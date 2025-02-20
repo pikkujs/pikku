@@ -12,7 +12,7 @@ import { AWSSecrets } from '@pikku/aws-services'
 import '@pikku-workspace-starter/functions/.pikku/pikku-channels'
 import { KyselyChannelStore } from '../../../packages/services/kysely/src/kysely-channel-store.js'
 import { ChannelStore } from '@pikku/core/channel'
-import { KyselyEventHubStore } from '../../../packages/services/kysely/src/kysely-subscription-store.js'
+import { KyselyEventHubStore } from '../../../packages/services/kysely/src/kysely-eventhub-store.js'
 import { MakeRequired } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import {
