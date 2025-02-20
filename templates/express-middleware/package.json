@@ -1,6 +1,6 @@
 {
   "name": "@pikku/templates-express-middleware",
-  "main": "bin/main.ts",
+  "main": "src/start.ts",
   "type": "module",
   "private": true,
   "dependencies": {
@@ -20,7 +20,7 @@
   "scripts": {
     "prebuild": "npx --yes @pikku/cli",
     "tsc": "tsc",
-    "start": "tsx bin/main.ts",
-    "dev": "tsx --watch bin/main.ts"
+    "start": "tsx src/start.ts",
+    "dev": "tsx --watch src/start.ts"
   }
 }

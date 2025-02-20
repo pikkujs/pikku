@@ -1,12 +1,12 @@
 {
   "name": "@pikku/templates-ws-server",
   "type": "module",
-  "main": "bin/start.ts",
+  "main": "src/start.ts",
   "private": true,
   "scripts": {
     "tsc": "tsc",
-    "start": "tsx bin/start.ts",
-    "dev": "tsx --watch bin/start.ts"
+    "start": "tsx src/start.ts",
+    "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
     "@pikku/core": "^0.6.8",

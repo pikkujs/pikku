@@ -7,22 +7,22 @@ import {
   processWebsocketMessage,
 } from '@pikku/lambda/websocket'
 
-import { createConfig } from '@pikku-workspace-starter/functions/src/config'
-import { createSingletonServices } from '@pikku-workspace-starter/functions/src/services'
-
-import {
-  Config,
-  SingletonServices,
-} from '@pikku-workspace-starter/functions/src/application-types'
-
 import { AWSSecrets } from '@pikku/aws-services'
 
 import '@pikku-workspace-starter/functions/.pikku/pikku-channels'
-import { KyselyChannelStore } from './kysely-channel-store.js'
+import { KyselyChannelStore } from '../../../packages/services/kysely/src/kysely-channel-store.js'
 import { ChannelStore } from '@pikku/core/channel'
-import { KyselyEventHubStore } from './kysely-subscription-store.js'
+import { KyselyEventHubStore } from '../../../packages/services/kysely/src/kysely-subscription-store.js'
 import { MakeRequired } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
+import {
+  Config,
+  SingletonServices,
+} from '../../functions/types/application-types.js'
+import {
+  createConfig,
+  createSingletonServices,
+} from '../../functions/src/services.js'
 
 let state:
   | {
@@ -38,9 +38,12 @@ const getParams = async (event: APIGatewayEvent) => {
     const variablesService = new LocalVariablesService()
     const singletonServices = await createSingletonServices(config, {
       variablesService,
-      secretServce: new AWSSecrets(config),
+      // @ts-ignore TODO
+      secretService: new AWSSecrets(config),
     })
+    // @ts-ignore
     const channelStore = new KyselyChannelStore(singletonServices.kysely)
+    // @ts-ignore
     const eventHubStore = new KyselyEventHubStore(singletonServices.kysely)
     singletonServices.eventHub = new LambdaEventHubService(
       singletonServices.logger,

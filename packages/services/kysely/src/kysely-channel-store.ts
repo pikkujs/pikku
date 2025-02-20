@@ -1,4 +1,3 @@
-import { DB } from '@pikku-workspace-starter/sdk'
 import { CoreUserSession } from '@pikku/core'
 import { Channel, ChannelStore } from '@pikku/core/channel'
 import { Kysely } from 'kysely'

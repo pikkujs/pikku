@@ -59,7 +59,9 @@ export function mergeJsonFiles(targetPath: string, fileName: string): void {
 export function replaceFunctionReferences(targetPath: string): void {
   const replaceInFile = (filePath: string): void => {
     let content = fs.readFileSync(filePath, 'utf-8')
-    const updatedContent = content.replace(/\.\.\/functions/g, './')
+    const updatedContent = content
+      .replaceAll('../../functions/src/', './')
+      .replaceAll('../functions/src', './')
     fs.writeFileSync(filePath, updatedContent)
   }
 

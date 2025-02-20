@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/kysely",
+  "version": "0.6.0",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "build:esm": "tsc -b",
+    "build": "yarn build:esm",
+    "ncu": "ncu",
+    "release": "npm run build && npm test"
+  },
+  "peerDependencies": {
+    "@pikku/core": "^0.6.7",
+    "kysely": "*"
+  },
+  "devDependencies": {
+    "kysely": "latest",
+    "kysely-codegen": "latest",
+    "typescript": "^5.6"
+  }
+}

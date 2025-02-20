@@ -6,7 +6,7 @@ import {
   createConfig,
   createSessionServices,
   createSingletonServices,
-} from '../../functions/src/services'
+} from '../../functions/src/services.js'
 
 async function main(): Promise<void> {
   try {

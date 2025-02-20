@@ -1,11 +1,12 @@
-import { createConfig } from '@pikku-workspace-starter/functions/src/config'
-import { createSingletonServices } from '@pikku-workspace-starter/functions/src/services'
+import { AWSSecrets } from '@pikku/aws-services'
 import {
   Config,
   SingletonServices,
-} from '@pikku-workspace-starter/functions/src/application-types'
-import { AWSSecrets } from '@pikku/aws-services'
-import { LocalVariablesService } from '@pikku/core'
+} from '../../functions/types/application-types.js'
+import {
+  createConfig,
+  createSingletonServices,
+} from '../../functions/src/services.js'
 
 let config: Config
 let singletonServices: SingletonServices
@@ -16,7 +17,8 @@ export const coldStart = async () => {
   }
   if (!singletonServices) {
     singletonServices = await createSingletonServices(config, {
-      secretServce: new AWSSecrets(config),
+      // @ts-ignore: TODO AWS Region required for this to work..
+      secretService: new AWSSecrets(config),
     })
   }
   return singletonServices
