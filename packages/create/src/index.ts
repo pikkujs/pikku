@@ -37,7 +37,7 @@ type Template = (typeof templates)[number]
 type PackageManager = (typeof packageManagers)[number]
 
 interface Answers {
-  projectName: string
+  name: string
   template: Template
   version: string
   installDependencies: boolean
@@ -61,7 +61,7 @@ async function run() {
   const answers: Answers = await inquirer.prompt([
     {
       type: 'input',
-      name: 'projectName',
+      name: 'name',
       message: 'Project name:',
       default: cliOptions.name || 'my-app',
       when: !cliOptions.name,
@@ -97,18 +97,12 @@ async function run() {
     },
   ])
 
-  const {
-    projectName,
-    template,
-    version,
-    installDependencies,
-    packageManager,
-  } = {
+  const { name, template, version, installDependencies, packageManager } = {
     ...cliOptions,
     ...answers,
   }
 
-  const targetPath = path.join(process.cwd(), projectName)
+  const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
 
   const functionsUrl = `${BASE_URL}/functions${versionRef}`
@@ -167,7 +161,7 @@ async function run() {
 
   console.log(chalk.green('\n✅ Project setup complete!'))
   console.log(`Run the following command to get started:\n`)
-  console.log(chalk.bold(`cd ${projectName}`))
+  console.log(chalk.bold(`cd ${name}`))
 }
 
 run()
