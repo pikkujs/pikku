@@ -79,3 +79,14 @@ export function replaceFunctionReferences(targetPath: string): void {
 
   scanAndReplace(targetPath)
 }
+
+/**
+ * Cleans up the tsconfig.json file
+ */
+export function cleanTSConfig(targetPath: string): void {
+  const tsconfigFile = path.join(targetPath, 'tsconfig.json')
+  const tsconfig = JSON.parse(fs.readFileSync(tsconfigFile, 'utf-8'))
+  delete tsconfig.extends
+  tsconfig.include = ["src/"]
+  fs.writeFileSync(tsconfigFile, JSON.stringify(tsconfig, null, 2))
+}

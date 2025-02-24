@@ -5,6 +5,7 @@ import path from 'path'
 import { downloadTemplate } from 'giget'
 import { createSpinner } from 'nanospinner'
 import {
+  cleanTSConfig,
   lazymkdir,
   mergeDirectories,
   mergeJsonFiles,
@@ -128,11 +129,12 @@ async function run() {
     mergeJsonFiles(targetPath, 'package.json')
     mergeJsonFiles(targetPath, 'pikku.config.json')
     replaceFunctionReferences(targetPath)
+    cleanTSConfig(targetPath)
 
     const packageContent = JSON.parse(
       readFileSync(`${targetPath}/package.json`, 'utf-8')
     )
-    packageContent.scripts.postinstall = 'npx @vramework/cli'
+    packageContent.scripts.postinstall = 'npx --yes @pikku/cli'
     writeFileSync(
       `${targetPath}/package.json`,
       JSON.stringify(packageContent, null, 2)
@@ -152,11 +154,11 @@ async function run() {
       stdio: 'inherit',
     })
 
-    console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['run', 'pikku'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
+    // console.log(chalk.blue('🦎 Running pikku...'))
+    // spawnSync(packageManager, ['run', 'pikku'], {
+    //   cwd: targetPath,
+    //   stdio: 'inherit',
+    // })
   }
 
   console.log(chalk.green('\n✅ Project setup complete!'))

@@ -72,4 +72,4 @@ jobs:
       - name: Install dependencies for create
         run: yarn install # TODO: This should only need to install create
       - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager ${{ matrix.package-manager}}
-      - run:  cd packages/create/my-app && yarn test
+      - run: cd packages/create/my-app && yarn test

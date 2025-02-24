@@ -2,9 +2,9 @@ import type {
   Config,
   Services,
   SingletonServices,
-  UserSession,
 } from '../types/application-types.js'
 import {
+  CoreUserSession,
   CreateConfig,
   CreateSessionServices,
   CreateSingletonServices,
@@ -13,6 +13,8 @@ import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { PikkuHTTPSessionService } from '@pikku/core/http'
 import { JoseJWTService } from '@pikku/jose'
 import { AjvSchemaService } from '@pikku/schema-ajv'
+
+export type UserSession = CoreUserSession<{}>
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}
