@@ -1,10 +1,9 @@
 import { CoreUserSession } from '@pikku/core'
 import { Channel, ChannelStore } from '@pikku/core/channel'
 import { Kysely } from 'kysely'
-import { DB as KyselyDB } from 'kysely-codegen'
 
 export class KyselyChannelStore extends ChannelStore {
-  constructor(private database: Kysely<KyselyDB>) {
+  constructor(private database: Kysely<any>) {
     super()
   }
 
@@ -30,10 +29,7 @@ export class KyselyChannelStore extends ChannelStore {
       .execute()
   }
 
-  public async setUserSession(
-    channelId: string,
-    session: DB.JsonValue
-  ): Promise<void> {
+  public async setUserSession(channelId: string, session: any): Promise<void> {
     await this.database
       .updateTable('serverless.lambdaChannels')
       .where('channelId', '=', channelId)
