@@ -3,11 +3,11 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.6.4",
+    "@pikku/core": "^0.6.10",
     "@pikku/jose": "^0.6.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.6.3",
+    "@pikku/cli": "^0.6.7",
     "typescript": "^5.6"
   },
   "scripts": {
