@@ -30,7 +30,7 @@
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
     "lint": "npx --yes oxlint@latest",
     "prettier": "npx --yes prettier . --write",
-    "typedoc": "npx --yes typedoc",
+    "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
     "changeset": "npx changeset"
   },
   "packageManager": "yarn@4.5.0",

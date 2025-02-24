@@ -1,18 +1,6 @@
 {
-  "entryPoints": ["./**/index.ts"],
+  "entryPoints": ["packages/**/index.ts"],
   "entryPointStrategy": "expand",
   "excludeInternal": true,
-  "out": ".typedocs",
-  "compilerOptions": {
-    "skipLibCheck": true,
-    "noImplicitAny": false,
-    "resolveJsonModule": true
-  },
-  "exclude": [
-    "**/*.test.ts",
-    "**/node_modules/**/*",
-    "**/dist/**/*",
-    "**/dist/*",
-    "**/*.d.ts"
-  ]
+  "out": ".typedocs"
 }

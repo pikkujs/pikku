@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx"
+  },
+  "exclude": [
+    "**/*.test.ts",
+    "**/node_modules/**/*",
+    "**/dist/**/*",
+    "**/dist/*",
+    "**/*.d.ts"
+  ]
+}
