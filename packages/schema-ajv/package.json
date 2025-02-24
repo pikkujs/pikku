@@ -1,6 +1,6 @@
 {
   "name": "@pikku/schema-ajv",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "The pikku schema ajv package",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.6.7"
+    "@pikku/core": "^0.6.10"
   },
   "dependencies": {
     "ajv": "^8.17.1",
