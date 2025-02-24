@@ -1,0 +1,1 @@
+{"version":3,"file":"pikku-routes.gen.js","sourceRoot":"","sources":["pikku-routes.gen.ts"],"names":[],"mappings":"AAIA,OAAO,qBAAqB,CAAA;AAE5B,OAAO,EAAE,iBAAiB,EAAE,MAAM,kBAAkB,CAAA;AACpD,iBAAiB,CAAC;IAChB;QACE,KAAK,EAAE,cAAc;QACrB,MAAM,EAAE,KAAK;QACb,KAAK,EAAE,IAAI;QACX,MAAM,EAAE,kBAAkB;KAC3B;CACF,CAAC,CAAA"}

@@ -34,18 +34,18 @@ jobs:
           path: packages/**/dist
           retention-days: 1
 
-      - name: Create Release Pull Request
-        uses: changesets/action@v1
-        with:
-          version: node .github/changeset-version.cjs
-          publish: yarn release
-          createGithubReleases: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Create Release Pull Request
+      #   uses: changesets/action@v1
+      #   with:
+      #     version: node .github/changeset-version.cjs
+      #     publish: yarn release
+      #     createGithubReleases: false
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Coveralls GitHub Action
-        uses: coverallsapp/github-action@v2.3.4
+      # - name: Coveralls GitHub Action
+      #   uses: coverallsapp/github-action@v2.3.4
 
   templates:
     name: Templates
@@ -53,8 +53,18 @@ jobs:
     needs: release
     strategy:
       matrix:
-        version: [22]
-        template: [express]
+        version: [18]
+        template:
+          [
+            # express,
+            express-middleware,
+            # fastify,
+            fastify-plugin,
+            uws,
+            serverless,
+            cloudflare-workers,
+            nextjs,
+          ]
         package-manager: [npm]
     steps:
       - name: Check out repository code
@@ -64,6 +74,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.version }}
+          cache: yarn
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
@@ -72,4 +83,7 @@ jobs:
       - name: Install dependencies for create
         run: yarn install # TODO: This should only need to install create
       - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager ${{ matrix.package-manager}}
-      - run:  cd packages/create/my-app && yarn test
+      - run: cd packages/create/my-app && npm run test
+    env:
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      USES_WEBSOCKET: ${{ matrix.template }}

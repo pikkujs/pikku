@@ -1,8 +1,9 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "module": "Node16"
   },
-  "files": [],
-  "include": []
+  "include": ["src"]
 }

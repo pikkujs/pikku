@@ -4,6 +4,7 @@ lcov.info
 .typedocs
 .DS_Store
 
+*.js.map
 *.js
 .yarn
 .dist

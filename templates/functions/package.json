@@ -11,7 +11,7 @@
     "typescript": "^5.6"
   },
   "scripts": {
-    "prebuild": "npx --yes @pikku/cli",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "test": "npm run start & bash run-tests.sh"
   }
 }

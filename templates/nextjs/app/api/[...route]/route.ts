@@ -1,7 +1,7 @@
 // import { pikku } from '@/vramework-nextjs.js'
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { NextRequest, NextResponse } from 'next/server.js'
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // TODO
-  // return pikku().apiRequest(req, res)
+export async function GET(_req: NextRequest) {
+  // return pikku().apiRequest(req, res);
+  return NextResponse.next()
 }

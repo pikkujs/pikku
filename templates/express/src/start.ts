@@ -5,7 +5,7 @@ import {
   createSingletonServices,
   createSessionServices,
 } from '../../functions/src/services.js'
-import { ScheduledTaskNames } from '../../functions/.pikku/pikku-schedules.gen.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {
   try {
@@ -21,9 +21,7 @@ async function main(): Promise<void> {
     await appServer.init()
     await appServer.start()
 
-    const scheduler = new PikkuTaskScheduler<ScheduledTaskNames>(
-      singletonServices
-    )
+    const scheduler = new PikkuTaskScheduler(singletonServices)
     scheduler.startAll()
   } catch (e: any) {
     console.error(e.toString())

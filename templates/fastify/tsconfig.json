@@ -3,6 +3,5 @@
   "compilerOptions": {
     "resolveJsonModule": true
   },
-  "files": [],
-  "include": []
+  "include": ["src/"]
 }

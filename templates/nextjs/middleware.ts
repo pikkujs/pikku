@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server.js'
 import { UserSession } from '../functions/types/application-types.js'
 
 // 1. Specify protected and public routes
-const protectedRoutes = ['/']
+const protectedRoutes = ['/admin']
 const publicRoutes = ['/login']
 
 const jwtService = new JoseJWTService<UserSession>(async () => [

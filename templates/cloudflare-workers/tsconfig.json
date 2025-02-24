@@ -1,8 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "noEmit": true,
     "resolveJsonModule": true
   },
-  "files": [],
-  "include": []
+  "include": ["src/"]
 }

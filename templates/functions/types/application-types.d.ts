@@ -6,6 +6,9 @@ import type {
 } from '@pikku/core'
 
 export type Config = CoreConfig
-export type UserSession = CoreUserSession
+
+export interface UserSession extends CoreUserSession<{}> {}
+
 export type SingletonServices = CoreSingletonServices<Config, UserSession>
-export type Services = CoreServices<SingletonServices>
+
+export interface Services extends CoreServices<SingletonServices> {}

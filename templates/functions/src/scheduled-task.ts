@@ -9,6 +9,6 @@ const myScheduledTask: APIFunctionSessionless<void, void> = async () => {
 
 addScheduledTask({
   name: 'myScheduledTask',
-  schedule: '*/* * * * 1',
+  schedule: '*/1 * * * *',
   func: myScheduledTask,
 })

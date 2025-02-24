@@ -1,6 +1,28 @@
 import fs from 'fs'
 import path from 'path'
 
+function deepMerge(target: any, source: any) {
+  if (!target || typeof target !== 'object') return source
+  if (!source || typeof source !== 'object') return target
+
+  Object.keys(source).forEach((key) => {
+    if (
+      source[key] &&
+      typeof source[key] === 'object' &&
+      !Array.isArray(source[key])
+    ) {
+      if (!target[key] || typeof target[key] !== 'object') {
+        target[key] = {}
+      }
+      deepMerge(target[key], source[key])
+    } else {
+      target[key] = source[key]
+    }
+  })
+
+  return target
+}
+
 export const lazymkdir = async (path: string) => {
   try {
     await fs.mkdirSync(path, { recursive: true })
@@ -32,25 +54,31 @@ export function mergeDirectories(srcDir: string, destDir: string): void {
 /**
  * Merges JSON files (package.json, pikku.config.json) by combining properties.
  */
-export function mergeJsonFiles(targetPath: string, fileName: string): void {
-  const filePath = path.join(targetPath, fileName)
-
-  if (!fs.existsSync(filePath)) return
-
+export function mergeJsonFiles(
+  sourcePaths: string[],
+  data: Record<string, string>,
+  targetPath: string,
+  fileName: string
+): void {
   let mergedData: Record<string, any> = {}
 
   // Read all JSON files in the target directory
-  fs.readdirSync(targetPath)
-    .filter((file) => file === fileName)
-    .forEach((file) => {
-      const fileContent = JSON.parse(
-        fs.readFileSync(path.join(targetPath, file), 'utf-8')
-      )
-      mergedData = { ...mergedData, ...fileContent }
-    })
+  for (const sourcePath of sourcePaths) {
+    const filePath = path.join(sourcePath, fileName)
+    if (fs.existsSync(filePath)) {
+      const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      mergedData = deepMerge(mergedData, fileContent)
+      fs.unlinkSync(path.join(sourcePath, fileName))
+    }
+  }
+
+  mergedData = { ...mergedData, ...data }
 
   // Write merged JSON back
-  fs.writeFileSync(filePath, JSON.stringify(mergedData, null, 2))
+  fs.writeFileSync(
+    path.join(targetPath, fileName),
+    JSON.stringify(mergedData, null, 2)
+  )
 }
 
 /**
@@ -78,4 +106,15 @@ export function replaceFunctionReferences(targetPath: string): void {
   }
 
   scanAndReplace(targetPath)
+}
+
+/**
+ * Cleans up the tsconfig.json file
+ */
+export function cleanTSConfig(targetPath: string): void {
+  const tsconfigFile = path.join(targetPath, 'tsconfig.json')
+  const tsconfig = JSON.parse(fs.readFileSync(tsconfigFile, 'utf-8'))
+  delete tsconfig.extends
+  tsconfig.include = ['src/']
+  fs.writeFileSync(tsconfigFile, JSON.stringify(tsconfig, null, 2))
 }

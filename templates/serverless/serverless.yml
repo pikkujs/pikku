@@ -15,10 +15,6 @@ provider:
   stage: production
   region: us-east-1
   lambdaHashingVersion: 20201221
-  iam:
-    role:
-      managedPolicies:
-        - 'arn:aws:iam::014498637088:policy/PikkuServerlessDB'
   environment:
     NODE_OPTIONS: --enable-source-maps
     NODE_ENV: production
@@ -32,6 +28,6 @@ functions:
           method: any
 
   cron:
-    handler: dist/cron.expireTodos
+    handler: dist/cron.myScheduledTask
     events:
       - schedule: rate(1 day)

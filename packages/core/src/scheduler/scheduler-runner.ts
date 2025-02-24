@@ -101,7 +101,7 @@ export async function runScheduledTask<
     }
 
     singletonServices.logger.info(
-      `Running schedule task: ${name} | schedule: ${task.schedule}}`
+      `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
     let allServices = singletonServices

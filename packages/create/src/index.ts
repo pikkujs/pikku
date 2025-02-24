@@ -5,6 +5,7 @@ import path from 'path'
 import { downloadTemplate } from 'giget'
 import { createSpinner } from 'nanospinner'
 import {
+  cleanTSConfig,
   lazymkdir,
   mergeDirectories,
   mergeJsonFiles,
@@ -20,10 +21,11 @@ const BASE_URL = 'gh:pikkujs/pikku/templates'
 const templates = [
   'cloudflare-websocket',
   'cloudflare-workers',
-  'express',
+  // 'express',
   'express-middleware',
   'fastify',
-  'functions',
+  'fastify-plugin',
+  // 'functions',
   'nextjs',
   'serverless',
   'serverless-websocket',
@@ -113,8 +115,8 @@ async function run() {
   try {
     // Download both templates, with optional version (branch/tag)
     const tmpDirPrefix = tmpdir()
-    const functionsPath = `${tmpDirPrefix}/functions`
-    const templatePath = `${tmpDirPrefix}/template`
+    const functionsPath = `${tmpDirPrefix}/pikku/functions`
+    const templatePath = `${tmpDirPrefix}/pikku/template`
 
     await downloadTemplate(functionsUrl, { dir: functionsPath, force: true })
     await downloadTemplate(templateUrl, { dir: templatePath, force: true })
@@ -123,16 +125,27 @@ async function run() {
 
     // Merge and process files
     lazymkdir(targetPath)
+    mergeJsonFiles(
+      [functionsPath, templatePath],
+      { name },
+      targetPath,
+      'package.json'
+    )
+    mergeJsonFiles(
+      [functionsPath, templatePath],
+      {},
+      targetPath,
+      'pikku.config.json'
+    )
     mergeDirectories(functionsPath, targetPath)
     mergeDirectories(templatePath, targetPath)
-    mergeJsonFiles(targetPath, 'package.json')
-    mergeJsonFiles(targetPath, 'pikku.config.json')
     replaceFunctionReferences(targetPath)
+    cleanTSConfig(targetPath)
 
     const packageContent = JSON.parse(
       readFileSync(`${targetPath}/package.json`, 'utf-8')
     )
-    packageContent.scripts.postinstall = 'npx @vramework/cli'
+    packageContent.scripts.postinstall = 'npx --yes @pikku/cli'
     writeFileSync(
       `${targetPath}/package.json`,
       JSON.stringify(packageContent, null, 2)
@@ -152,11 +165,11 @@ async function run() {
       stdio: 'inherit',
     })
 
-    console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['run', 'pikku'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
+    // console.log(chalk.blue('🦎 Running pikku...'))
+    // spawnSync(packageManager, ['run', 'pikku'], {
+    //   cwd: targetPath,
+    //   stdio: 'inherit',
+    // })
   }
 
   console.log(chalk.green('\n✅ Project setup complete!'))
