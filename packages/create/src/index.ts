@@ -37,10 +37,10 @@ type Template = (typeof templates)[number]
 type PackageManager = (typeof packageManagers)[number]
 
 interface Answers {
-  projectName: string
+  name: string
   template: Template
   version: string
-  installDependencies: boolean
+  install: boolean
   packageManager: PackageManager
 }
 
@@ -61,7 +61,7 @@ async function run() {
   const answers: Answers = await inquirer.prompt([
     {
       type: 'input',
-      name: 'projectName',
+      name: 'name',
       message: 'Project name:',
       default: cliOptions.name || 'my-app',
       when: !cliOptions.name,
@@ -82,7 +82,7 @@ async function run() {
     },
     {
       type: 'confirm',
-      name: 'installDependencies',
+      name: 'install',
       message: 'Install dependencies?',
       default: cliOptions.install,
       when: cliOptions.install === undefined,
@@ -97,18 +97,12 @@ async function run() {
     },
   ])
 
-  const {
-    projectName,
-    template,
-    version,
-    installDependencies,
-    packageManager,
-  } = {
+  const { name, template, version, install, packageManager } = {
     ...cliOptions,
     ...answers,
   }
 
-  const targetPath = path.join(process.cwd(), projectName)
+  const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
 
   const functionsUrl = `${BASE_URL}/functions${versionRef}`
@@ -151,7 +145,7 @@ async function run() {
     process.exit(1)
   }
 
-  if (installDependencies) {
+  if (install) {
     console.log(chalk.blue('📦 Installing dependencies...'))
     spawnSync(packageManager, ['install'], {
       cwd: targetPath,
@@ -167,7 +161,7 @@ async function run() {
 
   console.log(chalk.green('\n✅ Project setup complete!'))
   console.log(`Run the following command to get started:\n`)
-  console.log(chalk.bold(`cd ${projectName}`))
+  console.log(chalk.bold(`cd ${name}`))
 }
 
 run()

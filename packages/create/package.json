@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
-    "build": "tsx src/get-templates.ts && yarn tsc"
+    "build:esm": "yarn tsc",
+    "build": "yarn build:esm"
   },
   "dependencies": {
     "chalk": "^5.4.1",
