@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.10
+
+### Patch Changes
+
+- ccbef83: fix: validate against empty data payloads
+
 ## 0.6.9
 
 ### Patch Changes

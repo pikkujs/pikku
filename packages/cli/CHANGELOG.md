@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.6.7
+
+### Patch Changes
+
+- ccbef83: fix: validate against empty data payloads
+- Updated dependencies [ccbef83]
+  - @pikku/core@0.6.10
+
 ## 0.6.6
 
 ### Patch Changes
