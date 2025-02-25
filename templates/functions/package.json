@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.6.4",
+    "@pikku/core": "^0.6.10",
     "@pikku/jose": "^0.6.0",
     "@pikku/schema-ajv": "^0.6.1"
   },
