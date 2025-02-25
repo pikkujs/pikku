@@ -3,5 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "resolveJsonModule": true
-  }
+  },
+  "include": ["src/"],
+  "files": []
 }

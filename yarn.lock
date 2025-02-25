@@ -3413,7 +3413,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schema-ajv@workspace:packages/schema-ajv":
+"@pikku/schema-ajv@npm:^0.6.1, @pikku/schema-ajv@workspace:packages/schema-ajv":
   version: 0.0.0-use.local
   resolution: "@pikku/schema-ajv@workspace:packages/schema-ajv"
   dependencies:
@@ -3514,6 +3514,7 @@ __metadata:
     "@pikku/cli": "npm:^0.6.3"
     "@pikku/core": "npm:^0.6.4"
     "@pikku/jose": "npm:^0.6.0"
+    "@pikku/schema-ajv": "npm:^0.6.1"
     typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft

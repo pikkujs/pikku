@@ -76,8 +76,8 @@ export type ChannelMessage<
 type APIChannel<
   ChannelData,
   Channel extends string,
-  In extends unknown,
-  Out extends unknown,
+  In extends unknown = never,
+  Out extends unknown = never,
 > = CoreAPIChannel<
   ChannelData,
   Channel,
