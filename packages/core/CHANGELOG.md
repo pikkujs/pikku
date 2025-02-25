@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.10
+
+### Patch Changes
+
+- 4a4a55d: refactor: renaming EError to PikkuError
+
 ## 0.6.9
 
 ### Patch Changes
