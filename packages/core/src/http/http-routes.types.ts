@@ -1,4 +1,4 @@
-import { EError } from '../errors/error-handler.js'
+import { PikkuError } from '../errors/error-handler.js'
 import {
   APIDocs,
   CoreServices,
@@ -71,7 +71,7 @@ export type CoreHTTPFunction = {
   docs?: Partial<{
     description: string
     response: string
-    errors: Array<typeof EError>
+    errors: Array<typeof PikkuError>
     tags: string[]
   }>
 }

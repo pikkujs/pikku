@@ -5422,6 +5422,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"commander@npm:^13.1.0":
+  version: 13.1.0
+  resolution: "commander@npm:13.1.0"
+  checksum: 10/d3b4b79e6be8471ddadacbb8cd441fe82154d7da7393b50e76165a9e29ccdb74fa911a186437b9a211d0fc071db6051915c94fb8ef16d77511d898e9dbabc6af
+  languageName: node
+  linkType: hard
+
 "commander@npm:^4.0.0":
   version: 4.1.1
   resolution: "commander@npm:4.1.1"
@@ -5566,6 +5573,7 @@ __metadata:
     "@types/inquirer": "npm:^9.0.7"
     "@types/node": "npm:^22.13.1"
     chalk: "npm:^5.4.1"
+    commander: "npm:^13.1.0"
     giget: "npm:^1.2.4"
     inquirer: "npm:^12.4.1"
     nanospinner: "npm:^1.2.2"

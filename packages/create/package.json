@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "chalk": "^5.4.1",
+    "commander": "^13.1.0",
     "giget": "^1.2.4",
     "inquirer": "^12.4.1",
     "nanospinner": "^1.2.2"

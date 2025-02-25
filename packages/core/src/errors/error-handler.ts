@@ -2,9 +2,9 @@
  * Base class for custom errors.
  * @extends {Error}
  */
-export class EError extends Error {
+export class PikkuError extends Error {
   /**
-   * Creates an instance of EError.
+   * Creates an instance of PikkuError.
    * @param message - The error message.
    */
   constructor(message: string = 'An error occurred') {

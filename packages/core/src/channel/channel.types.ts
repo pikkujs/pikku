@@ -1,4 +1,4 @@
-import { EError } from '../errors/error-handler.js'
+import { PikkuError } from '../errors/error-handler.js'
 import {
   HTTPFunctionMetaInputTypes,
   PikkuHTTP,
@@ -143,7 +143,7 @@ export type CoreAPIChannel<
   docs?: Partial<{
     description: string
     response: string
-    errors: Array<typeof EError>
+    errors: Array<typeof PikkuError>
     tags: string[]
   }>
 }

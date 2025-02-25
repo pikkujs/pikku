@@ -34,18 +34,18 @@ jobs:
           path: packages/**/dist
           retention-days: 1
 
-      # - name: Create Release Pull Request
-      #   uses: changesets/action@v1
-      #   with:
-      #     version: node .github/changeset-version.cjs
-      #     publish: yarn release
-      #     createGithubReleases: false
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create Release Pull Request
+        uses: changesets/action@v1
+        with:
+          version: node .github/changeset-version.cjs
+          publish: yarn release
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # - name: Coveralls GitHub Action
-      #   uses: coverallsapp/github-action@v2.3.4
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2.3.4
 
   templates:
     name: Templates
@@ -54,8 +54,7 @@ jobs:
     strategy:
       matrix:
         version: [18]
-        template:
-          [
+        template: [
             # express,
             express-middleware,
             # fastify,
