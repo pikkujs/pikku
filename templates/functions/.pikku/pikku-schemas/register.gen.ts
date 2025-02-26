@@ -5,6 +5,6 @@ import { addSchema } from '@pikku/core/schema'
 // import { createRequire } from "module"
 // const require = createRequire(import.meta.url)
 
-import * as HelloWorldOutput from './schemas/HelloWorldOutput.schema.json'
+import * as HelloWorldOutput from './schemas/HelloWorldOutput.schema.json' 
 addSchema('HelloWorldOutput', HelloWorldOutput)
 // addSchema('HelloWorldOutput', require('./schemas/HelloWorldOutput.schema.json'))

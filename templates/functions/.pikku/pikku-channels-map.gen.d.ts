@@ -4,41 +4,38 @@
 /**
  * This provides the structure needed for TypeScript to be aware of channels
  */
+    
+
 
 interface ChannelHandler<I, O> {
-  input: I
-  output: O
+    input: I;
+    output: O;
 }
 
 export type ChannelsMap = {
-  readonly events: {
+  readonly 'events': {
     readonly routes: {
       readonly action: {
-        readonly auth: ChannelHandler<AuthInput, AuthOutput>
-        readonly subscribe: ChannelHandler<SubscribeInput>
-        readonly unsubscribe: ChannelHandler<UnsubscribeInput>
-        readonly emit: ChannelHandler<EmitInput, EmitOutput>
-      }
-    }
-    readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>
-  }
-}
+        readonly auth: ChannelHandler<AuthInput, AuthOutput>,
+        readonly subscribe: ChannelHandler<SubscribeInput, >,
+        readonly unsubscribe: ChannelHandler<UnsubscribeInput, >,
+        readonly emit: ChannelHandler<EmitInput, EmitOutput>,
+      },
+    },
+    readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>,
+  },
+};
 
 export type ChannelDefaultHandlerOf<Channel extends keyof ChannelsMap> =
-  ChannelsMap[Channel]['defaultMessage'] extends {
-    input: infer I
-    output: infer O
-  }
-    ? ChannelHandler<I, O>
-    : never
+    ChannelsMap[Channel]['defaultMessage'] extends { input: infer I; output: infer O }
+        ? ChannelHandler<I, O>
+        : never;
 
 export type ChannelRouteHandlerOf<
-  Channel extends keyof ChannelsMap,
-  Route extends keyof ChannelsMap[Channel]['routes'],
-  Method extends keyof ChannelsMap[Channel]['routes'][Route],
-> = ChannelsMap[Channel]['routes'][Route][Method] extends {
-  input: infer I
-  output: infer O
-}
-  ? ChannelHandler<I, O>
-  : never
+    Channel extends keyof ChannelsMap, 
+    Route extends keyof ChannelsMap[Channel]['routes'], 
+    Method extends keyof ChannelsMap[Channel]['routes'][Route],
+> =
+    ChannelsMap[Channel]['routes'][Route][Method] extends { input: infer I; output: infer O }
+        ? ChannelHandler<I, O>
+        : never;

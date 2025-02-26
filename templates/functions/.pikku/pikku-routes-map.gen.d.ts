@@ -4,33 +4,33 @@
 /**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
+    
+
 
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
-export type HelloWorldOutput = 'Hello world!'
+export type HelloWorldOutput = "Hello world!"
 
 // The '& {}' is a workaround for not directly refering to a type since it confuses typescript
 
+
 interface RouteHandler<I, O> {
-  input: I
-  output: O
+    input: I;
+    output: O;
 }
 
 export type RoutesMap = {
   readonly '/hello-world': {
-    readonly GET: RouteHandler<null, HelloWorldOutput>
-  }
-}
+    readonly GET: RouteHandler<null, HelloWorldOutput>,
+  },
+};
 
-export type RouteHandlerOf<
-  Route extends keyof RoutesMap,
-  Method extends keyof RoutesMap[Route],
-> = RoutesMap[Route][Method] extends { input: infer I; output: infer O }
-  ? RouteHandler<I, O>
-  : never
+export type RouteHandlerOf<Route extends keyof RoutesMap, Method extends keyof RoutesMap[Route]> =
+    RoutesMap[Route][Method] extends { input: infer I; output: infer O }
+        ? RouteHandler<I, O>
+        : never;
 
 export type RoutesWithMethod<Method extends string> = {
-  [Route in keyof RoutesMap]: Method extends keyof RoutesMap[Route]
-    ? Route
-    : never
-}[keyof RoutesMap]
+  [Route in keyof RoutesMap]: Method extends keyof RoutesMap[Route] ? Route : never;
+}[keyof RoutesMap];
+  

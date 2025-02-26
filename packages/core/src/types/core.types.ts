@@ -60,7 +60,7 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
 /**
  * Represents a core user session, which can be extended for more specific session information.
  */
-export type CoreUserSession<UserSession = unknown> = UserSession
+export interface CoreUserSession {}
 
 /**
  * Interface for core singleton services provided by Pikku.

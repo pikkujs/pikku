@@ -7,7 +7,9 @@ import type {
 
 export type Config = CoreConfig
 
-export interface UserSession extends CoreUserSession<{}> {}
+export interface UserSession extends CoreUserSession {
+  userId: string
+}
 
 export type SingletonServices = CoreSingletonServices<Config, UserSession>
 

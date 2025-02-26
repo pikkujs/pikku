@@ -12,9 +12,9 @@ export const serializePikkuTypes = (
 */
   
 import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission, MakeRequired } from '@pikku/core'
-import { CoreHTTPFunctionRoute, AssertRouteParams } from '@pikku/core/http'
-import { CoreScheduledTask } from '@pikku/core/scheduler'
-import { CoreAPIChannel, PikkuChannel } from '@pikku/core/channel'
+import { CoreHTTPFunctionRoute, AssertRouteParams, addRoute as addCoreHTTP } from '@pikku/core/http'
+import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
+import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
 
 ${userSessionTypeImport}
 ${sessionServicesTypeImport}
@@ -32,22 +32,20 @@ type APIChannel<ChannelData, Channel extends string, In extends unknown = never,
 
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
 
-declare module "@pikku/core" {
-  // type APIPermission<In = unknown, RequiredServices = ${servicesTypeName}> = CoreAPIPermission<In, RequiredServices, ${userSessionTypeName}>
-  // type APIFunction = <In = unknown, Out = never, RequiredServices = ${servicesTypeName}> = CoreAPIFunction<In, Out, RequiredServices, ${userSessionTypeName}>
-  // type APIFunctionSessionless = <In = unknown, Out = never, RequiredServices = ${servicesTypeName}> = CoreAPIFunctionSessionless<In, Out, RequiredServices, ${userSessionTypeName}>
+export const addChannel = <ChannelData, Channel extends string>(
+  channel: APIChannel<ChannelData, Channel> & AssertRouteParams<ChannelData, Channel>
+) => {
+  addCoreChannel(channel)
+}
 
-  function addChannel<ChannelData, Channel extends string>(
-    channel: APIChannel<ChannelData, Channel> & AssertRouteParams<ChannelData, Channel>
-  ): void;
+export const addRoute = <In, Out, Route extends string>(
+  route: APIRoute<In, Out, Route> & AssertRouteParams<In, Route>
+) => {
+  addCoreHTTP(route)
+}
 
-  function addRoute<In, Out, Route extends string>(
-    route: APIRoute<In, Out, Route> & AssertRouteParams<In, Route>
-  ): void;
-
-  function addScheduledTask(
-    task: ScheduledTask
-  ): void;
+export const addScheduledTask = (task: ScheduledTask) => {
+  addCoreScheduledTask(task)
 }
 `
 }

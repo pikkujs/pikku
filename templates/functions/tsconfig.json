@@ -2,8 +2,9 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "module": "node16"
   },
-  "include": ["src/"],
+  "include": ["src/", ".pikku/*"],
   "files": []
 }

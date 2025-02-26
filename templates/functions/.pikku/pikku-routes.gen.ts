@@ -7,9 +7,9 @@ import '../src/http.js'
 import { setHTTPRoutesMeta } from '@pikku/core/http'
 setHTTPRoutesMeta([
   {
-    route: '/hello-world',
-    method: 'get',
-    input: null,
-    output: 'HelloWorldOutput',
-  },
+    "route": "/hello-world",
+    "method": "get",
+    "input": null,
+    "output": "HelloWorldOutput"
+  }
 ])

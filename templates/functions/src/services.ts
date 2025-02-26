@@ -14,10 +14,6 @@ import { PikkuHTTPSessionService } from '@pikku/core/http'
 import { JoseJWTService } from '@pikku/jose'
 import { AjvSchemaService } from '@pikku/schema-ajv'
 
-export type UserSession = CoreUserSession<{
-  userId: string
-}>
-
 export const createConfig: CreateConfig<Config> = async () => {
   return {}
 }
