@@ -67,7 +67,7 @@ export interface CoreUserSession {}
  */
 export interface CoreSingletonServices<
   Config extends CoreConfig = CoreConfig,
-  UserSession extends CoreUserSession = CoreUserSession
+  UserSession extends CoreUserSession = CoreUserSession,
 > {
   /** The http permission service used for authorization (optional). */
   enforceHTTPAccess?: enforceHTTPAccess

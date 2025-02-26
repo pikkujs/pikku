@@ -46,7 +46,10 @@ export type RoutesWithMethod<Method extends string> = {
   `
 }
 
-export function generateCustomTypes(typesMap: TypesMap, requiredTypes: Set<string>) {
+export function generateCustomTypes(
+  typesMap: TypesMap,
+  requiredTypes: Set<string>
+) {
   return `
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
