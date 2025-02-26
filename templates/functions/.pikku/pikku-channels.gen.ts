@@ -7,50 +7,34 @@ import '../src/channel.routes.js'
 import { setChannelsMeta } from '@pikku/core/channel'
 setChannelsMeta([
   {
-    "name": "events",
-    "route": "/",
-    "input": null,
-    "connect": true,
-    "disconnect": true,
-    "message": {
-      "inputs": [
-        "OnMessageInput"
-      ],
-      "outputs": [
-        "OnMessageOutput"
-      ]
+    name: 'events',
+    route: '/',
+    input: null,
+    connect: true,
+    disconnect: true,
+    message: {
+      inputs: ['OnMessageInput'],
+      outputs: ['OnMessageOutput'],
     },
-    "messageRoutes": {
-      "action": {
-        "auth": {
-          "inputs": [
-            "AuthInput"
-          ],
-          "outputs": [
-            "AuthOutput"
-          ]
+    messageRoutes: {
+      action: {
+        auth: {
+          inputs: ['AuthInput'],
+          outputs: ['AuthOutput'],
         },
-        "subscribe": {
-          "inputs": [
-            "SubscribeInput"
-          ],
-          "outputs": []
+        subscribe: {
+          inputs: ['SubscribeInput'],
+          outputs: [],
         },
-        "unsubscribe": {
-          "inputs": [
-            "UnsubscribeInput"
-          ],
-          "outputs": []
+        unsubscribe: {
+          inputs: ['UnsubscribeInput'],
+          outputs: [],
         },
-        "emit": {
-          "inputs": [
-            "EmitInput"
-          ],
-          "outputs": [
-            "EmitOutput"
-          ]
-        }
-      }
-    }
-  }
+        emit: {
+          inputs: ['EmitInput'],
+          outputs: ['EmitOutput'],
+        },
+      },
+    },
+  },
 ])

@@ -21,13 +21,13 @@ provider:
 
 functions:
   http:
-    handler: dist/http.corslessHandler
+    handler: dist/start.corslessHandler
     events:
       - http:
           path: /{proxy+}
           method: any
 
   cron:
-    handler: dist/cron.myScheduledTask
+    handler: dist/start.myScheduledTask
     events:
       - schedule: rate(1 day)

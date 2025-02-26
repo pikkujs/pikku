@@ -4,49 +4,54 @@
 /**
  * This provides the structure needed for TypeScript to be aware of channels
  */
-    
-
 
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
-export type OnMessageInput = "hello"
-export type OnMessageOutput = "hey"
-export type AuthInput = { token: string; userId: string; }
-export type AuthOutput = { authResult: boolean; action: "auth"; }
-export type SubscribeInput = { name: string; }
-export type UnsubscribeInput = { name: string; }
-export type EmitInput = { name: string; }
-export type EmitOutput = { timestamp: string; from: string; } | { message: string; }
+export type OnMessageInput = 'hello'
+export type OnMessageOutput = 'hey'
+export type AuthInput = { token: string; userId: string }
+export type AuthOutput = { authResult: boolean; action: 'auth' }
+export type SubscribeInput = { name: string }
+export type UnsubscribeInput = { name: string }
+export type EmitInput = { name: string }
+export type EmitOutput =
+  | { timestamp: string; from: string }
+  | { message: string }
 
 interface ChannelHandler<I, O> {
-    input: I;
-    output: O;
+  input: I
+  output: O
 }
 
 export type ChannelsMap = {
-  readonly 'events': {
+  readonly events: {
     readonly routes: {
       readonly action: {
-        readonly auth: ChannelHandler<AuthInput, AuthOutput>,
-        readonly subscribe: ChannelHandler<SubscribeInput, never>,
-        readonly unsubscribe: ChannelHandler<UnsubscribeInput, never>,
-        readonly emit: ChannelHandler<EmitInput, EmitOutput>,
-      },
-    },
-    readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>,
-  },
-};
+        readonly auth: ChannelHandler<AuthInput, AuthOutput>
+        readonly subscribe: ChannelHandler<SubscribeInput, never>
+        readonly unsubscribe: ChannelHandler<UnsubscribeInput, never>
+        readonly emit: ChannelHandler<EmitInput, EmitOutput>
+      }
+    }
+    readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>
+  }
+}
 
 export type ChannelDefaultHandlerOf<Channel extends keyof ChannelsMap> =
-    ChannelsMap[Channel]['defaultMessage'] extends { input: infer I; output: infer O }
-        ? ChannelHandler<I, O>
-        : never;
+  ChannelsMap[Channel]['defaultMessage'] extends {
+    input: infer I
+    output: infer O
+  }
+    ? ChannelHandler<I, O>
+    : never
 
 export type ChannelRouteHandlerOf<
-    Channel extends keyof ChannelsMap, 
-    Route extends keyof ChannelsMap[Channel]['routes'], 
-    Method extends keyof ChannelsMap[Channel]['routes'][Route],
-> =
-    ChannelsMap[Channel]['routes'][Route][Method] extends { input: infer I; output: infer O }
-        ? ChannelHandler<I, O>
-        : never;
+  Channel extends keyof ChannelsMap,
+  Route extends keyof ChannelsMap[Channel]['routes'],
+  Method extends keyof ChannelsMap[Channel]['routes'][Route],
+> = ChannelsMap[Channel]['routes'][Route][Method] extends {
+  input: infer I
+  output: infer O
+}
+  ? ChannelHandler<I, O>
+  : never

@@ -7,8 +7,8 @@ import '../src/scheduled-task.js'
 import { setScheduledTasksMeta } from '@pikku/core/scheduler'
 setScheduledTasksMeta([
   {
-    "name": "myScheduledTask",
-    "schedule": "*/1 * * * *"
-  }
+    name: 'myScheduledTask',
+    schedule: '*/1 * * * *',
+  },
 ])
 export type ScheduledTaskNames = 'myScheduledTask'
