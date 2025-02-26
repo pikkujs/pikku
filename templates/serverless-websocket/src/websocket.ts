@@ -27,7 +27,7 @@ import {
 let state:
   | {
       config: Config
-      singletonServices: MakeRequired<SingletonServices, 'eventHub'>
+      singletonServices: SingletonServices
       channelStore: ChannelStore
     }
   | undefined

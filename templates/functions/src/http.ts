@@ -1,5 +1,4 @@
-import { addRoute } from '@pikku/core'
-import type { APIFunctionSessionless } from '../.pikku/pikku-types.gen.js'
+import { type APIFunctionSessionless, addRoute } from '../.pikku/pikku-types.gen.js'
 
 export const helloWorld: APIFunctionSessionless<
   void,

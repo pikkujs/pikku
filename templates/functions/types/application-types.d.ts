@@ -11,6 +11,8 @@ export interface UserSession extends CoreUserSession {
   userId: string
 }
 
-export type SingletonServices = CoreSingletonServices<Config, UserSession>
+export interface SingletonServices extends CoreSingletonServices<Config, UserSession> {
+  
+}
 
 export interface Services extends CoreServices<SingletonServices> {}

@@ -65,11 +65,10 @@ export interface CoreUserSession {}
 /**
  * Interface for core singleton services provided by Pikku.
  */
-export type CoreSingletonServices<
+export interface CoreSingletonServices<
   Config extends CoreConfig = CoreConfig,
-  UserSession extends CoreUserSession = CoreUserSession,
-  UserServices extends Record<string, unknown> = {},
-> = {
+  UserSession extends CoreUserSession = CoreUserSession
+> {
   /** The http permission service used for authorization (optional). */
   enforceHTTPAccess?: enforceHTTPAccess
   /** The channel permission service used by the application (optional). */
@@ -90,7 +89,7 @@ export type CoreSingletonServices<
   eventHub?: EventHubService<unknown>
   /** SecretServce  */
   secretService?: SecretService
-} & UserServices
+}
 
 /**
  * Represents different forms of interaction within Pikku and the outside world.

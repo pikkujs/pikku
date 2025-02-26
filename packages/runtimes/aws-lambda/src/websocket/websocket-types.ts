@@ -3,7 +3,6 @@ import {
   CoreServices,
   CoreUserSession,
   CreateSessionServices,
-  MakeRequired,
 } from '@pikku/core'
 import { ChannelStore } from '@pikku/core/channel'
 
@@ -13,7 +12,7 @@ export type WebsocketParams<
   UserSession extends CoreUserSession,
 > = {
   channelStore: ChannelStore
-  singletonServices: MakeRequired<SingletonServices, 'eventHub'>
+  singletonServices: SingletonServices
   createSessionServices?: CreateSessionServices<
     SingletonServices,
     Services,

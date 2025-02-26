@@ -120,7 +120,7 @@ const _getPikkuCLIConfig = async (
       if (!result.typesDeclarationFile) {
         result.typesDeclarationFile = join(
           result.outDir,
-          'pikku-types.gen.d.ts'
+          'pikku-types.gen.ts'
         )
       }
       if (!result.routesMapDeclarationFile) {

@@ -2,9 +2,9 @@ import type {
   Config,
   Services,
   SingletonServices,
+  UserSession,
 } from '../types/application-types.js'
 import {
-  CoreUserSession,
   CreateConfig,
   CreateSessionServices,
   CreateSingletonServices,

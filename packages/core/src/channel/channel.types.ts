@@ -11,7 +11,6 @@ import {
   CoreSingletonServices,
   CoreUserSession,
   CreateSessionServices,
-  MakeRequired,
 } from '../types/core.types.js'
 import { CoreAPIPermission } from '../types/functions.types.js'
 import { PikkuRequest } from '../pikku-request.js'
@@ -27,7 +26,7 @@ export type RunChannelOptions = Partial<{
 
 export type RunChannelParams<ChannelData> = {
   channelId: string
-  singletonServices: MakeRequired<CoreSingletonServices, 'eventHub'>
+  singletonServices: CoreSingletonServices
   request?: PikkuRequest<ChannelData> | PikkuHTTPAbstractRequest<ChannelData>
   response?: PikkuResponse | PikkuHTTPAbstractResponse
   http?: PikkuHTTP
@@ -67,7 +66,7 @@ export type CoreChannelConnection<
   Services extends CoreServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
 > = (
-  services: MakeRequired<Services, 'eventHub'>,
+  services: Services,
   channel: PikkuChannel<Session, ChannelData, Out>
 ) => Promise<void>
 
@@ -76,7 +75,7 @@ export type CoreChannelDisconnection<
   Services extends CoreServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
 > = (
-  services: MakeRequired<Services, 'eventHub'>,
+  services: Services,
   channel: PikkuChannel<Session, ChannelData, never>
 ) => Promise<void>
 
@@ -94,7 +93,7 @@ export type CoreChannelMessage<
   Services extends CoreServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
 > = (
-  services: MakeRequired<Services, 'eventHub'>,
+  services: Services,
   channel: PikkuChannel<Session, ChannelData, Out>,
   data: In
 ) => Promise<void | Out>
@@ -110,7 +109,7 @@ export type CoreAPIChannel<
   ChannelData,
   Channel extends string,
   ChannelFunctionConnection = CoreChannelConnection<ChannelData>,
-  ChannelFunctionDisconnection = CoreChannelConnection<ChannelData>,
+  ChannelFunctionDisconnection = CoreChannelDisconnection<ChannelData>,
   ChannelFunctionDefaultMessage = CoreChannelMessage<unknown, unknown, unknown>,
   ChannelFunctionMessageRoute = CoreChannelMessage<unknown, unknown, unknown>,
   APIPermission = CoreAPIPermission<ChannelData>,

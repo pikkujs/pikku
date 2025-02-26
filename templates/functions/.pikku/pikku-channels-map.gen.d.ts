@@ -7,6 +7,17 @@
     
 
 
+// Custom types are those that are defined directly within generics
+// or are broken into simpler types
+export type OnMessageInput = "hello"
+export type OnMessageOutput = "hey"
+export type AuthInput = { token: string; userId: string; }
+export type AuthOutput = { authResult: boolean; action: "auth"; }
+export type SubscribeInput = { name: string; }
+export type UnsubscribeInput = { name: string; }
+export type EmitInput = { name: string; }
+export type EmitOutput = { timestamp: string; from: string; } | { message: string; }
+
 interface ChannelHandler<I, O> {
     input: I;
     output: O;
@@ -17,8 +28,8 @@ export type ChannelsMap = {
     readonly routes: {
       readonly action: {
         readonly auth: ChannelHandler<AuthInput, AuthOutput>,
-        readonly subscribe: ChannelHandler<SubscribeInput, >,
-        readonly unsubscribe: ChannelHandler<UnsubscribeInput, >,
+        readonly subscribe: ChannelHandler<SubscribeInput, never>,
+        readonly unsubscribe: ChannelHandler<UnsubscribeInput, never>,
         readonly emit: ChannelHandler<EmitInput, EmitOutput>,
       },
     },

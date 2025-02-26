@@ -1,6 +1,7 @@
 import { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../core/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
+import { generateCustomTypes } from '../http/serialize-typed-route-map.js'
 
 export const serializeTypedChannelsMap = (
   relativeToPath: string,
@@ -20,11 +21,13 @@ export const serializeTypedChannelsMap = (
     typesMap,
     requiredTypes
   )
+  const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   return `/**
  * This provides the structure needed for TypeScript to be aware of channels
  */
     
 ${imports}
+${serializedCustomTypes}
 
 interface ChannelHandler<I, O> {
     input: I;
@@ -106,7 +109,7 @@ function generateChannels(channelsMeta: ChannelsMeta) {
       for (const [method, handler] of Object.entries(methods)) {
         routesStr += `        readonly ${method}: ChannelHandler<${formatTypeArray(
           handler.inputTypes
-        )}, ${formatTypeArray(handler.outputTypes)}>,\n`
+        )}, ${formatTypeArray(handler.outputTypes) || 'never'}>,\n`
       }
       routesStr += '      },\n'
     }

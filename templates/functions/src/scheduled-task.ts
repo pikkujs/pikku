@@ -1,5 +1,4 @@
-import { addScheduledTask } from '@pikku/core'
-import { APIFunctionSessionless } from '../.pikku/pikku-types.gen.js'
+import { type APIFunctionSessionless, addScheduledTask } from '../.pikku/pikku-types.gen.js'
 
 const myScheduledTask: APIFunctionSessionless<void, void> = async () => {
   console.log(

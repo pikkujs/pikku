@@ -1,4 +1,4 @@
-import { addChannel } from '@pikku/core'
+import { addChannel } from '../../.pikku/pikku-types.gen.js'
 import {
   onConnect,
   onDisconnect,
