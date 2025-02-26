@@ -11,7 +11,7 @@
     "test": "next build && next start & HTTP_PREFIX=http://localhost:3000/api bash run-tests.sh"
   },
   "dependencies": {
-    "@pikku/core": "^0.6.10",
+    "@pikku/core": "^0.6.11",
     "@pikku/fetch": "^0.6.0",
     "@pikku/jose": "^0.6.0",
     "@pikku/next": "^0.6.2",
@@ -22,7 +22,7 @@
     "tsx": "^4.19.2"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.6.3",
+    "@pikku/cli": "^0.6.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

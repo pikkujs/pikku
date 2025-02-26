@@ -1,5 +1,15 @@
 # @pikku/cli
 
+## 0.6.7
+
+### Patch Changes
+
+- 7859b28: breaking: changing overrides for addRoute to wrap instead due to random conflict override errors
+- 269a532: fix: fixing some typing issues
+- Updated dependencies [7859b28]
+- Updated dependencies [269a532]
+  - @pikku/core@0.6.11
+
 ## 0.6.6
 
 ### Patch Changes
