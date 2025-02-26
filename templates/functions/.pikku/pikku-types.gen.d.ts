@@ -92,6 +92,10 @@ type ScheduledTask = CoreScheduledTask<
 >
 
 declare module '@pikku/core' {
+  // type APIPermission<In = unknown, RequiredServices = Services> = CoreAPIPermission<In, RequiredServices, UserSession>
+  // type APIFunction = <In = unknown, Out = never, RequiredServices = Services> = CoreAPIFunction<In, Out, RequiredServices, UserSession>
+  // type APIFunctionSessionless = <In = unknown, Out = never, RequiredServices = Services> = CoreAPIFunctionSessionless<In, Out, RequiredServices, UserSession>
+
   function addChannel<ChannelData, Channel extends string>(
     channel: APIChannel<ChannelData, Channel> &
       AssertRouteParams<ChannelData, Channel>

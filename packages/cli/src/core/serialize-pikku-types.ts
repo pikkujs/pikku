@@ -14,7 +14,7 @@ export const serializePikkuTypes = (
 import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission, MakeRequired } from '@pikku/core'
 import { CoreHTTPFunctionRoute, AssertRouteParams } from '@pikku/core/http'
 import { CoreScheduledTask } from '@pikku/core/scheduler'
-import { CoreAPIChannel, CoreChannelConnection, CoreChannelDisconnection, CoreChannelMessage, PikkuChannel } from '@pikku/core/channel'
+import { CoreAPIChannel, PikkuChannel } from '@pikku/core/channel'
 
 ${userSessionTypeImport}
 ${sessionServicesTypeImport}
@@ -25,9 +25,9 @@ export type APIFunctionSessionless<In = unknown, Out = never, RequiredServices =
 export type APIFunction<In = unknown, Out = never, RequiredServices = ${servicesTypeName}> = CoreAPIFunction<In, Out, RequiredServices, ${userSessionTypeName}>
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>>
 
-export type ChannelConnection<Out = never, ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: MakeRequired<Services, 'eventHub'>, channel: PikkuChannel<${userSessionTypeName}, ChannelData, Out>) => Promise<void>
-export type ChannelDisconnection<ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: MakeRequired<Services, 'eventHub'>, channel: PikkuChannel<${userSessionTypeName}, ChannelData, never>) => Promise<void>
-export type ChannelMessage<In, Out = never, ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: MakeRequired<Services, 'eventHub'>, channel: PikkuChannel<${userSessionTypeName}, ChannelData, Out>, data: In) => Promise<Out | void>
+export type ChannelConnection<Out = never, ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: RequiredServices, channel: PikkuChannel<${userSessionTypeName}, ChannelData, Out>) => Promise<void>
+export type ChannelDisconnection<ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: RequiredServices, channel: PikkuChannel<${userSessionTypeName}, ChannelData, never>) => Promise<void>
+export type ChannelMessage<In, Out = never, ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: RequiredServices 'eventHub'>, channel: PikkuChannel<${userSessionTypeName}, ChannelData, Out>, data: In) => Promise<Out | void>
 type APIChannel<ChannelData, Channel extends string, In extends unknown = never, Out extends unknown = never> = CoreAPIChannel<ChannelData, Channel, ChannelConnection, ChannelDisconnection, ChannelMessage<In, Out, ChannelData>>
 
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>

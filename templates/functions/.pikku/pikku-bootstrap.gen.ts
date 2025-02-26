@@ -3,4 +3,5 @@
  */
 import './pikku-routes.gen.js'
 import './pikku-schedules.gen.js'
+import './pikku-channels.gen.js'
 import './pikku-schemas/register.gen.js'
