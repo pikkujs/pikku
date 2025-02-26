@@ -1,5 +1,14 @@
 ## 0.6.1
 
+## 0.6.4
+
+### Patch Changes
+
+- 269a532: fix: fixing some typing issues
+- Updated dependencies [7859b28]
+- Updated dependencies [269a532]
+  - @pikku/core@0.6.11
+
 ## 0.6.3
 
 ### Patch Changes

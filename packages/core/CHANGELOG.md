@@ -1,5 +1,12 @@
 ## 0.6
 
+## 0.6.11
+
+### Patch Changes
+
+- 7859b28: breaking: changing overrides for addRoute to wrap instead due to random conflict override errors
+- 269a532: fix: fixing some typing issues
+
 ## 0.6.10
 
 ### Patch Changes
