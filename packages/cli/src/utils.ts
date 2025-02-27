@@ -3,6 +3,7 @@ import { relative, dirname } from 'path'
 import { PathToNameAndType, InspectorState } from '@pikku/inspector'
 import { mkdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
+import packageJson from '../package.json'
 
 export const logPrimary = (message: string) => {
   console.log(chalk.green(message))
@@ -230,7 +231,7 @@ const logo = `
 
 export const logPikkuLogo = () => {
   logPrimary(logo)
-  logPrimary('⚙️ Welcome to the Pikku CLI!\n')
+  logPrimary(`⚙️ Welcome to the Pikku CLI (v${packageJson})\n`)
 }
 
 // TODO: add version back in once the ESM dust settles
