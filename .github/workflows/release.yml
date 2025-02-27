@@ -64,7 +64,7 @@ jobs:
             cloudflare-workers,
             nextjs,
           ]
-        package-manager: [npm]
+        package-manager: [npm, bun]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
