@@ -238,6 +238,8 @@ async function setupYarnWorkspace({
 }
 
 async function run() {
+  const version = cliOptions.version || 'master'
+
   console.log(chalk.hex('#a863ee').bold(logo))
   console.log(
     chalk.hex('#a863ee').bold('Welcome to the Pikku Project Generator!\n')
@@ -301,13 +303,6 @@ async function run() {
             },
           ],
         }))
-
-  const version =
-    cliOptions.version ||
-    (await input({
-      message: 'Version:',
-      default: 'master',
-    }))
 
   const install =
     cliOptions.install ||
