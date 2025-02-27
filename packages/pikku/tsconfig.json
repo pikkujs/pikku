@@ -1,24 +1,23 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-      "rootDir": "./src",
-      "module": "Node16",
-      "outDir": "dist",
-      "target": "esnext",
-      "declaration": true
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "module": "Node16",
+    "outDir": "dist",
+    "target": "esnext",
+    "declaration": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules"],
+  "references": [
+    {
+      "path": "../core/tsconfig.json"
     },
-    "include": ["src/**/*.ts"],
-    "exclude": ["**/*.test.ts", "node_modules"],
-    "references": [
-      {
-        "path": "../core/tsconfig.json"
-      },
-      {
-        "path": "../services/schema-ajv/tsconfig.json"
-      },
-      {
-        "path": "../services/jose/tsconfig.json"
-      }
-    ]
-  }
-  
+    {
+      "path": "../services/schema-ajv/tsconfig.json"
+    },
+    {
+      "path": "../services/jose/tsconfig.json"
+    }
+  ]
+}

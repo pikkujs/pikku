@@ -11,12 +11,12 @@ import {
   mergeDirectories,
   mergeJsonFiles,
   replaceFunctionReferences,
+  updatePackageJSONScripts,
   wranglerChanges,
 } from './utils.js'
 import { program } from 'commander'
 import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
-import { readFileSync, writeFileSync } from 'fs'
 
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 
@@ -127,15 +127,9 @@ async function run() {
 
     // Merge and process files
     lazymkdir(targetPath)
+    mergeJsonFiles([functionsPath, templatePath], targetPath, 'package.json')
     mergeJsonFiles(
       [functionsPath, templatePath],
-      { name },
-      targetPath,
-      'package.json'
-    )
-    mergeJsonFiles(
-      [functionsPath, templatePath],
-      {},
       targetPath,
       'pikku.config.json'
     )
@@ -143,15 +137,9 @@ async function run() {
     mergeDirectories(templatePath, targetPath)
     replaceFunctionReferences(targetPath)
     cleanTSConfig(targetPath)
-    wranglerChanges(targetPath)
-
-    const packageContent = JSON.parse(
-      readFileSync(`${targetPath}/package.json`, 'utf-8')
-    )
-    writeFileSync(
-      `${targetPath}/package.json`,
-      JSON.stringify(packageContent, null, 2)
-    )
+    wranglerChanges(targetPath, name)
+    serverlessChanges(targetPath, name)
+    updatePackageJSONScripts(targetPath, packageManager, name)
   } catch (e) {
     spinner.error()
     console.log(

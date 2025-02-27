@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
     "start": "tsx src/start.ts start",
     "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid"
   },

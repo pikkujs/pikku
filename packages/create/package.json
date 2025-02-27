@@ -6,7 +6,8 @@
   "bin": "dist/index.js",
   "scripts": {
     "build:esm": "yarn tsc",
-    "build": "yarn build:esm"
+    "build": "yarn build:esm",
+    "test": "bash run-tests.sh"
   },
   "dependencies": {
     "chalk": "^5.4.1",

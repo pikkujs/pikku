@@ -10,7 +10,7 @@
     "tsc": "tsc",
     "build:esm": "tsc -b",
     "build": "yarn build:esm",
-    "ncu": "ncu",
+    "ncu": "npx npm-check-updates",
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",

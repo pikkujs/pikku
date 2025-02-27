@@ -14,7 +14,7 @@
     "build:esm": "tsc -b",
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
     "build": "yarn build:esm && yarn schema",
-    "ncu": "ncu -x '/.*glob.*/'",
+    "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",

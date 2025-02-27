@@ -2,7 +2,7 @@ import chalk from 'chalk'
 import fs from 'fs'
 import path from 'path'
 
-function deepMerge(target: any, source: any) {
+export function deepMerge(target: any, source: any) {
   if (!target || typeof target !== 'object') return source
   if (!source || typeof source !== 'object') return target
 
@@ -57,7 +57,6 @@ export function mergeDirectories(srcDir: string, destDir: string): void {
  */
 export function mergeJsonFiles(
   sourcePaths: string[],
-  data: Record<string, string>,
   targetPath: string,
   fileName: string
 ): void {
@@ -72,8 +71,6 @@ export function mergeJsonFiles(
       fs.unlinkSync(path.join(sourcePath, fileName))
     }
   }
-
-  mergedData = { ...mergedData, ...data }
 
   // Write merged JSON back
   fs.writeFileSync(
@@ -123,25 +120,61 @@ export function cleanTSConfig(targetPath: string): void {
 /**
  * Applies changes to wranger
  */
-export function wranglerChanges(targetPath: string, packageManager: string): void {
+export function wranglerChanges(targetPath: string, appName: string): void {
   const wranglerFilePath = path.join(targetPath, 'wranger.toml')
-  const packageFilePath = path.join(targetPath, 'package.json')
 
   if (!fs.existsSync(wranglerFilePath)) return
 
   console.log(chalk.blue('⚙️ Updating wrangler config...'))
 
-  // Updating npm_execpath
-  let packageJson = JSON.parse(fs.readFileSync(packageFilePath, 'utf-8'))
-  packageJson = packageJson.replaceAll(new RegExp(/\$npm_execpath/g), packageManager)
-  fs.writeFileSync(packageFilePath, packageJson)
+  let wranglerConfig = JSON.parse(fs.readFileSync(wranglerFilePath, 'utf-8'))
+  const currentDate = new Date().toISOString().split('T')[0]
+  wranglerConfig = wranglerConfig
+    .replace(
+      /compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/,
+      `compatibility_date = "${currentDate}"`
+    )
+    .replace('pikku-cloudflare-workers', appName)
+    .replace('pikku-cloudflare-websockets', appName)
+  fs.writeFileSync(wranglerFilePath, wranglerConfig)
+}
+
+/**
+ * Applies changes to wranger
+ */
+export function serverlessChanges(targetPath: string, appName: string): void {
+  const serverlessFilePath = path.join(targetPath, 'serverless.yml')
+
+  if (!fs.existsSync(serverlessFilePath)) return
+
+  console.log(chalk.blue('⚙️ Updating serverless config...'))
 
   // Updating compmatability_date
-  const wrangler = JSON.parse(fs.readFileSync(wranglerFilePath, 'utf-8'))
-  const currentDate = new Date().toISOString().split('T')[0]
-  wrangler.replace(
-    /compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/,
-    `compatibility_date = "${currentDate}"`,
+  let serverlessConfigString = fs.readFileSync(serverlessFilePath, 'utf-8')
+  serverlessConfigString = serverlessConfigString
+    .replace('service: pikku-serverless-example', `service: ${appName}`)
+    .replace('service: pikku-serverless-ws-example', `service: ${appName}`)
+    .replace(
+      'arn:aws:iam::014498637088:policy/PikkuServerlessDB',
+      'arn:aws:iam::<account_id>:policy/<database-policy>'
+    )
+  fs.writeFileSync(serverlessFilePath, serverlessConfigString)
+}
+
+export function updatePackageJSONScripts(
+  targetPath: string,
+  appName: string,
+  packageManager: string
+): void {
+  const packageFilePath = path.join(targetPath, 'package.json')
+  let packageJsonString = fs.readFileSync(packageFilePath, 'utf-8')
+  packageJsonString = packageJsonString.replaceAll(
+    'npm run',
+    `${packageManager} run`
   )
-  fs.readFileSync(wranglerFilePath, wrangler)
+  const packageJson = JSON.parse(packageJsonString)
+  delete packageJson.scripts.tsc
+  delete packageJson.scripts.ncu
+  packageJson.name = appName
+  fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
 }

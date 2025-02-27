@@ -9,10 +9,10 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
     "build:esm": "tsc -b",
     "build": "yarn build:esm",
     "release": "npm run build && npm test",
-    "ncu": "ncu",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage"

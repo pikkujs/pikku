@@ -10,7 +10,7 @@
     "tsc": "tsc",
     "build:esm": "tsc -b",
     "build": "yarn build:esm",
-    "ncu": "ncu -x '/.*glob.*/'",
+    "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",

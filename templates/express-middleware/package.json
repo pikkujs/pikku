@@ -18,8 +18,9 @@
     "typescript": "^5.6"
   },
   "scripts": {
-    "tsc": "tsc",
     "start": "tsx src/start.ts",
-    "dev": "tsx --watch src/start.ts"
+    "dev": "tsx --watch src/start.ts",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates"
   }
 }
