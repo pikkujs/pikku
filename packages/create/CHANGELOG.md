@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.3
+
+### Patch Changes
+
+- dbbd304: feat: better support of yarn monorepo
+
 ## 0.0.2
 
 ### Patch Changes
