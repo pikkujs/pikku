@@ -3200,7 +3200,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:^0.6.10, @pikku/core@npm:^0.6.11, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:^0.6.11, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -3218,7 +3218,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/express-middleware@workspace:packages/runtimes/express-middleware"
   dependencies:
-    "@pikku/core": "npm:^0.6.10"
+    "@pikku/core": "npm:^0.6.11"
     "@types/express": "npm:^5"
     "@types/express-serve-static-core": "npm:^5.0.0"
     express: "npm:^5"
@@ -3267,7 +3267,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/fastify@workspace:packages/runtimes/fastify-server"
   dependencies:
-    "@pikku/core": "npm:^0.6.10"
+    "@pikku/core": "npm:^0.6.11"
     "@pikku/fastify-plugin": "npm:^0.6.3"
     fastify: "npm:^5.0.0"
     typescript: "npm:^5.6.3"
@@ -3288,14 +3288,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
-    "@pikku/core": "npm:^0.6.10"
+    "@pikku/core": "npm:^0.6.11"
     "@types/node": "npm:^22.7.8"
     path-to-regexp: "npm:^8.2.0"
     typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft
 
-"@pikku/jose@npm:^0.6.0, @pikku/jose@npm:^0.6.1, @pikku/jose@workspace:packages/services/jose":
+"@pikku/jose@npm:^0.6.0, @pikku/jose@npm:^0.6.2, @pikku/jose@workspace:packages/services/jose":
   version: 0.0.0-use.local
   resolution: "@pikku/jose@workspace:packages/services/jose"
   dependencies:
@@ -3374,7 +3374,7 @@ __metadata:
     "@pikku/cli": "npm:^0.6.8"
     "@pikku/core": "npm:^0.6.11"
     "@pikku/fetch": "npm:^0.6.1"
-    "@pikku/jose": "npm:^0.6.1"
+    "@pikku/jose": "npm:^0.6.2"
     "@pikku/next": "npm:^0.6.4"
     "@types/node": "npm:^20"
     "@types/react": "npm:^18"
@@ -3457,7 +3457,7 @@ __metadata:
     "@pikku/cli": "npm:^0.6.8"
     "@pikku/core": "npm:^0.6.11"
     "@pikku/express-middleware": "npm:^0.6.3"
-    "@pikku/jose": "npm:^0.6.1"
+    "@pikku/jose": "npm:^0.6.2"
     "@pikku/schedule": "npm:^0.6.1"
     "@types/cookie-parser": "npm:^1.4.7"
     cookie-parser: "npm:^1.4.7"
@@ -3604,7 +3604,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/uws@workspace:packages/runtimes/uws-server"
   dependencies:
-    "@pikku/core": "npm:^0.6.10"
+    "@pikku/core": "npm:^0.6.11"
     "@pikku/uws-handler": "npm:^0.6.4"
     "@types/qs": "npm:^6"
     qs: "npm:^6.13.0"
@@ -8779,8 +8779,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "pikku@workspace:packages/pikku"
   dependencies:
-    "@pikku/core": "npm:^0.6.10"
-    "@pikku/jose": "npm:^0.6.1"
+    "@pikku/core": "npm:^0.6.11"
+    "@pikku/jose": "npm:^0.6.2"
     "@pikku/schema-ajv": "npm:^0.6.1"
     typescript: "npm:^5.7.3"
   languageName: unknown

@@ -12,7 +12,7 @@ import {
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { PikkuHTTPSessionService } from '@pikku/core/http'
 import { JoseJWTService } from '@pikku/jose'
-import { AjvSchemaService } from '../../../packages/services/schema-ajv/dist/index.js'
+import { AjvSchemaService } from '@pikku/schema-ajv'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}

@@ -5,15 +5,15 @@ import { mkdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
 
 export const logPrimary = (message: string) => {
-  console.log(chalk.green(`✓ ${message}`))
+  console.log(chalk.green(message))
 }
 
 export const logSuccess = (message: string) => {
-  console.log(chalk.green(`✓ ${message}`))
+  console.log(chalk.green(message))
 }
 
 export const logInfo = (message: string) => {
-  console.log(chalk.blue(`✓ ${message}`))
+  console.log(chalk.blue(message))
 }
 
 export const getFileImportRelativePath = (

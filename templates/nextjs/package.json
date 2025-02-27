@@ -14,7 +14,7 @@
   "dependencies": {
     "@pikku/core": "^0.6.11",
     "@pikku/fetch": "^0.6.1",
-    "@pikku/jose": "^0.6.1",
+    "@pikku/jose": "^0.6.2",
     "@pikku/next": "^0.6.4",
     "next": "^15",
     "react": "^19",

@@ -6,7 +6,7 @@
   "dependencies": {
     "@pikku/core": "^0.6.11",
     "@pikku/express-middleware": "^0.6.3",
-    "@pikku/jose": "^0.6.1",
+    "@pikku/jose": "^0.6.2",
     "@pikku/schedule": "^0.6.1",
     "cookie-parser": "^1.4.7",
     "express": "^5"
