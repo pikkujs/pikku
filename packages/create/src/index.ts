@@ -208,8 +208,8 @@ async function setupYarnWorkspace({
       dir: yarnWorkspacePath,
       force: true,
     })
+    mergeDirectories(yarnWorkspacePath, targetPath)
     spinner.success()
-    updatePackageJSONScripts(targetPath, packageManager, name)
   } catch (e) {
     spinner.error()
     console.log(
@@ -272,33 +272,35 @@ async function run() {
     }))
 
   const packageManager =
-    cliOptions.packageManager ||
-    (await select({
-      message: 'Which package manager do you want to use?',
-      choices: [
-        {
-          name: 'npm',
-          value: 'npm',
-          description: 'npm is the most popular package manager',
-        },
-        {
-          name: 'yarn',
-          value: 'yarn',
-          description: 'yarn is what pikku usually uses',
-        },
-        {
-          name: 'bun',
-          value: 'bun',
-          description: 'bun support is still experimental',
-        },
-        new Separator(),
-        {
-          name: 'pnpm',
-          value: 'pnpm',
-          disabled: '(pnpm is not available)',
-        },
-      ],
-    }))
+    template === 'yarn-workspace'
+      ? 'yarn'
+      : cliOptions.packageManager ||
+        (await select({
+          message: 'Which package manager do you want to use?',
+          choices: [
+            {
+              name: 'npm',
+              value: 'npm',
+              description: 'npm is the most popular package manager',
+            },
+            {
+              name: 'yarn',
+              value: 'yarn',
+              description: 'yarn is what pikku usually uses',
+            },
+            {
+              name: 'bun',
+              value: 'bun',
+              description: 'bun support is still experimental',
+            },
+            new Separator(),
+            {
+              name: 'pnpm',
+              value: 'pnpm',
+              disabled: '(pnpm is not available)',
+            },
+          ],
+        }))
 
   const version =
     cliOptions.version ||
