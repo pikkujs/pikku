@@ -17,10 +17,10 @@ export const pikkuFetch = async ({
   await logCommandInfoAndTime(
     'Generating fetch wrapper',
     'Generated fetch wrapper',
-    [fetchFile === undefined, 'fetchFile isn\'t set in the pikku config'],
+    [fetchFile === undefined, "fetchFile isn't set in the pikku config"],
     async () => {
       if (!fetchFile) {
-        throw new Error('fetchFile is isn\'t set in the pikku config')
+        throw new Error("fetchFile is isn't set in the pikku config")
       }
 
       const routesMapDeclarationPath = getFileImportRelativePath(

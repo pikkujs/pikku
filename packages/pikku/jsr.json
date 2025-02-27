@@ -1,0 +1,6 @@
+{
+  "name": "@pikku/pikku",
+  "version": "0.6.1",
+  "license": "MIT",
+  "exports": "./src/index.ts"
+}

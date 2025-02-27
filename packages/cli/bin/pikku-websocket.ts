@@ -17,10 +17,13 @@ export const pikkuWebSocket = async ({
   await logCommandInfoAndTime(
     'Generating websocket wrapper',
     'Generated websocket wrapper',
-    [websocketFile === undefined, 'websocketFile isn\'t set in the pikku config'],
+    [
+      websocketFile === undefined,
+      "websocketFile isn't set in the pikku config",
+    ],
     async () => {
       if (!websocketFile) {
-        throw new Error('fetchFile is isn\'t set in the pikku config')
+        throw new Error("fetchFile is isn't set in the pikku config")
       }
 
       const channelsMapDeclarationPath = getFileImportRelativePath(
