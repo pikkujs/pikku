@@ -29,7 +29,8 @@
     ".pikku/*",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".pikku/*"
   ],
   "exclude": ["node_modules"]
 }
