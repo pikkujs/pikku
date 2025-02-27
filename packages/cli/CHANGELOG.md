@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.6.9
+
+### Patch Changes
+
+- 7e7ec0c: chore: show packageVersion in cli header
+
 ## 0.6.8
 
 ### Patch Changes
