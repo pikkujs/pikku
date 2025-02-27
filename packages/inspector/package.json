@@ -17,7 +17,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@pikku/core": "^0.6.5",
+    "@pikku/core": "^0.6.10",
     "path-to-regexp": "^8.2.0",
     "typescript": "^5.6"
   },

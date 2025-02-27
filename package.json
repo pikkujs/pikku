@@ -26,6 +26,7 @@
     "build": "yarn build:esm && (yarn build:cjs || yarn build:cjs)",
     "release": "yarn build && npx changeset publish",
     "ncu": "yarn workspaces foreach -p -A run ncu",
+    "ncu:pikku": "yarn workspaces foreach -p -A run ncu -f '/@pikku/.*/'",
     "test": "yarn workspaces foreach -A run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
     "lint": "npx --yes oxlint@latest",

@@ -121,13 +121,11 @@ export function cleanTSConfig(targetPath: string): void {
  * Applies changes to wranger
  */
 export function wranglerChanges(targetPath: string, appName: string): void {
-  const wranglerFilePath = path.join(targetPath, 'wranger.toml')
+  const wranglerFilePath = path.join(targetPath, 'wrangler.toml')
 
   if (!fs.existsSync(wranglerFilePath)) return
 
-  console.log(chalk.blue('⚙️ Updating wrangler config...'))
-
-  let wranglerConfig = JSON.parse(fs.readFileSync(wranglerFilePath, 'utf-8'))
+  let wranglerConfig = fs.readFileSync(wranglerFilePath, 'utf-8')
   const currentDate = new Date().toISOString().split('T')[0]
   wranglerConfig = wranglerConfig
     .replace(
@@ -137,6 +135,8 @@ export function wranglerChanges(targetPath: string, appName: string): void {
     .replace('pikku-cloudflare-workers', appName)
     .replace('pikku-cloudflare-websockets', appName)
   fs.writeFileSync(wranglerFilePath, wranglerConfig)
+
+  console.log(chalk.green('⚙️ Updated wrangler config...'))
 }
 
 /**
@@ -146,8 +146,6 @@ export function serverlessChanges(targetPath: string, appName: string): void {
   const serverlessFilePath = path.join(targetPath, 'serverless.yml')
 
   if (!fs.existsSync(serverlessFilePath)) return
-
-  console.log(chalk.blue('⚙️ Updating serverless config...'))
 
   // Updating compmatability_date
   let serverlessConfigString = fs.readFileSync(serverlessFilePath, 'utf-8')
@@ -159,6 +157,8 @@ export function serverlessChanges(targetPath: string, appName: string): void {
       'arn:aws:iam::<account_id>:policy/<database-policy>'
     )
   fs.writeFileSync(serverlessFilePath, serverlessConfigString)
+
+  console.log(chalk.green('⚙️ Updated serverless config...'))
 }
 
 export function updatePackageJSONScripts(

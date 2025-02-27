@@ -24,7 +24,7 @@
     "express": "^5"
   },
   "devDependencies": {
-    "@pikku/core": "^0.6.7",
+    "@pikku/core": "^0.6.10",
     "@types/express": "^5",
     "@types/express-serve-static-core": "^5.0.0",
     "express": "^5",

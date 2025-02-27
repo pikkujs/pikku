@@ -162,7 +162,7 @@ async function setupTemplate({
     cleanTSConfig(targetPath)
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
-    updatePackageJSONScripts(targetPath, packageManager, name)
+    updatePackageJSONScripts(targetPath, name, packageManager)
   } catch (e) {
     spinner.error()
     console.log(
@@ -179,7 +179,7 @@ async function setupTemplate({
     })
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['run', 'pikku'], {
+    spawnSync('npx --yes @pikku/cli', {
       cwd: targetPath,
       stdio: 'inherit',
     })
@@ -195,7 +195,6 @@ async function setupYarnWorkspace({
   name,
   packageManager,
   install,
-  template,
 }: CliOptions) {
   const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
@@ -227,7 +226,7 @@ async function setupYarnWorkspace({
     })
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['run', 'pikku'], {
+    spawnSync('npx --yes @pikku/cli', {
       cwd: targetPath,
       stdio: 'inherit',
     })
