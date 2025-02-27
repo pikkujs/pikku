@@ -2,6 +2,19 @@
 import { relative, dirname } from 'path'
 import { PathToNameAndType, InspectorState } from '@pikku/inspector'
 import { mkdir, writeFile } from 'fs/promises'
+import chalk from 'chalk'
+
+export const logPrimary = (message: string) => {
+  console.log(chalk.green(`✓ ${message}`))
+}
+
+export const logSuccess = (message: string) => {
+  console.log(chalk.green(`✓ ${message}`))
+}
+
+export const logInfo = (message: string) => {
+  console.log(chalk.blue(`✓ ${message}`))
+}
 
 export const getFileImportRelativePath = (
   from: string,
@@ -184,7 +197,7 @@ export const writeFileInDir = async (
 
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, content, 'utf-8')
-  console.log(`\x1b[32m✓ File written to ${path}\x1b[0m`)
+  logSuccess(`✓ File written to ${path}`)
 }
 
 export const logCommandInfoAndTime = async (
@@ -194,22 +207,30 @@ export const logCommandInfoAndTime = async (
   callback: (...args: any[]) => Promise<unknown>
 ): Promise<boolean> => {
   if (skipCondition === true) {
-    console.log(
-      `\x1b[34m• Skipping ${commandStart} since ${skipMessage}.\x1b[0m`
-    )
+    logInfo(`• Skipping ${commandStart} since ${skipMessage}.`)
     return false
   }
 
   const start = Date.now()
-  console.log(`\x1b[34m• ${commandStart}...\x1b[0m`)
+  chalk.blue(`• ${commandStart}...`)
   await callback()
 
-  console.log(`\x1b[32m✓ ${commandEnd} in ${Date.now() - start}ms.\x1b[0m`)
+  logSuccess(`✓ ${commandEnd} in ${Date.now() - start}ms.`)
   return true
 }
 
+const logo = `
+ ______ _ _     _           
+(_____ (_) |   | |          
+ _____) )| |  _| |  _ _   _ 
+|  ____/ | |_/ ) |_/ ) | | |
+| |    | |  _ (|  _ (| |_| |
+|_|    |_|_| \_)_| \_)____/ 
+`
+
 export const logPikkuLogo = () => {
-  console.log(`\x1b[33m⚙️ PIKKU CLI ⚙️\n-------------------\x1b[0m`)
+  logPrimary(logo)
+  logPrimary('⚙️ Welcome to the Pikku CLI!\n')
 }
 
 // TODO: add version back in once the ESM dust settles

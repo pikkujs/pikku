@@ -1,6 +1,7 @@
 import { Command } from 'commander'
 import {
   getFileImportRelativePath,
+  logInfo,
   logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
@@ -45,7 +46,7 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
 
   // This is needed since the addRoutes function will add the routes to the visitState
   if (!typesDeclarationFileExists) {
-    console.log(`\x1b[34m• Type file first created, inspecting again...\x1b[0m`)
+    logInfo(`• Type file first created, inspecting again...\x1b[0m`)
     visitState = await inspectorGlob(
       cliConfig.rootDir,
       cliConfig.routeDirectories
@@ -79,9 +80,7 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   await pikkuNext(cliConfig, visitState, options)
 
   if (cliConfig.openAPI) {
-    console.log(
-      `\x1b[34m• OpenAPI requires a reinspection to pickup new generated types..\x1b[0m`
-    )
+    logInfo(`• OpenAPI requires a reinspection to pickup new generated types..`)
     visitState = await inspectorGlob(
       cliConfig.rootDir,
       cliConfig.routeDirectories

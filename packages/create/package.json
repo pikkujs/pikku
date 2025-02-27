@@ -10,14 +10,13 @@
     "test": "bash run-tests.sh"
   },
   "dependencies": {
+    "@inquirer/prompts": "^7.3.2",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
     "giget": "^1.2.4",
-    "inquirer": "^12.4.1",
     "nanospinner": "^1.2.2"
   },
   "devDependencies": {
-    "@types/inquirer": "^9.0.7",
     "@types/node": "^22.13.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"

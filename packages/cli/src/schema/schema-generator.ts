@@ -1,5 +1,5 @@
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
-import { writeFileInDir } from '../utils.js'
+import { logInfo, writeFileInDir } from '../utils.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { JSONValue } from '@pikku/core'
 import { HTTPRoutesMeta } from '@pikku/core/http'
@@ -80,7 +80,7 @@ export async function saveSchemas(
   ])
 
   if (desiredSchemas.size === 0) {
-    console.log(`\x1b[34m• Skipping schemas since none found.\x1b[0m`)
+    logInfo(`• Skipping schemas since none found.\x1b[0m`)
     return
   }
 
