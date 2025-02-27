@@ -1,9 +1,11 @@
-// import packageInfo from '../package.json'
 import { relative, dirname } from 'path'
 import { PathToNameAndType, InspectorState } from '@pikku/inspector'
 import { mkdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
-import packageJson from '../package.json'
+import { fileURLToPath } from 'url'
+import { readFileSync } from 'fs'
+
+const __filename = fileURLToPath(import.meta.url)
 
 export const logPrimary = (message: string) => {
   console.log(chalk.green(message))
@@ -231,7 +233,11 @@ const logo = `
 
 export const logPikkuLogo = () => {
   logPrimary(logo)
-  logPrimary(`⚙️ Welcome to the Pikku CLI (v${packageJson})\n`)
+
+  const packageJson = JSON.parse(
+    readFileSync(`${dirname(__filename)}/../../package.json`, 'utf-8')
+  )
+  logPrimary(`⚙️ Welcome to the Pikku CLI (v${packageJson.version})\n`)
 }
 
 // TODO: add version back in once the ESM dust settles
