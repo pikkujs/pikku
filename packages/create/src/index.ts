@@ -11,6 +11,7 @@ import {
   mergeDirectories,
   mergeJsonFiles,
   replaceFunctionReferences,
+  wranglerChanges,
 } from './utils.js'
 import { program } from 'commander'
 import { tmpdir } from 'os'
@@ -142,11 +143,11 @@ async function run() {
     mergeDirectories(templatePath, targetPath)
     replaceFunctionReferences(targetPath)
     cleanTSConfig(targetPath)
+    wranglerChanges(targetPath)
 
     const packageContent = JSON.parse(
       readFileSync(`${targetPath}/package.json`, 'utf-8')
     )
-    packageContent.scripts.postinstall = 'npx --yes @pikku/cli'
     writeFileSync(
       `${targetPath}/package.json`,
       JSON.stringify(packageContent, null, 2)
@@ -166,11 +167,11 @@ async function run() {
       stdio: 'inherit',
     })
 
-    // console.log(chalk.blue('🦎 Running pikku...'))
-    // spawnSync(packageManager, ['run', 'pikku'], {
-    //   cwd: targetPath,
-    //   stdio: 'inherit',
-    // })
+    console.log(chalk.blue('🦎 Running pikku...'))
+    spawnSync(packageManager, ['run', 'pikku'], {
+      cwd: targetPath,
+      stdio: 'inherit',
+    })
   }
 
   console.log(chalk.green('\n✅ Project setup complete!'))

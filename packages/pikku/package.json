@@ -1,0 +1,28 @@
+{
+  "name": "pikku",
+  "version": "0.6.1",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "build:esm": "tsc -b",
+    "build": "yarn build:esm",
+    "ncu": "ncu -x '/.*glob.*/'",
+    "release": "yarn build && npm test",
+    "test": "bash run-tests.sh"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.6.5",
+    "@pikku/jose": "^0.6.0",
+    "@pikku/schema-ajv": "^0.6.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

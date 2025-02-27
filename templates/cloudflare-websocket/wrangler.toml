@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "pikku-workspace-starter-websockets"
+name = "pikku-cloudflare-websockets"
 main = "src/index.ts"
 compatibility_date = "2024-12-18"
 compatibility_flags = ["nodejs_compat_v2"]

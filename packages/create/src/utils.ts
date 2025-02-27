@@ -1,3 +1,4 @@
+import chalk from 'chalk'
 import fs from 'fs'
 import path from 'path'
 
@@ -117,4 +118,30 @@ export function cleanTSConfig(targetPath: string): void {
   delete tsconfig.extends
   tsconfig.include = ['src/']
   fs.writeFileSync(tsconfigFile, JSON.stringify(tsconfig, null, 2))
+}
+
+/**
+ * Applies changes to wranger
+ */
+export function wranglerChanges(targetPath: string, packageManager: string): void {
+  const wranglerFilePath = path.join(targetPath, 'wranger.toml')
+  const packageFilePath = path.join(targetPath, 'package.json')
+
+  if (!fs.existsSync(wranglerFilePath)) return
+
+  console.log(chalk.blue('⚙️ Updating wrangler config...'))
+
+  // Updating npm_execpath
+  let packageJson = JSON.parse(fs.readFileSync(packageFilePath, 'utf-8'))
+  packageJson = packageJson.replaceAll(new RegExp(/\$npm_execpath/g), packageManager)
+  fs.writeFileSync(packageFilePath, packageJson)
+
+  // Updating compmatability_date
+  const wrangler = JSON.parse(fs.readFileSync(wranglerFilePath, 'utf-8'))
+  const currentDate = new Date().toISOString().split('T')[0]
+  wrangler.replace(
+    /compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/,
+    `compatibility_date = "${currentDate}"`,
+  )
+  fs.readFileSync(wranglerFilePath, wrangler)
 }

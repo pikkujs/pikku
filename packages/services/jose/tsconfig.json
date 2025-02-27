@@ -5,7 +5,8 @@
     "module": "Node16",
     "outDir": "dist",
     "target": "esnext",
-    "declaration": true
+    "declaration": true,
+    "composite": true
   },
   "include": ["bin/**/*.ts", "src/**/*.ts"],
   "exclude": ["**/*.test.ts", "node_modules", "bin/dist"],

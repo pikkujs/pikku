@@ -3294,7 +3294,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/jose@npm:^0.6.0, @pikku/jose@workspace:packages/services/jose":
+"@pikku/jose@npm:^0.6.0, @pikku/jose@workspace:^, @pikku/jose@workspace:packages/services/jose":
   version: 0.0.0-use.local
   resolution: "@pikku/jose@workspace:packages/services/jose"
   dependencies:
@@ -3413,9 +3413,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schema-ajv@npm:^0.6.1, @pikku/schema-ajv@workspace:packages/schema-ajv":
+"@pikku/schema-ajv@npm:^0.6.1, @pikku/schema-ajv@workspace:^, @pikku/schema-ajv@workspace:packages/services/schema-ajv":
   version: 0.0.0-use.local
-  resolution: "@pikku/schema-ajv@workspace:packages/schema-ajv"
+  resolution: "@pikku/schema-ajv@workspace:packages/services/schema-ajv"
   dependencies:
     ajv: "npm:^8.17.1"
     ajv-formats: "npm:^3.0.1"
@@ -8813,6 +8813,17 @@ __metadata:
   checksum: 10/8b97cbf9dc6d4c1320cc238a2db0fc67547f9dc77011729ff353faf34f1936ea1a4d7f3c63b2f4980b253be77bcc72ea1e9e76ee3fd53cce2aafb6a8854d07ec
   languageName: node
   linkType: hard
+
+"pikku@workspace:packages/pikku":
+  version: 0.0.0-use.local
+  resolution: "pikku@workspace:packages/pikku"
+  dependencies:
+    "@pikku/core": "npm:^0.6.5"
+    "@pikku/jose": "workspace:^"
+    "@pikku/schema-ajv": "workspace:^"
+    typescript: "npm:^5.7.3"
+  languageName: unknown
+  linkType: soft
 
 "pino-abstract-transport@npm:^2.0.0":
   version: 2.0.0
