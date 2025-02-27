@@ -21,7 +21,7 @@
     "@pikku/core": "^0.6.5"
   },
   "dependencies": {
-    "@pikku/express-middleware": "^0.6.0",
+    "@pikku/express-middleware": "^0.6.3",
     "@types/content-type": "^1.1.8",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
