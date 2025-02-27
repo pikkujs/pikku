@@ -179,7 +179,7 @@ async function setupTemplate({
     })
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync('npx --yes @pikku/cli', {
+    spawnSync('npx', ['--no-install', '@pikku/cli'], {
       cwd: targetPath,
       stdio: 'inherit',
     })

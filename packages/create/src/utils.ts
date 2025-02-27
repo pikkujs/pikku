@@ -89,6 +89,7 @@ export function replaceFunctionReferences(targetPath: string): void {
       .replaceAll('../../functions/src/', './')
       .replaceAll('../functions/src/', './')
       .replaceAll('../../functions/.pikku/', '../.pikku/')
+      .replaceAll('../functions/types/', './types/')
     fs.writeFileSync(filePath, updatedContent)
   }
 
