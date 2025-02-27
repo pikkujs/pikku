@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.6.10
+
+### Patch Changes
+
+- 06e71be: fix: use readFile instead of import for json file
+
 ## 0.6.9
 
 ### Patch Changes

@@ -23,7 +23,7 @@
     "tsx": "^4.19.2"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.6.9",
+    "@pikku/cli": "^0.6.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

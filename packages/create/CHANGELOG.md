@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.4
+
+### Patch Changes
+
+- 615740e: fix: only ask for the version via the cli line
+
 ## 0.0.3
 
 ### Patch Changes
