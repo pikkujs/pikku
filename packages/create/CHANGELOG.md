@@ -1,5 +1,12 @@
 # create-pikku
 
+## 0.0.2
+
+### Patch Changes
+
+- bdcc89a: feat: adding intro logo to cli based commands
+- cb7bfdc: chore: remove ncu and tsc from packages
+
 ## 0.0.1
 
 ### Patch Changes
