@@ -184,10 +184,16 @@
         "schemaDirectory": {
           "type": "string"
         },
+        "supportsImportAttributes": {
+          "type": "boolean"
+        },
         "tsconfig": {
           "type": "string"
         },
         "typesDeclarationFile": {
+          "type": "string"
+        },
+        "websocketFile": {
           "type": "string"
         }
       },
@@ -203,6 +209,7 @@
         "routesMapDeclarationFile",
         "schedulersFile",
         "schemaDirectory",
+        "supportsImportAttributes",
         "tsconfig",
         "typesDeclarationFile"
       ],

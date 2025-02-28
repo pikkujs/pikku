@@ -1,6 +1,9 @@
 {
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/master/packages/cli/cli.schema.json",
   "routeDirectories": ["./src"],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
-  "supportsImportAttributes": false
+  "supportsImportAttributes": false,
+  "fetchFile": ".pikku/pikku-fetch.gen.ts",
+  "websocketFile": ".pikku/pikku-websocket.gen.ts"
 }

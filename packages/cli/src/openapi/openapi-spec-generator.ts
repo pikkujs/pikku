@@ -1,5 +1,4 @@
-import { getErrors } from '@pikku/core/errors'
-import { HTTPRoutesMeta } from '@pikku/core/http'
+import { getErrors, HTTPRoutesMeta } from '@pikku/core'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
 const convertSchema =
   'default' in _convertSchema ? (_convertSchema.default as any) : _convertSchema
