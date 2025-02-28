@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.12
+
+### Patch Changes
+
+- e0dd19a: fix: invalid schemas should result in a 422
+
 ## 0.6.11
 
 ### Patch Changes

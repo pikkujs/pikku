@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.5
+
+### Patch Changes
+
+- f8881ee: fix: run @pikku/cli correctly after create
+
 ## 0.0.4
 
 ### Patch Changes
