@@ -1,7 +1,7 @@
 import { Logger } from './services/logger.js'
 import { getRoutes } from './http/http-route-runner.js'
 import { SchemaService } from './services/schema-service.js'
-import { BadRequestError } from './errors/errors.js'
+import { UnprocessableContentError } from './errors/errors.js'
 
 /**
  * Retrieves the global schemas map.
@@ -109,7 +109,7 @@ export const validateAndCoerce = (
     if (!schemaName) {
       if (data && (data.length > 0 || Object.keys(data).length > 0)) {
         logger.warn('No schema provided, but data was passed')
-        throw new BadRequestError('No data expected')
+        throw new UnprocessableContentError('No data expected')
       } else {
         return
       }

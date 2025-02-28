@@ -2,7 +2,7 @@ import { Logger, SchemaService } from '@pikku/core'
 import { Ajv } from 'ajv'
 import addFormats from 'ajv-formats'
 import { ValidateFunction } from 'ajv'
-import { BadRequestError } from '@pikku/core/errors'
+import { UnprocessableContentError } from '@pikku/core/errors'
 
 const ajv = new Ajv({
   removeAdditional: false,
@@ -40,7 +40,7 @@ export class AjvSchemaService implements SchemaService {
         validator.errors
       )
       const errorText = ajv.errorsText(validator.errors)
-      throw new BadRequestError(errorText)
+      throw new UnprocessableContentError(errorText)
     }
   }
 
