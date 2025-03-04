@@ -1,5 +1,11 @@
 # @pikku/pino
 
+## 0.6.2
+
+### Patch Changes
+
+- 990c2c2: fix: not requiring kysely as a peerDependency
+
 ## 0.6.1
 
 ### Patch Changes
