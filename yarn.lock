@@ -3318,7 +3318,7 @@ __metadata:
   peerDependencies:
     "@pikku/core": ^0.6.13
   bin:
-    kysely-pure: dist/bin/kysely-pure.js
+    pikku-kysely-pure: dist/bin/pikku-kysely-pure.js
   languageName: unknown
   linkType: soft
 

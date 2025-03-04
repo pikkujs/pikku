@@ -27,6 +27,7 @@ import {
 import { program } from 'commander'
 import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
+import { unlinkSync } from 'fs'
 
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 
@@ -71,7 +72,12 @@ const templates = [
   },
   {
     template: 'nextjs',
-    description: 'A Nextjs template',
+    description: 'A Nextjs helloworld template',
+    supports: ['fullstack'],
+  },
+  {
+    template: 'nextjs-full',
+    description: 'A Nextjs simple book application',
     supports: ['fullstack'],
   },
   {
@@ -190,12 +196,10 @@ async function setupTemplate({
   console.log(chalk.bold(`cd ${name}`))
 }
 
-async function setupYarnWorkspace({
-  version,
-  name,
-  packageManager,
-  install,
-}: CliOptions) {
+async function setupRepo(
+  { version, name, packageManager, install }: CliOptions,
+  repoName: string
+) {
   const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
 
@@ -203,12 +207,20 @@ async function setupYarnWorkspace({
 
   try {
     const tmpDirPrefix = tmpdir()
-    const yarnWorkspacePath = `${tmpDirPrefix}/pikku/yarn-workspace-starter`
-    await downloadTemplate(`gh:pikkujs/yarn-workspace-starter${versionRef}`, {
+    const yarnWorkspacePath = `${tmpDirPrefix}/pikku/${repoName}`
+    await downloadTemplate(`gh:pikkujs/${repoName}${versionRef}`, {
       dir: yarnWorkspacePath,
       force: true,
     })
     mergeDirectories(yarnWorkspacePath, targetPath)
+
+    try {
+      unlinkSync(path.join(targetPath, 'package-lock.json'))
+    } catch {}
+    try {
+      unlinkSync(path.join(targetPath, 'yarn.lock'))
+    } catch {}
+
     spinner.success()
   } catch (e) {
     spinner.error()
@@ -319,7 +331,9 @@ async function run() {
   }
 
   if (template === 'yarn-workspace') {
-    await setupYarnWorkspace(selectedOptions)
+    await setupRepo(selectedOptions, 'yarn-workspace-starter')
+  } else if (template === 'nextjs-full') {
+    await setupRepo(selectedOptions, 'nextjs-app-starter')
   } else {
     await setupTemplate(selectedOptions)
   }
