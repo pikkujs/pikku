@@ -1,4 +1,4 @@
-export class AbstractPikkuRouteHandler {
+export class CorePikkuRouteHandler {
   private subscriptions = new Map<string, Set<(data: unknown) => void>>()
 
   constructor(

@@ -11,5 +11,5 @@ export {
   CorePikkuFetch,
   CorePikkuFetchOptions,
   HTTPMethod,
-} from './abstract-pikku-fetch.js'
+} from './core-pikku-fetch.js'
 export { corePikkuFetch } from './pikku-fetch.js'

@@ -1,8 +1,8 @@
 export const serializeWebsocketWrapper = (channelsMapPath: string) => {
-  return `import { AbstractPikkuWebsocket, AbstractPikkuRouteHandler } from '@pikku/websocket'
+  return `import { CorePikkuWebsocket, CorePikkuRouteHandler } from '@pikku/websocket'
 import { ChannelDefaultHandlerOf, ChannelRouteHandlerOf, ChannelsMap } from '${channelsMapPath}';
 
-class PikkuWebSocketRoute<Channel extends keyof ChannelsMap, Route extends keyof ChannelsMap[Channel]['routes']> extends AbstractPikkuRouteHandler {
+class PikkuWebSocketRoute<Channel extends keyof ChannelsMap, Route extends keyof ChannelsMap[Channel]['routes']> extends CorePikkuRouteHandler {
     public subscribe<
         Method extends keyof ChannelsMap[Channel]['routes'][Route],
         Data extends ChannelRouteHandlerOf<Channel, Route, Method>['output']
@@ -26,7 +26,7 @@ class PikkuWebSocketRoute<Channel extends keyof ChannelsMap, Route extends keyof
     }
 }
 
-export class PikkuWebSocket<Channel extends keyof ChannelsMap> extends AbstractPikkuWebsocket {
+export class PikkuWebSocket<Channel extends keyof ChannelsMap> extends CorePikkuWebsocket {
     /**
      * Send a message to a specific route and method.
      * Validates the input data type.

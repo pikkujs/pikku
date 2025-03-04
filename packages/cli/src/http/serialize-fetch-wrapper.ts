@@ -3,7 +3,7 @@ export const serializeFetchWrapper = (routesMapPath: string) => {
 import { CorePikkuFetch, HTTPMethod } from '@pikku/fetch'
 import type { RoutesMap, RouteHandlerOf, RoutesWithMethod } from '${routesMapPath}'
 
-export class PikkuFetch extends AbstractPikkuFetch {
+export class PikkuFetch extends CorePikkuFetch {
     public async post<Route extends RoutesWithMethod<'POST'>>(
         route: Route,
         data: RouteHandlerOf<Route, 'POST'>['input'] = null,

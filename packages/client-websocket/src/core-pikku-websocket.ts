@@ -1,4 +1,4 @@
-import { AbstractPikkuRouteHandler } from './abstract-pikku-route-handler.js'
+import { CorePikkuRouteHandler } from './core-pikku-route-handler.js'
 
 let WebSocketClass: typeof WebSocket
 
@@ -14,14 +14,14 @@ if (typeof WebSocket !== 'undefined') {
 }
 
 /**
- * The `AbstractPikkuWebsocket` class provides a utility for making websocket connections, including handling authorization,
+ * The `CorePikkuWebsocket` class provides a utility for making websocket connections, including handling authorization,
  * and managing server URLs. This class is designed to simplify API interactions
  * with configurable options and support for JWT and API key-based authentication.
  */
-export class AbstractPikkuWebsocket {
+export class CorePikkuWebsocket {
   public ws: WebSocket
 
-  private routes = new Map<string, AbstractPikkuRouteHandler>()
+  private routes = new Map<string, CorePikkuRouteHandler>()
   private subscriptions = new Set<(data: unknown) => void>()
 
   /**
@@ -32,11 +32,11 @@ export class AbstractPikkuWebsocket {
     this.ws.onmessage = this.handleMessage.bind(this)
   }
 
-  public getRoute(route: string | symbol | number): AbstractPikkuRouteHandler {
+  public getRoute(route: string | symbol | number): CorePikkuRouteHandler {
     const route2 = route.toString()
     let routeHandler = this.routes.get(route2)
     if (!routeHandler) {
-      routeHandler = new AbstractPikkuRouteHandler(
+      routeHandler = new CorePikkuRouteHandler(
         route2,
         this.ws.send.bind(this.ws)
       )

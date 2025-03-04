@@ -5,5 +5,5 @@
  * @module @pikku/ws
  */
 
-export { AbstractPikkuWebsocket } from './abstract-pikku-websocket.js'
-export { AbstractPikkuRouteHandler } from './abstract-pikku-route-handler.js'
+export { CorePikkuWebsocket } from './core-pikku-websocket.js'
+export { CorePikkuRouteHandler } from './core-pikku-route-handler.js'
