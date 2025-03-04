@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.6
+
+### Patch Changes
+
+- 49182d6: refactor: allowing nextjs-app to be created via create cli
+
 ## 0.0.5
 
 ### Patch Changes
