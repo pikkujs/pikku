@@ -3317,9 +3317,6 @@ __metadata:
     typescript: "npm:^5.6"
   peerDependencies:
     "@pikku/core": ^0.6.13
-    kysely: ^0.27.6
-    kysely-postgres-js: ^2.0.0
-    postgres: ^3.4.5
   bin:
     kysely-pure: dist/bin/kysely-pure.js
   languageName: unknown
