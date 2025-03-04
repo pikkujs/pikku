@@ -3,8 +3,11 @@
   "version": "0.6.0",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
-  "module": "dist/index.js",
-  "main": "dist/index.js",
+  "module": "dist/src/index.js",
+  "main": "dist/src/index.js",
+  "bin": {
+    "kysely-pure": "dist/bin/kysely-pure.js"
+  },
   "type": "module",
   "scripts": {
     "tsc": "tsc",
@@ -15,11 +18,15 @@
   },
   "peerDependencies": {
     "@pikku/core": "^0.6.7",
-    "kysely": "*"
+    "kysely": "^0.27.6",
+    "kysely-postgres-js": "^2.0.0",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "kysely": "latest",
-    "kysely-codegen": "latest",
+    "kysely": "^0.27.6",
+    "kysely-codegen": "^0.16.6",
+    "kysely-postgres-js": "^2.0.0",
+    "postgres": "^3.4.5",
     "typescript": "^5.6"
   }
 }

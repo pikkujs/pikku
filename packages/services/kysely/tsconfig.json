@@ -1,13 +1,13 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": ".",
     "module": "Node16",
     "outDir": "dist",
     "target": "esnext",
     "declaration": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "bin/**/*.ts", "bin/kysely-pure.ts"],
   "exclude": ["**/*.test.ts", "node_modules", "bin/dist"],
   "references": [
     {
