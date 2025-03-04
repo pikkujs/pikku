@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.13
+
+### Patch Changes
+
+- eb8a8b4: fix: updating schema and cli build issue due to tsconfig settings
+
 ## 0.6.12
 
 ### Patch Changes

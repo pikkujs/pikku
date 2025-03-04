@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.6.11
+
+### Patch Changes
+
+- 3062086: fix: renaming AbstractFetch/Websocket to core
+- eb8a8b4: fix: updating schema and cli build issue due to tsconfig settings
+- Updated dependencies [eb8a8b4]
+  - @pikku/core@0.6.13
+
 ## 0.6.10
 
 ### Patch Changes
