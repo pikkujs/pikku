@@ -1,5 +1,11 @@
 # @pikku/pino
 
+## 0.6.3
+
+### Patch Changes
+
+- 2c9a6b0: fix: correct reference to pikku-kysely-pure
+
 ## 0.6.2
 
 ### Patch Changes
