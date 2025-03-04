@@ -1,5 +1,11 @@
 # @pikku/websocket
 
+## 0.6.2
+
+### Patch Changes
+
+- 3062086: fix: renaming AbstractFetch/Websocket to core
+
 ## 0.6.1
 
 ### Patch Changes
