@@ -6,7 +6,7 @@
   "module": "dist/src/index.js",
   "main": "dist/src/index.js",
   "bin": {
-    "kysely-pure": "dist/bin/kysely-pure.js"
+    "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js"
   },
   "type": "module",
   "scripts": {
