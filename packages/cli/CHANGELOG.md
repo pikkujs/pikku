@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.6.12
+
+### Patch Changes
+
+- f0a905d: fix: fixing optional data if no arguments present
+
 ## 0.6.11
 
 ### Patch Changes
