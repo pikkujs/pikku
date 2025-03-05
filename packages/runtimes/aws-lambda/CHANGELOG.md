@@ -1,5 +1,11 @@
 ## 0.6.1
 
+## 0.6.5
+
+### Patch Changes
+
+- de4a36b: refactor: renaming serverless templates to aws-lambda
+
 ## 0.6.4
 
 ### Patch Changes
