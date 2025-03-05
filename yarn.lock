@@ -3424,7 +3424,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schema-ajv@npm:^0.6.1, @pikku/schema-ajv@npm:^0.6.2, @pikku/schema-ajv@workspace:packages/services/schema-ajv":
+"@pikku/schema-ajv@npm:^0.6.1, @pikku/schema-ajv@workspace:packages/services/schema-ajv":
   version: 0.0.0-use.local
   resolution: "@pikku/schema-ajv@workspace:packages/services/schema-ajv"
   dependencies:
@@ -3436,7 +3436,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schema-cfworker@workspace:packages/services/schema-cfworker":
+"@pikku/schema-cfworker@npm:^0.6.0, @pikku/schema-cfworker@workspace:packages/services/schema-cfworker":
   version: 0.0.0-use.local
   resolution: "@pikku/schema-cfworker@workspace:packages/services/schema-cfworker"
   dependencies:
@@ -3575,7 +3575,7 @@ __metadata:
     "@pikku/cli": "npm:^0.6.11"
     "@pikku/core": "npm:^0.6.13"
     "@pikku/jose": "npm:^0.6.0"
-    "@pikku/schema-ajv": "npm:^0.6.2"
+    "@pikku/schema-cfworker": "npm:^0.6.0"
     typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft

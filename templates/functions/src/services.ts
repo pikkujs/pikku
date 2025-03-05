@@ -12,7 +12,7 @@ import {
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { PikkuHTTPSessionService } from '@pikku/core/http'
 import { JoseJWTService } from '@pikku/jose'
-import { AjvSchemaService } from '@pikku/schema-ajv'
+import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}
@@ -39,7 +39,7 @@ export const createSingletonServices: CreateSingletonServices<
     logger
   )
 
-  const schemaService = new AjvSchemaService(logger)
+  const schemaService = new CFWorkerSchemaService(logger)
   const httpSessionService = new PikkuHTTPSessionService<UserSession>(jwt, {})
 
   return {
