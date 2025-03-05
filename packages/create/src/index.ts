@@ -207,12 +207,13 @@ async function setupRepo(
 
   try {
     const tmpDirPrefix = tmpdir()
-    const yarnWorkspacePath = `${tmpDirPrefix}/pikku/${repoName}`
+    const repoDirPath = `${tmpDirPrefix}/pikku/${repoName}`
     await downloadTemplate(`gh:pikkujs/${repoName}${versionRef}`, {
-      dir: yarnWorkspacePath,
+      dir: repoDirPath,
       force: true,
     })
-    mergeDirectories(yarnWorkspacePath, targetPath)
+    lazymkdir(targetPath)
+    mergeDirectories(repoDirPath, targetPath)
 
     try {
       unlinkSync(path.join(targetPath, 'package-lock.json'))
