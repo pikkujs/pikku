@@ -81,12 +81,12 @@ const templates = [
     supports: ['fullstack'],
   },
   {
-    template: 'serverless',
-    description: 'A Serverless template',
+    template: 'aws-lambda',
+    description: 'An aws-lambda template for HTTP and Scheduled tasks',
     supports: ['http', 'scheduled'],
   },
   {
-    template: 'serverless-websocket',
+    template: 'aws-lambda-websocket',
     description: 'A Serverless WebSocket template',
     supports: ['channel'],
   },

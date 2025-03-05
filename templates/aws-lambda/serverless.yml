@@ -1,5 +1,5 @@
 # "org" ensures this Service is used with the correct Serverless Framework Access Key.
-org: yasserf
+org: pikku
 # "app" enables Serverless Framework Dashboard features and sharing them with other Services.
 app: lambda
 

@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/templates-serverless-websocket",
+  "name": "@pikku/templates-aws-lambda-websocket",
   "type": "module",
   "main": "dist/index.mjs",
   "private": true,

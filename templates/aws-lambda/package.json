@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/templates-serverless",
+  "name": "@pikku/templates-aws-lambda",
   "main": "dist/index.mjs",
   "type": "module",
   "private": true,
