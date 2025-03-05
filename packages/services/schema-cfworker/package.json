@@ -1,0 +1,32 @@
+{
+  "name": "@pikku/schema-cfworker",
+  "version": "0.6.0",
+  "description": "The pikku schema cfworker-json-schema package",
+  "license": "MIT",
+  "author": "yasser.fadl@gmail.com",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build:esm": "tsc -b",
+    "build": "yarn build:esm",
+    "release": "npm run build && npm test",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage"
+  },
+  "peerDependencies": {
+    "@pikku/core": "^0.6.12"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "^4.1.1"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "module": "Node16",
+    "outDir": "dist",
+    "target": "esnext",
+    "declaration": true,
+    "composite": true
+  },
+  "include": ["bin/**/*.ts", "src/**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules", "bin/dist"],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
+  ]
+}
