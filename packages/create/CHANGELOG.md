@@ -1,5 +1,12 @@
 # create-pikku
 
+## 0.0.7
+
+### Patch Changes
+
+- d037fa1: fix: create dir for non templates
+- de4a36b: refactor: renaming serverless templates to aws-lambda
+
 ## 0.0.6
 
 ### Patch Changes

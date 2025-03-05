@@ -15,7 +15,7 @@
   "dependencies": {
     "@pikku/aws-services": "^0.6.3",
     "@pikku/core": "^0.6.13",
-    "@pikku/lambda": "^0.6.4",
+    "@pikku/lambda": "^0.6.5",
     "tslib": "^2.8.1"
   },
   "devDependencies": {

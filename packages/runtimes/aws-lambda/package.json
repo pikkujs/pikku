@@ -1,6 +1,6 @@
 {
   "name": "@pikku/lambda",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
