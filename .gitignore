@@ -6,6 +6,7 @@ lcov.info
 
 *.js.map
 *.js
+meta.json
 .yarn
 .dist
 dist

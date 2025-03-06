@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "next build && next start & HTTP_PREFIX=http://localhost:3000/api bash run-tests.sh"
+    "test:template": "next build && next start & HTTP_PREFIX=http://localhost:3000/api bash run-tests.sh"
   },
   "dependencies": {
     "@pikku/core": "^0.6.13",

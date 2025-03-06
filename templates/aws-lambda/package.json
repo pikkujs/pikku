@@ -6,7 +6,7 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "test": "npm run start & HTTP_PREFIX=http://localhost:3000/production bash run-tests.sh",
+    "test:template": "npm run start & HTTP_PREFIX=http://localhost:3000/production bash run-tests.sh",
     "start": "npm run build && serverless offline",
     "build": "rm -rf dist && esbuild ./src/main.ts --format=esm --minify --external:\"@aws-sdk/*\" --bundle --keep-names --sourcemap --platform=node --target=node20 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json",
     "deploy": "npm run build && serverless deploy"

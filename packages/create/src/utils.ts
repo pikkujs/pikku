@@ -176,6 +176,10 @@ export function updatePackageJSONScripts(
   delete packageJson.scripts.tsc
   delete packageJson.scripts.ncu
   delete packageJson.packageManager
+
+  packageJson.scripts.test = packageJson.scripts['test:template']
+  delete packageJson.scripts['test:template']
+
   packageJson.name = appName
   fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
 }

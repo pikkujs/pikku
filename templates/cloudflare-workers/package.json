@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "npm run start & HTTP_PREFIX=http://localhost:8787 bash run-tests.sh",
+    "test:template": "npm run start & HTTP_PREFIX=http://localhost:8787 bash run-tests.sh",
     "deploy": "wrangler deploy",
     "start": "wrangler dev"
   },
