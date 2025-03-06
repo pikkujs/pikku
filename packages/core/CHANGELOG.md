@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.14
+
+### Patch Changes
+
+- c1d8381: feat: adding filtering by tags to minimize produced payload
+
 ## 0.6.13
 
 ### Patch Changes
