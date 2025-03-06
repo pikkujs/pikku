@@ -1,27 +1,25 @@
 import { IncomingMessage } from 'http'
 import * as cookie from 'cookie'
 import { PikkuHTTPAbstractRequest } from '@pikku/core/http/pikku-http-abstract-request'
-import { PikkuQuery } from '@pikku/core/http'
+import { HTTPMethod, PikkuQuery } from '@pikku/core/http'
 
 export class PikkuHTTPRequest extends PikkuHTTPAbstractRequest {
-  private url: URL
   private query: PikkuQuery | undefined
+  private url: URL
 
   constructor(private request: IncomingMessage) {
-    super()
     // TODO: This is a hack to make the URL object work without caring about the domain
-    this.url = new URL(request.url || '/', 'http://ignore-this.com')
-  }
-
-  public getPath() {
-    return this.url.pathname
+    const url = new URL(request.url || '/', 'http://ignore-this.com')
+    const method = request.method?.toLowerCase() as HTTPMethod
+    super(url.pathname, method)
+    this.url = url
   }
 
   public async getBody() {
     try {
       // If the request method is GET, return an empty object since GET
       // shouldn't have a body
-      if (this.request.method?.toLowerCase() === 'get') {
+      if (this.method === 'get') {
         return {}
       }
       return await this.readJson()

@@ -1,6 +1,5 @@
 import { NotFoundError } from '../errors/errors.js'
-import { loadUserSession } from '../http/http-route-runner.js'
-import { validateAndCoerce } from '../schema.js'
+import { coerceQueryStringToArray, validateSchema } from '../schema.js'
 import { CoreUserSession } from '../types/core.types.js'
 import {
   CoreAPIChannel,
@@ -95,7 +94,6 @@ export const getMatchingChannelConfig = (request: string) => {
 export const openChannel = async ({
   route,
   singletonServices,
-  skipUserSession = false,
   coerceToArray = false,
   http,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
@@ -111,7 +109,7 @@ export const openChannel = async ({
     throw new NotFoundError(`Channel not found: ${route}`)
   }
 
-  const { matchedPath, params, channelConfig, schemaName } = matchingChannel
+  const { params, channelConfig, schemaName } = matchingChannel
 
   const requiresSession = channelConfig.auth !== false
   http?.request?.setParams(params)
@@ -120,37 +118,19 @@ export const openChannel = async ({
     `Matched channel: ${channelConfig.name} | route: ${channelConfig.route} | auth: ${requiresSession.toString()}`
   )
 
-  const userSession = await loadUserSession(
-    skipUserSession,
-    // We may require a session, but we don't actually need it
-    // on connect since channels can authenticate later given
-    // how websocket sessions work (cookie or queryParam based)
-    false,
-    http,
-    matchedPath,
-    channelConfig,
-    singletonServices.logger,
-    singletonServices.httpSessionService
-  )
-
-  if (singletonServices.enforceChannelAccess) {
-    await singletonServices.enforceChannelAccess(
-      matchingChannel.channelConfig,
-      userSession
-    )
-  }
-
   let openingData: any | undefined
   if (http?.request) {
     openingData = await http.request.getData()
-    validateAndCoerce(
+    if (coerceToArray && schemaName) {
+      coerceQueryStringToArray(schemaName, openingData)
+    }
+    validateSchema(
       singletonServices.logger,
       singletonServices.schemaService,
       schemaName,
       openingData,
-      coerceToArray
     )
-  }
+ }
 
-  return { userSession, openingData, channelConfig }
+  return { openingData, channelConfig }
 }

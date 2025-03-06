@@ -1,6 +1,6 @@
 import { parse as parseCookie } from 'cookie'
 import { PikkuRequest } from '../pikku-request.js'
-import { PikkuQuery } from './http-routes.types.js'
+import { HTTPMethod, PikkuQuery } from './http-routes.types.js'
 
 /**
  * Abstract class representing a pikku request.
@@ -11,6 +11,10 @@ export abstract class PikkuHTTPAbstractRequest<
   In = unknown,
 > extends PikkuRequest<In> {
   private params: Partial<Record<string, string | string[]>> = {}
+  
+  constructor (public path: string, public method: HTTPMethod) {
+    super()
+  }
 
   /**
    * Retrieves the request body.

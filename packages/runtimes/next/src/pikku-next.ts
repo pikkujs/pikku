@@ -54,7 +54,7 @@ export class PikkuNextJS {
     data: In
   ): Promise<Out> {
     const singletonServices = await this.getSingletonServices()
-    const request = new PikkuActionNextRequest<In>(data, true)
+    const request = new PikkuActionNextRequest<In>(route as string, method as HTTPMethod, data, true)
     await request.init()
     const response = new PikkuActionNextResponse(true)
     await response.init()
@@ -84,7 +84,7 @@ export class PikkuNextJS {
   ): Promise<Out> {
     const singletonServices = await this.getSingletonServices()
     return (await runHTTPRoute<In, Out>({
-      request: new PikkuActionNextRequest(data, false),
+      request: new PikkuActionNextRequest(route as string, method as HTTPMethod, data, false),
       response: new PikkuActionNextResponse(false),
       singletonServices,
       createSessionServices: this.createSessionServices,

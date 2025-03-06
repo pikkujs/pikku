@@ -98,12 +98,11 @@ export const coerceQueryStringToArray = (schemaName: string, data: any) => {
   }
 }
 
-export const validateAndCoerce = (
+export const validateSchema = async (
   logger: Logger,
   schemaService: SchemaService | undefined,
   schemaName: string | undefined | null,
-  data: any,
-  coerceToArray: boolean
+  data: any
 ) => {
   if (schemaService) {
     if (!schemaName) {
@@ -115,10 +114,7 @@ export const validateAndCoerce = (
       }
     }
     const schema = getSchema(schemaName)
-    schemaService.compileSchema(schemaName, schema)
-    if (coerceToArray) {
-      coerceQueryStringToArray(schemaName, data)
-    }
-    schemaService.validateSchema(schemaName, data)
+    await schemaService.compileSchema(schemaName, schema)
+    await schemaService.validateSchema(schemaName, data)
   }
 }

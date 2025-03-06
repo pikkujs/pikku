@@ -1,3 +1,4 @@
+import { HTTPMethod } from '@pikku/core'
 import { PikkuHTTPAbstractRequest } from '@pikku/core/http/pikku-http-abstract-request'
 import { cookies, headers } from 'next/headers.js'
 
@@ -16,10 +17,12 @@ export class PikkuActionNextRequest<In> extends PikkuHTTPAbstractRequest<In> {
    * @param body - The request body to be wrapped and converted to a plain object.
    */
   constructor(
+    route: string,
+    method: HTTPMethod,
     body: any,
     private dynamic: boolean
   ) {
-    super()
+    super(route, method)
     // Needed to convert the body to a plain object and validate dates
     this.body = JSON.parse(JSON.stringify(body))
   }

@@ -4,16 +4,7 @@ import { PikkuHTTPAbstractRequest } from '@pikku/core/http/pikku-http-abstract-r
 
 export class PikkuAPIGatewayLambdaRequest extends PikkuHTTPAbstractRequest {
   constructor(protected event: APIGatewayProxyEvent) {
-    super()
-  }
-
-  public getPath() {
-    // TODO: The path can be undefined, types are invalid
-    return this.event.path || '/'
-  }
-
-  public getMethod() {
-    return this.event.httpMethod.toLowerCase() as HTTPMethod
+    super(event.path || '/', event.httpMethod.toLowerCase() as HTTPMethod)
   }
 
   public async getBody() {

@@ -1,10 +1,8 @@
 import type { Logger, LogLevel } from '../services/logger.js'
-import type { HTTPSessionService } from '../http/http-session-service.js'
 import { VariablesService } from '../services/variables-service.js'
 import { EventHubService } from '../channel/eventhub-service.js'
 import { SchemaService } from '../services/schema-service.js'
-import { enforceChannelAccess } from '../channel/channel.types.js'
-import { enforceHTTPAccess, PikkuHTTP } from '../http/http-routes.types.js'
+import { PikkuHTTP } from '../http/http-routes.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
@@ -51,8 +49,6 @@ export type RequireAtLeastOne<T> = {
 export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   /** The log level for the application. */
   logLevel?: LogLevel
-  /** The maximum compute time allowed, in milliseconds (optional). */
-  maximumComputeTime?: number
   /** Secrets used by the application (optional). */
   secrets?: {}
 } & Config
@@ -69,14 +65,8 @@ export interface CoreSingletonServices<
   Config extends CoreConfig = CoreConfig,
   UserSession extends CoreUserSession = CoreUserSession,
 > {
-  /** The http permission service used for authorization (optional). */
-  enforceHTTPAccess?: enforceHTTPAccess
-  /** The channel permission service used by the application (optional). */
-  enforceChannelAccess?: enforceChannelAccess
   /** JWT Service */
   jwt?: JWTService<UserSession>
-  /** The session service used by the application (optional). */
-  httpSessionService?: HTTPSessionService
   /** The schema library used to validate data */
   schemaService?: SchemaService
   /** The core configuration for the application. */
@@ -94,9 +84,21 @@ export interface CoreSingletonServices<
 /**
  * Represents different forms of interaction within Pikku and the outside world.
  */
-export interface PikkuInteractions {
+export interface PikkuInteraction {
   http?: PikkuHTTP
 }
+
+/**
+ * Runs the interaction service for the given interaction.
+ */
+export interface PikkuInteractionService {
+  onInteraction (interaction: PikkuInteraction, next: () => Promise<void>): Promise<void>
+}
+
+/**
+ * A function that can wrap an interaction and be called before or after
+ */
+export type PikkuMiddleware = <SingletonServices = CoreSingletonServices>(_services: SingletonServices, interactions: PikkuInteraction, next: () => Promise<void>) => Promise<void>
 
 /**
  * Represents the core services used by Pikku, including singleton services and the request/response interaction.
@@ -106,7 +108,7 @@ export type CoreServices<
   UserSession extends CoreUserSession = CoreUserSession,
   CoreServices extends Record<string, unknown> = {},
 > = SingletonServices &
-  PikkuInteractions & {
+  PikkuInteraction & {
     userSession?: UserSessionService<UserSession>
   } & CoreServices
 
@@ -115,7 +117,7 @@ export type SessionServices<
   Services = CoreServices<SingletonServices>,
 > = Omit<
   Services,
-  keyof SingletonServices | keyof PikkuInteractions | 'session'
+  keyof SingletonServices | keyof PikkuInteraction | 'session'
 >
 
 /**
@@ -139,7 +141,7 @@ export type CreateSessionServices<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  interaction: PikkuInteractions,
+  interaction: PikkuInteraction,
   session: UserSession | undefined
 ) => Promise<SessionServices<Services, SingletonServices>>
 

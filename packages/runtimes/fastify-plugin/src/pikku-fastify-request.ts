@@ -5,7 +5,8 @@ import { FastifyRequest } from 'fastify'
 
 export class PikkuFastifyRequest extends PikkuHTTPAbstractRequest {
   constructor(private request: FastifyRequest) {
-    super()
+    const url = new URL(request.url)
+    super(url.pathname, request.method.toLowerCase() as any)
   }
 
   public async getBody() {

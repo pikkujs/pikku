@@ -47,7 +47,7 @@ export abstract class CloudflareWebSocketHibernationServer<
         ...params,
         channelId,
         channelObject: server,
-        route: request.getPath(),
+        route: request.path,
         request,
         response,
         bubbleErrors: true,

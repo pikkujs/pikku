@@ -12,22 +12,15 @@ class LambdaChannelHandler<
   UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,
   Out = unknown,
-> extends PikkuAbstractChannelHandler<UserSession, OpeningData, Out> {
+> extends PikkuAbstractChannelHandler<OpeningData, Out> {
   constructor(
     private logger: Logger,
-    userSession: UserSession | undefined,
-    private channelStore: ChannelStore,
     private callbackAPI: ApiGatewayManagementApiClient,
     channelId: string,
     channelName: string,
     openingData: OpeningData
   ) {
-    super(channelId, channelName, userSession, openingData)
-  }
-
-  public async setUserSession(userSession: UserSession): Promise<void> {
-    this.userSession = userSession
-    await this.channelStore.setUserSession(this.channelId, userSession)
+    super(channelId, channelName, openingData)
   }
 
   public async send(message: Out, isBinary?: boolean) {
@@ -48,12 +41,9 @@ export const createLambdaChannelHandlerFactory = (
     channelId,
     channelName,
     openingData,
-    userSession
   ) =>
     new LambdaChannelHandler(
       logger,
-      userSession,
-      channelStore,
       callbackAPI,
       channelId,
       channelName,

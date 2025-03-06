@@ -51,8 +51,8 @@ export const runFetch = async <
     response,
     singletonServices,
     createSessionServices: createSessionServices as any,
-    route: request.getPath(),
-    method: request.getMethod(),
+    route: request.path,
+    method: request.method,
   })
   return response.getCloudflareResponse()
 }

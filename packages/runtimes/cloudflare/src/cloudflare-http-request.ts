@@ -11,16 +11,10 @@ export class CloudflareHTTPRequest extends PikkuHTTPAbstractRequest {
   constructor(
     private request: Request<unknown, IncomingRequestCfProperties<unknown>>
   ) {
-    super()
-    this.url = new URL(request.url)
-  }
-
-  public getPath() {
-    return this.url.pathname
-  }
-
-  public getMethod() {
-    return this.request.method.toLowerCase() as HTTPMethod
+    const method = request.method.toLowerCase() as HTTPMethod
+    const url = new URL(request.url)
+    super(url.pathname, method)
+    this.url = url
   }
 
   public async getBody() {

@@ -7,13 +7,14 @@ import {
   RunRouteParams,
   PikkuHTTP,
 } from './http-routes.types.js'
-import { CoreUserSession, SessionServices } from '../types/core.types.js'
+import { CoreUserSession, PikkuMiddleware, SessionServices } from '../types/core.types.js'
 import { match } from 'path-to-regexp'
 import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
-import { Logger, SchemaService } from '../services/index.js'
+import { Logger } from '../services/index.js'
 import {
   ForbiddenError,
+  MissingSessionError,
   NotFoundError,
   NotImplementedError,
 } from '../errors/errors.js'
@@ -23,7 +24,8 @@ import { CoreAPIChannel } from '../channel/channel.types.js'
 import { PikkuRequest } from '../pikku-request.js'
 import { PikkuResponse } from '../pikku-response.js'
 import { HTTPSessionService } from './http-session-service.js'
-import { getSchema, validateAndCoerce } from '../schema.js'
+import { coerceQueryStringToArray, validateSchema } from '../schema.js'
+import { LocalUserSessionService } from '../services/user-session-service.js'
 
 if (!globalThis.pikku?.httpRoutes) {
   globalThis.pikku = globalThis.pikku || {}
@@ -90,7 +92,6 @@ export const getRoutes = () => {
 }
 
 const getMatchingRoute = (
-  schemaService: SchemaService | undefined,
   requestType: string,
   requestPath: string
 ) => {
@@ -112,11 +113,11 @@ const getMatchingRoute = (
         (routeMeta) =>
           routeMeta.method === route.method && routeMeta.route === route.route
       )?.input
-      if (schemaName && schemaService) {
-        const schema = getSchema(schemaName)
-        schemaService.compileSchema(schemaName, schema)
-      }
-      return { matchedPath, params: matchedPath.params, route, schemaName }
+
+      // TODO
+      const middlewares: PikkuMiddleware[] = []
+
+      return { matchedPath, params: matchedPath.params, route, schemaName, middlewares }
     }
   }
   return undefined
@@ -263,13 +264,14 @@ export const runHTTPRoute = async <In, Out>({
 }: Pick<CoreHTTPFunctionRoute<unknown, unknown, any>, 'route' | 'method'> &
   RunRouteOptions &
   RunRouteParams<In>): Promise<Out | void> => {
+  const userSessionService = new LocalUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
-  const trackerId: string = crypto.randomUUID().toString()
+  let middlewares: PikkuMiddleware[] | undefined
 
   const http = createHTTPInteraction(request, response)
+  const interaction = { http }
 
   const matchedRoute = getMatchingRoute(
-    singletonServices.schemaService,
     apiType,
     apiRoute
   )
@@ -285,6 +287,8 @@ export const runHTTPRoute = async <In, Out>({
     }
 
     const { matchedPath, params, route, schemaName } = matchedRoute
+    middlewares = matchedRoute.middlewares
+  
     const requiresSession = route.auth !== false
     http?.request?.setParams(params)
 
@@ -292,24 +296,45 @@ export const runHTTPRoute = async <In, Out>({
       `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`
     )
 
-    const session = await loadUserSession(
-      skipUserSession,
-      requiresSession,
-      http,
-      matchedPath,
-      route,
-      singletonServices.logger,
-      singletonServices.httpSessionService
-    )
+    const next = async () => {
+
+    }
+
+    // Run middleware start
+    for (const middleware of middlewares) {
+      await middleware(
+        { ...singletonServices, userSessionService },
+        interaction,
+        next
+      )
+    }
+
+    // Validate session was set if needed
+    const session = userSessionService.getSession()
+    if (skipUserSession && requiresSession) {
+      throw new Error("Can't skip trying to get user session if auth is required")
+    }
+    if (requiresSession) {
+      singletonServices.logger.info({
+        action: 'Rejecting route (invalid session)',
+        path: matchedPath,
+      })
+      throw new MissingSessionError()
+    }
+
     const data = await request.getData()
 
-    validateAndCoerce(
+    // Validate schema. This can be done via middleware, but
+    // we do it here since it's a core piece of functionality.
+    validateSchema(
       singletonServices.logger,
       singletonServices.schemaService,
       schemaName,
       data,
-      coerceToArray
     )
+    if (coerceToArray && schemaName) {
+      coerceQueryStringToArray(schemaName, data)
+    }
 
     sessionServices = await createSessionServices(
       singletonServices,
@@ -318,10 +343,7 @@ export const runHTTPRoute = async <In, Out>({
     )
     const allServices = { ...singletonServices, ...sessionServices, http }
 
-    if (singletonServices.enforceHTTPAccess) {
-      await singletonServices.enforceHTTPAccess(route, session)
-    }
-
+    // Run permission checks
     const permissioned = await verifyPermissions(
       route.permissions,
       allServices,
@@ -348,6 +370,7 @@ export const runHTTPRoute = async <In, Out>({
 
     return result
   } catch (e: any) {
+    const trackerId: string = crypto.randomUUID().toString()
     handleError(
       e,
       http,
@@ -358,6 +381,8 @@ export const runHTTPRoute = async <In, Out>({
       bubbleErrors
     )
   } finally {
+    // Run middleware end
+
     if (sessionServices) {
       await closeSessionServices(singletonServices.logger, sessionServices)
     }

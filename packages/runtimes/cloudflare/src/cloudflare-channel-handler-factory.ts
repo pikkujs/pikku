@@ -26,22 +26,15 @@ class CloudflareChannelHandler<
   UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,
   Out = unknown,
-> extends PikkuAbstractChannelHandler<UserSession, OpeningData, Out> {
+> extends PikkuAbstractChannelHandler<OpeningData, Out> {
   constructor(
     channelId: string,
     channelName: string,
     openingData: OpeningData,
-    userSession: UserSession | undefined,
     private websocket: WebSocket,
-    _logger: Logger,
-    private channelStore: ChannelStore
+    _logger: Logger
   ) {
-    super(channelId, channelName, userSession, openingData)
-  }
-
-  public async setUserSession(userSession: UserSession): Promise<void> {
-    this.getChannel().userSession = userSession
-    await this.channelStore.setUserSession(this.channelId, userSession)
+    super(channelId, channelName, openingData)
   }
 
   public async send(message: Out, isBinary?: boolean) {
@@ -65,16 +58,13 @@ export const createCloudflareChannelHandlerFactory = (
     channelId,
     channelName,
     openingData,
-    userSession
   ) =>
     new CloudflareChannelHandler(
       channelId,
       channelName,
       openingData,
-      userSession,
       websocket,
       logger,
-      channelStore
     )
   return factory
 }

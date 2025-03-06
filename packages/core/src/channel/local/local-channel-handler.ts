@@ -1,11 +1,9 @@
-import { CoreUserSession } from '../../types/core.types.js'
 import { PikkuAbstractChannelHandler } from '../pikku-abstract-channel-handler.js'
 
 export class PikkuLocalChannelHandler<
-  UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,
   Out = unknown,
-> extends PikkuAbstractChannelHandler<UserSession, OpeningData, Out> {
+> extends PikkuAbstractChannelHandler<OpeningData, Out> {
   private onMessageCallback?: (message: unknown) => void
   private openCallBack?: () => void
   private closeCallback?: () => void
@@ -48,9 +46,5 @@ export class PikkuLocalChannelHandler<
       throw new Error('No send callback registered')
     }
     return this.sendCallback?.(message, isBinary)
-  }
-
-  public setUserSession(userSession: UserSession): void {
-    this.getChannel().userSession = userSession
   }
 }

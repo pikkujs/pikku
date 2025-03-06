@@ -5,7 +5,7 @@ import getRawBody from 'raw-body'
 
 export class PikkuExpressRequest extends PikkuHTTPAbstractRequest {
   constructor(private request: Request) {
-    super()
+    super(request.path, request.method.toLowerCase() as any)
   }
 
   public getBody() {

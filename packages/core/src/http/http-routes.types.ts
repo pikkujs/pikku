@@ -182,13 +182,3 @@ export type HTTPRoutesMeta = Array<{
   tags?: string[]
 }>
 
-/**
- * Verifies access to a route.
- * @param route - The route to verify access for.
- * @param session - The user session.
- * @returns A promise that resolves if access is granted.
- */
-export type enforceHTTPAccess = (
-  route: CoreHTTPFunctionRoute<unknown, unknown, any>,
-  session?: CoreUserSession
-) => Promise<void> | void

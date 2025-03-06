@@ -23,7 +23,7 @@ export const generalHTTPHandler = async <
   request: PikkuAPIGatewayLambdaRequest,
   response: PikkuAPIGatewayLambdaResponse
 ): Promise<APIGatewayProxyResult> => {
-  if (request.getMethod() === 'options') {
+  if (request.method === 'options') {
     response.setHeader(
       'Access-Control-Allow-Headers',
       'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
@@ -37,7 +37,7 @@ export const generalHTTPHandler = async <
     return response.getLambdaResponse()
   }
 
-  if (request.getPath().includes('health-check')) {
+  if (request.path.includes('health-check')) {
     response.setStatus(200)
     return response.getLambdaResponse()
   }
@@ -48,8 +48,8 @@ export const generalHTTPHandler = async <
       response,
       singletonServices,
       createSessionServices: createSessionServices as any,
-      route: request.getPath(),
-      method: request.getMethod() as any,
+      route: request.path,
+      method: request.method
     })
   } catch {
     // Error should have already been handled by runHTTPRoute

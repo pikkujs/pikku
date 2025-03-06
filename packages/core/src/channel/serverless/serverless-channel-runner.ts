@@ -1,4 +1,4 @@
-import { CoreUserSession, SessionServices } from '../../types/core.types.js'
+import { SessionServices } from '../../types/core.types.js'
 import { closeSessionServices } from '../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { getChannels, openChannel } from '../channel-runner.js'
@@ -23,14 +23,12 @@ export interface RunServerlessChannelParams<ChannelData>
 
 const getVariablesForChannel = ({
   channelId,
-  userSession,
   channelName,
   channelHandlerFactory,
   openingData,
 }: {
   channelId: string
   channelName: string
-  userSession?: CoreUserSession
   channelHandlerFactory: PikkuChannelHandlerFactory
   openingData?: unknown
 }) => {
@@ -45,7 +43,6 @@ const getVariablesForChannel = ({
     channelId,
     channelConfig.name,
     openingData,
-    userSession
   )
   return {
     channelConfig,
@@ -90,7 +87,6 @@ export const runChannelConnect = async ({
     })
     const { channel } = getVariablesForChannel({
       channelId,
-      userSession,
       channelHandlerFactory,
       channelName: channelConfig.name,
     })
@@ -132,7 +128,6 @@ export const runChannelDisconnect = async ({
     await params.channelStore.getChannel(params.channelId)
   const { channel, channelConfig } = getVariablesForChannel({
     ...params,
-    userSession,
     openingData,
     channelName,
   })
@@ -162,7 +157,6 @@ export const runChannelMessage = async (
     await params.channelStore.getChannel(params.channelId)
   const { channelHandler, channelConfig } = getVariablesForChannel({
     ...params,
-    userSession,
     openingData,
     channelName,
   })

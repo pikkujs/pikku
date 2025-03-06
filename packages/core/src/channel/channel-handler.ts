@@ -1,8 +1,8 @@
 import {
   CoreSingletonServices,
   CoreServices,
-  CoreUserSession,
   JSONValue,
+  CoreUserSession,
 } from '../types/core.types.js'
 import { CoreAPIChannel, PikkuChannelHandler } from './channel.types.js'
 import { verifyPermissions } from '../permissions.js'
@@ -35,7 +35,7 @@ const validateSchema = (
 
 const validateAuth = (
   requiresSession: boolean,
-  channelHandler: PikkuChannelHandler,
+  userSession: CoreUserSession | undefined,
   onMessage: any
 ) => {
   const auth =
@@ -45,7 +45,7 @@ const validateAuth = (
         ? requiresSession
         : onMessage.auth
 
-  if (auth && !channelHandler.getChannel().userSession) {
+  if (auth && !userSession) {
     return false
   }
   return true
@@ -53,7 +53,7 @@ const validateAuth = (
 
 const validatePermissions = async (
   services: CoreServices,
-  channelHandler: PikkuChannelHandler,
+  userSession: CoreUserSession | undefined,
   onMessage: any,
   data: unknown
 ) => {
@@ -63,7 +63,7 @@ const validatePermissions = async (
     permissions,
     services,
     data,
-    channelHandler.getChannel().userSession
+    userSession
   )
 }
 
@@ -80,7 +80,7 @@ const runFunction = async (
 export const processMessageHandlers = (
   services: CoreServices,
   channelConfig: CoreAPIChannel<any, any>,
-  channelHandler: PikkuChannelHandler<CoreUserSession, unknown>
+  channelHandler: PikkuChannelHandler
 ) => {
   const logger = services.logger
   const requiresSession = channelConfig.auth !== false

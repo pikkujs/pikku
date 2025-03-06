@@ -46,7 +46,6 @@ export const runLocalChannel = async ({
     const channelHandler = new PikkuLocalChannelHandler(
       channelId,
       channelConfig.name,
-      userSession,
       openingData
     )
     const channel = channelHandler.getChannel()

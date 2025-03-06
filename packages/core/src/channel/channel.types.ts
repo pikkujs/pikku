@@ -9,7 +9,6 @@ import {
   APIDocs,
   CoreServices,
   CoreSingletonServices,
-  CoreUserSession,
   CreateSessionServices,
 } from '../types/core.types.js'
 import { CoreAPIPermission } from '../types/functions.types.js'
@@ -65,19 +64,17 @@ export type CoreChannelConnection<
   ChannelData,
   Out = unknown,
   Services extends CoreServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
-  channel: PikkuChannel<Session, ChannelData, Out>
+  channel: PikkuChannel<ChannelData, Out>
 ) => Promise<void>
 
 export type CoreChannelDisconnection<
   ChannelData,
   Services extends CoreServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
-  channel: PikkuChannel<Session, ChannelData, never>
+  channel: PikkuChannel<ChannelData, never>
 ) => Promise<void>
 
 /**
@@ -92,10 +89,9 @@ export type CoreChannelMessage<
   Out,
   ChannelData,
   Services extends CoreServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
-  channel: PikkuChannel<Session, ChannelData, Out>,
+  channel: PikkuChannel<ChannelData, Out>,
   data: In
 ) => Promise<void | Out>
 
@@ -151,14 +147,9 @@ export type CoreAPIChannel<
 
 export type CoreAPIChannels = CoreAPIChannel<any, string>[]
 
-export interface PikkuChannel<UserSession, OpeningData, Out> {
+export interface PikkuChannel<OpeningData, Out> {
   // The channel identifier
   channelId: string
-  // The user session, if available
-  userSession?: UserSession
-  // Update the user session, useful if you deal with auth on the
-  // stream side
-  setUserSession: (userSession: UserSession) => Promise<void> | void
   // The data the channel was created with. This could be query parameters
   // or parameters in the url.
   openingData: OpeningData
@@ -171,33 +162,18 @@ export interface PikkuChannel<UserSession, OpeningData, Out> {
 }
 
 export interface PikkuChannelHandler<
-  UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,
   Out = unknown,
 > {
-  setUserSession(session: UserSession): Promise<void> | void
   send(message: Out, isBinary?: boolean): Promise<void> | void
-  getChannel(): PikkuChannel<UserSession, OpeningData, Out>
+  getChannel(): PikkuChannel<OpeningData, Out>
 }
 
 export type PikkuChannelHandlerFactory<
   OpeningData = unknown,
-  UserSession extends CoreUserSession = CoreUserSession,
   Out = unknown,
 > = (
   channelId: string,
   channelName: string,
   openingData: OpeningData,
-  userSession: UserSession | undefined
-) => PikkuChannelHandler<UserSession, OpeningData, Out>
-
-/**
- * Enfore access to a channel.
- * @param route - The channel to verify access for.
- * @param session - The user session.
- * @returns A promise that resolves if access is granted.
- */
-export type enforceChannelAccess = (
-  channel: CoreAPIChannel<unknown, any>,
-  session?: CoreUserSession
-) => Promise<void> | void
+) => PikkuChannelHandler<OpeningData, Out>

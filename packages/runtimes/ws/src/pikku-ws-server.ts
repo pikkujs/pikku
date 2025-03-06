@@ -130,7 +130,7 @@ export const pikkuWebsocketHandler = ({
       response,
       singletonServices: singletonServicesWithEventHub,
       createSessionServices: createSessionServices as any,
-      route: request.getPath(),
+      route: request.path,
     })
 
     if (!channelHandler) {
