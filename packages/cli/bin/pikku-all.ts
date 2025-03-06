@@ -7,7 +7,7 @@ import {
   writeFileInDir,
 } from '../src/utils.js'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuRoutes } from './pikku-routes.js'
+import { pikkuHTTP } from './pikku-http.js'
 import { pikkuFunctionTypes } from './pikku-function-types.js'
 import { pikkuHTTPMap } from './pikku-routes-map.js'
 import { existsSync } from 'fs'
@@ -31,12 +31,18 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
     )
   }
 
-  const cliConfig = await getPikkuCLIConfig(options.config, [], true)
+  const cliConfig = await getPikkuCLIConfig(
+    options.config,
+    [],
+    options.tags,
+    true
+  )
 
   let typesDeclarationFileExists = true
   let visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
 
   if (!existsSync(cliConfig.typesDeclarationFile)) {
@@ -49,11 +55,12 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
     logInfo(`• Type file first created, inspecting again...\x1b[0m`)
     visitState = await inspectorGlob(
       cliConfig.rootDir,
-      cliConfig.routeDirectories
+      cliConfig.routeDirectories,
+      cliConfig.filters
     )
   }
 
-  const routes = await pikkuRoutes(cliConfig, visitState)
+  const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {
     await pikkuHTTPMap(cliConfig, visitState)
     await pikkuFetch(cliConfig)
@@ -83,7 +90,8 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
     logInfo(`• OpenAPI requires a reinspection to pickup new generated types..`)
     visitState = await inspectorGlob(
       cliConfig.rootDir,
-      cliConfig.routeDirectories
+      cliConfig.routeDirectories,
+      cliConfig.filters
     )
     await pikkuOpenAPI(cliConfig, visitState)
   }
@@ -105,5 +113,6 @@ export const all = (program: Command): void => {
       'The type of your session services factory'
     )
     .option('-c | --config <string>', 'The path to pikku cli config file')
+    .option('-t | --tags <tags...>', 'Which tags to filter by')
     .action(action)
 }

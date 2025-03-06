@@ -86,11 +86,13 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const cliConfig = await getPikkuCLIConfig(
     options.config,
     ['rootDir', 'schemaDirectory', 'configDir', 'nextJSfile'],
+    options.tags,
     true
   )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
   await pikkuNext(cliConfig, visitState, options)
 }

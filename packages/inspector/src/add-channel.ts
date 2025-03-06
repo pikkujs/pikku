@@ -2,11 +2,15 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { APIDocs } from '@pikku/core'
-import { getInputTypes } from './add-route.js'
-import { getPropertyAssignment, getFunctionTypes } from './utils.js'
+import { getInputTypes } from './add-http-route.js'
+import {
+  getPropertyAssignment,
+  getFunctionTypes,
+  matchesFilters,
+} from './utils.js'
 import { ChannelMeta } from '@pikku/core/channel'
 import { TypesMap } from './types-map.js'
-import { InspectorState } from './types.js'
+import { InspectorFilters, InspectorState } from './types.js'
 
 const addMessagesRoutes = (
   obj: ts.ObjectLiteralExpression,
@@ -75,7 +79,8 @@ const addMessagesRoutes = (
 export const addChannel = (
   node: ts.Node,
   checker: ts.TypeChecker,
-  state: InspectorState
+  state: InspectorState,
+  filters: InspectorFilters
 ) => {
   if (!ts.isCallExpression(node)) {
     return
@@ -97,11 +102,10 @@ export const addChannel = (
   let docs: APIDocs | undefined
   let paramsValues: string[] | null = []
   let queryValues: string[] | [] = []
+  let tags: string[] | undefined = undefined
   let inputType: string | null = null
   let route: string | null = null
   let name: string | null = null
-
-  state.channels.files.add(node.getSourceFile().fileName)
 
   // Check if the first argument is an object literal
   if (ts.isObjectLiteralExpression(firstArg)) {
@@ -129,6 +133,7 @@ export const addChannel = (
 
     docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
     queryValues = (getPropertyValue(obj, 'query') as string[]) || []
+    tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
 
     const connect = !!getPropertyAssignment(obj, 'onConnect')
     const disconnect = !!getPropertyAssignment(obj, 'onDisconnect')
@@ -145,6 +150,11 @@ export const addChannel = (
       state.channels.typesMap
     )
 
+    if (!matchesFilters(filters, { tags }, { type: 'channel', name })) {
+      return
+    }
+
+    state.channels.files.add(node.getSourceFile().fileName)
     state.channels.meta.push({
       name,
       route,
@@ -163,6 +173,7 @@ export const addChannel = (
       message,
       messageRoutes,
       docs,
+      tags,
     })
   }
 }

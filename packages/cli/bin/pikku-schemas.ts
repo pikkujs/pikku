@@ -37,7 +37,8 @@ async function action({ config }: { config?: string }): Promise<void> {
   ])
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
   await pikkuSchemas(cliConfig, visitState)
 }

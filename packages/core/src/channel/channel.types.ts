@@ -56,6 +56,7 @@ export interface ChannelMeta {
     >
   >
   docs?: APIDocs
+  tags?: string[]
 }
 
 export type ChannelsMeta = ChannelMeta[]
@@ -145,6 +146,7 @@ export type CoreAPIChannel<
     errors: Array<typeof PikkuError>
     tags: string[]
   }>
+  tags?: string[]
 }
 
 export type CoreAPIChannels = CoreAPIChannel<any, string>[]

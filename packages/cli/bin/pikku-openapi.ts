@@ -46,18 +46,17 @@ export const pikkuOpenAPI = async (
   )
 }
 
-async function action({ config }: PikkuCLIOptions): Promise<void> {
+async function action({ config, tags }: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
-  const cliConfig = await getPikkuCLIConfig(config, [
-    'rootDir',
-    'routesFile',
-    'openAPI',
-    'schemaDirectory',
-    'tsconfig',
-  ])
+  const cliConfig = await getPikkuCLIConfig(
+    config,
+    ['rootDir', 'routesFile', 'openAPI', 'schemaDirectory', 'tsconfig'],
+    tags
+  )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
   await pikkuOpenAPI(cliConfig, visitState)
 }

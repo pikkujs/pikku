@@ -13,4 +13,5 @@ addScheduledTask({
   name: 'myScheduledTask',
   schedule: '*/1 * * * *',
   func: myScheduledTask,
+  tags: ['hello'],
 })

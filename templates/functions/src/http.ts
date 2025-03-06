@@ -15,4 +15,5 @@ addRoute({
   method: 'get',
   route: '/hello-world',
   func: helloWorld,
+  tags: ['hello'],
 })

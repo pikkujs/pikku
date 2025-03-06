@@ -3,8 +3,8 @@ import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { APIDocs } from '@pikku/core'
-import { extractTypeKeys, getFunctionTypes } from './utils.js'
-import { MetaInputTypes, InspectorState } from './types.js'
+import { extractTypeKeys, getFunctionTypes, matchesFilters } from './utils.js'
+import { MetaInputTypes, InspectorState, InspectorFilters } from './types.js'
 
 export const getInputTypes = (
   metaTypes: MetaInputTypes,
@@ -33,7 +33,8 @@ export const getInputTypes = (
 export const addRoute = (
   node: ts.Node,
   checker: ts.TypeChecker,
-  state: InspectorState
+  state: InspectorState,
+  filters: InspectorFilters
 ) => {
   if (!ts.isCallExpression(node)) {
     return
@@ -56,28 +57,36 @@ export const addRoute = (
   let methodValue: string | null = null
   let paramsValues: string[] | null = []
   let queryValues: string[] | [] = []
+  let tags: string[] | [] = []
   let routeValue: string | null = null
-
-  state.http.files.add(node.getSourceFile().fileName)
 
   // Check if the first argument is an object literal
   if (ts.isObjectLiteralExpression(firstArg)) {
     const obj = firstArg
 
     routeValue = getPropertyValue(obj, 'route') as string | null
-    if (routeValue) {
-      const { keys } = pathToRegexp(routeValue)
-      paramsValues = keys.reduce((result, { type, name }) => {
-        if (type === 'param') {
-          result.push(name)
-        }
-        return result
-      }, [] as string[])
+    if (!routeValue) {
+      return
     }
+
+    const { keys } = pathToRegexp(routeValue)
+    paramsValues = keys.reduce((result, { type, name }) => {
+      if (type === 'param') {
+        result.push(name)
+      }
+      return result
+    }, [] as string[])
 
     docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
     methodValue = getPropertyValue(obj, 'method') as string
     queryValues = (getPropertyValue(obj, 'query') as string[]) || []
+    tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
+
+    if (
+      !matchesFilters(filters, { tags }, { type: 'http', name: routeValue })
+    ) {
+      return
+    }
 
     let { inputs, outputs, inputTypes } = getFunctionTypes(checker, obj, {
       funcName: 'func',
@@ -107,12 +116,9 @@ export const addRoute = (
       ].filter((query) => !paramsValues?.includes(query))
     }
 
-    if (!routeValue) {
-      return
-    }
-
+    state.http.files.add(node.getSourceFile().fileName)
     state.http.meta.push({
-      route: routeValue!,
+      route: routeValue,
       method: methodValue! as HTTPMethod,
       input,
       output,
@@ -126,6 +132,7 @@ export const addRoute = (
         paramsValues
       ),
       docs,
+      tags,
     })
   }
 }

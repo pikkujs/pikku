@@ -43,6 +43,9 @@ export interface InspectorChannelState {
   files: Set<string>
 }
 
+export type InspectorFilters = {
+  tags?: string[]
+}
 export interface InspectorState {
   sessionServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType

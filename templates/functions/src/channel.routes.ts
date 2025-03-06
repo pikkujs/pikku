@@ -48,4 +48,5 @@ addChannel({
       emit: emitMessage,
     },
   },
+  tags: ['events'],
 })

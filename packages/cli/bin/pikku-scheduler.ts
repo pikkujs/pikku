@@ -37,17 +37,18 @@ export const pikkuScheduler = async (
   )
 }
 
-async function action(cliOptions: PikkuCLIOptions): Promise<void> {
+async function action(options: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
 
-  const cliConfig = await getPikkuCLIConfig(cliOptions.config, [
-    'rootDir',
-    'routeDirectories',
-    'routesFile',
-  ])
+  const cliConfig = await getPikkuCLIConfig(
+    options.config,
+    ['rootDir', 'routeDirectories', 'routesFile'],
+    options.tags
+  )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
   await pikkuScheduler(cliConfig, visitState)
 }

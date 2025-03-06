@@ -36,5 +36,6 @@ setChannelsMeta([
         },
       },
     },
+    tags: ['events'],
   },
 ])

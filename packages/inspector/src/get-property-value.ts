@@ -16,7 +16,10 @@ export const getPropertyValue = (
     const initializer = property.initializer
 
     // Special handling for 'query' -> expect an array of strings
-    if (propertyName === 'query' && ts.isArrayLiteralExpression(initializer)) {
+    if (
+      ['query', 'tags'].includes(propertyName) &&
+      ts.isArrayLiteralExpression(initializer)
+    ) {
       const stringArray = initializer.elements
         .map((element) => {
           if (ts.isStringLiteral(element)) {

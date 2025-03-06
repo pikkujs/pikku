@@ -1,6 +1,7 @@
 import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import { OpenAPISpecInfo } from './openapi/openapi-spec-generator.js'
+import { InspectorFilters } from '@pikku/inspector'
 
 export interface PikkuCLICoreOutputFiles {
   outDir?: string
@@ -35,6 +36,8 @@ export type PikkuCLIConfig = {
     outputFile: string
     additionalInfo: OpenAPISpecInfo
   }
+
+  filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
 const CONFIG_DIR_FILES = ['nextJSfile', 'fetchFile', 'websocketFile']
@@ -42,11 +45,13 @@ const CONFIG_DIR_FILES = ['nextJSfile', 'fetchFile', 'websocketFile']
 export const getPikkuCLIConfig = async (
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
+  tags: string[] = [],
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   const config = await _getPikkuCLIConfig(
     configFile,
     requiredFields,
+    tags,
     exitProcess
   )
   return config
@@ -55,6 +60,7 @@ export const getPikkuCLIConfig = async (
 const _getPikkuCLIConfig = async (
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
+  tags: string[] = [],
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
@@ -82,6 +88,7 @@ const _getPikkuCLIConfig = async (
       const extendedConfig = await getPikkuCLIConfig(
         resolve(configDir, config.extends),
         [],
+        tags,
         exitProcess
       )
       result = {
@@ -152,6 +159,11 @@ const _getPikkuCLIConfig = async (
           }
         }
       }
+    }
+
+    result.filters = result.filters || {}
+    if (tags.length > 0) {
+      result.filters.tags = tags
     }
 
     if (!isAbsolute(result.tsconfig)) {

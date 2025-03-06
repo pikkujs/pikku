@@ -13,6 +13,7 @@
   },
   "scripts": {
     "tsc": "tsc",
+    "pikku": "pikku",
     "test": "npm run start & bash run-tests.sh"
   }
 }

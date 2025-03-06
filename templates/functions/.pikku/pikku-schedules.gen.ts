@@ -9,6 +9,7 @@ setScheduledTasksMeta([
   {
     name: 'myScheduledTask',
     schedule: '*/1 * * * *',
+    tags: ['hello'],
   },
 ])
 export type ScheduledTaskNames = 'myScheduledTask'

@@ -1,7 +1,11 @@
 import * as ts from 'typescript'
 import { visit } from './visit.js'
 import { TypesMap } from './types-map.js'
-import { InspectorState, InspectorHTTPState } from './types.js'
+import {
+  InspectorState,
+  InspectorHTTPState,
+  InspectorFilters,
+} from './types.js'
 
 export const normalizeHTTPTypes = (
   httpState: InspectorHTTPState
@@ -9,7 +13,10 @@ export const normalizeHTTPTypes = (
   return httpState
 }
 
-export const inspect = (routeFiles: string[]): InspectorState => {
+export const inspect = (
+  routeFiles: string[],
+  filters: InspectorFilters
+): InspectorState => {
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.CommonJS,
@@ -42,7 +49,9 @@ export const inspect = (routeFiles: string[]): InspectorState => {
   }
 
   for (const sourceFile of sourceFiles) {
-    ts.forEachChild(sourceFile, (child) => visit(checker, child, state))
+    ts.forEachChild(sourceFile, (child) =>
+      visit(checker, child, state, filters)
+    )
   }
 
   // Normalise the typesMap

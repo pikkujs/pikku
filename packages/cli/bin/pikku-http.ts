@@ -11,13 +11,13 @@ import {
 import { serializeRoutes } from '../src/http/serialize-route-imports.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
-export const pikkuRoutes = async (
+export const pikkuHTTP = async (
   cliConfig: PikkuCLIConfig,
   visitState: InspectorState
 ) => {
   return await logCommandInfoAndTime(
-    'Finding routes',
-    'Found routes',
+    'Finding HTTP routes',
+    'Found HTTP routes',
     [visitState.http.files.size === 0],
     async () => {
       const { routesFile, packageMappings } = cliConfig
@@ -34,16 +34,17 @@ export const pikkuRoutes = async (
 async function action(cliOptions: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
 
-  const cliConfig = await getPikkuCLIConfig(cliOptions.config, [
-    'rootDir',
-    'routeDirectories',
-    'routesFile',
-  ])
+  const cliConfig = await getPikkuCLIConfig(
+    cliOptions.config,
+    ['rootDir', 'routeDirectories', 'routesFile'],
+    cliOptions.tags
+  )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
-  await pikkuRoutes(cliConfig, visitState)
+  await pikkuHTTP(cliConfig, visitState)
 }
 
 export const routes = (program: Command): void => {

@@ -10,6 +10,7 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
     schedule: string
     session?: UserSession
     docs?: APIDocs
+    tags?: string[]
   }>
 
 /**
@@ -24,4 +25,5 @@ export type CoreScheduledTask<
   func: APIFunction
   docs?: APIDocs
   session?: UserSession
+  tags?: string[]
 }

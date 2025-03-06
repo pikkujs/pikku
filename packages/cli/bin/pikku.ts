@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
 import { schemas } from './pikku-schemas.js'
-import { routes } from './pikku-routes.js'
+import { routes } from './pikku-http.js'
 import { nextjs } from './pikku-nextjs.js'
 import { all } from './pikku-all.js'
 import { functionTypes } from './pikku-function-types.js'

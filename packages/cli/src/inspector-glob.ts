@@ -1,11 +1,12 @@
 import * as path from 'path'
 import { glob } from 'glob'
-import { InspectorState, inspect } from '@pikku/inspector'
+import { InspectorFilters, InspectorState, inspect } from '@pikku/inspector'
 import { logCommandInfoAndTime } from './utils.js'
 
 export const inspectorGlob = async (
   rootDir: string,
-  routeDirectories: string[]
+  routeDirectories: string[],
+  filters: InspectorFilters
 ) => {
   let result: InspectorState
   await logCommandInfoAndTime(
@@ -20,7 +21,7 @@ export const inspectorGlob = async (
           )
         )
       ).flat()
-      result = await inspect(routeFiles)
+      result = await inspect(routeFiles, filters)
     }
   )
   return result!

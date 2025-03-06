@@ -11,5 +11,6 @@ setHTTPRoutesMeta([
     method: 'get',
     input: null,
     output: 'HelloWorldOutput',
+    tags: ['hello'],
   },
 ])

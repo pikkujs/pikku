@@ -63,6 +63,7 @@ export interface PikkuCLIOptions {
   userSessionType?: string
   singletonServicesFactoryType?: string
   sessionServicesFactoryType?: string
+  tags?: string[]
 }
 
 const getMetaTypes = (
@@ -210,7 +211,9 @@ export const logCommandInfoAndTime = async (
   callback: (...args: any[]) => Promise<unknown>
 ): Promise<boolean> => {
   if (skipCondition === true) {
-    logInfo(`• Skipping ${commandStart} since ${skipMessage}.`)
+    logInfo(
+      `• Skipping ${commandStart.charAt(0).toLocaleLowerCase()}${commandStart.slice(1)} since ${skipMessage}.`
+    )
     return false
   }
 

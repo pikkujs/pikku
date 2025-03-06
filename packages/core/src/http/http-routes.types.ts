@@ -122,6 +122,7 @@ export type CoreHTTPFunctionRoute<
       func: APIFunction
       permissions?: Record<string, APIPermission[] | APIPermission>
       auth?: true
+      tags?: string[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -129,6 +130,7 @@ export type CoreHTTPFunctionRoute<
       func: APIFunctionSessionless
       permissions?: undefined
       auth?: false
+      tags?: string[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -137,6 +139,7 @@ export type CoreHTTPFunctionRoute<
       permissions?: Record<string, APIPermission[] | APIPermission>
       auth?: true
       query?: Array<keyof In>
+      tags?: string[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -145,6 +148,7 @@ export type CoreHTTPFunctionRoute<
       permissions?: undefined
       auth?: false
       query?: Array<keyof In>
+      tags?: string[]
     })
 
 /**
@@ -175,6 +179,7 @@ export type HTTPRoutesMeta = Array<{
   output: string | null
   inputTypes?: HTTPFunctionMetaInputTypes
   docs?: APIDocs
+  tags?: string[]
 }>
 
 /**

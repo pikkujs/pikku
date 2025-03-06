@@ -9,7 +9,7 @@ import {
   PikkuCLIOptions,
   writeFileInDir,
 } from '../src/utils.js'
-import { pikkuRoutes } from './pikku-routes.js'
+import { pikkuHTTP } from './pikku-http.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 import { serializePikkuTypes } from '../src/core/serialize-pikku-types.js'
 
@@ -45,17 +45,18 @@ export const pikkuFunctionTypes = async (
 async function action(cliOptions: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
 
-  const cliConfig = await getPikkuCLIConfig(cliOptions.config, [
-    'rootDir',
-    'routeDirectories',
-    'typesDeclarationFile',
-  ])
+  const cliConfig = await getPikkuCLIConfig(
+    cliOptions.config,
+    ['rootDir', 'routeDirectories', 'typesDeclarationFile'],
+    cliOptions.tags
+  )
 
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
-  await pikkuRoutes(cliConfig, visitState)
+  await pikkuHTTP(cliConfig, visitState)
 }
 
 export const functionTypes = (program: Command): void => {

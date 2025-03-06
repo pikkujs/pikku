@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import { TypesMap } from './types-map.js'
+import { InspectorFilters } from './types.js'
 
 type FunctionTypes = {
   inputTypes: ts.Type[]
@@ -346,4 +347,21 @@ export const getFunctionTypes = (
   }
 
   return result
+}
+
+export const matchesFilters = (
+  filters: InspectorFilters,
+  params: { tags?: string[] },
+  meta: { type: 'schedule' | 'http' | 'channel'; name: string }
+) => {
+  if (Object.keys(filters).length === 0 || filters.tags?.length === 0) {
+    return true
+  }
+
+  if (filters.tags?.some((tag) => params.tags?.includes(tag))) {
+    return true
+  }
+
+  console.debug(`⒡ Filtered: ${meta.type}:${meta.name}`)
+  return false
 }

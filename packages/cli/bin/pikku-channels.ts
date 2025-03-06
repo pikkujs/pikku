@@ -36,14 +36,15 @@ export const pikkuChannels = async (
 async function action(cliOptions: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
 
-  const cliConfig = await getPikkuCLIConfig(cliOptions.config, [
-    'rootDir',
-    'routeDirectories',
-    'routesFile',
-  ])
+  const cliConfig = await getPikkuCLIConfig(
+    cliOptions.config,
+    ['rootDir', 'routeDirectories', 'routesFile'],
+    cliOptions.tags
+  )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories
+    cliConfig.routeDirectories,
+    cliConfig.filters
   )
   await pikkuChannels(cliConfig, visitState)
 }
