@@ -1,16 +1,18 @@
-import { Logger, PikkuInteraction, PikkuInteractionService, SchemaService } from '@pikku/core'
+import { Logger, PikkuInteraction, SchemaService } from '@pikku/core'
 import { UnprocessableContentError } from '@pikku/core'
 import { Validator } from '@cfworker/json-schema'
 
-export class CFWorkerSchemaService implements SchemaService, PikkuInteractionService {
+export class CFWorkerSchemaService implements SchemaService {
   private validators = new Map<string, Validator>()
 
   constructor(private logger: Logger) {}
 
-  public async onInteraction({ http }: PikkuInteraction, next: () => Promise<void>): Promise<void> {
+  public async onInteraction(
+    { http }: PikkuInteraction,
+    next: () => Promise<void>
+  ): Promise<void> {
     if (http?.request) {
       if (http.request?.path) {
-        
       }
     }
   }

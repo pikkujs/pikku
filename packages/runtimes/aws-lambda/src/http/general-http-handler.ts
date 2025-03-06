@@ -49,7 +49,7 @@ export const generalHTTPHandler = async <
       singletonServices,
       createSessionServices: createSessionServices as any,
       route: request.path,
-      method: request.method
+      method: request.method,
     })
   } catch {
     // Error should have already been handled by runHTTPRoute

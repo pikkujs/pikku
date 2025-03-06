@@ -161,19 +161,13 @@ export interface PikkuChannel<OpeningData, Out> {
   state: 'initial' | 'open' | 'closed'
 }
 
-export interface PikkuChannelHandler<
-  OpeningData = unknown,
-  Out = unknown,
-> {
+export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {
   send(message: Out, isBinary?: boolean): Promise<void> | void
   getChannel(): PikkuChannel<OpeningData, Out>
 }
 
-export type PikkuChannelHandlerFactory<
-  OpeningData = unknown,
-  Out = unknown,
-> = (
+export type PikkuChannelHandlerFactory<OpeningData = unknown, Out = unknown> = (
   channelId: string,
   channelName: string,
-  openingData: OpeningData,
+  openingData: OpeningData
 ) => PikkuChannelHandler<OpeningData, Out>

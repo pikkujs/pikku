@@ -57,14 +57,14 @@ export const createCloudflareChannelHandlerFactory = (
   const factory: PikkuChannelHandlerFactory = (
     channelId,
     channelName,
-    openingData,
+    openingData
   ) =>
     new CloudflareChannelHandler(
       channelId,
       channelName,
       openingData,
       websocket,
-      logger,
+      logger
     )
   return factory
 }

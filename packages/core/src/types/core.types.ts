@@ -89,16 +89,18 @@ export interface PikkuInteraction {
 }
 
 /**
- * Runs the interaction service for the given interaction.
- */
-export interface PikkuInteractionService {
-  onInteraction (interaction: PikkuInteraction, next: () => Promise<void>): Promise<void>
-}
-
-/**
  * A function that can wrap an interaction and be called before or after
  */
-export type PikkuMiddleware = <SingletonServices = CoreSingletonServices>(_services: SingletonServices, interactions: PikkuInteraction, next: () => Promise<void>) => Promise<void>
+export type PikkuMiddleware = <
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+>(
+  services: SingletonServices & {
+    userSessionService: UserSessionService<UserSession>
+  },
+  interactions: PikkuInteraction,
+  next: () => Promise<void>
+) => Promise<void>
 
 /**
  * Represents the core services used by Pikku, including singleton services and the request/response interaction.
@@ -115,10 +117,7 @@ export type CoreServices<
 export type SessionServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services = CoreServices<SingletonServices>,
-> = Omit<
-  Services,
-  keyof SingletonServices | keyof PikkuInteraction | 'session'
->
+> = Omit<Services, keyof SingletonServices | keyof PikkuInteraction | 'session'>
 
 /**
  * Defines a function type for creating singleton services from the given configuration.

@@ -1,27 +1,9 @@
-import { JoseJWTService } from '@pikku/jose'
-import { PikkuHTTPSessionService } from '@pikku/core/http/pikku-http-session-service'
 import { PikkuNextRequest } from '@pikku/next/pikku-next-request'
 import { NextRequest, NextResponse } from 'next/server.js'
-import { UserSession } from '../functions/types/application-types.js'
 
 // 1. Specify protected and public routes
 const protectedRoutes = ['/admin']
 const publicRoutes = ['/login']
-
-const jwtService = new JoseJWTService<UserSession>(async () => [
-  {
-    id: 'my-key',
-    value: 'the-yellow-puppet',
-  },
-])
-
-const sessionService = new PikkuHTTPSessionService<UserSession>(jwtService, {
-  cookieNames: ['session'],
-  getSessionForCookieValue: async (cookieValue) => {
-    const session: any = await jwtService.decode(cookieValue)
-    return session.payload
-  },
-})
 
 export default async function middleware(req: NextRequest) {
   // 1. Check if the current route is protected or public
@@ -32,8 +14,7 @@ export default async function middleware(req: NextRequest) {
   let userSession
   try {
     // 2. Decrypt the session from the cookie
-    userSession = await sessionService.getUserSession(
-      false,
+    userSession = await pikku().getUserSession(
       new PikkuNextRequest(req as any) as any
     )
   } catch (e) {

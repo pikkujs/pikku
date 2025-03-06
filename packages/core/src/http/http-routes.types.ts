@@ -5,6 +5,7 @@ import {
   CoreSingletonServices,
   CoreUserSession,
   CreateSessionServices,
+  PikkuMiddleware,
 } from '../types/core.types.js'
 import {
   CoreAPIFunction,
@@ -115,6 +116,7 @@ export type CoreHTTPFunctionRoute<
   APIFunction = CoreAPIFunction<In, Out>,
   APIFunctionSessionless = CoreAPIFunctionSessionless<In, Out>,
   APIPermission = CoreAPIPermission<In>,
+  APIMiddleware = PikkuMiddleware,
 > =
   | (CoreHTTPFunction & {
       route: R
@@ -123,6 +125,7 @@ export type CoreHTTPFunctionRoute<
       permissions?: Record<string, APIPermission[] | APIPermission>
       auth?: true
       tags?: string[]
+      middleware?: APIMiddleware[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -131,6 +134,7 @@ export type CoreHTTPFunctionRoute<
       permissions?: undefined
       auth?: false
       tags?: string[]
+      middleware?: APIMiddleware[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -140,6 +144,7 @@ export type CoreHTTPFunctionRoute<
       auth?: true
       query?: Array<keyof In>
       tags?: string[]
+      middleware?: APIMiddleware[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -149,6 +154,7 @@ export type CoreHTTPFunctionRoute<
       auth?: false
       query?: Array<keyof In>
       tags?: string[]
+      middleware?: APIMiddleware[]
     })
 
 /**
@@ -182,3 +188,7 @@ export type HTTPRoutesMeta = Array<{
   tags?: string[]
 }>
 
+export type HTTPRouteMiddleware = {
+  route: string
+  middleware: PikkuMiddleware[]
+}

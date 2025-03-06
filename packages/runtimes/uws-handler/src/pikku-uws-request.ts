@@ -8,8 +8,7 @@ export class PikkuUWSRequest extends PikkuHTTPAbstractRequest {
     private request: HttpRequest,
     private response: HttpResponse
   ) {
-    const url = new URL(request.getUrl())
-    super(url.pathname, request.getMethod().toLowerCase() as any)
+    super(request.getUrl(), request.getMethod().toLowerCase() as any)
   }
 
   public async getBody() {

@@ -32,6 +32,10 @@ export type APIPermission<
   In = unknown,
   RequiredServices = Services,
 > = CoreAPIPermission<In, RequiredServices, UserSession>
+export type APIMiddleware<RequiredServices = Services> = PikkuMiddleware<
+  RequiredServices,
+  UserSession
+>
 
 export type APIFunctionSessionless<
   In = unknown,
@@ -49,7 +53,8 @@ type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<
   Route,
   APIFunction<In, Out>,
   APIFunctionSessionless<In, Out>,
-  APIPermission<In>
+  APIPermission<In>,
+  APIMiddleware
 >
 
 export type ChannelConnection<

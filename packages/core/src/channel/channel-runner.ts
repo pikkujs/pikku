@@ -128,9 +128,9 @@ export const openChannel = async ({
       singletonServices.logger,
       singletonServices.schemaService,
       schemaName,
-      openingData,
+      openingData
     )
- }
+  }
 
   return { openingData, channelConfig }
 }

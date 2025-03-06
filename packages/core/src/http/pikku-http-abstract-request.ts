@@ -11,8 +11,11 @@ export abstract class PikkuHTTPAbstractRequest<
   In = unknown,
 > extends PikkuRequest<In> {
   private params: Partial<Record<string, string | string[]>> = {}
-  
-  constructor (public path: string, public method: HTTPMethod) {
+
+  constructor(
+    public path: string,
+    public method: HTTPMethod
+  ) {
     super()
   }
 

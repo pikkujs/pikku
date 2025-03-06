@@ -10,7 +10,6 @@ import {
   CreateSingletonServices,
 } from '@pikku/core'
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
-import { PikkuHTTPSessionService } from '@pikku/core/http'
 import { JoseJWTService } from '@pikku/jose'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 
@@ -40,14 +39,12 @@ export const createSingletonServices: CreateSingletonServices<
   )
 
   const schemaService = new CFWorkerSchemaService(logger)
-  const httpSessionService = new PikkuHTTPSessionService<UserSession>(jwt, {})
 
   return {
     config,
     logger,
     variablesService,
     jwt,
-    httpSessionService,
     schemaService,
   }
 }

@@ -4,12 +4,7 @@ import { NotFoundError, NotImplementedError } from '../errors/errors.js'
 import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
 import { JSONValue } from '../types/core.types.js'
-import {
-  getUserSession,
-  runHTTPRoute,
-  clearRoutes,
-  addRoute,
-} from './http-route-runner.js'
+import { runHTTPRoute, clearRoutes, addRoute } from './http-route-runner.js'
 
 class PikkuTestRequest extends PikkuHTTPAbstractRequest {
   public getBody(): Promise<unknown> {
@@ -46,9 +41,6 @@ describe('runHTTPRoute', () => {
         info: () => {},
         warn: () => {},
         error: () => {},
-      },
-      httpSessionService: {
-        getUserSession: async () => {},
       },
     }
 

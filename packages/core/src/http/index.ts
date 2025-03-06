@@ -1,5 +1,3 @@
-export * from './pikku-http-session-service.js'
-
 export * from './pikku-http-abstract-request.js'
 
 export * from './pikku-http-abstract-response.js'

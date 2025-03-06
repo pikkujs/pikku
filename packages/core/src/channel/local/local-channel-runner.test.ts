@@ -19,9 +19,6 @@ const mockLogger = {
 
 const mockSingletonServices = {
   logger: mockLogger,
-  // Provide a mock channelPermissionService only when needed
-  // e.g., channelPermissionService: { verifyChannelAccess: async () => {} },
-  httpSessionService: {},
 } as any
 
 // Mock request and response objects
@@ -79,7 +76,7 @@ test('runChannel should return undefined and 404 if no matching channel is found
   const result = await runLocalChannel({
     singletonServices: mockSingletonServices,
     channelId: 'test-channel-id',
-    request: new MockRequest(),
+    request: new MockRequest('/non-existent-channel', 'get'),
     response: mockResponse,
     route: '/non-existent-channel',
     createSessionServices: mockCreateSessionServices,
@@ -113,7 +110,7 @@ test('runChannel should return a channel handler if channel matches and no auth 
   const result = await runLocalChannel({
     singletonServices: singletonServicesWithPerm,
     channelId: 'test-channel-id',
-    request: new MockRequest(),
+    request: new MockRequest('/test-channel', 'get'),
     response: new MockResponse(),
     route: '/test-channel',
     createSessionServices: mockCreateSessionServices,

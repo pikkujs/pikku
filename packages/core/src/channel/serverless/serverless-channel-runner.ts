@@ -42,7 +42,7 @@ const getVariablesForChannel = ({
   const channelHandler = channelHandlerFactory(
     channelId,
     channelConfig.name,
-    openingData,
+    openingData
   )
   return {
     channelConfig,

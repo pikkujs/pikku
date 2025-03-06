@@ -10,6 +10,7 @@ export * from './http/index.js'
 export * from './channel/index.js'
 export * from './scheduler/index.js'
 export * from './errors/index.js'
+export * from './middleware/index.js'
 
 export { addRoute } from './http/http-route-runner.js'
 export { addChannel } from './channel/channel-runner.js'

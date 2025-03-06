@@ -40,7 +40,7 @@ export const createLambdaChannelHandlerFactory = (
   const factory: PikkuChannelHandlerFactory = (
     channelId,
     channelName,
-    openingData,
+    openingData
   ) =>
     new LambdaChannelHandler(
       logger,

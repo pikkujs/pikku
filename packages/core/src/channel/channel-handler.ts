@@ -59,12 +59,7 @@ const validatePermissions = async (
 ) => {
   const permissions =
     typeof onMessage === 'function' ? {} : onMessage.permissions
-  return await verifyPermissions(
-    permissions,
-    services,
-    data,
-    userSession
-  )
+  return await verifyPermissions(permissions, services, data, userSession)
 }
 
 const runFunction = async (

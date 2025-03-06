@@ -103,7 +103,7 @@ const getMetaTypes = (
 
 export const getPikkuFilesAndMethods = async (
   {
-    sessionServicesTypeImportMap: httpSessionServicesTypeImportMap,
+    sessionServicesTypeImportMap,
     userSessionTypeImportMap,
     sessionServicesFactories,
     singletonServicesFactories,
@@ -142,7 +142,7 @@ export const getPikkuFilesAndMethods = async (
     sessionServicesType: getMetaTypes(
       'CoreServices',
       requires.sessionServiceType ? errors : new Map(),
-      httpSessionServicesTypeImportMap
+      sessionServicesTypeImportMap
     ),
     pikkuConfigFactory: getMetaTypes(
       'CoreConfig',
