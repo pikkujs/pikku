@@ -7,7 +7,7 @@ import { PikkuMiddleware } from '../types/core.types.js'
  *
  * @param options.debugJWTDecode - Optional flag for debugging the JWT decode process.
  */
-export const jwtMiddleware = (
+export const authJWTMiddleware = (
   options: { debugJWTDecode?: boolean } = {}
 ): PikkuMiddleware => {
   const middleware: PikkuMiddleware = async (

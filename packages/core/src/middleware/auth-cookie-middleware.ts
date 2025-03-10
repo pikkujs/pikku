@@ -6,7 +6,7 @@ import { PikkuMiddleware } from '../types/core.types.js'
  * @param options.cookieNames - List of cookie names to check.
  * @param options.getSessionForCookieValue - Function to retrieve a session using a cookie value.
  */
-export const cookieMiddleware = (
+export const authCookieMiddleware = (
   options: {
     cookieNames?: string[]
     getSessionForCookieValue?: (

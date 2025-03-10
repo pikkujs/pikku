@@ -9,7 +9,7 @@ import type {
   ScheduledTasksMeta,
 } from './scheduler.types.js'
 import type { CoreAPIFunctionSessionless } from '../types/functions.types.js'
-
+import crypto from 'crypto'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 
