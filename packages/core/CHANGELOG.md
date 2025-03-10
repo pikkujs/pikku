@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.16
+
+### Patch Changes
+
+- 3cbdf9e: fix: adding missing crypto import
+
 ## 0.6.15
 
 ### Patch Changes
