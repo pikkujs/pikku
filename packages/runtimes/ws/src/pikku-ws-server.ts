@@ -12,6 +12,7 @@ import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 
 import { PikkuHTTPRequest } from './pikku-http-request.js'
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
+import crypto from 'crypto'
 
 /**
  * Options for configuring the `pikkuHandler`.

@@ -12,6 +12,7 @@ export * from './scheduler/index.js'
 export * from './errors/index.js'
 export * from './middleware/index.js'
 
+export { runMiddleware } from './middleware-runner.js'
 export { addRoute } from './http/http-route-runner.js'
 export { addChannel } from './channel/channel-runner.js'
 export { addScheduledTask } from './scheduler/scheduler-runner.js'

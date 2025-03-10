@@ -12,8 +12,7 @@ import {
   PikkuMiddleware,
 } from '@pikku/core'
 import { HTTPMethod, runHTTPRoute } from '@pikku/core/http'
-import { runMiddleware } from '@pikku/core/src/middleware-runner.js'
-import { LocalUserSessionService } from '@pikku/core/src/services/user-session-service.js'
+import { runMiddleware, LocalUserSessionService } from '@pikku/core'
 import { PikkuNextRequest } from './pikku-next-request.js'
 
 const injectIntoUrl = (route: string, keys: Record<string, string>) => {
