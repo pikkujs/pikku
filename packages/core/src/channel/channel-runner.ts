@@ -1,6 +1,6 @@
 import { NotFoundError } from '../errors/errors.js'
 import { coerceQueryStringToArray, validateSchema } from '../schema.js'
-import { CoreUserSession } from '../types/core.types.js'
+import { UserSessionService } from '../services/user-session-service.js'
 import {
   CoreAPIChannel,
   ChannelsMeta,
@@ -96,10 +96,11 @@ export const openChannel = async ({
   singletonServices,
   coerceToArray = false,
   http,
+  userSessionService,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
-  Omit<RunChannelParams<unknown>, 'response' | 'request'> &
-  RunChannelOptions): Promise<{
-  userSession?: CoreUserSession
+  Omit<RunChannelParams<unknown>, 'response' | 'request'> & {
+    userSessionService?: UserSessionService<any>
+  } & RunChannelOptions): Promise<{
   openingData: unknown
   channelConfig: CoreAPIChannel<unknown, any>
 }> => {

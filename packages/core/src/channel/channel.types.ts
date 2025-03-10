@@ -10,6 +10,7 @@ import {
   CoreServices,
   CoreSingletonServices,
   CreateSessionServices,
+  PikkuMiddleware,
 } from '../types/core.types.js'
 import { CoreAPIPermission } from '../types/functions.types.js'
 import { PikkuRequest } from '../pikku-request.js'
@@ -134,6 +135,7 @@ export type CoreAPIChannel<
         }
     >
   >
+  middleware?: PikkuMiddleware[]
   permissions?: Record<string, APIPermission[] | APIPermission>
   auth?: boolean
   docs?: Partial<{

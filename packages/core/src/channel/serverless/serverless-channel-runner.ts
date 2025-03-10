@@ -11,6 +11,8 @@ import type {
 import { createHTTPInteraction } from '../../http/http-route-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleError } from '../../handle-error.js'
+import { RemoteUserSessionService } from '../../services/user-session-service.js'
+import { runMiddleware } from '../../middleware-runner.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -68,53 +70,71 @@ export const runChannelConnect = async ({
   RunServerlessChannelParams<unknown>) => {
   let sessionServices: SessionServices | undefined
   const http = createHTTPInteraction(request, response)
-  try {
-    const { userSession, channelConfig, openingData } = await openChannel({
-      channelId,
-      createSessionServices,
-      http,
-      route,
-      singletonServices,
-      coerceToArray,
-    })
-    await channelStore.addChannel({
-      channelId,
-      channelName: channelConfig.name,
-      openingData,
-      channelObject,
-    })
-    const { channel } = getVariablesForChannel({
-      channelId,
-      channelHandlerFactory,
-      channelName: channelConfig.name,
-    })
-    if (createSessionServices) {
-      sessionServices = await createSessionServices(
-        singletonServices,
-        { http },
-        userSession
+  const userSessionService = new RemoteUserSessionService(
+    channelStore,
+    channelId
+  )
+
+  const { channelConfig, openingData } = await openChannel({
+    channelId,
+    createSessionServices,
+    http,
+    route,
+    singletonServices,
+    coerceToArray,
+  })
+
+  const main = async () => {
+    try {
+      await channelStore.addChannel({
+        channelId,
+        channelName: channelConfig.name,
+        openingData,
+        channelObject,
+      })
+      const { channel } = getVariablesForChannel({
+        channelId,
+        channelHandlerFactory,
+        channelName: channelConfig.name,
+      })
+      if (createSessionServices) {
+        sessionServices = await createSessionServices(
+          singletonServices,
+          { http },
+          await userSessionService.get()
+        )
+      }
+      await channelConfig.onConnect?.(
+        { ...singletonServices, ...sessionServices },
+        channel
       )
-    }
-    await channelConfig.onConnect?.(
-      { ...singletonServices, ...sessionServices },
-      channel
-    )
-    http?.response?.setStatus(101)
-  } catch (e: any) {
-    handleError(
-      e,
-      http,
-      channelId,
-      singletonServices.logger,
-      logWarningsForStatusCodes,
-      respondWith404,
-      bubbleErrors
-    )
-  } finally {
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
+      http?.response?.setStatus(101)
+    } catch (e: any) {
+      handleError(
+        e,
+        http,
+        channelId,
+        singletonServices.logger,
+        logWarningsForStatusCodes,
+        respondWith404,
+        bubbleErrors
+      )
+    } finally {
+      if (sessionServices) {
+        await closeSessionServices(singletonServices.logger, sessionServices)
+      }
     }
   }
+
+  await runMiddleware(
+    {
+      ...singletonServices,
+      userSessionService,
+    },
+    { http },
+    channelConfig.middleware || [],
+    main
+  )
 }
 
 export const runChannelDisconnect = async ({

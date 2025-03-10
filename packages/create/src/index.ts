@@ -187,10 +187,17 @@ async function setupTemplate({
     })
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync('npx', ['--no-install', '@pikku/cli'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
+    try {
+      spawnSync(packageManager, ['run', 'pikku'], {
+        cwd: targetPath,
+        stdio: 'inherit',
+      })
+    } catch {
+      spawnSync('npx', ['--no-install', '@pikku/cli'], {
+        cwd: targetPath,
+        stdio: 'inherit',
+      })
+    }
   }
 
   console.log(chalk.green('\n✅ Project setup complete!'))

@@ -10,6 +10,8 @@ import {
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { SessionServices } from '../../types/core.types.js'
 import { handleError } from '../../handle-error.js'
+import { runMiddleware } from '../../middleware-runner.js'
+import { LocalUserSessionService } from '../../services/user-session-service.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -28,64 +30,83 @@ export const runLocalChannel = async ({
   RunChannelParams<unknown>): Promise<PikkuLocalChannelHandler | void> => {
   let sessionServices: SessionServices<typeof singletonServices> | undefined
 
+  let channelHandler: PikkuLocalChannelHandler | undefined
+  const userSessionService = new LocalUserSessionService()
   const http = createHTTPInteraction(request, response)
-  try {
-    const { userSession, openingData, channelConfig } = await openChannel({
-      channelId,
-      createSessionServices,
-      respondWith404,
-      http,
-      route,
-      singletonServices,
-      skipUserSession,
-      coerceToArray,
-    })
 
-    const channelHandler = new PikkuLocalChannelHandler(
-      channelId,
-      channelConfig.name,
-      openingData
-    )
-    const channel = channelHandler.getChannel()
-
-    if (createSessionServices) {
-      sessionServices = await createSessionServices(
+  const main = async () => {
+    try {
+      const { openingData, channelConfig } = await openChannel({
+        channelId,
+        createSessionServices,
+        respondWith404,
+        http,
+        route,
         singletonServices,
-        { http },
-        userSession
+        skipUserSession,
+        coerceToArray,
+      })
+
+      channelHandler = new PikkuLocalChannelHandler(
+        channelId,
+        channelConfig.name,
+        openingData
       )
-    }
-    const allServices = { ...singletonServices, ...sessionServices }
+      const channel = channelHandler.getChannel()
+      const userSession = await userSessionService.get()
+      if (createSessionServices) {
+        sessionServices = await createSessionServices(
+          singletonServices,
+          { http },
+          userSession
+        )
+      }
+      const allServices = {
+        ...singletonServices,
+        ...sessionServices,
+        userSessionService,
+      }
 
-    channelHandler.registerOnOpen(() => {
-      channelConfig.onConnect?.(allServices, channel)
-    })
+      channelHandler.registerOnOpen(() => {
+        channelConfig.onConnect?.(allServices, channel)
+      })
 
-    channelHandler.registerOnClose(async () => {
-      channelConfig.onDisconnect?.(allServices, channel)
+      channelHandler.registerOnClose(async () => {
+        channelConfig.onDisconnect?.(allServices, channel)
+        if (sessionServices) {
+          await closeSessionServices(singletonServices.logger, sessionServices)
+        }
+      })
+
+      channelHandler.registerOnMessage(
+        processMessageHandlers(allServices, channelConfig, channelHandler)
+      )
+    } catch (e: any) {
+      handleError(
+        e,
+        http,
+        channelId,
+        singletonServices.logger,
+        logWarningsForStatusCodes,
+        respondWith404,
+        bubbleErrors
+      )
+    } finally {
       if (sessionServices) {
         await closeSessionServices(singletonServices.logger, sessionServices)
       }
-    })
-
-    channelHandler.registerOnMessage(
-      processMessageHandlers(allServices, channelConfig, channelHandler)
-    )
-
-    return channelHandler
-  } catch (e: any) {
-    handleError(
-      e,
-      http,
-      channelId,
-      singletonServices.logger,
-      logWarningsForStatusCodes,
-      respondWith404,
-      bubbleErrors
-    )
-  } finally {
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
     }
   }
+
+  await runMiddleware(
+    {
+      ...singletonServices,
+      userSessionService,
+    },
+    { http },
+    route.middleware || [],
+    main
+  )
+
+  return channelHandler!
 }
