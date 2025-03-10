@@ -1,5 +1,13 @@
 # @pikku/ws
 
+## 0.6.5
+
+### Patch Changes
+
+- 1c7dfb6: fix: fixing some import issues
+- Updated dependencies [1c7dfb6]
+  - @pikku/core@0.6.15
+
 ## 0.6.4
 
 ### Patch Changes
