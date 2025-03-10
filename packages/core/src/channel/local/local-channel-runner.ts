@@ -1,8 +1,5 @@
 import { openChannel } from '../channel-runner.js'
-import {
-  createHTTPInteraction,
-  handleError,
-} from '../../http/http-route-runner.js'
+import { createHTTPInteraction } from '../../http/http-route-runner.js'
 import { closeSessionServices } from '../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import {
@@ -12,6 +9,7 @@ import {
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { SessionServices } from '../../types/core.types.js'
+import { handleError } from '../../handle-error.js'
 
 export const runLocalChannel = async ({
   singletonServices,

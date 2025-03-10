@@ -91,10 +91,10 @@ export interface PikkuInteraction {
 /**
  * A function that can wrap an interaction and be called before or after
  */
-export type PikkuMiddleware = <
+export type PikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
->(
+> = (
   services: SingletonServices & {
     userSessionService: UserSessionService<UserSession>
   },

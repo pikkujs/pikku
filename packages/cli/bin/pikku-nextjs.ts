@@ -36,6 +36,7 @@ export const pikkuNext = async (
         pikkuConfigFactory,
         singletonServicesFactory,
         sessionServicesFactory,
+        userSessionType,
       } = await getPikkuFilesAndMethods(
         visitState,
         packageMappings,
@@ -51,6 +52,7 @@ export const pikkuNext = async (
       const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextJSfile, pikkuConfigFactory.file, packageMappings)}'`
       const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextJSfile, singletonServicesFactory.file, packageMappings)}'`
       const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextJSfile, sessionServicesFactory.file, packageMappings)}'`
+      const userSessionImport = `import type { ${userSessionType.type} as UserSession } from '${getFileImportRelativePath(nextJSfile, userSessionType.file, packageMappings)}'`
 
       const routesPath = getFileImportRelativePath(
         nextJSfile,
@@ -74,7 +76,8 @@ export const pikkuNext = async (
         schemasPath,
         pikkuConfigImport,
         singletonServicesImport,
-        sessionServicesImport
+        sessionServicesImport,
+        userSessionImport
       )
       await writeFileInDir(nextJSfile, content)
     }

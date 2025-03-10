@@ -1,4 +1,8 @@
-import type { CoreServices, CoreUserSession } from './core.types.js'
+import type {
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+} from './core.types.js'
 
 /**
  * Represents a core API function that performs an operation using core services and a user session.
@@ -11,8 +15,8 @@ import type { CoreServices, CoreUserSession } from './core.types.js'
 export type CoreAPIFunction<
   In,
   Out,
-  Services = CoreServices,
-  Session = CoreUserSession,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session: Session) => Promise<Out>
 
 /**
@@ -26,8 +30,8 @@ export type CoreAPIFunction<
 export type CoreAPIFunctionSessionless<
   In,
   Out,
-  Services = CoreServices,
-  Session = CoreUserSession,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session?: Session) => Promise<Out>
 
 /**
@@ -39,6 +43,6 @@ export type CoreAPIFunctionSessionless<
  */
 export type CoreAPIPermission<
   In = any,
-  Services = CoreServices,
-  Session = CoreUserSession,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session?: Session) => Promise<boolean>

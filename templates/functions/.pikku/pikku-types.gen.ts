@@ -9,6 +9,7 @@ import {
   CoreAPIFunction,
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
+  PikkuMiddleware,
 } from '@pikku/core'
 import {
   CoreHTTPFunctionRoute,
@@ -26,26 +27,26 @@ import {
 } from '@pikku/core/channel'
 
 import type { UserSession } from '../types/application-types.d.js'
+import type { SingletonServices } from '../types/application-types.d.js'
 import type { Services } from '../types/application-types.d.js'
 
 export type APIPermission<
   In = unknown,
-  RequiredServices = Services,
+  RequiredServices extends SingletonServices = SingletonServices,
 > = CoreAPIPermission<In, RequiredServices, UserSession>
-export type APIMiddleware<RequiredServices = Services> = PikkuMiddleware<
-  RequiredServices,
-  UserSession
->
+export type APIMiddleware<
+  RequiredServices extends SingletonServices = SingletonServices,
+> = PikkuMiddleware<RequiredServices, UserSession>
 
 export type APIFunctionSessionless<
   In = unknown,
   Out = never,
-  RequiredServices = Services,
+  RequiredServices extends Services = Services,
 > = CoreAPIFunctionSessionless<In, Out, RequiredServices, UserSession>
 export type APIFunction<
   In = unknown,
   Out = never,
-  RequiredServices = Services,
+  RequiredServices extends Services = Services,
 > = CoreAPIFunction<In, Out, RequiredServices, UserSession>
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<
   In,
@@ -63,14 +64,14 @@ export type ChannelConnection<
   RequiredServices extends Services = Services,
 > = (
   services: RequiredServices,
-  channel: PikkuChannel<UserSession, ChannelData, Out>
+  channel: PikkuChannel<ChannelData, Out>
 ) => Promise<void>
 export type ChannelDisconnection<
   ChannelData = unknown,
   RequiredServices extends Services = Services,
 > = (
   services: RequiredServices,
-  channel: PikkuChannel<UserSession, ChannelData, never>
+  channel: PikkuChannel<ChannelData, never>
 ) => Promise<void>
 export type ChannelMessage<
   In,
@@ -79,7 +80,7 @@ export type ChannelMessage<
   RequiredServices extends Services = Services,
 > = (
   services: RequiredServices,
-  channel: PikkuChannel<UserSession, ChannelData, Out>,
+  channel: PikkuChannel<ChannelData, Out>,
   data: In
 ) => Promise<Out | void>
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<

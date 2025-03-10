@@ -47,6 +47,7 @@ export type InspectorFilters = {
   tags?: string[]
 }
 export interface InspectorState {
+  singletonServicesTypeImportMap: PathToNameAndType
   sessionServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType

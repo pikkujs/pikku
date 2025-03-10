@@ -14,4 +14,5 @@ export interface UserSession extends CoreUserSession {
 export interface SingletonServices
   extends CoreSingletonServices<Config, UserSession> {}
 
-export interface Services extends CoreServices<SingletonServices> {}
+export interface Services
+  extends CoreServices<SingletonServices, UserSession> {}

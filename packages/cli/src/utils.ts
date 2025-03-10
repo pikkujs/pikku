@@ -52,6 +52,7 @@ interface Meta {
 export type FilesAndMethods = {
   userSessionType: Meta
   sessionServicesType: Meta
+  singletonServicesType: Meta
   pikkuConfigFactory: Meta
   singletonServicesFactory: Meta
   sessionServicesFactory: Meta
@@ -103,6 +104,7 @@ const getMetaTypes = (
 
 export const getPikkuFilesAndMethods = async (
   {
+    singletonServicesTypeImportMap,
     sessionServicesTypeImportMap,
     userSessionTypeImportMap,
     sessionServicesFactories,
@@ -119,11 +121,13 @@ export const getPikkuFilesAndMethods = async (
   requires: Partial<{
     config: boolean
     sessionServiceType: boolean
+    singletonServicesType: boolean
     userSessionType: boolean
     singletonServicesFactory: boolean
     sessionServicesFactory: boolean
   }> = {
     config: false,
+    singletonServicesType: false,
     sessionServiceType: false,
     userSessionType: false,
     singletonServicesFactory: false,
@@ -138,6 +142,11 @@ export const getPikkuFilesAndMethods = async (
       requires.userSessionType ? errors : new Map(),
       userSessionTypeImportMap,
       configFileType
+    ),
+    singletonServicesType: getMetaTypes(
+      'CoreSingletonServices',
+      requires.singletonServicesType ? errors : new Map(),
+      singletonServicesTypeImportMap
     ),
     sessionServicesType: getMetaTypes(
       'CoreServices',

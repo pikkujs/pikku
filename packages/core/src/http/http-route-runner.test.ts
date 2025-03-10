@@ -1,9 +1,9 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
-import { NotFoundError, NotImplementedError } from '../errors/errors.js'
+import { NotFoundError } from '../errors/errors.js'
 import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
-import { JSONValue } from '../types/core.types.js'
+import { JSONValue, PikkuMiddleware } from '../types/core.types.js'
 import { runHTTPRoute, clearRoutes, addRoute } from './http-route-runner.js'
 
 class PikkuTestRequest extends PikkuHTTPAbstractRequest {
@@ -27,6 +27,11 @@ class PikkuTestResponse extends PikkuHTTPAbstractResponse {
   }
 }
 
+const sessionMiddleware: PikkuMiddleware = async (services, _, next) => {
+  services.userSessionService.set({ userId: 'test' } as any)
+  await next()
+}
+
 describe('runHTTPRoute', () => {
   let singletonServices: any
   let createSessionServices: any
@@ -45,7 +50,7 @@ describe('runHTTPRoute', () => {
     }
 
     createSessionServices = async () => ({})
-    request = new PikkuTestRequest()
+    request = new PikkuTestRequest('path', 'get')
     response = new PikkuTestResponse()
 
     request.getData = async () => ({})
@@ -83,6 +88,7 @@ describe('runHTTPRoute', () => {
       route: 'test',
       method: 'get',
       func: routeFunc,
+      middleware: [sessionMiddleware],
     })
 
     const result = await runHTTPRoute({
@@ -108,6 +114,7 @@ describe('runHTTPRoute', () => {
       method: 'get',
       func: routeFunc,
       permissions,
+      middleware: [sessionMiddleware],
     })
 
     await runHTTPRoute({
@@ -133,6 +140,7 @@ describe('runHTTPRoute', () => {
       route: 'test',
       method: 'get',
       func: routeFunc,
+      middleware: [sessionMiddleware],
     })
 
     await assert.rejects(
@@ -148,38 +156,5 @@ describe('runHTTPRoute', () => {
         }),
       error
     )
-  })
-})
-
-describe('getUserSession', () => {
-  let sessionService: any
-  let request: any
-
-  beforeEach(() => {
-    sessionService = {
-      getUserSession: async () => ({}),
-    }
-    request = new PikkuTestRequest()
-  })
-
-  test('should return user session when sessionService is provided', async () => {
-    const userSession = { id: '123', username: 'test' }
-    sessionService.getUserSession = async () => userSession
-
-    const result = await getUserSession(sessionService, true, request)
-
-    assert.deepStrictEqual(result, userSession)
-  })
-
-  test('should throw NotImplementedError when session is required but sessionService is not provided', async () => {
-    await assert.rejects(
-      async () => getUserSession(undefined, true, request),
-      NotImplementedError
-    )
-  })
-
-  test('should return undefined when session is not required and sessionService is not provided', async () => {
-    const result = await getUserSession(undefined, false, request)
-    assert.strictEqual(result, undefined)
   })
 })

@@ -153,7 +153,7 @@ describe('Functions Test Suite', () => {
     )
   })
 
-  test('cleanTSConfig: removes extends and resets include', () => {
+  test('cleanTSConfig: removes extends', () => {
     const testDir = path.join(tempRoot, 'tsconfigTest')
     fs.mkdirSync(testDir, { recursive: true })
     const tsconfigPath = path.join(testDir, 'tsconfig.json')
@@ -169,11 +169,6 @@ describe('Functions Test Suite', () => {
     const updatedConfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'))
     assert.ok(!('extends' in updatedConfig), '"extends" should be removed')
     assert.deepStrictEqual(
-      updatedConfig.include,
-      ['src/'],
-      '"include" should be reset to ["src/"]'
-    )
-    assert.deepStrictEqual(
       updatedConfig.compilerOptions,
       { target: 'ES6' },
       'Other properties should remain unchanged'
@@ -183,14 +178,13 @@ describe('Functions Test Suite', () => {
   test('wranglerChanges: updates wranger.toml file content', () => {
     const testDir = path.join(tempRoot, 'wranglerTest')
     fs.mkdirSync(testDir, { recursive: true })
-    const wranglerPath = path.join(testDir, 'wranger.toml')
-    // For testing, we use a JSON string to simulate TOML content.
-    const originalContent = JSON.stringify(
+    const wranglerPath = path.join(testDir, 'wrangler.toml')
+    const originalContent =
       'compatibility_date = "2020-01-01"\nservice = "pikku-cloudflare-workers"\nanother = "pikku-cloudflare-websockets"'
-    )
-    fs.writeFileSync(wranglerPath, originalContent, 'utf-8')
 
+    fs.writeFileSync(wranglerPath, originalContent, 'utf-8')
     const appName = 'myApp'
+
     wranglerChanges(testDir, appName)
 
     const updatedContent = fs.readFileSync(wranglerPath, 'utf-8')
@@ -238,7 +232,7 @@ describe('Functions Test Suite', () => {
     const pkgContent = {
       scripts: {
         build: 'npm run build',
-        test: 'npm run test',
+        'test:template': 'npm run test',
         tsc: 'tsc',
         ncu: 'ncu',
       },
@@ -264,7 +258,6 @@ describe('Functions Test Suite', () => {
     )
     // Verify that "npm run" was replaced with "yarn run"
 
-    console.log(updatedPackage)
     assert.ok(
       updatedPackage.scripts.build.includes('yarn run'),
       'build script should be updated'

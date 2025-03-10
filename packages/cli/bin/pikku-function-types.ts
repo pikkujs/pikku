@@ -23,17 +23,24 @@ export const pikkuFunctionTypes = async (
     'Created api types',
     [false],
     async () => {
-      const { userSessionType, sessionServicesType } =
+      const { userSessionType, sessionServicesType, singletonServicesType } =
         await getPikkuFilesAndMethods(
           visitState,
           packageMappings,
           typesFile,
           options,
-          { userSessionType: true, sessionServiceType: true }
+          {
+            userSessionType: true,
+            sessionServiceType: true,
+            singletonServicesType: true,
+          }
         )
+
       const content = serializePikkuTypes(
         `import type { ${userSessionType.type} } from '${getFileImportRelativePath(typesFile, userSessionType.typePath, packageMappings)}'`,
         userSessionType.type,
+        `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,
+        singletonServicesType.type,
         `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(typesFile, sessionServicesType.typePath, packageMappings)}'`,
         sessionServicesType.type
       )

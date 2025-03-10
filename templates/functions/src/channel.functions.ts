@@ -26,7 +26,7 @@ export const authenticate: ChannelMessage<
 > = async (services, channel, data) => {
   const authResult = data.token === 'valid'
   if (authResult) {
-    await channel.setUserSession({ userId: data.userId })
+    await services.userSession?.set({ userId: data.userId })
   }
   return { authResult, action: 'auth' }
 }
@@ -51,9 +51,10 @@ export const emitMessage: ChannelMessage<
   { name: string },
   { timestamp: string; from: string } | { message: string }
 > = async (services, channel, data) => {
+  const session = await services.userSession?.get()
   await services.eventHub?.publish(data.name, channel.channelId, {
     timestamp: new Date().toISOString(),
-    from: channel.userSession?.userId ?? 'anonymous',
+    from: session ?? 'anonymous',
   })
 }
 

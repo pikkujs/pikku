@@ -1,4 +1,5 @@
 {
+  "extends": "../functions/pikku.config.json",
   "nextJSfile": "./pikku-nextjs.ts",
   "supportsImportAttributes": true
 }

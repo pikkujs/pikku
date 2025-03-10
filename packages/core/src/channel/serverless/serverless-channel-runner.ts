@@ -8,11 +8,9 @@ import type {
   RunChannelParams,
   PikkuChannelHandlerFactory,
 } from '../channel.types.js'
-import {
-  createHTTPInteraction,
-  handleError,
-} from '../../http/http-route-runner.js'
+import { createHTTPInteraction } from '../../http/http-route-runner.js'
 import { ChannelStore } from '../channel-store.js'
+import { handleError } from '../../handle-error.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {

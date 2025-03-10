@@ -118,6 +118,16 @@ export function cleanTSConfig(targetPath: string): void {
 }
 
 /**
+ * Cleans up the tsconfig.json file
+ */
+export function cleanPikkuConfig(targetPath: string): void {
+  const pikkuConfigFile = path.join(targetPath, 'pikku.config.json')
+  const pikkuConfig = JSON.parse(fs.readFileSync(pikkuConfigFile, 'utf-8'))
+  delete pikkuConfig.extends
+  fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
+}
+
+/**
  * Applies changes to wranger
  */
 export function wranglerChanges(targetPath: string, appName: string): void {

@@ -25,6 +25,7 @@ export const inspect = (
   const sourceFiles = program.getSourceFiles()
 
   const state: InspectorState = {
+    singletonServicesTypeImportMap: new Map(),
     sessionServicesTypeImportMap: new Map(),
     userSessionTypeImportMap: new Map(),
     singletonServicesFactories: new Map(),

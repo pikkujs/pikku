@@ -15,6 +15,7 @@ import path from 'path'
 import { downloadTemplate } from 'giget'
 import { createSpinner } from 'nanospinner'
 import {
+  cleanPikkuConfig,
   cleanTSConfig,
   lazymkdir,
   mergeDirectories,
@@ -166,6 +167,7 @@ async function setupTemplate({
     mergeDirectories(templatePath, targetPath)
     replaceFunctionReferences(targetPath)
     cleanTSConfig(targetPath)
+    cleanPikkuConfig(targetPath)
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
     updatePackageJSONScripts(targetPath, name, packageManager)

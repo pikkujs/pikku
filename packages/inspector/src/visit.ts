@@ -15,6 +15,13 @@ export const visit = (
   addFileExtendsCoreType(
     node,
     checker,
+    state.singletonServicesTypeImportMap,
+    'CoreSingletonServices'
+  )
+
+  addFileExtendsCoreType(
+    node,
+    checker,
     state.sessionServicesTypeImportMap,
     'CoreServices'
   )

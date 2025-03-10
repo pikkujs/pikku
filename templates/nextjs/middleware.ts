@@ -1,5 +1,6 @@
 import { PikkuNextRequest } from '@pikku/next/pikku-next-request'
 import { NextRequest, NextResponse } from 'next/server.js'
+import { pikku } from './pikku-nextjs.js'
 
 // 1. Specify protected and public routes
 const protectedRoutes = ['/admin']
@@ -13,9 +14,11 @@ export default async function middleware(req: NextRequest) {
 
   let userSession
   try {
-    // 2. Decrypt the session from the cookie
-    userSession = await pikku().getUserSession(
-      new PikkuNextRequest(req as any) as any
+    // 2. Get the session, this requires middleware to be
+    // set
+    userSession = await pikku().getSession(
+      new PikkuNextRequest(req as any) as any,
+      []
     )
   } catch (e) {
     // An error trying to get the user session
