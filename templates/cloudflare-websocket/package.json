@@ -8,8 +8,8 @@
     "test:template": "npm run start & HTTP_PREFIX=http://localhost:8787 bash run-tests.sh"
   },
   "dependencies": {
-    "@pikku/cloudflare": "^0.6.3",
-    "@pikku/core": "^0.6.14"
+    "@pikku/cloudflare": "^0.6.4",
+    "@pikku/core": "^0.6.15"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241218.0",

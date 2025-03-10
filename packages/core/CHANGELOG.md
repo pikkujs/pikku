@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.15
+
+### Patch Changes
+
+- 1c7dfb6: fix: fixing some import issues
+
 ## 0.6.14
 
 ### Patch Changes
