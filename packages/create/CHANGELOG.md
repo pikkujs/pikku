@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.8
+
+### Patch Changes
+
+- ee5c874: feat: moving towards using middleware for http and channels
+
 ## 0.0.7
 
 ### Patch Changes

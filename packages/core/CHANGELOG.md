@@ -1,5 +1,12 @@
 ## 0.6
 
+## 0.6.14
+
+### Patch Changes
+
+- c1d8381: feat: adding filtering by tags to minimize produced payload
+- ee5c874: feat: moving towards using middleware for http and channels
+
 ## 0.6.13
 
 ### Patch Changes
