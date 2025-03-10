@@ -1,6 +1,6 @@
 {
   "name": "@pikku/fastify-plugin",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "The pikku fastify plugin",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
