@@ -1,5 +1,11 @@
 # @pikku/fastify-plugin
 
+## 0.6.5
+
+### Patch Changes
+
+- 9be87ff: fix: correct use of request.url
+
 ## 0.6.4
 
 ### Patch Changes

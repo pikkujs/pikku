@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@pikku/core": "^0.6.16",
-    "@pikku/fastify-plugin": "^0.6.4",
+    "@pikku/fastify-plugin": "^0.6.5",
     "tslib": "^2.7.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6"

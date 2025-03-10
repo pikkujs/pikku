@@ -3258,7 +3258,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fastify-plugin@npm:^0.6.3, @pikku/fastify-plugin@npm:^0.6.4, @pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin":
+"@pikku/fastify-plugin@npm:^0.6.3, @pikku/fastify-plugin@npm:^0.6.5, @pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin":
   version: 0.0.0-use.local
   resolution: "@pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin"
   dependencies:
@@ -3547,7 +3547,7 @@ __metadata:
   resolution: "@pikku/templates-fastify-plugin@workspace:templates/fastify-plugin"
   dependencies:
     "@pikku/core": "npm:^0.6.16"
-    "@pikku/fastify-plugin": "npm:^0.6.4"
+    "@pikku/fastify-plugin": "npm:^0.6.5"
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
     tsx: "npm:^4.19.2"
