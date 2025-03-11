@@ -14,6 +14,6 @@ export * from './middleware/index.js'
 
 export { pikkuState } from './pikku-state.js'
 export { runMiddleware } from './middleware-runner.js'
-export { addRoute } from './http/http-route-runner.js'
+export { addRoute, addMiddleware } from './http/http-route-runner.js'
 export { addChannel } from './channel/channel-runner.js'
 export { addScheduledTask } from './scheduler/scheduler-runner.js'
