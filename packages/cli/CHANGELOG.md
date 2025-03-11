@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.6.15
+
+### Patch Changes
+
+- 93c70b5: feat: make user session service a required service for channels
+
 ## 0.6.14
 
 ### Patch Changes
