@@ -86,7 +86,7 @@ const httpMiddleware = (
  */
 export const addMiddleware = <APIMiddleware>(
   routeOrMiddleware: APIMiddleware[] | string,
-  middleware?: APIMiddleware
+  middleware?: APIMiddleware[]
 ) => {
   if (typeof routeOrMiddleware === 'string') {
     globalThis.pikku.httpMiddleware.push({

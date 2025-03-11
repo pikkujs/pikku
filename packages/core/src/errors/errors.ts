@@ -121,14 +121,13 @@ addError(ProxyAuthenticationRequiredError, {
 })
 
 /**
- * The server did not receive a timely response from an upstream server.
+ * The server request expired
  * @group Error
  */
 export class RequestTimeoutError extends PikkuError {}
 addError(RequestTimeoutError, {
   status: 408,
-  message:
-    'The server did not receive a timely response from an upstream server.',
+  message: 'The request timeout has expired.',
 })
 
 /**

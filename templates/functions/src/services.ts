@@ -12,6 +12,7 @@ import {
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { JoseJWTService } from '@pikku/jose'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
+import './middleware.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}

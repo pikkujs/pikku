@@ -1,10 +1,7 @@
-import { CoreUserSession } from '../types/core.types.js'
-
 /**
  * Interface for handling JSON Web Tokens (JWT).
- * @template UserSession - The type of the user session.
  */
-export interface JWTService<UserSession = CoreUserSession> {
+export interface JWTService {
   /**
    * Encodes a payload into a JWT.
    * @param expiresIn - The expiration time of the token.
@@ -25,12 +22,4 @@ export interface JWTService<UserSession = CoreUserSession> {
     invalidHashError?: Error,
     debug?: boolean
   ) => Promise<T>
-
-  /**
-   * Decodes a user session from a JWT.
-   * @param jwtToken - The JWT representing the user session.
-   * @param debug - An optional flag for debugging.
-   * @returns A promise that resolves to the decoded user session.
-   */
-  decodeSession: (jwtToken: string, debug?: any) => Promise<UserSession>
 }

@@ -61,12 +61,9 @@ export interface CoreUserSession {}
 /**
  * Interface for core singleton services provided by Pikku.
  */
-export interface CoreSingletonServices<
-  Config extends CoreConfig = CoreConfig,
-  UserSession extends CoreUserSession = CoreUserSession,
-> {
+export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** JWT Service */
-  jwt?: JWTService<UserSession>
+  jwt?: JWTService
   /** The schema library used to validate data */
   schemaService?: SchemaService
   /** The core configuration for the application. */

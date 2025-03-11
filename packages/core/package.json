@@ -18,6 +18,7 @@
   },
   "exports": {
     ".": "./dist/index.js",
+    "./middleware": "./dist/middleware/index.js",
     "./channel": "./dist/channel/index.js",
     "./channel/local": "./dist/channel/local/index.js",
     "./channel/serverless": "./dist/channel/serverless/index.js",

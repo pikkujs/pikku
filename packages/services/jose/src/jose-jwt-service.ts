@@ -5,7 +5,6 @@
  * @module JoseJWTService
  */
 import { CoreUserSession } from '@pikku/core'
-import { MissingSessionError } from '@pikku/core/errors'
 import { JWTService, Logger } from '@pikku/core/services'
 import * as jose from 'jose'
 
@@ -84,20 +83,6 @@ export class JoseJWTService<UserSession extends CoreUserSession>
   public async verify(token: string): Promise<void> {
     const secret = await this.getSecret(token)
     await jose.jwtVerify(token, secret)
-  }
-
-  /**
-   * Decodes a user session from a JWT.
-   * @param session - The JWT representing the user session.
-   * @returns A promise that resolves to the decoded user session.
-   * @throws {MissingSessionError} If the session is not provided.
-   */
-  public async decodeSession(session?: string): Promise<UserSession> {
-    if (!session) {
-      throw new MissingSessionError()
-    }
-    const userSession: any = await this.decode<UserSession>(session)
-    return userSession.payload
   }
 
   /**

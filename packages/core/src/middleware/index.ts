@@ -1,4 +1,3 @@
-export * from './auth-api-key.js'
-export * from './auth-cookie-middleware.js'
-export * from './auth-jwt-middleware.js'
-export * from './auth-query-middleware.js'
+export * from './auth-apikey.js'
+export * from './auth-cookie.js'
+export * from './auth-bearer.js'
