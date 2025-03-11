@@ -3184,12 +3184,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:^0.6.13, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:^0.6.14, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^3.0.2"
-    "@pikku/core": "npm:^0.6.14"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/inspector": "npm:^0.6.3"
     "@types/cookie": "npm:^0.6.0"
     "@types/node": "npm:^22.7.8"
@@ -3206,7 +3206,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cloudflare@npm:^0.6.4, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
+"@pikku/cloudflare@npm:^0.6.5, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/cloudflare@workspace:packages/runtimes/cloudflare"
   dependencies:
@@ -3214,11 +3214,11 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     typescript: "npm:^5.7.2"
   peerDependencies:
-    "@pikku/core": ^0.6.15
+    "@pikku/core": ^0.6.17
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:^0.6.11, @pikku/core@npm:^0.6.14, @pikku/core@npm:^0.6.16, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:^0.6.11, @pikku/core@npm:^0.6.14, @pikku/core@npm:^0.6.17, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -3313,14 +3313,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/jose@npm:^0.6.0, @pikku/jose@npm:^0.6.2, @pikku/jose@workspace:packages/services/jose":
+"@pikku/jose@npm:^0.6.2, @pikku/jose@npm:^0.6.3, @pikku/jose@workspace:packages/services/jose":
   version: 0.0.0-use.local
   resolution: "@pikku/jose@workspace:packages/services/jose"
   dependencies:
     jose: "npm:^5.9.6"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.6.7
+    "@pikku/core": ^0.6.17
   languageName: unknown
   linkType: soft
 
@@ -3334,7 +3334,7 @@ __metadata:
     postgres: "npm:^3.4.5"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.6.13
+    "@pikku/core": ^0.6.17
   bin:
     pikku-kysely-pure: dist/bin/pikku-kysely-pure.js
   languageName: unknown
@@ -3392,10 +3392,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/nextjs-app-starter@workspace:templates/nextjs"
   dependencies:
-    "@pikku/cli": "npm:^0.6.13"
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/cli": "npm:^0.6.14"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/fetch": "npm:^0.6.2"
-    "@pikku/jose": "npm:^0.6.2"
+    "@pikku/jose": "npm:^0.6.3"
     "@pikku/next": "npm:^0.6.6"
     "@types/node": "npm:^20"
     "@types/react": "npm:^18"
@@ -3422,7 +3422,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schedule@npm:^0.6.1, @pikku/schedule@workspace:packages/schedule":
+"@pikku/schedule@npm:^0.6.2, @pikku/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@pikku/schedule@workspace:packages/schedule"
   dependencies:
@@ -3431,7 +3431,7 @@ __metadata:
     cron-schedule: "npm:^5.0.4"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.6.7
+    "@pikku/core": ^0.6.17
   languageName: unknown
   linkType: soft
 
@@ -3465,7 +3465,7 @@ __metadata:
     "@aws-sdk/client-apigatewaymanagementapi": "npm:^3.714.0"
     "@aws-sdk/client-secrets-manager": "npm:^3.714.0"
     "@pikku/aws-services": "npm:^0.6.3"
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/lambda": "npm:^0.6.6"
     "@types/aws-lambda": "npm:^8.10.146"
     "@types/node": "npm:^22"
@@ -3485,7 +3485,7 @@ __metadata:
     "@aws-sdk/client-s3": "npm:^3.732.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.732.0"
     "@pikku/aws-services": "npm:^0.6.3"
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/lambda": "npm:^0.6.6"
     "@types/aws-lambda": "npm:^8.10.146"
     "@types/node": "npm:^22"
@@ -3502,8 +3502,8 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
-    "@pikku/cloudflare": "npm:^0.6.4"
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/cloudflare": "npm:^0.6.5"
+    "@pikku/core": "npm:^0.6.17"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^3.99.0"
   languageName: unknown
@@ -3514,8 +3514,8 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
-    "@pikku/cloudflare": "npm:^0.6.4"
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/cloudflare": "npm:^0.6.5"
+    "@pikku/core": "npm:^0.6.17"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^3.99.0"
   languageName: unknown
@@ -3525,11 +3525,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.6.13"
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/cli": "npm:^0.6.14"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/express-middleware": "npm:^0.6.4"
-    "@pikku/jose": "npm:^0.6.2"
-    "@pikku/schedule": "npm:^0.6.1"
+    "@pikku/jose": "npm:^0.6.3"
+    "@pikku/schedule": "npm:^0.6.2"
     "@types/cookie-parser": "npm:^1.4.7"
     cookie-parser: "npm:^1.4.7"
     express: "npm:^5"
@@ -3542,9 +3542,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-server@workspace:templates/express"
   dependencies:
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/express": "npm:^0.6.2"
-    "@pikku/schedule": "npm:^0.6.1"
+    "@pikku/schedule": "npm:^0.6.2"
     "@types/node": "npm:^22"
     pino-pretty: "npm:^11.3.0"
     tslib: "npm:^2.7.0"
@@ -3557,7 +3557,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-plugin@workspace:templates/fastify-plugin"
   dependencies:
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/fastify-plugin": "npm:^0.6.5"
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
@@ -3570,7 +3570,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-server@workspace:templates/fastify"
   dependencies:
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/fastify": "npm:^0.6.1"
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
@@ -3583,9 +3583,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
-    "@pikku/cli": "npm:^0.6.13"
-    "@pikku/core": "npm:^0.6.16"
-    "@pikku/jose": "npm:^0.6.0"
+    "@pikku/cli": "npm:^0.6.14"
+    "@pikku/core": "npm:^0.6.17"
+    "@pikku/jose": "npm:^0.6.3"
     "@pikku/schema-cfworker": "npm:^0.6.1"
     typescript: "npm:^5.6"
   languageName: unknown
@@ -3595,7 +3595,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-uws@workspace:templates/uws"
   dependencies:
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/uws": "npm:^0.6.1"
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
@@ -3608,7 +3608,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-ws-server@workspace:templates/ws"
   dependencies:
-    "@pikku/core": "npm:^0.6.16"
+    "@pikku/core": "npm:^0.6.17"
     "@pikku/ws": "npm:^0.6.5"
     "@types/node": "npm:^22"
     "@types/ws": "npm:^8"

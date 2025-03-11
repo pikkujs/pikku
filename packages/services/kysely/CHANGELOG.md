@@ -1,5 +1,15 @@
 # @pikku/pino
 
+## 0.6.4
+
+### Patch Changes
+
+- 8a14f3a: refactor: removing user session from channel object
+- Updated dependencies [ebc04eb]
+- Updated dependencies [8a14f3a]
+- Updated dependencies [2c47386]
+  - @pikku/core@0.6.17
+
 ## 0.6.3
 
 ### Patch Changes

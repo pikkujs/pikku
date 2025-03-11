@@ -3,12 +3,12 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.6.16",
-    "@pikku/jose": "^0.6.0",
+    "@pikku/core": "^0.6.17",
+    "@pikku/jose": "^0.6.3",
     "@pikku/schema-cfworker": "^0.6.1"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.6.13",
+    "@pikku/cli": "^0.6.14",
     "typescript": "^5.6"
   },
   "scripts": {
