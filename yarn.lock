@@ -3206,7 +3206,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cloudflare@npm:^0.6.5, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
+"@pikku/cloudflare@npm:^0.6.6, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/cloudflare@workspace:packages/runtimes/cloudflare"
   dependencies:
@@ -3340,7 +3340,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/lambda@npm:^0.6.6, @pikku/lambda@workspace:packages/runtimes/aws-lambda":
+"@pikku/lambda@npm:^0.6.7, @pikku/lambda@workspace:packages/runtimes/aws-lambda":
   version: 0.0.0-use.local
   resolution: "@pikku/lambda@workspace:packages/runtimes/aws-lambda"
   dependencies:
@@ -3466,7 +3466,7 @@ __metadata:
     "@aws-sdk/client-secrets-manager": "npm:^3.714.0"
     "@pikku/aws-services": "npm:^0.6.3"
     "@pikku/core": "npm:^0.6.19"
-    "@pikku/lambda": "npm:^0.6.6"
+    "@pikku/lambda": "npm:^0.6.7"
     "@types/aws-lambda": "npm:^8.10.146"
     "@types/node": "npm:^22"
     esbuild: "npm:^0.24.0"
@@ -3486,7 +3486,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.732.0"
     "@pikku/aws-services": "npm:^0.6.3"
     "@pikku/core": "npm:^0.6.19"
-    "@pikku/lambda": "npm:^0.6.6"
+    "@pikku/lambda": "npm:^0.6.7"
     "@types/aws-lambda": "npm:^8.10.146"
     "@types/node": "npm:^22"
     esbuild: "npm:0.24.0"
@@ -3502,7 +3502,7 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
-    "@pikku/cloudflare": "npm:^0.6.5"
+    "@pikku/cloudflare": "npm:^0.6.6"
     "@pikku/core": "npm:^0.6.19"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^3.99.0"
@@ -3514,7 +3514,7 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
-    "@pikku/cloudflare": "npm:^0.6.5"
+    "@pikku/cloudflare": "npm:^0.6.6"
     "@pikku/core": "npm:^0.6.19"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^3.99.0"

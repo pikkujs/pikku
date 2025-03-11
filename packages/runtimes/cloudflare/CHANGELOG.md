@@ -1,5 +1,11 @@
 # @pikku/cloudflare
 
+## 0.6.6
+
+### Patch Changes
+
+- a234e33: fix: regressions in channels due to user session changes
+
 ## 0.6.5
 
 ### Patch Changes
