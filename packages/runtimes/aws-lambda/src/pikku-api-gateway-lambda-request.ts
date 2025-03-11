@@ -4,7 +4,10 @@ import { PikkuHTTPAbstractRequest } from '@pikku/core/http/pikku-http-abstract-r
 
 export class PikkuAPIGatewayLambdaRequest extends PikkuHTTPAbstractRequest {
   constructor(protected event: APIGatewayProxyEvent) {
-    super(event.path || '/', event.httpMethod.toLowerCase() as HTTPMethod)
+    super(
+      event.path || '/',
+      (event.httpMethod?.toLowerCase() as HTTPMethod) || 'get'
+    )
   }
 
   public async getBody() {

@@ -43,6 +43,8 @@ export abstract class CloudflareWebSocketHibernationServer<
     const params = await this.getAllParams(server)
 
     try {
+      this.ctx.acceptWebSocket(server, [channelId])
+
       await runChannelConnect({
         ...params,
         channelId,
@@ -52,7 +54,6 @@ export abstract class CloudflareWebSocketHibernationServer<
         response,
         bubbleErrors: true,
       })
-      this.ctx.acceptWebSocket(server, [channelId])
     } catch (e) {
       // Something went wrong, the cloudflare response will deal with it.
     }
