@@ -1,5 +1,13 @@
 ## 0.6
 
+## 0.6.17
+
+### Patch Changes
+
+- ebc04eb: refactor: move all global state into pikku state
+- 8a14f3a: refactor: removing user session from channel object
+- 2c47386: refactor: improving middleware
+
 ## 0.6.16
 
 ### Patch Changes

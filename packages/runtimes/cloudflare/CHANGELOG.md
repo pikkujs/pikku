@@ -1,5 +1,16 @@
 # @pikku/cloudflare
 
+## 0.6.5
+
+### Patch Changes
+
+- ebc04eb: refactor: move all global state into pikku state
+- 8a14f3a: refactor: removing user session from channel object
+- Updated dependencies [ebc04eb]
+- Updated dependencies [8a14f3a]
+- Updated dependencies [2c47386]
+  - @pikku/core@0.6.17
+
 ## 0.6.4
 
 ### Patch Changes

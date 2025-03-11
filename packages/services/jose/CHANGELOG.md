@@ -1,5 +1,15 @@
 # @pikku/jose
 
+## 0.6.3
+
+### Patch Changes
+
+- 2c47386: refactor: improving middleware
+- Updated dependencies [ebc04eb]
+- Updated dependencies [8a14f3a]
+- Updated dependencies [2c47386]
+  - @pikku/core@0.6.17
+
 ## 0.6.1
 
 ### Patch Changes
