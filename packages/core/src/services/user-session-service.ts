@@ -34,16 +34,18 @@ export class RemoteUserSessionService<UserSession extends CoreUserSession>
     public session: UserSession | undefined = undefined
   ) {}
 
-  public async set(session: UserSession) {
-    await this.channelStore.setUserSession(this.channelId, session)
+  public set(session: UserSession) {
+    return this.channelStore.setUserSession(this.channelId, session)
   }
 
-  public async clear() {
-    await this.channelStore.setUserSession(this.channelId, undefined)
+  public clear() {
+    return this.channelStore.setUserSession(this.channelId, null)
   }
 
   public async get(): Promise<UserSession | undefined> {
-    const channel = await this.channelStore.getChannel(this.channelId)
-    return channel.userSession
+    const { session } = await this.channelStore.getChannelAndSession(
+      this.channelId
+    )
+    return session
   }
 }

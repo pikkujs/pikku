@@ -37,16 +37,17 @@ export class KyselyChannelStore extends ChannelStore {
       .executeTakeFirstOrThrow()
   }
 
-  public async getChannel(channelId: string) {
+  public async getChannelAndSession(channelId: string) {
     const result = await this.database
       .selectFrom('serverless.lambdaChannels')
       .selectAll()
       .where('channelId', '=', channelId)
       .executeTakeFirstOrThrow()
+
     return {
       openingData: result.openingData as any,
-      userSession: result.userSession as CoreUserSession,
+      session: result.userSession as CoreUserSession,
       channelName: result.channelName,
-    } as Channel
+    } as Channel & { session: CoreUserSession }
   }
 }

@@ -42,7 +42,7 @@ export const authBearer = <
       http.request.getHeader('Authorization')
     if (authHeader) {
       const [scheme, bearerToken] = authHeader.split(' ')
-      if (scheme !== 'Bearer' || !token) {
+      if (scheme !== 'Bearer' || !token || !bearerToken) {
         throw new InvalidSessionError()
       }
       let userSession: UserSession | null = null

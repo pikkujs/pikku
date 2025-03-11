@@ -35,7 +35,13 @@ export class CloudflareWebsocketStore extends ChannelStore {
     })
   }
 
-  public async getChannel(channelId: string) {
+  public async getUserSession(channelId: string): Promise<any> {
+    const websocket = this.getWebsocket(channelId)
+    const { userSession } = websocket.deserializeAttachment()
+    return userSession
+  }
+
+  public async getChannelAndSession(channelId: string) {
     const websocket = this.getWebsocket(channelId)
     return websocket.deserializeAttachment()
   }

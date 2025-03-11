@@ -143,8 +143,8 @@ export const runChannelDisconnect = async ({
   ...params
 }: RunServerlessChannelParams<unknown>): Promise<void> => {
   let sessionServices: SessionServices | undefined
-  const { userSession, openingData, channelName } =
-    await params.channelStore.getChannel(params.channelId)
+  const { openingData, channelName, session } =
+    await params.channelStore.getChannelAndSession(params.channelId)
   const { channel, channelConfig } = getVariablesForChannel({
     ...params,
     openingData,
@@ -154,7 +154,7 @@ export const runChannelDisconnect = async ({
     sessionServices = await params.createSessionServices(
       singletonServices,
       {},
-      userSession
+      session
     )
   }
   await channelConfig.onDisconnect?.(
@@ -172,8 +172,8 @@ export const runChannelMessage = async (
   data: unknown
 ): Promise<unknown> => {
   let sessionServices: SessionServices | undefined
-  const { userSession, openingData, channelName } =
-    await params.channelStore.getChannel(params.channelId)
+  const { openingData, channelName, session } =
+    await params.channelStore.getChannelAndSession(params.channelId)
   const { channelHandler, channelConfig } = getVariablesForChannel({
     ...params,
     openingData,
@@ -183,7 +183,7 @@ export const runChannelMessage = async (
     sessionServices = await params.createSessionServices(
       singletonServices,
       {},
-      userSession
+      session
     )
   }
   let response: unknown
