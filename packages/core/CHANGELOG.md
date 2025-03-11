@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.19
+
+### Patch Changes
+
+- 9fb2b99: refactor: moving schemas to pikku state
+
 ## 0.6.18
 
 ### Patch Changes

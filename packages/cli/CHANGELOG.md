@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.6.16
+
+### Patch Changes
+
+- 9fb2b99: refactor: moving schemas to pikku state
+- Updated dependencies [9fb2b99]
+  - @pikku/core@0.6.19
+
 ## 0.6.15
 
 ### Patch Changes
