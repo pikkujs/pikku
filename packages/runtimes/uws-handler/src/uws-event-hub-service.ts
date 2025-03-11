@@ -1,4 +1,4 @@
-import { EventHubForwarder, EventHubService } from '@pikku/core/channel'
+import { EventHubService } from '@pikku/core/channel'
 import * as uWS from 'uWebSockets.js'
 
 export class UWSEventHubService<Mappings = unknown>
@@ -6,16 +6,7 @@ export class UWSEventHubService<Mappings = unknown>
 {
   private sockets: Map<string, uWS.WebSocket<unknown>> = new Map()
 
-  constructor(
-    uws?: uWS.TemplatedApp,
-    private forwarder?: EventHubForwarder
-  ) {
-    if (uws) {
-      forwarder?.onForwardedPublishMessage(
-        this.forwardPublishMessage.bind(this, uws)
-      )
-    }
-  }
+  constructor() {}
 
   public async subscribe(topic: string, channelId: string): Promise<void> {
     const socket = this.sockets.get(channelId)
@@ -37,7 +28,6 @@ export class UWSEventHubService<Mappings = unknown>
     if (socket) {
       this.forwardPublishMessage(socket, topic, message, isBinary)
     }
-    this.forwarder?.forwardPublish(topic, message, isBinary)
   }
 
   public async onChannelOpened(

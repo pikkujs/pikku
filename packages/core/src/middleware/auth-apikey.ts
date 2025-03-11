@@ -1,6 +1,7 @@
 import {
   CoreConfig,
   CoreSingletonServices,
+  CoreUserSession,
   PikkuMiddleware,
 } from '../types/core.types.js'
 
@@ -11,6 +12,7 @@ import {
  */
 export const authAPIKey = <
   SingletonServices extends CoreSingletonServices<CoreConfig>,
+  UserSession extends CoreUserSession,
 >({
   source,
   getSessionForAPIKey,
@@ -30,12 +32,8 @@ export const authAPIKey = <
       jwt?: false
     }
 )) => {
-  const middleware: PikkuMiddleware = async (
-    { userSessionService, ...services },
-    { http },
-    next
-  ) => {
-    if (!http?.request || userSessionService.get()) {
+  const middleware: PikkuMiddleware = async (services, { http }, next) => {
+    if (!http?.request || services.userSession.get()) {
       return next()
     }
 
@@ -47,7 +45,7 @@ export const authAPIKey = <
       apiKey = http.request.getQuery().apiKey as string | null
     }
     if (apiKey) {
-      let userSession
+      let userSession: UserSession | null = null
       if (jwt) {
         if (!services.jwt) {
           throw new Error('JWT service is required for JWT decoding.')
@@ -57,7 +55,7 @@ export const authAPIKey = <
         userSession = await getSessionForAPIKey!(services as any, apiKey)
       }
       if (userSession) {
-        await userSessionService.set(userSession)
+        await services.userSession.set(userSession)
       }
     }
     return next()

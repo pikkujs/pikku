@@ -58,7 +58,7 @@ export class PikkuNextJS {
     const userSessionService = new LocalUserSessionService()
     const singletonServices = await this.getSingletonServices()
     await runMiddleware(
-      { ...singletonServices, userSessionService },
+      { ...singletonServices, userSession: userSessionService },
       {
         http: { request: request as any },
       },

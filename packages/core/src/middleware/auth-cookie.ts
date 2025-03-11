@@ -34,12 +34,8 @@ export const authCookie = <
       jwt: true
     }
 )): PikkuMiddleware => {
-  const middleware: PikkuMiddleware = async (
-    { userSessionService, ...services },
-    { http },
-    next
-  ) => {
-    if (!http?.request || userSessionService.get()) {
+  const middleware: PikkuMiddleware = async (services, { http }, next) => {
+    if (!http?.request || services.userSession.get()) {
       return next()
     }
 
@@ -69,7 +65,7 @@ export const authCookie = <
             )
           }
           if (userSession) {
-            await userSessionService.set(userSession)
+            await services.userSession.set(userSession)
           }
         }
       }

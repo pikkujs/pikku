@@ -24,7 +24,7 @@ import {
  */
 export const runMiddleware = async (
   services: CoreSingletonServices & {
-    userSessionService: UserSessionService<any>
+    userSession: UserSessionService<any>
   },
   interaction: PikkuInteraction,
   middlewares: PikkuMiddleware[],

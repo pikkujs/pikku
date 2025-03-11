@@ -130,7 +130,7 @@ export const runChannelConnect = async ({
   await runMiddleware(
     {
       ...singletonServices,
-      userSessionService,
+      userSession: userSessionService,
     },
     { http },
     channelConfig.middleware || [],

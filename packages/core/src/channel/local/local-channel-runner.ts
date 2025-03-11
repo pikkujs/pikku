@@ -64,7 +64,7 @@ export const runLocalChannel = async ({
       const allServices = {
         ...singletonServices,
         ...sessionServices,
-        userSessionService,
+        userSession: userSessionService,
       }
 
       channelHandler.registerOnOpen(() => {
@@ -101,7 +101,7 @@ export const runLocalChannel = async ({
   await runMiddleware(
     {
       ...singletonServices,
-      userSessionService,
+      userSession: userSessionService,
     },
     { http },
     route.middleware || [],

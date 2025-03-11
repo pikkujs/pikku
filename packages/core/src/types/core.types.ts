@@ -93,7 +93,7 @@ export type PikkuMiddleware<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices & {
-    userSessionService: UserSessionService<UserSession>
+    userSession: UserSessionService<UserSession>
   },
   interactions: PikkuInteraction,
   next: () => Promise<void>

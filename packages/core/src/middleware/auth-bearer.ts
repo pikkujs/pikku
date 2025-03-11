@@ -27,13 +27,9 @@ export const authBearer = <
     token: string
   ) => Promise<UserSession> | UserSession
 } = {}): PikkuMiddleware => {
-  const middleware: PikkuMiddleware = async (
-    { userSessionService, ...services },
-    { http },
-    next
-  ) => {
+  const middleware: PikkuMiddleware = async (services, { http }, next) => {
     // Skip if session already exists.
-    if (!http?.request || userSessionService.get()) {
+    if (!http?.request || services.userSession.get()) {
       return next()
     }
 
@@ -60,7 +56,7 @@ export const authBearer = <
       }
 
       if (userSession) {
-        await userSessionService.set(userSession)
+        await services.userSession.set(userSession)
       }
     }
     return next()
