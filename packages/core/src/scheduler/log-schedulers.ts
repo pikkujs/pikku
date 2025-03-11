@@ -1,12 +1,12 @@
+import { pikkuState } from '../pikku-state.js'
 import { Logger } from '../services/index.js'
-import { getScheduledTasks } from './scheduler-runner.js'
 
 /**
  * Logs all the loaded scheduled tasks.
  * @param logger - A logger for logging information.
  */
 export const logSchedulers = (logger: Logger) => {
-  const { scheduledTasks } = getScheduledTasks()
+  const scheduledTasks = pikkuState('scheduler', 'tasks')
   if (scheduledTasks.size === 0) {
     logger.info('No scheduled tasks added')
     return

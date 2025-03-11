@@ -4,7 +4,8 @@ import { NotFoundError } from '../errors/errors.js'
 import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
 import { JSONValue, PikkuMiddleware } from '../types/core.types.js'
-import { runHTTPRoute, clearRoutes, addRoute } from './http-route-runner.js'
+import { runHTTPRoute, addRoute } from './http-route-runner.js'
+import { resetPikkuState } from '../pikku-state.js'
 
 class PikkuTestRequest extends PikkuHTTPAbstractRequest {
   public getBody(): Promise<unknown> {
@@ -39,7 +40,7 @@ describe('runHTTPRoute', () => {
   let response: any
 
   beforeEach(() => {
-    clearRoutes()
+    resetPikkuState()
 
     singletonServices = {
       logger: {

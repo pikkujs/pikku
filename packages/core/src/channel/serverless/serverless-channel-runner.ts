@@ -1,7 +1,7 @@
 import { SessionServices } from '../../types/core.types.js'
 import { closeSessionServices } from '../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
-import { getChannels, openChannel } from '../channel-runner.js'
+import { openChannel } from '../channel-runner.js'
 import type {
   CoreAPIChannel,
   RunChannelOptions,
@@ -13,6 +13,7 @@ import { ChannelStore } from '../channel-store.js'
 import { handleError } from '../../handle-error.js'
 import { RemoteUserSessionService } from '../../services/user-session-service.js'
 import { runMiddleware } from '../../middleware-runner.js'
+import { pikkuState } from '../../pikku-state.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -32,7 +33,7 @@ const getVariablesForChannel = ({
   channelHandlerFactory: PikkuChannelHandlerFactory
   openingData?: unknown
 }) => {
-  const { channels } = getChannels()
+  const channels = pikkuState('channel', 'channels')
   const channelConfig = channels.find(
     (channelConfig) => channelConfig.name === channelName
   )

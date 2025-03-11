@@ -4,8 +4,8 @@
 /* The files with an addSerializedTasks function call */
 import '../src/scheduled-task.js'
 
-import { setScheduledTasksMeta } from '@pikku/core/scheduler'
-setScheduledTasksMeta([
+import { pikkuState } from '@pikku/core'
+pikkuState('scheduler', 'meta', [
   {
     name: 'myScheduledTask',
     schedule: '*/1 * * * *',

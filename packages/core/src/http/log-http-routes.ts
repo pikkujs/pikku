@@ -1,12 +1,12 @@
+import { pikkuState } from '../pikku-state.js'
 import { Logger } from '../services/index.js'
-import { getRoutes } from './http-route-runner.js'
 
 /**
  * Logs all the loaded routes.
  * @param logger - A logger for logging information.
  */
 export const logRoutes = (logger: Logger) => {
-  const { routes } = getRoutes()
+  const routes = pikkuState('http', 'routes')
   if (routes.length === 0) {
     logger.info('No routes added')
     return

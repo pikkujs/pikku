@@ -4,6 +4,8 @@ import { JSONValue } from '../../types/core.types.js'
 import { PikkuHTTPAbstractRequest } from '../../http/pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from '../../http/pikku-http-abstract-response.js'
 import { runLocalChannel } from './local-channel-runner.js'
+import { resetPikkuState } from '../../pikku-state.js'
+import { addChannel } from '../channel-runner.js'
 
 /**
  * Minimal stubs for dependencies that runChannel expects.
@@ -49,28 +51,16 @@ class MockResponse extends PikkuHTTPAbstractResponse {
 }
 
 const mockCreateSessionServices = async () => ({ sessionServiceMock: true })
-function resetGlobalChannels(channels: any[] = [], channelsMeta: any[] = []) {
-  // If necessary, reinitialize globalThis.pikku
-  if (!globalThis.pikku) {
-    globalThis.pikku = {}
-  }
-  globalThis.pikku.channels = channels
-  globalThis.pikku.channelsMeta = channelsMeta
-  globalThis.pikku.openChannels = new Map()
-}
 
 beforeEach(() => {
-  resetGlobalChannels()
+  resetPikkuState()
 })
 
 afterEach(() => {
-  resetGlobalChannels()
+  resetPikkuState()
 })
 
 test('runChannel should return undefined and 404 if no matching channel is found', async () => {
-  // No channels configured
-  resetGlobalChannels()
-
   const mockResponse = new MockResponse()
 
   const result = await runLocalChannel({
@@ -92,12 +82,12 @@ test('runChannel should return undefined and 404 if no matching channel is found
 })
 
 test('runChannel should return a channel handler if channel matches and no auth required', async () => {
-  resetGlobalChannels([
-    {
-      route: '/test-channel',
-      auth: false,
-    },
-  ])
+  resetPikkuState()
+  addChannel({
+    name: 'test',
+    route: '/test-channel',
+    auth: false,
+  })
 
   // Provide a fake channelPermissionService if needed
   const singletonServicesWithPerm = {

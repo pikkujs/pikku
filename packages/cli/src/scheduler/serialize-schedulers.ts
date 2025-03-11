@@ -28,11 +28,9 @@ export const serializeSchedulerMeta = (
   scheduledTasksMeta: ScheduledTasksMeta
 ) => {
   const serializedOutput: string[] = []
+  serializedOutput.push("import { pikkuState } from '@pikku/core'")
   serializedOutput.push(
-    "import { setScheduledTasksMeta } from '@pikku/core/scheduler'"
-  )
-  serializedOutput.push(
-    `setScheduledTasksMeta(${JSON.stringify(scheduledTasksMeta, null, 2)})`
+    `pikkuState('scheduler', 'meta', ${JSON.stringify(scheduledTasksMeta, null, 2)})`
   )
   if (scheduledTasksMeta.length > 0) {
     serializedOutput.push(

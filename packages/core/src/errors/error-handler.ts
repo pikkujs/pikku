@@ -1,3 +1,5 @@
+import { pikkuState } from '../pikku-state.js'
+
 /**
  * Base class for custom errors.
  * @extends {Error}
@@ -21,19 +23,7 @@ export interface ErrorDetails {
   message: string
 }
 
-/**
- * Map of API errors to their details.
- */
-if (!globalThis.pikku?.apiErrors) {
-  globalThis.pikku = globalThis.pikku || {}
-  globalThis.pikku.apiErrors = new Map<any, ErrorDetails>([])
-}
-
-const apiErrors = (): Map<any, ErrorDetails> => {
-  return globalThis.pikku.apiErrors
-}
-
-export const getErrors = () => apiErrors()
+export const getErrors = () => pikkuState('errors', 'errors')
 
 /**
  * Adds an error to the API errors map.
@@ -41,7 +31,7 @@ export const getErrors = () => apiErrors()
  * @param details - The details of the error.
  */
 export const addError = (error: any, { status, message }: ErrorDetails) => {
-  apiErrors().set(error, { status, message })
+  pikkuState('errors', 'errors').set(error, { status, message })
 }
 
 /**
@@ -64,11 +54,10 @@ export const addErrors = (
 export const getErrorResponse = (
   error: Error
 ): { status: number; message: string } | undefined => {
-  const foundError = Array.from(apiErrors().entries()).find(
-    ([e]) => e.name === error.constructor.name
-  )
+  const errors = Array.from(pikkuState('errors', 'errors').entries())
+  const foundError = errors.find(([e]) => e.name === error.constructor.name)
   if (foundError) {
     return foundError[1]
   }
-  return apiErrors().get(error)
+  return pikkuState('errors', 'errors').get(error)
 }

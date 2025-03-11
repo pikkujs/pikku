@@ -4,8 +4,8 @@
 /* The files with an addChannel function call */
 import '../src/channel.routes.js'
 
-import { setChannelsMeta } from '@pikku/core/channel'
-setChannelsMeta([
+import { pikkuState } from '@pikku/core'
+pikkuState('channel', 'meta', [
   {
     name: 'events',
     route: '/',

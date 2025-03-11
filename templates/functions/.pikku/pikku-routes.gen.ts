@@ -4,8 +4,8 @@
 /* The files with an addRoute function call */
 import '../src/http.js'
 
-import { setHTTPRoutesMeta } from '@pikku/core/http'
-setHTTPRoutesMeta([
+import { pikkuState } from '@pikku/core'
+pikkuState('http', 'meta', [
   {
     route: '/hello-world',
     method: 'get',

@@ -1,45 +1,13 @@
 import { NotFoundError } from '../errors/errors.js'
+import { pikkuState } from '../pikku-state.js'
 import { coerceQueryStringToArray, validateSchema } from '../schema.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import {
   CoreAPIChannel,
-  ChannelsMeta,
-  CoreAPIChannels,
   RunChannelOptions,
   RunChannelParams,
 } from './channel.types.js'
 import { match } from 'path-to-regexp'
-
-if (!globalThis.pikku?.channels) {
-  globalThis.pikku = globalThis.pikku || {}
-  globalThis.pikku.channels = []
-  globalThis.pikku.channelsMeta = []
-}
-
-const channels = (data?: any): CoreAPIChannels => {
-  if (data) {
-    globalThis.pikku.channels = data
-  }
-  return globalThis.pikku.channels
-}
-
-const channelsMeta = (data?: any): ChannelsMeta => {
-  if (data) {
-    globalThis.pikku.channelsMeta = data
-  }
-  return globalThis.pikku.channelsMeta
-}
-
-/**
- * Returns all the registered routes and associated metadata.
- * @internal
- */
-export const getChannels = () => {
-  return {
-    channels: channels(),
-    channelsMeta: channelsMeta(),
-  }
-}
 
 export const addChannel = <
   In,
@@ -56,18 +24,12 @@ export const addChannel = <
     APIPermission
   >
 ) => {
-  channels().push(channel as any)
-}
-
-/**
- * @ignore
- */
-export const setChannelsMeta = (_channelsMeta: ChannelsMeta) => {
-  channelsMeta(_channelsMeta)
+  pikkuState('channel', 'channels').push(channel as any)
 }
 
 export const getMatchingChannelConfig = (request: string) => {
-  const { channels, channelsMeta } = getChannels()
+  const channels = pikkuState('channel', 'channels')
+  const channelsMeta = pikkuState('channel', 'meta')
   for (const channelConfig of channels) {
     const cleanedRoute = channelConfig.route.replace(/^\/\//, '/')
     const cleanedRequest = request.replace(/^\/\//, '/')
@@ -96,7 +58,6 @@ export const openChannel = async ({
   singletonServices,
   coerceToArray = false,
   http,
-  userSessionService,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
   Omit<RunChannelParams<unknown>, 'response' | 'request'> & {
     userSessionService?: UserSessionService<any>

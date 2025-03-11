@@ -1,7 +1,7 @@
 import { Logger } from './services/logger.js'
-import { getRoutes } from './http/http-route-runner.js'
 import { SchemaService } from './services/schema-service.js'
 import { UnprocessableContentError } from './errors/errors.js'
+import { pikkuState } from './pikku-state.js'
 
 /**
  * Retrieves the global schemas map.
@@ -58,7 +58,7 @@ const validateAllSchemasLoaded = (
   logger: Logger,
   schemaService: SchemaService
 ) => {
-  const { routesMeta } = getRoutes()
+  const routesMeta = pikkuState('http', 'meta')
   const validators = schemaService.getSchemaNames()
 
   const missingSchemas: string[] = []

@@ -1,13 +1,11 @@
 import { verifyPermissions } from '../permissions.js'
 import {
   CoreHTTPFunctionRoute,
-  HTTPRoutesMeta,
   RunRouteOptions,
   RunRouteParams,
   PikkuHTTP,
-  HTTPRouteMiddleware,
 } from './http-routes.types.js'
-import { SessionServices } from '../types/core.types.js'
+import { PikkuMiddleware, SessionServices } from '../types/core.types.js'
 import { match } from 'path-to-regexp'
 import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
@@ -24,59 +22,7 @@ import { coerceQueryStringToArray, validateSchema } from '../schema.js'
 import { LocalUserSessionService } from '../services/user-session-service.js'
 import { runMiddleware } from '../middleware-runner.js'
 import { handleError } from '../handle-error.js'
-
-/**
- * Initialize global state for HTTP routes and middleware if not already available
- */
-if (!globalThis.pikku?.httpRoutes) {
-  globalThis.pikku = globalThis.pikku || {}
-  globalThis.pikku.httpMiddleware = []
-  globalThis.pikku.httpRoutes = []
-  globalThis.pikku.httpRoutesMeta = []
-}
-
-/**
- * Get or set the global HTTP routes
- *
- * @param {CoreHTTPFunctionRoute<any, any, any>[]} [data] - Optional routes data to set
- * @returns {CoreHTTPFunctionRoute<any, any, any>[]} Current routes
- */
-const httpRoutes = (
-  data?: CoreHTTPFunctionRoute<any, any, any>[]
-): CoreHTTPFunctionRoute<any, any, any>[] => {
-  if (data) {
-    globalThis.pikku.httpRoutes = data
-  }
-  return globalThis.pikku.httpRoutes
-}
-
-/**
- * Get or set the global HTTP route metadata
- *
- * @param {HTTPRoutesMeta} [data] - Optional route metadata to set
- * @returns {HTTPRoutesMeta} Current route metadata
- */
-const httpRoutesMeta = (data?: HTTPRoutesMeta): HTTPRoutesMeta => {
-  if (data) {
-    globalThis.pikku.httpRoutesMeta = data
-  }
-  return globalThis.pikku.httpRoutesMeta
-}
-
-/**
- * Get or set the global HTTP middleware
- *
- * @param {HTTPRouteMiddleware[]} [data] - Optional middleware to set
- * @returns {HTTPRouteMiddleware[]} Current middleware
- */
-const httpMiddleware = (
-  data?: HTTPRouteMiddleware[]
-): HTTPRouteMiddleware[] => {
-  if (data) {
-    globalThis.pikku.httpMiddleware = data
-  }
-  return globalThis.pikku.httpMiddleware
-}
+import { pikkuState } from '../pikku-state.js'
 
 /**
  * Add middleware to a specific route or globally
@@ -84,19 +30,19 @@ const httpMiddleware = (
  * @param {APIMiddleware[] | string} routeOrMiddleware - Route pattern to match or middleware array
  * @param {APIMiddleware} [middleware] - Middleware to add (required if first param is a string)
  */
-export const addMiddleware = <APIMiddleware>(
+export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
   routeOrMiddleware: APIMiddleware[] | string,
   middleware?: APIMiddleware[]
 ) => {
-  if (typeof routeOrMiddleware === 'string') {
-    globalThis.pikku.httpMiddleware.push({
+  if (typeof routeOrMiddleware === 'string' && middleware) {
+    pikkuState('http', 'middleware').push({
       route: routeOrMiddleware,
-      middleware: middleware!,
+      middleware,
     })
   } else {
-    globalThis.pikku.httpMiddleware.push({
+    pikkuState('http', 'middleware').push({
       route: '*',
-      middleware: routeOrMiddleware,
+      middleware: routeOrMiddleware as any,
     })
   }
 }
@@ -125,37 +71,7 @@ export const addRoute = <
     APIMiddleware
   >
 ) => {
-  httpRoutes().push(route as any)
-}
-
-/**
- * Remove all routes from the global registry
- */
-export const clearRoutes = () => {
-  httpRoutes([])
-}
-
-/**
- * Set the HTTP routes metadata
- *
- * @param {HTTPRoutesMeta} routeMeta - Metadata for routes
- * @ignore
- */
-export const setHTTPRoutesMeta = (routeMeta: HTTPRoutesMeta) => {
-  httpRoutesMeta(routeMeta)
-}
-
-/**
- * Returns all the registered routes and associated metadata
- *
- * @returns {Object} Object containing routes and routesMeta
- * @internal
- */
-export const getRoutes = () => {
-  return {
-    routes: httpRoutes(),
-    routesMeta: httpRoutesMeta(),
-  }
+  pikkuState('http', 'routes').push(route as any)
 }
 
 /**
@@ -166,7 +82,11 @@ export const getRoutes = () => {
  * @returns {Object | undefined} Matching route information or undefined if no match
  */
 const getMatchingRoute = (requestType: string, requestPath: string) => {
-  for (const route of httpRoutes()) {
+  const routes = pikkuState('http', 'routes')
+  const middleware = pikkuState('http', 'middleware')
+  const routesMeta = pikkuState('http', 'meta')
+
+  for (const route of routes) {
     // Skip routes that don't match the request method
     if (route.method !== requestType.toLowerCase()) {
       continue
@@ -182,13 +102,13 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
 
     if (matchedPath) {
       // Get all middleware for this route
-      const globalMiddleware = httpMiddleware()
+      const globalMiddleware = middleware
         .filter((m) => m.route === '*' || new RegExp(m.route).test(route.route))
         .map((m) => m.middleware)
         .flat()
 
       // Find schema for this route
-      const schemaName = httpRoutesMeta().find(
+      const schemaName = routesMeta.find(
         (routeMeta) =>
           routeMeta.method === route.method && routeMeta.route === route.route
       )?.input
@@ -269,7 +189,6 @@ const executeRouteWithMiddleware = async (
     createSessionServices,
     skipUserSession,
   } = services
-  const { coerceToArray } = options
 
   const requiresSession = route.auth !== false
   let sessionServices: any
@@ -318,7 +237,7 @@ const executeRouteWithMiddleware = async (
       data
     )
 
-    if (coerceToArray && schemaName) {
+    if (options.coerceToArray && schemaName) {
       coerceQueryStringToArray(schemaName, data)
     }
 

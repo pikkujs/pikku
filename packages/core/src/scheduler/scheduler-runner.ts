@@ -4,14 +4,12 @@ import type {
   CoreUserSession,
   CreateSessionServices,
 } from '../types/core.types.js'
-import type {
-  CoreScheduledTask,
-  ScheduledTasksMeta,
-} from './scheduler.types.js'
+import type { CoreScheduledTask } from './scheduler.types.js'
 import type { CoreAPIFunctionSessionless } from '../types/functions.types.js'
 import crypto from 'crypto'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
+import { pikkuState } from '../pikku-state.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -24,53 +22,16 @@ export type RunScheduledTasksParams = {
   >
 }
 
-if (!global.pikku?.scheduledTasks) {
-  global.pikku = global.pikku || {}
-  global.pikku.scheduledTasks = new Map<string, CoreScheduledTask>()
-  global.pikku.scheduledTasksMeta = []
-}
-
-const scheduledTasks = (): Map<string, CoreScheduledTask> => {
-  return global.pikku.scheduledTasks
-}
-
-const scheduledTasksMeta = (data?: ScheduledTasksMeta) => {
-  if (data) {
-    global.pikku.scheduledTasksMeta = data
-  }
-  return global.pikku.scheduledTasksMeta
-}
-
 export const addScheduledTask = <
   APIFunction extends CoreAPIFunctionSessionless<void, void>,
 >(
   scheduledTask: CoreScheduledTask<APIFunction>
 ) => {
-  if (scheduledTasks().has(scheduledTask.name)) {
+  const tasks = pikkuState('scheduler', 'tasks')
+  if (tasks.has(scheduledTask.name)) {
     throw new Error(`Scheduled task already exists: ${scheduledTask.name}`)
   }
-  scheduledTasks().set(scheduledTask.name, scheduledTask)
-}
-
-export const clearScheduledTasks = () => {
-  scheduledTasks().clear()
-}
-
-export const setScheduledTasksMeta = (
-  _scheduledTasksMeta: ScheduledTasksMeta
-) => {
-  scheduledTasksMeta(_scheduledTasksMeta)
-}
-
-/**
- * Returns all the cron jobs
- * @internal
- */
-export const getScheduledTasks = () => {
-  return {
-    scheduledTasks: scheduledTasks(),
-    scheduledTasksMeta: scheduledTasksMeta(),
-  }
+  tasks.set(scheduledTask.name, scheduledTask)
 }
 
 class ScheduledTaskNotFoundError extends Error {
@@ -94,7 +55,7 @@ export async function runScheduledTask<
   const trackerId: string = crypto.randomUUID().toString()
 
   try {
-    const task = scheduledTasks().get(name)
+    const task = pikkuState('scheduler', 'tasks').get(name)
 
     if (!task) {
       throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)

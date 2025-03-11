@@ -6,7 +6,7 @@ import {
 } from '../types/core.types.js'
 import { CoreAPIChannel, PikkuChannelHandler } from './channel.types.js'
 import { verifyPermissions } from '../permissions.js'
-import { getChannels } from './channel-runner.js'
+import { pikkuState } from '../pikku-state.js'
 
 const validateSchema = (
   logger: CoreSingletonServices['logger'],
@@ -15,7 +15,7 @@ const validateSchema = (
   routingProperty?: string,
   routerValue?: string
 ) => {
-  const { channelsMeta } = getChannels()
+  const channelsMeta = pikkuState('channel', 'meta')
   for (const channelMeta of channelsMeta) {
     if (routingProperty && routerValue) {
       const channelRoute =

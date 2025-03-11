@@ -26,9 +26,9 @@ export const serializeChannels = (
 
 export const serializeChannelMeta = (channelsMeta: ChannelsMeta) => {
   const serializedOutput: string[] = []
-  serializedOutput.push("import { setChannelsMeta } from '@pikku/core/channel'")
+  serializedOutput.push("import { pikkuState } from '@pikku/core'")
   serializedOutput.push(
-    `setChannelsMeta(${JSON.stringify(channelsMeta, null, 2)})`
+    `pikkuState('channel', 'meta', ${JSON.stringify(channelsMeta, null, 2)})`
   )
   return serializedOutput.join('\n')
 }

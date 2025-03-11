@@ -30,7 +30,6 @@ export const handleError = (
 
   // Get appropriate error response
   const errorResponse = getErrorResponse(e)
-
   if (errorResponse != null) {
     // Set status and response body
     http?.response?.setStatus(errorResponse.status)
