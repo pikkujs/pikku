@@ -4,37 +4,13 @@ import { UnprocessableContentError } from './errors/errors.js'
 import { pikkuState } from './pikku-state.js'
 
 /**
- * Retrieves the global schemas map.
- * @returns A map of schemas.
- */
-export const getSchemas = () => {
-  if (!global.pikkuSchemas) {
-    global.pikkuSchemas = new Map<string, any>()
-  }
-  return global.pikkuSchemas
-}
-
-/**
- * Retrieves a schema from the schemas map.
- * @returns A schema.
- */
-export const getSchema = (schemaName: string): any => {
-  const schemas = getSchemas()
-  const schema = schemas.get(schemaName)
-  if (!schema) {
-    throw new Error(`Schema not found: ${schemaName}`)
-  }
-  return schema
-}
-
-/**
  * Adds a schema to the global schemas map.
  * @param name - The name of the schema.
  * @param value - The schema value.
  * @ignore
  */
 export const addSchema = (name: string, value: any) => {
-  getSchemas().set(name, value)
+  pikkuState('misc', 'schemas').set(name, value)
 }
 
 /**
@@ -48,7 +24,8 @@ export const compileAllSchemas = (
   if (!schemaService) {
     throw new Error('SchemaService needs to be defined to load schemas')
   }
-  for (const [name, schema] of getSchemas()) {
+  const schemas = pikkuState('misc', 'schemas')
+  for (const [name, schema] of schemas) {
     schemaService.compileSchema(name, schema)
   }
   validateAllSchemasLoaded(logger, schemaService)
@@ -82,7 +59,7 @@ const validateAllSchemasLoaded = (
 }
 
 export const coerceQueryStringToArray = (schemaName: string, data: any) => {
-  const schema = getSchema(schemaName)
+  const schema = pikkuState('misc', 'schemas').get(schemaName)
   for (const key in schema.properties) {
     const property = schema.properties[key]
     if (typeof property === 'boolean') {
@@ -113,7 +90,7 @@ export const validateSchema = async (
         return
       }
     }
-    const schema = getSchema(schemaName)
+    const schema = pikkuState('misc', 'schemas').get(schemaName)
     await schemaService.compileSchema(schemaName, schema)
     await schemaService.validateSchema(schemaName, data)
   }

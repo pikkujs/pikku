@@ -1,4 +1,4 @@
-import { getErrors, HTTPRoutesMeta } from '@pikku/core'
+import { HTTPRoutesMeta, pikkuState } from '@pikku/core'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
 const convertSchema =
   'default' in _convertSchema ? (_convertSchema.default as any) : _convertSchema
@@ -66,9 +66,8 @@ export interface OpenAPISpecInfo {
 }
 
 const getErrorResponseForConstructorName = (constructorName: string) => {
-  const foundError = Array.from(getErrors().entries()).find(
-    ([e]) => e.name === constructorName
-  )
+  const errors = Array.from(pikkuState('misc', 'errors').entries())
+  const foundError = errors.find(([e]) => e.name === constructorName)
   if (foundError) {
     return foundError[1]
   }

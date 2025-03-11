@@ -24,8 +24,9 @@ interface PikkuState {
     tasks: Map<string, CoreScheduledTask>
     meta: ScheduledTasksMeta
   }
-  errors: {
+  misc: {
     errors: Map<PikkuError, ErrorDetails>
+    schemas: Map<string, any>
   }
 }
 
@@ -44,9 +45,9 @@ export const resetPikkuState = () => {
       tasks: new Map(),
       meta: [],
     },
-    errors: {
-      // We keep errors since they are registered globally
-      errors: globalThis.pikkuState?.errors?.errors || new Map(),
+    misc: {
+      errors: globalThis.pikkuState?.misc?.errors || new Map(),
+      schemas: globalThis.pikkuState?.misc?.schema || new Map(),
     },
   }
 }

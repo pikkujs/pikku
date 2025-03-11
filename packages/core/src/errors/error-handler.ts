@@ -23,15 +23,13 @@ export interface ErrorDetails {
   message: string
 }
 
-export const getErrors = () => pikkuState('errors', 'errors')
-
 /**
  * Adds an error to the API errors map.
  * @param error - The error to add.
  * @param details - The details of the error.
  */
 export const addError = (error: any, { status, message }: ErrorDetails) => {
-  pikkuState('errors', 'errors').set(error, { status, message })
+  pikkuState('misc', 'errors').set(error, { status, message })
 }
 
 /**
@@ -54,10 +52,10 @@ export const addErrors = (
 export const getErrorResponse = (
   error: Error
 ): { status: number; message: string } | undefined => {
-  const errors = Array.from(pikkuState('errors', 'errors').entries())
+  const errors = Array.from(pikkuState('misc', 'errors').entries())
   const foundError = errors.find(([e]) => e.name === error.constructor.name)
   if (foundError) {
     return foundError[1]
   }
-  return pikkuState('errors', 'errors').get(error)
+  return pikkuState('misc', 'errors').get(error)
 }
