@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.18
+
+### Patch Changes
+
+- 6be081b: fix: export addMiddleware correctly
+
 ## 0.6.17
 
 ### Patch Changes
