@@ -13,7 +13,7 @@
     "test:template": "next build && next start & HTTP_PREFIX=http://localhost:3000/api bash run-tests.sh"
   },
   "dependencies": {
-    "@pikku/core": "^0.6.19",
+    "@pikku/core": "^0.6.20",
     "@pikku/fetch": "^0.6.2",
     "@pikku/jose": "^0.6.3",
     "@pikku/next": "^0.6.6",
