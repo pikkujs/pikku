@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.20
+
+### Patch Changes
+
+- 1d43a9a: feat: adding context to allow middleware to set values (not typed)
+
 ## 0.6.19
 
 ### Patch Changes
