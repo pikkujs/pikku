@@ -14,7 +14,6 @@ import {
   MissingSessionError,
   NotFoundError,
 } from '../errors/errors.js'
-import crypto from 'crypto'
 import { closeSessionServices } from '../utils.js'
 import { PikkuRequest } from '../pikku-request.js'
 import { PikkuResponse } from '../pikku-response.js'
@@ -167,6 +166,7 @@ const executeRouteWithMiddleware = async (
   services: {
     singletonServices: any
     userSessionService: any
+    context: Map<string, unknown>,
     createSessionServices: Function
     skipUserSession: boolean
   },
@@ -186,6 +186,7 @@ const executeRouteWithMiddleware = async (
   const {
     singletonServices,
     userSessionService,
+    context,
     createSessionServices,
     skipUserSession,
   } = services
@@ -221,12 +222,12 @@ const executeRouteWithMiddleware = async (
 
     // Create session services
     sessionServices = await createSessionServices(
-      singletonServices,
+      { ...singletonServices, context },
       { http },
       session
     )
 
-    const allServices = { ...singletonServices, ...sessionServices, http }
+    const allServices = { ...singletonServices, ...sessionServices, context }
     const data = await http?.request?.getData()
 
     // Validate schema
@@ -270,7 +271,7 @@ const executeRouteWithMiddleware = async (
   }
 
   await runMiddleware(
-    { ...singletonServices, userSessionService },
+    { ...singletonServices, context, userSessionService },
     { http },
     middleware,
     runMain
@@ -301,7 +302,7 @@ export const runHTTPRoute = async <In, Out>({
 }: Pick<CoreHTTPFunctionRoute<unknown, unknown, any>, 'route' | 'method'> &
   RunRouteOptions &
   RunRouteParams<In>): Promise<Out | void> => {
-  const trackerId: string = crypto.randomUUID().toString()
+  const context = new Map()
 
   const userSessionService = new LocalUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
@@ -329,6 +330,7 @@ export const runHTTPRoute = async <In, Out>({
       {
         singletonServices,
         userSessionService,
+        context,
         createSessionServices,
         skipUserSession,
       },
@@ -343,7 +345,7 @@ export const runHTTPRoute = async <In, Out>({
     handleError(
       e,
       http,
-      trackerId,
+      context.get('trackingId'),
       singletonServices.logger,
       logWarningsForStatusCodes,
       respondWith404,

@@ -6,7 +6,6 @@ import type {
 } from '../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import type { CoreAPIFunctionSessionless } from '../types/functions.types.js'
-import crypto from 'crypto'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
@@ -52,8 +51,6 @@ export async function runScheduledTask<
   createSessionServices,
 }: RunScheduledTasksParams): Promise<void> {
   let sessionServices: CoreServices | undefined
-  const trackerId: string = crypto.randomUUID().toString()
-
   try {
     const task = pikkuState('scheduler', 'tasks').get(name)
 
@@ -80,7 +77,6 @@ export async function runScheduledTask<
     const errorResponse = getErrorResponse(e)
 
     if (errorResponse != null) {
-      singletonServices.logger.warn(`Error id: ${trackerId}`)
       singletonServices.logger.error(e)
     }
 

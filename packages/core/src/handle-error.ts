@@ -17,7 +17,7 @@ import { PikkuHTTP } from './http/http-routes.types.js'
 export const handleError = (
   e: any,
   http: PikkuHTTP | undefined,
-  trackerId: string,
+  trackerId: string | undefined,
   logger: Logger,
   logWarningsForStatusCodes: number[],
   respondWith404: boolean,
@@ -41,15 +41,20 @@ export const handleError = (
 
     // Log certain status codes as warnings
     if (logWarningsForStatusCodes.includes(errorResponse.status)) {
-      logger.warn(`Warning id: ${trackerId}`)
+      if (trackerId) {
+        logger.warn(`Warning id: ${trackerId}`)
+      }
       logger.warn(e)
     }
   } else {
     // Handle unexpected errors
-    logger.warn(`Error id: ${trackerId}`)
     logger.error(e)
     http?.response?.setStatus(500)
-    http?.response?.setJson({ errorId: trackerId })
+
+    if (trackerId) {
+      logger.warn(`Error id: ${trackerId}`)
+      http?.response?.setJson({ errorId: trackerId })
+    }
   }
 
   // Handle 404 errors specifically
