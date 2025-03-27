@@ -6,7 +6,7 @@ import {
   PikkuCLIOptions,
   writeFileInDir,
 } from '../src/utils.js'
-import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
+import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { pikkuHTTP } from './pikku-http.js'
 import { pikkuFunctionTypes } from './pikku-function-types.js'
 import { pikkuHTTPMap } from './pikku-routes-map.js'
@@ -20,23 +20,15 @@ import { pikkuScheduler } from './pikku-scheduler.js'
 import { pikkuSchemas } from './pikku-schemas.js'
 import { pikkuWebSocket } from './pikku-websocket.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
+import chokidar from 'chokidar'
 
-export const action = async (options: PikkuCLIOptions): Promise<void> => {
-  logPikkuLogo()
-
+const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const imports: string[] = []
   const addImport = (from: string) => {
     imports.push(
       `import '${getFileImportRelativePath(cliConfig.bootstrapFile, from, cliConfig.packageMappings)}'`
     )
   }
-
-  const cliConfig = await getPikkuCLIConfig(
-    options.config,
-    [],
-    options.tags,
-    true
-  )
 
   let typesDeclarationFileExists = true
   let visitState = await inspectorGlob(
@@ -99,6 +91,69 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   await writeFileInDir(cliConfig.bootstrapFile, imports.join('\n'))
 }
 
+const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
+  const configWatcher = chokidar.watch(cliConfig.routeDirectories, {
+    ignoreInitial: true,
+    ignored: /.*\.gen\.tsx?/,
+  })
+
+  let watcher = new chokidar.FSWatcher({})
+
+  const generatorWatcher = () => {
+    watcher.close()
+
+    logInfo(`• Watching directories: \n  - ${cliConfig.routeDirectories.join('\n  - ')}`)
+    watcher = chokidar.watch(cliConfig.routeDirectories, {
+      ignoreInitial: true,
+      ignored: /.*\.gen\.ts/,
+    })
+
+    watcher.on('ready', async () => {
+      const handle = async () => {
+        try {
+          await runAll(cliConfig, options)
+        } catch (err) {
+          console.error(err)
+          console.info()
+        }
+      }
+
+      await handle()
+
+      let timeout: ReturnType<typeof setTimeout> | undefined
+
+      const deduped = (_file: string) => {
+        if (timeout) {
+          clearTimeout(timeout)
+        }
+        timeout = setTimeout(handle, 10)
+      }
+
+      watcher.on('change', deduped)
+      watcher.on('add', deduped)
+      watcher.on('unlink', deduped)
+    })
+  }
+
+  configWatcher.on('ready', generatorWatcher)
+  configWatcher.on('change', generatorWatcher)
+}
+
+export const action = async (options: PikkuCLIOptions): Promise<void> => {
+  logPikkuLogo()
+
+  const cliConfig = await getPikkuCLIConfig(
+    options.config,
+    [],
+    options.tags,
+    true
+  )
+
+  if (options.watch) {
+    watch(cliConfig, options)
+  }
+}
+
 export const all = (program: Command): void => {
   program
     .command('all', { isDefault: true })
@@ -114,5 +169,6 @@ export const all = (program: Command): void => {
     )
     .option('-c | --config <string>', 'The path to pikku cli config file')
     .option('-t | --tags <tags...>', 'Which tags to filter by')
+    .option('-w | --watch', 'Whether to watch file changes')
     .action(action)
 }

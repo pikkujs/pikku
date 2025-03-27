@@ -104,6 +104,7 @@ const _getPikkuCLIConfig = async (
       result = {
         ...config,
         configDir,
+        watch: config.watch || false,
         packageMappings: config.packageMappings || {},
         rootDir: config.rootDir
           ? resolve(configDir, config.rootDir)

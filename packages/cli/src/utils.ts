@@ -59,6 +59,7 @@ export type FilesAndMethods = {
 }
 
 export interface PikkuCLIOptions {
+  watch?: boolean
   config?: string
   configFileType?: string
   userSessionType?: string
