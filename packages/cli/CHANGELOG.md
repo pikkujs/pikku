@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.6.17
+
+### Patch Changes
+
+- 57f5d8c: refactor: moving getSession out of nextjs wrapper since it bundles all routes and only needs middleware
+- 141d690: feat: creating a nextJS http wrapper for proxying
+- e5a5a12: feat: adding watch command (pikki all --watch)
+- 0ad27a2: chore: switching from glon to tinyblobby
+
 ## 0.6.16
 
 ### Patch Changes
