@@ -3198,6 +3198,7 @@ __metadata:
     commander: "npm:^12"
     glob: "npm:^10"
     path-to-regexp: "npm:^8.2.0"
+    tinyglobby: "npm:^0.2.12"
     ts-json-schema-generator: "npm:^2.3.0"
     typescript: "npm:^5.6"
     yaml: "npm:^2.6.0"
@@ -3398,8 +3399,8 @@ __metadata:
     "@pikku/jose": "npm:^0.6.3"
     "@pikku/next": "npm:^0.6.6"
     "@types/node": "npm:^20"
-    "@types/react": "npm:^18"
-    "@types/react-dom": "npm:^18"
+    "@types/react": "npm:^19"
+    "@types/react-dom": "npm:^19"
     next: "npm:^15"
     postcss: "npm:^8"
     react: "npm:^19"
@@ -4471,13 +4472,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/prop-types@npm:*":
-  version: 15.7.14
-  resolution: "@types/prop-types@npm:15.7.14"
-  checksum: 10/d0c5407b9ccc3dd5fae0ccf9b1007e7622ba5e6f1c18399b4f24dff33619d469da4b9fa918a374f19dc0d9fe6a013362aab0b844b606cfc10676efba3f5f736d
-  languageName: node
-  linkType: hard
-
 "@types/qs@npm:*, @types/qs@npm:^6":
   version: 6.9.18
   resolution: "@types/qs@npm:6.9.18"
@@ -4492,22 +4486,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^18":
-  version: 18.3.5
-  resolution: "@types/react-dom@npm:18.3.5"
+"@types/react-dom@npm:^19":
+  version: 19.0.4
+  resolution: "@types/react-dom@npm:19.0.4"
   peerDependencies:
-    "@types/react": ^18.0.0
-  checksum: 10/02095b326f373867498e0eb2b5ebb60f9bd9535db0d757ea13504c4b7d75e16605cf1d43ce7a2e67893d177b51db4357cabb2842fb4257c49427d02da1a14e09
-  languageName: node
-  linkType: hard
-
-"@types/react@npm:^18":
-  version: 18.3.18
-  resolution: "@types/react@npm:18.3.18"
-  dependencies:
-    "@types/prop-types": "npm:*"
-    csstype: "npm:^3.0.2"
-  checksum: 10/7fdd8b853e0d291d4138133f93f8d5c333da918e5804afcea61a923aab4bdfc9bb15eb21a5640959b452972b8715ddf10ffb12b3bd071898b9e37738636463f2
+    "@types/react": ^19.0.0
+  checksum: 10/f15d470242f0b7cca57dd7e991a2852525ac93b2cb92f7e6c104d7bd6a978c3b1d0ba9b8698f23bc19c16b5cd98a6d160007be52c61196952f57cf019f204254
   languageName: node
   linkType: hard
 
@@ -6521,6 +6505,18 @@ __metadata:
   dependencies:
     reusify: "npm:^1.0.4"
   checksum: 10/20457acfb15946f8ea80496da296a0d4930919638315627f093269d302f46fa97eaac3ad180746910edcd6f7163b8125620c30a41427267ffacd10ab67b1c806
+  languageName: node
+  linkType: hard
+
+"fdir@npm:^6.4.3":
+  version: 6.4.3
+  resolution: "fdir@npm:6.4.3"
+  peerDependencies:
+    picomatch: ^3 || ^4
+  peerDependenciesMeta:
+    picomatch:
+      optional: true
+  checksum: 10/8e6d20f4590dc168de1374a9cadaa37e20ca6e0b822aa247c230e7ea1d9e9674a68cd816146435e4ecc98f9285091462ab7e5e56eebc9510931a1794e4db68b2
   languageName: node
   linkType: hard
 
@@ -8595,6 +8591,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"picomatch@npm:^4.0.2":
+  version: 4.0.2
+  resolution: "picomatch@npm:4.0.2"
+  checksum: 10/ce617b8da36797d09c0baacb96ca8a44460452c89362d7cb8f70ca46b4158ba8bc3606912de7c818eb4a939f7f9015cef3c766ec8a0c6bfc725fdc078e39c717
+  languageName: node
+  linkType: hard
+
 "pify@npm:^2.3.0":
   version: 2.3.0
   resolution: "pify@npm:2.3.0"
@@ -10018,6 +10021,16 @@ __metadata:
   version: 0.3.2
   resolution: "tinyexec@npm:0.3.2"
   checksum: 10/b9d5fed3166fb1acd1e7f9a89afcd97ccbe18b9c1af0278e429455f6976d69271ba2d21797e7c36d57d6b05025e525d2882d88c2ab435b60d1ddf2fea361de57
+  languageName: node
+  linkType: hard
+
+"tinyglobby@npm:^0.2.12":
+  version: 0.2.12
+  resolution: "tinyglobby@npm:0.2.12"
+  dependencies:
+    fdir: "npm:^6.4.3"
+    picomatch: "npm:^4.0.2"
+  checksum: 10/4ad28701fa9118b32ef0e27f409e0a6c5741e8b02286d50425c1f6f71e6d6c6ded9dd5bbbbb714784b08623c4ec4d150151f1d3d996cfabe0495f908ab4f7002
   languageName: node
   linkType: hard
 

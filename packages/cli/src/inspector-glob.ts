@@ -1,5 +1,5 @@
 import * as path from 'path'
-import { glob } from 'glob'
+import { glob } from 'tinyglobby'
 import { InspectorFilters, InspectorState, inspect } from '@pikku/inspector'
 import { logCommandInfoAndTime } from './utils.js'
 
