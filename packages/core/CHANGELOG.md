@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.21
+
+### Patch Changes
+
+- aab52d4: revert: add http back to all services until we figure out best way to set session from a function
+
 ## 0.6.20
 
 ### Patch Changes
