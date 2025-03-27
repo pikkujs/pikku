@@ -1,5 +1,11 @@
 # @pikku/next
 
+## 0.6.7
+
+### Patch Changes
+
+- 57f5d8c: refactor: moving getSession out of nextjs wrapper since it bundles all routes and only needs middleware
+
 ## 0.6.6
 
 ### Patch Changes
