@@ -166,7 +166,7 @@ const executeRouteWithMiddleware = async (
   services: {
     singletonServices: any
     userSessionService: any
-    context: Map<string, unknown>,
+    context: Map<string, unknown>
     createSessionServices: Function
     skipUserSession: boolean
   },

@@ -42,20 +42,6 @@ export const pikku = () => {
   }
 
   /**
-   * Retrieves the user session using the current PikkuNextJS instance.
-   *
-   * @param request - The Next.js request object.
-   * @param middleware - An array of middleware functions to process the request.
-   * @returns A promise that resolves to the user session.
-   */
-  const getSession = async (
-    request: PikkuNextRequest,
-    middleware: PikkuMiddleware[]
-  ): Promise<UserSession | undefined> => {
-    return _pikku!.getSession(request, middleware) as any
-  }
-
-  /**
    * Makes a dynamic action request for a specified route and method.
    * Dynamic requests may access headers and cookies and are therefore unsuitable for precompile stages.
    *

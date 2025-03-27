@@ -6,14 +6,10 @@ import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 import {
   CoreConfig,
   CoreSingletonServices,
-  CoreUserSession,
   CreateConfig,
   CreateSessionServices,
-  PikkuMiddleware,
 } from '@pikku/core'
 import { HTTPMethod, runHTTPRoute } from '@pikku/core/http'
-import { runMiddleware, LocalUserSessionService } from '@pikku/core'
-import { PikkuNextRequest } from './pikku-next-request.js'
 
 const injectIntoUrl = (route: string, keys: Record<string, string>) => {
   const path = compile(route)
@@ -42,30 +38,6 @@ export class PikkuNextJS {
     ) => Promise<CoreSingletonServices>,
     private readonly createSessionServices: CreateSessionServices<any, any, any>
   ) {}
-
-  /**
-   * Handles an action request, routing it to the appropriate handler.
-   *
-   * @param route - The route to handle.
-   * @param method - The HTTP method for the request.
-   * @param data - The data to be sent with the request.
-   * @returns A promise that resolves to the response data.
-   */
-  public async getSession(
-    request: PikkuNextRequest,
-    middleware: PikkuMiddleware[]
-  ): Promise<CoreUserSession | undefined> {
-    const userSessionService = new LocalUserSessionService()
-    const singletonServices = await this.getSingletonServices()
-    await runMiddleware(
-      { ...singletonServices, userSession: userSessionService },
-      {
-        http: { request: request as any },
-      },
-      middleware as any
-    )
-    return userSessionService.get()
-  }
 
   /**
    * Handles an action request, routing it to the appropriate handler.

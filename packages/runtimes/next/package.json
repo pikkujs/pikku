@@ -18,7 +18,8 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./pikku-next-request": "./dist/pikku-next-request.js"
+    "./pikku-next-request": "./dist/pikku-next-request.js",
+    "./pikku-session": "./dist/pikku-session.js"
   },
   "peerDependencies": {
     "@pikku/core": "^0.6.15",
