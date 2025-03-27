@@ -102,7 +102,9 @@ const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const generatorWatcher = () => {
     watcher.close()
 
-    logInfo(`• Watching directories: \n  - ${cliConfig.routeDirectories.join('\n  - ')}`)
+    logInfo(
+      `• Watching directories: \n  - ${cliConfig.routeDirectories.join('\n  - ')}`
+    )
     watcher = chokidar.watch(cliConfig.routeDirectories, {
       ignoreInitial: true,
       ignored: /.*\.gen\.ts/,
