@@ -3313,7 +3313,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/jose@npm:^0.6.2, @pikku/jose@npm:^0.6.3, @pikku/jose@workspace:packages/services/jose":
+"@pikku/jose@npm:^0.6.2, @pikku/jose@npm:^0.6.4, @pikku/jose@workspace:packages/services/jose":
   version: 0.0.0-use.local
   resolution: "@pikku/jose@workspace:packages/services/jose"
   dependencies:
@@ -3395,7 +3395,7 @@ __metadata:
     "@pikku/cli": "npm:^0.6.17"
     "@pikku/core": "npm:^0.6.21"
     "@pikku/fetch": "npm:^0.6.2"
-    "@pikku/jose": "npm:^0.6.3"
+    "@pikku/jose": "npm:^0.6.4"
     "@pikku/next": "npm:^0.6.7"
     "@types/node": "npm:^20"
     "@types/react": "npm:^19"
@@ -3528,7 +3528,7 @@ __metadata:
     "@pikku/cli": "npm:^0.6.17"
     "@pikku/core": "npm:^0.6.21"
     "@pikku/express-middleware": "npm:^0.6.4"
-    "@pikku/jose": "npm:^0.6.3"
+    "@pikku/jose": "npm:^0.6.4"
     "@pikku/schedule": "npm:^0.6.2"
     "@types/cookie-parser": "npm:^1.4.7"
     cookie-parser: "npm:^1.4.7"
@@ -3585,7 +3585,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.6.17"
     "@pikku/core": "npm:^0.6.21"
-    "@pikku/jose": "npm:^0.6.3"
+    "@pikku/jose": "npm:^0.6.4"
     "@pikku/schema-cfworker": "npm:^0.6.1"
     typescript: "npm:^5.6"
   languageName: unknown

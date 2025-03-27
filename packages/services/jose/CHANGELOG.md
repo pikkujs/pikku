@@ -1,5 +1,11 @@
 # @pikku/jose
 
+## 0.6.4
+
+### Patch Changes
+
+- 82f87ee: fix: extract the payload from the jwt token
+
 ## 0.6.3
 
 ### Patch Changes
