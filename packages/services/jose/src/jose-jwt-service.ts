@@ -72,7 +72,7 @@ export class JoseJWTService<UserSession extends CoreUserSession>
    */
   public async decode<T>(token: string): Promise<T> {
     const secret = await this.getSecret(token)
-    return (await jose.jwtVerify(token, secret, {})) as unknown as T
+    return (await jose.jwtVerify(token, secret, {})).payload as unknown as T
   }
 
   /**
