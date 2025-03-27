@@ -28,7 +28,8 @@ export type PikkuCLIConfig = {
   configDir: string
   tsconfig: string
 
-  nextJSfile?: string
+  nextBackendFile?: string
+  nextHTTPFile?: string
   fetchFile?: string
   websocketFile?: string
 
@@ -40,7 +41,12 @@ export type PikkuCLIConfig = {
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
-const CONFIG_DIR_FILES = ['nextJSfile', 'fetchFile', 'websocketFile']
+const CONFIG_DIR_FILES = [
+  'nextBackendFile',
+  'nextHTTPFile',
+  'fetchFile',
+  'websocketFile',
+]
 
 export const getPikkuCLIConfig = async (
   configFile: string | undefined = undefined,
@@ -104,7 +110,6 @@ const _getPikkuCLIConfig = async (
       result = {
         ...config,
         configDir,
-        watch: config.watch || false,
         packageMappings: config.packageMappings || {},
         rootDir: config.rootDir
           ? resolve(configDir, config.rootDir)

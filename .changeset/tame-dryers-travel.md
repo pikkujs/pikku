@@ -1,6 +1,5 @@
 ---
 '@pikku/next': patch
-'@pikku/core': patch
 '@pikku/cli': patch
 ---
 

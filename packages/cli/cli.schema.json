@@ -138,7 +138,10 @@
         "fetchFile": {
           "type": "string"
         },
-        "nextJSfile": {
+        "nextBackendFile": {
+          "type": "string"
+        },
+        "nextHTTPFile": {
           "type": "string"
         },
         "openAPI": {

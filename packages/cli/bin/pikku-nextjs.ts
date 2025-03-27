@@ -1,5 +1,6 @@
 import { Command } from 'commander'
-import { serializeNextJsWrapper } from '../src/nextjs/serialize-nextjs-wrapper.js'
+import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from '../src/nextjs/serialize-nextjs-backend-wrapper.js'
+import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from '../src/nextjs/serialize-nextjs-http-wrapper.js'
 import {
   getFileImportRelativePath,
   getPikkuFilesAndMethods,
@@ -14,11 +15,13 @@ import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuNext = async (
   {
-    nextJSfile,
+    nextBackendFile,
+    nextHTTPFile,
     routesFile,
     routesMapDeclarationFile,
     schemaDirectory,
     packageMappings,
+    fetchFile,
   }: PikkuCLIConfig,
   visitState: InspectorState,
   options: PikkuCLIOptions
@@ -26,21 +29,28 @@ export const pikkuNext = async (
   return await logCommandInfoAndTime(
     'Generating nextjs wrapper',
     'Generated nextjs wrapper',
-    [nextJSfile === undefined, 'nextjs outfile is not defined'],
+    [nextBackendFile === undefined, 'nextjs outfile is not defined'],
     async () => {
-      if (!nextJSfile) {
-        throw new Error('nextJSfile is required in pikku config')
+      if (!nextBackendFile || !nextHTTPFile) {
+        throw new Error(
+          'nextBackendFile or nextHTTPFile is required in pikku config'
+        )
+      }
+
+      if (nextHTTPFile && !fetchFile) {
+        throw new Error(
+          'fetchFile is required in pikku config in order for nextJS http wrapper to work'
+        )
       }
 
       const {
         pikkuConfigFactory,
         singletonServicesFactory,
         sessionServicesFactory,
-        userSessionType,
       } = await getPikkuFilesAndMethods(
         visitState,
         packageMappings,
-        nextJSfile,
+        nextBackendFile,
         options,
         {
           config: true,
@@ -49,37 +59,46 @@ export const pikkuNext = async (
         }
       )
 
-      const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextJSfile, pikkuConfigFactory.file, packageMappings)}'`
-      const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextJSfile, singletonServicesFactory.file, packageMappings)}'`
-      const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextJSfile, sessionServicesFactory.file, packageMappings)}'`
-      const userSessionImport = `import type { ${userSessionType.type} as UserSession } from '${getFileImportRelativePath(nextJSfile, userSessionType.file, packageMappings)}'`
+      const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
+      const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
+      const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
 
       const routesPath = getFileImportRelativePath(
-        nextJSfile,
+        nextBackendFile,
         routesFile,
         packageMappings
       )
       const routesMapDeclarationPath = getFileImportRelativePath(
-        nextJSfile,
+        nextBackendFile,
         routesMapDeclarationFile,
         packageMappings
       )
       const schemasPath = getFileImportRelativePath(
-        nextJSfile,
+        nextBackendFile,
         `${schemaDirectory}/register.gen.ts`,
         packageMappings
       )
 
-      const content = serializeNextJsWrapper(
-        routesPath,
-        routesMapDeclarationPath,
-        schemasPath,
-        pikkuConfigImport,
-        singletonServicesImport,
-        sessionServicesImport,
-        userSessionImport
-      )
-      await writeFileInDir(nextJSfile, content)
+      if (nextBackendFile) {
+        const content = serializeNextBackendWrapper(
+          routesPath,
+          routesMapDeclarationPath,
+          schemasPath,
+          pikkuConfigImport,
+          singletonServicesImport,
+          sessionServicesImport
+        )
+        await writeFileInDir(nextBackendFile, content)
+      }
+
+      if (nextHTTPFile) {
+        const pikkuFetchImport = `import { PikkuFetch } from '${getFileImportRelativePath(nextBackendFile, fetchFile!, packageMappings)}'`
+        const content = serializeNextHTTPWrapper(
+          routesMapDeclarationPath,
+          pikkuFetchImport
+        )
+        await writeFileInDir(nextHTTPFile, content)
+      }
     }
   )
 }
@@ -88,7 +107,7 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   logPikkuLogo()
   const cliConfig = await getPikkuCLIConfig(
     options.config,
-    ['rootDir', 'schemaDirectory', 'configDir', 'nextJSfile'],
+    ['rootDir', 'schemaDirectory', 'configDir', 'nextBackendFile'],
     options.tags,
     true
   )

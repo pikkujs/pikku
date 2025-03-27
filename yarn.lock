@@ -3196,7 +3196,6 @@ __metadata:
     "@types/uuid": "npm:^10.0.0"
     chalk: "npm:^5.4.1"
     commander: "npm:^12"
-    glob: "npm:^10"
     path-to-regexp: "npm:^8.2.0"
     tinyglobby: "npm:^0.2.12"
     ts-json-schema-generator: "npm:^2.3.0"
@@ -6837,7 +6836,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^10, glob@npm:^10.2.2, glob@npm:^10.3.10, glob@npm:^10.3.12, glob@npm:^10.3.7":
+"glob@npm:^10.2.2, glob@npm:^10.3.10, glob@npm:^10.3.12, glob@npm:^10.3.7":
   version: 10.4.5
   resolution: "glob@npm:10.4.5"
   dependencies:
