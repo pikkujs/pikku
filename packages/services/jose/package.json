@@ -1,6 +1,6 @@
 {
   "name": "@pikku/jose",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

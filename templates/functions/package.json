@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@pikku/core": "^0.6.21",
-    "@pikku/jose": "^0.6.3",
+    "@pikku/jose": "^0.6.4",
     "@pikku/schema-cfworker": "^0.6.1"
   },
   "devDependencies": {
