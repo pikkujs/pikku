@@ -227,7 +227,12 @@ const executeRouteWithMiddleware = async (
       session
     )
 
-    const allServices = { ...singletonServices, ...sessionServices, context }
+    const allServices = {
+      ...singletonServices,
+      ...sessionServices,
+      http,
+      context,
+    }
     const data = await http?.request?.getData()
 
     // Validate schema
