@@ -18,7 +18,7 @@ import { closeSessionServices } from '../utils.js'
 import { PikkuRequest } from '../pikku-request.js'
 import { PikkuResponse } from '../pikku-response.js'
 import { coerceQueryStringToArray, validateSchema } from '../schema.js'
-import { LocalUserSessionService } from '../services/user-session-service.js'
+import { PikkuUserSessionService } from '../services/user-session-service.js'
 import { runMiddleware } from '../middleware-runner.js'
 import { handleError } from '../handle-error.js'
 import { pikkuState } from '../pikku-state.js'
@@ -222,7 +222,7 @@ const executeRouteWithMiddleware = async (
 
     // Create session services
     sessionServices = await createSessionServices(
-      { ...singletonServices, context },
+      { ...singletonServices, userSessionService, context },
       { http },
       session
     )
@@ -309,7 +309,7 @@ export const runHTTPRoute = async <In, Out>({
   RunRouteParams<In>): Promise<Out | void> => {
   const context = new Map()
 
-  const userSessionService = new LocalUserSessionService()
+  const userSessionService = new PikkuUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
 

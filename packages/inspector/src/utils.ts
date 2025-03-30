@@ -3,6 +3,7 @@ import { TypesMap } from './types-map.js'
 import { InspectorFilters } from './types.js'
 
 type FunctionTypes = {
+  type: string | null
   inputTypes: ts.Type[]
   inputs: null | string[]
   outputTypes: ts.Type[]
@@ -262,6 +263,7 @@ export const getFunctionTypes = (
     inputs: null,
     outputTypes: [],
     outputs: null,
+    type: null,
   }
 
   const property = getPropertyAssignment(obj, subFunctionName)
@@ -305,6 +307,8 @@ export const getFunctionTypes = (
     console.error(`Unable to resolve type for property '${funcName}'`)
     return result
   }
+
+  result.type = type.aliasSymbol?.getEscapedName() || null
 
   // Access type arguments from TypeReference
   const typeArguments = getTypeArgumentsOfType(checker, type)

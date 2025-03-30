@@ -4,38 +4,56 @@ import {
   JSONValue,
   CoreUserSession,
 } from '../types/core.types.js'
-import { CoreAPIChannel, PikkuChannelHandler } from './channel.types.js'
+import {
+  ChannelMessageMeta,
+  CoreAPIChannel,
+  PikkuChannelHandler,
+} from './channel.types.js'
 import { verifyPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
+
+const getRouteMeta = (
+  channelName: string,
+  routingProperty?: string,
+  routerValue?: string
+): ChannelMessageMeta => {
+  const channelsMeta = pikkuState('channel', 'meta')
+  const channelMeta = channelsMeta.find(
+    (channelMeta) => channelMeta.name === channelName
+  )
+  if (!channelMeta) {
+    throw new Error(`Channel ${channelName} not found`)
+  }
+  if (!routingProperty) {
+    if (!channelMeta.message) {
+      throw new Error(`Channel ${channelName} has no default message route`)
+    }
+    return channelMeta.message
+  }
+  if (!routerValue) {
+    throw new Error(
+      `Channel ${channelName} requires a router value for ${routingProperty}`
+    )
+  }
+  return channelMeta.messageRoutes[routingProperty]?.[routerValue]
+}
 
 const validateSchema = (
   logger: CoreSingletonServices['logger'],
   data: JSONValue,
-  channelName: string,
-  routingProperty?: string,
-  routerValue?: string
+  channelRoute: ChannelMessageMeta
 ) => {
-  const channelsMeta = pikkuState('channel', 'meta')
-  for (const channelMeta of channelsMeta) {
-    if (routingProperty && routerValue) {
-      const channelRoute =
-        channelMeta.messageRoutes[routingProperty]?.[routerValue]
-      if (channelRoute) {
-        const schemaNames = channelRoute.inputs
-        if (schemaNames) {
-          // TODO
-          // loadSchema(schemaNames, logger)
-          // validateJson(schemaNames, data)
-        }
-        return
-      }
-    }
+  const schemaNames = channelRoute.inputs
+  if (schemaNames) {
+    // TODO
+    // loadSchema(schemaNames, logger)
+    // validateJson(schemaNames, data)
   }
 }
 
 const validateAuth = (
   requiresSession: boolean,
-  userSession: CoreUserSession | undefined,
+  session: CoreUserSession | undefined,
   onMessage: any
 ) => {
   const auth =
@@ -45,7 +63,7 @@ const validateAuth = (
         ? requiresSession
         : onMessage.auth
 
-  if (auth && !userSession) {
+  if (auth && !session) {
     return false
   }
   return true
@@ -53,27 +71,41 @@ const validateAuth = (
 
 const validatePermissions = async (
   services: CoreServices,
-  userSession: CoreUserSession | undefined,
+  session: CoreUserSession | undefined,
   onMessage: any,
   data: unknown
 ) => {
   const permissions =
     typeof onMessage === 'function' ? {} : onMessage.permissions
-  return await verifyPermissions(permissions, services, data, userSession)
+  return await verifyPermissions(permissions, services, data, session)
 }
 
 const runFunction = async (
   services: CoreServices,
   channelHandler: PikkuChannelHandler,
+  channelMessageMeta: ChannelMessageMeta,
+  session: CoreUserSession | undefined,
   onMessage: any,
   data: unknown
 ) => {
   const func: any = typeof onMessage === 'function' ? onMessage : onMessage.func
-  return await func(services, channelHandler.getChannel(), data)
+  if (channelMessageMeta.type?.toLowerCase().includes('function')) {
+    return await func(
+      {
+        ...services,
+        channel: channelHandler.getChannel(),
+      },
+      data,
+      session
+    )
+  } else {
+    return await func(services, channelHandler.getChannel(), data)
+  }
 }
 
 export const processMessageHandlers = (
   services: CoreServices,
+  session: CoreUserSession | undefined,
   channelConfig: CoreAPIChannel<any, any>,
   channelHandler: PikkuChannelHandler
 ) => {
@@ -83,6 +115,7 @@ export const processMessageHandlers = (
   const processMessage = async (
     data: JSONValue,
     onMessage: any,
+    session: CoreUserSession | undefined,
     routingProperty?: string,
     routerValue?: string
   ): Promise<unknown> => {
@@ -98,13 +131,14 @@ export const processMessageHandlers = (
       return
     }
 
-    validateSchema(
-      services.logger,
-      data,
+    const routeMeta = getRouteMeta(
       channelConfig.name,
       routingProperty,
       routerValue
     )
+    if (routeMeta) {
+      validateSchema(services.logger, data, routeMeta)
+    }
 
     const hasPermission = await validatePermissions(
       services,
@@ -118,7 +152,14 @@ export const processMessageHandlers = (
       )
     }
 
-    return await runFunction(services, channelHandler, onMessage, data)
+    return await runFunction(
+      services,
+      channelHandler,
+      routeMeta,
+      session,
+      onMessage,
+      data
+    )
   }
 
   const onMessage = async (rawData): Promise<unknown> => {
@@ -137,6 +178,7 @@ export const processMessageHandlers = (
             result = await processMessage(
               messageData,
               routes[routerValue],
+              session,
               routingProperty,
               routerValue
             )
@@ -147,7 +189,11 @@ export const processMessageHandlers = (
         // Default handler if no routes matched but json data was parsed
         if (!processed && channelConfig.onMessage) {
           processed = true
-          result = await processMessage(messageData, channelConfig.onMessage)
+          result = await processMessage(
+            messageData,
+            channelConfig.onMessage,
+            session
+          )
         }
       } catch (error) {
         // Most likely a json error.. ignore
@@ -157,7 +203,7 @@ export const processMessageHandlers = (
     // Default handler if no routes matched and json data wasn't parsed
     if (!processed && channelConfig.onMessage) {
       processed = true
-      result = await processMessage(rawData, channelConfig.onMessage)
+      result = await processMessage(rawData, channelConfig.onMessage, session)
     }
 
     if (!processed) {

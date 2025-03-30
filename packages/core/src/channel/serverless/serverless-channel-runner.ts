@@ -11,7 +11,7 @@ import type {
 import { createHTTPInteraction } from '../../http/http-route-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleError } from '../../handle-error.js'
-import { RemoteUserSessionService } from '../../services/user-session-service.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 
@@ -69,9 +69,10 @@ export const runChannelConnect = async ({
 }: Pick<CoreAPIChannel<unknown, any>, 'route'> &
   RunChannelOptions &
   RunServerlessChannelParams<unknown>) => {
+  const context = new Map()
   let sessionServices: SessionServices | undefined
   const http = createHTTPInteraction(request, response)
-  const userSessionService = new RemoteUserSessionService(
+  const userSessionService = new PikkuUserSessionService(
     channelStore,
     channelId
   )
@@ -83,6 +84,7 @@ export const runChannelConnect = async ({
     route,
     singletonServices,
     coerceToArray,
+    userSessionService,
   })
 
   const main = async () => {
@@ -130,7 +132,8 @@ export const runChannelConnect = async ({
   await runMiddleware(
     {
       ...singletonServices,
-      userSession: userSessionService,
+      userSessionService,
+      context,
     },
     { http },
     channelConfig.middleware || [],
@@ -190,6 +193,7 @@ export const runChannelMessage = async (
   try {
     const onMessage = processMessageHandlers(
       { ...singletonServices, ...sessionServices },
+      session,
       channelConfig,
       channelHandler
     )

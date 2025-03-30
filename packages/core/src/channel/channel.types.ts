@@ -12,7 +12,7 @@ import {
   CreateSessionServices,
   PikkuMiddleware,
 } from '../types/core.types.js'
-import { CoreAPIPermission } from '../types/functions.types.js'
+import { CoreAPIFunction, CoreAPIPermission } from '../types/functions.types.js'
 import { PikkuRequest } from '../pikku-request.js'
 import { PikkuResponse } from '../pikku-response.js'
 
@@ -35,6 +35,13 @@ export type RunChannelParams<ChannelData> = {
 
 export interface HandlerMeta {}
 
+export interface ChannelMessageMeta {
+  inputs: string[] | null
+  outputs: string[] | null
+  docs?: APIDocs
+  type: null | string
+}
+
 export interface ChannelMeta {
   name: string
   route: string
@@ -44,17 +51,8 @@ export interface ChannelMeta {
   inputTypes?: HTTPFunctionMetaInputTypes
   connect: boolean
   disconnect: boolean
-  message: { inputs: string[] | null; outputs: string[] | null } | null
-  messageRoutes: Record<
-    string,
-    Record<
-      string,
-      {
-        inputs: string[] | null
-        outputs: string[] | null
-      }
-    >
-  >
+  message: ChannelMessageMeta | null
+  messageRoutes: Record<string, Record<string, ChannelMessageMeta>>
   docs?: APIDocs
   tags?: string[]
 }
@@ -108,8 +106,12 @@ export type CoreAPIChannel<
   Channel extends string,
   ChannelFunctionConnection = CoreChannelConnection<ChannelData>,
   ChannelFunctionDisconnection = CoreChannelDisconnection<ChannelData>,
-  ChannelFunctionDefaultMessage = CoreChannelMessage<unknown, unknown, unknown>,
-  ChannelFunctionMessageRoute = CoreChannelMessage<unknown, unknown, unknown>,
+  ChannelFunctionDefaultMessage =
+    | CoreChannelMessage<unknown, unknown, unknown>
+    | CoreAPIFunction<unknown, unknown>,
+  ChannelFunctionMessageRoute =
+    | CoreChannelMessage<unknown, unknown, unknown>
+    | CoreAPIFunction<unknown, unknown>,
   APIPermission = CoreAPIPermission<ChannelData>,
 > = {
   name: string

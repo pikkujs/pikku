@@ -60,7 +60,8 @@ const addMessagesRoutes = (
             })
             const inputs = result?.inputs || null
             const outputs = result?.outputs || null
-            messageTypes[channel][route] = { inputs, outputs }
+            const type = result?.type || null
+            messageTypes[channel][route] = { inputs, outputs, type }
           }
         }
       } else {
@@ -137,13 +138,13 @@ export const addChannel = (
 
     const connect = !!getPropertyAssignment(obj, 'onConnect')
     const disconnect = !!getPropertyAssignment(obj, 'onDisconnect')
-    const { inputs, outputs } = getFunctionTypes(checker, obj, {
+    const { inputs, outputs, type } = getFunctionTypes(checker, obj, {
       funcName: 'onMessage',
       inputIndex: 0,
       outputIndex: 1,
       typesMap: state.channels.typesMap,
     })
-    const message = { inputs, outputs }
+    const message = { inputs, outputs, type }
     const messageRoutes = addMessagesRoutes(
       obj,
       checker,
@@ -170,7 +171,7 @@ export const addChannel = (
       ),
       connect,
       disconnect,
-      message,
+      message: message || undefined,
       messageRoutes,
       docs,
       tags,

@@ -60,7 +60,7 @@ export const openChannel = async ({
   http,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
   Omit<RunChannelParams<unknown>, 'response' | 'request'> & {
-    userSessionService?: UserSessionService<any>
+    userSessionService: UserSessionService<any>
   } & RunChannelOptions): Promise<{
   openingData: unknown
   channelConfig: CoreAPIChannel<unknown, any>

@@ -11,7 +11,7 @@ import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { SessionServices } from '../../types/core.types.js'
 import { handleError } from '../../handle-error.js'
 import { runMiddleware } from '../../middleware-runner.js'
-import { LocalUserSessionService } from '../../services/user-session-service.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -31,7 +31,7 @@ export const runLocalChannel = async ({
   let sessionServices: SessionServices<typeof singletonServices> | undefined
 
   let channelHandler: PikkuLocalChannelHandler | undefined
-  const userSessionService = new LocalUserSessionService()
+  const userSessionService = new PikkuUserSessionService()
   const http = createHTTPInteraction(request, response)
 
   const main = async () => {
@@ -45,6 +45,7 @@ export const runLocalChannel = async ({
         singletonServices,
         skipUserSession,
         coerceToArray,
+        userSessionService,
       })
 
       channelHandler = new PikkuLocalChannelHandler(
@@ -53,14 +54,15 @@ export const runLocalChannel = async ({
         openingData
       )
       const channel = channelHandler.getChannel()
-      const userSession = await userSessionService.get()
+      const session = await userSessionService.get()
       if (createSessionServices) {
         sessionServices = await createSessionServices(
           singletonServices,
           { http },
-          userSession
+          session
         )
       }
+
       const allServices = {
         ...singletonServices,
         ...sessionServices,
@@ -79,7 +81,12 @@ export const runLocalChannel = async ({
       })
 
       channelHandler.registerOnMessage(
-        processMessageHandlers(allServices, channelConfig, channelHandler)
+        processMessageHandlers(
+          allServices,
+          session,
+          channelConfig,
+          channelHandler
+        )
       )
     } catch (e: any) {
       handleError(
@@ -101,7 +108,7 @@ export const runLocalChannel = async ({
   await runMiddleware(
     {
       ...singletonServices,
-      userSession: userSessionService,
+      userSessionService,
     },
     { http },
     route.middleware || [],

@@ -1,3 +1,4 @@
+import { PikkuChannel } from '../channel/channel.types.js'
 import type {
   CoreServices,
   CoreSingletonServices,
@@ -15,9 +16,16 @@ import type {
 export type CoreAPIFunction<
   In,
   Out,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSingletonServices = CoreServices & {
+    channel?: PikkuChannel<unknown, Out>
+  },
   Session extends CoreUserSession = CoreUserSession,
-> = (services: Services, data: In, session: Session) => Promise<Out>
+  Channel extends boolean = false,
+> = (
+  services: Services,
+  data: In,
+  session: Session
+) => Channel extends true ? Promise<Out> | Promise<void> : Promise<Out>
 
 /**
  * Represents a core API function that can be used without a session.
@@ -30,9 +38,16 @@ export type CoreAPIFunction<
 export type CoreAPIFunctionSessionless<
   In,
   Out,
-  Services extends CoreSingletonServices = CoreServices,
+  Services extends CoreSingletonServices = CoreServices & {
+    channel?: PikkuChannel<unknown, Out>
+  },
   Session extends CoreUserSession = CoreUserSession,
-> = (services: Services, data: In, session?: Session) => Promise<Out>
+  Channel extends boolean = false,
+> = (
+  services: Services,
+  data: In,
+  session: Session
+) => Channel extends true ? Promise<Out> | Promise<void> : Promise<Out>
 
 /**
  * Represents a function that checks permissions for a given API operation.
