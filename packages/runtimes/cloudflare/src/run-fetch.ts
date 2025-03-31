@@ -4,13 +4,7 @@ import {
   CoreUserSession,
   CreateSessionServices,
 } from '@pikku/core'
-import { CloudflareHTTPRequest } from './cloudflare-http-request.js'
-import { CloudfrontHTTPResponse } from './cloudflare-http-response.js'
 import { runHTTPRoute } from '@pikku/core/http'
-import type {
-  Request,
-  IncomingRequestCfProperties,
-} from '@cloudflare/workers-types'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 
 export const runFetch = async <
@@ -18,7 +12,7 @@ export const runFetch = async <
   Services extends CoreServices<SingletonServices>,
   UserSession extends CoreUserSession,
 >(
-  cloudflareRequest: Request<unknown, IncomingRequestCfProperties<unknown>>,
+  request: Request,
   singletonServices: SingletonServices,
   createSessionServices: CreateSessionServices<
     SingletonServices,
@@ -27,11 +21,8 @@ export const runFetch = async <
   >,
   websocketHibernationServer?: CloudflareWebSocketHibernationServer<SingletonServices>
 ) => {
-  const request = new CloudflareHTTPRequest(cloudflareRequest)
-
   const isWebsocketUpgradeRequest =
-    cloudflareRequest.method === 'GET' &&
-    cloudflareRequest.headers.get('Upgrade') === 'websocket'
+    request.method === 'GET' && request.headers.get('Upgrade') === 'websocket'
   if (isWebsocketUpgradeRequest) {
     if (!websocketHibernationServer) {
       return new Response(null, {
@@ -42,17 +33,12 @@ export const runFetch = async <
         },
       })
     }
-    return websocketHibernationServer.fetch(cloudflareRequest)
+    return websocketHibernationServer.fetch(request as any)
   }
 
-  const response = new CloudfrontHTTPResponse()
-  await runHTTPRoute({
-    request,
-    response,
+  const response = await runHTTPRoute(request, {
     singletonServices,
     createSessionServices: createSessionServices as any,
-    route: request.path,
-    method: request.method,
   })
-  return response.getCloudflareResponse()
+  return response
 }

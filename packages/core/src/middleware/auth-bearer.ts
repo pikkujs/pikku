@@ -34,8 +34,8 @@ export const authBearer = <
     }
 
     const authHeader =
-      http.request.getHeader('authorization') ||
-      http.request.getHeader('Authorization')
+      http.request.header('authorization') ||
+      http.request.header('Authorization')
     if (authHeader) {
       const [scheme, bearerToken] = authHeader.split(' ')
       if (scheme !== 'Bearer' || !token || !bearerToken) {

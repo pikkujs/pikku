@@ -1,7 +1,7 @@
 import {
   DurableObjectState,
   DurableObject,
-  Request,
+  Request as CloudflareRequest,
   WebSocket,
 } from '@cloudflare/workers-types'
 import {
@@ -9,12 +9,10 @@ import {
   runChannelDisconnect,
   runChannelMessage,
 } from '@pikku/core/channel/serverless'
-import { CloudflareHTTPRequest } from './cloudflare-http-request.js'
-import { CloudfrontHTTPResponse } from './cloudflare-http-response.js'
 import { CloudflareWebsocketStore } from './cloudflare-channel-store.js'
 import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-handler-factory.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
-import { CoreSingletonServices } from '@pikku/core'
+import { CoreSingletonServices, PikkuHTTPResponse } from '@pikku/core'
 import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
@@ -30,27 +28,25 @@ export abstract class CloudflareWebSocketHibernationServer<
     this.channelStore = new CloudflareWebsocketStore(this.ctx)
   }
 
-  public async fetch(cloudflareRequest: Request) {
+  public async fetch(request: CloudflareRequest) {
     // @ts-ignore
     const webSocketPair = new WebSocketPair()
     const client: WebSocket = webSocketPair[0]
     const server: WebSocket = webSocketPair[1]
 
-    const request = new CloudflareHTTPRequest(cloudflareRequest as any)
-    const response = new CloudfrontHTTPResponse(client)
+    const response = new PikkuHTTPResponse()
 
     const channelId = crypto.randomUUID().toString()
     const params = await this.getAllParams(server)
 
     try {
       this.ctx.acceptWebSocket(server, [channelId])
-
       await runChannelConnect({
         ...params,
         channelId,
         channelObject: server,
-        route: request.path,
-        request,
+        route: request,
+        request: request as unknown as Request,
         response,
         bubbleErrors: true,
       })
@@ -58,7 +54,7 @@ export abstract class CloudflareWebSocketHibernationServer<
       // Something went wrong, the cloudflare response will deal with it.
     }
 
-    return response.getCloudflareResponse() as any
+    return response.toResponse({ webSocket: client }) as any
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {

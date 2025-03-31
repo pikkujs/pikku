@@ -6,7 +6,4 @@
  * @module @pikku/next
  */
 
-export * from './pikku-action-next-request.js'
-export * from './pikku-action-next-response.js'
 export * from './pikku-next.js'
-export * from './pikku-next-request.js'

@@ -7,8 +7,6 @@ import {
 } from './http-routes.types.js'
 import { PikkuMiddleware, SessionServices } from '../types/core.types.js'
 import { match } from 'path-to-regexp'
-import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
-import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
 import {
   ForbiddenError,
   MissingSessionError,
@@ -22,6 +20,8 @@ import { PikkuUserSessionService } from '../services/user-session-service.js'
 import { runMiddleware } from '../middleware-runner.js'
 import { handleError } from '../handle-error.js'
 import { pikkuState } from '../pikku-state.js'
+import { PikkuHTTPResponse } from './pikku-http-response.js'
+import { PikkuHTTPRequest } from './pikku-http-request.js'
 
 /**
  * Add middleware to a specific route or globally
@@ -138,14 +138,14 @@ export const createHTTPInteraction = (
   let http: PikkuHTTP | undefined = undefined
 
   if (
-    request instanceof PikkuHTTPAbstractRequest ||
-    response instanceof PikkuHTTPAbstractResponse
+    request instanceof PikkuHTTPRequest ||
+    response instanceof PikkuHTTPResponse
   ) {
     http = {}
-    if (request instanceof PikkuHTTPAbstractRequest) {
+    if (request instanceof PikkuHTTPRequest) {
       http.request = request
     }
-    if (response instanceof PikkuHTTPAbstractResponse) {
+    if (response instanceof PikkuHTTPResponse) {
       http.response = response
     }
   }
@@ -264,13 +264,14 @@ const executeRouteWithMiddleware = async (
 
     // Set the response
     if (route.returnsJSON === false) {
-      http?.response?.setResponse(result)
+      http?.response?.arrayBuffer(result)
     } else {
-      http?.response?.setJson(result)
+      http?.response?.json(result)
     }
 
-    http?.response?.setStatus(200)
-    http?.response?.end()
+    http?.response?.status(200)
+    // TODO
+    //http?.response?.end()
 
     return result
   }
@@ -292,21 +293,38 @@ const executeRouteWithMiddleware = async (
  * @returns {Promise<Out | void>} Result of the route handler
  * @ignore
  */
-export const runHTTPRoute = async <In, Out>({
-  singletonServices,
-  request,
-  response,
-  createSessionServices,
-  route: apiRoute,
-  method: apiType,
-  skipUserSession = false,
-  respondWith404 = true,
-  logWarningsForStatusCodes = [],
-  coerceToArray = false,
-  bubbleErrors = false,
-}: Pick<CoreHTTPFunctionRoute<unknown, unknown, any>, 'route' | 'method'> &
-  RunRouteOptions &
-  RunRouteParams<In>): Promise<Out | void> => {
+export const runHTTPRoute = async <In, Out>(
+  request: Request | PikkuHTTPRequest,
+  params: RunRouteOptions & RunRouteParams
+): Promise<Response> => {
+  const pikkuResponse = new PikkuHTTPResponse()
+  await runHTTPRouteWithoutResponse<In, Out>(request, {
+    ...params,
+    response: pikkuResponse,
+  })
+  return pikkuResponse.toResponse()
+}
+
+/**
+ * Run an HTTP route with the given parameters
+ *
+ * @param {Object} options - Options for running the route
+ * @returns {Promise<Out | void>} Result of the route handler
+ * @ignore
+ */
+export const runHTTPRouteWithoutResponse = async <In, Out>(
+  request: Request | PikkuHTTPRequest,
+  {
+    singletonServices,
+    response,
+    createSessionServices,
+    skipUserSession = false,
+    respondWith404 = true,
+    logWarningsForStatusCodes = [],
+    coerceToArray = false,
+    bubbleErrors = false,
+  }: RunRouteOptions & RunRouteParams
+): Promise<Out | void> => {
   const context = new Map()
 
   const userSessionService = new PikkuUserSessionService()
@@ -314,7 +332,12 @@ export const runHTTPRoute = async <In, Out>({
   let result: Out
 
   // Create HTTP interaction object
-  const http = createHTTPInteraction(request, response)
+  const http = createHTTPInteraction(
+    request instanceof Request ? new PikkuHTTPRequest(request) : request,
+    response
+  )
+  const apiType = http!.request!.method()
+  const apiRoute = http!.request!.path()
 
   // Find matching route
   const matchedRoute = getMatchingRoute(apiType, apiRoute)

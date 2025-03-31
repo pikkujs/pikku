@@ -10,7 +10,7 @@ import {
   CoreSingletonServices,
   CreateSessionServices,
 } from '@pikku/core'
-import { pikkuMiddleware } from '@pikku/express-middleware'
+import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.
@@ -75,11 +75,15 @@ export class PikkuExpressServer {
 
   public async init() {
     this.app.use(
-      pikkuMiddleware(this.singletonServices, this.createSessionServices, {
-        respondWith404: false,
-        logRoutes: true,
-        loadSchemas: true,
-      })
+      pikkuExpressMiddleware(
+        this.singletonServices,
+        this.createSessionServices,
+        {
+          respondWith404: false,
+          logRoutes: true,
+          loadSchemas: true,
+        }
+      )
     )
   }
 

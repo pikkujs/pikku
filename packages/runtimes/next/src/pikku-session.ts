@@ -1,11 +1,14 @@
-import { PikkuUserSessionService, runMiddleware } from '@pikku/core'
+import {
+  PikkuHTTPRequest,
+  PikkuUserSessionService,
+  runMiddleware,
+} from '@pikku/core'
 import type {
   CoreSingletonServices,
   CoreUserSession,
   PikkuMiddleware,
 } from '@pikku/core'
 import { NextRequest } from 'next/server.js'
-import { PikkuNextRequest } from './pikku-next-request.js'
 
 /**
  * Retrieves the user session from the request via the middleware provided.
@@ -15,15 +18,16 @@ import { PikkuNextRequest } from './pikku-next-request.js'
  * @returns
  */
 export const getSession = async <UserSession extends CoreUserSession>(
-  request: NextRequest,
+  nextRequest: NextRequest,
   singletonServices: CoreSingletonServices,
   middleware: PikkuMiddleware[]
 ): Promise<UserSession | undefined> => {
+  const request = new PikkuHTTPRequest(nextRequest)
   const userSessionService = new PikkuUserSessionService<UserSession>()
   await runMiddleware(
     { ...singletonServices, userSessionService },
     {
-      http: { request: new PikkuNextRequest(request) },
+      http: { request },
     },
     middleware as any
   )

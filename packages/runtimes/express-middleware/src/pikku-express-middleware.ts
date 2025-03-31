@@ -1,10 +1,11 @@
+import { RequestHandler } from 'express'
+
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 import { runHTTPRoute, RunRouteOptions } from '@pikku/core/http'
-import { RequestHandler } from 'express'
-import { PikkuExpressRequest } from './pikku-express-request.js'
-import { PikkuExpressResponse } from './pikku-express-response.js'
 import { logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
+import { expressToRequest } from './express-request-convertor.js'
+import { sendResponseToExpress } from './express-response-convertor.js'
 
 /**
  * Arguments for configuring the Pikku middleware.
@@ -29,7 +30,7 @@ type PikkuMiddlewareArgs = RunRouteOptions & {
  * @param {PikkuMiddlewareArgs} options - The configuration options for the middleware.
  * @returns {RequestHandler} - The Express middleware function.
  */
-export const pikkuMiddleware = (
+export const pikkuExpressMiddleware = (
   singletonServices: CoreSingletonServices,
   createSessionServices: CreateSessionServices<any, any, any>,
   { respondWith404, logRoutes, loadSchemas, coerceToArray }: PikkuMiddlewareArgs
@@ -42,17 +43,14 @@ export const pikkuMiddleware = (
   }
 
   return async (req, res, next) => {
-    await runHTTPRoute({
-      request: new PikkuExpressRequest(req),
-      response: new PikkuExpressResponse(res),
+    const request = expressToRequest(req)
+    const response = await runHTTPRoute(request, {
       singletonServices,
       createSessionServices,
-      method: req.method.toLowerCase() as any,
-      route: req.path,
       respondWith404,
       coerceToArray,
     })
-
+    await sendResponseToExpress(res, response)
     next()
   }
 }

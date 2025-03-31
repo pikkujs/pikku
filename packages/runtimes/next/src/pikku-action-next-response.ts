@@ -1,4 +1,4 @@
-import { PikkuHTTPAbstractResponse } from '@pikku/core/http/pikku-http-abstract-response'
+import { PikkuHTTPResponse } from '@pikku/core/http'
 import type { SerializeOptions } from 'cookie'
 import { cookies } from 'next/headers.js'
 
@@ -6,7 +6,7 @@ import { cookies } from 'next/headers.js'
  * The `PikkuActionNextResponse` class is an extension of the `PikkuHTTPAbstractResponse` class,
  * specifically designed for handling action responses in a Next.js environment.
  */
-export class PikkuActionNextResponse extends PikkuHTTPAbstractResponse {
+export class PikkuActionNextResponse extends PikkuHTTPResponse {
   private cookieStore: any
 
   /**

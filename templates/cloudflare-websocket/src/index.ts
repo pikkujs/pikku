@@ -19,7 +19,7 @@ export default {
     const id = websocketServerDurableObject.idFromName('channel-name-goes-here')
     const webSocketHibernationServer = websocketServerDurableObject.get(id)
     return await runFetch(
-      request,
+      request as unknown as Request,
       singletonServices,
       createSessionServices,
       webSocketHibernationServer

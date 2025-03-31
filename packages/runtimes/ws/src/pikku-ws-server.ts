@@ -10,9 +10,9 @@ import { compileAllSchemas } from '@pikku/core/schema'
 import { RunRouteOptions } from '@pikku/core/http'
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 
-import { PikkuHTTPRequest } from './pikku-http-request.js'
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
 import crypto from 'crypto'
+import { incomingMessageToRequest } from './pikku-http-request.js'
 
 /**
  * Options for configuring the `pikkuHandler`.
@@ -121,7 +121,7 @@ export const pikkuWebsocketHandler = ({
 
   server.on('upgrade', async (req, socket, head) => {
     // Handle WebSocket connection upgrade
-    const request = new PikkuHTTPRequest(req)
+    const request = incomingMessageToRequest(req)
     const response = new PikkuDuplexResponse(socket)
 
     // Initialize the channel handler
@@ -131,7 +131,6 @@ export const pikkuWebsocketHandler = ({
       response,
       singletonServices: singletonServicesWithEventHub,
       createSessionServices: createSessionServices as any,
-      route: request.path,
     })
 
     if (!channelHandler) {

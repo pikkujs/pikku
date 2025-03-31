@@ -12,6 +12,10 @@ export default {
 
   async fetch(request, env): Promise<Response> {
     const singletonServices = await setupServices(env)
-    return await runFetch(request, singletonServices, createSessionServices)
+    return await runFetch(
+      request as unknown as Request,
+      singletonServices,
+      createSessionServices
+    )
   },
 } satisfies ExportedHandler<Record<string, string>>

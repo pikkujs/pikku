@@ -1,6 +1,5 @@
 import { compile } from 'path-to-regexp'
 import { EventEmitter } from 'eventemitter3'
-import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 
 import {
@@ -10,6 +9,10 @@ import {
   CreateSessionServices,
 } from '@pikku/core'
 import { HTTPMethod, runHTTPRoute } from '@pikku/core/http'
+import {
+  convertActionNextRequestDynamic,
+  convertActionNextRequestStatic,
+} from './pikku-next-request-convertor.js'
 
 const injectIntoUrl = (route: string, keys: Record<string, string>) => {
   const path = compile(route)
@@ -53,22 +56,18 @@ export class PikkuNextJS {
     data: In
   ): Promise<Out> {
     const singletonServices = await this.getSingletonServices()
-    const request = new PikkuActionNextRequest<In>(
-      route as string,
+    const request = await convertActionNextRequestDynamic(
+      injectIntoUrl(route as string, data),
       method as HTTPMethod,
-      data,
-      true
+      data
     )
-    await request.init()
+
     const response = new PikkuActionNextResponse(true)
     await response.init()
-    return (await runHTTPRoute<In, Out>({
-      request,
+    return (await runHTTPRoute<In, Out>(request, {
       response,
       singletonServices,
       createSessionServices: this.createSessionServices,
-      route: injectIntoUrl(route as string, data),
-      method: method as HTTPMethod,
       bubbleErrors: true,
     })) as Out
   }
@@ -87,18 +86,15 @@ export class PikkuNextJS {
     data: In
   ): Promise<Out> {
     const singletonServices = await this.getSingletonServices()
-    return (await runHTTPRoute<In, Out>({
-      request: new PikkuActionNextRequest(
-        route as string,
-        method as HTTPMethod,
-        data,
-        false
-      ),
+    const request = await convertActionNextRequestStatic(
+      injectIntoUrl(route as string, data),
+      method as HTTPMethod,
+      data
+    )
+    return (await runHTTPRoute<In, Out>(request, {
       response: new PikkuActionNextResponse(false),
       singletonServices,
       createSessionServices: this.createSessionServices,
-      route: injectIntoUrl(route as string, data),
-      method: method as HTTPMethod,
       skipUserSession: true,
       bubbleErrors: true,
     })) as Out

@@ -3,8 +3,6 @@ import {
   HTTPFunctionMetaInputTypes,
   PikkuHTTP,
 } from '../http/http-routes.types.js'
-import { PikkuHTTPAbstractRequest } from '../http/pikku-http-abstract-request.js'
-import { PikkuHTTPAbstractResponse } from '../http/pikku-http-abstract-response.js'
 import {
   APIDocs,
   CoreServices,
@@ -15,6 +13,7 @@ import {
 import { CoreAPIFunction, CoreAPIPermission } from '../types/functions.types.js'
 import { PikkuRequest } from '../pikku-request.js'
 import { PikkuResponse } from '../pikku-response.js'
+import { PikkuHTTPResponse } from '../http/pikku-http-response.js'
 
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean
@@ -27,8 +26,8 @@ export type RunChannelOptions = Partial<{
 export type RunChannelParams<ChannelData> = {
   channelId: string
   singletonServices: CoreSingletonServices
-  request?: PikkuRequest<ChannelData> | PikkuHTTPAbstractRequest<ChannelData>
-  response?: PikkuResponse | PikkuHTTPAbstractResponse
+  request?: PikkuRequest<ChannelData> | Request
+  response?: PikkuResponse | PikkuHTTPResponse
   http?: PikkuHTTP
   createSessionServices?: CreateSessionServices
 }

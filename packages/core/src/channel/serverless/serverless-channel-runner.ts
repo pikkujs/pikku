@@ -14,6 +14,8 @@ import { handleError } from '../../handle-error.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { pikkuState } from '../../pikku-state.js'
+import { PikkuHTTPRequest } from '../../http/pikku-http-request.js'
+import { PikkuHTTP } from '../../http/http-routes.types.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -71,7 +73,10 @@ export const runChannelConnect = async ({
   RunServerlessChannelParams<unknown>) => {
   const context = new Map()
   let sessionServices: SessionServices | undefined
-  const http = createHTTPInteraction(request, response)
+  let http: PikkuHTTP | undefined
+  if (request instanceof Request) {
+    http = createHTTPInteraction(new PikkuHTTPRequest(request), response)
+  }
   const userSessionService = new PikkuUserSessionService(
     channelStore,
     channelId
@@ -111,7 +116,7 @@ export const runChannelConnect = async ({
         { ...singletonServices, ...sessionServices },
         channel
       )
-      http?.response?.setStatus(101)
+      http?.response?.status(101)
     } catch (e: any) {
       handleError(
         e,

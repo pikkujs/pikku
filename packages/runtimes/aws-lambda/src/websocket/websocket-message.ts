@@ -2,12 +2,13 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
+  PikkuHTTPResponse,
 } from '@pikku/core'
 import { runChannelMessage } from '@pikku/core/channel/serverless'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import { PikkuAPIGatewayLambdaResponse } from '../pikku-api-gateway-lambda-response.js'
 import { getServerlessDependencies } from './utils.js'
 import { WebsocketParams } from './websocket-types.js'
+import { responseToLambdaResult } from '../response-converter.js'
 
 export const processWebsocketMessage = async <
   SingletonServices extends CoreSingletonServices,
@@ -26,7 +27,7 @@ export const processWebsocketMessage = async <
     channelStore,
     event
   )
-  const response = new PikkuAPIGatewayLambdaResponse()
+  const response = new PikkuHTTPResponse()
   try {
     const result = await runChannelMessage(
       {
@@ -38,11 +39,11 @@ export const processWebsocketMessage = async <
     )
     if (result) {
       // TODO: Support non json
-      response.setJson(result as any)
+      response.json(result as any)
     }
   } catch (e) {
     // Error should have already been handled by runHTTPRoute
     console.error(e)
   }
-  return response.getLambdaResponse()
+  return responseToLambdaResult(response.toResponse())
 }

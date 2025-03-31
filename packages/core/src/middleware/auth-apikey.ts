@@ -39,7 +39,7 @@ export const authAPIKey = <
 
     let apiKey: string | null = null
     if (source === 'header' || source === 'all') {
-      apiKey = http.request.getHeader('x-api-key') as string | null
+      apiKey = http.request.header('x-api-key') as string | null
     }
     if (!apiKey && (source === 'query' || source === 'all')) {
       apiKey = http.request.getQuery().apiKey as string | null

@@ -3,9 +3,9 @@ import { compileAllSchemas } from '@pikku/core/schema'
 import { runHTTPRoute, RunRouteOptions } from '@pikku/core/http'
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
-import { PikkuFastifyRequest } from './pikku-fastify-request.js'
-import { PikkuFastifyResponse } from './pikku-fastify-response.js'
 import { logRoutes } from '@pikku/core/http'
+import { fastifyToRequest } from './fastify-request-convertor.js'
+import { sendResponseToFastify } from './fastify-response-convertor.js'
 
 /**
  * The `PikkuFastifyPlugin` is a Fastify plugin that integrates the Pikku framework with Fastify,
@@ -53,15 +53,12 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
     )
   }
   fastify.all('/*', async (req, res) => {
-    await runHTTPRoute({
-      request: new PikkuFastifyRequest(req),
-      response: new PikkuFastifyResponse(res),
+    const response = await runHTTPRoute(fastifyToRequest(req), {
       singletonServices: pikku.singletonServices,
       createSessionServices: pikku.createSessionServices,
-      method: req.method as any,
-      route: req.url as string,
       respondWith404: pikku.respondWith404,
     })
+    await sendResponseToFastify(res, response)
   })
 }
 

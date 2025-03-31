@@ -2,13 +2,14 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
+  PikkuHTTPResponse,
 } from '@pikku/core'
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
-import { PikkuAPIGatewayLambdaResponse } from '../pikku-api-gateway-lambda-response.js'
+import { responseToLambdaResult } from '../response-converter.js'
 import { runChannelConnect } from '@pikku/core/channel/serverless'
 import { getServerlessDependencies } from './utils.js'
 import { WebsocketParams } from './websocket-types.js'
-import { PikkuAPIGatewayLambdaRequest } from '../pikku-api-gateway-lambda-request.js'
+import { lambdaEventToRequest } from '../request-converter.js'
 
 export const connectWebsocket = async <
   SingletonServices extends CoreSingletonServices,
@@ -27,8 +28,8 @@ export const connectWebsocket = async <
     channelStore,
     event
   )
-  const request = new PikkuAPIGatewayLambdaRequest(event)
-  const response = new PikkuAPIGatewayLambdaResponse()
+  const request = lambdaEventToRequest(event)
+  const response = new PikkuHTTPResponse()
   await runChannelConnect({
     ...runnerParams,
     request,
@@ -37,5 +38,5 @@ export const connectWebsocket = async <
     createSessionServices: createSessionServices as any,
     route: event.path || '/',
   })
-  return response.getLambdaResponse()
+  return responseToLambdaResult(response.toResponse())
 }

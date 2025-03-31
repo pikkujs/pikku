@@ -12,6 +12,8 @@ import { SessionServices } from '../../types/core.types.js'
 import { handleError } from '../../handle-error.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import { PikkuHTTPRequest } from '../../http/pikku-http-request.js'
+import { PikkuHTTP } from '../../http/http-routes.types.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -25,14 +27,19 @@ export const runLocalChannel = async ({
   coerceToArray = false,
   logWarningsForStatusCodes = [],
   bubbleErrors = false,
-}: Pick<CoreAPIChannel<unknown, any>, 'route'> &
+}: Partial<Pick<CoreAPIChannel<unknown, any>, 'route'>> &
   RunChannelOptions &
   RunChannelParams<unknown>): Promise<PikkuLocalChannelHandler | void> => {
   let sessionServices: SessionServices<typeof singletonServices> | undefined
 
   let channelHandler: PikkuLocalChannelHandler | undefined
   const userSessionService = new PikkuUserSessionService()
-  const http = createHTTPInteraction(request, response)
+
+  let http: PikkuHTTP | undefined
+  if (request instanceof Request) {
+    http = createHTTPInteraction(new PikkuHTTPRequest(request), response)
+    route = http?.request?.path()
+  }
 
   const main = async () => {
     try {

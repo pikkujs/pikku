@@ -12,10 +12,9 @@ import {
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
 } from '../types/functions.types.js'
-import { PikkuRequest } from '../pikku-request.js'
 import { PikkuResponse } from '../pikku-response.js'
-import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
-import { PikkuHTTPAbstractResponse } from './pikku-http-abstract-response.js'
+import { PikkuHTTPResponse } from './pikku-http-response.js'
+import { PikkuHTTPRequest } from './pikku-http-request.js'
 
 type ExtractRouteParams<S extends string> =
   S extends `${string}:${infer Param}/${infer Rest}`
@@ -37,10 +36,9 @@ export type RunRouteOptions = Partial<{
   bubbleErrors: boolean
 }>
 
-export type RunRouteParams<In> = {
+export type RunRouteParams = {
   singletonServices: CoreSingletonServices
-  request: PikkuRequest<In> | PikkuHTTPAbstractRequest<In>
-  response?: PikkuResponse | PikkuHTTPAbstractResponse | undefined
+  response?: PikkuResponse | PikkuHTTPResponse | undefined
   createSessionServices: CreateSessionServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
@@ -80,8 +78,8 @@ export type CoreHTTPFunction = {
  * Represents a http interaction within Pikku, including a request and response.
  */
 export interface PikkuHTTP {
-  request?: PikkuHTTPAbstractRequest
-  response?: PikkuHTTPAbstractResponse
+  request?: PikkuHTTPRequest
+  response?: PikkuHTTPResponse
 }
 
 /**

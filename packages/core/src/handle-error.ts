@@ -32,8 +32,8 @@ export const handleError = (
   const errorResponse = getErrorResponse(e)
   if (errorResponse != null) {
     // Set status and response body
-    http?.response?.setStatus(errorResponse.status)
-    http?.response?.setJson({
+    http?.response?.status(errorResponse.status)
+    http?.response?.json({
       message: errorResponse.message,
       payload: (e as any).payload,
       traceId: trackerId,
@@ -49,23 +49,25 @@ export const handleError = (
   } else {
     // Handle unexpected errors
     logger.error(e)
-    http?.response?.setStatus(500)
+    http?.response?.status(500)
 
     if (trackerId) {
       logger.warn(`Error id: ${trackerId}`)
-      http?.response?.setJson({ errorId: trackerId })
+      http?.response?.json({ errorId: trackerId })
     }
   }
 
   // Handle 404 errors specifically
   if (e instanceof NotFoundError) {
-    http?.response?.end()
+    // TODO
+    // http?.response?.end()
   }
 
   // Either bubble up or end the response
   if (bubbleError) {
     throw e
   } else {
-    http?.response?.end()
+    // TODO
+    // http?.response?.end()
   }
 }

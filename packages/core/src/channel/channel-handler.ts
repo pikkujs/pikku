@@ -35,7 +35,13 @@ const getRouteMeta = (
       `Channel ${channelName} requires a router value for ${routingProperty}`
     )
   }
-  return channelMeta.messageRoutes[routingProperty]?.[routerValue]
+  const route = channelMeta.messageRoutes[routingProperty]?.[routerValue]
+  if (!route) {
+    throw new Error(
+      `Channel ${channelName} has no route for ${routingProperty}:${routerValue}`
+    )
+  }
+  return route
 }
 
 const validateSchema = (

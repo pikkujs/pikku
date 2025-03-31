@@ -4,12 +4,12 @@ import {
   CreateSessionServices,
   CoreUserSession,
 } from '@pikku/core'
-import { runHTTPRoute } from '@pikku/core/http'
-import { APIGatewayProxyResult } from 'aws-lambda'
-import { PikkuAPIGatewayLambdaRequest } from '../pikku-api-gateway-lambda-request.js'
-import { PikkuAPIGatewayLambdaResponse } from '../pikku-api-gateway-lambda-response.js'
+import { PikkuHTTPResponse, runHTTPRoute } from '@pikku/core/http'
+import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
+import { responseToLambdaResult } from '../response-converter.js'
+import { lambdaEventToRequest } from '../request-converter.js'
 
-export const generalHTTPHandler = async <
+export const runFetch = async <
   SingletonServices extends CoreSingletonServices,
   Services extends CoreServices<SingletonServices>,
   UserSession extends CoreUserSession,
@@ -20,40 +20,34 @@ export const generalHTTPHandler = async <
     Services,
     UserSession
   >,
-  request: PikkuAPIGatewayLambdaRequest,
-  response: PikkuAPIGatewayLambdaResponse
+  event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
+  const request = lambdaEventToRequest(event)
+  const response = new PikkuHTTPResponse()
+
   if (request.method === 'options') {
-    response.setHeader(
+    response.header(
       'Access-Control-Allow-Headers',
       'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
     )
-    response.setHeader(
+    response.header(
       'Access-Control-Allow-Methods',
       'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT'
     )
-    response.setStatus(200)
-    response.setJson({})
-    return response.getLambdaResponse()
-  }
-
-  if (request.path.includes('health-check')) {
-    response.setStatus(200)
-    return response.getLambdaResponse()
+    response.status(200)
+    response.json({})
+    return responseToLambdaResult(response.toResponse())
   }
 
   try {
-    await runHTTPRoute({
-      request,
+    await runHTTPRoute(request, {
       response,
       singletonServices,
       createSessionServices: createSessionServices as any,
-      route: request.path,
-      method: request.method,
     })
   } catch {
     // Error should have already been handled by runHTTPRoute
   }
 
-  return response.getLambdaResponse()
+  return responseToLambdaResult(response.toResponse())
 }

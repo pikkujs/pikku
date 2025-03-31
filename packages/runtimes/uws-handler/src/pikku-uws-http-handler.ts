@@ -3,8 +3,8 @@ import * as uWS from 'uWebSockets.js'
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 import { runHTTPRoute } from '@pikku/core/http'
 
-import { PikkuUWSRequest } from './pikku-uws-request.js'
-import { PikkuUWSResponse } from './pikku-uws-response.js'
+import { uwsToRequest } from './uws-request-convertor.js'
+import { sendPikkuResponseToUWS } from './uws-response-convertor.js'
 import {
   logRoutes as logRegisterRoutes,
   RunRouteOptions,
@@ -48,13 +48,11 @@ export const pikkuHTTPHandler = ({
   }
 
   return async (res: uWS.HttpResponse, req: uWS.HttpRequest): Promise<void> => {
-    await runHTTPRoute({
-      request: new PikkuUWSRequest(req, res),
-      response: new PikkuUWSResponse(res),
+    const request = await uwsToRequest(req, res)
+    const response = await runHTTPRoute(request, {
       singletonServices,
       createSessionServices,
-      method: req.getMethod() as any,
-      route: req.getUrl() as string,
     })
+    await sendPikkuResponseToUWS(response, res)
   }
 }

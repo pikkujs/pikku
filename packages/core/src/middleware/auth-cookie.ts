@@ -39,7 +39,7 @@ export const authCookie = <
       return next()
     }
 
-    const cookies = http.request.getCookies()
+    const cookies = http.request.cookies()
     if (cookies) {
       let cookieName: string | undefined
       for (const name of cookieNames) {

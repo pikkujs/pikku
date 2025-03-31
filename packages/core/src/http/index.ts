@@ -1,6 +1,5 @@
-export * from './pikku-http-abstract-request.js'
-
-export * from './pikku-http-abstract-response.js'
+export * from './pikku-http-request.js'
+export * from './pikku-http-response.js'
 
 export * from './log-http-routes.js'
 
