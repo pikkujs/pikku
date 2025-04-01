@@ -15,24 +15,29 @@ pikkuState('channel', 'meta', [
     message: {
       inputs: ['OnMessageInput'],
       outputs: ['OnMessageOutput'],
+      type: 'ChannelMessage',
     },
     messageRoutes: {
       action: {
         auth: {
           inputs: ['AuthInput'],
           outputs: ['AuthOutput'],
+          type: 'ChannelMessage',
         },
         subscribe: {
           inputs: ['SubscribeInput'],
           outputs: [],
+          type: 'ChannelMessage',
         },
         unsubscribe: {
           inputs: ['UnsubscribeInput'],
           outputs: [],
+          type: 'ChannelMessage',
         },
         emit: {
           inputs: ['EmitInput'],
           outputs: ['EmitOutput'],
+          type: 'ChannelMessage',
         },
       },
     },

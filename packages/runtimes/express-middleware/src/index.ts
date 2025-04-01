@@ -1,6 +1,6 @@
 /**
  * This module provides an Express middleware for integrating the Pikku framework with Express applications.
- * It exports the `pikkuMiddleware` function, allowing developers to easily manage request handling
+ * It exports the `pikkuExpressMiddleware` function, allowing developers to easily manage request handling
  * using Pikku's core features in an Express environment.
  *
  * @module @pikku/express-middleware

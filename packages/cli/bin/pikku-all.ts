@@ -153,6 +153,8 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
 
   if (options.watch) {
     watch(cliConfig, options)
+  } else {
+    await runAll(cliConfig, options)
   }
 }
 

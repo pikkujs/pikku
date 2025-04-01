@@ -7,7 +7,7 @@ import {
 } from '../../functions/src/services.js'
 import { PikkuTaskScheduler } from '@pikku/schedule'
 import express from 'express'
-import { pikkuMiddleware } from '@pikku/express-middleware'
+import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 
 async function main(): Promise<void> {
   const config = await createConfig()
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   app.use(cookieParser())
 
   app.use(
-    pikkuMiddleware(singletonServices, createSessionServices, {
+    pikkuExpressMiddleware(singletonServices, createSessionServices, {
       respondWith404: false,
     })
   )

@@ -10,6 +10,7 @@ import {
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
   PikkuMiddleware,
+  MakeRequired,
 } from '@pikku/core'
 import {
   CoreHTTPFunctionRoute,
@@ -63,14 +64,14 @@ export type ChannelConnection<
   ChannelData = unknown,
   RequiredServices extends Services = Services,
 > = (
-  services: RequiredServices,
+  services: MakeRequired<RequiredServices, 'userSession'>,
   channel: PikkuChannel<ChannelData, Out>
 ) => Promise<void>
 export type ChannelDisconnection<
   ChannelData = unknown,
   RequiredServices extends Services = Services,
 > = (
-  services: RequiredServices,
+  services: MakeRequired<RequiredServices, 'userSession'>,
   channel: PikkuChannel<ChannelData, never>
 ) => Promise<void>
 export type ChannelMessage<
@@ -79,7 +80,7 @@ export type ChannelMessage<
   ChannelData = unknown,
   RequiredServices extends Services = Services,
 > = (
-  services: RequiredServices,
+  services: MakeRequired<RequiredServices, 'userSession'>,
   channel: PikkuChannel<ChannelData, Out>,
   data: In
 ) => Promise<Out | void>
