@@ -7,9 +7,10 @@ import { coldStart } from './cold-start.js'
 
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
-export const httpRoutes = async (event: APIGatewayProxyEvent) => {
+export const httpRoute = async (event: APIGatewayProxyEvent) => {
   const singletonServices = await coldStart()
-  return await runFetch(singletonServices, createSessionServices, event)
+  const result = await runFetch(singletonServices, createSessionServices, event)
+  return result
 }
 
 export const myScheduledTask: ScheduledHandler = async () => {

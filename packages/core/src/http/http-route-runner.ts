@@ -298,10 +298,7 @@ export const runHTTPRoute = async <In, Out>(
   params: RunRouteOptions & RunRouteParams
 ): Promise<Response> => {
   const pikkuResponse = new PikkuHTTPResponse()
-  await runHTTPRouteWithoutResponse<In, Out>(request, {
-    ...params,
-    response: pikkuResponse,
-  })
+  await runHTTPRouteWithoutResponse<In, Out>(request, pikkuResponse, params)
   return pikkuResponse.toResponse()
 }
 
@@ -314,9 +311,9 @@ export const runHTTPRoute = async <In, Out>(
  */
 export const runHTTPRouteWithoutResponse = async <In, Out>(
   request: Request | PikkuHTTPRequest,
+  response: PikkuHTTPResponse,
   {
     singletonServices,
-    response,
     createSessionServices,
     skipUserSession = false,
     respondWith404 = true,

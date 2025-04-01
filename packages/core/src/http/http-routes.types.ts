@@ -12,7 +12,6 @@ import {
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
 } from '../types/functions.types.js'
-import { PikkuResponse } from '../pikku-response.js'
 import { PikkuHTTPResponse } from './pikku-http-response.js'
 import { PikkuHTTPRequest } from './pikku-http-request.js'
 
@@ -38,7 +37,6 @@ export type RunRouteOptions = Partial<{
 
 export type RunRouteParams = {
   singletonServices: CoreSingletonServices
-  response?: PikkuResponse | PikkuHTTPResponse | undefined
   createSessionServices: CreateSessionServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,

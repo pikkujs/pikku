@@ -21,7 +21,7 @@ provider:
 
 functions:
   http:
-    handler: dist/main.corslessHandler
+    handler: dist/main.httpRoute
     events:
       - http:
           path: /{proxy+}
