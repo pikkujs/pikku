@@ -35,7 +35,8 @@
     "@types/cookie": "^0.6.0",
     "@types/uuid": "^10.0.0",
     "cookie": "^1.0.1",
-    "path-to-regexp": "^8.2.0"
+    "path-to-regexp": "^8.2.0",
+    "picoquery": "^2.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.8",

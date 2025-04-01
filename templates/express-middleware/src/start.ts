@@ -1,4 +1,3 @@
-import cookieParser from 'cookie-parser'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
   createSessionServices,
@@ -15,7 +14,6 @@ async function main(): Promise<void> {
   const app = express()
 
   app.use(express.json())
-  app.use(cookieParser())
 
   app.use(
     pikkuExpressMiddleware(singletonServices, createSessionServices, {

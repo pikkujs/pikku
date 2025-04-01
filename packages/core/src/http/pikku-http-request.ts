@@ -1,3 +1,4 @@
+import { parse as parseQuery } from 'picoquery'
 import { parse as parseCookie } from 'cookie'
 import { PikkuRequest } from '../pikku-request.js'
 import { HTTPMethod, PikkuQuery } from './http-routes.types.js'
@@ -28,7 +29,7 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
    * Retrieves the request body.
    * @returns A promise that resolves to the request body.
    */
-  public body(): Promise<In> {
+  public json(): Promise<In> {
     return this.request.json()
   }
 
@@ -84,7 +85,7 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
    * @returns An object containing the query parameters.
    */
   public getQuery(): PikkuQuery {
-    return {}
+    return parseQuery(this.url.searchParams.toString()) as PikkuQuery
   }
 
   /**
@@ -92,11 +93,16 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
    * @returns A promise that resolves to an object containing the combined data.
    */
   public async getData(): Promise<In> {
+    let body: any = {}
+    try {
+      body = await this.json()
+    } catch (e) {}
+
     return {
       ...this.params(),
       ...this.getQuery(),
       // TODO: If body isn't an object, we should insert it as the word...
-      ...(await this.body()),
+      ...body,
     }
   }
 }
