@@ -2,7 +2,7 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
-  PikkuHTTPResponse,
+  PikkuFetchHTTPResponse,
 } from '@pikku/core'
 import { runChannelMessage } from '@pikku/core/channel/serverless'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
@@ -27,7 +27,7 @@ export const processWebsocketMessage = async <
     channelStore,
     event
   )
-  const response = new PikkuHTTPResponse()
+  const response = new PikkuFetchHTTPResponse()
   try {
     const result = await runChannelMessage(
       {

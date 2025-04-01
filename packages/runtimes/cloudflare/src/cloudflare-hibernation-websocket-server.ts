@@ -12,7 +12,11 @@ import {
 import { CloudflareWebsocketStore } from './cloudflare-channel-store.js'
 import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-handler-factory.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
-import { CoreSingletonServices, PikkuHTTPResponse } from '@pikku/core'
+import {
+  CoreSingletonServices,
+  PikkuFetchHTTPRequest,
+  PikkuFetchHTTPResponse,
+} from '@pikku/core'
 import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
@@ -28,13 +32,14 @@ export abstract class CloudflareWebSocketHibernationServer<
     this.channelStore = new CloudflareWebsocketStore(this.ctx)
   }
 
-  public async fetch(request: CloudflareRequest) {
+  public async fetch(cloudflareRequest: CloudflareRequest) {
     // @ts-ignore
     const webSocketPair = new WebSocketPair()
     const client: WebSocket = webSocketPair[0]
     const server: WebSocket = webSocketPair[1]
 
-    const response = new PikkuHTTPResponse()
+    const request = new PikkuFetchHTTPRequest(cloudflareRequest as any)
+    const response = new PikkuFetchHTTPResponse()
 
     const channelId = crypto.randomUUID().toString()
     const params = await this.getAllParams(server)
@@ -46,7 +51,7 @@ export abstract class CloudflareWebSocketHibernationServer<
         channelId,
         channelObject: server,
         route: request,
-        request: request as unknown as Request,
+        request,
         response,
         bubbleErrors: true,
       })

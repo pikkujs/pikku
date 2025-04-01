@@ -9,7 +9,7 @@ import { compileAllSchemas } from '@pikku/core/schema'
 import { uwsToRequest } from './uws-request-convertor.js'
 import { PikkuuWSHandlerOptions } from './pikku-uws-http-handler.js'
 import { UWSEventHubService } from './uws-event-hub-service.js'
-import { PikkuHTTPResponse } from '@pikku/core'
+import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 
 const isSerializable = (data: any): boolean => {
   return !(
@@ -69,8 +69,8 @@ export const pikkuWebsocketHandler = ({
         const secWebSocketProtocol = req.getHeader('sec-websocket-protocol')
         const secWebSocketExtensions = req.getHeader('sec-websocket-extensions')
 
-        const request = await uwsToRequest(req, res)
-        const response = new PikkuHTTPResponse()
+        const request = new PikkuFetchHTTPRequest(await uwsToRequest(req, res))
+        const response = new PikkuFetchHTTPResponse()
 
         const channelHandler = await runLocalChannel({
           channelId: crypto.randomUUID().toString(),

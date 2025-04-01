@@ -2,49 +2,43 @@ import { Duplex } from 'stream' // Assuming `Duplex` is from Node.js' 'stream' m
 import { PikkuHTTPResponse, type JSONValue } from '@pikku/core'
 import { SerializeOptions } from 'cookie'
 
-export class PikkuDuplexResponse extends PikkuHTTPResponse {
+export class PikkuDuplexResponse implements PikkuHTTPResponse {
   private aborted = false
 
   constructor(private duplex: Duplex) {
-    super()
     this.duplex.on('close', () => {
       this.aborted = true
     })
   }
 
+  public redirect(location: string, status?: number): this {
+    throw new Error('Method not implemented.')
+  }
+
   // Set the status code for the response
-  public setStatus(status: number): void {
+  public status(status: number): this {
     if (!this.aborted) {
       this.duplex.write(`HTTP/1.1 ${status} OK\r\n`)
     }
+    return this
   }
 
   // Set the response body as JSON
-  public setJson(body: JSONValue): void {
-    this.setHeader('Content-Type', 'application/json')
-    this.setResponse(JSON.stringify(body))
+  public json(body: JSONValue): this {
+    this.header('Content-Type', 'application/json')
+    this.json(JSON.stringify(body))
+    return this
   }
 
-  public setResponse(body: string): void {
+  public arrayBuffer(body: string): this {
     if (!this.aborted) {
       this.writeBody(body)
     }
+    return this
   }
 
-  public setCookie(
-    name: string,
-    value: string,
-    options: SerializeOptions
-  ): void {
+  public cookie(name: string, value: string, options: SerializeOptions): this {
     throw new Error(`We don't cookies from a websocket response`)
-  }
-
-  public clearCookie(name: string): void {
-    throw new Error(`We don't cookies from a websocket response`)
-  }
-
-  public setRedirect(path: string, status: number) {
-    throw new Error('Method not implemented.')
   }
 
   // Helper function to write the body
@@ -58,11 +52,12 @@ export class PikkuDuplexResponse extends PikkuHTTPResponse {
   }
 
   // Set headers (for content-type, cookies, etc.)
-  public setHeader(name: string, value: string): void {
+  public header(name: string, value: string): this {
     if (!this.aborted) {
       // Write the header to the response (e.g., Content-Type)
       this.duplex.write(`${name}: ${value}\r\n`)
     }
+    return this
   }
 
   // End the response

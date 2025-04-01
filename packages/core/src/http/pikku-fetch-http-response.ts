@@ -1,4 +1,6 @@
-export class PikkuHTTPResponse {
+import { PikkuHTTPResponse } from './http-routes.types.js'
+
+export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #statusCode: number = 200
   #headers = new Headers()
   #body: BodyInit | null = null
@@ -55,7 +57,6 @@ export class PikkuHTTPResponse {
   public redirect(location: string, status: number = 302): this {
     this.#statusCode = status
     this.header('Location', location)
-    this.html(`Redirecting to <a href="${location}">${location}</a>`)
     return this
   }
 

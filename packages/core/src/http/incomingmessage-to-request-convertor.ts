@@ -1,7 +1,9 @@
 import { IncomingMessage } from 'http'
 import { Readable } from 'stream'
 
-export function incomingMessageToRequest(req: IncomingMessage): Request {
+export function incomingMessageToRequestConvertor(
+  req: IncomingMessage
+): Request {
   // Create a dummy URL because IncomingMessage.url is usually a relative URL.
   const url = new URL(req.url || '/', 'http://localhost')
   const method = req.method ? req.method.toUpperCase() : 'GET'

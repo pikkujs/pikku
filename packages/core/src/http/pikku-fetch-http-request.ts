@@ -1,20 +1,25 @@
 import { parse as parseQuery } from 'picoquery'
 import { parse as parseCookie } from 'cookie'
-import { PikkuRequest } from '../pikku-request.js'
-import { HTTPMethod, PikkuQuery } from './http-routes.types.js'
+import {
+  HTTPMethod,
+  PikkuHTTPRequest,
+  PikkuQuery,
+} from './http-routes.types.js'
 
 /**
  * Abstract class representing a pikku request.
  * @template In - The type of the request body.
  * @group RequestResponse
  */
-export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
-  private _params: Partial<Record<string, string | string[]>> = {}
-  private url: URL
+export class PikkuFetchHTTPRequest<In = unknown>
+  implements PikkuHTTPRequest<In>
+{
+  #cookies: Partial<Record<string, string>> | undefined
+  #params: Partial<Record<string, string | string[]>> = {}
+  #url: URL
 
   constructor(private request: Request) {
-    super()
-    this.url = new URL(request.url)
+    this.#url = new URL(request.url)
   }
 
   public method(): HTTPMethod {
@@ -22,7 +27,7 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
   }
 
   public path(): string {
-    return this.url.pathname
+    return this.#url.pathname
   }
 
   /**
@@ -54,12 +59,10 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
    * Retrieves the cookies from the request.
    * @returns An object containing the cookies.
    */
-  public cookies(): Partial<Record<string, string>> {
+  public cookie(cookieName: string): string | null {
     const cookieHeader = this.header('cookie')
-    if (cookieHeader) {
-      return parseCookie(cookieHeader)
-    }
-    return {}
+    this.#cookies = cookieHeader ? parseCookie(cookieHeader) : {}
+    return this.#cookies[cookieName] || null
   }
 
   /**
@@ -67,7 +70,7 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
    * @returns An object containing the request parameters.
    */
   public params(): Partial<Record<string, string | string[]>> {
-    return this._params
+    return this.#params
   }
 
   /**
@@ -77,22 +80,22 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
   public setParams(
     params: Record<string, string | string[] | undefined>
   ): void {
-    this._params = params
+    this.#params = params
   }
 
   /**
    * Retrieves the query parameters from the request.
    * @returns An object containing the query parameters.
    */
-  public getQuery(): PikkuQuery {
-    return parseQuery(this.url.searchParams.toString()) as PikkuQuery
+  public query(): PikkuQuery {
+    return parseQuery(this.#url.searchParams.toString()) as PikkuQuery
   }
 
   /**
    * Retrieves the combined data from the request, including parameters, query, and body.
    * @returns A promise that resolves to an object containing the combined data.
    */
-  public async getData(): Promise<In> {
+  public async data(): Promise<In> {
     let body: any = {}
     try {
       body = await this.json()
@@ -100,7 +103,7 @@ export class PikkuHTTPRequest<In = unknown> extends PikkuRequest<In> {
 
     return {
       ...this.params(),
-      ...this.getQuery(),
+      ...this.query(),
       // TODO: If body isn't an object, we should insert it as the word...
       ...body,
     }

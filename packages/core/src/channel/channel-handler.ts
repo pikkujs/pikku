@@ -142,6 +142,7 @@ export const processMessageHandlers = (
       routingProperty,
       routerValue
     )
+
     if (routeMeta) {
       validateSchema(services.logger, data, routeMeta)
     }

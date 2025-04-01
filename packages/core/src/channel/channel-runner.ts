@@ -57,9 +57,9 @@ export const openChannel = async ({
   route,
   singletonServices,
   coerceToArray = false,
-  http,
+  request,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
-  Omit<RunChannelParams<unknown>, 'response' | 'request'> & {
+  RunChannelParams<unknown> & {
     userSessionService: UserSessionService<any>
   } & RunChannelOptions): Promise<{
   openingData: unknown
@@ -74,15 +74,15 @@ export const openChannel = async ({
   const { params, channelConfig, schemaName } = matchingChannel
 
   const requiresSession = channelConfig.auth !== false
-  http?.request?.setParams(params)
+  request?.setParams(params)
 
   singletonServices.logger.info(
     `Matched channel: ${channelConfig.name} | route: ${channelConfig.route} | auth: ${requiresSession.toString()}`
   )
 
   let openingData: any | undefined
-  if (http?.request) {
-    openingData = await http.request.getData()
+  if (request) {
+    openingData = await request.data()
     if (coerceToArray && schemaName) {
       coerceQueryStringToArray(schemaName, openingData)
     }

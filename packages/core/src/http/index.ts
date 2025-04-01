@@ -1,6 +1,6 @@
-export * from './pikku-http-request.js'
-export * from './pikku-http-response.js'
-
+export * from './pikku-fetch-http-request.js'
+export * from './pikku-fetch-http-response.js'
+export * from './incomingmessage-to-request-convertor.js'
 export * from './log-http-routes.js'
 
 export {

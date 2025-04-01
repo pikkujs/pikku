@@ -5,7 +5,7 @@ import {
   CoreUserSession,
 } from '@pikku/core'
 import {
-  PikkuHTTPResponse,
+  PikkuFetchHTTPResponse,
   runHTTPRouteWithoutResponse,
 } from '@pikku/core/http'
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
@@ -26,7 +26,7 @@ export const runFetch = async <
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
   const request = lambdaEventToRequest(event)
-  const response = new PikkuHTTPResponse()
+  const response = new PikkuFetchHTTPResponse()
 
   if (request.method === 'options') {
     response.header(
@@ -38,7 +38,6 @@ export const runFetch = async <
       'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT'
     )
     response.status(200)
-    response.json({})
     return responseToLambdaResult(response.toResponse())
   }
 

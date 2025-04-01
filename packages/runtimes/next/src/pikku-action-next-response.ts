@@ -1,20 +1,11 @@
-import { PikkuHTTPResponse } from '@pikku/core/http'
+import { PikkuHTTPResponse } from '@pikku/core'
 import type { SerializeOptions } from 'cookie'
 import { cookies } from 'next/headers.js'
 
-/**
- * The `PikkuActionNextResponse` class is an extension of the `PikkuHTTPAbstractResponse` class,
- * specifically designed for handling action responses in a Next.js environment.
- */
-export class PikkuActionNextResponse extends PikkuHTTPResponse {
+export class PikkuActionNextResponse implements PikkuHTTPResponse {
   private cookieStore: any
 
-  /**
-   * Constructs a new instance of the `PikkuActionNextRequest` class.
-   */
-  constructor(private dynamic: boolean) {
-    super()
-  }
+  constructor(private dynamic: boolean) {}
 
   public async init() {
     if (this.dynamic) {
@@ -22,63 +13,31 @@ export class PikkuActionNextResponse extends PikkuHTTPResponse {
     }
   }
 
-  /**
-   *
-   * Sets the response header.
-   *
-   * @remarks
-   * This method is currently a placeholder and should be implemented as needed.
-   */
-  public setRedirect(path: string, status: number) {
-    throw new Error('Method not implemented.')
+  status(code: number): this {
+    // This doesn't matter since SSR expects data
+    return this
   }
 
-  /**
-   * Sets the status of the response.
-   *
-   * @remarks
-   * This method is currently a placeholder and should be implemented as needed.
-   */
-  public setStatus() {}
-
-  /**
-   * Sets the response body as JSON.
-   *
-   * @remarks
-   * This method is currently a placeholder and should be implemented as needed.
-   */
-  public setJson() {}
-
-  /**
-   * Sets the final response to be sent to the client.
-   *
-   * @remarks
-   * This method is currently a placeholder and should be implemented as needed.
-   */
-  public setResponse() {}
-
-  /**
-   * Sets a cookie in the response.
-   *
-   * @param name - The name of the cookie.
-   * @param value - The value of the cookie.
-   * @param options - Options for setting the cookie.
-   */
-  public setCookie(
-    name: string,
-    value: string,
-    options: SerializeOptions
-  ): void {
+  cookie(name: string, value: string, options: SerializeOptions): this {
     this.getCookieStore().set(name, value, options)
+    return this
   }
 
-  /**
-   * Clears a cookie from the response.
-   *
-   * @param name - The name of the cookie to clear.
-   */
-  public clearCookie(name: string): void {
-    this.getCookieStore().delete(name)
+  header(name: string, value: string | string[]): this {
+    // This doesn't matter since SSR expects data
+    return this
+  }
+
+  arrayBuffer(data: XMLHttpRequestBodyInit): this {
+    throw new Error("Next Resposne doesn't support arrayBuffer")
+  }
+
+  json(data: unknown): this {
+    return this
+  }
+
+  redirect(location: string, status?: number): this {
+    return this
   }
 
   private getCookieStore() {

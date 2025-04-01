@@ -1,6 +1,5 @@
 import { compile } from 'path-to-regexp'
 import { EventEmitter } from 'eventemitter3'
-import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 
 import {
   CoreConfig,
@@ -9,10 +8,8 @@ import {
   CreateSessionServices,
 } from '@pikku/core'
 import { HTTPMethod, runHTTPRouteWithoutResponse } from '@pikku/core/http'
-import {
-  convertActionNextRequestDynamic,
-  convertActionNextRequestStatic,
-} from './pikku-next-request-convertor.js'
+import { PikkuActionNextRequest } from './pikku-action-next-request.js'
+import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 
 const injectIntoUrl = (route: string, keys: Record<string, string>) => {
   const path = compile(route)
@@ -56,14 +53,14 @@ export class PikkuNextJS {
     data: In
   ): Promise<Out> {
     const singletonServices = await this.getSingletonServices()
-    const request = await convertActionNextRequestDynamic(
+    const request = new PikkuActionNextRequest(
       injectIntoUrl(route as string, data),
       method as HTTPMethod,
-      data
+      data,
+      true
     )
 
     const response = new PikkuActionNextResponse(true)
-    await response.init()
     return (await runHTTPRouteWithoutResponse<In, Out>(request, response, {
       singletonServices,
       createSessionServices: this.createSessionServices,
@@ -85,10 +82,11 @@ export class PikkuNextJS {
     data: In
   ): Promise<Out> {
     const singletonServices = await this.getSingletonServices()
-    const request = await convertActionNextRequestStatic(
+    const request = new PikkuActionNextRequest(
       injectIntoUrl(route as string, data),
       method as HTTPMethod,
-      data
+      data,
+      false
     )
     const response = new PikkuActionNextResponse(false)
     return (await runHTTPRouteWithoutResponse<In, Out>(request, response, {

@@ -4,16 +4,20 @@
  * @group RequestResponse
  */
 export abstract class PikkuRequest<In = any> {
-  constructor(private data?: In) {}
+  #data: In | undefined
+
+  constructor(data: In) {
+    this.#data = data
+  }
 
   /**
    * Retrieves the data
    * @returns A promise that resolves to an object containing the combined data.
    */
-  public async getData(): Promise<In> {
-    if (!this.data) {
+  public async data(): Promise<In> {
+    if (!this.#data) {
       throw new Error('Data not found')
     }
-    return this.data
+    return this.#data
   }
 }

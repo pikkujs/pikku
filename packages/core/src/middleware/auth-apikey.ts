@@ -42,7 +42,7 @@ export const authAPIKey = <
       apiKey = http.request.header('x-api-key') as string | null
     }
     if (!apiKey && (source === 'query' || source === 'all')) {
-      apiKey = http.request.getQuery().apiKey as string | null
+      apiKey = http.request.query().apiKey as string | null
     }
     if (apiKey) {
       let userSession: UserSession | null = null

@@ -12,7 +12,6 @@ import { SessionServices } from '../../types/core.types.js'
 import { handleError } from '../../handle-error.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
-import { PikkuHTTPRequest } from '../../http/pikku-http-request.js'
 import { PikkuHTTP } from '../../http/http-routes.types.js'
 
 export const runLocalChannel = async ({
@@ -36,8 +35,8 @@ export const runLocalChannel = async ({
   const userSessionService = new PikkuUserSessionService()
 
   let http: PikkuHTTP | undefined
-  if (request instanceof Request) {
-    http = createHTTPInteraction(new PikkuHTTPRequest(request), response)
+  if (request) {
+    http = createHTTPInteraction(request, response)
     route = http?.request?.path()
   }
 
@@ -47,7 +46,8 @@ export const runLocalChannel = async ({
         channelId,
         createSessionServices,
         respondWith404,
-        http,
+        request,
+        response,
         route,
         singletonServices,
         skipUserSession,

@@ -39,36 +39,28 @@ export const authCookie = <
       return next()
     }
 
-    const cookies = http.request.cookies()
-    if (cookies) {
-      let cookieName: string | undefined
-      for (const name of cookieNames) {
-        if (cookies[name]) {
-          cookieName = name
-          break
-        }
-      }
-      if (cookieName) {
-        let userSession: UserSession | null = null
-        const cookieValue = cookies[cookieName]
-        if (cookieValue) {
-          if (jwt) {
-            if (!services.jwt) {
-              throw new Error('JWT service is required for JWT decoding.')
-            }
-            userSession = await services.jwt.decode(cookieValue)
-          } else if (getSessionForCookieValue) {
-            userSession = await getSessionForCookieValue(
-              services as any,
-              cookieValue,
-              cookieName
-            )
+    let userSession: UserSession | null = null
+    for (const cookieName of cookieNames) {
+      const cookieValue = http.request.cookie(cookieName)
+      if (cookieValue) {
+        if (jwt) {
+          if (!services.jwt) {
+            throw new Error('JWT service is required for JWT decoding.')
           }
-          if (userSession) {
-            services.userSessionService.setInitial(userSession)
-          }
+          userSession = await services.jwt.decode(cookieValue)
+        } else if (getSessionForCookieValue) {
+          userSession = await getSessionForCookieValue(
+            services as any,
+            cookieValue,
+            cookieName
+          )
         }
+        break
       }
+    }
+
+    if (userSession) {
+      services.userSessionService.setInitial(userSession)
     }
     return next()
   }

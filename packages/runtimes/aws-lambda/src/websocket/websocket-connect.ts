@@ -2,7 +2,8 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
-  PikkuHTTPResponse,
+  PikkuFetchHTTPRequest,
+  PikkuFetchHTTPResponse,
 } from '@pikku/core'
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { responseToLambdaResult } from '../response-converter.js'
@@ -28,8 +29,8 @@ export const connectWebsocket = async <
     channelStore,
     event
   )
-  const request = lambdaEventToRequest(event)
-  const response = new PikkuHTTPResponse()
+  const request = new PikkuFetchHTTPRequest(lambdaEventToRequest(event))
+  const response = new PikkuFetchHTTPResponse()
   await runChannelConnect({
     ...runnerParams,
     request,

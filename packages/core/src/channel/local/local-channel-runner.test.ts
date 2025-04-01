@@ -1,11 +1,10 @@
 import { test, beforeEach, afterEach } from 'node:test'
 import * as assert from 'node:assert/strict'
 import { JSONValue } from '../../types/core.types.js'
-import { PikkuHTTPAbstractRequest } from '../../http/pikku-http-abstract-request.js'
-import { PikkuHTTPAbstractResponse } from '../../http/pikku-http-response.js'
 import { runLocalChannel } from './local-channel-runner.js'
 import { resetPikkuState } from '../../pikku-state.js'
 import { addChannel } from '../channel-runner.js'
+import { PikkuHTTPRequest } from '../../http/http-routes.types.js'
 
 /**
  * Minimal stubs for dependencies that runChannel expects.
@@ -24,14 +23,14 @@ const mockSingletonServices = {
 } as any
 
 // Mock request and response objects
-class MockRequest extends PikkuHTTPAbstractRequest {
+class MockRequest implements PikkuHTTPRequest {
   public getBody(): Promise<unknown> {
     throw new Error('Method not implemented.')
   }
   public getHeader(headerName: string): string | undefined {
     throw new Error('Method not implemented.')
   }
-  public async getData() {
+  public async data() {
     return { test: 'data' }
   }
 }

@@ -8,7 +8,12 @@ export function uwsToRequest(
     const method = req.getMethod().toUpperCase()
     const path = req.getUrl()
     const query = req.getQuery()
-    const fullUrl = query ? `${path}?${query}` : path
+    // Build a full URL. Use a dummy base if no host is provided.
+    let baseUrl = 'http://localhost'
+    if (req.getHeader('host')) {
+      baseUrl = `http://${req.getHeader('host')}`
+    }
+    const url = new URL(query ? `${path}?${query}` : path, baseUrl)
 
     const headers = new Headers()
     req.forEach((key, value) => {
@@ -17,7 +22,7 @@ export function uwsToRequest(
 
     // GET/HEAD requests should not have a body
     if (method === 'GET' || method === 'HEAD') {
-      resolve(new Request(fullUrl, { method, headers }))
+      resolve(new Request(url, { method, headers }))
       return
     }
 
@@ -36,7 +41,7 @@ export function uwsToRequest(
         const body = buffer ?? Buffer.alloc(0)
 
         // Build the full Request object
-        const request = new Request(fullUrl, {
+        const request = new Request(url, {
           method,
           headers,
           body: body.length > 0 ? body : undefined,

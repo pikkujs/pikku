@@ -1,3 +1,4 @@
+import { SerializeOptions } from 'cookie'
 import { PikkuError } from '../errors/error-handler.js'
 import {
   APIDocs,
@@ -12,8 +13,6 @@ import {
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
 } from '../types/functions.types.js'
-import { PikkuHTTPResponse } from './pikku-http-response.js'
-import { PikkuHTTPRequest } from './pikku-http-request.js'
 
 type ExtractRouteParams<S extends string> =
   S extends `${string}:${infer Param}/${infer Rest}`
@@ -187,4 +186,26 @@ export type HTTPRoutesMeta = Array<{
 export type HTTPRouteMiddleware = {
   route: string
   middleware: PikkuMiddleware[]
+}
+
+export interface PikkuHTTPRequest<In = unknown> {
+  method(): HTTPMethod
+  path(): string
+  data(): Promise<In>
+  json(): Promise<unknown>
+  arrayBuffer(): Promise<ArrayBuffer>
+  header(headerName: string): string | null
+  cookie(name?: string): string | null
+  params(): Partial<Record<string, string | string[]>>
+  setParams(params: Record<string, string | string[] | undefined>): void
+  query(): PikkuQuery
+}
+
+export interface PikkuHTTPResponse {
+  status(code: number): this
+  cookie(name: string, value: string | null, options: SerializeOptions): this
+  header(name: string, value: string | string[]): this
+  arrayBuffer(data: XMLHttpRequestBodyInit): this
+  json(data: unknown): this
+  redirect(location: string, status?: number): this
 }

@@ -4,6 +4,8 @@ import {
   RunRouteOptions,
   RunRouteParams,
   PikkuHTTP,
+  PikkuHTTPRequest,
+  PikkuHTTPResponse,
 } from './http-routes.types.js'
 import { PikkuMiddleware, SessionServices } from '../types/core.types.js'
 import { match } from 'path-to-regexp'
@@ -13,15 +15,13 @@ import {
   NotFoundError,
 } from '../errors/errors.js'
 import { closeSessionServices } from '../utils.js'
-import { PikkuRequest } from '../pikku-request.js'
-import { PikkuResponse } from '../pikku-response.js'
 import { coerceQueryStringToArray, validateSchema } from '../schema.js'
 import { PikkuUserSessionService } from '../services/user-session-service.js'
 import { runMiddleware } from '../middleware-runner.js'
 import { handleError } from '../handle-error.js'
 import { pikkuState } from '../pikku-state.js'
-import { PikkuHTTPResponse } from './pikku-http-response.js'
-import { PikkuHTTPRequest } from './pikku-http-request.js'
+import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
+import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 
 /**
  * Add middleware to a specific route or globally
@@ -132,20 +132,17 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
  * @returns {PikkuHTTP | undefined} HTTP interaction object or undefined
  */
 export const createHTTPInteraction = (
-  request: PikkuRequest | undefined,
-  response: PikkuResponse | undefined
+  request: PikkuHTTPRequest | undefined,
+  response: PikkuHTTPResponse | undefined
 ): PikkuHTTP | undefined => {
   let http: PikkuHTTP | undefined = undefined
 
-  if (
-    request instanceof PikkuHTTPRequest ||
-    response instanceof PikkuHTTPResponse
-  ) {
+  if (request || response) {
     http = {}
-    if (request instanceof PikkuHTTPRequest) {
+    if (request) {
       http.request = request
     }
-    if (response instanceof PikkuHTTPResponse) {
+    if (response) {
       http.response = response
     }
   }
@@ -233,15 +230,19 @@ const executeRouteWithMiddleware = async (
       http,
       context,
     }
-    const data = await http?.request?.getData()
+    const data = await http?.request?.data()
 
     // Validate schema
-    validateSchema(
-      singletonServices.logger,
-      singletonServices.schemaService,
-      schemaName,
-      data
-    )
+    try {
+      validateSchema(
+        singletonServices.logger,
+        singletonServices.schemaService,
+        schemaName,
+        data
+      )
+    } catch (e) {
+      // TODO: Schema invalid!
+    }
 
     if (options.coerceToArray && schemaName) {
       coerceQueryStringToArray(schemaName, data)
@@ -297,7 +298,7 @@ export const runHTTPRoute = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   params: RunRouteOptions & RunRouteParams
 ): Promise<Response> => {
-  const pikkuResponse = new PikkuHTTPResponse()
+  const pikkuResponse = new PikkuFetchHTTPResponse()
   await runHTTPRouteWithoutResponse<In, Out>(request, pikkuResponse, params)
   return pikkuResponse.toResponse()
 }
@@ -330,7 +331,7 @@ export const runHTTPRouteWithoutResponse = async <In, Out>(
 
   // Create HTTP interaction object
   const http = createHTTPInteraction(
-    request instanceof Request ? new PikkuHTTPRequest(request) : request,
+    request instanceof Request ? new PikkuFetchHTTPRequest(request) : request,
     response
   )
   const apiType = http!.request!.method()

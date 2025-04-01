@@ -1,7 +1,8 @@
 import { PikkuError } from '../errors/error-handler.js'
 import {
   HTTPFunctionMetaInputTypes,
-  PikkuHTTP,
+  PikkuHTTPRequest,
+  PikkuHTTPResponse,
 } from '../http/http-routes.types.js'
 import {
   APIDocs,
@@ -11,9 +12,6 @@ import {
   PikkuMiddleware,
 } from '../types/core.types.js'
 import { CoreAPIFunction, CoreAPIPermission } from '../types/functions.types.js'
-import { PikkuRequest } from '../pikku-request.js'
-import { PikkuResponse } from '../pikku-response.js'
-import { PikkuHTTPResponse } from '../http/pikku-http-response.js'
 
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean
@@ -26,13 +24,10 @@ export type RunChannelOptions = Partial<{
 export type RunChannelParams<ChannelData> = {
   channelId: string
   singletonServices: CoreSingletonServices
-  request?: PikkuRequest<ChannelData> | Request
-  response?: PikkuResponse | PikkuHTTPResponse
-  http?: PikkuHTTP
+  request?: PikkuHTTPRequest<ChannelData>
+  response?: PikkuHTTPResponse
   createSessionServices?: CreateSessionServices
 }
-
-export interface HandlerMeta {}
 
 export interface ChannelMessageMeta {
   inputs: string[] | null
