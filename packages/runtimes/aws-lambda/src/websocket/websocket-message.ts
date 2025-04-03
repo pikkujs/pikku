@@ -42,7 +42,7 @@ export const processWebsocketMessage = async <
       response.json(result as any)
     }
   } catch (e) {
-    // Error should have already been handled by runHTTPRoute
+    // Error should have already been handled by fetch
     console.error(e)
   }
   return responseToLambdaResult(response.toResponse())

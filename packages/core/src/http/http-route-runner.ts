@@ -294,12 +294,12 @@ const executeRouteWithMiddleware = async (
  * @returns {Promise<Out | void>} Result of the route handler
  * @ignore
  */
-export const runHTTPRoute = async <In, Out>(
+export const fetch = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   params: RunRouteOptions & RunRouteParams
 ): Promise<Response> => {
   const pikkuResponse = new PikkuFetchHTTPResponse()
-  await runHTTPRouteWithoutResponse<In, Out>(request, pikkuResponse, params)
+  await fetchData<In, Out>(request, pikkuResponse, params)
   return pikkuResponse.toResponse()
 }
 
@@ -310,7 +310,7 @@ export const runHTTPRoute = async <In, Out>(
  * @returns {Promise<Out | void>} Result of the route handler
  * @ignore
  */
-export const runHTTPRouteWithoutResponse = async <In, Out>(
+export const fetchData = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   response: PikkuHTTPResponse,
   {

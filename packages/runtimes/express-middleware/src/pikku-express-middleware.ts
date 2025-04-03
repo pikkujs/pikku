@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express'
 
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
-import { runHTTPRoute, RunRouteOptions } from '@pikku/core/http'
+import { fetch, RunRouteOptions } from '@pikku/core/http'
 import { logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { expressToRequest } from './express-request-convertor.js'
@@ -44,7 +44,7 @@ export const pikkuExpressMiddleware = (
 
   return async (req, res, next) => {
     const request = expressToRequest(req)
-    const response = await runHTTPRoute(request, {
+    const response = await fetch(request, {
       singletonServices,
       createSessionServices,
       respondWith404,

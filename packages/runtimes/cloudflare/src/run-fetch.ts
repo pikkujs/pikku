@@ -4,7 +4,7 @@ import {
   CoreUserSession,
   CreateSessionServices,
 } from '@pikku/core'
-import { runHTTPRoute } from '@pikku/core/http'
+import { fetch } from '@pikku/core/http'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 
 export const runFetch = async <
@@ -36,7 +36,7 @@ export const runFetch = async <
     return websocketHibernationServer.fetch(request as any)
   }
 
-  const response = await runHTTPRoute(request, {
+  const response = await fetch(request, {
     singletonServices,
     createSessionServices: createSessionServices as any,
   })

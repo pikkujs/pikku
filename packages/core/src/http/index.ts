@@ -3,10 +3,6 @@ export * from './pikku-fetch-http-response.js'
 export * from './incomingmessage-to-request-convertor.js'
 export * from './log-http-routes.js'
 
-export {
-  runHTTPRoute,
-  runHTTPRouteWithoutResponse,
-  addRoute,
-} from './http-route-runner.js'
+export { fetch, fetchData, addRoute } from './http-route-runner.js'
 
 export type * from './http-routes.types.js'

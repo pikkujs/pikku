@@ -4,7 +4,7 @@ import { NotFoundError } from '../errors/errors.js'
 import { PikkuHTTPAbstractRequest } from './pikku-http-abstract-request.js'
 import { PikkuHTTPAbstractResponse } from './pikku-fetch-http-response.js'
 import { JSONValue, PikkuMiddleware } from '../types/core.types.js'
-import { runHTTPRoute, addRoute } from './http-route-runner.js'
+import { fetch, addRoute } from './http-route-runner.js'
 import { resetPikkuState } from '../pikku-state.js'
 
 class PikkuTestRequest extends PikkuHTTPAbstractRequest {
@@ -33,7 +33,7 @@ const sessionMiddleware: PikkuMiddleware = async (services, _, next) => {
   await next()
 }
 
-describe('runHTTPRoute', () => {
+describe('fetch', () => {
   let singletonServices: any
   let createSessionServices: any
   let request: any
@@ -68,7 +68,7 @@ describe('runHTTPRoute', () => {
 
     await assert.rejects(
       async () =>
-        runHTTPRoute({
+        fetch({
           request,
           response,
           singletonServices,
@@ -92,7 +92,7 @@ describe('runHTTPRoute', () => {
       middleware: [sessionMiddleware],
     })
 
-    const result = await runHTTPRoute({
+    const result = await fetch({
       request,
       response,
       singletonServices,
@@ -118,7 +118,7 @@ describe('runHTTPRoute', () => {
       middleware: [sessionMiddleware],
     })
 
-    await runHTTPRoute({
+    await fetch({
       request,
       response,
       singletonServices,
@@ -146,7 +146,7 @@ describe('runHTTPRoute', () => {
 
     await assert.rejects(
       async () =>
-        runHTTPRoute({
+        fetch({
           request,
           response,
           singletonServices,

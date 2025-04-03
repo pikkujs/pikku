@@ -1,6 +1,6 @@
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { runHTTPRoute, RunRouteOptions } from '@pikku/core/http'
+import { fetch, RunRouteOptions } from '@pikku/core/http'
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import { logRoutes } from '@pikku/core/http'
@@ -53,7 +53,7 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
     )
   }
   fastify.all('/*', async (req, res) => {
-    const response = await runHTTPRoute(fastifyToRequest(req), {
+    const response = await fetch(fastifyToRequest(req), {
       singletonServices: pikku.singletonServices,
       createSessionServices: pikku.createSessionServices,
       respondWith404: pikku.respondWith404,

@@ -7,7 +7,7 @@ import {
   CreateConfig,
   CreateSessionServices,
 } from '@pikku/core'
-import { HTTPMethod, runHTTPRouteWithoutResponse } from '@pikku/core/http'
+import { HTTPMethod, fetchData } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 
@@ -61,7 +61,7 @@ export class PikkuNextJS {
     )
 
     const response = new PikkuActionNextResponse(true)
-    return (await runHTTPRouteWithoutResponse<In, Out>(request, response, {
+    return (await fetchData<In, Out>(request, response, {
       singletonServices,
       createSessionServices: this.createSessionServices,
       bubbleErrors: true,
@@ -89,7 +89,7 @@ export class PikkuNextJS {
       false
     )
     const response = new PikkuActionNextResponse(false)
-    return (await runHTTPRouteWithoutResponse<In, Out>(request, response, {
+    return (await fetchData<In, Out>(request, response, {
       singletonServices,
       createSessionServices: this.createSessionServices,
       skipUserSession: true,

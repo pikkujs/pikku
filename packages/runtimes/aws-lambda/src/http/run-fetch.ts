@@ -4,10 +4,7 @@ import {
   CreateSessionServices,
   CoreUserSession,
 } from '@pikku/core'
-import {
-  PikkuFetchHTTPResponse,
-  runHTTPRouteWithoutResponse,
-} from '@pikku/core/http'
+import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { responseToLambdaResult } from '../response-converter.js'
 import { lambdaEventToRequest } from '../request-converter.js'
@@ -42,12 +39,12 @@ export const runFetch = async <
   }
 
   try {
-    await runHTTPRouteWithoutResponse(request, response, {
+    await fetchData(request, response, {
       singletonServices,
       createSessionServices: createSessionServices as any,
     })
   } catch {
-    // Error should have already been handled by runHTTPRoute
+    // Error should have already been handled by fetch
   }
 
   return responseToLambdaResult(response.toResponse())

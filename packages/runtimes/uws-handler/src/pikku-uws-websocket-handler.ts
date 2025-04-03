@@ -100,7 +100,7 @@ export const pikkuWebsocketHandler = ({
           )
         })
       } catch (e: any) {
-        // Error should have already been handled by runHTTPRoute
+        // Error should have already been handled by fetch
       }
     },
     open: (ws) => {

@@ -1,7 +1,7 @@
 import * as uWS from 'uWebSockets.js'
 
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
-import { runHTTPRoute } from '@pikku/core/http'
+import { fetch } from '@pikku/core/http'
 
 import { uwsToRequest } from './uws-request-convertor.js'
 import { sendPikkuResponseToUWS } from './uws-response-convertor.js'
@@ -49,7 +49,7 @@ export const pikkuHTTPHandler = ({
 
   return async (res: uWS.HttpResponse, req: uWS.HttpRequest): Promise<void> => {
     const request = await uwsToRequest(req, res)
-    const response = await runHTTPRoute(request, {
+    const response = await fetch(request, {
       singletonServices,
       createSessionServices,
     })
