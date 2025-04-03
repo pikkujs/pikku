@@ -196,7 +196,6 @@ const executeRouteWithMiddleware = async (
   services: {
     singletonServices: any
     userSessionService: any
-    context: Map<string, unknown>
     createSessionServices: Function
     skipUserSession: boolean
   },
@@ -216,7 +215,6 @@ const executeRouteWithMiddleware = async (
   const {
     singletonServices,
     userSessionService,
-    context,
     createSessionServices,
     skipUserSession,
   } = services
@@ -253,7 +251,7 @@ const executeRouteWithMiddleware = async (
 
     // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
-      { ...singletonServices, userSessionService, context },
+      { ...singletonServices, userSessionService },
       { http },
       session
     )
@@ -262,7 +260,6 @@ const executeRouteWithMiddleware = async (
       ...singletonServices,
       ...sessionServices,
       http,
-      context,
     }
     const data = await http?.request?.data()
 
@@ -314,7 +311,7 @@ const executeRouteWithMiddleware = async (
 
   // Execute middleware, then run the main logic
   await runMiddleware(
-    { ...singletonServices, context, userSessionService },
+    { ...singletonServices, userSessionService },
     { http },
     middleware,
     runMain
@@ -399,8 +396,6 @@ export const fetchData = async <In, Out>(
     bubbleErrors = false,
   }: RunRouteOptions & RunRouteParams
 ): Promise<Out | void> => {
-  const context = new Map()
-
   const userSessionService = new PikkuUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
@@ -432,7 +427,6 @@ export const fetchData = async <In, Out>(
       {
         singletonServices,
         userSessionService,
-        context,
         createSessionServices,
         skipUserSession,
       },
@@ -447,7 +441,7 @@ export const fetchData = async <In, Out>(
     handleError(
       e,
       http,
-      context.get('trackingId'),
+      '111', // TODO: context.get('trackingId'),
       singletonServices.logger,
       logWarningsForStatusCodes,
       respondWith404,

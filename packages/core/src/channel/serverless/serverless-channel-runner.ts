@@ -71,7 +71,6 @@ export const runChannelConnect = async ({
 }: Pick<CoreAPIChannel<unknown, any>, 'route'> &
   RunChannelOptions &
   RunServerlessChannelParams<unknown>) => {
-  const context = new Map()
   let sessionServices: SessionServices | undefined
 
   let http: PikkuHTTP | undefined
@@ -140,7 +139,6 @@ export const runChannelConnect = async ({
     {
       ...singletonServices,
       userSessionService,
-      context,
     },
     { http },
     channelConfig.middleware || [],
