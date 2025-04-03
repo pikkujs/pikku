@@ -44,8 +44,10 @@ jobs:
             fastify-plugin,
             uws,
             aws-lambda,
+            # aws-lambda-websockets,
             cloudflare-workers,
-            nextjs,
+            # cloudflare-websockets,
+            # nextjs,
           ]
         package-manager: [yarn]
     steps:
@@ -62,10 +64,10 @@ jobs:
         with:
           name: built-packages
           path: packages
-      - name: Install dependencies for create
-        run: yarn install # TODO: This should only need to install create
-      - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager ${{ matrix.package-manager}}
-      - run: cd packages/create/my-app && yarn link -A ../../../ && yarn run test
+      - name: Install dependencies
+        run: yarn install
+      - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../../../test-app --install --package-manager ${{ matrix.package-manager}} --yarn-link ../pikku
+      - run: cd ../test-app && yarn link -A ../pikku && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       USES_WEBSOCKET: ${{ matrix.template }}

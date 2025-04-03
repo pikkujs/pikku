@@ -24,10 +24,15 @@ import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 
 /**
- * Add middleware to a specific route or globally
+ * Registers middleware either globally or for a specific route.
  *
- * @param {APIMiddleware[] | string} routeOrMiddleware - Route pattern to match or middleware array
- * @param {APIMiddleware} [middleware] - Middleware to add (required if first param is a string)
+ * When a string route pattern is provided along with middleware, the middleware
+ * is applied only to that route. Otherwise, if an array is provided, it is treated
+ * as global middleware (applied to all routes).
+ *
+ * @template APIMiddleware The middleware type.
+ * @param {APIMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
+ * @param {APIMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
  */
 export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
   routeOrMiddleware: APIMiddleware[] | string,
@@ -47,9 +52,19 @@ export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
 }
 
 /**
- * Add a route to the global routes registry
+ * Adds a new route to the global HTTP route registry.
  *
- * @param {CoreHTTPFunctionRoute} route - Route configuration to add
+ * The route configuration includes the HTTP method, route path, permissions,
+ * middleware, and the handler function that implements the route's logic.
+ *
+ * @template In Expected input type.
+ * @template Out Expected output type.
+ * @template Route Route pattern as a string.
+ * @template APIFunction Type for the route handler function.
+ * @template APIFunctionSessionless Type for a sessionless handler.
+ * @template APIPermission Type representing required permissions.
+ * @template APIMiddleware Middleware type to be used with the route.
+ * @param {CoreHTTPFunctionRoute<In, Out, Route, APIFunction, APIFunctionSessionless, APIPermission, APIMiddleware>} route - The route configuration object.
  */
 export const addRoute = <
   In,
@@ -74,11 +89,15 @@ export const addRoute = <
 }
 
 /**
- * Find a route that matches the given request type and path
+ * Finds a matching route based on the HTTP method and URL path.
  *
- * @param {string} requestType - HTTP method (GET, POST, etc.)
- * @param {string} requestPath - URL path to match
- * @returns {Object | undefined} Matching route information or undefined if no match
+ * Iterates over all registered routes, skipping those with a mismatched method.
+ * When a route pattern matches the incoming request path, this function aggregates
+ * any global middleware along with route-specific middleware and identifies any input schema.
+ *
+ * @param {string} requestType - The HTTP method (e.g., GET, POST).
+ * @param {string} requestPath - The URL path of the incoming request.
+ * @returns {Object | undefined} An object with matched route details or undefined if no match.
  */
 const getMatchingRoute = (requestType: string, requestPath: string) => {
   const routes = pikkuState('http', 'routes')
@@ -86,27 +105,27 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
   const routesMeta = pikkuState('http', 'meta')
 
   for (const route of routes) {
-    // Skip routes that don't match the request method
+    // Skip routes that don't match the HTTP method
     if (route.method !== requestType.toLowerCase()) {
       continue
     }
 
-    // Create path matcher function
+    // Generate a matching function from the route pattern
     const matchFunc = match(`/${route.route}`.replace(/^\/\//, '/'), {
       decode: decodeURIComponent,
     })
 
-    // Try to match the path
+    // Attempt to match the request path
     const matchedPath = matchFunc(requestPath.replace(/^\/\//, '/'))
 
     if (matchedPath) {
-      // Get all middleware for this route
+      // Aggregate global and route-specific middleware
       const globalMiddleware = middleware
         .filter((m) => m.route === '*' || new RegExp(m.route).test(route.route))
         .map((m) => m.middleware)
         .flat()
 
-      // Find schema for this route
+      // Extract associated schema information if available
       const schemaName = routesMeta.find(
         (routeMeta) =>
           routeMeta.method === route.method && routeMeta.route === route.route
@@ -125,11 +144,14 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
 }
 
 /**
- * Create an HTTP interaction object from request and response
+ * Combines the request and response objects into a single HTTP interaction object.
  *
- * @param {PikkuRequest | undefined} request - The HTTP request object
- * @param {PikkuResponse | undefined} response - The HTTP response object
- * @returns {PikkuHTTP | undefined} HTTP interaction object or undefined
+ * This utility function creates an object that holds both the HTTP request and response,
+ * which simplifies passing these around through middleware and route execution.
+ *
+ * @param {PikkuHTTPRequest | undefined} request - The HTTP request object.
+ * @param {PikkuHTTPResponse | undefined} response - The HTTP response object.
+ * @returns {PikkuHTTP | undefined} The combined HTTP interaction object or undefined if none provided.
  */
 export const createHTTPInteraction = (
   request: PikkuHTTPRequest | undefined,
@@ -151,13 +173,24 @@ export const createHTTPInteraction = (
 }
 
 /**
- * Validate input data and execute route handler with appropriate middleware
+ * Validates the input data and executes the route handler with associated middleware.
  *
- * @param {Object} services - Available services
- * @param {Object} matchedRoute - Information about the matched route
- * @param {PikkuHTTP | undefined} http - HTTP interaction object
- * @param {Object} options - Additional options
- * @returns {Promise<any>} Result of the route handler
+ * This function is the central execution point for a route. It performs these steps:
+ *  1. Sets URL parameters on the request.
+ *  2. Validates the user session if required.
+ *  3. Creates session-specific services.
+ *  4. Validates the incoming data against a schema.
+ *  5. Optionally coerces query string values to arrays.
+ *  6. Checks route-specific permissions.
+ *  7. Executes the route handler.
+ *  8. Sends the appropriate response.
+ *
+ * @param {Object} services - A collection of shared services and utilities.
+ * @param {Object} matchedRoute - Contains route details, URL parameters, middleware, and optional schema.
+ * @param {PikkuHTTP | undefined} http - The HTTP interaction object.
+ * @param {Object} options - Options for route execution (e.g., whether to coerce query strings to arrays).
+ * @returns {Promise<any>} An object containing the route handler result and session services (if any).
+ * @throws Throws errors like MissingSessionError or ForbiddenError on validation failures.
  */
 const executeRouteWithMiddleware = async (
   services: {
@@ -192,17 +225,18 @@ const executeRouteWithMiddleware = async (
   let sessionServices: any
   let result: any
 
+  // Attach URL parameters to the request object
   http?.request?.setParams(params)
 
   singletonServices.logger.info(
     `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`
   )
 
-  // Main route execution function
+  // Main route execution logic wrapped for middleware handling
   const runMain = async () => {
     const session = userSessionService.get()
 
-    // Validate session was set if needed
+    // Ensure session is available when required
     if (skipUserSession && requiresSession) {
       throw new Error(
         "Can't skip trying to get user session if auth is required"
@@ -217,7 +251,7 @@ const executeRouteWithMiddleware = async (
       throw new MissingSessionError()
     }
 
-    // Create session services
+    // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
       { ...singletonServices, userSessionService, context },
       { http },
@@ -232,7 +266,7 @@ const executeRouteWithMiddleware = async (
     }
     const data = await http?.request?.data()
 
-    // Validate schema
+    // Validate request data against the defined schema, if any
     try {
       validateSchema(
         singletonServices.logger,
@@ -241,14 +275,15 @@ const executeRouteWithMiddleware = async (
         data
       )
     } catch (e) {
-      // TODO: Schema invalid!
+      // TODO: Implement proper handling for schema validation failures
     }
 
+    // Coerce query string parameters to arrays if specified by the schema
     if (options.coerceToArray && schemaName) {
       coerceQueryStringToArray(schemaName, data)
     }
 
-    // Run permission checks
+    // Execute permission checks
     const permissioned = await verifyPermissions(
       route.permissions,
       allServices,
@@ -260,10 +295,10 @@ const executeRouteWithMiddleware = async (
       throw new ForbiddenError('Permission denied')
     }
 
-    // Execute the route handler
+    // Invoke the actual route handler function
     result = await route.func(allServices, data, session!)
 
-    // Set the response
+    // Respond with either a binary or JSON response based on configuration
     if (route.returnsJSON === false) {
       http?.response?.arrayBuffer(result)
     } else {
@@ -271,12 +306,13 @@ const executeRouteWithMiddleware = async (
     }
 
     http?.response?.status(200)
-    // TODO
-    //http?.response?.end()
+    // TODO: Evaluate if the response stream should be explicitly ended.
+    // http?.response?.end()
 
     return result
   }
 
+  // Execute middleware, then run the main logic
   await runMiddleware(
     { ...singletonServices, context, userSessionService },
     { http },
@@ -288,14 +324,22 @@ const executeRouteWithMiddleware = async (
 }
 
 /**
- * Run an HTTP route with the given parameters
+ * Executes an HTTP route for a given Fetch API request.
  *
- * @param {Object} options - Options for running the route
- * @returns {Promise<Out | void>} Result of the route handler
- * @ignore
+ * This function wraps the entire lifecycle of handling an HTTP request:
+ *  - Matching the request to a registered route.
+ *  - Validating input and session state.
+ *  - Running middleware and the route handler.
+ *  - Handling errors and forming the response.
+ *
+ * @template In Expected input data type.
+ * @template Out Expected output data type.
+ * @param {Request} request - The native Fetch API Request object.
+ * @param {RunRouteOptions & RunRouteParams} params - Additional options including services and session management.
+ * @returns {Promise<Response>} A promise that resolves to a Fetch API Response object.
  */
 export const fetch = async <In, Out>(
-  request: Request | PikkuHTTPRequest,
+  request: Request,
   params: RunRouteOptions & RunRouteParams
 ): Promise<Response> => {
   const pikkuResponse = new PikkuFetchHTTPResponse()
@@ -304,11 +348,43 @@ export const fetch = async <In, Out>(
 }
 
 /**
- * Run an HTTP route with the given parameters
+ * Executes an HTTP route using a Pikku-specific request wrapper.
  *
- * @param {Object} options - Options for running the route
- * @returns {Promise<Out | void>} Result of the route handler
- * @ignore
+ * This variant accepts either a native Request or a PikkuHTTPRequest object and returns
+ * a PikkuFetchHTTPResponse for further manipulation if needed.
+ *
+ * @template In Expected input data type.
+ * @template Out Expected output data type.
+ * @param {Request | PikkuHTTPRequest} request - The request object.
+ * @param {RunRouteOptions & RunRouteParams} params - Execution options including services and session configuration.
+ * @returns {Promise<PikkuFetchHTTPResponse>} A promise that resolves to a PikkuFetchHTTPResponse object.
+ */
+export const pikkuFetch = async <In, Out>(
+  request: Request | PikkuHTTPRequest,
+  params: RunRouteOptions & RunRouteParams
+): Promise<PikkuFetchHTTPResponse> => {
+  const pikkuResponse = new PikkuFetchHTTPResponse()
+  await fetchData<In, Out>(request, pikkuResponse, params)
+  return pikkuResponse
+}
+
+/**
+ * Core function to process an HTTP request through route matching, validation,
+ * middleware execution, error handling, and session service cleanup.
+ *
+ * This function does the following:
+ *  - Wraps the incoming request and response into an HTTP interaction object.
+ *  - Determines the correct route based on HTTP method and path.
+ *  - Executes middleware and the route handler.
+ *  - Catches and handles errors, optionally bubbling them if configured.
+ *  - Cleans up any session services created during processing.
+ *
+ * @template In Expected input data type.
+ * @template Out Expected output data type.
+ * @param {Request | PikkuHTTPRequest} request - The incoming HTTP request.
+ * @param {PikkuHTTPResponse} response - The response object to be populated.
+ * @param {RunRouteOptions & RunRouteParams} options - Options such as singleton services, session handling, and error configuration.
+ * @returns {Promise<Out | void>} The output from the route handler or void if an error occurred.
  */
 export const fetchData = async <In, Out>(
   request: Request | PikkuHTTPRequest,
@@ -329,7 +405,7 @@ export const fetchData = async <In, Out>(
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
 
-  // Create HTTP interaction object
+  // Combine the request and response into one interaction object
   const http = createHTTPInteraction(
     request instanceof Request ? new PikkuFetchHTTPRequest(request) : request,
     response
@@ -337,11 +413,11 @@ export const fetchData = async <In, Out>(
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
 
-  // Find matching route
+  // Locate the matching route based on the HTTP method and path
   const matchedRoute = getMatchingRoute(apiType, apiRoute)
 
   try {
-    // Handle route not found
+    // If no route matches, log the occurrence and throw a NotFoundError
     if (!matchedRoute) {
       singletonServices.logger.info({
         message: 'Route not found',
@@ -351,7 +427,7 @@ export const fetchData = async <In, Out>(
       throw new NotFoundError(`Route not found: ${apiRoute}`)
     }
 
-    // Execute route with middleware
+    // Execute the matched route along with its middleware and session management
     ;({ result, sessionServices } = await executeRouteWithMiddleware(
       {
         singletonServices,
@@ -367,7 +443,7 @@ export const fetchData = async <In, Out>(
 
     return result
   } catch (e: any) {
-    // Handle and possibly bubble the error
+    // Handle errors and, depending on configuration, bubble them up or respond with an error
     handleError(
       e,
       http,
@@ -378,7 +454,7 @@ export const fetchData = async <In, Out>(
       bubbleErrors
     )
   } finally {
-    // Clean up session services
+    // Clean up any session-specific services created during processing
     if (sessionServices) {
       await closeSessionServices(singletonServices.logger, sessionServices)
     }

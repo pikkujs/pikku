@@ -6,7 +6,7 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
-    "test:template": "npm run start & HTTP_PREFIX=http://localhost:3000/production bash run-tests.sh",
+    "test:template": "bash run-tests.sh --url http://localhost:3000/production",
     "start": "npm run build && serverless offline",
     "build": "rm -rf dist && esbuild ./src/main.ts --format=esm --minify --external:\"@aws-sdk/*\" --bundle --keep-names --sourcemap --platform=node --target=node20 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json",
     "deploy": "npm run build && serverless deploy"
@@ -19,10 +19,13 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.732.0",
+    "@aws-sdk/client-secrets-manager": "^3.714.0",
+    "@aws-sdk/cloudfront-signer": "^3.723.0",
     "@aws-sdk/s3-request-presigner": "^3.732.0",
     "@types/aws-lambda": "^8.10.146",
     "@types/node": "^22",
     "esbuild": "0.24.0",
+    "serverless": "^4.10.1",
     "serverless-offline": "^14.4.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7"

@@ -190,6 +190,12 @@ export function updatePackageJSONScripts(
   packageJson.scripts.test = packageJson.scripts['test:template']
   delete packageJson.scripts['test:template']
 
+  if (packageManager === 'yarn') {
+    packageJson.packageManager = 'yarn@4.8.1'
+  }
+
+  packageJson.scripts.pikku = 'pikku all'
+
   packageJson.name = appName
   fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
 }

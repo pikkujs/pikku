@@ -42,8 +42,6 @@ class ScheduledTaskNotFoundError extends Error {
 export async function runScheduledTask<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
-  Services extends
-    CoreServices<SingletonServices> = CoreServices<SingletonServices>,
 >({
   name,
   session,

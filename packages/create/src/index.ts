@@ -28,7 +28,7 @@ import {
 import { program } from 'commander'
 import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
-import { unlinkSync } from 'fs'
+import { unlinkSync, writeFileSync } from 'fs'
 
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 
@@ -116,6 +116,7 @@ interface CliOptions {
   version: string
   install: boolean
   packageManager: PackageManager
+  yarnLink?: string
 }
 
 // 🏗 Add CLI Flags with Commander.js
@@ -125,18 +126,58 @@ program
   .option('-n, --name <name>', 'Project name')
   .option('-i, --install', 'Install dependencies')
   .option('-p, --package-manager <packageManager>', 'Package manager')
+  .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .parse(process.argv)
 
 const cliOptions = program.opts()
 
-async function setupTemplate({
-  version,
-  name,
-  packageManager,
-  install,
-  template,
-}: CliOptions) {
-  const targetPath = path.join(process.cwd(), name)
+async function installDependencies(
+  targetPath: string,
+  { packageManager, install, yarnLink }: CliOptions
+) {
+  if (install) {
+    if (yarnLink) {
+      writeFileSync(
+        path.join(targetPath, '.yarnrc.yml'),
+        [
+          'compressionLevel: mixed',
+          'enableGlobalCache: false',
+          'nodeLinker: node-modules',
+        ].join('\n')
+      )
+    }
+
+    console.log(chalk.blue('📦 Installing dependencies...'))
+    spawnSync(packageManager, ['install'], {
+      cwd: targetPath,
+      stdio: 'inherit',
+    })
+
+    if (yarnLink) {
+      console.log(chalk.blue('🔗 Linking to Pikku'))
+      spawnSync('yarn', ['link', yarnLink, '--A', '--private'], {
+        cwd: targetPath,
+        stdio: 'inherit',
+      })
+    } else {
+      console.log(
+        chalk.red('⚠️ Yarn link is only supported with yarn package manager')
+      )
+      process.exit(1)
+    }
+
+    console.log(chalk.blue('🦎 Running pikku...'))
+    spawnSync('npx --yes @pikku/cli', {
+      cwd: targetPath,
+      stdio: 'inherit',
+    })
+  }
+}
+
+async function setupTemplate(cliOptions: CliOptions) {
+  const { version, name: projectPath, packageManager, template } = cliOptions
+  const targetPath = path.join(process.cwd(), projectPath)
+  const name = projectPath.split('/').pop()!
   const versionRef = version ? `#${version}` : ''
 
   const functionsUrl = `${BASE_URL}/functions${versionRef}`
@@ -171,6 +212,10 @@ async function setupTemplate({
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
     updatePackageJSONScripts(targetPath, name, packageManager)
+
+    if (packageManager === 'yarn') {
+      writeFileSync(path.join(targetPath, 'yarn.lock'), '')
+    }
   } catch (e) {
     spinner.error()
     console.log(
@@ -179,36 +224,15 @@ async function setupTemplate({
     process.exit(1)
   }
 
-  if (install) {
-    console.log(chalk.blue('📦 Installing dependencies...'))
-    spawnSync(packageManager, ['install'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
-
-    console.log(chalk.blue('🦎 Running pikku...'))
-    try {
-      spawnSync(packageManager, ['run', 'pikku'], {
-        cwd: targetPath,
-        stdio: 'inherit',
-      })
-    } catch {
-      spawnSync('npx', ['--no-install', '@pikku/cli'], {
-        cwd: targetPath,
-        stdio: 'inherit',
-      })
-    }
-  }
+  await installDependencies(targetPath, cliOptions)
 
   console.log(chalk.green('\n✅ Project setup complete!'))
   console.log(`Run the following command to get started:\n`)
   console.log(chalk.bold(`cd ${name}`))
 }
 
-async function setupRepo(
-  { version, name, packageManager, install }: CliOptions,
-  repoName: string
-) {
+async function setupRepo(cliOptions: CliOptions, repoName: string) {
+  const { version, name } = cliOptions
   const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
 
@@ -240,19 +264,7 @@ async function setupRepo(
     process.exit(1)
   }
 
-  if (install) {
-    console.log(chalk.blue('📦 Installing dependencies...'))
-    spawnSync(packageManager, ['install'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
-
-    console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync('npx --yes @pikku/cli', {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
-  }
+  await installDependencies(targetPath, cliOptions)
 
   console.log(chalk.green('\n✅ Project setup complete!'))
   console.log(`Run the following command to get started:\n`)
@@ -338,6 +350,7 @@ async function run() {
     version,
     install,
     packageManager,
+    yarnLink: cliOptions.yarnLink,
   }
 
   if (template === 'yarn-workspace') {
