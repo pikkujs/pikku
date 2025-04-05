@@ -76,7 +76,9 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     addImport(`${cliConfig.schemaDirectory}/register.gen.ts`)
   }
 
-  await pikkuNext(cliConfig, visitState, options)
+  if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
+    await pikkuNext(cliConfig, visitState, options)
+  }
 
   if (cliConfig.openAPI) {
     logInfo(`• OpenAPI requires a reinspection to pickup new generated types..`)

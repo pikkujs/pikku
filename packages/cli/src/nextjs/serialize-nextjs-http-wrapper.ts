@@ -33,7 +33,7 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     method: Method,
     data: RouteHandlerOf<Route, Method>['input'] = null
   ): Promise<RouteHandlerOf<Route, Method>['output']> => {
-    return (_pikku! as any)[method](route, data as any)
+    return (_pikku! as any)[(method as string).toLowerCase()](route, data as any)
   }
 
   /**
@@ -55,7 +55,7 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     method: Method,
     data: RouteHandlerOf<Route, Method>['input'] = null
   ): Promise<RouteHandlerOf<Route, Method>['output']> => {
-    return (_pikku! as any)[method](route, data as any)
+    return (_pikku! as any)[(method as string).toLowerCase()](route, data as any)
   }
 
   /**

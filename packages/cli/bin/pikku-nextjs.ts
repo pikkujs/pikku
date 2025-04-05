@@ -29,11 +29,14 @@ export const pikkuNext = async (
   return await logCommandInfoAndTime(
     'Generating nextjs wrapper',
     'Generated nextjs wrapper',
-    [nextBackendFile === undefined, 'nextjs outfile is not defined'],
+    [
+      nextBackendFile === undefined && nextHTTPFile === undefined,
+      'nextjs outfile is not defined',
+    ],
     async () => {
-      if (!nextBackendFile || !nextHTTPFile) {
+      if (!nextBackendFile && !nextHTTPFile) {
         throw new Error(
-          'nextBackendFile or nextHTTPFile is required in pikku config'
+          'nextBackendFile or nextHTTPFile is required in pikku config for nextJS'
         )
       }
 
@@ -43,43 +46,44 @@ export const pikkuNext = async (
         )
       }
 
-      const {
-        pikkuConfigFactory,
-        singletonServicesFactory,
-        sessionServicesFactory,
-      } = await getPikkuFilesAndMethods(
-        visitState,
-        packageMappings,
-        nextBackendFile,
-        options,
-        {
-          config: true,
-          singletonServicesFactory: true,
-          sessionServicesFactory: true,
-        }
-      )
-
-      const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
-      const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
-      const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
-
-      const routesPath = getFileImportRelativePath(
-        nextBackendFile,
-        routesFile,
-        packageMappings
-      )
-      const routesMapDeclarationPath = getFileImportRelativePath(
-        nextBackendFile,
-        routesMapDeclarationFile,
-        packageMappings
-      )
-      const schemasPath = getFileImportRelativePath(
-        nextBackendFile,
-        `${schemaDirectory}/register.gen.ts`,
-        packageMappings
-      )
-
       if (nextBackendFile) {
+        const {
+          pikkuConfigFactory,
+          singletonServicesFactory,
+          sessionServicesFactory,
+        } = await getPikkuFilesAndMethods(
+          visitState,
+          packageMappings,
+          nextBackendFile,
+          options,
+          {
+            config: true,
+            singletonServicesFactory: true,
+            sessionServicesFactory: true,
+          }
+        )
+
+        const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
+        const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
+        const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
+
+        const routesPath = getFileImportRelativePath(
+          nextBackendFile,
+          routesFile,
+          packageMappings
+        )
+
+        const routesMapDeclarationPath = getFileImportRelativePath(
+          nextBackendFile,
+          routesMapDeclarationFile,
+          packageMappings
+        )
+        const schemasPath = getFileImportRelativePath(
+          nextBackendFile,
+          `${schemaDirectory}/register.gen.ts`,
+          packageMappings
+        )
+
         const content = serializeNextBackendWrapper(
           routesPath,
           routesMapDeclarationPath,
@@ -92,10 +96,21 @@ export const pikkuNext = async (
       }
 
       if (nextHTTPFile) {
-        const pikkuFetchImport = `import { PikkuFetch } from '${getFileImportRelativePath(nextBackendFile, fetchFile!, packageMappings)}'`
+        const routesPath = getFileImportRelativePath(
+          nextHTTPFile,
+          routesFile,
+          packageMappings
+        )
+
+        const routesMapDeclarationPath = getFileImportRelativePath(
+          nextHTTPFile,
+          routesMapDeclarationFile,
+          packageMappings
+        )
+
         const content = serializeNextHTTPWrapper(
-          routesMapDeclarationPath,
-          pikkuFetchImport
+          routesPath,
+          routesMapDeclarationPath
         )
         await writeFileInDir(nextHTTPFile, content)
       }
@@ -107,7 +122,7 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   logPikkuLogo()
   const cliConfig = await getPikkuCLIConfig(
     options.config,
-    ['rootDir', 'schemaDirectory', 'configDir', 'nextBackendFile'],
+    ['rootDir', 'schemaDirectory', 'configDir'],
     options.tags,
     true
   )

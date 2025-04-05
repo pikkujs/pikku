@@ -265,6 +265,7 @@ const executeRouteWithMiddleware = async (
 
     // Validate request data against the defined schema, if any
     try {
+      console.log(schemaName, data)
       validateSchema(
         singletonServices.logger,
         singletonServices.schemaService,

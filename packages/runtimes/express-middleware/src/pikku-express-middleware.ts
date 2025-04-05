@@ -43,7 +43,7 @@ export const pikkuExpressMiddleware = (
   }
 
   return async (req, res, next) => {
-    const request = expressToRequest(req)
+    const request = await expressToRequest(req)
     const response = await fetch(request, {
       singletonServices,
       createSessionServices,
