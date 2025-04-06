@@ -17,7 +17,7 @@ export default async function middleware(req: NextRequest) {
     // 2. Get the session, this requires middleware to be
     // set
     userSession = await getSession(
-      req, // Request
+      req as any, // Request
       {} as CoreSingletonServices, // Singleton Services Required by session
       [] // Middleware
     )

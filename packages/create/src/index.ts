@@ -148,14 +148,18 @@ async function installDependencies(
     }
 
     console.log(chalk.blue('📦 Installing dependencies...'))
-    spawnSync(packageManager, ['install'], {
+    const installArgs = ['install']
+    if (packageManager === 'yarn') {
+      installArgs.push('--no-immutable')
+    }
+    spawnSync(packageManager, installArgs, {
       cwd: targetPath,
       stdio: 'inherit',
     })
 
     if (yarnLink) {
       console.log(chalk.blue('🔗 Linking to Pikku'))
-      spawnSync('yarn', ['link', yarnLink, '--A', '--private'], {
+      spawnSync('yarn', ['link', '--all', '--private', yarnLink], {
         cwd: targetPath,
         stdio: 'inherit',
       })
@@ -167,7 +171,7 @@ async function installDependencies(
     }
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync('npx --yes @pikku/cli', {
+    spawnSync(packageManager, ['pikku', 'all'], {
       cwd: targetPath,
       stdio: 'inherit',
     })

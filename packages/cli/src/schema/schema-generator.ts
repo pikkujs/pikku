@@ -102,7 +102,6 @@ export async function saveSchemas(
       (schema) => `
 import * as ${schema} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
 addSchema('${schema}', ${schema})
-// addSchema('${schema}', require('./schemas/${schema}.schema.json'))
 `
     )
     .join('\n')
@@ -110,8 +109,6 @@ addSchema('${schema}', ${schema})
   await writeFileInDir(
     `${schemaParentDir}/register.gen.ts`,
     `import { addSchema } from '@pikku/core/schema'
-// import { createRequire } from "module"
-// const require = createRequire(import.meta.url)
 ${schemaImports}`
   )
 }

@@ -44,8 +44,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Coveralls GitHub Action
-        uses: coverallsapp/github-action@v2.3.4
+      # - name: Coveralls GitHub Action
+      #   uses: coverallsapp/github-action@v2.3.4
 
   templates:
     name: Templates
@@ -64,7 +64,7 @@ jobs:
             cloudflare-workers,
             nextjs,
           ]
-        package-manager: [npm]
+        package-manager: [yarn]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -81,8 +81,8 @@ jobs:
           path: packages
       - name: Install dependencies for create
         run: yarn install # TODO: This should only need to install create
-      - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager ${{ matrix.package-manager}}
-      - run: cd packages/create/my-app && npm run test
+      - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../../../test-app --install --package-manager ${{ matrix.package-manager}} --yarn-link ../pikku
+      - run: cd ../test-app && yarn link -A ../pikku && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       USES_WEBSOCKET: ${{ matrix.template }}

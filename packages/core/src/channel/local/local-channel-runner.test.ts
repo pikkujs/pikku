@@ -29,7 +29,8 @@ const mockSingletonServices = {
 
 // Mock request and response objects
 export class PikkuMockRequest implements PikkuHTTPRequest {
-  private _params: Record<string, string | string[] | undefined>
+  private _params: Record<string, string | string[] | undefined> = {}
+
   constructor(
     private _route: string,
     private _method: HTTPMethod
@@ -69,7 +70,6 @@ export class PikkuMockRequest implements PikkuHTTPRequest {
 
 export class PikkuMockResponse implements PikkuHTTPResponse {
   public _status: number | undefined
-  private _data: unknown
 
   status(code: number): this {
     this._status = code
@@ -86,7 +86,7 @@ export class PikkuMockResponse implements PikkuHTTPResponse {
     throw new Error('Method not implemented.')
   }
   json(data: unknown): this {
-    this._data = data
+    // We don't need to implement this for our test
     return this
   }
   redirect(location: string, status?: number): this {

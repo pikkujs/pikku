@@ -3616,6 +3616,7 @@ __metadata:
     "@pikku/core": "npm:^0.6.21"
     "@pikku/jose": "npm:^0.6.4"
     "@pikku/schema-cfworker": "npm:^0.6.1"
+    "@pikku/websocket": "npm:^0.6.2"
     typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft
@@ -3676,7 +3677,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/websocket@workspace:packages/client-websocket":
+"@pikku/websocket@npm:^0.6.2, @pikku/websocket@workspace:packages/client-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/websocket@workspace:packages/client-websocket"
   dependencies:

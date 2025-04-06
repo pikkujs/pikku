@@ -13,7 +13,7 @@ import type {
   RoutesMap,
   RouteHandlerOf,
   RoutesWithMethod,
-} from '../functions/.pikku/pikku-routes-map.gen.js'
+} from '../functions/.pikku/pikku-routes-map.gen.d.js'
 
 import { createConfig as createConfig } from '../functions/src/services.js'
 import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'
@@ -29,7 +29,7 @@ let _pikku: PikkuNextJS | undefined
  *
  * @returns An object containing methods for making dynamic and static action requests, as well as session retrieval.
  */
-export const pikku = () => {
+export const pikku = (_options?: any) => {
   if (!_pikku) {
     _pikku = new PikkuNextJS(
       createConfig as any,

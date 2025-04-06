@@ -7,15 +7,12 @@ import {
   PikkuLocalChannelHandler,
 } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
-import {
-  incomingMessageToRequestConvertor,
-  PikkuFetchHTTPRequest,
-  RunRouteOptions,
-} from '@pikku/core/http'
+import { PikkuFetchHTTPRequest, RunRouteOptions } from '@pikku/core/http'
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
 import crypto from 'crypto'
+import { incomingMessageToRequestConvertor } from './incoming-message-to-request-convertor.js'
 
 /**
  * Options for configuring the `pikkuHandler`.
