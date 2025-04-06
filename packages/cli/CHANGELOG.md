@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.6.18
+
+### Patch Changes
+
+- 60b2265: refactor: supporting request and response objects
+- Updated dependencies [60b2265]
+  - @pikku/inspector@0.6.4
+  - @pikku/core@0.6.22
+
 ## 0.6.17
 
 ### Patch Changes

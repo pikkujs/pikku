@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.22
+
+### Patch Changes
+
+- 60b2265: refactor: supporting request and response objects
+
 ## 0.6.21
 
 ### Patch Changes
