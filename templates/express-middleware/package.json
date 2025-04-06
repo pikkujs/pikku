@@ -4,15 +4,15 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.6.21",
-    "@pikku/express-middleware": "^0.6.4",
+    "@pikku/core": "^0.6.22",
+    "@pikku/express-middleware": "^0.6.5",
     "@pikku/jose": "^0.6.4",
     "@pikku/schedule": "^0.6.2",
     "cookie-parser": "^1.4.7",
     "express": "^5"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.6.17",
+    "@pikku/cli": "^0.6.18",
     "@types/cookie-parser": "^1.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.6"

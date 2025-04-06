@@ -1,5 +1,14 @@
 # @pikku/express
 
+## 0.6.3
+
+### Patch Changes
+
+- 60b2265: refactor: supporting request and response objects
+- Updated dependencies [60b2265]
+  - @pikku/express-middleware@0.6.5
+  - @pikku/core@0.6.22
+
 ## 0.6.2
 
 ### Patch Changes
