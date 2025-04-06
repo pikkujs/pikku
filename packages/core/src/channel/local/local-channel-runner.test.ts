@@ -1,10 +1,10 @@
 import { test, beforeEach, afterEach } from 'node:test'
 import * as assert from 'node:assert/strict'
-import { JSONValue } from '../../types/core.types.js'
 import { runLocalChannel } from './local-channel-runner.js'
 import { resetPikkuState } from '../../pikku-state.js'
 import { addChannel } from '../channel-runner.js'
-import { PikkuHTTPRequest } from '../../http/http-routes.types.js'
+import { HTTPMethod, PikkuHTTPRequest, PikkuHTTPResponse, PikkuQuery } from '../../http/http-routes.types.js'
+import { SerializeOptions } from 'cookie'
 
 /**
  * Minimal stubs for dependencies that runChannel expects.
@@ -23,11 +23,38 @@ const mockSingletonServices = {
 } as any
 
 // Mock request and response objects
-class MockRequest implements PikkuHTTPRequest {
-  public getBody(): Promise<unknown> {
+export class PikkuMockRequest implements PikkuHTTPRequest {
+  private _params: Record<string, string | string[] | undefined>
+  constructor(
+    private _route: string,
+    private _method: HTTPMethod
+  ) {}
+
+  method(): HTTPMethod {
+    return this._method
+  }
+  path(): string {
+    return this._route
+  }
+  json(): Promise<unknown> {
     throw new Error('Method not implemented.')
   }
-  public getHeader(headerName: string): string | undefined {
+  arrayBuffer(): Promise<ArrayBuffer> {
+    throw new Error('Method not implemented.')
+  }
+  header(headerName: string): string | null {
+    throw new Error('Method not implemented.')
+  }
+  cookie(name?: string): string | null {
+    throw new Error('Method not implemented.')
+  }
+  params(): Partial<Record<string, string | string[]>> {
+    return this._params
+  }
+  setParams(params: Record<string, string | string[] | undefined>): void {
+    this._params = params
+  }
+  query(): PikkuQuery {
     throw new Error('Method not implemented.')
   }
   public async data() {
@@ -35,17 +62,30 @@ class MockRequest implements PikkuHTTPRequest {
   }
 }
 
-class MockResponse extends PikkuHTTPAbstractResponse {
-  public statusSet: boolean | undefined
-  public ended: boolean | undefined
+export class PikkuMockResponse implements PikkuHTTPResponse {
+  public _status: number | undefined
+  private _data: unknown
 
-  public setJson(body: JSONValue): void {}
-  public setResponse(response: string | Buffer): void {}
-  public setStatus(code) {
-    this.statusSet = code
+  status(code: number): this {
+    this._status = code
+    return this
   }
-  public end() {
-    this.ended = true
+
+  cookie(name: string, value: string | null, options: SerializeOptions): this {
+    throw new Error('Method not implemented.')
+  }
+  header(name: string, value: string | string[]): this {
+    throw new Error('Method not implemented.')
+  }
+  arrayBuffer(data: XMLHttpRequestBodyInit): this {
+    throw new Error('Method not implemented.')
+  }
+  json(data: unknown): this {
+    this._data = data
+    return this
+  }
+  redirect(location: string, status?: number): this {
+    throw new Error('Method not implemented.')
   }
 }
 
@@ -60,14 +100,13 @@ afterEach(() => {
 })
 
 test('runChannel should return undefined and 404 if no matching channel is found', async () => {
-  const mockResponse = new MockResponse()
+  const mockResponse = new PikkuMockResponse()
 
   const result = await runLocalChannel({
     singletonServices: mockSingletonServices,
     channelId: 'test-channel-id',
-    request: new MockRequest('/non-existent-channel', 'get'),
+    request: new PikkuMockRequest('/non-existent-channel', 'get'),
     response: mockResponse,
-    route: '/non-existent-channel',
     createSessionServices: mockCreateSessionServices,
   })
 
@@ -76,8 +115,8 @@ test('runChannel should return undefined and 404 if no matching channel is found
     undefined,
     'Should return undefined if no channel matches'
   )
-  assert.equal(mockResponse.statusSet, 404, 'Should set response status to 404')
-  assert.equal(mockResponse.ended, true, 'Should end the response')
+  assert.equal(mockResponse._status, 404, 'Should set response status to 404')
+  // assert.equal(mockResponse._ended, true, 'Should end the response')
 })
 
 test('runChannel should return a channel handler if channel matches and no auth required', async () => {
@@ -99,11 +138,13 @@ test('runChannel should return a channel handler if channel matches and no auth 
   const result = await runLocalChannel({
     singletonServices: singletonServicesWithPerm,
     channelId: 'test-channel-id',
-    request: new MockRequest('/test-channel', 'get'),
-    response: new MockResponse(),
+    request: new PikkuMockRequest('/test-channel', 'get'),
+    response: new PikkuMockResponse(),
     route: '/test-channel',
     createSessionServices: mockCreateSessionServices,
   })
+
+  console.log(result)
 
   assert.ok(result, 'Should return a PikkuChannelHandler instance')
 

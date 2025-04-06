@@ -23,8 +23,6 @@
     "./channel/local": "./dist/channel/local/index.js",
     "./channel/serverless": "./dist/channel/serverless/index.js",
     "./http": "./dist/http/index.js",
-    "./http/pikku-http-abstract-response": "./dist/http/pikku-http-abstract-response.js",
-    "./http/pikku-http-abstract-request": "./dist/http/pikku-http-abstract-request.js",
     "./errors": "./dist/errors/index.js",
     "./scheduler": "./dist/scheduler/index.js",
     "./services": "./dist/services/index.js",

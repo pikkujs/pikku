@@ -22,7 +22,7 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
-      # - run: yarn test:coverage
+      - run: yarn test:coverage
       - run: yarn prettier
       - run: yarn lint
       - run: yarn typedoc
@@ -64,7 +64,7 @@ jobs:
             cloudflare-workers,
             nextjs,
           ]
-        package-manager: [yarn]
+        package-manager: [npm]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -79,10 +79,10 @@ jobs:
         with:
           name: built-packages
           path: packages
-      - name: Install dependencies
-        run: yarn install
+      - name: Install dependencies for create
+        run: yarn install # TODO: This should only need to install create
       - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager ${{ matrix.package-manager}}
-      - run: cd packages/create/my-app && yarn link -A ../../../ && yarn run test
+      - run: cd packages/create/my-app && npm run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       USES_WEBSOCKET: ${{ matrix.template }}
