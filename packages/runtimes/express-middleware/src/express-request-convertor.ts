@@ -1,5 +1,4 @@
 import type { Request as ExpressRequest } from 'express'
-import getRawBody from 'raw-body'
 
 export async function expressToRequest(req: ExpressRequest): Promise<Request> {
   const protocol = req.protocol || 'http'
