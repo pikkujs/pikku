@@ -3,7 +3,12 @@ import * as assert from 'node:assert/strict'
 import { runLocalChannel } from './local-channel-runner.js'
 import { resetPikkuState } from '../../pikku-state.js'
 import { addChannel } from '../channel-runner.js'
-import { HTTPMethod, PikkuHTTPRequest, PikkuHTTPResponse, PikkuQuery } from '../../http/http-routes.types.js'
+import {
+  HTTPMethod,
+  PikkuHTTPRequest,
+  PikkuHTTPResponse,
+  PikkuQuery,
+} from '../../http/http-routes.types.js'
 import { SerializeOptions } from 'cookie'
 
 /**

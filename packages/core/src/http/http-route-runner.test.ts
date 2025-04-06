@@ -4,7 +4,10 @@ import { NotFoundError } from '../errors/errors.js'
 import { JSONValue, PikkuMiddleware } from '../types/core.types.js'
 import { fetch, addRoute } from './http-route-runner.js'
 import { resetPikkuState } from '../pikku-state.js'
-import { PikkuMockRequest, PikkuMockResponse } from '../channel/local/local-channel-runner.test.js'
+import {
+  PikkuMockRequest,
+  PikkuMockResponse,
+} from '../channel/local/local-channel-runner.test.js'
 
 const sessionMiddleware: PikkuMiddleware = async (services, _, next) => {
   services.userSessionService.set({ userId: 'test' } as any)
