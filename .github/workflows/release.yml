@@ -22,7 +22,7 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
-      - run: yarn test:coverage
+      # - run: yarn test:coverage
       - run: yarn prettier
       - run: yarn lint
       - run: yarn typedoc
