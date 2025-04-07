@@ -264,17 +264,12 @@ const executeRouteWithMiddleware = async (
     const data = await http?.request?.data()
 
     // Validate request data against the defined schema, if any
-    try {
-      console.log(schemaName, data)
-      validateSchema(
-        singletonServices.logger,
-        singletonServices.schemaService,
-        schemaName,
-        data
-      )
-    } catch (e) {
-      // TODO: Implement proper handling for schema validation failures
-    }
+    await validateSchema(
+      singletonServices.logger,
+      singletonServices.schemaService,
+      schemaName,
+      data
+    )
 
     // Coerce query string parameters to arrays if specified by the schema
     if (options.coerceToArray && schemaName) {

@@ -144,7 +144,7 @@ export const processMessageHandlers = (
     )
 
     if (routeMeta) {
-      validateSchema(services.logger, data, routeMeta)
+      await validateSchema(services.logger, data, routeMeta)
     }
 
     const hasPermission = await validatePermissions(

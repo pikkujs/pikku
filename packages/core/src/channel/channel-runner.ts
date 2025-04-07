@@ -86,7 +86,7 @@ export const openChannel = async ({
     if (coerceToArray && schemaName) {
       coerceQueryStringToArray(schemaName, openingData)
     }
-    validateSchema(
+    await validateSchema(
       singletonServices.logger,
       singletonServices.schemaService,
       schemaName,
