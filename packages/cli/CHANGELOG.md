@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.6.19
+
+### Patch Changes
+
+- 1c8c470: removing a console
+- Updated dependencies [1c8c470]
+  - @pikku/core@0.6.23
+
 ## 0.6.18
 
 ### Patch Changes
