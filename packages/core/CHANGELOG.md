@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.23
+
+### Patch Changes
+
+- 1c8c470: fix: await schema validation
+
 ## 0.6.22
 
 ### Patch Changes
