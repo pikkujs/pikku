@@ -39,7 +39,7 @@ export const pikkuExpressMiddleware = (
     logRegisterRoutes(singletonServices.logger)
   }
   if (loadSchemas) {
-    compileAllSchemas(singletonServices.logger, singletonServices.schemaService)
+    compileAllSchemas(singletonServices.logger, singletonServices.schema)
   }
 
   return async (req, res, next) => {

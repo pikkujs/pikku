@@ -33,7 +33,7 @@ export const authAPIKey = <
     }
 )) => {
   const middleware: PikkuMiddleware = async (services, { http }, next) => {
-    if (!http?.request || services.userSessionService.get()) {
+    if (!http?.request || services.userSession.get()) {
       return next()
     }
 
@@ -55,7 +55,7 @@ export const authAPIKey = <
         userSession = await getSessionForAPIKey!(services as any, apiKey)
       }
       if (userSession) {
-        services.userSessionService.setInitial(userSession)
+        services.userSession.setInitial(userSession)
       }
     }
     return next()

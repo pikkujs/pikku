@@ -14,8 +14,9 @@ export default {
 
   async fetch(request, env): Promise<Response> {
     const singletonServices = await setupServices(env)
-    const websocketServerDurableObject: any =
-      singletonServices.variablesService.get('WEBSOCKET_HIBERNATION_SERVER')
+    const websocketServerDurableObject: any = singletonServices.variables.get(
+      'WEBSOCKET_HIBERNATION_SERVER'
+    )
     const id = websocketServerDurableObject.idFromName('channel-name-goes-here')
     const webSocketHibernationServer = websocketServerDurableObject.get(id)
     return await runFetch(

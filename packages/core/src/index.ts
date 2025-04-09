@@ -11,7 +11,7 @@ export * from './channel/index.js'
 export * from './scheduler/index.js'
 export * from './errors/index.js'
 export * from './middleware/index.js'
-
+export * from './time-utils.js'
 export { pikkuState } from './pikku-state.js'
 export { runMiddleware } from './middleware-runner.js'
 export { addRoute, addMiddleware } from './http/http-route-runner.js'

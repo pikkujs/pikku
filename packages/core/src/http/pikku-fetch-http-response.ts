@@ -1,8 +1,14 @@
 import { PikkuHTTPResponse } from './http-routes.types.js'
+import {
+  SerializeOptions as CookieSerializeOptions,
+  serialize as serializeCookie,
+} from 'cookie'
 
 export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #statusCode: number = 200
   #headers = new Headers()
+  #cookies = new Map<string, { value: string; flags: CookieSerializeOptions }>()
+
   #body: BodyInit | null = null
 
   public status(code: number): this {
@@ -10,8 +16,12 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
-  public cookie(name: string, value: string, flags: any): this {
-    // TODO
+  public cookie(
+    name: string,
+    value: string,
+    flags: CookieSerializeOptions
+  ): this {
+    this.#cookies.set(name, { value, flags })
     return this
   }
 
@@ -61,6 +71,10 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   }
 
   public toResponse(args?: Record<string, any>): Response {
+    const cookieHeader = Array.from(this.#cookies.entries()).map(
+      ([name, { value, flags }]) => serializeCookie(name, value, flags)
+    )
+    this.#headers.set('Set-Cookie', cookieHeader.join(', '))
     return new Response(this.#body, {
       ...args,
       status: this.#statusCode,

@@ -42,7 +42,7 @@ export const pikkuWebsocketHandler = ({
     logChannels(singletonServices.logger)
   }
   if (loadSchemas) {
-    compileAllSchemas(singletonServices.logger, singletonServices.schemaService)
+    compileAllSchemas(singletonServices.logger, singletonServices.schema)
   }
 
   const eventHub = new UWSEventHubService()

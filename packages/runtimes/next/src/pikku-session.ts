@@ -23,13 +23,13 @@ export const getSession = async <UserSession extends CoreUserSession>(
   middleware: PikkuMiddleware[]
 ): Promise<UserSession | undefined> => {
   const request = new PikkuFetchHTTPRequest(nextRequest)
-  const userSessionService = new PikkuUserSessionService<UserSession>()
+  const userSession = new PikkuUserSessionService<UserSession>()
   await runMiddleware(
-    { ...singletonServices, userSessionService },
+    { ...singletonServices, userSession },
     {
       http: { request },
     },
     middleware as any
   )
-  return userSessionService.get()
+  return userSession.get()
 }

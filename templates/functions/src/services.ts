@@ -25,10 +25,10 @@ export const createSingletonServices: CreateSingletonServices<
   Config,
   SingletonServices
 > = async (config: Config): Promise<SingletonServices> => {
-  const variablesService = new LocalVariablesService()
+  const variables = new LocalVariablesService()
   const logger = new ConsoleLogger()
 
-  const jwt = new JoseJWTService<UserSession>(
+  const jwt = new JoseJWTService(
     async () => [
       {
         id: 'my-key',
@@ -38,14 +38,14 @@ export const createSingletonServices: CreateSingletonServices<
     logger
   )
 
-  const schemaService = new CFWorkerSchemaService(logger)
+  const schema = new CFWorkerSchemaService(logger)
 
   return {
     config,
     logger,
-    variablesService,
+    variables,
     jwt,
-    schemaService,
+    schema,
   }
 }
 

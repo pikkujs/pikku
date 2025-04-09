@@ -8,7 +8,7 @@ import {
 /**
  * Runs a chain of middleware functions in sequence before executing the main function.
  *
- * @param services - An object containing services (e.g., singletonServices, userSessionService, etc.)
+ * @param services - An object containing services (e.g., singletonServices, userSession, etc.)
  * @param interaction - The interaction context, e.g., { http }.
  * @param middlewares - An array of middleware functions to run.
  * @param main - The main function to execute after all middleware have run.
@@ -16,7 +16,7 @@ import {
  *
  * @example
  * runMiddleware(
- *   { ...services, userSessionService },
+ *   { ...services, userSession },
  *   { http },
  *   [middleware1, middleware2, middleware3],
  *   async () => { return await runMain(); }
@@ -24,7 +24,7 @@ import {
  */
 export const runMiddleware = async (
   services: CoreSingletonServices & {
-    userSessionService: UserSessionService<any>
+    userSession: UserSessionService<any>
   },
   interaction: PikkuInteraction,
   middlewares: PikkuMiddleware[],
