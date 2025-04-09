@@ -118,7 +118,7 @@ export class PikkuFetchHTTPRequest<In = unknown>
     if (noBodyMethods.includes(this.method())) {
       return {}
     }
-    
+
     let body: any = {}
     const contentType = this.header('content-type') || ''
     try {

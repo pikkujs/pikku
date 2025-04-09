@@ -23,7 +23,7 @@ export const runLocalChannel = async ({
   createSessionServices,
   skipUserSession = false,
   respondWith404 = true,
-  coerceToArray = false,
+  coerceDataFromSchema = true,
   logWarningsForStatusCodes = [],
   bubbleErrors = false,
 }: Partial<Pick<CoreAPIChannel<unknown, any>, 'route'>> &
@@ -51,7 +51,7 @@ export const runLocalChannel = async ({
         route,
         singletonServices,
         skipUserSession,
-        coerceToArray,
+        coerceDataFromSchema,
         userSession,
       })
 

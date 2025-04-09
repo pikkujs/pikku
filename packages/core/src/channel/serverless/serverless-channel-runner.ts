@@ -64,7 +64,7 @@ export const runChannelConnect = async ({
   createSessionServices,
   channelStore,
   channelHandlerFactory,
-  coerceToArray = false,
+  coerceDataFromSchema = true,
   logWarningsForStatusCodes = [],
   respondWith404 = true,
   bubbleErrors = false,
@@ -86,7 +86,7 @@ export const runChannelConnect = async ({
     request,
     route,
     singletonServices,
-    coerceToArray,
+    coerceDataFromSchema,
     userSession,
   })
 

@@ -58,7 +58,7 @@ const validateAllSchemasLoaded = (
   }
 }
 
-export const coerceQueryStringToArray = (schemaName: string, data: any) => {
+export const coerceTopLevelDataFromSchema = (schemaName: string, data: any) => {
   const schema = pikkuState('misc', 'schemas').get(schemaName)
   for (const key in schema.properties) {
     const property = schema.properties[key]
@@ -71,6 +71,8 @@ export const coerceQueryStringToArray = (schemaName: string, data: any) => {
     }
     if (type === 'array' && typeof data[key] === 'string') {
       data[key] = data[key].split(',')
+    } else if (type === 'string' && property.format === 'date-time') {
+      data[key] = new Date(data[key])
     }
   }
 }

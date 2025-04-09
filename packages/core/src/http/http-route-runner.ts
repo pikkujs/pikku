@@ -19,7 +19,7 @@ import {
   NotFoundError,
 } from '../errors/errors.js'
 import { closeSessionServices } from '../utils.js'
-import { coerceQueryStringToArray, validateSchema } from '../schema.js'
+import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
   PikkuUserSessionService,
   UserSessionService,
@@ -215,7 +215,7 @@ const executeRouteWithMiddleware = async (
   },
   http: PikkuHTTP | undefined,
   options: {
-    coerceToArray: boolean
+    coerceDataFromSchema: boolean
   }
 ) => {
   const { matchedPath, params, route, middleware, schemaName } = matchedRoute
@@ -279,9 +279,9 @@ const executeRouteWithMiddleware = async (
       data
     )
 
-    // Coerce query string parameters to arrays if specified by the schema
-    if (options.coerceToArray && schemaName) {
-      coerceQueryStringToArray(schemaName, data)
+    // Coerce (top level) query string parameters or date objects if specified by the schema
+    if (options.coerceDataFromSchema && schemaName) {
+      coerceTopLevelDataFromSchema(schemaName, data)
     }
 
     // Execute permission checks
@@ -396,7 +396,7 @@ export const fetchData = async <In, Out>(
     skipUserSession = false,
     respondWith404 = true,
     logWarningsForStatusCodes = [],
-    coerceToArray = false,
+    coerceDataFromSchema = true,
     bubbleErrors = false,
   }: RunRouteOptions & RunRouteParams
 ): Promise<Out | void> => {
@@ -436,7 +436,7 @@ export const fetchData = async <In, Out>(
       },
       matchedRoute,
       http,
-      { coerceToArray }
+      { coerceDataFromSchema }
     ))
 
     return result

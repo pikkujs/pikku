@@ -1,6 +1,6 @@
 import { test, describe, before } from 'node:test'
 import * as assert from 'assert'
-import { addSchema, coerceQueryStringToArray } from './schema.js'
+import { addSchema, coerceTopLevelDataFromSchema } from './schema.js'
 
 describe('Schema', () => {
   describe('coerceQueryStringToArray', () => {
@@ -24,32 +24,32 @@ describe('Schema', () => {
 
     test('should split a string into an array for properties of type array', () => {
       const data = { tags: 'a,b,c' }
-      coerceQueryStringToArray('testSchema', data)
+      coerceTopLevelDataFromSchema('testSchema', data)
       assert.deepStrictEqual(data.tags, ['a', 'b', 'c'])
     })
 
     test('should not modify properties of type array if they are already arrays', () => {
       const data = { tags: ['a', 'b', 'c'] }
-      coerceQueryStringToArray('testSchema', data)
+      coerceTopLevelDataFromSchema('testSchema', data)
       assert.deepStrictEqual(data.tags, ['a', 'b', 'c'])
     })
 
     test('should not modify properties that are not type array', () => {
       const data = { count: 5, name: 'example' }
-      coerceQueryStringToArray('testSchema', data)
+      coerceTopLevelDataFromSchema('testSchema', data)
       assert.strictEqual(data.count, 5)
       assert.strictEqual(data.name, 'example')
     })
 
     test('should handle cases where the data object does not have a key present in the schema', () => {
       const data = { unknownKey: 'shouldRemain' }
-      coerceQueryStringToArray('testSchema', data)
+      coerceTopLevelDataFromSchema('testSchema', data)
       assert.strictEqual(data.unknownKey, 'shouldRemain')
     })
 
     test('should handle cases where schema properties contain boolean values', () => {
       const data = { tags: 'a,b,c', isActive: 'true' }
-      coerceQueryStringToArray('booleanSchema', data)
+      coerceTopLevelDataFromSchema('booleanSchema', data)
       assert.deepStrictEqual(data.tags, ['a', 'b', 'c'])
       assert.strictEqual(data.isActive, 'true') // No coercion should happen
     })

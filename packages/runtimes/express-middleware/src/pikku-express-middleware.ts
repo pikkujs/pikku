@@ -19,7 +19,7 @@ import { sendResponseToExpress } from './express-response-convertor.js'
 type PikkuMiddlewareArgs = RunRouteOptions & {
   logRoutes?: boolean
   loadSchemas?: boolean
-  coerceToArray?: boolean
+  coerceDataFromSchema?: boolean
 }
 
 /**
@@ -33,7 +33,12 @@ type PikkuMiddlewareArgs = RunRouteOptions & {
 export const pikkuExpressMiddleware = (
   singletonServices: CoreSingletonServices,
   createSessionServices: CreateSessionServices<any, any, any>,
-  { respondWith404, logRoutes, loadSchemas, coerceToArray }: PikkuMiddlewareArgs
+  {
+    respondWith404,
+    logRoutes,
+    loadSchemas,
+    coerceDataFromSchema,
+  }: PikkuMiddlewareArgs = {}
 ): RequestHandler => {
   if (logRoutes) {
     logRegisterRoutes(singletonServices.logger)
@@ -48,7 +53,7 @@ export const pikkuExpressMiddleware = (
       singletonServices,
       createSessionServices,
       respondWith404,
-      coerceToArray,
+      coerceDataFromSchema,
     })
     await sendResponseToExpress(res, response)
     next()

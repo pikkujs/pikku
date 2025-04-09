@@ -60,7 +60,6 @@ export class PikkuFastifyServer {
       pikku: {
         singletonServices: this.singletonServices,
         createSessionServices: this.createSessionServices,
-        respondWith404: true,
         logRoutes: true,
         loadSchemas: true,
       },

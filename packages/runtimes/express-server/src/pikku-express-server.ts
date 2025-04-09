@@ -79,7 +79,6 @@ export class PikkuExpressServer {
         this.singletonServices,
         this.createSessionServices,
         {
-          respondWith404: false,
           logRoutes: true,
           loadSchemas: true,
         }

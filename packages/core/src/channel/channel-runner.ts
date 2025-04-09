@@ -1,6 +1,6 @@
 import { NotFoundError } from '../errors/errors.js'
 import { pikkuState } from '../pikku-state.js'
-import { coerceQueryStringToArray, validateSchema } from '../schema.js'
+import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import {
   CoreAPIChannel,
@@ -56,7 +56,7 @@ export const getMatchingChannelConfig = (request: string) => {
 export const openChannel = async ({
   route,
   singletonServices,
-  coerceToArray = false,
+  coerceDataFromSchema = true,
   request,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
   RunChannelParams<unknown> & {
@@ -83,8 +83,8 @@ export const openChannel = async ({
   let openingData: any | undefined
   if (request) {
     openingData = await request.data()
-    if (coerceToArray && schemaName) {
-      coerceQueryStringToArray(schemaName, openingData)
+    if (coerceDataFromSchema && schemaName) {
+      coerceTopLevelDataFromSchema(schemaName, openingData)
     }
     await validateSchema(
       singletonServices.logger,

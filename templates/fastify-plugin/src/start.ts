@@ -19,7 +19,6 @@ async function main(): Promise<void> {
     pikku: {
       singletonServices,
       createSessionServices,
-      respondWith404: false,
     },
   })
 

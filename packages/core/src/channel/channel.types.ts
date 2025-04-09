@@ -16,7 +16,7 @@ import { CoreAPIFunction, CoreAPIPermission } from '../types/functions.types.js'
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean
   respondWith404: boolean
-  coerceToArray: boolean
+  coerceDataFromSchema: boolean
   logWarningsForStatusCodes: number[]
   bubbleErrors: boolean
 }>
