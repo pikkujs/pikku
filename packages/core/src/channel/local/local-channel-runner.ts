@@ -32,7 +32,7 @@ export const runLocalChannel = async ({
   let sessionServices: SessionServices<typeof singletonServices> | undefined
 
   let channelHandler: PikkuLocalChannelHandler | undefined
-  const userSessionService = new PikkuUserSessionService()
+  const userSession = new PikkuUserSessionService()
 
   let http: PikkuHTTP | undefined
   if (request) {
@@ -52,7 +52,7 @@ export const runLocalChannel = async ({
         singletonServices,
         skipUserSession,
         coerceToArray,
-        userSessionService,
+        userSession,
       })
 
       channelHandler = new PikkuLocalChannelHandler(
@@ -61,7 +61,7 @@ export const runLocalChannel = async ({
         openingData
       )
       const channel = channelHandler.getChannel()
-      const session = await userSessionService.get()
+      const session = await userSession.get()
       if (createSessionServices) {
         sessionServices = await createSessionServices(
           singletonServices,
@@ -73,7 +73,7 @@ export const runLocalChannel = async ({
       const allServices = {
         ...singletonServices,
         ...sessionServices,
-        userSession: userSessionService,
+        userSession: userSession,
       }
 
       channelHandler.registerOnOpen(() => {
@@ -115,7 +115,7 @@ export const runLocalChannel = async ({
   await runMiddleware(
     {
       ...singletonServices,
-      userSessionService,
+      userSession,
     },
     { http },
     route.middleware || [],

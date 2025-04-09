@@ -36,11 +36,11 @@ let state:
 const getParams = async (event: APIGatewayEvent) => {
   if (!state) {
     const config = await createConfig()
-    const variablesService = new LocalVariablesService()
+    const variables = new LocalVariablesService()
     const singletonServices = await createSingletonServices(config, {
-      variablesService,
+      variables,
       // @ts-ignore TODO
-      secretService: new AWSSecrets(config),
+      secrets: new AWSSecrets(config),
     })
     // @ts-ignore
     const channelStore = new KyselyChannelStore(singletonServices.kysely)

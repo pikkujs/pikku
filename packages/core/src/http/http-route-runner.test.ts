@@ -10,7 +10,7 @@ import {
 } from '../channel/local/local-channel-runner.test.js'
 
 const sessionMiddleware: PikkuMiddleware = async (services, _, next) => {
-  services.userSessionService.set({ userId: 'test' } as any)
+  services.userSession.set({ userId: 'test' } as any)
   await next()
 }
 

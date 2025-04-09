@@ -46,7 +46,7 @@ export type CoreAPIFunctionSessionless<
 > = (
   services: Services,
   data: In,
-  session: Session
+  session?: Session
 ) => Channel extends true ? Promise<Out> | Promise<void> : Promise<Out>
 
 /**

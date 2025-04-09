@@ -11,7 +11,7 @@ export const setupServices = async (
   const config = await createConfig(localVariables)
   const localSecrets = new LocalSecretService(localVariables)
   return await createSingletonServices(config, {
-    variablesService: localVariables,
-    secretService: localSecrets,
+    variables: localVariables,
+    secrets: localSecrets,
   })
 }

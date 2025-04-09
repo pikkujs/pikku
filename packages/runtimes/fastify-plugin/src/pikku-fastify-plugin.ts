@@ -44,12 +44,12 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
     logRoutes(pikku.singletonServices.logger)
   }
   if (pikku.loadSchemas) {
-    if (!pikku.singletonServices.schemaService) {
+    if (!pikku.singletonServices.schema) {
       throw new Error('SchemaService needs to be defined to load schemas')
     }
     compileAllSchemas(
       pikku.singletonServices.logger,
-      pikku.singletonServices.schemaService
+      pikku.singletonServices.schema
     )
   }
   fastify.all('/*', async (req, res) => {

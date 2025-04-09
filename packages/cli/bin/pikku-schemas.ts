@@ -10,7 +10,6 @@ export const pikkuSchemas = async (
   { tsconfig, schemaDirectory, supportsImportAttributes }: PikkuCLIConfig,
   { http }: InspectorState
 ) => {
-  console.log('Generating schemas...')
   return await logCommandInfoAndTime(
     'Creating schemas',
     'Created schemas',
