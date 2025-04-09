@@ -1,5 +1,13 @@
 # @pikku/next
 
+## 0.6.9
+
+### Patch Changes
+
+- 531f4b5: refactor: using userSession.set to set cookies with middleware
+- Updated dependencies [531f4b5]
+  - @pikku/core@0.6.24
+
 ## 0.6.8
 
 ### Patch Changes
