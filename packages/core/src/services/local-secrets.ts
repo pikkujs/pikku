@@ -10,7 +10,7 @@ export class LocalSecretService implements SecretService {
    * Creates an instance of LocalSecretService.
    */
   constructor(
-    private variablesService: VariablesService = new LocalVariablesService()
+    private variables: VariablesService = new LocalVariablesService()
   ) {}
 
   /**
@@ -20,7 +20,7 @@ export class LocalSecretService implements SecretService {
    * @throws {Error} If the secret is not found.
    */
   public async getSecretJSON<R>(key: string): Promise<R> {
-    const value = await this.variablesService.get(key)
+    const value = await this.variables.get(key)
     if (value) {
       return JSON.parse(value)
     }
@@ -34,7 +34,7 @@ export class LocalSecretService implements SecretService {
    * @throws {Error} If the secret is not found.
    */
   public async getSecret(key: string): Promise<string> {
-    const value = await this.variablesService.get(key)
+    const value = await this.variables.get(key)
     if (value) {
       return value
     }

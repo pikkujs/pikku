@@ -149,8 +149,6 @@ test('runChannel should return a channel handler if channel matches and no auth 
     createSessionServices: mockCreateSessionServices,
   })
 
-  console.log(result)
-
   assert.ok(result, 'Should return a PikkuChannelHandler instance')
 
   // Simulate opening the channel

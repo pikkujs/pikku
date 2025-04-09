@@ -1,3 +1,5 @@
+import { RelativeTimeInput } from '../time-utils.js'
+
 /**
  * Interface for handling JSON Web Tokens (JWT).
  */
@@ -8,7 +10,10 @@ export interface JWTService {
    * @param payload - The payload to encode.
    * @returns A promise that resolves to the encoded JWT.
    */
-  encode: <T extends any>(expiresIn: string, payload: T) => Promise<string>
+  encode: <T extends any>(
+    expiresIn: RelativeTimeInput,
+    payload: T
+  ) => Promise<string>
 
   /**
    * Decodes a JWT into its payload.

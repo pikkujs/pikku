@@ -44,7 +44,7 @@ export const pikkuHTTPHandler = ({
     logRegisterRoutes(singletonServices.logger)
   }
   if (loadSchemas) {
-    compileAllSchemas(singletonServices.logger, singletonServices.schemaService)
+    compileAllSchemas(singletonServices.logger, singletonServices.schema)
   }
 
   return async (res: uWS.HttpResponse, req: uWS.HttpRequest): Promise<void> => {

@@ -2,6 +2,7 @@ import { ChannelStore } from '../channel/channel-store.js'
 import { CoreUserSession } from '../types/core.types.js'
 
 export interface UserSessionService<UserSession extends CoreUserSession> {
+  sessionChanged: boolean
   setInitial(session: UserSession): void
   set(session: UserSession): Promise<void> | void
   clear(): Promise<void> | void
@@ -11,6 +12,7 @@ export interface UserSessionService<UserSession extends CoreUserSession> {
 export class PikkuUserSessionService<UserSession extends CoreUserSession>
   implements UserSessionService<UserSession>
 {
+  public sessionChanged = false
   private session: UserSession | undefined
   constructor(
     private channelStore?: ChannelStore<unknown, unknown, UserSession>,
@@ -26,11 +28,13 @@ export class PikkuUserSessionService<UserSession extends CoreUserSession>
   }
 
   public set(session: UserSession) {
+    this.sessionChanged = true
     this.session = session
     return this.channelStore?.setUserSession(this.channelId!, session)
   }
 
   public clear() {
+    this.sessionChanged = true
     this.session = undefined
     return this.channelStore?.setUserSession(this.channelId!, null)
   }

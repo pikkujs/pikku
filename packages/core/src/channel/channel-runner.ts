@@ -60,7 +60,7 @@ export const openChannel = async ({
   request,
 }: Pick<CoreAPIChannel<unknown, string>, 'route'> &
   RunChannelParams<unknown> & {
-    userSessionService: UserSessionService<any>
+    userSession: UserSessionService<any>
   } & RunChannelOptions): Promise<{
   openingData: unknown
   channelConfig: CoreAPIChannel<unknown, any>
@@ -88,7 +88,7 @@ export const openChannel = async ({
     }
     await validateSchema(
       singletonServices.logger,
-      singletonServices.schemaService,
+      singletonServices.schema,
       schemaName,
       openingData
     )

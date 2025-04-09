@@ -4,17 +4,14 @@
  *
  * @module JoseJWTService
  */
-import { CoreUserSession } from '@pikku/core'
+import { getRelativeTimeOffsetFromNow, RelativeTimeInput } from '@pikku/core'
 import { JWTService, Logger } from '@pikku/core/services'
 import * as jose from 'jose'
 
 /**
  * Service for handling JSON Web Tokens (JWT) using the jose library.
- * @template UserSession - The type of the user session.
  */
-export class JoseJWTService<UserSession extends CoreUserSession>
-  implements JWTService
-{
+export class JoseJWTService implements JWTService {
   private currentSecret: { id: string; key: Uint8Array } | undefined
   private secrets: Record<string, Uint8Array> = {}
 
@@ -52,7 +49,10 @@ export class JoseJWTService<UserSession extends CoreUserSession>
    * @param payload - The payload to encode.
    * @returns A promise that resolves to the encoded JWT.
    */
-  public async encode<T>(expiresIn: string, payload: T): Promise<string> {
+  public async encode<T>(
+    expiresIn: RelativeTimeInput,
+    payload: T
+  ): Promise<string> {
     if (!this.currentSecret) {
       await this.init()
     }
@@ -61,7 +61,7 @@ export class JoseJWTService<UserSession extends CoreUserSession>
       .setIssuedAt()
       // .setIssuer('urn:example:issuer')
       // .setAudience('urn:example:audience')
-      .setExpirationTime(expiresIn)
+      .setExpirationTime(getRelativeTimeOffsetFromNow(expiresIn))
       .sign(this.currentSecret!.key)
   }
 

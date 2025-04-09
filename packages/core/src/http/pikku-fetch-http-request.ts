@@ -5,6 +5,7 @@ import {
   PikkuHTTPRequest,
   PikkuQuery,
 } from './http-routes.types.js'
+import { UnprocessableContentError } from '../errors/errors.js'
 
 /**
  * Abstract class representing a pikku request.
@@ -97,15 +98,60 @@ export class PikkuFetchHTTPRequest<In = unknown>
    */
   public async data(): Promise<In> {
     let body: any = {}
+    const contentType = this.header('content-type') || ''
     try {
-      body = await this.json()
-    } catch (e) {}
-
-    return {
-      ...this.params(),
-      ...this.query(),
-      // TODO: If body isn't an object, we should insert it as the word...
-      ...body,
+      if (contentType.includes('application/json')) {
+        const parsed = await this.json()
+        body =
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+            ? parsed
+            : { data: parsed }
+      } else if (contentType.includes('text/')) {
+        const text = await this.request.text()
+        body = { data: text }
+      } else {
+        const buffer = await this.request.arrayBuffer()
+        body = { data: buffer }
+      }
+    } catch (e) {
+      console.error(e)
+      // fallback to empty body
+      body = {}
     }
+
+    const parts = [this.params(), this.query(), body]
+
+    const merged: Record<string, unknown> = {}
+
+    for (const part of parts) {
+      for (const [key, value] of Object.entries(part)) {
+        if (key in merged && !valuesAreEquivalent(merged[key], value)) {
+          throw new UnprocessableContentError(
+            `Conflicting values for key "${key}": "${merged[key]}" vs "${value}"`
+          )
+        }
+
+        merged[key] ??= value
+      }
+    }
+
+    return merged as In
   }
+}
+
+function valuesAreEquivalent(a: unknown, b: unknown): boolean {
+  return coerce(a) === coerce(b)
+}
+
+function coerce(value: unknown): string | number | boolean {
+  if (typeof value === 'boolean' || typeof value === 'number') return value
+  if (typeof value === 'string') {
+    if (value === 'true') return true
+    if (value === 'false') return false
+    const num = Number(value)
+    return isNaN(num) ? value : num
+  }
+  return value as any
 }

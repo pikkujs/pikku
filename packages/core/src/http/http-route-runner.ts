@@ -7,7 +7,11 @@ import {
   PikkuHTTPRequest,
   PikkuHTTPResponse,
 } from './http-routes.types.js'
-import { PikkuMiddleware, SessionServices } from '../types/core.types.js'
+import {
+  CoreUserSession,
+  PikkuMiddleware,
+  SessionServices,
+} from '../types/core.types.js'
 import { match } from 'path-to-regexp'
 import {
   ForbiddenError,
@@ -16,7 +20,10 @@ import {
 } from '../errors/errors.js'
 import { closeSessionServices } from '../utils.js'
 import { coerceQueryStringToArray, validateSchema } from '../schema.js'
-import { PikkuUserSessionService } from '../services/user-session-service.js'
+import {
+  PikkuUserSessionService,
+  UserSessionService,
+} from '../services/user-session-service.js'
 import { runMiddleware } from '../middleware-runner.js'
 import { handleError } from '../handle-error.js'
 import { pikkuState } from '../pikku-state.js'
@@ -195,7 +202,7 @@ export const createHTTPInteraction = (
 const executeRouteWithMiddleware = async (
   services: {
     singletonServices: any
-    userSessionService: any
+    userSession: UserSessionService<CoreUserSession>
     createSessionServices: Function
     skipUserSession: boolean
   },
@@ -214,7 +221,7 @@ const executeRouteWithMiddleware = async (
   const { matchedPath, params, route, middleware, schemaName } = matchedRoute
   const {
     singletonServices,
-    userSessionService,
+    userSession,
     createSessionServices,
     skipUserSession,
   } = services
@@ -232,7 +239,7 @@ const executeRouteWithMiddleware = async (
 
   // Main route execution logic wrapped for middleware handling
   const runMain = async () => {
-    const session = userSessionService.get()
+    const session = userSession.get()
 
     // Ensure session is available when required
     if (skipUserSession && requiresSession) {
@@ -251,7 +258,7 @@ const executeRouteWithMiddleware = async (
 
     // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
-      { ...singletonServices, userSessionService },
+      { ...singletonServices, userSession },
       { http },
       session
     )
@@ -259,6 +266,7 @@ const executeRouteWithMiddleware = async (
     const allServices = {
       ...singletonServices,
       ...sessionServices,
+      userSession,
       http,
     }
     const data = await http?.request?.data()
@@ -266,7 +274,7 @@ const executeRouteWithMiddleware = async (
     // Validate request data against the defined schema, if any
     await validateSchema(
       singletonServices.logger,
-      singletonServices.schemaService,
+      singletonServices.schema,
       schemaName,
       data
     )
@@ -307,7 +315,7 @@ const executeRouteWithMiddleware = async (
 
   // Execute middleware, then run the main logic
   await runMiddleware(
-    { ...singletonServices, userSessionService },
+    { ...singletonServices, userSession },
     { http },
     middleware,
     runMain
@@ -392,7 +400,7 @@ export const fetchData = async <In, Out>(
     bubbleErrors = false,
   }: RunRouteOptions & RunRouteParams
 ): Promise<Out | void> => {
-  const userSessionService = new PikkuUserSessionService()
+  const userSession = new PikkuUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
 
@@ -422,7 +430,7 @@ export const fetchData = async <In, Out>(
     ;({ result, sessionServices } = await executeRouteWithMiddleware(
       {
         singletonServices,
-        userSessionService,
+        userSession,
         createSessionServices,
         skipUserSession,
       },

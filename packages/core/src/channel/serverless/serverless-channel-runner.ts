@@ -78,10 +78,7 @@ export const runChannelConnect = async ({
     http = createHTTPInteraction(new PikkuFetchHTTPRequest(request), response)
   }
 
-  const userSessionService = new PikkuUserSessionService(
-    channelStore,
-    channelId
-  )
+  const userSession = new PikkuUserSessionService(channelStore, channelId)
 
   const { channelConfig, openingData } = await openChannel({
     channelId,
@@ -90,7 +87,7 @@ export const runChannelConnect = async ({
     route,
     singletonServices,
     coerceToArray,
-    userSessionService,
+    userSession,
   })
 
   const main = async () => {
@@ -110,7 +107,7 @@ export const runChannelConnect = async ({
         sessionServices = await createSessionServices(
           singletonServices,
           { http },
-          await userSessionService.get()
+          await userSession.get()
         )
       }
       await channelConfig.onConnect?.(
@@ -138,7 +135,7 @@ export const runChannelConnect = async ({
   await runMiddleware(
     {
       ...singletonServices,
-      userSessionService,
+      userSession,
     },
     { http },
     channelConfig.middleware || [],

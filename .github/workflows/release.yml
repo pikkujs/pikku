@@ -44,8 +44,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # - name: Coveralls GitHub Action
-      #   uses: coverallsapp/github-action@v2.3.4
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2.3.4
 
   templates:
     name: Templates

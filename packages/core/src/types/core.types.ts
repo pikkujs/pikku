@@ -65,17 +65,17 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** JWT Service */
   jwt?: JWTService
   /** The schema library used to validate data */
-  schemaService?: SchemaService
+  schema?: SchemaService
   /** The core configuration for the application. */
   config: Config
   /** The logger used by the application. */
   logger: Logger
   /** The variable service to be used */
-  variablesService: VariablesService
+  variables: VariablesService
   /** The subscription service that is passed to streams */
   eventHub?: EventHubService<unknown>
   /** SecretServce  */
-  secretService?: SecretService
+  secrets?: SecretService
 }
 
 /**
@@ -93,7 +93,7 @@ export type PikkuMiddleware<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices & {
-    userSessionService: UserSessionService<UserSession>
+    userSession: UserSessionService<UserSession>
   },
   interactions: PikkuInteraction,
   next: () => Promise<void>
@@ -145,7 +145,7 @@ export type CreateSessionServices<
  * Defines a function type for creating config.
  */
 export type CreateConfig<Config extends CoreConfig> = (
-  variablesService?: VariablesService
+  variables?: VariablesService
 ) => Promise<Config>
 
 /**
