@@ -10,7 +10,7 @@
     "test:template": "bash run-tests.sh --websocket"
   },
   "dependencies": {
-    "@pikku/core": "^0.6.23",
+    "@pikku/core": "^0.6.24",
     "@pikku/uws": "^0.6.1",
     "tslib": "^2.7.0",
     "tsx": "^4.19.2"

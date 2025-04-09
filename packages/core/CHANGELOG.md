@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.24
+
+### Patch Changes
+
+- 531f4b5: refactor: using userSession.set to set cookies with middleware
+
 ## 0.6.23
 
 ### Patch Changes
