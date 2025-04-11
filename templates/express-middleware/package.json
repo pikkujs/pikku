@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.6.24",
-    "@pikku/express-middleware": "^0.6.6",
+    "@pikku/core": "^0.6.25",
+    "@pikku/express-middleware": "^0.6.7",
     "@pikku/jose": "^0.6.5",
     "@pikku/schedule": "^0.6.2",
     "cookie-parser": "^1.4.7",

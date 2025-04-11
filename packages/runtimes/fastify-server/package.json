@@ -1,6 +1,6 @@
 {
   "name": "@pikku/fastify",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "The pikku fastify server",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,14 +18,14 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.6.7"
+    "@pikku/core": "^0.6.25"
   },
   "dependencies": {
     "@pikku/fastify-plugin": "^0.6.3",
     "fastify": "^5.0.0"
   },
   "devDependencies": {
-    "@pikku/core": "^0.6.11",
+    "@pikku/core": "^0.6.25",
     "typescript": "^5.6.3"
   },
   "engines": {

@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.25
+
+### Patch Changes
+
+- b774c7d: fix: coerce top level data from schema now includes date strings
+
 ## 0.6.24
 
 ### Patch Changes

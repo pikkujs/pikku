@@ -1,5 +1,13 @@
 # @pikku/express-middleware
 
+## 0.6.7
+
+### Patch Changes
+
+- b774c7d: fix: coerce top level data from schema now includes date strings
+- Updated dependencies [b774c7d]
+  - @pikku/core@0.6.25
+
 ## 0.6.6
 
 ### Patch Changes
