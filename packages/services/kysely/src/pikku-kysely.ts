@@ -12,7 +12,6 @@ export class PikkuKysely<DB> {
     private poolConfig: postgres.Options<{}>,
     defaultSchemaName: string
   ) {
-    delete poolConfig.ssl
     this.postgres = postgres(poolConfig)
     this.kysely = new Kysely<DB>({
       dialect: new PostgresJSDialect({
