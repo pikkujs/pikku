@@ -1,5 +1,11 @@
 # @pikku/pino
 
+## 0.6.5
+
+### Patch Changes
+
+- 9541f42: fix: deleting ssl invalidation
+
 ## 0.6.4
 
 ### Patch Changes
