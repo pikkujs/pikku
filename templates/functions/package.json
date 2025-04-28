@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.6.26",
+    "@pikku/core": "^0.6.27",
     "@pikku/jose": "^0.6.5",
     "@pikku/schema-cfworker": "^0.6.2"
   },

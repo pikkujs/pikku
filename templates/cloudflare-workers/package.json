@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@pikku/cloudflare": "^0.6.7",
-    "@pikku/core": "^0.6.26"
+    "@pikku/core": "^0.6.27"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241218.0",

@@ -12,8 +12,8 @@
     "deploy": "npm run build && serverless deploy"
   },
   "dependencies": {
-    "@pikku/aws-services": "^0.6.3",
-    "@pikku/core": "^0.6.26",
+    "@pikku/aws-services": "^0.6.4",
+    "@pikku/core": "^0.6.27",
     "@pikku/lambda": "^0.6.8",
     "tslib": "^2.8.1"
   },

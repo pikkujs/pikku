@@ -1,5 +1,14 @@
 # @pikku/express
 
+## 0.6.6
+
+### Patch Changes
+
+- d0968d2: fix: fixing content uploads for s3
+- Updated dependencies [8658745]
+- Updated dependencies [d0968d2]
+  - @pikku/core@0.6.27
+
 ## 0.6.5
 
 ### Patch Changes
