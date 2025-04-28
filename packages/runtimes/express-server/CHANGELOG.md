@@ -1,5 +1,13 @@
 # @pikku/express
 
+## 0.6.5
+
+### Patch Changes
+
+- 6da4870: moving body parser to middleware to avoid conflicts
+- Updated dependencies [412f136]
+  - @pikku/core@0.6.26
+
 ## 0.6.4
 
 ### Patch Changes
