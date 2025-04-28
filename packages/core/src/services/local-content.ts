@@ -1,6 +1,8 @@
-import { promises } from 'fs'
+import { createReadStream, createWriteStream, promises, ReadStream } from 'fs'
 import { mkdir } from 'fs/promises'
 import { ContentService, Logger } from '@pikku/core/services'
+import { pipeline } from 'stream/promises'
+import { Readable } from 'stream'
 
 export interface LocalContentConfig {
   localFileUploadPath: string
@@ -33,17 +35,22 @@ export class LocalContent implements ContentService {
     }
   }
 
-  public async writeFile(assetKey: string, buffer: Buffer): Promise<boolean> {
+  public async writeFile(assetKey: string, stream: Readable): Promise<boolean> {
     this.logger.debug(`Writing file: ${assetKey}`)
+
+    const path = `${this.config.localFileUploadPath}/${assetKey}`
+
     try {
-      const path = `${this.config.localFileUploadPath}/${assetKey}`
       await this.createDirectoryForFile(path)
-      await promises.writeFile(path, buffer)
+      const fileStream = createWriteStream(path)
+      // Use pipeline to properly manage stream piping and errors
+      await pipeline(stream, fileStream)
+      return true
     } catch (e) {
       console.error(e)
-      this.logger.error(`Error inserting content ${assetKey}`, e)
+      this.logger.error(`Error writing content ${assetKey}`, e)
+      return false
     }
-    return false
   }
 
   public async copyFile(
@@ -62,14 +69,21 @@ export class LocalContent implements ContentService {
     return false
   }
 
-  public async readFile(assetKey: string): Promise<Buffer> {
-    this.logger.debug(`getting key: ${assetKey}`)
+  public async readFile(assetKey: string): Promise<ReadStream> {
+    this.logger.debug(`Getting key: ${assetKey}`)
+
+    const filePath = `${this.config.localFileUploadPath}/${assetKey}`
+
     try {
-      return await promises.readFile(
-        `${this.config.localFileUploadPath}/${assetKey}`
-      )
+      const stream = createReadStream(filePath)
+      // Handle early stream errors (like file not found, permission denied, etc.)
+      stream.on('error', (err) => {
+        this.logger.error(`Error getting content ${assetKey}`, err)
+      })
+
+      return stream
     } catch (e) {
-      this.logger.error(`Error get content ${assetKey}`)
+      this.logger.error(`Error setting up stream for ${assetKey}`, e)
       throw e
     }
   }

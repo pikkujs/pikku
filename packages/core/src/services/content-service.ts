@@ -1,3 +1,6 @@
+import { ReadStream } from 'fs'
+import { Readable } from 'stream'
+
 /**
  * Interface for handling content operations.
  */
@@ -42,15 +45,15 @@ export interface ContentService {
    * @returns A promise that resolves to a boolean indicating success.
    *  This method deletes the specified file and returns a boolean indicating whether the deletion was successful.
    */
-  deleteFile?: (fileName: string) => Promise<boolean>
+  deleteFile: (fileName: string) => Promise<boolean>
 
   /**
    * Writes a file.
    * @param assetKey - The key of the asset to write.
-   * @param buffer - The buffer containing the file data.
+   * @param stream - The ReadStream of the file to write.
    * @returns A promise that resolves to a boolean indicating success.
    */
-  writeFile?: (assetKey: string, buffer: Buffer) => Promise<boolean>
+  writeFile: (assetKey: string, stream: ReadStream) => Promise<boolean>
 
   /**
    * This method copies the file from the specified absolute path to the location identified by the asset key and returns a boolean indicating success.
@@ -58,12 +61,12 @@ export interface ContentService {
    * @param fromAbsolutePath - The absolute path of the source file.
    * @returns A promise that resolves to a boolean indicating success.
    */
-  copyFile?: (assetKey: string, fromAbsolutePath: string) => Promise<boolean>
+  copyFile: (assetKey: string, fromAbsolutePath: string) => Promise<boolean>
 
   /**
    * Reads a file.
    * @param assetKey - The key of the asset to read.
-   * @returns A promise that resolves to a buffer containing the file data.
+   * @returns A promise that resolves to a Readable stream of the file.
    */
-  readFile?: (assetKey: string) => Promise<Buffer>
+  readFile: (assetKey: string) => Promise<Readable>
 }

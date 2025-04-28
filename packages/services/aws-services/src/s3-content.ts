@@ -8,6 +8,7 @@ import { getSignedUrl as getS3SignedUrl } from '@aws-sdk/s3-request-presigner'
 import { ContentService, Logger } from '@pikku/core/services'
 import { readFile } from 'fs/promises'
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer'
+import { Readable } from 'stream'
 
 export interface S3ContentConfig {
   bucketName: string
@@ -73,34 +74,35 @@ export class S3Content implements ContentService {
     }
   }
 
-  public async readFile(Key: string) {
+  public async readFile(Key: string): Promise<Readable> {
     this.logger.debug(`Getting file, key: ${Key}`)
+
     const response = await this.s3.send(
       new GetObjectCommand({
         Bucket: this.config.bucketName,
         Key,
       })
     )
-    const body = response.Body as any
-    const responseDataChunks: any[] = []
-    body.on('data', (chunk: any) => responseDataChunks.push(chunk))
 
-    return new Promise<Buffer>((resolve, reject) => {
-      body.once('end', () => resolve(Buffer.concat(responseDataChunks)))
-      body.on('error', reject)
-    })
+    if (!response.Body) {
+      throw new Error('No body returned from S3')
+    }
+
+    return response.Body as Readable
   }
 
-  public async writeFile(Key: string, buffer: Buffer) {
+  public async writeFile(Key: string, stream: Readable): Promise<boolean> {
     try {
-      this.logger.debug(`Write file, key: ${Key}`)
+      this.logger.debug(`Writing file, key: ${Key}`)
+
       await this.s3.send(
         new PutObjectCommand({
           Bucket: this.config.bucketName,
           Key,
-          Body: buffer,
+          Body: stream, // <- Pass the readable stream directly
         })
       )
+
       return true
     } catch (e: any) {
       this.logger.error(`Error writing file, key: ${Key}`, e)
