@@ -4,6 +4,9 @@ import { Server } from 'http'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import { CorsOptions, CorsOptionsDelegate } from 'cors'
+import getRawBody from 'raw-body'
+import contentType from 'content-type'
+import { mkdir, writeFile } from 'fs/promises'
 
 import {
   CoreConfig,
@@ -11,6 +14,7 @@ import {
   CreateSessionServices,
 } from '@pikku/core'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
+import { LocalContentConfig } from '@pikku/core/src/services/local-content.js'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.
@@ -24,6 +28,8 @@ export type ExpressCoreConfig = CoreConfig & {
   healthCheckPath?: string
   /** Limits for the server, e.g., memory or request limits (optional). */
   limits?: Partial<Record<string, string>>
+  /** Content */
+  content?: LocalContentConfig
 }
 
 export class PikkuExpressServer {
@@ -49,6 +55,33 @@ export class PikkuExpressServer {
 
   public enableStaticAssets(assetsUrl: string, contentDirectory: string) {
     this.app.use(assetsUrl || '/assets/', express.static(contentDirectory))
+  }
+
+  public enableReaper() {
+    const configContent = this.config.content
+    if (!configContent) {
+      throw new Error(
+        'Content config is not set, needed to enable file uploads'
+      )
+    }
+
+    this.app.put('/reaper/*path', async (req, res) => {
+      const key = (req.params as any).path.join('/')
+
+      const file = await getRawBody(req, {
+        length: req.headers['content-length'],
+        limit: configContent.sizeLimit || '1mb',
+        encoding: contentType.parse(req).parameters.charset,
+      })
+
+      const parts = key.split('/')
+      const fileName = parts.pop()
+      const dir = `${configContent.localFileUploadPath}/${parts.join('/')}`
+
+      await mkdir(dir, { recursive: true })
+      await writeFile(`${dir}/${fileName}`, file, 'binary')
+      res.end()
+    })
   }
 
   public async init() {

@@ -253,10 +253,14 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
     mergeDirectories(repoDirPath, targetPath)
 
     try {
-      unlinkSync(path.join(targetPath, 'package-lock.json'))
+      if (cliOptions.packageManager !== 'npm') {
+        unlinkSync(path.join(targetPath, 'package-lock.json'))
+      }
     } catch {}
     try {
-      unlinkSync(path.join(targetPath, 'yarn.lock'))
+      if (cliOptions.packageManager !== 'yarn') {
+        unlinkSync(path.join(targetPath, 'yarn.lock'))
+      }
     } catch {}
 
     spinner.success()
