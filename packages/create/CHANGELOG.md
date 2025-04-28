@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.10
+
+### Patch Changes
+
+- 412f136: updating local content service
+
 ## 0.0.9
 
 ### Patch Changes

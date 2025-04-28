@@ -1,5 +1,11 @@
 ## 0.6
 
+## 0.6.26
+
+### Patch Changes
+
+- 412f136: updating local content service
+
 ## 0.6.25
 
 ### Patch Changes
