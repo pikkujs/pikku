@@ -11,6 +11,7 @@ export * from './secret-service.js'
 export * from './variables-service.js'
 export * from './schema-service.js'
 export * from './user-session-service.js'
+export * from './local-content.js'
 
 // Local implementations
 export * from './local-secrets.js'

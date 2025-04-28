@@ -53,8 +53,17 @@ export class PikkuExpressServer {
     this.app.use(cors(options))
   }
 
-  public enableStaticAssets(assetsUrl: string, contentDirectory: string) {
-    this.app.use(assetsUrl || '/assets/', express.static(contentDirectory))
+  public enableStaticAssets() {
+    const configContent = this.config.content
+    if (!configContent) {
+      throw new Error(
+        'Content config is not set, needed to enable asset serving'
+      )
+    }
+    this.app.use(
+      configContent.assetUrlPrefix,
+      express.static(configContent.localFileUploadPath)
+    )
   }
 
   public enableReaper() {
