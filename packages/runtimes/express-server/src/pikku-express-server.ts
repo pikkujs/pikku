@@ -35,28 +35,6 @@ export class PikkuExpressServer {
     private readonly singletonServices: CoreSingletonServices,
     private readonly createSessionServices: CreateSessionServices<any, any, any>
   ) {
-    this.app.use(
-      express.json({
-        limit: this.config.limits?.json || '1mb',
-      })
-    )
-
-    this.app.use(
-      express.text({
-        limit: this.config.limits?.xml || '1mb',
-        type: 'text/xml',
-      })
-    )
-
-    this.app.use(
-      express.urlencoded({
-        extended: true,
-        limit: this.config.limits?.urlencoded || '1mb',
-      })
-    )
-
-    this.app.use(cookieParser())
-
     this.app.get(
       this.config.healthCheckPath || '/health-check',
       function (req, res) {
@@ -75,6 +53,18 @@ export class PikkuExpressServer {
 
   public async init() {
     this.app.use(
+      express.json({
+        limit: this.config.limits?.json || '1mb',
+      }),
+      express.text({
+        limit: this.config.limits?.xml || '1mb',
+        type: 'text/xml',
+      }),
+      express.urlencoded({
+        extended: true,
+        limit: this.config.limits?.urlencoded || '1mb',
+      }),
+      cookieParser(),
       pikkuExpressMiddleware(
         this.singletonServices,
         this.createSessionServices,
