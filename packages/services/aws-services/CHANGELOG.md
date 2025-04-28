@@ -1,5 +1,15 @@
 ## 0.6
 
+## 0.6.4
+
+### Patch Changes
+
+- 8658745: refactor: changing content service to use streams for performance benefits
+- d0968d2: fix: fixing content uploads for s3
+- Updated dependencies [8658745]
+- Updated dependencies [d0968d2]
+  - @pikku/core@0.6.27
+
 ## 0.6.3
 
 ### Patch Changes

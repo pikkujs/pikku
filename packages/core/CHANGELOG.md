@@ -1,5 +1,12 @@
 ## 0.6
 
+## 0.6.27
+
+### Patch Changes
+
+- 8658745: refactor: changing content service to use streams for performance benefits
+- d0968d2: fix: fixing content uploads for s3
+
 ## 0.6.26
 
 ### Patch Changes
