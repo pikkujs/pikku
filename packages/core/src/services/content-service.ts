@@ -1,72 +1,68 @@
 import { ReadStream } from 'fs'
-import { Readable } from 'stream'
 
-/**
- * Interface for handling content operations.
- */
 export interface ContentService {
   /**
-   * Signs a content key to provide secure access.
-   * @param contentKey - The key of the content to sign.
-   * @returns A promise that resolves to the signed content key URL.
+   * Signs a content key to generate a secure, time-limited access URL.
+   * @param contentKey - The key representing the content object.
+   * @param dateLessThan - The expiration time for the signed URL.
+   * @param dateGreaterThan - (Optional) Start time before which access is denied.
    */
-  signContentKey: (
+  signContentKey(
     contentKey: string,
     dateLessThan: Date,
     dateGreaterThan?: Date
-  ) => Promise<string>
+  ): Promise<string>
 
   /**
-   * Signs a URL to provide secure access.
-   * @param url - The URL to sign.
-   * @returns A promise that resolves to the signed URL.
+   * Signs an arbitrary URL to generate a secure, time-limited access URL.
+   * @param url - The full URL that needs signing.
+   * @param dateLessThan - The expiration time for the signed URL.
+   * @param dateGreaterThan - (Optional) Start time before which access is denied.
    */
-  signURL: (
+  signURL(
     url: string,
     dateLessThan: Date,
     dateGreaterThan?: Date
-  ) => Promise<string>
+  ): Promise<string>
 
   /**
-   * Gets an upload URL for a file.
-   * @param fileKey - The key of the file to upload.
-   * @param contentType - The content type of the file.
-   * @returns A promise that resolves to an object containing the upload URL and asset key.
-   *  This method generates an upload URL for the specified file key and content type, allowing the file to be uploaded.
+   * Generates a signed URL for uploading a file directly to storage.
+   * @param fileKey - The desired key/location of the uploaded file.
+   * @param contentType - The MIME type of the file.
+   * @returns A signed upload URL and the finalized asset key.
    */
-  getUploadURL: (
+  getUploadURL(
     fileKey: string,
     contentType: string
-  ) => Promise<{ uploadUrl: string; assetKey: string }>
+  ): Promise<{ uploadUrl: string; assetKey: string }>
 
   /**
-   * Deletes a file.
-   * @param fileName - The name of the file to delete.
-   * @returns A promise that resolves to a boolean indicating success.
-   *  This method deletes the specified file and returns a boolean indicating whether the deletion was successful.
+   * Deletes a file from the storage backend.
+   * @param fileName - The name or key of the file to delete.
+   * @returns A boolean indicating success.
    */
-  deleteFile: (fileName: string) => Promise<boolean>
+  deleteFile(fileName: string): Promise<boolean>
 
   /**
-   * Writes a file.
-   * @param assetKey - The key of the asset to write.
-   * @param stream - The ReadStream of the file to write.
-   * @returns A promise that resolves to a boolean indicating success.
+   * Uploads a file stream to storage under a specified asset key.
+   * @param assetKey - The key where the file will be saved.
+   * @param stream - A readable stream of the file contents.
+   * @returns A boolean indicating success.
    */
-  writeFile: (assetKey: string, stream: ReadStream) => Promise<boolean>
+  writeFile(assetKey: string, stream: ReadStream): Promise<boolean>
 
   /**
-   * This method copies the file from the specified absolute path to the location identified by the asset key and returns a boolean indicating success.
-   * @param assetKey - The key of the asset to copy.
-   * @param fromAbsolutePath - The absolute path of the source file.
-   * @returns A promise that resolves to a boolean indicating success.
+   * Copies a file from a local absolute path into storage under a new asset key.
+   * @param assetKey - The destination key.
+   * @param fromAbsolutePath - The local absolute file path.
+   * @returns A boolean indicating success.
    */
-  copyFile: (assetKey: string, fromAbsolutePath: string) => Promise<boolean>
+  copyFile(assetKey: string, fromAbsolutePath: string): Promise<boolean>
 
   /**
-   * Reads a file.
-   * @param assetKey - The key of the asset to read.
-   * @returns A promise that resolves to a Readable stream of the file.
+   * Reads a file from storage as a readable stream.
+   * @param assetKey - The key of the file to read.
+   * @returns A readable file stream.
    */
-  readFile: (assetKey: string) => Promise<Readable>
+  readFile(assetKey: string): Promise<ReadStream>
 }
