@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.1.0
+
+### Minor Changes
+
+- 01fd252: upgrading pikku to 0.7 as part of APIFunction signature change
+
 ## 0.0.10
 
 ### Patch Changes
