@@ -1,6 +1,6 @@
 {
   "name": "@pikku/next",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -22,7 +22,7 @@
     "./pikku-session": "./dist/pikku-session.js"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.7.0",
+    "@pikku/core": "^0.8.0",
     "next": "^15",
     "react-dom": "*"
   },

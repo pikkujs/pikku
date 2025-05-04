@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "bin": {
@@ -22,8 +22,8 @@
   },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^3.0.2",
-    "@pikku/core": "^0.7.0",
-    "@pikku/inspector": "^0.7.0",
+    "@pikku/core": "^0.8.0",
+    "@pikku/inspector": "^0.8.0",
     "@types/cookie": "^0.6.0",
     "@types/uuid": "^10.0.0",
     "chalk": "^5.4.1",

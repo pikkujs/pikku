@@ -1,5 +1,11 @@
 # @pikku/websocket
 
+## 0.8.0
+
+### Minor Changes
+
+- 01fd252: upgrading pikku to 0.7 as part of APIFunction signature change
+
 ## 0.6.2
 
 ### Patch Changes

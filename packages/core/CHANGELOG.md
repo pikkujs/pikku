@@ -1,5 +1,16 @@
 ## 0.6
 
+## 0.8.0
+
+### Minor Changes
+
+- 01fd252: upgrading pikku to 0.7 as part of APIFunction signature change
+
+### Patch Changes
+
+- 0f71559: fix: adding request-id (since we no longer use context)
+- 14d29d0: fix: correcting readable type for content service
+
 ## 0.6.27
 
 ### Patch Changes
