@@ -10,6 +10,16 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #cookies = new Map<string, { value: string; flags: CookieSerializeOptions }>()
 
   #body: BodyInit | null = null
+  #responseMode: 'stream' | null = null
+  #send: ((data: string) => void) | null = null
+  #close: (() => void) | null = null
+
+  public setMode (mode: 'stream') {
+    this.#responseMode = 'stream'
+    if (mode === 'stream') {
+      this.#body = this.createStream()
+    }
+  }
 
   public status(code: number): this {
     this.#statusCode = code
@@ -36,37 +46,60 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   }
 
   public arrayBuffer(data: XMLHttpRequestBodyInit): this {
-    this.#body = data
-    this.header('Content-Type', 'application/octet-stream')
+    if (this.#responseMode === 'stream') {
+      this.#send!(data as string)
+    } else {
+      this.#body = data
+      this.header('Content-Type', 'application/octet-stream')
+    }
     return this
   }
 
   public json(data: unknown): this {
-    this.#body = JSON.stringify(data)
-    this.header('Content-Type', 'application/json')
+    if (this.#responseMode === 'stream') {
+      this.#send!(JSON.stringify(data))
+    } else {
+      this.#body = JSON.stringify(data)
+      this.header('Content-Type', 'application/json')
+    }
     return this
   }
 
   public text(content: string): this {
-    this.#body = content
-    this.header('Content-Type', 'text/plain')
+    if (this.#responseMode === 'stream') {
+      this.#send!(content)
+    } else {
+      this.#body = content
+      this.header('Content-Type', 'text/plain')
+    }
     return this
   }
 
   public html(content: string): this {
-    this.#body = content
-    this.header('Content-Type', 'text/html')
+    if (this.#responseMode === 'stream') {
+      this.#send!(content)
+    } else {
+      this.#body = content
+      this.header('Content-Type', 'text/html')
+    }
     return this
   }
 
-  public body(body: BodyInit): this {
-    this.#body = body
-    return this
-  }
+  // public body(body: BodyInit): this {
+  //   this.#body = body
+  //   return this
+  // }
 
   public redirect(location: string, status: number = 302): this {
     this.#statusCode = status
     this.header('Location', location)
+    return this
+  }
+
+  public close(): this {
+    if (this.#close) {
+      this.#close()
+    } 
     return this
   }
 
@@ -79,6 +112,27 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
       ...args,
       status: this.#statusCode,
       headers: this.#headers,
+    })
+  }
+
+  private createStream(): ReadableStream<Uint8Array> {
+    const encoder = new TextEncoder()
+    return new ReadableStream({
+      start: (controller) => {
+        const send = (data: string) => {
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        };
+    
+        const close = () => {
+          controller.close();
+        };
+    
+        this.#send = send;
+        this.#close = close;
+    
+        // Force initial flush
+        controller.enqueue(encoder.encode(':\n\n'));
+      },
     })
   }
 }

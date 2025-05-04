@@ -42,7 +42,9 @@ export type APIMiddleware<
 export type APIFunctionSessionless<
   In = unknown,
   Out = never,
-  RequiredServices extends Services = Services,
+  RequiredServices extends Services = Services & {
+    channel?: PikkuChannel<unknown, Out>;
+  },
 > = CoreAPIFunctionSessionless<In, Out, RequiredServices, UserSession>
 export type APIFunction<
   In = unknown,

@@ -18,7 +18,7 @@ import {
   MissingSessionError,
   NotFoundError,
 } from '../errors/errors.js'
-import { closeSessionServices, createWeakUID } from '../utils.js'
+import { closeSessionServices, createWeakUID, isSerializable } from '../utils.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
   PikkuUserSessionService,
@@ -29,6 +29,7 @@ import { handleError } from '../handle-error.js'
 import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
+import { PikkuChannel } from '../channel/channel.types.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -205,6 +206,7 @@ const executeRouteWithMiddleware = async (
     userSession: UserSessionService<CoreUserSession>
     createSessionServices: Function
     skipUserSession: boolean
+    requestId: string
   },
   matchedRoute: {
     matchedPath: any
@@ -224,6 +226,7 @@ const executeRouteWithMiddleware = async (
     userSession,
     createSessionServices,
     skipUserSession,
+    requestId
   } = services
 
   const requiresSession = route.auth !== false
@@ -256,9 +259,39 @@ const executeRouteWithMiddleware = async (
       throw new MissingSessionError()
     }
 
+    const data = await http?.request?.data()
+
+    let channel: PikkuChannel<unknown, unknown> | undefined
+    if (matchedRoute.route.sse) {
+      const response = http?.response
+      if (!response) {
+        throw new Error('SSE requires a valid HTTP response object')
+      }
+      if (!response.setMode) {
+        throw new Error('Response object does not support SSE mode')
+      }
+      response.setMode('stream')
+      response.header('Content-Type', 'text/event-stream');
+      response.header('Cache-Control', 'no-cache');
+      response.header('Connection', 'keep-alive');
+      response.header('Transfer-Encoding', 'chunked');
+      channel = {
+        channelId: requestId,
+        openingData: data,
+        send: (data: any) => {
+          response.arrayBuffer(isSerializable(data) ? JSON.stringify(data): data)
+        },
+        close: () => {
+          channel!.state = 'closed'
+          response.close?.()
+        },
+        state: 'open'
+      }
+    }
+
     // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
-      { ...singletonServices, userSession },
+      { ...singletonServices, userSession, channel },
       { http },
       session
     )
@@ -266,10 +299,10 @@ const executeRouteWithMiddleware = async (
     const allServices = {
       ...singletonServices,
       ...sessionServices,
-      userSession,
       http,
+      userSession,
+      channel
     }
-    const data = await http?.request?.data()
 
     // Validate request data against the defined schema, if any
     await validateSchema(
@@ -419,7 +452,6 @@ export const fetchData = async <In, Out>(
 
   // Locate the matching route based on the HTTP method and path
   const matchedRoute = getMatchingRoute(apiType, apiRoute)
-
   try {
     // If no route matches, log the occurrence and throw a NotFoundError
     if (!matchedRoute) {
@@ -432,12 +464,13 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ;({ result, sessionServices } = await executeRouteWithMiddleware(
+    ; ({ result, sessionServices } = await executeRouteWithMiddleware(
       {
         singletonServices,
         userSession,
         createSessionServices,
         skipUserSession,
+        requestId
       },
       matchedRoute,
       http,

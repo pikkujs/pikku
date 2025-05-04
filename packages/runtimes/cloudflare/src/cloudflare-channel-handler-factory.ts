@@ -1,4 +1,4 @@
-import { CoreUserSession } from '@pikku/core'
+import { CoreUserSession, isSerializable } from '@pikku/core'
 import {
   ChannelStore,
   PikkuAbstractChannelHandler,
@@ -6,22 +6,6 @@ import {
 } from '@pikku/core/channel'
 import { Logger } from '@pikku/core/services'
 import { WebSocket } from '@cloudflare/workers-types'
-
-const isSerializable = (data: any): boolean => {
-  return !(
-    typeof data === 'string' ||
-    data instanceof ArrayBuffer ||
-    data instanceof Uint8Array ||
-    data instanceof Int8Array ||
-    data instanceof Uint16Array ||
-    data instanceof Int16Array ||
-    data instanceof Uint32Array ||
-    data instanceof Int32Array ||
-    data instanceof Float32Array ||
-    data instanceof Float64Array
-  )
-}
-
 class CloudflareChannelHandler<
   UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,

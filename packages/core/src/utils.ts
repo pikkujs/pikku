@@ -23,3 +23,19 @@ export const closeSessionServices = async (
 export const createWeakUID = () => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
 }
+
+
+export const isSerializable = (data: any): boolean => {
+  return !(
+    typeof data === 'string' ||
+    data instanceof ArrayBuffer ||
+    data instanceof Uint8Array ||
+    data instanceof Int8Array ||
+    data instanceof Uint16Array ||
+    data instanceof Int16Array ||
+    data instanceof Uint32Array ||
+    data instanceof Int32Array ||
+    data instanceof Float32Array ||
+    data instanceof Float64Array
+  )
+}

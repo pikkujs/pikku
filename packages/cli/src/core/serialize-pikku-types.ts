@@ -25,8 +25,12 @@ ${sessionServicesTypeImport}
 export type APIPermission<In = unknown, RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CoreAPIPermission<In, RequiredServices, ${userSessionTypeName}>
 export type APIMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = PikkuMiddleware<RequiredServices, ${userSessionTypeName}>
 
-export type APIFunctionSessionless<In = unknown, Out = never, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = CoreAPIFunctionSessionless<In, Out, RequiredServices, ${userSessionTypeName}>
-export type APIFunction<In = unknown, Out = never, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = CoreAPIFunction<In, Out, RequiredServices, ${userSessionTypeName}>
+export type APIFunctionSessionless<In = unknown, Out = never, RequiredServices extends ${servicesTypeName} = ${servicesTypeName} & {
+  channel?: PikkuChannel<In, Out>
+}> = CoreAPIFunctionSessionless<In, Out, RequiredServices, ${userSessionTypeName}>
+export type APIFunction<In = unknown, Out = never, RequiredServices extends ${servicesTypeName} = ${servicesTypeName} & {
+  channel?: PikkuChannel<In, Out>
+}> = CoreAPIFunction<In, Out, RequiredServices, ${userSessionTypeName}>
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>, APIMiddleware>
 
 export type ChannelConnection<Out = unknown, ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: MakeRequired<RequiredServices, 'userSession'>, channel: PikkuChannel<ChannelData, Out>) => Promise<void>

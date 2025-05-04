@@ -19,7 +19,20 @@ export const sendResponseToExpress = async (
     }
   })
 
-  // Send body
-  const buffer = Buffer.from(await response.arrayBuffer())
-  expressResponse.send(buffer)
+  // Stream body (crucial for SSE)
+  if (response.body) {
+    const reader = response.body.getReader();
+    const write = async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        expressResponse.write(value);
+      }
+      expressResponse.end();
+    };
+
+    await write();
+  } else {
+    expressResponse.end();
+  }
 }

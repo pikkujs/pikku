@@ -16,15 +16,15 @@ import {
 
 type ExtractRouteParams<S extends string> =
   S extends `${string}:${infer Param}/${infer Rest}`
-    ? Param | ExtractRouteParams<`/${Rest}`>
-    : S extends `${string}:${infer Param}`
-      ? Param
-      : never
+  ? Param | ExtractRouteParams<`/${Rest}`>
+  : S extends `${string}:${infer Param}`
+  ? Param
+  : never
 
 export type AssertRouteParams<In, Route extends string> =
   ExtractRouteParams<Route> extends keyof In
-    ? unknown
-    : ['Error: Route parameters', ExtractRouteParams<Route>, 'not in', keyof In]
+  ? unknown
+  : ['Error: Route parameters', ExtractRouteParams<Route>, 'not in', keyof In]
 
 export type RunRouteOptions = Partial<{
   skipUserSession: boolean
@@ -115,43 +115,66 @@ export type CoreHTTPFunctionRoute<
   APIMiddleware = PikkuMiddleware,
 > =
   | (CoreHTTPFunction & {
-      route: R
-      method: HTTPMethod
-      func: APIFunction
-      permissions?: Record<string, APIPermission[] | APIPermission>
-      auth?: true
-      tags?: string[]
-      middleware?: APIMiddleware[]
-    })
+    route: R
+    method: HTTPMethod
+    func: APIFunction
+    permissions?: Record<string, APIPermission[] | APIPermission>
+    auth?: true
+    tags?: string[]
+    middleware?: APIMiddleware[]
+    sse?: undefined
+  })
   | (CoreHTTPFunction & {
-      route: R
-      method: HTTPMethod
-      func: APIFunctionSessionless
-      permissions?: undefined
-      auth?: false
-      tags?: string[]
-      middleware?: APIMiddleware[]
-    })
+    route: R
+    method: HTTPMethod
+    func: APIFunctionSessionless
+    permissions?: undefined
+    auth?: false
+    tags?: string[]
+    middleware?: APIMiddleware[]
+    sse?: undefined
+  })
   | (CoreHTTPFunction & {
-      route: R
-      method: 'post'
-      func: APIFunction
-      permissions?: Record<string, APIPermission[] | APIPermission>
-      auth?: true
-      query?: Array<keyof In>
-      tags?: string[]
-      middleware?: APIMiddleware[]
-    })
+    route: R;
+    method: 'get';
+    func: APIFunction;
+    permissions?: Record<string, APIPermission[] | APIPermission>;
+    auth?: true;
+    sse?: boolean;
+    tags?: string[];
+    middleware?: APIMiddleware[];
+  })
   | (CoreHTTPFunction & {
-      route: R
-      method: 'post'
-      func: APIFunctionSessionless
-      permissions?: undefined
-      auth?: false
-      query?: Array<keyof In>
-      tags?: string[]
-      middleware?: APIMiddleware[]
-    })
+    route: R;
+    method: 'get';
+    func: APIFunctionSessionless;
+    permissions?: undefined;
+    auth?: false;
+    sse?: boolean;
+    tags?: string[];
+    middleware?: APIMiddleware[];
+  }) | (CoreHTTPFunction & {
+    route: R
+    method: 'post'
+    func: APIFunction
+    permissions?: Record<string, APIPermission[] | APIPermission>
+    auth?: true
+    query?: Array<keyof In>
+    tags?: string[]
+    middleware?: APIMiddleware[]
+    sse?: undefined
+  })
+  | (CoreHTTPFunction & {
+    route: R
+    method: 'post'
+    func: APIFunctionSessionless
+    permissions?: undefined
+    auth?: false
+    query?: Array<keyof In>
+    tags?: string[]
+    middleware?: APIMiddleware[]
+    sse?: undefined
+  })
 
 /**
  * Represents an array of core API routes.
@@ -181,7 +204,8 @@ export type HTTPRoutesMeta = Array<{
   output: string | null
   inputTypes?: HTTPFunctionMetaInputTypes
   docs?: APIDocs
-  tags?: string[]
+  tags?: string[],
+  sse?: true
 }>
 
 export type HTTPRouteMiddleware = {
@@ -206,7 +230,9 @@ export interface PikkuHTTPResponse {
   status(code: number): this
   cookie(name: string, value: string | null, options: SerializeOptions): this
   header(name: string, value: string | string[]): this
-  arrayBuffer(data: XMLHttpRequestBodyInit): this
+  arrayBuffer(data: ArrayBuffer | ArrayBufferView | Blob | string | FormData | URLSearchParams | ReadableStream): this;
   json(data: unknown): this
   redirect(location: string, status?: number): this
+  close?: () => void
+  setMode?: (mode: 'stream') => void
 }
