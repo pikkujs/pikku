@@ -12,13 +12,14 @@ export const serializeTypedRoutesMap = (
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedMetaTypes = generateMetaTypes(metaTypes, typesMap)
+  const serializedRoutes = generateRoutes(routesMeta, typesMap, requiredTypes)
+
   const serializedImportMap = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
     requiredTypes
   )
-  const serializedRoutes = generateRoutes(routesMeta, typesMap, requiredTypes)
 
   return `/**
  * This provides the structure needed for typescript to be aware of routes and their return types

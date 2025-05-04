@@ -28,17 +28,17 @@ export const getFileImportRelativePath = (
   if (!/^\.+\//.test(filePath)) {
     filePath = `./${filePath}`
   }
-  let usesPackageName = false
+  // let usesPackageName = false
   for (const [path, packageName] of Object.entries(packageMappings)) {
     if (filePath.includes(path)) {
-      usesPackageName = true
+      // usesPackageName = true
       filePath = filePath.replace(new RegExp(`.*${path}`), packageName)
       break
     }
   }
-  if (usesPackageName) {
-    return filePath.replace('.ts', '')
-  }
+  // if (usesPackageName) {
+  //   return filePath.replace('.ts', '')
+  // }
   return filePath.replace('.ts', '.js')
 }
 

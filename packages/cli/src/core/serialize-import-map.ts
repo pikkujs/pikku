@@ -12,6 +12,7 @@ export const serializeImportMap = (
     const { originalName, uniqueName, path } =
       typesMap.getTypeMeta(requiredType)
     if (!path) {
+      // This is a custom type that exists in file, so we don't need to import it
       return
     }
     const variables = paths.get(path) || []
