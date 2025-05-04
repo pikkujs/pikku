@@ -70,42 +70,13 @@ export type CoreChannelDisconnection<
   channel: PikkuChannel<ChannelData, never>
 ) => Promise<void>
 
-/**
- * Represents a core channel function that performs an operation using core services and a user session.
- *
- * @template In - The input type.
- * @template Services - The services type, defaults to `CoreServices`.
- * @template Session - The session type, defaults to `CoreUserSession`.
- */
-export type CoreChannelMessage<
-  In,
-  Out,
-  ChannelData,
-  Services extends CoreServices = CoreServices,
-> = (
-  services: Services,
-  channel: PikkuChannel<ChannelData, Out>,
-  data: In
-) => Promise<void | Out>
-
-export type CoreAPIChannelMessage<
-  ChannelFunctionMessage = CoreChannelMessage<unknown, unknown, unknown>,
-> = {
-  func: ChannelFunctionMessage
-  route: string
-}
-
 export type CoreAPIChannel<
   ChannelData,
   Channel extends string,
   ChannelFunctionConnection = CoreChannelConnection<ChannelData>,
   ChannelFunctionDisconnection = CoreChannelDisconnection<ChannelData>,
-  ChannelFunctionDefaultMessage =
-    | CoreChannelMessage<unknown, unknown, unknown>
-    | CoreAPIFunction<unknown, unknown>,
-  ChannelFunctionMessageRoute =
-    | CoreChannelMessage<unknown, unknown, unknown>
-    | CoreAPIFunction<unknown, unknown>,
+  ChannelFunctionDefaultMessage = CoreAPIFunction<unknown, unknown>,
+  ChannelFunctionMessageRoute = CoreAPIFunction<unknown, unknown>,
   APIPermission = CoreAPIPermission<ChannelData>,
 > = {
   name: string

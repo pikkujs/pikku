@@ -107,9 +107,9 @@ function generateChannels(channelsMeta: ChannelsMeta) {
     for (const [key, methods] of Object.entries(routes)) {
       routesStr += `      readonly ${key}: {\n`
       for (const [method, handler] of Object.entries(methods)) {
-        routesStr += `        readonly ${method}: ChannelHandler<${formatTypeArray(
-          handler.inputTypes
-        )}, ${formatTypeArray(handler.outputTypes) || 'never'}>,\n`
+        routesStr += `        readonly ${method}: ChannelHandler<${
+          formatTypeArray(handler.inputTypes) || 'void'
+        }, ${formatTypeArray(handler.outputTypes) || 'never'}>,\n`
       }
       routesStr += '      },\n'
     }

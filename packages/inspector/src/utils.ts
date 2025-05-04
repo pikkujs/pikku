@@ -192,7 +192,8 @@ export const resolveTypeImports = (
 
 export const getPropertyAssignment = (
   obj: ts.ObjectLiteralExpression,
-  name: string
+  name: string,
+  required: boolean = true
 ) => {
   const property = obj.properties.find(
     (p) =>
@@ -201,7 +202,9 @@ export const getPropertyAssignment = (
       p.name.text === name
   )
   if (!property) {
-    console.error(`Missing property '${name}' in object`)
+    if (required) {
+      console.error(`Missing property '${name}' in object`)
+    }
     return null
   }
   return property
@@ -244,6 +247,7 @@ export const getTypeArgumentsOfType = (
 export const getFunctionTypes = (
   checker: ts.TypeChecker,
   obj: ts.ObjectLiteralExpression,
+  required: boolean = true,
   {
     typesMap,
     funcName,
@@ -266,7 +270,7 @@ export const getFunctionTypes = (
     type: null,
   }
 
-  const property = getPropertyAssignment(obj, subFunctionName)
+  const property = getPropertyAssignment(obj, subFunctionName, required)
   if (!property) {
     return result
   }
@@ -286,7 +290,7 @@ export const getFunctionTypes = (
   // Handle regular property assignment
   else if (ts.isPropertyAssignment(property)) {
     if (ts.isObjectLiteralExpression(property.initializer)) {
-      return getFunctionTypes(checker, property.initializer, {
+      return getFunctionTypes(checker, property.initializer, required, {
         typesMap,
         funcName,
         subFunctionName: 'func',

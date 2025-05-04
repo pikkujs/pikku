@@ -16,11 +16,16 @@ import type {
 export type CoreAPIFunction<
   In,
   Out,
-  Services extends CoreSingletonServices = CoreServices & {
-    channel?: PikkuChannel<unknown, Out>
-  },
-  Session extends CoreUserSession = CoreUserSession,
   Channel extends boolean = false,
+  Services extends CoreSingletonServices = CoreServices &
+    (Channel extends true
+      ? {
+          channel: PikkuChannel<unknown, Out>
+        }
+      : {
+          channel?: PikkuChannel<unknown, Out> | undefined
+        }),
+  Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
   data: In,
@@ -38,11 +43,16 @@ export type CoreAPIFunction<
 export type CoreAPIFunctionSessionless<
   In,
   Out,
-  Services extends CoreSingletonServices = CoreServices & {
-    channel?: PikkuChannel<unknown, Out>
-  },
-  Session extends CoreUserSession = CoreUserSession,
   Channel extends boolean = false,
+  Services extends CoreSingletonServices = CoreServices &
+    (Channel extends true
+      ? {
+          channel: PikkuChannel<unknown, Out>
+        }
+      : {
+          channel?: PikkuChannel<unknown, Out> | undefined
+        }),
+  Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
   data: In,

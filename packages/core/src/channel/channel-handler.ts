@@ -215,9 +215,9 @@ export const processMessageHandlers = (
 
     if (!processed) {
       logger.error(
-        `No handler found for message in channel ${channelConfig.name} for ${rawData}`
+        `No handler found for message in channel ${channelConfig.name} for ${JSON.stringify(rawData)}`
       )
-      logger.error(`Channel ${channelConfig}`)
+      logger.error(`Channel ${JSON.stringify(channelConfig)}`)
     }
 
     return result

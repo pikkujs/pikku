@@ -1,7 +1,7 @@
 import type {
+  APIFunction,
   ChannelConnection,
   ChannelDisconnection,
-  ChannelMessage,
 } from '../.pikku/pikku-types.gen.js'
 
 export const onConnect: ChannelConnection<'hello!'> = async (
@@ -20,10 +20,10 @@ export const onDisconnect: ChannelDisconnection = async (services, channel) => {
   )
 }
 
-export const authenticate: ChannelMessage<
+export const authenticate: APIFunction<
   { token: string; userId: string },
   { authResult: boolean; action: 'auth' }
-> = async (services, channel, data) => {
+> = async (services, data) => {
   const authResult = data.token === 'valid'
   if (authResult) {
     await services.userSession?.set({ userId: data.userId })
@@ -31,39 +31,37 @@ export const authenticate: ChannelMessage<
   return { authResult, action: 'auth' }
 }
 
-export const subscribe: ChannelMessage<{ name: string }, never> = async (
+export const subscribe: APIFunction<{ name: string }, void, true> = async (
   services,
-  channel,
   data
 ) => {
-  await services.eventHub?.subscribe(data.name, channel.channelId)
+  await services.eventHub?.subscribe(data.name, services.channel.channelId)
 }
 
-export const unsubscribe: ChannelMessage<{ name: string }, never> = async (
-  services,
-  channel,
+export const unsubscribe: APIFunction<{ name: string }, void, true> = async (
+  { channel, eventHub },
   data
 ) => {
-  await services.eventHub?.unsubscribe(data.name, channel.channelId)
+  await eventHub?.unsubscribe(data.name, channel.channelId)
 }
 
-export const emitMessage: ChannelMessage<
+export const emitMessage: APIFunction<
   { name: string },
-  { timestamp: string; from: string } | { message: string }
-> = async (services, channel, data) => {
+  { timestamp: string; from: string } | { message: string },
+  true
+> = async (services, data) => {
   const session = await services.userSession?.get()
-  await services.eventHub?.publish(data.name, channel.channelId, {
+  await services.eventHub?.publish(data.name, services.channel.channelId, {
     timestamp: new Date().toISOString(),
     from: session ?? 'anonymous',
   })
 }
 
-export const onMessage: ChannelMessage<'hello', 'hey'> = async (
-  services,
-  channel
+export const onMessage: APIFunction<'hello', 'hey', true> = async (
+  services
 ) => {
   services.logger.info(
-    `Got a generic hello message with data ${JSON.stringify(channel.openingData)}`
+    `Got a generic hello message with data ${JSON.stringify(services.channel.openingData)}`
   )
-  channel.send('hey')
+  services.channel.send('hey')
 }

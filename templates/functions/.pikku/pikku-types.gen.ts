@@ -42,15 +42,23 @@ export type APIMiddleware<
 export type APIFunctionSessionless<
   In = unknown,
   Out = never,
+  Channel extends boolean = false,
   RequiredServices extends Services = Services & {
-    channel?: PikkuChannel<unknown, Out>
+    channel: Channel extends true
+      ? PikkuChannel<unknown, Out>
+      : PikkuChannel<unknown, Out> | undefined
   },
-> = CoreAPIFunctionSessionless<In, Out, RequiredServices, UserSession>
+> = CoreAPIFunctionSessionless<In, Out, Channel, RequiredServices, UserSession>
 export type APIFunction<
   In = unknown,
   Out = never,
-  RequiredServices extends Services = Services,
-> = CoreAPIFunction<In, Out, RequiredServices, UserSession>
+  Channel extends boolean = false,
+  RequiredServices extends Services = Services & {
+    channel: Channel extends true
+      ? PikkuChannel<unknown, Out>
+      : PikkuChannel<unknown, Out> | undefined
+  },
+> = CoreAPIFunction<In, Out, Channel, RequiredServices, UserSession>
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<
   In,
   Out,
@@ -76,23 +84,12 @@ export type ChannelDisconnection<
   services: MakeRequired<RequiredServices, 'userSession'>,
   channel: PikkuChannel<ChannelData, never>
 ) => Promise<void>
-export type ChannelMessage<
-  In,
-  Out = unknown,
-  ChannelData = unknown,
-  RequiredServices extends Services = Services,
-> = (
-  services: MakeRequired<RequiredServices, 'userSession'>,
-  channel: PikkuChannel<ChannelData, Out>,
-  data: In
-) => Promise<Out | void>
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<
   ChannelData,
   Channel,
   ChannelConnection,
   ChannelDisconnection,
-  ChannelMessage<any, any, ChannelData>,
-  ChannelMessage<any, any, ChannelData>,
+  APIFunction<any, any, any>,
   APIPermission
 >
 

@@ -88,7 +88,7 @@ export const addRoute = (
       return
     }
 
-    let { inputs, outputs, inputTypes } = getFunctionTypes(checker, obj, {
+    let { inputs, outputs, inputTypes } = getFunctionTypes(checker, obj, true, {
       funcName: 'func',
       inputIndex: 0,
       outputIndex: 1,

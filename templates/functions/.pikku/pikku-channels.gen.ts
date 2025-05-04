@@ -3,6 +3,7 @@
  */
 /* The files with an addChannel function call */
 import '../src/channel.routes.js'
+import '../src/http-progressive-enhancement.js'
 
 import { pikkuState } from '@pikku/core'
 pikkuState('channel', 'meta', [
@@ -15,32 +16,53 @@ pikkuState('channel', 'meta', [
     message: {
       inputs: ['OnMessageInput'],
       outputs: ['OnMessageOutput'],
-      type: 'ChannelMessage',
+      type: 'APIFunction',
     },
     messageRoutes: {
       action: {
         auth: {
           inputs: ['AuthInput'],
           outputs: ['AuthOutput'],
-          type: 'ChannelMessage',
+          type: 'APIFunction',
         },
         subscribe: {
           inputs: ['SubscribeInput'],
           outputs: [],
-          type: 'ChannelMessage',
+          type: 'APIFunction',
         },
         unsubscribe: {
           inputs: ['UnsubscribeInput'],
           outputs: [],
-          type: 'ChannelMessage',
+          type: 'APIFunction',
         },
         emit: {
           inputs: ['EmitInput'],
           outputs: ['EmitOutput'],
-          type: 'ChannelMessage',
+          type: 'APIFunction',
         },
       },
     },
     tags: ['events'],
+  },
+  {
+    name: 'progressive-enhancement',
+    route: '/status/websocket',
+    input: null,
+    connect: false,
+    disconnect: false,
+    message: {
+      inputs: null,
+      outputs: null,
+      type: null,
+    },
+    messageRoutes: {
+      action: {
+        status: {
+          inputs: [],
+          outputs: ['StatusOutput'],
+          type: 'APIFunctionSessionless',
+        },
+      },
+    },
   },
 ])

@@ -17,6 +17,7 @@ export type EmitInput = { name: string }
 export type EmitOutput =
   | { timestamp: string; from: string }
   | { message: string }
+export type StatusOutput = { state: 'initial' | 'pending' | 'done' }
 
 interface ChannelHandler<I, O> {
   input: I
@@ -34,6 +35,14 @@ export type ChannelsMap = {
       }
     }
     readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>
+  }
+  readonly 'progressive-enhancement': {
+    readonly routes: {
+      readonly action: {
+        readonly status: ChannelHandler<void, StatusOutput>
+      }
+    }
+    readonly defaultMessage: ChannelHandler<null, null>
   }
 }
 
