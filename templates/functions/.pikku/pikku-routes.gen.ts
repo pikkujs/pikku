@@ -9,30 +9,28 @@ import '../src/http.js'
 import { pikkuState } from '@pikku/core'
 pikkuState('http', 'meta', [
   {
-    "route": "/status/sse",
-    "method": "get",
-    "input": null,
-    "output": "ProgressiveEnhancementExampleOutput"
+    route: '/status/sse',
+    method: 'get',
+    input: null,
+    output: 'ProgressiveEnhancementExampleOutput',
   },
   {
-    "route": "/status/http",
-    "method": "get",
-    "input": null,
-    "output": "ProgressiveEnhancementExampleOutput"
+    route: '/status/http',
+    method: 'get',
+    input: null,
+    output: 'ProgressiveEnhancementExampleOutput',
   },
   {
-    "route": "/sse",
-    "method": "get",
-    "input": null,
-    "output": "TimeSinceOpenedOutput"
+    route: '/sse',
+    method: 'get',
+    input: null,
+    output: 'TimeSinceOpenedOutput',
   },
   {
-    "route": "/hello-world",
-    "method": "get",
-    "input": null,
-    "output": "HelloWorldOutput",
-    "tags": [
-      "hello"
-    ]
-  }
+    route: '/hello-world',
+    method: 'get',
+    input: null,
+    output: 'HelloWorldOutput',
+    tags: ['hello'],
+  },
 ])
