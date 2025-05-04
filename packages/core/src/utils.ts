@@ -19,3 +19,7 @@ export const closeSessionServices = async (
     })
   )
 }
+
+export const createWeakUID = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
+}

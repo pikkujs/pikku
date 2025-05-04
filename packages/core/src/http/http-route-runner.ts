@@ -18,7 +18,7 @@ import {
   MissingSessionError,
   NotFoundError,
 } from '../errors/errors.js'
-import { closeSessionServices } from '../utils.js'
+import { closeSessionServices, createWeakUID } from '../utils.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
   PikkuUserSessionService,
@@ -398,8 +398,13 @@ export const fetchData = async <In, Out>(
     logWarningsForStatusCodes = [],
     coerceDataFromSchema = true,
     bubbleErrors = false,
+    generateRequestId,
   }: RunRouteOptions & RunRouteParams
 ): Promise<Out | void> => {
+  const requestId =
+    (request as any).getHeader?.('x-request-id') ||
+    generateRequestId?.() ||
+    createWeakUID()
   const userSession = new PikkuUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
@@ -445,7 +450,7 @@ export const fetchData = async <In, Out>(
     handleError(
       e,
       http,
-      '111', // TODO: context.get('trackingId'),
+      requestId,
       singletonServices.logger,
       logWarningsForStatusCodes,
       respondWith404,

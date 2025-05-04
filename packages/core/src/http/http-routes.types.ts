@@ -32,6 +32,7 @@ export type RunRouteOptions = Partial<{
   logWarningsForStatusCodes: number[]
   coerceDataFromSchema: boolean
   bubbleErrors: boolean
+  generateRequestId: () => string
 }>
 
 export type RunRouteParams = {
