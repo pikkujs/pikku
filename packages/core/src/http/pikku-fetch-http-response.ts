@@ -14,7 +14,7 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #send: ((data: string) => void) | null = null
   #close: (() => void) | null = null
 
-  public setMode (mode: 'stream') {
+  public setMode(mode: 'stream') {
     this.#responseMode = 'stream'
     if (mode === 'stream') {
       this.#body = this.createStream()
@@ -99,7 +99,7 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   public close(): this {
     if (this.#close) {
       this.#close()
-    } 
+    }
     return this
   }
 
@@ -120,18 +120,18 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     return new ReadableStream({
       start: (controller) => {
         const send = (data: string) => {
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        };
-    
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+        }
+
         const close = () => {
-          controller.close();
-        };
-    
-        this.#send = send;
-        this.#close = close;
-    
+          controller.close()
+        }
+
+        this.#send = send
+        this.#close = close
+
         // Force initial flush
-        controller.enqueue(encoder.encode(':\n\n'));
+        controller.enqueue(encoder.encode(':\n\n'))
       },
     })
   }

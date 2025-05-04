@@ -21,18 +21,18 @@ export const sendResponseToExpress = async (
 
   // Stream body (crucial for SSE)
   if (response.body) {
-    const reader = response.body.getReader();
+    const reader = response.body.getReader()
     const write = async () => {
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        expressResponse.write(value);
+        const { done, value } = await reader.read()
+        if (done) break
+        expressResponse.write(value)
       }
-      expressResponse.end();
-    };
+      expressResponse.end()
+    }
 
-    await write();
+    await write()
   } else {
-    expressResponse.end();
+    expressResponse.end()
   }
 }

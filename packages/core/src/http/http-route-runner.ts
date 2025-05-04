@@ -18,7 +18,11 @@ import {
   MissingSessionError,
   NotFoundError,
 } from '../errors/errors.js'
-import { closeSessionServices, createWeakUID, isSerializable } from '../utils.js'
+import {
+  closeSessionServices,
+  createWeakUID,
+  isSerializable,
+} from '../utils.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
   PikkuUserSessionService,
@@ -226,7 +230,7 @@ const executeRouteWithMiddleware = async (
     userSession,
     createSessionServices,
     skipUserSession,
-    requestId
+    requestId,
   } = services
 
   const requiresSession = route.auth !== false
@@ -271,21 +275,23 @@ const executeRouteWithMiddleware = async (
         throw new Error('Response object does not support SSE mode')
       }
       response.setMode('stream')
-      response.header('Content-Type', 'text/event-stream');
-      response.header('Cache-Control', 'no-cache');
-      response.header('Connection', 'keep-alive');
-      response.header('Transfer-Encoding', 'chunked');
+      response.header('Content-Type', 'text/event-stream')
+      response.header('Cache-Control', 'no-cache')
+      response.header('Connection', 'keep-alive')
+      response.header('Transfer-Encoding', 'chunked')
       channel = {
         channelId: requestId,
         openingData: data,
         send: (data: any) => {
-          response.arrayBuffer(isSerializable(data) ? JSON.stringify(data): data)
+          response.arrayBuffer(
+            isSerializable(data) ? JSON.stringify(data) : data
+          )
         },
         close: () => {
           channel!.state = 'closed'
           response.close?.()
         },
-        state: 'open'
+        state: 'open',
       }
     }
 
@@ -301,7 +307,7 @@ const executeRouteWithMiddleware = async (
       ...sessionServices,
       http,
       userSession,
-      channel
+      channel,
     }
 
     // Validate request data against the defined schema, if any
@@ -464,13 +470,13 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ; ({ result, sessionServices } = await executeRouteWithMiddleware(
+    ;({ result, sessionServices } = await executeRouteWithMiddleware(
       {
         singletonServices,
         userSession,
         createSessionServices,
         skipUserSession,
-        requestId
+        requestId,
       },
       matchedRoute,
       http,
