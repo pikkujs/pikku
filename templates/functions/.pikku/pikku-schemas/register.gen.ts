@@ -3,14 +3,13 @@
  */
 import { addSchema } from '@pikku/core/schema'
 
-import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json'
-addSchema(
-  'ProgressiveEnhancementExampleOutput',
-  ProgressiveEnhancementExampleOutput
-)
+import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json' 
+addSchema('ProgressiveEnhancementExampleOutput', ProgressiveEnhancementExampleOutput)
 
-import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json'
+
+import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json' 
 addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
 
-import * as HelloWorldOutput from './schemas/HelloWorldOutput.schema.json'
+
+import * as HelloWorldOutput from './schemas/HelloWorldOutput.schema.json' 
 addSchema('HelloWorldOutput', HelloWorldOutput)

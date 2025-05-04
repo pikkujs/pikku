@@ -8,61 +8,81 @@ import '../src/http-progressive-enhancement.js'
 import { pikkuState } from '@pikku/core'
 pikkuState('channel', 'meta', [
   {
-    name: 'events',
-    route: '/',
-    input: null,
-    connect: true,
-    disconnect: true,
-    message: {
-      inputs: ['OnMessageInput'],
-      outputs: ['OnMessageOutput'],
-      type: 'APIFunction',
+    "name": "events",
+    "route": "/",
+    "input": null,
+    "connect": true,
+    "disconnect": true,
+    "message": {
+      "inputs": [
+        "OnMessageInput"
+      ],
+      "outputs": [
+        "OnMessageOutput"
+      ],
+      "type": "APIFunction"
     },
-    messageRoutes: {
-      action: {
-        auth: {
-          inputs: ['AuthInput'],
-          outputs: ['AuthOutput'],
-          type: 'APIFunction',
+    "messageRoutes": {
+      "action": {
+        "auth": {
+          "inputs": [
+            "AuthInput"
+          ],
+          "outputs": [
+            "AuthOutput"
+          ],
+          "type": "APIFunction"
         },
-        subscribe: {
-          inputs: ['SubscribeInput'],
-          outputs: [],
-          type: 'APIFunction',
+        "subscribe": {
+          "inputs": [
+            "SubscribeInput"
+          ],
+          "outputs": [],
+          "type": "APIFunction"
         },
-        unsubscribe: {
-          inputs: ['UnsubscribeInput'],
-          outputs: [],
-          type: 'APIFunction',
+        "unsubscribe": {
+          "inputs": [
+            "UnsubscribeInput"
+          ],
+          "outputs": [],
+          "type": "APIFunction"
         },
-        emit: {
-          inputs: ['EmitInput'],
-          outputs: ['EmitOutput'],
-          type: 'APIFunction',
-        },
-      },
+        "emit": {
+          "inputs": [
+            "EmitInput"
+          ],
+          "outputs": [
+            "EmitOutput"
+          ],
+          "type": "APIFunction"
+        }
+      }
     },
-    tags: ['events'],
+    "tags": [
+      "events"
+    ]
   },
   {
-    name: 'progressive-enhancement',
-    route: '/status/websocket',
-    input: null,
-    connect: false,
-    disconnect: false,
-    message: {
-      inputs: null,
-      outputs: null,
-      type: null,
+    "name": "progressive-enhancement",
+    "route": "/status/websocket",
+    "input": null,
+    "connect": false,
+    "disconnect": false,
+    "message": {
+      "inputs": null,
+      "outputs": null,
+      "type": null
     },
-    messageRoutes: {
-      action: {
-        status: {
-          inputs: [],
-          outputs: ['StatusOutput'],
-          type: 'APIFunctionSessionless',
-        },
-      },
-    },
-  },
+    "messageRoutes": {
+      "action": {
+        "status": {
+          "inputs": [],
+          "outputs": [
+            "StatusOutput"
+          ],
+          "type": "APIFunctionSessionless"
+        }
+      }
+    }
+  }
 ])

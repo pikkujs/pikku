@@ -75,8 +75,7 @@ export type CoreAPIChannel<
   Channel extends string,
   ChannelFunctionConnection = CoreChannelConnection<ChannelData>,
   ChannelFunctionDisconnection = CoreChannelDisconnection<ChannelData>,
-  ChannelFunctionDefaultMessage = CoreAPIFunction<unknown, unknown>,
-  ChannelFunctionMessageRoute = CoreAPIFunction<unknown, unknown>,
+  ChannelFunctionMessage = CoreAPIFunction<unknown, unknown>,
   APIPermission = CoreAPIPermission<ChannelData>,
 > = {
   name: string
@@ -85,18 +84,18 @@ export type CoreAPIChannel<
   onDisconnect?: ChannelFunctionDisconnection
   onMessage?:
     | {
-        func: ChannelFunctionDefaultMessage
+        func: ChannelFunctionMessage
         permissions?: Record<string, APIPermission[] | APIPermission>
         auth?: boolean
       }
-    | ChannelFunctionDefaultMessage
+    | ChannelFunctionMessage
   onMessageRoute?: Record<
     string,
     Record<
       string,
-      | ChannelFunctionMessageRoute
+      | ChannelFunctionMessage
       | {
-          func: ChannelFunctionMessageRoute
+          func: ChannelFunctionMessage
           permissions?: Record<string, APIPermission[] | APIPermission>
           auth?: boolean
         }

@@ -25,6 +25,7 @@ jobs:
       - run: yarn test:coverage
       - run: yarn prettier
       - run: yarn lint
+      - run: cd templates/functions && yarn pikku && cd ../..
       - run: yarn typedoc
 
       - name: Save build output (for later jobs)
