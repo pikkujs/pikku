@@ -52,12 +52,17 @@ const addMessagesRoutes = (
         const keys = nestedObject.properties.map((p) => p.name?.getText())
         for (const route of keys) {
           if (route) {
-            const result = getFunctionTypesFromObject(checker, nestedObject, false, {
-              funcName: route,
-              inputIndex: 0,
-              outputIndex: 1,
-              typesMap,
-            })
+            const result = getFunctionTypesFromObject(
+              checker,
+              nestedObject,
+              false,
+              {
+                funcName: route,
+                inputIndex: 0,
+                outputIndex: 1,
+                typesMap,
+              }
+            )
             const inputs = result?.inputs || null
             const outputs = result?.outputs || null
             const type = result?.type || null
@@ -138,12 +143,17 @@ export const addChannel = (
 
     const connect = !!getPropertyAssignment(obj, 'onConnect', false)
     const disconnect = !!getPropertyAssignment(obj, 'onDisconnect', false)
-    const { inputs, outputs, type } = getFunctionTypesFromObject(checker, obj, false, {
-      funcName: 'onMessage',
-      inputIndex: 0,
-      outputIndex: 1,
-      typesMap: state.channels.typesMap,
-    })
+    const { inputs, outputs, type } = getFunctionTypesFromObject(
+      checker,
+      obj,
+      false,
+      {
+        funcName: 'onMessage',
+        inputIndex: 0,
+        outputIndex: 1,
+        typesMap: state.channels.typesMap,
+      }
+    )
     const message = { inputs, outputs, type }
     const messageRoutes = addMessagesRoutes(
       obj,

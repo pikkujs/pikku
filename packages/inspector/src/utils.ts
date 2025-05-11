@@ -250,7 +250,7 @@ export const getFunctionTypes = (
   typesMap: TypesMap,
   funcName: string,
   inputIndex: number = 0,
-  outputIndex: number = 1,
+  outputIndex: number = 1
 ): FunctionTypes => {
   const result: FunctionTypes = {
     inputTypes: [],
@@ -349,13 +349,18 @@ export const getFunctionTypesFromObject = (
   // Handle regular property assignment
   else if (ts.isPropertyAssignment(property)) {
     if (ts.isObjectLiteralExpression(property.initializer)) {
-      return getFunctionTypesFromObject(checker, property.initializer, required, {
-        typesMap,
-        funcName,
-        subFunctionName: 'func',
-        inputIndex,
-        outputIndex,
-      })
+      return getFunctionTypesFromObject(
+        checker,
+        property.initializer,
+        required,
+        {
+          typesMap,
+          funcName,
+          subFunctionName: 'func',
+          inputIndex,
+          outputIndex,
+        }
+      )
     }
 
     if (property.initializer) {
@@ -371,7 +376,14 @@ export const getFunctionTypesFromObject = (
     return emptyResponse
   }
 
-  return getFunctionTypes(checker, type, typesMap, funcName, inputIndex, outputIndex)
+  return getFunctionTypes(
+    checker,
+    type,
+    typesMap,
+    funcName,
+    inputIndex,
+    outputIndex
+  )
 }
 
 export const matchesFilters = (
