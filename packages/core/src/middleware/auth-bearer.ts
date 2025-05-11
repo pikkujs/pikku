@@ -28,8 +28,9 @@ export const authBearer = <
   ) => Promise<UserSession> | UserSession
 } = {}): PikkuMiddleware => {
   const middleware: PikkuMiddleware = async (services, { http }, next) => {
+    const { userSession: userSessionService, jwt: jwtService } = services
     // Skip if session already exists.
-    if (!http?.request || services.userSession.get()) {
+    if (!http?.request || userSessionService.get()) {
       return next()
     }
 
@@ -43,10 +44,10 @@ export const authBearer = <
       }
       let userSession: UserSession | null = null
       if (jwt) {
-        if (!services.jwt) {
+        if (!jwtService) {
           throw new Error('JWT service is required for JWT decoding.')
         }
-        userSession = await services.jwt.decode(bearerToken)
+        userSession = await jwtService.decode(bearerToken)
       } else if (token) {
         if (bearerToken === token.value) {
           userSession = token.userSession
@@ -56,7 +57,7 @@ export const authBearer = <
       }
 
       if (userSession) {
-        services.userSession.setInitial(userSession)
+        userSessionService.setInitial(userSession)
       }
     }
     return next()

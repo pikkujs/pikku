@@ -44,7 +44,12 @@ export const authCookie = <
     }
 )): PikkuMiddleware => {
   const middleware: PikkuMiddleware = async (services, { http }, next) => {
-    if (!http?.request || services.userSession.get()) {
+    const {
+      userSession: userSessionService,
+      jwt: jwtService,
+      logger,
+    } = services
+    if (!http?.request || userSessionService.get()) {
       return next()
     }
 
@@ -52,10 +57,10 @@ export const authCookie = <
     const cookieValue = http.request.cookie(name)
     if (cookieValue) {
       if (jwt) {
-        if (!services.jwt) {
+        if (!jwtService) {
           throw new Error('JWT service is required for JWT decoding.')
         }
-        userSession = await services.jwt.decode(cookieValue)
+        userSession = await jwtService.decode(cookieValue)
       } else if (getSessionForCookieValue) {
         userSession = await getSessionForCookieValue(
           services as any,
@@ -66,7 +71,7 @@ export const authCookie = <
     }
 
     if (userSession) {
-      services.userSession.setInitial(userSession)
+      userSessionService.setInitial(userSession)
     }
     await next()
 
@@ -75,22 +80,22 @@ export const authCookie = <
       return
     }
 
-    if (services.userSession.sessionChanged) {
-      const session = services.userSession.get()
+    if (userSessionService.sessionChanged) {
+      const session = userSessionService.get()
       if (jwt) {
-        if (!services.jwt) {
+        if (!jwtService) {
           throw new Error('JWT service is required for JWT encoding.')
         }
         http.response.cookie(
           name,
-          await services.jwt.encode(expiresIn, session),
+          await jwtService.encode(expiresIn, session),
           {
             ...options,
             expires: getRelativeTimeOffsetFromNow(expiresIn),
           }
         )
       } else {
-        services.logger.warn('No JWT service available, unable to set cookie')
+        logger.warn('No JWT service available, unable to set cookie')
       }
     }
   }

@@ -33,7 +33,8 @@ export const authAPIKey = <
     }
 )) => {
   const middleware: PikkuMiddleware = async (services, { http }, next) => {
-    if (!http?.request || services.userSession.get()) {
+    const { userSession: userSessionService, jwt: jwtService } = services
+    if (!http?.request || userSessionService.get()) {
       return next()
     }
 
@@ -47,15 +48,15 @@ export const authAPIKey = <
     if (apiKey) {
       let userSession: UserSession | null = null
       if (jwt) {
-        if (!services.jwt) {
+        if (!jwtService) {
           throw new Error('JWT service is required for JWT decoding.')
         }
-        userSession = await services.jwt.decode(apiKey)
+        userSession = await jwtService.decode(apiKey)
       } else {
         userSession = await getSessionForAPIKey!(services as any, apiKey)
       }
       if (userSession) {
-        services.userSession.setInitial(userSession)
+        userSessionService.setInitial(userSession)
       }
     }
     return next()

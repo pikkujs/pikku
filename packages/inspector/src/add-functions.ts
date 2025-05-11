@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import { InspectorState, InspectorFilters } from './types.js'
 import { TypesMap } from './types-map.js'
 import { extractFunctionName } from './utils.js'
+import { FunctionServicesMeta } from '@pikku/core'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -219,71 +220,95 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
   return type
 }
 
+/**
+ * Inspect pikkuFunc calls, extract input/output and first-arg destructuring,
+ * then push into state.functions.meta.
+ */
 export function addFunctions(
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
   filters: InspectorFilters
 ) {
-  // 1) bail if not a call
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args, typeArguments } = node
 
-  // 2) only handle pikkuFunc
-  if (!ts.isIdentifier(expression)) {
+  // only handle calls like pikkuFunc(...)
+  if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
     return
   }
-
-  if (!expression.text.startsWith('pikku')) {
-    return
-  }
-
-  // 3) must have at least one arg
   if (args.length === 0) return
 
-  // 4) figure out the function name
+  // figure out the function name
   const funcName = extractFunctionName(node)
   if (!funcName) {
     console.error('Couldn’t determine function name—skipping.')
     return
   }
 
-  // 5) determine the actual handler expression:
-  //    either the `func` prop or the first argument directly
-  if (!args[0]) {
-    console.error(`• No handler found for ${funcName}.`)
-    return
-  }
-
+  // determine the actual handler expression:
+  // either the `func` prop or the first argument directly
   let handlerNode: ts.Expression = args[0]!
-
-  if (handlerNode && ts.isObjectLiteralExpression(handlerNode)) {
-    const funcProp = handlerNode.properties.find(
-      (p) =>
+  if (ts.isObjectLiteralExpression(handlerNode)) {
+    const fnProp = handlerNode.properties.find(
+      (p): p is ts.PropertyAssignment =>
         ts.isPropertyAssignment(p) &&
         ts.isIdentifier(p.name) &&
         p.name.text === 'func'
-    ) as ts.PropertyAssignment | undefined
-
+    )
     if (
-      !funcProp ||
-      (!ts.isArrowFunction(funcProp.initializer) &&
-        !ts.isFunctionExpression(funcProp.initializer))
+      !fnProp ||
+      (!ts.isArrowFunction(fnProp.initializer) &&
+        !ts.isFunctionExpression(fnProp.initializer))
     ) {
       console.error(`• No valid 'func' property found for ${funcName}.`)
       return
     }
-
-    handlerNode = funcProp.initializer
+    handlerNode = fnProp.initializer
+  }
+  if (
+    !ts.isArrowFunction(handlerNode) &&
+    !ts.isFunctionExpression(handlerNode)
+  ) {
+    console.error(`• Handler for ${funcName} is not a function.`)
+    return
   }
 
-  // 6) pull out and unwrap any <In, Out> generics
+  // --- NEW: Extract first-arg destructuring names ---
+  const services: FunctionServicesMeta = {
+    optimized: true,
+    services: [],
+  }
+
+  const firstParam = handlerNode.parameters[0]
+  if (firstParam) {
+    if (ts.isObjectBindingPattern(firstParam.name)) {
+      for (const elem of firstParam.name.elements) {
+        const original =
+          elem.propertyName && ts.isIdentifier(elem.propertyName)
+            ? elem.propertyName.text
+            : ts.isIdentifier(elem.name)
+              ? elem.name.text
+              : undefined
+        if (original) {
+          services.services.push(original)
+        }
+      }
+    } else if (
+      ts.isIdentifier(firstParam.name) &&
+      !firstParam.name.text.startsWith('_')
+    ) {
+      services.optimized = false
+    }
+  }
+
+  // --- Generics → ts.Type[], unwrapped from Promise ---
   const genericTypes: ts.Type[] = (typeArguments ?? [])
     .map((tn) => checker.getTypeFromTypeNode(tn))
     .map((t) => unwrapPromise(checker, t))
 
-  // 7) extract Input
+  // --- Input Extraction ---
   let { names: inputNames, types: inputTypes } = getNamesAndTypes(
     checker,
     state.functions.typesMap,
@@ -293,15 +318,13 @@ export function addFunctions(
   )
   if (inputTypes.length === 0) {
     console.error(
-      `\x1b[31m• Unknown input type found for ${funcName}, assuming void.\x1b[0m`
+      `\x1b[31m• Unknown input type for ${funcName}, assuming void.\x1b[0m`
     )
   }
 
-  // 8) extract Output
+  // --- Output Extraction ---
   let outputNames: string[] = []
-
   if (genericTypes.length >= 2) {
-    // explicit <In, Out>
     outputNames = getNamesAndTypes(
       checker,
       state.functions.typesMap,
@@ -309,11 +332,7 @@ export function addFunctions(
       funcName,
       genericTypes[1]
     ).names
-  } else if (
-    ts.isArrowFunction(handlerNode) ||
-    ts.isFunctionExpression(handlerNode)
-  ) {
-    // infer from signature
+  } else {
     const sig = checker.getSignatureFromDeclaration(handlerNode)
     if (sig) {
       const rawRet = checker.getReturnTypeOfSignature(sig)
@@ -328,10 +347,11 @@ export function addFunctions(
     }
   }
 
-  // 9) record it
+  // --- Record metadata ---
   state.functions.files.add(node.getSourceFile().fileName)
   state.functions.meta.push({
     name: funcName,
+    services,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
   })

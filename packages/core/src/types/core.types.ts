@@ -7,8 +7,14 @@ import { UserSessionService } from '../services/user-session-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
 
+export interface FunctionServicesMeta {
+  optimized: boolean
+  services: string[]
+}
+
 export type FunctionsMeta = {
   name: string
+  services: FunctionServicesMeta
   inputs: string[] | null
   outputs: string[] | null
 }[]
