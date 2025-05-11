@@ -136,7 +136,8 @@ export const processMessageHandlers = (
       )
     }
 
-    const func: any = typeof onMessage === 'function' ? onMessage : onMessage.func
+    const func: any =
+      typeof onMessage === 'function' ? onMessage : onMessage.func
     return await func(
       {
         ...services,

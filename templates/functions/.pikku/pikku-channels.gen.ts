@@ -8,62 +8,51 @@ import '../src/http-progressive-enhancement.js'
 import { pikkuState } from '@pikku/core'
 pikkuState('channel', 'meta', [
   {
-    "name": "events",
-    "route": "/",
-    "input": null,
-    "connect": true,
-    "disconnect": true,
-    "messageRoutes": {
-      "action": {
-        "auth": {
-          "inputs": [
-            "AuthenticateInput"
-          ],
-          "outputs": [
-            "AuthenticateOutput"
-          ]
-        },
-        "subscribe": {
-          "inputs": [
-            "SubscribeInput"
-          ],
-          "outputs": []
-        },
-        "unsubscribe": {
-          "inputs": [
-            "UnsubscribeInput"
-          ],
-          "outputs": []
-        },
-        "emit": {
-          "inputs": [
-            "EmitMessageInput"
-          ],
-          "outputs": [
-            "EmitMessageOutput"
-          ]
-        }
-      }
+    name: 'events',
+    route: '/',
+    input: null,
+    connect: true,
+    disconnect: true,
+    message: {
+      inputs: ['OnMessageInput'],
+      outputs: ['OnMessageOutput'],
     },
-    "tags": [
-      "events"
-    ]
+    messageRoutes: {
+      action: {
+        auth: {
+          inputs: ['AuthenticateInput'],
+          outputs: ['AuthenticateOutput'],
+        },
+        subscribe: {
+          inputs: ['SubscribeInput'],
+          outputs: [],
+        },
+        unsubscribe: {
+          inputs: ['UnsubscribeInput'],
+          outputs: [],
+        },
+        emit: {
+          inputs: ['EmitMessageInput'],
+          outputs: ['EmitMessageOutput'],
+        },
+      },
+    },
+    tags: ['events'],
   },
   {
-    "name": "progressive-enhancement",
-    "route": "/status/websocket",
-    "input": null,
-    "connect": false,
-    "disconnect": false,
-    "messageRoutes": {
-      "action": {
-        "status": {
-          "inputs": [],
-          "outputs": [
-            "ProgressiveEnhancementExampleOutput"
-          ]
-        }
-      }
-    }
-  }
+    name: 'progressive-enhancement',
+    route: '/status/websocket',
+    input: null,
+    connect: false,
+    disconnect: false,
+    message: null,
+    messageRoutes: {
+      action: {
+        status: {
+          inputs: [],
+          outputs: ['ProgressiveEnhancementExampleOutput'],
+        },
+      },
+    },
+  },
 ])

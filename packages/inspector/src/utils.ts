@@ -1,17 +1,14 @@
 import * as ts from 'typescript'
 import { InspectorFilters } from './types.js'
 
-
 /**
  * Generates a stable “anonymous” name for a CallExpression based on:
  *   – the file name (sanitized)
  *   – the line and character where the call appears
  */
-export function makeDeterministicAnonName(
-  callExpr: ts.CallExpression
-): string {
-  const sf     = callExpr.getSourceFile()
-  const file   = sf.fileName.replace(/[^a-zA-Z0-9_]/g, '_')
+export function makeDeterministicAnonName(callExpr: ts.CallExpression): string {
+  const sf = callExpr.getSourceFile()
+  const file = sf.fileName.replace(/[^a-zA-Z0-9_]/g, '_')
   const { line, character } = ts.getLineAndCharacterOfPosition(
     sf,
     callExpr.getStart()
@@ -24,9 +21,7 @@ export function makeDeterministicAnonName(
  * `pikkuFunc({ name: 'bar', func: () => {} })`, returns the identifier
  * (`foo` or `'bar'`), or `null` if none can be determined.
  */
-export function extractFunctionName(
-  callExpr: ts.CallExpression
-): string {
+export function extractFunctionName(callExpr: ts.CallExpression): string {
   const parent = callExpr.parent
 
   // 1) const foo = pikkuFunc(...)

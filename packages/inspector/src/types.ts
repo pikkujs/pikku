@@ -1,7 +1,8 @@
 import { ChannelsMeta } from '@pikku/core/channel'
-import { HTTPFunctionsMeta, HTTPRoutesMeta } from '@pikku/core/http'
+import { HTTPRoutesMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { TypesMap } from './types-map.js'
+import { FunctionsMeta } from '@pikku/core'
 
 export type PathToNameAndType = Map<
   string,
@@ -17,18 +18,6 @@ export type MetaInputTypes = Map<
   }
 >
 
-export type APIFunctionMeta = Array<{
-  name: string
-  input: string
-  output: string
-  file: string
-}>
-
-export type InspectorAPIFunction = {
-  typesMap: TypesMap
-  meta: APIFunctionMeta
-}
-
 export interface InspectorHTTPState {
   typesMap: TypesMap
   metaInputTypes: MetaInputTypes
@@ -38,7 +27,7 @@ export interface InspectorHTTPState {
 
 export interface InspectorFunctionState {
   typesMap: TypesMap
-  meta: HTTPFunctionsMeta
+  meta: FunctionsMeta
   files: Set<string>
 }
 

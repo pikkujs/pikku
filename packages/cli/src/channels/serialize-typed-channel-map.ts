@@ -120,6 +120,8 @@ function generateChannels(channelsMeta: ChannelsMeta) {
       routesStr += `    readonly defaultMessage: ChannelHandler<${formatTypeArray(
         message.inputs
       )}, ${formatTypeArray(message.outputs)}>,\n`
+    } else {
+      routesStr += `    readonly defaultMessage: never,\n`
     }
 
     routesStr += '  },\n'

@@ -3,7 +3,7 @@ import {
   CoreHTTPFunctionRoutes,
   HTTPRoutesMeta,
 } from './http/http-routes.types.js'
-import { PikkuMiddleware } from './types/core.types.js'
+import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
@@ -11,6 +11,9 @@ import {
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
 
 interface PikkuState {
+  functions: {
+    meta: FunctionsMeta
+  }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
     routes: CoreHTTPFunctionRoutes

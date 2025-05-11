@@ -11,9 +11,9 @@ export async function generateSchemas(
   routesMeta: HTTPRoutesMeta
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(
-    typesMaps.flatMap(tm => [...tm.customTypes.keys()])
+    typesMaps.flatMap((tm) => [...tm.customTypes.keys()])
   )
-  for (const { input, output, inputTypes } of routesMeta) {
+  for (const { input, inputTypes } of routesMeta) {
     if (input) {
       for (const typesMap of typesMaps) {
         const uniqueName = typesMap.getUniqueName(input)
@@ -23,15 +23,16 @@ export async function generateSchemas(
         }
       }
     }
-    if (output) {
-      for (const typesMap of typesMaps) {
-        const uniqueName = typesMap.getUniqueName(output)
-        if (uniqueName) {
-          schemasSet.add(uniqueName)
-          break
-        }
-      }
-    }
+    // if (output) {
+    //   for (const typesMap of typesMaps) {
+    //     const uniqueName = typesMap.getUniqueName(output)
+    //     if (uniqueName) {
+    //       console.log('Adding output schema:', uniqueName)
+    //       schemasSet.add(uniqueName)
+    //       break
+    //     }
+    //   }
+    // }
     if (inputTypes?.body) {
       schemasSet.add(inputTypes.body)
     }

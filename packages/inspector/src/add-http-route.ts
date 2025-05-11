@@ -11,7 +11,10 @@ import { InspectorState, InspectorFilters } from './types.js'
  * query and params. Returns undefined (we only mutate metaTypes).
  */
 export const getInputTypes = (
-  metaTypes: Map<string, { query?: string[]; params?: string[]; body?: string[] }>,
+  metaTypes: Map<
+    string,
+    { query?: string[]; params?: string[]; body?: string[] }
+  >,
   methodType: string,
   inputType: string | null,
   queryValues: string[],
@@ -54,9 +57,7 @@ export const addRoute = (
   if (!route) return
 
   const keys = pathToRegexp(route).keys
-  const params = keys
-    .filter(k => k.type === 'param')
-    .map(k => k.name)
+  const params = keys.filter((k) => k.type === 'param').map((k) => k.name)
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
@@ -70,7 +71,7 @@ export const addRoute = (
 
   // --- find the referenced function ---
   const funcProp = obj.properties.find(
-    p =>
+    (p) =>
       ts.isPropertyAssignment(p) &&
       ts.isIdentifier(p.name) &&
       p.name.text === 'func'
@@ -83,7 +84,7 @@ export const addRoute = (
   const funcName = funcProp.initializer.text
 
   // lookup existing function metadata
-  const fnMeta = state.functions.meta.find(m => m.name === funcName)
+  const fnMeta = state.functions.meta.find((m) => m.name === funcName)
   if (!fnMeta) {
     console.error(`• No function metadata found for '${funcName}'.`)
     return

@@ -132,10 +132,7 @@ const getNamesAndTypes = (
   }
 
   // 2) For unions, resolve all member names/types
-  const {
-    names: rawNames,
-    types: rawTypes
-  } = resolveUnionTypes(checker, type)
+  const { names: rawNames, types: rawTypes } = resolveUnionTypes(checker, type)
 
   // If the union is exactly [void], we'd have caught it above.
   // If it's e.g. [string, void], rawNames should already include 'void'.
@@ -143,19 +140,14 @@ const getNamesAndTypes = (
   // 3) If multiple names or the single name isn't a valid identifier,
   //    we emit an alias type.
   const firstName = rawNames[0]
-  if (
-    rawNames.length > 1 ||
-    (firstName && !isValidVariableName(firstName))
-  ) {
+  if (rawNames.length > 1 || (firstName && !isValidVariableName(firstName))) {
     const aliasType = rawNames.join(' | ')
     const aliasName =
-      funcName.charAt(0).toUpperCase() +
-      funcName.slice(1) +
-      direction
+      funcName.charAt(0).toUpperCase() + funcName.slice(1) + direction
 
     // record the alias in your TypesMap
     const references = rawTypes
-      .map(t => resolveTypeImports(t, typesMap, true))
+      .map((t) => resolveTypeImports(t, typesMap, true))
       .flat()
 
     typesMap.addCustomType(aliasName, aliasType, references)
@@ -167,19 +159,19 @@ const getNamesAndTypes = (
   }
 
   // 4) Single, valid name → inline it
-  const uniqueNames = rawNames.map((name, i) => {
-    const t = rawTypes[i]
-    if (!t) {
-      throw new Error(
-        `Expected type for name "${name}" in ${funcName}`
-      )
-    }
-    if (isPrimitiveType(t)) {
-      return name
-    }
-    // non-primitive: import/alias it inline
-    return resolveTypeImports(t, typesMap, false)
-  }).flat()
+  const uniqueNames = rawNames
+    .map((name, i) => {
+      const t = rawTypes[i]
+      if (!t) {
+        throw new Error(`Expected type for name "${name}" in ${funcName}`)
+      }
+      if (isPrimitiveType(t)) {
+        return name
+      }
+      // non-primitive: import/alias it inline
+      return resolveTypeImports(t, typesMap, false)
+    })
+    .flat()
 
   return {
     names: uniqueNames,
@@ -198,7 +190,7 @@ const isPrimitiveType = (type: ts.Type): boolean => {
     ts.TypeFlags.Undefined |
     ts.TypeFlags.Null |
     ts.TypeFlags.Any |
-    ts.TypeFlags.Unknown | 
+    ts.TypeFlags.Unknown |
     ts.TypeFlags.VoidLike
 
   return (type.flags & primitiveFlags) !== 0
@@ -216,12 +208,12 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
 
   // aliasTypeArguments covers most Promise<T> cases
   if (isPromise && type.aliasTypeArguments?.length === 1) {
-    return type.aliasTypeArguments[0]
+    return type.aliasTypeArguments[0]!
   }
 
   // fallback for raw TypeReference
   if (isPromise && (type as ts.TypeReference).typeArguments?.length === 1) {
-    return (type as ts.TypeReference).typeArguments![0]
+    return (type as ts.TypeReference).typeArguments![0]!
   }
 
   return type
@@ -259,10 +251,15 @@ export function addFunctions(
 
   // 5) determine the actual handler expression:
   //    either the `func` prop or the first argument directly
-  let handlerNode: ts.Expression = args[0]
-  if (ts.isObjectLiteralExpression(args[0])) {
-    const obj = args[0]
-    const funcProp = obj.properties.find(
+  if (!args[0]) {
+    console.error(`• No handler found for ${funcName}.`)
+    return
+  }
+
+  let handlerNode: ts.Expression = args[0]!
+
+  if (handlerNode && ts.isObjectLiteralExpression(handlerNode)) {
+    const funcProp = handlerNode.properties.find(
       (p) =>
         ts.isPropertyAssignment(p) &&
         ts.isIdentifier(p.name) &&
@@ -335,7 +332,7 @@ export function addFunctions(
   state.functions.files.add(node.getSourceFile().fileName)
   state.functions.meta.push({
     name: funcName,
-    inputs: inputNames.filter(n => n !== 'void') ?? null,
-    outputs: outputNames.filter(n => n !== 'void') ?? null,
+    inputs: inputNames.filter((n) => n !== 'void') ?? null,
+    outputs: outputNames.filter((n) => n !== 'void') ?? null,
   })
 }

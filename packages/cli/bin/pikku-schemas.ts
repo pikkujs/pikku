@@ -15,11 +15,11 @@ export const pikkuSchemas = async (
     'Created schemas',
     [false],
     async () => {
-      const schemas = await generateSchemas(tsconfig, [
-        functions.typesMap,
-        http.typesMap,
-        channels.typesMap
-      ], http.meta)
+      const schemas = await generateSchemas(
+        tsconfig,
+        [functions.typesMap, http.typesMap, channels.typesMap],
+        http.meta
+      )
       await saveSchemas(
         schemaDirectory,
         schemas,

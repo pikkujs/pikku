@@ -7,6 +7,12 @@ import { UserSessionService } from '../services/user-session-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
 
+export type FunctionsMeta = {
+  name: string
+  inputs: string[] | null
+  outputs: string[] | null
+}[]
+
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>
 

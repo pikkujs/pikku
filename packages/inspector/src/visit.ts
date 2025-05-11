@@ -54,7 +54,6 @@ export const visitSetup = (
   ts.forEachChild(node, (child) => visitSetup(checker, child, state, filters))
 }
 
-
 export const visitRoutes = (
   checker: ts.TypeChecker,
   node: ts.Node,

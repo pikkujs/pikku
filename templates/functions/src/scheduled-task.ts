@@ -1,6 +1,6 @@
 import {
   addScheduledTask,
-  pikkuSessionlessFunc
+  pikkuSessionlessFunc,
 } from '../.pikku/pikku-types.gen.js'
 
 const myScheduledTask = pikkuSessionlessFunc<void, void>(async ({ logger }) => {

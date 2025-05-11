@@ -4,227 +4,187 @@ import { pathToRegexp } from 'path-to-regexp'
 import { APIDocs } from '@pikku/core'
 import { getInputTypes } from './add-http-route.js'
 import {
-    extractFunctionName,
-    getPropertyAssignment,
-    matchesFilters,
+  extractFunctionName,
+  getPropertyAssignment,
+  matchesFilters,
 } from './utils.js'
-import { ChannelMeta } from '@pikku/core/channel'
-import { InspectorFilters, InspectorState } from './types.js'
+import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
+import type { InspectorFilters, InspectorState } from './types.js'
 
-export function addMessagesRoutes(
-    obj: ts.ObjectLiteralExpression,
-    state: InspectorState
-): ChannelMeta['messageRoutes'] {
-    const routes: ChannelMeta['messageRoutes'] = {}
-
-    // find the onMessageRoute property
-    const onMsgProp = obj.properties.find(
-        p =>
-            ts.isPropertyAssignment(p) &&
-            (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
-            p.name.getText() === 'onMessageRoute'
-    ) as ts.PropertyAssignment | undefined
-    if (!onMsgProp) return {}
-
-    const lit = onMsgProp.initializer
-    if (!ts.isObjectLiteralExpression(lit)) return {}
-
-    for (const chanProp of lit.properties) {
-        // only handle normal or shorthand assignments
-        if (
-            !ts.isPropertyAssignment(chanProp) &&
-            !ts.isShorthandPropertyAssignment(chanProp)
-        ) continue
-
-        const channel = chanProp.name.getText()
-        routes[channel] = {}
-
-        // extract the nested object literal
-        const nested = ts.isPropertyAssignment(chanProp)
-            ? chanProp.initializer
-            : null
-        if (!nested || !ts.isObjectLiteralExpression(nested)) continue
-
-        for (const routeProp of nested.properties) {
-            // again, only prop- or shorthand-assignments
-            if (
-                !ts.isPropertyAssignment(routeProp) &&
-                !ts.isShorthandPropertyAssignment(routeProp)
-            ) continue
-
-            const route = routeProp.name.getText()
-            let initializer: ts.Expression
-
-            if (ts.isPropertyAssignment(routeProp)) {
-                initializer = routeProp.initializer
-            } else {
-                // shorthand: { unsubscribe }
-                initializer = routeProp.name
-            }
-
-            // now pull the handler name off the right‐hand side:
-            let handlerName: string | null = null
-
-            if (ts.isIdentifier(initializer)) {
-                // unsubscribe or emitMessage
-                handlerName = initializer.text
-            } else if (ts.isCallExpression(initializer)) {
-                // pikkuFunc(...) or shorthand createFunction
-                handlerName = extractFunctionName(initializer)
-                // assume `initializer` here is already narrowed to ObjectLiteralExpression
-            } else if (ts.isObjectLiteralExpression(initializer)) {
-                // find the `func` property inside your `{ func: ..., auth: ... }` object
-                const fnProp = initializer.properties.find(
-                    (p): p is ts.PropertyAssignment =>
-                        ts.isPropertyAssignment(p) &&
-                        (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
-                        p.name.getText() === 'func'
-                )
-
-                if (fnProp) {
-                    // now TypeScript knows `fnProp` is a PropertyAssignment, so `.initializer` exists
-                    const rhs = fnProp.initializer
-
-                    if (ts.isIdentifier(rhs)) {
-                        handlerName = rhs.text
-                    } else if (ts.isCallExpression(rhs)) {
-                        handlerName = extractFunctionName(rhs)
-                    } else {
-                        console.error(
-                            `• Unexpected form for 'func' property in onMessageRoute:`,
-                            rhs.kind
-                        )
-                    }
-                }
-            }
-
-            if (!handlerName) {
-                console.error(`Could not resolve handler for route '${route}'`)
-                continue
-            }
-
-            const fnMeta = state.functions.meta.find(m => m.name === handlerName)
-            if (!fnMeta) {
-                console.error(`• No function metadata found for handler '${handlerName}'`)
-                continue
-            }
-
-            routes[channel][route] = {
-                inputs: fnMeta.inputs || null,
-                outputs: fnMeta.outputs || null
-            }
-        }
-    }
-
-    return routes
+/**
+ * Safely get the “initializer” expression of a property-like AST node:
+ * - for `foo: expr`, returns `expr`
+ * - for `{ foo }` shorthand, returns the identifier `foo`
+ * - otherwise, returns undefined
+ */
+function getInitializerOf(
+  elem: ts.ObjectLiteralElementLike
+): ts.Expression | undefined {
+  if (ts.isPropertyAssignment(elem)) {
+    return elem.initializer
+  }
+  if (ts.isShorthandPropertyAssignment(elem)) {
+    return elem.name
+  }
+  return undefined
 }
 
-export const addChannel = (
-    node: ts.Node,
-    checker: ts.TypeChecker,
-    state: InspectorState,
-    filters: InspectorFilters
-) => {
-    if (!ts.isCallExpression(node)) {
-        return
+/**
+ * Resolve a handler expression (Identifier, CallExpression, or { func })
+ * into its underlying function name.
+ */
+function getHandlerNameFromExpression(expr: ts.Expression): string | null {
+  if (ts.isIdentifier(expr)) {
+    return expr.text
+  }
+  if (ts.isCallExpression(expr)) {
+    return extractFunctionName(expr)
+  }
+  if (ts.isObjectLiteralExpression(expr)) {
+    const fnProp = getPropertyAssignment(expr, 'func')
+    if (fnProp) {
+      const inner = getInitializerOf(fnProp)
+      if (inner) return getHandlerNameFromExpression(inner)
     }
+  }
+  return null
+}
 
-    const args = node.arguments
-    const firstArg = args[0]
-    const expression = node.expression
+/**
+ * Build out the nested message-routes by looking up each handler
+ * in state.functions.meta instead of re-inferring it here.
+ */
+export function addMessagesRoutes(
+  obj: ts.ObjectLiteralExpression,
+  state: InspectorState
+): ChannelMeta['messageRoutes'] {
+  const result: ChannelMeta['messageRoutes'] = {}
+  const onMsgRouteProp = getPropertyAssignment(obj, 'onMessageRoute')
+  if (!onMsgRouteProp) return result
 
-    // Check if the call is to addRoute
-    if (!ts.isIdentifier(expression) || expression.text !== 'addChannel') {
-        return
-    }
+  const top = getInitializerOf(onMsgRouteProp)
+  if (!top || !ts.isObjectLiteralExpression(top)) return result
 
-    if (!firstArg) {
-        return
-    }
+  for (const chanElem of top.properties) {
+    const chanInit = getInitializerOf(chanElem)
+    if (!chanInit || !ts.isObjectLiteralExpression(chanInit)) continue
 
-    let docs: APIDocs | undefined
-    let paramsValues: string[] | null = []
-    let queryValues: string[] | [] = []
-    let tags: string[] | undefined = undefined
-    let inputType: string | null = null
-    let route: string | null = null
-    let name: string | null = null
+    const channelKey = chanElem.name!.getText()
+    result[channelKey] = {}
 
-    // Check if the first argument is an object literal
-    if (ts.isObjectLiteralExpression(firstArg)) {
-        const obj = firstArg
+    for (const routeElem of chanInit.properties) {
+      const init = getInitializerOf(routeElem)
+      if (!init) continue
 
-        name = getPropertyValue(obj, 'name') as string | null
-        route = getPropertyValue(obj, 'route') as string | null
-
-        if (!name) {
-            console.error('Channel name is required')
-            return
-        }
-
-        if (route) {
-            const { keys } = pathToRegexp(route)
-            paramsValues = keys.reduce((result, { type, name }) => {
-                if (type === 'param') {
-                    result.push(name)
-                }
-                return result
-            }, [] as string[])
-        } else {
-            route = ''
-        }
-
-        docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
-        queryValues = (getPropertyValue(obj, 'query') as string[]) || []
-        tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
-
-        const connect = !!getPropertyAssignment(obj, 'onConnect', false)
-        const disconnect = !!getPropertyAssignment(obj, 'onDisconnect', false)
-
-        const onMessageRoute = getPropertyAssignment(obj, 'onMessageRoute', false)
-        let message: any | null = null
-        if (onMessageRoute) {
-            const funcName = extractFunctionName(onMessageRoute)
-            const fnMeta = state.functions.meta.find(m => m.name === 'funcName')
-            if (!fnMeta) {
-                console.error(`• No function metadata found for '${funcName}'.`)
-            } else {
-                message = {
-                    inputs: fnMeta.inputs,
-                    outputs: fnMeta.outputs,
-                }
-            }
-        }
-
-        const messageRoutes = addMessagesRoutes(
-            obj,
-            state
+      const routeKey = routeElem.name!.getText()
+      const handlerName = getHandlerNameFromExpression(init)
+      if (!handlerName) {
+        console.error(
+          `Could not resolve handler for message route '${routeKey}'`
         )
+        continue
+      }
 
-        if (!matchesFilters(filters, { tags }, { type: 'channel', name })) {
-            return
-        }
+      const fnMeta = state.functions.meta.find((m) => m.name === handlerName)
+      if (!fnMeta) {
+        console.error(`No function metadata found for handler '${handlerName}'`)
+        continue
+      }
 
-        state.channels.files.add(node.getSourceFile().fileName)
-        state.channels.meta.push({
-            name,
-            route,
-            input: inputType,
-            params: paramsValues.length > 0 ? paramsValues : undefined,
-            query: queryValues.length > 0 ? queryValues : undefined,
-            inputTypes: getInputTypes(
-                state.channels.metaInputTypes,
-                'get',
-                inputType,
-                queryValues,
-                paramsValues
-            ),
-            connect,
-            disconnect,
-            message: message || undefined,
-            messageRoutes,
-            docs,
-            tags,
-        })
+      result[channelKey]![routeKey] = {
+        inputs: fnMeta.inputs ?? null,
+        outputs: fnMeta.outputs ?? null,
+      }
     }
+  }
+
+  return result
+}
+
+/**
+ * Inspect addChannel calls, look up all handlers in state.functions.meta,
+ * and emit one entry into state.channels.meta.
+ */
+export function addChannel(
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  state: InspectorState,
+  filters: InspectorFilters
+) {
+  if (!ts.isCallExpression(node)) return
+  const { expression, arguments: args } = node
+  if (!ts.isIdentifier(expression) || expression.text !== 'addChannel') return
+  const first = args[0]
+  if (!first || !ts.isObjectLiteralExpression(first)) return
+
+  const obj = first
+  const name = getPropertyValue(obj, 'name') as string | undefined
+  const route = (getPropertyValue(obj, 'route') as string) ?? ''
+
+  if (!name) {
+    console.error('Channel name is required')
+    return
+  }
+
+  // path parameters
+  const params = route
+    ? pathToRegexp(route)
+        .keys.filter((k) => k.type === 'param')
+        .map((k) => k.name)
+    : []
+
+  const docs = getPropertyValue(obj, 'docs') as APIDocs | undefined
+  const tags = getPropertyValue(obj, 'tags') as string[] | undefined
+  const query = getPropertyValue(obj, 'query') as string[] | []
+
+  if (!matchesFilters(filters, { tags }, { type: 'channel', name })) return
+
+  const connect = Boolean(getPropertyAssignment(obj, 'onConnect', false))
+  const disconnect = Boolean(getPropertyAssignment(obj, 'onDisconnect', false))
+
+  // default onMessage handler
+  let message: ChannelMessageMeta | null = null
+  const onMsgProp = getPropertyAssignment(obj, 'onMessage', false)
+  if (onMsgProp) {
+    const init = getInitializerOf(onMsgProp)
+    const handlerName = init && getHandlerNameFromExpression(init)
+    const fnMeta =
+      handlerName && state.functions.meta.find((m) => m.name === handlerName)
+    if (!fnMeta) {
+      console.error(
+        `No function metadata for onMessage handler '${handlerName}'`
+      )
+    } else {
+      message = {
+        inputs: fnMeta.inputs ?? null,
+        outputs: fnMeta.outputs ?? null,
+      }
+    }
+  }
+
+  // nested message-routes
+  const messageRoutes = addMessagesRoutes(obj, state)
+
+  // record into state
+  state.channels.files.add(node.getSourceFile().fileName)
+  state.channels.meta.push({
+    name,
+    route,
+    input: null,
+    params: params.length ? params : undefined,
+    query: query?.length ? query : undefined,
+    inputTypes: getInputTypes(
+      state.channels.metaInputTypes,
+      'get',
+      message?.inputs?.[0] ?? null,
+      query,
+      params
+    ),
+    connect,
+    disconnect,
+    message,
+    messageRoutes,
+    docs: docs ?? undefined,
+    tags: tags ?? undefined,
+  })
 }
