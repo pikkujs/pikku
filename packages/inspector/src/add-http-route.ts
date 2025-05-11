@@ -3,7 +3,7 @@ import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { APIDocs } from '@pikku/core'
-import { extractTypeKeys, getFunctionTypes, matchesFilters } from './utils.js'
+import { extractTypeKeys, getFunctionTypesFromObject, matchesFilters } from './utils.js'
 import { MetaInputTypes, InspectorState, InspectorFilters } from './types.js'
 
 export const getInputTypes = (
@@ -88,7 +88,7 @@ export const addRoute = (
       return
     }
 
-    let { inputs, outputs, inputTypes } = getFunctionTypes(checker, obj, true, {
+    let { inputs, outputs, inputTypes } = getFunctionTypesFromObject(checker, obj, true, {
       funcName: 'func',
       inputIndex: 0,
       outputIndex: 1,

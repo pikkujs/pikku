@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { TypesMap } from './types-map.js'
 import { InspectorFilters } from './types.js'
 
-type FunctionTypes = {
+export type FunctionTypes = {
   type: string | null
   inputTypes: ts.Type[]
   inputs: null | string[]
@@ -246,73 +246,19 @@ export const getTypeArgumentsOfType = (
 
 export const getFunctionTypes = (
   checker: ts.TypeChecker,
-  obj: ts.ObjectLiteralExpression,
-  required: boolean = true,
-  {
-    typesMap,
-    funcName,
-    subFunctionName = funcName,
-    inputIndex,
-    outputIndex,
-  }: {
-    typesMap: TypesMap
-    subFunctionName?: string
-    funcName: string
-    inputIndex: number
-    outputIndex: number
-  }
+  type: ts.Type,
+  typesMap: TypesMap,
+  funcName: string,
+  inputIndex: number = 0,
+  outputIndex: number = 1,
 ): FunctionTypes => {
   const result: FunctionTypes = {
     inputTypes: [],
     inputs: null,
     outputTypes: [],
     outputs: null,
-    type: null,
+    type: type.aliasSymbol?.getEscapedName() || null,
   }
-
-  const property = getPropertyAssignment(obj, subFunctionName, required)
-  if (!property) {
-    return result
-  }
-
-  let type: ts.Type | undefined
-
-  // Handle shorthand property assignment
-  if (ts.isShorthandPropertyAssignment(property)) {
-    const symbol = checker.getShorthandAssignmentValueSymbol(property)
-    if (symbol) {
-      type = checker.getTypeOfSymbolAtLocation(symbol, property)
-      if (funcName === 'func') {
-        funcName = symbol.name
-      }
-    }
-  }
-  // Handle regular property assignment
-  else if (ts.isPropertyAssignment(property)) {
-    if (ts.isObjectLiteralExpression(property.initializer)) {
-      return getFunctionTypes(checker, property.initializer, required, {
-        typesMap,
-        funcName,
-        subFunctionName: 'func',
-        inputIndex,
-        outputIndex,
-      })
-    }
-
-    if (property.initializer) {
-      type = checker.getTypeAtLocation(property.initializer)
-      if (funcName === 'func') {
-        funcName = property.initializer.getText()
-      }
-    }
-  }
-
-  if (!type) {
-    console.error(`Unable to resolve type for property '${funcName}'`)
-    return result
-  }
-
-  result.type = type.aliasSymbol?.getEscapedName() || null
 
   // Access type arguments from TypeReference
   const typeArguments = getTypeArgumentsOfType(checker, type)
@@ -355,6 +301,77 @@ export const getFunctionTypes = (
   }
 
   return result
+}
+
+export const getFunctionTypesFromObject = (
+  checker: ts.TypeChecker,
+  obj: ts.ObjectLiteralExpression,
+  required: boolean = true,
+  {
+    typesMap,
+    funcName,
+    subFunctionName = funcName,
+    inputIndex,
+    outputIndex,
+  }: {
+    typesMap: TypesMap
+    subFunctionName?: string
+    funcName: string
+    inputIndex: number
+    outputIndex: number
+  }
+): FunctionTypes => {
+  const emptyResponse: FunctionTypes = {
+    inputTypes: [],
+    inputs: null,
+    outputTypes: [],
+    outputs: null,
+    type: null,
+  }
+
+  const property = getPropertyAssignment(obj, subFunctionName, required)
+  if (!property) {
+    return emptyResponse
+  }
+
+  let type: ts.Type | undefined
+
+  // Handle shorthand property assignment
+  if (ts.isShorthandPropertyAssignment(property)) {
+    const symbol = checker.getShorthandAssignmentValueSymbol(property)
+    if (symbol) {
+      type = checker.getTypeOfSymbolAtLocation(symbol, property)
+      if (funcName === 'func') {
+        funcName = symbol.name
+      }
+    }
+  }
+  // Handle regular property assignment
+  else if (ts.isPropertyAssignment(property)) {
+    if (ts.isObjectLiteralExpression(property.initializer)) {
+      return getFunctionTypesFromObject(checker, property.initializer, required, {
+        typesMap,
+        funcName,
+        subFunctionName: 'func',
+        inputIndex,
+        outputIndex,
+      })
+    }
+
+    if (property.initializer) {
+      type = checker.getTypeAtLocation(property.initializer)
+      if (funcName === 'func') {
+        funcName = property.initializer.getText()
+      }
+    }
+  }
+
+  if (!type) {
+    console.error(`Unable to resolve type for property '${funcName}'`)
+    return emptyResponse
+  }
+
+  return getFunctionTypes(checker, type, typesMap, funcName, inputIndex, outputIndex)
 }
 
 export const matchesFilters = (

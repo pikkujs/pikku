@@ -209,6 +209,12 @@ export type HTTPRoutesMeta = Array<{
   sse?: true
 }>
 
+export type HTTPFunctionsMeta = Array<{
+  name: string
+  input: string | null
+  output: string | null
+}>
+
 export type HTTPRouteMiddleware = {
   route: string
   middleware: PikkuMiddleware[]

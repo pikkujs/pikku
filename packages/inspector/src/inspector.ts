@@ -31,6 +31,11 @@ export const inspect = (
     singletonServicesFactories: new Map(),
     sessionServicesFactories: new Map(),
     configFactories: new Map(),
+    functions: {
+      typesMap: new TypesMap(),
+      meta: [],
+      files: new Set(),
+    },
     http: {
       typesMap: new TypesMap(),
       metaInputTypes: new Map(),

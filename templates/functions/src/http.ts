@@ -10,6 +10,14 @@ export const helloWorld: APIFunctionSessionless<
   return 'Hello world!'
 }
 
+const pikkuFunc = <In, Out = unknown>(func: any) => {
+  return func
+}
+
+export const helloWorld2 = pikkuFunc<{ same: string }>(async () => {
+  return 'Hello world!' as const
+})
+
 addRoute({
   auth: false,
   method: 'get',

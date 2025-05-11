@@ -5,6 +5,7 @@ import { addRoute } from './add-http-route.js'
 import { addSchedule } from './add-schedule.js'
 import { addChannel } from './add-channel.js'
 import { InspectorFilters, InspectorState } from './types.js'
+import { addFunctions } from './add-functions.js'
 
 export const visit = (
   checker: ts.TypeChecker,
@@ -49,6 +50,7 @@ export const visit = (
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
 
+  addFunctions(node, checker, state, filters)
   addRoute(node, checker, state, filters)
   addSchedule(node, checker, state, filters)
   addChannel(node, checker, state, filters)

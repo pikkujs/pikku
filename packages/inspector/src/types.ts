@@ -1,5 +1,5 @@
 import { ChannelsMeta } from '@pikku/core/channel'
-import { HTTPRoutesMeta } from '@pikku/core/http'
+import { HTTPFunctionsMeta, HTTPRoutesMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { TypesMap } from './types-map.js'
 
@@ -36,6 +36,12 @@ export interface InspectorHTTPState {
   files: Set<string>
 }
 
+export interface InspectorFunctionState {
+  typesMap: TypesMap
+  meta: HTTPFunctionsMeta
+  files: Set<string>
+}
+
 export interface InspectorChannelState {
   typesMap: TypesMap
   metaInputTypes: MetaInputTypes
@@ -54,6 +60,7 @@ export interface InspectorState {
   sessionServicesFactories: PathToNameAndType
   configFactories: PathToNameAndType
   http: InspectorHTTPState
+  functions: InspectorFunctionState
   channels: InspectorChannelState
   scheduledTasks: {
     meta: ScheduledTasksMeta

@@ -5,7 +5,7 @@ import { APIDocs } from '@pikku/core'
 import { getInputTypes } from './add-http-route.js'
 import {
   getPropertyAssignment,
-  getFunctionTypes,
+  getFunctionTypesFromObject,
   matchesFilters,
 } from './utils.js'
 import { ChannelMeta } from '@pikku/core/channel'
@@ -52,7 +52,7 @@ const addMessagesRoutes = (
         const keys = nestedObject.properties.map((p) => p.name?.getText())
         for (const route of keys) {
           if (route) {
-            const result = getFunctionTypes(checker, nestedObject, false, {
+            const result = getFunctionTypesFromObject(checker, nestedObject, false, {
               funcName: route,
               inputIndex: 0,
               outputIndex: 1,
@@ -138,7 +138,7 @@ export const addChannel = (
 
     const connect = !!getPropertyAssignment(obj, 'onConnect', false)
     const disconnect = !!getPropertyAssignment(obj, 'onDisconnect', false)
-    const { inputs, outputs, type } = getFunctionTypes(checker, obj, false, {
+    const { inputs, outputs, type } = getFunctionTypesFromObject(checker, obj, false, {
       funcName: 'onMessage',
       inputIndex: 0,
       outputIndex: 1,
