@@ -33,7 +33,6 @@ export interface ChannelMessageMeta {
   inputs: string[] | null
   outputs: string[] | null
   docs?: APIDocs
-  type: null | string
 }
 
 export interface ChannelMeta {

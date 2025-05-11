@@ -17,8 +17,8 @@ import type { Services } from '../types/application-types.d.js'
 export type APIPermission<In = unknown, RequiredServices extends SingletonServices = SingletonServices> = CoreAPIPermission<In, RequiredServices, UserSession>
 export type APIMiddleware<RequiredServices extends SingletonServices = SingletonServices> = PikkuMiddleware<RequiredServices, UserSession>
 
-export type APIFunctionSessionless<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunctionSessionless<In, Out, Channel, RequiredServices, UserSession>
-export type APIFunction<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunction<In, Out, Channel, RequiredServices, UserSession>
+type APIFunctionSessionless<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunctionSessionless<In, Out, Channel, RequiredServices, UserSession>
+type APIFunction<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunction<In, Out, Channel, RequiredServices, UserSession>
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>, APIMiddleware>
 
 export type ChannelConnection<Out = unknown, ChannelData = unknown, RequiredServices extends Services = Services> = (services: MakeRequired<RequiredServices, 'userSession'>, channel: PikkuChannel<ChannelData, Out>) => Promise<void>
@@ -55,6 +55,62 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
    return typeof func === 'function' ? func : func.func
 }
 
+export const pikkuChannelConnection = <In, Out = unknown>(
+  func:
+    | ChannelConnection<In, Out>
+    | {
+        func: ChannelConnection<In, Out>
+        auth?: true
+        name?: string
+      }
+    | {
+        func: ChannelConnection<In, Out>
+        auth: false
+        name?: string
+      }
+) => {
+   return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuChannelDisconnection = <In>(
+  func:
+    | ChannelDisconnection<In>
+    | {
+        func: ChannelDisconnection<In>
+        auth?: true
+        name?: string
+      }
+    | {
+        func: ChannelDisconnection<In>
+        auth: false
+        name?: string
+      }
+) => {
+   return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuChannelFunc = <In, Out = unknown>(
+  func:
+    | APIFunctionSessionless<In, Out, true>
+    | {
+        func: APIFunctionSessionless<In, Out, true>
+        name?: string
+      }
+) => {
+   return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuVoidFunc = (
+  func:
+    | APIFunctionSessionless<void, void>
+    | {
+        func: APIFunctionSessionless<void, void>
+        name?: string
+      }
+) => {
+   return typeof func === 'function' ? func : func.func
+}
+   
 export const addChannel = <ChannelData, Channel extends string>(
   channel: APIChannel<ChannelData, Channel> & AssertRouteParams<ChannelData, Channel>
 ) => {

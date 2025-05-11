@@ -211,8 +211,8 @@ export type HTTPRoutesMeta = Array<{
 
 export type HTTPFunctionsMeta = Array<{
   name: string
-  input: string | null
-  output: string | null
+  inputs: string[] | null
+  outputs: string[] | null
 }>
 
 export type HTTPRouteMiddleware = {

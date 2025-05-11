@@ -3,145 +3,114 @@ import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { APIDocs } from '@pikku/core'
-import {
-  extractTypeKeys,
-  getFunctionTypesFromObject,
-  matchesFilters,
-} from './utils.js'
-import { MetaInputTypes, InspectorState, InspectorFilters } from './types.js'
+import { matchesFilters } from './utils.js'
+import { InspectorState, InspectorFilters } from './types.js'
 
+/**
+ * Populate metaInputTypes for a given route based on method, input type,
+ * query and params. Returns undefined (we only mutate metaTypes).
+ */
 export const getInputTypes = (
-  metaTypes: MetaInputTypes,
+  metaTypes: Map<string, { query?: string[]; params?: string[]; body?: string[] }>,
   methodType: string,
   inputType: string | null,
   queryValues: string[],
   paramsValues: string[]
-) => {
-  if (!inputType) {
-    return undefined
-  }
-
-  if (inputType) {
-    metaTypes.set(inputType, {
-      query: queryValues,
-      params: paramsValues,
-      body: ['post', 'put', 'patch'].includes(methodType)
-        ? [...new Set([...queryValues, ...paramsValues])]
-        : [],
-    })
-  }
-
-  return undefined
+): undefined => {
+  if (!inputType) return
+  metaTypes.set(inputType, {
+    query: queryValues,
+    params: paramsValues,
+    body: ['post', 'put', 'patch'].includes(methodType)
+      ? [...new Set([...queryValues, ...paramsValues])]
+      : [],
+  })
+  return
 }
 
+/**
+ * Simplified addRoute: re-uses function metadata from state.functions.meta
+ * instead of re-inferring types here.
+ */
 export const addRoute = (
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
   filters: InspectorFilters
 ) => {
-  if (!ts.isCallExpression(node)) {
-    return
-  }
+  // only look at calls
+  if (!ts.isCallExpression(node)) return
 
-  const args = node.arguments
+  const { expression, arguments: args } = node
+  if (!ts.isIdentifier(expression) || expression.text !== 'addRoute') return
+
+  // must pass an object literal
   const firstArg = args[0]
-  const expression = node.expression
+  if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) return
+  const obj = firstArg
 
-  // Check if the call is to addRoute
-  if (!ts.isIdentifier(expression) || expression.text !== 'addRoute') {
+  // --- extract HTTP metadata ---
+  const route = getPropertyValue(obj, 'route') as string | null
+  if (!route) return
+
+  const keys = pathToRegexp(route).keys
+  const params = keys
+    .filter(k => k.type === 'param')
+    .map(k => k.name)
+
+  const method =
+    (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
+  const docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
+  const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
+  const query = (getPropertyValue(obj, 'query') as string[]) || []
+
+  if (!matchesFilters(filters, { tags }, { type: 'http', name: route })) {
     return
   }
 
-  if (!firstArg) {
+  // --- find the referenced function ---
+  const funcProp = obj.properties.find(
+    p =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'func'
+  ) as ts.PropertyAssignment | undefined
+
+  if (!funcProp || !ts.isIdentifier(funcProp.initializer)) {
+    console.error(`• No valid 'func' property for route '${route}'.`)
     return
   }
+  const funcName = funcProp.initializer.text
 
-  let docs: APIDocs | undefined
-  let methodValue: string | null = null
-  let paramsValues: string[] | null = []
-  let queryValues: string[] | [] = []
-  let tags: string[] | [] = []
-  let routeValue: string | null = null
-
-  // Check if the first argument is an object literal
-  if (ts.isObjectLiteralExpression(firstArg)) {
-    const obj = firstArg
-
-    routeValue = getPropertyValue(obj, 'route') as string | null
-    if (!routeValue) {
-      return
-    }
-
-    const { keys } = pathToRegexp(routeValue)
-    paramsValues = keys.reduce((result, { type, name }) => {
-      if (type === 'param') {
-        result.push(name)
-      }
-      return result
-    }, [] as string[])
-
-    docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
-    methodValue = getPropertyValue(obj, 'method') as string
-    queryValues = (getPropertyValue(obj, 'query') as string[]) || []
-    tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
-
-    if (
-      !matchesFilters(filters, { tags }, { type: 'http', name: routeValue })
-    ) {
-      return
-    }
-
-    let { inputs, outputs, inputTypes } = getFunctionTypesFromObject(
-      checker,
-      obj,
-      true,
-      {
-        funcName: 'func',
-        inputIndex: 0,
-        outputIndex: 1,
-        typesMap: state.http.typesMap,
-      }
-    )
-
-    const input = inputs ? inputs[0] || null : null
-    const output = outputs ? outputs[0] || null : null
-
-    if (inputs && inputs?.length > 1) {
-      console.error(
-        `Only one input type is currently allowed for method '${methodValue}' and route '${routeValue}': \n\t${inputs.join('\n\t')}`
-      )
-    }
-
-    if (outputs && outputs?.length > 1) {
-      console.error(
-        `Only one output type is currently allowed for method '${methodValue}' and route '${routeValue}': \n\t${outputs.join('\n\t')}`
-      )
-    }
-
-    if (inputTypes[0] && !['post', 'put', 'patch'].includes(methodValue)) {
-      queryValues = [
-        ...new Set([...queryValues, ...extractTypeKeys(inputTypes[0])]),
-      ].filter((query) => !paramsValues?.includes(query))
-    }
-
-    state.http.files.add(node.getSourceFile().fileName)
-    state.http.meta.push({
-      route: routeValue,
-      method: methodValue! as HTTPMethod,
-      input,
-      output,
-      params: paramsValues.length > 0 ? paramsValues : undefined,
-      query: queryValues.length > 0 ? queryValues : undefined,
-      inputTypes: getInputTypes(
-        state.http.metaInputTypes,
-        methodValue,
-        input,
-        queryValues,
-        paramsValues
-      ),
-      docs,
-      tags,
-    })
+  // lookup existing function metadata
+  const fnMeta = state.functions.meta.find(m => m.name === funcName)
+  if (!fnMeta) {
+    console.error(`• No function metadata found for '${funcName}'.`)
+    return
   }
+  const input = fnMeta.inputs?.[0] || null
+  const output = fnMeta.outputs?.[0] || null
+
+  // --- compute inputTypes (body/query/params) ---
+  const inputTypes = getInputTypes(
+    state.http.metaInputTypes,
+    method,
+    input,
+    query,
+    params
+  )
+
+  // --- record route ---
+  state.http.files.add(node.getSourceFile().fileName)
+  state.http.meta.push({
+    route,
+    method: method as HTTPMethod,
+    input,
+    output,
+    params: params.length > 0 ? params : undefined,
+    query: query.length > 0 ? query : undefined,
+    inputTypes,
+    docs,
+    tags,
+  })
 }

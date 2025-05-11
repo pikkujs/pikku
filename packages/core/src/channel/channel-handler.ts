@@ -86,29 +86,6 @@ const validatePermissions = async (
   return await verifyPermissions(permissions, services, data, session)
 }
 
-const runFunction = async (
-  services: CoreServices,
-  channelHandler: PikkuChannelHandler,
-  channelMessageMeta: ChannelMessageMeta,
-  session: CoreUserSession | undefined,
-  onMessage: any,
-  data: unknown
-) => {
-  const func: any = typeof onMessage === 'function' ? onMessage : onMessage.func
-  if (channelMessageMeta.type?.toLowerCase().includes('function')) {
-    return await func(
-      {
-        ...services,
-        channel: channelHandler.getChannel(),
-      },
-      data,
-      session
-    )
-  } else {
-    return await func(services, channelHandler.getChannel(), data)
-  }
-}
-
 export const processMessageHandlers = (
   services: CoreServices,
   session: CoreUserSession | undefined,
@@ -159,13 +136,14 @@ export const processMessageHandlers = (
       )
     }
 
-    return await runFunction(
-      services,
-      channelHandler,
-      routeMeta,
-      session,
-      onMessage,
-      data
+    const func: any = typeof onMessage === 'function' ? onMessage : onMessage.func
+    return await func(
+      {
+        ...services,
+        channel: channelHandler.getChannel(),
+      },
+      data,
+      session
     )
   }
 

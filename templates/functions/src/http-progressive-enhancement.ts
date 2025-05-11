@@ -1,13 +1,13 @@
 import { addRoute } from '@pikku/core'
 import {
   addChannel,
-  APIFunctionSessionless,
+  pikkuSessionlessFunc,
 } from '../.pikku/pikku-types.gen.js'
 
-export const progressiveEnhancementExample: APIFunctionSessionless<
+export const progressiveEnhancementExample = pikkuSessionlessFunc<
   void,
   { state: 'initial' | 'pending' | 'done' }
-> = async (services) => {
+>(async (services) => {
   if (services?.channel) {
     setTimeout(() => {
       services.channel?.send({ state: 'pending' })
@@ -17,7 +17,7 @@ export const progressiveEnhancementExample: APIFunctionSessionless<
     }, 5000)
   }
   return { state: 'initial' }
-}
+})
 
 addRoute({
   auth: false,

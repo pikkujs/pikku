@@ -1,10 +1,10 @@
 import { addRoute } from '@pikku/core'
-import { APIFunctionSessionless } from '../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-export const timeSinceOpened: APIFunctionSessionless<
+export const timeSinceOpened = pikkuSessionlessFunc<
   void,
   { count: number } | void
-> = async (services) => {
+>(async (services) => {
   const startedAt = Date.now()
   let count = 0
   const interval = setInterval(() => {
@@ -16,7 +16,7 @@ export const timeSinceOpened: APIFunctionSessionless<
   }, 1000)
 
   return { count }
-}
+})
 
 addRoute({
   auth: false,

@@ -3,11 +3,11 @@ import { addFileWithFactory } from './add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add-file-extends-core-type.js'
 import { addRoute } from './add-http-route.js'
 import { addSchedule } from './add-schedule.js'
-import { addChannel } from './add-channel.js'
 import { InspectorFilters, InspectorState } from './types.js'
 import { addFunctions } from './add-functions.js'
+import { addChannel } from './add-channel.js'
 
-export const visit = (
+export const visitSetup = (
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
@@ -49,11 +49,20 @@ export const visit = (
   )
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
-
   addFunctions(node, checker, state, filters)
+
+  ts.forEachChild(node, (child) => visitSetup(checker, child, state, filters))
+}
+
+
+export const visitRoutes = (
+  checker: ts.TypeChecker,
+  node: ts.Node,
+  state: InspectorState,
+  filters: InspectorFilters
+) => {
   addRoute(node, checker, state, filters)
   addSchedule(node, checker, state, filters)
   addChannel(node, checker, state, filters)
-
-  ts.forEachChild(node, (child) => visit(checker, child, state, filters))
+  ts.forEachChild(node, (child) => visitRoutes(checker, child, state, filters))
 }

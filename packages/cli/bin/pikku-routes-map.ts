@@ -12,7 +12,7 @@ import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuHTTPMap = async (
   { routesMapDeclarationFile, packageMappings }: PikkuCLIConfig,
-  { http }: InspectorState
+  { http, functions }: InspectorState
 ) => {
   return await logCommandInfoAndTime(
     'Creating routes map',
@@ -22,7 +22,7 @@ export const pikkuHTTPMap = async (
       const content = serializeTypedRoutesMap(
         routesMapDeclarationFile,
         packageMappings,
-        http.typesMap,
+        functions.typesMap,
         http.meta,
         http.metaInputTypes
       )

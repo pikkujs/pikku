@@ -8,18 +8,22 @@ import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuSchemas = async (
   { tsconfig, schemaDirectory, supportsImportAttributes }: PikkuCLIConfig,
-  { http }: InspectorState
+  { functions, http, channels }: InspectorState
 ) => {
   return await logCommandInfoAndTime(
     'Creating schemas',
     'Created schemas',
     [false],
     async () => {
-      const schemas = await generateSchemas(tsconfig, http.typesMap, http.meta)
+      const schemas = await generateSchemas(tsconfig, [
+        functions.typesMap,
+        http.typesMap,
+        channels.typesMap
+      ], http.meta)
       await saveSchemas(
         schemaDirectory,
         schemas,
-        http.typesMap,
+        functions.typesMap,
         http.meta,
         supportsImportAttributes
       )

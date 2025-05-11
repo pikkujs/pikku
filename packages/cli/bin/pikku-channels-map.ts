@@ -22,7 +22,7 @@ export const pikkuChannelsMap = async (
       const content = serializeTypedChannelsMap(
         channelsMapDeclarationFile,
         packageMappings,
-        state.channels.typesMap,
+        state.functions.typesMap,
         state.channels.meta
       )
       await writeFileInDir(channelsMapDeclarationFile, content)

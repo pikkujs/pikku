@@ -14,7 +14,7 @@ import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuOpenAPI = async (
   { tsconfig, openAPI }: PikkuCLIConfig,
-  { http }: InspectorState
+  { http, functions }: InspectorState
 ) => {
   await logCommandInfoAndTime(
     'Creating OpenAPI spec',
@@ -24,7 +24,7 @@ export const pikkuOpenAPI = async (
       if (!openAPI?.outputFile) {
         throw new Error('openAPI is required')
       }
-      const schemas = await generateSchemas(tsconfig, http.typesMap, http.meta)
+      const schemas = await generateSchemas(tsconfig, [http.typesMap, functions.typesMap], http.meta)
       const openAPISpec = await generateOpenAPISpec(
         http.meta,
         schemas,

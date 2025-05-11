@@ -9,6 +9,15 @@
 
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
+export type OnConnectInput = "hello!"
+export type AuthenticateInput = { token: string; userId: string; }
+export type AuthenticateOutput = { authResult: boolean; action: "auth"; }
+export type SubscribeInput = { name: string; }
+export type UnsubscribeInput = { name: string; }
+export type EmitMessageInput = { name: string; }
+export type EmitMessageOutput = { timestamp: string; from: string; } | { message: string; }
+export type OnMessageInput = "hello"
+export type OnMessageOutput = "hey"
 export type ProgressiveEnhancementExampleOutput = { state: "initial" | "pending" | "done"; }
 export type TimeSinceOpenedOutput = { count: number; }
 

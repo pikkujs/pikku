@@ -9,15 +9,17 @@
 
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
-export type OnMessageInput = "hello"
-export type OnMessageOutput = "hey"
-export type AuthInput = { token: string; userId: string; }
-export type AuthOutput = { authResult: boolean; action: "auth"; }
+export type OnConnectInput = "hello!"
+export type AuthenticateInput = { token: string; userId: string; }
+export type AuthenticateOutput = { authResult: boolean; action: "auth"; }
 export type SubscribeInput = { name: string; }
 export type UnsubscribeInput = { name: string; }
-export type EmitInput = { name: string; }
-export type EmitOutput = { timestamp: string; from: string; } | { message: string; }
-export type StatusOutput = { state: "initial" | "pending" | "done"; }
+export type EmitMessageInput = { name: string; }
+export type EmitMessageOutput = { timestamp: string; from: string; } | { message: string; }
+export type OnMessageInput = "hello"
+export type OnMessageOutput = "hey"
+export type ProgressiveEnhancementExampleOutput = { state: "initial" | "pending" | "done"; }
+export type TimeSinceOpenedOutput = { count: number; }
 
 interface ChannelHandler<I, O> {
     input: I;
@@ -28,21 +30,19 @@ export type ChannelsMap = {
   readonly 'events': {
     readonly routes: {
       readonly action: {
-        readonly auth: ChannelHandler<AuthInput, AuthOutput>,
+        readonly auth: ChannelHandler<AuthenticateInput, AuthenticateOutput>,
         readonly subscribe: ChannelHandler<SubscribeInput, never>,
         readonly unsubscribe: ChannelHandler<UnsubscribeInput, never>,
-        readonly emit: ChannelHandler<EmitInput, EmitOutput>,
+        readonly emit: ChannelHandler<EmitMessageInput, EmitMessageOutput>,
       },
     },
-    readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>,
   },
   readonly 'progressive-enhancement': {
     readonly routes: {
       readonly action: {
-        readonly status: ChannelHandler<void, StatusOutput>,
+        readonly status: ChannelHandler<void, ProgressiveEnhancementExampleOutput>,
       },
     },
-    readonly defaultMessage: ChannelHandler<null, null>,
   },
 };
 

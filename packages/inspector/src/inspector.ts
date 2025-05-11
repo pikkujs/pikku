@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { visit } from './visit.js'
+import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import {
   InspectorState,
@@ -54,14 +54,21 @@ export const inspect = (
     },
   }
 
+  // First sweep: add all functions
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visit(checker, child, state, filters)
+      visitSetup(checker, child, state, filters)
+    )
+  }
+
+  // Second sweep: add all transports
+  for (const sourceFile of sourceFiles) {
+    ts.forEachChild(sourceFile, (child) =>
+      visitRoutes(checker, child, state, filters)
     )
   }
 
   // Normalise the typesMap
-
   state.http = normalizeHTTPTypes(state.http)
 
   return state

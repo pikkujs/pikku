@@ -13,48 +13,35 @@ pikkuState('channel', 'meta', [
     "input": null,
     "connect": true,
     "disconnect": true,
-    "message": {
-      "inputs": [
-        "OnMessageInput"
-      ],
-      "outputs": [
-        "OnMessageOutput"
-      ],
-      "type": "APIFunction"
-    },
     "messageRoutes": {
       "action": {
         "auth": {
           "inputs": [
-            "AuthInput"
+            "AuthenticateInput"
           ],
           "outputs": [
-            "AuthOutput"
-          ],
-          "type": "APIFunction"
+            "AuthenticateOutput"
+          ]
         },
         "subscribe": {
           "inputs": [
             "SubscribeInput"
           ],
-          "outputs": [],
-          "type": "APIFunction"
+          "outputs": []
         },
         "unsubscribe": {
           "inputs": [
             "UnsubscribeInput"
           ],
-          "outputs": [],
-          "type": "APIFunction"
+          "outputs": []
         },
         "emit": {
           "inputs": [
-            "EmitInput"
+            "EmitMessageInput"
           ],
           "outputs": [
-            "EmitOutput"
-          ],
-          "type": "APIFunction"
+            "EmitMessageOutput"
+          ]
         }
       }
     },
@@ -68,19 +55,13 @@ pikkuState('channel', 'meta', [
     "input": null,
     "connect": false,
     "disconnect": false,
-    "message": {
-      "inputs": null,
-      "outputs": null,
-      "type": null
-    },
     "messageRoutes": {
       "action": {
         "status": {
           "inputs": [],
           "outputs": [
-            "StatusOutput"
-          ],
-          "type": "APIFunctionSessionless"
+            "ProgressiveEnhancementExampleOutput"
+          ]
         }
       }
     }
