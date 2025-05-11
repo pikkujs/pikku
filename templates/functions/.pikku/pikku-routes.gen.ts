@@ -30,7 +30,7 @@ pikkuState('http', 'meta', [
     "route": "/hello-world",
     "method": "get",
     "input": null,
-    "output": "HelloWorldOutput",
+    "output": "string",
     "tags": [
       "hello"
     ]

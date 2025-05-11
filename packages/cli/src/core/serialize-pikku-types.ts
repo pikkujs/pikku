@@ -35,6 +35,34 @@ type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelDat
 
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
 
+export const pikkuFunc = <In, Out = unknown>(
+  func:
+    | APIFunction<In, Out>
+    | {
+        func: APIFunction<In, Out>
+        auth?: true
+        name?: string
+      }
+    | {
+        func: APIFunctionSessionless<In, Out>
+        auth: false
+        name?: string
+      }
+) => {
+   return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuSessionlessFunc = <In, Out = unknown>(
+  func:
+    | APIFunctionSessionless<In, Out>
+    | {
+        func: APIFunctionSessionless<In, Out>
+        name?: string
+      }
+) => {
+   return typeof func === 'function' ? func : func.func
+}
+
 export const addChannel = <ChannelData, Channel extends string>(
   channel: APIChannel<ChannelData, Channel> & AssertRouteParams<ChannelData, Channel>
 ) => {

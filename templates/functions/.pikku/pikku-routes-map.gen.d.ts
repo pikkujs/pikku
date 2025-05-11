@@ -11,7 +11,6 @@
 // or are broken into simpler types
 export type ProgressiveEnhancementExampleOutput = { state: "initial" | "pending" | "done"; }
 export type TimeSinceOpenedOutput = { count: number; }
-export type HelloWorldOutput = "Hello world!"
 
 // The '& {}' is a workaround for not directly refering to a type since it confuses typescript
 
@@ -32,7 +31,7 @@ export type RoutesMap = {
     readonly GET: RouteHandler<null, TimeSinceOpenedOutput>,
   },
   readonly '/hello-world': {
-    readonly GET: RouteHandler<null, HelloWorldOutput>,
+    readonly GET: RouteHandler<null, string>,
   },
 };
 

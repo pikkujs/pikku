@@ -1,28 +1,15 @@
 import {
-  type APIFunctionSessionless,
   addRoute,
+  pikkuFunc,
+  pikkuSessionlessFunc
 } from '../.pikku/pikku-types.gen.js'
 
-export const helloWorld: APIFunctionSessionless<
-  void,
-  'Hello world!'
-> = async () => {
+export const helloWorld = pikkuSessionlessFunc(async () => {
   return 'Hello world!'
-}
-
-const pikkuFunc = <In, Out = unknown>(func: any) => {
-  return func
-}
+})
 
 export const helloWorld2 = pikkuFunc<{ same: string }>(async () => {
   return 'Hello world!' as const
-})
-
-pikkuFunc<{ same: string }>({
-  func: async () => {
-    return 'Hello world!' as const
-  },
-  name: 'bobs'
 })
 
 addRoute({

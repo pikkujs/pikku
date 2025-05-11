@@ -9,7 +9,3 @@ addSchema('ProgressiveEnhancementExampleOutput', ProgressiveEnhancementExampleOu
 
 import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json' 
 addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
-
-
-import * as HelloWorldOutput from './schemas/HelloWorldOutput.schema.json' 
-addSchema('HelloWorldOutput', HelloWorldOutput)
