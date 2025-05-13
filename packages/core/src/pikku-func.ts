@@ -1,0 +1,51 @@
+import { ForbiddenError } from "./errors/errors.js"
+import { verifyPermissions } from "./permissions.js"
+import { pikkuState } from "./pikku-state.js"
+import { coerceTopLevelDataFromSchema, validateSchema } from "./schema.js"
+import { CoreServices, CoreSingletonServices, CoreUserSession } from "./types/core.types.js"
+import { CorePermissionGroup } from "./types/functions.types.js"
+
+export const runPikkuFunc = async <In = any, Out = any>(funcName: string, { singletonServices, getAllServices, data, session, permissions, coerceDataFromSchema }: {
+    singletonServices: CoreSingletonServices,
+    getAllServices: () => Promise<CoreServices>,
+    data: In,
+    session?: CoreUserSession,
+    permissions?: CorePermissionGroup<In>,
+    coerceDataFromSchema?: boolean,
+}): Promise<Out> => {
+    const func = pikkuState('functions', 'functions').get(funcName)
+    const funcMeta = pikkuState('functions', 'meta')[funcName]
+    if (!func) {
+        throw new Error(`Function not found: ${funcName}`)
+    }
+    const schemaName = funcMeta.schemaName
+
+    // Validate request data against the defined schema, if any
+    await validateSchema(
+        singletonServices.logger,
+        singletonServices.schema,
+        schemaName,
+        data
+    )
+
+    // Coerce (top level) query string parameters or date objects if specified by the schema
+    if (coerceDataFromSchema && schemaName) {
+        coerceTopLevelDataFromSchema(schemaName, data)
+    }
+
+    const allServices = await getAllServices()
+
+    // Execute permission checks
+    const permissioned = await verifyPermissions(
+        permissions,
+        allServices,
+        data,
+        session
+    )
+
+    if (permissioned === false) {
+        throw new ForbiddenError('Permission denied')
+    }
+
+    return await func(allServices, data, session!) as Out
+}

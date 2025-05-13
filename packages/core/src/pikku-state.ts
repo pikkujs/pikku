@@ -9,10 +9,12 @@ import {
   ScheduledTasksMeta,
 } from './scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
+import { CoreAPIFunction, CoreAPIFunctionSessionless } from './types/functions.types.js'
 
 interface PikkuState {
   functions: {
     meta: FunctionsMeta
+    functions: Map<string, CoreAPIFunction<unknown, unknown> | CoreAPIFunctionSessionless<unknown, unknown>>
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>

@@ -71,3 +71,5 @@ export type CoreAPIPermission<
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session?: Session) => Promise<boolean>
+
+export type CorePermissionGroup<In = any> = Record<string, CoreAPIPermission<In> | CoreAPIPermission<In>[]> | undefined

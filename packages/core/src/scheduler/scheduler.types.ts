@@ -23,6 +23,7 @@ export type CoreScheduledTask<
   name: string
   schedule: string
   func: APIFunction
+  funcName: string
   docs?: APIDocs
   session?: UserSession
   tags?: string[]

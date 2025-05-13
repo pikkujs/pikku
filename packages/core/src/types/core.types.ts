@@ -17,6 +17,7 @@ export type FunctionsMeta = Record<
   {
     name: string
     services: FunctionServicesMeta
+    schemaName: string
     inputs: string[] | null
     outputs: string[] | null
   }

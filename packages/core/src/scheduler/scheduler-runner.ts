@@ -9,6 +9,7 @@ import type { CoreAPIFunctionSessionless } from '../types/functions.types.js'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
+import { runPikkuFunc } from '../pikku-func.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -60,24 +61,29 @@ export async function runScheduledTask<
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    let allServices = singletonServices
-    if (createSessionServices) {
-      const sessionServices = await createSessionServices(
-        singletonServices,
-        {},
-        session
-      )
-      allServices = { ...singletonServices, ...sessionServices }
+    const getAllServices = async () => {
+      if (createSessionServices) {
+        const sessionServices = await createSessionServices(
+          singletonServices,
+          {},
+          session
+        )
+        return { ...singletonServices, ...sessionServices }
+      }
+      return singletonServices
     }
 
-    await task.func(allServices, undefined, session!)
+    return await runPikkuFunc(task.funcName, {
+      singletonServices,
+      getAllServices,
+      session,
+      data: undefined,
+    })
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
-
     if (errorResponse != null) {
       singletonServices.logger.error(e)
     }
-
     throw e
   } finally {
     if (sessionServices) {

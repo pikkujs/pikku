@@ -12,6 +12,7 @@ import {
   CoreAPIFunction,
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
+  CorePermissionGroup,
 } from '../types/functions.types.js'
 
 type ExtractRouteParams<S extends string> =
@@ -62,6 +63,7 @@ export type HTTPMethod =
 export type CoreHTTPFunction = {
   contentType?: 'xml' | 'json'
   route: string
+  funcName: string
   eventChannel?: false
   returnsJSON?: false
   timeout?: number
@@ -118,7 +120,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: HTTPMethod
       func: APIFunction
-      permissions?: Record<string, APIPermission[] | APIPermission>
+      permissions?: CorePermissionGroup<In>
       auth?: true
       tags?: string[]
       middleware?: APIMiddleware[]

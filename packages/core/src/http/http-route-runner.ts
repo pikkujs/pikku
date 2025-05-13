@@ -1,4 +1,3 @@
-import { verifyPermissions } from '../permissions.js'
 import {
   CoreHTTPFunctionRoute,
   RunRouteOptions,
@@ -14,7 +13,6 @@ import {
 } from '../types/core.types.js'
 import { match } from 'path-to-regexp'
 import {
-  ForbiddenError,
   MissingSessionError,
   NotFoundError,
 } from '../errors/errors.js'
@@ -23,7 +21,6 @@ import {
   createWeakUID,
   isSerializable,
 } from '../utils.js'
-import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
   PikkuUserSessionService,
   UserSessionService,
@@ -34,6 +31,7 @@ import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
+import { runPikkuFunc } from '../pikku-func.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -114,7 +112,6 @@ export const addRoute = <
 const getMatchingRoute = (requestType: string, requestPath: string) => {
   const routes = pikkuState('http', 'routes')
   const middleware = pikkuState('http', 'middleware')
-  const routesMeta = pikkuState('http', 'meta')
 
   for (const route of routes) {
     // Skip routes that don't match the HTTP method
@@ -137,18 +134,12 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
         .map((m) => m.middleware)
         .flat()
 
-      // Extract associated schema information if available
-      const schemaName = routesMeta.find(
-        (routeMeta) =>
-          routeMeta.method === route.method && routeMeta.route === route.route
-      )?.input
-
       return {
         matchedPath,
         params: matchedPath.params,
         route,
+        permissions: route.permissions,
         middleware: [...globalMiddleware, ...(route.middleware || [])],
-        schemaName,
       }
     }
   }
@@ -217,14 +208,13 @@ const executeRouteWithMiddleware = async (
     params: any
     route: CoreHTTPFunctionRoute<any, any, any>
     middleware: any[]
-    schemaName?: string | null
   },
-  http: PikkuHTTP | undefined,
+  http: PikkuHTTP,
   options: {
     coerceDataFromSchema: boolean
   }
 ) => {
-  const { matchedPath, params, route, middleware, schemaName } = matchedRoute
+  const { matchedPath, params, route, middleware } = matchedRoute
   const {
     singletonServices,
     userSession,
@@ -263,80 +253,62 @@ const executeRouteWithMiddleware = async (
       throw new MissingSessionError()
     }
 
-    const data = await http?.request?.data()
+    const data = http.request!.data()
 
-    let channel: PikkuChannel<unknown, unknown> | undefined
-    if (matchedRoute.route.sse) {
-      const response = http?.response
-      if (!response) {
-        throw new Error('SSE requires a valid HTTP response object')
+    const getAllServices = async () => {
+      let channel: PikkuChannel<unknown, unknown> | undefined
+      if (matchedRoute.route.sse) {
+        const response = http?.response
+        if (!response) {
+          throw new Error('SSE requires a valid HTTP response object')
+        }
+        if (!response.setMode) {
+          throw new Error('Response object does not support SSE mode')
+        }
+        response.setMode('stream')
+        response.header('Content-Type', 'text/event-stream')
+        response.header('Cache-Control', 'no-cache')
+        response.header('Connection', 'keep-alive')
+        response.header('Transfer-Encoding', 'chunked')
+        channel = {
+          channelId: requestId,
+          openingData: data,
+          send: (data: any) => {
+            response.arrayBuffer(
+              isSerializable(data) ? JSON.stringify(data) : data
+            )
+          },
+          close: () => {
+            channel!.state = 'closed'
+            response.close?.()
+          },
+          state: 'open',
+        }
       }
-      if (!response.setMode) {
-        throw new Error('Response object does not support SSE mode')
-      }
-      response.setMode('stream')
-      response.header('Content-Type', 'text/event-stream')
-      response.header('Cache-Control', 'no-cache')
-      response.header('Connection', 'keep-alive')
-      response.header('Transfer-Encoding', 'chunked')
-      channel = {
-        channelId: requestId,
-        openingData: data,
-        send: (data: any) => {
-          response.arrayBuffer(
-            isSerializable(data) ? JSON.stringify(data) : data
-          )
-        },
-        close: () => {
-          channel!.state = 'closed'
-          response.close?.()
-        },
-        state: 'open',
+
+      // Create session-specific services for handling the request
+      sessionServices = await createSessionServices(
+        { ...singletonServices, userSession, channel },
+        { http },
+        session
+      )
+      return {
+        ...singletonServices,
+        ...sessionServices,
+        http,
+        userSession,
+        channel,
       }
     }
 
-    // Create session-specific services for handling the request
-    sessionServices = await createSessionServices(
-      { ...singletonServices, userSession, channel },
-      { http },
-      session
-    )
-
-    const allServices = {
-      ...singletonServices,
-      ...sessionServices,
-      http,
-      userSession,
-      channel,
-    }
-
-    // Validate request data against the defined schema, if any
-    await validateSchema(
-      singletonServices.logger,
-      singletonServices.schema,
-      schemaName,
-      data
-    )
-
-    // Coerce (top level) query string parameters or date objects if specified by the schema
-    if (options.coerceDataFromSchema && schemaName) {
-      coerceTopLevelDataFromSchema(schemaName, data)
-    }
-
-    // Execute permission checks
-    const permissioned = await verifyPermissions(
-      route.permissions,
-      allServices,
+    const result = await runPikkuFunc(route.funcName, {
+      singletonServices,
+      getAllServices,
+      session,
       data,
-      session
-    )
-
-    if (permissioned === false) {
-      throw new ForbiddenError('Permission denied')
-    }
-
-    // Invoke the actual route handler function
-    result = await route.func(allServices, data, session!)
+      permissions: route.permissions,
+      coerceDataFromSchema: options.coerceDataFromSchema,
+    })
 
     // Respond with either a binary or JSON response based on configuration
     if (route.returnsJSON === false) {
@@ -470,7 +442,7 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ;({ result, sessionServices } = await executeRouteWithMiddleware(
+    ; ({ result, sessionServices } = await executeRouteWithMiddleware(
       {
         singletonServices,
         userSession,
@@ -479,7 +451,7 @@ export const fetchData = async <In, Out>(
         requestId,
       },
       matchedRoute,
-      http,
+      http!,
       { coerceDataFromSchema }
     ))
 
