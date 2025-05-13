@@ -31,7 +31,7 @@ import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { runPikkuFunc } from '../pikku-func.js'
+import { getFunctionName, runPikkuFunc } from '../pikku-func.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -72,7 +72,7 @@ export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
  * @template Route Route pattern as a string.
  * @template APIFunction Type for the route handler function.
  * @template APIFunctionSessionless Type for a sessionless handler.
- * @template APIPermission Type representing required permissions.
+ * @template APIPermissionGroup Type representing required permissions.
  * @template APIMiddleware Middleware type to be used with the route.
  * @param {CoreHTTPFunctionRoute<In, Out, Route, APIFunction, APIFunctionSessionless, APIPermission, APIMiddleware>} route - The route configuration object.
  */
@@ -82,7 +82,7 @@ export const addRoute = <
   Route extends string,
   APIFunction,
   APIFunctionSessionless,
-  APIPermission,
+  APIPermissionGroup,
   APIMiddleware,
 >(
   route: CoreHTTPFunctionRoute<
@@ -91,7 +91,7 @@ export const addRoute = <
     Route,
     APIFunction,
     APIFunctionSessionless,
-    APIPermission,
+    APIPermissionGroup,
     APIMiddleware
   >
 ) => {
@@ -301,7 +301,8 @@ const executeRouteWithMiddleware = async (
       }
     }
 
-    const result = await runPikkuFunc(route.funcName, {
+    const funName = getFunctionName(route.func)
+    const result = await runPikkuFunc(funName, {
       singletonServices,
       getAllServices,
       session,

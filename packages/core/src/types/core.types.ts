@@ -6,6 +6,7 @@ import { PikkuHTTP } from '../http/http-routes.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
+import { PikkuChannel } from '../channel/channel.types.js'
 
 export interface FunctionServicesMeta {
   optimized: boolean
@@ -125,6 +126,7 @@ export type CoreServices<
 > = SingletonServices &
   PikkuInteraction & {
     userSession?: UserSessionService<UserSession>
+    channel?: PikkuChannel<unknown, unknown>
   } & CoreServices
 
 export type SessionServices<

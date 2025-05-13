@@ -14,7 +14,8 @@ import { CoreAPIFunction, CoreAPIFunctionSessionless } from './types/functions.t
 interface PikkuState {
   functions: {
     meta: FunctionsMeta
-    functions: Map<string, CoreAPIFunction<unknown, unknown> | CoreAPIFunctionSessionless<unknown, unknown>>
+    nameToFunction: Map<string, CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>>
+    functionToName: Map<CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>, string>
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>

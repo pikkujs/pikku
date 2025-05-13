@@ -3,23 +3,38 @@ import { verifyPermissions } from "./permissions.js"
 import { pikkuState } from "./pikku-state.js"
 import { coerceTopLevelDataFromSchema, validateSchema } from "./schema.js"
 import { CoreServices, CoreSingletonServices, CoreUserSession } from "./types/core.types.js"
-import { CorePermissionGroup } from "./types/functions.types.js"
+import { CoreAPIFunction, CoreAPIFunctionSessionless, CorePermissionGroup } from "./types/functions.types.js"
 
-export const runPikkuFunc = async <In = any, Out = any>(funcName: string, { singletonServices, getAllServices, data, session, permissions, coerceDataFromSchema }: {
-    singletonServices: CoreSingletonServices,
-    getAllServices: () => Promise<CoreServices>,
-    data: In,
-    session?: CoreUserSession,
-    permissions?: CorePermissionGroup<In>,
-    coerceDataFromSchema?: boolean,
-}): Promise<Out> => {
-    const func = pikkuState('functions', 'functions').get(funcName)
-    const funcMeta = pikkuState('functions', 'meta')[funcName]
+export const getFunctionName = (func: CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>) => {
+    const funcName = pikkuState('functions', 'functionToName').get(func)
+    if (!funcName) {
+        throw new Error(`Function not found: ${funcName}`)
+    }
+    return funcName
+}
+
+export const runPikkuFuncDirectly = async <In, Out>(funcName: string, allServices: CoreServices, data: In, session?: CoreUserSession) => {
+    const func = pikkuState('functions', 'nameToFunction').get(funcName)
     if (!func) {
         throw new Error(`Function not found: ${funcName}`)
     }
-    const schemaName = funcMeta.schemaName
+    return await func(allServices, data, session!) as Out
+}
 
+export const runPikkuFunc = async <In = any, Out = any>(funcName: string, { singletonServices, getAllServices, data, session, permissions, coerceDataFromSchema }: {
+    singletonServices: CoreSingletonServices,
+    getAllServices: () => Promise<CoreServices> | CoreServices,
+    data: In,
+    session?: CoreUserSession,
+    permissions?: CorePermissionGroup,
+    coerceDataFromSchema?: boolean,
+}): Promise<Out> => {
+    const func = pikkuState('functions', 'nameToFunction').get(funcName)
+    if (!func) {
+        throw new Error(`Function not found: ${funcName}`)
+    }
+    const funcMeta = pikkuState('functions', 'meta')[funcName]
+    const schemaName = funcMeta.schemaName
     // Validate request data against the defined schema, if any
     await validateSchema(
         singletonServices.logger,

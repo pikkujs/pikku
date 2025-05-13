@@ -1,6 +1,6 @@
-import { SerializeOptions } from 'cookie'
-import { PikkuError } from '../errors/error-handler.js'
-import {
+import type { SerializeOptions } from 'cookie'
+import type { PikkuError } from '../errors/error-handler.js'
+import type {
   APIDocs,
   CoreServices,
   CoreSingletonServices,
@@ -8,7 +8,7 @@ import {
   CreateSessionServices,
   PikkuMiddleware,
 } from '../types/core.types.js'
-import {
+import type {
   CoreAPIFunction,
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
@@ -63,7 +63,6 @@ export type HTTPMethod =
 export type CoreHTTPFunction = {
   contentType?: 'xml' | 'json'
   route: string
-  funcName: string
   eventChannel?: false
   returnsJSON?: false
   timeout?: number
@@ -120,7 +119,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: HTTPMethod
       func: APIFunction
-      permissions?: CorePermissionGroup<In>
+      permissions?: CorePermissionGroup<APIPermission>,
       auth?: true
       tags?: string[]
       middleware?: APIMiddleware[]
@@ -140,7 +139,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: 'get'
       func: APIFunction
-      permissions?: Record<string, APIPermission[] | APIPermission>
+      permissions?: CorePermissionGroup<APIPermission>,
       auth?: true
       sse?: boolean
       tags?: string[]
@@ -160,7 +159,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: 'post'
       func: APIFunction
-      permissions?: Record<string, APIPermission[] | APIPermission>
+      permissions?: CorePermissionGroup<APIPermission>,
       auth?: true
       query?: Array<keyof In>
       tags?: string[]

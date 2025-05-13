@@ -1,5 +1,4 @@
 import {
-  CoreSingletonServices,
   CoreServices,
   JSONValue,
   CoreUserSession,
@@ -9,18 +8,15 @@ import {
   CoreAPIChannel,
   PikkuChannelHandler,
 } from './channel.types.js'
-import { verifyPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
+import { getFunctionName, runPikkuFunc } from '../pikku-func.js'
 
-const getRouteMeta = (
+const validateRouteMeta = (
   channelName: string,
   routingProperty?: string,
   routerValue?: string
 ): ChannelMessageMeta => {
-  const channelsMeta = pikkuState('channel', 'meta')
-  const channelMeta = channelsMeta.find(
-    (channelMeta) => channelMeta.name === channelName
-  )
+  const channelMeta = pikkuState('channel', 'meta')[channelName]
   if (!channelMeta) {
     throw new Error(`Channel ${channelName} not found`)
   }
@@ -44,19 +40,6 @@ const getRouteMeta = (
   return route
 }
 
-const validateSchema = (
-  logger: CoreSingletonServices['logger'],
-  data: JSONValue,
-  channelRoute: ChannelMessageMeta
-) => {
-  const schemaNames = channelRoute.inputs
-  if (schemaNames) {
-    // TODO
-    // loadSchema(schemaNames, logger)
-    // validateJson(schemaNames, data)
-  }
-}
-
 const validateAuth = (
   requiresSession: boolean,
   session: CoreUserSession | undefined,
@@ -73,17 +56,6 @@ const validateAuth = (
     return false
   }
   return true
-}
-
-const validatePermissions = async (
-  services: CoreServices,
-  session: CoreUserSession | undefined,
-  onMessage: any,
-  data: unknown
-) => {
-  const permissions =
-    typeof onMessage === 'function' ? {} : onMessage.permissions
-  return await verifyPermissions(permissions, services, data, session)
 }
 
 export const processMessageHandlers = (
@@ -114,38 +86,24 @@ export const processMessageHandlers = (
       return
     }
 
-    const routeMeta = getRouteMeta(
+    validateRouteMeta(
       channelConfig.name,
       routingProperty,
       routerValue
     )
 
-    if (routeMeta) {
-      await validateSchema(services.logger, data, routeMeta)
-    }
-
-    const hasPermission = await validatePermissions(
-      services,
-      channelHandler,
-      onMessage,
-      data
-    )
-    if (!hasPermission) {
-      logger.error(
-        `Channel ${channelConfig.name} requires permissions for ${routingProperty || 'default message route'}`
-      )
-    }
-
-    const func: any =
-      typeof onMessage === 'function' ? onMessage : onMessage.func
-    return await func(
-      {
+    const permissions = typeof onMessage === 'function' ? {} : onMessage.permissions
+    const func: any = typeof onMessage === 'function' ? onMessage : onMessage.func
+    return await runPikkuFunc(getFunctionName(func), {
+      singletonServices: services,
+      getAllServices: () => ({
         ...services,
         channel: channelHandler.getChannel(),
-      },
+      }),
       data,
-      session
-    )
+      session,
+      permissions
+    })
   }
 
   const onMessage = async (rawData): Promise<unknown> => {

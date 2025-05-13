@@ -9,7 +9,7 @@ import { CorePermissionGroup } from './types/functions.types.js'
  * @returns A promise that resolves to void.
  */
 export const verifyPermissions = async (
-  permissions: CorePermissionGroup<any>,
+  permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
   session?: CoreUserSession

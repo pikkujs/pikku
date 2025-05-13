@@ -71,7 +71,7 @@ function generateChannels(channelsMeta: ChannelsMeta) {
     }
   > = {}
 
-  for (const meta of channelsMeta) {
+  for (const meta of Object.values(channelsMeta)) {
     const { name, messageRoutes, message } = meta
 
     if (!channelsObject[name]) {

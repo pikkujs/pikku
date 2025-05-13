@@ -46,11 +46,11 @@ export const addSchedule = (
     }
 
     state.scheduledTasks.files.add(node.getSourceFile().fileName)
-    state.scheduledTasks.meta.push({
+    state.scheduledTasks.meta[nameValue] = {
       name: nameValue,
       schedule: scheduleValue,
       docs,
       tags,
-    })
+    }
   }
 }

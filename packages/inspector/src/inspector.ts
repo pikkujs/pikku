@@ -46,10 +46,10 @@ export const inspect = (
       typesMap: new TypesMap(),
       metaInputTypes: new Map(),
       files: new Set(),
-      meta: [],
+      meta: {},
     },
     scheduledTasks: {
-      meta: [],
+      meta: {},
       files: new Set(),
     },
   }

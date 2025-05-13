@@ -166,7 +166,7 @@ export function addChannel(
 
   // record into state
   state.channels.files.add(node.getSourceFile().fileName)
-  state.channels.meta.push({
+  state.channels.meta[name] ={
     name,
     route,
     input: null,
@@ -185,5 +185,5 @@ export function addChannel(
     messageRoutes,
     docs: docs ?? undefined,
     tags: tags ?? undefined,
-  })
+  }
 }

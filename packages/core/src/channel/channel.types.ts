@@ -6,12 +6,11 @@ import {
 } from '../http/http-routes.types.js'
 import {
   APIDocs,
-  CoreServices,
   CoreSingletonServices,
   CreateSessionServices,
   PikkuMiddleware,
 } from '../types/core.types.js'
-import { CoreAPIFunction, CoreAPIPermission } from '../types/functions.types.js'
+import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission } from '../types/functions.types.js'
 
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean
@@ -50,37 +49,18 @@ export interface ChannelMeta {
   tags?: string[]
 }
 
-export type ChannelsMeta = ChannelMeta[]
-
-export type CoreChannelConnection<
-  ChannelData,
-  Out = unknown,
-  Services extends CoreServices = CoreServices,
-> = (
-  services: Services,
-  channel: PikkuChannel<ChannelData, Out>
-) => Promise<void>
-
-export type CoreChannelDisconnection<
-  ChannelData,
-  Services extends CoreServices = CoreServices,
-> = (
-  services: Services,
-  channel: PikkuChannel<ChannelData, never>
-) => Promise<void>
+export type ChannelsMeta = Record<string, ChannelMeta>
 
 export type CoreAPIChannel<
   ChannelData,
   Channel extends string,
-  ChannelFunctionConnection = CoreChannelConnection<ChannelData>,
-  ChannelFunctionDisconnection = CoreChannelDisconnection<ChannelData>,
   ChannelFunctionMessage = CoreAPIFunction<unknown, unknown>,
   APIPermission = CoreAPIPermission<ChannelData>,
 > = {
   name: string
   route: Channel
-  onConnect?: ChannelFunctionConnection
-  onDisconnect?: ChannelFunctionDisconnection
+  onConnect?: CoreAPIFunctionSessionless<ChannelData, unknown>
+  onDisconnect?: CoreAPIFunctionSessionless<void, void>
   onMessage?:
     | {
         func: ChannelFunctionMessage

@@ -9,7 +9,7 @@ import type { CoreAPIFunctionSessionless } from '../types/functions.types.js'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
-import { runPikkuFunc } from '../pikku-func.js'
+import { getFunctionName, runPikkuFunc } from '../pikku-func.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -73,7 +73,7 @@ export async function runScheduledTask<
       return singletonServices
     }
 
-    return await runPikkuFunc(task.funcName, {
+    return await runPikkuFunc(getFunctionName(task.func), {
       singletonServices,
       getAllServices,
       session,

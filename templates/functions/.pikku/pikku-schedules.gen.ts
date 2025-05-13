@@ -5,11 +5,13 @@
 import '../src/scheduled-task.js'
 
 import { pikkuState } from '@pikku/core'
-pikkuState('scheduler', 'meta', [
-  {
-    name: 'myScheduledTask',
-    schedule: '*/1 * * * *',
-    tags: ['hello'],
-  },
-])
+pikkuState('scheduler', 'meta', {
+  "myScheduledTask": {
+    "name": "myScheduledTask",
+    "schedule": "*/1 * * * *",
+    "tags": [
+      "hello"
+    ]
+  }
+})
 export type ScheduledTaskNames = 'myScheduledTask'

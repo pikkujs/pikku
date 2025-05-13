@@ -349,9 +349,15 @@ export function addFunctions(
 
   // --- Record metadata ---
   state.functions.files.add(node.getSourceFile().fileName)
+
+  if (inputNames.length > 1) {
+    console.warn('More than one input type detected, only the first one will be used as a schema.')
+  }
+
   state.functions.meta[funcName] = {
     name: funcName,
     services,
+    schemaName: inputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
   }

@@ -13,7 +13,7 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission, PikkuMiddleware, MakeRequired } from '@pikku/core'
+import type { CoreAPIFunction, CoreAPIFunctionSessionless, CorePermissionGroup, CoreAPIPermission, PikkuMiddleware, MakeRequired } from '@pikku/core'
 import { CoreHTTPFunctionRoute, AssertRouteParams, addRoute as addCoreHTTP } from '@pikku/core/http'
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
@@ -27,11 +27,11 @@ export type APIMiddleware<RequiredServices extends ${singletonServicesTypeName} 
 
 type APIFunctionSessionless<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunctionSessionless<In, Out, Channel, RequiredServices, ${userSessionTypeName}>
 type APIFunction<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunction<In, Out, Channel, RequiredServices, ${userSessionTypeName}>
-type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>, APIMiddleware>
+type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, CorePermissionGroup<APIPermission>, APIMiddleware>
 
 export type ChannelConnection<Out = unknown, ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: MakeRequired<RequiredServices, 'userSession'>, channel: PikkuChannel<ChannelData, Out>) => Promise<void>
 export type ChannelDisconnection<ChannelData = unknown, RequiredServices extends ${servicesTypeName} = ${servicesTypeName}> = (services: MakeRequired<RequiredServices, 'userSession'>, channel: PikkuChannel<ChannelData, never>) => Promise<void>
-type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, ChannelConnection, ChannelDisconnection, APIFunction<any, any, false> | APIFunction<any, any, true>, APIPermission>
+type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<any, any, false> | APIFunction<any, any, true>, APIPermission>
 
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
 

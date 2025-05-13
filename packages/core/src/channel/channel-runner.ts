@@ -20,14 +20,13 @@ export const addChannel = <
     In,
     Channel,
     ChannelFunction,
-    ChannelFunctionSessionless,
     APIPermission
   >
 ) => {
   pikkuState('channel', 'channels').push(channel as any)
 }
 
-export const getMatchingChannelConfig = (request: string) => {
+const getMatchingChannelConfig = (request: string) => {
   const channels = pikkuState('channel', 'channels')
   const channelsMeta = pikkuState('channel', 'meta')
   for (const channelConfig of channels) {
@@ -38,9 +37,7 @@ export const getMatchingChannelConfig = (request: string) => {
     })
     const matchedPath = matchFunc(cleanedRequest)
     if (matchedPath) {
-      const schemaName = channelsMeta.find(
-        (channelMeta) => channelMeta.route === channelConfig.route
-      )?.input
+      const schemaName = channelsMeta[channelConfig.route]?.input
       return {
         matchedPath,
         params: matchedPath.params,
