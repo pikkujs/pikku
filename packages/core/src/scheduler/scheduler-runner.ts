@@ -5,11 +5,11 @@ import type {
   CreateSessionServices,
 } from '../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
-import type { CoreAPIFunctionSessionless } from '../types/functions.types.js'
+import type { CoreAPIFunctionSessionless } from '../function/functions.types.js'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
-import { getFunctionName, runPikkuFunc } from '../pikku-func.js'
+import { getFunctionName, runPikkuFunc } from '../function/function-runner.js'
 
 export type RunScheduledTasksParams = {
   name: string

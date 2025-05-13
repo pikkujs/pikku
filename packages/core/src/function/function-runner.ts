@@ -1,9 +1,14 @@
-import { ForbiddenError } from "./errors/errors.js"
-import { verifyPermissions } from "./permissions.js"
-import { pikkuState } from "./pikku-state.js"
-import { coerceTopLevelDataFromSchema, validateSchema } from "./schema.js"
-import { CoreServices, CoreSingletonServices, CoreUserSession } from "./types/core.types.js"
-import { CoreAPIFunction, CoreAPIFunctionSessionless, CorePermissionGroup } from "./types/functions.types.js"
+import { ForbiddenError } from "../errors/errors.js"
+import { verifyPermissions } from "../permissions.js"
+import { pikkuState } from "../pikku-state.js"
+import { coerceTopLevelDataFromSchema, validateSchema } from "../schema.js"
+import { CoreServices, CoreSingletonServices, CoreUserSession } from "../types/core.types.js"
+import { CoreAPIFunction, CoreAPIFunctionSessionless, CorePermissionGroup } from "./functions.types.js"
+
+export const addFunction = (funcName: string, func: CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>) => {
+  pikkuState('functions', 'functionToName').set(func, funcName)
+  pikkuState('functions', 'nameToFunction').set(funcName, func)
+}
 
 export const getFunctionName = (func: CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>) => {
     const funcName = pikkuState('functions', 'functionToName').get(func)

@@ -10,22 +10,22 @@ import {
 } from '../src/utils.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
-export const pikkuChannels = async (
+export const pikkuHTTP = async (
   cliConfig: PikkuCLIConfig,
   visitState: InspectorState
 ) => {
   return await logCommandInfoAndTime(
-    'Finding Channels',
-    'Found channels',
-    [visitState.channels.files.size === 0],
+    'Finding HTTP routes',
+    'Found HTTP routes',
+    [visitState.http.files.size === 0],
     async () => {
-      const { channelsFile, packageMappings } = cliConfig
-      const { channels } = visitState
+      const { httpRoutesFile, packageMappings } = cliConfig
+      const { http } = visitState
       const content = [
-        serializeFileImports('addChannel', channelsFile, channels.files, packageMappings),
-       `import { pikkuState } from '@pikku/core'\npikkuState('channel', 'meta', ${JSON.stringify(channels.meta, null, 2)})`,
+        serializeFileImports('addHTTPRoute', httpRoutesFile, http.files, packageMappings),
+        `import { pikkuState } from '@pikku/core'\npikkuState('http', 'meta', ${JSON.stringify(http.meta, null, 2)})`
       ]
-      await writeFileInDir(channelsFile, content.join('\n\n'))
+      await writeFileInDir(httpRoutesFile, content.join('\n\n'))
     }
   )
 }
@@ -43,13 +43,13 @@ async function action(cliOptions: PikkuCLIOptions): Promise<void> {
     cliConfig.srcDirectories,
     cliConfig.filters
   )
-  await pikkuChannels(cliConfig, visitState)
+  await pikkuHTTP(cliConfig, visitState)
 }
 
-export const channels = (program: Command): void => {
+export const routes = (program: Command): void => {
   program
-    .command('channels')
-    .description('Find all channels to import')
+    .command('routes')
+    .description('Find all routes to import')
     .option('-c | --config <string>', 'The path to pikku cli config file')
     .action(action)
 }

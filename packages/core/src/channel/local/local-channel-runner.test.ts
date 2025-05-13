@@ -8,7 +8,7 @@ import {
   PikkuHTTPRequest,
   PikkuHTTPResponse,
   PikkuQuery,
-} from '../../http/http-routes.types.js'
+} from '../../http/http.types.js'
 import { SerializeOptions } from 'cookie'
 
 /**

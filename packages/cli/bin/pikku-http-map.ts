@@ -7,26 +7,26 @@ import {
   PikkuCLIOptions,
   writeFileInDir,
 } from '../src/utils.js'
-import { serializeTypedRoutesMap } from '../src/http/serialize-typed-route-map.js'
+import { serializeTypedRoutesMap } from '../src/serialize-typed-http-map.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuHTTPMap = async (
-  { routesMapDeclarationFile, packageMappings }: PikkuCLIConfig,
+  { httpRoutesMapDeclarationFile, packageMappings }: PikkuCLIConfig,
   { http, functions }: InspectorState
 ) => {
   return await logCommandInfoAndTime(
-    'Creating routes map',
-    'Created routes map',
+    'Creating HTTP map',
+    'Created HTTP map',
     [http.files.size === 0],
     async () => {
       const content = serializeTypedRoutesMap(
-        routesMapDeclarationFile,
+        httpRoutesMapDeclarationFile,
         packageMappings,
         functions.typesMap,
         http.meta,
         http.metaInputTypes
       )
-      await writeFileInDir(routesMapDeclarationFile, content)
+      await writeFileInDir(httpRoutesMapDeclarationFile, content)
     }
   )
 }
@@ -35,12 +35,12 @@ async function action(cliOptions: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
   const cliConfig = await getPikkuCLIConfig(
     cliOptions.config,
-    ['rootDir', 'routeDirectories', 'routesFile'],
+    ['rootDir', 'srcDirectories', 'httpRoutesFile'],
     cliOptions.tags
   )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
   await pikkuHTTPMap(cliConfig, visitState)

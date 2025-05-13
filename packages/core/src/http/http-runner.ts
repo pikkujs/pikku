@@ -5,7 +5,7 @@ import {
   PikkuHTTP,
   PikkuHTTPRequest,
   PikkuHTTPResponse,
-} from './http-routes.types.js'
+} from './http.types.js'
 import {
   CoreUserSession,
   PikkuMiddleware,
@@ -31,7 +31,7 @@ import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { getFunctionName, runPikkuFunc } from '../pikku-func.js'
+import { getFunctionName, runPikkuFunc } from '../function/function-runner.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -76,7 +76,7 @@ export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
  * @template APIMiddleware Middleware type to be used with the route.
  * @param {CoreHTTPFunctionRoute<In, Out, Route, APIFunction, APIFunctionSessionless, APIPermission, APIMiddleware>} route - The route configuration object.
  */
-export const addRoute = <
+export const addHTTPRoute = <
   In,
   Out,
   Route extends string,
@@ -85,7 +85,7 @@ export const addRoute = <
   APIPermissionGroup,
   APIMiddleware,
 >(
-  route: CoreHTTPFunctionRoute<
+  httpRoute: CoreHTTPFunctionRoute<
     In,
     Out,
     Route,
@@ -95,7 +95,7 @@ export const addRoute = <
     APIMiddleware
   >
 ) => {
-  pikkuState('http', 'routes').push(route as any)
+  pikkuState('http', 'routes').push(httpRoute as any)
 }
 
 /**

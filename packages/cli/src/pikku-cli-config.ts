@@ -1,16 +1,17 @@
 import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
-import { OpenAPISpecInfo } from './openapi/openapi-spec-generator.js'
+import { OpenAPISpecInfo } from './openapi-spec-generator.js'
 import { InspectorFilters } from '@pikku/inspector'
 
 export interface PikkuCLICoreOutputFiles {
   outDir?: string
-  routesFile: string
+  functionsFile: string
+  httpRoutesFile: string
   channelsFile: string
   schedulersFile: string
   schemaDirectory: string
   typesDeclarationFile: string
-  routesMapDeclarationFile: string
+  httpRoutesMapDeclarationFile: string
   channelsMapDeclarationFile: string
   bootstrapFile: string
 }
@@ -21,7 +22,7 @@ export type PikkuCLIConfig = {
   extends?: string
 
   rootDir: string
-  routeDirectories: string[]
+  srcDirectories: string[]
   packageMappings: Record<string, string>
   supportsImportAttributes: boolean
 
@@ -121,8 +122,11 @@ const _getPikkuCLIConfig = async (
       if (!result.schemaDirectory) {
         result.schemaDirectory = join(result.outDir, 'pikku-schemas')
       }
-      if (!result.routesFile) {
-        result.routesFile = join(result.outDir, 'pikku-routes.gen.ts')
+      if (!result.functionsFile) {
+        result.functionsFile = join(result.outDir, 'pikku-functions.gen.ts')
+      }
+      if (!result.httpRoutesFile) {
+        result.httpRoutesFile = join(result.outDir, 'pikku-http-routes.gen.ts')
       }
       if (!result.schedulersFile) {
         result.schedulersFile = join(result.outDir, 'pikku-schedules.gen.ts')
@@ -133,8 +137,8 @@ const _getPikkuCLIConfig = async (
       if (!result.typesDeclarationFile) {
         result.typesDeclarationFile = join(result.outDir, 'pikku-types.gen.ts')
       }
-      if (!result.routesMapDeclarationFile) {
-        result.routesMapDeclarationFile = join(
+      if (!result.httpRoutesMapDeclarationFile) {
+        result.httpRoutesMapDeclarationFile = join(
           result.outDir,
           'pikku-routes-map.gen.d.ts'
         )

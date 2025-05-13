@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { saveSchemas, generateSchemas } from '../src/schema/schema-generator.js'
+import { saveSchemas, generateSchemas } from '../src/schema-generator.js'
 
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { InspectorState } from '@pikku/inspector'
@@ -35,13 +35,13 @@ async function action({ config }: { config?: string }): Promise<void> {
   logPikkuLogo()
 
   const cliConfig = await getPikkuCLIConfig(config, [
-    'routeDirectories',
+    'srcDirectories',
     'schemaDirectory',
     'tsconfig',
   ])
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
   await pikkuSchemas(cliConfig, visitState)

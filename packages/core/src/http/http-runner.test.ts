@@ -2,7 +2,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../errors/errors.js'
 import { JSONValue, PikkuMiddleware } from '../types/core.types.js'
-import { fetch, addRoute } from './http-route-runner.js'
+import { fetch, addHTTPRoute } from './http-runner.js'
 import { resetPikkuState } from '../pikku-state.js'
 import {
   PikkuMockRequest,
@@ -57,7 +57,7 @@ describe('fetch', () => {
 
   test('should call the route function and return its result when a matching route is found', async () => {
     const routeFunc = async () => ({ success: true })
-    addRoute({
+    addHTTPRoute({
       route: 'test',
       method: 'get',
       func: routeFunc,
@@ -76,7 +76,7 @@ describe('fetch', () => {
     const permissions = { test: async () => true }
     const routeFunc = async () => ({ success: true })
 
-    addRoute({
+    addHTTPRoute({
       route: 'test',
       method: 'get',
       func: routeFunc,
@@ -97,7 +97,7 @@ describe('fetch', () => {
     const routeFunc = async () => {
       throw error
     }
-    addRoute({
+    addHTTPRoute({
       route: 'test',
       method: 'get',
       func: routeFunc,

@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { addFileWithFactory } from './add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add-file-extends-core-type.js'
-import { addRoute } from './add-http-route.js'
+import { addHTTPRoute } from './add-http-route.js'
 import { addSchedule } from './add-schedule.js'
 import { InspectorFilters, InspectorState } from './types.js'
 import { addFunctions } from './add-functions.js'
@@ -60,7 +60,7 @@ export const visitRoutes = (
   state: InspectorState,
   filters: InspectorFilters
 ) => {
-  addRoute(node, checker, state, filters)
+  addHTTPRoute(node, checker, state, filters)
   addSchedule(node, checker, state, filters)
   addChannel(node, checker, state, filters)
   ts.forEachChild(node, (child) => visitRoutes(checker, child, state, filters))

@@ -5,12 +5,12 @@ import {
   logCommandInfoAndTime,
   logPikkuLogo,
   PikkuCLIOptions,
+  serializeFileImports,
   writeFileInDir,
 } from '../src/utils.js'
 import {
   serializeSchedulerMeta,
-  serializeSchedulers,
-} from '../src/scheduler/serialize-schedulers.js'
+} from '../src/serialize-scheduler-meta.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuScheduler = async (
@@ -25,7 +25,8 @@ export const pikkuScheduler = async (
       const { schedulersFile, packageMappings } = cliConfig
       const { scheduledTasks } = visitState
       const content = [
-        serializeSchedulers(
+        serializeFileImports(
+          'addSerializedTasks',
           schedulersFile,
           scheduledTasks.files,
           packageMappings
@@ -42,12 +43,12 @@ async function action(options: PikkuCLIOptions): Promise<void> {
 
   const cliConfig = await getPikkuCLIConfig(
     options.config,
-    ['rootDir', 'routeDirectories', 'routesFile'],
+    ['rootDir', 'srcDirectories', 'httpRoutesFile'],
     options.tags
   )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
   await pikkuScheduler(cliConfig, visitState)

@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from '../src/nextjs/serialize-nextjs-backend-wrapper.js'
-import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from '../src/nextjs/serialize-nextjs-http-wrapper.js'
+import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from '../src/serialize-nextjs-backend-wrapper.js'
+import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from '../src/serialize-nextjs-http-wrapper.js'
 import {
   getFileImportRelativePath,
   getPikkuFilesAndMethods,
@@ -17,8 +17,8 @@ export const pikkuNext = async (
   {
     nextBackendFile,
     nextHTTPFile,
-    routesFile,
-    routesMapDeclarationFile,
+    httpRoutesFile,
+    httpRoutesMapDeclarationFile,
     schemaDirectory,
     packageMappings,
     fetchFile,
@@ -69,13 +69,13 @@ export const pikkuNext = async (
 
         const routesPath = getFileImportRelativePath(
           nextBackendFile,
-          routesFile,
+          httpRoutesFile,
           packageMappings
         )
 
         const routesMapDeclarationPath = getFileImportRelativePath(
           nextBackendFile,
-          routesMapDeclarationFile,
+          httpRoutesMapDeclarationFile,
           packageMappings
         )
         const schemasPath = getFileImportRelativePath(
@@ -98,13 +98,13 @@ export const pikkuNext = async (
       if (nextHTTPFile) {
         const routesPath = getFileImportRelativePath(
           nextHTTPFile,
-          routesFile,
+          httpRoutesFile,
           packageMappings
         )
 
         const routesMapDeclarationPath = getFileImportRelativePath(
           nextHTTPFile,
-          routesMapDeclarationFile,
+          httpRoutesMapDeclarationFile,
           packageMappings
         )
 
@@ -128,7 +128,7 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
   await pikkuNext(cliConfig, visitState, options)

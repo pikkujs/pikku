@@ -9,7 +9,7 @@ import {
   PikkuChannelHandler,
 } from './channel.types.js'
 import { pikkuState } from '../pikku-state.js'
-import { getFunctionName, runPikkuFunc } from '../pikku-func.js'
+import { getFunctionName, runPikkuFunc } from '../function/function-runner.js'
 
 const validateRouteMeta = (
   channelName: string,

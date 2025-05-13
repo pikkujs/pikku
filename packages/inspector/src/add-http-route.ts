@@ -32,10 +32,10 @@ export const getInputTypes = (
 }
 
 /**
- * Simplified addRoute: re-uses function metadata from state.functions.meta
+ * Simplified addHTTPRoute: re-uses function metadata from state.functions.meta
  * instead of re-inferring types here.
  */
-export const addRoute = (
+export const addHTTPRoute = (
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
@@ -45,7 +45,7 @@ export const addRoute = (
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'addRoute') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'addHTTPRoute') return
 
   // must pass an object literal
   const firstArg = args[0]

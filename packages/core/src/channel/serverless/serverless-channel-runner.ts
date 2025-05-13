@@ -8,15 +8,15 @@ import type {
   RunChannelParams,
   PikkuChannelHandlerFactory,
 } from '../channel.types.js'
-import { createHTTPInteraction } from '../../http/http-route-runner.js'
+import { createHTTPInteraction } from '../../http/http-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleError } from '../../handle-error.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
-import { PikkuHTTP } from '../../http/http-routes.types.js'
-import { getFunctionName, runPikkuFuncDirectly } from '../../pikku-func.js'
+import { PikkuHTTP } from '../../http/http.types.js'
+import { getFunctionName, runPikkuFuncDirectly } from '../../function/function-runner.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {

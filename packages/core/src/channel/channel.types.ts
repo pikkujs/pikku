@@ -3,14 +3,14 @@ import {
   HTTPFunctionMetaInputTypes,
   PikkuHTTPRequest,
   PikkuHTTPResponse,
-} from '../http/http-routes.types.js'
+} from '../http/http.types.js'
 import {
   APIDocs,
   CoreSingletonServices,
   CreateSessionServices,
   PikkuMiddleware,
 } from '../types/core.types.js'
-import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission } from '../types/functions.types.js'
+import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission } from '../function/functions.types.js'
 
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean

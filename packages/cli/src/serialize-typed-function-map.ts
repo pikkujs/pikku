@@ -1,5 +1,5 @@
 import { HTTPRoutesMeta } from '@pikku/core/http'
-import { serializeImportMap } from '../core/serialize-import-map.js'
+import { serializeImportMap } from './serialize-import-map.js'
 import { MetaInputTypes, TypesMap } from '@pikku/inspector'
 
 export const serializeTypedRoutesMap = (

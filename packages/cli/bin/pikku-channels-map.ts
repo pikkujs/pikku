@@ -7,7 +7,7 @@ import {
   PikkuCLIOptions,
   writeFileInDir,
 } from '../src/utils.js'
-import { serializeTypedChannelsMap } from '../src/channels/serialize-typed-channel-map.js'
+import { serializeTypedChannelsMap } from '../src/serialize-typed-channel-map.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuChannelsMap = async (
@@ -34,13 +34,13 @@ async function action(cliOptions: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
   const cliConfig = await getPikkuCLIConfig(
     cliOptions.config,
-    ['rootDir', 'routeDirectories', 'routesFile'],
+    ['rootDir', 'srcDirectories', 'httpRoutesFile'],
     cliOptions.tags,
     false
   )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
   await pikkuChannelsMap(cliConfig, visitState)

@@ -13,7 +13,7 @@ import type {
   CoreAPIFunctionSessionless,
   CoreAPIPermission,
   CorePermissionGroup,
-} from '../types/functions.types.js'
+} from '../function/functions.types.js'
 
 type ExtractRouteParams<S extends string> =
   S extends `${string}:${infer Param}/${infer Rest}`

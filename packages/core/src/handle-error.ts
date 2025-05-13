@@ -1,7 +1,7 @@
 import { getErrorResponse } from './errors/error-handler.js'
 import { NotFoundError } from './errors/errors.js'
 import { Logger } from './services/logger.js'
-import { PikkuHTTP } from './http/http-routes.types.js'
+import { PikkuHTTP } from './http/http.types.js'
 
 /**
  * Handle errors that occur during route processing

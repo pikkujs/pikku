@@ -1,5 +1,5 @@
 import { APIDocs, CoreUserSession } from '../types/core.types.js'
-import { CoreAPIFunctionSessionless } from '../types/functions.types.js'
+import { CoreAPIFunctionSessionless } from '../function/functions.types.js'
 
 /**
  * Represents metadata for scheduled tasks, including title, schedule, and documentation.

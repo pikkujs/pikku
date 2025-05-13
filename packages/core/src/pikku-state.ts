@@ -2,14 +2,14 @@ import { ChannelsMeta, CoreAPIChannels } from './channel/channel.types.js'
 import {
   CoreHTTPFunctionRoutes,
   HTTPRoutesMeta,
-} from './http/http-routes.types.js'
+} from './http/http.types.js'
 import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
 } from './scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
-import { CoreAPIFunction, CoreAPIFunctionSessionless } from './types/functions.types.js'
+import { CoreAPIFunction, CoreAPIFunctionSessionless } from './function/functions.types.js'
 
 interface PikkuState {
   functions: {

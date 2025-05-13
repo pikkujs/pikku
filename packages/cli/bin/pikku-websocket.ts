@@ -7,7 +7,7 @@ import {
   writeFileInDir,
 } from '../src/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { serializeWebsocketWrapper } from '../src/channels/serialize-websocket-wrapper.js'
+import { serializeWebsocketWrapper } from '../src/serialize-websocket-wrapper.js'
 
 export const pikkuWebSocket = async ({
   websocketFile,

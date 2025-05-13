@@ -5,8 +5,8 @@ import {
   PikkuCLIOptions,
   writeFileInDir,
 } from '../src/utils.js'
-import { generateSchemas } from '../src/schema/schema-generator.js'
-import { generateOpenAPISpec } from '../src/openapi/openapi-spec-generator.js'
+import { generateSchemas } from '../src/schema-generator.js'
+import { generateOpenAPISpec } from '../src/openapi-spec-generator.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { InspectorState } from '@pikku/inspector'
 import { stringify } from 'yaml'
@@ -54,12 +54,12 @@ async function action({ config, tags }: PikkuCLIOptions): Promise<void> {
   logPikkuLogo()
   const cliConfig = await getPikkuCLIConfig(
     config,
-    ['rootDir', 'routesFile', 'openAPI', 'schemaDirectory', 'tsconfig'],
+    ['rootDir', 'httpRoutesFile', 'openAPI', 'schemaDirectory', 'tsconfig'],
     tags
   )
   const visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
   await pikkuOpenAPI(cliConfig, visitState)

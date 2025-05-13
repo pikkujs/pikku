@@ -38,7 +38,8 @@ function getHandlerNameFromExpression(expr: ts.Expression): string | null {
     return expr.text
   }
   if (ts.isCallExpression(expr)) {
-    return extractFunctionName(expr)
+    const { funcName } = extractFunctionName(expr)
+    return funcName
   }
   if (ts.isObjectLiteralExpression(expr)) {
     const fnProp = getPropertyAssignment(expr, 'func')

@@ -220,6 +220,7 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
   return type
 }
 
+
 /**
  * Inspect pikkuFunc calls, extract input/output and first-arg destructuring,
  * then push into state.functions.meta.
@@ -241,7 +242,7 @@ export function addFunctions(
   if (args.length === 0) return
 
   // figure out the function name
-  const funcName = extractFunctionName(node)
+  const { funcName } = extractFunctionName(node)
   if (!funcName) {
     console.error('Couldn’t determine function name—skipping.')
     return

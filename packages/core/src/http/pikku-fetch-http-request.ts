@@ -4,7 +4,7 @@ import {
   HTTPMethod,
   PikkuHTTPRequest,
   PikkuQuery,
-} from './http-routes.types.js'
+} from './http.types.js'
 import { UnprocessableContentError } from '../errors/errors.js'
 
 /**

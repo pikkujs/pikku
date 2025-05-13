@@ -1,5 +1,5 @@
 import { openChannel } from '../channel-runner.js'
-import { createHTTPInteraction } from '../../http/http-route-runner.js'
+import { createHTTPInteraction } from '../../http/http-runner.js'
 import { closeSessionServices } from '../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import {
@@ -12,8 +12,8 @@ import { SessionServices } from '../../types/core.types.js'
 import { handleError } from '../../handle-error.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
-import { PikkuHTTP } from '../../http/http-routes.types.js'
-import { getFunctionName, runPikkuFuncDirectly } from '../../pikku-func.js'
+import { PikkuHTTP } from '../../http/http.types.js'
+import { getFunctionName, runPikkuFuncDirectly } from '../../function/function-runner.js'
 
 export const runLocalChannel = async ({
   singletonServices,

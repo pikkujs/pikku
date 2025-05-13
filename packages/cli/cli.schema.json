@@ -169,7 +169,7 @@
         "rootDir": {
           "type": "string"
         },
-        "routeDirectories": {
+        "srcDirectories": {
           "items": {
             "type": "string"
           },
@@ -207,7 +207,7 @@
         "configDir",
         "packageMappings",
         "rootDir",
-        "routeDirectories",
+        "srcDirectories",
         "routesFile",
         "routesMapDeclarationFile",
         "schedulersFile",

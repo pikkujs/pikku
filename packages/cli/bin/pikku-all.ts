@@ -7,9 +7,9 @@ import {
   writeFileInDir,
 } from '../src/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuHTTP } from './pikku-http.js'
+import { pikkuHTTP } from './pikku-http-routes.js'
 import { pikkuFunctionTypes } from './pikku-function-types.js'
-import { pikkuHTTPMap } from './pikku-routes-map.js'
+import { pikkuHTTPMap } from './pikku-http-map.js'
 import { existsSync } from 'fs'
 import { pikkuFetch } from './pikku-fetch.js'
 import { pikkuChannelsMap } from './pikku-channels-map.js'
@@ -21,6 +21,7 @@ import { pikkuSchemas } from './pikku-schemas.js'
 import { pikkuWebSocket } from './pikku-websocket.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 import chokidar from 'chokidar'
+import { pikkuFunctions } from './pikku-functions.js'
 
 const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const imports: string[] = []
@@ -33,7 +34,7 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   let typesDeclarationFileExists = true
   let visitState = await inspectorGlob(
     cliConfig.rootDir,
-    cliConfig.routeDirectories,
+    cliConfig.srcDirectories,
     cliConfig.filters
   )
 
@@ -42,21 +43,27 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   }
   await pikkuFunctionTypes(cliConfig, options, visitState)
 
-  // This is needed since the addRoutes function will add the routes to the visitState
+  // This is needed since the addHTTPRoute function will add the routes to the visitState
   if (!typesDeclarationFileExists) {
     logInfo(`• Type file first created, inspecting again...\x1b[0m`)
     visitState = await inspectorGlob(
       cliConfig.rootDir,
-      cliConfig.routeDirectories,
+      cliConfig.srcDirectories,
       cliConfig.filters
     )
+  }
+
+  const functions = pikkuFunctions(cliConfig, visitState)
+  if (!functions) {
+    logInfo(`• No functions found, skipping remaining steps...\x1b[0m`)
+    process.exit(1)
   }
 
   const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {
     await pikkuHTTPMap(cliConfig, visitState)
     await pikkuFetch(cliConfig)
-    addImport(cliConfig.routesFile)
+    addImport(cliConfig.httpRoutesFile)
   }
 
   const scheduled = await pikkuScheduler(cliConfig, visitState)
@@ -84,7 +91,7 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     logInfo(`• OpenAPI requires a reinspection to pickup new generated types..`)
     visitState = await inspectorGlob(
       cliConfig.rootDir,
-      cliConfig.routeDirectories,
+      cliConfig.srcDirectories,
       cliConfig.filters
     )
     await pikkuOpenAPI(cliConfig, visitState)
@@ -94,7 +101,7 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
 }
 
 const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
-  const configWatcher = chokidar.watch(cliConfig.routeDirectories, {
+  const configWatcher = chokidar.watch(cliConfig.srcDirectories, {
     ignoreInitial: true,
     ignored: /.*\.gen\.tsx?/,
   })
@@ -105,9 +112,9 @@ const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     watcher.close()
 
     logInfo(
-      `• Watching directories: \n  - ${cliConfig.routeDirectories.join('\n  - ')}`
+      `• Watching directories: \n  - ${cliConfig.srcDirectories.join('\n  - ')}`
     )
-    watcher = chokidar.watch(cliConfig.routeDirectories, {
+    watcher = chokidar.watch(cliConfig.srcDirectories, {
       ignoreInitial: true,
       ignored: /.*\.gen\.ts/,
     })

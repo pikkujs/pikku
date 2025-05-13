@@ -7,11 +7,11 @@ import {
   writeFileInDir,
 } from '../src/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { serializeFetchWrapper } from '../src/http/serialize-fetch-wrapper.js'
+import { serializeFetchWrapper } from '../src/serialize-fetch-wrapper.js'
 
 export const pikkuFetch = async ({
   fetchFile,
-  routesMapDeclarationFile,
+  httpRoutesMapDeclarationFile,
   packageMappings,
 }: PikkuCLIConfig) => {
   await logCommandInfoAndTime(
@@ -25,7 +25,7 @@ export const pikkuFetch = async ({
 
       const routesMapDeclarationPath = getFileImportRelativePath(
         fetchFile,
-        routesMapDeclarationFile,
+        httpRoutesMapDeclarationFile,
         packageMappings
       )
 

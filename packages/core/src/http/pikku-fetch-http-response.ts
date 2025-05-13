@@ -1,4 +1,4 @@
-import { PikkuHTTPResponse } from './http-routes.types.js'
+import { PikkuHTTPResponse } from './http.types.js'
 import {
   SerializeOptions as CookieSerializeOptions,
   serialize as serializeCookie,

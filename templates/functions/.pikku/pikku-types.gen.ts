@@ -5,8 +5,9 @@
 * This is used to provide the application types in the typescript project
 */
   
-import type { CoreAPIFunction, CoreAPIFunctionSessionless, CorePermissionGroup, CoreAPIPermission, PikkuMiddleware, MakeRequired } from '@pikku/core'
-import { CoreHTTPFunctionRoute, AssertRouteParams, addRoute as addCoreHTTP } from '@pikku/core/http'
+import { CorePermissionGroup, CoreAPIPermission, PikkuMiddleware, MakeRequired } from '@pikku/core'
+import { CoreAPIFunction, CoreAPIFunctionSessionless } from '@pikku/core/function'
+import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRoute } from '@pikku/core/http'
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
 
@@ -41,7 +42,7 @@ export const pikkuFunc = <In, Out = unknown>(
         name?: string
       }
 ) => {
-   return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? func : func.func
 }
 
 export const pikkuSessionlessFunc = <In, Out = unknown>(
@@ -52,7 +53,7 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
         name?: string
       }
 ) => {
-   return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? func : func.func
 }
 
 export const pikkuChannelConnection = <In, Out = unknown>(
@@ -69,7 +70,7 @@ export const pikkuChannelConnection = <In, Out = unknown>(
         name?: string
       }
 ) => {
-   return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? func : func.func
 }
 
 export const pikkuChannelDisconnection = <In>(
@@ -86,7 +87,7 @@ export const pikkuChannelDisconnection = <In>(
         name?: string
       }
 ) => {
-   return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? func : func.func
 }
 
 export const pikkuChannelFunc = <In, Out = unknown>(
@@ -97,7 +98,7 @@ export const pikkuChannelFunc = <In, Out = unknown>(
         name?: string
       }
 ) => {
-   return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? func : func.func
 }
 
 export const pikkuVoidFunc = (
@@ -108,7 +109,7 @@ export const pikkuVoidFunc = (
         name?: string
       }
 ) => {
-   return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? func : func.func
 }
    
 export const addChannel = <ChannelData, Channel extends string>(
@@ -117,10 +118,10 @@ export const addChannel = <ChannelData, Channel extends string>(
   addCoreChannel(channel as any) // TODO
 }
 
-export const addRoute = <In, Out, Route extends string>(
+export const addHTTPRoute = <In, Out, Route extends string>(
   route: APIRoute<In, Out, Route> & AssertRouteParams<In, Route>
 ) => {
-  addCoreHTTP(route)
+  addCoreHTTPRoute(route)
 }
 
 export const addScheduledTask = (task: ScheduledTask) => {

@@ -1,4 +1,4 @@
-import { addRoute } from '@pikku/core'
+import { addHTTPRoute } from '@pikku/core'
 import { addChannel, pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 export const progressiveEnhancementExample = pikkuSessionlessFunc<
@@ -16,7 +16,7 @@ export const progressiveEnhancementExample = pikkuSessionlessFunc<
   return { state: 'initial' }
 })
 
-addRoute({
+addHTTPRoute({
   auth: false,
   method: 'get',
   route: '/status/sse',
@@ -34,7 +34,7 @@ addChannel({
   },
 })
 
-addRoute({
+addHTTPRoute({
   auth: false,
   method: 'get',
   route: '/status/http',

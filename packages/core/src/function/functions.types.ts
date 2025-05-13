@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from './core.types.js'
+} from '../types/core.types.js'
 
 /**
  * Represents a core API function that performs an operation using core services and a user session.

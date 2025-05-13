@@ -2,7 +2,7 @@
  * @module @pikku/core
  */
 export * from './types/core.types.js'
-export * from './types/functions.types.js'
+export * from './function/index.js'
 export * from './pikku-request.js'
 export * from './pikku-response.js'
 export * from './services/index.js'
@@ -15,6 +15,6 @@ export * from './time-utils.js'
 export * from './utils.js'
 export { pikkuState } from './pikku-state.js'
 export { runMiddleware } from './middleware-runner.js'
-export { addRoute, addMiddleware } from './http/http-route-runner.js'
+export { addHTTPRoute, addMiddleware } from './http/http-runner.js'
 export { addChannel } from './channel/channel-runner.js'
 export { addScheduledTask } from './scheduler/scheduler-runner.js'

@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from './utils.js'
 
 export const inspectorGlob = async (
   rootDir: string,
-  routeDirectories: string[],
+  srcDirectories: string[],
   filters: InspectorFilters
 ) => {
   let result: InspectorState
@@ -16,7 +16,7 @@ export const inspectorGlob = async (
     async () => {
       const routeFiles = (
         await Promise.all(
-          routeDirectories.map((dir) =>
+          srcDirectories.map((dir) =>
             glob(`${path.join(rootDir, dir)}/**/*.ts`)
           )
         )
