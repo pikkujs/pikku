@@ -84,7 +84,7 @@ export const addRoute = (
   const funcName = funcProp.initializer.text
 
   // lookup existing function metadata
-  const fnMeta = state.functions.meta.find((m) => m.name === funcName)
+  const fnMeta = state.functions.meta[funcName]
   if (!fnMeta) {
     console.error(`• No function metadata found for '${funcName}'.`)
     return

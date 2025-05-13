@@ -38,6 +38,7 @@
   "devDependencies": {
     "@types/node": "^20.11.30",
     "husky": "^9.1.7",
+    "lint-staged": "^16.0.0",
     "prettier": "3.3.3",
     "tsx": "^4.19.2",
     "typedoc": "^0.27.9"
@@ -49,5 +50,8 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "lint-staged": {
+    "*.ts": "yarn lint && yarn prettier"
   }
 }

@@ -33,7 +33,7 @@ export const inspect = (
     configFactories: new Map(),
     functions: {
       typesMap: new TypesMap(),
-      meta: [],
+      meta: {},
       files: new Set(),
     },
     http: {

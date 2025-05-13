@@ -85,7 +85,7 @@ export function addMessagesRoutes(
         continue
       }
 
-      const fnMeta = state.functions.meta.find((m) => m.name === handlerName)
+      const fnMeta = state.functions.meta[handlerName]
       if (!fnMeta) {
         console.error(`No function metadata found for handler '${handlerName}'`)
         continue
@@ -148,8 +148,7 @@ export function addChannel(
   if (onMsgProp) {
     const init = getInitializerOf(onMsgProp)
     const handlerName = init && getHandlerNameFromExpression(init)
-    const fnMeta =
-      handlerName && state.functions.meta.find((m) => m.name === handlerName)
+    const fnMeta = handlerName && state.functions.meta[handlerName]
     if (!fnMeta) {
       console.error(
         `No function metadata for onMessage handler '${handlerName}'`

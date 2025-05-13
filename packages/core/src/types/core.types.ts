@@ -12,12 +12,15 @@ export interface FunctionServicesMeta {
   services: string[]
 }
 
-export type FunctionsMeta = {
-  name: string
-  services: FunctionServicesMeta
-  inputs: string[] | null
-  outputs: string[] | null
-}[]
+export type FunctionsMeta = Record<
+  string,
+  {
+    name: string
+    services: FunctionServicesMeta
+    inputs: string[] | null
+    outputs: string[] | null
+  }
+>
 
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>

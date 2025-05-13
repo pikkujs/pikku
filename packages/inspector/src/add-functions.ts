@@ -349,10 +349,10 @@ export function addFunctions(
 
   // --- Record metadata ---
   state.functions.files.add(node.getSourceFile().fileName)
-  state.functions.meta.push({
+  state.functions.meta[funcName] = {
     name: funcName,
     services,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
-  })
+  }
 }
