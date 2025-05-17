@@ -107,8 +107,6 @@ export type CoreAPIChannel<
   tags?: string[]
 }
 
-export type CoreAPIChannels = CoreAPIChannel<any, string>[]
-
 export interface PikkuChannel<OpeningData, Out> {
   // The channel identifier
   channelId: string

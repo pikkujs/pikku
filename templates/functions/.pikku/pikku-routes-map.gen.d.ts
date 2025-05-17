@@ -4,56 +4,52 @@
 /**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
+    
+
 
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
-export type OnConnectInput = 'hello!'
-export type AuthenticateInput = { token: string; userId: string }
-export type AuthenticateOutput = { authResult: boolean; action: 'auth' }
-export type SubscribeInput = { name: string }
-export type UnsubscribeInput = { name: string }
-export type EmitMessageInput = { name: string }
-export type EmitMessageOutput =
-  | { timestamp: string; from: string }
-  | { message: string }
-export type OnMessageInput = 'hello'
-export type OnMessageOutput = 'hey'
-export type ProgressiveEnhancementExampleOutput = {
-  state: 'initial' | 'pending' | 'done'
-}
-export type TimeSinceOpenedOutput = { count: number }
+export type OnConnectInput = "hello!"
+export type AuthenticateInput = { token: string; userId: string; }
+export type AuthenticateOutput = { authResult: boolean; action: "auth"; }
+export type SubscribeInput = { name: string; }
+export type UnsubscribeInput = { name: string; }
+export type EmitMessageInput = { name: string; }
+export type EmitMessageOutput = { timestamp: string; from: string; } | { message: string; }
+export type OnMessageInput = "hello"
+export type OnMessageOutput = "hey"
+export type ProgressiveEnhancementExampleOutput = { state: "initial" | "pending" | "done"; }
+export type TimeSinceOpenedOutput = { count: number; }
 
 // The '& {}' is a workaround for not directly refering to a type since it confuses typescript
 
+
 interface RouteHandler<I, O> {
-  input: I
-  output: O
+    input: I;
+    output: O;
 }
 
 export type RoutesMap = {
   readonly '/status/sse': {
-    readonly GET: RouteHandler<null, ProgressiveEnhancementExampleOutput>
-  }
+    readonly GET: RouteHandler<null, ProgressiveEnhancementExampleOutput>,
+  },
   readonly '/status/http': {
-    readonly GET: RouteHandler<null, ProgressiveEnhancementExampleOutput>
-  }
+    readonly GET: RouteHandler<null, ProgressiveEnhancementExampleOutput>,
+  },
   readonly '/sse': {
-    readonly GET: RouteHandler<null, TimeSinceOpenedOutput>
-  }
+    readonly GET: RouteHandler<null, TimeSinceOpenedOutput>,
+  },
   readonly '/hello-world': {
-    readonly GET: RouteHandler<null, string>
-  }
-}
+    readonly GET: RouteHandler<null, string>,
+  },
+};
 
-export type RouteHandlerOf<
-  Route extends keyof RoutesMap,
-  Method extends keyof RoutesMap[Route],
-> = RoutesMap[Route][Method] extends { input: infer I; output: infer O }
-  ? RouteHandler<I, O>
-  : never
+export type RouteHandlerOf<Route extends keyof RoutesMap, Method extends keyof RoutesMap[Route]> =
+    RoutesMap[Route][Method] extends { input: infer I; output: infer O }
+        ? RouteHandler<I, O>
+        : never;
 
 export type RoutesWithMethod<Method extends string> = {
-  [Route in keyof RoutesMap]: Method extends keyof RoutesMap[Route]
-    ? Route
-    : never
-}[keyof RoutesMap]
+  [Route in keyof RoutesMap]: Method extends keyof RoutesMap[Route] ? Route : never;
+}[keyof RoutesMap];
+  

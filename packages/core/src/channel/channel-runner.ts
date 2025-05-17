@@ -4,6 +4,7 @@ import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import {
+  ChannelMeta,
   CoreAPIChannel,
   RunChannelOptions,
   RunChannelParams,
@@ -26,13 +27,11 @@ export const addChannel = <
   // Get the channel metadata
   const channelsMeta = pikkuState('channel', 'meta')
   const channelMeta = channelsMeta[channel.name]
-
   if (!channelMeta) {
-    console.error(`Channel metadata not found for channel: ${channel.name}`)
-    // Still store the channel, even without metadata
-    pikkuState('channel', 'channels').push(channel as any)
-    return
+    throw new Error(`Channel metadata not found for channel: ${channel.name}`)
   }
+
+  pikkuState('channel', 'channels').set(channel.name, channel as any)
 
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connectPikkuFuncName) {
@@ -78,13 +77,13 @@ export const addChannel = <
   }
 
   // Store the channel configuration
-  pikkuState('channel', 'channels').push(channel as any)
+  pikkuState('channel', 'channels').set(channel.name, channel as any)
 }
 
 const getMatchingChannelConfig = (request: string) => {
   const channels = pikkuState('channel', 'channels')
   const channelsMeta = pikkuState('channel', 'meta')
-  for (const channelConfig of channels) {
+  for (const channelConfig of channels.values()) {
     const cleanedRoute = channelConfig.route.replace(/^\/\//, '/')
     const cleanedRequest = request.replace(/^\/\//, '/')
     const matchFunc = match(cleanedRoute, {
@@ -92,16 +91,21 @@ const getMatchingChannelConfig = (request: string) => {
     })
     const matchedPath = matchFunc(cleanedRequest)
     if (matchedPath) {
-      const schemaName = channelsMeta[channelConfig.route]?.input
+      const channelMeta = channelsMeta[channelConfig.name]
+      if (!channelMeta) {
+        throw new Error(
+          `Channel ${channelConfig.name} not found in metadata`
+        )
+      }
       return {
         matchedPath,
         params: matchedPath.params,
         channelConfig,
-        schemaName,
+        schemaName: channelMeta.input,
+        meta: channelsMeta[channelConfig.route]!
       }
     }
   }
-
   return null
 }
 
@@ -116,6 +120,7 @@ export const openChannel = async ({
   } & RunChannelOptions): Promise<{
   openingData: unknown
   channelConfig: CoreAPIChannel<unknown, any>
+  meta: ChannelMeta
 }> => {
   const matchingChannel = getMatchingChannelConfig(route)
   if (!matchingChannel) {
@@ -123,7 +128,7 @@ export const openChannel = async ({
     throw new NotFoundError(`Channel not found: ${route}`)
   }
 
-  const { params, channelConfig, schemaName } = matchingChannel
+  const { params, channelConfig, schemaName, meta } = matchingChannel
 
   const requiresSession = channelConfig.auth !== false
   request?.setParams(params)
@@ -146,5 +151,5 @@ export const openChannel = async ({
     )
   }
 
-  return { openingData, channelConfig }
+  return { openingData, channelConfig, meta }
 }

@@ -16,10 +16,7 @@ import { runMiddleware } from '../../middleware-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
-import {
-  getFunctionName,
-  runPikkuFuncDirectly,
-} from '../../function/function-runner.js'
+import { runPikkuFuncDirectly } from '../../function/function-runner.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -40,11 +37,14 @@ const getVariablesForChannel = ({
   openingData?: unknown
 }) => {
   const channels = pikkuState('channel', 'channels')
-  const channelConfig = channels.find(
-    (channelConfig) => channelConfig.name === channelName
-  )
+  const channelConfig = channels[channelName]
+  const channelsMeta = pikkuState('channel', 'meta')
+  const meta = channelsMeta[channelName]
   if (!channelConfig) {
     throw new Error(`Channel not found: ${channelName}`)
+  }
+  if(!meta) {
+    throw new Error(`Channel meta not found: ${channelName}`)
   }
   const channelHandler = channelHandlerFactory(
     channelId,
@@ -55,6 +55,7 @@ const getVariablesForChannel = ({
     channelConfig,
     channelHandler,
     channel: channelHandler.getChannel(),
+    meta
   }
 }
 
@@ -84,7 +85,7 @@ export const runChannelConnect = async ({
 
   const userSession = new PikkuUserSessionService(channelStore, channelId)
 
-  const { channelConfig, openingData } = await openChannel({
+  const { channelConfig, openingData, meta } = await openChannel({
     channelId,
     createSessionServices,
     request,
@@ -114,10 +115,9 @@ export const runChannelConnect = async ({
           await userSession.get()
         )
       }
-      if (channelConfig.onConnect) {
-        const funcName = getFunctionName(channelConfig.onConnect)
+      if (channelConfig.onConnect && meta.connectPikkuFuncName) {
         await runPikkuFuncDirectly(
-          funcName,
+          meta.connectPikkuFuncName,
           { ...singletonServices, ...sessionServices, channel },
           openingData
         )
@@ -158,7 +158,7 @@ export const runChannelDisconnect = async ({
   let sessionServices: SessionServices | undefined
   const { openingData, channelName, session } =
     await params.channelStore.getChannelAndSession(params.channelId)
-  const { channel, channelConfig } = getVariablesForChannel({
+  const { channel, channelConfig, meta } = getVariablesForChannel({
     ...params,
     openingData,
     channelName,
@@ -170,10 +170,9 @@ export const runChannelDisconnect = async ({
       session
     )
   }
-  if (channelConfig.onDisconnect) {
-    const funcName = getFunctionName(channelConfig.onDisconnect)
+  if (channelConfig.onDisconnect && meta.disconnectPikkuFuncName) {
     await runPikkuFuncDirectly(
-      funcName,
+      meta.disconnectPikkuFuncName,
       { ...singletonServices, ...sessionServices, channel },
       undefined
     )

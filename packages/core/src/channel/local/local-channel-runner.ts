@@ -13,10 +13,7 @@ import { handleError } from '../../handle-error.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
-import {
-  getFunctionName,
-  runPikkuFuncDirectly,
-} from '../../function/function-runner.js'
+import { runPikkuFuncDirectly } from '../../function/function-runner.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -46,7 +43,7 @@ export const runLocalChannel = async ({
 
   const main = async () => {
     try {
-      const { openingData, channelConfig } = await openChannel({
+      const { openingData, channelConfig, meta } = await openChannel({
         channelId,
         createSessionServices,
         respondWith404,
@@ -81,10 +78,9 @@ export const runLocalChannel = async ({
       }
 
       channelHandler.registerOnOpen(() => {
-        if (channelConfig.onConnect) {
-          const funcName = getFunctionName(channelConfig.onConnect)
+        if (channelConfig.onConnect && meta.connectPikkuFuncName) {
           runPikkuFuncDirectly(
-            funcName,
+            meta.connectPikkuFuncName,
             { ...allServices, channel },
             openingData
           )
@@ -92,10 +88,9 @@ export const runLocalChannel = async ({
       })
 
       channelHandler.registerOnClose(async () => {
-        if (channelConfig.onDisconnect) {
-          const funcName = getFunctionName(channelConfig.onDisconnect)
+        if (channelConfig.onDisconnect && meta.disconnectPikkuFuncName) {
           runPikkuFuncDirectly(
-            funcName,
+            meta.disconnectPikkuFuncName,
             { ...allServices, channel },
             openingData
           )
@@ -140,5 +135,5 @@ export const runLocalChannel = async ({
     main
   )
 
-  return channelHandler!
+  return channelHandler
 }

@@ -9,9 +9,9 @@ import {
   PikkuChannelHandler,
 } from './channel.types.js'
 import { pikkuState } from '../pikku-state.js'
-import { getFunctionName, runPikkuFunc } from '../function/function-runner.js'
+import { runPikkuFunc } from '../function/function-runner.js'
 
-const validateRouteMeta = (
+const getRouteMeta = (
   channelName: string,
   routingProperty?: string,
   routerValue?: string
@@ -86,13 +86,12 @@ export const processMessageHandlers = (
       return
     }
 
-    validateRouteMeta(channelConfig.name, routingProperty, routerValue)
+    const { pikkuFuncName } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
 
     const permissions =
       typeof onMessage === 'function' ? {} : onMessage.permissions
-    const func: any =
-      typeof onMessage === 'function' ? onMessage : onMessage.func
-    return await runPikkuFunc(getFunctionName(func), {
+
+    return await runPikkuFunc(pikkuFuncName, {
       singletonServices: services,
       getAllServices: () => ({
         ...services,

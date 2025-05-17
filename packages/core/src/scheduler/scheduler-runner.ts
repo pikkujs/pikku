@@ -9,11 +9,7 @@ import type { CoreAPIFunctionSessionless } from '../function/functions.types.js'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
-import {
-  addFunction,
-  getFunctionName,
-  runPikkuFunc,
-} from '../function/function-runner.js'
+import { addFunction, runPikkuFunc } from '../function/function-runner.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -63,9 +59,12 @@ export async function runScheduledTask<
   let sessionServices: CoreServices | undefined
   try {
     const task = pikkuState('scheduler', 'tasks').get(name)
-
+    const meta = pikkuState('scheduler', 'meta')[name]
     if (!task) {
       throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)
+    }
+    if (!meta) {
+      throw new ScheduledTaskNotFoundError(`Scheduled task meta not found: ${name}`)
     }
 
     singletonServices.logger.info(
@@ -84,7 +83,7 @@ export async function runScheduledTask<
       return singletonServices
     }
 
-    return await runPikkuFunc(getFunctionName(task.func), {
+    return await runPikkuFunc(meta.pikkuFuncName, {
       singletonServices,
       getAllServices,
       session,

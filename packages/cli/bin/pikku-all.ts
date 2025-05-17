@@ -58,6 +58,7 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     logInfo(`• No functions found, skipping remaining steps...\x1b[0m`)
     process.exit(1)
   }
+  addImport(cliConfig.functionsFile)
 
   const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {

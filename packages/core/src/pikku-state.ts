@@ -1,5 +1,5 @@
-import { ChannelsMeta, CoreAPIChannels } from './channel/channel.types.js'
-import { CoreHTTPFunctionRoutes, HTTPRoutesMeta } from './http/http.types.js'
+import { ChannelsMeta, CoreAPIChannel } from './channel/channel.types.js'
+import { CoreHTTPFunctionRoute, HTTPMethod, HTTPRoutesMeta } from './http/http.types.js'
 import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
@@ -18,18 +18,14 @@ interface PikkuState {
       string,
       CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>
     >
-    functionToName: Map<
-      CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>,
-      string
-    >
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
-    routes: CoreHTTPFunctionRoutes
+    routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionRoute<any, any, any>>>,
     meta: HTTPRoutesMeta
   }
   channel: {
-    channels: CoreAPIChannels
+    channels: Map<string, CoreAPIChannel<any, any>>
     meta: ChannelsMeta
   }
   scheduler: {
@@ -44,14 +40,18 @@ interface PikkuState {
 
 export const resetPikkuState = () => {
   globalThis.pikkuState = {
+    functions: {
+      meta: {},
+      nameToFunction: new Map(),
+    },
     http: {
       middleware: [],
-      routes: [],
+      routes: new Map(),
       meta: [],
     },
     channel: {
-      channels: [],
-      meta: [],
+      channels: new Map(),
+      meta: {},
     },
     scheduler: {
       tasks: new Map(),

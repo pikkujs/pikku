@@ -17,17 +17,7 @@ export const addFunction = (
   funcName: string,
   func: CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>
 ) => {
-  pikkuState('functions', 'functionToName').set(func, funcName)
   pikkuState('functions', 'nameToFunction').set(funcName, func)
-}
-
-// TODO
-export const getFunctionName = (func: any) => {
-  const funcName = pikkuState('functions', 'functionToName').get(func)
-  if (!funcName) {
-    throw new Error(`Function not found: ${funcName}`)
-  }
-  return funcName
 }
 
 export const runPikkuFuncDirectly = async <In, Out>(

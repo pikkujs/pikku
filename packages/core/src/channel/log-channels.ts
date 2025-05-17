@@ -7,14 +7,14 @@ import { Logger } from '../services/index.js'
  */
 export const logChannels = (logger: Logger) => {
   const channels = pikkuState('channel', 'channels')
-  if (channels.length === 0) {
+  if (channels.size === 0) {
     logger.info('No channels added')
     return
   }
 
   let scheduledChannels = 'Channels:'
-  for (const { name, route } of channels) {
-    scheduledChannels += `\n\t- ${name} at ${route}`
-  }
+  channels.forEach((channel) => {
+    scheduledChannels += `\n\t- ${channel.name} at ${channel.route}`
+  })
   logger.info(scheduledChannels)
 }

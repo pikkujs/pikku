@@ -5,6 +5,8 @@ import {
   PikkuHTTP,
   PikkuHTTPRequest,
   PikkuHTTPResponse,
+  HTTPRouteMeta,
+  HTTPMethod,
 } from './http.types.js'
 import {
   CoreUserSession,
@@ -28,11 +30,7 @@ import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import {
-  addFunction,
-  getFunctionName,
-  runPikkuFunc,
-} from '../function/function-runner.js'
+import { addFunction, runPikkuFunc } from '../function/function-runner.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -104,7 +102,11 @@ export const addHTTPRoute = <
     throw new Error('Route metadata not found')
   }
   addFunction(routeMeta.pikkuFuncName, httpRoute.func as any)
-  pikkuState('http', 'routes').push(httpRoute as any)
+  const routes = pikkuState('http', 'routes')
+  if (!routes.has(httpRoute.method)) {
+    routes.set(httpRoute.method, new Map())
+  }
+  pikkuState('http', 'routes').get(httpRoute.method)?.set(httpRoute.route, httpRoute as any)
 }
 
 /**
@@ -119,15 +121,13 @@ export const addHTTPRoute = <
  * @returns {Object | undefined} An object with matched route details or undefined if no match.
  */
 const getMatchingRoute = (requestType: string, requestPath: string) => {
-  const routes = pikkuState('http', 'routes')
+  const allRoutes = pikkuState('http', 'routes')
   const middleware = pikkuState('http', 'middleware')
-
-  for (const route of routes) {
-    // Skip routes that don't match the HTTP method
-    if (route.method !== requestType.toLowerCase()) {
-      continue
-    }
-
+  const routes = allRoutes.get(requestType.toLowerCase() as HTTPMethod)
+  if (!routes) {
+    return undefined
+  }
+  for (const route of routes.values()) {
     // Generate a matching function from the route pattern
     const matchFunc = match(`/${route.route}`.replace(/^\/\//, '/'), {
       decode: decodeURIComponent,
@@ -143,12 +143,17 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
         .map((m) => m.middleware)
         .flat()
 
+      const meta = pikkuState('http', 'meta').find(
+        (meta) => meta.route === route.route && meta.method === route.method
+      )
+
       return {
         matchedPath,
         params: matchedPath.params,
         route,
         permissions: route.permissions,
         middleware: [...globalMiddleware, ...(route.middleware || [])],
+        meta: meta!
       }
     }
   }
@@ -216,14 +221,15 @@ const executeRouteWithMiddleware = async (
     matchedPath: any
     params: any
     route: CoreHTTPFunctionRoute<any, any, any>
-    middleware: any[]
+    middleware: any[],
+    meta: HTTPRouteMeta
   },
   http: PikkuHTTP,
   options: {
     coerceDataFromSchema: boolean
   }
 ) => {
-  const { matchedPath, params, route, middleware } = matchedRoute
+  const { matchedPath, params, route, middleware, meta } = matchedRoute
   const {
     singletonServices,
     userSession,
@@ -310,8 +316,7 @@ const executeRouteWithMiddleware = async (
       }
     }
 
-    const funName = getFunctionName(route.func)
-    const result = await runPikkuFunc(funName, {
+    const result = await runPikkuFunc(meta.pikkuFuncName, {
       singletonServices,
       getAllServices,
       session,

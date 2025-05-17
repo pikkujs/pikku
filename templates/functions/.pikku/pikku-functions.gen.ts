@@ -10,125 +10,172 @@ import '../src/scheduled-task.js'
 
 import { pikkuState } from '@pikku/core'
 pikkuState('functions', 'meta', {
-  pikkuFn_src_channel_functions_ts_L9C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
-    name: 'onConnect',
-    services: {
-      optimized: true,
-      services: ['logger', 'channel'],
+  "pikkuFn_src_channel_functions_ts_L9C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L9C3",
+    "name": "onConnect",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger",
+        "channel"
+      ]
     },
-    schemaName: 'OnConnectInput',
-    inputs: ['OnConnectInput'],
-    outputs: [],
+    "schemaName": "OnConnectInput",
+    "inputs": [
+      "OnConnectInput"
+    ],
+    "outputs": []
   },
-  pikkuFn_src_channel_functions_ts_L18C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L18C3',
-    name: 'onDisconnect',
-    services: {
-      optimized: true,
-      services: ['logger', 'channel'],
+  "pikkuFn_src_channel_functions_ts_L18C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L18C3",
+    "name": "onDisconnect",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger",
+        "channel"
+      ]
     },
-    schemaName: null,
-    inputs: [],
-    outputs: [],
+    "schemaName": null,
+    "inputs": [],
+    "outputs": []
   },
-  pikkuFn_src_channel_functions_ts_L28C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L28C3',
-    name: 'authenticate',
-    services: {
-      optimized: true,
-      services: ['userSession'],
+  "pikkuFn_src_channel_functions_ts_L28C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L28C3",
+    "name": "authenticate",
+    "services": {
+      "optimized": true,
+      "services": [
+        "userSession"
+      ]
     },
-    schemaName: 'AuthenticateInput',
-    inputs: ['AuthenticateInput'],
-    outputs: ['AuthenticateOutput'],
+    "schemaName": "AuthenticateInput",
+    "inputs": [
+      "AuthenticateInput"
+    ],
+    "outputs": [
+      "AuthenticateOutput"
+    ]
   },
-  pikkuFn_src_channel_functions_ts_L37C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L37C3',
-    name: 'subscribe',
-    services: {
-      optimized: true,
-      services: ['eventHub', 'channel'],
+  "pikkuFn_src_channel_functions_ts_L37C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L37C3",
+    "name": "subscribe",
+    "services": {
+      "optimized": true,
+      "services": [
+        "eventHub",
+        "channel"
+      ]
     },
-    schemaName: 'SubscribeInput',
-    inputs: ['SubscribeInput'],
-    outputs: [],
+    "schemaName": "SubscribeInput",
+    "inputs": [
+      "SubscribeInput"
+    ],
+    "outputs": []
   },
-  pikkuFn_src_channel_functions_ts_L43C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L43C3',
-    name: 'unsubscribe',
-    services: {
-      optimized: true,
-      services: ['channel', 'eventHub'],
+  "pikkuFn_src_channel_functions_ts_L43C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L43C3",
+    "name": "unsubscribe",
+    "services": {
+      "optimized": true,
+      "services": [
+        "channel",
+        "eventHub"
+      ]
     },
-    schemaName: 'UnsubscribeInput',
-    inputs: ['UnsubscribeInput'],
-    outputs: [],
+    "schemaName": "UnsubscribeInput",
+    "inputs": [
+      "UnsubscribeInput"
+    ],
+    "outputs": []
   },
-  pikkuFn_src_channel_functions_ts_L51C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L51C3',
-    name: 'emitMessage',
-    services: {
-      optimized: true,
-      services: ['userSession', 'eventHub', 'channel'],
+  "pikkuFn_src_channel_functions_ts_L51C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L51C3",
+    "name": "emitMessage",
+    "services": {
+      "optimized": true,
+      "services": [
+        "userSession",
+        "eventHub",
+        "channel"
+      ]
     },
-    schemaName: 'EmitMessageInput',
-    inputs: ['EmitMessageInput'],
-    outputs: ['EmitMessageOutput'],
+    "schemaName": "EmitMessageInput",
+    "inputs": [
+      "EmitMessageInput"
+    ],
+    "outputs": [
+      "EmitMessageOutput"
+    ]
   },
-  pikkuFn_src_channel_functions_ts_L60C3: {
-    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L60C3',
-    name: 'onMessage',
-    services: {
-      optimized: true,
-      services: ['logger', 'channel'],
+  "pikkuFn_src_channel_functions_ts_L60C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L60C3",
+    "name": "onMessage",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger",
+        "channel"
+      ]
     },
-    schemaName: 'OnMessageInput',
-    inputs: ['OnMessageInput'],
-    outputs: ['OnMessageOutput'],
+    "schemaName": "OnMessageInput",
+    "inputs": [
+      "OnMessageInput"
+    ],
+    "outputs": [
+      "OnMessageOutput"
+    ]
   },
-  pikkuFn_src_http_progressive_enhancement_ts_L6C3: {
-    pikkuFuncName: 'pikkuFn_src_http_progressive_enhancement_ts_L6C3',
-    name: 'progressiveEnhancementExample',
-    services: {
-      optimized: false,
-      services: [],
+  "pikkuFn_src_http_progressive_enhancement_ts_L10C3": {
+    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L10C3",
+    "name": "progressiveEnhancementExample",
+    "services": {
+      "optimized": false,
+      "services": []
     },
-    schemaName: 'void',
-    inputs: [],
-    outputs: ['ProgressiveEnhancementExampleOutput'],
+    "schemaName": "void",
+    "inputs": [],
+    "outputs": [
+      "ProgressiveEnhancementExampleOutput"
+    ]
   },
-  pikkuFn_src_http_sse_ts_L7C3: {
-    pikkuFuncName: 'pikkuFn_src_http_sse_ts_L7C3',
-    name: 'timeSinceOpened',
-    services: {
-      optimized: true,
-      services: [],
+  "pikkuFn_src_http_sse_ts_L7C3": {
+    "pikkuFuncName": "pikkuFn_src_http_sse_ts_L7C3",
+    "name": "timeSinceOpened",
+    "services": {
+      "optimized": true,
+      "services": []
     },
-    schemaName: 'void',
-    inputs: [],
-    outputs: ['TimeSinceOpenedOutput'],
+    "schemaName": "void",
+    "inputs": [],
+    "outputs": [
+      "TimeSinceOpenedOutput"
+    ]
   },
-  pikkuFn_src_http_ts_L3C54: {
-    pikkuFuncName: 'pikkuFn_src_http_ts_L3C54',
-    name: 'helloWorld',
-    services: {
-      optimized: true,
-      services: [],
+  "pikkuFn_src_http_ts_L6C54": {
+    "pikkuFuncName": "pikkuFn_src_http_ts_L6C54",
+    "name": "helloWorld",
+    "services": {
+      "optimized": true,
+      "services": []
     },
-    schemaName: 'void',
-    inputs: [],
-    outputs: ['string'],
+    "schemaName": "void",
+    "inputs": [],
+    "outputs": [
+      "string"
+    ]
   },
-  pikkuFn_src_scheduled_task_ts_L6C58: {
-    pikkuFuncName: 'pikkuFn_src_scheduled_task_ts_L6C58',
-    name: 'myScheduledTask',
-    services: {
-      optimized: true,
-      services: ['logger'],
+  "pikkuFn_src_scheduled_task_ts_L6C58": {
+    "pikkuFuncName": "pikkuFn_src_scheduled_task_ts_L6C58",
+    "name": "myScheduledTask",
+    "services": {
+      "optimized": true,
+      "services": [
+        "logger"
+      ]
     },
-    schemaName: 'void',
-    inputs: [],
-    outputs: [],
-  },
+    "schemaName": "void",
+    "inputs": [],
+    "outputs": []
+  }
 })

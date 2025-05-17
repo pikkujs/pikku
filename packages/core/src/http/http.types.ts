@@ -179,13 +179,6 @@ export type CoreHTTPFunctionRoute<
     })
 
 /**
- * Represents an array of core API routes.
- */
-export type CoreHTTPFunctionRoutes = Array<
-  CoreHTTPFunctionRoute<any, any, string>
->
-
-/**
  * Represents the input types for route metadata, including parameters, query, and body types.
  */
 export type HTTPFunctionMetaInputTypes = {
@@ -197,7 +190,7 @@ export type HTTPFunctionMetaInputTypes = {
 /**
  * Represents metadata for a set of routes, including route details, methods, input/output types, and documentation.
  */
-export type HTTPRoutesMeta = Array<{
+export type HTTPRouteMeta = {
   pikkuFuncName: string
   route: string
   method: HTTPMethod
@@ -209,7 +202,8 @@ export type HTTPRoutesMeta = Array<{
   docs?: APIDocs
   tags?: string[]
   sse?: true
-}>
+}
+export type HTTPRoutesMeta = Array<HTTPRouteMeta>
 
 export type HTTPFunctionsMeta = Array<{
   name: string
