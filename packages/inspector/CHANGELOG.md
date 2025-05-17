@@ -1,5 +1,11 @@
 # @pikku/inspector
 
+## 0.7.1
+
+### Patch Changes
+
+- ebfb786: fix: only inspect function calls with pikku\*func in name
+
 ## 0.7.0
 
 This has changed significantly. The inspector now finds all functions and then links them to events.
