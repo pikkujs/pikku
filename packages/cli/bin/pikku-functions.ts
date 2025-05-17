@@ -22,8 +22,13 @@ export const pikkuFunctions = async (
       const { functionsFile, packageMappings } = cliConfig
       const { functions } = visitState
       const content = [
-        serializeFileImports('addFunction', functionsFile, functions.files, packageMappings),
-        `import { pikkuState } from '@pikku/core'\npikkuState('functions', 'meta', ${JSON.stringify(functions.meta, null, 2)})`
+        serializeFileImports(
+          'addFunction',
+          functionsFile,
+          functions.files,
+          packageMappings
+        ),
+        `import { pikkuState } from '@pikku/core'\npikkuState('functions', 'meta', ${JSON.stringify(functions.meta, null, 2)})`,
       ]
       await writeFileInDir(functionsFile, content.join('\n\n'))
     }

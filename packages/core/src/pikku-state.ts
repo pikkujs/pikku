@@ -1,21 +1,27 @@
 import { ChannelsMeta, CoreAPIChannels } from './channel/channel.types.js'
-import {
-  CoreHTTPFunctionRoutes,
-  HTTPRoutesMeta,
-} from './http/http.types.js'
+import { CoreHTTPFunctionRoutes, HTTPRoutesMeta } from './http/http.types.js'
 import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
 } from './scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
-import { CoreAPIFunction, CoreAPIFunctionSessionless } from './function/functions.types.js'
+import {
+  CoreAPIFunction,
+  CoreAPIFunctionSessionless,
+} from './function/functions.types.js'
 
 interface PikkuState {
   functions: {
     meta: FunctionsMeta
-    nameToFunction: Map<string, CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>>
-    functionToName: Map<CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>, string>
+    nameToFunction: Map<
+      string,
+      CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>
+    >
+    functionToName: Map<
+      CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>,
+      string
+    >
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>

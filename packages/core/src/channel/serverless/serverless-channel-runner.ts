@@ -16,7 +16,10 @@ import { runMiddleware } from '../../middleware-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
-import { getFunctionName, runPikkuFuncDirectly } from '../../function/function-runner.js'
+import {
+  getFunctionName,
+  runPikkuFuncDirectly,
+} from '../../function/function-runner.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -167,9 +170,13 @@ export const runChannelDisconnect = async ({
       session
     )
   }
-  if(channelConfig.onDisconnect) {
+  if (channelConfig.onDisconnect) {
     const funcName = getFunctionName(channelConfig.onDisconnect)
-    await runPikkuFuncDirectly(funcName, { ...singletonServices, ...sessionServices, channel }, undefined)
+    await runPikkuFuncDirectly(
+      funcName,
+      { ...singletonServices, ...sessionServices, channel },
+      undefined
+    )
   }
   await params.channelStore.removeChannels([channel.channelId])
   if (sessionServices) {

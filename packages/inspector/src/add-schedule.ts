@@ -44,10 +44,15 @@ export const addSchedule = (
     ) as ts.PropertyAssignment | undefined
 
     if (!funcProp || !ts.isIdentifier(funcProp.initializer)) {
-      console.error(`• No valid 'func' property for scheduled task '${nameValue}'.`)
+      console.error(
+        `• No valid 'func' property for scheduled task '${nameValue}'.`
+      )
       return
     }
-  const pikkuFuncName = extractFunctionName(funcProp.initializer, checker).pikkuFuncName
+    const pikkuFuncName = extractFunctionName(
+      funcProp.initializer,
+      checker
+    ).pikkuFuncName
 
     if (!nameValue || !scheduleValue) {
       return

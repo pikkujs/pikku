@@ -4,15 +4,18 @@ import { CoreAPIFunctionSessionless } from '../function/functions.types.js'
 /**
  * Represents metadata for scheduled tasks, including title, schedule, and documentation.
  */
-export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> = Record<string,
-  {
-    pikkuFuncName: string
-    name: string
-    schedule: string
-    session?: UserSession
-    docs?: APIDocs
-    tags?: string[]
-  }>
+export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
+  Record<
+    string,
+    {
+      pikkuFuncName: string
+      name: string
+      schedule: string
+      session?: UserSession
+      docs?: APIDocs
+      tags?: string[]
+    }
+  >
 
 /**
  * Represents a core scheduled task.

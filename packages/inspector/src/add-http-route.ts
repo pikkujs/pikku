@@ -3,7 +3,11 @@ import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { APIDocs } from '@pikku/core'
-import { extractFunctionName, getPropertyAssignmentInitializer, matchesFilters } from './utils.js'
+import {
+  extractFunctionName,
+  getPropertyAssignmentInitializer,
+  matchesFilters,
+} from './utils.js'
 import { InspectorState, InspectorFilters } from './types.js'
 
 /**
@@ -70,14 +74,19 @@ export const addHTTPRoute = (
   }
 
   // --- find the referenced function ---
-  const funcInitializer = getPropertyAssignmentInitializer(obj, 'func', true, checker)
+  const funcInitializer = getPropertyAssignmentInitializer(
+    obj,
+    'func',
+    true,
+    checker
+  )
   if (!funcInitializer) {
     console.error(`• No valid 'func' property for route '${route}'.`)
     return
   }
 
   const funcName = extractFunctionName(funcInitializer, checker).pikkuFuncName
-  
+
   // lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]
   if (!fnMeta) {

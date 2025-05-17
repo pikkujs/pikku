@@ -13,7 +13,10 @@ import { handleError } from '../../handle-error.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
-import { getFunctionName, runPikkuFuncDirectly } from '../../function/function-runner.js'
+import {
+  getFunctionName,
+  runPikkuFuncDirectly,
+} from '../../function/function-runner.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -80,14 +83,22 @@ export const runLocalChannel = async ({
       channelHandler.registerOnOpen(() => {
         if (channelConfig.onConnect) {
           const funcName = getFunctionName(channelConfig.onConnect)
-          runPikkuFuncDirectly(funcName, { ...allServices, channel }, openingData)
+          runPikkuFuncDirectly(
+            funcName,
+            { ...allServices, channel },
+            openingData
+          )
         }
       })
 
       channelHandler.registerOnClose(async () => {
         if (channelConfig.onDisconnect) {
           const funcName = getFunctionName(channelConfig.onDisconnect)
-          runPikkuFuncDirectly(funcName, { ...allServices, channel }, openingData)
+          runPikkuFuncDirectly(
+            funcName,
+            { ...allServices, channel },
+            openingData
+          )
         }
         if (sessionServices) {
           await closeSessionServices(singletonServices.logger, sessionServices)

@@ -266,7 +266,7 @@ export const serializeFileImports = (
   packageMappings: Record<string, string> = {}
 ) => {
   const serializedOutput: string[] = [
-    `/* The files with an ${importType} function call */`
+    `/* The files with an ${importType} function call */`,
   ]
 
   Array.from(files)

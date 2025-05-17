@@ -1,4 +1,8 @@
-import { pikkuSessionlessFunc, addChannel, addHTTPRoute } from '../.pikku/pikku-types.gen.js'
+import {
+  pikkuSessionlessFunc,
+  addChannel,
+  addHTTPRoute,
+} from '../.pikku/pikku-types.gen.js'
 
 export const progressiveEnhancementExample = pikkuSessionlessFunc<
   void,

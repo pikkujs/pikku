@@ -1,3 +1,1 @@
-export const callFunction = () => {
-       
-}
+export const callFunction = () => {}

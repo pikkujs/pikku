@@ -12,10 +12,7 @@ import {
   SessionServices,
 } from '../types/core.types.js'
 import { match } from 'path-to-regexp'
-import {
-  MissingSessionError,
-  NotFoundError,
-} from '../errors/errors.js'
+import { MissingSessionError, NotFoundError } from '../errors/errors.js'
 import {
   closeSessionServices,
   createWeakUID,
@@ -31,7 +28,11 @@ import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { addFunction, getFunctionName, runPikkuFunc } from '../function/function-runner.js'
+import {
+  addFunction,
+  getFunctionName,
+  runPikkuFunc,
+} from '../function/function-runner.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -451,7 +452,7 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ; ({ result, sessionServices } = await executeRouteWithMiddleware(
+    ;({ result, sessionServices } = await executeRouteWithMiddleware(
       {
         singletonServices,
         userSession,

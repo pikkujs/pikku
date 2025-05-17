@@ -8,9 +8,7 @@ import {
   serializeFileImports,
   writeFileInDir,
 } from '../src/utils.js'
-import {
-  serializeSchedulerMeta,
-} from '../src/serialize-scheduler-meta.js'
+import { serializeSchedulerMeta } from '../src/serialize-scheduler-meta.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuScheduler = async (

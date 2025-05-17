@@ -119,7 +119,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: HTTPMethod
       func: APIFunction
-      permissions?: CorePermissionGroup<APIPermission>,
+      permissions?: CorePermissionGroup<APIPermission>
       auth?: true
       tags?: string[]
       middleware?: APIMiddleware[]
@@ -139,7 +139,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: 'get'
       func: APIFunction
-      permissions?: CorePermissionGroup<APIPermission>,
+      permissions?: CorePermissionGroup<APIPermission>
       auth?: true
       sse?: boolean
       tags?: string[]
@@ -159,7 +159,7 @@ export type CoreHTTPFunctionRoute<
       route: R
       method: 'post'
       func: APIFunction
-      permissions?: CorePermissionGroup<APIPermission>,
+      permissions?: CorePermissionGroup<APIPermission>
       auth?: true
       query?: Array<keyof In>
       tags?: string[]

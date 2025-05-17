@@ -21,67 +21,64 @@ export const addChannel = <
   ChannelFunctionSessionless,
   APIPermission,
 >(
-  channel: CoreAPIChannel<
-    In,
-    Channel,
-    ChannelFunction,
-    APIPermission
-  >
+  channel: CoreAPIChannel<In, Channel, ChannelFunction, APIPermission>
 ) => {
   // Get the channel metadata
-  const channelsMeta = pikkuState('channel', 'meta');
-  const channelMeta = channelsMeta[channel.name];
-  
+  const channelsMeta = pikkuState('channel', 'meta')
+  const channelMeta = channelsMeta[channel.name]
+
   if (!channelMeta) {
-    console.error(`Channel metadata not found for channel: ${channel.name}`);
+    console.error(`Channel metadata not found for channel: ${channel.name}`)
     // Still store the channel, even without metadata
-    pikkuState('channel', 'channels').push(channel as any);
-    return;
+    pikkuState('channel', 'channels').push(channel as any)
+    return
   }
-  
+
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connectPikkuFuncName) {
-    addFunction(channelMeta.connectPikkuFuncName, channel.onConnect as any);
+    addFunction(channelMeta.connectPikkuFuncName, channel.onConnect as any)
   }
-  
+
   // Register onDisconnect function if provided
   if (channel.onDisconnect && channelMeta.disconnectPikkuFuncName) {
-    addFunction(channelMeta.disconnectPikkuFuncName, channel.onDisconnect as any);
+    addFunction(
+      channelMeta.disconnectPikkuFuncName,
+      channel.onDisconnect as any
+    )
   }
-  
+
   // Register onMessage function if provided
   if (channel.onMessage && channelMeta.message?.pikkuFuncName) {
-    const messageFunc = typeof channel.onMessage === 'function' ? 
-                         channel.onMessage : 
-                         channel.onMessage.func;
-    addFunction(channelMeta.message.pikkuFuncName, messageFunc as any);
+    const messageFunc =
+      typeof channel.onMessage === 'function'
+        ? channel.onMessage
+        : channel.onMessage.func
+    addFunction(channelMeta.message.pikkuFuncName, messageFunc as any)
   }
-  
+
   // Register functions in onMessageRoute
   if (channel.onMessageRoute && channelMeta.messageRoutes) {
     // Iterate through each channel in onMessageRoute
     Object.entries(channel.onMessageRoute).forEach(([channelKey, routes]) => {
-      const channelRoutes = channelMeta.messageRoutes[channelKey];
-      if (!channelRoutes) return;
-      
+      const channelRoutes = channelMeta.messageRoutes[channelKey]
+      if (!channelRoutes) return
+
       // Iterate through each route in the channel
       Object.entries(routes).forEach(([routeKey, handler]) => {
-        const routeMeta = channelRoutes[routeKey];
-        if (!routeMeta) return;
-        
+        const routeMeta = channelRoutes[routeKey]
+        if (!routeMeta) return
+
         // Extract the function from the handler
-        const routeFunc = typeof handler === 'function' ? 
-                           handler : 
-                           handler.func;
-        
+        const routeFunc = typeof handler === 'function' ? handler : handler.func
+
         // Register the function using the pikku name from metadata
-        addFunction(routeMeta.pikkuFuncName, routeFunc as any);
-      });
-    });
+        addFunction(routeMeta.pikkuFuncName, routeFunc as any)
+      })
+    })
   }
-  
+
   // Store the channel configuration
-  pikkuState('channel', 'channels').push(channel as any);
+  pikkuState('channel', 'channels').push(channel as any)
 }
 
 const getMatchingChannelConfig = (request: string) => {

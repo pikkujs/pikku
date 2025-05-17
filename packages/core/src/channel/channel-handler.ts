@@ -86,14 +86,12 @@ export const processMessageHandlers = (
       return
     }
 
-    validateRouteMeta(
-      channelConfig.name,
-      routingProperty,
-      routerValue
-    )
+    validateRouteMeta(channelConfig.name, routingProperty, routerValue)
 
-    const permissions = typeof onMessage === 'function' ? {} : onMessage.permissions
-    const func: any = typeof onMessage === 'function' ? onMessage : onMessage.func
+    const permissions =
+      typeof onMessage === 'function' ? {} : onMessage.permissions
+    const func: any =
+      typeof onMessage === 'function' ? onMessage : onMessage.func
     return await runPikkuFunc(getFunctionName(func), {
       singletonServices: services,
       getAllServices: () => ({
@@ -102,7 +100,7 @@ export const processMessageHandlers = (
       }),
       data,
       session,
-      permissions
+      permissions,
     })
   }
 

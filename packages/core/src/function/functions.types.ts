@@ -57,7 +57,7 @@ export type CoreAPIFunctionSessionless<
   services: Services,
   data: In,
   session?: Session
-) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void> 
+) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
 /**
  * Represents a function that checks permissions for a given API operation.
@@ -72,6 +72,6 @@ export type CoreAPIPermission<
   Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session?: Session) => Promise<boolean>
 
-export type CorePermissionGroup<
-  APIPermission = CoreAPIPermission<any>,
-> = Record<string, APIPermission | APIPermission[]> | undefined
+export type CorePermissionGroup<APIPermission = CoreAPIPermission<any>> =
+  | Record<string, APIPermission | APIPermission[]>
+  | undefined

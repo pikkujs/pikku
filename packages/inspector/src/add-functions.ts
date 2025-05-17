@@ -1,7 +1,10 @@
 import * as ts from 'typescript'
 import { InspectorState, InspectorFilters } from './types.js'
 import { TypesMap } from './types-map.js'
-import { extractFunctionName, getPropertyAssignmentInitializer } from './utils.js'
+import {
+  extractFunctionName,
+  getPropertyAssignmentInitializer,
+} from './utils.js'
 import { FunctionServicesMeta } from '@pikku/core'
 
 const isValidVariableName = (name: string) => {
@@ -238,7 +241,7 @@ export function addFunctions(
   if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
     return
   }
-  
+
   if (args.length === 0) return
 
   const { pikkuFuncName, name } = extractFunctionName(node, checker)
@@ -247,7 +250,12 @@ export function addFunctions(
   // either the `func` prop or the first argument directly
   let handlerNode: ts.Expression = args[0]!
   if (ts.isObjectLiteralExpression(handlerNode)) {
-    const fnProp = getPropertyAssignmentInitializer(handlerNode, 'func', true, checker)
+    const fnProp = getPropertyAssignmentInitializer(
+      handlerNode,
+      'func',
+      true,
+      checker
+    )
     if (
       !fnProp ||
       (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
@@ -258,7 +266,10 @@ export function addFunctions(
     handlerNode = fnProp
   }
 
-  if (!ts.isArrowFunction(handlerNode) && !ts.isFunctionExpression(handlerNode)) {
+  if (
+    !ts.isArrowFunction(handlerNode) &&
+    !ts.isFunctionExpression(handlerNode)
+  ) {
     console.error(`• Handler for TODO is not a function.`)
     return
   }
@@ -338,7 +349,9 @@ export function addFunctions(
   state.functions.files.add(node.getSourceFile().fileName)
 
   if (inputNames.length > 1) {
-    console.warn('More than one input type detected, only the first one will be used as a schema.')
+    console.warn(
+      'More than one input type detected, only the first one will be used as a schema.'
+    )
   }
 
   state.functions.meta[pikkuFuncName] = {

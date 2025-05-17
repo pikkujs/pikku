@@ -10,7 +10,11 @@ import {
   CreateSessionServices,
   PikkuMiddleware,
 } from '../types/core.types.js'
-import { CoreAPIFunction, CoreAPIFunctionSessionless, CoreAPIPermission } from '../function/functions.types.js'
+import {
+  CoreAPIFunction,
+  CoreAPIFunctionSessionless,
+  CoreAPIPermission,
+} from '../function/functions.types.js'
 
 export type RunChannelOptions = Partial<{
   skipUserSession: boolean
@@ -57,9 +61,15 @@ export type ChannelsMeta = Record<string, ChannelMeta>
 export type CoreAPIChannel<
   ChannelData,
   Channel extends string,
-  ChannelConnect = CoreAPIFunction<void, unknown, ChannelData> | CoreAPIFunctionSessionless<void, unknown, ChannelData>,
-  ChannelDisconnect = CoreAPIFunction<void, void, ChannelData> | CoreAPIFunctionSessionless<void, void, ChannelData>,
-  ChannelFunctionMessage = CoreAPIFunction<unknown, unknown, ChannelData> | CoreAPIFunctionSessionless<unknown, unknown, ChannelData>,
+  ChannelConnect =
+    | CoreAPIFunction<void, unknown, ChannelData>
+    | CoreAPIFunctionSessionless<void, unknown, ChannelData>,
+  ChannelDisconnect =
+    | CoreAPIFunction<void, void, ChannelData>
+    | CoreAPIFunctionSessionless<void, void, ChannelData>,
+  ChannelFunctionMessage =
+    | CoreAPIFunction<unknown, unknown, ChannelData>
+    | CoreAPIFunctionSessionless<unknown, unknown, ChannelData>,
   APIPermission = CoreAPIPermission<ChannelData>,
 > = {
   name: string
