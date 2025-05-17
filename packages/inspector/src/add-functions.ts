@@ -238,6 +238,17 @@ export function addFunctions(
   const { expression, arguments: args, typeArguments } = node
 
   // only handle calls like pikkuFunc(...)
+  if (!ts.isIdentifier(expression)) {
+    return
+  }
+
+  // Match identifiers that contain both "pikku" and "func" (case insensitive)
+  const pikkuFuncPattern = /pikku.*func/i;
+  if (!pikkuFuncPattern.test(expression.text)) {
+    return
+  }
+
+  // only handle calls like pikkuFunc(...)
   if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
     return
   }
@@ -270,7 +281,7 @@ export function addFunctions(
     !ts.isArrowFunction(handlerNode) &&
     !ts.isFunctionExpression(handlerNode)
   ) {
-    console.error(`• Handler for TODO is not a function.`)
+    console.error(`• Handler for ${name} is not a function.`)
     return
   }
 
