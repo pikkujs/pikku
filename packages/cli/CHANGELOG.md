@@ -1,5 +1,9 @@
 # @pikku/cli
 
+## 0.7.0
+
+- Now function first. No breaking changes for end user here, just internals
+
 ## 0.6.20
 
 ### Patch Changes

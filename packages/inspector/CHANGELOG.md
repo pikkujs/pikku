@@ -1,5 +1,15 @@
 # @pikku/inspector
 
+## 0.7.0
+
+This has changed significantly. The inspector now finds all functions and then links them to events.
+
+This means we can now get:
+
+- RPCs out of the box
+- Schemas are per function, not event
+- Supports inline functions, external functions, anonymous functions
+
 ## 0.6.4
 
 ### Patch Changes

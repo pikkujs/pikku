@@ -1,5 +1,10 @@
 # @pikku/express
 
+## 0.7.0
+
+- Updating to match remaining packages
+
+
 ## 0.6.6
 
 ### Patch Changes

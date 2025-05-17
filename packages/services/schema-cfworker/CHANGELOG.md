@@ -1,5 +1,9 @@
 # @pikku/cfworker-json-schema
 
+## 0.7.0
+
+- Updating to match remaining packages
+
 ## 0.6.2
 
 ### Patch Changes

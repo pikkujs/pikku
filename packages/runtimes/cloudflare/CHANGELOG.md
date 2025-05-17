@@ -1,5 +1,9 @@
 # @pikku/cloudflare
 
+## 0.7.0
+
+- Updating to match remaining packages
+
 ## 0.6.7
 
 ### Patch Changes
