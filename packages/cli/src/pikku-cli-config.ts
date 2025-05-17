@@ -6,9 +6,13 @@ import { InspectorFilters } from '@pikku/inspector'
 export interface PikkuCLICoreOutputFiles {
   outDir?: string
   functionsFile: string
+  functionsMetaFile: string
   httpRoutesFile: string
+  httpRoutesMetaFile: string
   channelsFile: string
+  channelsMetaFile: string
   schedulersFile: string
+  schedulersMetaFile: string
   schemaDirectory: string
   typesDeclarationFile: string
   httpRoutesMapDeclarationFile: string
@@ -125,14 +129,26 @@ const _getPikkuCLIConfig = async (
       if (!result.functionsFile) {
         result.functionsFile = join(result.outDir, 'pikku-functions.gen.ts')
       }
+      if (!result.functionsMetaFile) {
+        result.functionsMetaFile = join(result.outDir, 'pikku-functions-meta.gen.ts')
+      }
       if (!result.httpRoutesFile) {
         result.httpRoutesFile = join(result.outDir, 'pikku-http-routes.gen.ts')
+      }
+      if (!result.httpRoutesMetaFile) {
+        result.httpRoutesMetaFile = join(result.outDir, 'pikku-http-routes-meta.gen.ts')
       }
       if (!result.schedulersFile) {
         result.schedulersFile = join(result.outDir, 'pikku-schedules.gen.ts')
       }
+      if (!result.schedulersMetaFile) {
+        result.schedulersMetaFile = join(result.outDir, 'pikku-schedules-meta.gen.ts')
+      }
       if (!result.channelsFile) {
         result.channelsFile = join(result.outDir, 'pikku-channels.gen.ts')
+      }
+      if (!result.channelsMetaFile) {
+        result.channelsMetaFile = join(result.outDir, 'pikku-channels-meta.gen.ts')
       }
       if (!result.typesDeclarationFile) {
         result.typesDeclarationFile = join(result.outDir, 'pikku-types.gen.ts')

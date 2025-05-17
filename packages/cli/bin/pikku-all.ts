@@ -24,11 +24,15 @@ import chokidar from 'chokidar'
 import { pikkuFunctions } from './pikku-functions.js'
 
 const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
+  const metaImports: string[] = []
   const imports: string[] = []
-  const addImport = (from: string) => {
-    imports.push(
-      `import '${getFileImportRelativePath(cliConfig.bootstrapFile, from, cliConfig.packageMappings)}'`
-    )
+  const addImport = (from: string, type: 'meta' | 'events' | 'other') => {
+    const statement = `import '${getFileImportRelativePath(cliConfig.bootstrapFile, from, cliConfig.packageMappings)}'`
+    if (type === 'meta') {
+      metaImports.push(statement)
+    } else {
+      imports.push(statement)
+    }
   }
 
   let typesDeclarationFileExists = true
@@ -58,30 +62,34 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     logInfo(`• No functions found, skipping remaining steps...\x1b[0m`)
     process.exit(1)
   }
-  addImport(cliConfig.functionsFile)
+  addImport(cliConfig.functionsMetaFile, 'meta')
+  addImport(cliConfig.functionsFile, 'events')
 
   const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {
     await pikkuHTTPMap(cliConfig, visitState)
     await pikkuFetch(cliConfig)
-    addImport(cliConfig.httpRoutesFile)
+    addImport(cliConfig.httpRoutesMetaFile, 'meta')
+    addImport(cliConfig.httpRoutesFile, 'events')
   }
 
   const scheduled = await pikkuScheduler(cliConfig, visitState)
   if (scheduled) {
-    addImport(cliConfig.schedulersFile)
+    addImport(cliConfig.schedulersMetaFile, 'meta')
+    addImport(cliConfig.schedulersFile, 'events')
   }
 
   const channels = await pikkuChannels(cliConfig, visitState)
   if (channels) {
     await pikkuChannelsMap(cliConfig, visitState)
     await pikkuWebSocket(cliConfig)
-    addImport(cliConfig.channelsFile)
+    addImport(cliConfig.channelsMetaFile, 'meta')
+    addImport(cliConfig.channelsFile, 'events')
   }
 
   const schemas = await pikkuSchemas(cliConfig, visitState)
   if (schemas) {
-    addImport(`${cliConfig.schemaDirectory}/register.gen.ts`)
+    addImport(`${cliConfig.schemaDirectory}/register.gen.ts`, 'other')
   }
 
   if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
@@ -98,7 +106,7 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     await pikkuOpenAPI(cliConfig, visitState)
   }
 
-  await writeFileInDir(cliConfig.bootstrapFile, imports.join('\n'))
+  await writeFileInDir(cliConfig.bootstrapFile, [...metaImports, ...imports].join('\n'))
 }
 
 const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {

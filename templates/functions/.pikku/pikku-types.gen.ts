@@ -5,7 +5,7 @@
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePermissionGroup, CoreAPIPermission, PikkuMiddleware } from '@pikku/core'
+import { CoreAPIPermission, PikkuMiddleware } from '@pikku/core'
 import { CoreAPIFunction, CoreAPIFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRoute } from '@pikku/core/http'
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
@@ -40,8 +40,7 @@ type APIFunction<
   )
 > = CoreAPIFunction<In, Out, ChannelData, RequiredServices, UserSession>
 
-type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, CorePermissionGroup<APIPermission>, APIMiddleware>
-
+type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>, APIMiddleware>
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, UserSession>
 

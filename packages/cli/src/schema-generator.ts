@@ -15,12 +15,20 @@ export async function generateSchemas(
   )
   for (const { input, inputTypes } of httpRoutesMeta) {
     if (input) {
+      let found = false
       for (const typesMap of typesMaps) {
-        const uniqueName = typesMap.getUniqueName(input)
-        if (uniqueName) {
-          schemasSet.add(uniqueName)
-          break
+        try {
+          const uniqueName = typesMap.getUniqueName(input)
+          if (uniqueName) {
+            found = true
+            schemasSet.add(uniqueName)
+            break
+          }
+        } catch (e) {
         }
+      }
+      if (!found) {
+        console.error('Input type not found in any types map:', input)
       }
     }
     // if (output) {

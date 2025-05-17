@@ -102,7 +102,7 @@ const getMatchingChannelConfig = (request: string) => {
         params: matchedPath.params,
         channelConfig,
         schemaName: channelMeta.input,
-        meta: channelsMeta[channelConfig.route]!
+        meta: channelMeta
       }
     }
   }
