@@ -1,5 +1,16 @@
 ## 0.7.0
 
+## 0.8.0
+
+### Minor Changes
+
+- 01fd252: upgrading pikku to 0.7 as part of APIFunction signature change
+
+### Patch Changes
+
+- 0f71559: fix: adding request-id (since we no longer use context)
+- 14d29d0: fix: correcting readable type for content service
+
 We now use the function first approach internally, which means first all the functions register, and then events call call them.
 
 The main breaking changes for the end user are:

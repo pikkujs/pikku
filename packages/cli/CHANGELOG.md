@@ -1,5 +1,20 @@
 # @pikku/cli
 
+## 0.8.0
+
+### Minor Changes
+
+- 01fd252: upgrading pikku to 0.7 as part of APIFunction signature change
+
+### Patch Changes
+
+- 0f71559: fix: correcting imports for routes-map generation
+- Updated dependencies [01fd252]
+- Updated dependencies [0f71559]
+- Updated dependencies [14d29d0]
+  - @pikku/inspector@0.8.0
+  - @pikku/core@0.8.0
+
 ## 0.7.0
 
 - Now function first. No breaking changes for end user here, just internals
