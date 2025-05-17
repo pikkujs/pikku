@@ -16,9 +16,10 @@ export interface FunctionServicesMeta {
 export type FunctionsMeta = Record<
   string,
   {
-    name: string
+    pikkuFuncName: string
+    name?: string
     services: FunctionServicesMeta
-    schemaName: string
+    schemaName: string | null
     inputs: string[] | null
     outputs: string[] | null
   }

@@ -9,7 +9,7 @@ import type { CoreAPIFunctionSessionless } from '../function/functions.types.js'
 import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
-import { getFunctionName, runPikkuFunc } from '../function/function-runner.js'
+import { addFunction, getFunctionName, runPikkuFunc } from '../function/function-runner.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -27,6 +27,13 @@ export const addScheduledTask = <
 >(
   scheduledTask: CoreScheduledTask<APIFunction>
 ) => {
+  const meta = pikkuState('scheduler', 'meta')
+  const taskMeta = meta[scheduledTask.name]
+  if (!taskMeta) {
+    throw new Error('Task metadata not found')
+  }
+  addFunction(taskMeta.pikkuFuncName, scheduledTask.func)
+  
   const tasks = pikkuState('scheduler', 'tasks')
   if (tasks.has(scheduledTask.name)) {
     throw new Error(`Scheduled task already exists: ${scheduledTask.name}`)

@@ -31,7 +31,7 @@ import { pikkuState } from '../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { getFunctionName, runPikkuFunc } from '../function/function-runner.js'
+import { addFunction, getFunctionName, runPikkuFunc } from '../function/function-runner.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -95,6 +95,14 @@ export const addHTTPRoute = <
     APIMiddleware
   >
 ) => {
+  const httpMeta = pikkuState('http', 'meta')
+  const routeMeta = httpMeta.find(
+    (meta) => meta.route === httpRoute.route && meta.method === httpRoute.method
+  )
+  if (!routeMeta) {
+    throw new Error('Route metadata not found')
+  }
+  addFunction(routeMeta.pikkuFuncName, httpRoute.func as any)
   pikkuState('http', 'routes').push(httpRoute as any)
 }
 

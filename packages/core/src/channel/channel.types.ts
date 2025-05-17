@@ -29,6 +29,7 @@ export type RunChannelParams<ChannelData> = {
 }
 
 export interface ChannelMessageMeta {
+  pikkuFuncName: string
   inputs: string[] | null
   outputs: string[] | null
   docs?: APIDocs
@@ -42,7 +43,9 @@ export interface ChannelMeta {
   input: string | null
   inputTypes?: HTTPFunctionMetaInputTypes
   connect: boolean
+  connectPikkuFuncName: string | null
   disconnect: boolean
+  disconnectPikkuFuncName: string | null
   message: ChannelMessageMeta | null
   messageRoutes: Record<string, Record<string, ChannelMessageMeta>>
   docs?: APIDocs
@@ -54,13 +57,15 @@ export type ChannelsMeta = Record<string, ChannelMeta>
 export type CoreAPIChannel<
   ChannelData,
   Channel extends string,
-  ChannelFunctionMessage = CoreAPIFunction<unknown, unknown>,
+  ChannelConnect = CoreAPIFunction<void, unknown, ChannelData> | CoreAPIFunctionSessionless<void, unknown, ChannelData>,
+  ChannelDisconnect = CoreAPIFunction<void, void, ChannelData> | CoreAPIFunctionSessionless<void, void, ChannelData>,
+  ChannelFunctionMessage = CoreAPIFunction<unknown, unknown, ChannelData> | CoreAPIFunctionSessionless<unknown, unknown, ChannelData>,
   APIPermission = CoreAPIPermission<ChannelData>,
 > = {
   name: string
   route: Channel
-  onConnect?: CoreAPIFunctionSessionless<ChannelData, unknown>
-  onDisconnect?: CoreAPIFunctionSessionless<void, void>
+  onConnect?: ChannelConnect
+  onDisconnect?: ChannelDisconnect
   onMessage?:
     | {
         func: ChannelFunctionMessage

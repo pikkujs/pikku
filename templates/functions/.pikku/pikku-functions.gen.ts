@@ -9,13 +9,15 @@ import '../src/http.js'
 import '../src/scheduled-task.js'
 
 import { pikkuState } from '@pikku/core'
-pikkuState('http', 'meta', {
-  "onConnect": {
+pikkuState('functions', 'meta', {
+  "pikkuFn_src_channel_functions_ts_L9C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L9C3",
     "name": "onConnect",
     "services": {
       "optimized": true,
       "services": [
-        "logger"
+        "logger",
+        "channel"
       ]
     },
     "schemaName": "OnConnectInput",
@@ -24,19 +26,22 @@ pikkuState('http', 'meta', {
     ],
     "outputs": []
   },
-  "onDisconnect": {
+  "pikkuFn_src_channel_functions_ts_L18C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L18C3",
     "name": "onDisconnect",
     "services": {
       "optimized": true,
       "services": [
-        "logger"
+        "logger",
+        "channel"
       ]
     },
     "schemaName": null,
     "inputs": [],
     "outputs": []
   },
-  "authenticate": {
+  "pikkuFn_src_channel_functions_ts_L28C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L28C3",
     "name": "authenticate",
     "services": {
       "optimized": true,
@@ -52,7 +57,8 @@ pikkuState('http', 'meta', {
       "AuthenticateOutput"
     ]
   },
-  "subscribe": {
+  "pikkuFn_src_channel_functions_ts_L37C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L37C3",
     "name": "subscribe",
     "services": {
       "optimized": true,
@@ -67,7 +73,8 @@ pikkuState('http', 'meta', {
     ],
     "outputs": []
   },
-  "unsubscribe": {
+  "pikkuFn_src_channel_functions_ts_L43C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L43C3",
     "name": "unsubscribe",
     "services": {
       "optimized": true,
@@ -82,7 +89,8 @@ pikkuState('http', 'meta', {
     ],
     "outputs": []
   },
-  "emitMessage": {
+  "pikkuFn_src_channel_functions_ts_L51C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L51C3",
     "name": "emitMessage",
     "services": {
       "optimized": true,
@@ -100,7 +108,8 @@ pikkuState('http', 'meta', {
       "EmitMessageOutput"
     ]
   },
-  "onMessage": {
+  "pikkuFn_src_channel_functions_ts_L60C3": {
+    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L60C3",
     "name": "onMessage",
     "services": {
       "optimized": true,
@@ -117,7 +126,8 @@ pikkuState('http', 'meta', {
       "OnMessageOutput"
     ]
   },
-  "progressiveEnhancementExample": {
+  "pikkuFn_src_http_progressive_enhancement_ts_L6C3": {
+    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L6C3",
     "name": "progressiveEnhancementExample",
     "services": {
       "optimized": false,
@@ -129,7 +139,8 @@ pikkuState('http', 'meta', {
       "ProgressiveEnhancementExampleOutput"
     ]
   },
-  "timeSinceOpened": {
+  "pikkuFn_src_http_sse_ts_L7C3": {
+    "pikkuFuncName": "pikkuFn_src_http_sse_ts_L7C3",
     "name": "timeSinceOpened",
     "services": {
       "optimized": true,
@@ -141,7 +152,8 @@ pikkuState('http', 'meta', {
       "TimeSinceOpenedOutput"
     ]
   },
-  "helloWorld": {
+  "pikkuFn_src_http_ts_L3C54": {
+    "pikkuFuncName": "pikkuFn_src_http_ts_L3C54",
     "name": "helloWorld",
     "services": {
       "optimized": true,
@@ -153,7 +165,8 @@ pikkuState('http', 'meta', {
       "string"
     ]
   },
-  "myScheduledTask": {
+  "pikkuFn_src_scheduled_task_ts_L6C58": {
+    "pikkuFuncName": "pikkuFn_src_scheduled_task_ts_L6C58",
     "name": "myScheduledTask",
     "services": {
       "optimized": true,

@@ -5,7 +5,7 @@
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePermissionGroup, CoreAPIPermission, PikkuMiddleware, MakeRequired } from '@pikku/core'
+import { CorePermissionGroup, CoreAPIPermission, PikkuMiddleware } from '@pikku/core'
 import { CoreAPIFunction, CoreAPIFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRoute } from '@pikku/core/http'
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
@@ -18,14 +18,31 @@ import type { Services } from '../types/application-types.d.js'
 export type APIPermission<In = unknown, RequiredServices extends SingletonServices = SingletonServices> = CoreAPIPermission<In, RequiredServices, UserSession>
 export type APIMiddleware<RequiredServices extends SingletonServices = SingletonServices> = PikkuMiddleware<RequiredServices, UserSession>
 
-type APIFunctionSessionless<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunctionSessionless<In, Out, Channel, RequiredServices, UserSession>
-type APIFunction<In = unknown, Out = never, Channel extends boolean = false, RequiredServices extends Services = Services & (Channel extends true ? { channel: PikkuChannel<unknown, Out> } : { channel?: PikkuChannel<unknown, Out> })> = CoreAPIFunction<In, Out, Channel, RequiredServices, UserSession>
+type APIFunctionSessionless<
+  In = unknown, 
+  Out = never, 
+  ChannelData = null,  // null means optional channel
+  RequiredServices extends Services = Services & (
+    [ChannelData] extends [null] 
+      ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
+      : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
+  )
+> = CoreAPIFunctionSessionless<In, Out, ChannelData, RequiredServices, UserSession>
+
+type APIFunction<
+  In = unknown, 
+  Out = never, 
+  ChannelData = null,  // null means optional channel
+  RequiredServices extends Services = Services & (
+    [ChannelData] extends [null] 
+      ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
+      : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
+  )
+> = CoreAPIFunction<In, Out, ChannelData, RequiredServices, UserSession>
+
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, CorePermissionGroup<APIPermission>, APIMiddleware>
 
-export type ChannelConnection<Out = unknown, ChannelData = unknown, RequiredServices extends Services = Services> = (services: MakeRequired<RequiredServices, 'userSession'>, channel: PikkuChannel<ChannelData, Out>) => Promise<void>
-export type ChannelDisconnection<ChannelData = unknown, RequiredServices extends Services = Services> = (services: MakeRequired<RequiredServices, 'userSession'>, channel: PikkuChannel<ChannelData, never>) => Promise<void>
-type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<any, any, false> | APIFunction<any, any, true>, APIPermission>
-
+type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, UserSession>
 
 export const pikkuFunc = <In, Out = unknown>(
@@ -56,45 +73,33 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
   return typeof func === 'function' ? func : func.func
 }
 
-export const pikkuChannelConnection = <In, Out = unknown>(
+export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>(
   func:
-    | ChannelConnection<In, Out>
+    | APIFunctionSessionless<void, Out, ChannelData>
     | {
-        func: ChannelConnection<In, Out>
-        auth?: true
-        name?: string
-      }
-    | {
-        func: ChannelConnection<In, Out>
-        auth: false
+        func: APIFunctionSessionless<void, Out, ChannelData>
         name?: string
       }
 ) => {
   return typeof func === 'function' ? func : func.func
 }
 
-export const pikkuChannelDisconnection = <In>(
+export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
   func:
-    | ChannelDisconnection<In>
+    | APIFunctionSessionless<void, void, ChannelData>
     | {
-        func: ChannelDisconnection<In>
-        auth?: true
-        name?: string
-      }
-    | {
-        func: ChannelDisconnection<In>
-        auth: false
+        func: APIFunction<void, void, ChannelData>
         name?: string
       }
 ) => {
   return typeof func === 'function' ? func : func.func
 }
 
-export const pikkuChannelFunc = <In, Out = unknown>(
+export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unknown>(
   func:
-    | APIFunctionSessionless<In, Out, true>
+    | APIFunctionSessionless<In, Out, ChannelData>
     | {
-        func: APIFunctionSessionless<In, Out, true>
+        func: APIFunctionSessionless<In, Out, ChannelData>
         name?: string
       }
 ) => {

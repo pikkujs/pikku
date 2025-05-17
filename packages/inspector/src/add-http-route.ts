@@ -3,7 +3,7 @@ import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { APIDocs } from '@pikku/core'
-import { matchesFilters } from './utils.js'
+import { extractFunctionName, getPropertyAssignmentInitializer, matchesFilters } from './utils.js'
 import { InspectorState, InspectorFilters } from './types.js'
 
 /**
@@ -70,22 +70,18 @@ export const addHTTPRoute = (
   }
 
   // --- find the referenced function ---
-  const funcProp = obj.properties.find(
-    (p) =>
-      ts.isPropertyAssignment(p) &&
-      ts.isIdentifier(p.name) &&
-      p.name.text === 'func'
-  ) as ts.PropertyAssignment | undefined
-
-  if (!funcProp || !ts.isIdentifier(funcProp.initializer)) {
+  const funcInitializer = getPropertyAssignmentInitializer(obj, 'func', true, checker)
+  if (!funcInitializer) {
     console.error(`• No valid 'func' property for route '${route}'.`)
     return
   }
-  const funcName = funcProp.initializer.text
 
+  const funcName = extractFunctionName(funcInitializer, checker).pikkuFuncName
+  
   // lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]
   if (!fnMeta) {
+    console.log(Object.keys(state.functions.meta))
     console.error(`• No function metadata found for '${funcName}'.`)
     return
   }
@@ -104,6 +100,7 @@ export const addHTTPRoute = (
   // --- record route ---
   state.http.files.add(node.getSourceFile().fileName)
   state.http.meta.push({
+    pikkuFuncName: funcName,
     route,
     method: method as HTTPMethod,
     input,

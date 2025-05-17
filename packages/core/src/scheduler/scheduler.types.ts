@@ -6,6 +6,7 @@ import { CoreAPIFunctionSessionless } from '../function/functions.types.js'
  */
 export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> = Record<string,
   {
+    pikkuFuncName: string
     name: string
     schedule: string
     session?: UserSession

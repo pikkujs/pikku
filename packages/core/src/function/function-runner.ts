@@ -10,7 +10,8 @@ export const addFunction = (funcName: string, func: CoreAPIFunction<any, any> | 
   pikkuState('functions', 'nameToFunction').set(funcName, func)
 }
 
-export const getFunctionName = (func: CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>) => {
+// TODO
+export const getFunctionName = (func: any) => { 
     const funcName = pikkuState('functions', 'functionToName').get(func)
     if (!funcName) {
         throw new Error(`Function not found: ${funcName}`)
@@ -39,6 +40,9 @@ export const runPikkuFunc = async <In = any, Out = any>(funcName: string, { sing
         throw new Error(`Function not found: ${funcName}`)
     }
     const funcMeta = pikkuState('functions', 'meta')[funcName]
+    if (!funcMeta) {
+        throw new Error(`Function meta not found: ${funcName}`)
+    }
     const schemaName = funcMeta.schemaName
     // Validate request data against the defined schema, if any
     await validateSchema(

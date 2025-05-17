@@ -9,24 +9,28 @@ import '../src/http.js'
 import { pikkuState } from '@pikku/core'
 pikkuState('http', 'meta', [
   {
+    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L6C3",
     "route": "/status/sse",
     "method": "get",
     "input": null,
     "output": "ProgressiveEnhancementExampleOutput"
   },
   {
+    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L6C3",
     "route": "/status/http",
     "method": "get",
     "input": null,
     "output": "ProgressiveEnhancementExampleOutput"
   },
   {
+    "pikkuFuncName": "pikkuFn_src_http_sse_ts_L7C3",
     "route": "/sse",
     "method": "get",
     "input": null,
     "output": "TimeSinceOpenedOutput"
   },
   {
+    "pikkuFuncName": "pikkuFn_src_http_ts_L3C54",
     "route": "/hello-world",
     "method": "get",
     "input": null,

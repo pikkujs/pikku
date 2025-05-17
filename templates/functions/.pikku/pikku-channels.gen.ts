@@ -11,19 +11,15 @@ pikkuState('channel', 'meta', {
     "name": "events",
     "route": "/",
     "input": null,
-    "connect": true,
-    "disconnect": true,
-    "message": {
-      "inputs": [
-        "OnMessageInput"
-      ],
-      "outputs": [
-        "OnMessageOutput"
-      ]
-    },
+    "connectPikkuFuncName": null,
+    "connect": false,
+    "disconnectPikkuFuncName": null,
+    "disconnect": false,
+    "message": null,
     "messageRoutes": {
       "action": {
         "auth": {
+          "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L28C3",
           "inputs": [
             "AuthenticateInput"
           ],
@@ -32,18 +28,21 @@ pikkuState('channel', 'meta', {
           ]
         },
         "subscribe": {
+          "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L37C3",
           "inputs": [
             "SubscribeInput"
           ],
           "outputs": []
         },
         "unsubscribe": {
+          "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L43C3",
           "inputs": [
             "UnsubscribeInput"
           ],
           "outputs": []
         },
         "emit": {
+          "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L51C3",
           "inputs": [
             "EmitMessageInput"
           ],
@@ -61,12 +60,15 @@ pikkuState('channel', 'meta', {
     "name": "progressive-enhancement",
     "route": "/status/websocket",
     "input": null,
+    "connectPikkuFuncName": null,
     "connect": false,
+    "disconnectPikkuFuncName": null,
     "disconnect": false,
     "message": null,
     "messageRoutes": {
       "action": {
         "status": {
+          "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L6C3",
           "inputs": [],
           "outputs": [
             "ProgressiveEnhancementExampleOutput"

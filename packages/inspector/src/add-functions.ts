@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { InspectorState, InspectorFilters } from './types.js'
 import { TypesMap } from './types-map.js'
-import { extractFunctionName } from './utils.js'
+import { extractFunctionName, getPropertyAssignmentInitializer } from './utils.js'
 import { FunctionServicesMeta } from '@pikku/core'
 
 const isValidVariableName = (name: string) => {
@@ -220,7 +220,6 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
   return type
 }
 
-
 /**
  * Inspect pikkuFunc calls, extract input/output and first-arg destructuring,
  * then push into state.functions.meta.
@@ -239,44 +238,31 @@ export function addFunctions(
   if (!ts.isIdentifier(expression) || !expression.text.startsWith('pikku')) {
     return
   }
+  
   if (args.length === 0) return
 
-  // figure out the function name
-  const { funcName } = extractFunctionName(node)
-  if (!funcName) {
-    console.error('Couldn’t determine function name—skipping.')
-    return
-  }
+  const { pikkuFuncName, name } = extractFunctionName(node, checker)
 
   // determine the actual handler expression:
   // either the `func` prop or the first argument directly
   let handlerNode: ts.Expression = args[0]!
   if (ts.isObjectLiteralExpression(handlerNode)) {
-    const fnProp = handlerNode.properties.find(
-      (p): p is ts.PropertyAssignment =>
-        ts.isPropertyAssignment(p) &&
-        ts.isIdentifier(p.name) &&
-        p.name.text === 'func'
-    )
+    const fnProp = getPropertyAssignmentInitializer(handlerNode, 'func', true, checker)
     if (
       !fnProp ||
-      (!ts.isArrowFunction(fnProp.initializer) &&
-        !ts.isFunctionExpression(fnProp.initializer))
+      (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
     ) {
-      console.error(`• No valid 'func' property found for ${funcName}.`)
+      console.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
       return
     }
-    handlerNode = fnProp.initializer
+    handlerNode = fnProp
   }
-  if (
-    !ts.isArrowFunction(handlerNode) &&
-    !ts.isFunctionExpression(handlerNode)
-  ) {
-    console.error(`• Handler for ${funcName} is not a function.`)
+
+  if (!ts.isArrowFunction(handlerNode) && !ts.isFunctionExpression(handlerNode)) {
+    console.error(`• Handler for TODO is not a function.`)
     return
   }
 
-  // --- NEW: Extract first-arg destructuring names ---
   const services: FunctionServicesMeta = {
     optimized: true,
     services: [],
@@ -314,12 +300,12 @@ export function addFunctions(
     checker,
     state.functions.typesMap,
     'Input',
-    funcName,
+    name,
     genericTypes[0]
   )
   if (inputTypes.length === 0) {
-    console.error(
-      `\x1b[31m• Unknown input type for ${funcName}, assuming void.\x1b[0m`
+    console.warn(
+      `\x1b[31m• Unknown input type for '${name}', assuming void.\x1b[0m`
     )
   }
 
@@ -330,7 +316,7 @@ export function addFunctions(
       checker,
       state.functions.typesMap,
       'Output',
-      funcName,
+      name,
       genericTypes[1]
     ).names
   } else {
@@ -342,7 +328,7 @@ export function addFunctions(
         checker,
         state.functions.typesMap,
         'Output',
-        funcName,
+        pikkuFuncName,
         unwrapped
       ).names
     }
@@ -355,8 +341,9 @@ export function addFunctions(
     console.warn('More than one input type detected, only the first one will be used as a schema.')
   }
 
-  state.functions.meta[funcName] = {
-    name: funcName,
+  state.functions.meta[pikkuFuncName] = {
+    pikkuFuncName,
+    name,
     services,
     schemaName: inputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,

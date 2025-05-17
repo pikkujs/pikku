@@ -198,6 +198,7 @@ export type HTTPFunctionMetaInputTypes = {
  * Represents metadata for a set of routes, including route details, methods, input/output types, and documentation.
  */
 export type HTTPRoutesMeta = Array<{
+  pikkuFuncName: string
   route: string
   method: HTTPMethod
   params?: string[]

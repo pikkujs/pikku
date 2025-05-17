@@ -16,21 +16,21 @@ import type {
 export type CoreAPIFunction<
   In,
   Out,
-  Channel extends boolean = false,
+  ChannelData extends unknown | null = null,
   Services extends CoreSingletonServices = CoreServices &
-    (Channel extends true
+    (ChannelData extends null
       ? {
-          channel: PikkuChannel<unknown, Out>
+          channel?: PikkuChannel<unknown, Out> | undefined
         }
       : {
-          channel?: PikkuChannel<unknown, Out> | undefined
+          channel: PikkuChannel<ChannelData, Out>
         }),
   Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
   data: In,
   session: Session
-) => Channel extends true ? Promise<Out> | Promise<void> : Promise<Out>
+) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
 /**
  * Represents a core API function that can be used without a session.
@@ -43,21 +43,21 @@ export type CoreAPIFunction<
 export type CoreAPIFunctionSessionless<
   In,
   Out,
-  Channel extends boolean = false,
+  ChannelData extends unknown | null = null,
   Services extends CoreSingletonServices = CoreServices &
-    (Channel extends true
+    (ChannelData extends null
       ? {
-          channel: PikkuChannel<unknown, Out>
+          channel?: PikkuChannel<unknown, Out> | undefined
         }
       : {
-          channel?: PikkuChannel<unknown, Out> | undefined
+          channel: PikkuChannel<ChannelData, Out>
         }),
   Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
   data: In,
   session?: Session
-) => Channel extends true ? Promise<Out> | Promise<void> : Promise<Out>
+) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void> 
 
 /**
  * Represents a function that checks permissions for a given API operation.

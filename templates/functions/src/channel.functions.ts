@@ -1,12 +1,12 @@
 import {
   pikkuFunc,
   pikkuChannelFunc,
-  pikkuChannelConnection,
-  pikkuChannelDisconnection,
+  pikkuChannelConnectionFunc,
+  pikkuChannelDisconnectionFunc,
 } from '../.pikku/pikku-types.gen.js'
 
-export const onConnect = pikkuChannelConnection<'hello!'>(
-  async ({ logger }, channel) => {
+export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
+  async ({ logger, channel }) => {
     logger.info(
       `Connected to event channel with opening data ${JSON.stringify(channel.openingData)}`
     )
@@ -14,8 +14,8 @@ export const onConnect = pikkuChannelConnection<'hello!'>(
   }
 )
 
-export const onDisconnect = pikkuChannelDisconnection(
-  async ({ logger }, channel) => {
+export const onDisconnect = pikkuChannelDisconnectionFunc(
+  async ({ logger, channel }) => {
     logger.info(
       `Disconnected from event channel with data ${JSON.stringify(channel.openingData)}`
     )

@@ -98,7 +98,7 @@ export const runLocalChannel = async ({
         processMessageHandlers(
           allServices,
           session,
-          channelConfig,
+          channelConfig as any,
           channelHandler
         )
       )

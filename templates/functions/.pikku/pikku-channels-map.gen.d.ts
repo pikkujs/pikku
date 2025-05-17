@@ -36,7 +36,7 @@ export type ChannelsMap = {
         readonly emit: ChannelHandler<EmitMessageInput, EmitMessageOutput>,
       },
     },
-    readonly defaultMessage: ChannelHandler<OnMessageInput, OnMessageOutput>,
+    readonly defaultMessage: never,
   },
   readonly 'progressive-enhancement': {
     readonly routes: {

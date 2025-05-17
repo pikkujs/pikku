@@ -5,7 +5,7 @@ import { APIDocs } from '@pikku/core'
 import { getInputTypes } from './add-http-route.js'
 import {
   extractFunctionName,
-  getPropertyAssignment,
+  getPropertyAssignmentInitializer,
   matchesFilters,
 } from './utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
@@ -33,22 +33,59 @@ function getInitializerOf(
  * Resolve a handler expression (Identifier, CallExpression, or { func })
  * into its underlying function name.
  */
-function getHandlerNameFromExpression(expr: ts.Expression): string | null {
+function getHandlerNameFromExpression(expr: ts.Expression, checker: ts.TypeChecker): string | null {
+  // Handle direct identifier case (which includes shorthand properties)
   if (ts.isIdentifier(expr)) {
-    return expr.text
+    const sym = checker.getSymbolAtLocation(expr);
+    if (sym) {
+      let resolvedSym = sym;
+      if (resolvedSym.flags & ts.SymbolFlags.Alias) {
+        resolvedSym = checker.getAliasedSymbol(resolvedSym) ?? resolvedSym;
+      }
+
+      // Try to get declarations
+      const decls = resolvedSym.declarations ?? [];
+      if (decls.length > 0) {
+        const decl = decls[0]!;
+
+        // For variable declarations, look at the initializer
+        if (ts.isVariableDeclaration(decl) && decl.initializer) {
+          if (ts.isCallExpression(decl.initializer) ||
+            ts.isArrowFunction(decl.initializer) ||
+            ts.isFunctionExpression(decl.initializer)) {
+            // Extract function name from the declaration's initializer
+            const { pikkuFuncName } = extractFunctionName(decl.initializer, checker);
+            return pikkuFuncName;
+          }
+        }
+        // For function declarations, use directly
+        else if (ts.isFunctionDeclaration(decl)) {
+          const { pikkuFuncName } = extractFunctionName(decl, checker);
+          return pikkuFuncName;
+        }
+      }
+    }
+
+    // Fallback: try to extract directly from the identifier
+    const { pikkuFuncName } = extractFunctionName(expr, checker);
+    return pikkuFuncName;
   }
+
+  // Handle call expressions
   if (ts.isCallExpression(expr)) {
-    const { funcName } = extractFunctionName(expr)
-    return funcName
+    const { pikkuFuncName } = extractFunctionName(expr, checker);
+    return pikkuFuncName;
   }
+
+  // Handle object literals with 'func' property
   if (ts.isObjectLiteralExpression(expr)) {
-    const fnProp = getPropertyAssignment(expr, 'func')
+    const fnProp = getPropertyAssignmentInitializer(expr, 'func', true, checker);
     if (fnProp) {
-      const inner = getInitializerOf(fnProp)
-      if (inner) return getHandlerNameFromExpression(inner)
+      return getHandlerNameFromExpression(fnProp, checker);
     }
   }
-  return null
+
+  return null;
 }
 
 /**
@@ -57,16 +94,16 @@ function getHandlerNameFromExpression(expr: ts.Expression): string | null {
  */
 export function addMessagesRoutes(
   obj: ts.ObjectLiteralExpression,
-  state: InspectorState
+  state: InspectorState,
+  checker: ts.TypeChecker
 ): ChannelMeta['messageRoutes'] {
   const result: ChannelMeta['messageRoutes'] = {}
-  const onMsgRouteProp = getPropertyAssignment(obj, 'onMessageRoute')
+  const onMsgRouteProp = getPropertyAssignmentInitializer(obj, 'onMessageRoute', true, checker)
   if (!onMsgRouteProp) return result
 
-  const top = getInitializerOf(onMsgRouteProp)
-  if (!top || !ts.isObjectLiteralExpression(top)) return result
+  if (!onMsgRouteProp || !ts.isObjectLiteralExpression(onMsgRouteProp)) return result
 
-  for (const chanElem of top.properties) {
+  for (const chanElem of onMsgRouteProp.properties) {
     const chanInit = getInitializerOf(chanElem)
     if (!chanInit || !ts.isObjectLiteralExpression(chanInit)) continue
 
@@ -74,28 +111,207 @@ export function addMessagesRoutes(
     result[channelKey] = {}
 
     for (const routeElem of chanInit.properties) {
-      const init = getInitializerOf(routeElem)
-      if (!init) continue
+      const init = getInitializerOf(routeElem);
+      if (!init) continue;
 
-      const routeKey = routeElem.name!.getText()
-      const handlerName = getHandlerNameFromExpression(init)
+      const routeKey = routeElem.name!.getText();
+
+      // For shorthand properties, we need to resolve the identifier to its declaration
+      if (ts.isShorthandPropertyAssignment(routeElem)) {
+        // Get the symbol for the shorthand property
+        const shorthandSym = checker.getShorthandAssignmentValueSymbol(routeElem);
+        
+        if (shorthandSym && shorthandSym.declarations && shorthandSym.declarations.length > 0) {
+          const shorthandDecl = shorthandSym.declarations[0]
+          if (!shorthandDecl) {
+            throw new Error(`No declaration found for shorthand property '${routeKey}'`);
+          }
+          
+          // Handle import specifiers
+          if (ts.isImportSpecifier(shorthandDecl)) {
+            // Get the imported symbol
+            const importedSymbol = checker.getSymbolAtLocation(shorthandDecl.name);
+            if (importedSymbol) {
+              // Try to resolve the alias to get the original symbol
+              let resolvedSymbol = importedSymbol;
+              if (resolvedSymbol.flags & ts.SymbolFlags.Alias) {
+                resolvedSymbol = checker.getAliasedSymbol(resolvedSymbol) ?? resolvedSymbol;
+              }
+              
+              // Try to get the declarations of the resolved symbol
+              const importDecls = resolvedSymbol.declarations ?? [];
+              if (importDecls.length > 0) {
+                const importDecl = importDecls[0]!;
+                
+                // Handle different kinds of declarations
+                if (ts.isVariableDeclaration(importDecl) && importDecl.initializer) {
+                  // Extract from the initializer if it's a function
+                  if (ts.isArrowFunction(importDecl.initializer) || 
+                      ts.isFunctionExpression(importDecl.initializer) ||
+                      ts.isCallExpression(importDecl.initializer)) {
+                    const { pikkuFuncName } = extractFunctionName(importDecl.initializer, checker);
+                    const handlerName = pikkuFuncName;
+                    
+                    // Look up in the registry
+                    const fnMeta = state.functions.meta[handlerName];
+                    if (fnMeta) {
+                      result[channelKey]![routeKey] = {
+                        pikkuFuncName: handlerName,
+                        inputs: fnMeta.inputs ?? null,
+                        outputs: fnMeta.outputs ?? null,
+                      };
+                      continue;
+                    }
+                  }
+                }
+                else if (ts.isFunctionDeclaration(importDecl)) {
+                  // Extract from the function declaration
+                  const { pikkuFuncName } = extractFunctionName(importDecl, checker);
+                  const handlerName = pikkuFuncName;
+                  
+                  // Look up in the registry
+                  const fnMeta = state.functions.meta[handlerName];
+                  if (fnMeta) {
+                    result[channelKey]![routeKey] = {
+                      pikkuFuncName: handlerName,
+                      inputs: fnMeta.inputs ?? null,
+                      outputs: fnMeta.outputs ?? null,
+                    };
+                    continue;
+                  }
+                }
+                else if (ts.isExportSpecifier(importDecl)) {
+                  // For re-exports, we need to follow another level of indirection
+                  const exportSymbol = checker.getSymbolAtLocation(importDecl.name);
+                  if (exportSymbol) {
+                    let resolvedExportSymbol = exportSymbol;
+                    if (resolvedExportSymbol.flags & ts.SymbolFlags.Alias) {
+                      resolvedExportSymbol = checker.getAliasedSymbol(resolvedExportSymbol) ?? resolvedExportSymbol;
+                    }
+                    
+                    const exportDecls = resolvedExportSymbol.declarations ?? [];
+                    if (exportDecls.length > 0) {
+                      const exportDecl = exportDecls[0]!;
+                      
+                      if (ts.isVariableDeclaration(exportDecl) && exportDecl.initializer) {
+                        const { pikkuFuncName } = extractFunctionName(exportDecl.initializer, checker);
+                        const handlerName = pikkuFuncName;
+                        
+                        const fnMeta = state.functions.meta[handlerName];
+                        if (fnMeta) {
+                          result[channelKey]![routeKey] = {
+                            pikkuFuncName: handlerName,
+                            inputs: fnMeta.inputs ?? null,
+                            outputs: fnMeta.outputs ?? null,
+                          };
+                          continue;
+                        }
+                      }
+                      else if (ts.isFunctionDeclaration(exportDecl)) {
+                        const { pikkuFuncName } = extractFunctionName(exportDecl, checker);
+                        const handlerName = pikkuFuncName;
+                        
+                        const fnMeta = state.functions.meta[handlerName];
+                        if (fnMeta) {
+                          result[channelKey]![routeKey] = {
+                            pikkuFuncName: handlerName,
+                            inputs: fnMeta.inputs ?? null,
+                            outputs: fnMeta.outputs ?? null,
+                          };
+                          continue;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            
+            // As a fallback, try to look up by name
+            const funcName = shorthandDecl.name.getText();
+            
+            // Look for any function in the registry that ends with this name
+            const possibleMatch = Object.keys(state.functions.meta).find(key => {
+              const parts = key.split('_');
+              const filename = parts[parts.length - 3] || '';
+              return filename.endsWith(funcName);
+            });
+            
+            if (possibleMatch) {
+              const fnMeta = state.functions.meta[possibleMatch];
+              if (!fnMeta) {
+                console.error(`No function metadata found for handler '${possibleMatch}'`);
+                continue;
+              }
+              result[channelKey]![routeKey] = {
+                pikkuFuncName: possibleMatch,
+                inputs: fnMeta.inputs ?? null,
+                outputs: fnMeta.outputs ?? null,
+              };
+              continue;
+            }
+          }
+          else {
+            // Handle other declaration types (variable, function, etc.)
+            let actualFunction: ts.Node | undefined = undefined;
+            
+            if (ts.isVariableDeclaration(shorthandDecl)) {
+              // Check if it has an initializer
+              if (shorthandDecl.initializer) {
+                // If it's a function expression or similar, use that
+                if (ts.isArrowFunction(shorthandDecl.initializer) || 
+                    ts.isFunctionExpression(shorthandDecl.initializer) ||
+                    ts.isCallExpression(shorthandDecl.initializer)) {
+                  actualFunction = shorthandDecl.initializer;
+                }
+              }
+            } 
+            else if (ts.isFunctionDeclaration(shorthandDecl)) {
+              actualFunction = shorthandDecl;
+            }
+            
+            // If we found the actual function, extract its name
+            if (actualFunction) {
+              // Extract the function name directly from the actual function
+              const { pikkuFuncName } = extractFunctionName(actualFunction, checker);
+              const handlerName = pikkuFuncName;
+              
+              // Now use this handlerName to look up in the registry
+              const fnMeta = state.functions.meta[handlerName];
+              
+              if (fnMeta) {
+                result[channelKey]![routeKey] = {
+                  pikkuFuncName: handlerName,
+                  inputs: fnMeta.inputs ?? null,
+                  outputs: fnMeta.outputs ?? null,
+                };
+                continue;  // Skip the normal processing below
+              }
+            }
+          }
+        }
+      }
+
+      // Normal processing for non-shorthand properties
+      const handlerName = getHandlerNameFromExpression(init, checker);
       if (!handlerName) {
         console.error(
           `Could not resolve handler for message route '${routeKey}'`
-        )
-        continue
+        );
+        continue;
       }
 
-      const fnMeta = state.functions.meta[handlerName]
+      const fnMeta = state.functions.meta[handlerName];
       if (!fnMeta) {
-        console.error(`No function metadata found for handler '${handlerName}'`)
-        continue
+        console.error(`No function metadata found for handler '${handlerName}'`);
+        continue;
       }
 
       result[channelKey]![routeKey] = {
+        pikkuFuncName: handlerName,
         inputs: fnMeta.inputs ?? null,
         outputs: fnMeta.outputs ?? null,
-      }
+      };
     }
   }
 
@@ -130,8 +346,8 @@ export function addChannel(
   // path parameters
   const params = route
     ? pathToRegexp(route)
-        .keys.filter((k) => k.type === 'param')
-        .map((k) => k.name)
+      .keys.filter((k) => k.type === 'param')
+      .map((k) => k.name)
     : []
 
   const docs = getPropertyValue(obj, 'docs') as APIDocs | undefined
@@ -140,22 +356,23 @@ export function addChannel(
 
   if (!matchesFilters(filters, { tags }, { type: 'channel', name })) return
 
-  const connect = Boolean(getPropertyAssignment(obj, 'onConnect', false))
-  const disconnect = Boolean(getPropertyAssignment(obj, 'onDisconnect', false))
+  const connect = getPropertyAssignmentInitializer(obj, 'onConnect', false, checker)
+  const disconnect = getPropertyAssignmentInitializer(obj, 'onDisconnect', false, checker)
 
   // default onMessage handler
   let message: ChannelMessageMeta | null = null
-  const onMsgProp = getPropertyAssignment(obj, 'onMessage', false)
+  const onMsgProp = getPropertyAssignmentInitializer(obj, 'onMessage', false, checker)
   if (onMsgProp) {
-    const init = getInitializerOf(onMsgProp)
-    const handlerName = init && getHandlerNameFromExpression(init)
+    const handlerName = onMsgProp && getHandlerNameFromExpression(onMsgProp, checker)
     const fnMeta = handlerName && state.functions.meta[handlerName]
     if (!fnMeta) {
       console.error(
         `No function metadata for onMessage handler '${handlerName}'`
       )
+      throw new Error()
     } else {
       message = {
+        pikkuFuncName: extractFunctionName(onMsgProp as any, checker).pikkuFuncName,
         inputs: fnMeta.inputs ?? null,
         outputs: fnMeta.outputs ?? null,
       }
@@ -163,11 +380,11 @@ export function addChannel(
   }
 
   // nested message-routes
-  const messageRoutes = addMessagesRoutes(obj, state)
+  const messageRoutes = addMessagesRoutes(obj, state, checker)
 
   // record into state
   state.channels.files.add(node.getSourceFile().fileName)
-  state.channels.meta[name] ={
+  state.channels.meta[name] = {
     name,
     route,
     input: null,
@@ -180,8 +397,10 @@ export function addChannel(
       query,
       params
     ),
-    connect,
-    disconnect,
+    connectPikkuFuncName: connect ? extractFunctionName(connect, checker).pikkuFuncName : null,
+    connect: !!connect,
+    disconnectPikkuFuncName: disconnect ? extractFunctionName(disconnect as any, checker).pikkuFuncName : null,
+    disconnect: !!disconnect,
     message,
     messageRoutes,
     docs: docs ?? undefined,

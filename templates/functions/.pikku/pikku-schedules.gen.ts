@@ -7,6 +7,7 @@ import '../src/scheduled-task.js'
 import { pikkuState } from '@pikku/core'
 pikkuState('scheduler', 'meta', {
   "myScheduledTask": {
+    "pikkuFuncName": "pikkuFn_src_scheduled_task_ts_L6C58",
     "name": "myScheduledTask",
     "schedule": "*/1 * * * *",
     "tags": [
