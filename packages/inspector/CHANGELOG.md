@@ -1,5 +1,13 @@
 # @pikku/inspector
 
+## 0.7.3
+
+### Patch Changes
+
+- 534fdef: feat: adding rpc (locally for now)
+- Updated dependencies [534fdef]
+  - @pikku/core@0.7.3
+
 ## 0.7.2
 
 ### Patch Changes

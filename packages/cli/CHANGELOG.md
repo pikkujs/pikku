@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.7.1
+
+### Patch Changes
+
+- 534fdef: feat: adding rpc (locally for now)
+- Updated dependencies [534fdef]
+  - @pikku/inspector@0.7.3
+  - @pikku/core@0.7.3
+
 ## 0.7.0
 
 - Now function first. No breaking changes for end user here, just internals

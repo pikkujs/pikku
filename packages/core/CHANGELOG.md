@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.3
+
+### Patch Changes
+
+- 534fdef: feat: adding rpc (locally for now)
+
 ## 0.7.2
 
 ### Patch Changes
