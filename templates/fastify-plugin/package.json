@@ -9,7 +9,7 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.7.2",
+    "@pikku/core": "^0.7.3",
     "@pikku/fastify-plugin": "^0.7.0",
     "@pikku/schedule": "^0.7.0",
     "tslib": "^2.7.0",
