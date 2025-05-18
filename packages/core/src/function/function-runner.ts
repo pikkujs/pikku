@@ -60,17 +60,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
   const schemaName = funcMeta.schemaName
-  // Validate request data against the defined schema, if any
-  await validateSchema(
-    singletonServices.logger,
-    singletonServices.schema,
-    schemaName,
-    data
-  )
-
-  // Coerce (top level) query string parameters or date objects if specified by the schema
-  if (coerceDataFromSchema && schemaName) {
-    coerceTopLevelDataFromSchema(schemaName, data)
+  if (schemaName) {
+    // Validate request data against the defined schema, if any
+    await validateSchema(
+      singletonServices.logger,
+      singletonServices.schema,
+      schemaName,
+      data
+    )
+    // Coerce (top level) query string parameters or date objects if specified by the schema
+    if (coerceDataFromSchema) {
+      coerceTopLevelDataFromSchema(schemaName, data)
+    }
   }
 
   const allServices = await getAllServices()
