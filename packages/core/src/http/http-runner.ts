@@ -31,6 +31,7 @@ import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../function/function-runner.js'
+import { rpcService } from '../rpc/rpc-runner.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -101,7 +102,11 @@ export const addHTTPRoute = <
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
-  addFunction(routeMeta.pikkuFuncName, httpRoute.func as any)
+  addFunction(routeMeta.pikkuFuncName, {
+    func: httpRoute.func,
+    auth: httpRoute.auth,
+    permissions: httpRoute.permissions,
+  })
   const routes = pikkuState('http', 'routes')
   if (!routes.has(httpRoute.method)) {
     routes.set(httpRoute.method, new Map())
@@ -309,17 +314,17 @@ const executeRouteWithMiddleware = async (
         { http },
         session
       )
-      return {
+
+      return rpcService.injectRPCService({
         ...singletonServices,
         ...sessionServices,
         http,
         userSession,
         channel,
-      }
+      })
     }
 
     const result = await runPikkuFunc(meta.pikkuFuncName, {
-      singletonServices,
       getAllServices,
       session,
       data,

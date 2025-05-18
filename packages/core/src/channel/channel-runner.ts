@@ -35,15 +35,16 @@ export const addChannel = <
 
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connectPikkuFuncName) {
-    addFunction(channelMeta.connectPikkuFuncName, channel.onConnect as any)
+    addFunction(channelMeta.connectPikkuFuncName, {
+      func: channel.onConnect as any,
+    })
   }
 
   // Register onDisconnect function if provided
   if (channel.onDisconnect && channelMeta.disconnectPikkuFuncName) {
-    addFunction(
-      channelMeta.disconnectPikkuFuncName,
-      channel.onDisconnect as any
-    )
+    addFunction(channelMeta.disconnectPikkuFuncName, {
+      func: channel.onDisconnect,
+    })
   }
 
   // Register onMessage function if provided
@@ -52,7 +53,9 @@ export const addChannel = <
       typeof channel.onMessage === 'function'
         ? channel.onMessage
         : channel.onMessage.func
-    addFunction(channelMeta.message.pikkuFuncName, messageFunc as any)
+    addFunction(channelMeta.message.pikkuFuncName, {
+      func: messageFunc,
+    })
   }
 
   // Register functions in onMessageRoute
@@ -68,10 +71,17 @@ export const addChannel = <
         if (!routeMeta) return
 
         // Extract the function from the handler
-        const routeFunc = typeof handler === 'function' ? handler : handler.func
+        const routeFunc =
+          typeof handler === 'function'
+            ? { func: handler }
+            : {
+                func: handler.func,
+                auth: handler.auth,
+                permissions: handler.permissions,
+              }
 
         // Register the function using the pikku name from metadata
-        addFunction(routeMeta.pikkuFuncName, routeFunc as any)
+        addFunction(routeMeta.pikkuFuncName, routeFunc)
       })
     })
   }

@@ -7,6 +7,7 @@ import { UserSessionService } from '../services/user-session-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
 import { PikkuChannel } from '../channel/channel.types.js'
+import { PikkuRPC } from '../rpc/rpc-types.js'
 
 export interface FunctionServicesMeta {
   optimized: boolean
@@ -126,6 +127,7 @@ export type CoreServices<
   CoreServices extends Record<string, unknown> = {},
 > = SingletonServices &
   PikkuInteraction & {
+    rpc?: PikkuRPC
     userSession?: UserSessionService<UserSession>
     channel?: PikkuChannel<unknown, unknown>
   } & CoreServices

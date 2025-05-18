@@ -3,6 +3,7 @@ import { HTTPRoutesMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta } from '@pikku/core'
+import { RPCMeta } from '../../core/src/rpc/rpc-types.js'
 
 export type PathToNameAndType = Map<
   string,
@@ -54,5 +55,8 @@ export interface InspectorState {
   scheduledTasks: {
     meta: ScheduledTasksMeta
     files: Set<string>
+  }
+  rpc: {
+    meta: Record<string, RPCMeta>
   }
 }

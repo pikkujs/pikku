@@ -5,3 +5,4 @@
 import '../src/http-progressive-enhancement.js'
 import '../src/http-sse.js'
 import '../src/http.js'
+import '../src/rpc.js'

@@ -255,7 +255,8 @@ export function addFunctions(
 
   if (args.length === 0) return
 
-  const { pikkuFuncName, name } = extractFunctionName(node, checker)
+  const { pikkuFuncName, name, explicitName, exportedName } =
+    extractFunctionName(node, checker)
 
   // determine the actual handler expression:
   // either the `func` prop or the first argument directly
@@ -318,18 +319,18 @@ export function addFunctions(
     .map((t) => unwrapPromise(checker, t))
 
   // --- Input Extraction ---
-  let { names: inputNames, types: inputTypes } = getNamesAndTypes(
+  let { names: inputNames } = getNamesAndTypes(
     checker,
     state.functions.typesMap,
     'Input',
     name,
     genericTypes[0]
   )
-  if (inputTypes.length === 0) {
-    console.warn(
-      `\x1b[31m• Unknown input type for '${name}', assuming void.\x1b[0m`
-    )
-  }
+  // if (inputTypes.length === 0) {
+  //   console.debug(
+  //     `\x1b[31m• Unknown input type for '${name}', assuming void.\x1b[0m`
+  //   )
+  // }
 
   // --- Output Extraction ---
   let outputNames: string[] = []
@@ -372,5 +373,29 @@ export function addFunctions(
     schemaName: inputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
+  }
+
+  if (explicitName) {
+    if (state.rpc.meta[explicitName]) {
+      console.warn(
+        `• Explicit function name '${explicitName}' already exists, skipping.`
+      )
+    } else {
+      state.rpc.meta[explicitName] = {
+        pikkuFuncName,
+        exposed: false,
+      }
+    }
+  } else if (exportedName) {
+    if (state.rpc.meta[exportedName]) {
+      console.warn(
+        `• Exported function name '${explicitName}' already exists, skipping.`
+      )
+    } else {
+      state.rpc.meta[exportedName] = {
+        pikkuFuncName,
+        exposed: false,
+      }
+    }
   }
 }

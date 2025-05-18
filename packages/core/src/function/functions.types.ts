@@ -75,3 +75,14 @@ export type CoreAPIPermission<
 export type CorePermissionGroup<APIPermission = CoreAPIPermission<any>> =
   | Record<string, APIPermission | APIPermission[]>
   | undefined
+
+export type CorePikkuFunctionConfig<
+  APIFunction extends
+    | CoreAPIFunction<any, any>
+    | CoreAPIFunctionSessionless<any, any>,
+  APIPermission extends CoreAPIPermission<any> = CoreAPIPermission<any>,
+> = {
+  func: APIFunction
+  auth?: boolean
+  permissions?: CorePermissionGroup<APIPermission>
+}

@@ -13,6 +13,7 @@ export interface PikkuCLICoreOutputFiles {
   channelsMetaFile: string
   schedulersFile: string
   schedulersMetaFile: string
+  rpcFile: string
   schemaDirectory: string
   typesDeclarationFile: string
   httpRoutesMapDeclarationFile: string
@@ -134,6 +135,9 @@ const _getPikkuCLIConfig = async (
           result.outDir,
           'pikku-functions-meta.gen.ts'
         )
+      }
+      if (!result.rpcFile) {
+        result.rpcFile = join(result.outDir, 'pikku-rpc.gen.ts')
       }
       if (!result.httpRoutesFile) {
         result.httpRoutesFile = join(result.outDir, 'pikku-http-routes.gen.ts')

@@ -96,7 +96,6 @@ export const processMessageHandlers = (
       typeof onMessage === 'function' ? {} : onMessage.permissions
 
     return await runPikkuFunc(pikkuFuncName, {
-      singletonServices: services,
       getAllServices: () => ({
         ...services,
         channel: channelHandler.getChannel(),

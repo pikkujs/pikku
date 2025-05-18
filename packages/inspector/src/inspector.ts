@@ -52,6 +52,9 @@ export const inspect = (
       meta: {},
       files: new Set(),
     },
+    rpc: {
+      meta: {},
+    },
   }
 
   // First sweep: add all functions

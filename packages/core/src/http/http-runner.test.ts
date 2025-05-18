@@ -15,8 +15,8 @@ const sessionMiddleware: PikkuMiddleware = async (services, _, next) => {
   await next()
 }
 
-const setHTTPFunctionMap = (fun: any) => {
-  pikkuState('functions', 'meta', {
+const setHTTPFunctionMap = (func: any) => {
+  pikkuState('function', 'meta', {
     pikku_func_name: {
       pikkuFuncName: 'pikku_func_name',
       services: ['userSession'],
@@ -31,7 +31,7 @@ const setHTTPFunctionMap = (fun: any) => {
       output: null,
     },
   ])
-  addFunction('pikku_func_name', fun)
+  addFunction('pikku_func_name', { func })
 }
 
 describe('fetch', () => {

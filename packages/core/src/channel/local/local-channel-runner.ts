@@ -14,6 +14,7 @@ import { runMiddleware } from '../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runPikkuFuncDirectly } from '../../function/function-runner.js'
+import { rpcService } from '../../rpc/rpc-runner.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -71,11 +72,11 @@ export const runLocalChannel = async ({
         )
       }
 
-      const allServices = {
+      const allServices = rpcService.injectRPCService({
         ...singletonServices,
         ...sessionServices,
         userSession: userSession,
-      }
+      })
 
       channelHandler.registerOnOpen(() => {
         if (channelConfig.onConnect && meta.connectPikkuFuncName) {

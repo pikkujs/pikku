@@ -22,6 +22,7 @@ import { pikkuWebSocket } from './pikku-websocket.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 import chokidar from 'chokidar'
 import { pikkuFunctions } from './pikku-functions.js'
+import { pikkuRPC } from './pikku-rpc.js'
 
 const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const metaImports: string[] = []
@@ -64,6 +65,9 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   }
   addImport(cliConfig.functionsMetaFile, 'meta')
   addImport(cliConfig.functionsFile, 'events')
+
+  await pikkuRPC(cliConfig, visitState)
+  addImport(cliConfig.rpcFile, 'meta')
 
   const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {

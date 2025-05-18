@@ -4,8 +4,9 @@ import { InspectorFilters } from './types.js'
 type ExtractedFunctionName = {
   pikkuFuncName: string
   name: string
+  explicitName: string | null
   exportedName: string | null
-  functionName: string | null
+  localName: string | null
   propertyName: string | null
 }
 
@@ -264,8 +265,9 @@ export function extractFunctionName(
     pikkuFuncName: '', // Will be populated later
     name: '', // This will hold our "best" name based on priority
     exportedName: null,
-    functionName: null,
+    localName: null,
     propertyName: null,
+    explicitName: null,
   }
 
   // Special case for addHTTPRoute: if this is an identifier within an object literal,
@@ -320,7 +322,7 @@ export function extractFunctionName(
                 result.exportedName = decl.name.text
               } else if (ts.isIdentifier(decl.name)) {
                 // If not exported, still capture the variable name
-                result.functionName = decl.name.text
+                result.localName = decl.name.text
               }
 
               // Apply name priority logic
@@ -354,7 +356,7 @@ export function extractFunctionName(
             ts.isStringLiteral(prop.initializer)
           ) {
             // Priority 1: Object with name property
-            result.functionName = prop.initializer.text
+            result.explicitName = prop.initializer.text
             break
           }
         }
@@ -425,7 +427,7 @@ export function extractFunctionName(
                           result.exportedName = funcDecl.name.text
                         } else if (ts.isIdentifier(funcDecl.name)) {
                           // If not exported, still capture the variable name
-                          result.functionName = funcDecl.name.text
+                          result.localName = funcDecl.name.text
                         }
 
                         break
@@ -444,7 +446,7 @@ export function extractFunctionName(
                         result.exportedName = funcDecl.name.text
                       } else if (ts.isIdentifier(funcDecl.name)) {
                         // If not exported, still capture the variable name
-                        result.functionName = funcDecl.name.text
+                        result.localName = funcDecl.name.text
                       }
 
                       break
@@ -466,7 +468,7 @@ export function extractFunctionName(
                       ts.isIdentifier(funcDecl.name)
                     ) {
                       // If not exported, still capture the function name
-                      result.functionName = funcDecl.name.text
+                      result.localName = funcDecl.name.text
                     }
 
                     break
@@ -527,7 +529,7 @@ export function extractFunctionName(
                       result.exportedName = shorthandDecl.name.text
                     } else if (ts.isIdentifier(shorthandDecl.name)) {
                       // If not exported, still capture the variable name
-                      result.functionName = shorthandDecl.name.text
+                      result.localName = shorthandDecl.name.text
                     }
 
                     break
@@ -546,7 +548,7 @@ export function extractFunctionName(
                     result.exportedName = shorthandDecl.name.text
                   } else if (ts.isIdentifier(shorthandDecl.name)) {
                     // If not exported, still capture the variable name
-                    result.functionName = shorthandDecl.name.text
+                    result.localName = shorthandDecl.name.text
                   }
 
                   break
@@ -568,7 +570,7 @@ export function extractFunctionName(
                   ts.isIdentifier(shorthandDecl.name)
                 ) {
                   // If not exported, still capture the function name
-                  result.functionName = shorthandDecl.name.text
+                  result.localName = shorthandDecl.name.text
                 }
 
                 break
@@ -611,7 +613,7 @@ export function extractFunctionName(
                   ts.isStringLiteral(prop.initializer)
                 ) {
                   // Priority 1: Object with name property
-                  result.functionName = prop.initializer.text
+                  result.explicitName = prop.initializer.text
                   break
                 }
               }
@@ -632,8 +634,8 @@ export function extractFunctionName(
               result.exportedName = decl.name.text
             } else if (ts.isIdentifier(decl.name)) {
               // If not explicitly set by name property above, set functionName
-              if (!result.functionName) {
-                result.functionName = decl.name.text
+              if (!result.localName) {
+                result.localName = decl.name.text
               }
             }
           } else if (
@@ -646,7 +648,7 @@ export function extractFunctionName(
             if (isNamedExport(decl) && ts.isIdentifier(decl.name)) {
               result.exportedName = decl.name.text
             } else if (ts.isIdentifier(decl.name)) {
-              result.functionName = decl.name.text
+              result.localName = decl.name.text
             }
           }
         } else if (ts.isFunctionDeclaration(decl)) {
@@ -662,7 +664,7 @@ export function extractFunctionName(
           ) {
             result.exportedName = decl.name.text
           } else if (decl.name && ts.isIdentifier(decl.name)) {
-            result.functionName = decl.name.text
+            result.localName = decl.name.text
           }
         }
       }
@@ -679,7 +681,7 @@ export function extractFunctionName(
       result.exportedName = parent.name.text
     } else {
       // Still capture the variable name even if not exported
-      result.functionName = parent.name.text
+      result.localName = parent.name.text
     }
   }
   // 2) { foo: pikkuFunc(...) }
@@ -703,9 +705,9 @@ export function extractFunctionName(
           ts.isIdentifier(prop.name) &&
           prop.name.text === 'name' &&
           ts.isStringLiteral(prop.initializer) &&
-          !result.functionName // Only set if not already set
+          !result.explicitName // Only set if not already set
         ) {
-          result.functionName = prop.initializer.text
+          result.explicitName = prop.initializer.text
           break
         }
       }
@@ -721,29 +723,22 @@ export function extractFunctionName(
  * Helper function to populate the 'name' field based on priority
  */
 function populateNameByPriority(result: ExtractedFunctionName): void {
-  // Priority 1: If we have a functionName (from name property or variable name), use that
-  if (result.functionName) {
-    result.name = result.functionName
+  // Priority 1: If we have an explict name, use that
+  if (result.explicitName) {
+    result.name = result.explicitName
   }
   // Priority 2: If we have an exported name, use that
   else if (result.exportedName) {
     result.name = result.exportedName
   }
   // Priority 3: If we have a property name, use that
-  else if (result.propertyName) {
-    result.name = result.propertyName
-  }
+  // else if (result.propertyName) {
+  //   result.name = result.propertyName
+  // }
   // Fallback: Use the deterministic name, but we could shorten it in the future
   else {
     // For now, just use the full pikkuFuncName
     result.name = result.pikkuFuncName
-
-    // Alternative: extract just the filename and line/column from pikkuFuncName
-    // const nameParts = result.pikkuFuncName.split('_');
-    // if (nameParts.length >= 3) {
-    //   // Extract just filename + line/column info
-    //   result.name = `${nameParts[1]}_${nameParts[2]}`;
-    // }
   }
 }
 

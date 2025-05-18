@@ -10,18 +10,16 @@ import {
   ScheduledTasksMeta,
 } from './scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
-import {
-  CoreAPIFunction,
-  CoreAPIFunctionSessionless,
-} from './function/functions.types.js'
+import { CorePikkuFunctionConfig } from './function/functions.types.js'
+import { RPCMeta } from './rpc/rpc-types.js'
 
 interface PikkuState {
-  functions: {
+  function: {
     meta: FunctionsMeta
-    nameToFunction: Map<
-      string,
-      CoreAPIFunction<any, any> | CoreAPIFunctionSessionless<any, any>
-    >
+    functions: Map<string, CorePikkuFunctionConfig<any, any>>
+  }
+  rpc: {
+    meta: Record<string, RPCMeta>
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
@@ -44,9 +42,12 @@ interface PikkuState {
 
 export const resetPikkuState = () => {
   globalThis.pikkuState = {
-    functions: {
+    function: {
       meta: {},
-      nameToFunction: new Map(),
+      functions: new Map(),
+    },
+    rpc: {
+      meta: {},
     },
     http: {
       middleware: [],
@@ -59,13 +60,13 @@ export const resetPikkuState = () => {
     },
     scheduler: {
       tasks: new Map(),
-      meta: [],
+      meta: [] as unknown as ScheduledTasksMeta,
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),
       schemas: globalThis.pikkuState?.misc?.schema || new Map(),
     },
-  }
+  } as PikkuState
 }
 
 if (!globalThis.pikkuState) {

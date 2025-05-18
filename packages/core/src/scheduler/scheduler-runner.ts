@@ -10,6 +10,7 @@ import { getErrorResponse } from '../errors/error-handler.js'
 import { closeSessionServices } from '../utils.js'
 import { pikkuState } from '../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../function/function-runner.js'
+import { rpcService } from '../rpc/rpc-runner.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -32,7 +33,9 @@ export const addScheduledTask = <
   if (!taskMeta) {
     throw new Error('Task metadata not found')
   }
-  addFunction(taskMeta.pikkuFuncName, scheduledTask.func)
+  addFunction(taskMeta.pikkuFuncName, {
+    func: scheduledTask.func,
+  })
 
   const tasks = pikkuState('scheduler', 'tasks')
   if (tasks.has(scheduledTask.name)) {
@@ -80,13 +83,15 @@ export async function runScheduledTask<
           {},
           session
         )
-        return { ...singletonServices, ...sessionServices }
+        return rpcService.injectRPCService({
+          ...singletonServices,
+          ...sessionServices,
+        })
       }
       return singletonServices
     }
 
     return await runPikkuFunc(meta.pikkuFuncName, {
-      singletonServices,
       getAllServices,
       session,
       data: undefined,
