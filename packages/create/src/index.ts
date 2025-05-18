@@ -258,12 +258,12 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
       if (cliOptions.packageManager !== 'npm') {
         unlinkSync(path.join(targetPath, 'package-lock.json'))
       }
-    } catch { }
+    } catch {}
     try {
       if (cliOptions.packageManager !== 'yarn') {
         unlinkSync(path.join(targetPath, 'yarn.lock'))
       }
-    } catch { }
+    } catch {}
 
     spinner.success()
   } catch (e) {
@@ -321,32 +321,32 @@ async function run() {
     template === 'yarn-workspace'
       ? 'yarn'
       : cliOptions.packageManager ||
-      (await select({
-        message: 'Which package manager do you want to use?',
-        choices: [
-          {
-            name: 'npm',
-            value: 'npm',
-            description: 'npm is the most popular package manager',
-          },
-          {
-            name: 'yarn',
-            value: 'yarn',
-            description: 'yarn is what pikku usually uses',
-          },
-          {
-            name: 'bun',
-            value: 'bun',
-            description: 'bun support is still experimental',
-          },
-          new Separator(),
-          {
-            name: 'pnpm',
-            value: 'pnpm',
-            disabled: '(pnpm is not available)',
-          },
-        ],
-      }))
+        (await select({
+          message: 'Which package manager do you want to use?',
+          choices: [
+            {
+              name: 'npm',
+              value: 'npm',
+              description: 'npm is the most popular package manager',
+            },
+            {
+              name: 'yarn',
+              value: 'yarn',
+              description: 'yarn is what pikku usually uses',
+            },
+            {
+              name: 'bun',
+              value: 'bun',
+              description: 'bun support is still experimental',
+            },
+            new Separator(),
+            {
+              name: 'pnpm',
+              value: 'pnpm',
+              disabled: '(pnpm is not available)',
+            },
+          ],
+        }))
 
   const install =
     cliOptions.install ||

@@ -21,13 +21,19 @@ export const pikkuHTTP = async (
     async () => {
       const { httpRoutesFile, httpRoutesMetaFile, packageMappings } = cliConfig
       const { http } = visitState
-      await writeFileInDir(httpRoutesFile, serializeFileImports(
-        'addHTTPRoute',
+      await writeFileInDir(
         httpRoutesFile,
-        http.files,
-        packageMappings
-      ))
-      await writeFileInDir(httpRoutesMetaFile, `import { pikkuState } from '@pikku/core'\npikkuState('http', 'meta', ${JSON.stringify(http.meta, null, 2)})`)
+        serializeFileImports(
+          'addHTTPRoute',
+          httpRoutesFile,
+          http.files,
+          packageMappings
+        )
+      )
+      await writeFileInDir(
+        httpRoutesMetaFile,
+        `import { pikkuState } from '@pikku/core'\npikkuState('http', 'meta', ${JSON.stringify(http.meta, null, 2)})`
+      )
     }
   )
 }

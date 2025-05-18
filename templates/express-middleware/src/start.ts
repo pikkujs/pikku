@@ -15,9 +15,11 @@ async function main(): Promise<void> {
 
   app.use(express.json())
 
-  app.use(pikkuExpressMiddleware(singletonServices, createSessionServices, {
-    logRoutes: true
-  }))
+  app.use(
+    pikkuExpressMiddleware(singletonServices, createSessionServices, {
+      logRoutes: true,
+    })
+  )
 
   app.listen(4002, 'localhost', () =>
     singletonServices.logger.info(`server started`)

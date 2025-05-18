@@ -130,8 +130,8 @@ const getNamesAndTypes = (
   // 1) Handle an explicit void (or undefined) type up front
   if (type.flags & ts.TypeFlags.VoidLike) {
     return {
-      names: ['void'],
-      types: [type],
+      names: [],
+      types: [],
     }
   }
 
@@ -243,7 +243,7 @@ export function addFunctions(
   }
 
   // Match identifiers that contain both "pikku" and "func" (case insensitive)
-  const pikkuFuncPattern = /pikku.*func/i;
+  const pikkuFuncPattern = /pikku.*func/i
   if (!pikkuFuncPattern.test(expression.text)) {
     return
   }

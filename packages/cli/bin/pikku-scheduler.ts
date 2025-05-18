@@ -22,13 +22,19 @@ export const pikkuScheduler = async (
     async () => {
       const { schedulersFile, schedulersMetaFile, packageMappings } = cliConfig
       const { scheduledTasks } = visitState
-      await writeFileInDir(schedulersMetaFile,serializeSchedulerMeta(scheduledTasks.meta))
-      await writeFileInDir(schedulersFile, serializeFileImports(
+      await writeFileInDir(
+        schedulersMetaFile,
+        serializeSchedulerMeta(scheduledTasks.meta)
+      )
+      await writeFileInDir(
+        schedulersFile,
+        serializeFileImports(
           'addSerializedTasks',
           schedulersFile,
           scheduledTasks.files,
           packageMappings
-        ))
+        )
+      )
     }
   )
 }

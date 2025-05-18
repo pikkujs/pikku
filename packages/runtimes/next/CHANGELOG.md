@@ -4,7 +4,6 @@
 
 - Updating to match remaining packages
 
-
 ## 0.6.9
 
 ### Patch Changes

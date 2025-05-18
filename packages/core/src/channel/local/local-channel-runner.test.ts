@@ -128,10 +128,10 @@ test('runChannel should return a channel handler if channel matches and no auth 
   resetPikkuState()
 
   pikkuState('channel', 'meta', {
-    'test': {
+    test: {
       name: 'test',
       route: '/test-channel',
-    }
+    },
   } as any)
   addChannel({
     name: 'test',

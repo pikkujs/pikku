@@ -86,7 +86,11 @@ export const processMessageHandlers = (
       return
     }
 
-    const { pikkuFuncName } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
+    const { pikkuFuncName } = getRouteMeta(
+      channelConfig.name,
+      routingProperty,
+      routerValue
+    )
 
     const permissions =
       typeof onMessage === 'function' ? {} : onMessage.permissions

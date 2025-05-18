@@ -93,16 +93,14 @@ const getMatchingChannelConfig = (request: string) => {
     if (matchedPath) {
       const channelMeta = channelsMeta[channelConfig.name]
       if (!channelMeta) {
-        throw new Error(
-          `Channel ${channelConfig.name} not found in metadata`
-        )
+        throw new Error(`Channel ${channelConfig.name} not found in metadata`)
       }
       return {
         matchedPath,
         params: matchedPath.params,
         channelConfig,
         schemaName: channelMeta.input,
-        meta: channelMeta
+        meta: channelMeta,
       }
     }
   }

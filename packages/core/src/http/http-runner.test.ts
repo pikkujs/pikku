@@ -20,15 +20,17 @@ const setHTTPFunctionMap = (fun: any) => {
     pikku_func_name: {
       pikkuFuncName: 'pikku_func_name',
       services: ['userSession'],
-    }
+    },
   } as any)
-  pikkuState('http', 'meta', [{
-    "pikkuFuncName": "pikku_func_name",
-    "route": "test",
-    "method": "get",
-    "input": null,
-    "output": null
-  }])
+  pikkuState('http', 'meta', [
+    {
+      pikkuFuncName: 'pikku_func_name',
+      route: 'test',
+      method: 'get',
+      input: null,
+      output: null,
+    },
+  ])
   addFunction('pikku_func_name', fun)
 }
 
@@ -43,9 +45,9 @@ describe('fetch', () => {
 
     singletonServices = {
       logger: {
-        info: () => { },
-        warn: () => { },
-        error: () => { },
+        info: () => {},
+        warn: () => {},
+        error: () => {},
       },
     }
 
@@ -55,11 +57,11 @@ describe('fetch', () => {
 
     request.getData = async () => ({})
     request.getHeader = () => 'application/json'
-    response.setStatus = (status: number) => { }
-    response.setJson = (json: JSONValue) => { }
+    response.setStatus = (status: number) => {}
+    response.setJson = (json: JSONValue) => {}
   })
 
-  afterEach(() => { })
+  afterEach(() => {})
 
   test('should throw RouteNotFoundError when no matching route is found', async () => {
     await assert.rejects(

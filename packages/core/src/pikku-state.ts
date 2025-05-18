@@ -1,5 +1,9 @@
 import { ChannelsMeta, CoreAPIChannel } from './channel/channel.types.js'
-import { CoreHTTPFunctionRoute, HTTPMethod, HTTPRoutesMeta } from './http/http.types.js'
+import {
+  CoreHTTPFunctionRoute,
+  HTTPMethod,
+  HTTPRoutesMeta,
+} from './http/http.types.js'
 import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
@@ -21,7 +25,7 @@ interface PikkuState {
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
-    routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionRoute<any, any, any>>>,
+    routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionRoute<any, any, any>>>
     meta: HTTPRoutesMeta
   }
   channel: {

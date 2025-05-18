@@ -106,7 +106,10 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     await pikkuOpenAPI(cliConfig, visitState)
   }
 
-  await writeFileInDir(cliConfig.bootstrapFile, [...metaImports, ...imports].join('\n'))
+  await writeFileInDir(
+    cliConfig.bootstrapFile,
+    [...metaImports, ...imports].join('\n')
+  )
 }
 
 const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {

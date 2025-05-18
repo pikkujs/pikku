@@ -64,7 +64,9 @@ export async function runScheduledTask<
       throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)
     }
     if (!meta) {
-      throw new ScheduledTaskNotFoundError(`Scheduled task meta not found: ${name}`)
+      throw new ScheduledTaskNotFoundError(
+        `Scheduled task meta not found: ${name}`
+      )
     }
 
     singletonServices.logger.info(

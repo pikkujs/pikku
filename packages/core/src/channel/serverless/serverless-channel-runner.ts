@@ -43,7 +43,7 @@ const getVariablesForChannel = ({
   if (!channelConfig) {
     throw new Error(`Channel not found: ${channelName}`)
   }
-  if(!meta) {
+  if (!meta) {
     throw new Error(`Channel meta not found: ${channelName}`)
   }
   const channelHandler = channelHandlerFactory(
@@ -55,7 +55,7 @@ const getVariablesForChannel = ({
     channelConfig,
     channelHandler,
     channel: channelHandler.getChannel(),
-    meta
+    meta,
   }
 }
 

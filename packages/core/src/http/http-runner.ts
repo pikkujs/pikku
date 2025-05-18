@@ -106,7 +106,9 @@ export const addHTTPRoute = <
   if (!routes.has(httpRoute.method)) {
     routes.set(httpRoute.method, new Map())
   }
-  pikkuState('http', 'routes').get(httpRoute.method)?.set(httpRoute.route, httpRoute as any)
+  pikkuState('http', 'routes')
+    .get(httpRoute.method)
+    ?.set(httpRoute.route, httpRoute as any)
 }
 
 /**
@@ -153,7 +155,7 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
         route,
         permissions: route.permissions,
         middleware: [...globalMiddleware, ...(route.middleware || [])],
-        meta: meta!
+        meta: meta!,
       }
     }
   }
@@ -221,7 +223,7 @@ const executeRouteWithMiddleware = async (
     matchedPath: any
     params: any
     route: CoreHTTPFunctionRoute<any, any, any>
-    middleware: any[],
+    middleware: any[]
     meta: HTTPRouteMeta
   },
   http: PikkuHTTP,

@@ -21,13 +21,19 @@ export const pikkuChannels = async (
     async () => {
       const { channelsFile, channelsMetaFile, packageMappings } = cliConfig
       const { channels } = visitState
-      await writeFileInDir(channelsFile, serializeFileImports(
+      await writeFileInDir(
+        channelsFile,
+        serializeFileImports(
           'addChannel',
           channelsFile,
           channels.files,
           packageMappings
-        ))
-      await writeFileInDir(channelsMetaFile, `import { pikkuState } from '@pikku/core'\npikkuState('channel', 'meta', ${JSON.stringify(channels.meta, null, 2)})`)
+        )
+      )
+      await writeFileInDir(
+        channelsMetaFile,
+        `import { pikkuState } from '@pikku/core'\npikkuState('channel', 'meta', ${JSON.stringify(channels.meta, null, 2)})`
+      )
     }
   )
 }

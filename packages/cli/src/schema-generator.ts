@@ -24,8 +24,7 @@ export async function generateSchemas(
             schemasSet.add(uniqueName)
             break
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
       if (!found) {
         console.error('Input type not found in any types map:', input)
