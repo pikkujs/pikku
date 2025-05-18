@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.2
+
+### Patch Changes
+
+- bb59874: fix: only try validating schemas if they exist in function runner
+
 ## 0.7.1
 
 ### Patch Changes

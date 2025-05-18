@@ -3241,7 +3241,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:^0.7.0, @pikku/core@npm:^0.7.1, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:^0.7.0, @pikku/core@npm:^0.7.2, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -3332,7 +3332,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
-    "@pikku/core": "npm:^0.7.0"
+    "@pikku/core": "npm:^0.7.2"
     "@types/node": "npm:^22.7.8"
     path-to-regexp: "npm:^8.2.0"
     typescript: "npm:^5.6"
@@ -3420,7 +3420,7 @@ __metadata:
   resolution: "@pikku/nextjs-app-starter@workspace:templates/nextjs"
   dependencies:
     "@pikku/cli": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/fetch": "npm:^0.7.0"
     "@pikku/jose": "npm:^0.7.0"
     "@pikku/next": "npm:^0.7.0"
@@ -3492,7 +3492,7 @@ __metadata:
     "@aws-sdk/client-apigatewaymanagementapi": "npm:^3.714.0"
     "@aws-sdk/client-secrets-manager": "npm:^3.714.0"
     "@pikku/aws-services": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/lambda": "npm:^0.7.0"
     "@types/aws-lambda": "npm:^8.10.146"
     "@types/node": "npm:^22"
@@ -3515,7 +3515,7 @@ __metadata:
     "@aws-sdk/cloudfront-signer": "npm:^3.723.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.732.0"
     "@pikku/aws-services": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/lambda": "npm:^0.7.0"
     "@types/aws-lambda": "npm:^8.10.146"
     "@types/node": "npm:^22"
@@ -3534,7 +3534,7 @@ __metadata:
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     "@pikku/cloudflare": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^4.6.0"
   languageName: unknown
@@ -3546,7 +3546,7 @@ __metadata:
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     "@pikku/cloudflare": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^4.6.0"
   languageName: unknown
@@ -3557,7 +3557,7 @@ __metadata:
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
     "@pikku/cli": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/express-middleware": "npm:^0.7.0"
     "@pikku/jose": "npm:^0.7.0"
     "@pikku/schedule": "npm:^0.7.0"
@@ -3573,7 +3573,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-server@workspace:templates/express"
   dependencies:
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/express": "npm:^0.7.0"
     "@pikku/schedule": "npm:^0.7.0"
     "@types/node": "npm:^22"
@@ -3588,7 +3588,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-plugin@workspace:templates/fastify-plugin"
   dependencies:
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/fastify-plugin": "npm:^0.7.0"
     "@pikku/schedule": "npm:^0.7.0"
     "@types/node": "npm:^22"
@@ -3602,7 +3602,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-server@workspace:templates/fastify"
   dependencies:
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/fastify": "npm:^0.7.0"
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
@@ -3616,7 +3616,7 @@ __metadata:
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
     "@pikku/cli": "npm:^0.7.0"
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/jose": "npm:^0.7.0"
     "@pikku/schema-cfworker": "npm:^0.7.1"
     "@pikku/websocket": "npm:^0.7.0"
@@ -3628,7 +3628,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-uws@workspace:templates/uws"
   dependencies:
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/uws": "npm:^0.7.0"
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
@@ -3641,7 +3641,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-ws-server@workspace:templates/ws"
   dependencies:
-    "@pikku/core": "npm:^0.7.1"
+    "@pikku/core": "npm:^0.7.2"
     "@pikku/ws": "npm:^0.7.0"
     "@types/node": "npm:^22"
     "@types/ws": "npm:^8"

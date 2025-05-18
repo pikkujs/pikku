@@ -1,5 +1,13 @@
 # @pikku/inspector
 
+## 0.7.2
+
+### Patch Changes
+
+- 7acd53a: fix: ignore return type if it's void
+- Updated dependencies [bb59874]
+  - @pikku/core@0.7.2
+
 ## 0.7.1
 
 ### Patch Changes
