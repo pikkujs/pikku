@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.1
+
+### Patch Changes
+
+- cd83e0a: fix: invalid logroutes log line
+
 We now use the function first approach internally, which means first all the functions register, and then events call call them.
 
 The main breaking changes for the end user are:

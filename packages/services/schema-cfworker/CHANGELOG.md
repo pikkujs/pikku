@@ -1,5 +1,13 @@
 # @pikku/cfworker-json-schema
 
+## 0.7.1
+
+### Patch Changes
+
+- 7fbaf32: fix: need to copy schema value since cf-worker tries to manipulate it
+- Updated dependencies [cd83e0a]
+  - @pikku/core@0.7.1
+
 ## 0.7.0
 
 - Updating to match remaining packages
