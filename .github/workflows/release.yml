@@ -54,7 +54,7 @@ jobs:
     needs: release
     strategy:
       matrix:
-        version: [18]
+        version: [20]
         template: [
             # express,
             express-middleware,
