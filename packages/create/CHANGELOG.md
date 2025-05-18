@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.12
+
+### Patch Changes
+
+- 378e46c: fix: invalid yarnlink check
+
 ## 0.0.11
 
 ### Patch Changes
