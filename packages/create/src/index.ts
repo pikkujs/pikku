@@ -158,16 +158,18 @@ async function installDependencies(
     })
 
     if (yarnLink) {
-      console.log(chalk.blue('🔗 Linking to Pikku'))
-      spawnSync('yarn', ['link', '--all', '--private', yarnLink], {
-        cwd: targetPath,
-        stdio: 'inherit',
-      })
-    } else {
-      console.log(
-        chalk.red('⚠️ Yarn link is only supported with yarn package manager')
-      )
-      process.exit(1)
+      if (packageManager === 'yarn') {
+        console.log(chalk.blue('🔗 Linking to Pikku'))
+        spawnSync('yarn', ['link', '--all', '--private', yarnLink], {
+          cwd: targetPath,
+          stdio: 'inherit',
+        })
+      } else {
+        console.log(
+          chalk.red('⚠️ Yarn link is only supported with yarn package manager')
+        )
+        process.exit(1)
+      }
     }
 
     console.log(chalk.blue('🦎 Running pikku...'))
@@ -256,12 +258,12 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
       if (cliOptions.packageManager !== 'npm') {
         unlinkSync(path.join(targetPath, 'package-lock.json'))
       }
-    } catch {}
+    } catch { }
     try {
       if (cliOptions.packageManager !== 'yarn') {
         unlinkSync(path.join(targetPath, 'yarn.lock'))
       }
-    } catch {}
+    } catch { }
 
     spinner.success()
   } catch (e) {
@@ -319,32 +321,32 @@ async function run() {
     template === 'yarn-workspace'
       ? 'yarn'
       : cliOptions.packageManager ||
-        (await select({
-          message: 'Which package manager do you want to use?',
-          choices: [
-            {
-              name: 'npm',
-              value: 'npm',
-              description: 'npm is the most popular package manager',
-            },
-            {
-              name: 'yarn',
-              value: 'yarn',
-              description: 'yarn is what pikku usually uses',
-            },
-            {
-              name: 'bun',
-              value: 'bun',
-              description: 'bun support is still experimental',
-            },
-            new Separator(),
-            {
-              name: 'pnpm',
-              value: 'pnpm',
-              disabled: '(pnpm is not available)',
-            },
-          ],
-        }))
+      (await select({
+        message: 'Which package manager do you want to use?',
+        choices: [
+          {
+            name: 'npm',
+            value: 'npm',
+            description: 'npm is the most popular package manager',
+          },
+          {
+            name: 'yarn',
+            value: 'yarn',
+            description: 'yarn is what pikku usually uses',
+          },
+          {
+            name: 'bun',
+            value: 'bun',
+            description: 'bun support is still experimental',
+          },
+          new Separator(),
+          {
+            name: 'pnpm',
+            value: 'pnpm',
+            disabled: '(pnpm is not available)',
+          },
+        ],
+      }))
 
   const install =
     cliOptions.install ||
