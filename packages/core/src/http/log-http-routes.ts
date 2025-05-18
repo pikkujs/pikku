@@ -15,7 +15,7 @@ export const logRoutes = (logger: Logger) => {
   let routesMessage = 'Routes loaded:'
   routesByType.forEach((routes) => {
     routes.forEach((route) => {
-      routesMessage += `\n\t- ${route.method.toUpperCase()} -> ${route}`
+      routesMessage += `\n\t- ${route.method.toUpperCase()} -> ${route.route}`
     })
   })
   logger.info(routesMessage)
