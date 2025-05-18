@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.0.11
+
+### Patch Changes
+
+- 2a000ea: fix: include the .pikku folder in the root directory in tsconfig to pickup schemas
+
 ## 0.0.10
 
 ### Patch Changes

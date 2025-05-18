@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.7.0",
+    "@pikku/core": "^0.7.1",
     "@pikku/jose": "^0.7.0",
-    "@pikku/schema-cfworker": "^0.7.0"
+    "@pikku/schema-cfworker": "^0.7.1"
   },
   "devDependencies": {
     "@pikku/cli": "^0.7.0",
