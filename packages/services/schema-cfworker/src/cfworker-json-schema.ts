@@ -11,7 +11,9 @@ export class CFWorkerSchemaService implements SchemaService {
     if (!this.validators.has(schema)) {
       this.logger.debug(`Adding json schema for ${schema}`)
       try {
-        const validator = new Validator(value)
+        // We need to deep clone the value to avoid CFWorker's JSON schema validator
+        // from mutating the original value (which throws an error)
+        const validator = new Validator(JSON.parse(JSON.stringify(value)))
         this.validators.set(schema, validator)
       } catch (e: any) {
         throw e
