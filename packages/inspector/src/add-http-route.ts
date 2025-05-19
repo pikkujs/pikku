@@ -90,7 +90,6 @@ export const addHTTPRoute = (
   // lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]
   if (!fnMeta) {
-    console.log(Object.keys(state.functions.meta))
     console.error(`• No function metadata found for '${funcName}'.`)
     return
   }

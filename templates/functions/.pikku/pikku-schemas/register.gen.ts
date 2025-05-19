@@ -3,18 +3,6 @@
  */
 import { addSchema } from '@pikku/core/schema'
 
-import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json'
-addSchema(
-  'ProgressiveEnhancementExampleOutput',
-  ProgressiveEnhancementExampleOutput
-)
-
-import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json'
-addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
-
-import * as RpcTestInput from './schemas/RpcTestInput.schema.json'
-addSchema('RpcTestInput', RpcTestInput)
-
 import * as OnConnectInput from './schemas/OnConnectInput.schema.json'
 addSchema('OnConnectInput', OnConnectInput)
 
@@ -41,3 +29,15 @@ addSchema('OnMessageInput', OnMessageInput)
 
 import * as OnMessageOutput from './schemas/OnMessageOutput.schema.json'
 addSchema('OnMessageOutput', OnMessageOutput)
+
+import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json'
+addSchema(
+  'ProgressiveEnhancementExampleOutput',
+  ProgressiveEnhancementExampleOutput
+)
+
+import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json'
+addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
+
+import * as RpcTestInput from './schemas/RpcTestInput.schema.json'
+addSchema('RpcTestInput', RpcTestInput)

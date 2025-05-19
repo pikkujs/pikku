@@ -86,9 +86,14 @@ function generateRoutes(
 
   for (const meta of routesMeta) {
     const { route, method, pikkuFuncName } = meta
-    const { inputs, outputs } = functionsMeta[pikkuFuncName]
-    const input = inputs ? inputs[0] : undefined
-    const output = outputs ? outputs[0] : undefined
+    const functionMeta = functionsMeta[pikkuFuncName]
+    if (!functionMeta) {
+      throw new Error(
+        `Function ${pikkuFuncName} not found in functionsMeta. Please check your configuration.`
+      )
+    }
+    const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
+    const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Initialize the route entry if it doesn't exist
     if (!routesObj[route]) {

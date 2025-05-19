@@ -37,13 +37,11 @@ export const inspect = (
       files: new Set(),
     },
     http: {
-      typesMap: new TypesMap(),
       metaInputTypes: new Map(),
       meta: [],
       files: new Set(),
     },
     channels: {
-      typesMap: new TypesMap(),
       metaInputTypes: new Map(),
       files: new Set(),
       meta: {},

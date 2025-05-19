@@ -20,7 +20,6 @@ export type MetaInputTypes = Map<
 >
 
 export interface InspectorHTTPState {
-  typesMap: TypesMap
   metaInputTypes: MetaInputTypes
   meta: HTTPRoutesMeta
   files: Set<string>
@@ -33,7 +32,6 @@ export interface InspectorFunctionState {
 }
 
 export interface InspectorChannelState {
-  typesMap: TypesMap
   metaInputTypes: MetaInputTypes
   meta: ChannelsMeta
   files: Set<string>

@@ -114,8 +114,14 @@ export async function generateOpenAPISpec(
   routeMeta.forEach((meta) => {
     const { route, method, inputTypes, pikkuFuncName, params, query, docs } =
       meta
-    const { outputs } = functionsMeta[pikkuFuncName]
-    const output = outputs ? outputs[0] : undefined
+    const functionMeta = functionsMeta[pikkuFuncName]
+    if (!functionMeta) {
+      console.error(
+        `• No function metadata found for '${pikkuFuncName}' in route '${route}'.`
+      )
+      return
+    }
+    const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     const path = route.replace(/:(\w+)/g, '{$1}') // Convert ":param" to "{param}"
 
