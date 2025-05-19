@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.5
+
+### Patch Changes
+
+- 46d4458: feat: we now have typed rpc calls inside of functions!
+
 ## 0.7.4
 
 ### Patch Changes
