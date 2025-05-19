@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.7.3
+
+### Patch Changes
+
+- 46d4458: feat: we now have typed rpc calls inside of functions!
+- Updated dependencies [46d4458]
+  - @pikku/core@0.7.5
+
 ## 0.7.2
 
 ### Patch Changes
