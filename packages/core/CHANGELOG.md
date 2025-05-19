@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.6
+
+### Patch Changes
+
+- 6166c74: fix: odd missing file
+
 ## 0.7.5
 
 ### Patch Changes
