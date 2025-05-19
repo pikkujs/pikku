@@ -8,7 +8,7 @@ import {
   logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
-} from '../src/utils.js'
+} from '../src/utils/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { InspectorState } from '@pikku/inspector'
 import { inspectorGlob } from '../src/inspector-glob.js'

@@ -4,7 +4,7 @@ import {
   logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
-} from '../src/utils.js'
+} from '../src/utils/utils.js'
 import { generateSchemas } from '../src/schema-generator.js'
 import { generateOpenAPISpec } from '../src/openapi-spec-generator.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'

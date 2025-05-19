@@ -5,7 +5,7 @@ import {
   logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
-} from '../src/utils.js'
+} from '../src/utils/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { serializeWebsocketWrapper } from '../src/serialize-websocket-wrapper.js'
 

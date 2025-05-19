@@ -1,14 +1,10 @@
-import { Command } from 'commander'
-import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
+import { PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { InspectorState } from '@pikku/inspector'
 import {
   logCommandInfoAndTime,
-  logPikkuLogo,
-  PikkuCLIOptions,
   serializeFileImports,
   writeFileInDir,
-} from '../src/utils.js'
-import { inspectorGlob } from '../src/inspector-glob.js'
+} from '../src/utils/utils.js'
 
 export const pikkuHTTP = async (
   cliConfig: PikkuCLIConfig,
@@ -36,28 +32,4 @@ export const pikkuHTTP = async (
       )
     }
   )
-}
-
-async function action(cliOptions: PikkuCLIOptions): Promise<void> {
-  logPikkuLogo()
-
-  const cliConfig = await getPikkuCLIConfig(
-    cliOptions.config,
-    ['rootDir', 'srcDirectories', 'httpRoutesFile'],
-    cliOptions.tags
-  )
-  const visitState = await inspectorGlob(
-    cliConfig.rootDir,
-    cliConfig.srcDirectories,
-    cliConfig.filters
-  )
-  await pikkuHTTP(cliConfig, visitState)
-}
-
-export const routes = (program: Command): void => {
-  program
-    .command('routes')
-    .description('Find all routes to import')
-    .option('-c | --config <string>', 'The path to pikku cli config file')
-    .action(action)
 }

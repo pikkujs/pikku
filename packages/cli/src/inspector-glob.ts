@@ -1,7 +1,7 @@
 import * as path from 'path'
 import { glob } from 'tinyglobby'
 import { InspectorFilters, InspectorState, inspect } from '@pikku/inspector'
-import { logCommandInfoAndTime } from './utils.js'
+import { logCommandInfoAndTime } from './utils/utils.js'
 
 export const inspectorGlob = async (
   rootDir: string,

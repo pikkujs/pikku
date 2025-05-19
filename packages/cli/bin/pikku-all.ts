@@ -5,7 +5,7 @@ import {
   logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
-} from '../src/utils.js'
+} from '../src/utils/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { pikkuHTTP } from './pikku-http-routes.js'
 import { pikkuFunctionTypes } from './pikku-function-types.js'
@@ -23,6 +23,7 @@ import { inspectorGlob } from '../src/inspector-glob.js'
 import chokidar from 'chokidar'
 import { pikkuFunctions } from './pikku-functions.js'
 import { pikkuRPC } from './pikku-rpc.js'
+import { pikkuRPCMap } from './pikku-rpc-map.js'
 
 const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const metaImports: string[] = []
@@ -67,7 +68,9 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   addImport(cliConfig.functionsFile, 'events')
 
   await pikkuRPC(cliConfig, visitState)
-  addImport(cliConfig.rpcFile, 'meta')
+  await pikkuRPCMap(cliConfig, visitState)
+  addImport(cliConfig.rpcMetaFile, 'meta')
+  addImport(cliConfig.rpcFile, 'events')
 
   const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {

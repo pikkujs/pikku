@@ -357,9 +357,6 @@ export function addFunctions(
     }
   }
 
-  // --- Record metadata ---
-  state.functions.files.add(node.getSourceFile().fileName)
-
   if (inputNames.length > 1) {
     console.warn(
       'More than one input type detected, only the first one will be used as a schema.'
@@ -375,27 +372,24 @@ export function addFunctions(
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
   }
 
-  if (explicitName) {
-    if (state.rpc.meta[explicitName]) {
-      console.warn(
-        `• Explicit function name '${explicitName}' already exists, skipping.`
+  if (explicitName || exportedName) {
+    if (!exportedName) {
+      console.error(
+        `• Function with explicit name '${name}' is not exported, this is not allowed.`
       )
-    } else {
-      state.rpc.meta[explicitName] = {
-        pikkuFuncName,
-        exposed: false,
-      }
+      return
     }
-  } else if (exportedName) {
-    if (state.rpc.meta[exportedName]) {
-      console.warn(
-        `• Exported function name '${explicitName}' already exists, skipping.`
-      )
-    } else {
-      state.rpc.meta[exportedName] = {
-        pikkuFuncName,
-        exposed: false,
-      }
+    if (state.rpc.meta[name]) {
+      console.error(`• Function name '${name}' already exists, skipping.`)
+      return
     }
+    state.rpc.meta[name] = {
+      pikkuFuncName,
+      exposed: false,
+    }
+    state.rpc.files.set(name, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
   }
 }

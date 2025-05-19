@@ -1,14 +1,7 @@
-import { Command } from 'commander'
-import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
+import { PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { InspectorState } from '@pikku/inspector'
-import {
-  logCommandInfoAndTime,
-  logPikkuLogo,
-  PikkuCLIOptions,
-  writeFileInDir,
-} from '../src/utils.js'
+import { logCommandInfoAndTime, writeFileInDir } from '../src/utils/utils.js'
 import { serializeTypedChannelsMap } from '../src/serialize-typed-channel-map.js'
-import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuChannelsMap = async (
   { channelsMapDeclarationFile, packageMappings }: PikkuCLIConfig,
@@ -28,28 +21,4 @@ export const pikkuChannelsMap = async (
       await writeFileInDir(channelsMapDeclarationFile, content)
     }
   )
-}
-
-async function action(cliOptions: PikkuCLIOptions): Promise<void> {
-  logPikkuLogo()
-  const cliConfig = await getPikkuCLIConfig(
-    cliOptions.config,
-    ['rootDir', 'srcDirectories', 'httpRoutesFile'],
-    cliOptions.tags,
-    false
-  )
-  const visitState = await inspectorGlob(
-    cliConfig.rootDir,
-    cliConfig.srcDirectories,
-    cliConfig.filters
-  )
-  await pikkuChannelsMap(cliConfig, visitState)
-}
-
-export const channelsMap = (program: Command): void => {
-  program
-    .command('channels-map')
-    .description('Generate a map of all channels to aid in type checking')
-    .option('-c | --config <string>', 'The path to pikku cli config file')
-    .action(action)
 }

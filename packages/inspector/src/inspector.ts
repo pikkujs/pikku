@@ -34,7 +34,6 @@ export const inspect = (
     functions: {
       typesMap: new TypesMap(),
       meta: {},
-      files: new Set(),
     },
     http: {
       metaInputTypes: new Map(),
@@ -52,6 +51,7 @@ export const inspect = (
     },
     rpc: {
       meta: {},
+      files: new Map(),
     },
   }
 

@@ -1,13 +1,13 @@
 import { Command } from 'commander'
+import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
+import { serializeFetchWrapper } from '../src/serialize-fetch-wrapper.js'
 import {
   getFileImportRelativePath,
   logCommandInfoAndTime,
   logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
-} from '../src/utils.js'
-import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { serializeFetchWrapper } from '../src/serialize-fetch-wrapper.js'
+} from '../src/utils/utils.js'
 
 export const pikkuFetch = async ({
   fetchFile,

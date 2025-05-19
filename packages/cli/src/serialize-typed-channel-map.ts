@@ -1,7 +1,7 @@
 import { ChannelsMeta } from '@pikku/core/channel'
-import { serializeImportMap } from './serialize-import-map.js'
+import { serializeImportMap } from './utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from './serialize-typed-http-map.js'
+import { generateCustomTypes } from './utils/utils.js'
 
 export const serializeTypedChannelsMap = (
   relativeToPath: string,

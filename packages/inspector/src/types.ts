@@ -28,7 +28,6 @@ export interface InspectorHTTPState {
 export interface InspectorFunctionState {
   typesMap: TypesMap
   meta: FunctionsMeta
-  files: Set<string>
 }
 
 export interface InspectorChannelState {
@@ -56,5 +55,6 @@ export interface InspectorState {
   }
   rpc: {
     meta: Record<string, RPCMeta>
+    files: Map<string, { path: string; exportedName: string }>
   }
 }

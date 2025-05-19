@@ -1,5 +1,5 @@
 import { relative, dirname } from 'path'
-import { PathToNameAndType, InspectorState } from '@pikku/inspector'
+import { PathToNameAndType, InspectorState, TypesMap } from '@pikku/inspector'
 import { mkdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
 import { fileURLToPath } from 'url'
@@ -248,7 +248,7 @@ export const logPikkuLogo = () => {
   logPrimary(logo)
 
   const packageJson = JSON.parse(
-    readFileSync(`${dirname(__filename)}/../../package.json`, 'utf-8')
+    readFileSync(`${dirname(__filename)}/../../../package.json`, 'utf-8')
   )
   logPrimary(`⚙️ Welcome to the Pikku CLI (v${packageJson.version})\n`)
 }
@@ -281,4 +281,22 @@ export const serializeFileImports = (
     })
 
   return serializedOutput.join('\n')
+}
+
+export function generateCustomTypes(
+  typesMap: TypesMap,
+  requiredTypes: Set<string>
+) {
+  return `
+// Custom types are those that are defined directly within generics
+// or are broken into simpler types
+${Array.from(typesMap.customTypes.entries())
+  .map(([name, { type, references }]) => {
+    references.forEach((name) => {
+      const originalName = typesMap.getTypeMeta(name).originalName
+      requiredTypes.add(originalName)
+    })
+    return `export type ${name} = ${type}`
+  })
+  .join('\n')}`
 }

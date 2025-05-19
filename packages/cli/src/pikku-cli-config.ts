@@ -4,20 +4,37 @@ import { OpenAPISpecInfo } from './openapi-spec-generator.js'
 import { InspectorFilters } from '@pikku/inspector'
 
 export interface PikkuCLICoreOutputFiles {
+  // Base directory
   outDir?: string
-  functionsFile: string
-  functionsMetaFile: string
-  httpRoutesFile: string
-  httpRoutesMetaFile: string
-  channelsFile: string
-  channelsMetaFile: string
-  schedulersFile: string
-  schedulersMetaFile: string
-  rpcFile: string
+
+  // Schema and types
   schemaDirectory: string
   typesDeclarationFile: string
+
+  // Function definitions
+  functionsFile: string
+  functionsMetaFile: string
+
+  // HTTP routes
+  httpRoutesFile: string
+  httpRoutesMetaFile: string
   httpRoutesMapDeclarationFile: string
+
+  // Channels
+  channelsFile: string
+  channelsMetaFile: string
   channelsMapDeclarationFile: string
+
+  // RPC
+  rpcFile: string
+  rpcMetaFile: string
+  rpcMapDeclarationFile: string
+
+  // Schedulers
+  schedulersFile: string
+  schedulersMetaFile: string
+
+  // Application bootstrap
   bootstrapFile: string
 }
 
@@ -138,6 +155,15 @@ const _getPikkuCLIConfig = async (
       }
       if (!result.rpcFile) {
         result.rpcFile = join(result.outDir, 'pikku-rpc.gen.ts')
+      }
+      if (!result.rpcMetaFile) {
+        result.rpcMetaFile = join(result.outDir, 'pikku-rpc-meta.gen.ts')
+      }
+      if (!result.rpcMapDeclarationFile) {
+        result.rpcMapDeclarationFile = join(
+          result.outDir,
+          'pikku-rpc-map.gen.ts'
+        )
       }
       if (!result.httpRoutesFile) {
         result.httpRoutesFile = join(result.outDir, 'pikku-http-routes.gen.ts')

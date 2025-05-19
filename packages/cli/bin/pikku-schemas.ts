@@ -3,12 +3,12 @@ import { saveSchemas, generateSchemas } from '../src/schema-generator.js'
 
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { InspectorState } from '@pikku/inspector'
-import { logCommandInfoAndTime, logPikkuLogo } from '../src/utils.js'
+import { logCommandInfoAndTime, logPikkuLogo } from '../src/utils/utils.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 
 export const pikkuSchemas = async (
   { tsconfig, schemaDirectory, supportsImportAttributes }: PikkuCLIConfig,
-  { functions, http, channels }: InspectorState
+  { functions, http }: InspectorState
 ) => {
   return await logCommandInfoAndTime(
     'Creating schemas',
