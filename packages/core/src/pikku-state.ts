@@ -20,6 +20,10 @@ interface PikkuState {
   }
   rpc: {
     meta: Record<string, RPCMeta>
+    files: Map<string, {
+      exportedName: string
+      path: string
+    }>
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
@@ -48,6 +52,7 @@ export const resetPikkuState = () => {
     },
     rpc: {
       meta: {},
+      files: new Map()
     },
     http: {
       middleware: [],
