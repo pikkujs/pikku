@@ -1,45 +1,38 @@
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { logInfo, writeFileInDir } from './utils.js'
 import { mkdir, writeFile } from 'fs/promises'
-import { JSONValue } from '@pikku/core'
+import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPRoutesMeta } from '@pikku/core/http'
 import { TypesMap } from '@pikku/inspector'
 
 export async function generateSchemas(
   tsconfig: string,
   typesMaps: TypesMap[],
+  functionMeta: FunctionsMeta,
   httpRoutesMeta: HTTPRoutesMeta
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(
     typesMaps.flatMap((tm) => [...tm.customTypes.keys()])
   )
-  for (const { input, inputTypes } of httpRoutesMeta) {
-    if (input) {
-      let found = false
-      for (const typesMap of typesMaps) {
-        try {
-          const uniqueName = typesMap.getUniqueName(input)
-          if (uniqueName) {
-            found = true
-            schemasSet.add(uniqueName)
-            break
-          }
-        } catch (e) {}
-      }
-      if (!found) {
-        console.error('Input type not found in any types map:', input)
+  for (const { inputs, outputs } of Object.values(functionMeta)) {
+    if (inputs) {
+      for (const input of inputs) {
+        const uniqueName = typesMaps[0].getUniqueName(input)
+        if (uniqueName) {
+          schemasSet.add(uniqueName)
+        }
       }
     }
-    // if (output) {
-    //   for (const typesMap of typesMaps) {
-    //     const uniqueName = typesMap.getUniqueName(output)
-    //     if (uniqueName) {
-    //       console.log('Adding output schema:', uniqueName)
-    //       schemasSet.add(uniqueName)
-    //       break
-    //     }
-    //   }
-    // }
+    if (outputs) {
+      for (const output of outputs) {
+        const uniqueName = typesMaps[0].getUniqueName(output)
+        if (uniqueName) {
+          schemasSet.add(uniqueName)
+        }
+      }
+    }
+  }
+  for (const { inputTypes } of httpRoutesMeta) {
     if (inputTypes?.body) {
       schemasSet.add(inputTypes.body)
     }
@@ -78,7 +71,7 @@ export async function saveSchemas(
   schemaParentDir: string,
   schemas: Record<string, JSONValue>,
   typesMap: TypesMap,
-  routesMeta: HTTPRoutesMeta,
+  functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean
 ) {
   await writeFileInDir(
@@ -87,10 +80,10 @@ export async function saveSchemas(
   )
 
   const desiredSchemas = new Set([
-    ...routesMeta
-      .map(({ input, output }) => [
-        input ? typesMap.getUniqueName(input) : undefined,
-        output ? typesMap.getUniqueName(output) : undefined,
+    ...Object.values(functionsMeta)
+      .map(({ inputs, outputs }) => [
+        inputs?.[0] ? typesMap.getUniqueName(inputs[0]) : undefined,
+        outputs?.[0] ? typesMap.getUniqueName(outputs[0]) : undefined,
       ])
       .flat()
       .filter(

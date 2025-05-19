@@ -95,7 +95,6 @@ export const addHTTPRoute = (
     return
   }
   const input = fnMeta.inputs?.[0] || null
-  const output = fnMeta.outputs?.[0] || null
 
   // --- compute inputTypes (body/query/params) ---
   const inputTypes = getInputTypes(
@@ -112,8 +111,6 @@ export const addHTTPRoute = (
     pikkuFuncName: funcName,
     route,
     method: method as HTTPMethod,
-    input,
-    output,
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,
     inputTypes,

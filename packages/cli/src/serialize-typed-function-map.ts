@@ -1,18 +1,25 @@
 import { HTTPRoutesMeta } from '@pikku/core/http'
 import { serializeImportMap } from './serialize-import-map.js'
 import { MetaInputTypes, TypesMap } from '@pikku/inspector'
+import { FunctionsMeta } from '@pikku/core'
 
 export const serializeTypedRoutesMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
+  functionsMeta: FunctionsMeta,
   routesMeta: HTTPRoutesMeta,
   metaTypes: MetaInputTypes
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedMetaTypes = generateMetaTypes(metaTypes, typesMap)
-  const serializedRoutes = generateRoutes(routesMeta, typesMap, requiredTypes)
+  const serializedRoutes = generateRoutes(
+    functionsMeta,
+    routesMeta,
+    typesMap,
+    requiredTypes
+  )
 
   const serializedImportMap = serializeImportMap(
     relativeToPath,
@@ -66,6 +73,7 @@ ${Array.from(typesMap.customTypes.entries())
 }
 
 function generateRoutes(
+  functionsMeta: FunctionsMeta,
   routesMeta: HTTPRoutesMeta,
   typesMap: TypesMap,
   requiredTypes: Set<string>
@@ -77,7 +85,9 @@ function generateRoutes(
   > = {}
 
   for (const meta of routesMeta) {
-    const { route, method, input, output } = meta
+    const { route, method, pikkuFuncName } = meta
+    const input = functionsMeta[pikkuFuncName]?.inputs?.[0]
+    const output = functionsMeta[pikkuFuncName]?.outputs?.[0]
 
     // Initialize the route entry if it doesn't exist
     if (!routesObj[route]) {

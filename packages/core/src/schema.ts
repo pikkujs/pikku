@@ -41,10 +41,12 @@ const validateAllSchemasLoaded = (
   const missingSchemas: string[] = []
 
   for (const route of routesMeta) {
-    if (!route.input || validators.has(route.input)) {
+    const inputs = pikkuState('function', 'meta')[route.pikkuFuncName]?.inputs
+    const input = inputs?.[0]
+    if (!input || validators.has(input)) {
       continue
     }
-    missingSchemas.push(route.input)
+    missingSchemas.push(input)
   }
 
   if (missingSchemas.length > 0) {

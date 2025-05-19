@@ -3,52 +3,52 @@
  */
 import { pikkuState } from '@pikku/core'
 pikkuState('rpc', 'meta', {
-  "onConnect": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L9C3",
-    "exposed": false
+  onConnect: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
+    exposed: false,
   },
-  "onDisconnect": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L18C3",
-    "exposed": false
+  onDisconnect: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L18C3',
+    exposed: false,
   },
-  "authenticate": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L28C3",
-    "exposed": false
+  authenticate: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L28C3',
+    exposed: false,
   },
-  "subscribe": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L37C3",
-    "exposed": false
+  subscribe: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L37C3',
+    exposed: false,
   },
-  "unsubscribe": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L43C3",
-    "exposed": false
+  unsubscribe: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L43C3',
+    exposed: false,
   },
-  "emitMessage": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L51C3",
-    "exposed": false
+  emitMessage: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L51C3',
+    exposed: false,
   },
-  "onMessage": {
-    "pikkuFuncName": "pikkuFn_src_channel_functions_ts_L60C3",
-    "exposed": false
+  onMessage: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L60C3',
+    exposed: false,
   },
-  "progressiveEnhancementExample": {
-    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L10C3",
-    "exposed": false
+  progressiveEnhancementExample: {
+    pikkuFuncName: 'pikkuFn_src_http_progressive_enhancement_ts_L10C3',
+    exposed: false,
   },
-  "timeSinceOpened": {
-    "pikkuFuncName": "pikkuFn_src_http_sse_ts_L7C3",
-    "exposed": false
+  timeSinceOpened: {
+    pikkuFuncName: 'pikkuFn_src_http_sse_ts_L7C3',
+    exposed: false,
   },
-  "helloWorld": {
-    "pikkuFuncName": "pikkuFn_src_http_ts_L6C54",
-    "exposed": false
+  helloWorld: {
+    pikkuFuncName: 'pikkuFn_src_http_ts_L6C54',
+    exposed: false,
   },
-  "rpcTest": {
-    "pikkuFuncName": "pikkuFn_src_rpc_ts_L7C3",
-    "exposed": false
+  rpcTest: {
+    pikkuFuncName: 'pikkuFn_src_rpc_ts_L7C3',
+    exposed: false,
   },
-  "rpcCaller": {
-    "pikkuFuncName": "pikkuFn_src_rpc_ts_L17C47",
-    "exposed": false
-  }
+  rpcCaller: {
+    pikkuFuncName: 'pikkuFn_src_rpc_ts_L17C47',
+    exposed: false,
+  },
 })

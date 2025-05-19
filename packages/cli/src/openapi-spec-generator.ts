@@ -1,4 +1,4 @@
-import { HTTPRoutesMeta, pikkuState } from '@pikku/core'
+import { FunctionsMeta, HTTPRoutesMeta, pikkuState } from '@pikku/core'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
 const convertSchema =
   'default' in _convertSchema ? (_convertSchema.default as any) : _convertSchema
@@ -75,12 +75,16 @@ const getErrorResponseForConstructorName = (constructorName: string) => {
 }
 
 const convertSchemasToBodyPayloads = async (
+  functionsMeta: FunctionsMeta,
   routesMeta: HTTPRoutesMeta,
   schemas: Record<string, any>
 ) => {
   const requiredSchemas = new Set(
     routesMeta
-      .map(({ inputTypes, output }) => [inputTypes?.body, output])
+      .map(({ inputTypes, pikkuFuncName }) => {
+        const output = functionsMeta[pikkuFuncName]?.outputs?.[0]
+        return [inputTypes?.body, output]
+      })
       .flat()
       .filter((schema) => !!schema)
   )
@@ -100,6 +104,7 @@ const convertSchemasToBodyPayloads = async (
 }
 
 export async function generateOpenAPISpec(
+  functionsMeta: FunctionsMeta,
   routeMeta: HTTPRoutesMeta,
   schemas: Record<string, any>,
   additionalInfo: OpenAPISpecInfo
@@ -107,7 +112,11 @@ export async function generateOpenAPISpec(
   const paths: Record<string, any> = {}
 
   routeMeta.forEach((meta) => {
-    const { route, method, inputTypes, output, params, query, docs } = meta
+    const { route, method, inputTypes, pikkuFuncName, params, query, docs } =
+      meta
+    const { outputs } = functionsMeta[pikkuFuncName]
+    const output = outputs ? outputs[0] : undefined
+
     const path = route.replace(/:(\w+)/g, '{$1}') // Convert ":param" to "{param}"
 
     if (!paths[path]) {
@@ -194,7 +203,11 @@ export async function generateOpenAPISpec(
     servers: additionalInfo.servers,
     paths,
     components: {
-      schemas: await convertSchemasToBodyPayloads(routeMeta, schemas),
+      schemas: await convertSchemasToBodyPayloads(
+        functionsMeta,
+        routeMeta,
+        schemas
+      ),
       responses: {},
       parameters: {},
       examples: {},

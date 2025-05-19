@@ -23,6 +23,7 @@ export const pikkuHTTPMap = async (
         httpRoutesMapDeclarationFile,
         packageMappings,
         functions.typesMap,
+        functions.meta,
         http.meta,
         http.metaInputTypes
       )

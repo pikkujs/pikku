@@ -196,8 +196,6 @@ export type HTTPRouteMeta = {
   method: HTTPMethod
   params?: string[]
   query?: string[]
-  input: string | null
-  output: string | null
   inputTypes?: HTTPFunctionMetaInputTypes
   docs?: APIDocs
   tags?: string[]

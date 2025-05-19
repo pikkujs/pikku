@@ -26,10 +26,12 @@ export const pikkuOpenAPI = async (
       }
       const schemas = await generateSchemas(
         tsconfig,
-        [http.typesMap, functions.typesMap],
+        [functions.typesMap],
+        functions.meta,
         http.meta
       )
       const openAPISpec = await generateOpenAPISpec(
+        functions.meta,
         http.meta,
         schemas,
         openAPI.additionalInfo
