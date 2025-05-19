@@ -13,7 +13,7 @@ export const serializeRPCImports = (
 ) => {
   const serializedImports: string[] = [
     `/* Import and register RPCs */`,
-    `import { addFunction } from '@pikku/core/functions'`,
+    `import { addFunction } from '@pikku/core'`,
   ]
 
   const serializedRegistrations: string[] = []
@@ -33,7 +33,9 @@ export const serializeRPCImports = (
     // For directly exported functions, we can just import and register them
     if (name === exportedName) {
       serializedImports.push(`import { ${exportedName} } from '${filePath}'`)
-      serializedRegistrations.push(`addFunction('${name}', ${exportedName})`)
+      serializedRegistrations.push(
+        `addFunction('${name}', { func: ${exportedName} })`
+      )
     }
     // For renamed functions, we need to import and alias them
     else {

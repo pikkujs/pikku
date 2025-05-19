@@ -1,10 +1,18 @@
-export type PikkuRPC = {
+export type PikkuRPC<invoke extends Function = any> = {
   depth: number
   global: boolean
-  invoke: any
+  invoke: invoke
 }
 
 export type RPCMeta = {
   pikkuFuncName: string
   exposed: boolean
+}
+
+/**
+ * Type for RPC handlers
+ */
+export interface RPCHandler<Input, Output> {
+  input: Input
+  output: Output
 }

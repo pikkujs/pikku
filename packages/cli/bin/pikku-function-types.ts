@@ -10,7 +10,11 @@ import {
 import { serializePikkuTypes } from '../src/serialize-pikku-types.js'
 
 export const pikkuFunctionTypes = async (
-  { typesDeclarationFile: typesFile, packageMappings }: PikkuCLIConfig,
+  {
+    typesDeclarationFile: typesFile,
+    packageMappings,
+    rpcMapDeclarationFile,
+  }: PikkuCLIConfig,
   options: PikkuCLIOptions,
   visitState: InspectorState
 ) => {
@@ -38,7 +42,7 @@ export const pikkuFunctionTypes = async (
         `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,
         singletonServicesType.type,
         `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(typesFile, sessionServicesType.typePath, packageMappings)}'`,
-        sessionServicesType.type
+        `import type { TypedPikkuRPC } from '${getFileImportRelativePath(typesFile, rpcMapDeclarationFile, packageMappings)}'`
       )
       await writeFileInDir(typesFile, content)
     }

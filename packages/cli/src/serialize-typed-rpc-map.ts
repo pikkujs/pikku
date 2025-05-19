@@ -41,23 +41,19 @@ interface RPCHandler<I, O> {
 
 ${serializedRPCs}
 
-// Helper type to extract the handler for a specific RPC
-export type RPCHandlerOf<RPCName extends keyof RPCMap> = 
-  RPCMap[RPCName] extends RPCHandler<infer I, infer O> 
-    ? RPCHandler<I, O> 
-    : never;
+type RPCInvoke = <Name extends keyof RPCMap>(
+  name: Name,
+  data: RPCMap[Name]['input'],
+  options?: {
+    location?: 'local' | 'remote' | 'auto'
+  }
+) => Promise<RPCMap[Name]['output']>
 
-// Helper type to extract input type for an RPC
-export type RPCInputOf<RPCName extends keyof RPCMap> = 
-  RPCMap[RPCName] extends RPCHandler<infer I, any> 
-    ? I 
-    : never;
-
-// Helper type to extract output type for an RPC
-export type RPCOutputOf<RPCName extends keyof RPCMap> = 
-  RPCMap[RPCName] extends RPCHandler<any, infer O> 
-    ? O 
-    : never;
+export type TypedPikkuRPC = {
+  depth: number;
+  global: boolean;
+  invoke: RPCInvoke;
+}
   `
 }
 

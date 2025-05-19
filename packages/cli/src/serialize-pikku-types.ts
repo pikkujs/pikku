@@ -7,7 +7,7 @@ export const serializePikkuTypes = (
   singletonServicesTypeImport: string,
   singletonServicesTypeName: string,
   sessionServicesTypeImport: string,
-  servicesTypeName: string
+  rpcMapTypeImport: string
 ) => {
   return `/**
 * This is used to provide the application types in the typescript project
@@ -22,6 +22,7 @@ import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pik
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
 ${sessionServicesTypeImport}
+${rpcMapTypeImport}
 
 export type APIPermission<In = unknown, RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CoreAPIPermission<In, RequiredServices, ${userSessionTypeName}>
 export type APIMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = PikkuMiddleware<RequiredServices, ${userSessionTypeName}>
@@ -30,7 +31,8 @@ type APIFunctionSessionless<
   In = unknown, 
   Out = never, 
   ChannelData = null,  // null means optional channel
-  RequiredServices extends Services = Services & (
+  RequiredServices extends Services = Services &
+    { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
       : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
@@ -41,7 +43,8 @@ type APIFunction<
   In = unknown, 
   Out = never, 
   ChannelData = null,  // null means optional channel
-  RequiredServices extends Services = Services & (
+  RequiredServices extends Services = Services &
+    { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
       : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type

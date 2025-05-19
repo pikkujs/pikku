@@ -8,6 +8,7 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>(
     logger.debug(`RPC Test with RPC: ${rpc?.depth}`)
     if (rpc?.depth && rpc?.depth < 10) {
       data.in += 1
+      rpc.invoke('rpcTest', data)
       await rpc?.invoke(`rpcTest`, data)
     }
     return data

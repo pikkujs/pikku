@@ -1,18 +1,10 @@
-import {
-  CoreSingletonServices,
-  CoreServices,
-  CreateSessionServices,
-  CoreUserSession,
-} from '../types/core.types.js'
+import { CoreServices } from '../types/core.types.js'
 import { runPikkuFunc } from '../function/function-runner.js'
 import { pikkuState } from '../pikku-state.js'
 import { RPCMeta } from './rpc-types.js'
-import { PikkuUserSessionService } from '../services/user-session-service.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
-  singletonServices: CoreSingletonServices
-  createSessionServices: CreateSessionServices
   coerceDataFromSchema: boolean
 }
 
@@ -26,7 +18,7 @@ const getRPCMeta = (rpcName: string): RPCMeta => {
 }
 
 // Context-aware RPC client for use within services
-class ServiceRPC {
+class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
     private options: {
@@ -44,11 +36,11 @@ class ServiceRPC {
     return runPikkuFunc<In, Out>(rpcMeta.pikkuFuncName, {
       getAllServices: () => {
         this.services.rpc = this.services.rpc
-          ? {
+          ? ({
               ...this.services.rpc,
               depth: rpcDepth + 1,
               global: false,
-            }
+            } as any)
           : undefined
         return this.services
       },
@@ -73,61 +65,15 @@ export class PikkuRPCService {
     const serviceCopy = {
       ...coreServices,
     }
-    const serviceRPC = new ServiceRPC(serviceCopy, {
+    const serviceRPC = new ContextAwareRPCService(serviceCopy, {
       coerceDataFromSchema: this.config?.coerceDataFromSchema,
     })
     serviceCopy.rpc = {
       depth,
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
-    }
+    } as any
     return serviceCopy
-  }
-
-  //   Global RPC method to call functions by name
-  async rpc<In = any, Out = any>(
-    funcName: string,
-    data: In,
-    session?: CoreUserSession
-  ): Promise<Out> {
-    if (!this.config) {
-      throw new Error('RPC service not initialized')
-    }
-
-    const rpcMeta = getRPCMeta(funcName)
-    const { singletonServices, createSessionServices, coerceDataFromSchema } =
-      this.config
-
-    // Define the getAllServices function for runPikkuFunc
-    const getAllServices = async () => {
-      const userSession = new PikkuUserSessionService()
-      if (session) {
-        userSession.set(session)
-      }
-
-      const sessionServices = await createSessionServices(
-        singletonServices,
-        {},
-        session
-      )
-
-      return this.injectRPCService(
-        {
-          ...singletonServices,
-          ...sessionServices,
-          userSession,
-        },
-        0
-      )
-    }
-
-    // Call the function using runPikkuFunc - it will handle permission merging
-    return runPikkuFunc<In, Out>(rpcMeta.pikkuFuncName, {
-      getAllServices,
-      data,
-      session,
-      coerceDataFromSchema: coerceDataFromSchema ?? true,
-    })
   }
 }
 
@@ -137,13 +83,4 @@ export const rpcService = new PikkuRPCService()
 // Convenience function for initializing
 export const initialize = (config: RPCServiceConfig) => {
   rpcService.initialize(config)
-}
-
-// Convenience function for making standalone RPC calls
-export const pikkuRPC = <In = any, Out = any, session = CoreUserSession>(
-  funcName: string,
-  data: In,
-  session?: CoreUserSession
-): Promise<Out> => {
-  return rpcService.rpc(funcName, data, session)
 }
