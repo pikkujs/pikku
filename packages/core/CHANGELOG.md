@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.4
+
+### Patch Changes
+
+- 598588f: fix: generating output schemas from function meta
+
 ## 0.7.3
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.7.2
+
+### Patch Changes
+
+- 598588f: fix: generating output schemas from function meta
+- Updated dependencies [598588f]
+  - @pikku/inspector@0.7.4
+  - @pikku/core@0.7.4
+
 ## 0.7.1
 
 ### Patch Changes
