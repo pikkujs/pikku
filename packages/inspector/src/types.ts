@@ -27,6 +27,7 @@ export interface InspectorHTTPState {
 
 export interface InspectorFunctionState {
   typesMap: TypesMap
+  files: Map<string, { path: string; exportedName: string }>
   meta: FunctionsMeta
 }
 
@@ -55,6 +56,5 @@ export interface InspectorState {
   }
   rpc: {
     meta: Record<string, RPCMeta>
-    files: Map<string, { path: string; exportedName: string }>
   }
 }

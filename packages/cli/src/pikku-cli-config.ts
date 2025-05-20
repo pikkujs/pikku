@@ -26,7 +26,6 @@ export interface PikkuCLICoreOutputFiles {
   channelsMapDeclarationFile: string
 
   // RPC
-  rpcFile: string
   rpcMetaFile: string
   rpcMapDeclarationFile: string
 
@@ -152,9 +151,6 @@ const _getPikkuCLIConfig = async (
           result.outDir,
           'pikku-functions-meta.gen.ts'
         )
-      }
-      if (!result.rpcFile) {
-        result.rpcFile = join(result.outDir, 'pikku-rpc.gen.ts')
       }
       if (!result.rpcMetaFile) {
         result.rpcMetaFile = join(result.outDir, 'pikku-rpc-meta.gen.ts')

@@ -70,7 +70,6 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   await pikkuRPC(cliConfig, visitState)
   await pikkuRPCMap(cliConfig, visitState)
   addImport(cliConfig.rpcMetaFile, 'meta')
-  addImport(cliConfig.rpcFile, 'events')
 
   const routes = await pikkuHTTP(cliConfig, visitState)
   if (routes) {

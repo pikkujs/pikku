@@ -387,9 +387,11 @@ export function addFunctions(
       pikkuFuncName,
       exposed: false,
     }
-    state.rpc.files.set(name, {
+    state.functions.files.set(name, {
       path: node.getSourceFile().fileName,
       exportedName,
     })
+  } else {
+    console.log(`• Function name '${name}' not exported, skipping.`)
   }
 }

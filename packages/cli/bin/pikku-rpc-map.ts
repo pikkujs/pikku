@@ -10,7 +10,7 @@ export const pikkuRPCMap = async (
   return await logCommandInfoAndTime(
     'Creating RPC map',
     'Created RPC map',
-    [rpc.files.size === 0],
+    [false],
     async () => {
       const content = serializeTypedRPCMap(
         rpcMapDeclarationFile,

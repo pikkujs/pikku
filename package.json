@@ -52,6 +52,6 @@
     "node": ">=20"
   },
   "lint-staged": {
-    "*.ts": "yarn lint && yarn prettier"
+    "**/*.ts": "yarn lint && yarn prettier"
   }
 }
