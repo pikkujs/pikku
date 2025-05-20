@@ -17,8 +17,8 @@ export const pikkuNext = async (
   {
     nextBackendFile,
     nextHTTPFile,
-    httpRoutesFile,
     httpRoutesMapDeclarationFile,
+    bootstrapFile,
     schemaDirectory,
     packageMappings,
     fetchFile,
@@ -67,9 +67,9 @@ export const pikkuNext = async (
         const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
         const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
 
-        const routesPath = getFileImportRelativePath(
+        const bootstrapPath = getFileImportRelativePath(
           nextBackendFile,
-          httpRoutesFile,
+          bootstrapFile,
           packageMappings
         )
 
@@ -85,7 +85,7 @@ export const pikkuNext = async (
         )
 
         const content = serializeNextBackendWrapper(
-          routesPath,
+          bootstrapPath,
           routesMapDeclarationPath,
           schemasPath,
           pikkuConfigImport,
@@ -95,22 +95,22 @@ export const pikkuNext = async (
         await writeFileInDir(nextBackendFile, content)
       }
 
-      if (nextHTTPFile) {
-        const routesPath = getFileImportRelativePath(
-          nextHTTPFile,
-          httpRoutesFile,
-          packageMappings
-        )
-
+      if (nextHTTPFile && fetchFile) {
         const routesMapDeclarationPath = getFileImportRelativePath(
           nextHTTPFile,
           httpRoutesMapDeclarationFile,
           packageMappings
         )
 
+        const fetchPath = getFileImportRelativePath(
+          nextHTTPFile,
+          fetchFile,
+          packageMappings
+        )
+
         const content = serializeNextHTTPWrapper(
-          routesPath,
-          routesMapDeclarationPath
+          routesMapDeclarationPath,
+          fetchPath
         )
         await writeFileInDir(nextHTTPFile, content)
       }
