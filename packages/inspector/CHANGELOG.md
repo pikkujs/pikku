@@ -1,5 +1,11 @@
 # @pikku/inspector
 
+## 0.7.6
+
+### Patch Changes
+
+- faa1369: refactor: moving function imports into pikku-fun.gen file
+
 ## 0.7.5
 
 ### Patch Changes

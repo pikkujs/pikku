@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.7.5
+
+### Patch Changes
+
+- faa1369: refactor: moving function imports into pikku-fun.gen file
+- Updated dependencies [faa1369]
+  - @pikku/inspector@0.7.6
+
 ## 0.7.4
 
 ### Patch Changes
