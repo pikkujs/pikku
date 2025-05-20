@@ -22,7 +22,9 @@ addFunction('helloWorld', { func: helloWorld })
 addFunction('onConnect', { func: onConnect })
 addFunction('onDisconnect', { func: onDisconnect })
 addFunction('onMessage', { func: onMessage })
-addFunction('progressiveEnhancementExample', { func: progressiveEnhancementExample })
+addFunction('progressiveEnhancementExample', {
+  func: progressiveEnhancementExample,
+})
 addFunction('rpcCaller', { func: rpcCaller })
 addFunction('rpcTest', { func: rpcTest })
 addFunction('subscribe', { func: subscribe })

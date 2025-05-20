@@ -4,36 +4,34 @@
 import { pikkuState } from '@pikku/core'
 pikkuState('http', 'meta', [
   {
-    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L10C3",
-    "route": "/status/sse",
-    "method": "get"
+    pikkuFuncName: 'pikkuFn_src_http_progressive_enhancement_ts_L10C3',
+    route: '/status/sse',
+    method: 'get',
   },
   {
-    "pikkuFuncName": "pikkuFn_src_http_progressive_enhancement_ts_L10C3",
-    "route": "/status/http",
-    "method": "get"
+    pikkuFuncName: 'pikkuFn_src_http_progressive_enhancement_ts_L10C3',
+    route: '/status/http',
+    method: 'get',
   },
   {
-    "pikkuFuncName": "pikkuFn_src_http_sse_ts_L7C3",
-    "route": "/sse",
-    "method": "get"
+    pikkuFuncName: 'pikkuFn_src_http_sse_ts_L7C3',
+    route: '/sse',
+    method: 'get',
   },
   {
-    "pikkuFuncName": "pikkuFn_src_http_ts_L6C54",
-    "route": "/hello-world",
-    "method": "get",
-    "tags": [
-      "hello"
-    ]
+    pikkuFuncName: 'pikkuFn_src_http_ts_L6C54',
+    route: '/hello-world',
+    method: 'get',
+    tags: ['hello'],
   },
   {
-    "pikkuFuncName": "pikkuFn_src_rpc_ts_L18C47",
-    "route": "/rpc",
-    "method": "get"
+    pikkuFuncName: 'pikkuFn_src_rpc_ts_L18C47',
+    route: '/rpc',
+    method: 'get',
   },
   {
-    "pikkuFuncName": "pikkuFn_src_rpc_ts_L7C3",
-    "route": "/dummy",
-    "method": "get"
-  }
+    pikkuFuncName: 'pikkuFn_src_rpc_ts_L7C3',
+    route: '/dummy',
+    method: 'get',
+  },
 ])
