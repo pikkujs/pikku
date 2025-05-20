@@ -1,5 +1,11 @@
 ## 0.7.0
 
+## 0.7.7
+
+### Patch Changes
+
+- 6af8a19: fix: always write functions meta data
+
 ## 0.7.6
 
 ### Patch Changes

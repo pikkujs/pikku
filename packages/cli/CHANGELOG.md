@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.7.4
+
+### Patch Changes
+
+- 6af8a19: fix: always write functions meta data
+- Updated dependencies [6af8a19]
+  - @pikku/core@0.7.7
+
 ## 0.7.3
 
 ### Patch Changes
