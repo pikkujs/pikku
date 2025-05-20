@@ -1,5 +1,11 @@
 # @pikku/inspector
 
+## 0.7.5
+
+### Patch Changes
+
+- c5e724c: fix: rerelease as previous publish is missing something
+
 ## 0.7.4
 
 ### Patch Changes
