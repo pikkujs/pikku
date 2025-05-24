@@ -48,13 +48,30 @@ export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
   routeOrMiddleware: APIMiddleware[] | string,
   middleware?: APIMiddleware[]
 ) => {
+  const middlewareStore = pikkuState('http', 'middleware')
+
   if (typeof routeOrMiddleware === 'string' && middleware) {
-    pikkuState('http', 'middleware').push({
-      route: routeOrMiddleware,
-      middleware,
-    })
+    const route = routeOrMiddleware
+
+    // Remove existing entry for this route if it exists
+    const existingIndex = middlewareStore.findIndex(
+      (item) => item.route === route
+    )
+    if (existingIndex !== -1) {
+      middlewareStore.splice(existingIndex, 1)
+    }
+
+    middlewareStore.push({ route, middleware })
   } else {
-    pikkuState('http', 'middleware').push({
+    // Handle global middleware
+    const existingIndex = middlewareStore.findIndex(
+      (item) => item.route === '*'
+    )
+    if (existingIndex !== -1) {
+      middlewareStore.splice(existingIndex, 1)
+    }
+
+    middlewareStore.push({
       route: '*',
       middleware: routeOrMiddleware as any,
     })
@@ -324,7 +341,7 @@ const executeRouteWithMiddleware = async (
       })
     }
 
-    const result = await runPikkuFunc(meta.pikkuFuncName, {
+    result = await runPikkuFunc(meta.pikkuFuncName, {
       getAllServices,
       session,
       data,
@@ -342,8 +359,6 @@ const executeRouteWithMiddleware = async (
     http?.response?.status(200)
     // TODO: Evaluate if the response stream should be explicitly ended.
     // http?.response?.end()
-
-    return result
   }
 
   // Execute middleware, then run the main logic
@@ -432,6 +447,7 @@ export const fetchData = async <In, Out>(
     coerceDataFromSchema = true,
     bubbleErrors = false,
     generateRequestId,
+    ignoreMiddleware = false,
   }: RunRouteOptions & RunRouteParams
 ): Promise<Out | void> => {
   const requestId =
@@ -472,7 +488,12 @@ export const fetchData = async <In, Out>(
         skipUserSession,
         requestId,
       },
-      matchedRoute,
+      ignoreMiddleware
+        ? {
+            ...matchedRoute,
+            middleware: [],
+          }
+        : matchedRoute,
       http!,
       { coerceDataFromSchema }
     ))

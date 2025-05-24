@@ -34,6 +34,7 @@ export type RunRouteOptions = Partial<{
   coerceDataFromSchema: boolean
   bubbleErrors: boolean
   generateRequestId: () => string
+  ignoreMiddleware: boolean
 }>
 
 export type RunRouteParams = {

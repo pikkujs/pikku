@@ -32,11 +32,11 @@ export const runMiddleware = async (
 ): Promise<void> => {
   const dispatch = async (index: number): Promise<any> => {
     if (middlewares && index < middlewares.length) {
-      await middlewares[index]!(services, interaction, () =>
+      return await middlewares[index]!(services, interaction, () =>
         dispatch(index + 1)
       )
     } else if (main) {
-      return await main()
+      await main()
     }
   }
   await dispatch(0)

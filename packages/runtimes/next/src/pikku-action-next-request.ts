@@ -38,9 +38,7 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
   }
 
   json(): Promise<unknown> {
-    throw new Error(
-      'Method not implemented since json is merged into data already'
-    )
+    return this.#body
   }
 
   arrayBuffer(): Promise<ArrayBuffer> {
@@ -48,9 +46,7 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
   }
 
   params(): Partial<Record<string, string | string[]>> {
-    throw new Error(
-      'Method not implemented since params are merged into data already'
-    )
+    return this.#body
   }
 
   setParams(_params: Record<string, string | string[] | undefined>): void {
@@ -58,9 +54,7 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
   }
 
   query(): PikkuQuery {
-    throw new Error(
-      'Method not implemented since query is merged into data already'
-    )
+    return this.#body
   }
 
   public async init() {
@@ -86,7 +80,7 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
     if (!this.cookieStore) {
       throw new Error('Init first needs to be called')
     }
-    return this.cookieStore.get(cookieName) || null
+    return this.cookieStore.get(cookieName).value || null
   }
 
   /**

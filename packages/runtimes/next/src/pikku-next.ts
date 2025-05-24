@@ -59,8 +59,11 @@ export class PikkuNextJS {
       data,
       true
     )
+    await request.init()
 
     const response = new PikkuActionNextResponse(true)
+    await response.init()
+
     return (await fetchData<In, Out>(request, response, {
       singletonServices,
       createSessionServices: this.createSessionServices,
@@ -94,6 +97,7 @@ export class PikkuNextJS {
       createSessionServices: this.createSessionServices,
       skipUserSession: true,
       bubbleErrors: true,
+      ignoreMiddleware: true,
     })) as Out
   }
 
