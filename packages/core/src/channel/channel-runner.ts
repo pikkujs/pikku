@@ -34,15 +34,15 @@ export const addChannel = <
   pikkuState('channel', 'channels').set(channel.name, channel as any)
 
   // Register onConnect function if provided
-  if (channel.onConnect && channelMeta.connectPikkuFuncName) {
-    addFunction(channelMeta.connectPikkuFuncName, {
+  if (channel.onConnect && channelMeta.connect) {
+    addFunction(channelMeta.connect.pikkuFuncName, {
       func: channel.onConnect as any,
     })
   }
 
   // Register onDisconnect function if provided
-  if (channel.onDisconnect && channelMeta.disconnectPikkuFuncName) {
-    addFunction(channelMeta.disconnectPikkuFuncName, {
+  if (channel.onDisconnect && channelMeta.disconnect) {
+    addFunction(channelMeta.disconnect.pikkuFuncName, {
       func: channel.onDisconnect,
     })
   }

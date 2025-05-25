@@ -42,7 +42,6 @@ export const inspect = (
       files: new Set(),
     },
     channels: {
-      metaInputTypes: new Map(),
       files: new Set(),
       meta: {},
     },

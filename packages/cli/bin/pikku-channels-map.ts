@@ -16,6 +16,7 @@ export const pikkuChannelsMap = async (
         channelsMapDeclarationFile,
         packageMappings,
         state.functions.typesMap,
+        state.functions.meta,
         state.channels.meta
       )
       await writeFileInDir(channelsMapDeclarationFile, content)

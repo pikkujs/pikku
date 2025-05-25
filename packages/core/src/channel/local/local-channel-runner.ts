@@ -79,9 +79,9 @@ export const runLocalChannel = async ({
       })
 
       channelHandler.registerOnOpen(() => {
-        if (channelConfig.onConnect && meta.connectPikkuFuncName) {
+        if (channelConfig.onConnect && meta.connect) {
           runPikkuFuncDirectly(
-            meta.connectPikkuFuncName,
+            meta.connect.pikkuFuncName,
             { ...allServices, channel },
             openingData
           )
@@ -89,9 +89,9 @@ export const runLocalChannel = async ({
       })
 
       channelHandler.registerOnClose(async () => {
-        if (channelConfig.onDisconnect && meta.disconnectPikkuFuncName) {
+        if (channelConfig.onDisconnect && meta.disconnect) {
           runPikkuFuncDirectly(
-            meta.disconnectPikkuFuncName,
+            meta.disconnect.pikkuFuncName,
             { ...allServices, channel },
             openingData
           )

@@ -115,9 +115,9 @@ export const runChannelConnect = async ({
           await userSession.get()
         )
       }
-      if (channelConfig.onConnect && meta.connectPikkuFuncName) {
+      if (channelConfig.onConnect && meta.connect) {
         await runPikkuFuncDirectly(
-          meta.connectPikkuFuncName,
+          meta.connect.pikkuFuncName,
           { ...singletonServices, ...sessionServices, channel },
           openingData
         )
@@ -170,9 +170,9 @@ export const runChannelDisconnect = async ({
       session
     )
   }
-  if (channelConfig.onDisconnect && meta.disconnectPikkuFuncName) {
+  if (channelConfig.onDisconnect && meta.disconnect) {
     await runPikkuFuncDirectly(
-      meta.disconnectPikkuFuncName,
+      meta.disconnect.pikkuFuncName,
       { ...singletonServices, ...sessionServices, channel },
       undefined
     )

@@ -34,8 +34,6 @@ export type RunChannelParams<ChannelData> = {
 
 export interface ChannelMessageMeta {
   pikkuFuncName: string
-  inputs: string[] | null
-  outputs: string[] | null
   docs?: APIDocs
 }
 
@@ -46,10 +44,8 @@ export interface ChannelMeta {
   query?: string[]
   input: string | null
   inputTypes?: HTTPFunctionMetaInputTypes
-  connect: boolean
-  connectPikkuFuncName: string | null
-  disconnect: boolean
-  disconnectPikkuFuncName: string | null
+  connect: ChannelMessageMeta | null
+  disconnect: ChannelMessageMeta | null
   message: ChannelMessageMeta | null
   messageRoutes: Record<string, Record<string, ChannelMessageMeta>>
   docs?: APIDocs

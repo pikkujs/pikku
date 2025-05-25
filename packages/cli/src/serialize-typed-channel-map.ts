@@ -2,14 +2,19 @@ import { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from './utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from './utils/utils.js'
+import { FunctionsMeta } from '@pikku/core'
 
 export const serializeTypedChannelsMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
+  functionsMeta: FunctionsMeta,
   channelsMeta: ChannelsMeta
 ): string => {
-  const { channels, requiredTypes } = generateChannels(channelsMeta)
+  const { channels, requiredTypes } = generateChannels(
+    functionsMeta,
+    channelsMeta
+  )
   typesMap.customTypes.forEach(({ references }) => {
     for (const reference of references) {
       requiredTypes.add(reference)
@@ -52,7 +57,10 @@ export type ChannelRouteHandlerOf<
 `
 }
 
-function generateChannels(channelsMeta: ChannelsMeta) {
+function generateChannels(
+  functionsMeta: FunctionsMeta,
+  channelsMeta: ChannelsMeta
+) {
   const requiredTypes = new Set<string>()
   const channelsObject: Record<
     string,
@@ -75,16 +83,29 @@ function generateChannels(channelsMeta: ChannelsMeta) {
     const { name, messageRoutes, message } = meta
 
     if (!channelsObject[name]) {
-      channelsObject[name] = { message, routes: {} }
+      channelsObject[name] = { message: null, routes: {} }
+    }
+
+    if (message) {
+      const func = functionsMeta[message.pikkuFuncName]
+      const inputTypes = func.inputs || null
+      const outputTypes = func.outputs || null
+      channelsObject[name].message = {
+        inputs: inputTypes,
+        outputs: outputTypes,
+      }
+      inputTypes?.forEach((type) => requiredTypes.add(type))
+      outputTypes?.forEach((type) => requiredTypes.add(type))
     }
 
     for (const [key, route] of Object.entries(messageRoutes)) {
       if (!channelsObject[name].routes[key]) {
         channelsObject[name].routes[key] = {}
       }
-      for (const [method, { inputs, outputs }] of Object.entries(route)) {
-        const inputTypes = inputs || null
-        const outputTypes = outputs || null
+      for (const [method, { pikkuFuncName }] of Object.entries(route)) {
+        const func = functionsMeta[pikkuFuncName]
+        const inputTypes = func.inputs || null
+        const outputTypes = func.outputs || null
         channelsObject[name].routes[key][method] = {
           inputTypes,
           outputTypes,

@@ -32,7 +32,6 @@ export interface InspectorFunctionState {
 }
 
 export interface InspectorChannelState {
-  metaInputTypes: MetaInputTypes
   meta: ChannelsMeta
   files: Set<string>
 }

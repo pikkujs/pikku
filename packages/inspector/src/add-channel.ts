@@ -2,7 +2,6 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { APIDocs } from '@pikku/core'
-import { getInputTypes } from './add-http-route.js'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -189,8 +188,6 @@ export function addMessagesRoutes(
                     if (fnMeta) {
                       result[channelKey]![routeKey] = {
                         pikkuFuncName: handlerName,
-                        inputs: fnMeta.inputs ?? null,
-                        outputs: fnMeta.outputs ?? null,
                       }
                       continue
                     }
@@ -208,8 +205,6 @@ export function addMessagesRoutes(
                   if (fnMeta) {
                     result[channelKey]![routeKey] = {
                       pikkuFuncName: handlerName,
-                      inputs: fnMeta.inputs ?? null,
-                      outputs: fnMeta.outputs ?? null,
                     }
                     continue
                   }
@@ -244,8 +239,6 @@ export function addMessagesRoutes(
                         if (fnMeta) {
                           result[channelKey]![routeKey] = {
                             pikkuFuncName: handlerName,
-                            inputs: fnMeta.inputs ?? null,
-                            outputs: fnMeta.outputs ?? null,
                           }
                           continue
                         }
@@ -260,8 +253,6 @@ export function addMessagesRoutes(
                         if (fnMeta) {
                           result[channelKey]![routeKey] = {
                             pikkuFuncName: handlerName,
-                            inputs: fnMeta.inputs ?? null,
-                            outputs: fnMeta.outputs ?? null,
                           }
                           continue
                         }
@@ -294,8 +285,6 @@ export function addMessagesRoutes(
               }
               result[channelKey]![routeKey] = {
                 pikkuFuncName: possibleMatch,
-                inputs: fnMeta.inputs ?? null,
-                outputs: fnMeta.outputs ?? null,
               }
               continue
             }
@@ -334,8 +323,6 @@ export function addMessagesRoutes(
               if (fnMeta) {
                 result[channelKey]![routeKey] = {
                   pikkuFuncName: handlerName,
-                  inputs: fnMeta.inputs ?? null,
-                  outputs: fnMeta.outputs ?? null,
                 }
                 continue // Skip the normal processing below
               }
@@ -361,8 +348,6 @@ export function addMessagesRoutes(
 
       result[channelKey]![routeKey] = {
         pikkuFuncName: handlerName,
-        inputs: fnMeta.inputs ?? null,
-        outputs: fnMeta.outputs ?? null,
       }
     }
   }
@@ -429,6 +414,7 @@ export function addChannel(
     false,
     checker
   )
+
   if (onMsgProp) {
     const handlerName =
       onMsgProp && getHandlerNameFromExpression(onMsgProp, checker)
@@ -442,8 +428,6 @@ export function addChannel(
       message = {
         pikkuFuncName: extractFunctionName(onMsgProp as any, checker)
           .pikkuFuncName,
-        inputs: fnMeta.inputs ?? null,
-        outputs: fnMeta.outputs ?? null,
       }
     }
   }
@@ -459,21 +443,22 @@ export function addChannel(
     input: null,
     params: params.length ? params : undefined,
     query: query?.length ? query : undefined,
-    inputTypes: getInputTypes(
-      state.channels.metaInputTypes,
-      'get',
-      message?.inputs?.[0] ?? null,
-      query,
-      params
-    ),
-    connectPikkuFuncName: connect
-      ? extractFunctionName(connect, checker).pikkuFuncName
+    // inputTypes: getInputTypes(
+    //   state.channels.metaInputTypes,
+    //   'get',
+    //   null, // TODO
+    //   query,
+    //   params
+    // ),
+    connect: connect
+      ? { pikkuFuncName: extractFunctionName(connect, checker).pikkuFuncName }
       : null,
-    connect: !!connect,
-    disconnectPikkuFuncName: disconnect
-      ? extractFunctionName(disconnect as any, checker).pikkuFuncName
+    disconnect: disconnect
+      ? {
+          pikkuFuncName: extractFunctionName(disconnect as any, checker)
+            .pikkuFuncName,
+        }
       : null,
-    disconnect: !!disconnect,
     message,
     messageRoutes,
     docs: docs ?? undefined,
