@@ -18,10 +18,9 @@ export const pikkuNext = async (
     nextBackendFile,
     nextHTTPFile,
     httpRoutesMapDeclarationFile,
-    bootstrapFile,
-    schemaDirectory,
     packageMappings,
     fetchFile,
+    bootstrapFiles,
   }: PikkuCLIConfig,
   visitState: InspectorState,
   options: PikkuCLIOptions
@@ -67,9 +66,9 @@ export const pikkuNext = async (
         const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
         const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
 
-        const bootstrapPath = getFileImportRelativePath(
+        const httpBootstrapPath = getFileImportRelativePath(
           nextBackendFile,
-          bootstrapFile,
+          bootstrapFiles.http,
           packageMappings
         )
 
@@ -78,16 +77,10 @@ export const pikkuNext = async (
           httpRoutesMapDeclarationFile,
           packageMappings
         )
-        const schemasPath = getFileImportRelativePath(
-          nextBackendFile,
-          `${schemaDirectory}/register.gen.ts`,
-          packageMappings
-        )
 
         const content = serializeNextBackendWrapper(
-          bootstrapPath,
+          httpBootstrapPath,
           routesMapDeclarationPath,
-          schemasPath,
           pikkuConfigImport,
           singletonServicesImport,
           sessionServicesImport

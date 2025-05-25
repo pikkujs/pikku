@@ -24,16 +24,39 @@ import chokidar from 'chokidar'
 import { pikkuFunctions } from './pikku-functions.js'
 import { pikkuRPC } from './pikku-rpc.js'
 import { pikkuRPCMap } from './pikku-rpc-map.js'
+import { PikkuEventTypes } from '@pikku/core'
 
 const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
-  const metaImports: string[] = []
-  const imports: string[] = []
-  const addImport = (from: string, type: 'meta' | 'events' | 'other') => {
+  const boostrapImports: Partial<
+    Record<PikkuEventTypes, { meta: string[]; events: string[] }>
+  > & { all: { meta: string[]; events: string[] } } = {
+    all: { meta: [], events: [] },
+  }
+
+  const addImport = (
+    from: string,
+    type: 'meta' | 'events' | 'other',
+    addTo?: PikkuEventTypes[]
+  ) => {
     const statement = `import '${getFileImportRelativePath(cliConfig.bootstrapFile, from, cliConfig.packageMappings)}'`
     if (type === 'meta') {
-      metaImports.push(statement)
+      boostrapImports.all.meta.push(statement)
     } else {
-      imports.push(statement)
+      boostrapImports.all.events.push(statement)
+    }
+
+    for (const transport of Object.keys(PikkuEventTypes)) {
+      if (!addTo || addTo?.includes(transport as PikkuEventTypes)) {
+        boostrapImports[transport] = boostrapImports[transport] || {
+          meta: [],
+          events: [],
+        }
+        if (type === 'meta') {
+          boostrapImports[transport].meta.push(statement)
+        } else {
+          boostrapImports[transport].events.push(statement)
+        }
+      }
     }
   }
 
@@ -69,33 +92,33 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
 
   await pikkuRPC(cliConfig, visitState)
   await pikkuRPCMap(cliConfig, visitState)
-  addImport(cliConfig.rpcMetaFile, 'meta')
+  addImport(cliConfig.rpcMetaFile, 'meta', [PikkuEventTypes.rpc])
 
-  const routes = await pikkuHTTP(cliConfig, visitState)
-  if (routes) {
+  const schemas = await pikkuSchemas(cliConfig, visitState)
+  if (schemas) {
+    addImport(`${cliConfig.schemaDirectory}/register.gen.ts`, 'other')
+  }
+
+  const http = await pikkuHTTP(cliConfig, visitState)
+  if (http) {
     await pikkuHTTPMap(cliConfig, visitState)
     await pikkuFetch(cliConfig)
-    addImport(cliConfig.httpRoutesMetaFile, 'meta')
-    addImport(cliConfig.httpRoutesFile, 'events')
+    addImport(cliConfig.httpRoutesMetaFile, 'meta', [PikkuEventTypes.http])
+    addImport(cliConfig.httpRoutesFile, 'events', [PikkuEventTypes.http])
   }
 
   const scheduled = await pikkuScheduler(cliConfig, visitState)
   if (scheduled) {
-    addImport(cliConfig.schedulersMetaFile, 'meta')
-    addImport(cliConfig.schedulersFile, 'events')
+    addImport(cliConfig.schedulersMetaFile, 'meta', [PikkuEventTypes.scheduled])
+    addImport(cliConfig.schedulersFile, 'events', [PikkuEventTypes.scheduled])
   }
 
   const channels = await pikkuChannels(cliConfig, visitState)
   if (channels) {
     await pikkuChannelsMap(cliConfig, visitState)
     await pikkuWebSocket(cliConfig)
-    addImport(cliConfig.channelsMetaFile, 'meta')
-    addImport(cliConfig.channelsFile, 'events')
-  }
-
-  const schemas = await pikkuSchemas(cliConfig, visitState)
-  if (schemas) {
-    addImport(`${cliConfig.schemaDirectory}/register.gen.ts`, 'other')
+    addImport(cliConfig.channelsMetaFile, 'meta', [PikkuEventTypes.channel])
+    addImport(cliConfig.channelsFile, 'events', [PikkuEventTypes.channel])
   }
 
   if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
@@ -112,10 +135,12 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     await pikkuOpenAPI(cliConfig, visitState)
   }
 
-  await writeFileInDir(
-    cliConfig.bootstrapFile,
-    [...metaImports, ...imports].join('\n')
-  )
+  for (const [type, { meta, events }] of Object.entries(boostrapImports)) {
+    await writeFileInDir(
+      type === 'all' ? cliConfig.bootstrapFile : cliConfig.bootstrapFiles[type],
+      [...meta, ...events].join('\n')
+    )
+  }
 }
 
 const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {

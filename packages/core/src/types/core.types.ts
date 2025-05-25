@@ -9,6 +9,13 @@ import { SecretService } from '../services/secret-service.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { PikkuRPC } from '../rpc/rpc-types.js'
 
+export enum PikkuEventTypes {
+  http = 'http',
+  scheduled = 'scheduled',
+  channel = 'channel',
+  rpc = 'rpc',
+}
+
 export interface FunctionServicesMeta {
   optimized: boolean
   services: string[]

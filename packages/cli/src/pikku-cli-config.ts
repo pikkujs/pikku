@@ -2,6 +2,7 @@ import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import { OpenAPISpecInfo } from './openapi-spec-generator.js'
 import { InspectorFilters } from '@pikku/inspector'
+import { PikkuEventTypes } from '@pikku/core'
 
 export interface PikkuCLICoreOutputFiles {
   // Base directory
@@ -35,6 +36,7 @@ export interface PikkuCLICoreOutputFiles {
 
   // Application bootstrap
   bootstrapFile: string
+  bootstrapFiles: Record<PikkuEventTypes, string>
 }
 
 export type PikkuCLIConfig = {
@@ -205,6 +207,14 @@ const _getPikkuCLIConfig = async (
       }
       if (!result.bootstrapFile) {
         result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')
+      }
+
+      result.bootstrapFiles = result.bootstrapFiles || {}
+      for (const key of Object.keys(PikkuEventTypes)) {
+        result.bootstrapFiles[key] = join(
+          result.outDir,
+          `pikku-bootstrap-${key}.gen.ts`
+        )
       }
     }
 

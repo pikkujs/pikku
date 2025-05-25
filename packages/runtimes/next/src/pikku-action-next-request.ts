@@ -80,7 +80,7 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
     if (!this.cookieStore) {
       throw new Error('Init first needs to be called')
     }
-    return this.cookieStore.get(cookieName).value || null
+    return this.cookieStore.get(cookieName)?.value || null
   }
 
   /**

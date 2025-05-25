@@ -1,7 +1,6 @@
 export const serializeNextJsBackendWrapper = (
-  bootstrapPath: string,
+  httpBootstrapPath: string,
   routesMapPath: string,
-  schemasPath: string,
   configImport: string,
   singleServicesFactoryImport: string,
   sessionServicesImport: string
@@ -19,7 +18,7 @@ ${configImport}
 ${singleServicesFactoryImport}
 ${sessionServicesImport}
 
-import '${bootstrapPath}'
+import '${httpBootstrapPath}'
 
 let _pikku: PikkuNextJS | undefined
 
