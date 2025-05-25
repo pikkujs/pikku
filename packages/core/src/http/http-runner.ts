@@ -121,8 +121,6 @@ export const addHTTPRoute = <
   }
   addFunction(routeMeta.pikkuFuncName, {
     func: httpRoute.func,
-    auth: httpRoute.auth,
-    permissions: httpRoute.permissions,
   })
   const routes = pikkuState('http', 'routes')
   if (!routes.has(httpRoute.method)) {
