@@ -1,5 +1,19 @@
 # @pikku/cli
 
+## 0.7.6
+
+### Patch Changes
+
+- 8b4f52e: refactor: moving schemas in channels to functions
+- 1d70184: feat: adding multiple bootstrap files for different transports
+- 5c4f56f: fix: adding more options to schema generator to support complex types
+- a9427b8: fix: import bootstrap file to include all rpc/function code in nextjs wrapper
+- Updated dependencies [8b4f52e]
+- Updated dependencies [8b4f52e]
+- Updated dependencies [1d70184]
+  - @pikku/core@0.7.8
+  - @pikku/inspector@0.7.7
+
 ## 0.7.5
 
 ### Patch Changes

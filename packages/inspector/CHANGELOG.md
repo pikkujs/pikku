@@ -1,5 +1,15 @@
 # @pikku/inspector
 
+## 0.7.7
+
+### Patch Changes
+
+- 8b4f52e: refactor: moving schemas in channels to functions
+- Updated dependencies [8b4f52e]
+- Updated dependencies [8b4f52e]
+- Updated dependencies [1d70184]
+  - @pikku/core@0.7.8
+
 ## 0.7.6
 
 ### Patch Changes
