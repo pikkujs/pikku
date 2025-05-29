@@ -1,5 +1,16 @@
 # @pikku/next
 
+## 0.7.1
+
+### Patch Changes
+
+- 8b4f52e: fix: nextjs compatability with 0.7
+- 1d70184: feat: adding multiple bootstrap files for different transports
+- Updated dependencies [8b4f52e]
+- Updated dependencies [8b4f52e]
+- Updated dependencies [1d70184]
+  - @pikku/core@0.7.8
+
 ## 0.7.0
 
 - Updating to match remaining packages

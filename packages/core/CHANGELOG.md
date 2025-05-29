@@ -1,5 +1,13 @@
 ## 0.7.0
 
+## 0.7.8
+
+### Patch Changes
+
+- 8b4f52e: fix: nextjs compatability with 0.7
+- 8b4f52e: refactor: moving schemas in channels to functions
+- 1d70184: feat: adding multiple bootstrap files for different transports
+
 ## 0.7.7
 
 ### Patch Changes
