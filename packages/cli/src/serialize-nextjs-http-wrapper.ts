@@ -10,10 +10,9 @@ export const serializeNextJsHTTPWrapper = (
  */
 import { CorePikkuFetchOptions } from '@pikku/fetch'
 import type { RoutesMap, RouteHandlerOf, RoutesWithMethod } from '${routesMapPath}'
+import { PikkuFetch } from '${pikkuFetchImport}'
 
 let _pikku: PikkuFetch | undefined
-
-${pikkuFetchImport}
 
 /**
  * Initializes and returns an instance of PikkuNextJS with helper methods for handling route requests.

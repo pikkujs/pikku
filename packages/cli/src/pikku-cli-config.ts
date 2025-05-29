@@ -196,7 +196,7 @@ const _getPikkuCLIConfig = async (
       if (!result.httpRoutesMapDeclarationFile) {
         result.httpRoutesMapDeclarationFile = join(
           result.outDir,
-          'pikku-routes-map.gen.d.ts'
+          'pikku-http-routes-map.gen.d.ts'
         )
       }
       if (!result.channelsMapDeclarationFile) {

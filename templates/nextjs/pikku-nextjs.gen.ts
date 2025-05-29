@@ -13,14 +13,13 @@ import type {
   RoutesMap,
   RouteHandlerOf,
   RoutesWithMethod,
-} from '../functions/.pikku/pikku-routes-map.gen.d.js'
+} from '../functions/.pikku/pikku-http-routes-map.gen.d.js'
 
 import { createConfig as createConfig } from '../functions/src/services.js'
 import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'
 import { createSessionServices as createSessionServices } from '../functions/src/services.js'
 
-import '../functions/.pikku/pikku-routes.gen.js'
-import '../functions/.pikku/pikku-schemas/register.gen.js'
+import './.pikku/pikku-bootstrap-http.gen.js'
 
 let _pikku: PikkuNextJS | undefined
 
