@@ -88,6 +88,11 @@ function generateChannels(
 
     if (message) {
       const func = functionsMeta[message.pikkuFuncName]
+      if (!func) {
+        throw new Error(
+          `Function ${message.pikkuFuncName} not found in functionsMeta for channel ${name}`
+        )
+      }
       const inputTypes = func.inputs || null
       const outputTypes = func.outputs || null
       channelsObject[name].message = {
@@ -104,6 +109,11 @@ function generateChannels(
       }
       for (const [method, { pikkuFuncName }] of Object.entries(route)) {
         const func = functionsMeta[pikkuFuncName]
+        if (!func) {
+          throw new Error(
+            `Function ${pikkuFuncName} not found in functionsMeta for channel ${name}, route ${key}, method ${method}`
+          )
+        }
         const inputTypes = func.inputs || null
         const outputTypes = func.outputs || null
         channelsObject[name].routes[key][method] = {

@@ -38,6 +38,12 @@ export async function generateSchemas(
     skipTypeCheck: true,
     topRef: false,
     discriminatorType: 'open-api',
+    expose: 'export',
+    jsDoc: 'extended',
+    sortProps: true,
+    strictTuples: false,
+    encodeRefs: false,
+    additionalProperties: false,
   })
   const schemas: Record<string, JSONValue> = {}
   schemasSet.forEach((schema) => {
