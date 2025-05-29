@@ -145,7 +145,7 @@ export const addScheduledTask = (task: ScheduledTask) => {
   addCoreScheduledTask(task as any) // TODO
 }
 
-export const addQueueWorker = (queueWorker: QueueWorker) => {
+export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
   addCoreQueueWorker(queueWorker as any) // TODO
 }
 `
