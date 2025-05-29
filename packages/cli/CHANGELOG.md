@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.7.7
+
+### Patch Changes
+
+- a5e3903: fix: PikkuFetch import fix
+
 ## 0.7.6
 
 ### Patch Changes
