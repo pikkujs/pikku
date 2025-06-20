@@ -1,8 +1,9 @@
+import type { RPCMeta } from '@pikku/core/rpc'
+
 import { serializeImportMap } from './utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
 import { generateCustomTypes } from './utils/utils.js'
-import { RPCMeta } from '../../core/src/rpc/rpc-types.js'
 
 export const serializeTypedRPCMap = (
   relativeToPath: string,

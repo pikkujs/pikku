@@ -28,6 +28,14 @@ functions:
           method: any
 
   cron:
-    handler: dist/main.myScheduledTask
+    handler: dist/main.mySQSProcessor
     events:
-      - schedule: rate(1 day)
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MySecondQueue
+              - Arn
+          batchSize: 10
+          maximumConcurrency: 20
+          maximumBatchingWindow: 60
+          functionResponseType: ReportBatchItemFailures

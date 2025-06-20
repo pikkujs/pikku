@@ -1,19 +1,20 @@
 import type { Logger, LogLevel } from '../services/logger.js'
 import { VariablesService } from '../services/variables-service.js'
-import { EventHubService } from '../channel/eventhub-service.js'
+import { EventHubService } from '../events/channel/eventhub-service.js'
 import { SchemaService } from '../services/schema-service.js'
-import { PikkuHTTP } from '../http/http.types.js'
+import { PikkuHTTP } from '../events/http/http.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
-import { PikkuChannel } from '../channel/channel.types.js'
-import { PikkuRPC } from '../rpc/rpc-types.js'
+import { PikkuChannel } from '../events/channel/channel.types.js'
+import { PikkuRPC } from '../events/rpc/rpc-types.js'
 
 export enum PikkuEventTypes {
   http = 'http',
   scheduled = 'scheduled',
   channel = 'channel',
   rpc = 'rpc',
+  queue = 'queue',
 }
 
 export interface FunctionServicesMeta {

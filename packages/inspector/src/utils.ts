@@ -843,7 +843,7 @@ export function getPropertyAssignmentInitializer(
 export const matchesFilters = (
   filters: InspectorFilters,
   params: { tags?: string[] },
-  meta: { type: 'schedule' | 'http' | 'channel'; name: string }
+  meta: { type: 'schedule' | 'http' | 'channel' | 'queue'; name: string }
 ) => {
   if (Object.keys(filters).length === 0 || filters.tags?.length === 0) {
     return true

@@ -5,9 +5,12 @@ import {
   CoreSingletonServices,
   CoreUserSession,
   CreateSessionServices,
-  pikkuState,
 } from '@pikku/core'
-import { runScheduledTask, CoreScheduledTask } from '@pikku/core/scheduler'
+import {
+  runScheduledTask,
+  CoreScheduledTask,
+  getScheduledTasks,
+} from '@pikku/core/scheduler'
 
 export class PikkuTaskScheduler<TaskName extends string> {
   private jobs = new Map<string, CronJob>()
@@ -22,7 +25,7 @@ export class PikkuTaskScheduler<TaskName extends string> {
   ) {}
 
   public startAll() {
-    const scheduledTasks = pikkuState('scheduler', 'tasks')
+    const scheduledTasks = getScheduledTasks()
     scheduledTasks.forEach((task) => this.startJobSchedule(task))
   }
 
@@ -32,7 +35,7 @@ export class PikkuTaskScheduler<TaskName extends string> {
   }
 
   public start(names: TaskName[]) {
-    const scheduledTasks = pikkuState('scheduler', 'tasks')
+    const scheduledTasks = getScheduledTasks()
     for (const name of names) {
       const task = scheduledTasks.get(name)
       if (task) {
