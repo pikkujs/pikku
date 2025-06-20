@@ -65,7 +65,12 @@ export interface ConfigValidationResult {
 /**
  * Queue job representation
  */
-type QueueJobStatus = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
+export type QueueJobStatus =
+  | 'waiting'
+  | 'active'
+  | 'completed'
+  | 'failed'
+  | 'delayed'
 export interface QueueJob<T = any, R = any> {
   id: string
   queueName: string
