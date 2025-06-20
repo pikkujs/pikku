@@ -1,4 +1,4 @@
-import { ChannelStore } from '../channel/channel-store.js'
+import { ChannelStore } from '../events/channel/channel-store.js'
 import { CoreUserSession } from '../types/core.types.js'
 
 export interface UserSessionService<UserSession extends CoreUserSession> {

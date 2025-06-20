@@ -6,7 +6,8 @@
     "module": "Node16",
     "outDir": "dist",
     "target": "esnext",
-    "moduleResolution": "node16"
+    "moduleResolution": "node16",
+    "tsBuildInfoFile": null
   },
   "exclude": ["**/*.test.ts", "node_modules", "dist"],
   "references": []

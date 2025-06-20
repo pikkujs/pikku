@@ -34,6 +34,10 @@ export interface PikkuCLICoreOutputFiles {
   schedulersFile: string
   schedulersMetaFile: string
 
+  // Queue processors
+  queueProcessorsFile: string
+  queueProcessorsMetaFile: string
+
   // Application bootstrap
   bootstrapFile: string
   bootstrapFiles: Record<PikkuEventTypes, string>
@@ -179,6 +183,18 @@ const _getPikkuCLIConfig = async (
         result.schedulersMetaFile = join(
           result.outDir,
           'pikku-schedules-meta.gen.ts'
+        )
+      }
+      if (!result.queueProcessorsFile) {
+        result.queueProcessorsFile = join(
+          result.outDir,
+          'pikku-queue-processors.gen.ts'
+        )
+      }
+      if (!result.queueProcessorsMetaFile) {
+        result.queueProcessorsMetaFile = join(
+          result.outDir,
+          'pikku-queue-processors-meta.gen.ts'
         )
       }
       if (!result.channelsFile) {

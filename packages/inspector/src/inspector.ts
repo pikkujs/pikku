@@ -49,6 +49,10 @@ export const inspect = (
       meta: {},
       files: new Set(),
     },
+    queueProcessors: {
+      meta: {},
+      files: new Set(),
+    },
     rpc: {
       meta: {},
     },

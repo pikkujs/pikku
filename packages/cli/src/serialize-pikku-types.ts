@@ -16,7 +16,7 @@ export const serializePikkuTypes = (
 import { CoreAPIPermission, PikkuMiddleware } from '@pikku/core'
 import { CoreAPIFunction, CoreAPIFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRoute } from '@pikku/core/http'
-import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
+import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/events/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
 
 ${userSessionTypeImport}

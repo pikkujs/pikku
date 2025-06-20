@@ -1,17 +1,21 @@
-import { ChannelsMeta, CoreAPIChannel } from './channel/channel.types.js'
+import { ChannelsMeta, CoreAPIChannel } from './events/channel/channel.types.js'
 import {
   CoreHTTPFunctionRoute,
   HTTPMethod,
   HTTPRoutesMeta,
-} from './http/http.types.js'
+} from './events/http/http.types.js'
 import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
-} from './scheduler/scheduler.types.js'
+} from './events/scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
 import { CorePikkuFunctionConfig } from './function/functions.types.js'
-import { RPCMeta } from './rpc/rpc-types.js'
+import { RPCMeta } from './events/rpc/rpc-types.js'
+import {
+  QueueProcessorsMeta,
+  CoreQueueProcessor,
+} from './events/queue/queue.types.js'
 
 interface PikkuState {
   function: {
@@ -41,6 +45,10 @@ interface PikkuState {
     tasks: Map<string, CoreScheduledTask>
     meta: ScheduledTasksMeta
   }
+  queue: {
+    registrations: Map<string, CoreQueueProcessor<any, any>>
+    meta: QueueProcessorsMeta
+  }
   misc: {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
@@ -69,6 +77,10 @@ export const resetPikkuState = () => {
     scheduler: {
       tasks: new Map(),
       meta: [] as unknown as ScheduledTasksMeta,
+    },
+    queue: {
+      registrations: new Map(),
+      meta: {},
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),

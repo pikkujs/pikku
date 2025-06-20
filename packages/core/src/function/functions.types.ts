@@ -1,4 +1,4 @@
-import { PikkuChannel } from '../channel/channel.types.js'
+import { PikkuChannel } from '../events/channel/channel.types.js'
 import type {
   CoreServices,
   CoreSingletonServices,

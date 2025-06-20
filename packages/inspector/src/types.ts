@@ -1,9 +1,10 @@
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPRoutesMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
+import { QueueProcessorsMeta } from '@pikku/core/queue'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta } from '@pikku/core'
-import { RPCMeta } from '../../core/src/rpc/rpc-types.js'
+import { RPCMeta } from '@pikku/core/rpc'
 
 export type PathToNameAndType = Map<
   string,
@@ -51,6 +52,10 @@ export interface InspectorState {
   channels: InspectorChannelState
   scheduledTasks: {
     meta: ScheduledTasksMeta
+    files: Set<string>
+  }
+  queueProcessors: {
+    meta: QueueProcessorsMeta
     files: Set<string>
   }
   rpc: {
