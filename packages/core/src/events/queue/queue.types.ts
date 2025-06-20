@@ -65,16 +65,19 @@ export interface ConfigValidationResult {
 /**
  * Queue job representation
  */
+type QueueJobStatus = 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
 export interface QueueJob<T = any, R = any> {
+  id: string
   queueName: string
+  status: () => Promise<QueueJobStatus> | QueueJobStatus
   data: T
-  status: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed'
+  createdAt: Date
+
   result?: R
-  id?: string
+
   progress?: number
   attemptsMade?: number
   maxAttempts?: number
-  createdAt?: Date
   processedAt?: Date
   completedAt?: Date
   failedAt?: Date

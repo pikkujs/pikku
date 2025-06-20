@@ -1,8 +1,8 @@
 import { ScheduledHandler, SQSHandler } from 'aws-lambda'
 import { runScheduledTask } from '@pikku/core/scheduler'
-import { runQueueJob } from '@pikku/core/queue'
 import { APIGatewayProxyEvent } from 'aws-lambda'
 import { runFetch } from '@pikku/lambda/http'
+import { runSQSQueueMessage } from '@pikku/lambda/queue'
 import { createSessionServices } from '../../functions/src/services.js'
 import { coldStart } from './cold-start.js'
 
@@ -22,10 +22,7 @@ export const myScheduledTask: ScheduledHandler = async () => {
   })
 }
 
-export const mySQSProcessor: SQSHandler = async () => {
+export const mySQSProcessor: SQSHandler = async (event) => {
   const singletonServices = await coldStart()
-  await runQueueJob({
-    singletonServices,
-    job: {}, // Convert SQS message to job format
-  } as any)
+  await runSQSQueueMessage(singletonServices, createSessionServices, event)
 }

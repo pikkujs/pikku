@@ -3510,17 +3510,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/queue-sqs@workspace:packages/services/queue-sqs":
-  version: 0.0.0-use.local
-  resolution: "@pikku/queue-sqs@workspace:packages/services/queue-sqs"
-  dependencies:
-    typescript: "npm:^5.6"
-  peerDependencies:
-    "@aws-sdk/client-sqs": ^3.0.0
-    "@pikku/core": ^0.7.0
-  languageName: unknown
-  linkType: soft
-
 "@pikku/schedule@npm:^0.7.0, @pikku/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@pikku/schedule@workspace:packages/schedule"

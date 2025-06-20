@@ -1,5 +1,10 @@
 import Bull from 'bull'
-import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
+import type {
+  QueueService,
+  QueueJob,
+  JobOptions,
+  QueueJobStatus,
+} from '@pikku/core/queue'
 
 /**
  * Bull/Redis queue service implementation
@@ -100,11 +105,7 @@ export class BullQueueService implements QueueService {
     return this.mapBullJobToQueueJob<T, R>(bullJob)
   }
 
-  public async waitForResult<R>(
-    queueName: string,
-    jobId: string,
-    timeout?: number
-  ): Promise<R> {
+  public async waitForResult<R>(queueName: string, jobId: string): Promise<R> {
     const queue = this.queues.get(queueName)
     if (!queue) {
       throw new Error(`Queue '${queueName}' not found.`)
@@ -129,15 +130,12 @@ export class BullQueueService implements QueueService {
   protected async mapBullJobToQueueJob<In, Out>(
     bullJob: Bull.Job
   ): Promise<QueueJob<In, Out>> {
-    const state = await bullJob.getState()
-    const status = this.mapBullStateToStatus(state)
-
     return {
       queueName: bullJob.queue.name,
       id: bullJob.id?.toString() || '',
       data: bullJob.data,
       result: bullJob.returnvalue as Out,
-      status,
+      status: async () => this.mapBullStateToStatus(await bullJob.getState()),
       progress: bullJob.progress(),
       attemptsMade: bullJob.attemptsMade,
       maxAttempts: bullJob.opts.attempts || 1,
@@ -156,7 +154,7 @@ export class BullQueueService implements QueueService {
   /**
    * Map Bull job state to our queue job status
    */
-  private mapBullStateToStatus(state: string): QueueJob['status'] {
+  private mapBullStateToStatus(state: string): QueueJobStatus {
     switch (state) {
       case 'waiting':
         return 'waiting'

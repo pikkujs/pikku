@@ -19,7 +19,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./http": "./dist/http/index.js",
-    "./websocket": "./dist/websocket/index.js"
+    "./websocket": "./dist/websocket/index.js",
+    "./queue": "./dist/queue/index.js"
   },
   "peerDependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.713.0",
