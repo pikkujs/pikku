@@ -25,6 +25,7 @@ import { pikkuFunctions } from './pikku-functions.js'
 import { pikkuRPC } from './pikku-rpc.js'
 import { pikkuRPCMap } from './pikku-rpc-map.js'
 import { PikkuEventTypes } from '@pikku/core'
+import { pikkuQueue } from './pikku-queue.js'
 
 const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const boostrapImports: Partial<
@@ -111,6 +112,14 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   if (scheduled) {
     addImport(cliConfig.schedulersMetaFile, 'meta', [PikkuEventTypes.scheduled])
     addImport(cliConfig.schedulersFile, 'events', [PikkuEventTypes.scheduled])
+  }
+
+  const queues = await pikkuQueue(cliConfig, visitState)
+  if (queues) {
+    addImport(cliConfig.queueProcessorsMetaFile, 'meta', [
+      PikkuEventTypes.queue,
+    ])
+    addImport(cliConfig.queueProcessorsFile, 'events', [PikkuEventTypes.queue])
   }
 
   const channels = await pikkuChannels(cliConfig, visitState)

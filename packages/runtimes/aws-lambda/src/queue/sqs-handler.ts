@@ -35,7 +35,11 @@ export function mapSQSRecordToQueueJob(record: SQSRecord): QueueJob {
     createdAt: new Date(parseInt(record.attributes.SentTimestamp)),
     processedAt: new Date(),
     attemptsMade: parseInt(record.attributes.ApproximateReceiveCount) - 1,
-    maxAttempts: undefined, // SQS doesn't expose max attempts directly
+    maxAttempts: undefined, // SQS doesn't expose max attempts directly,
+    waitForCompletion: async () => {
+      // SQS does not support waiting for completion like other queues
+      throw new Error('SQS does not support waitForCompletion')
+    },
   }
 
   return job

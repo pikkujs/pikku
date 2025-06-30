@@ -4,52 +4,59 @@
 import { pikkuState } from '@pikku/core'
 pikkuState('rpc', 'meta', {
   onConnect: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L9C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
     exposed: false,
   },
   onDisconnect: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L18C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L18C3',
     exposed: false,
   },
   authenticate: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L28C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L28C3',
     exposed: false,
   },
   subscribe: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L37C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L37C3',
     exposed: false,
   },
   unsubscribe: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L43C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L43C3',
     exposed: false,
   },
   emitMessage: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L51C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L51C3',
     exposed: false,
   },
   onMessage: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L60C3',
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L60C3',
     exposed: false,
   },
   progressiveEnhancementExample: {
-    pikkuFuncName:
-      'pikkuFn____functions_src_http_progressive_enhancement_ts_L10C3',
+    pikkuFuncName: 'pikkuFn_src_http_progressive_enhancement_functions_ts_L6C3',
     exposed: false,
   },
   timeSinceOpened: {
-    pikkuFuncName: 'pikkuFn____functions_src_http_sse_ts_L7C3',
+    pikkuFuncName: 'pikkuFn_src_http_sse_functions_ts_L6C3',
     exposed: false,
   },
   helloWorld: {
-    pikkuFuncName: 'pikkuFn____functions_src_http_ts_L6C54',
+    pikkuFuncName: 'pikkuFn_src_http_functions_ts_L3C54',
+    exposed: false,
+  },
+  queueProcessor: {
+    pikkuFuncName: 'pikkuFn_src_queue_processor_functions_ts_L6C3',
     exposed: false,
   },
   rpcTest: {
-    pikkuFuncName: 'pikkuFn____functions_src_rpc_ts_L7C3',
+    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L4C3',
     exposed: false,
   },
   rpcCaller: {
-    pikkuFuncName: 'pikkuFn____functions_src_rpc_ts_L18C47',
+    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L15C47',
+    exposed: false,
+  },
+  myScheduledTask: {
+    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L7C3',
     exposed: false,
   },
 })

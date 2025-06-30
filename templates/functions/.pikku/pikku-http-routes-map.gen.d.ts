@@ -22,6 +22,8 @@ export type ProgressiveEnhancementExampleOutput = {
   state: 'initial' | 'pending' | 'done'
 }
 export type TimeSinceOpenedOutput = { count: number }
+export type QueueProcessorInput = { message: string; fail: boolean }
+export type QueueProcessorOutput = { result: string }
 export type RpcTestInput = { in: number }
 
 // The '& {}' is a workaround for not directly refering to a type since it confuses typescript

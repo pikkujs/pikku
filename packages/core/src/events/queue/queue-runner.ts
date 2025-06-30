@@ -25,14 +25,14 @@ export const addQueueProcessor = <
     OutputData
   > = CoreAPIFunctionSessionless<InputData, OutputData>,
 >(
-  queueProcessor: CoreQueueProcessor<InputData, OutputData, APIFunction>
+  queueProcessor: CoreQueueProcessor<APIFunction>
 ) => {
   // Get processor metadata
   const meta = pikkuState('queue', 'meta')
-  const processorMeta = meta[queueProcessor.name]
+  const processorMeta = meta[queueProcessor.queueName]
   if (!processorMeta) {
     throw new Error(
-      `Queue processor metadata not found for '${queueProcessor.name}'. Make sure to run the CLI to generate metadata.`
+      `Queue processor metadata not found for '${queueProcessor.queueName}'. Make sure to run the CLI to generate metadata.`
     )
   }
 
@@ -43,7 +43,7 @@ export const addQueueProcessor = <
 
   // Store processor definition in state - runtime adapters will pick this up
   const registrations = pikkuState('queue', 'registrations')
-  registrations.set(queueProcessor.name, queueProcessor)
+  registrations.set(queueProcessor.queueName, queueProcessor)
 }
 
 /**
@@ -84,11 +84,12 @@ export async function runQueueJob({
   const meta = pikkuState('queue', 'meta')
   const processorMeta = meta[job.queueName]
   if (!processorMeta) {
+    console.log('throwing an error', job.queueName, meta)
     throw new Error(`Processor metadata not found for: ${job.queueName}`)
   }
 
   try {
-    logger.debug(`Processing job ${job.id} in queue ${job.queueName}`)
+    logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
     // Use provided singleton services
     const getAllServices = () => ({

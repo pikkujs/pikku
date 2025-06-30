@@ -1,7 +1,4 @@
-import {
-  addHTTPRoute,
-  pikkuSessionlessFunc,
-} from '../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 export const rpcTest = pikkuSessionlessFunc<{ in: number }>(
   async ({ logger, rpc }, data) => {
@@ -18,18 +15,4 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>(
 export const rpcCaller = pikkuSessionlessFunc(async ({ rpc, logger }) => {
   logger.info(`RPC Caller with RPC: ${rpc?.depth}`)
   return await rpc?.invoke(`rpcTest`, { in: 0 })
-})
-
-addHTTPRoute({
-  auth: false,
-  method: 'get',
-  route: '/rpc',
-  func: rpcCaller,
-})
-
-addHTTPRoute({
-  auth: false,
-  method: 'get',
-  route: '/dummy',
-  func: rpcTest,
 })

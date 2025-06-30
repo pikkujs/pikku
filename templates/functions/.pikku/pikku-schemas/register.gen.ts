@@ -3,41 +3,47 @@
  */
 import { addSchema } from '@pikku/core/schema'
 
-import * as OnConnectInput from './schemas/OnConnectInput.schema.json' with { type: 'json' }
+import * as OnConnectInput from './schemas/OnConnectInput.schema.json'
 addSchema('OnConnectInput', OnConnectInput)
 
-import * as AuthenticateInput from './schemas/AuthenticateInput.schema.json' with { type: 'json' }
+import * as AuthenticateInput from './schemas/AuthenticateInput.schema.json'
 addSchema('AuthenticateInput', AuthenticateInput)
 
-import * as AuthenticateOutput from './schemas/AuthenticateOutput.schema.json' with { type: 'json' }
+import * as AuthenticateOutput from './schemas/AuthenticateOutput.schema.json'
 addSchema('AuthenticateOutput', AuthenticateOutput)
 
-import * as SubscribeInput from './schemas/SubscribeInput.schema.json' with { type: 'json' }
+import * as SubscribeInput from './schemas/SubscribeInput.schema.json'
 addSchema('SubscribeInput', SubscribeInput)
 
-import * as UnsubscribeInput from './schemas/UnsubscribeInput.schema.json' with { type: 'json' }
+import * as UnsubscribeInput from './schemas/UnsubscribeInput.schema.json'
 addSchema('UnsubscribeInput', UnsubscribeInput)
 
-import * as EmitMessageInput from './schemas/EmitMessageInput.schema.json' with { type: 'json' }
+import * as EmitMessageInput from './schemas/EmitMessageInput.schema.json'
 addSchema('EmitMessageInput', EmitMessageInput)
 
-import * as EmitMessageOutput from './schemas/EmitMessageOutput.schema.json' with { type: 'json' }
+import * as EmitMessageOutput from './schemas/EmitMessageOutput.schema.json'
 addSchema('EmitMessageOutput', EmitMessageOutput)
 
-import * as OnMessageInput from './schemas/OnMessageInput.schema.json' with { type: 'json' }
+import * as OnMessageInput from './schemas/OnMessageInput.schema.json'
 addSchema('OnMessageInput', OnMessageInput)
 
-import * as OnMessageOutput from './schemas/OnMessageOutput.schema.json' with { type: 'json' }
+import * as OnMessageOutput from './schemas/OnMessageOutput.schema.json'
 addSchema('OnMessageOutput', OnMessageOutput)
 
-import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json' with { type: 'json' }
+import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json'
 addSchema(
   'ProgressiveEnhancementExampleOutput',
   ProgressiveEnhancementExampleOutput
 )
 
-import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json' with { type: 'json' }
+import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json'
 addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
 
-import * as RpcTestInput from './schemas/RpcTestInput.schema.json' with { type: 'json' }
+import * as QueueProcessorInput from './schemas/QueueProcessorInput.schema.json'
+addSchema('QueueProcessorInput', QueueProcessorInput)
+
+import * as QueueProcessorOutput from './schemas/QueueProcessorOutput.schema.json'
+addSchema('QueueProcessorOutput', QueueProcessorOutput)
+
+import * as RpcTestInput from './schemas/RpcTestInput.schema.json'
 addSchema('RpcTestInput', RpcTestInput)

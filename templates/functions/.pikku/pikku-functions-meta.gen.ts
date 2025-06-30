@@ -3,8 +3,8 @@
  */
 import { pikkuState } from '@pikku/core'
 pikkuState('function', 'meta', {
-  pikkuFn____functions_src_channel_functions_ts_L9C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L9C3',
+  pikkuFn_src_channel_functions_ts_L9C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
     name: 'onConnect',
     services: {
       optimized: true,
@@ -14,8 +14,8 @@ pikkuState('function', 'meta', {
     inputs: ['OnConnectInput'],
     outputs: [],
   },
-  pikkuFn____functions_src_channel_functions_ts_L18C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L18C3',
+  pikkuFn_src_channel_functions_ts_L18C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L18C3',
     name: 'onDisconnect',
     services: {
       optimized: true,
@@ -25,8 +25,8 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: [],
   },
-  pikkuFn____functions_src_channel_functions_ts_L28C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L28C3',
+  pikkuFn_src_channel_functions_ts_L28C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L28C3',
     name: 'authenticate',
     services: {
       optimized: true,
@@ -36,8 +36,8 @@ pikkuState('function', 'meta', {
     inputs: ['AuthenticateInput'],
     outputs: ['AuthenticateOutput'],
   },
-  pikkuFn____functions_src_channel_functions_ts_L37C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L37C3',
+  pikkuFn_src_channel_functions_ts_L37C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L37C3',
     name: 'subscribe',
     services: {
       optimized: true,
@@ -47,8 +47,8 @@ pikkuState('function', 'meta', {
     inputs: ['SubscribeInput'],
     outputs: [],
   },
-  pikkuFn____functions_src_channel_functions_ts_L43C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L43C3',
+  pikkuFn_src_channel_functions_ts_L43C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L43C3',
     name: 'unsubscribe',
     services: {
       optimized: true,
@@ -58,8 +58,8 @@ pikkuState('function', 'meta', {
     inputs: ['UnsubscribeInput'],
     outputs: [],
   },
-  pikkuFn____functions_src_channel_functions_ts_L51C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L51C3',
+  pikkuFn_src_channel_functions_ts_L51C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L51C3',
     name: 'emitMessage',
     services: {
       optimized: true,
@@ -69,8 +69,8 @@ pikkuState('function', 'meta', {
     inputs: ['EmitMessageInput'],
     outputs: ['EmitMessageOutput'],
   },
-  pikkuFn____functions_src_channel_functions_ts_L60C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L60C3',
+  pikkuFn_src_channel_functions_ts_L60C3: {
+    pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L60C3',
     name: 'onMessage',
     services: {
       optimized: true,
@@ -80,9 +80,8 @@ pikkuState('function', 'meta', {
     inputs: ['OnMessageInput'],
     outputs: ['OnMessageOutput'],
   },
-  pikkuFn____functions_src_http_progressive_enhancement_ts_L10C3: {
-    pikkuFuncName:
-      'pikkuFn____functions_src_http_progressive_enhancement_ts_L10C3',
+  pikkuFn_src_http_progressive_enhancement_functions_ts_L6C3: {
+    pikkuFuncName: 'pikkuFn_src_http_progressive_enhancement_functions_ts_L6C3',
     name: 'progressiveEnhancementExample',
     services: {
       optimized: false,
@@ -92,8 +91,8 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: ['ProgressiveEnhancementExampleOutput'],
   },
-  pikkuFn____functions_src_http_sse_ts_L7C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_http_sse_ts_L7C3',
+  pikkuFn_src_http_sse_functions_ts_L6C3: {
+    pikkuFuncName: 'pikkuFn_src_http_sse_functions_ts_L6C3',
     name: 'timeSinceOpened',
     services: {
       optimized: true,
@@ -103,8 +102,8 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: ['TimeSinceOpenedOutput'],
   },
-  pikkuFn____functions_src_http_ts_L6C54: {
-    pikkuFuncName: 'pikkuFn____functions_src_http_ts_L6C54',
+  pikkuFn_src_http_functions_ts_L3C54: {
+    pikkuFuncName: 'pikkuFn_src_http_functions_ts_L3C54',
     name: 'helloWorld',
     services: {
       optimized: true,
@@ -114,8 +113,19 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: ['string'],
   },
-  pikkuFn____functions_src_rpc_ts_L7C3: {
-    pikkuFuncName: 'pikkuFn____functions_src_rpc_ts_L7C3',
+  pikkuFn_src_queue_processor_functions_ts_L6C3: {
+    pikkuFuncName: 'pikkuFn_src_queue_processor_functions_ts_L6C3',
+    name: 'queueProcessor',
+    services: {
+      optimized: true,
+      services: [],
+    },
+    schemaName: 'QueueProcessorInput',
+    inputs: ['QueueProcessorInput'],
+    outputs: ['QueueProcessorOutput'],
+  },
+  pikkuFn_src_rpc_functions_ts_L4C3: {
+    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L4C3',
     name: 'rpcTest',
     services: {
       optimized: true,
@@ -125,8 +135,8 @@ pikkuState('function', 'meta', {
     inputs: ['RpcTestInput'],
     outputs: [],
   },
-  pikkuFn____functions_src_rpc_ts_L18C47: {
-    pikkuFuncName: 'pikkuFn____functions_src_rpc_ts_L18C47',
+  pikkuFn_src_rpc_functions_ts_L15C47: {
+    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L15C47',
     name: 'rpcCaller',
     services: {
       optimized: true,
@@ -136,9 +146,9 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: [],
   },
-  pikkuFn____functions_src_scheduled_task_ts_L6C58: {
-    pikkuFuncName: 'pikkuFn____functions_src_scheduled_task_ts_L6C58',
-    name: 'pikkuFn____functions_src_scheduled_task_ts_L6C58',
+  pikkuFn_src_scheduled_task_functions_ts_L7C3: {
+    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L7C3',
+    name: 'myScheduledTask',
     services: {
       optimized: true,
       services: ['logger'],

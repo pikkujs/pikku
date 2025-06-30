@@ -4,7 +4,7 @@
 import { pikkuState } from '@pikku/core'
 pikkuState('scheduler', 'meta', {
   myScheduledTask: {
-    pikkuFuncName: 'pikkuFn____functions_src_scheduled_task_ts_L6C58',
+    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L7C3',
     name: 'myScheduledTask',
     schedule: '*/1 * * * *',
     tags: ['hello'],

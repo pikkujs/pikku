@@ -22,6 +22,8 @@ export type ProgressiveEnhancementExampleOutput = {
   state: 'initial' | 'pending' | 'done'
 }
 export type TimeSinceOpenedOutput = { count: number }
+export type QueueProcessorInput = { message: string; fail: boolean }
+export type QueueProcessorOutput = { result: string }
 export type RpcTestInput = { in: number }
 
 interface RPCHandler<I, O> {
@@ -43,8 +45,10 @@ export type RPCMap = {
   >
   readonly timeSinceOpened: RPCHandler<null, TimeSinceOpenedOutput>
   readonly helloWorld: RPCHandler<null, string>
+  readonly queueProcessor: RPCHandler<QueueProcessorInput, QueueProcessorOutput>
   readonly rpcTest: RPCHandler<RpcTestInput, null>
   readonly rpcCaller: RPCHandler<null, null>
+  readonly myScheduledTask: RPCHandler<null, null>
 }
 
 type RPCInvoke = <Name extends keyof RPCMap>(

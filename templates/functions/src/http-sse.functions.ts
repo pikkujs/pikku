@@ -1,4 +1,3 @@
-import { addHTTPRoute } from '@pikku/core'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 export const timeSinceOpened = pikkuSessionlessFunc<
@@ -16,12 +15,4 @@ export const timeSinceOpened = pikkuSessionlessFunc<
   // }, 1000)
 
   return { count }
-})
-
-addHTTPRoute({
-  auth: false,
-  method: 'get',
-  route: '/sse',
-  func: timeSinceOpened,
-  sse: true,
 })

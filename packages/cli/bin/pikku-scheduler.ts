@@ -25,7 +25,7 @@ export const pikkuScheduler = async (
       await writeFileInDir(
         schedulersFile,
         serializeFileImports(
-          'addSerializedTasks',
+          'addScheduledTasks',
           schedulersFile,
           scheduledTasks.files,
           packageMappings

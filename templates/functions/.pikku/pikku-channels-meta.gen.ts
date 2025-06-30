@@ -13,16 +13,16 @@ pikkuState('channel', 'meta', {
     messageRoutes: {
       action: {
         auth: {
-          pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L28C3',
+          pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L28C3',
         },
         subscribe: {
-          pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L37C3',
+          pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L37C3',
         },
         unsubscribe: {
-          pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L43C3',
+          pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L43C3',
         },
         emit: {
-          pikkuFuncName: 'pikkuFn____functions_src_channel_functions_ts_L51C3',
+          pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L51C3',
         },
       },
     },
@@ -39,7 +39,7 @@ pikkuState('channel', 'meta', {
       action: {
         status: {
           pikkuFuncName:
-            'pikkuFn____functions_src_http_progressive_enhancement_ts_L10C3',
+            'pikkuFn_src_http_progressive_enhancement_functions_ts_L6C3',
         },
       },
     },

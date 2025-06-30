@@ -46,7 +46,7 @@ interface PikkuState {
     meta: ScheduledTasksMeta
   }
   queue: {
-    registrations: Map<string, CoreQueueProcessor<any, any>>
+    registrations: Map<string, CoreQueueProcessor>
     meta: QueueProcessorsMeta
   }
   misc: {

@@ -2,7 +2,11 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { APIDocs } from '@pikku/core'
 import { InspectorFilters, InspectorState } from './types.js'
-import { extractFunctionName, matchesFilters } from './utils.js'
+import {
+  extractFunctionName,
+  getPropertyAssignmentInitializer,
+  matchesFilters,
+} from './utils.js'
 
 export const addSchedule = (
   node: ts.Node,
@@ -35,22 +39,21 @@ export const addSchedule = (
     const docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
     const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
 
-    // --- find the referenced function ---
-    const funcProp = obj.properties.find(
-      (p) =>
-        ts.isPropertyAssignment(p) &&
-        ts.isIdentifier(p.name) &&
-        p.name.text === 'func'
-    ) as ts.PropertyAssignment | undefined
-
-    if (!funcProp || !ts.isIdentifier(funcProp.initializer)) {
+    const funcInitializer = getPropertyAssignmentInitializer(
+      obj,
+      'func',
+      true,
+      checker
+    )
+    if (!funcInitializer) {
       console.error(
         `• No valid 'func' property for scheduled task '${nameValue}'.`
       )
       return
     }
+
     const pikkuFuncName = extractFunctionName(
-      funcProp.initializer,
+      funcInitializer,
       checker
     ).pikkuFuncName
 

@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/queue-bull",
+  "name": "@pikku/queue-bullmq",
   "version": "0.7.0",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -16,8 +16,8 @@
     "@pikku/core": "^0.7.0"
   },
   "dependencies": {
-    "bull": "^4.16.5",
-    "redis": "^4.6.0"
+    "bullmq": "^5.56.0",
+    "ioredis": "^5.6.1"
   },
   "devDependencies": {
     "typescript": "^5.6"

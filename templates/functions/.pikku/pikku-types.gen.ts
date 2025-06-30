@@ -24,6 +24,10 @@ import {
   PikkuChannel,
   addChannel as addCoreChannel,
 } from '@pikku/core/channel'
+import {
+  CoreQueueProcessor,
+  addQueueProcessor as addCoreQueueProcessor,
+} from '@pikku/core/queue'
 
 import type { UserSession } from '../types/application-types.d.js'
 import type { SingletonServices } from '../types/application-types.d.js'
@@ -86,6 +90,9 @@ type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<
 type ScheduledTask = CoreScheduledTask<
   APIFunctionSessionless<void, void>,
   UserSession
+>
+type QueueProcessor<In, Out> = CoreQueueProcessor<
+  APIFunctionSessionless<In, Out>
 >
 
 export const pikkuFunc = <In, Out = unknown>(
@@ -182,4 +189,8 @@ export const addHTTPRoute = <In, Out, Route extends string>(
 
 export const addScheduledTask = (task: ScheduledTask) => {
   addCoreScheduledTask(task as any) // TODO
+}
+
+export const addQueueProcessor = (queueProcessor: QueueProcessor) => {
+  addCoreQueueProcessor(queueProcessor as any) // TODO
 }

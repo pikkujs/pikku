@@ -16,8 +16,9 @@ export const serializePikkuTypes = (
 import { CoreAPIPermission, PikkuMiddleware } from '@pikku/core'
 import { CoreAPIFunction, CoreAPIFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRoute } from '@pikku/core/http'
-import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/events/scheduler'
+import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
+import { CoreQueueProcessor, addQueueProcessor as addCoreQueueProcessor } from '@pikku/core/queue'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -54,6 +55,7 @@ type APIFunction<
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>, APIMiddleware>
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
+type QueueProcessor<In, Out> = CoreQueueProcessor<APIFunctionSessionless<In, Out>>
 
 export const pikkuFunc = <In, Out = unknown>(
   func:
@@ -141,6 +143,10 @@ export const addHTTPRoute = <In, Out, Route extends string>(
 
 export const addScheduledTask = (task: ScheduledTask) => {
   addCoreScheduledTask(task as any) // TODO
+}
+
+export const addQueueProcessor = (queueProcessor: QueueProcessor) => {
+  addCoreQueueProcessor(queueProcessor as any) // TODO
 }
 `
 }

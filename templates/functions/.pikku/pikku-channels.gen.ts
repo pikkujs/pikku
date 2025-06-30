@@ -3,4 +3,4 @@
  */
 /* The files with an addChannel function call */
 import '../src/channel.routes.js'
-import '../src/http-progressive-enhancement.js'
+import '../src/http-progressive-enhancement.routes.js'
