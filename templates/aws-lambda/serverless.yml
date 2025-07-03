@@ -28,14 +28,28 @@ functions:
           method: any
 
   cron:
-    handler: dist/main.mySQSProcessor
+    handler: dist/main.myScheduledTask
+    events:
+      - schedule: rate(1 day)
+
+  sqs:
+    handler: dist/main.mySQSWorker
     events:
       - sqs:
           arn:
             Fn::GetAtt:
-              - MySecondQueue
+              - PikkuTemplateQueue
               - Arn
           batchSize: 10
           maximumConcurrency: 20
           maximumBatchingWindow: 60
           functionResponseType: ReportBatchItemFailures
+
+resources:
+  Resources:
+    PikkuTemplateQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: hello-world-queue
+        # Add other queue properties as needed
+        MessageRetentionPeriod: 1209600

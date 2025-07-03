@@ -1,1 +1,1 @@
-export { runSQSQueueMessage } from './sqs-handler.js'
+export { runSQSQueueWorker } from './sqs-worker.js'

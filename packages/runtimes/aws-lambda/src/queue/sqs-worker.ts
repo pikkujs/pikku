@@ -4,63 +4,68 @@ import type {
   CoreSingletonServices,
   CreateSessionServices,
   QueueJob,
+  QueueJobStatus,
 } from '@pikku/core'
 
 /**
- * Convert SQS record to Pikku queue job format
+ * Enhanced version with additional SQS-specific features
  */
-export function mapSQSRecordToQueueJob(record: SQSRecord): QueueJob {
+export function mapSQSRecordToQueueJob(
+  record: SQSRecord,
+  maxAttempts?: number
+): QueueJob {
   let data: any
 
   try {
-    // Try to parse as JSON first
     data = JSON.parse(record.body)
   } catch {
-    // Fall back to raw string if not valid JSON
     data = record.body
   }
 
-  // Extract queue name from source ARN or use default
-  // SQS ARN format: arn:aws:sqs:region:account:queue-name
   if (!record.eventSourceARN) {
     throw new Error('SQS record does not have eventSourceARN')
   }
+
   const queueName = record.eventSourceARN.split(':').pop()!
 
   const job: QueueJob = {
     queueName,
     data,
-    status: () => 'active',
     id: record.messageId,
+    status: async () => 'active' as QueueJobStatus,
     createdAt: new Date(parseInt(record.attributes.SentTimestamp)),
     processedAt: new Date(),
     attemptsMade: parseInt(record.attributes.ApproximateReceiveCount) - 1,
-    maxAttempts: undefined, // SQS doesn't expose max attempts directly,
+    maxAttempts, // Can be provided from queue configuration
+    result: undefined,
+    progress: 0,
+    completedAt: undefined,
+    failedAt: undefined,
+    error: undefined,
     waitForCompletion: async () => {
-      // SQS does not support waiting for completion like other queues
-      throw new Error('SQS does not support waitForCompletion')
+      throw new Error(
+        'SQS does not support waitForCompletion - jobs are fire-and-forget'
+      )
     },
+
+    // Additional SQS-specific metadata could be added here
+    // messageAttributes: record.messageAttributes,
+    // messageGroupId: record.attributes.MessageGroupId, // FIFO queues
+    // messageDeduplicationId: record.attributes.MessageDeduplicationId, // FIFO queues
   }
 
   return job
 }
 
 /**
- * Process all SQS records from an SQS event
- */
-export function mapSQSEventToQueueJobs(event: SQSEvent): QueueJob[] {
-  return event.Records.map(mapSQSRecordToQueueJob)
-}
-
-/**
  * Create an SQS handler that processes queue jobs using Pikku
  */
-export const runSQSQueueMessage = async (
+export const runSQSQueueWorker = async (
   singletonServices: CoreSingletonServices,
   createSessionServices: CreateSessionServices<any, any, any> | undefined,
   event: SQSEvent
 ): Promise<SQSBatchResponse> => {
-  const jobs = mapSQSEventToQueueJobs(event)
+  const jobs = event.Records.map(mapSQSRecordToQueueJob)
 
   // Process all jobs in parallel
   const results = await Promise.allSettled(
