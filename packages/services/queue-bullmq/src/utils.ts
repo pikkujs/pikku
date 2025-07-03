@@ -46,15 +46,19 @@ export const mapBullJobToQueueJob = async <In, Out>(
       }
       return await bullJob.waitUntilFinished(queueEvents, ttl)
     },
-    progress: Number(bullJob.progress),
-    attemptsMade: bullJob.attemptsMade,
-    maxAttempts: bullJob.opts.attempts || 1,
-    createdAt: new Date(bullJob.timestamp),
-    processedAt: bullJob.processedOn
-      ? new Date(bullJob.processedOn)
-      : undefined,
-    completedAt: bullJob.finishedOn ? new Date(bullJob.finishedOn) : undefined,
-    failedAt: bullJob.finishedOn ? new Date(bullJob.finishedOn) : undefined,
-    error: bullJob.failedReason,
+    metadata: () => ({
+      progress: bullJob.progress,
+      attemptsMade: bullJob.attemptsMade,
+      maxAttempts: bullJob.opts.attempts || 1,
+      createdAt: new Date(bullJob.timestamp),
+      processedAt: bullJob.processedOn
+        ? new Date(bullJob.processedOn)
+        : undefined,
+      completedAt: bullJob.finishedOn
+        ? new Date(bullJob.finishedOn)
+        : undefined,
+      failedAt: bullJob.finishedOn ? new Date(bullJob.finishedOn) : undefined,
+      error: bullJob.failedReason,
+    }),
   }
 }

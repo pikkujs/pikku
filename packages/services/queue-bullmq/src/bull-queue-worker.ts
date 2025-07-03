@@ -6,11 +6,11 @@ import Bull, {
 } from 'bullmq'
 import type {
   QueueWorkers,
-  QueueCapabilities,
-  ConfigValidationResult,
   PikkuWorkerConfig,
+  QueueConfigMapping,
+  ConfigValidationResult,
 } from '@pikku/core/queue'
-import { getQueueProcessors, runQueueJob } from '@pikku/core/queue'
+import { runQueueJob, registerQueueProcessors } from '@pikku/core/queue'
 import {
   CoreServices,
   CoreSingletonServices,
@@ -68,18 +68,70 @@ export class BullQueueWorkers implements QueueWorkers {
   readonly name = 'bull'
   readonly supportsResults = true
 
-  readonly capabilities: QueueCapabilities = {
-    retryAttempts: true,
-    retryBackoff: true,
-    deadLetterQueue: false, // Bull handles failures differently
-    concurrency: true,
-    batchProcessing: false, // Bull processes jobs individually
-    priority: true,
-    fifo: true,
-    visibilityTimeout: false, // Redis/Bull doesn't use visibility timeout
-    messageRetention: true,
-    prefetch: false, // Bull manages this internally
-    pollInterval: false, // Bull is push-based, not poll-based
+  /**
+   * Configuration mapping rules for BullMQ
+   * This defines how Pikku worker configs map to BullMQ configurations
+   */
+  readonly configMappings: QueueConfigMapping = {
+    // Configurations that are directly supported
+    supported: {
+      name: {
+        queueProperty: 'name',
+        description: 'Worker name for identification and monitoring',
+      },
+      batchSize: {
+        queueProperty: 'concurrency',
+        description:
+          "Number of jobs to process concurrently, this is Bull's concurrency setting",
+      },
+      autorun: {
+        queueProperty: 'autorun',
+        description: 'Whether to start processing jobs automatically',
+      },
+      lockDuration: {
+        queueProperty: 'lockDuration',
+        description: 'Duration of job lock in milliseconds',
+      },
+      drainDelay: {
+        queueProperty: 'drainDelay',
+        description: 'Delay when queue is empty before polling again',
+      },
+      maxStalledCount: {
+        queueProperty: 'maxStalledCount',
+        description:
+          'Maximum number of times a job can be recovered from stalled state',
+      },
+      removeOnComplete: {
+        queueProperty: 'removeOnComplete',
+        description: 'Number of completed jobs to keep for inspection',
+      },
+      removeOnFail: {
+        queueProperty: 'removeOnFail',
+        description: 'Number of failed jobs to keep for inspection',
+      },
+    },
+
+    // Configurations that are not supported
+    unsupported: {
+      visibilityTimeout: {
+        reason: 'Bull does not use visibility timeout',
+        explanation:
+          'BullMQ locks jobs during processing instead of using visibility timeouts',
+      },
+      pollInterval: {
+        reason: 'Bull is push-based and does not use polling intervals',
+        explanation:
+          'BullMQ uses Redis pub/sub for real-time job notifications',
+      },
+      prefetch: {
+        reason: 'Bull manages job prefetching internally',
+        explanation:
+          'BullMQ optimizes job fetching automatically based on concurrency settings',
+      },
+    },
+
+    // No fallback configurations for BullMQ currently
+    fallbacks: {},
   }
 
   private workers = new Map<string, Bull.Worker>()
@@ -98,14 +150,11 @@ export class BullQueueWorkers implements QueueWorkers {
   /**
    * Scan state and register all compatible processors
    */
-  async registerQueues(): Promise<void> {
-    const queueProcessors = getQueueProcessors()
-    for (const [queueName, processor] of queueProcessors) {
-      this.singletonServices.logger.info(
-        `Registering Bull queue processor: ${queueName}`
-      )
-
-      try {
+  async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
+    return await registerQueueProcessors(
+      this.configMappings,
+      this.singletonServices.logger,
+      async (queueName, processor) => {
         const worker = new Worker(
           processor.queueName,
           async (job: Bull.Job) => {
@@ -125,19 +174,9 @@ export class BullQueueWorkers implements QueueWorkers {
           }
         )
         worker.on('error', console.error)
-
         this.workers.set(queueName, worker)
-
-        this.singletonServices.logger.info(
-          `Successfully registered Bull worker: ${queueName}`
-        )
-      } catch (error) {
-        this.singletonServices.logger.error(
-          `Failed to register Bull worker ${queueName}:`,
-          error
-        )
       }
-    }
+    )
   }
 
   /**
@@ -152,82 +191,5 @@ export class BullQueueWorkers implements QueueWorkers {
     ])
     this.workers.clear()
     this.queueEvents.clear()
-  }
-
-  /**
-   * Validate config and return warnings for unsupported features
-   */
-  validateConfig(config: PikkuWorkerConfig): ConfigValidationResult {
-    const applied: Partial<PikkuWorkerConfig> = {}
-    const ignored: Partial<PikkuWorkerConfig> = {}
-    const warnings: string[] = []
-    const fallbacks: { [key: string]: any } = {}
-
-    // Supported configurations - add all the new ones
-    if (config.name !== undefined) {
-      applied.name = config.name
-    }
-
-    if (config.concurrency !== undefined) {
-      applied.concurrency = config.concurrency
-    }
-
-    if (config.autorun !== undefined) {
-      applied.autorun = config.autorun
-    }
-
-    if (config.lockDuration !== undefined) {
-      applied.lockDuration = config.lockDuration
-    }
-
-    if (config.drainDelay !== undefined) {
-      applied.drainDelay = config.drainDelay
-    }
-
-    if (config.maxStalledCount !== undefined) {
-      applied.maxStalledCount = config.maxStalledCount
-    }
-
-    if (config.removeOnComplete !== undefined) {
-      applied.removeOnComplete = config.removeOnComplete
-    }
-
-    if (config.removeOnFail !== undefined) {
-      applied.removeOnFail = config.removeOnFail
-    }
-
-    // Unsupported configurations with warnings
-    if (config.batchSize !== undefined) {
-      ignored.batchSize = config.batchSize
-      warnings.push(
-        'Bull processes jobs individually. Batch processing is not supported.'
-      )
-    }
-
-    if (config.visibilityTimeout !== undefined) {
-      ignored.visibilityTimeout = config.visibilityTimeout
-      warnings.push(
-        'Bull does not use visibility timeout. Jobs are locked during processing.'
-      )
-    }
-
-    if (config.pollInterval !== undefined) {
-      ignored.pollInterval = config.pollInterval
-      warnings.push('Bull is push-based and does not use polling intervals.')
-    }
-
-    if (config.prefetch !== undefined) {
-      ignored.prefetch = config.prefetch
-      warnings.push(
-        'Bull manages job prefetching internally. This setting is ignored.'
-      )
-    }
-
-    return {
-      applied,
-      ignored,
-      warnings,
-      fallbacks,
-    }
   }
 }

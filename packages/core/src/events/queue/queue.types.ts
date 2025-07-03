@@ -1,5 +1,6 @@
 import { APIDocs } from '../../types/core.types.js'
 import { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
+import { QueueConfigMapping } from './validate-worker-config.js'
 
 /**
  * Configuration for queue workers - how jobs are processed
@@ -10,7 +11,7 @@ import { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
 export interface PikkuWorkerConfig {
   /** Optional worker name for identification and monitoring */
   name?: string
-  /** Number of messages to process in batch / in parralel */
+  /** Number of messages to process in batch / in parallel */
   batchSize?: number
   /** Number of messages to prefetch for efficiency */
   prefetch?: number
@@ -57,23 +58,6 @@ export interface PikkuJobConfig {
 }
 
 /**
- * Queue capabilities matrix for different queue systems
- */
-export interface QueueCapabilities {
-  retryAttempts: boolean
-  retryBackoff: boolean
-  deadLetterQueue: boolean
-  concurrency: boolean
-  batchProcessing: boolean
-  priority: boolean
-  fifo: boolean
-  visibilityTimeout: boolean
-  messageRetention: boolean
-  prefetch: boolean
-  pollInterval: boolean
-}
-
-/**
  * Configuration validation result with warnings and fallbacks
  */
 export interface ConfigValidationResult {
@@ -94,7 +78,7 @@ export type QueueJobStatus =
   | 'delayed'
 
 export type QueueJobMetadata = {
-  progress?: number
+  progress?: number | string | object | undefined | boolean
   attemptsMade?: number
   maxAttempts?: number
   processedAt?: Date
@@ -148,17 +132,14 @@ export interface QueueWorkers {
   /** Service name identifier */
   name: string
 
-  /** Queue capabilities matrix */
-  capabilities: QueueCapabilities
-
   /** Whether this queue service supports job results */
   supportsResults: boolean
 
-  /** Validate config and return warnings */
-  validateConfig(config: PikkuWorkerConfig): ConfigValidationResult
+  /** Configuration mapping for validation */
+  configMappings: QueueConfigMapping
 
   /** Scan state and register all compatible processors */
-  registerQueues(): Promise<void>
+  registerQueues(): Promise<Record<string, ConfigValidationResult[]>>
 
   /** Close all queues and connections */
   close(): Promise<void>

@@ -6,7 +6,7 @@ export const queueProcessor = pikkuSessionlessFunc<
 >(async ({}, data) => {
   await new Promise((resolve) => setTimeout(resolve, 1000))
   if (data.fail) {
-    throw new Error('Job failed due to some error')
+    throw new Error('Job failed because it was instructed to')
   }
   return { result: `echo: ${data.message}` }
 })

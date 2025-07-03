@@ -79,18 +79,17 @@ export class BullQueueService implements QueueService {
   /**
    * Add a job to the queue
    */
-  public async add<In, Out>(
+  public async add<In>(
     queueName: string,
     data: In,
     options?: JobOptions
-  ): Promise<QueueJob<In, Out>> {
+  ): Promise<string> {
     const queue = await this.createQueue(queueName)
     const bullJob = await queue.add(queueName, data, mapPikkuJobToBull(options))
-    return mapBullJobToQueueJob<In, Out>(
-      bullJob,
-      this.redisConnectionOptions,
-      this.queueEvents
-    )
+    if (!bullJob.id) {
+      throw new Error(`Failed to add job to queue '${queueName}'.`)
+    }
+    return bullJob.id
   }
 
   /**

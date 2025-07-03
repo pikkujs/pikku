@@ -13,7 +13,6 @@ export type {
   QueueService,
   PikkuWorkerConfig,
   PikkuJobConfig,
-  QueueCapabilities,
   QueueJob,
   JobOptions,
 } from '@pikku/core/queue'

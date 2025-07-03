@@ -1,11 +1,11 @@
 import PgBoss from 'pg-boss'
 import type {
   QueueWorkers,
-  QueueCapabilities,
-  ConfigValidationResult,
   PikkuWorkerConfig,
+  QueueConfigMapping,
+  ConfigValidationResult,
 } from '@pikku/core/queue'
-import { getQueueProcessors, runQueueJob } from '@pikku/core/queue'
+import { runQueueJob, registerQueueProcessors } from '@pikku/core/queue'
 import {
   CoreServices,
   CoreSingletonServices,
@@ -39,18 +39,79 @@ export class PgBossQueueWorkers implements QueueWorkers {
   readonly name = 'pg-boss'
   readonly supportsResults = true
 
-  readonly capabilities: QueueCapabilities = {
-    retryAttempts: true,
-    retryBackoff: true,
-    deadLetterQueue: true,
-    concurrency: true,
-    batchProcessing: true,
-    priority: true,
-    fifo: true,
-    visibilityTimeout: true,
-    messageRetention: true,
-    prefetch: false, // pg-boss manages this internally
-    pollInterval: true,
+  /**
+   * Configuration mapping rules for pg-boss
+   * This defines how Pikku worker configs map to pg-boss configurations
+   */
+  readonly configMappings: QueueConfigMapping = {
+    // Configurations that are directly supported
+    supported: {
+      batchSize: {
+        queueProperty: 'batchSize',
+        description: 'Number of jobs to process in a single batch',
+      },
+      pollInterval: {
+        queueProperty: 'pollingIntervalSeconds',
+        transform: (value: number) => Math.round(value / 1000),
+        description:
+          'How often to poll for new jobs (converted from ms to seconds)',
+      },
+    },
+
+    // Configurations that are not supported but have reasonable explanations
+    unsupported: {
+      name: {
+        reason: 'Worker names are not supported in pg-boss',
+        explanation:
+          'pg-boss identifies workers by their queue name and process, not custom names',
+      },
+      autorun: {
+        reason: 'Autorun is not configurable in pg-boss (always enabled)',
+        explanation:
+          'pg-boss workers automatically start processing when created',
+      },
+      lockDuration: {
+        reason: 'Lock duration is managed differently in pg-boss',
+        explanation:
+          'pg-boss uses job-level expiration instead of worker-level locks',
+      },
+      drainDelay: {
+        reason: 'Drain delay is not configurable in pg-boss',
+        explanation: 'pg-boss handles graceful shutdown internally',
+      },
+      maxStalledCount: {
+        reason: 'Max stalled count is not configurable in pg-boss',
+        explanation:
+          'pg-boss handles stalled jobs through its built-in retry mechanism',
+      },
+      prefetch: {
+        reason: 'Prefetch is managed internally by pg-boss',
+        explanation:
+          'pg-boss optimizes job fetching automatically based on batch size',
+      },
+      visibilityTimeout: {
+        reason: "Visibility timeout concept doesn't apply to pg-boss",
+        explanation:
+          'pg-boss uses PostgreSQL locks and job expiration instead of visibility timeout',
+      },
+    },
+
+    // Configurations that have partial support or workarounds
+    fallbacks: {
+      removeOnComplete: {
+        reason: 'Job retention is managed through pg-boss archival system',
+        explanation:
+          'pg-boss automatically archives completed jobs based on database settings',
+        fallbackValue: 'Managed by pg-boss database archival',
+      },
+      removeOnFail: {
+        reason:
+          'Failed job retention is managed through pg-boss archival system',
+        explanation:
+          'pg-boss automatically archives failed jobs based on database settings',
+        fallbackValue: 'Managed by pg-boss database archival',
+      },
+    },
   }
 
   private pgBoss: PgBoss
@@ -58,7 +119,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
 
   constructor(
     options: PgBoss.ConstructorOptions | string,
-    private singletonServices?: CoreSingletonServices,
+    private singletonServices: CoreSingletonServices,
     private createSessionServices?: CreateSessionServices<
       CoreSingletonServices,
       CoreServices,
@@ -82,14 +143,11 @@ export class PgBossQueueWorkers implements QueueWorkers {
   /**
    * Scan state and register all compatible processors
    */
-  async registerQueues(): Promise<void> {
-    const queueProcessors = getQueueProcessors()
-    for (const [queueName, processor] of queueProcessors) {
-      this.singletonServices?.logger.info(
-        `Registering pg-boss queue processor: ${queueName}`
-      )
-
-      try {
+  async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
+    return await registerQueueProcessors(
+      this.configMappings,
+      this.singletonServices.logger,
+      async (queueName, processor) => {
         await this.pgBoss.createQueue(queueName)
         const workerId = await this.pgBoss.work<any>(
           processor.queueName,
@@ -115,17 +173,8 @@ export class PgBossQueueWorkers implements QueueWorkers {
           }
         )
         this.activeWorkers.set(queueName, workerId)
-
-        this.singletonServices?.logger.info(
-          `Successfully registered pg-boss worker: ${queueName}`
-        )
-      } catch (error) {
-        this.singletonServices?.logger.error(
-          `Failed to register pg-boss worker ${queueName}:`,
-          error
-        )
       }
-    }
+    )
   }
 
   /**
@@ -133,76 +182,5 @@ export class PgBossQueueWorkers implements QueueWorkers {
    */
   async close(): Promise<void> {
     await this.pgBoss.stop()
-  }
-
-  /**
-   * Validate config and return warnings for unsupported features
-   */
-  validateConfig(config: PikkuWorkerConfig): ConfigValidationResult {
-    const applied: Partial<PikkuWorkerConfig> = {}
-    const ignored: Partial<PikkuWorkerConfig> = {}
-    const warnings: string[] = []
-    const fallbacks: { [key: string]: any } = {}
-
-    if (config.batchSize !== undefined) {
-      applied.batchSize = config.batchSize
-    }
-
-    if (config.pollInterval !== undefined) {
-      applied.pollInterval = config.pollInterval
-    }
-
-    if (config.visibilityTimeout !== undefined) {
-      applied.visibilityTimeout = config.visibilityTimeout
-    }
-
-    // Partially supported configurations with fallbacks
-    if (config.removeOnComplete !== undefined) {
-      applied.removeOnComplete = config.removeOnComplete
-      fallbacks.removeOnComplete = 'Mapped to expireInSeconds'
-    }
-
-    if (config.removeOnFail !== undefined) {
-      applied.removeOnFail = config.removeOnFail
-      fallbacks.removeOnFail = 'Mapped to expireInSeconds'
-    }
-
-    // Unsupported configurations
-    if (config.name !== undefined) {
-      ignored.name = config.name
-      warnings.push('Worker names are not supported in pg-boss')
-    }
-
-    if (config.autorun !== undefined) {
-      ignored.autorun = config.autorun
-      warnings.push('Autorun is not configurable in pg-boss (always enabled)')
-    }
-
-    if (config.lockDuration !== undefined) {
-      ignored.lockDuration = config.lockDuration
-      warnings.push('Lock duration is managed by visibilityTimeout in pg-boss')
-    }
-
-    if (config.drainDelay !== undefined) {
-      ignored.drainDelay = config.drainDelay
-      warnings.push('Drain delay is not configurable in pg-boss')
-    }
-
-    if (config.maxStalledCount !== undefined) {
-      ignored.maxStalledCount = config.maxStalledCount
-      warnings.push('Max stalled count is not configurable in pg-boss')
-    }
-
-    if (config.prefetch !== undefined) {
-      ignored.prefetch = config.prefetch
-      warnings.push('Prefetch is managed internally by pg-boss')
-    }
-
-    return {
-      applied,
-      ignored,
-      warnings,
-      fallbacks,
-    }
   }
 }
