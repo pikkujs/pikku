@@ -10,9 +10,7 @@ import { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
 export interface PikkuWorkerConfig {
   /** Optional worker name for identification and monitoring */
   name?: string
-  /** Maximum number of concurrent message processors */
-  concurrency?: number
-  /** Number of messages to process in batch (where supported) */
+  /** Number of messages to process in batch / in parralel */
   batchSize?: number
   /** Number of messages to prefetch for efficiency */
   prefetch?: number
@@ -94,16 +92,8 @@ export type QueueJobStatus =
   | 'completed'
   | 'failed'
   | 'delayed'
-export interface QueueJob<T = any, R = any> {
-  id: string
-  queueName: string
-  status: () => Promise<QueueJobStatus> | QueueJobStatus
-  data: T
-  createdAt: Date
 
-  result?: R
-  waitForCompletion?: (ttl?: number) => Promise<R>
-
+export type QueueJobMetadata = {
   progress?: number
   attemptsMade?: number
   maxAttempts?: number
@@ -111,6 +101,17 @@ export interface QueueJob<T = any, R = any> {
   completedAt?: Date
   failedAt?: Date
   error?: string
+  createdAt: Date
+}
+
+export interface QueueJob<T = any, R = any> {
+  id: string
+  queueName: string
+  status: () => Promise<QueueJobStatus> | QueueJobStatus
+  data: T
+  result?: R
+  waitForCompletion?: (ttl?: number) => Promise<R>
+  metadata?: () => Promise<QueueJobMetadata> | QueueJobMetadata
 }
 
 /**
@@ -134,11 +135,7 @@ export interface QueueService {
   readonly supportsResults: boolean
 
   /** Add a job to the queue with type safety */
-  add<T, R>(
-    queueName: string,
-    data: T,
-    options?: JobOptions
-  ): Promise<QueueJob<T, R>>
+  add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>
 
   /** Get job status and result */
   getJob<T, R>(queueName: string, jobId: string): Promise<QueueJob<T, R> | null>

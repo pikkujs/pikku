@@ -78,7 +78,7 @@ export async function runQueueJob({
   singletonServices: CoreServices
   createSessionServices?: CreateSessionServices
   job: QueueJob
-}): Promise<any> {
+}): Promise<void> {
   const logger = singletonServices.logger
 
   const meta = pikkuState('queue', 'meta')

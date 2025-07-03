@@ -28,8 +28,8 @@ export const mapPikkuWorkerToBull = (
     workerOptions.name = workerConfig.name
   }
 
-  if (workerConfig?.concurrency !== undefined) {
-    workerOptions.concurrency = workerConfig.concurrency
+  if (workerConfig?.batchSize !== undefined) {
+    workerOptions.concurrency = workerConfig.batchSize
   }
 
   if (workerConfig?.autorun !== undefined) {

@@ -33,27 +33,23 @@ export function mapSQSRecordToQueueJob(
     data,
     id: record.messageId,
     status: async () => 'active' as QueueJobStatus,
-    createdAt: new Date(parseInt(record.attributes.SentTimestamp)),
-    processedAt: new Date(),
-    attemptsMade: parseInt(record.attributes.ApproximateReceiveCount) - 1,
-    maxAttempts, // Can be provided from queue configuration
-    result: undefined,
-    progress: 0,
-    completedAt: undefined,
-    failedAt: undefined,
-    error: undefined,
+    metadata: () => ({
+      processedAt: new Date(),
+      attemptsMade: parseInt(record.attributes.ApproximateReceiveCount) - 1,
+      maxAttempts,
+      result: undefined,
+      progress: 0,
+      createdAt: new Date(parseInt(record.attributes.SentTimestamp)),
+      completedAt: undefined,
+      failedAt: undefined,
+      error: undefined,
+    }),
     waitForCompletion: async () => {
       throw new Error(
         'SQS does not support waitForCompletion - jobs are fire-and-forget'
       )
     },
-
-    // Additional SQS-specific metadata could be added here
-    // messageAttributes: record.messageAttributes,
-    // messageGroupId: record.attributes.MessageGroupId, // FIFO queues
-    // messageDeduplicationId: record.attributes.MessageDeduplicationId, // FIFO queues
   }
-
   return job
 }
 
@@ -65,6 +61,7 @@ export const runSQSQueueWorker = async (
   createSessionServices: CreateSessionServices<any, any, any> | undefined,
   event: SQSEvent
 ): Promise<SQSBatchResponse> => {
+  console.log(JSON.stringify(event, null, 2))
   const jobs = event.Records.map(mapSQSRecordToQueueJob)
 
   // Process all jobs in parallel
