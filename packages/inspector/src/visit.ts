@@ -3,7 +3,7 @@ import { addFileWithFactory } from './add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add-file-extends-core-type.js'
 import { addHTTPRoute } from './add-http-route.js'
 import { addSchedule } from './add-schedule.js'
-import { addQueueProcessor } from './add-queue-processor.js'
+import { addQueueWorker } from './add-queue-worker.js'
 import { InspectorFilters, InspectorState } from './types.js'
 import { addFunctions } from './add-functions.js'
 import { addChannel } from './add-channel.js'
@@ -63,8 +63,8 @@ export const visitRoutes = (
 ) => {
   addHTTPRoute(node, checker, state, filters)
   addSchedule(node, checker, state, filters)
-  addQueueProcessor(node, checker, state, filters)
+  addQueueWorker(node, checker, state, filters)
   addChannel(node, checker, state, filters)
-  addQueueProcessor(node, checker, state, filters)
+  addQueueWorker(node, checker, state, filters)
   ts.forEachChild(node, (child) => visitRoutes(checker, child, state, filters))
 }

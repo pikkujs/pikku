@@ -113,16 +113,16 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: ['string'],
   },
-  pikkuFn_src_queue_processor_functions_ts_L6C3: {
-    pikkuFuncName: 'pikkuFn_src_queue_processor_functions_ts_L6C3',
-    name: 'queueProcessor',
+  pikkuFn_src_queue_worker_functions_ts_L6C3: {
+    pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',
+    name: 'queueWorker',
     services: {
       optimized: true,
       services: [],
     },
-    schemaName: 'QueueProcessorInput',
-    inputs: ['QueueProcessorInput'],
-    outputs: ['QueueProcessorOutput'],
+    schemaName: 'QueueWorkerInput',
+    inputs: ['QueueWorkerInput'],
+    outputs: ['QueueWorkerOutput'],
   },
   pikkuFn_src_rpc_functions_ts_L4C3: {
     pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L4C3',
@@ -146,8 +146,8 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: [],
   },
-  pikkuFn_src_scheduled_task_functions_ts_L7C3: {
-    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L7C3',
+  pikkuFn_src_scheduled_task_functions_ts_L6C3: {
+    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L6C3',
     name: 'myScheduledTask',
     services: {
       optimized: true,

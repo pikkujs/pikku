@@ -43,8 +43,8 @@ pikkuState('rpc', 'meta', {
     pikkuFuncName: 'pikkuFn_src_http_functions_ts_L3C54',
     exposed: false,
   },
-  queueProcessor: {
-    pikkuFuncName: 'pikkuFn_src_queue_processor_functions_ts_L6C3',
+  queueWorker: {
+    pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',
     exposed: false,
   },
   rpcTest: {
@@ -56,7 +56,7 @@ pikkuState('rpc', 'meta', {
     exposed: false,
   },
   myScheduledTask: {
-    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L7C3',
+    pikkuFuncName: 'pikkuFn_src_scheduled_task_functions_ts_L6C3',
     exposed: false,
   },
 })

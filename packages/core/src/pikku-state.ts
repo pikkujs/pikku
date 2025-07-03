@@ -13,8 +13,8 @@ import { ErrorDetails, PikkuError } from './errors/error-handler.js'
 import { CorePikkuFunctionConfig } from './function/functions.types.js'
 import { RPCMeta } from './events/rpc/rpc-types.js'
 import {
-  QueueProcessorsMeta,
-  CoreQueueProcessor,
+  queueWorkersMeta,
+  CoreQueueWorker,
 } from './events/queue/queue.types.js'
 
 interface PikkuState {
@@ -46,8 +46,8 @@ interface PikkuState {
     meta: ScheduledTasksMeta
   }
   queue: {
-    registrations: Map<string, CoreQueueProcessor>
-    meta: QueueProcessorsMeta
+    registrations: Map<string, CoreQueueWorker>
+    meta: queueWorkersMeta
   }
   misc: {
     errors: Map<PikkuError, ErrorDetails>

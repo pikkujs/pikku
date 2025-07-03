@@ -1,7 +1,7 @@
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPRoutesMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import { QueueProcessorsMeta } from '@pikku/core/queue'
+import { queueWorkersMeta } from '@pikku/core/queue'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta } from '@pikku/core'
 import { RPCMeta } from '@pikku/core/rpc'
@@ -54,8 +54,8 @@ export interface InspectorState {
     meta: ScheduledTasksMeta
     files: Set<string>
   }
-  queueProcessors: {
-    meta: QueueProcessorsMeta
+  queueWorkers: {
+    meta: queueWorkersMeta
     files: Set<string>
   }
   rpc: {

@@ -25,8 +25,8 @@ import {
   addChannel as addCoreChannel,
 } from '@pikku/core/channel'
 import {
-  CoreQueueProcessor,
-  addQueueProcessor as addCoreQueueProcessor,
+  CoreQueueWorker,
+  addQueueWorker as addCoreQueueWorker,
 } from '@pikku/core/queue'
 
 import type { UserSession } from '../types/application-types.d.js'
@@ -91,9 +91,7 @@ type ScheduledTask = CoreScheduledTask<
   APIFunctionSessionless<void, void>,
   UserSession
 >
-type QueueProcessor<In, Out> = CoreQueueProcessor<
-  APIFunctionSessionless<In, Out>
->
+type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
 
 export const pikkuFunc = <In, Out = unknown>(
   func:
@@ -191,6 +189,6 @@ export const addScheduledTask = (task: ScheduledTask) => {
   addCoreScheduledTask(task as any) // TODO
 }
 
-export const addQueueProcessor = (queueProcessor: QueueProcessor) => {
-  addCoreQueueProcessor(queueProcessor as any) // TODO
+export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
+  addCoreQueueWorker(queueWorker as any) // TODO
 }

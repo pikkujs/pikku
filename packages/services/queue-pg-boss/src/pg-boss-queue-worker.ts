@@ -5,7 +5,7 @@ import type {
   QueueConfigMapping,
   ConfigValidationResult,
 } from '@pikku/core/queue'
-import { runQueueJob, registerQueueProcessors } from '@pikku/core/queue'
+import { runQueueJob, registerqueueWorkers } from '@pikku/core/queue'
 import {
   CoreServices,
   CoreSingletonServices,
@@ -144,7 +144,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    return await registerQueueProcessors(
+    return await registerqueueWorkers(
       this.configMappings,
       this.singletonServices.logger,
       async (queueName, processor) => {

@@ -35,8 +35,9 @@ export interface PikkuCLICoreOutputFiles {
   schedulersMetaFile: string
 
   // Queue processors
-  queueProcessorsFile: string
-  queueProcessorsMetaFile: string
+  queueWorkersFile: string
+  queueWorkersMetaFile: string
+  queueMapDeclarationFile: string
 
   // Application bootstrap
   bootstrapFile: string
@@ -60,6 +61,7 @@ export type PikkuCLIConfig = {
   nextHTTPFile?: string
   fetchFile?: string
   websocketFile?: string
+  queueFile?: string
 
   openAPI?: {
     outputFile: string
@@ -74,6 +76,7 @@ const CONFIG_DIR_FILES = [
   'nextHTTPFile',
   'fetchFile',
   'websocketFile',
+  'queueFile',
 ]
 
 export const getPikkuCLIConfig = async (
@@ -185,16 +188,22 @@ const _getPikkuCLIConfig = async (
           'pikku-schedules-meta.gen.ts'
         )
       }
-      if (!result.queueProcessorsFile) {
-        result.queueProcessorsFile = join(
+      if (!result.queueWorkersFile) {
+        result.queueWorkersFile = join(
           result.outDir,
-          'pikku-queue-processors.gen.ts'
+          'pikku-queue-workers.gen.ts'
         )
       }
-      if (!result.queueProcessorsMetaFile) {
-        result.queueProcessorsMetaFile = join(
+      if (!result.queueWorkersMetaFile) {
+        result.queueWorkersMetaFile = join(
           result.outDir,
-          'pikku-queue-processors-meta.gen.ts'
+          'pikku-queue-workers-meta.gen.ts'
+        )
+      }
+      if (!result.queueMapDeclarationFile) {
+        result.queueMapDeclarationFile = join(
+          result.outDir,
+          'pikku-queue-map.gen.ts'
         )
       }
       if (!result.channelsFile) {

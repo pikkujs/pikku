@@ -14,21 +14,21 @@ export const pikkuQueue = async (
   return await logCommandInfoAndTime(
     'Finding queues',
     'Found queue',
-    [visitState.queueProcessors.files.size === 0],
+    [visitState.queueWorkers.files.size === 0],
     async () => {
-      const { queueProcessorsFile, queueProcessorsMetaFile, packageMappings } =
+      const { queueWorkersFile, queueWorkersMetaFile, packageMappings } =
         cliConfig
-      const { queueProcessors } = visitState
+      const { queueWorkers } = visitState
       await writeFileInDir(
-        queueProcessorsMetaFile,
-        serializeQueueMeta(queueProcessors.meta)
+        queueWorkersMetaFile,
+        serializeQueueMeta(queueWorkers.meta)
       )
       await writeFileInDir(
-        queueProcessorsFile,
+        queueWorkersFile,
         serializeFileImports(
-          'addQueueProcessors',
-          queueProcessorsFile,
-          queueProcessors.files,
+          'addQueueWorkers',
+          queueWorkersFile,
+          queueWorkers.files,
           packageMappings
         )
       )

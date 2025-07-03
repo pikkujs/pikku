@@ -1,12 +1,10 @@
-import { QueueProcessorsMeta } from '@pikku/core'
+import { queueWorkersMeta } from '@pikku/core'
 
-export const serializeQueueMeta = (
-  queueProcessorsMeta: QueueProcessorsMeta
-) => {
+export const serializeQueueMeta = (queueWorkersMeta: queueWorkersMeta) => {
   const serializedOutput: string[] = []
   serializedOutput.push("import { pikkuState } from '@pikku/core'")
   serializedOutput.push(
-    `pikkuState('queue', 'meta', ${JSON.stringify(queueProcessorsMeta, null, 2)})`
+    `pikkuState('queue', 'meta', ${JSON.stringify(queueWorkersMeta, null, 2)})`
   )
   return serializedOutput.join('\n')
 }

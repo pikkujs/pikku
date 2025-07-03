@@ -1,5 +1,5 @@
 import type { CoreServices } from '../../types/core.types.js'
-import type { CoreQueueProcessor, QueueJob } from './queue.types.js'
+import type { CoreQueueWorker, QueueJob } from './queue.types.js'
 import type { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -9,7 +9,7 @@ import { CreateSessionServices } from '../../types/core.types.js'
 /**
  * Error class for queue processor not found
  */
-class QueueProcessorNotFoundError extends Error {
+class QueueWorkerNotFoundError extends Error {
   constructor(name: string) {
     super(`Queue processor not found: ${name}`)
   }
@@ -17,7 +17,7 @@ class QueueProcessorNotFoundError extends Error {
 /**
  * Add a queue processor to the system
  */
-export const addQueueProcessor = <
+export const addQueueWorker = <
   InputData = any,
   OutputData = any,
   APIFunction extends CoreAPIFunctionSessionless<
@@ -25,43 +25,43 @@ export const addQueueProcessor = <
     OutputData
   > = CoreAPIFunctionSessionless<InputData, OutputData>,
 >(
-  queueProcessor: CoreQueueProcessor<APIFunction>
+  queueWorker: CoreQueueWorker<APIFunction>
 ) => {
   // Get processor metadata
   const meta = pikkuState('queue', 'meta')
-  const processorMeta = meta[queueProcessor.queueName]
+  const processorMeta = meta[queueWorker.queueName]
   if (!processorMeta) {
     throw new Error(
-      `Queue processor metadata not found for '${queueProcessor.queueName}'. Make sure to run the CLI to generate metadata.`
+      `Queue processor metadata not found for '${queueWorker.queueName}'. Make sure to run the CLI to generate metadata.`
     )
   }
 
   // Register the function with pikku
   addFunction(processorMeta.pikkuFuncName, {
-    func: queueProcessor.func,
+    func: queueWorker.func,
   })
 
   // Store processor definition in state - runtime adapters will pick this up
   const registrations = pikkuState('queue', 'registrations')
-  registrations.set(queueProcessor.queueName, queueProcessor)
+  registrations.set(queueWorker.queueName, queueWorker)
 }
 
 /**
  * Get all registered queue processors
  */
-export function getQueueProcessors(): Map<string, CoreQueueProcessor> {
+export function getQueueWorkers(): Map<string, CoreQueueWorker> {
   return pikkuState('queue', 'registrations')
 }
 
 /**
  * Stop and remove a queue processor
  */
-export async function removeQueueProcessor(name: string): Promise<void> {
+export async function removeQueueWorker(name: string): Promise<void> {
   const registrations = pikkuState('queue', 'registrations')
   const registration = registrations.get(name)
 
   if (!registration) {
-    throw new QueueProcessorNotFoundError(name)
+    throw new QueueWorkerNotFoundError(name)
   }
 
   registrations.delete(name)

@@ -8,7 +8,7 @@ import {
   matchesFilters,
 } from './utils.js'
 
-export const addQueueProcessor = (
+export const addQueueWorker = (
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
@@ -22,8 +22,8 @@ export const addQueueProcessor = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to addQueueProcessor
-  if (!ts.isIdentifier(expression) || expression.text !== 'addQueueProcessor') {
+  // Check if the call is to addQueueWorker
+  if (!ts.isIdentifier(expression) || expression.text !== 'addQueueWorker') {
     return
   }
 
@@ -73,8 +73,8 @@ export const addQueueProcessor = (
       return
     }
 
-    state.queueProcessors.files.add(node.getSourceFile().fileName)
-    state.queueProcessors.meta[queueName] = {
+    state.queueWorkers.files.add(node.getSourceFile().fileName)
+    state.queueWorkers.meta[queueName] = {
       pikkuFuncName,
       queueName,
       docs,

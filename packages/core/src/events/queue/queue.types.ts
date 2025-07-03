@@ -148,7 +148,7 @@ export interface QueueWorkers {
 /**
  * Queue processor metadata
  */
-export type QueueProcessorsMeta = Record<
+export type queueWorkersMeta = Record<
   string,
   {
     pikkuFuncName: string
@@ -164,7 +164,7 @@ export type QueueProcessorsMeta = Record<
 /**
  * Core queue processor definition
  */
-export type CoreQueueProcessor<
+export type CoreQueueWorker<
   APIFunction = CoreAPIFunctionSessionless<any, any>,
 > = {
   queueName: string

@@ -39,11 +39,11 @@ addSchema(
 import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json'
 addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
 
-import * as QueueProcessorInput from './schemas/QueueProcessorInput.schema.json'
-addSchema('QueueProcessorInput', QueueProcessorInput)
+import * as QueueWorkerInput from './schemas/QueueWorkerInput.schema.json'
+addSchema('QueueWorkerInput', QueueWorkerInput)
 
-import * as QueueProcessorOutput from './schemas/QueueProcessorOutput.schema.json'
-addSchema('QueueProcessorOutput', QueueProcessorOutput)
+import * as QueueWorkerOutput from './schemas/QueueWorkerOutput.schema.json'
+addSchema('QueueWorkerOutput', QueueWorkerOutput)
 
 import * as RpcTestInput from './schemas/RpcTestInput.schema.json'
 addSchema('RpcTestInput', RpcTestInput)

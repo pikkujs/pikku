@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-export const queueProcessor = pikkuSessionlessFunc<
+export const queueWorker = pikkuSessionlessFunc<
   { message: string; fail: boolean },
   { result: string }
 >(async ({}, data) => {

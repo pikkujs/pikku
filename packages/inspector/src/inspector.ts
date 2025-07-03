@@ -49,7 +49,7 @@ export const inspect = (
       meta: {},
       files: new Set(),
     },
-    queueProcessors: {
+    queueWorkers: {
       meta: {},
       files: new Set(),
     },

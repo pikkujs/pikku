@@ -1,8 +1,5 @@
-import type {
-  ConfigValidationResult,
-  CoreQueueProcessor,
-} from './queue.types.js'
-import { getQueueProcessors } from './queue-runner.js'
+import type { ConfigValidationResult, CoreQueueWorker } from './queue.types.js'
+import { getQueueWorkers } from './queue-runner.js'
 import {
   QueueConfigMapping,
   validateWorkerConfig,
@@ -14,7 +11,7 @@ import { Logger } from '../../services/logger.js'
  */
 export type QueueRegistrationCallback<T = any> = (
   queueName: string,
-  processor: CoreQueueProcessor
+  processor: CoreQueueWorker
 ) => Promise<T>
 
 /**
@@ -26,15 +23,15 @@ export type QueueRegistrationCallback<T = any> = (
  * @param logger - Optional logger for info/error messages
  * @returns Record of validation results by queue name
  */
-export async function registerQueueProcessors<T = any>(
+export async function registerqueueWorkers<T = any>(
   configMappings: QueueConfigMapping,
   logger: Logger,
   registerCallback: QueueRegistrationCallback<T>
 ): Promise<Record<string, ConfigValidationResult[]>> {
   const configValidation: Record<string, ConfigValidationResult[]> = {}
-  const queueProcessors = getQueueProcessors()
+  const queueWorkers = getQueueWorkers()
 
-  for (const [queueName, processor] of queueProcessors) {
+  for (const [queueName, processor] of queueWorkers) {
     logger?.info(`Registering queue processor: ${queueName}`)
     // Validate the processor configuration
     const validationResult = validateWorkerConfig(

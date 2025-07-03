@@ -24,7 +24,7 @@ async function main(): Promise<void> {
         message: 'Hello from Bull!',
         fail: false,
       })
-      console.log(await queueJob.waitForCompletion())
+      console.log(await queueJob.waitForCompletion?.())
     }, 2000)
 
     setTimeout(async () => {
@@ -32,7 +32,7 @@ async function main(): Promise<void> {
         message: 'Sorry in advance',
         fail: true,
       })
-      console.log(await queueJob.waitForCompletion())
+      console.log(await queueJob.waitForCompletion?.())
     }, 4000)
   } catch (e: any) {
     console.error(e.toString())

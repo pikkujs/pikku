@@ -11,7 +11,7 @@ import { onConnect } from '../src/channel.functions.js'
 import { onDisconnect } from '../src/channel.functions.js'
 import { onMessage } from '../src/channel.functions.js'
 import { progressiveEnhancementExample } from '../src/http-progressive-enhancement.functions.js'
-import { queueProcessor } from '../src/queue-processor.functions.js'
+import { queueWorker } from '../src/queue-worker.functions.js'
 import { rpcCaller } from '../src/rpc.functions.js'
 import { rpcTest } from '../src/rpc.functions.js'
 import { subscribe } from '../src/channel.functions.js'
@@ -28,7 +28,7 @@ addFunction('onMessage', { func: onMessage })
 addFunction('progressiveEnhancementExample', {
   func: progressiveEnhancementExample,
 })
-addFunction('queueProcessor', { func: queueProcessor })
+addFunction('queueWorker', { func: queueWorker })
 addFunction('rpcCaller', { func: rpcCaller })
 addFunction('rpcTest', { func: rpcTest })
 addFunction('subscribe', { func: subscribe })
