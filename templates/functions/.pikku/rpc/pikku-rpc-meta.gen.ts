@@ -43,6 +43,18 @@ pikkuState('rpc', 'meta', {
     pikkuFuncName: 'pikkuFn_src_http_functions_ts_L3C54',
     exposed: false,
   },
+  sayHello: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L10C3',
+    exposed: false,
+  },
+  calculate: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L27C3',
+    exposed: false,
+  },
+  getUserInfo: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L66C3',
+    exposed: false,
+  },
   queueWorker: {
     pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',
     exposed: false,

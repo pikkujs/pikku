@@ -24,7 +24,11 @@ async function main(): Promise<void> {
         message: 'Hello from Bull!',
         fail: false,
       })
-      console.log(await queueJob.waitForCompletion?.())
+      const job = await bullQueueService.getJob('hello-world-queue', queueJob)
+      if (!job) {
+        throw new Error('Job not found')
+      }
+      console.log(job.waitForCompletion?.())
     }, 2000)
 
     setTimeout(async () => {
@@ -32,7 +36,11 @@ async function main(): Promise<void> {
         message: 'Sorry in advance',
         fail: true,
       })
-      console.log(await queueJob.waitForCompletion?.())
+      const job = await bullQueueService.getJob('hello-world-queue', queueJob)
+      if (!job) {
+        throw new Error('Job not found')
+      }
+      console.log(job.waitForCompletion?.())
     }, 4000)
   } catch (e: any) {
     console.error(e.toString())

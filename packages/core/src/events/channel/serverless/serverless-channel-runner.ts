@@ -10,7 +10,7 @@ import type {
 } from '../channel.types.js'
 import { createHTTPInteraction } from '../../http/http-runner.js'
 import { ChannelStore } from '../channel-store.js'
-import { handleError } from '../../../handle-error.js'
+import { handleHTTPError } from '../../../handle-error.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
 import { runMiddleware } from '../../../middleware-runner.js'
 import { pikkuState } from '../../../pikku-state.js'
@@ -124,7 +124,7 @@ export const runChannelConnect = async ({
       }
       http?.response?.status(101)
     } catch (e: any) {
-      handleError(
+      handleHTTPError(
         e,
         http,
         channelId,

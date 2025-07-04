@@ -84,7 +84,6 @@ export async function runQueueJob({
   const meta = pikkuState('queue', 'meta')
   const processorMeta = meta[job.queueName]
   if (!processorMeta) {
-    console.log('throwing an error', job.queueName, meta)
     throw new Error(`Processor metadata not found for: ${job.queueName}`)
   }
 

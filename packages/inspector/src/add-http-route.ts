@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { APIDocs } from '@pikku/core'
+import { APIDocs, PikkuEventTypes } from '@pikku/core'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -69,7 +69,13 @@ export const addHTTPRoute = (
   const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
-  if (!matchesFilters(filters, { tags }, { type: 'http', name: route })) {
+  if (
+    !matchesFilters(
+      filters,
+      { tags },
+      { type: PikkuEventTypes.http, name: route }
+    )
+  ) {
     return
   }
 

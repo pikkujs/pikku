@@ -35,6 +35,9 @@ export class CLILogger {
   error(message: string) {
     console.error(chalk.red(message))
   }
+  warn(message: string) {
+    console.error(chalk.yellow(message))
+  }
 
   private logPikkuLogo() {
     this.primary(logo)

@@ -25,7 +25,7 @@ import {
   UserSessionService,
 } from '../../services/user-session-service.js'
 import { runMiddleware } from '../../middleware-runner.js'
-import { handleError } from '../../handle-error.js'
+import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
@@ -499,7 +499,7 @@ export const fetchData = async <In, Out>(
     return result
   } catch (e: any) {
     // Handle errors and, depending on configuration, bubble them up or respond with an error
-    handleError(
+    handleHTTPError(
       e,
       http,
       requestId,

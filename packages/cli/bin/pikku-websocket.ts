@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { CLILogger, PikkuCLIOptions } from '../src/utils.js'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuWebSocket } from '../src/events/channels/pikku-command-websocket.js'
+import { pikkuWebSocketTyped } from '../src/events/channels/pikku-command-websocket-typed.js'
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const logger = new CLILogger({ logLogo: true })
@@ -12,7 +12,7 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
     options.tags,
     true
   )
-  await pikkuWebSocket(logger, cliConfig)
+  await pikkuWebSocketTyped(logger, cliConfig)
 }
 
 export const websocket = (program: Command): void => {

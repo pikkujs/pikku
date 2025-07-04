@@ -39,6 +39,10 @@ export interface PikkuCLICoreOutputFiles {
   queueWorkersMetaFile: string
   queueMapDeclarationFile: string
 
+  // MCP
+  mcpEndpointsFile: string
+  mcpEndpointsMetaFile: string
+
   // Application bootstrap
   bootstrapFile: string
   bootstrapFiles: Record<PikkuEventTypes, string>
@@ -63,7 +67,6 @@ export type PikkuCLIConfig = {
   websocketFile?: string
   queueFile?: string
   mcpJsonFile?: string
-  mcpBootstrapFile?: string
 
   openAPI?: {
     outputFile: string
@@ -80,7 +83,6 @@ const CONFIG_DIR_FILES = [
   'websocketFile',
   'queueFile',
   'mcpJsonFile',
-  'mcpBootstrapFile',
 ]
 
 export const getPikkuCLIConfig = async (
@@ -160,7 +162,6 @@ const _getPikkuCLIConfig = async (
       const schedulerDir = join(result.outDir, 'scheduler')
       const queueDir = join(result.outDir, 'queue')
       const mcpDir = join(result.outDir, 'mcp')
-      const functionsDir = join(result.outDir, 'functions')
 
       // Create directories if they don't exist (will be done lazily when files are written)
 
@@ -170,16 +171,16 @@ const _getPikkuCLIConfig = async (
 
       // Functions
       if (!result.functionsFile) {
-        result.functionsFile = join(functionsDir, 'pikku-functions.gen.ts')
+        result.functionsFile = join(result.outDir, 'pikku-functions.gen.ts')
       }
       if (!result.functionsMetaFile) {
         result.functionsMetaFile = join(
-          functionsDir,
+          result.outDir,
           'pikku-functions-meta.gen.ts'
         )
       }
       if (!result.typesDeclarationFile) {
-        result.typesDeclarationFile = join(functionsDir, 'pikku-types.gen.ts')
+        result.typesDeclarationFile = join(result.outDir, 'pikku-types.gen.ts')
       }
 
       // HTTP
@@ -258,11 +259,14 @@ const _getPikkuCLIConfig = async (
       }
 
       // MCP
+      if (!result.mcpEndpointsMetaFile) {
+        result.mcpEndpointsMetaFile = join(mcpDir, 'mcp-endpoints-meta.gen.ts')
+      }
+      if (!result.mcpEndpointsFile) {
+        result.mcpEndpointsFile = join(mcpDir, 'mcp-endpoints.gen.ts')
+      }
       if (!result.mcpJsonFile) {
         result.mcpJsonFile = join(mcpDir, 'mcp.gen.json')
-      }
-      if (!result.mcpBootstrapFile) {
-        result.mcpBootstrapFile = join(mcpDir, 'pikku-mcp-bootstrap.gen.ts')
       }
 
       result.bootstrapFiles = result.bootstrapFiles || {}

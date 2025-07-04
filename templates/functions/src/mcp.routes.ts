@@ -29,7 +29,6 @@ addMCPEndpoint({
   },
 })
 
-// Register a user information resource
 addMCPEndpoint({
   name: 'getUserInfo',
   description: 'Retrieve user information by user ID',

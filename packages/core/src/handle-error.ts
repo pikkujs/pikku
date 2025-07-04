@@ -14,7 +14,7 @@ import { PikkuHTTP } from './events/http/http.types.js'
  * @param {boolean} respondWith404 - Whether to respond with 404 for NotFoundError
  * @param {boolean} bubbleError - Whether to throw the error after handling
  */
-export const handleError = (
+export const handleHTTPError = (
   e: any,
   http: PikkuHTTP | undefined,
   trackerId: string | undefined,

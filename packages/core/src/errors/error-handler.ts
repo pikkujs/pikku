@@ -21,6 +21,7 @@ export class PikkuError extends Error {
 export interface ErrorDetails {
   status: number
   message: string
+  mcpCode?: number
 }
 
 /**
@@ -51,7 +52,7 @@ export const addErrors = (
  */
 export const getErrorResponse = (
   error: Error
-): { status: number; message: string } | undefined => {
+): { status: number; message: string; mcpCode?: number } | undefined => {
   const errors = Array.from(pikkuState('misc', 'errors').entries())
   const foundError = errors.find(([e]) => e.name === error.constructor.name)
   if (foundError) {

@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { APIDocs } from '@pikku/core'
+import { APIDocs, PikkuEventTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState } from './types.js'
 import {
   extractFunctionName,
@@ -65,7 +65,11 @@ export const addQueueWorker = (
     }
 
     if (
-      !matchesFilters(filters, { tags }, { type: 'queue', name: queueName })
+      !matchesFilters(
+        filters,
+        { tags },
+        { type: PikkuEventTypes.queue, name: queueName }
+      )
     ) {
       console.info(
         `• Skipping queue processor '${pikkuFuncName}' for queue '${queueName}' due to filter mismatch.`

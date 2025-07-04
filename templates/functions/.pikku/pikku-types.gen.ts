@@ -33,10 +33,10 @@ import {
   addMCPEndpoint as addCoreMCPEndpoint,
 } from '@pikku/core'
 
-import type { UserSession } from '../../types/application-types.d.js'
-import type { SingletonServices } from '../../types/application-types.d.js'
-import type { Services } from '../../types/application-types.d.js'
-import type { TypedPikkuRPC } from '../rpc/pikku-rpc-map.gen.js'
+import type { UserSession } from '../types/application-types.d.js'
+import type { SingletonServices } from '../types/application-types.d.js'
+import type { Services } from '../types/application-types.d.js'
+import type { TypedPikkuRPC } from './rpc/pikku-rpc-map.gen.js'
 
 export type APIPermission<
   In = unknown,

@@ -36,16 +36,20 @@ export type CoreMCPEndpoint<
   tags?: string[]
 }
 
-// Legacy type aliases for backward compatibility
-export type MCPResourcesMeta<UserSession extends CoreUserSession = any> =
-  MCPEndpointsMeta<UserSession>
-export type MCPToolsMeta<UserSession extends CoreUserSession = any> =
-  MCPEndpointsMeta<UserSession>
-export type CoreMCPResource<
-  APIFunction = CoreAPIFunctionSessionless<any, any>,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = CoreMCPEndpoint<APIFunction, UserSession>
-export type CoreMCPTool<
-  APIFunction = CoreAPIFunctionSessionless<any, any>,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = CoreMCPEndpoint<APIFunction, UserSession>
+export type JsonRpcRequest = {
+  jsonrpc: '2.0'
+  id: string | number | null
+  method: string
+  params?: any
+}
+
+export type JsonRpcResponse = {
+  jsonrpc: '2.0'
+  id: string | number | null
+  result?: any
+  error?: {
+    code: number
+    message: string
+    data?: any
+  }
+}

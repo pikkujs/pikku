@@ -3,8 +3,9 @@ import { join } from 'path'
 import { MCPEndpointsMeta } from '@pikku/core'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { TypesMap } from '@pikku/inspector'
+import { CLILogger } from '../../utils.js'
 
-interface MCPTool {
+interface MCPEndpoint {
   name: string
   description: string
   parameters?: JSONValue
@@ -13,12 +14,14 @@ interface MCPTool {
 }
 
 export const serializeMCPJson = async (
+  logger: CLILogger,
   schemaDirectory: string,
   functionsMeta: FunctionsMeta,
   typesMap: TypesMap,
   mcpEndpointsMeta: MCPEndpointsMeta
 ): Promise<string> => {
-  const tools: MCPTool[] = []
+  const tools: MCPEndpoint[] = []
+  const resources: MCPEndpoint[] = []
 
   // Helper function to load schema from file
   const loadSchema = async (
@@ -47,7 +50,7 @@ export const serializeMCPJson = async (
       const schemaContent = await readFile(schemaPath, 'utf-8')
       return JSON.parse(schemaContent)
     } catch (e) {
-      console.warn(`Could not load schema for type: ${uniqueName}`)
+      logger.warn(`Could not load schema for type: ${uniqueName}`)
       return undefined
     }
   }
@@ -56,6 +59,9 @@ export const serializeMCPJson = async (
   for (const [name, endpointMeta] of Object.entries(mcpEndpointsMeta)) {
     const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
     if (!functionMeta) {
+      logger.warn(
+        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping endpoint ${name}.`
+      )
       continue
     }
 
@@ -65,14 +71,26 @@ export const serializeMCPJson = async (
     const parameters = await loadSchema(inputType)
     const returns = await loadSchema(outputType)
 
-    tools.push({
+    const endpoint = {
       name,
       description: endpointMeta.description,
       ...(parameters && { parameters }),
       ...(returns && { returns }),
       ...(endpointMeta.streaming && { streaming: true }),
-    })
+    }
+
+    if (endpointMeta.type === 'resource') {
+      resources.push(endpoint)
+      continue
+    } else if (endpointMeta.type === 'tool') {
+      tools.push(endpoint)
+    } else {
+      logger.warn(
+        `Unknown endpoint type for ${name}: ${endpointMeta.type}. Skipping.`
+      )
+      continue
+    }
   }
 
-  return JSON.stringify({ tools }, null, 2)
+  return JSON.stringify({ tools, resources }, null, 2)
 }

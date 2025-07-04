@@ -113,6 +113,39 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: ['string'],
   },
+  pikkuFn_src_mcp_functions_ts_L10C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L10C3',
+    name: 'sayHello',
+    services: {
+      optimized: false,
+      services: [],
+    },
+    schemaName: 'SayHelloInput',
+    inputs: ['SayHelloInput'],
+    outputs: ['SayHelloOutput'],
+  },
+  pikkuFn_src_mcp_functions_ts_L27C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L27C3',
+    name: 'calculate',
+    services: {
+      optimized: false,
+      services: [],
+    },
+    schemaName: 'CalculateInput',
+    inputs: ['CalculateInput'],
+    outputs: ['CalculateOutput'],
+  },
+  pikkuFn_src_mcp_functions_ts_L66C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L66C3',
+    name: 'getUserInfo',
+    services: {
+      optimized: false,
+      services: [],
+    },
+    schemaName: 'GetUserInfoInput',
+    inputs: ['GetUserInfoInput'],
+    outputs: ['GetUserInfoOutput'],
+  },
   pikkuFn_src_queue_worker_functions_ts_L6C3: {
     pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',
     name: 'queueWorker',

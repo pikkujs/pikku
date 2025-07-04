@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import { InspectorFilters } from './types.js'
+import { PikkuEventTypes } from '@pikku/core'
 
 type ExtractedFunctionName = {
   pikkuFuncName: string
@@ -844,7 +845,7 @@ export const matchesFilters = (
   filters: InspectorFilters,
   params: { tags?: string[] },
   meta: {
-    type: 'schedule' | 'http' | 'channel' | 'queue' | 'mcpEndpoint'
+    type: PikkuEventTypes
     name: string
   }
 ) => {

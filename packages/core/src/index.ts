@@ -23,12 +23,7 @@ export { addChannel } from './events/channel/channel-runner.js'
 export { addScheduledTask } from './events/scheduler/scheduler-runner.js'
 export {
   addMCPEndpoint,
-  addMCPResource,
-  addMCPTool,
   runMCPEndpointJsonRpc,
-  runMCPEndpointJsonRpcBatch,
-  handleMCPJsonRpcRequest,
   getMCPEndpoints,
   getMCPEndpointsMeta,
-  JSON_RPC_ERRORS,
 } from './events/mcp/mcp-runner.js'

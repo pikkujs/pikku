@@ -3,47 +3,65 @@
  */
 import { addSchema } from '@pikku/core/schema'
 
-import * as OnConnectInput from './schemas/OnConnectInput.schema.json'
+import * as OnConnectInput from './schemas/OnConnectInput.schema.json' with { type: 'json' }
 addSchema('OnConnectInput', OnConnectInput)
 
-import * as AuthenticateInput from './schemas/AuthenticateInput.schema.json'
+import * as AuthenticateInput from './schemas/AuthenticateInput.schema.json' with { type: 'json' }
 addSchema('AuthenticateInput', AuthenticateInput)
 
-import * as AuthenticateOutput from './schemas/AuthenticateOutput.schema.json'
+import * as AuthenticateOutput from './schemas/AuthenticateOutput.schema.json' with { type: 'json' }
 addSchema('AuthenticateOutput', AuthenticateOutput)
 
-import * as SubscribeInput from './schemas/SubscribeInput.schema.json'
+import * as SubscribeInput from './schemas/SubscribeInput.schema.json' with { type: 'json' }
 addSchema('SubscribeInput', SubscribeInput)
 
-import * as UnsubscribeInput from './schemas/UnsubscribeInput.schema.json'
+import * as UnsubscribeInput from './schemas/UnsubscribeInput.schema.json' with { type: 'json' }
 addSchema('UnsubscribeInput', UnsubscribeInput)
 
-import * as EmitMessageInput from './schemas/EmitMessageInput.schema.json'
+import * as EmitMessageInput from './schemas/EmitMessageInput.schema.json' with { type: 'json' }
 addSchema('EmitMessageInput', EmitMessageInput)
 
-import * as EmitMessageOutput from './schemas/EmitMessageOutput.schema.json'
+import * as EmitMessageOutput from './schemas/EmitMessageOutput.schema.json' with { type: 'json' }
 addSchema('EmitMessageOutput', EmitMessageOutput)
 
-import * as OnMessageInput from './schemas/OnMessageInput.schema.json'
+import * as OnMessageInput from './schemas/OnMessageInput.schema.json' with { type: 'json' }
 addSchema('OnMessageInput', OnMessageInput)
 
-import * as OnMessageOutput from './schemas/OnMessageOutput.schema.json'
+import * as OnMessageOutput from './schemas/OnMessageOutput.schema.json' with { type: 'json' }
 addSchema('OnMessageOutput', OnMessageOutput)
 
-import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json'
+import * as ProgressiveEnhancementExampleOutput from './schemas/ProgressiveEnhancementExampleOutput.schema.json' with { type: 'json' }
 addSchema(
   'ProgressiveEnhancementExampleOutput',
   ProgressiveEnhancementExampleOutput
 )
 
-import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json'
+import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json' with { type: 'json' }
 addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
 
-import * as QueueWorkerInput from './schemas/QueueWorkerInput.schema.json'
+import * as SayHelloInput from './schemas/SayHelloInput.schema.json' with { type: 'json' }
+addSchema('SayHelloInput', SayHelloInput)
+
+import * as SayHelloOutput from './schemas/SayHelloOutput.schema.json' with { type: 'json' }
+addSchema('SayHelloOutput', SayHelloOutput)
+
+import * as CalculateInput from './schemas/CalculateInput.schema.json' with { type: 'json' }
+addSchema('CalculateInput', CalculateInput)
+
+import * as CalculateOutput from './schemas/CalculateOutput.schema.json' with { type: 'json' }
+addSchema('CalculateOutput', CalculateOutput)
+
+import * as GetUserInfoInput from './schemas/GetUserInfoInput.schema.json' with { type: 'json' }
+addSchema('GetUserInfoInput', GetUserInfoInput)
+
+import * as GetUserInfoOutput from './schemas/GetUserInfoOutput.schema.json' with { type: 'json' }
+addSchema('GetUserInfoOutput', GetUserInfoOutput)
+
+import * as QueueWorkerInput from './schemas/QueueWorkerInput.schema.json' with { type: 'json' }
 addSchema('QueueWorkerInput', QueueWorkerInput)
 
-import * as QueueWorkerOutput from './schemas/QueueWorkerOutput.schema.json'
+import * as QueueWorkerOutput from './schemas/QueueWorkerOutput.schema.json' with { type: 'json' }
 addSchema('QueueWorkerOutput', QueueWorkerOutput)
 
-import * as RpcTestInput from './schemas/RpcTestInput.schema.json'
+import * as RpcTestInput from './schemas/RpcTestInput.schema.json' with { type: 'json' }
 addSchema('RpcTestInput', RpcTestInput)

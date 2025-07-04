@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { APIDocs } from '@pikku/core'
+import { APIDocs, PikkuEventTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState } from './types.js'
 import {
   extractFunctionName,
@@ -22,22 +22,13 @@ export const addMCPEndpoint = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to addMCPResource, addMCPTool, or addMCPEndpoint
+  // Check if the call is to addMCPEndpoint
   if (
     !ts.isIdentifier(expression) ||
-    !['addMCPResource', 'addMCPTool', 'addMCPEndpoint'].includes(
-      expression.text
-    )
+    !['addMCPEndpoint'].includes(expression.text)
   ) {
     return
   }
-
-  const endpointType =
-    expression.text === 'addMCPResource'
-      ? 'resource'
-      : expression.text === 'addMCPTool'
-        ? 'tool'
-        : undefined // will be determined from the object
 
   if (!firstArg) {
     return
@@ -50,6 +41,7 @@ export const addMCPEndpoint = (
     const descriptionValue = getPropertyValue(obj, 'description') as
       | string
       | null
+
     const typeValue = getPropertyValue(obj, 'type') as string | null
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
     const docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
@@ -77,14 +69,11 @@ export const addMCPEndpoint = (
       return
     }
 
-    // Determine the endpoint type
-    const finalType = endpointType || typeValue || 'tool' // default to tool
-
     if (
       !matchesFilters(
         filters,
         { tags },
-        { type: 'mcpEndpoint', name: nameValue }
+        { type: PikkuEventTypes.mcp, name: nameValue }
       )
     ) {
       return
@@ -95,7 +84,7 @@ export const addMCPEndpoint = (
       pikkuFuncName,
       name: nameValue,
       description: descriptionValue,
-      type: finalType as 'tool' | 'resource',
+      type: typeValue as 'tool' | 'resource',
       ...(streamingValue !== null && { streaming: streamingValue }),
       docs,
       tags,

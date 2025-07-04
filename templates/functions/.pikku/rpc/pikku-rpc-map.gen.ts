@@ -22,6 +22,21 @@ export type ProgressiveEnhancementExampleOutput = {
   state: 'initial' | 'pending' | 'done'
 }
 export type TimeSinceOpenedOutput = { count: number }
+export type SayHelloInput = { name?: string }
+export type SayHelloOutput = { message: string; timestamp: number }
+export type CalculateInput = {
+  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  a: number
+  b: number
+}
+export type CalculateOutput = { result: number; operation: string }
+export type GetUserInfoInput = { userId: string }
+export type GetUserInfoOutput = {
+  userId: string
+  name: string
+  email: string
+  lastLogin: string
+}
 export type QueueWorkerInput = { message: string; fail: boolean }
 export type QueueWorkerOutput = { result: string }
 export type RpcTestInput = { in: number }
@@ -45,6 +60,9 @@ export type RPCMap = {
   >
   readonly timeSinceOpened: RPCHandler<null, TimeSinceOpenedOutput>
   readonly helloWorld: RPCHandler<null, string>
+  readonly sayHello: RPCHandler<SayHelloInput, SayHelloOutput>
+  readonly calculate: RPCHandler<CalculateInput, CalculateOutput>
+  readonly getUserInfo: RPCHandler<GetUserInfoInput, GetUserInfoOutput>
   readonly queueWorker: RPCHandler<QueueWorkerInput, QueueWorkerOutput>
   readonly rpcTest: RPCHandler<RpcTestInput, null>
   readonly rpcCaller: RPCHandler<null, null>

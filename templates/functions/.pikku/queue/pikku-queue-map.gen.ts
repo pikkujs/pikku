@@ -22,6 +22,21 @@ export type ProgressiveEnhancementExampleOutput = {
   state: 'initial' | 'pending' | 'done'
 }
 export type TimeSinceOpenedOutput = { count: number }
+export type SayHelloInput = { name?: string }
+export type SayHelloOutput = { message: string; timestamp: number }
+export type CalculateInput = {
+  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  a: number
+  b: number
+}
+export type CalculateOutput = { result: number; operation: string }
+export type GetUserInfoInput = { userId: string }
+export type GetUserInfoOutput = {
+  userId: string
+  name: string
+  email: string
+  lastLogin: string
+}
 export type QueueWorkerInput = { message: string; fail: boolean }
 export type QueueWorkerOutput = { result: string }
 export type RpcTestInput = { in: number }

@@ -6,7 +6,7 @@ import {
 } from '../../utils.js'
 import { serializeWebsocketWrapper } from './serialize-websocket-wrapper.js'
 
-export const pikkuWebSocket: PikkuCommandWithoutState = async (
+export const pikkuWebSocketTyped: PikkuCommandWithoutState = async (
   logger,
   { websocketFile, channelsMapDeclarationFile, packageMappings }
 ) => {

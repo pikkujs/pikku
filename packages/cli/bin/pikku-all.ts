@@ -21,13 +21,14 @@ import { PikkuEventTypes } from '@pikku/core'
 import { pikkuQueue } from '../src/events/queue/pikku-command-queue.js'
 import { pikkuQueueMap } from '../src/events/queue/pikku-command-queue-map.js'
 import { pikkuFetch } from '../src/events/fetch/index.js'
-import { pikkuWebSocket } from '../src/events/channels/pikku-command-websocket.js'
+import { pikkuWebSocketTyped } from '../src/events/channels/pikku-command-websocket-typed.js'
 import { pikkuNext } from '../src/events/http/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../src/events/http/pikku-command-openapi.js'
 import { pikkuMCP } from '../src/events/mcp/pikku-command-mcp.js'
 import { pikkuQueueService } from '../src/events/queue/pikku-command-queue-service.js'
 import { pikkuScheduler } from '../src/events/scheduler/pikku-command-scheduler.js'
 import { pikkuSchemas } from '../src/schemas.js'
+import { pikkuMCPJSON } from '../src/events/mcp/pikku-command-mcp-json.js'
 
 const runAll = async (
   logger: CLILogger,
@@ -45,11 +46,10 @@ const runAll = async (
     type: 'meta' | 'events' | 'other',
     addTo?: PikkuEventTypes[]
   ) => {
-    const statement = `import '${getFileImportRelativePath(cliConfig.bootstrapFile, from, cliConfig.packageMappings)}'`
     if (type === 'meta') {
-      boostrapImports.all.meta.push(statement)
+      boostrapImports.all.meta.push(from)
     } else {
-      boostrapImports.all.events.push(statement)
+      boostrapImports.all.events.push(from)
     }
 
     for (const transport of Object.keys(PikkuEventTypes)) {
@@ -59,9 +59,9 @@ const runAll = async (
           events: [],
         }
         if (type === 'meta') {
-          boostrapImports[transport].meta.push(statement)
+          boostrapImports[transport].meta.push(from)
         } else {
-          boostrapImports[transport].events.push(statement)
+          boostrapImports[transport].events.push(from)
         }
       }
     }
@@ -133,12 +133,17 @@ const runAll = async (
   const channels = await pikkuChannels(logger, cliConfig, visitState)
   if (channels) {
     await pikkuChannelsMap(logger, cliConfig, visitState)
-    await pikkuWebSocket(logger, cliConfig)
+    await pikkuWebSocketTyped(logger, cliConfig)
     addImport(cliConfig.channelsMetaFile, 'meta', [PikkuEventTypes.channel])
     addImport(cliConfig.channelsFile, 'events', [PikkuEventTypes.channel])
   }
 
-  await pikkuMCP(logger, cliConfig, visitState)
+  const mcp = await pikkuMCP(logger, cliConfig, visitState)
+  if (mcp) {
+    await pikkuMCPJSON(logger, cliConfig, visitState)
+    addImport(cliConfig.mcpEndpointsMetaFile, 'meta', [PikkuEventTypes.mcp])
+    addImport(cliConfig.mcpEndpointsFile, 'events', [PikkuEventTypes.mcp])
+  }
 
   if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
     await pikkuNext(logger, cliConfig, visitState, options)
@@ -158,10 +163,17 @@ const runAll = async (
   }
 
   for (const [type, { meta, events }] of Object.entries(boostrapImports)) {
+    const bootstrapFile =
+      type === 'all' ? cliConfig.bootstrapFile : cliConfig.bootstrapFiles[type]
     await writeFileInDir(
       logger,
-      type === 'all' ? cliConfig.bootstrapFile : cliConfig.bootstrapFiles[type],
-      [...meta, ...events].join('\n')
+      bootstrapFile,
+      [...meta, ...events]
+        .map(
+          (to) =>
+            `import '${getFileImportRelativePath(bootstrapFile, to, cliConfig.packageMappings)}'`
+        )
+        .join('\n')
     )
   }
 }

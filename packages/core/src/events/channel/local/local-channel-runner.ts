@@ -9,7 +9,7 @@ import {
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { SessionServices } from '../../../types/core.types.js'
-import { handleError } from '../../../handle-error.js'
+import { handleHTTPError } from '../../../handle-error.js'
 import { runMiddleware } from '../../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
@@ -110,7 +110,7 @@ export const runLocalChannel = async ({
         )
       )
     } catch (e: any) {
-      handleError(
+      handleHTTPError(
         e,
         http,
         channelId,

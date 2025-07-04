@@ -67,7 +67,9 @@
         "additionalProperties": false,
         "definitions": {}
       }
-    },
+    }
+  ],
+  "resources": [
     {
       "name": "getUserInfo",
       "description": "Retrieve user information by user ID",
