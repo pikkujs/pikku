@@ -3,7 +3,7 @@
  */
 
 import type { QueueService, QueueJob } from '@pikku/core/queue'
-import type { QueueMap, TypedPikkuQueue } from './pikku-queue-map.gen.js'
+import type { QueueMap, TypedPikkuQueue } from './queue/pikku-queue-map.gen.js'
 
 export class PikkuQueue implements TypedPikkuQueue {
   constructor(private queueService: QueueService) {}

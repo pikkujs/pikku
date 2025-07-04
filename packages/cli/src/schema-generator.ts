@@ -1,11 +1,12 @@
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
-import { logInfo, writeFileInDir } from './utils/utils.js'
+import { CLILogger, writeFileInDir } from './utils.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPRoutesMeta } from '@pikku/core/http'
 import { TypesMap } from '@pikku/inspector'
 
 export async function generateSchemas(
+  logger: CLILogger,
   tsconfig: string,
   typesMap: TypesMap,
   functionMeta: FunctionsMeta,
@@ -63,6 +64,7 @@ export async function generateSchemas(
 }
 
 export async function saveSchemas(
+  logger: CLILogger,
   schemaParentDir: string,
   schemas: Record<string, JSONValue>,
   typesMap: TypesMap,
@@ -70,6 +72,7 @@ export async function saveSchemas(
   supportsImportAttributes: boolean
 ) {
   await writeFileInDir(
+    logger,
     `${schemaParentDir}/register.gen.ts`,
     'export const empty = null;'
   )
@@ -90,7 +93,7 @@ export async function saveSchemas(
   ])
 
   if (desiredSchemas.size === 0) {
-    logInfo(`• Skipping schemas since none found.\x1b[0m`)
+    logger.info(`• Skipping schemas since none found.\x1b[0m`)
     return
   }
 
@@ -117,8 +120,10 @@ addSchema('${schema}', ${schema})
     .join('\n')
 
   await writeFileInDir(
+    logger,
     `${schemaParentDir}/register.gen.ts`,
     `import { addSchema } from '@pikku/core/schema'
-${schemaImports}`
+${schemaImports}`,
+    { logWrite: true }
   )
 }

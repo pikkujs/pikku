@@ -16,6 +16,7 @@ import {
   queueWorkersMeta,
   CoreQueueWorker,
 } from './events/queue/queue.types.js'
+import { MCPEndpointsMeta, CoreMCPEndpoint } from './events/mcp/mcp.types.js'
 
 interface PikkuState {
   function: {
@@ -49,6 +50,10 @@ interface PikkuState {
     registrations: Map<string, CoreQueueWorker>
     meta: queueWorkersMeta
   }
+  mcp: {
+    endpoints: Map<string, CoreMCPEndpoint>
+    meta: MCPEndpointsMeta
+  }
   misc: {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
@@ -81,6 +86,10 @@ export const resetPikkuState = () => {
     queue: {
       registrations: new Map(),
       meta: {},
+    },
+    mcp: {
+      endpoints: new Map(),
+      meta: {} as MCPEndpointsMeta,
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),

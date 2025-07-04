@@ -1,35 +1,39 @@
 import { Command } from 'commander'
 import {
+  CLILogger,
   getFileImportRelativePath,
-  logInfo,
-  logPikkuLogo,
   PikkuCLIOptions,
   writeFileInDir,
-} from '../src/utils/utils.js'
+} from '../src/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuHTTP } from './pikku-http-routes.js'
-import { pikkuFunctionTypes } from './pikku-function-types.js'
-import { pikkuHTTPMap } from './pikku-http-map.js'
+import { pikkuHTTP } from '../src/events/http/pikku-command-http-routes.js'
+import { pikkuFunctionTypes } from '../src/events/functions/pikku-command-function-types.js'
+import { pikkuHTTPMap } from '../src/events/http/pikku-command-http-map.js'
 import { existsSync } from 'fs'
-import { pikkuFetch } from './pikku-fetch.js'
-import { pikkuChannelsMap } from './pikku-channels-map.js'
-import { pikkuChannels } from './pikku-channels.js'
-import { pikkuNext } from './pikku-nextjs.js'
-import { pikkuOpenAPI } from './pikku-openapi.js'
-import { pikkuScheduler } from './pikku-scheduler.js'
-import { pikkuSchemas } from './pikku-schemas.js'
-import { pikkuWebSocket } from './pikku-websocket.js'
+import { pikkuChannelsMap } from '../src/events/channels/pikku-command-channels-map.js'
+import { pikkuChannels } from '../src/events/channels/pikku-command-channels.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 import chokidar from 'chokidar'
-import { pikkuFunctions } from './pikku-functions.js'
-import { pikkuRPC } from './pikku-rpc.js'
-import { pikkuRPCMap } from './pikku-rpc-map.js'
+import { pikkuFunctions } from '../src/events/functions/pikku-command-functions.js'
+import { pikkuRPC } from '../src/events/rpc/pikku-command-rpc.js'
+import { pikkuRPCMap } from '../src/events/rpc/pikku-command-rpc-map.js'
 import { PikkuEventTypes } from '@pikku/core'
-import { pikkuQueue } from './pikku-queue.js'
-import { pikkuQueueMap } from './pikku-queue-map.js'
-import { pikkuQueueService } from './pikku-queue-service.js'
+import { pikkuQueue } from '../src/events/queue/pikku-command-queue.js'
+import { pikkuQueueMap } from '../src/events/queue/pikku-command-queue-map.js'
+import { pikkuFetch } from '../src/events/fetch/index.js'
+import { pikkuWebSocket } from '../src/events/channels/pikku-command-websocket.js'
+import { pikkuNext } from '../src/events/http/pikku-command-nextjs.js'
+import { pikkuOpenAPI } from '../src/events/http/pikku-command-openapi.js'
+import { pikkuMCP } from '../src/events/mcp/pikku-command-mcp.js'
+import { pikkuQueueService } from '../src/events/queue/pikku-command-queue-service.js'
+import { pikkuScheduler } from '../src/events/scheduler/pikku-command-scheduler.js'
+import { pikkuSchemas } from '../src/schemas.js'
 
-const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
+const runAll = async (
+  logger: CLILogger,
+  cliConfig: PikkuCLIConfig,
+  options: PikkuCLIOptions
+) => {
   const boostrapImports: Partial<
     Record<PikkuEventTypes, { meta: string[]; events: string[] }>
   > & { all: { meta: string[]; events: string[] } } = {
@@ -65,6 +69,7 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
 
   let typesDeclarationFileExists = true
   let visitState = await inspectorGlob(
+    logger,
     cliConfig.rootDir,
     cliConfig.srcDirectories,
     cliConfig.filters
@@ -73,88 +78,99 @@ const runAll = async (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   if (!existsSync(cliConfig.typesDeclarationFile)) {
     typesDeclarationFileExists = false
   }
-  await pikkuFunctionTypes(cliConfig, options, visitState)
+  await pikkuFunctionTypes(logger, cliConfig, visitState, options)
 
   // This is needed since the addHTTPRoute function will add the routes to the visitState
   if (!typesDeclarationFileExists) {
-    logInfo(`• Type file first created, inspecting again...\x1b[0m`)
+    logger.info(`• Type file first created, inspecting again...\x1b[0m`)
     visitState = await inspectorGlob(
+      logger,
       cliConfig.rootDir,
       cliConfig.srcDirectories,
       cliConfig.filters
     )
   }
 
-  const functions = pikkuFunctions(cliConfig, visitState)
+  const functions = pikkuFunctions(logger, cliConfig, visitState)
   if (!functions) {
-    logInfo(`• No functions found, skipping remaining steps...\x1b[0m`)
+    logger.info(`• No functions found, skipping remaining steps...\x1b[0m`)
     process.exit(1)
   }
   addImport(cliConfig.functionsMetaFile, 'meta')
   addImport(cliConfig.functionsFile, 'events')
 
-  await pikkuRPC(cliConfig, visitState)
-  await pikkuRPCMap(cliConfig, visitState)
+  await pikkuRPC(logger, cliConfig, visitState)
+  await pikkuRPCMap(logger, cliConfig, visitState)
   addImport(cliConfig.rpcMetaFile, 'meta', [PikkuEventTypes.rpc])
 
-  const schemas = await pikkuSchemas(cliConfig, visitState)
+  const schemas = await pikkuSchemas(logger, cliConfig, visitState)
   if (schemas) {
     addImport(`${cliConfig.schemaDirectory}/register.gen.ts`, 'other')
   }
 
-  const http = await pikkuHTTP(cliConfig, visitState)
+  const http = await pikkuHTTP(logger, cliConfig, visitState)
   if (http) {
-    await pikkuHTTPMap(cliConfig, visitState)
-    await pikkuFetch(cliConfig)
+    await pikkuHTTPMap(logger, cliConfig, visitState)
+    await pikkuFetch(logger, cliConfig)
     addImport(cliConfig.httpRoutesMetaFile, 'meta', [PikkuEventTypes.http])
     addImport(cliConfig.httpRoutesFile, 'events', [PikkuEventTypes.http])
   }
 
-  const scheduled = await pikkuScheduler(cliConfig, visitState)
+  const scheduled = await pikkuScheduler(logger, cliConfig, visitState)
   if (scheduled) {
     addImport(cliConfig.schedulersMetaFile, 'meta', [PikkuEventTypes.scheduled])
     addImport(cliConfig.schedulersFile, 'events', [PikkuEventTypes.scheduled])
   }
 
-  const queues = await pikkuQueue(cliConfig, visitState)
+  const queues = await pikkuQueue(logger, cliConfig, visitState)
   if (queues) {
-    await pikkuQueueMap(cliConfig, visitState)
-    await pikkuQueueService(cliConfig)
+    await pikkuQueueMap(logger, cliConfig, visitState)
+    await pikkuQueueService(logger, cliConfig)
     addImport(cliConfig.queueWorkersMetaFile, 'meta', [PikkuEventTypes.queue])
     addImport(cliConfig.queueWorkersFile, 'events', [PikkuEventTypes.queue])
   }
 
-  const channels = await pikkuChannels(cliConfig, visitState)
+  const channels = await pikkuChannels(logger, cliConfig, visitState)
   if (channels) {
-    await pikkuChannelsMap(cliConfig, visitState)
-    await pikkuWebSocket(cliConfig)
+    await pikkuChannelsMap(logger, cliConfig, visitState)
+    await pikkuWebSocket(logger, cliConfig)
     addImport(cliConfig.channelsMetaFile, 'meta', [PikkuEventTypes.channel])
     addImport(cliConfig.channelsFile, 'events', [PikkuEventTypes.channel])
   }
 
+  await pikkuMCP(logger, cliConfig, visitState)
+
   if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
-    await pikkuNext(cliConfig, visitState, options)
+    await pikkuNext(logger, cliConfig, visitState, options)
   }
 
   if (cliConfig.openAPI) {
-    logInfo(`• OpenAPI requires a reinspection to pickup new generated types..`)
+    logger.info(
+      `• OpenAPI requires a reinspection to pickup new generated types..`
+    )
     visitState = await inspectorGlob(
+      logger,
       cliConfig.rootDir,
       cliConfig.srcDirectories,
       cliConfig.filters
     )
-    await pikkuOpenAPI(cliConfig, visitState)
+    await pikkuOpenAPI(logger, cliConfig, visitState)
   }
 
   for (const [type, { meta, events }] of Object.entries(boostrapImports)) {
     await writeFileInDir(
+      logger,
       type === 'all' ? cliConfig.bootstrapFile : cliConfig.bootstrapFiles[type],
       [...meta, ...events].join('\n')
     )
   }
 }
 
-const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
+const watch = (
+  logger: CLILogger,
+  cliConfig: PikkuCLIConfig,
+  options: PikkuCLIOptions
+) => {
   const configWatcher = chokidar.watch(cliConfig.srcDirectories, {
     ignoreInitial: true,
     ignored: /.*\.gen\.tsx?/,
@@ -165,7 +181,7 @@ const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
   const generatorWatcher = () => {
     watcher.close()
 
-    logInfo(
+    logger.info(
       `• Watching directories: \n  - ${cliConfig.srcDirectories.join('\n  - ')}`
     )
     watcher = chokidar.watch(cliConfig.srcDirectories, {
@@ -176,7 +192,7 @@ const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
     watcher.on('ready', async () => {
       const handle = async () => {
         try {
-          await runAll(cliConfig, options)
+          await runAll(logger, cliConfig, options)
         } catch (err) {
           console.error(err)
           console.info()
@@ -205,7 +221,7 @@ const watch = (cliConfig: PikkuCLIConfig, options: PikkuCLIOptions) => {
 }
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {
-  logPikkuLogo()
+  const logger = new CLILogger({ logLogo: true })
 
   const cliConfig = await getPikkuCLIConfig(
     options.config,
@@ -215,9 +231,9 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   )
 
   if (options.watch) {
-    watch(cliConfig, options)
+    watch(logger, cliConfig, options)
   } else {
-    await runAll(cliConfig, options)
+    await runAll(logger, cliConfig, options)
   }
 }
 

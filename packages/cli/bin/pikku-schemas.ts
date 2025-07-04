@@ -1,39 +1,12 @@
 import { Command } from 'commander'
-import { saveSchemas, generateSchemas } from '../src/schema-generator.js'
 
-import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { InspectorState } from '@pikku/inspector'
-import { logCommandInfoAndTime, logPikkuLogo } from '../src/utils/utils.js'
+import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
-
-export const pikkuSchemas = async (
-  { tsconfig, schemaDirectory, supportsImportAttributes }: PikkuCLIConfig,
-  { functions, http }: InspectorState
-) => {
-  return await logCommandInfoAndTime(
-    'Creating schemas',
-    'Created schemas',
-    [false],
-    async () => {
-      const schemas = await generateSchemas(
-        tsconfig,
-        functions.typesMap,
-        functions.meta,
-        http.meta
-      )
-      await saveSchemas(
-        schemaDirectory,
-        schemas,
-        functions.typesMap,
-        functions.meta,
-        supportsImportAttributes
-      )
-    }
-  )
-}
+import { pikkuSchemas } from '../src/schemas.js'
+import { CLILogger } from '../src/utils.js'
 
 async function action({ config }: { config?: string }): Promise<void> {
-  logPikkuLogo()
+  const logger = new CLILogger({ logLogo: true })
 
   const cliConfig = await getPikkuCLIConfig(config, [
     'srcDirectories',
@@ -41,11 +14,12 @@ async function action({ config }: { config?: string }): Promise<void> {
     'tsconfig',
   ])
   const visitState = await inspectorGlob(
+    logger,
     cliConfig.rootDir,
     cliConfig.srcDirectories,
     cliConfig.filters
   )
-  await pikkuSchemas(cliConfig, visitState)
+  await pikkuSchemas(logger, cliConfig, visitState)
 }
 
 export const schemas = (program: Command): void => {

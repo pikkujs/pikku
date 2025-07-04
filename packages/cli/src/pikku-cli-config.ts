@@ -1,6 +1,6 @@
 import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
-import { OpenAPISpecInfo } from './openapi-spec-generator.js'
+import { OpenAPISpecInfo } from './events/http/openapi-spec-generator.js'
 import { InspectorFilters } from '@pikku/inspector'
 import { PikkuEventTypes } from '@pikku/core'
 
@@ -62,6 +62,8 @@ export type PikkuCLIConfig = {
   fetchFile?: string
   websocketFile?: string
   queueFile?: string
+  mcpJsonFile?: string
+  mcpBootstrapFile?: string
 
   openAPI?: {
     outputFile: string
@@ -77,6 +79,8 @@ const CONFIG_DIR_FILES = [
   'fetchFile',
   'websocketFile',
   'queueFile',
+  'mcpJsonFile',
+  'mcpBootstrapFile',
 ]
 
 export const getPikkuCLIConfig = async (
@@ -149,95 +153,123 @@ const _getPikkuCLIConfig = async (
     }
 
     if (result.outDir) {
+      // Create transport/event directories
+      const httpDir = join(result.outDir, 'http')
+      const channelsDir = join(result.outDir, 'channels')
+      const rpcDir = join(result.outDir, 'rpc')
+      const schedulerDir = join(result.outDir, 'scheduler')
+      const queueDir = join(result.outDir, 'queue')
+      const mcpDir = join(result.outDir, 'mcp')
+      const functionsDir = join(result.outDir, 'functions')
+
+      // Create directories if they don't exist (will be done lazily when files are written)
+
       if (!result.schemaDirectory) {
-        result.schemaDirectory = join(result.outDir, 'pikku-schemas')
+        result.schemaDirectory = join(result.outDir, 'schemas')
       }
+
+      // Functions
       if (!result.functionsFile) {
-        result.functionsFile = join(result.outDir, 'pikku-functions.gen.ts')
+        result.functionsFile = join(functionsDir, 'pikku-functions.gen.ts')
       }
       if (!result.functionsMetaFile) {
         result.functionsMetaFile = join(
-          result.outDir,
+          functionsDir,
           'pikku-functions-meta.gen.ts'
         )
       }
-      if (!result.rpcMetaFile) {
-        result.rpcMetaFile = join(result.outDir, 'pikku-rpc-meta.gen.ts')
+      if (!result.typesDeclarationFile) {
+        result.typesDeclarationFile = join(functionsDir, 'pikku-types.gen.ts')
       }
-      if (!result.rpcMapDeclarationFile) {
-        result.rpcMapDeclarationFile = join(
-          result.outDir,
-          'pikku-rpc-map.gen.ts'
-        )
-      }
+
+      // HTTP
       if (!result.httpRoutesFile) {
-        result.httpRoutesFile = join(result.outDir, 'pikku-http-routes.gen.ts')
+        result.httpRoutesFile = join(httpDir, 'pikku-http-routes.gen.ts')
       }
       if (!result.httpRoutesMetaFile) {
         result.httpRoutesMetaFile = join(
-          result.outDir,
+          httpDir,
           'pikku-http-routes-meta.gen.ts'
         )
       }
+      if (!result.httpRoutesMapDeclarationFile) {
+        result.httpRoutesMapDeclarationFile = join(
+          httpDir,
+          'pikku-http-routes-map.gen.d.ts'
+        )
+      }
+
+      // Channels/WebSocket
+      if (!result.channelsFile) {
+        result.channelsFile = join(channelsDir, 'pikku-channels.gen.ts')
+      }
+      if (!result.channelsMetaFile) {
+        result.channelsMetaFile = join(
+          channelsDir,
+          'pikku-channels-meta.gen.ts'
+        )
+      }
+      if (!result.channelsMapDeclarationFile) {
+        result.channelsMapDeclarationFile = join(
+          channelsDir,
+          'pikku-channels-map.gen.d.ts'
+        )
+      }
+
+      // RPC
+      if (!result.rpcMetaFile) {
+        result.rpcMetaFile = join(rpcDir, 'pikku-rpc-meta.gen.ts')
+      }
+      if (!result.rpcMapDeclarationFile) {
+        result.rpcMapDeclarationFile = join(rpcDir, 'pikku-rpc-map.gen.ts')
+      }
+
+      // Scheduler
       if (!result.schedulersFile) {
-        result.schedulersFile = join(result.outDir, 'pikku-schedules.gen.ts')
+        result.schedulersFile = join(schedulerDir, 'pikku-schedules.gen.ts')
       }
       if (!result.schedulersMetaFile) {
         result.schedulersMetaFile = join(
-          result.outDir,
+          schedulerDir,
           'pikku-schedules-meta.gen.ts'
         )
       }
+
+      // Queue
       if (!result.queueWorkersFile) {
-        result.queueWorkersFile = join(
-          result.outDir,
-          'pikku-queue-workers.gen.ts'
-        )
+        result.queueWorkersFile = join(queueDir, 'pikku-queue-workers.gen.ts')
       }
       if (!result.queueWorkersMetaFile) {
         result.queueWorkersMetaFile = join(
-          result.outDir,
+          queueDir,
           'pikku-queue-workers-meta.gen.ts'
         )
       }
       if (!result.queueMapDeclarationFile) {
         result.queueMapDeclarationFile = join(
-          result.outDir,
+          queueDir,
           'pikku-queue-map.gen.ts'
         )
       }
-      if (!result.channelsFile) {
-        result.channelsFile = join(result.outDir, 'pikku-channels.gen.ts')
-      }
-      if (!result.channelsMetaFile) {
-        result.channelsMetaFile = join(
-          result.outDir,
-          'pikku-channels-meta.gen.ts'
-        )
-      }
-      if (!result.typesDeclarationFile) {
-        result.typesDeclarationFile = join(result.outDir, 'pikku-types.gen.ts')
-      }
-      if (!result.httpRoutesMapDeclarationFile) {
-        result.httpRoutesMapDeclarationFile = join(
-          result.outDir,
-          'pikku-http-routes-map.gen.d.ts'
-        )
-      }
-      if (!result.channelsMapDeclarationFile) {
-        result.channelsMapDeclarationFile = join(
-          result.outDir,
-          'pikku-channels-map.gen.d.ts'
-        )
-      }
+
+      // Bootstrap files
       if (!result.bootstrapFile) {
         result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')
       }
 
+      // MCP
+      if (!result.mcpJsonFile) {
+        result.mcpJsonFile = join(mcpDir, 'mcp.gen.json')
+      }
+      if (!result.mcpBootstrapFile) {
+        result.mcpBootstrapFile = join(mcpDir, 'pikku-mcp-bootstrap.gen.ts')
+      }
+
       result.bootstrapFiles = result.bootstrapFiles || {}
       for (const key of Object.keys(PikkuEventTypes)) {
+        const eventDir = join(result.outDir, key.toLowerCase())
         result.bootstrapFiles[key] = join(
-          result.outDir,
+          eventDir,
           `pikku-bootstrap-${key}.gen.ts`
         )
       }

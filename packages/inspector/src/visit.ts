@@ -4,6 +4,7 @@ import { addFileExtendsCoreType } from './add-file-extends-core-type.js'
 import { addHTTPRoute } from './add-http-route.js'
 import { addSchedule } from './add-schedule.js'
 import { addQueueWorker } from './add-queue-worker.js'
+import { addMCPEndpoint } from './add-mcp-endpoint.js'
 import { InspectorFilters, InspectorState } from './types.js'
 import { addFunctions } from './add-functions.js'
 import { addChannel } from './add-channel.js'
@@ -65,6 +66,6 @@ export const visitRoutes = (
   addSchedule(node, checker, state, filters)
   addQueueWorker(node, checker, state, filters)
   addChannel(node, checker, state, filters)
-  addQueueWorker(node, checker, state, filters)
+  addMCPEndpoint(node, checker, state, filters)
   ts.forEachChild(node, (child) => visitRoutes(checker, child, state, filters))
 }

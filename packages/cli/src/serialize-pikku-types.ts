@@ -19,6 +19,7 @@ import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRo
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
 import { CoreQueueWorker, addQueueWorker as addCoreQueueWorker } from '@pikku/core/queue'
+import { CoreMCPEndpoint, addMCPEndpoint as addCoreMCPEndpoint } from '@pikku/core'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -56,6 +57,7 @@ type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Ro
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
 type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
+type MCPEndpoint<In, Out> = CoreMCPEndpoint<APIFunctionSessionless<In, Out>>
 
 export const pikkuFunc = <In, Out = unknown>(
   func:
@@ -147,6 +149,12 @@ export const addScheduledTask = (task: ScheduledTask) => {
 
 export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
   addCoreQueueWorker(queueWorker as any) // TODO
+}
+
+export const addMCPEndpoint = <In, Out>(
+  mcpEndpoint: MCPEndpoint<In, Out>
+) => {
+  addCoreMCPEndpoint(mcpEndpoint as any)
 }
 `
 }

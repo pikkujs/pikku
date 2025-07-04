@@ -7,7 +7,7 @@ import type {
   RoutesMap,
   RouteHandlerOf,
   RoutesWithMethod,
-} from './pikku-http-routes-map.gen.d.js'
+} from './http/pikku-http-routes-map.gen.d.js'
 
 export class PikkuFetch extends CorePikkuFetch {
   public async post<Route extends RoutesWithMethod<'POST'>>(

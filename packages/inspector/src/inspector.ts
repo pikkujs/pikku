@@ -56,6 +56,10 @@ export const inspect = (
     rpc: {
       meta: {},
     },
+    mcpEndpoints: {
+      meta: {},
+      files: new Set(),
+    },
   }
 
   // First sweep: add all functions

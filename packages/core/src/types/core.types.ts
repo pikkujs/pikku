@@ -15,6 +15,7 @@ export enum PikkuEventTypes {
   channel = 'channel',
   rpc = 'rpc',
   queue = 'queue',
+  mcp = 'mcp',
 }
 
 export interface FunctionServicesMeta {

@@ -6,7 +6,7 @@ import {
   ChannelDefaultHandlerOf,
   ChannelRouteHandlerOf,
   ChannelsMap,
-} from './pikku-channels-map.gen.d.js'
+} from './channels/pikku-channels-map.gen.d.js'
 
 class PikkuWebSocketRoute<
   Channel extends keyof ChannelsMap,
