@@ -2,7 +2,7 @@ import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPRoutesMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { queueWorkersMeta } from '@pikku/core/queue'
-import { MCPEndpointsMeta } from '@pikku/core'
+import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta } from '@pikku/core'
 import { RPCMeta } from '@pikku/core/rpc'
@@ -63,7 +63,9 @@ export interface InspectorState {
     meta: Record<string, RPCMeta>
   }
   mcpEndpoints: {
-    meta: MCPEndpointsMeta
+    resourcesMeta: MCPResourceMeta
+    toolsMeta: MCPToolMeta
+    promptsMeta: MCPPromptMeta
     files: Set<string>
   }
 }

@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { APIDocs, PikkuEventTypes } from '@pikku/core'
+import { PikkuEventTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState } from './types.js'
 import {
   extractFunctionName,
@@ -8,7 +8,7 @@ import {
   matchesFilters,
 } from './utils.js'
 
-export const addMCPEndpoint = (
+export const addMCPTool = (
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
@@ -22,11 +22,8 @@ export const addMCPEndpoint = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to addMCPEndpoint
-  if (
-    !ts.isIdentifier(expression) ||
-    !['addMCPEndpoint'].includes(expression.text)
-  ) {
+  // Check if the call is to addMCPTool
+  if (!ts.isIdentifier(expression) || expression.text !== 'addMCPTool') {
     return
   }
 
@@ -38,13 +35,11 @@ export const addMCPEndpoint = (
     const obj = firstArg
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
+    const titleValue = getPropertyValue(obj, 'title') as string | null
     const descriptionValue = getPropertyValue(obj, 'description') as
       | string
       | null
-
-    const typeValue = getPropertyValue(obj, 'type') as string | null
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
-    const docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
     const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
 
     const funcInitializer = getPropertyAssignmentInitializer(
@@ -54,9 +49,7 @@ export const addMCPEndpoint = (
       checker
     )
     if (!funcInitializer) {
-      console.error(
-        `• No valid 'func' property for MCP endpoint '${nameValue}'.`
-      )
+      console.error(`• No valid 'func' property for MCP tool '${nameValue}'.`)
       return
     }
 
@@ -65,7 +58,13 @@ export const addMCPEndpoint = (
       checker
     ).pikkuFuncName
 
-    if (!nameValue || !descriptionValue) {
+    if (!nameValue) {
+      console.error(`• MCP tool is missing the required 'name' property.`)
+      return
+    }
+
+    if (!descriptionValue) {
+      console.error(`• MCP tool '${nameValue}' is missing a description.`)
       return
     }
 
@@ -79,15 +78,26 @@ export const addMCPEndpoint = (
       return
     }
 
+    // lookup existing function metadata
+    const fnMeta = state.functions.meta[pikkuFuncName]
+    if (!fnMeta) {
+      console.error(`• No function metadata found for '${pikkuFuncName}'.`)
+      return
+    }
+    const inputSchema = fnMeta.inputs?.[0] || null
+    const outputSchema = fnMeta.outputs?.[0] || null
+
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
-    state.mcpEndpoints.meta[nameValue] = {
+
+    state.mcpEndpoints.toolsMeta[nameValue] = {
       pikkuFuncName,
       name: nameValue,
+      title: titleValue || undefined,
       description: descriptionValue,
-      type: typeValue as 'tool' | 'resource',
       ...(streamingValue !== null && { streaming: streamingValue }),
-      docs,
       tags,
+      inputSchema,
+      outputSchema,
     }
   }
 }

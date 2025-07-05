@@ -57,7 +57,9 @@ export const inspect = (
       meta: {},
     },
     mcpEndpoints: {
-      meta: {},
+      resourcesMeta: {},
+      toolsMeta: {},
+      promptsMeta: {},
       files: new Set(),
     },
   }
