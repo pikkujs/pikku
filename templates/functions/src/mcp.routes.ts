@@ -1,43 +1,60 @@
-import { addMCPEndpoint } from '../.pikku/pikku-types.gen.js'
-import { sayHello, calculate, getUserInfo } from './mcp.functions.js'
+import {
+  addMCPTool,
+  addMCPResource,
+  addMCPPrompt,
+} from '../.pikku/pikku-types.gen.js'
+import {
+  sayHello,
+  calculate,
+  getUserInfo,
+  dynamicPromptGenerator,
+  getStaticResource,
+  staticPromptGenerator,
+} from './mcp.functions.js'
 
 // Register a simple greeting tool
-addMCPEndpoint({
+addMCPTool({
   name: 'sayHello',
   description: 'Greet someone with a friendly hello message',
-  type: 'tool',
   func: sayHello,
-  docs: {
-    summary: 'Say hello to someone',
-    description:
-      'A simple greeting tool that returns a personalized hello message with timestamp',
-    tags: ['greeting', 'hello', 'demo'],
-  },
+  tags: ['greeting', 'hello', 'demo'],
 })
 
 // Register a calculator tool
-addMCPEndpoint({
+addMCPTool({
   name: 'calculate',
   description:
     'Perform basic mathematical operations (add, subtract, multiply, divide)',
-  type: 'tool',
   func: calculate,
-  docs: {
-    summary: 'Basic calculator',
-    description: 'Performs basic arithmetic operations between two numbers',
-    tags: ['math', 'calculator', 'arithmetic'],
-  },
+  tags: ['math', 'calculator', 'arithmetic'],
 })
 
-addMCPEndpoint({
-  name: 'getUserInfo',
+addMCPResource({
+  uri: 'getStaticResource',
+  title: 'Static Resource',
+  description: 'Gets a static resource with predefined data',
+  func: getStaticResource,
+})
+
+addMCPResource({
+  uri: 'getUserInfo/{userId}',
+  title: 'User Information',
   description: 'Retrieve user information by user ID',
-  type: 'resource',
   func: getUserInfo,
-  docs: {
-    summary: 'Get user data',
-    description:
-      'Fetches user profile information including name, email, and last login',
-    tags: ['user', 'profile', 'data'],
-  },
+  tags: ['user', 'profile', 'data'],
+})
+
+addMCPPrompt({
+  name: 'getStaticResource',
+  description: 'A static prompt that returns a predefined message',
+  func: staticPromptGenerator,
+})
+
+// Register a progressive enhancement example prompt
+addMCPPrompt({
+  name: 'dynamicPromptGenerator',
+  description:
+    'Generate educational content with progressive complexity and optional examples',
+  func: dynamicPromptGenerator,
+  tags: ['education', 'content', 'progressive', 'examples'],
 })

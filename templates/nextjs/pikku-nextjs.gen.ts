@@ -13,7 +13,7 @@ import type {
   RoutesMap,
   RouteHandlerOf,
   RoutesWithMethod,
-} from '../functions/.pikku/pikku-http-routes-map.gen.d.js'
+} from '../functions/.pikku/http/pikku-http-routes-map.gen.js'
 
 import { createConfig as createConfig } from '../functions/src/services.js'
 import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'

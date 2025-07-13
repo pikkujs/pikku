@@ -1,55 +1,118 @@
-import { APIDocs, CoreUserSession } from '../../types/core.types.js'
 import { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
 
 /**
- * Represents metadata for MCP endpoints (tools and resources), including name, description, and documentation.
+ * Represents metadata for MCP resources, including name, description, and documentation.
  */
-export type MCPEndpointsMeta<UserSession extends CoreUserSession = any> =
-  Record<
-    string,
-    {
-      pikkuFuncName: string
-      name: string
-      description: string
-      type: 'tool' | 'resource'
-      streaming?: boolean
-      session?: UserSession
-      docs?: APIDocs
-      tags?: string[]
-    }
-  >
+export type MCPResourceMeta = Record<
+  string,
+  Omit<CoreMCPResource, 'func'> & {
+    pikkuFuncName: string
+    inputSchema: string | null
+    outputSchema: string | null
+  }
+>
 
 /**
- * Represents a core MCP endpoint (tool or resource).
+ * Represents metadata for MCP tools, including name, description, and documentation.
  */
-export type CoreMCPEndpoint<
+export type MCPToolMeta = Record<
+  string,
+  Omit<CoreMCPTool, 'func'> & {
+    pikkuFuncName: string
+    inputSchema: string | null
+    outputSchema: string | null
+  }
+>
+
+/**
+ * Represents metadata for MCP prompts, including name, description, and arguments.
+ */
+export type MCPPromptMeta = Record<
+  string,
+  Omit<CoreMCPPrompt, 'func'> & {
+    pikkuFuncName: string
+    inputSchema: string | null
+    outputSchema: string | null
+    arguments: Array<{
+      name: string
+      description: string
+      required: boolean
+    }>
+  }
+>
+
+/**
+ * Represents an MCP resource with specific properties.
+ */
+export type CoreMCPResource<
   APIFunction = CoreAPIFunctionSessionless<any, any>,
-  UserSession extends CoreUserSession = CoreUserSession,
 > = {
-  name: string
-  description: string
-  type: 'tool' | 'resource'
+  uri: string
+  title: string
+  description?: string
+  mimeType?: string
+  size?: number
   streaming?: boolean
   func: APIFunction
-  docs?: APIDocs
-  session?: UserSession
+  tags?: string[]
+}
+
+/**
+ * Represents an MCP tool with specific properties.
+ */
+export type CoreMCPTool<APIFunction = CoreAPIFunctionSessionless<any, any>> = {
+  name: string
+  title?: string
+  description: string
+  annotations?: Record<string, any>
+  func: APIFunction
+  tags?: string[]
+  streaming?: boolean
+}
+
+/**
+ * Represents an MCP prompt with specific properties.
+ */
+export type CoreMCPPrompt<
+  APIFunction = CoreAPIFunctionSessionless<any, MCPPromptResponse>,
+> = {
+  name: string
+  description?: string
+  func: APIFunction
   tags?: string[]
 }
 
 export type JsonRpcRequest = {
-  jsonrpc: '2.0'
+  jsonrpc: string
   id: string | number | null
-  method: string
   params?: any
 }
 
 export type JsonRpcResponse = {
-  jsonrpc: '2.0'
   id: string | number | null
   result?: any
-  error?: {
-    code: number
-    message: string
-    data?: any
+}
+
+export type JsonRpcErrorResponse = {
+  id: string | number | null
+  code: number
+  message: string
+  data?: any
+}
+
+/**
+ * Represents a message in an MCP prompt response
+ */
+export type MCPPromptMessage = {
+  role: 'user' | 'assistant' | 'system'
+  content: {
+    type: 'text' | 'image'
+    text: string
+    data?: string // for image content
   }
 }
+
+/**
+ * Standard response type for MCP prompts - array of messages
+ */
+export type MCPPromptResponse = MCPPromptMessage[]

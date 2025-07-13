@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "Node16",
+    "module": "Node18",
     "target": "ES2021",
     "noImplicitAny": true, // Already strict
     "noUnusedLocals": true, // Already strict

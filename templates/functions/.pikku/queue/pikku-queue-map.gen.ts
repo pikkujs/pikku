@@ -5,6 +5,8 @@
  * This provides the structure needed for typescript to be aware of Queue workers and their input/output types
  */
 
+import type { __object } from '../../src/mcp.functions.js'
+
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
 export type OnConnectInput = 'hello!'
@@ -30,6 +32,7 @@ export type CalculateInput = {
   b: number
 }
 export type CalculateOutput = { result: number; operation: string }
+export type GetStaticResourceOutput = { message: string }
 export type GetUserInfoInput = { userId: string }
 export type GetUserInfoOutput = {
   userId: string
@@ -37,6 +40,19 @@ export type GetUserInfoOutput = {
   email: string
   lastLogin: string
 }
+export type PikkuFn_src_mcp_functions_ts_L113C66Output = {
+  role: 'user'
+  content: { type: 'text'; text: string }
+}[]
+export type DynamicPromptGeneratorInput = {
+  topic: string
+  complexity: 'beginner' | 'intermediate' | 'advanced'
+  includeExamples?: boolean
+}
+export type PikkuFn_src_mcp_functions_ts_L133C4Output = {
+  role: 'user'
+  content: { type: 'text'; text: string }
+}[]
 export type QueueWorkerInput = { message: string; fail: boolean }
 export type QueueWorkerOutput = { result: string }
 export type RpcTestInput = { in: number }

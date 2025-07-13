@@ -51,11 +51,29 @@ addSchema('CalculateInput', CalculateInput)
 import * as CalculateOutput from './schemas/CalculateOutput.schema.json' with { type: 'json' }
 addSchema('CalculateOutput', CalculateOutput)
 
+import * as GetStaticResourceOutput from './schemas/GetStaticResourceOutput.schema.json' with { type: 'json' }
+addSchema('GetStaticResourceOutput', GetStaticResourceOutput)
+
 import * as GetUserInfoInput from './schemas/GetUserInfoInput.schema.json' with { type: 'json' }
 addSchema('GetUserInfoInput', GetUserInfoInput)
 
 import * as GetUserInfoOutput from './schemas/GetUserInfoOutput.schema.json' with { type: 'json' }
 addSchema('GetUserInfoOutput', GetUserInfoOutput)
+
+import * as PikkuFn_src_mcp_functions_ts_L113C66Output from './schemas/PikkuFn_src_mcp_functions_ts_L113C66Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L113C66Output',
+  PikkuFn_src_mcp_functions_ts_L113C66Output
+)
+
+import * as DynamicPromptGeneratorInput from './schemas/DynamicPromptGeneratorInput.schema.json' with { type: 'json' }
+addSchema('DynamicPromptGeneratorInput', DynamicPromptGeneratorInput)
+
+import * as PikkuFn_src_mcp_functions_ts_L133C4Output from './schemas/PikkuFn_src_mcp_functions_ts_L133C4Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L133C4Output',
+  PikkuFn_src_mcp_functions_ts_L133C4Output
+)
 
 import * as QueueWorkerInput from './schemas/QueueWorkerInput.schema.json' with { type: 'json' }
 addSchema('QueueWorkerInput', QueueWorkerInput)

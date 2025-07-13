@@ -3833,9 +3833,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/mcp-server@npm:^0.7, @pikku/mcp-server@workspace:packages/runtimes/mcp-server":
+"@pikku/modelcontextprotocol@npm:^0.7, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
   version: 0.0.0-use.local
-  resolution: "@pikku/mcp-server@workspace:packages/runtimes/mcp-server"
+  resolution: "@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol"
   dependencies:
     "@modelcontextprotocol/sdk": "npm:^1.15.0"
     typescript: "npm:^5.6.3"
@@ -4128,13 +4128,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-mcp-server@workspace:templates/modelcontrolprotocol":
+"@pikku/templates-mcp-server@workspace:templates/mcp-server":
   version: 0.0.0-use.local
-  resolution: "@pikku/templates-mcp-server@workspace:templates/modelcontrolprotocol"
+  resolution: "@pikku/templates-mcp-server@workspace:templates/mcp-server"
   dependencies:
     "@pikku/cli": "npm:^0.7"
     "@pikku/core": "npm:^0.7"
-    "@pikku/mcp-server": "npm:^0.7"
+    "@pikku/modelcontextprotocol": "npm:^0.7"
     "@types/node": "npm:^20.0.0"
     tsx: "npm:^4.0.0"
     typescript: "npm:^5.0.0"

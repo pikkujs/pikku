@@ -22,8 +22,16 @@ export { addHTTPRoute, addMiddleware } from './events/http/http-runner.js'
 export { addChannel } from './events/channel/channel-runner.js'
 export { addScheduledTask } from './events/scheduler/scheduler-runner.js'
 export {
-  addMCPEndpoint,
-  runMCPEndpointJsonRpc,
-  getMCPEndpoints,
-  getMCPEndpointsMeta,
+  addMCPResource,
+  addMCPTool,
+  addMCPPrompt,
+  runMCPResource,
+  runMCPTool,
+  runMCPPrompt,
+  getMCPTools,
+  getMCPResources,
+  getMCPPrompts,
+  getMCPResourcesMeta,
+  getMCPToolsMeta,
+  getMCPPromptsMeta,
 } from './events/mcp/mcp-runner.js'

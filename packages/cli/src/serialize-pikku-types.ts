@@ -19,7 +19,7 @@ import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRo
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
 import { CoreQueueWorker, addQueueWorker as addCoreQueueWorker } from '@pikku/core/queue'
-import { CoreMCPEndpoint, addMCPEndpoint as addCoreMCPEndpoint } from '@pikku/core'
+import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, MCPPromptResponse, addMCPResource as addCoreMCPResource, addMCPTool as addCoreMCPTool, addMCPPrompt as addCoreMCPPrompt } from '@pikku/core'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -57,7 +57,9 @@ type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Ro
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
 type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
-type MCPEndpoint<In, Out> = CoreMCPEndpoint<APIFunctionSessionless<In, Out>>
+type MCPResource<In, Out> = CoreMCPResource<APIFunctionSessionless<In, Out>>
+type MCPTool<In, Out> = CoreMCPTool<APIFunctionSessionless<In, Out>>
+type MCPPrompt<In> = CoreMCPPrompt<APIFunctionSessionless<In, MCPPromptResponse>>
 
 export const pikkuFunc = <In, Out = unknown>(
   func:
@@ -151,10 +153,33 @@ export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
   addCoreQueueWorker(queueWorker as any) // TODO
 }
 
-export const addMCPEndpoint = <In, Out>(
-  mcpEndpoint: MCPEndpoint<In, Out>
+export const addMCPResource = <In, Out>(
+  mcpResource: MCPResource<In, Out>
 ) => {
-  addCoreMCPEndpoint(mcpEndpoint as any)
+  addCoreMCPResource(mcpResource as any)
+}
+
+export const addMCPTool = <In, Out>(
+  mcpTool: MCPTool<In, Out>
+) => {
+  addCoreMCPTool(mcpTool as any)
+}
+
+export const addMCPPrompt = <In>(
+  mcpPrompt: MCPPrompt<In>
+) => {
+  addCoreMCPPrompt(mcpPrompt as any)
+}
+
+export const pikkuMCPPromptFunc = <In>(
+  func:
+    | APIFunctionSessionless<In, MCPPromptResponse>
+    | {
+        func: APIFunctionSessionless<In, MCPPromptResponse>
+        name?: string
+      }
+) => {
+  return typeof func === 'function' ? func : func.func
 }
 `
 }

@@ -20,7 +20,9 @@ export const pikkuMCPJSON: PikkuCommand = async (
           schemaDirectory,
           functions.meta,
           functions.typesMap,
-          mcpEndpoints.meta
+          mcpEndpoints.resourcesMeta,
+          mcpEndpoints.toolsMeta,
+          mcpEndpoints.promptsMeta
         )
         await writeFileInDir(logger, mcpJsonFile, mcpJson, {
           ignoreModifyComment: true,

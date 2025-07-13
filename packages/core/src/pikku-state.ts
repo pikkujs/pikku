@@ -16,7 +16,14 @@ import {
   queueWorkersMeta,
   CoreQueueWorker,
 } from './events/queue/queue.types.js'
-import { MCPEndpointsMeta, CoreMCPEndpoint } from './events/mcp/mcp.types.js'
+import {
+  CoreMCPResource,
+  CoreMCPTool,
+  CoreMCPPrompt,
+  MCPResourceMeta,
+  MCPToolMeta,
+  MCPPromptMeta,
+} from './events/mcp/mcp.types.js'
 
 interface PikkuState {
   function: {
@@ -51,8 +58,12 @@ interface PikkuState {
     meta: queueWorkersMeta
   }
   mcp: {
-    endpoints: Map<string, CoreMCPEndpoint>
-    meta: MCPEndpointsMeta
+    resources: Map<string, CoreMCPResource>
+    resourcesMeta: MCPResourceMeta
+    tools: Map<string, CoreMCPTool>
+    toolsMeta: MCPToolMeta
+    prompts: Map<string, CoreMCPPrompt>
+    promptsMeta: MCPPromptMeta
   }
   misc: {
     errors: Map<PikkuError, ErrorDetails>
@@ -88,8 +99,12 @@ export const resetPikkuState = () => {
       meta: {},
     },
     mcp: {
-      endpoints: new Map(),
-      meta: {} as MCPEndpointsMeta,
+      resources: new Map(),
+      resourcesMeta: {} as MCPResourceMeta,
+      tools: new Map(),
+      toolsMeta: {} as MCPToolMeta,
+      prompts: new Map(),
+      promptsMeta: {} as MCPPromptMeta,
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),

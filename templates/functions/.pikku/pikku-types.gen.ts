@@ -29,8 +29,13 @@ import {
   addQueueWorker as addCoreQueueWorker,
 } from '@pikku/core/queue'
 import {
-  CoreMCPEndpoint,
-  addMCPEndpoint as addCoreMCPEndpoint,
+  CoreMCPResource,
+  CoreMCPTool,
+  CoreMCPPrompt,
+  MCPPromptResponse,
+  addMCPResource as addCoreMCPResource,
+  addMCPTool as addCoreMCPTool,
+  addMCPPrompt as addCoreMCPPrompt,
 } from '@pikku/core'
 
 import type { UserSession } from '../types/application-types.d.js'
@@ -96,7 +101,11 @@ type ScheduledTask = CoreScheduledTask<
   UserSession
 >
 type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
-type MCPEndpoint<In, Out> = CoreMCPEndpoint<APIFunctionSessionless<In, Out>>
+type MCPResource<In, Out> = CoreMCPResource<APIFunctionSessionless<In, Out>>
+type MCPTool<In, Out> = CoreMCPTool<APIFunctionSessionless<In, Out>>
+type MCPPrompt<In> = CoreMCPPrompt<
+  APIFunctionSessionless<In, MCPPromptResponse>
+>
 
 export const pikkuFunc = <In, Out = unknown>(
   func:
@@ -198,6 +207,25 @@ export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
   addCoreQueueWorker(queueWorker as any) // TODO
 }
 
-export const addMCPEndpoint = <In, Out>(mcpEndpoint: MCPEndpoint<In, Out>) => {
-  addCoreMCPEndpoint(mcpEndpoint as any)
+export const addMCPResource = <In, Out>(mcpResource: MCPResource<In, Out>) => {
+  addCoreMCPResource(mcpResource as any)
+}
+
+export const addMCPTool = <In, Out>(mcpTool: MCPTool<In, Out>) => {
+  addCoreMCPTool(mcpTool as any)
+}
+
+export const addMCPPrompt = <In>(mcpPrompt: MCPPrompt<In>) => {
+  addCoreMCPPrompt(mcpPrompt as any)
+}
+
+export const pikkuMCPPromptFunc = <In>(
+  func:
+    | APIFunctionSessionless<In, MCPPromptResponse>
+    | {
+        func: APIFunctionSessionless<In, MCPPromptResponse>
+        name?: string
+      }
+) => {
+  return typeof func === 'function' ? func : func.func
 }

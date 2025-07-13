@@ -5,7 +5,9 @@
 import { addFunction } from '@pikku/core'
 import { authenticate } from '../src/channel.functions.js'
 import { calculate } from '../src/mcp.functions.js'
+import { dynamicPromptGenerator } from '../src/mcp.functions.js'
 import { emitMessage } from '../src/channel.functions.js'
+import { getStaticResource } from '../src/mcp.functions.js'
 import { getUserInfo } from '../src/mcp.functions.js'
 import { helloWorld } from '../src/http.functions.js'
 import { myScheduledTask } from '../src/scheduled-task.functions.js'
@@ -17,13 +19,16 @@ import { queueWorker } from '../src/queue-worker.functions.js'
 import { rpcCaller } from '../src/rpc.functions.js'
 import { rpcTest } from '../src/rpc.functions.js'
 import { sayHello } from '../src/mcp.functions.js'
+import { staticPromptGenerator } from '../src/mcp.functions.js'
 import { subscribe } from '../src/channel.functions.js'
 import { timeSinceOpened } from '../src/http-sse.functions.js'
 import { unsubscribe } from '../src/channel.functions.js'
 
 addFunction('authenticate', { func: authenticate })
 addFunction('calculate', { func: calculate })
+addFunction('dynamicPromptGenerator', { func: dynamicPromptGenerator })
 addFunction('emitMessage', { func: emitMessage })
+addFunction('getStaticResource', { func: getStaticResource })
 addFunction('getUserInfo', { func: getUserInfo })
 addFunction('helloWorld', { func: helloWorld })
 addFunction('myScheduledTask', { func: myScheduledTask })
@@ -37,6 +42,7 @@ addFunction('queueWorker', { func: queueWorker })
 addFunction('rpcCaller', { func: rpcCaller })
 addFunction('rpcTest', { func: rpcTest })
 addFunction('sayHello', { func: sayHello })
+addFunction('staticPromptGenerator', { func: staticPromptGenerator })
 addFunction('subscribe', { func: subscribe })
 addFunction('timeSinceOpened', { func: timeSinceOpened })
 addFunction('unsubscribe', { func: unsubscribe })

@@ -44,15 +44,27 @@ pikkuState('rpc', 'meta', {
     exposed: false,
   },
   sayHello: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L10C3',
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L12C3',
     exposed: false,
   },
   calculate: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L27C3',
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L31C3',
+    exposed: false,
+  },
+  getStaticResource: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L68C3',
     exposed: false,
   },
   getUserInfo: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L66C3',
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L80C3',
+    exposed: false,
+  },
+  staticPromptGenerator: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L113C66',
+    exposed: false,
+  },
+  dynamicPromptGenerator: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L133C4',
     exposed: false,
   },
   queueWorker: {

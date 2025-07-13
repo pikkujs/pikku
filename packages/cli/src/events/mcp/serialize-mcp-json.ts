@@ -1,13 +1,13 @@
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { MCPEndpointsMeta } from '@pikku/core'
+import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { TypesMap } from '@pikku/inspector'
 import { CLILogger } from '../../utils.js'
 
 interface MCPEndpoint {
   name: string
-  description: string
+  description?: string
   parameters?: JSONValue
   returns?: JSONValue
   streaming?: boolean
@@ -18,10 +18,13 @@ export const serializeMCPJson = async (
   schemaDirectory: string,
   functionsMeta: FunctionsMeta,
   typesMap: TypesMap,
-  mcpEndpointsMeta: MCPEndpointsMeta
+  mcpResourceMeta: MCPResourceMeta,
+  mcpToolMeta: MCPToolMeta,
+  mcpPromptMeta: MCPPromptMeta
 ): Promise<string> => {
   const tools: MCPEndpoint[] = []
   const resources: MCPEndpoint[] = []
+  const prompts: any[] = []
 
   // Helper function to load schema from file
   const loadSchema = async (
@@ -55,12 +58,40 @@ export const serializeMCPJson = async (
     }
   }
 
-  // Process all MCP endpoints (tools and resources)
-  for (const [name, endpointMeta] of Object.entries(mcpEndpointsMeta)) {
+  // Process MCP resources
+  for (const [name, endpointMeta] of Object.entries(mcpResourceMeta)) {
     const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
     if (!functionMeta) {
       logger.warn(
-        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping endpoint ${name}.`
+        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping resource ${name}.`
+      )
+      continue
+    }
+
+    const inputType = functionMeta.inputs?.[0]
+    const outputType = functionMeta.outputs?.[0]
+
+    const parameters = await loadSchema(inputType)
+    const returns = await loadSchema(outputType)
+
+    const endpoint = {
+      uri: name,
+      name,
+      description: endpointMeta.description,
+      ...(parameters && { parameters }),
+      ...(returns && { returns }),
+      ...(endpointMeta.streaming && { streaming: true }),
+    }
+
+    resources.push(endpoint)
+  }
+
+  // Process MCP tools
+  for (const [name, endpointMeta] of Object.entries(mcpToolMeta)) {
+    const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
+    if (!functionMeta) {
+      logger.warn(
+        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping tool ${name}.`
       )
       continue
     }
@@ -79,18 +110,50 @@ export const serializeMCPJson = async (
       ...(endpointMeta.streaming && { streaming: true }),
     }
 
-    if (endpointMeta.type === 'resource') {
-      resources.push(endpoint)
-      continue
-    } else if (endpointMeta.type === 'tool') {
-      tools.push(endpoint)
-    } else {
+    tools.push(endpoint)
+  }
+
+  // Process MCP prompts
+  for (const [name, endpointMeta] of Object.entries(mcpPromptMeta)) {
+    const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
+    if (!functionMeta) {
       logger.warn(
-        `Unknown endpoint type for ${name}: ${endpointMeta.type}. Skipping.`
+        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping prompt ${name}.`
       )
       continue
     }
+
+    const inputType = functionMeta.inputs?.[0]
+    // TODO: this needs to be a json schema type, not any
+    const inputSchema: any = await loadSchema(inputType)
+
+    // Generate arguments from input schema
+    const argumentsArray: any[] = []
+    if (
+      inputSchema &&
+      typeof inputSchema === 'object' &&
+      inputSchema.properties
+    ) {
+      const properties = inputSchema.properties as Record<string, any>
+      const required = (inputSchema.required as string[]) || []
+
+      for (const [propName, propSchema] of Object.entries(properties)) {
+        argumentsArray.push({
+          name: propName,
+          description: propSchema.description || `${propName} parameter`,
+          required: required.includes(propName),
+        })
+      }
+    }
+
+    const prompt = {
+      name,
+      description: endpointMeta.description,
+      arguments: argumentsArray,
+    }
+
+    prompts.push(prompt)
   }
 
-  return JSON.stringify({ tools, resources }, null, 2)
+  return JSON.stringify({ tools, resources, prompts }, null, 2)
 }

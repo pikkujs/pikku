@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "topic": { "type": "string" },
+    "complexity": {
+      "type": "string",
+      "enum": ["beginner", "intermediate", "advanced"]
+    },
+    "includeExamples": { "type": "boolean" }
+  },
+  "required": ["topic", "complexity"],
+  "additionalProperties": false,
+  "definitions": {}
+}

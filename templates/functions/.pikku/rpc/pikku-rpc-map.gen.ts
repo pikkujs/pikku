@@ -30,6 +30,7 @@ export type CalculateInput = {
   b: number
 }
 export type CalculateOutput = { result: number; operation: string }
+export type GetStaticResourceOutput = { message: string }
 export type GetUserInfoInput = { userId: string }
 export type GetUserInfoOutput = {
   userId: string
@@ -37,6 +38,19 @@ export type GetUserInfoOutput = {
   email: string
   lastLogin: string
 }
+export type PikkuFn_src_mcp_functions_ts_L113C66Output = {
+  role: 'user'
+  content: { type: 'text'; text: string }
+}[]
+export type DynamicPromptGeneratorInput = {
+  topic: string
+  complexity: 'beginner' | 'intermediate' | 'advanced'
+  includeExamples?: boolean
+}
+export type PikkuFn_src_mcp_functions_ts_L133C4Output = {
+  role: 'user'
+  content: { type: 'text'; text: string }
+}[]
 export type QueueWorkerInput = { message: string; fail: boolean }
 export type QueueWorkerOutput = { result: string }
 export type RpcTestInput = { in: number }
@@ -62,7 +76,16 @@ export type RPCMap = {
   readonly helloWorld: RPCHandler<null, string>
   readonly sayHello: RPCHandler<SayHelloInput, SayHelloOutput>
   readonly calculate: RPCHandler<CalculateInput, CalculateOutput>
+  readonly getStaticResource: RPCHandler<null, GetStaticResourceOutput>
   readonly getUserInfo: RPCHandler<GetUserInfoInput, GetUserInfoOutput>
+  readonly staticPromptGenerator: RPCHandler<
+    null,
+    PikkuFn_src_mcp_functions_ts_L113C66Output
+  >
+  readonly dynamicPromptGenerator: RPCHandler<
+    DynamicPromptGeneratorInput,
+    PikkuFn_src_mcp_functions_ts_L133C4Output
+  >
   readonly queueWorker: RPCHandler<QueueWorkerInput, QueueWorkerOutput>
   readonly rpcTest: RPCHandler<RpcTestInput, null>
   readonly rpcCaller: RPCHandler<null, null>

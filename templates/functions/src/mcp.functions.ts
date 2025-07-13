@@ -1,4 +1,7 @@
-import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
+import {
+  pikkuSessionlessFunc,
+  pikkuMCPPromptFunc,
+} from '../.pikku/pikku-types.gen.js'
 
 /**
  * A simple hello world MCP tool that greets the user
@@ -59,6 +62,18 @@ export const calculate = pikkuSessionlessFunc<
 /**
  * A mock user information resource that returns user data
  */
+export const getStaticResource = pikkuSessionlessFunc<
+  void,
+  { message: string }
+>(async () => {
+  return {
+    message: `Hello! This is a static resource.`,
+  }
+})
+
+/**
+ * A mock user information resource that returns user data
+ */
 export const getUserInfo = pikkuSessionlessFunc<
   { userId: string },
   { userId: string; name: string; email: string; lastLogin: string }
@@ -90,4 +105,67 @@ export const getUserInfo = pikkuSessionlessFunc<
   }
 
   return user
+})
+
+/**
+ * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
+ */
+export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
+  return [
+    {
+      role: 'user' as const,
+      content: {
+        type: 'text' as const,
+        text: `This is a static prompt example. It does not take any arguments and simply returns a predefined message.`,
+      },
+    },
+  ]
+})
+
+/**
+ * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
+ */
+export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
+  topic: string
+  complexity: 'beginner' | 'intermediate' | 'advanced'
+  includeExamples?: boolean
+}>(async (services, { topic, complexity, includeExamples = false }) => {
+  services.logger.info(
+    `Generating progressive enhancement content for: ${topic} (${complexity})`
+  )
+
+  let content = `# Progressive Enhancement for ${topic}\n\n`
+
+  switch (complexity) {
+    case 'beginner':
+      content += `This is a beginner-friendly introduction to ${topic}.\n\n`
+      content += `Start with the basics and build up your understanding gradually.\n`
+      break
+    case 'intermediate':
+      content += `This is an intermediate guide to ${topic}.\n\n`
+      content += `Assumes some familiarity with related concepts.\n`
+      break
+    case 'advanced':
+      content += `This is an advanced discussion of ${topic}.\n\n`
+      content += `Deep dive into complex scenarios and edge cases.\n`
+      break
+  }
+
+  if (includeExamples) {
+    content += `\n## Examples\n\n`
+    content += `Here are some practical examples for ${topic}:\n`
+    content += `- Example 1: Basic implementation\n`
+    content += `- Example 2: Advanced use case\n`
+    content += `- Example 3: Common pitfalls to avoid\n`
+  }
+
+  return [
+    {
+      role: 'user' as const,
+      content: {
+        type: 'text' as const,
+        text: content,
+      },
+    },
+  ]
 })

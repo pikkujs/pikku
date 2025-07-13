@@ -40,7 +40,7 @@ async function main(): Promise<void> {
       singletonServices.logger.info(`Queued job: ${jobId}`)
 
       const job = await pgBossQueueService.getJob('hello-world-queue', jobId)
-      if (job) {
+      if (job && job.waitForCompletion) {
         console.log(await job.waitForCompletion())
       }
     }, 2000)
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
       singletonServices.logger.info(`Queued failing job: ${jobId}`)
 
       const job = await pgBossQueueService.getJob('hello-world-queue', jobId)
-      if (job) {
+      if (job && job.waitForCompletion) {
         try {
           console.log(await job.waitForCompletion())
         } catch (error) {

@@ -113,8 +113,8 @@ pikkuState('function', 'meta', {
     inputs: [],
     outputs: ['string'],
   },
-  pikkuFn_src_mcp_functions_ts_L10C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L10C3',
+  pikkuFn_src_mcp_functions_ts_L12C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L12C3',
     name: 'sayHello',
     services: {
       optimized: false,
@@ -124,8 +124,8 @@ pikkuState('function', 'meta', {
     inputs: ['SayHelloInput'],
     outputs: ['SayHelloOutput'],
   },
-  pikkuFn_src_mcp_functions_ts_L27C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L27C3',
+  pikkuFn_src_mcp_functions_ts_L31C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L31C3',
     name: 'calculate',
     services: {
       optimized: false,
@@ -135,8 +135,19 @@ pikkuState('function', 'meta', {
     inputs: ['CalculateInput'],
     outputs: ['CalculateOutput'],
   },
-  pikkuFn_src_mcp_functions_ts_L66C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L66C3',
+  pikkuFn_src_mcp_functions_ts_L68C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L68C3',
+    name: 'getStaticResource',
+    services: {
+      optimized: true,
+      services: [],
+    },
+    schemaName: null,
+    inputs: [],
+    outputs: ['GetStaticResourceOutput'],
+  },
+  pikkuFn_src_mcp_functions_ts_L80C3: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L80C3',
     name: 'getUserInfo',
     services: {
       optimized: false,
@@ -145,6 +156,28 @@ pikkuState('function', 'meta', {
     schemaName: 'GetUserInfoInput',
     inputs: ['GetUserInfoInput'],
     outputs: ['GetUserInfoOutput'],
+  },
+  pikkuFn_src_mcp_functions_ts_L113C66: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L113C66',
+    name: 'staticPromptGenerator',
+    services: {
+      optimized: true,
+      services: [],
+    },
+    schemaName: null,
+    inputs: [],
+    outputs: ['PikkuFn_src_mcp_functions_ts_L113C66Output'],
+  },
+  pikkuFn_src_mcp_functions_ts_L133C4: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L133C4',
+    name: 'dynamicPromptGenerator',
+    services: {
+      optimized: false,
+      services: [],
+    },
+    schemaName: 'DynamicPromptGeneratorInput',
+    inputs: ['DynamicPromptGeneratorInput'],
+    outputs: ['PikkuFn_src_mcp_functions_ts_L133C4Output'],
   },
   pikkuFn_src_queue_worker_functions_ts_L6C3: {
     pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',

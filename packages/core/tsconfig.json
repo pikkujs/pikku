@@ -3,7 +3,7 @@
   "compilerOptions": {
     "rootDir": "./src",
     "composite": true,
-    "module": "Node16",
+    "module": "Node18",
     "outDir": "dist",
     "target": "esnext",
     "moduleResolution": "node16",

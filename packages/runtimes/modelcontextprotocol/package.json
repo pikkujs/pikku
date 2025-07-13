@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/mcp-server",
+  "name": "@pikku/modelcontextprotocol",
   "version": "0.7.0",
   "description": "A Pikku MCP server runtime using the official MCP SDK",
   "license": "MIT",

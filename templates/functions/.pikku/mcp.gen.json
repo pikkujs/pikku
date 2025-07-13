@@ -71,7 +71,25 @@
   ],
   "resources": [
     {
-      "name": "getUserInfo",
+      "uri": "getStaticResource",
+      "name": "getStaticResource",
+      "description": "Gets a static resource with predefined data",
+      "returns": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    {
+      "uri": "getUserInfo/{userId}",
+      "name": "getUserInfo/{userId}",
       "description": "Retrieve user information by user ID",
       "parameters": {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -106,6 +124,34 @@
         "additionalProperties": false,
         "definitions": {}
       }
+    }
+  ],
+  "prompts": [
+    {
+      "name": "getStaticResource",
+      "description": "A static prompt that returns a predefined message",
+      "arguments": []
+    },
+    {
+      "name": "dynamicPromptGenerator",
+      "description": "Generate educational content with progressive complexity and optional examples",
+      "arguments": [
+        {
+          "name": "topic",
+          "description": "topic parameter",
+          "required": true
+        },
+        {
+          "name": "complexity",
+          "description": "complexity parameter",
+          "required": true
+        },
+        {
+          "name": "includeExamples",
+          "description": "includeExamples parameter",
+          "required": false
+        }
+      ]
     }
   ]
 }

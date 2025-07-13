@@ -16,6 +16,6 @@
   },
   "dependencies": {
     "@pikku/core": "^0.7",
-    "@pikku/mcp-server": "^0.7"
+    "@pikku/modelcontextprotocol": "^0.7"
   }
 }
