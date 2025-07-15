@@ -5,6 +5,7 @@ import {
 } from '../.pikku/pikku-types.gen.js'
 import {
   sayHello,
+  disableTool,
   calculate,
   getUserInfo,
   dynamicPromptGenerator,
@@ -18,6 +19,14 @@ addMCPTool({
   description: 'Greet someone with a friendly hello message',
   func: sayHello,
   tags: ['greeting', 'hello', 'demo'],
+})
+
+// Disable tools
+addMCPTool({
+  name: 'disableTool',
+  description: 'Disable a tool by name',
+  func: disableTool,
+  tags: [],
 })
 
 // Register a calculator tool

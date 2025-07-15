@@ -19,7 +19,7 @@ import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRo
 import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
 import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
 import { CoreQueueWorker, addQueueWorker as addCoreQueueWorker } from '@pikku/core/queue'
-import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, MCPPromptResponse, addMCPResource as addCoreMCPResource, addMCPTool as addCoreMCPTool, addMCPPrompt as addCoreMCPPrompt } from '@pikku/core'
+import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, addMCPResource as addCoreMCPResource, addMCPTool as addCoreMCPTool, addMCPPrompt as addCoreMCPPrompt, MCPResourceResponse, MCPToolResponse, MCPPromptResponse, PikkuMCP } from '@pikku/core'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -33,11 +33,15 @@ type APIFunctionSessionless<
   In = unknown, 
   Out = never, 
   ChannelData = null,  // null means optional channel
+  MCPData = null, // null means optional MCP
   RequiredServices extends Services = Services &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
       : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
+  ) & ([MCPData] extends [null]
+    ? { mcp?: PikkuMCP }  // Optional MCP
+    : { mcp: PikkuMCP }  // Required MCP
   )
 > = CoreAPIFunctionSessionless<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
 
@@ -45,11 +49,15 @@ type APIFunction<
   In = unknown, 
   Out = never, 
   ChannelData = null,  // null means optional channel
+  MCPData = null, // null means optional MCP
   RequiredServices extends Services = Services &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
       : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
+  ) & ([MCPData] extends [null]
+    ? { mcp?: PikkuMCP }  // Optional MCP
+    : { mcp: PikkuMCP }  // Required MCP
   )
 > = CoreAPIFunction<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
 
@@ -57,9 +65,10 @@ type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Ro
 type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
 type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
 type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
-type MCPResource<In, Out> = CoreMCPResource<APIFunctionSessionless<In, Out>>
-type MCPTool<In, Out> = CoreMCPTool<APIFunctionSessionless<In, Out>>
-type MCPPrompt<In> = CoreMCPPrompt<APIFunctionSessionless<In, MCPPromptResponse>>
+
+type MCPResource<In> = CoreMCPResource<APIFunctionSessionless<In, MCPResourceResponse, null, true>>
+type MCPTool<In> = CoreMCPTool<APIFunctionSessionless<In, MCPToolResponse, null, true>>
+type MCPPrompt<In> = CoreMCPPrompt<APIFunctionSessionless<In, MCPPromptResponse, null, true>>
 
 export const pikkuFunc = <In, Out = unknown>(
   func:
@@ -153,14 +162,14 @@ export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
   addCoreQueueWorker(queueWorker as any) // TODO
 }
 
-export const addMCPResource = <In, Out>(
-  mcpResource: MCPResource<In, Out>
+export const addMCPResource = <In>(
+  mcpResource: MCPResource<In>
 ) => {
   addCoreMCPResource(mcpResource as any)
 }
 
-export const addMCPTool = <In, Out>(
-  mcpTool: MCPTool<In, Out>
+export const addMCPTool = <In>(
+  mcpTool: MCPTool<In>
 ) => {
   addCoreMCPTool(mcpTool as any)
 }
@@ -178,6 +187,28 @@ export const pikkuMCPPromptFunc = <In>(
         func: APIFunctionSessionless<In, MCPPromptResponse>
         name?: string
       }
+) => {
+  return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuMCPToolFunc = <In>(
+  func:
+    | APIFunctionSessionless<In, MCPToolResponse, null, true>
+    | {
+      func: APIFunctionSessionless<In, MCPToolResponse, null, true>
+      name?: string
+    }
+) => {
+  return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuMCPResourceFunc = <In>(
+  func:
+    | APIFunctionSessionless<In, MCPResourceResponse, null, true>
+    | {
+      func: APIFunctionSessionless<In, MCPResourceResponse, null, true>
+      name?: string
+    }
 ) => {
   return typeof func === 'function' ? func : func.func
 }

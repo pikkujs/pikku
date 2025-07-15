@@ -1,35 +1,56 @@
+import { NotFoundError } from '@pikku/core'
 import {
-  pikkuSessionlessFunc,
   pikkuMCPPromptFunc,
+  pikkuMCPResourceFunc,
+  pikkuMCPToolFunc,
 } from '../.pikku/pikku-types.gen.js'
 
 /**
  * A simple hello world MCP tool that greets the user
  */
-export const sayHello = pikkuSessionlessFunc<
-  { name?: string },
-  { message: string; timestamp: number }
->(async (services, { name = 'World' }) => {
-  services.logger.info(`Saying hello to: ${name}`)
+export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
+  async (services, { name = 'World' }) => {
+    services.logger.info(`Saying hello to: ${name}`)
 
-  return {
-    message: `Hello, ${name}! This is a Pikku MCP tool.`,
-    timestamp: Date.now(),
+    return [
+      {
+        type: 'text',
+        text: `Hello, ${name}! This is a Pikku MCP tool.`,
+      },
+    ]
   }
-})
+)
+
+export const disableTool = pikkuMCPToolFunc<{ name: string }>(
+  async (services, { name }) => {
+    const changed = await services.mcp.enableTools({ [name]: false })
+    if (changed) {
+      return [
+        {
+          type: 'text',
+          text: `Tool '${name}' has been disabled.`,
+        },
+      ]
+    } else {
+      return [
+        {
+          type: 'text',
+          text: `Tool '${name}' is not enabled or does not exist.`,
+        },
+      ]
+    }
+  }
+)
 
 /**
  * A simple calculator MCP tool that performs basic math operations
  */
-export const calculate = pikkuSessionlessFunc<
-  {
-    operation: 'add' | 'subtract' | 'multiply' | 'divide'
-    a: number
-    b: number
-  },
-  { result: number; operation: string }
->(async (services, { operation, a, b }) => {
-  services.logger.info(`Calculating: ${a} ${operation} ${b}`)
+export const calculate = pikkuMCPToolFunc<{
+  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  a: number
+  b: number
+}>(async ({ logger }, { operation, a, b }) => {
+  logger.info(`Calculating: ${a} ${operation} ${b}`)
 
   let result: number
 
@@ -53,59 +74,65 @@ export const calculate = pikkuSessionlessFunc<
       throw new Error(`Unknown operation: ${operation}`)
   }
 
-  return {
-    result,
-    operation: `${a} ${operation} ${b} = ${result}`,
-  }
+  return [
+    {
+      type: 'text',
+      text: `The result of ${a} ${operation} ${b} is ${result}.`,
+    },
+  ]
 })
 
 /**
  * A mock user information resource that returns user data
  */
-export const getStaticResource = pikkuSessionlessFunc<
-  void,
-  { message: string }
->(async () => {
-  return {
-    message: `Hello! This is a static resource.`,
-  }
+export const getStaticResource = pikkuMCPResourceFunc(async ({ mcp }) => {
+  return [
+    {
+      uri: mcp.uri!,
+      text: JSON.stringify('Hello! This is a static resource.'),
+    },
+  ]
 })
 
 /**
  * A mock user information resource that returns user data
  */
-export const getUserInfo = pikkuSessionlessFunc<
-  { userId: string },
-  { userId: string; name: string; email: string; lastLogin: string }
->(async (services, { userId }) => {
-  services.logger.info(`Getting user info for: ${userId}`)
+export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
+  async (services, { userId }) => {
+    services.logger.info(`Getting user info for: ${userId}`)
 
-  // Mock user data - in a real app this would come from a database
-  const mockUsers: Record<
-    string,
-    { userId: string; name: string; email: string; lastLogin: string }
-  > = {
-    '123': {
-      userId: '123',
-      name: 'John Doe',
-      email: 'john@example.com',
-      lastLogin: '2024-01-15T10:30:00Z',
-    },
-    '456': {
-      userId: '456',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      lastLogin: '2024-01-14T15:45:00Z',
-    },
+    // Mock user data - in a real app this would come from a database
+    const mockUsers: Record<
+      string,
+      { userId: string; name: string; email: string; lastLogin: string }
+    > = {
+      '123': {
+        userId: '123',
+        name: 'John Doe',
+        email: 'john@example.com',
+        lastLogin: '2024-01-15T10:30:00Z',
+      },
+      '456': {
+        userId: '456',
+        name: 'Jane Smith',
+        email: 'jane@example.com',
+        lastLogin: '2024-01-14T15:45:00Z',
+      },
+    }
+
+    const user = mockUsers[userId]
+    if (!user) {
+      throw new NotFoundError(`User not found: ${userId}`)
+    }
+
+    return [
+      {
+        uri: `getUserInfo/${userId}`,
+        text: JSON.stringify(user),
+      },
+    ]
   }
-
-  const user = mockUsers[userId]
-  if (!user) {
-    throw new Error(`User not found: ${userId}`)
-  }
-
-  return user
-})
+)
 
 /**
  * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
@@ -113,9 +140,9 @@ export const getUserInfo = pikkuSessionlessFunc<
 export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
   return [
     {
-      role: 'user' as const,
+      role: 'user',
       content: {
-        type: 'text' as const,
+        type: 'text',
         text: `This is a static prompt example. It does not take any arguments and simply returns a predefined message.`,
       },
     },

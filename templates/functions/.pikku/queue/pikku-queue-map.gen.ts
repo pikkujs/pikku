@@ -5,10 +5,32 @@
  * This provides the structure needed for typescript to be aware of Queue workers and their input/output types
  */
 
-import type { __object } from '../../src/mcp.functions.js'
-
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
+export type SayHelloInput = { name?: string }
+export type SayHelloOutput = { message: string; timestamp: number }
+export type DisableToolInput = { name: string }
+export type CalculateInput = {
+  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  a: number
+  b: number
+}
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3Output =
+  { type: string; text: string }[]
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55Output =
+  { uri: any; text: string }[]
+export type GetUserInfoInput = { userId: string }
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3Output =
+  { uri: string; text: string }[]
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66Output =
+  { role: 'user'; content: { type: 'text'; text: string } }[]
+export type DynamicPromptGeneratorInput = {
+  topic: string
+  complexity: 'beginner' | 'intermediate' | 'advanced'
+  includeExamples?: boolean
+}
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4Output =
+  { role: 'user'; content: { type: 'text'; text: string } }[]
 export type OnConnectInput = 'hello!'
 export type AuthenticateInput = { token: string; userId: string }
 export type AuthenticateOutput = { authResult: boolean; action: 'auth' }
@@ -24,35 +46,6 @@ export type ProgressiveEnhancementExampleOutput = {
   state: 'initial' | 'pending' | 'done'
 }
 export type TimeSinceOpenedOutput = { count: number }
-export type SayHelloInput = { name?: string }
-export type SayHelloOutput = { message: string; timestamp: number }
-export type CalculateInput = {
-  operation: 'add' | 'subtract' | 'multiply' | 'divide'
-  a: number
-  b: number
-}
-export type CalculateOutput = { result: number; operation: string }
-export type GetStaticResourceOutput = { message: string }
-export type GetUserInfoInput = { userId: string }
-export type GetUserInfoOutput = {
-  userId: string
-  name: string
-  email: string
-  lastLogin: string
-}
-export type PikkuFn_src_mcp_functions_ts_L113C66Output = {
-  role: 'user'
-  content: { type: 'text'; text: string }
-}[]
-export type DynamicPromptGeneratorInput = {
-  topic: string
-  complexity: 'beginner' | 'intermediate' | 'advanced'
-  includeExamples?: boolean
-}
-export type PikkuFn_src_mcp_functions_ts_L133C4Output = {
-  role: 'user'
-  content: { type: 'text'; text: string }
-}[]
 export type QueueWorkerInput = { message: string; fail: boolean }
 export type QueueWorkerOutput = { result: string }
 export type RpcTestInput = { in: number }

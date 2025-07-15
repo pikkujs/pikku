@@ -3,9 +3,11 @@ import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 
 export interface MCPToolEndpoint {
   name: string
+  title: string
   description: string
   inputSchema?: any
   outputSchema?: any
+  enabled: boolean
 }
 
 export interface MCPResourceEndpoint {
@@ -13,14 +15,15 @@ export interface MCPResourceEndpoint {
   title: string
   description: string
   inputSchema?: any
-  outputSchema?: any
+  mimeType?: string
+  enabled: boolean
 }
 
 export interface MCPPromptEndpoint {
   name: string
   description: string
   inputSchema?: any
-  outputSchema?: any
+  enabled: boolean
 }
 
 export class MCPEndpointRegistry {
@@ -40,9 +43,11 @@ export class MCPEndpointRegistry {
         for (const tool of mcpData.tools) {
           this.tools.set(tool.name, {
             name: tool.name,
+            title: tool.title,
             description: tool.description,
             inputSchema: tool.parameters,
             outputSchema: tool.returns,
+            enabled: tool.enabled !== undefined ? tool.enabled : true,
           })
         }
       }
@@ -53,7 +58,7 @@ export class MCPEndpointRegistry {
             uri: resource.uri,
             description: resource.description,
             inputSchema: resource.parameters,
-            outputSchema: resource.returns,
+            enabled: resource.enabled !== undefined ? resource.enabled : true,
           })
         }
       }
@@ -63,7 +68,7 @@ export class MCPEndpointRegistry {
             name: prompt.name,
             description: prompt.description,
             inputSchema: prompt.arguments,
-            outputSchema: undefined,
+            enabled: prompt.enabled !== undefined ? prompt.enabled : true,
           })
         }
       }
@@ -85,7 +90,7 @@ export class MCPEndpointRegistry {
   }
 
   getTools(): MCPToolEndpoint[] {
-    return Array.from(this.tools.values())
+    return Array.from(this.tools.values()).filter((tool) => tool.enabled)
   }
 
   getResources(): MCPResourceEndpoint[] {
@@ -118,5 +123,41 @@ export class MCPEndpointRegistry {
 
   hasPrompt(name: string): boolean {
     return name in this.promptsMeta
+  }
+
+  enableTools(tools: Record<any, boolean>): boolean {
+    let changed = false
+    for (const [name, enabled] of Object.entries(tools)) {
+      const tool = this.tools.get(name)
+      if (tool && tool.enabled !== enabled) {
+        tool.enabled = enabled
+        changed = true
+      }
+    }
+    return changed
+  }
+
+  enablePrompts(prompts: Record<any, boolean>): boolean {
+    let changed = false
+    for (const [name, enabled] of Object.entries(prompts)) {
+      const prompt = this.prompts.get(name)
+      if (prompt && prompt.enabled !== enabled) {
+        prompt.enabled = enabled
+        changed = true
+      }
+    }
+    return changed
+  }
+
+  enableResources(prompts: Record<any, boolean>): boolean {
+    let changed = false
+    for (const [name, enabled] of Object.entries(this.resources)) {
+      const resource = this.resources.get(name)
+      if (resource && resource.enabled !== enabled) {
+        resource.enabled = enabled
+        changed = true
+      }
+    }
+    return changed
   }
 }

@@ -3,6 +3,107 @@
  */
 import { pikkuState } from '@pikku/core'
 pikkuState('function', 'meta', {
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3',
+      name: 'sayHello',
+      services: {
+        optimized: false,
+        services: [],
+      },
+      schemaName: 'SayHelloInput',
+      inputs: ['SayHelloInput'],
+      outputs: ['SayHelloOutput'],
+    },
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3',
+      name: 'disableTool',
+      services: {
+        optimized: false,
+        services: [],
+      },
+      schemaName: 'DisableToolInput',
+      inputs: ['DisableToolInput'],
+      outputs: [],
+    },
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3',
+      name: 'calculate',
+      services: {
+        optimized: true,
+        services: ['logger'],
+      },
+      schemaName: 'CalculateInput',
+      inputs: ['CalculateInput'],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3Output',
+      ],
+    },
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55',
+      name: 'getStaticResource',
+      services: {
+        optimized: true,
+        services: ['mcp'],
+      },
+      schemaName: null,
+      inputs: [],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55Output',
+      ],
+    },
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3',
+      name: 'getUserInfo',
+      services: {
+        optimized: false,
+        services: [],
+      },
+      schemaName: 'GetUserInfoInput',
+      inputs: ['GetUserInfoInput'],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3Output',
+      ],
+    },
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66',
+      name: 'staticPromptGenerator',
+      services: {
+        optimized: true,
+        services: [],
+      },
+      schemaName: null,
+      inputs: [],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66Output',
+      ],
+    },
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4:
+    {
+      pikkuFuncName:
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4',
+      name: 'dynamicPromptGenerator',
+      services: {
+        optimized: false,
+        services: [],
+      },
+      schemaName: 'DynamicPromptGeneratorInput',
+      inputs: ['DynamicPromptGeneratorInput'],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4Output',
+      ],
+    },
   pikkuFn_src_channel_functions_ts_L9C3: {
     pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
     name: 'onConnect',
@@ -112,72 +213,6 @@ pikkuState('function', 'meta', {
     schemaName: null,
     inputs: [],
     outputs: ['string'],
-  },
-  pikkuFn_src_mcp_functions_ts_L12C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L12C3',
-    name: 'sayHello',
-    services: {
-      optimized: false,
-      services: [],
-    },
-    schemaName: 'SayHelloInput',
-    inputs: ['SayHelloInput'],
-    outputs: ['SayHelloOutput'],
-  },
-  pikkuFn_src_mcp_functions_ts_L31C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L31C3',
-    name: 'calculate',
-    services: {
-      optimized: false,
-      services: [],
-    },
-    schemaName: 'CalculateInput',
-    inputs: ['CalculateInput'],
-    outputs: ['CalculateOutput'],
-  },
-  pikkuFn_src_mcp_functions_ts_L68C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L68C3',
-    name: 'getStaticResource',
-    services: {
-      optimized: true,
-      services: [],
-    },
-    schemaName: null,
-    inputs: [],
-    outputs: ['GetStaticResourceOutput'],
-  },
-  pikkuFn_src_mcp_functions_ts_L80C3: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L80C3',
-    name: 'getUserInfo',
-    services: {
-      optimized: false,
-      services: [],
-    },
-    schemaName: 'GetUserInfoInput',
-    inputs: ['GetUserInfoInput'],
-    outputs: ['GetUserInfoOutput'],
-  },
-  pikkuFn_src_mcp_functions_ts_L113C66: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L113C66',
-    name: 'staticPromptGenerator',
-    services: {
-      optimized: true,
-      services: [],
-    },
-    schemaName: null,
-    inputs: [],
-    outputs: ['PikkuFn_src_mcp_functions_ts_L113C66Output'],
-  },
-  pikkuFn_src_mcp_functions_ts_L133C4: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L133C4',
-    name: 'dynamicPromptGenerator',
-    services: {
-      optimized: false,
-      services: [],
-    },
-    schemaName: 'DynamicPromptGeneratorInput',
-    inputs: ['DynamicPromptGeneratorInput'],
-    outputs: ['PikkuFn_src_mcp_functions_ts_L133C4Output'],
   },
   pikkuFn_src_queue_worker_functions_ts_L6C3: {
     pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',

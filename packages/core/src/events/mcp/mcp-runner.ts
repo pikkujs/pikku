@@ -11,6 +11,7 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcErrorResponse,
+  PikkuMCP,
 } from './mcp.types.js'
 import type { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
@@ -28,9 +29,10 @@ export class MCPError extends Error {
   }
 }
 
-export type RunMCPEndpointParams = {
+export type RunMCPEndpointParams<Tools extends string = any> = {
   session?: CoreUserSession
   singletonServices: CoreSingletonServices
+  mcp?: PikkuMCP<Tools>
   createSessionServices?: CreateSessionServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
@@ -154,7 +156,7 @@ export async function runMCPResource(
     uri,
     endpoint,
     pikkuFuncName,
-    params
+    { ...params, mcp: { uri } } as RunMCPEndpointParams<keyof CoreMCPResource>
   )
 }
 
@@ -198,14 +200,15 @@ export async function runMCPPrompt(
 async function runMCPPikkuFunc(
   request: JsonRpcRequest,
   type: 'resource' | 'tool' | 'prompt',
-  id: string,
+  name: string,
   mcp: CoreMCPResource | CoreMCPTool | CoreMCPPrompt | undefined,
   pikkuFuncName: string | undefined,
   {
     session,
     singletonServices,
     createSessionServices,
-  }: Omit<RunMCPEndpointParams, 'name' | 'data'>
+    mcp: interaction,
+  }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
   let sessionServices: any
 
@@ -219,32 +222,36 @@ async function runMCPPikkuFunc(
 
     if (!mcp) {
       throw new NotFoundError(
-        `MCP '${type}' registration not found for '${id}'`
+        `MCP '${type}' registration not found for '${name}'`
       )
     }
 
     if (!pikkuFuncName) {
       throw new NotFoundError(
-        `MCP '${type}' PikkuFunction Mapping not found for '${id}'`
+        `MCP '${type}' PikkuFunction Mapping not found for '${name}'`
       )
     }
 
-    singletonServices.logger.info(`Running MCP ${type}: ${id}`)
+    singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
     const getAllServices = async () => {
       if (createSessionServices) {
         const services = await createSessionServices(
           singletonServices,
-          {},
+          { mcp: interaction },
           session
         )
         sessionServices = services
         return rpcService.injectRPCService({
           ...singletonServices,
           ...services,
+          mcp: interaction,
         })
       }
-      return singletonServices
+      return rpcService.injectRPCService({
+        ...singletonServices,
+        mcp: interaction,
+      })
     }
 
     const result = await runPikkuFunc(pikkuFuncName, {
@@ -258,29 +265,30 @@ async function runMCPPikkuFunc(
       result,
     }
   } catch (e: any) {
+    singletonServices.logger.error(
+      `Error running MCP ${type} '${name}':`,
+      e.constructor
+    )
     const errorResponse = getErrorResponse(e)
-    if (errorResponse != null) {
-      singletonServices.logger.error(e)
-    }
-
-    let jsonRpcError: JsonRpcError
     if (errorResponse?.mcpCode) {
-      jsonRpcError = {
+      throw new MCPError({
+        id: request.id,
         code: errorResponse.mcpCode,
         message: errorResponse.message,
-      }
+      })
     } else {
-      jsonRpcError = {
+      if (errorResponse) {
+        singletonServices.logger.warn(
+          `Got error without a mapping: ${errorResponse.message}`
+        )
+      }
+      throw new MCPError({
+        id: request.id,
         code: -32603,
         message: 'Internal error',
         data: { message: e.message, stack: e.stack },
-      }
+      })
     }
-
-    throw new MCPError({
-      id: request.id,
-      ...jsonRpcError,
-    })
   } finally {
     if (sessionServices) {
       await closeSessionServices(singletonServices.logger, sessionServices)

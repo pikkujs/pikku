@@ -32,10 +32,13 @@ import {
   CoreMCPResource,
   CoreMCPTool,
   CoreMCPPrompt,
-  MCPPromptResponse,
   addMCPResource as addCoreMCPResource,
   addMCPTool as addCoreMCPTool,
   addMCPPrompt as addCoreMCPPrompt,
+  MCPResourceResponse,
+  MCPToolResponse,
+  MCPPromptResponse,
+  PikkuMCP,
 } from '@pikku/core'
 
 import type { UserSession } from '../types/application-types.d.js'
@@ -55,11 +58,15 @@ type APIFunctionSessionless<
   In = unknown,
   Out = never,
   ChannelData = null, // null means optional channel
+  MCPData = null, // null means optional MCP
   RequiredServices extends Services = Services & { rpc: TypedPikkuRPC } & ([
       ChannelData,
     ] extends [null]
       ? { channel?: PikkuChannel<unknown, Out> } // Optional channel
-      : { channel: PikkuChannel<ChannelData, Out> }), // Required channel with any data type
+      : { channel: PikkuChannel<ChannelData, Out> }) & // Required channel with any data type
+    ([MCPData] extends [null]
+      ? { mcp?: PikkuMCP } // Optional MCP
+      : { mcp: PikkuMCP }), // Required MCP
 > = CoreAPIFunctionSessionless<
   In,
   Out,
@@ -72,11 +79,15 @@ type APIFunction<
   In = unknown,
   Out = never,
   ChannelData = null, // null means optional channel
+  MCPData = null, // null means optional MCP
   RequiredServices extends Services = Services & { rpc: TypedPikkuRPC } & ([
       ChannelData,
     ] extends [null]
       ? { channel?: PikkuChannel<unknown, Out> } // Optional channel
-      : { channel: PikkuChannel<ChannelData, Out> }), // Required channel with any data type
+      : { channel: PikkuChannel<ChannelData, Out> }) & // Required channel with any data type
+    ([MCPData] extends [null]
+      ? { mcp?: PikkuMCP } // Optional MCP
+      : { mcp: PikkuMCP }), // Required MCP
 > = CoreAPIFunction<In, Out, ChannelData, RequiredServices, UserSession>
 
 type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<
@@ -101,10 +112,15 @@ type ScheduledTask = CoreScheduledTask<
   UserSession
 >
 type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
-type MCPResource<In, Out> = CoreMCPResource<APIFunctionSessionless<In, Out>>
-type MCPTool<In, Out> = CoreMCPTool<APIFunctionSessionless<In, Out>>
+
+type MCPResource<In> = CoreMCPResource<
+  APIFunctionSessionless<In, MCPResourceResponse, null, true>
+>
+type MCPTool<In> = CoreMCPTool<
+  APIFunctionSessionless<In, MCPToolResponse, null, true>
+>
 type MCPPrompt<In> = CoreMCPPrompt<
-  APIFunctionSessionless<In, MCPPromptResponse>
+  APIFunctionSessionless<In, MCPPromptResponse, null, true>
 >
 
 export const pikkuFunc = <In, Out = unknown>(
@@ -207,11 +223,11 @@ export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
   addCoreQueueWorker(queueWorker as any) // TODO
 }
 
-export const addMCPResource = <In, Out>(mcpResource: MCPResource<In, Out>) => {
+export const addMCPResource = <In>(mcpResource: MCPResource<In>) => {
   addCoreMCPResource(mcpResource as any)
 }
 
-export const addMCPTool = <In, Out>(mcpTool: MCPTool<In, Out>) => {
+export const addMCPTool = <In>(mcpTool: MCPTool<In>) => {
   addCoreMCPTool(mcpTool as any)
 }
 
@@ -224,6 +240,28 @@ export const pikkuMCPPromptFunc = <In>(
     | APIFunctionSessionless<In, MCPPromptResponse>
     | {
         func: APIFunctionSessionless<In, MCPPromptResponse>
+        name?: string
+      }
+) => {
+  return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuMCPToolFunc = <In>(
+  func:
+    | APIFunctionSessionless<In, MCPToolResponse, null, true>
+    | {
+        func: APIFunctionSessionless<In, MCPToolResponse, null, true>
+        name?: string
+      }
+) => {
+  return typeof func === 'function' ? func : func.func
+}
+
+export const pikkuMCPResourceFunc = <In>(
+  func:
+    | APIFunctionSessionless<In, MCPResourceResponse, null, true>
+    | {
+        func: APIFunctionSessionless<In, MCPResourceResponse, null, true>
         name?: string
       }
 ) => {

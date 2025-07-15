@@ -8,6 +8,7 @@ import {
 
 import '../../functions/.pikku/mcp.gen.json' with { type: 'json' }
 import '../../functions/.pikku/mcp/pikku-bootstrap-mcp.gen.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -24,18 +25,29 @@ async function main() {
         name: 'pikku-mcp-server',
         version: '1.0.0',
         mcpJsonPath: join(__dirname, '../../functions/.pikku/mcp.gen.json'),
+        capabilities: {
+          logging: {},
+          tools: {},
+          resources: {},
+          prompts: {},
+        },
       },
       singletonServices
     )
 
     await server.init()
-    await server.start()
 
-    // Keep the process running
-    process.on('SIGINT', async () => {
-      await server.stop()
-      process.exit(0)
-    })
+    try {
+      const transport = new StdioServerTransport()
+      await server.connect(transport)
+      server.wrapLogger()
+      process.on('SIGINT', async () => {
+        await transport?.close()
+        process.exit(0)
+      })
+    } catch (error) {
+      throw error
+    }
   } catch (error) {
     console.error('Failed to start MCP server:', error)
     process.exit(1)

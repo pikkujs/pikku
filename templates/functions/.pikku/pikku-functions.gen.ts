@@ -5,6 +5,7 @@
 import { addFunction } from '@pikku/core'
 import { authenticate } from '../src/channel.functions.js'
 import { calculate } from '../src/mcp.functions.js'
+import { disableTool } from '../src/mcp.functions.js'
 import { dynamicPromptGenerator } from '../src/mcp.functions.js'
 import { emitMessage } from '../src/channel.functions.js'
 import { getStaticResource } from '../src/mcp.functions.js'
@@ -26,6 +27,7 @@ import { unsubscribe } from '../src/channel.functions.js'
 
 addFunction('authenticate', { func: authenticate })
 addFunction('calculate', { func: calculate })
+addFunction('disableTool', { func: disableTool })
 addFunction('dynamicPromptGenerator', { func: dynamicPromptGenerator })
 addFunction('emitMessage', { func: emitMessage })
 addFunction('getStaticResource', { func: getStaticResource })

@@ -31,6 +31,22 @@
       }
     },
     {
+      "name": "disableTool",
+      "description": "Disable a tool by name",
+      "parameters": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false,
+        "definitions": {}
+      }
+    },
+    {
       "name": "calculate",
       "description": "Perform basic mathematical operations (add, subtract, multiply, divide)",
       "parameters": {
@@ -54,17 +70,20 @@
       },
       "returns": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-          "result": {
-            "type": "number"
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
           },
-          "operation": {
-            "type": "string"
-          }
+          "required": ["type", "text"],
+          "additionalProperties": false
         },
-        "required": ["result", "operation"],
-        "additionalProperties": false,
         "definitions": {}
       }
     }
@@ -76,14 +95,18 @@
       "description": "Gets a static resource with predefined data",
       "returns": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string"
-          }
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uri": {},
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": ["uri", "text"],
+          "additionalProperties": false
         },
-        "required": ["message"],
-        "additionalProperties": false,
         "definitions": {}
       }
     },
@@ -105,23 +128,20 @@
       },
       "returns": {
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-          "userId": {
-            "type": "string"
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
           },
-          "name": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "lastLogin": {
-            "type": "string"
-          }
+          "required": ["uri", "text"],
+          "additionalProperties": false
         },
-        "required": ["userId", "name", "email", "lastLogin"],
-        "additionalProperties": false,
         "definitions": {}
       }
     }

@@ -1,5 +1,14 @@
 import { CoreAPIFunctionSessionless } from '../../function/functions.types.js'
 
+export type PikkuMCP<Tools extends string = any> = {
+  // elicitInput: <Input>(message: string) => Promise<{ action: string, content: Input }>
+  uri?: string
+  sendResourceUpdated: (uri: string) => void
+  enableResources: (resources: Record<string, boolean>) => Promise<boolean>
+  enablePrompts: (prompts: Record<string, boolean>) => Promise<boolean>
+  enableTools: (tools: Record<Tools, boolean>) => Promise<boolean>
+}
+
 /**
  * Represents metadata for MCP resources, including name, description, and documentation.
  */
@@ -84,17 +93,17 @@ export type CoreMCPPrompt<
 
 export type JsonRpcRequest = {
   jsonrpc: string
-  id: string | number | null
+  id?: string | number | null
   params?: any
 }
 
 export type JsonRpcResponse = {
-  id: string | number | null
+  id?: string | number | null
   result?: any
 }
 
 export type JsonRpcErrorResponse = {
-  id: string | number | null
+  id?: string | number | null
   code: number
   message: string
   data?: any
@@ -116,3 +125,26 @@ export type MCPPromptMessage = {
  * Standard response type for MCP prompts - array of messages
  */
 export type MCPPromptResponse = MCPPromptMessage[]
+
+export type MCPResourceMessage = {
+  uri: string
+  text: string
+}
+
+export type MCPResourceResponse = MCPResourceMessage[]
+
+/**
+ * Standard response type for MCP prompts - array of messages
+ */
+
+export type MCPToolMessage =
+  | {
+      type: 'text'
+      text: string
+    }
+  | {
+      type: 'image'
+      data: string // base64 encoded image data
+    }
+
+export type MCPToolResponse = MCPToolMessage[]

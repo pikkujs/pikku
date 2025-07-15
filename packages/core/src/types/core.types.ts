@@ -8,6 +8,7 @@ import { JWTService } from '../services/jwt-service.js'
 import { SecretService } from '../services/secret-service.js'
 import { PikkuChannel } from '../events/channel/channel.types.js'
 import { PikkuRPC } from '../events/rpc/rpc-types.js'
+import { PikkuMCP } from '../events/mcp/mcp.types.js'
 
 export enum PikkuEventTypes {
   http = 'http',
@@ -111,6 +112,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
  */
 export interface PikkuInteraction {
   http?: PikkuHTTP
+  mcp?: PikkuMCP
+  rpc?: PikkuRPC
 }
 
 /**
@@ -136,6 +139,7 @@ export type CoreServices<
   CoreServices extends Record<string, unknown> = {},
 > = SingletonServices &
   PikkuInteraction & {
+    mcp?: PikkuMCP
     rpc?: PikkuRPC
     userSession?: UserSessionService<UserSession>
     channel?: PikkuChannel<unknown, unknown>

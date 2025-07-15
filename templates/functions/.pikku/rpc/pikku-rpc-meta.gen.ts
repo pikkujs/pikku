@@ -3,6 +3,41 @@
  */
 import { pikkuState } from '@pikku/core'
 pikkuState('rpc', 'meta', {
+  sayHello: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3',
+    exposed: false,
+  },
+  disableTool: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3',
+    exposed: false,
+  },
+  calculate: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3',
+    exposed: false,
+  },
+  getStaticResource: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55',
+    exposed: false,
+  },
+  getUserInfo: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3',
+    exposed: false,
+  },
+  staticPromptGenerator: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66',
+    exposed: false,
+  },
+  dynamicPromptGenerator: {
+    pikkuFuncName:
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4',
+    exposed: false,
+  },
   onConnect: {
     pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
     exposed: false,
@@ -41,30 +76,6 @@ pikkuState('rpc', 'meta', {
   },
   helloWorld: {
     pikkuFuncName: 'pikkuFn_src_http_functions_ts_L3C54',
-    exposed: false,
-  },
-  sayHello: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L12C3',
-    exposed: false,
-  },
-  calculate: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L31C3',
-    exposed: false,
-  },
-  getStaticResource: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L68C3',
-    exposed: false,
-  },
-  getUserInfo: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L80C3',
-    exposed: false,
-  },
-  staticPromptGenerator: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L113C66',
-    exposed: false,
-  },
-  dynamicPromptGenerator: {
-    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L133C4',
     exposed: false,
   },
   queueWorker: {
