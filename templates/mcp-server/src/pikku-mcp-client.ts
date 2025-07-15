@@ -5,6 +5,7 @@ import {
   GetPromptResultSchema,
   ListPromptsResultSchema,
   ListResourcesResultSchema,
+  ListResourceTemplatesResultSchema,
   ListToolsResultSchema,
   PingRequestSchema,
   ReadResourceResultSchema,
@@ -91,7 +92,7 @@ export class PikkuMCPTestClient {
       {
         method: 'resources/templates/list',
       },
-      ListResourcesResultSchema
+      ListResourceTemplatesResultSchema
     )
   }
 

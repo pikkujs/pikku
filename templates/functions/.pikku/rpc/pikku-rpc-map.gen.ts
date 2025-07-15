@@ -8,28 +8,31 @@
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
 export type SayHelloInput = { name?: string }
-export type SayHelloOutput = { message: string; timestamp: number }
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output =
+  { type: string; text: string }[]
 export type DisableToolInput = { name: string }
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output =
+  { type: string; text: string }[]
 export type CalculateInput = {
   operation: 'add' | 'subtract' | 'multiply' | 'divide'
   a: number
   b: number
 }
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3Output =
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output =
   { type: string; text: string }[]
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55Output =
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output =
   { uri: any; text: string }[]
 export type GetUserInfoInput = { userId: string }
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3Output =
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output =
   { uri: string; text: string }[]
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66Output =
-  { role: 'user'; content: { type: 'text'; text: string } }[]
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output =
+  { role: string; content: { type: string; text: string } }[]
 export type DynamicPromptGeneratorInput = {
   topic: string
   complexity: 'beginner' | 'intermediate' | 'advanced'
-  includeExamples?: boolean
+  includeExamples?: string
 }
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4Output =
+export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output =
   { role: 'user'; content: { type: 'text'; text: string } }[]
 export type OnConnectInput = 'hello!'
 export type AuthenticateInput = { token: string; userId: string }
@@ -56,27 +59,33 @@ interface RPCHandler<I, O> {
 }
 
 export type RPCMap = {
-  readonly sayHello: RPCHandler<SayHelloInput, SayHelloOutput>
-  readonly disableTool: RPCHandler<DisableToolInput, null>
+  readonly sayHello: RPCHandler<
+    SayHelloInput,
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output
+  >
+  readonly disableTool: RPCHandler<
+    DisableToolInput,
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output
+  >
   readonly calculate: RPCHandler<
     CalculateInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3Output
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output
   >
   readonly getStaticResource: RPCHandler<
     null,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55Output
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output
   >
   readonly getUserInfo: RPCHandler<
     GetUserInfoInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3Output
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output
   >
   readonly staticPromptGenerator: RPCHandler<
     null,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66Output
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output
   >
   readonly dynamicPromptGenerator: RPCHandler<
     DynamicPromptGeneratorInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4Output
+    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output
   >
   readonly onConnect: RPCHandler<OnConnectInput, null>
   readonly onDisconnect: RPCHandler<null, null>

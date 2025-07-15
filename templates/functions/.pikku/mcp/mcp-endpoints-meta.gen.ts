@@ -5,77 +5,79 @@ import { pikkuState } from '@pikku/core'
 pikkuState('mcp', 'resourcesMeta', {
   getStaticResource: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55',
     uri: 'getStaticResource',
     title: 'Static Resource',
     description: 'Gets a static resource with predefined data',
     inputSchema: null,
     outputSchema:
-      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55Output',
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output',
   },
   'getUserInfo/{userId}': {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3',
     uri: 'getUserInfo/{userId}',
     title: 'User Information',
     description: 'Retrieve user information by user ID',
     tags: ['user', 'profile', 'data'],
     inputSchema: 'GetUserInfoInput',
     outputSchema:
-      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3Output',
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output',
   },
 })
 pikkuState('mcp', 'toolsMeta', {
   sayHello: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3',
     name: 'sayHello',
     description: 'Greet someone with a friendly hello message',
     tags: ['greeting', 'hello', 'demo'],
     inputSchema: 'SayHelloInput',
-    outputSchema: 'SayHelloOutput',
+    outputSchema:
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output',
   },
   disableTool: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3',
     name: 'disableTool',
     description: 'Disable a tool by name',
     inputSchema: 'DisableToolInput',
-    outputSchema: null,
+    outputSchema:
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output',
   },
   calculate: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4',
     name: 'calculate',
     description:
       'Perform basic mathematical operations (add, subtract, multiply, divide)',
     tags: ['math', 'calculator', 'arithmetic'],
     inputSchema: 'CalculateInput',
     outputSchema:
-      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3Output',
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output',
   },
 })
 pikkuState('mcp', 'promptsMeta', {
   getStaticResource: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66',
     name: 'getStaticResource',
     description: 'A static prompt that returns a predefined message',
     inputSchema: null,
     outputSchema:
-      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66Output',
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output',
     arguments: [],
   },
   dynamicPromptGenerator: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4',
     name: 'dynamicPromptGenerator',
     description:
       'Generate educational content with progressive complexity and optional examples',
     tags: ['education', 'content', 'progressive', 'examples'],
     inputSchema: 'DynamicPromptGeneratorInput',
     outputSchema:
-      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4Output',
+      'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output',
     arguments: [
       {
         name: 'topic',

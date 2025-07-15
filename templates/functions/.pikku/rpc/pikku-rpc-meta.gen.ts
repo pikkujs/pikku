@@ -5,37 +5,37 @@ import { pikkuState } from '@pikku/core'
 pikkuState('rpc', 'meta', {
   sayHello: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3',
     exposed: false,
   },
   disableTool: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3',
     exposed: false,
   },
   calculate: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4',
     exposed: false,
   },
   getStaticResource: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55',
     exposed: false,
   },
   getUserInfo: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3',
     exposed: false,
   },
   staticPromptGenerator: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66',
     exposed: false,
   },
   dynamicPromptGenerator: {
     pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4',
+      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4',
     exposed: false,
   },
   onConnect: {

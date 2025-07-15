@@ -155,7 +155,7 @@ export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
 export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
   topic: string
   complexity: 'beginner' | 'intermediate' | 'advanced'
-  includeExamples?: boolean
+  includeExamples?: string
 }>(async (services, { topic, complexity, includeExamples = false }) => {
   services.logger.info(
     `Generating progressive enhancement content for: ${topic} (${complexity})`

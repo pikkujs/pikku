@@ -16,6 +16,11 @@ export const serializeImportMap = (
       return
     }
     const variables = paths.get(path) || []
+
+    if (uniqueName === '__object') {
+      return
+    }
+
     if (originalName === uniqueName) {
       variables.push(originalName)
     } else {

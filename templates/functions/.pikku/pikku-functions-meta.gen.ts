@@ -3,10 +3,10 @@
  */
 import { pikkuState } from '@pikku/core'
 pikkuState('function', 'meta', {
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L14C3',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3',
       name: 'sayHello',
       services: {
         optimized: false,
@@ -14,12 +14,14 @@ pikkuState('function', 'meta', {
       },
       schemaName: 'SayHelloInput',
       inputs: ['SayHelloInput'],
-      outputs: ['SayHelloOutput'],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output',
+      ],
     },
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L26C3',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3',
       name: 'disableTool',
       services: {
         optimized: false,
@@ -27,12 +29,14 @@ pikkuState('function', 'meta', {
       },
       schemaName: 'DisableToolInput',
       inputs: ['DisableToolInput'],
-      outputs: [],
+      outputs: [
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output',
+      ],
     },
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4',
       name: 'calculate',
       services: {
         optimized: true,
@@ -41,13 +45,13 @@ pikkuState('function', 'meta', {
       schemaName: 'CalculateInput',
       inputs: ['CalculateInput'],
       outputs: [
-        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L39C3Output',
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output',
       ],
     },
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55',
       name: 'getStaticResource',
       services: {
         optimized: true,
@@ -56,13 +60,13 @@ pikkuState('function', 'meta', {
       schemaName: null,
       inputs: [],
       outputs: [
-        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L73C55Output',
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output',
       ],
     },
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3',
       name: 'getUserInfo',
       services: {
         optimized: false,
@@ -71,13 +75,13 @@ pikkuState('function', 'meta', {
       schemaName: 'GetUserInfoInput',
       inputs: ['GetUserInfoInput'],
       outputs: [
-        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L85C3Output',
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output',
       ],
     },
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66',
       name: 'staticPromptGenerator',
       services: {
         optimized: true,
@@ -86,13 +90,13 @@ pikkuState('function', 'meta', {
       schemaName: null,
       inputs: [],
       outputs: [
-        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L121C66Output',
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output',
       ],
     },
-  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4:
+  pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4:
     {
       pikkuFuncName:
-        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4',
+        'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4',
       name: 'dynamicPromptGenerator',
       services: {
         optimized: false,
@@ -101,7 +105,7 @@ pikkuState('function', 'meta', {
       schemaName: 'DynamicPromptGeneratorInput',
       inputs: ['DynamicPromptGeneratorInput'],
       outputs: [
-        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C4Output',
+        'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output',
       ],
     },
   pikkuFn_src_channel_functions_ts_L9C3: {

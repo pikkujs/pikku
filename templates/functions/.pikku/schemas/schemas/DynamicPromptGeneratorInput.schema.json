@@ -7,7 +7,7 @@
       "type": "string",
       "enum": ["beginner", "intermediate", "advanced"]
     },
-    "includeExamples": { "type": "boolean" }
+    "includeExamples": { "type": "string" }
   },
   "required": ["topic", "complexity"],
   "additionalProperties": false,
