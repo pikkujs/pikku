@@ -3,41 +3,6 @@
  */
 import { pikkuState } from '@pikku/core'
 pikkuState('rpc', 'meta', {
-  sayHello: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3',
-    exposed: false,
-  },
-  disableTool: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3',
-    exposed: false,
-  },
-  calculate: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4',
-    exposed: false,
-  },
-  getStaticResource: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55',
-    exposed: false,
-  },
-  getUserInfo: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3',
-    exposed: false,
-  },
-  staticPromptGenerator: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66',
-    exposed: false,
-  },
-  dynamicPromptGenerator: {
-    pikkuFuncName:
-      'pikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4',
-    exposed: false,
-  },
   onConnect: {
     pikkuFuncName: 'pikkuFn_src_channel_functions_ts_L9C3',
     exposed: false,
@@ -78,6 +43,34 @@ pikkuState('rpc', 'meta', {
     pikkuFuncName: 'pikkuFn_src_http_functions_ts_L3C54',
     exposed: false,
   },
+  sayHello: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L12C3',
+    exposed: false,
+  },
+  disableTool: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L25C3',
+    exposed: false,
+  },
+  calculate: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L52C4',
+    exposed: false,
+  },
+  getStaticResource: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L88C55',
+    exposed: false,
+  },
+  getUserInfo: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L101C3',
+    exposed: false,
+  },
+  staticPromptGenerator: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L140C66',
+    exposed: false,
+  },
+  dynamicPromptGenerator: {
+    pikkuFuncName: 'pikkuFn_src_mcp_functions_ts_L159C4',
+    exposed: false,
+  },
   queueWorker: {
     pikkuFuncName: 'pikkuFn_src_queue_worker_functions_ts_L6C3',
     exposed: false,
@@ -87,7 +80,7 @@ pikkuState('rpc', 'meta', {
     exposed: false,
   },
   rpcCaller: {
-    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L15C47',
+    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L15C80',
     exposed: false,
   },
   myScheduledTask: {

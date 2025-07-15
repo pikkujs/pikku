@@ -3,63 +3,6 @@
  */
 import { addSchema } from '@pikku/core/schema'
 
-import * as SayHelloInput from './schemas/SayHelloInput.schema.json' with { type: 'json' }
-addSchema('SayHelloInput', SayHelloInput)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output
-)
-
-import * as DisableToolInput from './schemas/DisableToolInput.schema.json' with { type: 'json' }
-addSchema('DisableToolInput', DisableToolInput)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output
-)
-
-import * as CalculateInput from './schemas/CalculateInput.schema.json' with { type: 'json' }
-addSchema('CalculateInput', CalculateInput)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output
-)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output
-)
-
-import * as GetUserInfoInput from './schemas/GetUserInfoInput.schema.json' with { type: 'json' }
-addSchema('GetUserInfoInput', GetUserInfoInput)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output
-)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output
-)
-
-import * as DynamicPromptGeneratorInput from './schemas/DynamicPromptGeneratorInput.schema.json' with { type: 'json' }
-addSchema('DynamicPromptGeneratorInput', DynamicPromptGeneratorInput)
-
-import * as PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output from './schemas/PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output.schema.json' with { type: 'json' }
-addSchema(
-  'PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output',
-  PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output
-)
-
 import * as OnConnectInput from './schemas/OnConnectInput.schema.json' with { type: 'json' }
 addSchema('OnConnectInput', OnConnectInput)
 
@@ -96,6 +39,63 @@ addSchema(
 import * as TimeSinceOpenedOutput from './schemas/TimeSinceOpenedOutput.schema.json' with { type: 'json' }
 addSchema('TimeSinceOpenedOutput', TimeSinceOpenedOutput)
 
+import * as SayHelloInput from './schemas/SayHelloInput.schema.json' with { type: 'json' }
+addSchema('SayHelloInput', SayHelloInput)
+
+import * as PikkuFn_src_mcp_functions_ts_L12C3Output from './schemas/PikkuFn_src_mcp_functions_ts_L12C3Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L12C3Output',
+  PikkuFn_src_mcp_functions_ts_L12C3Output
+)
+
+import * as DisableToolInput from './schemas/DisableToolInput.schema.json' with { type: 'json' }
+addSchema('DisableToolInput', DisableToolInput)
+
+import * as PikkuFn_src_mcp_functions_ts_L25C3Output from './schemas/PikkuFn_src_mcp_functions_ts_L25C3Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L25C3Output',
+  PikkuFn_src_mcp_functions_ts_L25C3Output
+)
+
+import * as CalculateInput from './schemas/CalculateInput.schema.json' with { type: 'json' }
+addSchema('CalculateInput', CalculateInput)
+
+import * as PikkuFn_src_mcp_functions_ts_L52C4Output from './schemas/PikkuFn_src_mcp_functions_ts_L52C4Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L52C4Output',
+  PikkuFn_src_mcp_functions_ts_L52C4Output
+)
+
+import * as PikkuFn_src_mcp_functions_ts_L88C55Output from './schemas/PikkuFn_src_mcp_functions_ts_L88C55Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L88C55Output',
+  PikkuFn_src_mcp_functions_ts_L88C55Output
+)
+
+import * as GetUserInfoInput from './schemas/GetUserInfoInput.schema.json' with { type: 'json' }
+addSchema('GetUserInfoInput', GetUserInfoInput)
+
+import * as PikkuFn_src_mcp_functions_ts_L101C3Output from './schemas/PikkuFn_src_mcp_functions_ts_L101C3Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L101C3Output',
+  PikkuFn_src_mcp_functions_ts_L101C3Output
+)
+
+import * as PikkuFn_src_mcp_functions_ts_L140C66Output from './schemas/PikkuFn_src_mcp_functions_ts_L140C66Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L140C66Output',
+  PikkuFn_src_mcp_functions_ts_L140C66Output
+)
+
+import * as DynamicPromptGeneratorInput from './schemas/DynamicPromptGeneratorInput.schema.json' with { type: 'json' }
+addSchema('DynamicPromptGeneratorInput', DynamicPromptGeneratorInput)
+
+import * as PikkuFn_src_mcp_functions_ts_L159C4Output from './schemas/PikkuFn_src_mcp_functions_ts_L159C4Output.schema.json' with { type: 'json' }
+addSchema(
+  'PikkuFn_src_mcp_functions_ts_L159C4Output',
+  PikkuFn_src_mcp_functions_ts_L159C4Output
+)
+
 import * as QueueWorkerInput from './schemas/QueueWorkerInput.schema.json' with { type: 'json' }
 addSchema('QueueWorkerInput', QueueWorkerInput)
 
@@ -104,3 +104,6 @@ addSchema('QueueWorkerOutput', QueueWorkerOutput)
 
 import * as RpcTestInput from './schemas/RpcTestInput.schema.json' with { type: 'json' }
 addSchema('RpcTestInput', RpcTestInput)
+
+import * as RpcCallerInput from './schemas/RpcCallerInput.schema.json' with { type: 'json' }
+addSchema('RpcCallerInput', RpcCallerInput)

@@ -7,33 +7,6 @@
 
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
-export type SayHelloInput = { name?: string }
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output =
-  { type: string; text: string }[]
-export type DisableToolInput = { name: string }
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output =
-  { type: string; text: string }[]
-export type CalculateInput = {
-  operation: 'add' | 'subtract' | 'multiply' | 'divide'
-  a: number
-  b: number
-}
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output =
-  { type: string; text: string }[]
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output =
-  { uri: any; text: string }[]
-export type GetUserInfoInput = { userId: string }
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output =
-  { uri: string; text: string }[]
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output =
-  { role: string; content: { type: string; text: string } }[]
-export type DynamicPromptGeneratorInput = {
-  topic: string
-  complexity: 'beginner' | 'intermediate' | 'advanced'
-  includeExamples?: string
-}
-export type PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output =
-  { role: 'user'; content: { type: 'text'; text: string } }[]
 export type OnConnectInput = 'hello!'
 export type AuthenticateInput = { token: string; userId: string }
 export type AuthenticateOutput = { authResult: boolean; action: 'auth' }
@@ -49,9 +22,51 @@ export type ProgressiveEnhancementExampleOutput = {
   state: 'initial' | 'pending' | 'done'
 }
 export type TimeSinceOpenedOutput = { count: number }
+export type SayHelloInput = { name?: string }
+export type PikkuFn_src_mcp_functions_ts_L12C3Output = {
+  type: string
+  text: string
+}[]
+export type DisableToolInput = { name: string }
+export type PikkuFn_src_mcp_functions_ts_L25C3Output = {
+  type: string
+  text: string
+}[]
+export type CalculateInput = {
+  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  a: number
+  b: number
+}
+export type PikkuFn_src_mcp_functions_ts_L52C4Output = {
+  type: string
+  text: string
+}[]
+export type PikkuFn_src_mcp_functions_ts_L88C55Output = {
+  uri: any
+  text: string
+}[]
+export type GetUserInfoInput = { userId: string }
+export type PikkuFn_src_mcp_functions_ts_L101C3Output = {
+  uri: string
+  text: string
+}[]
+export type PikkuFn_src_mcp_functions_ts_L140C66Output = {
+  role: string
+  content: { type: string; text: string }
+}[]
+export type DynamicPromptGeneratorInput = {
+  topic: string
+  complexity: 'beginner' | 'intermediate' | 'advanced'
+  includeExamples?: string
+}
+export type PikkuFn_src_mcp_functions_ts_L159C4Output = {
+  role: 'user'
+  content: { type: 'text'; text: string }
+}[]
 export type QueueWorkerInput = { message: string; fail: boolean }
 export type QueueWorkerOutput = { result: string }
 export type RpcTestInput = { in: number }
+export type RpcCallerInput = { name: string; data: unknown }
 
 interface RPCHandler<I, O> {
   input: I
@@ -59,34 +74,6 @@ interface RPCHandler<I, O> {
 }
 
 export type RPCMap = {
-  readonly sayHello: RPCHandler<
-    SayHelloInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L12C3Output
-  >
-  readonly disableTool: RPCHandler<
-    DisableToolInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L25C3Output
-  >
-  readonly calculate: RPCHandler<
-    CalculateInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L52C4Output
-  >
-  readonly getStaticResource: RPCHandler<
-    null,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L88C55Output
-  >
-  readonly getUserInfo: RPCHandler<
-    GetUserInfoInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L101C3Output
-  >
-  readonly staticPromptGenerator: RPCHandler<
-    null,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L140C66Output
-  >
-  readonly dynamicPromptGenerator: RPCHandler<
-    DynamicPromptGeneratorInput,
-    PikkuFn__Users_yasser_git_pikku_pikku_templates_functions_src_mcp_functions_ts_L159C4Output
-  >
   readonly onConnect: RPCHandler<OnConnectInput, null>
   readonly onDisconnect: RPCHandler<null, null>
   readonly authenticate: RPCHandler<AuthenticateInput, AuthenticateOutput>
@@ -100,13 +87,41 @@ export type RPCMap = {
   >
   readonly timeSinceOpened: RPCHandler<null, TimeSinceOpenedOutput>
   readonly helloWorld: RPCHandler<null, string>
+  readonly sayHello: RPCHandler<
+    SayHelloInput,
+    PikkuFn_src_mcp_functions_ts_L12C3Output
+  >
+  readonly disableTool: RPCHandler<
+    DisableToolInput,
+    PikkuFn_src_mcp_functions_ts_L25C3Output
+  >
+  readonly calculate: RPCHandler<
+    CalculateInput,
+    PikkuFn_src_mcp_functions_ts_L52C4Output
+  >
+  readonly getStaticResource: RPCHandler<
+    null,
+    PikkuFn_src_mcp_functions_ts_L88C55Output
+  >
+  readonly getUserInfo: RPCHandler<
+    GetUserInfoInput,
+    PikkuFn_src_mcp_functions_ts_L101C3Output
+  >
+  readonly staticPromptGenerator: RPCHandler<
+    null,
+    PikkuFn_src_mcp_functions_ts_L140C66Output
+  >
+  readonly dynamicPromptGenerator: RPCHandler<
+    DynamicPromptGeneratorInput,
+    PikkuFn_src_mcp_functions_ts_L159C4Output
+  >
   readonly queueWorker: RPCHandler<QueueWorkerInput, QueueWorkerOutput>
   readonly rpcTest: RPCHandler<RpcTestInput, null>
-  readonly rpcCaller: RPCHandler<null, null>
+  readonly rpcCaller: RPCHandler<RpcCallerInput, null>
   readonly myScheduledTask: RPCHandler<null, null>
 }
 
-type RPCInvoke = <Name extends keyof RPCMap>(
+export type RPCInvoke = <Name extends keyof RPCMap>(
   name: Name,
   data: RPCMap[Name]['input'],
   options?: {

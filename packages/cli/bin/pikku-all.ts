@@ -21,6 +21,7 @@ import { PikkuEventTypes } from '@pikku/core'
 import { pikkuQueue } from '../src/events/queue/pikku-command-queue.js'
 import { pikkuQueueMap } from '../src/events/queue/pikku-command-queue-map.js'
 import { pikkuFetch } from '../src/events/fetch/index.js'
+import { pikkuRPCClient } from '../src/events/rpc/pikku-command-rpc-client.js'
 import { pikkuWebSocketTyped } from '../src/events/channels/pikku-command-websocket-typed.js'
 import { pikkuNext } from '../src/events/http/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../src/events/http/pikku-command-openapi.js'
@@ -101,6 +102,7 @@ const runAll = async (
 
   await pikkuRPC(logger, cliConfig, visitState)
   await pikkuRPCMap(logger, cliConfig, visitState)
+  await pikkuRPCClient(logger, cliConfig)
   addImport(cliConfig.rpcMetaFile, 'meta', [PikkuEventTypes.rpc])
 
   const schemas = await pikkuSchemas(logger, cliConfig, visitState)

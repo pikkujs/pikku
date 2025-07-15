@@ -12,7 +12,8 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>(
   }
 )
 
-export const rpcCaller = pikkuSessionlessFunc(async ({ rpc, logger }) => {
-  logger.info(`RPC Caller with RPC: ${rpc?.depth}`)
-  return await rpc.invoke(`rpcTest`, { in: 0 })
-})
+export const rpcCaller = pikkuSessionlessFunc<{ name: string; data: unknown }>(
+  async ({ rpc }, { name, data }) => {
+    return await rpc.invoke(name as any, data)
+  }
+)

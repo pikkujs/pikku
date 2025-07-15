@@ -25,13 +25,8 @@ pikkuState('http', 'meta', [
     tags: ['hello'],
   },
   {
-    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L15C47',
+    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L15C80',
     route: '/rpc',
-    method: 'get',
-  },
-  {
-    pikkuFuncName: 'pikkuFn_src_rpc_functions_ts_L4C3',
-    route: '/dummy',
-    method: 'get',
+    method: 'post',
   },
 ])

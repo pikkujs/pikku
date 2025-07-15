@@ -64,7 +64,7 @@ export class CorePikkuFetch {
    *
    * @param {string} serverUrl - The server URL to be set.
    */
-  public async setServerUrl(serverUrl: string): Promise<void> {
+  public setServerUrl(serverUrl: string): void {
     if (serverUrl.endsWith('/')) {
       console.warn('Server URL should not end with a slash, removing.')
       serverUrl = serverUrl.slice(0, -1)

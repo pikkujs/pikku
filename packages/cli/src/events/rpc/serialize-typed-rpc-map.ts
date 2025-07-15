@@ -42,7 +42,7 @@ interface RPCHandler<I, O> {
 
 ${serializedRPCs}
 
-type RPCInvoke = <Name extends keyof RPCMap>(
+export type RPCInvoke = <Name extends keyof RPCMap>(
   name: Name,
   data: RPCMap[Name]['input'],
   options?: {

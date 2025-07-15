@@ -65,6 +65,7 @@ export type PikkuCLIConfig = {
   nextHTTPFile?: string
   fetchFile?: string
   websocketFile?: string
+  rpcFile?: string
   queueFile?: string
   mcpJsonFile?: string
 
@@ -81,6 +82,7 @@ const CONFIG_DIR_FILES = [
   'nextHTTPFile',
   'fetchFile',
   'websocketFile',
+  'rpcFile',
   'queueFile',
   'mcpJsonFile',
 ]
