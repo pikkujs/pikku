@@ -72,7 +72,9 @@ export class PikkuMCPServer {
   async init(): Promise<void> {
     try {
       // Load the MCP JSON schema file
-      await this.mcpEndpointRegistry.loadFromMCPJson(this.config.mcpJsonPath)
+      await this.mcpEndpointRegistry.loadFromMCPJsonFile(
+        this.config.mcpJsonPath
+      )
       if (this.config.capabilities.resources) {
         const resourcesMeta = getMCPResourcesMeta()
         this.mcpEndpointRegistry.setResourcesMeta(resourcesMeta)

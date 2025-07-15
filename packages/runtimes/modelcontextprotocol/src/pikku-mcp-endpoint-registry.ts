@@ -34,46 +34,48 @@ export class MCPEndpointRegistry {
   private toolsMeta: MCPToolMeta = {}
   private promptsMeta: MCPPromptMeta = {}
 
-  async loadFromMCPJson(mcpJsonPath: string): Promise<void> {
+  async loadFromMCPJsonFile(mcpJsonPath: string): Promise<void> {
     try {
       const mcpJsonContent = await readFile(mcpJsonPath, 'utf-8')
-      const mcpData = JSON.parse(mcpJsonContent)
-
-      if (mcpData.tools && Array.isArray(mcpData.tools)) {
-        for (const tool of mcpData.tools) {
-          this.tools.set(tool.name, {
-            name: tool.name,
-            title: tool.title,
-            description: tool.description,
-            inputSchema: tool.parameters,
-            outputSchema: tool.returns,
-            enabled: tool.enabled !== undefined ? tool.enabled : true,
-          })
-        }
-      }
-      if (mcpData.resources && Array.isArray(mcpData.resources)) {
-        for (const resource of mcpData.resources) {
-          this.resources.set(resource.name, {
-            title: resource.name,
-            uri: resource.uri,
-            description: resource.description,
-            inputSchema: resource.parameters,
-            enabled: resource.enabled !== undefined ? resource.enabled : true,
-          })
-        }
-      }
-      if (mcpData.prompts && Array.isArray(mcpData.prompts)) {
-        for (const prompt of mcpData.prompts) {
-          this.prompts.set(prompt.name, {
-            name: prompt.name,
-            description: prompt.description,
-            inputSchema: prompt.arguments,
-            enabled: prompt.enabled !== undefined ? prompt.enabled : true,
-          })
-        }
-      }
+      await this.loadFromMCPJson(JSON.parse(mcpJsonContent))
     } catch (error) {
       throw new Error(`Failed to load MCP JSON from ${mcpJsonPath}: ${error}`)
+    }
+  }
+
+  async loadFromMCPJson(mcpData: any): Promise<void> {
+    if (mcpData.tools && Array.isArray(mcpData.tools)) {
+      for (const tool of mcpData.tools) {
+        this.tools.set(tool.name, {
+          name: tool.name,
+          title: tool.title,
+          description: tool.description,
+          inputSchema: tool.parameters,
+          outputSchema: tool.returns,
+          enabled: tool.enabled !== undefined ? tool.enabled : true,
+        })
+      }
+    }
+    if (mcpData.resources && Array.isArray(mcpData.resources)) {
+      for (const resource of mcpData.resources) {
+        this.resources.set(resource.name, {
+          title: resource.name,
+          uri: resource.uri,
+          description: resource.description,
+          inputSchema: resource.parameters,
+          enabled: resource.enabled !== undefined ? resource.enabled : true,
+        })
+      }
+    }
+    if (mcpData.prompts && Array.isArray(mcpData.prompts)) {
+      for (const prompt of mcpData.prompts) {
+        this.prompts.set(prompt.name, {
+          name: prompt.name,
+          description: prompt.description,
+          inputSchema: prompt.arguments,
+          enabled: prompt.enabled !== undefined ? prompt.enabled : true,
+        })
+      }
     }
   }
 
@@ -149,9 +151,9 @@ export class MCPEndpointRegistry {
     return changed
   }
 
-  enableResources(prompts: Record<any, boolean>): boolean {
+  enableResources(resources: Record<any, boolean>): boolean {
     let changed = false
-    for (const [name, enabled] of Object.entries(this.resources)) {
+    for (const [name, enabled] of Object.entries(resources)) {
       const resource = this.resources.get(name)
       if (resource && resource.enabled !== enabled) {
         resource.enabled = enabled

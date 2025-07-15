@@ -118,7 +118,7 @@ type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelDat
  * Type definition for scheduled tasks that run at specified intervals.
  * These are sessionless functions that execute based on cron expressions.
  */
-type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>, ${userSessionTypeName}>
+type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>>
 
 /**
  * Type definition for queue workers that process background jobs.
