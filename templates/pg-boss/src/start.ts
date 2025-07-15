@@ -1,4 +1,4 @@
-import { PgBossQueueWorkers, PgBossQueueService } from '@pikku/queue-pg-boss'
+import { PgBossQueueWorkers } from '@pikku/queue-pg-boss'
 import {
   createConfig,
   createSingletonServices,
@@ -29,48 +29,12 @@ async function main(): Promise<void> {
     // Register queue processors
     await pgBossQueueWorkers.registerQueues()
 
-    const pgBossQueueService = new PgBossQueueService(connectionString)
-    await pgBossQueueService.init()
-
-    // Test a successful job
-    setTimeout(async () => {
-      const jobId = await pgBossQueueService.add('hello-world-queue', {
-        message: 'Hello from pg-boss!',
-        fail: false,
-      })
-      singletonServices.logger.info(`Queued job: ${jobId}`)
-
-      const job = await pgBossQueueService.getJob('hello-world-queue', jobId)
-      if (job && job.waitForCompletion) {
-        console.log(await job.waitForCompletion())
-      }
-    }, 2000)
-
-    // Test a failing job
-    setTimeout(async () => {
-      const jobId = await pgBossQueueService.add('hello-world-queue', {
-        message: 'Sorry in advance',
-        fail: true,
-      })
-      singletonServices.logger.info(`Queued failing job: ${jobId}`)
-
-      const job = await pgBossQueueService.getJob('hello-world-queue', jobId)
-      if (job && job.waitForCompletion) {
-        try {
-          console.log(await job.waitForCompletion())
-        } catch (error) {
-          singletonServices.logger.error('Job failed as expected:', error)
-        }
-      }
-    }, 4000)
-
     // Handle graceful shutdown
     process.on('SIGTERM', async () => {
       singletonServices.logger.info(
         'Received SIGTERM, shutting down gracefully...'
       )
       await pgBossQueueWorkers.close()
-      await pgBossQueueService.close()
       process.exit(0)
     })
 
@@ -79,7 +43,6 @@ async function main(): Promise<void> {
         'Received SIGINT, shutting down gracefully...'
       )
       await pgBossQueueWorkers.close()
-      await pgBossQueueService.close()
       process.exit(0)
     })
   } catch (e: any) {

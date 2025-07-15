@@ -17,8 +17,8 @@ async function main(): Promise<void> {
       createSessionServices
     )
     await bullQueueWorkers.registerQueues()
-    const bullQueueService = new BullQueueService(undefined)
 
+    const bullQueueService = new BullQueueService(undefined)
     // Test a successful job
     setTimeout(async () => {
       const queueJob = await bullQueueService.add('hello-world-queue', {
