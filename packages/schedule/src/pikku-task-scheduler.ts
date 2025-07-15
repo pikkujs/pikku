@@ -55,10 +55,7 @@ export class PikkuTaskScheduler<TaskName extends string> {
   }
 
   private startJobSchedule(
-    task: CoreScheduledTask<
-      CoreAPIFunctionSessionless<void, void>,
-      CoreUserSession
-    >
+    task: CoreScheduledTask<CoreAPIFunctionSessionless<void, void>>
   ) {
     const job = new CronJob(
       task.schedule,

@@ -119,6 +119,20 @@ export interface PikkuInteraction {
 /**
  * A function that can wrap an interaction and be called before or after
  */
+export type PikkuFunctionMiddleware<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (
+  services: SingletonServices & {
+    userSession?: UserSessionService<UserSession>
+  },
+  interactions: PikkuInteraction,
+  next: () => Promise<void>
+) => Promise<void>
+
+/**
+ * A function that can wrap an interaction and be called before or after
+ */
 export type PikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,

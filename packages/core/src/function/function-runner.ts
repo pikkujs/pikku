@@ -1,9 +1,14 @@
 import { ForbiddenError } from '../errors/errors.js'
+import { runMiddleware } from '../middleware-runner.js'
 import { verifyPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import { Logger } from '../services/logger.js'
-import { CoreServices, CoreUserSession } from '../types/core.types.js'
+import {
+  CoreServices,
+  CoreUserSession,
+  PikkuFunctionMiddleware,
+} from '../types/core.types.js'
 import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
@@ -143,6 +148,19 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   if (permissioned === false) {
     throw new ForbiddenError('Permission denied')
+  }
+
+  if (funcConfig.middleware) {
+    return (await runMiddleware<PikkuFunctionMiddleware>(
+      allServices,
+      {
+        http: allServices.http,
+        mcp: allServices.mcp,
+        rpc: allServices.rpc,
+      },
+      funcConfig.middleware,
+      async () => await funcConfig.func(allServices, data, session!)
+    )) as Out
   }
 
   return (await funcConfig.func(allServices, data, session!)) as Out

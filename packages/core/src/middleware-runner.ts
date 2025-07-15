@@ -1,6 +1,7 @@
 import { UserSessionService } from './services/user-session-service.js'
 import {
   CoreSingletonServices,
+  PikkuFunctionMiddleware,
   PikkuInteraction,
   PikkuMiddleware,
 } from './types/core.types.js'
@@ -22,22 +23,28 @@ import {
  *   async () => { return await runMain(); }
  * );
  */
-export const runMiddleware = async (
+export const runMiddleware = async <
+  Middleware extends
+    | PikkuMiddleware
+    | PikkuFunctionMiddleware = PikkuMiddleware,
+>(
   services: CoreSingletonServices & {
-    userSession: UserSessionService<any>
+    userSession?: UserSessionService<any>
   },
   interaction: PikkuInteraction,
-  middlewares: PikkuMiddleware[],
-  main?: () => Promise<void>
-): Promise<void> => {
+  middlewares: Middleware[],
+  main?: () => Promise<unknown>
+): Promise<unknown> => {
+  let result: any
   const dispatch = async (index: number): Promise<any> => {
     if (middlewares && index < middlewares.length) {
-      return await middlewares[index]!(services, interaction, () =>
+      return await middlewares[index]!(services as any, interaction, () =>
         dispatch(index + 1)
       )
     } else if (main) {
-      await main()
+      result = await main()
     }
   }
   await dispatch(0)
+  return result
 }

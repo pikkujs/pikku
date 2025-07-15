@@ -107,10 +107,7 @@ type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<
   APIFunction<any, any> | APIFunction<any, any, ChannelData>,
   APIPermission
 >
-type ScheduledTask = CoreScheduledTask<
-  APIFunctionSessionless<void, void>,
-  UserSession
->
+type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>>
 type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
 
 type MCPResource<In> = CoreMCPResource<
