@@ -1,4 +1,5 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -18,20 +19,21 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CreateSessionServices,
+  LogLevel,
+  Logger,
+} from '@pikku/core'
+
+import {
+  MCPEndpointRegistry,
+  PikkuMCP,
+  MCPError,
   runMCPTool,
   runMCPResource,
   runMCPPrompt,
   getMCPResourcesMeta,
   getMCPToolsMeta,
   getMCPPromptsMeta,
-  LogLevel,
-  MCPError,
-  PikkuMCP,
-  Logger,
-} from '@pikku/core'
-
-import { MCPEndpointRegistry } from './pikku-mcp-endpoint-registry.js'
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+} from '@pikku/core/mcp'
 
 export interface MCPServerConfig extends CoreConfig {
   name: string

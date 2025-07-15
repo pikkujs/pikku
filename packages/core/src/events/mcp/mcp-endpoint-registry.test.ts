@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test'
 import * as assert from 'assert'
-import { MCPEndpointRegistry } from './pikku-mcp-endpoint-registry.js'
+import { MCPEndpointRegistry } from './mcp-endpoint-registry.js'
 
 describe('MCPEndpointRegistry', () => {
   let registry: MCPEndpointRegistry

@@ -10,7 +10,7 @@ import type {
   QueueConfigMapping,
   ConfigValidationResult,
 } from '@pikku/core/queue'
-import { runQueueJob, registerqueueWorkers } from '@pikku/core/queue'
+import { runQueueJob, registerQueueWorkers } from '@pikku/core/queue'
 import {
   CoreServices,
   CoreSingletonServices,
@@ -151,7 +151,7 @@ export class BullQueueWorkers implements QueueWorkers {
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    return await registerqueueWorkers(
+    return await registerQueueWorkers(
       this.configMappings,
       this.singletonServices.logger,
       async (queueName, processor) => {

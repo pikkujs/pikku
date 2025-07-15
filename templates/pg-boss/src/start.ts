@@ -32,6 +32,7 @@ async function main(): Promise<void> {
     const pgBossQueueService = new PgBossQueueService(connectionString)
     await pgBossQueueService.init()
 
+    // Test a successful job
     setTimeout(async () => {
       const jobId = await pgBossQueueService.add('hello-world-queue', {
         message: 'Hello from pg-boss!',
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
       }
     }, 2000)
 
+    // Test a failing job
     setTimeout(async () => {
       const jobId = await pgBossQueueService.add('hello-world-queue', {
         message: 'Sorry in advance',

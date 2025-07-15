@@ -27,6 +27,7 @@
     "./queue": "./dist/events/queue/index.js",
     "./scheduler": "./dist/events/scheduler/index.js",
     "./rpc": "./dist/events/rpc/index.js",
+    "./mcp": "./dist/events/mcp/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
     "./schema": "./dist/schema.js",

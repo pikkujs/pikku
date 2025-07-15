@@ -14,5 +14,5 @@ export { validateWorkerConfig } from './validate-worker-config.js'
 export type { QueueConfigMapping } from './validate-worker-config.js'
 
 // Queue registration helper
-export { registerqueueWorkers } from './register-queue-helper.js'
+export { registerQueueWorkers } from './register-queue-helper.js'
 export type { QueueRegistrationCallback } from './register-queue-helper.js'

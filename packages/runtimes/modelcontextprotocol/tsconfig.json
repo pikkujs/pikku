@@ -7,12 +7,7 @@
     "target": "esnext",
     "declaration": true
   },
-  "include": [
-    "bin/**/*.ts",
-    "src/**/*.ts",
-    "../../../templates/modelcontrolprotocol/src/test-client.example.ts",
-    "../../../templates/modelcontrolprotocol/src/test-client.test.ts"
-  ],
+  "include": ["bin/**/*.ts", "src/**/*.ts"],
   "exclude": ["**/*.test.ts", "node_modules", "bin/dist"],
   "references": [
     {

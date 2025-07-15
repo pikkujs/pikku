@@ -19,6 +19,7 @@ async function main(): Promise<void> {
     await bullQueueWorkers.registerQueues()
     const bullQueueService = new BullQueueService(undefined)
 
+    // Test a successful job
     setTimeout(async () => {
       const queueJob = await bullQueueService.add('hello-world-queue', {
         message: 'Hello from Bull!',
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
       console.log(job.waitForCompletion?.())
     }, 2000)
 
+    // Test a failing job
     setTimeout(async () => {
       const queueJob = await bullQueueService.add('hello-world-queue', {
         message: 'Sorry in advance',

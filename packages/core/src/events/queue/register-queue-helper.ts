@@ -23,7 +23,7 @@ export type QueueRegistrationCallback<T = any> = (
  * @param logger - Optional logger for info/error messages
  * @returns Record of validation results by queue name
  */
-export async function registerqueueWorkers<T = any>(
+export async function registerQueueWorkers<T = any>(
   configMappings: QueueConfigMapping,
   logger: Logger,
   registerCallback: QueueRegistrationCallback<T>
