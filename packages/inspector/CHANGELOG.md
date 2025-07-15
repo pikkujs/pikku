@@ -1,5 +1,13 @@
 # @pikku/inspector
 
+## 0.8.0
+
+### Major Features
+
+- **Model Context Protocol (MCP) Analysis**: Added comprehensive MCP endpoint analysis
+- **Queue Worker Analysis**: Added queue analysis
+- **Enhanced Service Analysis**: Added service destructuring analysis for better code generation and type safety
+
 ## 0.7.7
 
 ### Patch Changes

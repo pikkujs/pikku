@@ -1,4 +1,13 @@
-## 0.7.0
+## 0.8.0
+
+### Major Features
+
+- **Model Context Protocol (MCP) Support**: Added MCP implementation with resources, tools, and prompts
+- **Queue System**: Added queue support with runners and workers
+- **RPC (Remote Procedure Calls)**: Added typed RPC calls inside functions with local and remote support
+- **Middleware Runner**: Added middleware runner to functions for enhanced request processing
+- **Multiple Bootstrap Files**: Added support for different transport bootstrap files
+- **Middleware Runner**: Run middleware on any function
 
 ## 0.7.8
 

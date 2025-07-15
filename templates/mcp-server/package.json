@@ -9,13 +9,13 @@
     "tsc": "tsc"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.7",
+    "@pikku/cli": "^0.8.0",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@pikku/core": "^0.7",
-    "@pikku/modelcontextprotocol": "^0.7"
+    "@pikku/core": "^0.8.0",
+    "@pikku/modelcontextprotocol": "^0.8.0"
   }
 }

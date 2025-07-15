@@ -1,5 +1,9 @@
 # create-pikku
 
+## 0.8.0
+
+- Updated for 0.8.0 compatibility with new project templates
+
 ## 0.0.12
 
 ### Patch Changes

@@ -1,5 +1,9 @@
 # @pikku/uws
 
+## 0.8.0
+
+- Updating to match remaining packages
+
 ## 0.7.0
 
 - Updating to match remaining packages

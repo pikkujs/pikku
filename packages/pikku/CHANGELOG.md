@@ -1,5 +1,13 @@
 # pikku
 
+## 0.8.0
+
+### Compatibility Updates
+
+- Updated for 0.8.0 compatibility with new MCP, queue, and RPC features
+- Enhanced type exports for improved developer experience
+- Maintained backward compatibility with existing Pikku applications
+
 ## 0.7.0
 
 - Updating to match remaining packages

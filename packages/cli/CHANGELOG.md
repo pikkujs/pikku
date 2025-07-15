@@ -1,5 +1,19 @@
 # @pikku/cli
 
+## 0.8.0
+
+### Major Features
+
+- **Model Context Protocol (MCP) Support**: Complete MCP implementation with automatic generation of MCP JSON specifications, resources, tools, and prompts
+- **Queue System**: Added queue support
+- **RPC (Remote Procedure Calls)**: Added typed RPC call generation with local and remote procedure support
+- **Multiple Bootstrap Files**: Added support for generating different transport-specific bootstrap files
+- **Service Destructuring Analysis**: Added service destructuring analysis for better code generation
+- **Bootstrap Files**: Added support for generating transport-specific bootstrap files
+- **Service Destructuring**: Added service destructuring analysis for better code organization
+- **Error Handling**: Improved error handling for complex type generation
+- **Performance**: Optimized code generation for large projects with multiple event types
+
 ## 0.7.7
 
 ### Patch Changes

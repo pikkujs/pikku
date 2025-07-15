@@ -1,5 +1,9 @@
 # @pikku/pino
 
+## 0.8.0
+
+- Updated to match the 0.8 version
+
 ## 0.7.0
 
 - Updating to match remaining packages

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ws",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "The pikku ws server",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.7.0",
+    "@pikku/core": "^0.8.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

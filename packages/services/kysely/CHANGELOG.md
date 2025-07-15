@@ -1,4 +1,8 @@
-# @pikku/pino
+# @pikku/kysely
+
+## 0.8.0
+
+- Updated to match the 0.8 version
 
 ## 0.7.0
 

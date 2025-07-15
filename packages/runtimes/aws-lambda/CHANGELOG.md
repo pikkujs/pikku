@@ -1,3 +1,9 @@
+## 0.8.0
+
+### Major Features
+
+- **SQS Queue Support**: Added SQS queue worker support
+
 ## 0.7.0
 
 - Updating to match remaining packages
