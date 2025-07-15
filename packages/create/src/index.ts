@@ -54,22 +54,22 @@ const templates = [
   {
     template: 'express-middleware',
     description: 'An Express Middleware template',
-    supports: ['http', 'scheduled'],
+    supports: ['http'],
   },
   {
     template: 'fastify',
     description: 'A Fastify template',
-    supports: ['http', 'scheduled'],
+    supports: ['http'],
   },
   {
     template: 'fastify-plugin',
     description: 'A Fastify Plugin template',
-    supports: ['http', 'scheduled'],
+    supports: ['http'],
   },
   {
     template: 'functions',
     description: 'A Functions template',
-    supports: [],
+    supports: ['http', 'channel', 'scheduled', 'mcp', 'queue'],
   },
   {
     template: 'nextjs',
@@ -92,6 +92,21 @@ const templates = [
     supports: ['channel'],
   },
   {
+    template: 'bullmq',
+    description: 'A BullMQ Redis-based queue template',
+    supports: ['queue'],
+  },
+  {
+    template: 'mcp-server',
+    description: 'A Model Context Protocol server template',
+    supports: ['mcp'],
+  },
+  {
+    template: 'pg-boss',
+    description: 'A PostgreSQL-based queue template using pg-boss',
+    supports: ['queue'],
+  },
+  {
     template: 'uws',
     description: 'A uWebSockets.js template',
     supports: ['http', 'channel', 'scheduled'],
@@ -103,7 +118,7 @@ const templates = [
   },
   {
     template: 'yarn-workspace',
-    description: 'The yarn worspace',
+    description: 'The yarn workspace',
     supports: ['http', 'channel', 'scheduled', 'fullstack'],
   },
 ] as const
