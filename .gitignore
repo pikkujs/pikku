@@ -12,6 +12,7 @@ meta.json
 dist
 
 my-app
+.pikku
 
 # Logs
 logs
