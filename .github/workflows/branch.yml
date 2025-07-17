@@ -19,6 +19,8 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
+
+      - run: cd templates/functions && yarn pikku && cd ../..
       - run: yarn test
       - run: yarn prettier
       - run: yarn lint

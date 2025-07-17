@@ -1,4 +1,4 @@
-import { RelativeTimeInput } from '../time-utils.js'
+import type { RelativeTimeInput } from '../time-utils.js'
 
 /**
  * Interface for handling JSON Web Tokens (JWT).

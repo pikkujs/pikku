@@ -57,6 +57,7 @@ const generateBootstrapFile = async (
         (to) =>
           `import '${getFileImportRelativePath(bootstrapFile, to, cliConfig.packageMappings)}'`
       )
+      .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
       .join('\n')
   )
 }
@@ -221,6 +222,7 @@ const runAll = async (
         (to) =>
           `import '${getFileImportRelativePath(cliConfig.bootstrapFile, to, cliConfig.packageMappings)}'`
       )
+      .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
       .join('\n')
   )
 }
