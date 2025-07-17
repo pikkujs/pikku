@@ -3,7 +3,7 @@ export const serializeRPCWrapper = (rpcMapPath: string) => {
 import { PikkuFetch } from "./pikku-fetch.gen.js"
 import type { RPCInvoke } from '${rpcMapPath}'
 
-export class RPCHandler {
+export class PikkuRPC {
     pikkuFetch = new PikkuFetch()
 
     setPikkuFetch(pikkuFetch: PikkuFetch): void {
@@ -19,11 +19,11 @@ export class RPCHandler {
     }
 
     // Generic RPC invoke method
-    rpc: RPCInvoke = async (name, data) => {
+    invoke: RPCInvoke = async (name, data) => {
        return await this.pikkuFetch.post('/rpc', { name, data })
     }
 }
 
-export const pikkuRPC = new RPCHandler();
+export const pikkuRPC = new PikkuRPC();
 `
 }

@@ -8,5 +8,6 @@
   "websocketFile": ".pikku/pikku-websocket.gen.ts",
   "rpcFile": ".pikku/pikku-rpc.gen.ts",
   "queueFile": ".pikku/pikku-queue.gen.ts",
-  "mcpJsonFile": ".pikku/mcp.gen.json"
+  "mcpJsonFile": ".pikku/mcp.gen.json",
+  "middlewareServices": ["jwt"]
 }

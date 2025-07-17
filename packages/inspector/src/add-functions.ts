@@ -305,10 +305,7 @@ export function addFunctions(
           services.services.push(original)
         }
       }
-    } else if (
-      ts.isIdentifier(firstParam.name) &&
-      !firstParam.name.text.startsWith('_')
-    ) {
+    } else if (ts.isIdentifier(firstParam.name)) {
       services.optimized = false
     }
   }

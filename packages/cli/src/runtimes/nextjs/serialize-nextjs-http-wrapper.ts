@@ -1,7 +1,6 @@
 export const serializeNextJsHTTPWrapper = (
   routesMapPath: string,
-  pikkuFetchImport: string,
-  rpcImport: string
+  pikkuFetchImport: string
 ) => {
   return `'server-only'
   
@@ -12,7 +11,6 @@ export const serializeNextJsHTTPWrapper = (
 import { CorePikkuFetchOptions } from '@pikku/fetch'
 import type { RoutesMap, RouteHandlerOf, RoutesWithMethod } from '${routesMapPath}'
 import { PikkuFetch } from '${pikkuFetchImport}'
-import type { RPCInvoke } from '${rpcImport}'
 
 let _pikku: PikkuFetch | undefined
 
@@ -151,39 +149,13 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     return staticActionRequest(route, 'GET', data)
   }
 
-  /**
-   * Makes an RPC call using the dynamic fetch instance.
-   * RPC calls are made as POST requests to the /rpc endpoint.
-   *
-   * @param name - The RPC method name.
-   * @param data - The input data for the RPC call.
-   * @returns A promise that resolves to the output of the RPC handler.
-   */
-  const rpc: RPCInvoke = async (name, data) => {
-    return (_pikku! as any).post('/rpc', { name, data })
-  }
-
-  /**
-   * Makes a static RPC call using the dynamic fetch instance.
-   * Static RPC calls are made as POST requests to the /rpc endpoint.
-   *
-   * @param name - The RPC method name.
-   * @param data - The input data for the RPC call.
-   * @returns A promise that resolves to the output of the RPC handler.
-   */
-  const staticRPC: RPCInvoke = async (name, data) => {
-    return (_pikku! as any).post('/rpc', { name, data })
-  }
-
   return {
     get: dynamicGet,
     post: dynamicPost,
     patch: dynamicPatch,
     del: dynamicDel,
     staticGet,
-    staticPost,
-    rpc,
-    staticRPC
+    staticPost
   }
 }
 `

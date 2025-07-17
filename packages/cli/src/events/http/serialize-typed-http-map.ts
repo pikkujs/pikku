@@ -2,6 +2,7 @@ import { HTTPRoutesMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../serialize-import-map.js'
 import { MetaInputTypes, TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
+import { generateCustomTypes } from '../../utils.js'
 
 export const serializeTypedRoutesMap = (
   relativeToPath: string,
@@ -52,24 +53,6 @@ export type RoutesWithMethod<Method extends string> = {
   [Route in keyof RoutesMap]: Method extends keyof RoutesMap[Route] ? Route : never;
 }[keyof RoutesMap];
   `
-}
-
-export function generateCustomTypes(
-  typesMap: TypesMap,
-  requiredTypes: Set<string>
-) {
-  return `
-// Custom types are those that are defined directly within generics
-// or are broken into simpler types
-${Array.from(typesMap.customTypes.entries())
-  .map(([name, { type, references }]) => {
-    references.forEach((name) => {
-      const originalName = typesMap.getTypeMeta(name).originalName
-      requiredTypes.add(originalName)
-    })
-    return `export type ${name} = ${type}`
-  })
-  .join('\n')}`
 }
 
 function generateRoutes(

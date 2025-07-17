@@ -9,9 +9,16 @@ import {
   CreateSessionServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
-import { JoseJWTService } from '@pikku/jose'
+import {
+  ConsoleLogger,
+  JWTService,
+  LocalVariablesService,
+} from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
+import {
+  RequiredSingletonServices,
+  singletonServices,
+} from '../.pikku/pikku-services.gen.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}
@@ -23,29 +30,34 @@ export const createConfig: CreateConfig<Config> = async () => {
  */
 export const createSingletonServices: CreateSingletonServices<
   Config,
-  SingletonServices
-> = async (config: Config): Promise<SingletonServices> => {
+  RequiredSingletonServices
+> = async (config: Config): Promise<RequiredSingletonServices> => {
   const variables = new LocalVariablesService()
   const logger = new ConsoleLogger()
 
-  const jwt = new JoseJWTService(
-    async () => [
-      {
-        id: 'my-key',
-        value: 'the-yellow-puppet',
-      },
-    ],
-    logger
-  )
-
   const schema = new CFWorkerSchemaService(logger)
+
+  // Only create JWT service if it's actually needed
+  let jwt: JWTService | undefined
+  if (singletonServices.jwt) {
+    const { JoseJWTService } = await import('@pikku/jose')
+    jwt = new JoseJWTService(
+      async () => [
+        {
+          id: 'my-key',
+          value: 'the-yellow-puppet',
+        },
+      ],
+      logger
+    )
+  }
 
   return {
     config,
     logger,
     variables,
-    jwt,
     schema,
+    jwt,
   }
 }
 

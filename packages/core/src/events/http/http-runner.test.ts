@@ -27,8 +27,6 @@ const setHTTPFunctionMap = (func: any) => {
       pikkuFuncName: 'pikku_func_name',
       route: 'test',
       method: 'get',
-      input: null,
-      output: null,
     },
   ])
   addFunction('pikku_func_name', { func })
@@ -56,7 +54,8 @@ describe('fetch', () => {
     response = new PikkuMockResponse()
 
     request.getData = async () => ({})
-    request.getHeader = () => 'application/json'
+    request.getHeader = (name: string) =>
+      name === 'content-type' ? 'application/json' : undefined
     response.setStatus = (status: number) => {}
     response.setJson = (json: JSONValue) => {}
   })

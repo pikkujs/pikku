@@ -43,6 +43,9 @@ export interface PikkuCLICoreOutputFiles {
   mcpEndpointsFile: string
   mcpEndpointsMetaFile: string
 
+  // Services
+  servicesFile: string
+
   // Application bootstrap
   bootstrapFile: string
   bootstrapFiles: Record<PikkuEventTypes, string>
@@ -73,6 +76,8 @@ export type PikkuCLIConfig = {
     outputFile: string
     additionalInfo: OpenAPISpecInfo
   }
+
+  middlewareServices?: string[]
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
@@ -158,8 +163,9 @@ const _getPikkuCLIConfig = async (
 
     if (result.outDir) {
       // Create transport/event directories
+      const functionDir = join(result.outDir, 'function')
       const httpDir = join(result.outDir, 'http')
-      const channelsDir = join(result.outDir, 'channels')
+      const channelDir = join(result.outDir, 'channel')
       const rpcDir = join(result.outDir, 'rpc')
       const schedulerDir = join(result.outDir, 'scheduler')
       const queueDir = join(result.outDir, 'queue')
@@ -173,11 +179,11 @@ const _getPikkuCLIConfig = async (
 
       // Functions
       if (!result.functionsFile) {
-        result.functionsFile = join(result.outDir, 'pikku-functions.gen.ts')
+        result.functionsFile = join(functionDir, 'pikku-functions.gen.ts')
       }
       if (!result.functionsMetaFile) {
         result.functionsMetaFile = join(
-          result.outDir,
+          functionDir,
           'pikku-functions-meta.gen.ts'
         )
       }
@@ -204,17 +210,14 @@ const _getPikkuCLIConfig = async (
 
       // Channels/WebSocket
       if (!result.channelsFile) {
-        result.channelsFile = join(channelsDir, 'pikku-channels.gen.ts')
+        result.channelsFile = join(channelDir, 'pikku-channels.gen.ts')
       }
       if (!result.channelsMetaFile) {
-        result.channelsMetaFile = join(
-          channelsDir,
-          'pikku-channels-meta.gen.ts'
-        )
+        result.channelsMetaFile = join(channelDir, 'pikku-channels-meta.gen.ts')
       }
       if (!result.channelsMapDeclarationFile) {
         result.channelsMapDeclarationFile = join(
-          channelsDir,
+          channelDir,
           'pikku-channels-map.gen.d.ts'
         )
       }
@@ -229,12 +232,12 @@ const _getPikkuCLIConfig = async (
 
       // Scheduler
       if (!result.schedulersFile) {
-        result.schedulersFile = join(schedulerDir, 'pikku-schedules.gen.ts')
+        result.schedulersFile = join(schedulerDir, 'pikku-scheduler.gen.ts')
       }
       if (!result.schedulersMetaFile) {
         result.schedulersMetaFile = join(
           schedulerDir,
-          'pikku-schedules-meta.gen.ts'
+          'pikku-scheduler-meta.gen.ts'
         )
       }
 
@@ -253,6 +256,11 @@ const _getPikkuCLIConfig = async (
           queueDir,
           'pikku-queue-map.gen.ts'
         )
+      }
+
+      // Services
+      if (!result.servicesFile) {
+        result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')
       }
 
       // Bootstrap files

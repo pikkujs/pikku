@@ -33,7 +33,7 @@ export const authAPIKey = <
     }
 )) => {
   const middleware: PikkuMiddleware = async (services, { http }, next) => {
-    const { userSession: userSessionService, jwt: jwtService } = services
+    const { userSession: userSessionService, jwt: jwtService } = services as any
     if (!http?.request || userSessionService.get()) {
       return next()
     }

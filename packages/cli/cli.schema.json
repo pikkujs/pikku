@@ -2,6 +2,18 @@
   "$ref": "#/definitions/PikkuCLIConfig",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "InspectorFilters": {
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
     "OpenAPISpecInfo": {
       "additionalProperties": false,
       "properties": {
@@ -123,10 +135,38 @@
         "bootstrapFile": {
           "type": "string"
         },
+        "bootstrapFiles": {
+          "additionalProperties": false,
+          "properties": {
+            "channel": {
+              "type": "string"
+            },
+            "http": {
+              "type": "string"
+            },
+            "mcp": {
+              "type": "string"
+            },
+            "queue": {
+              "type": "string"
+            },
+            "rpc": {
+              "type": "string"
+            },
+            "scheduled": {
+              "type": "string"
+            }
+          },
+          "required": ["http", "scheduled", "channel", "rpc", "queue", "mcp"],
+          "type": "object"
+        },
         "channelsFile": {
           "type": "string"
         },
         "channelsMapDeclarationFile": {
+          "type": "string"
+        },
+        "channelsMetaFile": {
           "type": "string"
         },
         "configDir": {
@@ -136,6 +176,33 @@
           "type": "string"
         },
         "fetchFile": {
+          "type": "string"
+        },
+        "filters": {
+          "$ref": "#/definitions/InspectorFilters"
+        },
+        "functionsFile": {
+          "type": "string"
+        },
+        "functionsMetaFile": {
+          "type": "string"
+        },
+        "httpRoutesFile": {
+          "type": "string"
+        },
+        "httpRoutesMapDeclarationFile": {
+          "type": "string"
+        },
+        "httpRoutesMetaFile": {
+          "type": "string"
+        },
+        "mcpEndpointsFile": {
+          "type": "string"
+        },
+        "mcpEndpointsMetaFile": {
+          "type": "string"
+        },
+        "mcpJsonFile": {
           "type": "string"
         },
         "nextBackendFile": {
@@ -166,7 +233,40 @@
           },
           "type": "object"
         },
+        "queueFile": {
+          "type": "string"
+        },
+        "queueMapDeclarationFile": {
+          "type": "string"
+        },
+        "queueWorkersFile": {
+          "type": "string"
+        },
+        "queueWorkersMetaFile": {
+          "type": "string"
+        },
         "rootDir": {
+          "type": "string"
+        },
+        "rpcFile": {
+          "type": "string"
+        },
+        "rpcMapDeclarationFile": {
+          "type": "string"
+        },
+        "rpcMetaFile": {
+          "type": "string"
+        },
+        "schedulersFile": {
+          "type": "string"
+        },
+        "schedulersMetaFile": {
+          "type": "string"
+        },
+        "schemaDirectory": {
+          "type": "string"
+        },
+        "servicesFile": {
           "type": "string"
         },
         "srcDirectories": {
@@ -174,18 +274,6 @@
             "type": "string"
           },
           "type": "array"
-        },
-        "routesFile": {
-          "type": "string"
-        },
-        "routesMapDeclarationFile": {
-          "type": "string"
-        },
-        "schedulersFile": {
-          "type": "string"
-        },
-        "schemaDirectory": {
-          "type": "string"
         },
         "supportsImportAttributes": {
           "type": "boolean"
@@ -202,16 +290,31 @@
       },
       "required": [
         "bootstrapFile",
+        "bootstrapFiles",
         "channelsFile",
         "channelsMapDeclarationFile",
+        "channelsMetaFile",
         "configDir",
+        "filters",
+        "functionsFile",
+        "functionsMetaFile",
+        "httpRoutesFile",
+        "httpRoutesMapDeclarationFile",
+        "httpRoutesMetaFile",
+        "mcpEndpointsFile",
+        "mcpEndpointsMetaFile",
         "packageMappings",
+        "queueMapDeclarationFile",
+        "queueWorkersFile",
+        "queueWorkersMetaFile",
         "rootDir",
-        "srcDirectories",
-        "routesFile",
-        "routesMapDeclarationFile",
+        "rpcMapDeclarationFile",
+        "rpcMetaFile",
         "schedulersFile",
+        "schedulersMetaFile",
         "schemaDirectory",
+        "servicesFile",
+        "srcDirectories",
         "supportsImportAttributes",
         "tsconfig",
         "typesDeclarationFile"

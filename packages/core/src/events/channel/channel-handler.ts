@@ -95,6 +95,9 @@ export const processMessageHandlers = (
     const permissions =
       typeof onMessage === 'function' ? {} : onMessage.permissions
 
+    const middleware =
+      typeof onMessage === 'function' ? [] : onMessage.middleware
+
     return await runPikkuFunc(pikkuFuncName, {
       getAllServices: () => ({
         ...services,
@@ -103,6 +106,7 @@ export const processMessageHandlers = (
       data,
       session,
       permissions,
+      middleware,
     })
   }
 

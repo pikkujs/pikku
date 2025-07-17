@@ -3,7 +3,6 @@ import { runMiddleware } from '../middleware-runner.js'
 import { verifyPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
-import { Logger } from '../services/logger.js'
 import {
   CoreServices,
   CoreUserSession,
@@ -13,56 +12,6 @@ import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
 } from './functions.types.js'
-
-// Permission merging function
-function mergePermissions(
-  logger: Logger,
-  funcName: string,
-  funcPermissions?: CorePermissionGroup,
-  transportPermissions?: CorePermissionGroup
-): CorePermissionGroup | undefined {
-  if (!funcPermissions && !transportPermissions) {
-    return undefined
-  }
-
-  if (!funcPermissions) {
-    return transportPermissions
-  }
-
-  if (!transportPermissions) {
-    return funcPermissions
-  }
-
-  // Start with a copy of function permissions
-  const mergedPermissions = { ...funcPermissions }
-
-  // Merge in transport permissions
-  for (const [key, transportValue] of Object.entries(transportPermissions)) {
-    if (key in mergedPermissions) {
-      // For permission arrays, concatenate and deduplicate values
-      if (
-        Array.isArray(mergedPermissions[key]) &&
-        Array.isArray(transportValue)
-      ) {
-        mergedPermissions[key] = [
-          ...new Set([...mergedPermissions[key], ...transportValue]),
-        ]
-      }
-      // For other types, warn about conflict and use the more restrictive (transport-level) value
-      else {
-        logger.warn(
-          `Permission conflict on key "${key}" for function "${funcName}". Using transport-level permission.`
-        )
-        mergedPermissions[key] = transportValue
-      }
-    } else {
-      // If key doesn't exist in function permissions, add it
-      mergedPermissions[key] = transportValue
-    }
-  }
-
-  return mergedPermissions
-}
 
 export const addFunction = (
   funcName: string,
@@ -91,12 +40,14 @@ export const runPikkuFunc = async <In = any, Out = any>(
     data,
     session,
     permissions: transportPermissions,
+    middleware: transportMiddleware,
     coerceDataFromSchema,
   }: {
     getAllServices: () => Promise<CoreServices> | CoreServices
     data: In
     session?: CoreUserSession
     permissions?: CorePermissionGroup
+    middleware?: PikkuFunctionMiddleware[]
     coerceDataFromSchema?: boolean
   }
 ): Promise<Out> => {
@@ -132,25 +83,29 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
   }
 
-  // Execute permission checks
-  const mergedPermissions = mergePermissions(
-    allServices.logger,
-    funcName,
-    funcConfig.permissions,
-    transportPermissions
-  )
-  const permissioned = await verifyPermissions(
-    mergedPermissions,
-    allServices,
-    data,
-    session
-  )
+  let permissioned = true
+  if (funcConfig.permissions) {
+    permissioned = await verifyPermissions(
+      funcConfig.permissions,
+      allServices,
+      data,
+      session
+    )
+  }
+  if (!permissioned && transportPermissions) {
+    permissioned = await verifyPermissions(
+      transportPermissions,
+      allServices,
+      data,
+      session
+    )
+  }
 
   if (permissioned === false) {
     throw new ForbiddenError('Permission denied')
   }
 
-  if (funcConfig.middleware) {
+  if (transportMiddleware || funcConfig.middleware) {
     return (await runMiddleware<PikkuFunctionMiddleware>(
       allServices,
       {
@@ -158,7 +113,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         mcp: allServices.mcp,
         rpc: allServices.rpc,
       },
-      funcConfig.middleware,
+      [...(transportMiddleware || []), ...(funcConfig.middleware || [])],
       async () => await funcConfig.func(allServices, data, session!)
     )) as Out
   }

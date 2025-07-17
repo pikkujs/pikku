@@ -48,7 +48,7 @@ export const authCookie = <
       userSession: userSessionService,
       jwt: jwtService,
       logger,
-    } = services
+    } = services as any
     if (!http?.request || userSessionService.get()) {
       return next()
     }

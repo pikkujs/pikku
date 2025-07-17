@@ -65,7 +65,7 @@ export const addSchedule = (
       !matchesFilters(
         filters,
         { tags },
-        { type: PikkuEventTypes.scheduled, name: nameValue }
+        { type: PikkuEventTypes.scheduler, name: nameValue }
       )
     ) {
       return

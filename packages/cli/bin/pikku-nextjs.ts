@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import { CLILogger, PikkuCLIOptions } from '../src/utils.js'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
-import { pikkuNext } from '../src/events/http/pikku-command-nextjs.js'
+import { pikkuNext } from '../src/runtimes/nextjs/pikku-command-nextjs.js'
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const logger = new CLILogger({ logLogo: true })

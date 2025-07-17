@@ -15,58 +15,58 @@ import { pikkuChannels } from '../src/events/channels/pikku-command-channels.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 import chokidar from 'chokidar'
 import { pikkuFunctions } from '../src/events/functions/pikku-command-functions.js'
+import { pikkuServices } from '../src/events/functions/pikku-command-services.js'
 import { pikkuRPC } from '../src/events/rpc/pikku-command-rpc.js'
 import { pikkuRPCMap } from '../src/events/rpc/pikku-command-rpc-map.js'
-import { PikkuEventTypes } from '@pikku/core'
 import { pikkuQueue } from '../src/events/queue/pikku-command-queue.js'
 import { pikkuQueueMap } from '../src/events/queue/pikku-command-queue-map.js'
 import { pikkuFetch } from '../src/events/fetch/index.js'
 import { pikkuRPCClient } from '../src/events/rpc/pikku-command-rpc-client.js'
 import { pikkuWebSocketTyped } from '../src/events/channels/pikku-command-websocket-typed.js'
-import { pikkuNext } from '../src/events/http/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../src/events/http/pikku-command-openapi.js'
 import { pikkuMCP } from '../src/events/mcp/pikku-command-mcp.js'
 import { pikkuQueueService } from '../src/events/queue/pikku-command-queue-service.js'
 import { pikkuScheduler } from '../src/events/scheduler/pikku-command-scheduler.js'
 import { pikkuSchemas } from '../src/schemas.js'
 import { pikkuMCPJSON } from '../src/events/mcp/pikku-command-mcp-json.js'
+import { pikkuNext } from '../src/runtimes/nextjs/pikku-command-nextjs.js'
+
+const generateBootstrapFile = async (
+  logger: CLILogger,
+  cliConfig: PikkuCLIConfig,
+  bootstrapFile: string,
+  specificImports: string[],
+  schemas?: boolean
+) => {
+  // Common imports that every bootstrap file needs
+  const commonImports = [cliConfig.functionsMetaFile, cliConfig.functionsFile]
+
+  // Add schema if it exists
+  if (schemas) {
+    commonImports.push(`${cliConfig.schemaDirectory}/register.gen.ts`)
+  }
+
+  // Combine common imports with specific imports
+  const allImports = [...commonImports, ...specificImports]
+
+  await writeFileInDir(
+    logger,
+    bootstrapFile,
+    allImports
+      .map(
+        (to) =>
+          `import '${getFileImportRelativePath(bootstrapFile, to, cliConfig.packageMappings)}'`
+      )
+      .join('\n')
+  )
+}
 
 const runAll = async (
   logger: CLILogger,
   cliConfig: PikkuCLIConfig,
   options: PikkuCLIOptions
 ) => {
-  const boostrapImports: Partial<
-    Record<PikkuEventTypes, { meta: string[]; events: string[] }>
-  > & { all: { meta: string[]; events: string[] } } = {
-    all: { meta: [], events: [] },
-  }
-
-  const addImport = (
-    from: string,
-    type: 'meta' | 'events' | 'other',
-    addTo?: PikkuEventTypes[]
-  ) => {
-    if (type === 'meta') {
-      boostrapImports.all.meta.push(from)
-    } else {
-      boostrapImports.all.events.push(from)
-    }
-
-    for (const transport of Object.keys(PikkuEventTypes)) {
-      if (!addTo || addTo?.includes(transport as PikkuEventTypes)) {
-        boostrapImports[transport] = boostrapImports[transport] || {
-          meta: [],
-          events: [],
-        }
-        if (type === 'meta') {
-          boostrapImports[transport].meta.push(from)
-        } else {
-          boostrapImports[transport].events.push(from)
-        }
-      }
-    }
-  }
+  const allImports: string[] = []
 
   let typesDeclarationFileExists = true
   let visitState = await inspectorGlob(
@@ -97,54 +97,102 @@ const runAll = async (
     logger.info(`• No functions found, skipping remaining steps...\x1b[0m`)
     process.exit(1)
   }
-  addImport(cliConfig.functionsMetaFile, 'meta')
-  addImport(cliConfig.functionsFile, 'events')
+
+  // Base imports for all bootstrap files
+  allImports.push(cliConfig.functionsMetaFile, cliConfig.functionsFile)
+
+  // Generate services map
+  await pikkuServices(logger, cliConfig, visitState)
 
   await pikkuRPC(logger, cliConfig, visitState)
   await pikkuRPCMap(logger, cliConfig, visitState)
   await pikkuRPCClient(logger, cliConfig)
-  addImport(cliConfig.rpcMetaFile, 'meta', [PikkuEventTypes.rpc])
+  allImports.push(cliConfig.rpcMetaFile)
 
   const schemas = await pikkuSchemas(logger, cliConfig, visitState)
   if (schemas) {
-    addImport(`${cliConfig.schemaDirectory}/register.gen.ts`, 'other')
+    allImports.push(`${cliConfig.schemaDirectory}/register.gen.ts`)
   }
+
+  // RPC bootstrap is always generated since RPC is always present
+  await generateBootstrapFile(
+    logger,
+    cliConfig,
+    cliConfig.bootstrapFiles.rpc,
+    [cliConfig.rpcMetaFile],
+    schemas
+  )
 
   const http = await pikkuHTTP(logger, cliConfig, visitState)
   if (http) {
     await pikkuHTTPMap(logger, cliConfig, visitState)
     await pikkuFetch(logger, cliConfig)
-    addImport(cliConfig.httpRoutesMetaFile, 'meta', [PikkuEventTypes.http])
-    addImport(cliConfig.httpRoutesFile, 'events', [PikkuEventTypes.http])
+    allImports.push(cliConfig.httpRoutesMetaFile, cliConfig.httpRoutesFile)
+
+    await generateBootstrapFile(
+      logger,
+      cliConfig,
+      cliConfig.bootstrapFiles.http,
+      [cliConfig.httpRoutesMetaFile, cliConfig.httpRoutesFile],
+      schemas
+    )
   }
 
-  const scheduled = await pikkuScheduler(logger, cliConfig, visitState)
-  if (scheduled) {
-    addImport(cliConfig.schedulersMetaFile, 'meta', [PikkuEventTypes.scheduled])
-    addImport(cliConfig.schedulersFile, 'events', [PikkuEventTypes.scheduled])
+  const scheduler = await pikkuScheduler(logger, cliConfig, visitState)
+  if (scheduler) {
+    allImports.push(cliConfig.schedulersMetaFile, cliConfig.schedulersFile)
+
+    await generateBootstrapFile(
+      logger,
+      cliConfig,
+      cliConfig.bootstrapFiles.scheduler,
+      [cliConfig.schedulersMetaFile, cliConfig.schedulersFile],
+      schemas
+    )
   }
 
   const queues = await pikkuQueue(logger, cliConfig, visitState)
   if (queues) {
     await pikkuQueueMap(logger, cliConfig, visitState)
     await pikkuQueueService(logger, cliConfig)
-    addImport(cliConfig.queueWorkersMetaFile, 'meta', [PikkuEventTypes.queue])
-    addImport(cliConfig.queueWorkersFile, 'events', [PikkuEventTypes.queue])
+    allImports.push(cliConfig.queueWorkersMetaFile, cliConfig.queueWorkersFile)
+
+    await generateBootstrapFile(
+      logger,
+      cliConfig,
+      cliConfig.bootstrapFiles.queue,
+      [cliConfig.queueWorkersMetaFile, cliConfig.queueWorkersFile],
+      schemas
+    )
   }
 
   const channels = await pikkuChannels(logger, cliConfig, visitState)
   if (channels) {
     await pikkuChannelsMap(logger, cliConfig, visitState)
     await pikkuWebSocketTyped(logger, cliConfig)
-    addImport(cliConfig.channelsMetaFile, 'meta', [PikkuEventTypes.channel])
-    addImport(cliConfig.channelsFile, 'events', [PikkuEventTypes.channel])
+    allImports.push(cliConfig.channelsMetaFile, cliConfig.channelsFile)
+
+    await generateBootstrapFile(
+      logger,
+      cliConfig,
+      cliConfig.bootstrapFiles.channel,
+      [cliConfig.channelsMetaFile, cliConfig.channelsFile],
+      schemas
+    )
   }
 
   const mcp = await pikkuMCP(logger, cliConfig, visitState)
   if (mcp) {
     await pikkuMCPJSON(logger, cliConfig, visitState)
-    addImport(cliConfig.mcpEndpointsMetaFile, 'meta', [PikkuEventTypes.mcp])
-    addImport(cliConfig.mcpEndpointsFile, 'events', [PikkuEventTypes.mcp])
+    allImports.push(cliConfig.mcpEndpointsMetaFile, cliConfig.mcpEndpointsFile)
+
+    await generateBootstrapFile(
+      logger,
+      cliConfig,
+      cliConfig.bootstrapFiles.mcp,
+      [cliConfig.mcpEndpointsMetaFile, cliConfig.mcpEndpointsFile],
+      schemas
+    )
   }
 
   if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
@@ -164,20 +212,17 @@ const runAll = async (
     await pikkuOpenAPI(logger, cliConfig, visitState)
   }
 
-  for (const [type, { meta, events }] of Object.entries(boostrapImports)) {
-    const bootstrapFile =
-      type === 'all' ? cliConfig.bootstrapFile : cliConfig.bootstrapFiles[type]
-    await writeFileInDir(
-      logger,
-      bootstrapFile,
-      [...meta, ...events]
-        .map(
-          (to) =>
-            `import '${getFileImportRelativePath(bootstrapFile, to, cliConfig.packageMappings)}'`
-        )
-        .join('\n')
-    )
-  }
+  // Generate main bootstrap file (pass all imports directly since this is the main file)
+  await writeFileInDir(
+    logger,
+    cliConfig.bootstrapFile,
+    allImports
+      .map(
+        (to) =>
+          `import '${getFileImportRelativePath(cliConfig.bootstrapFile, to, cliConfig.packageMappings)}'`
+      )
+      .join('\n')
+  )
 }
 
 const watch = (

@@ -1,18 +1,15 @@
 import type { Logger, LogLevel } from '../services/logger.js'
 import { VariablesService } from '../services/variables-service.js'
-import { EventHubService } from '../events/channel/eventhub-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { PikkuHTTP } from '../events/http/http.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
-import { JWTService } from '../services/jwt-service.js'
-import { SecretService } from '../services/secret-service.js'
 import { PikkuChannel } from '../events/channel/channel.types.js'
 import { PikkuRPC } from '../events/rpc/rpc-types.js'
 import { PikkuMCP } from '../events/mcp/mcp.types.js'
 
 export enum PikkuEventTypes {
   http = 'http',
-  scheduled = 'scheduled',
+  scheduler = 'scheduler',
   channel = 'channel',
   rpc = 'rpc',
   queue = 'queue',
@@ -91,8 +88,6 @@ export interface CoreUserSession {}
  * Interface for core singleton services provided by Pikku.
  */
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
-  /** JWT Service */
-  jwt?: JWTService
   /** The schema library used to validate data */
   schema?: SchemaService
   /** The core configuration for the application. */
@@ -101,10 +96,6 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   /** The variable service to be used */
   variables: VariablesService
-  /** The subscription service that is passed to streams */
-  eventHub?: EventHubService<unknown>
-  /** SecretServce  */
-  secrets?: SecretService
 }
 
 /**

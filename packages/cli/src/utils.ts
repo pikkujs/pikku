@@ -1,4 +1,4 @@
-import { relative, dirname } from 'path'
+import { relative, dirname, resolve } from 'path'
 import { PathToNameAndType, InspectorState, TypesMap } from '@pikku/inspector'
 import { mkdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
@@ -57,14 +57,17 @@ export const getFileImportRelativePath = (
   if (!/^\.+\//.test(filePath)) {
     filePath = `./${filePath}`
   }
+
+  const absolutePath = resolve(dirname(from), to)
   // let usesPackageName = false
   for (const [path, packageName] of Object.entries(packageMappings)) {
-    if (filePath.includes(path)) {
+    if (absolutePath.includes(path)) {
       // usesPackageName = true
-      filePath = filePath.replace(new RegExp(`.*${path}`), packageName)
+      filePath = absolutePath.replace(new RegExp(`.*${path}`), packageName)
       break
     }
   }
+
   // if (usesPackageName) {
   //   return filePath.replace('.ts', '')
   // }

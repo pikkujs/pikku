@@ -5,7 +5,7 @@ import {
   createSingletonServices,
   createSessionServices,
 } from '../../functions/src/services.js'
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '../../functions/.pikku/http/pikku-bootstrap-http.gen.js'
 
 async function main(): Promise<void> {
   try {
