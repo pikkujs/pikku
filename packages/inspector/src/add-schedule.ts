@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { APIDocs, PikkuEventTypes } from '@pikku/core'
-import { InspectorFilters, InspectorState } from './types.js'
+import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -12,7 +12,8 @@ export const addSchedule = (
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
-  filters: InspectorFilters
+  filters: InspectorFilters,
+  logger: InspectorLogger
 ) => {
   if (!ts.isCallExpression(node)) {
     return
@@ -61,11 +62,14 @@ export const addSchedule = (
       return
     }
 
+    const filePath = node.getSourceFile().fileName
+
     if (
       !matchesFilters(
         filters,
         { tags },
-        { type: PikkuEventTypes.scheduler, name: nameValue }
+        { type: PikkuEventTypes.scheduler, name: nameValue, filePath },
+        logger
       )
     ) {
       return

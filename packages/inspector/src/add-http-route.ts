@@ -8,7 +8,7 @@ import {
   getPropertyAssignmentInitializer,
   matchesFilters,
 } from './utils.js'
-import { InspectorState, InspectorFilters } from './types.js'
+import { InspectorState, InspectorFilters, InspectorLogger } from './types.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -43,7 +43,8 @@ export const addHTTPRoute = (
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
-  filters: InspectorFilters
+  filters: InspectorFilters,
+  logger: InspectorLogger
 ) => {
   // only look at calls
   if (!ts.isCallExpression(node)) return
@@ -69,11 +70,14 @@ export const addHTTPRoute = (
   const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
+  const filePath = node.getSourceFile().fileName
+
   if (
     !matchesFilters(
       filters,
       { tags },
-      { type: PikkuEventTypes.http, name: route }
+      { type: PikkuEventTypes.http, name: route, filePath },
+      logger
     )
   ) {
     return

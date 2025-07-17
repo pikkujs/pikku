@@ -38,6 +38,11 @@ export class CLILogger {
   warn(message: string) {
     console.error(chalk.yellow(message))
   }
+  debug(message: string) {
+    if (process.env.DEBUG) {
+      console.log(chalk.gray(message))
+    }
+  }
 
   private logPikkuLogo() {
     this.primary(logo)
@@ -98,6 +103,8 @@ export interface PikkuCLIOptions {
   singletonServicesFactoryType?: string
   sessionServicesFactoryType?: string
   tags?: string[]
+  types?: string[]
+  directories?: string[]
 }
 
 const getMetaTypes = (

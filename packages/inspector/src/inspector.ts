@@ -5,6 +5,7 @@ import {
   InspectorState,
   InspectorHTTPState,
   InspectorFilters,
+  InspectorLogger,
 } from './types.js'
 
 export const normalizeHTTPTypes = (
@@ -14,6 +15,7 @@ export const normalizeHTTPTypes = (
 }
 
 export const inspect = (
+  logger: InspectorLogger,
   routeFiles: string[],
   filters: InspectorFilters
 ): InspectorState => {
@@ -67,14 +69,14 @@ export const inspect = (
   // First sweep: add all functions
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visitSetup(checker, child, state, filters)
+      visitSetup(checker, child, state, filters, logger)
     )
   }
 
   // Second sweep: add all transports
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visitRoutes(checker, child, state, filters)
+      visitRoutes(checker, child, state, filters, logger)
     )
   }
 

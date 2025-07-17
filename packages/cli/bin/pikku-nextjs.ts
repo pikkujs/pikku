@@ -10,7 +10,9 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const cliConfig = await getPikkuCLIConfig(
     options.config,
     ['rootDir', 'schemaDirectory', 'configDir'],
-    options.tags,
+    options.tags || [],
+    [],
+    [],
     true
   )
   const visitState = await inspectorGlob(

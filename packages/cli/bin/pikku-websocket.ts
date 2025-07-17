@@ -9,7 +9,9 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const cliConfig = await getPikkuCLIConfig(
     options.config,
     ['rootDir', 'schemaDirectory', 'configDir', 'fetchFile'],
-    options.tags,
+    options.tags || [],
+    [],
+    [],
     true
   )
   await pikkuWebSocketTyped(logger, cliConfig)

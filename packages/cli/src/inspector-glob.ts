@@ -23,7 +23,7 @@ export const inspectorGlob = async (
           )
         )
       ).flat()
-      result = await inspect(routeFiles, filters)
+      result = await inspect(logger, routeFiles, filters)
     }
   )
   return result!

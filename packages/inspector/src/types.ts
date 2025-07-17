@@ -40,6 +40,15 @@ export interface InspectorChannelState {
 
 export type InspectorFilters = {
   tags?: string[]
+  types?: string[]
+  directories?: string[]
+}
+
+export interface InspectorLogger {
+  info: (message: string) => void
+  error: (message: string) => void
+  warn: (message: string) => void
+  debug: (message: string) => void
 }
 export interface InspectorState {
   singletonServicesTypeImportMap: PathToNameAndType

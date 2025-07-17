@@ -7,7 +7,7 @@ import { addQueueWorker } from './add-queue-worker.js'
 import { addMCPResource } from './add-mcp-resource.js'
 import { addMCPTool } from './add-mcp-tool.js'
 import { addMCPPrompt } from './add-mcp-prompt.js'
-import { InspectorFilters, InspectorState } from './types.js'
+import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import { addFunctions } from './add-functions.js'
 import { addChannel } from './add-channel.js'
 
@@ -15,7 +15,8 @@ export const visitSetup = (
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
-  filters: InspectorFilters
+  filters: InspectorFilters,
+  logger: InspectorLogger
 ) => {
   addFileExtendsCoreType(
     node,
@@ -53,23 +54,28 @@ export const visitSetup = (
   )
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
-  addFunctions(node, checker, state, filters)
+  addFunctions(node, checker, state, filters, logger)
 
-  ts.forEachChild(node, (child) => visitSetup(checker, child, state, filters))
+  ts.forEachChild(node, (child) =>
+    visitSetup(checker, child, state, filters, logger)
+  )
 }
 
 export const visitRoutes = (
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
-  filters: InspectorFilters
+  filters: InspectorFilters,
+  logger: InspectorLogger
 ) => {
-  addHTTPRoute(node, checker, state, filters)
-  addSchedule(node, checker, state, filters)
-  addQueueWorker(node, checker, state, filters)
-  addChannel(node, checker, state, filters)
-  addMCPResource(node, checker, state, filters)
-  addMCPTool(node, checker, state, filters)
-  addMCPPrompt(node, checker, state, filters)
-  ts.forEachChild(node, (child) => visitRoutes(checker, child, state, filters))
+  addHTTPRoute(node, checker, state, filters, logger)
+  addSchedule(node, checker, state, filters, logger)
+  addQueueWorker(node, checker, state, filters, logger)
+  addChannel(node, checker, state, filters, logger)
+  addMCPResource(node, checker, state, filters, logger)
+  addMCPTool(node, checker, state, filters, logger)
+  addMCPPrompt(node, checker, state, filters, logger)
+  ts.forEachChild(node, (child) =>
+    visitRoutes(checker, child, state, filters, logger)
+  )
 }

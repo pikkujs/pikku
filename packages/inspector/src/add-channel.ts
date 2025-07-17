@@ -8,7 +8,11 @@ import {
   matchesFilters,
 } from './utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
-import type { InspectorFilters, InspectorState } from './types.js'
+import type {
+  InspectorFilters,
+  InspectorState,
+  InspectorLogger,
+} from './types.js'
 
 /**
  * Safely get the “initializer” expression of a property-like AST node:
@@ -363,7 +367,8 @@ export function addChannel(
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
-  filters: InspectorFilters
+  filters: InspectorFilters,
+  logger: InspectorLogger
 ) {
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
@@ -391,8 +396,15 @@ export function addChannel(
   const tags = getPropertyValue(obj, 'tags') as string[] | undefined
   const query = getPropertyValue(obj, 'query') as string[] | []
 
+  const filePath = node.getSourceFile().fileName
+
   if (
-    !matchesFilters(filters, { tags }, { type: PikkuEventTypes.channel, name })
+    !matchesFilters(
+      filters,
+      { tags },
+      { type: PikkuEventTypes.channel, name, filePath },
+      logger
+    )
   )
     return
 

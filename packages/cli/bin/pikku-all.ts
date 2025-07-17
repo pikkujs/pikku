@@ -287,7 +287,9 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const cliConfig = await getPikkuCLIConfig(
     options.config,
     [],
-    options.tags,
+    options.tags || [],
+    options.types || [],
+    options.directories || [],
     true
   )
 
@@ -313,6 +315,11 @@ export const all = (program: Command): void => {
     )
     .option('-c | --config <string>', 'The path to pikku cli config file')
     .option('-t | --tags <tags...>', 'Which tags to filter by')
+    .option(
+      '--types <types...>',
+      'Which types to filter by (http, channel, queue, scheduler, rpc, mcp)'
+    )
+    .option('--directories <directories...>', 'Which directories to filter by')
     .option('-w | --watch', 'Whether to watch file changes')
     .action(action)
 }

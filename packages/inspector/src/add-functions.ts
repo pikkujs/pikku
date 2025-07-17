@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { InspectorState, InspectorFilters } from './types.js'
+import { InspectorState, InspectorFilters, InspectorLogger } from './types.js'
 import { TypesMap } from './types-map.js'
 import {
   extractFunctionName,
@@ -231,7 +231,8 @@ export function addFunctions(
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
-  filters: InspectorFilters
+  filters: InspectorFilters,
+  logger: InspectorLogger
 ) {
   if (!ts.isCallExpression(node)) return
 
