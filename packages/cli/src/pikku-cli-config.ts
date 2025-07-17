@@ -95,17 +95,13 @@ const CONFIG_DIR_FILES = [
 export const getPikkuCLIConfig = async (
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  tags: string[] = [],
-  types: string[] = [],
-  directories: string[] = [],
+  filters: InspectorFilters = {},
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   const config = await _getPikkuCLIConfig(
     configFile,
     requiredFields,
-    tags,
-    types,
-    directories,
+    filters,
     exitProcess
   )
   return config
@@ -114,9 +110,7 @@ export const getPikkuCLIConfig = async (
 const _getPikkuCLIConfig = async (
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  tags: string[] = [],
-  types: string[] = [],
-  directories: string[] = [],
+  filters: InspectorFilters = {},
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
@@ -144,9 +138,7 @@ const _getPikkuCLIConfig = async (
       const extendedConfig = await getPikkuCLIConfig(
         resolve(configDir, config.extends),
         [],
-        tags,
-        types,
-        directories,
+        filters,
         exitProcess
       )
       result = {
@@ -315,14 +307,14 @@ const _getPikkuCLIConfig = async (
     }
 
     result.filters = result.filters || {}
-    if (tags.length > 0) {
-      result.filters.tags = tags
+    if (filters.tags && filters.tags.length > 0) {
+      result.filters.tags = filters.tags
     }
-    if (types.length > 0) {
-      result.filters.types = types
+    if (filters.types && filters.types.length > 0) {
+      result.filters.types = filters.types
     }
-    if (directories.length > 0) {
-      result.filters.directories = directories
+    if (filters.directories && filters.directories.length > 0) {
+      result.filters.directories = filters.directories
     }
 
     if (!isAbsolute(result.tsconfig)) {

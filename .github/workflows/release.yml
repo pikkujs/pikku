@@ -64,7 +64,7 @@ jobs:
             aws-lambda,
             cloudflare-workers,
             nextjs,
-            mcp-server
+            mcp-server,
           ]
         package-manager: [yarn]
     steps:

@@ -287,9 +287,11 @@ export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const cliConfig = await getPikkuCLIConfig(
     options.config,
     [],
-    options.tags || [],
-    options.types || [],
-    options.directories || [],
+    {
+      tags: options.tags,
+      types: options.types,
+      directories: options.directories,
+    },
     true
   )
 

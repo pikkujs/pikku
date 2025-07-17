@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "^0.8.0",
+    "@pikku/fetch": "^0.8.0",
     "@pikku/websocket": "^0.8.0",
     "typescript": "^5.6"
   },

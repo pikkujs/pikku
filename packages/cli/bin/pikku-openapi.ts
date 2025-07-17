@@ -9,7 +9,9 @@ async function action({ config, tags }: PikkuCLIOptions): Promise<void> {
   const cliConfig = await getPikkuCLIConfig(
     config,
     ['rootDir', 'httpRoutesFile', 'openAPI', 'schemaDirectory', 'tsconfig'],
-    tags
+    {
+      tags: tags || [],
+    }
   )
   const visitState = await inspectorGlob(
     logger,

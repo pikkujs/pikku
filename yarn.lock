@@ -4121,6 +4121,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.8.0"
     "@pikku/core": "npm:^0.8.0"
+    "@pikku/fetch": "npm:^0.8.0"
     "@pikku/jose": "npm:^0.8.0"
     "@pikku/schema-cfworker": "npm:^0.8.0"
     "@pikku/websocket": "npm:^0.8.0"
