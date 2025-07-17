@@ -4,7 +4,9 @@ import { PikkuMCPTestClient } from './pikku-mcp-client.js'
 
 // Test configuration - adjust based on your MCP server setup
 const TEST_SERVER_COMMAND = 'node'
-const TEST_SERVER_ARGS = ['dist/mcp-server/src/start.js']
+const TEST_SERVER_ARGS = process.env.MCP_SERVER_START
+  ? [process.env.MCP_SERVER_START]
+  : ['dist/mcp-server/src/start.js']
 
 test('MCP Server - Basic Connection and Capabilities', async () => {
   const client = new PikkuMCPTestClient(TEST_SERVER_COMMAND, TEST_SERVER_ARGS)

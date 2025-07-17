@@ -6,7 +6,8 @@
   "scripts": {
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "test": "bash run-tests.sh"
   },
   "devDependencies": {
     "@pikku/cli": "^0.8.0",

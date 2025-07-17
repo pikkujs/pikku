@@ -50,4 +50,8 @@ if [ "$coverage_mode" = true ]; then
 fi
 
 # Execute the node command with the expanded list of files
-$node_cmd "${files[@]}"
+if [ ! -d "dist/mcp-server" ]; then
+  MCP_SERVER_START='dist/src/start.js' $node_cmd "${files[@]}"
+else
+  $node_cmd "${files[@]}"
+fi

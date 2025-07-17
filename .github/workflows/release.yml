@@ -64,6 +64,7 @@ jobs:
             aws-lambda,
             cloudflare-workers,
             nextjs,
+            mcp-server
           ]
         package-manager: [yarn]
     steps:
@@ -83,7 +84,7 @@ jobs:
       - name: Install dependencies for create
         run: yarn install # TODO: This should only need to install create
       - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../../../test-app --install --package-manager ${{ matrix.package-manager}} --yarn-link ../pikku
-      - run: cd ../test-app && yarn link -A ../pikku && yarn run test
+      - run: cd ../test-app && yarn link -A ../pikku && yarn run tsc && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       USES_WEBSOCKET: ${{ matrix.template }}
