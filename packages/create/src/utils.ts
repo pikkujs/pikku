@@ -115,11 +115,14 @@ export function cleanTSConfig(targetPath: string): void {
   const tsconfig = JSON.parse(fs.readFileSync(tsconfigFile, 'utf-8'))
   delete tsconfig.extends
   tsconfig.includes?.push('.pikku/**/*')
+  if (tsconfig.files?.length === 0) {
+    delete tsconfig.files
+  }
   fs.writeFileSync(tsconfigFile, JSON.stringify(tsconfig, null, 2))
 }
 
 /**
- * Cleans up the tsconfig.json file
+ * Cleans up the pikku.config.json file
  */
 export function cleanPikkuConfig(targetPath: string): void {
   const pikkuConfigFile = path.join(targetPath, 'pikku.config.json')

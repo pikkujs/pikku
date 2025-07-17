@@ -24,7 +24,10 @@ async function main() {
       {
         name: 'pikku-mcp-server',
         version: '1.0.0',
-        mcpJsonPath: join(__dirname, '../../functions/.pikku/mcp.gen.json'),
+        mcpJsonPath: join(
+          __dirname,
+          process.env.MCP_JSON_PATH || '../../functions/.pikku/mcp.gen.json'
+        ),
         capabilities: {
           logging: {},
           tools: {},

@@ -225,6 +225,7 @@ async function setupTemplate(cliOptions: CliOptions) {
       targetPath,
       'pikku.config.json'
     )
+    mergeJsonFiles([functionsPath, templatePath], targetPath, 'tsconfig.json')
     mergeDirectories(functionsPath, targetPath)
     mergeDirectories(templatePath, targetPath)
     replaceFunctionReferences(targetPath)

@@ -4039,6 +4039,7 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     "@pikku/cloudflare": "npm:^0.8.0"
     "@pikku/core": "npm:^0.8.0"
+    "@types/node": "npm:^22"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^4.6.0"
   languageName: unknown
@@ -4051,6 +4052,7 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     "@pikku/cloudflare": "npm:^0.8.0"
     "@pikku/core": "npm:^0.8.0"
+    "@types/node": "npm:^22"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^4.6.0"
   languageName: unknown
@@ -4066,6 +4068,7 @@ __metadata:
     "@pikku/jose": "npm:^0.8.0"
     "@pikku/schedule": "npm:^0.8.0"
     "@types/cookie-parser": "npm:^1.4.7"
+    "@types/node": "npm:^22"
     cookie-parser: "npm:^1.4.7"
     express: "npm:^5"
     tsx: "npm:^4.19.2"
@@ -4125,6 +4128,7 @@ __metadata:
     "@pikku/jose": "npm:^0.8.0"
     "@pikku/schema-cfworker": "npm:^0.8.0"
     "@pikku/websocket": "npm:^0.8.0"
+    "@types/node": "npm:^22"
     typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft

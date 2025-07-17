@@ -51,7 +51,7 @@ fi
 
 # Execute the node command with the expanded list of files
 if [ ! -d "dist/mcp-server" ]; then
-  MCP_SERVER_START='dist/src/start.js' $node_cmd "${files[@]}"
+  MCP_JSON_PATH='../../../.pikku/mcp/mcp.gen.json' MCP_SERVER_START='dist/src/start.js' $node_cmd "${files[@]}"
 else
   $node_cmd "${files[@]}"
 fi
