@@ -1,5 +1,34 @@
 # @pikku/cli
 
+## 0.8.1
+
+### Patch Changes
+
+- 44e3ff4: feat: enhance CLI filtering with type and directory filters
+
+  - Add --types filter to filter by PikkuEventTypes (http, channel, queue, scheduler, rpc, mcp)
+  - Add --directories filter to filter by file paths/directories
+  - All filters (tags, types, directories) now work together with AND logic
+  - Add comprehensive logging interface to inspector package
+  - Add comprehensive test suite for matchesFilters function
+  - Support cross-platform path handling
+
+- 7c592b8: feat: support for required services and improved service configuration
+
+  This release includes several enhancements to service management and configuration:
+
+  - Added support for required services configuration
+  - Improved service discovery and registration
+  - Added typed RPC clients for service communication
+  - Updated middleware to run per function
+
+- Updated dependencies [3261090]
+- Updated dependencies [44e3ff4]
+- Updated dependencies [7c592b8]
+- Updated dependencies [30a082f]
+  - @pikku/core@0.8.1
+  - @pikku/inspector@0.8.1
+
 ## 0.8.0
 
 ### Major Features
