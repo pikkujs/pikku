@@ -38,7 +38,7 @@ import {
 export interface MCPServerConfig extends CoreConfig {
   name: string
   version: string
-  mcpJsonPath: string
+  mcpJSON: any
   capabilities: Partial<{
     logging: {}
     tools: {}
@@ -74,9 +74,7 @@ export class PikkuMCPServer {
   async init(): Promise<void> {
     try {
       // Load the MCP JSON schema file
-      await this.mcpEndpointRegistry.loadFromMCPJsonFile(
-        this.config.mcpJsonPath
-      )
+      await this.mcpEndpointRegistry.loadFromMCPJson(this.config.mcpJSON)
       if (this.config.capabilities.resources) {
         const resourcesMeta = getMCPResourcesMeta()
         this.mcpEndpointRegistry.setResourcesMeta(resourcesMeta)

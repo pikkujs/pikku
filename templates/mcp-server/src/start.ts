@@ -6,14 +6,9 @@ import {
   createConfig,
 } from '../../functions/src/services.js'
 
-import '../../functions/.pikku/mcp.gen.json' with { type: 'json' }
+import mcpJSON from '../../functions/.pikku/mcp/mcp.gen.json' with { type: 'json' }
 import '../../functions/.pikku/mcp/pikku-bootstrap-mcp.gen.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { dirname, join } from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 async function main() {
   try {
@@ -24,10 +19,7 @@ async function main() {
       {
         name: 'pikku-mcp-server',
         version: '1.0.0',
-        mcpJsonPath: join(
-          __dirname,
-          process.env.MCP_JSON_PATH || '../../functions/.pikku/mcp.gen.json'
-        ),
+        mcpJSON,
         capabilities: {
           logging: {},
           tools: {},

@@ -1,4 +1,3 @@
-import { readFile } from 'fs/promises'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 
 export interface MCPToolEndpoint {
@@ -33,15 +32,6 @@ export class MCPEndpointRegistry {
   private resourcesMeta: MCPResourceMeta = {}
   private toolsMeta: MCPToolMeta = {}
   private promptsMeta: MCPPromptMeta = {}
-
-  async loadFromMCPJsonFile(mcpJsonPath: string): Promise<void> {
-    try {
-      const mcpJsonContent = await readFile(mcpJsonPath, 'utf-8')
-      await this.loadFromMCPJson(JSON.parse(mcpJsonContent))
-    } catch (error) {
-      throw new Error(`Failed to load MCP JSON from ${mcpJsonPath}: ${error}`)
-    }
-  }
 
   async loadFromMCPJson(mcpData: any): Promise<void> {
     if (mcpData.tools && Array.isArray(mcpData.tools)) {
