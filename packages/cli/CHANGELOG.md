@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.8.2
+
+### Patch Changes
+
+- a02347b: fix: only insert package mapping if it's not the same package
+- Updated dependencies [0fb4b3d]
+  - @pikku/core@0.8.2
+
 ## 0.8.1
 
 ### Patch Changes

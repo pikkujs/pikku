@@ -1,5 +1,11 @@
 ## 0.8.0
 
+## 0.8.2
+
+### Patch Changes
+
+- 0fb4b3d: refactor: mcp server expects json and not file path
+
 ## 0.8.1
 
 ### Patch Changes
