@@ -134,4 +134,42 @@ describe('getFileImportRelativePath', () => {
 
     assert.strictEqual(result, './file2.tsx'.replace('.ts', '.js'))
   })
+
+  test('should strip everything before and including node_modules/', () => {
+    const from =
+      '/project/packages/functions/.pikku/http/pikku-http-routes-map.gen.d.ts'
+    const to =
+      '/project/packages/functions/../../../../node_modules/@pikku/core/dist/types/core.types.d.ts'
+    const packageMappings = {}
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, '@pikku/core/dist/types/core.types.d.js')
+  })
+
+  test('should handle node_modules path with package mappings', () => {
+    const from = '/project/packages/app/src/file1.ts'
+    const to = '/project/packages/app/node_modules/@myorg/utils/dist/utils.d.ts'
+    const packageMappings = {
+      'packages/app': '@myorg/app',
+    }
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, '@myorg/utils/dist/utils.d.js')
+  })
+
+  test('should handle deeply nested node_modules paths', () => {
+    const from =
+      '/Users/user/project/workspace-starter/packages/functions/.pikku/http/pikku-http-routes-map.gen.d.ts'
+    const to =
+      '/Users/user/project/workspace-starter/packages/functions/../../../../node_modules/@pikku/core/dist/types/core.types.d.ts'
+    const packageMappings = {
+      'packages/functions': '@workspace/functions',
+    }
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, '@pikku/core/dist/types/core.types.d.js')
+  })
 })

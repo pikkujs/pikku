@@ -63,6 +63,15 @@ export const getFileImportRelativePath = (
     filePath = `./${filePath}`
   }
 
+  // If the path includes node_modules, strip everything before and including node_modules/
+  if (filePath.includes('node_modules')) {
+    const nodeModulesIndex = filePath.indexOf('node_modules/')
+    if (nodeModulesIndex !== -1) {
+      filePath = filePath.substring(nodeModulesIndex + 'node_modules/'.length)
+    }
+    return filePath.replace('.ts', '.js')
+  }
+
   const absolutePath = resolve(dirname(from), to)
   const fromAbsolutePath = resolve(dirname(from))
 
