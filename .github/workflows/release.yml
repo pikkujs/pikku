@@ -1,4 +1,4 @@
-name: Release
+name: Main
 
 on:
   push:
@@ -9,7 +9,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   build:
-    name: Release
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code

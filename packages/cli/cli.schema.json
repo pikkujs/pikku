@@ -5,7 +5,19 @@
     "InspectorFilters": {
       "additionalProperties": false,
       "properties": {
+        "directories": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "types": {
           "items": {
             "type": "string"
           },
@@ -153,11 +165,11 @@
             "rpc": {
               "type": "string"
             },
-            "scheduled": {
+            "scheduler": {
               "type": "string"
             }
           },
-          "required": ["http", "scheduled", "channel", "rpc", "queue", "mcp"],
+          "required": ["http", "scheduler", "channel", "rpc", "queue", "mcp"],
           "type": "object"
         },
         "channelsFile": {
@@ -204,6 +216,12 @@
         },
         "mcpJsonFile": {
           "type": "string"
+        },
+        "middlewareServices": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "nextBackendFile": {
           "type": "string"

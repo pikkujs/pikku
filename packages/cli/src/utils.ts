@@ -64,12 +64,27 @@ export const getFileImportRelativePath = (
   }
 
   const absolutePath = resolve(dirname(from), to)
-  // let usesPackageName = false
-  for (const [path, packageName] of Object.entries(packageMappings)) {
-    if (absolutePath.includes(path)) {
-      // usesPackageName = true
-      filePath = absolutePath.replace(new RegExp(`.*${path}`), packageName)
+  const fromAbsolutePath = resolve(dirname(from))
+
+  // Check if both files are in the same package directory
+  // If so, skip packageMappings to use relative paths
+  let inSamePackage = false
+  for (const [path] of Object.entries(packageMappings)) {
+    if (absolutePath.includes(path) && fromAbsolutePath.includes(path)) {
+      inSamePackage = true
       break
+    }
+  }
+
+  // Only apply packageMappings if files are not in the same package
+  if (!inSamePackage) {
+    // let usesPackageName = false
+    for (const [path, packageName] of Object.entries(packageMappings)) {
+      if (absolutePath.includes(path)) {
+        // usesPackageName = true
+        filePath = absolutePath.replace(new RegExp(`.*${path}`), packageName)
+        break
+      }
     }
   }
 
