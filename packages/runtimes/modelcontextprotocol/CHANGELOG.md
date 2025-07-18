@@ -1,5 +1,15 @@
 # @pikku/mcp-server
 
+## 0.8.1
+
+### Patch Changes
+
+- 3261090: refactor: moving mcp endpoints into core
+- Updated dependencies [3261090]
+- Updated dependencies [7c592b8]
+- Updated dependencies [30a082f]
+  - @pikku/core@0.8.1
+
 ## 0.8.0
 
 ### Major Features

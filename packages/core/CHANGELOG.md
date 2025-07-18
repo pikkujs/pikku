@@ -1,5 +1,21 @@
 ## 0.8.0
 
+## 0.8.1
+
+### Patch Changes
+
+- 3261090: refactor: moving mcp endpoints into core
+- 7c592b8: feat: support for required services and improved service configuration
+
+  This release includes several enhancements to service management and configuration:
+
+  - Added support for required services configuration
+  - Improved service discovery and registration
+  - Added typed RPC clients for service communication
+  - Updated middleware to run per function
+
+- 30a082f: refactor: moving service implementations out of pikku/core since they aren't all edge compatible
+
 ### Major Features
 
 - **Model Context Protocol (MCP) Support**: Added MCP implementation with resources, tools, and prompts
