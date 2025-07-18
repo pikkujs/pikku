@@ -1,6 +1,6 @@
 {
   "name": "@pikku/modelcontextprotocol",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "A Pikku MCP server runtime using the official MCP SDK",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.8.1"
+    "@pikku/core": "^0.8.2"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.15.0"

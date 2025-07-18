@@ -1,5 +1,13 @@
 # @pikku/mcp-server
 
+## 0.8.2
+
+### Patch Changes
+
+- 0fb4b3d: refactor: mcp server expects json and not file path
+- Updated dependencies [0fb4b3d]
+  - @pikku/core@0.8.2
+
 ## 0.8.1
 
 ### Patch Changes
