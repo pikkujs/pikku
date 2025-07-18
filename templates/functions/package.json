@@ -8,7 +8,7 @@
     "@pikku/schema-cfworker": "^0.8.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.8.2",
+    "@pikku/cli": "^0.8.3",
     "@pikku/fetch": "^0.8.0",
     "@pikku/websocket": "^0.8.0",
     "@types/node": "^22",

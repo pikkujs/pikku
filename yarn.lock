@@ -3659,7 +3659,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:^0.8.2, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:^0.8.2, @pikku/cli@npm:^0.8.3, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -3883,7 +3883,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/nextjs-app-starter@workspace:templates/nextjs"
   dependencies:
-    "@pikku/cli": "npm:^0.8.2"
+    "@pikku/cli": "npm:^0.8.3"
     "@pikku/core": "npm:^0.8.2"
     "@pikku/fetch": "npm:^0.8.0"
     "@pikku/jose": "npm:^0.8.0"
@@ -4062,7 +4062,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.8.2"
+    "@pikku/cli": "npm:^0.8.3"
     "@pikku/core": "npm:^0.8.2"
     "@pikku/express-middleware": "npm:^0.8.0"
     "@pikku/jose": "npm:^0.8.0"
@@ -4122,7 +4122,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
-    "@pikku/cli": "npm:^0.8.2"
+    "@pikku/cli": "npm:^0.8.3"
     "@pikku/core": "npm:^0.8.2"
     "@pikku/fetch": "npm:^0.8.0"
     "@pikku/jose": "npm:^0.8.0"

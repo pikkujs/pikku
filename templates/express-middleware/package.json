@@ -12,7 +12,7 @@
     "express": "^5"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.8.2",
+    "@pikku/cli": "^0.8.3",
     "@types/cookie-parser": "^1.4.7",
     "@types/node": "^22",
     "tsx": "^4.19.2",
