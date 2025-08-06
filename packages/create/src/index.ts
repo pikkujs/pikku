@@ -298,7 +298,7 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
 }
 
 async function run() {
-  const version = cliOptions.version || 'master'
+  const version = cliOptions.version || 'main'
 
   console.log(chalk.hex('#a863ee').bold(logo))
   console.log(

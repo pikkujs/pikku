@@ -3,7 +3,7 @@ run-name: Branch
 on:
   push:
     branches-ignore:
-      - master
+      - main
       - develop
 jobs:
   main:
