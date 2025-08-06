@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { APIDocs, PikkuEventTypes } from '@pikku/core'
+import { APIDocs, PikkuWiringTypes } from '@pikku/core'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -36,7 +36,7 @@ export const getInputTypes = (
 }
 
 /**
- * Simplified addHTTPRoute: re-uses function metadata from state.functions.meta
+ * Simplified wireHTTP: re-uses function metadata from state.functions.meta
  * instead of re-inferring types here.
  */
 export const addHTTPRoute = (
@@ -50,7 +50,7 @@ export const addHTTPRoute = (
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'addHTTPRoute') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireHTTP') return
 
   // must pass an object literal
   const firstArg = args[0]
@@ -76,7 +76,7 @@ export const addHTTPRoute = (
     !matchesFilters(
       filters,
       { tags },
-      { type: PikkuEventTypes.http, name: route, filePath },
+      { type: PikkuWiringTypes.http, name: route, filePath },
       logger
     )
   ) {

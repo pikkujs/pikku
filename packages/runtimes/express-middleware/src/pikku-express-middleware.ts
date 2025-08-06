@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express'
 
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
-import { fetch, RunRouteOptions } from '@pikku/core/http'
+import { fetch, RunHTTPWiringOptions } from '@pikku/core/http'
 import { logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { expressToRequest } from './express-request-convertor.js'
@@ -16,7 +16,7 @@ import { sendResponseToExpress } from './express-response-convertor.js'
  * @property {boolean} [logRoutes] - Whether to log the routes.
  * @property {boolean} [loadSchemas] - Whether to load all schemas.
  */
-type PikkuMiddlewareArgs = RunRouteOptions & {
+type PikkuMiddlewareArgs = RunHTTPWiringOptions & {
   logRoutes?: boolean
   loadSchemas?: boolean
   coerceDataFromSchema?: boolean

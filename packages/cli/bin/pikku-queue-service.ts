@@ -1,14 +1,14 @@
 import { Command } from 'commander'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { CLILogger, PikkuCLIOptions } from '../src/utils.js'
-import { pikkuQueueService } from '../src/events/queue/pikku-command-queue-service.js'
+import { pikkuQueueService } from '../src/wirings/queue/pikku-command-queue-service.js'
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const logger = new CLILogger({ logLogo: true })
 
   const cliConfig = await getPikkuCLIConfig(
     options.config,
-    ['rootDir', 'schemaDirectory', 'configDir', 'queueFile'],
+    ['rootDir', 'schemaDirectory', 'configDir', 'queueWiringsFile'],
     {
       tags: options.tags,
       types: options.types,

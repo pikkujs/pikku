@@ -10,16 +10,16 @@
  */
 import { PikkuNextJS } from '@pikku/next'
 import type {
-  RoutesMap,
-  RouteHandlerOf,
-  RoutesWithMethod,
-} from '../functions/.pikku/http/pikku-http-routes-map.gen.js'
+  HTTPWiringsMap,
+  HTTPWiringHandlerOf,
+  HTTPWiringsWithMethod,
+} from '../functions/.pikku/http/pikku-http-wirings-map.gen.d.js'
 
 import { createConfig as createConfig } from '../functions/src/services.js'
 import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'
 import { createSessionServices as createSessionServices } from '../functions/src/services.js'
 
-import './.pikku/pikku-bootstrap-http.gen.js'
+import './.pikku/http/pikku-bootstrap-http.gen.js'
 
 let _pikku: PikkuNextJS | undefined
 
@@ -41,7 +41,7 @@ export const pikku = (_options?: any) => {
    * Makes a dynamic action request for a specified route and method.
    * Dynamic requests may access headers and cookies and are therefore unsuitable for precompile stages.
    *
-   * @template Route - The route key from the RoutesMap.
+   * @template Route - The route key from the HTTPWiringsMap.
    * @template Method - The method key from the specified route.
    * @param route - The route identifier.
    * @param method - The HTTP method to be used for the request.
@@ -49,13 +49,13 @@ export const pikku = (_options?: any) => {
    * @returns A promise that resolves to the output of the route handler.
    */
   const dynamicActionRequest = async <
-    Route extends keyof RoutesMap,
-    Method extends keyof RoutesMap[Route],
+    Route extends keyof HTTPWiringsMap,
+    Method extends keyof HTTPWiringsMap[Route],
   >(
     route: Route,
     method: Method,
-    data: RouteHandlerOf<Route, Method>['input'] = null
-  ): Promise<RouteHandlerOf<Route, Method>['output']> => {
+    data: HTTPWiringHandlerOf<Route, Method>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, Method>['output']> => {
     return _pikku!.actionRequest(route, method, data as any)
   }
 
@@ -63,7 +63,7 @@ export const pikku = (_options?: any) => {
    * Makes a static action request for a specified route and method.
    * Static requests do not depend on headers or cookies and are suitable for precompile stages.
    *
-   * @template Route - The route key from the RoutesMap.
+   * @template Route - The route key from the HTTPWiringsMap.
    * @template Method - The method key from the specified route.
    * @param route - The route identifier.
    * @param method - The HTTP method to be used for the request.
@@ -71,13 +71,13 @@ export const pikku = (_options?: any) => {
    * @returns A promise that resolves to the output of the route handler.
    */
   const staticActionRequest = async <
-    Route extends keyof RoutesMap,
-    Method extends keyof RoutesMap[Route],
+    Route extends keyof HTTPWiringsMap,
+    Method extends keyof HTTPWiringsMap[Route],
   >(
     route: Route,
     method: Method,
-    data: RouteHandlerOf<Route, Method>['input'] = null
-  ): Promise<RouteHandlerOf<Route, Method>['output']> => {
+    data: HTTPWiringHandlerOf<Route, Method>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, Method>['output']> => {
     return _pikku!.staticActionRequest(route, method, data as any)
   }
 
@@ -89,10 +89,10 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the POST request, defaults to null.
    * @returns A promise that resolves to the output of the POST handler.
    */
-  const dynamicPost = <Route extends RoutesWithMethod<'POST'>>(
+  const dynamicPost = <Route extends HTTPWiringsWithMethod<'POST'>>(
     route: Route,
-    data: RouteHandlerOf<Route, 'POST'>['input'] = null
-  ): Promise<RouteHandlerOf<Route, 'POST'>['output']> => {
+    data: HTTPWiringHandlerOf<Route, 'POST'>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, 'POST'>['output']> => {
     return dynamicActionRequest(route, 'POST', data)
   }
 
@@ -104,10 +104,10 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the GET request, defaults to null.
    * @returns A promise that resolves to the output of the GET handler.
    */
-  const dynamicGet = <Route extends RoutesWithMethod<'GET'>>(
+  const dynamicGet = <Route extends HTTPWiringsWithMethod<'GET'>>(
     route: Route,
-    data: RouteHandlerOf<Route, 'GET'>['input'] = null
-  ): Promise<RouteHandlerOf<Route, 'GET'>['output']> => {
+    data: HTTPWiringHandlerOf<Route, 'GET'>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, 'GET'>['output']> => {
     return dynamicActionRequest(route, 'GET', data)
   }
 
@@ -119,10 +119,10 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the PATCH request, defaults to null.
    * @returns A promise that resolves to the output of the PATCH handler.
    */
-  const dynamicPatch = <Route extends RoutesWithMethod<'PATCH'>>(
+  const dynamicPatch = <Route extends HTTPWiringsWithMethod<'PATCH'>>(
     route: Route,
-    data: RouteHandlerOf<Route, 'PATCH'>['input'] = null
-  ): Promise<RouteHandlerOf<Route, 'PATCH'>['output']> => {
+    data: HTTPWiringHandlerOf<Route, 'PATCH'>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, 'PATCH'>['output']> => {
     return dynamicActionRequest(route, 'PATCH', data)
   }
 
@@ -134,10 +134,10 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the DELETE request, defaults to null.
    * @returns A promise that resolves to the output of the DELETE handler.
    */
-  const dynamicDel = <Route extends RoutesWithMethod<'DELETE'>>(
+  const dynamicDel = <Route extends HTTPWiringsWithMethod<'DELETE'>>(
     route: Route,
-    data: RouteHandlerOf<Route, 'DELETE'>['input'] = null
-  ): Promise<RouteHandlerOf<Route, 'DELETE'>['output']> => {
+    data: HTTPWiringHandlerOf<Route, 'DELETE'>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, 'DELETE'>['output']> => {
     return dynamicActionRequest(route, 'DELETE', data)
   }
 
@@ -151,10 +151,10 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the POST request, defaults to null.
    * @returns A promise that resolves to the output of the POST handler.
    */
-  const staticPost = <Route extends RoutesWithMethod<'POST'>>(
+  const staticPost = <Route extends HTTPWiringsWithMethod<'POST'>>(
     route: Route,
-    data: RouteHandlerOf<Route, 'POST'>['input'] = null
-  ): Promise<RouteHandlerOf<Route, 'POST'>['output']> => {
+    data: HTTPWiringHandlerOf<Route, 'POST'>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, 'POST'>['output']> => {
     return staticActionRequest(route, 'POST', data)
   }
 
@@ -166,10 +166,10 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the GET request, defaults to null.
    * @returns A promise that resolves to the output of the GET handler.
    */
-  const staticGet = <Route extends RoutesWithMethod<'GET'>>(
+  const staticGet = <Route extends HTTPWiringsWithMethod<'GET'>>(
     route: Route,
-    data: RouteHandlerOf<Route, 'GET'>['input'] = null
-  ): Promise<RouteHandlerOf<Route, 'GET'>['output']> => {
+    data: HTTPWiringHandlerOf<Route, 'GET'>['input'] = null
+  ): Promise<HTTPWiringHandlerOf<Route, 'GET'>['output']> => {
     return staticActionRequest(route, 'GET', data)
   }
 

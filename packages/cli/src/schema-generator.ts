@@ -2,7 +2,7 @@ import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { CLILogger, writeFileInDir } from './utils.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
-import { HTTPRoutesMeta } from '@pikku/core/http'
+import { HTTPWiringsMeta } from '@pikku/core/http'
 import { TypesMap } from '@pikku/inspector'
 
 export async function generateSchemas(
@@ -10,7 +10,7 @@ export async function generateSchemas(
   tsconfig: string,
   typesMap: TypesMap,
   functionMeta: FunctionsMeta,
-  httpRoutesMeta: HTTPRoutesMeta
+  httpWiringsMeta: HTTPWiringsMeta
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -22,7 +22,7 @@ export async function generateSchemas(
       }
     }
   }
-  for (const { inputTypes } of httpRoutesMeta) {
+  for (const { inputTypes } of httpWiringsMeta) {
     if (inputTypes?.body) {
       schemasSet.add(inputTypes.body)
     }

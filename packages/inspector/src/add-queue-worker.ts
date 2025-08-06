@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { APIDocs, PikkuEventTypes } from '@pikku/core'
+import { APIDocs, PikkuWiringTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import {
   extractFunctionName,
@@ -24,7 +24,7 @@ export const addQueueWorker = (
   const expression = node.expression
 
   // Check if the call is to addQueueWorker
-  if (!ts.isIdentifier(expression) || expression.text !== 'addQueueWorker') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireQueueWorker') {
     return
   }
 
@@ -71,7 +71,7 @@ export const addQueueWorker = (
       !matchesFilters(
         filters,
         { tags },
-        { type: PikkuEventTypes.queue, name: queueName, filePath },
+        { type: PikkuWiringTypes.queue, name: queueName, filePath },
         logger
       )
     ) {

@@ -259,6 +259,7 @@ export function updatePackageJSONScripts(
   delete packageJson.scripts.ncu
   delete packageJson.packageManager
 
+  packageJson.scripts.postinstall = 'pikku all'
   packageJson.scripts.test = packageJson.scripts['test:template']
   delete packageJson.scripts['test:template']
 

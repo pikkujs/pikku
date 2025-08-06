@@ -54,7 +54,7 @@ jobs:
             # aws-lambda,
             cloudflare-workers,
             nextjs,
-            mcp-server,
+            # mcp-server,
           ]
         package-manager: [yarn]
     steps:
@@ -75,10 +75,6 @@ jobs:
         run: yarn install # TODO: This should only need to install create
       - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../../../test-app --install --package-manager ${{ matrix.package-manager}} --yarn-link ../pikku
       - run: cd ../test-app && yarn link -A ../pikku && yarn install && yarn run tsc && yarn run test
-      - name: Sync template repository
-        run: ./scripts/sync-template-repos.sh ${{ matrix.template }} --apply
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       USES_WEBSOCKET: ${{ matrix.template }}
@@ -144,3 +140,34 @@ jobs:
   #   env:
   #     SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
   #     USES_WEBSOCKET: ${{ matrix.template }}
+
+  sync-templates:
+    name: Sync Templates
+    runs-on: ubuntu-latest
+    needs: release
+    strategy:
+      matrix:
+        version: [20]
+        template: [
+            # express,
+            express-middleware,
+            # fastify,
+            fastify-plugin,
+            uws,
+            # aws-lambda,
+            cloudflare-workers,
+            nextjs,
+            # mcp-server,
+          ]
+        package-manager: [npm]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Create Template
+        run: npm --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../../../test-app --install --package-manager ${{ matrix.package-manager}}
+      
+      - name: Sync template repository
+        run: ./scripts/sync-template-repos.sh ${{ matrix.template }} --apply --token ${{ env.SYNC_TOKEN_GITHUB }}
+        env:
+          SYNC_TOKEN_GITHUB: ${{ secrets.SYNC_TOKEN_GITHUB }} 

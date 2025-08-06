@@ -1,13 +1,13 @@
 import type { Logger, LogLevel } from '../services/logger.js'
 import { VariablesService } from '../services/variables-service.js'
 import { SchemaService } from '../services/schema-service.js'
-import { PikkuHTTP } from '../events/http/http.types.js'
+import { PikkuHTTP } from '../wirings/http/http.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
-import { PikkuChannel } from '../events/channel/channel.types.js'
-import { PikkuRPC } from '../events/rpc/rpc-types.js'
-import { PikkuMCP } from '../events/mcp/mcp.types.js'
+import { PikkuChannel } from '../wirings/channel/channel.types.js'
+import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
+import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 
-export enum PikkuEventTypes {
+export enum PikkuWiringTypes {
   http = 'http',
   scheduler = 'scheduler',
   channel = 'channel',

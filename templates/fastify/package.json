@@ -9,8 +9,8 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.8.2",
-    "@pikku/fastify": "^0.8.0",
+    "@pikku/core": "^0.9.0",
+    "@pikku/fastify": "^0.9.0",
     "tslib": "^2.7.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6"

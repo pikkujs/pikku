@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { PikkuEventTypes } from '@pikku/core'
+import { PikkuWiringTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import {
   extractFunctionName,
@@ -23,8 +23,8 @@ export const addMCPTool = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to addMCPTool
-  if (!ts.isIdentifier(expression) || expression.text !== 'addMCPTool') {
+  // Check if the call is to wireMCPTool
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireMCPTool') {
     return
   }
 
@@ -75,7 +75,7 @@ export const addMCPTool = (
       !matchesFilters(
         filters,
         { tags },
-        { type: PikkuEventTypes.mcp, name: nameValue, filePath },
+        { type: PikkuWiringTypes.mcp, name: nameValue, filePath },
         logger
       )
     ) {

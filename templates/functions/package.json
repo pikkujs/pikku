@@ -3,20 +3,22 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.8.2",
-    "@pikku/jose": "^0.8.0",
+    "@pikku/core": "^0.9.0",
+    "@pikku/jose": "^0.9.0",
     "@pikku/schema-cfworker": "^0.8.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.8.3",
-    "@pikku/fetch": "^0.8.0",
-    "@pikku/websocket": "^0.8.0",
+    "@pikku/cli": "^0.9.0",
+    "@pikku/fetch": "^0.9.0",
+    "@pikku/websocket": "^0.9.0",
     "@types/node": "^22",
     "typescript": "^5.6"
   },
   "scripts": {
     "tsc": "tsc",
     "pikku": "pikku",
-    "test:template": "bash run-tests.sh"
+    "test:template": "bash run-tests.sh",
+    "test:http": "npx tests/http.test.ts",
+    "test:rpc": "npx tests/rpc.test.ts"
   }
 }

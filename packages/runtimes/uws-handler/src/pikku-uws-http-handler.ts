@@ -7,7 +7,7 @@ import { uwsToRequest } from './uws-request-convertor.js'
 import { sendPikkuResponseToUWS } from './uws-response-convertor.js'
 import {
   logRoutes as logRegisterRoutes,
-  RunRouteOptions,
+  RunHTTPWiringOptions,
 } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 
@@ -19,14 +19,14 @@ import { compileAllSchemas } from '@pikku/core/schema'
  * @property {CreateSessionServices<any, any, any>} createSessionServices - A function to create session services.
  * @property {boolean} [logRoutes] - Whether to log the routes.
  * @property {boolean} [loadSchemas] - Whether to load all schemas.
- * @property {RunRouteOptions} - Additional options for running the route.
+ * @property {RunHTTPWiringOptions} - Additional options for running the route.
  */
 export type PikkuuWSHandlerOptions = {
   singletonServices: CoreSingletonServices
   createSessionServices: CreateSessionServices<any, any, any>
   logRoutes?: boolean
   loadSchemas?: boolean
-} & RunRouteOptions
+} & RunHTTPWiringOptions
 
 /**
  * Creates a uWebSockets handler for handling requests using the `@pikku/core` framework.

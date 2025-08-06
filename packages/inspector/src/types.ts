@@ -1,5 +1,5 @@
 import { ChannelsMeta } from '@pikku/core/channel'
-import { HTTPRoutesMeta } from '@pikku/core/http'
+import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { queueWorkersMeta } from '@pikku/core/queue'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
@@ -23,7 +23,7 @@ export type MetaInputTypes = Map<
 
 export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
-  meta: HTTPRoutesMeta
+  meta: HTTPWiringsMeta
   files: Set<string>
 }
 

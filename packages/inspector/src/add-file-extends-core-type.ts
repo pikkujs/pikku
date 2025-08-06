@@ -1,8 +1,6 @@
 import * as ts from 'typescript'
 import { PathToNameAndType } from './types.js'
 
-// const VRAMEWORK_TYPES = ['CoreConfig', 'CoreService', 'CoreServices', 'CoreSingletonService', 'CoreSessionService']
-
 export const addFileExtendsCoreType = (
   node: ts.Node,
   checker: ts.TypeChecker,

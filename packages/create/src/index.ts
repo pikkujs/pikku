@@ -75,12 +75,12 @@ const templates = [
   {
     template: 'nextjs',
     description: 'A Nextjs helloworld template',
-    supports: ['fullstack'],
+    supports: ['http', 'fullstack'],
   },
   {
     template: 'nextjs-full',
     description: 'A Nextjs simple book application',
-    supports: ['fullstack'],
+    supports: ['http', 'fullstack'],
   },
   {
     template: 'aws-lambda',

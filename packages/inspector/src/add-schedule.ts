@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { APIDocs, PikkuEventTypes } from '@pikku/core'
+import { APIDocs, PikkuWiringTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import {
   extractFunctionName,
@@ -24,7 +24,7 @@ export const addSchedule = (
   const expression = node.expression
 
   // Check if the call is to addScheduledTask
-  if (!ts.isIdentifier(expression) || expression.text !== 'addScheduledTask') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireScheduler') {
     return
   }
 
@@ -68,7 +68,7 @@ export const addSchedule = (
       !matchesFilters(
         filters,
         { tags },
-        { type: PikkuEventTypes.scheduler, name: nameValue, filePath },
+        { type: PikkuWiringTypes.scheduler, name: nameValue, filePath },
         logger
       )
     ) {

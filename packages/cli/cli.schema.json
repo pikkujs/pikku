@@ -172,13 +172,13 @@
           "required": ["http", "scheduler", "channel", "rpc", "queue", "mcp"],
           "type": "object"
         },
-        "channelsFile": {
-          "type": "string"
-        },
         "channelsMapDeclarationFile": {
           "type": "string"
         },
-        "channelsMetaFile": {
+        "channelsWiringFile": {
+          "type": "string"
+        },
+        "channelsWiringMetaFile": {
           "type": "string"
         },
         "configDir": {
@@ -199,22 +199,22 @@
         "functionsMetaFile": {
           "type": "string"
         },
-        "httpRoutesFile": {
+        "httpMapDeclarationFile": {
           "type": "string"
         },
-        "httpRoutesMapDeclarationFile": {
+        "httpWiringMetaFile": {
           "type": "string"
         },
-        "httpRoutesMetaFile": {
-          "type": "string"
-        },
-        "mcpEndpointsFile": {
-          "type": "string"
-        },
-        "mcpEndpointsMetaFile": {
+        "httpWiringsFile": {
           "type": "string"
         },
         "mcpJsonFile": {
+          "type": "string"
+        },
+        "mcpWiringsFile": {
+          "type": "string"
+        },
+        "mcpWiringsMetaFile": {
           "type": "string"
         },
         "middlewareServices": {
@@ -251,34 +251,34 @@
           },
           "type": "object"
         },
-        "queueFile": {
-          "type": "string"
-        },
         "queueMapDeclarationFile": {
           "type": "string"
         },
-        "queueWorkersFile": {
+        "queueWiringsFile": {
           "type": "string"
         },
-        "queueWorkersMetaFile": {
+        "queueWorkersWiringFile": {
+          "type": "string"
+        },
+        "queueWorkersWiringMetaFile": {
           "type": "string"
         },
         "rootDir": {
           "type": "string"
         },
-        "rpcFile": {
-          "type": "string"
-        },
         "rpcMapDeclarationFile": {
           "type": "string"
         },
-        "rpcMetaFile": {
+        "rpcWiringMetaFile": {
           "type": "string"
         },
-        "schedulersFile": {
+        "rpcWiringsFile": {
           "type": "string"
         },
-        "schedulersMetaFile": {
+        "schedulersWiringFile": {
+          "type": "string"
+        },
+        "schedulersWiringMetaFile": {
           "type": "string"
         },
         "schemaDirectory": {
@@ -309,27 +309,27 @@
       "required": [
         "bootstrapFile",
         "bootstrapFiles",
-        "channelsFile",
         "channelsMapDeclarationFile",
-        "channelsMetaFile",
+        "channelsWiringFile",
+        "channelsWiringMetaFile",
         "configDir",
         "filters",
         "functionsFile",
         "functionsMetaFile",
-        "httpRoutesFile",
-        "httpRoutesMapDeclarationFile",
-        "httpRoutesMetaFile",
-        "mcpEndpointsFile",
-        "mcpEndpointsMetaFile",
+        "httpMapDeclarationFile",
+        "httpWiringMetaFile",
+        "httpWiringsFile",
+        "mcpWiringsFile",
+        "mcpWiringsMetaFile",
         "packageMappings",
         "queueMapDeclarationFile",
-        "queueWorkersFile",
-        "queueWorkersMetaFile",
+        "queueWorkersWiringFile",
+        "queueWorkersWiringMetaFile",
         "rootDir",
         "rpcMapDeclarationFile",
-        "rpcMetaFile",
-        "schedulersFile",
-        "schedulersMetaFile",
+        "rpcWiringMetaFile",
+        "schedulersWiringFile",
+        "schedulersWiringMetaFile",
         "schemaDirectory",
         "servicesFile",
         "srcDirectories",

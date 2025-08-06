@@ -16,14 +16,14 @@ export const inspectorGlob = async (
     'Inspected codebase',
     [false],
     async () => {
-      const routeFiles = (
+      const wiringFiles = (
         await Promise.all(
           srcDirectories.map((dir) =>
             glob(`${path.join(rootDir, dir)}/**/*.ts`)
           )
         )
       ).flat()
-      result = await inspect(logger, routeFiles, filters)
+      result = await inspect(logger, wiringFiles, filters)
     }
   )
   return result!

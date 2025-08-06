@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { InspectorFilters, InspectorLogger } from './types.js'
-import { PikkuEventTypes } from '@pikku/core'
+import { PikkuWiringTypes } from '@pikku/core'
 
 type ExtractedFunctionName = {
   pikkuFuncName: string
@@ -271,7 +271,7 @@ export function extractFunctionName(
     explicitName: null,
   }
 
-  // Special case for addHTTPRoute: if this is an identifier within an object literal,
+  // Special case for wireHTTP: if this is an identifier within an object literal,
   // it might be coming from the HTTP route handling flow
   if (
     ts.isIdentifier(callExpr) &&
@@ -845,7 +845,7 @@ export const matchesFilters = (
   filters: InspectorFilters,
   params: { tags?: string[] },
   meta: {
-    type: PikkuEventTypes
+    type: PikkuWiringTypes
     name: string
     filePath?: string
   },

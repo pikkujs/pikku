@@ -1,6 +1,6 @@
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { fetch, RunRouteOptions } from '@pikku/core/http'
+import { fetch, RunHTTPWiringOptions } from '@pikku/core/http'
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import { logRoutes } from '@pikku/core/http'
@@ -26,7 +26,7 @@ export type PikkuFastifyPluginOptions = {
     createSessionServices: CreateSessionServices<any, any, any>
     logRoutes?: boolean
     loadSchemas?: boolean
-  } & RunRouteOptions
+  } & RunHTTPWiringOptions
 }
 
 /**
