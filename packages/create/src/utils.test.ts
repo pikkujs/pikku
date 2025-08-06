@@ -15,6 +15,7 @@ import {
   serverlessChanges,
   updatePackageJSONScripts,
   deepMerge,
+  filterFilesByFeatures,
 } from './utils.js'
 
 describe('Functions Test Suite', () => {
@@ -265,6 +266,123 @@ describe('Functions Test Suite', () => {
     assert.ok(
       updatedPackage.scripts.test.includes('yarn run'),
       'test script should be updated'
+    )
+  })
+
+  test('filterFilesByFeatures: removes files not supported by template features', () => {
+    const testDir = path.join(tempRoot, 'filterFeaturesTest')
+    const srcDir = path.join(testDir, 'src')
+    fs.mkdirSync(srcDir, { recursive: true })
+
+    // Create test files
+    const testFiles = [
+      'http.functions.ts',
+      'http.routes.ts',
+      'channel.functions.ts',
+      'channel.routes.ts',
+      'mcp.functions.ts',
+      'mcp.routes.ts',
+      'queue-worker.functions.ts',
+      'scheduled-task.functions.ts',
+      'http-progressive-enhancement.functions.ts',
+      'services.ts', // Should always be kept
+    ]
+
+    testFiles.forEach((file) => {
+      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    })
+
+    // Test filtering for HTTP-only template
+    filterFilesByFeatures(testDir, ['http'])
+
+    // Check which files remain
+    const remainingFiles = fs.readdirSync(srcDir)
+
+    // Should keep HTTP files and services.ts
+    assert.ok(
+      remainingFiles.includes('http.functions.ts'),
+      'HTTP functions should remain'
+    )
+    assert.ok(
+      remainingFiles.includes('http.routes.ts'),
+      'HTTP routes should remain'
+    )
+    assert.ok(
+      remainingFiles.includes('services.ts'),
+      'Services should always remain'
+    )
+
+    // Should remove non-HTTP files
+    assert.ok(
+      !remainingFiles.includes('channel.functions.ts'),
+      'Channel functions should be removed'
+    )
+    assert.ok(
+      !remainingFiles.includes('mcp.functions.ts'),
+      'MCP functions should be removed'
+    )
+    assert.ok(
+      !remainingFiles.includes('queue-worker.functions.ts'),
+      'Queue worker should be removed'
+    )
+    assert.ok(
+      !remainingFiles.includes('scheduled-task.functions.ts'),
+      'Scheduled task should be removed'
+    )
+
+    // http-progressive-enhancement should be removed (it's for channels)
+    assert.ok(
+      !remainingFiles.includes('http-progressive-enhancement.functions.ts'),
+      'Progressive enhancement should be removed'
+    )
+  })
+
+  test('filterFilesByFeatures: keeps channel files for channel template', () => {
+    const testDir = path.join(tempRoot, 'filterChannelTest')
+    const srcDir = path.join(testDir, 'src')
+    fs.mkdirSync(srcDir, { recursive: true })
+
+    // Create test files
+    const testFiles = [
+      'http.functions.ts',
+      'channel.functions.ts',
+      'channel.routes.ts',
+      'http-progressive-enhancement.functions.ts',
+      'services.ts',
+    ]
+
+    testFiles.forEach((file) => {
+      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    })
+
+    // Test filtering for channel-only template
+    filterFilesByFeatures(testDir, ['channel'])
+
+    // Check which files remain
+    const remainingFiles = fs.readdirSync(srcDir)
+
+    // Should keep channel files and progressive enhancement (which is for channels)
+    assert.ok(
+      remainingFiles.includes('channel.functions.ts'),
+      'Channel functions should remain'
+    )
+    assert.ok(
+      remainingFiles.includes('channel.routes.ts'),
+      'Channel routes should remain'
+    )
+    assert.ok(
+      remainingFiles.includes('http-progressive-enhancement.functions.ts'),
+      'Progressive enhancement should remain'
+    )
+    assert.ok(
+      remainingFiles.includes('services.ts'),
+      'Services should always remain'
+    )
+
+    // Should remove HTTP files
+    assert.ok(
+      !remainingFiles.includes('http.functions.ts'),
+      'HTTP functions should be removed'
     )
   })
 })

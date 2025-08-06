@@ -175,6 +175,74 @@ export function serverlessChanges(targetPath: string, appName: string): void {
   console.log(chalk.green('⚙️ Updated serverless config...'))
 }
 
+/**
+ * Maps file patterns to feature types for filtering
+ */
+const FILE_FEATURE_MAPPING = {
+  'channel.': ['channel'],
+  'http.': ['http'],
+  'http-progressive-enhancement.': ['channel'], // This is for channels as mentioned
+  'http-sse.': ['http'],
+  'mcp.': ['mcp'],
+  'queue-worker.': ['queue'],
+  'rpc.': ['http'], // RPC is typically over HTTP
+  'scheduled-task.': ['scheduled'],
+} as const
+
+/**
+ * Filters files in functionsPath based on supported features
+ */
+export function filterFilesByFeatures(
+  functionsPath: string,
+  supportedFeatures: string[]
+): void {
+  const srcPath = path.join(functionsPath, 'src')
+  if (!fs.existsSync(srcPath)) return
+
+  const filesToRemove: string[] = []
+
+  fs.readdirSync(srcPath).forEach((file) => {
+    const filePath = path.join(srcPath, file)
+    if (fs.statSync(filePath).isFile()) {
+      let shouldKeepFile = false
+
+      // Check if the file matches any pattern for supported features
+      for (const [pattern, features] of Object.entries(FILE_FEATURE_MAPPING)) {
+        if (file.includes(pattern)) {
+          // Check if any of the file's features are supported
+          if (features.some((feature) => supportedFeatures.includes(feature))) {
+            shouldKeepFile = true
+          }
+          break
+        }
+      }
+
+      // Keep files that don't match any pattern (like services.ts)
+      const hasKnownPattern = Object.keys(FILE_FEATURE_MAPPING).some(
+        (pattern) => file.includes(pattern)
+      )
+
+      if (!hasKnownPattern) {
+        shouldKeepFile = true
+      }
+
+      if (!shouldKeepFile) {
+        filesToRemove.push(filePath)
+      }
+    }
+  })
+
+  // Remove filtered files
+  filesToRemove.forEach((filePath) => {
+    fs.unlinkSync(filePath)
+    console.log(
+      chalk.yellow(
+        `🗑️  Removed ${path.basename(filePath)} (not needed for this template)`
+      )
+    )
+  })
+}
+
 export function updatePackageJSONScripts(
   targetPath: string,
   appName: string,

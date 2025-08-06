@@ -17,6 +17,7 @@ import { createSpinner } from 'nanospinner'
 import {
   cleanPikkuConfig,
   cleanTSConfig,
+  filterFilesByFeatures,
   lazymkdir,
   mergeDirectories,
   mergeJsonFiles,
@@ -216,6 +217,13 @@ async function setupTemplate(cliOptions: CliOptions) {
     await downloadTemplate(templateUrl, { dir: templatePath, force: true })
 
     spinner.success()
+
+    // Get supported features for the selected template
+    const selectedTemplate = templates.find((t) => t.template === template)
+    const supportedFeatures = (selectedTemplate?.supports || []) as string[]
+
+    // Filter files based on supported features
+    filterFilesByFeatures(functionsPath, supportedFeatures)
 
     // Merge and process files
     lazymkdir(targetPath)
