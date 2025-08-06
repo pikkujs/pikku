@@ -290,7 +290,7 @@ const executeRouteWithMiddleware = async (
       throw new MissingSessionError()
     }
 
-    const data = http.request!.data()
+    const data = await http.request!.data()
 
     const getAllServices = async () => {
       let channel: PikkuChannel<unknown, unknown> | undefined
