@@ -86,7 +86,7 @@ We now use the function first approach internally, which means first all the fun
 The main breaking changes for the end user are:
 
 - We now declare functions using `pikkuFunc<In, Out>(async () => {})
-- We renamed addRoute to addHTTPRoutes
+- We renamed addRoute to wireHTTPs
 
 We also removed all the different types of functions. Everything is now either an APIFunction of APIFunctionSessionless. The channel (eventHub or any other transport specific service) is now injected in the service itself.
 

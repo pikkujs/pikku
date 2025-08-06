@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
-import { PikkuEventTypes } from '@pikku/core'
+import { PikkuWiringTypes } from '@pikku/core'
 import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import {
   extractFunctionName,
@@ -23,8 +23,8 @@ export const addMCPResource = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to addMCPResource
-  if (!ts.isIdentifier(expression) || expression.text !== 'addMCPResource') {
+  // Check if the call is to wireMCPResource
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireMCPResource') {
     return
   }
 
@@ -84,7 +84,7 @@ export const addMCPResource = (
       !matchesFilters(
         filters,
         { tags },
-        { type: PikkuEventTypes.mcp, name: uriValue, filePath },
+        { type: PikkuWiringTypes.mcp, name: uriValue, filePath },
         logger
       )
     ) {

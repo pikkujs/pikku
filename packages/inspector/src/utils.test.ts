@@ -2,7 +2,7 @@ import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
 import { matchesFilters } from './utils.js'
 import { InspectorFilters } from './types.js'
-import { PikkuEventTypes } from '@pikku/core'
+import { PikkuWiringTypes } from '@pikku/core'
 
 describe('matchesFilters', () => {
   // Mock logger for testing
@@ -20,7 +20,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -37,7 +37,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -54,7 +54,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['api', 'internal'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -69,7 +69,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['internal', 'private'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -84,7 +84,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: undefined },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -99,7 +99,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: [] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -116,7 +116,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -131,21 +131,21 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
       assert.equal(result, false)
     })
 
-    test('should handle all PikkuEventTypes correctly', () => {
+    test('should handle all PikkuWiringTypes correctly', () => {
       const eventTypes = [
-        PikkuEventTypes.http,
-        PikkuEventTypes.channel,
-        PikkuEventTypes.queue,
-        PikkuEventTypes.scheduler,
-        PikkuEventTypes.rpc,
-        PikkuEventTypes.mcp,
+        PikkuWiringTypes.http,
+        PikkuWiringTypes.channel,
+        PikkuWiringTypes.queue,
+        PikkuWiringTypes.scheduler,
+        PikkuWiringTypes.rpc,
+        PikkuWiringTypes.mcp,
       ]
 
       eventTypes.forEach((eventType) => {
@@ -175,7 +175,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/routes.ts',
         },
@@ -194,7 +194,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/public/routes.ts',
         },
@@ -213,7 +213,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: 'C:\\project\\src\\api\\routes.ts',
         },
@@ -232,7 +232,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: 'C:\\project\\src\\api\\routes.ts',
         },
@@ -250,7 +250,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.http, name: 'test-route' }, // no filePath
+        { type: PikkuWiringTypes.http, name: 'test-route' }, // no filePath
         mockLogger
       )
 
@@ -266,7 +266,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/v1/routes.ts',
         },
@@ -289,7 +289,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['api', 'public'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/routes.ts',
         },
@@ -310,7 +310,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['api', 'public'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/routes.ts',
         },
@@ -331,7 +331,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['api', 'public'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/routes.ts',
         },
@@ -352,7 +352,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['api', 'public'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/routes.ts',
         },
@@ -372,7 +372,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: undefined },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -387,7 +387,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.http, name: '' },
+        { type: PikkuWiringTypes.http, name: '' },
         mockLogger
       )
 
@@ -403,7 +403,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api-v2/routes.ts',
         },
@@ -422,7 +422,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/api/routes.ts',
         },
@@ -440,7 +440,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['api', 'public', 'v1'] },
-        { type: PikkuEventTypes.http, name: 'test-route' },
+        { type: PikkuWiringTypes.http, name: 'test-route' },
         mockLogger
       )
 
@@ -455,7 +455,7 @@ describe('matchesFilters', () => {
       const result = matchesFilters(
         filters,
         { tags: ['test'] },
-        { type: PikkuEventTypes.channel, name: 'test-channel' },
+        { type: PikkuWiringTypes.channel, name: 'test-channel' },
         mockLogger
       )
 
@@ -471,7 +471,7 @@ describe('matchesFilters', () => {
         filters,
         { tags: ['test'] },
         {
-          type: PikkuEventTypes.http,
+          type: PikkuWiringTypes.http,
           name: 'test-route',
           filePath: '/project/src/internal/routes.ts',
         },

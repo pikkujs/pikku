@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { CLILogger, PikkuCLIOptions } from '../src/utils.js'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuWebSocketTyped } from '../src/events/channels/pikku-command-websocket-typed.js'
+import { pikkuWebSocketTyped } from '../src/wirings/channels/pikku-command-websocket-typed.js'
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {
   const logger = new CLILogger({ logLogo: true })

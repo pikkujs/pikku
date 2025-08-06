@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuFetch } from '../src/events/fetch/index.js'
+import { pikkuFetch } from '../src/wirings/fetch/index.js'
 import { CLILogger, PikkuCLIOptions } from '../src/utils.js'
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {

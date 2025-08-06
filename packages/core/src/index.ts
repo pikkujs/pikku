@@ -10,25 +10,26 @@ export * from './services/schema-service.js'
 export * from './services/jwt-service.js'
 export * from './services/secret-service.js'
 export * from './services/user-session-service.js'
-export * from './events/http/index.js'
-export * from './events/channel/index.js'
-export * from './events/scheduler/index.js'
-export * from './events/rpc/index.js'
-export * from './events/queue/index.js'
-export * from './events/mcp/index.js'
+export * from './wirings/http/index.js'
+export * from './wirings/channel/index.js'
+export * from './wirings/scheduler/index.js'
+export * from './wirings/rpc/index.js'
+export * from './wirings/queue/index.js'
+export * from './wirings/mcp/index.js'
 export * from './errors/index.js'
 export * from './middleware/index.js'
 export * from './time-utils.js'
 export * from './utils.js'
 export { pikkuState } from './pikku-state.js'
 export { runMiddleware } from './middleware-runner.js'
-export { addHTTPRoute, addMiddleware } from './events/http/http-runner.js'
-export { addChannel } from './events/channel/channel-runner.js'
-export { addScheduledTask } from './events/scheduler/scheduler-runner.js'
+export { wireHTTP, addMiddleware } from './wirings/http/http-runner.js'
+export { wireChannel } from './wirings/channel/channel-runner.js'
+export { wireScheduler } from './wirings/scheduler/scheduler-runner.js'
+export { wireQueueWorker } from './wirings/queue/queue-runner.js'
 export {
-  addMCPResource,
-  addMCPTool,
-  addMCPPrompt,
+  wireMCPResource,
+  wireMCPTool,
+  wireMCPPrompt,
   runMCPResource,
   runMCPTool,
   runMCPPrompt,
@@ -38,4 +39,4 @@ export {
   getMCPResourcesMeta,
   getMCPToolsMeta,
   getMCPPromptsMeta,
-} from './events/mcp/mcp-runner.js'
+} from './wirings/mcp/mcp-runner.js'

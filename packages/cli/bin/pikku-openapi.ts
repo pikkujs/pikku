@@ -2,13 +2,13 @@ import { Command } from 'commander'
 import { CLILogger, PikkuCLIOptions } from '../src/utils.js'
 import { getPikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
-import { pikkuOpenAPI } from '../src/events/http/pikku-command-openapi.js'
+import { pikkuOpenAPI } from '../src/wirings/http/pikku-command-openapi.js'
 
 async function action({ config, tags }: PikkuCLIOptions): Promise<void> {
   const logger = new CLILogger({ logLogo: true })
   const cliConfig = await getPikkuCLIConfig(
     config,
-    ['rootDir', 'httpRoutesFile', 'openAPI', 'schemaDirectory', 'tsconfig'],
+    ['rootDir', 'httpWiringsFile', 'openAPI', 'schemaDirectory', 'tsconfig'],
     {
       tags: tags || [],
     }

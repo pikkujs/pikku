@@ -1,21 +1,21 @@
-import { ChannelsMeta, CoreAPIChannel } from './events/channel/channel.types.js'
+import { ChannelsMeta, CoreChannel } from './wirings/channel/channel.types.js'
 import {
-  CoreHTTPFunctionRoute,
+  CoreHTTPFunctionWiring,
   HTTPMethod,
-  HTTPRoutesMeta,
-} from './events/http/http.types.js'
+  HTTPWiringsMeta,
+} from './wirings/http/http.types.js'
 import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
-} from './events/scheduler/scheduler.types.js'
+} from './wirings/scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
 import { CorePikkuFunctionConfig } from './function/functions.types.js'
-import { RPCMeta } from './events/rpc/rpc-types.js'
+import { RPCMeta } from './wirings/rpc/rpc-types.js'
 import {
   queueWorkersMeta,
   CoreQueueWorker,
-} from './events/queue/queue.types.js'
+} from './wirings/queue/queue.types.js'
 import {
   CoreMCPResource,
   CoreMCPTool,
@@ -23,7 +23,7 @@ import {
   MCPResourceMeta,
   MCPToolMeta,
   MCPPromptMeta,
-} from './events/mcp/mcp.types.js'
+} from './wirings/mcp/mcp.types.js'
 
 interface PikkuState {
   function: {
@@ -42,11 +42,11 @@ interface PikkuState {
   }
   http: {
     middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
-    routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionRoute<any, any, any>>>
-    meta: HTTPRoutesMeta
+    routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>
+    meta: HTTPWiringsMeta
   }
   channel: {
-    channels: Map<string, CoreAPIChannel<any, any>>
+    channels: Map<string, CoreChannel<any, any>>
     meta: ChannelsMeta
   }
   scheduler: {

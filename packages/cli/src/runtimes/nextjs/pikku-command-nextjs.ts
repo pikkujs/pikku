@@ -13,7 +13,7 @@ export const pikkuNext: PikkuCommand = async (
   {
     nextBackendFile,
     nextHTTPFile,
-    httpRoutesMapDeclarationFile,
+    httpMapDeclarationFile,
     packageMappings,
     fetchFile,
     bootstrapFiles,
@@ -72,7 +72,7 @@ export const pikkuNext: PikkuCommand = async (
 
         const routesMapDeclarationPath = getFileImportRelativePath(
           nextBackendFile,
-          httpRoutesMapDeclarationFile,
+          httpMapDeclarationFile,
           packageMappings
         )
 
@@ -89,7 +89,7 @@ export const pikkuNext: PikkuCommand = async (
       if (nextHTTPFile && fetchFile) {
         const routesMapDeclarationPath = getFileImportRelativePath(
           nextHTTPFile,
-          httpRoutesMapDeclarationFile,
+          httpMapDeclarationFile,
           packageMappings
         )
 

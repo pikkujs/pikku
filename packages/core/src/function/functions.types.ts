@@ -1,4 +1,4 @@
-import { PikkuChannel } from '../events/channel/channel.types.js'
+import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import type {
   CoreServices,
   CoreSingletonServices,
@@ -14,7 +14,7 @@ import type {
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Session - The session type, defaults to `CoreUserSession`.
  */
-export type CoreAPIFunction<
+export type CorePikkuFunction<
   In,
   Out,
   ChannelData extends unknown | null = null,
@@ -41,7 +41,7 @@ export type CoreAPIFunction<
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Session - The session type, defaults to `CoreUserSession`.
  */
-export type CoreAPIFunctionSessionless<
+export type CorePikkuFunctionSessionless<
   In,
   Out,
   ChannelData extends unknown | null = null,
@@ -61,30 +61,30 @@ export type CoreAPIFunctionSessionless<
 ) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
 /**
- * Represents a function that checks permissions for a given API operation.
+ * Represents a function that checks permissions for a given operation.
  *
  * @template In - The input type.
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Session - The session type, defaults to `CoreUserSession`.
  */
-export type CoreAPIPermission<
+export type CorePikkuPermission<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session?: Session) => Promise<boolean>
 
-export type CorePermissionGroup<APIPermission = CoreAPIPermission<any>> =
-  | Record<string, APIPermission | APIPermission[]>
+export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
+  | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined
 
 export type CorePikkuFunctionConfig<
-  APIFunction extends
-    | CoreAPIFunction<any, any>
-    | CoreAPIFunctionSessionless<any, any>,
-  APIPermission extends CoreAPIPermission<any> = CoreAPIPermission<any>,
+  PikkuFunction extends
+    | CorePikkuFunction<any, any>
+    | CorePikkuFunctionSessionless<any, any>,
+  PikkuPermission extends CorePikkuPermission<any> = CorePikkuPermission<any>,
 > = {
-  func: APIFunction
+  func: PikkuFunction
   auth?: boolean
-  permissions?: CorePermissionGroup<APIPermission>
+  permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuFunctionMiddleware[]
 }

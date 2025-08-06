@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { APIDocs, PikkuEventTypes } from '@pikku/core'
+import { APIDocs, PikkuWiringTypes } from '@pikku/core'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -107,11 +107,11 @@ export function addMessagesRoutes(
   obj: ts.ObjectLiteralExpression,
   state: InspectorState,
   checker: ts.TypeChecker
-): ChannelMeta['messageRoutes'] {
-  const result: ChannelMeta['messageRoutes'] = {}
+): ChannelMeta['messageWirings'] {
+  const result: ChannelMeta['messageWirings'] = {}
   const onMsgRouteProp = getPropertyAssignmentInitializer(
     obj,
-    'onMessageRoute',
+    'onMessageWiring',
     true,
     checker
   )
@@ -372,7 +372,7 @@ export function addChannel(
 ) {
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
-  if (!ts.isIdentifier(expression) || expression.text !== 'addChannel') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireChannel') return
   const first = args[0]
   if (!first || !ts.isObjectLiteralExpression(first)) return
 
@@ -402,7 +402,7 @@ export function addChannel(
     !matchesFilters(
       filters,
       { tags },
-      { type: PikkuEventTypes.channel, name, filePath },
+      { type: PikkuWiringTypes.channel, name, filePath },
       logger
     )
   )
@@ -448,7 +448,7 @@ export function addChannel(
   }
 
   // nested message-routes
-  const messageRoutes = addMessagesRoutes(obj, state, checker)
+  const messageWirings = addMessagesRoutes(obj, state, checker)
 
   // record into state
   state.channels.files.add(node.getSourceFile().fileName)
@@ -475,7 +475,7 @@ export function addChannel(
         }
       : null,
     message,
-    messageRoutes,
+    messageWirings,
     docs: docs ?? undefined,
     tags: tags ?? undefined,
   }

@@ -13,13 +13,13 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CoreAPIPermission, PikkuMiddleware } from '@pikku/core'
-import { CoreAPIFunction, CoreAPIFunctionSessionless } from '@pikku/core/function'
-import { CoreHTTPFunctionRoute, AssertRouteParams, addHTTPRoute as addCoreHTTPRoute } from '@pikku/core/http'
-import { CoreScheduledTask, addScheduledTask as addCoreScheduledTask } from '@pikku/core/scheduler'
-import { CoreAPIChannel, PikkuChannel, addChannel as addCoreChannel } from '@pikku/core/channel'
-import { CoreQueueWorker, addQueueWorker as addCoreQueueWorker } from '@pikku/core/queue'
-import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, addMCPResource as addCoreMCPResource, addMCPTool as addCoreMCPTool, addMCPPrompt as addCoreMCPPrompt, MCPResourceResponse, MCPToolResponse, MCPPromptResponse, PikkuMCP } from '@pikku/core'
+import { CorePikkuPermission, PikkuMiddleware } from '@pikku/core'
+import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
+import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore } from '@pikku/core/http'
+import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
+import { CoreChannel, PikkuChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
+import { CoreQueueWorker, wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'
+import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, wireMCPResource as wireMCPResourceCore, wireMCPTool as wireMCPToolCore, wireMCPPrompt as wireMCPPromptCore, MCPResourceResponse, MCPToolResponse, MCPPromptResponse, PikkuMCP } from '@pikku/core'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -33,11 +33,11 @@ ${rpcMapTypeImport}
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type APIPermission<In = unknown, RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CoreAPIPermission<In, RequiredServices, ${userSessionTypeName}>
+export type PikkuPermission<In = unknown, RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CorePikkuPermission<In, RequiredServices, ${userSessionTypeName}>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
- * Use this to define reusable middleware that can be applied to multiple routes.
+ * Use this to define reusable middleware that can be applied to multiple HTTP wirings.
  * 
  * @template RequiredServices - The services required for this middleware
  */
@@ -53,7 +53,7 @@ export type APIMiddleware<RequiredServices extends ${singletonServicesTypeName} 
  * @template MCPData - MCP data type (null = optional MCP)
  * @template RequiredServices - Services required by this function
  */
-type APIFunctionSessionless<
+type PikkuFunctionSessionless<
   In = unknown, 
   Out = never, 
   ChannelData = null,  // null means optional channel
@@ -67,7 +67,7 @@ type APIFunctionSessionless<
     ? { mcp?: PikkuMCP }  // Optional MCP
     : { mcp: PikkuMCP }  // Required MCP
   )
-> = CoreAPIFunctionSessionless<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
+> = CorePikkuFunctionSessionless<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
 
 /**
  * A session-aware API function that requires user authentication.
@@ -79,7 +79,7 @@ type APIFunctionSessionless<
  * @template MCPData - MCP data type (null = optional MCP)
  * @template RequiredServices - Services required by this function
  */
-type APIFunction<
+type PikkuFunction<
   In = unknown, 
   Out = never, 
   ChannelData = null,  // null means optional channel
@@ -93,17 +93,17 @@ type APIFunction<
     ? { mcp?: PikkuMCP }  // Optional MCP
     : { mcp: PikkuMCP }  // Required MCP
   )
-> = CoreAPIFunction<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
+> = CorePikkuFunction<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
 
 /**
- * Type definition for HTTP API routes with type-safe path parameters.
+ * Type definition for HTTP API wirings with type-safe path parameters.
  * Supports both authenticated and unauthenticated functions.
  * 
- * @template In - Input type for the route
- * @template Out - Output type for the route
- * @template Route - String literal type for the route path (e.g., "/users/:id")
+ * @template In - Input type for the HTTP wiring
+ * @template Out - Output type for the HTTP wiring
+ * @template Route - String literal type for the HTTP path (e.g., "/users/:id")
  */
-type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Route, APIFunction<In, Out>, APIFunctionSessionless<In, Out>, APIPermission<In>, APIMiddleware>
+type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction<In, Out>, PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, APIMiddleware>
 
 /**
  * Type definition for WebSocket channels with typed data exchange.
@@ -112,13 +112,13 @@ type APIRoute<In, Out, Route extends string> = CoreHTTPFunctionRoute<In, Out, Ro
  * @template ChannelData - Type of data exchanged through the channel
  * @template Channel - String literal type for the channel name
  */
-type APIChannel<ChannelData, Channel extends string> = CoreAPIChannel<ChannelData, Channel, APIFunction<void, unknown> | APIFunction<void, unknown, ChannelData>, APIFunction<void, void> | APIFunction<void, void, ChannelData>, APIFunction<any, any> | APIFunction<any, any, ChannelData>, APIPermission>
+type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelData, Channel, PikkuFunction<void, unknown> | PikkuFunction<void, unknown, ChannelData>, PikkuFunction<void, void> | PikkuFunction<void, void, ChannelData>, PikkuFunction<any, any> | PikkuFunction<any, any, ChannelData>, PikkuPermission>
 
 /**
  * Type definition for scheduled tasks that run at specified intervals.
  * These are sessionless functions that execute based on cron expressions.
  */
-type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>>
+type SchedulerWiring = CoreScheduledTask<PikkuFunctionSessionless<void, void>>
 
 /**
  * Type definition for queue workers that process background jobs.
@@ -126,28 +126,28 @@ type ScheduledTask = CoreScheduledTask<APIFunctionSessionless<void, void>>
  * @template In - Input type for the queue job
  * @template Out - Output type for the queue job
  */
-type QueueWorker<In, Out> = CoreQueueWorker<APIFunctionSessionless<In, Out>>
+type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionSessionless<In, Out>>
 
 /**
  * Type definition for MCP resources that provide data to AI models.
  * 
  * @template In - Input type for the resource request
  */
-type MCPResource<In> = CoreMCPResource<APIFunctionSessionless<In, MCPResourceResponse, null, true>>
+type MCPResourceWiring<In> = CoreMCPResource<PikkuFunctionSessionless<In, MCPResourceResponse, null, true>>
 
 /**
  * Type definition for MCP tools that AI models can invoke.
  * 
  * @template In - Input type for the tool invocation
  */
-type MCPTool<In> = CoreMCPTool<APIFunctionSessionless<In, MCPToolResponse, null, true>>
+type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionSessionless<In, MCPToolResponse, null, true>>
 
 /**
  * Type definition for MCP prompts that provide templates to AI models.
  * 
  * @template In - Input type for the prompt parameters
  */
-type MCPPrompt<In> = CoreMCPPrompt<APIFunctionSessionless<In, MCPPromptResponse, null, true>>
+type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionSessionless<In, MCPPromptResponse, null, true>>
 
 /**
  * Creates a Pikku function that can be either session-aware or sessionless.
@@ -172,14 +172,14 @@ type MCPPrompt<In> = CoreMCPPrompt<APIFunctionSessionless<In, MCPPromptResponse,
  */
 export const pikkuFunc = <In, Out = unknown>(
   func:
-    | APIFunction<In, Out>
+    | PikkuFunction<In, Out>
     | {
-        func: APIFunction<In, Out>
+        func: PikkuFunction<In, Out>
         auth?: true
         name?: string
       }
     | {
-        func: APIFunctionSessionless<In, Out>
+        func: PikkuFunctionSessionless<In, Out>
         auth: false
         name?: string
       }
@@ -209,9 +209,9 @@ export const pikkuFunc = <In, Out = unknown>(
  */
 export const pikkuSessionlessFunc = <In, Out = unknown>(
   func:
-    | APIFunctionSessionless<In, Out>
+    | PikkuFunctionSessionless<In, Out>
     | {
-        func: APIFunctionSessionless<In, Out>
+        func: PikkuFunctionSessionless<In, Out>
         name?: string
       }
 ) => {
@@ -240,9 +240,9 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
  */
 export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>(
   func:
-    | APIFunctionSessionless<void, Out, ChannelData>
+    | PikkuFunctionSessionless<void, Out, ChannelData>
     | {
-        func: APIFunctionSessionless<void, Out, ChannelData>
+        func: PikkuFunctionSessionless<void, Out, ChannelData>
         name?: string
       }
 ) => {
@@ -269,9 +269,9 @@ export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>
  */
 export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
   func:
-    | APIFunctionSessionless<void, void, ChannelData>
+    | PikkuFunctionSessionless<void, void, ChannelData>
     | {
-        func: APIFunction<void, void, ChannelData>
+        func: PikkuFunction<void, void, ChannelData>
         name?: string
       }
 ) => {
@@ -299,9 +299,9 @@ export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
  */
 export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unknown>(
   func:
-    | APIFunctionSessionless<In, Out, ChannelData>
+    | PikkuFunctionSessionless<In, Out, ChannelData>
     | {
-        func: APIFunctionSessionless<In, Out, ChannelData>
+        func: PikkuFunctionSessionless<In, Out, ChannelData>
         name?: string
       }
 ) => {
@@ -326,9 +326,9 @@ export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unkn
  */
 export const pikkuVoidFunc = (
   func:
-    | APIFunctionSessionless<void, void>
+    | PikkuFunctionSessionless<void, void>
     | {
-        func: APIFunctionSessionless<void, void>
+        func: PikkuFunctionSessionless<void, void>
         name?: string
       }
 ) => {
@@ -342,24 +342,24 @@ export const pikkuVoidFunc = (
  * @template Channel - String literal type for the channel name
  * @param channel - Channel definition with connection, disconnection, and message handlers
  */
-export const addChannel = <ChannelData, Channel extends string>(
-  channel: APIChannel<ChannelData, Channel> & AssertRouteParams<ChannelData, Channel>
+export const wireChannel = <ChannelData, Channel extends string>(
+  channel: ChannelWiring<ChannelData, Channel> & AssertHTTPWiringParams<ChannelData, Channel>
 ) => {
-  addCoreChannel(channel as any) // TODO
+  wireChannelCore(channel as any) // TODO
 }
 
 /**
- * Registers an HTTP route with the Pikku framework.
+ * Registers an HTTP wiring with the Pikku framework.
  * 
- * @template In - Input type for the route
- * @template Out - Output type for the route
- * @template Route - String literal type for the route path (e.g., "/users/:id")
- * @param route - Route definition with handler, method, and optional middleware
+ * @template In - Input type for the HTTP wiring
+ * @template Out - Output type for the HTTP wiring
+ * @template Route - String literal type for the HTTP path (e.g., "/users/:id")
+ * @param httpWiring - HTTP wiring definition with handler, method, and optional middleware
  */
-export const addHTTPRoute = <In, Out, Route extends string>(
-  route: APIRoute<In, Out, Route> & AssertRouteParams<In, Route>
+export const wireHTTP = <In, Out, Route extends string>(
+  httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
 ) => {
-  addCoreHTTPRoute(route)
+  wireHTTPCore(httpWiring)
 }
 
 /**
@@ -368,8 +368,8 @@ export const addHTTPRoute = <In, Out, Route extends string>(
  * 
  * @param task - Scheduled task definition with cron expression and handler
  */
-export const addScheduledTask = (task: ScheduledTask) => {
-  addCoreScheduledTask(task as any) // TODO
+export const wireScheduler = (task: SchedulerWiring) => {
+  wireSchedulerCore(task as any) // TODO
 }
 
 /**
@@ -378,8 +378,8 @@ export const addScheduledTask = (task: ScheduledTask) => {
  * 
  * @param queueWorker - Queue worker definition with job handler
  */
-export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
-  addCoreQueueWorker(queueWorker as any) // TODO
+export const wireQueueWorker = (queueWorker: QueueWiring<any, any>) => {
+  wireQueueWorkerCore(queueWorker as any) // TODO
 }
 
 /**
@@ -389,10 +389,10 @@ export const addQueueWorker = (queueWorker: QueueWorker<any, any>) => {
  * @template In - Input type for the resource request
  * @param mcpResource - MCP resource definition with data provider function
  */
-export const addMCPResource = <In>(
-  mcpResource: MCPResource<In>
+export const wireMCPResource = <In>(
+  mcpResource: MCPResourceWiring<In>
 ) => {
-  addCoreMCPResource(mcpResource as any)
+  wireMCPResourceCore(mcpResource as any)
 }
 
 /**
@@ -402,10 +402,10 @@ export const addMCPResource = <In>(
  * @template In - Input type for the tool invocation
  * @param mcpTool - MCP tool definition with action function
  */
-export const addMCPTool = <In>(
-  mcpTool: MCPTool<In>
+export const wireMCPTool = <In>(
+  mcpTool: MCPToolWiring<In>
 ) => {
-  addCoreMCPTool(mcpTool as any)
+  wireMCPToolCore(mcpTool as any)
 }
 
 /**
@@ -415,10 +415,10 @@ export const addMCPTool = <In>(
  * @template In - Input type for the prompt parameters
  * @param mcpPrompt - MCP prompt definition with template function
  */
-export const addMCPPrompt = <In>(
-  mcpPrompt: MCPPrompt<In>
+export const wireMCPPrompt = <In>(
+  mcpPrompt: MCPPromptWiring<In>
 ) => {
-  addCoreMCPPrompt(mcpPrompt as any)
+  wireMCPPromptCore(mcpPrompt as any)
 }
 
 /**
@@ -446,9 +446,9 @@ export const addMCPPrompt = <In>(
  */
 export const pikkuMCPPromptFunc = <In>(
   func:
-    | APIFunctionSessionless<In, MCPPromptResponse>
+    | PikkuFunctionSessionless<In, MCPPromptResponse>
     | {
-        func: APIFunctionSessionless<In, MCPPromptResponse>
+        func: PikkuFunctionSessionless<In, MCPPromptResponse>
         name?: string
       }
 ) => {
@@ -478,9 +478,9 @@ export const pikkuMCPPromptFunc = <In>(
  */
 export const pikkuMCPToolFunc = <In>(
   func:
-    | APIFunctionSessionless<In, MCPToolResponse, null, true>
+    | PikkuFunctionSessionless<In, MCPToolResponse, null, true>
     | {
-      func: APIFunctionSessionless<In, MCPToolResponse, null, true>
+      func: PikkuFunctionSessionless<In, MCPToolResponse, null, true>
       name?: string
     }
 ) => {
@@ -511,9 +511,9 @@ export const pikkuMCPToolFunc = <In>(
  */
 export const pikkuMCPResourceFunc = <In>(
   func:
-    | APIFunctionSessionless<In, MCPResourceResponse, null, true>
+    | PikkuFunctionSessionless<In, MCPResourceResponse, null, true>
     | {
-      func: APIFunctionSessionless<In, MCPResourceResponse, null, true>
+      func: PikkuFunctionSessionless<In, MCPResourceResponse, null, true>
       name?: string
     }
 ) => {

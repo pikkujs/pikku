@@ -6,29 +6,29 @@ import {
   writeFileInDir,
 } from '../src/utils.js'
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
-import { pikkuHTTP } from '../src/events/http/pikku-command-http-routes.js'
-import { pikkuFunctionTypes } from '../src/events/functions/pikku-command-function-types.js'
-import { pikkuHTTPMap } from '../src/events/http/pikku-command-http-map.js'
+import { pikkuHTTP } from '../src/wirings/http/pikku-command-http-routes.js'
+import { pikkuFunctionTypes } from '../src/wirings/functions/pikku-command-function-types.js'
+import { pikkuHTTPMap } from '../src/wirings/http/pikku-command-http-map.js'
 import { existsSync } from 'fs'
-import { pikkuChannelsMap } from '../src/events/channels/pikku-command-channels-map.js'
-import { pikkuChannels } from '../src/events/channels/pikku-command-channels.js'
+import { pikkuChannelsMap } from '../src/wirings/channels/pikku-command-channels-map.js'
+import { pikkuChannels } from '../src/wirings/channels/pikku-command-channels.js'
 import { inspectorGlob } from '../src/inspector-glob.js'
 import chokidar from 'chokidar'
-import { pikkuFunctions } from '../src/events/functions/pikku-command-functions.js'
-import { pikkuServices } from '../src/events/functions/pikku-command-services.js'
-import { pikkuRPC } from '../src/events/rpc/pikku-command-rpc.js'
-import { pikkuRPCMap } from '../src/events/rpc/pikku-command-rpc-map.js'
-import { pikkuQueue } from '../src/events/queue/pikku-command-queue.js'
-import { pikkuQueueMap } from '../src/events/queue/pikku-command-queue-map.js'
-import { pikkuFetch } from '../src/events/fetch/index.js'
-import { pikkuRPCClient } from '../src/events/rpc/pikku-command-rpc-client.js'
-import { pikkuWebSocketTyped } from '../src/events/channels/pikku-command-websocket-typed.js'
-import { pikkuOpenAPI } from '../src/events/http/pikku-command-openapi.js'
-import { pikkuMCP } from '../src/events/mcp/pikku-command-mcp.js'
-import { pikkuQueueService } from '../src/events/queue/pikku-command-queue-service.js'
-import { pikkuScheduler } from '../src/events/scheduler/pikku-command-scheduler.js'
+import { pikkuFunctions } from '../src/wirings/functions/pikku-command-functions.js'
+import { pikkuServices } from '../src/wirings/functions/pikku-command-services.js'
+import { pikkuRPC } from '../src/wirings/rpc/pikku-command-rpc.js'
+import { pikkuRPCMap } from '../src/wirings/rpc/pikku-command-rpc-map.js'
+import { pikkuQueue } from '../src/wirings/queue/pikku-command-queue.js'
+import { pikkuQueueMap } from '../src/wirings/queue/pikku-command-queue-map.js'
+import { pikkuFetch } from '../src/wirings/fetch/index.js'
+import { pikkuRPCClient } from '../src/wirings/rpc/pikku-command-rpc-client.js'
+import { pikkuWebSocketTyped } from '../src/wirings/channels/pikku-command-websocket-typed.js'
+import { pikkuOpenAPI } from '../src/wirings/http/pikku-command-openapi.js'
+import { pikkuMCP } from '../src/wirings/mcp/pikku-command-mcp.js'
+import { pikkuQueueService } from '../src/wirings/queue/pikku-command-queue-service.js'
+import { pikkuScheduler } from '../src/wirings/scheduler/pikku-command-scheduler.js'
 import { pikkuSchemas } from '../src/schemas.js'
-import { pikkuMCPJSON } from '../src/events/mcp/pikku-command-mcp-json.js'
+import { pikkuMCPJSON } from '../src/wirings/mcp/pikku-command-mcp-json.js'
 import { pikkuNext } from '../src/runtimes/nextjs/pikku-command-nextjs.js'
 
 const generateBootstrapFile = async (
@@ -82,7 +82,7 @@ const runAll = async (
   }
   await pikkuFunctionTypes(logger, cliConfig, visitState, options)
 
-  // This is needed since the addHTTPRoute function will add the routes to the visitState
+  // This is needed since the wireHTTP function will add the routes to the visitState
   if (!typesDeclarationFileExists) {
     logger.info(`• Type file first created, inspecting again...\x1b[0m`)
     visitState = await inspectorGlob(
@@ -108,7 +108,7 @@ const runAll = async (
   await pikkuRPC(logger, cliConfig, visitState)
   await pikkuRPCMap(logger, cliConfig, visitState)
   await pikkuRPCClient(logger, cliConfig)
-  allImports.push(cliConfig.rpcMetaFile)
+  allImports.push(cliConfig.rpcWiringMetaFile)
 
   const schemas = await pikkuSchemas(logger, cliConfig, visitState)
   if (schemas) {
@@ -120,7 +120,7 @@ const runAll = async (
     logger,
     cliConfig,
     cliConfig.bootstrapFiles.rpc,
-    [cliConfig.rpcMetaFile],
+    [cliConfig.rpcWiringMetaFile],
     schemas
   )
 
@@ -128,26 +128,29 @@ const runAll = async (
   if (http) {
     await pikkuHTTPMap(logger, cliConfig, visitState)
     await pikkuFetch(logger, cliConfig)
-    allImports.push(cliConfig.httpRoutesMetaFile, cliConfig.httpRoutesFile)
+    allImports.push(cliConfig.httpWiringMetaFile, cliConfig.httpWiringsFile)
 
     await generateBootstrapFile(
       logger,
       cliConfig,
       cliConfig.bootstrapFiles.http,
-      [cliConfig.httpRoutesMetaFile, cliConfig.httpRoutesFile],
+      [cliConfig.httpWiringMetaFile, cliConfig.httpWiringsFile],
       schemas
     )
   }
 
   const scheduler = await pikkuScheduler(logger, cliConfig, visitState)
   if (scheduler) {
-    allImports.push(cliConfig.schedulersMetaFile, cliConfig.schedulersFile)
+    allImports.push(
+      cliConfig.schedulersWiringMetaFile,
+      cliConfig.schedulersWiringFile
+    )
 
     await generateBootstrapFile(
       logger,
       cliConfig,
       cliConfig.bootstrapFiles.scheduler,
-      [cliConfig.schedulersMetaFile, cliConfig.schedulersFile],
+      [cliConfig.schedulersWiringMetaFile, cliConfig.schedulersWiringFile],
       schemas
     )
   }
@@ -156,13 +159,16 @@ const runAll = async (
   if (queues) {
     await pikkuQueueMap(logger, cliConfig, visitState)
     await pikkuQueueService(logger, cliConfig)
-    allImports.push(cliConfig.queueWorkersMetaFile, cliConfig.queueWorkersFile)
+    allImports.push(
+      cliConfig.queueWorkersWiringMetaFile,
+      cliConfig.queueWorkersWiringFile
+    )
 
     await generateBootstrapFile(
       logger,
       cliConfig,
       cliConfig.bootstrapFiles.queue,
-      [cliConfig.queueWorkersMetaFile, cliConfig.queueWorkersFile],
+      [cliConfig.queueWorkersWiringMetaFile, cliConfig.queueWorkersWiringFile],
       schemas
     )
   }
@@ -171,13 +177,16 @@ const runAll = async (
   if (channels) {
     await pikkuChannelsMap(logger, cliConfig, visitState)
     await pikkuWebSocketTyped(logger, cliConfig)
-    allImports.push(cliConfig.channelsMetaFile, cliConfig.channelsFile)
+    allImports.push(
+      cliConfig.channelsWiringMetaFile,
+      cliConfig.channelsWiringFile
+    )
 
     await generateBootstrapFile(
       logger,
       cliConfig,
       cliConfig.bootstrapFiles.channel,
-      [cliConfig.channelsMetaFile, cliConfig.channelsFile],
+      [cliConfig.channelsWiringMetaFile, cliConfig.channelsWiringFile],
       schemas
     )
   }
@@ -185,13 +194,13 @@ const runAll = async (
   const mcp = await pikkuMCP(logger, cliConfig, visitState)
   if (mcp) {
     await pikkuMCPJSON(logger, cliConfig, visitState)
-    allImports.push(cliConfig.mcpEndpointsMetaFile, cliConfig.mcpEndpointsFile)
+    allImports.push(cliConfig.mcpWiringsMetaFile, cliConfig.mcpWiringsFile)
 
     await generateBootstrapFile(
       logger,
       cliConfig,
       cliConfig.bootstrapFiles.mcp,
-      [cliConfig.mcpEndpointsMetaFile, cliConfig.mcpEndpointsFile],
+      [cliConfig.mcpWiringsMetaFile, cliConfig.mcpWiringsFile],
       schemas
     )
   }

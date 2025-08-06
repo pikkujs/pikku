@@ -7,7 +7,7 @@ import {
   PikkuLocalChannelHandler,
 } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { PikkuFetchHTTPRequest, RunRouteOptions } from '@pikku/core/http'
+import { PikkuFetchHTTPRequest, RunHTTPWiringOptions } from '@pikku/core/http'
 import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
 
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
@@ -22,7 +22,7 @@ import { incomingMessageToRequestConvertor } from './incoming-message-to-request
  * @property {CreateSessionServices<any, any, any>} createSessionServices - A function to create session services.
  * @property {boolean} [logRoutes] - Whether to log the routes.
  * @property {boolean} [loadSchemas] - Whether to load all schemas.
- * @property {RunRouteOptions} - Additional options for running the route.
+ * @property {RunHTTPWiringOptions} - Additional options for running the route.
  */
 export type PikkuWSHandlerOptions = {
   server: Server
@@ -31,7 +31,7 @@ export type PikkuWSHandlerOptions = {
   createSessionServices?: CreateSessionServices<any, any, any>
   logRoutes?: boolean
   loadSchemas?: boolean
-} & RunRouteOptions
+} & RunHTTPWiringOptions
 
 const isSerializable = (data: any): boolean => {
   // Check if the data is any kind of Buffer-like object
