@@ -2,10 +2,11 @@ import { DurableObjectState, WebSocket } from '@cloudflare/workers-types'
 import { EventHubService } from '@pikku/core/channel'
 import { Logger } from '@pikku/core/services'
 
-export class CloudflareEventHubService<Data = unknown>
-  implements EventHubService<Data>
+export class CloudflareEventHubService<
+  EventTopics extends Record<string, unknown> = {},
+> implements EventHubService<EventTopics>
 {
-  private subscriptions: Map<string, Set<string>> = new Map()
+  private subscriptions: Map<keyof EventTopics, Set<string>> = new Map()
   private isDirty = false
   private state: 'initial' | 'loading' | 'ready' = 'initial'
   private loadedCallbacks: (() => void)[] = []
@@ -65,20 +66,27 @@ export class CloudflareEventHubService<Data = unknown>
   /**
    * Subscribes a connection to a specific topic.
    */
-  public async subscribe(topic: string, channelId: string): Promise<void> {
+  public async subscribe<T extends keyof EventTopics>(
+    topic: T,
+    channelId: string
+  ): Promise<void> {
     await this.ensureSubscriptionsLoaded()
 
-    if (!this.subscriptions.has(topic)) {
-      this.subscriptions.set(topic, new Set())
+    const topicStr = String(topic)
+    if (!this.subscriptions.has(topicStr)) {
+      this.subscriptions.set(topicStr, new Set())
     }
-    this.subscriptions.get(topic)?.add(channelId)
+    this.subscriptions.get(topicStr)?.add(channelId)
     this.isDirty = true
   }
 
   /**
    * Unsubscribes a connection from a specific topic.
    */
-  public async unsubscribe(topic: string, channelId: string): Promise<void> {
+  public async unsubscribe<T extends keyof EventTopics>(
+    topic: T,
+    channelId: string
+  ): Promise<void> {
     await this.ensureSubscriptionsLoaded()
 
     const channelIds = this.subscriptions.get(topic)
@@ -97,17 +105,17 @@ export class CloudflareEventHubService<Data = unknown>
    * @param data - The data to send to the subscribers.
    * @param isBinary - Indicates if the data is binary.
    */
-  public async publish(
-    topic: string,
+  public async publish<T extends keyof EventTopics>(
+    topic: T,
     fromChannelId: string,
-    data: Data,
+    data: EventTopics[T],
     isBinary: boolean = false
   ) {
     await this.ensureSubscriptionsLoaded()
 
     const channelIds = this.subscriptions.get(topic)
     if (!channelIds) {
-      this.logger.warn(`No subscribers for topic: ${topic}`)
+      this.logger.warn(`No subscribers for topic: ${topic.toString()}`)
       return
     }
     for (const channelId of channelIds) {
@@ -126,7 +134,7 @@ export class CloudflareEventHubService<Data = unknown>
         }
       } catch (error) {
         this.logger.error(
-          `Failed to send message to ${channelId} on topic ${topic}:`,
+          `Failed to send message to ${channelId} on topic ${topic.toString()}:`,
           error
         )
       }

@@ -14,9 +14,13 @@ export interface UserSession extends CoreUserSession {
   userId: string
 }
 
+export type EventHubTypes = {
+  [eventName: string]: any
+}
+
 export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
-  eventHub?: EventHubService<unknown>
+  eventHub?: EventHubService<EventHubTypes>
   secrets?: SecretService
 }
 

@@ -8,8 +8,8 @@ import { getApiGatewayManagementApiClient, sendMessages } from './utils.js'
 import { Logger } from '@pikku/core/services'
 import { APIGatewayEvent } from 'aws-lambda'
 
-export class LambdaEventHubService<Out = unknown>
-  implements EventHubService<Out>
+export class LambdaEventHubService<EventTopics extends Record<string, any> = {}>
+  implements EventHubService<EventTopics>
 {
   private callbackAPI: ApiGatewayManagementApiClient
 
@@ -17,33 +17,43 @@ export class LambdaEventHubService<Out = unknown>
     private logger: Logger,
     event: APIGatewayEvent,
     private channelStore: ChannelStore,
-    private eventHubStore: EventHubStore
+    private eventHubStore: EventHubStore<EventTopics>
   ) {
     this.callbackAPI = getApiGatewayManagementApiClient(logger, event)
   }
 
-  async subscribe(topic: string, channelId: string): Promise<void> {
+  async subscribe<T extends keyof EventTopics>(
+    topic: T,
+    channelId: string
+  ): Promise<void> {
     await this.eventHubStore.subscribe(topic, channelId)
   }
 
-  async unsubscribe(topic: string, channelId: string): Promise<void> {
+  async unsubscribe<T extends keyof EventTopics>(
+    topic: T,
+    channelId: string
+  ): Promise<void> {
     await this.eventHubStore.unsubscribe(topic, channelId)
   }
 
-  async publish(
-    topic: string,
-    fromChannelId: string,
-    data: Out,
+  async publish<T extends keyof EventTopics>(
+    topic: T,
+    channelId: string | null,
+    data: EventTopics[T],
     isBinary?: boolean
   ): Promise<void> {
-    const channelIds = await this.eventHubStore.getChannelIdsForTopic(topic)
-    await this.sendMessages(channelIds, fromChannelId, data)
+    const channelIds = await this.eventHubStore.getChannelIdsForTopic(
+      topic as string
+    )
+    if (channelId) {
+      await this.sendMessages(channelIds, channelId, data, isBinary)
+    }
   }
 
   private async sendMessages(
     channelIds: string[],
     fromChannelId: string,
-    data: Out,
+    data: EventTopics[keyof EventTopics],
     isBinary?: boolean
   ): Promise<void> {
     await sendMessages(

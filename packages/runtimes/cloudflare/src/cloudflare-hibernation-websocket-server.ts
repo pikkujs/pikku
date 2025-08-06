@@ -22,7 +22,7 @@ export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > implements DurableObject
 {
-  private eventHub: CloudflareEventHubService<unknown> | undefined
+  private eventHub: CloudflareEventHubService<{}> | undefined
   private channelStore: CloudflareWebsocketStore
 
   constructor(

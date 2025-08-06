@@ -1,32 +1,38 @@
 import { EventHubService } from '@pikku/core/channel'
 import * as uWS from 'uWebSockets.js'
 
-export class UWSEventHubService<Mappings = unknown>
+export class UWSEventHubService<Mappings extends Record<string, unknown> = {}>
   implements EventHubService<Mappings>
 {
   private sockets: Map<string, uWS.WebSocket<unknown>> = new Map()
 
   constructor() {}
 
-  public async subscribe(topic: string, channelId: string): Promise<void> {
+  public async subscribe<T extends keyof Mappings>(
+    topic: T,
+    channelId: string
+  ): Promise<void> {
     const socket = this.sockets.get(channelId)
-    socket?.subscribe(topic)
+    socket?.subscribe(topic as string)
   }
 
-  public async unsubscribe(topic: string, channelId: string): Promise<void> {
+  public async unsubscribe<T extends keyof Mappings>(
+    topic: T,
+    channelId: string
+  ): Promise<void> {
     const socket = this.sockets.get(channelId)
-    socket?.unsubscribe(topic)
+    socket?.unsubscribe(topic as string)
   }
 
-  public async publish(
-    topic: string,
+  public async publish<T extends keyof Mappings>(
+    topic: T,
     channelId: string,
     message: any,
     isBinary?: boolean
   ): Promise<void> {
     const socket = this.sockets.get(channelId)
     if (socket) {
-      this.forwardPublishMessage(socket, topic, message, isBinary)
+      this.forwardPublishMessage(socket, topic as string, message, isBinary)
     }
   }
 

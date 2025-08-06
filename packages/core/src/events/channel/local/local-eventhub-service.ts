@@ -5,7 +5,7 @@ import { EventHubService } from '../eventhub-service.js'
  * Implementation of the SubscriptionService interface.
  * Manages subscriptions and publishes messages to subscribers.
  */
-export class LocalEventHubService<Data = unknown>
+export class LocalEventHubService<Data extends Record<string, any> = {}>
   implements EventHubService<Data>
 {
   private channels = new Map<string, PikkuChannelHandler>()
@@ -13,7 +13,7 @@ export class LocalEventHubService<Data = unknown>
   /**
    * A map storing topics and their associated connection IDs.
    */
-  private subscriptions: Map<string, Set<string>> = new Map()
+  private subscriptions: Map<keyof Data, Set<string>> = new Map()
 
   /**
    * Subscribes a connection to a specific topic.
@@ -21,7 +21,10 @@ export class LocalEventHubService<Data = unknown>
    * @param topic - The topic to subscribe to.
    * @param channelId - The unique ID of the connection to subscribe.
    */
-  public subscribe(topic: string, channelId: string): void {
+  public subscribe<T extends keyof Data>(
+    topic: T,
+    channelId: string
+  ): void | Promise<void> {
     if (!this.subscriptions.has(topic)) {
       this.subscriptions.set(topic, new Set())
     }
@@ -34,12 +37,15 @@ export class LocalEventHubService<Data = unknown>
    * @param topic - The topic to unsubscribe from.
    * @param channelId - The unique ID of the connection to unsubscribe.
    */
-  public unsubscribe(topic: string, channelId: string): void {
+  public unsubscribe<T extends keyof Data>(
+    topic: T,
+    channelId: string
+  ): void | Promise<void> {
     const topicSubscriptions = this.subscriptions.get(topic)
     if (topicSubscriptions) {
       topicSubscriptions.delete(channelId)
       if (topicSubscriptions.size === 0) {
-        this.subscriptions.delete(topic) // Cleanup empty subscriptions
+        this.subscriptions.delete(topic)
       }
     }
   }
@@ -49,12 +55,12 @@ export class LocalEventHubService<Data = unknown>
    * @param topic - The topic to send data to.
    * @param data - The data to send to the subscribers.
    */
-  public publish(
-    topic: string,
-    channelId: string,
-    data: Data,
+  public publish<T extends keyof Data>(
+    topic: T,
+    channelId: string | null,
+    data: Data[T],
     isBinary?: boolean
-  ): void {
+  ): void | Promise<void> {
     const subscribedChannelIds = this.subscriptions.get(topic)
     if (!subscribedChannelIds) {
       return
