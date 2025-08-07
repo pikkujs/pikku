@@ -26,7 +26,7 @@
     "@aws-sdk/client-secrets-manager": "^3.714.0",
     "@aws-sdk/cloudfront-signer": "^3.723.0",
     "@aws-sdk/s3-request-presigner": "^3.732.0",
-    "@pikku/core": "^0.8.0"
+    "@pikku/core": "^0.9.0"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.732.0",

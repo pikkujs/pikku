@@ -94,6 +94,8 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
+      - run: cd templates/functions && yarn pikku && cd ../..
+
       - name: Create Release Pull Request
         uses: changesets/action@v1
         with:

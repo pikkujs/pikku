@@ -1,5 +1,12 @@
 ## 0.8.0
 
+## 0.9.0
+
+### Breaking Changes
+
+- Normalized all transports to use "wirings" instead of events/routes/transports for consistency across the framework
+
+
 ### Major Features
 
 - **SQS Queue Support**: Added SQS queue worker support

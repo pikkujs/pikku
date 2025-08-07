@@ -3645,7 +3645,7 @@ __metadata:
     "@aws-sdk/client-secrets-manager": ^3.714.0
     "@aws-sdk/cloudfront-signer": ^3.723.0
     "@aws-sdk/s3-request-presigner": ^3.732.0
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3655,7 +3655,7 @@ __metadata:
   dependencies:
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3690,22 +3690,9 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     typescript: "npm:^5.7.2"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
-
-"@pikku/core@npm:^0.8.2":
-  version: 0.8.2
-  resolution: "@pikku/core@npm:0.8.2"
-  dependencies:
-    "@types/cookie": "npm:^0.6.0"
-    "@types/uuid": "npm:^10.0.0"
-    cookie: "npm:^1.0.1"
-    path-to-regexp: "npm:^8.2.0"
-    picoquery: "npm:^2.4.0"
-  checksum: 10/a3804c458b0012670bcae6c9e06c4a2d5b7d1cb5ab99ba4c8534b707442f8425381a0e5d12976b64fb5e165bcdbbe775cca94fb72af1c50af1b9a6e00ef6f1d5
-  languageName: node
-  linkType: hard
 
 "@pikku/core@npm:^0.9.0, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
@@ -3757,7 +3744,7 @@ __metadata:
     raw-body: "npm:^3.0.0"
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3769,7 +3756,7 @@ __metadata:
     fastify-plugin: "npm:^5.0.1"
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3782,7 +3769,7 @@ __metadata:
     fastify: "npm:^5.0.0"
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3812,7 +3799,7 @@ __metadata:
     jose: "npm:^6.0.10"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3826,7 +3813,7 @@ __metadata:
     postgres: "npm:^3.4.5"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   bin:
     pikku-kysely-pure: dist/bin/pikku-kysely-pure.js
   languageName: unknown
@@ -3846,25 +3833,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/modelcontextprotocol@npm:^0.8.2":
-  version: 0.8.2
-  resolution: "@pikku/modelcontextprotocol@npm:0.8.2"
-  dependencies:
-    "@modelcontextprotocol/sdk": "npm:^1.15.0"
-  peerDependencies:
-    "@pikku/core": ^0.8.2
-  checksum: 10/1022e35afbaa78270f886f9222d7ce5e563edd864242ea41bba1290f2376adff27b2b9f347c1f76b8519368029cbbb14b974271f4ba98eea3813cde70fbb7710
-  languageName: node
-  linkType: hard
-
-"@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
+"@pikku/modelcontextprotocol@npm:^0.9.0, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
   version: 0.0.0-use.local
   resolution: "@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol"
   dependencies:
     "@modelcontextprotocol/sdk": "npm:^1.15.0"
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.2
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3945,7 +3921,7 @@ __metadata:
     ioredis: "npm:^5.6.1"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3956,7 +3932,7 @@ __metadata:
     pg-boss: "npm:^10.3.2"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -3969,23 +3945,11 @@ __metadata:
     cron-schedule: "npm:^5.0.4"
     typescript: "npm:^5.6"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
-"@pikku/schema-ajv@npm:^0.8.0":
-  version: 0.8.0
-  resolution: "@pikku/schema-ajv@npm:0.8.0"
-  dependencies:
-    ajv: "npm:^8.17.1"
-    ajv-formats: "npm:^3.0.1"
-  peerDependencies:
-    "@pikku/core": ^0.8.0
-  checksum: 10/5418bb3dee301ef5c05237023477ce07737c2d09755ff81e1454c7fb489691d72a9624f9b58da10945794377e264bbde0cb5b2e8f0deacefc442a510573c616d
-  languageName: node
-  linkType: hard
-
-"@pikku/schema-ajv@workspace:packages/services/schema-ajv":
+"@pikku/schema-ajv@npm:^0.9.0, @pikku/schema-ajv@workspace:packages/services/schema-ajv":
   version: 0.0.0-use.local
   resolution: "@pikku/schema-ajv@workspace:packages/services/schema-ajv"
   dependencies:
@@ -3993,20 +3957,9 @@ __metadata:
     ajv-formats: "npm:^3.0.1"
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
-
-"@pikku/schema-cfworker@npm:^0.8.0":
-  version: 0.8.0
-  resolution: "@pikku/schema-cfworker@npm:0.8.0"
-  dependencies:
-    "@cfworker/json-schema": "npm:^4.1.1"
-  peerDependencies:
-    "@pikku/core": ^0.8.0
-  checksum: 10/09076fd94a9e305ddb8dff9fc4a4f7a55593d0628284ab9c5c65b5143069b4a60099d5ec857693f8033bd5b882c60ca037fdcd1610030186af01e130f7a4f0c7
-  languageName: node
-  linkType: hard
 
 "@pikku/schema-cfworker@npm:^0.9.0, @pikku/schema-cfworker@workspace:packages/services/schema-cfworker":
   version: 0.0.0-use.local
@@ -4015,7 +3968,7 @@ __metadata:
     "@cfworker/json-schema": "npm:^4.1.1"
     typescript: "npm:^5.6.3"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -4085,7 +4038,7 @@ __metadata:
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     "@pikku/cloudflare": "npm:^0.9.0"
-    "@pikku/core": "npm:^0.8.2"
+    "@pikku/core": "npm:^0.9.0"
     "@types/node": "npm:^22"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^4.6.0"
@@ -4098,7 +4051,7 @@ __metadata:
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20241218.0"
     "@pikku/cloudflare": "npm:^0.9.0"
-    "@pikku/core": "npm:^0.8.2"
+    "@pikku/core": "npm:^0.9.0"
     "@types/node": "npm:^22"
     typescript: "npm:^5.5.2"
     wrangler: "npm:^4.6.0"
@@ -4173,7 +4126,7 @@ __metadata:
     "@pikku/core": "npm:^0.9.0"
     "@pikku/fetch": "npm:^0.9.0"
     "@pikku/jose": "npm:^0.9.0"
-    "@pikku/schema-cfworker": "npm:^0.8.0"
+    "@pikku/schema-cfworker": "npm:^0.9.0"
     "@pikku/websocket": "npm:^0.9.0"
     "@types/node": "npm:^22"
     typescript: "npm:^5.6"
@@ -4186,7 +4139,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.9.0"
     "@pikku/core": "npm:^0.9.0"
-    "@pikku/modelcontextprotocol": "npm:^0.8.2"
+    "@pikku/modelcontextprotocol": "npm:^0.9.0"
     "@types/node": "npm:^20.0.0"
     tsx: "npm:^4.0.0"
     typescript: "npm:^5.0.0"
@@ -4258,7 +4211,7 @@ __metadata:
     typescript: "npm:^5.6.3"
     uWebSockets.js: "uNetworking/uWebSockets.js#v20.49.0"
   peerDependencies:
-    "@pikku/core": ^0.8.0
+    "@pikku/core": ^0.9.0
   languageName: unknown
   linkType: soft
 
@@ -10022,7 +9975,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.9.0"
     "@pikku/jose": "npm:^0.9.0"
-    "@pikku/schema-ajv": "npm:^0.8.0"
+    "@pikku/schema-ajv": "npm:^0.9.0"
     typescript: "npm:^5.7.3"
   languageName: unknown
   linkType: soft
