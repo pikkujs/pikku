@@ -167,7 +167,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create Template
-        run: npm --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../../../test-app --install --package-manager ${{ matrix.package-manager}}
+        run: npm create pikku@latest -- --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../test-app --install --package-manager ${{ matrix.package-manager}}
       
       - name: Sync template repository
         run: ./scripts/sync-template-repos.sh ${{ matrix.template }} --apply --token ${{ env.SYNC_TOKEN_GITHUB }}
