@@ -133,6 +133,7 @@ interface CliOptions {
   install: boolean
   packageManager: PackageManager
   yarnLink?: string
+  stackblitz?: boolean
 }
 
 // 🏗 Add CLI Flags with Commander.js
@@ -143,6 +144,7 @@ program
   .option('-i, --install', 'Install dependencies')
   .option('-p, --package-manager <packageManager>', 'Package manager')
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
+  .option('--stackblitz', 'Add StackBlitz configuration')
   .parse(process.argv)
 
 const cliOptions = program.opts()
@@ -241,7 +243,21 @@ async function setupTemplate(cliOptions: CliOptions) {
     cleanPikkuConfig(targetPath)
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
-    updatePackageJSONScripts(targetPath, name, packageManager)
+    updatePackageJSONScripts(
+      targetPath,
+      name,
+      packageManager,
+      supportedFeatures,
+      cliOptions.stackblitz
+    )
+
+    if (cliOptions.stackblitz) {
+      try {
+        unlinkSync(path.join(targetPath, 'run-tests.sh'))
+      } catch {
+        // File doesn't exist, ignore
+      }
+    }
 
     if (packageManager === 'yarn') {
       writeFileSync(path.join(targetPath, 'yarn.lock'), '')
@@ -385,6 +401,7 @@ async function run() {
     install,
     packageManager,
     yarnLink: cliOptions.yarnLink,
+    stackblitz: cliOptions.stackblitz,
   }
 
   if (template === 'yarn-workspace') {

@@ -241,7 +241,7 @@ describe('Functions Test Suite', () => {
     }
     fs.writeFileSync(pkgPath, JSON.stringify(pkgContent, null, 2), 'utf-8')
 
-    updatePackageJSONScripts(testDir, 'newApp', 'yarn')
+    updatePackageJSONScripts(testDir, 'newApp', 'yarn', ['http'])
 
     const updatedPackage = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
     assert.strictEqual(

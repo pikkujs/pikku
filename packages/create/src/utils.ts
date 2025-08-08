@@ -246,7 +246,9 @@ export function filterFilesByFeatures(
 export function updatePackageJSONScripts(
   targetPath: string,
   appName: string,
-  packageManager: string
+  packageManager: string,
+  supportedFeatures: string[],
+  stackblitz?: boolean
 ): void {
   const packageFilePath = path.join(targetPath, 'package.json')
   let packageJsonString = fs.readFileSync(packageFilePath, 'utf-8')
@@ -260,14 +262,40 @@ export function updatePackageJSONScripts(
   delete packageJson.packageManager
 
   packageJson.scripts.postinstall = 'pikku all'
-  packageJson.scripts.test = packageJson.scripts['test:template']
-  delete packageJson.scripts['test:template']
+
+  if (!stackblitz) {
+    packageJson.scripts.test = packageJson.scripts['test:template']
+    delete packageJson.scripts['test:template']
+  }
+
+  if (stackblitz) {
+    // For stackblitz, create test script based on supported features
+    const testCommands: string[] = []
+    if (supportedFeatures.includes('http')) {
+      testCommands.push('npm run test:http')
+    }
+    if (supportedFeatures.includes('channel')) {
+      testCommands.push('npm run test:websocket')
+    }
+    if (supportedFeatures.includes('rpc')) {
+      testCommands.push('npm run test:rpc')
+    }
+    packageJson.scripts.test = testCommands.join(' && ')
+  }
 
   if (packageManager === 'yarn') {
-    packageJson.packageManager = 'yarn@4.8.1'
+    packageJson.packageManager = 'yarn@4.9.2'
   }
 
   packageJson.scripts.pikku = 'pikku all'
+
+  if (stackblitz) {
+    packageJson.scripts.stackblitz =
+      "concurrently 'pikku --watch' 'npm run dev'"
+    packageJson.stackblitz = {
+      startCommand: 'npm run stackblitz',
+    }
+  }
 
   packageJson.name = appName
   fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
