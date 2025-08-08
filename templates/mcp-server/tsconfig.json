@@ -6,6 +6,6 @@
     "resolveJsonModule": true,
     "module": "node18"
   },
-  "include": ["src/", ".pikku/*"],
+  "include": ["src/", ".pikku/*", "client/mcp.ts", "client/mcp-server.test.ts"],
   "files": []
 }

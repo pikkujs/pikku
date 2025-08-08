@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { PikkuMCPTestClient } from './pikku-mcp-client.js'
+import { PikkuMCPTestClient } from './mcp.js'
 
 // Test configuration - adjust based on your MCP server setup
 const TEST_SERVER_COMMAND = 'node'

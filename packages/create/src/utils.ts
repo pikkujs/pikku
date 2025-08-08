@@ -190,6 +190,18 @@ const FILE_FEATURE_MAPPING = {
 } as const
 
 /**
+ * Maps client file names to feature types for filtering
+ */
+const CLIENT_FEATURE_MAPPING = {
+  'http.ts': ['http'],
+  'mcp.ts': ['mcp'],
+  'queue-worker.ts': ['queue'],
+  'rpc.ts': ['http'],
+  'scheduled-task.ts': ['scheduled'],
+  'websocket.ts': ['channel'],
+} as const
+
+/**
  * Filters files in functionsPath based on supported features
  */
 export function filterFilesByFeatures(
@@ -197,40 +209,85 @@ export function filterFilesByFeatures(
   supportedFeatures: string[]
 ): void {
   const srcPath = path.join(functionsPath, 'src')
-  if (!fs.existsSync(srcPath)) return
+  const clientPath = path.join(functionsPath, 'client')
 
   const filesToRemove: string[] = []
 
-  fs.readdirSync(srcPath).forEach((file) => {
-    const filePath = path.join(srcPath, file)
-    if (fs.statSync(filePath).isFile()) {
-      let shouldKeepFile = false
+  // Filter src directory files
+  if (fs.existsSync(srcPath)) {
+    fs.readdirSync(srcPath).forEach((file) => {
+      const filePath = path.join(srcPath, file)
+      if (fs.statSync(filePath).isFile()) {
+        let shouldKeepFile = false
 
-      // Check if the file matches any pattern for supported features
-      for (const [pattern, features] of Object.entries(FILE_FEATURE_MAPPING)) {
-        if (file.includes(pattern)) {
-          // Check if any of the file's features are supported
-          if (features.some((feature) => supportedFeatures.includes(feature))) {
-            shouldKeepFile = true
+        // Check if the file matches any pattern for supported features
+        for (const [pattern, features] of Object.entries(
+          FILE_FEATURE_MAPPING
+        )) {
+          if (file.includes(pattern)) {
+            // Check if any of the file's features are supported
+            if (
+              features.some((feature) => supportedFeatures.includes(feature))
+            ) {
+              shouldKeepFile = true
+            }
+            break
           }
-          break
+        }
+
+        // Keep files that don't match any pattern (like services.ts)
+        const hasKnownPattern = Object.keys(FILE_FEATURE_MAPPING).some(
+          (pattern) => file.includes(pattern)
+        )
+
+        if (!hasKnownPattern) {
+          shouldKeepFile = true
+        }
+
+        if (!shouldKeepFile) {
+          filesToRemove.push(filePath)
         }
       }
+    })
+  }
 
-      // Keep files that don't match any pattern (like services.ts)
-      const hasKnownPattern = Object.keys(FILE_FEATURE_MAPPING).some(
-        (pattern) => file.includes(pattern)
-      )
+  // Filter client directory files
+  if (fs.existsSync(clientPath)) {
+    fs.readdirSync(clientPath).forEach((file) => {
+      const filePath = path.join(clientPath, file)
+      if (fs.statSync(filePath).isFile()) {
+        let shouldKeepFile = false
 
-      if (!hasKnownPattern) {
-        shouldKeepFile = true
+        // Check if the client file matches supported features
+        for (const [clientFile, features] of Object.entries(
+          CLIENT_FEATURE_MAPPING
+        )) {
+          if (file === clientFile) {
+            // Check if any of the file's features are supported
+            if (
+              features.some((feature) => supportedFeatures.includes(feature))
+            ) {
+              shouldKeepFile = true
+            }
+            break
+          }
+        }
+
+        // Keep files that don't match any known client pattern
+        const hasKnownClientPattern = Object.keys(
+          CLIENT_FEATURE_MAPPING
+        ).includes(file)
+
+        if (!hasKnownClientPattern) {
+          shouldKeepFile = true
+        }
+
+        if (!shouldKeepFile) {
+          filesToRemove.push(filePath)
+        }
       }
-
-      if (!shouldKeepFile) {
-        filesToRemove.push(filePath)
-      }
-    }
-  })
+    })
+  }
 
   // Remove filtered files
   filesToRemove.forEach((filePath) => {
