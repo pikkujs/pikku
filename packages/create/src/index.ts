@@ -38,8 +38,28 @@ const packageManagers = ['npm', 'yarn', 'pnpm'] as const
 // type Feature = "http" | "scheduled" | "channel" | "fullstack"
 const templates = [
   {
+    template: 'aws-lambda',
+    description: 'An aws-lambda template for HTTP and Scheduled tasks',
+    supports: ['http', 'scheduled'],
+  },
+  {
+    template: 'aws-lambda-websocket',
+    description: 'A Serverless WebSocket template',
+    supports: ['channel'],
+  },
+  {
     template: 'cloudflare-websocket',
     description: 'A Cloudflare Workers WebSocket template',
+    supports: ['channel'],
+  },
+  {
+    template: 'bullmq',
+    description: 'A BullMQ Redis-based queue template',
+    supports: ['queue'],
+  },
+  {
+    template: 'cloudflare-websocket',
+    description: 'A Cloudflare Websocket template',
     supports: ['channel'],
   },
   {
@@ -68,9 +88,9 @@ const templates = [
     supports: ['http'],
   },
   {
-    template: 'functions',
-    description: 'A Functions template',
-    supports: ['http', 'channel', 'scheduled', 'mcp', 'queue'],
+    template: 'mcp-server',
+    description: 'A Model Context Protocol server template',
+    supports: ['mcp'],
   },
   {
     template: 'nextjs',
@@ -81,26 +101,6 @@ const templates = [
     template: 'nextjs-full',
     description: 'A Nextjs simple book application',
     supports: ['http', 'fullstack'],
-  },
-  {
-    template: 'aws-lambda',
-    description: 'An aws-lambda template for HTTP and Scheduled tasks',
-    supports: ['http', 'scheduled'],
-  },
-  {
-    template: 'aws-lambda-websocket',
-    description: 'A Serverless WebSocket template',
-    supports: ['channel'],
-  },
-  {
-    template: 'bullmq',
-    description: 'A BullMQ Redis-based queue template',
-    supports: ['queue'],
-  },
-  {
-    template: 'mcp-server',
-    description: 'A Model Context Protocol server template',
-    supports: ['mcp'],
   },
   {
     template: 'pg-boss',
@@ -119,7 +119,7 @@ const templates = [
   },
   {
     template: 'yarn-workspace',
-    description: 'The yarn workspace',
+    description: 'The official yarn workspace',
     supports: ['http', 'channel', 'scheduled', 'fullstack'],
   },
 ] as const
