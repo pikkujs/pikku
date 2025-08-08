@@ -1,5 +1,12 @@
 # @pikku/jose
 
+## 0.9.1
+
+### Fix
+
+- Republishing due to dev dependencies being out of sync
+
+
 ## 0.9.0
 
 ### Breaking Changes
