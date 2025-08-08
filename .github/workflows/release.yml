@@ -151,15 +151,20 @@ jobs:
       matrix:
         version: [20]
         template: [
-            # express,
-            express-middleware,
-            # fastify,
-            fastify-plugin,
-            uws,
-            # aws-lambda,
+            aws-lambda,
+            aws-lambda-websocket,
+            bullmq,
+            cloudflare-websocket,
             cloudflare-workers,
+            express,
+            express-middleware,
+            fastify,
+            fastify-plugin,
+            mcp-server,
             nextjs,
-            # mcp-server,
+            pg-boss,
+            uws,
+            ws
           ]
     steps:
       - name: Check out repository code
