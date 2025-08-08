@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.1
+
+### Patch Changes
+
+- fdb1593: core: bumping everything with a patch to sync up the major release inconsistencies in dependencies
+
 ### Breaking Changes
 
 - Normalized all transports to use "wirings" instead of events/routes/transports for consistency across the framework

@@ -1,5 +1,11 @@
 # @pikku/fetch
 
+## 0.9.1
+
+### Patch Changes
+
+- fdb1593: core: bumping everything with a patch to sync up the major release inconsistencies in dependencies
+
 ## 0.9.0
 
 ### Breaking Changes
