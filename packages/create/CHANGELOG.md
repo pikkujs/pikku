@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.9.3
+
+### Patch Changes
+
+- 6ff2f99: fix: stackblitz doesnt like hidden folders, so generate pikku in another
+
 ## 0.9.2
 
 ### Patch Changes
