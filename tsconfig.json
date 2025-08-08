@@ -28,7 +28,11 @@
       "@pikku/core": ["./packages/core"],
       "@pikku/core/*": ["./packages/core/*"],
       "@pikku/inspector": ["./packages/inspector"],
-      "@pikku/inspector/*": ["./packages/inspector/*"]
+      "@pikku/inspector/*": ["./packages/inspector/*"],
+      "@pikku/queue-bullmq": ["./packages/services/queue-bullmq"],
+      "@pikku/queue-bullmq/*": ["./packages/services/queue-bullmq/*"],
+      "@pikku/queue-pg-boss": ["./packages/services/queue-pg-boss"],
+      "@pikku/queue-pg-boss/*": ["./packages/services/queue-pg-boss/*"]
     }
   },
   "exclude": ["node_modules", ".typedocs"]
