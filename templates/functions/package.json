@@ -19,8 +19,8 @@
     "tsc": "tsc",
     "pikku": "pikku",
     "test:template": "bash run-tests.sh",
-    "test:http": "npx tests/http.test.ts",
-    "test:rpc": "npx tests/rpc.test.ts",
-    "test:websocket": "npx tests/websocket.test.ts"
+    "test:http": "npx tsx clients/http.ts",
+    "test:rpc": "npx tsx clients/rpc.ts",
+    "test:websocket": "npx text clients/websocket.ts"
   }
 }

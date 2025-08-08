@@ -6,7 +6,6 @@
 
 - Normalized all transports to use "wirings" instead of events/routes/transports for consistency across the framework
 
-
 ## 0.1.1
 
 ### Patch Changes
