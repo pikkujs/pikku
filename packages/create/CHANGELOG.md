@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.9.1
+
+### Patch Changes
+
+- bb5803b: feat: adding stackblitz compatability
+
 ## 0.9.0
 
 ### Breaking Changes
