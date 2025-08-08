@@ -7,9 +7,13 @@ const start = Date.now()
 
 async function check() {
   try {
-    const res = await pikkuFetch.fetch('/hello-world', 'GET', null)
+    const res = await pikkuFetch.fetch('/', 'GET', null)
     if (res.status === 200) {
       console.log('✅ HTTP test passed with 200 OK')
+
+      const data = await pikkuFetch.get('/hello-world')
+      console.log('Data from /hello-world:', data)
+
       process.exit(0)
     } else {
       console.log(`Still failing (status ${res.status}), retrying...`)
