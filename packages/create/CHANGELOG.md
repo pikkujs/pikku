@@ -1,5 +1,13 @@
 # create-pikku
 
+## 0.9.2
+
+### Patch Changes
+
+- fdb1593: feat: adding silent option to cli
+- fdb1593: core: bumping everything with a patch to sync up the major release inconsistencies in dependencies
+- 22a1d7a: feat: adding remaining templates
+
 ## 0.9.1
 
 ### Patch Changes

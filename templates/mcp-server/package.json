@@ -1,6 +1,6 @@
 {
   "name": "@pikku/templates-mcp-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Pikku Model Context Protocol (MCP) Server Template",
   "type": "module",
   "scripts": {
@@ -10,13 +10,13 @@
     "test": "bash run-tests.sh"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.9.0",
+    "@pikku/cli": "^0.9.1",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@pikku/core": "^0.9.0",
-    "@pikku/modelcontextprotocol": "^0.9.0"
+    "@pikku/core": "^0.9.1",
+    "@pikku/modelcontextprotocol": "^0.9.1"
   }
 }

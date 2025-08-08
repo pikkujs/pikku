@@ -1,5 +1,15 @@
 # @pikku/cli
 
+## 0.9.1
+
+### Patch Changes
+
+- fdb1593: feat: adding silent option to cli
+- fdb1593: core: bumping everything with a patch to sync up the major release inconsistencies in dependencies
+- Updated dependencies [fdb1593]
+  - @pikku/core@0.9.1
+  - @pikku/inspector@0.9.1
+
 ## 0.9.0
 
 ### Breaking Changes
