@@ -82,14 +82,20 @@ export function mergeJsonFiles(
 /**
  * Replaces all occurrences of '../functions' with './' in all project files.
  */
-export function replaceFunctionReferences(targetPath: string): void {
+export function replaceFunctionReferences(
+  targetPath: string,
+  stackblitz?: boolean
+): void {
+  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
+
   const replaceInFile = (filePath: string): void => {
     let content = fs.readFileSync(filePath, 'utf-8')
     const updatedContent = content
       .replaceAll('../../functions/src/', './')
       .replaceAll('../functions/src/', './')
-      .replaceAll('../../functions/.pikku/', '../.pikku/')
+      .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
       .replaceAll('../functions/types/', './types/')
+      .replaceAll('.pikku', pikkuDir)
     fs.writeFileSync(filePath, updatedContent)
   }
 
@@ -110,11 +116,13 @@ export function replaceFunctionReferences(targetPath: string): void {
 /**
  * Cleans up the tsconfig.json file
  */
-export function cleanTSConfig(targetPath: string): void {
+export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
+  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
+
   const tsconfigFile = path.join(targetPath, 'tsconfig.json')
   const tsconfig = JSON.parse(fs.readFileSync(tsconfigFile, 'utf-8'))
   delete tsconfig.extends
-  tsconfig.includes?.push('.pikku/**/*')
+  tsconfig.includes?.push(`${pikkuDir}/**/*`)
   if (tsconfig.files?.length === 0) {
     delete tsconfig.files
   }

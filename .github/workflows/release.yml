@@ -51,7 +51,7 @@ jobs:
             # fastify,
             fastify-plugin,
             uws,
-            aws-lambda,
+            # aws-lambda,
             cloudflare-workers,
             nextjs,
             mcp-server,

@@ -15,7 +15,7 @@ export const pikkuRPCClient: PikkuCommandWithoutState = async (
     'Generating RPC wrapper',
     'Generated RPC wrapper',
     [
-      rpcWiringsFile === undefined,
+      rpcWiringsFile === undefined || rpcWiringsFile === null,
       "rpcWiringsFile isn't set in the pikku config",
     ],
     async () => {
