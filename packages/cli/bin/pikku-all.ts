@@ -262,7 +262,11 @@ const watch = (
     watcher.on('ready', async () => {
       const handle = async () => {
         try {
+          const start = Date.now()
           await runAll(logger, cliConfig, options)
+          if (options.silent) {
+            logger.timing(`✓ Generated in ${Date.now() - start}ms`)
+          }
         } catch (err) {
           console.error(err)
           console.info()
@@ -291,7 +295,7 @@ const watch = (
 }
 
 export const action = async (options: PikkuCLIOptions): Promise<void> => {
-  const logger = new CLILogger({ logLogo: true })
+  const logger = new CLILogger({ logLogo: true, silent: options.silent })
 
   const cliConfig = await getPikkuCLIConfig(
     options.config,
@@ -332,5 +336,6 @@ export const all = (program: Command): void => {
     )
     .option('--directories <directories...>', 'Which directories to filter by')
     .option('-w | --watch', 'Whether to watch file changes')
+    .option('-s | --silent', 'Silent mode - only show errors')
     .action(action)
 }

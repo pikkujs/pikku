@@ -17,20 +17,35 @@ const logo = `
 `
 
 export class CLILogger {
-  constructor({ logLogo }: { logLogo: boolean }) {
-    if (logLogo) {
+  private silent: boolean
+
+  constructor({
+    logLogo,
+    silent = false,
+  }: {
+    logLogo: boolean
+    silent?: boolean
+  }) {
+    this.silent = silent
+    if (logLogo && !silent) {
       this.logPikkuLogo()
     }
   }
 
   primary(message: string) {
-    console.log(chalk.green(message))
+    if (!this.silent) {
+      console.log(chalk.green(message))
+    }
   }
   success(message: string) {
-    console.log(chalk.green(message))
+    if (!this.silent) {
+      console.log(chalk.green(message))
+    }
   }
   info(message: string) {
-    console.log(chalk.blue(message))
+    if (!this.silent) {
+      console.log(chalk.blue(message))
+    }
   }
   error(message: string) {
     console.error(chalk.red(message))
@@ -39,9 +54,13 @@ export class CLILogger {
     console.error(chalk.yellow(message))
   }
   debug(message: string) {
-    if (process.env.DEBUG) {
+    if (process.env.DEBUG && !this.silent) {
       console.log(chalk.gray(message))
     }
+  }
+
+  timing(message: string) {
+    console.log(chalk.gray(message))
   }
 
   private logPikkuLogo() {
@@ -129,6 +148,7 @@ export interface PikkuCLIOptions {
   tags?: string[]
   types?: string[]
   directories?: string[]
+  silent?: boolean
 }
 
 const getMetaTypes = (

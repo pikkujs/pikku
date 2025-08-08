@@ -348,7 +348,7 @@ export function updatePackageJSONScripts(
 
   if (stackblitz) {
     packageJson.scripts.stackblitz =
-      "concurrently 'pikku --watch' 'npm run dev'"
+      "concurrently 'pikku --watch --silent' 'npm run dev'"
     packageJson.stackblitz = {
       startCommand: 'npm run stackblitz',
     }
