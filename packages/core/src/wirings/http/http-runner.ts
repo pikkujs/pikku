@@ -44,7 +44,7 @@ import { rpcService } from '../rpc/rpc-runner.js'
  * @param {PikkuMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
  * @param {PikkuMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
  */
-export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
+export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   routeOrMiddleware: PikkuMiddleware[] | string,
   middleware?: PikkuMiddleware[]
 ) => {
