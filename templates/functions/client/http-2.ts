@@ -12,7 +12,7 @@ async function check() {
       console.log('✅ HTTP test passed with 200 OK')
 
       const data = await pikkuFetch.get('/hello-world')
-      console.log('Data from /hello-world:', data)
+      console.log('Data from /hello-world', data)
 
       process.exit(0)
     } else {
