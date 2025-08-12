@@ -27,7 +27,7 @@ export class UWSEventHubService<Mappings extends Record<string, unknown> = {}>
   public async publish<T extends keyof Mappings>(
     topic: T,
     channelId: string,
-    message: any,
+    message: Mappings[T],
     isBinary?: boolean
   ): Promise<void> {
     const socket = this.sockets.get(channelId)

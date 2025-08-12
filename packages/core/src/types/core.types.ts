@@ -124,7 +124,7 @@ export type PikkuFunctionMiddleware<
 /**
  * A function that can wrap an interaction and be called before or after
  */
-export type PikkuMiddleware<
+export type CorePikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (

@@ -3,7 +3,7 @@ import {
   CoreSingletonServices,
   PikkuFunctionMiddleware,
   PikkuInteraction,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
 } from './types/core.types.js'
 
 /**
@@ -25,8 +25,8 @@ import {
  */
 export const runMiddleware = async <
   Middleware extends
-    | PikkuMiddleware
-    | PikkuFunctionMiddleware = PikkuMiddleware,
+    | CorePikkuMiddleware
+    | PikkuFunctionMiddleware = CorePikkuMiddleware,
 >(
   services: CoreSingletonServices & {
     userSession?: UserSessionService<any>

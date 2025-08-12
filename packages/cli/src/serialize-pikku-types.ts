@@ -41,7 +41,7 @@ export type PikkuPermission<In = unknown, RequiredServices extends ${singletonSe
  * 
  * @template RequiredServices - The services required for this middleware
  */
-export type APIMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = PikkuMiddleware<RequiredServices, ${userSessionTypeName}>
+export type PikkuMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = PikkuMiddleware<RequiredServices, ${userSessionTypeName}>
 
 /**
  * A sessionless API function that doesn't require user authentication.
@@ -103,7 +103,7 @@ type PikkuFunction<
  * @template Out - Output type for the HTTP wiring
  * @template Route - String literal type for the HTTP path (e.g., "/users/:id")
  */
-type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction<In, Out>, PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, APIMiddleware>
+type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction<In, Out>, PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 
 /**
  * Type definition for WebSocket channels with typed data exchange.

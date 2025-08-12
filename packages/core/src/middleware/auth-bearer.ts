@@ -3,7 +3,7 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CoreUserSession,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
 } from '../types/core.types.js'
 
 /**
@@ -26,8 +26,8 @@ export const authBearer = <
     services: SingletonServices,
     token: string
   ) => Promise<UserSession> | UserSession
-} = {}): PikkuMiddleware => {
-  const middleware: PikkuMiddleware = async (services, { http }, next) => {
+} = {}): CorePikkuMiddleware => {
+  const middleware: CorePikkuMiddleware = async (services, { http }, next) => {
     const { userSession: userSessionService, jwt: jwtService } = services as any
     // Skip if session already exists.
     if (!http?.request || userSessionService.get()) {

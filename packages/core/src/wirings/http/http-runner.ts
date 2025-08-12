@@ -10,7 +10,7 @@ import {
 } from './http.types.js'
 import {
   CoreUserSession,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
   SessionServices,
 } from '../../types/core.types.js'
 import { match } from 'path-to-regexp'
@@ -40,13 +40,13 @@ import { rpcService } from '../rpc/rpc-runner.js'
  * is applied only to that route. Otherwise, if an array is provided, it is treated
  * as global middleware (applied to all routes).
  *
- * @template APIMiddleware The middleware type.
- * @param {APIMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
- * @param {APIMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
+ * @template PikkuMiddleware The middleware type.
+ * @param {PikkuMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
+ * @param {PikkuMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
  */
-export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
-  routeOrMiddleware: APIMiddleware[] | string,
-  middleware?: APIMiddleware[]
+export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
+  routeOrMiddleware: PikkuMiddleware[] | string,
+  middleware?: PikkuMiddleware[]
 ) => {
   const middlewareStore = pikkuState('http', 'middleware')
 
@@ -90,8 +90,8 @@ export const addMiddleware = <APIMiddleware extends PikkuMiddleware>(
  * @template PikkuFunction Type for the route handler function.
  * @template PikkuFunctionSessionless Type for a sessionless handler.
  * @template PikkuPermissionGroup Type representing required permissions.
- * @template APIMiddleware Middleware type to be used with the route.
- * @param {CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction, PikkuFunctionSessionless, PikkuPermission, APIMiddleware>} httpWiring - The HTTP wiring configuration object.
+ * @template PikkuMiddleware Middleware type to be used with the route.
+ * @param {CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware>} httpWiring - The HTTP wiring configuration object.
  */
 export const wireHTTP = <
   In,
@@ -100,7 +100,7 @@ export const wireHTTP = <
   PikkuFunction,
   PikkuFunctionSessionless,
   PikkuPermissionGroup,
-  APIMiddleware,
+  PikkuMiddleware,
 >(
   httpWiring: CoreHTTPFunctionWiring<
     In,
@@ -109,7 +109,7 @@ export const wireHTTP = <
     PikkuFunction,
     PikkuFunctionSessionless,
     PikkuPermissionGroup,
-    APIMiddleware
+    PikkuMiddleware
   >
 ) => {
   const httpMeta = pikkuState('http', 'meta')

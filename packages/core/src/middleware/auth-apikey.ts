@@ -2,7 +2,7 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CoreUserSession,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
 } from '../types/core.types.js'
 
 /**
@@ -32,7 +32,7 @@ export const authAPIKey = <
       jwt?: false
     }
 )) => {
-  const middleware: PikkuMiddleware = async (services, { http }, next) => {
+  const middleware: CorePikkuMiddleware = async (services, { http }, next) => {
     const { userSession: userSessionService, jwt: jwtService } = services as any
     if (!http?.request || userSessionService.get()) {
       return next()

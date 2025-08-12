@@ -6,7 +6,7 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
   CreateSessionServices,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
 } from '../../types/core.types.js'
 import type {
   CorePikkuFunction,
@@ -119,7 +119,7 @@ export type CoreHTTPFunctionWiring<
   PikkuFunction = CorePikkuFunction<In, Out>,
   PikkuFunctionSessionless = CorePikkuFunctionSessionless<In, Out>,
   PikkuPermission = CorePikkuPermission<In>,
-  APIMiddleware = PikkuMiddleware,
+  PikkuMiddleware = CorePikkuMiddleware,
 > =
   | (CoreHTTPFunction & {
       route: R
@@ -128,7 +128,7 @@ export type CoreHTTPFunctionWiring<
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       tags?: string[]
-      middleware?: APIMiddleware[]
+      middleware?: PikkuMiddleware[]
       sse?: undefined
     })
   | (CoreHTTPFunction & {
@@ -138,7 +138,7 @@ export type CoreHTTPFunctionWiring<
       permissions?: undefined
       auth?: false
       tags?: string[]
-      middleware?: APIMiddleware[]
+      middleware?: PikkuMiddleware[]
       sse?: undefined
     })
   | (CoreHTTPFunction & {
@@ -149,7 +149,7 @@ export type CoreHTTPFunctionWiring<
       auth?: true
       sse?: boolean
       tags?: string[]
-      middleware?: APIMiddleware[]
+      middleware?: PikkuMiddleware[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -159,7 +159,7 @@ export type CoreHTTPFunctionWiring<
       auth?: false
       sse?: boolean
       tags?: string[]
-      middleware?: APIMiddleware[]
+      middleware?: PikkuMiddleware[]
     })
   | (CoreHTTPFunction & {
       route: R
@@ -169,7 +169,7 @@ export type CoreHTTPFunctionWiring<
       auth?: true
       query?: Array<keyof In>
       tags?: string[]
-      middleware?: APIMiddleware[]
+      middleware?: PikkuMiddleware[]
       sse?: undefined
     })
   | (CoreHTTPFunction & {
@@ -180,7 +180,7 @@ export type CoreHTTPFunctionWiring<
       auth?: false
       query?: Array<keyof In>
       tags?: string[]
-      middleware?: APIMiddleware[]
+      middleware?: PikkuMiddleware[]
       sse?: undefined
     })
 
@@ -217,7 +217,7 @@ export type HTTPFunctionsMeta = Array<{
 
 export type HTTPWiringMiddleware = {
   route: string
-  middleware: PikkuMiddleware[]
+  middleware: CorePikkuMiddleware[]
 }
 
 export interface PikkuHTTPRequest<In = unknown> {

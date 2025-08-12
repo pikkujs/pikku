@@ -8,7 +8,7 @@ import {
   APIDocs,
   CoreSingletonServices,
   CreateSessionServices,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
 } from '../../types/core.types.js'
 import {
   CorePikkuFunction,
@@ -91,7 +91,7 @@ export type CoreChannel<
         }
     >
   >
-  middleware?: PikkuMiddleware[]
+  middleware?: CorePikkuMiddleware[]
   permissions?: Record<string, PikkuPermission[] | PikkuPermission>
   auth?: boolean
   docs?: Partial<{

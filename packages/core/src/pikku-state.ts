@@ -4,7 +4,7 @@ import {
   HTTPMethod,
   HTTPWiringsMeta,
 } from './wirings/http/http.types.js'
-import { FunctionsMeta, PikkuMiddleware } from './types/core.types.js'
+import { FunctionsMeta, CorePikkuMiddleware } from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
@@ -41,7 +41,7 @@ interface PikkuState {
     >
   }
   http: {
-    middleware: Array<{ route: string; middleware: PikkuMiddleware[] }>
+    middleware: Array<{ route: string; middleware: CorePikkuMiddleware[] }>
     routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>
     meta: HTTPWiringsMeta
   }

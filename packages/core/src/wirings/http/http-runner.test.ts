@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
-import { JSONValue, PikkuMiddleware } from '../../types/core.types.js'
+import { JSONValue, CorePikkuMiddleware } from '../../types/core.types.js'
 import { fetch, wireHTTP } from './http-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import {
@@ -10,7 +10,7 @@ import {
 } from '../channel/local/local-channel-runner.test.js'
 import { addFunction } from '../../function/function-runner.js'
 
-const sessionMiddleware: PikkuMiddleware = async (services, _, next) => {
+const sessionMiddleware: CorePikkuMiddleware = async (services, _, next) => {
   services.userSession.set({ userId: 'test' } as any)
   await next()
 }
