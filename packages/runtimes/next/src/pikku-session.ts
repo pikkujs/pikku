@@ -6,7 +6,7 @@ import {
 import type {
   CoreSingletonServices,
   CoreUserSession,
-  PikkuMiddleware,
+  CorePikkuMiddleware,
 } from '@pikku/core'
 import { NextRequest } from 'next/server.js'
 
@@ -20,7 +20,7 @@ import { NextRequest } from 'next/server.js'
 export const getSession = async <UserSession extends CoreUserSession>(
   nextRequest: NextRequest,
   singletonServices: CoreSingletonServices,
-  middleware: PikkuMiddleware[]
+  middleware: CorePikkuMiddleware[]
 ): Promise<UserSession | undefined> => {
   const request = new PikkuFetchHTTPRequest(nextRequest)
   const userSession = new PikkuUserSessionService<UserSession>()

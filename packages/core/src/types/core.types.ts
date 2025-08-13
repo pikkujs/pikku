@@ -133,7 +133,7 @@ export type CoreServices<
     mcp?: PikkuMCP
     rpc?: PikkuRPC
     userSession?: UserSessionService<UserSession>
-    // channel?: PikkuChannel<unknown, unknown>
+    channel?: PikkuChannel<unknown, unknown>
   } & CoreServices
 
 export type SessionServices<
