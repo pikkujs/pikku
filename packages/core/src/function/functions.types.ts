@@ -80,10 +80,15 @@ export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
 
 export type CorePikkuFunctionConfig<
   PikkuFunction extends
-    | CorePikkuFunction<any, any>
-    | CorePikkuFunctionSessionless<any, any>,
-  PikkuPermission extends CorePikkuPermission<any> = CorePikkuPermission<any>,
+    | CorePikkuFunction<any, any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any, any>,
+  PikkuPermission extends CorePikkuPermission<
+    any,
+    any,
+    any
+  > = CorePikkuPermission<any>,
 > = {
+  name?: string
   expose?: boolean
   func: PikkuFunction
   auth?: boolean
