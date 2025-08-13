@@ -26,9 +26,9 @@
   "devDependencies": {
     "@pikku/core": "^0.9.1",
     "@types/express": "^5",
-    "@types/express-serve-static-core": "^5.0.0",
+    "@types/express-serve-static-core": "^5.0.7",
     "express": "^5",
-    "typescript": "^5.6.3"
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=18"

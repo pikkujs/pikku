@@ -44,7 +44,7 @@ export function uwsToRequest(
         const request = new Request(url, {
           method,
           headers,
-          body: body.length > 0 ? body : undefined,
+          body: body.length > 0 ? new Uint8Array(body) : undefined,
         })
 
         resolve(request)

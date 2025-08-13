@@ -16,10 +16,10 @@
     "@pikku/core": "^0.9.1"
   },
   "dependencies": {
-    "bullmq": "^5.56.0",
-    "ioredis": "^5.6.1"
+    "bullmq": "^5.57.0",
+    "ioredis": "^5.7.0"
   },
   "devDependencies": {
-    "typescript": "^5.6"
+    "typescript": "^5.9"
   }
 }

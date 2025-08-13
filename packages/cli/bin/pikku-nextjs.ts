@@ -30,13 +30,13 @@ export const nextjs = (program: Command): void => {
   program
     .command('nextjs')
     .description('generate nextjs wrapper')
-    .option('-ct | --pikku-config-type', 'The type of your pikku config object')
+    .option('--pikku-config-type', 'The type of your pikku config object')
     .option(
-      '-ss | --singleton-services-factory-type',
+      '--singleton-services-factory-type',
       'The type of your singleton services factory'
     )
     .option(
-      '-se | --session-services-factory-type',
+      '--session-services-factory-type',
       'The type of your session services factory'
     )
     .option('-c | --config <string>', 'The path to pikku cli config file')

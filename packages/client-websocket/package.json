@@ -24,10 +24,10 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "devDependencies": {
-    "typescript": "^5.6"
+    "typescript": "^5.9"
   },
   "optionalDependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.3"
   },
   "engines": {
     "node": ">=20"

@@ -24,7 +24,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "devDependencies": {
-    "typescript": "^5.6"
+    "typescript": "^5.9"
   },
   "engines": {
     "node": ">=18"

@@ -1,5 +1,4 @@
-import express from 'express'
-import core from 'express-serve-static-core'
+import express, { Express } from 'express'
 import { Server } from 'http'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
@@ -33,7 +32,7 @@ export type ExpressCoreConfig = CoreConfig & {
 }
 
 export class PikkuExpressServer {
-  public app: core.Express = express()
+  public app: Express = express()
   private server: Server | undefined
 
   constructor(
@@ -97,16 +96,22 @@ export class PikkuExpressServer {
     this.app.use(
       express.json({
         limit: this.config.limits?.json || '1mb',
-      }),
+      })
+    )
+    this.app.use(
       express.text({
         limit: this.config.limits?.xml || '1mb',
         type: 'text/xml',
-      }),
+      })
+    )
+    this.app.use(
       express.urlencoded({
         extended: true,
         limit: this.config.limits?.urlencoded || '1mb',
-      }),
-      cookieParser(),
+      })
+    )
+    this.app.use(cookieParser())
+    this.app.use(
       pikkuExpressMiddleware(
         this.singletonServices,
         this.createSessionServices,

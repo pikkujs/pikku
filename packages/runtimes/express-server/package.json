@@ -22,11 +22,11 @@
   },
   "dependencies": {
     "@pikku/express-middleware": "^0.9.1",
-    "@types/content-type": "^1.1.8",
-    "@types/cookie-parser": "^1.4.7",
-    "@types/cors": "^2.8.17",
+    "@types/content-type": "^1.1.9",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5",
-    "@types/express-serve-static-core": "^5.0.0",
+    "@types/express-serve-static-core": "^5.0.7",
     "content-type": "^1.0.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -34,7 +34,7 @@
     "raw-body": "^3.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=18"

@@ -20,15 +20,15 @@
     "@pikku/core": "^0.9.1"
   },
   "dependencies": {
-    "kysely": "^0.27.6",
+    "kysely": "^0.28.5",
     "kysely-postgres-js": "^2.0.0",
-    "postgres": "^3.4.5"
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
-    "kysely": "^0.27.6",
-    "kysely-codegen": "^0.16.6",
+    "kysely": "^0.28.5",
+    "kysely-codegen": "^0.18.5",
     "kysely-postgres-js": "^2.0.0",
-    "postgres": "^3.4.5",
-    "typescript": "^5.6"
+    "postgres": "^3.4.7",
+    "typescript": "^5.9"
   }
 }

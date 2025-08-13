@@ -17,9 +17,9 @@
     "@pikku/core": "^0.9.1"
   },
   "dependencies": {
-    "jose": "^6.0.10"
+    "jose": "^6.0.12"
   },
   "devDependencies": {
-    "typescript": "^5.6"
+    "typescript": "^5.9"
   }
 }
