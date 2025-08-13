@@ -8,8 +8,8 @@
     "test:template": "bash run-tests.sh --url http://localhost:8787  --websocket"
   },
   "dependencies": {
-    "@pikku/cloudflare": "^0.9.1",
-    "@pikku/core": "^0.9.1"
+    "@pikku/cloudflare": "^0.9.2",
+    "@pikku/core": "^0.9.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241218.0",

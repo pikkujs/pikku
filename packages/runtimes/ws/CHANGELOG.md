@@ -1,5 +1,18 @@
 # @pikku/ws
 
+## 0.9.2
+
+### Patch Changes
+
+- a5905a9: chore: updating all dependencies
+- Updated dependencies [1256238]
+- Updated dependencies [6cf8efd]
+- Updated dependencies [d3a9a09]
+- Updated dependencies [840e078]
+- Updated dependencies [667d23c]
+- Updated dependencies [a5905a9]
+  - @pikku/core@0.9.2
+
 ## 0.9.1
 
 ### Patch Changes
