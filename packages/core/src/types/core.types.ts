@@ -176,7 +176,7 @@ export type CreateConfig<Config extends CoreConfig> = (
 /**
  * Represents the documentation for a route, including summary, description, tags, and errors.
  */
-export type APIDocs = {
+export type PikkuDocs = {
   summary?: string
   description?: string
   tags?: string[]

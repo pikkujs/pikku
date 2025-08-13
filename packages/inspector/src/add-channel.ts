@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { APIDocs, PikkuWiringTypes } from '@pikku/core'
+import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -392,7 +392,7 @@ export function addChannel(
         .map((k) => k.name)
     : []
 
-  const docs = getPropertyValue(obj, 'docs') as APIDocs | undefined
+  const docs = getPropertyValue(obj, 'docs') as PikkuDocs | undefined
   const tags = getPropertyValue(obj, 'tags') as string[] | undefined
   const query = getPropertyValue(obj, 'query') as string[] | []
 

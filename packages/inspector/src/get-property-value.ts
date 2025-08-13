@@ -1,10 +1,10 @@
-import { APIDocs } from '@pikku/core'
+import { PikkuDocs } from '@pikku/core'
 import * as ts from 'typescript'
 
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string
-): string | string[] | null | APIDocs => {
+): string | string[] | null | PikkuDocs => {
   const property = obj.properties.find(
     (p) =>
       ts.isPropertyAssignment(p) &&
@@ -34,7 +34,7 @@ export const getPropertyValue = (
 
     // Special handling for 'docs' -> expect RouteDocs
     if (propertyName === 'docs' && ts.isObjectLiteralExpression(initializer)) {
-      const docs: APIDocs = {}
+      const docs: PikkuDocs = {}
 
       initializer.properties.forEach((prop) => {
         if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {

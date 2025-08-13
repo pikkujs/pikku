@@ -5,7 +5,7 @@ import {
   PikkuHTTPResponse,
 } from '../http/http.types.js'
 import {
-  APIDocs,
+  PikkuDocs,
   CoreSingletonServices,
   CreateSessionServices,
   CorePikkuMiddleware,
@@ -34,7 +34,7 @@ export type RunChannelParams<ChannelData> = {
 
 export interface ChannelMessageMeta {
   pikkuFuncName: string
-  docs?: APIDocs
+  docs?: PikkuDocs
 }
 
 export interface ChannelMeta {
@@ -48,7 +48,7 @@ export interface ChannelMeta {
   disconnect: ChannelMessageMeta | null
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
-  docs?: APIDocs
+  docs?: PikkuDocs
   tags?: string[]
 }
 

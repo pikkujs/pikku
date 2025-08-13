@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { APIDocs, PikkuWiringTypes } from '@pikku/core'
+import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
@@ -66,7 +66,7 @@ export const addHTTPRoute = (
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
-  const docs = (getPropertyValue(obj, 'docs') as APIDocs) || undefined
+  const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
   const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 

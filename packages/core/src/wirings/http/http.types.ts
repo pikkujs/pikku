@@ -1,7 +1,7 @@
 import type { SerializeOptions } from 'cookie'
 import type { PikkuError } from '../../errors/error-handler.js'
 import type {
-  APIDocs,
+  PikkuDocs,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
@@ -203,7 +203,7 @@ export type HTTPWiringMeta = {
   params?: string[]
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes
-  docs?: APIDocs
+  docs?: PikkuDocs
   tags?: string[]
   sse?: true
 }

@@ -1,4 +1,4 @@
-import { APIDocs } from '../../types/core.types.js'
+import { PikkuDocs } from '../../types/core.types.js'
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
 import { QueueConfigMapping } from './validate-worker-config.js'
 
@@ -155,7 +155,7 @@ export type queueWorkersMeta = Record<
     schemaName?: string
     queueName: string
     session?: undefined
-    docs?: APIDocs
+    docs?: PikkuDocs
     tags?: string[]
     config?: PikkuWorkerConfig
   }
@@ -170,7 +170,7 @@ export type CoreQueueWorker<
   queueName: string
   func: PikkuFunction
   config?: PikkuWorkerConfig
-  docs?: APIDocs
+  docs?: PikkuDocs
   session?: undefined
   tags?: string[]
 }

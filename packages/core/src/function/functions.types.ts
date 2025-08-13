@@ -3,6 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
+  PikkuDocs,
   CorePikkuMiddleware,
 } from '../types/core.types.js'
 
@@ -87,4 +88,5 @@ export type CorePikkuFunctionConfig<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: CorePikkuMiddleware[]
+  docs?: PikkuDocs
 }

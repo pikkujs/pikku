@@ -1,4 +1,4 @@
-import { APIDocs, CoreUserSession } from '../../types/core.types.js'
+import { PikkuDocs, CoreUserSession } from '../../types/core.types.js'
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
 
 /**
@@ -12,7 +12,7 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
       name: string
       schedule: string
       session?: UserSession
-      docs?: APIDocs
+      docs?: PikkuDocs
       tags?: string[]
     }
   >
@@ -26,6 +26,6 @@ export type CoreScheduledTask<
   name: string
   schedule: string
   func: PikkuFunction
-  docs?: APIDocs
+  docs?: PikkuDocs
   tags?: string[]
 }
