@@ -13,7 +13,8 @@ export class CloudflareEventHubService<
 
   constructor(
     private logger: Logger,
-    private ctx: DurableObjectState
+    private ctx: DurableObjectState,
+    private namespace: string = 'subscriptions'
   ) {
     // Ensure state is saved before hibernation
     ctx.blockConcurrencyWhile(async () => {
@@ -26,8 +27,9 @@ export class CloudflareEventHubService<
   private async ensureSubscriptionsLoaded(): Promise<void> {
     if (this.state === 'initial') {
       this.state = 'loading'
-      const storedSubscriptions =
-        await this.ctx.storage.get<string>('subscriptions')
+      const storedSubscriptions = await this.ctx.storage.get<string>(
+        this.namespace
+      )
       if (storedSubscriptions) {
         const parsedSubscriptions = JSON.parse(storedSubscriptions)
         this.subscriptions = new Map(
@@ -57,7 +59,7 @@ export class CloudflareEventHubService<
       ])
     )
     await this.ctx.storage.put(
-      'subscriptions',
+      this.namespace,
       JSON.stringify(serializedSubscriptions)
     )
     this.isDirty = false
