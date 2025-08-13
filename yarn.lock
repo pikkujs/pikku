@@ -3373,7 +3373,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@modelcontextprotocol/sdk@npm:^1.17.2":
+"@modelcontextprotocol/sdk@npm:^1.15.0":
   version: 1.17.2
   resolution: "@modelcontextprotocol/sdk@npm:1.17.2"
   dependencies:
@@ -3911,7 +3911,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol"
   dependencies:
-    "@modelcontextprotocol/sdk": "npm:^1.17.2"
+    "@modelcontextprotocol/sdk": "npm:^1.15.0"
     typescript: "npm:^5.9.2"
   peerDependencies:
     "@pikku/core": ^0.9.1

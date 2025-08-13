@@ -5,7 +5,8 @@ import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
 } from './utils.js'
-import { FunctionServicesMeta } from '@pikku/core'
+import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
+import { getPropertyValue } from './get-property-value.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -259,10 +260,18 @@ export function addFunctions(
   const { pikkuFuncName, name, explicitName, exportedName } =
     extractFunctionName(node, checker)
 
+  let tags: string[] | undefined
+  let expose: boolean | undefined
+  let docs: PikkuDocs | undefined
+
   // determine the actual handler expression:
   // either the `func` prop or the first argument directly
   let handlerNode: ts.Expression = args[0]!
   if (ts.isObjectLiteralExpression(handlerNode)) {
+    tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
+    expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
+    docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
+
     const fnProp = getPropertyAssignmentInitializer(
       handlerNode,
       'func',
@@ -368,6 +377,9 @@ export function addFunctions(
     schemaName: inputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
+    expose,
+    tags,
+    docs,
   }
 
   if (explicitName || exportedName) {

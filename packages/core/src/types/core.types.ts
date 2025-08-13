@@ -30,6 +30,9 @@ export type FunctionsMeta = Record<
     schemaName: string | null
     inputs: string[] | null
     outputs: string[] | null
+    expose?: boolean
+    tags?: string[]
+    docs?: PikkuDocs
   }
 >
 

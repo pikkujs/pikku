@@ -4,7 +4,7 @@ import * as ts from 'typescript'
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string
-): string | string[] | null | PikkuDocs => {
+): string | string[] | null | PikkuDocs | boolean => {
   const property = obj.properties.find(
     (p) =>
       ts.isPropertyAssignment(p) &&
@@ -68,16 +68,25 @@ export const getPropertyValue = (
       return docs
     }
 
+    // booleans -> true/false
+    if (initializer.kind === ts.SyntaxKind.TrueKeyword) {
+      return true
+    }
+
+    if (initializer.kind === ts.SyntaxKind.FalseKeyword) {
+      return false
+    }
+
     // Handle string literals for other properties
     if (
       ts.isStringLiteral(initializer) ||
       ts.isNoSubstitutionTemplateLiteral(initializer)
     ) {
       return initializer.text
-    } else {
-      // Handle other initializer types if necessary
-      return initializer.getText()
     }
+
+    // Handle other initializer types if necessary
+    return initializer.getText()
   }
 
   return null
