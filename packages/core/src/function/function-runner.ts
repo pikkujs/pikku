@@ -6,7 +6,7 @@ import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
   CoreServices,
   CoreUserSession,
-  PikkuFunctionMiddleware,
+  CorePikkuMiddleware,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
@@ -47,7 +47,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     data: In
     session?: CoreUserSession
     permissions?: CorePermissionGroup
-    middleware?: PikkuFunctionMiddleware[]
+    middleware?: CorePikkuMiddleware[]
     coerceDataFromSchema?: boolean
   }
 ): Promise<Out> => {
@@ -106,7 +106,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   if (transportMiddleware || funcConfig.middleware) {
-    return (await runMiddleware<PikkuFunctionMiddleware>(
+    return (await runMiddleware<CorePikkuMiddleware>(
       allServices,
       {
         http: allServices.http,

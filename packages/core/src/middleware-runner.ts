@@ -1,7 +1,6 @@
 import { UserSessionService } from './services/user-session-service.js'
 import {
   CoreSingletonServices,
-  PikkuFunctionMiddleware,
   PikkuInteraction,
   CorePikkuMiddleware,
 } from './types/core.types.js'
@@ -23,11 +22,7 @@ import {
  *   async () => { return await runMain(); }
  * );
  */
-export const runMiddleware = async <
-  Middleware extends
-    | CorePikkuMiddleware
-    | PikkuFunctionMiddleware = CorePikkuMiddleware,
->(
+export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   services: CoreSingletonServices & {
     userSession?: UserSessionService<any>
   },

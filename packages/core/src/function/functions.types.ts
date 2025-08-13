@@ -3,7 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  PikkuFunctionMiddleware,
+  CorePikkuMiddleware,
 } from '../types/core.types.js'
 
 /**
@@ -86,5 +86,5 @@ export type CorePikkuFunctionConfig<
   func: PikkuFunction
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
-  middleware?: PikkuFunctionMiddleware[]
+  middleware?: CorePikkuMiddleware[]
 }

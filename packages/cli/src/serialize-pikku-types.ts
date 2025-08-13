@@ -13,7 +13,7 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePikkuPermission, PikkuMiddleware } from '@pikku/core'
+import { CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore } from '@pikku/core/http'
 import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
@@ -41,7 +41,7 @@ export type PikkuPermission<In = unknown, RequiredServices extends ${singletonSe
  * 
  * @template RequiredServices - The services required for this middleware
  */
-export type PikkuMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = PikkuMiddleware<RequiredServices, ${userSessionTypeName}>
+export type PikkuMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CorePikkuMiddleware<RequiredServices, ${userSessionTypeName}>
 
 /**
  * A sessionless API function that doesn't require user authentication.
@@ -347,6 +347,27 @@ export const wireChannel = <ChannelData, Channel extends string>(
 ) => {
   wireChannelCore(channel as any) // TODO
 }
+
+/**
+ * Registers middleware either globally or for a specific route.
+ * 
+ * When a string route pattern is provided along with middleware, the middleware
+ * is applied only to that route. Otherwise, if an array is provided, it is treated
+ * as global middleware (applied to all routes).
+ * 
+ * @param routeOrMiddleware - Either a global middleware array or a route pattern string
+ * @param middleware - The middleware array to apply when a route pattern is specified
+ * 
+ * @example
+ * \`\`\`typescript
+ * // Add global middleware
+ * addHTTPMiddleware([authMiddleware, loggingMiddleware])
+ * 
+ * // Add route-specific middleware
+ * addHTTPMiddleware('/api/admin/*', [adminAuthMiddleware])
+ * \`\`\`
+ */
+export { addHTTPMiddleware }
 
 /**
  * Registers an HTTP wiring with the Pikku framework.
