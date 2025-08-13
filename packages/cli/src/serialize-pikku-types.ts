@@ -178,11 +178,6 @@ export const pikkuFunc = <In, Out = unknown>(
         auth?: true
         name?: string
       }
-    | {
-        func: PikkuFunctionSessionless<In, Out>
-        auth: false
-        name?: string
-      }
 ) => {
   return typeof func === 'function' ? func : func.func
 }
