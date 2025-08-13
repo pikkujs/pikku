@@ -28,9 +28,9 @@
     "@types/aws-lambda": "^8.10.146"
   },
   "devDependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.713.0",
-    "@types/aws-lambda": "^8.10.146",
-    "typescript": "^5.7.2"
+    "@aws-sdk/client-apigatewaymanagementapi": "^3.864.0",
+    "@types/aws-lambda": "^8.10.152",
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=18"

@@ -319,13 +319,13 @@ export const all = (program: Command): void => {
   program
     .command('all', { isDefault: true })
     .description('Generate all the files used by pikku')
-    .option('-ct | --pikku-config-type', 'The type of your pikku config object')
+    .option('--pikku-config-type', 'The type of your pikku config object')
     .option(
-      '-ss | --singleton-services-factory-type',
+      '--singleton-services-factory-type',
       'The type of your singleton services factory'
     )
     .option(
-      '-se | --session-services-factory-type',
+      '--session-services-factory-type',
       'The type of your session services factory'
     )
     .option('-c | --config <string>', 'The path to pikku cli config file')

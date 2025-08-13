@@ -19,10 +19,10 @@
   "dependencies": {
     "@pikku/core": "^0.9.1",
     "path-to-regexp": "^8.2.0",
-    "typescript": "^5.6"
+    "typescript": "^5.9"
   },
   "devDependencies": {
-    "@types/node": "^22.7.8"
+    "@types/node": "^24.2.1"
   },
   "engines": {
     "node": ">=18"

@@ -25,8 +25,10 @@ export function fastifyToRequest(req: FastifyRequest): Request {
   if (method !== 'GET' && method !== 'HEAD') {
     if (req.body !== undefined) {
       // If a parsed body exists, use it:
-      if (typeof req.body === 'string' || Buffer.isBuffer(req.body)) {
+      if (typeof req.body === 'string') {
         body = req.body
+      } else if (Buffer.isBuffer(req.body)) {
+        body = req.body.toString('utf-8')
       } else {
         // Otherwise, assume it's a JSON object and stringify it.
         body = JSON.stringify(req.body)
