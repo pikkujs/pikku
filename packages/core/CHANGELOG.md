@@ -1,5 +1,22 @@
 ## 0.9.0
 
+## 0.9.2
+
+### Patch Changes
+
+- 1256238: feat: pikkufunc in types extends function config to include all the different params
+- 6cf8efd: feat: Adding PikkuDocs to function definition
+
+  refactor: renaming APIDocs to PikkuDocs
+
+- d3a9a09: refactor: change addMiddleware to addHTTPMiddleware due to route support'
+
+  chore: export addHTTPMiddleware from pikku-types for consistency
+
+- 840e078: refactor: change APIMiddleware type to PikkuMiddleware
+- 667d23c: feat: adding expose to function config (although it isn't yet wired up)
+- a5905a9: chore: updating all dependencies
+
 ## 0.9.1
 
 ### Patch Changes

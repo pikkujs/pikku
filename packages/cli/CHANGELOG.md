@@ -1,5 +1,25 @@
 # @pikku/cli
 
+## 0.9.2
+
+### Patch Changes
+
+- 1256238: feat: pikkufunc in types extends function config to include all the different params
+- d3a9a09: refactor: change addMiddleware to addHTTPMiddleware due to route support'
+
+  chore: export addHTTPMiddleware from pikku-types for consistency
+
+- 840e078: refactor: change APIMiddleware type to PikkuMiddleware
+- a5905a9: chore: updating all dependencies
+- Updated dependencies [1256238]
+- Updated dependencies [6cf8efd]
+- Updated dependencies [d3a9a09]
+- Updated dependencies [840e078]
+- Updated dependencies [667d23c]
+- Updated dependencies [a5905a9]
+  - @pikku/core@0.9.2
+  - @pikku/inspector@0.9.2
+
 ## 0.9.1
 
 ### Patch Changes

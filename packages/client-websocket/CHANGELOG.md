@@ -1,5 +1,11 @@
 # @pikku/websocket
 
+## 0.9.2
+
+### Patch Changes
+
+- a5905a9: chore: updating all dependencies
+
 ## 0.9.1
 
 ### Patch Changes
