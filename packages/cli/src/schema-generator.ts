@@ -57,6 +57,7 @@ export async function generateSchemas(
         return
       }
       logger.error(`Error generating schema: ${schema}`)
+      logger.error(e)
     }
   })
 

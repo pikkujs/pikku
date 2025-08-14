@@ -32,9 +32,7 @@ export const serializeFunctionImports = (
     // For directly exported functions, we can just import and register them
     if (name === exportedName) {
       serializedImports.push(`import { ${exportedName} } from '${filePath}'`)
-      serializedRegistrations.push(
-        `addFunction('${name}', { func: ${exportedName} })`
-      )
+      serializedRegistrations.push(`addFunction('${name}', ${exportedName})`)
     }
     // For renamed functions, we need to import and alias them
     else {

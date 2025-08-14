@@ -377,9 +377,9 @@ export function addFunctions(
     schemaName: inputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
-    expose,
-    tags,
-    docs,
+    expose: expose || undefined,
+    tags: tags || undefined,
+    docs: docs || undefined,
   }
 
   if (explicitName || exportedName) {
