@@ -289,7 +289,7 @@ export function extractFunctionName(
       const decls = resolvedSym.declarations ?? []
       if (decls.length > 0) {
         const decl = decls[0]!
-        // Check if the declaration is a variable that uses pikkuSessionlessFunc
+        // Check if the declaration is a variable that uses a pikkuFun
         if (ts.isVariableDeclaration(decl) && decl.initializer) {
           if (
             ts.isCallExpression(decl.initializer) &&
@@ -717,6 +717,12 @@ export function extractFunctionName(
 
   // Apply name priority logic
   populateNameByPriority(result)
+
+  // CRITICAL FIX: If we have an exported name, use it as the pikkuFuncName for consistent lookup
+  if (result.exportedName && !result.explicitName) {
+    result.pikkuFuncName = result.exportedName
+  }
+
   return result
 }
 
