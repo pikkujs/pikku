@@ -1,5 +1,20 @@
 # @pikku/cli
 
+## 0.9.3
+
+### Patch Changes
+
+- 9691aba: fix: add-functions should support both functions only and objects
+- 2ab0278: refactor: no longer import ALL functions, only the ones used by rpcs
+- 81005ba: feat: creating a smaller meta file for functions to reduce size
+- b3c2829: fix (using ai): generating custom types broke imports.. this fixes it, but needs more robust training
+- Updated dependencies [9691aba]
+- Updated dependencies [2ab0278]
+- Updated dependencies [81005ba]
+- Updated dependencies [b3c2829]
+  - @pikku/inspector@0.9.3
+  - @pikku/core@0.9.3
+
 ## 0.9.2
 
 ### Patch Changes

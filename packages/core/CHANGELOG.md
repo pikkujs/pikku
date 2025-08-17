@@ -1,5 +1,13 @@
 ## 0.9.0
 
+## 0.9.3
+
+### Patch Changes
+
+- 9691aba: fix: add-functions should support both functions only and objects
+- 2ab0278: refactor: no longer import ALL functions, only the ones used by rpcs
+- 81005ba: feat: creating a smaller meta file for functions to reduce size
+
 ## 0.9.2
 
 ### Patch Changes

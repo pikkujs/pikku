@@ -1,5 +1,16 @@
 # @pikku/kysely
 
+## 0.9.3
+
+### Patch Changes
+
+- 917bd6b: feat: fixing number issue with pure generation
+- af95a59: fix: adding a number type (string or number) to db for now. Going forward should probably parse to a number but js and floats..
+- Updated dependencies [9691aba]
+- Updated dependencies [2ab0278]
+- Updated dependencies [81005ba]
+  - @pikku/core@0.9.3
+
 ## 0.9.2
 
 ### Patch Changes
