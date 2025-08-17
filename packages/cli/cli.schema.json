@@ -221,6 +221,9 @@
         "functionsMetaFile": {
           "type": "string"
         },
+        "functionsMetaMinFile": {
+          "type": "string"
+        },
         "httpMapDeclarationFile": {
           "type": "string"
         },
@@ -341,6 +344,7 @@
         "filters",
         "functionsFile",
         "functionsMetaFile",
+        "functionsMetaMinFile",
         "httpMapDeclarationFile",
         "httpWiringMetaFile",
         "httpWiringsFile",

@@ -1,10 +1,5 @@
-import {
-  getFileImportRelativePath,
-  logCommandInfoAndTime,
-  writeFileInDir,
-} from '../../utils.js'
-import { PikkuCommand } from '../../types.js'
-import { FunctionsMeta } from '@pikku/core'
+import { getFileImportRelativePath } from '../../utils.js'
+import { FunctionsMeta, FunctionsRuntimeMeta } from '@pikku/core'
 
 export const serializeFunctionImports = (
   outputPath: string,
@@ -81,32 +76,29 @@ export const serializeFunctionImports = (
   return [...serializedImports, ...serializedRegistrations].join('\n')
 }
 
-export const pikkuFunctions: PikkuCommand = async (
-  logger,
-  { functionsMetaFile, functionsFile, packageMappings },
-  { functions }
-) => {
-  return await logCommandInfoAndTime(
-    logger,
-    'Serializing Pikku functions',
-    'Serialized Pikku functions',
-    [false],
-    async () => {
-      await writeFileInDir(
-        logger,
-        functionsFile,
-        serializeFunctionImports(
-          functionsFile,
-          functions.files,
-          functions.meta,
-          packageMappings
-        )
-      )
-      await writeFileInDir(
-        logger,
-        functionsMetaFile,
-        `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(functions.meta, null, 2)})`
-      )
+export const generateRuntimeMeta = (
+  functions: FunctionsMeta
+): FunctionsRuntimeMeta => {
+  const runtimeMeta: FunctionsRuntimeMeta = {}
+
+  for (const [
+    key,
+    {
+      pikkuFuncName,
+      inputSchemaName,
+      outputSchemaName,
+      expose,
+      isDirectFunction,
+    },
+  ] of Object.entries(functions)) {
+    runtimeMeta[key] = {
+      pikkuFuncName,
+      inputSchemaName,
+      outputSchemaName,
+      expose,
+      isDirectFunction,
     }
-  )
+  }
+
+  return runtimeMeta
 }

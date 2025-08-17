@@ -39,7 +39,10 @@ const generateBootstrapFile = async (
   schemas?: boolean
 ) => {
   // Common imports that every bootstrap file needs
-  const commonImports = [cliConfig.functionsMetaFile, cliConfig.functionsFile]
+  const commonImports = [
+    cliConfig.functionsMetaMinFile,
+    cliConfig.functionsFile,
+  ]
 
   // Add schema if it exists
   if (schemas) {

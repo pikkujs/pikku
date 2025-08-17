@@ -21,21 +21,28 @@ export interface FunctionServicesMeta {
   services: string[]
 }
 
-export type FunctionsMeta = Record<
-  string,
-  {
-    pikkuFuncName: string
-    name?: string
+export type FunctionRuntimeMeta = {
+  pikkuFuncName: string
+  inputSchemaName: string | null
+  outputSchemaName: string | null
+  expose?: boolean
+  isDirectFunction?: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
+}
+
+export type FunctionMeta = FunctionRuntimeMeta &
+  Partial<{
+    name: string
     services: FunctionServicesMeta
-    schemaName: string | null
     inputs: string[] | null
     outputs: string[] | null
-    expose?: boolean
-    tags?: string[]
-    docs?: PikkuDocs
-    isDirectFunction?: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
-  }
->
+    tags: string[]
+    docs: PikkuDocs
+  }>
+
+export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
+export type FunctionsMeta = Record<string, FunctionMeta>
+
+// Optimized runtime metadata with only essential fields
 
 export type MakeRequired<T, K extends keyof T> = Omit<T, K> &
   Required<Pick<T, K>>

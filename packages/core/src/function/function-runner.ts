@@ -68,18 +68,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   const allServices = await getAllServices()
 
-  const schemaName = funcMeta.schemaName
-  if (schemaName) {
+  const inputSchemaName = funcMeta.inputSchemaName
+  if (inputSchemaName) {
     // Validate request data against the defined schema, if any
     await validateSchema(
       allServices.logger,
       allServices.schema,
-      schemaName,
+      inputSchemaName,
       data
     )
     // Coerce (top level) query string parameters or date objects if specified by the schema
     if (coerceDataFromSchema) {
-      coerceTopLevelDataFromSchema(schemaName, data)
+      coerceTopLevelDataFromSchema(inputSchemaName, data)
     }
   }
 
