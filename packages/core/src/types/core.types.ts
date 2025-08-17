@@ -33,6 +33,7 @@ export type FunctionsMeta = Record<
     expose?: boolean
     tags?: string[]
     docs?: PikkuDocs
+    isDirectFunction?: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
   }
 >
 

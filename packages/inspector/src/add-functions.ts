@@ -286,7 +286,10 @@ export function addFunctions(
   // determine the actual handler expression:
   // either the `func` prop or the first argument directly
   let handlerNode: ts.Expression = args[0]!
+  let isDirectFunction = true // Default to direct function format
+
   if (ts.isObjectLiteralExpression(handlerNode)) {
+    isDirectFunction = false // This is object format with func property
     tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
     expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
     docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
@@ -399,6 +402,7 @@ export function addFunctions(
     expose: expose || undefined,
     tags: tags || undefined,
     docs: docs || undefined,
+    isDirectFunction,
   }
 
   if (explicitName || exportedName) {

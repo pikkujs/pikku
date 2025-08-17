@@ -19,6 +19,7 @@ export const pikkuFunctions: PikkuCommand = async (
         serializeFunctionImports(
           functionsFile,
           functions.files,
+          functions.meta,
           packageMappings
         )
       )

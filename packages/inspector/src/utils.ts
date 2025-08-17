@@ -321,6 +321,8 @@ export function extractFunctionName(
                 ts.isIdentifier(decl.name)
               ) {
                 result.exportedName = decl.name.text
+                // CRITICAL FIX: Use exported name as pikkuFuncName for consistency
+                result.pikkuFuncName = decl.name.text
               } else if (ts.isIdentifier(decl.name)) {
                 // If not exported, still capture the variable name
                 result.localName = decl.name.text
