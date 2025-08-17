@@ -3,7 +3,7 @@ import type {
   Services,
   SingletonServices,
   UserSession,
-} from '../types/application-types.js'
+} from '../types/application-types.d.js'
 import {
   CreateConfig,
   CreateSessionServices,

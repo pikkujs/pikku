@@ -17,7 +17,7 @@ import { LocalVariablesService } from '@pikku/core/services'
 import {
   Config,
   SingletonServices,
-} from '../../functions/types/application-types.js'
+} from '../../functions/types/application-types.d.js'
 import {
   createConfig,
   createSingletonServices,
