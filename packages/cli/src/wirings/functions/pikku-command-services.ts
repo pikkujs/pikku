@@ -95,7 +95,7 @@ export const pikkuServices: PikkuCommand = async (
     logger,
     'Generating Pikku services map',
     'Generated Pikku services map',
-    [visitState.functions.files.size === 0],
+    [false],
     async () => {
       const { sessionServicesType, singletonServicesType } =
         await getPikkuFilesAndMethods(

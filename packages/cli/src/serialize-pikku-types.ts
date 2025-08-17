@@ -58,7 +58,7 @@ type PikkuFunctionSessionless<
   Out = never, 
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services &
+  RequiredServices extends Services = Omit<Services, 'rpc'> &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -84,7 +84,7 @@ type PikkuFunction<
   Out = never, 
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services &
+  RequiredServices extends Services = Omit<Services, 'rpc'> &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel

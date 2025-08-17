@@ -1,14 +1,14 @@
 import { CoreServices } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
-import { RPCMeta } from './rpc-types.js'
+import { ForbiddenError } from '../../errors/errors.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
   coerceDataFromSchema: boolean
 }
 
-const getRPCMeta = (rpcName: string): RPCMeta => {
+const getPikkuFunctionName = (rpcName: string): string => {
   const rpc = pikkuState('rpc', 'meta')
   const rpcMeta = rpc[rpcName]
   if (!rpcMeta) {
@@ -26,14 +26,25 @@ class ContextAwareRPCService {
     }
   ) {}
 
+  public async rpcExposed(funcName: string, data: any): Promise<any> {
+    const functionMeta = pikkuState('function', 'meta')[funcName]
+    if (!functionMeta) {
+      throw new Error(`Function not found: ${funcName}`)
+    }
+    if (!functionMeta.expose) {
+      throw new ForbiddenError()
+    }
+    return await this.rpc(funcName, data)
+  }
+
   public async rpc<In = any, Out = any>(
     funcName: string,
     data: In
   ): Promise<Out> {
     const session = await this.services.userSession?.get()
     const rpcDepth = this.services.rpc?.depth || 0
-    const rpcMeta = getRPCMeta(funcName)
-    return runPikkuFunc<In, Out>(rpcMeta.pikkuFuncName, {
+    const pikkuFuncName = getPikkuFunctionName(funcName)
+    return runPikkuFunc<In, Out>(pikkuFuncName, {
       getAllServices: () => {
         this.services.rpc = this.services.rpc
           ? ({
@@ -72,6 +83,7 @@ export class PikkuRPCService {
       depth,
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
+      invokeExposed: serviceRPC.rpc.bind(serviceRPC),
     } as any
     return serviceCopy
   }

@@ -5,7 +5,6 @@ import { queueWorkersMeta } from '@pikku/core/queue'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta } from '@pikku/core'
-import { RPCMeta } from '@pikku/core/rpc'
 
 export type PathToNameAndType = Map<
   string,
@@ -29,7 +28,6 @@ export interface InspectorHTTPState {
 
 export interface InspectorFunctionState {
   typesMap: TypesMap
-  files: Map<string, { path: string; exportedName: string }>
   meta: FunctionsMeta
 }
 
@@ -69,7 +67,11 @@ export interface InspectorState {
     files: Set<string>
   }
   rpc: {
-    meta: Record<string, RPCMeta>
+    internalMeta: Record<string, string>
+    internalFiles: Map<string, { path: string; exportedName: string }>
+    exposedMeta: Record<string, string>
+    exposedFiles: Map<string, { path: string; exportedName: string }>
+    invokedFunctions: Set<string> // Track functions called via rpc.invoke()
   }
   mcpEndpoints: {
     resourcesMeta: MCPResourceMeta

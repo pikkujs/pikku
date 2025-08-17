@@ -9,7 +9,11 @@ import { PikkuCommand } from '../../types.js'
 
 export const pikkuFunctionTypes: PikkuCommand = async (
   logger,
-  { typesDeclarationFile: typesFile, packageMappings, rpcMapDeclarationFile },
+  {
+    typesDeclarationFile: typesFile,
+    packageMappings,
+    rpcInternalMapDeclarationFile,
+  },
   visitState,
   options = {}
 ) => {
@@ -39,7 +43,7 @@ export const pikkuFunctionTypes: PikkuCommand = async (
         `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,
         singletonServicesType.type,
         `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(typesFile, sessionServicesType.typePath, packageMappings)}'`,
-        `import type { TypedPikkuRPC } from '${getFileImportRelativePath(typesFile, rpcMapDeclarationFile, packageMappings)}'`
+        `import type { TypedPikkuRPC } from '${getFileImportRelativePath(typesFile, rpcInternalMapDeclarationFile, packageMappings)}'`
       )
 
       await writeFileInDir(logger, typesFile, content)

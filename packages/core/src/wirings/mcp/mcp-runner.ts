@@ -56,9 +56,7 @@ export const wireMCPResource = <
   if (!mcpResourceMeta) {
     throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
   }
-  addFunction(mcpResourceMeta.pikkuFuncName, {
-    func: mcpResource.func,
-  })
+  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource.func)
   const resources = pikkuState('mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
@@ -76,9 +74,7 @@ export const wireMCPTool = <
   if (!mcpToolMeta) {
     throw new Error(`MCP tool metadata not found for '${mcpTool.name}'`)
   }
-  addFunction(mcpToolMeta.pikkuFuncName, {
-    func: mcpTool.func,
-  })
+  addFunction(mcpToolMeta.pikkuFuncName, mcpTool.func as any)
   const tools = pikkuState('mcp', 'tools')
   if (tools.has(mcpTool.name)) {
     throw new Error(`MCP tool already exists: ${mcpTool.name}`)
@@ -96,9 +92,7 @@ export const wireMCPPrompt = <
   if (!mcpPromptMeta) {
     throw new Error(`MCP prompt metadata not found for '${mcpPrompt.name}'`)
   }
-  addFunction(mcpPromptMeta.pikkuFuncName, {
-    func: mcpPrompt.func,
-  })
+  addFunction(mcpPromptMeta.pikkuFuncName, mcpPrompt.func as any)
   const prompts = pikkuState('mcp', 'prompts')
   if (prompts.has(mcpPrompt.name)) {
     throw new Error(`MCP prompt already exists: ${mcpPrompt.name}`)

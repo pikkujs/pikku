@@ -7,7 +7,7 @@ const start = Date.now()
 
 async function check() {
   try {
-    await pikkuRPC.invoke('helloWorld', null)
+    await pikkuRPC.invoke('rpcTest', { in: 0 })
     console.log('✅ RPC test passed')
     process.exit(0)
   } catch (err: any) {

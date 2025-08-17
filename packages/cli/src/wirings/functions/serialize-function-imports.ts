@@ -8,7 +8,7 @@ export const serializeFunctionImports = (
   packageMappings: Record<string, string> = {}
 ) => {
   const serializedImports: string[] = [
-    `/* Import and register RPCs */`,
+    `/* Import and register functions used by RPCs */`,
     `import { addFunction } from '@pikku/core'`,
   ]
 
@@ -83,20 +83,13 @@ export const generateRuntimeMeta = (
 
   for (const [
     key,
-    {
-      pikkuFuncName,
-      inputSchemaName,
-      outputSchemaName,
-      expose,
-      isDirectFunction,
-    },
+    { pikkuFuncName, inputSchemaName, outputSchemaName, expose },
   ] of Object.entries(functions)) {
     runtimeMeta[key] = {
       pikkuFuncName,
       inputSchemaName,
       outputSchemaName,
       expose,
-      isDirectFunction,
     }
   }
 

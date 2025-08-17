@@ -8,12 +8,17 @@ import { PikkuCommandWithoutState } from '../../types.js'
 
 export const pikkuRPCClient: PikkuCommandWithoutState = async (
   logger,
-  { rpcWiringsFile, rpcMapDeclarationFile, packageMappings }
+  {
+    rpcWiringsFile,
+    rpcMapDeclarationFile,
+    rpcInternalMapDeclarationFile,
+    packageMappings,
+  }
 ) => {
   return await logCommandInfoAndTime(
     logger,
-    'Generating RPC wrapper',
-    'Generated RPC wrapper',
+    'Generating RPC wrappers',
+    'Generated RPC wrappers',
     [
       rpcWiringsFile === undefined || rpcWiringsFile === null,
       "rpcWiringsFile isn't set in the pikku config",
@@ -28,7 +33,6 @@ export const pikkuRPCClient: PikkuCommandWithoutState = async (
         rpcMapDeclarationFile,
         packageMappings
       )
-
       const content = [serializeRPCWrapper(rpcMapDeclarationPath)]
       await writeFileInDir(logger, rpcWiringsFile, content.join('\n'))
     }

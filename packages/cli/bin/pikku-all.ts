@@ -17,7 +17,10 @@ import chokidar from 'chokidar'
 import { pikkuFunctions } from '../src/wirings/functions/pikku-command-functions.js'
 import { pikkuServices } from '../src/wirings/functions/pikku-command-services.js'
 import { pikkuRPC } from '../src/wirings/rpc/pikku-command-rpc.js'
-import { pikkuRPCMap } from '../src/wirings/rpc/pikku-command-rpc-map.js'
+import {
+  pikkuRPCExposedMap,
+  pikkuRPCInternalMap,
+} from '../src/wirings/rpc/pikku-command-rpc-map.js'
 import { pikkuQueue } from '../src/wirings/queue/pikku-command-queue.js'
 import { pikkuQueueMap } from '../src/wirings/queue/pikku-command-queue-map.js'
 import { pikkuFetch } from '../src/wirings/fetch/index.js'
@@ -109,7 +112,8 @@ const runAll = async (
   await pikkuServices(logger, cliConfig, visitState)
 
   await pikkuRPC(logger, cliConfig, visitState)
-  await pikkuRPCMap(logger, cliConfig, visitState)
+  await pikkuRPCInternalMap(logger, cliConfig, visitState)
+  await pikkuRPCExposedMap(logger, cliConfig, visitState)
   await pikkuRPCClient(logger, cliConfig)
   allImports.push(cliConfig.rpcWiringMetaFile)
 

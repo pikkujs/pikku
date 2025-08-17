@@ -11,7 +11,6 @@ import {
 } from './wirings/scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
 import { CorePikkuFunctionConfig } from './function/functions.types.js'
-import { RPCMeta } from './wirings/rpc/rpc-types.js'
 import {
   queueWorkersMeta,
   CoreQueueWorker,
@@ -31,7 +30,7 @@ interface PikkuState {
     functions: Map<string, CorePikkuFunctionConfig<any, any>>
   }
   rpc: {
-    meta: Record<string, RPCMeta>
+    meta: Record<string, string>
     files: Map<
       string,
       {

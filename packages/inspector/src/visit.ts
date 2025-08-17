@@ -10,6 +10,7 @@ import { addMCPPrompt } from './add-mcp-prompt.js'
 import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import { addFunctions } from './add-functions.js'
 import { addChannel } from './add-channel.js'
+import { addRPCInvocations } from './add-rpc-invocations.js'
 
 export const visitSetup = (
   checker: ts.TypeChecker,
@@ -54,7 +55,7 @@ export const visitSetup = (
   )
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
-  addFunctions(node, checker, state, filters, logger)
+  addRPCInvocations(node, state, logger)
 
   ts.forEachChild(node, (child) =>
     visitSetup(checker, child, state, filters, logger)
@@ -68,6 +69,7 @@ export const visitRoutes = (
   filters: InspectorFilters,
   logger: InspectorLogger
 ) => {
+  addFunctions(node, checker, state, logger)
   addHTTPRoute(node, checker, state, filters, logger)
   addSchedule(node, checker, state, filters, logger)
   addQueueWorker(node, checker, state, filters, logger)
@@ -75,6 +77,7 @@ export const visitRoutes = (
   addMCPResource(node, checker, state, filters, logger)
   addMCPTool(node, checker, state, filters, logger)
   addMCPPrompt(node, checker, state, filters, logger)
+
   ts.forEachChild(node, (child) =>
     visitRoutes(checker, child, state, filters, logger)
   )

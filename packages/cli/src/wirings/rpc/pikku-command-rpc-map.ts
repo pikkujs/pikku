@@ -2,15 +2,38 @@ import { logCommandInfoAndTime, writeFileInDir } from '../../utils.js'
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 import { PikkuCommand } from '../../types.js'
 
-export const pikkuRPCMap: PikkuCommand = async (
+export const pikkuRPCInternalMap: PikkuCommand = async (
+  logger,
+  { rpcInternalMapDeclarationFile, packageMappings },
+  { functions, rpc }
+) => {
+  return await logCommandInfoAndTime(
+    logger,
+    'Creating RPC internal map',
+    'Created RPC internal map',
+    [false],
+    async () => {
+      const content = serializeTypedRPCMap(
+        rpcInternalMapDeclarationFile,
+        packageMappings,
+        functions.typesMap,
+        functions.meta,
+        rpc.internalMeta
+      )
+      await writeFileInDir(logger, rpcInternalMapDeclarationFile, content)
+    }
+  )
+}
+
+export const pikkuRPCExposedMap: PikkuCommand = async (
   logger,
   { rpcMapDeclarationFile, packageMappings },
   { functions, rpc }
 ) => {
   return await logCommandInfoAndTime(
     logger,
-    'Creating RPC map',
-    'Created RPC map',
+    'Creating RPC external map',
+    'Created RPC external map',
     [false],
     async () => {
       const content = serializeTypedRPCMap(
@@ -18,7 +41,7 @@ export const pikkuRPCMap: PikkuCommand = async (
         packageMappings,
         functions.typesMap,
         functions.meta,
-        rpc.meta
+        rpc.exposedMeta
       )
       await writeFileInDir(logger, rpcMapDeclarationFile, content)
     }

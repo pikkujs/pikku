@@ -26,7 +26,6 @@ export type FunctionRuntimeMeta = {
   inputSchemaName: string | null
   outputSchemaName: string | null
   expose?: boolean
-  isDirectFunction?: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &
@@ -37,6 +36,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
     outputs: string[] | null
     tags: string[]
     docs: PikkuDocs
+    isDirectFunction: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
   }>
 
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>

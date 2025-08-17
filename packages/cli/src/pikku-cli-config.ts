@@ -27,7 +27,11 @@ export interface PikkuCLICoreOutputFiles {
   channelsWiringMetaFile: string
   channelsMapDeclarationFile: string
 
-  // RPC
+  // RPC Internal
+  rpcInternalWiringMetaFile: string
+  rpcInternalMapDeclarationFile: string
+
+  // RPC Exposed
   rpcWiringMetaFile: string
   rpcMapDeclarationFile: string
 
@@ -167,7 +171,8 @@ const _getPikkuCLIConfig = async (
       const functionDir = join(result.outDir, 'function')
       const httpDir = join(result.outDir, 'http')
       const channelDir = join(result.outDir, 'channel')
-      const rpcDir = join(result.outDir, 'rpc')
+      const internalRPCDirectory = join(result.outDir, 'rpc-internal')
+      const externalRPCDirectory = join(result.outDir, 'rpc')
       const schedulerDir = join(result.outDir, 'scheduler')
       const queueDir = join(result.outDir, 'queue')
       const mcpDir = join(result.outDir, 'mcp')
@@ -232,13 +237,31 @@ const _getPikkuCLIConfig = async (
         )
       }
 
-      // RPC
+      // Internal
+      if (!result.rpcInternalWiringMetaFile) {
+        result.rpcInternalWiringMetaFile = join(
+          internalRPCDirectory,
+          'pikku-rpc-wirings-meta.internal.gen.ts'
+        )
+      }
+
+      if (!result.rpcInternalMapDeclarationFile) {
+        result.rpcInternalMapDeclarationFile = join(
+          internalRPCDirectory,
+          'pikku-rpc-wirings-map.internal.gen.d.ts'
+        )
+      }
+
+      // External
       if (!result.rpcWiringMetaFile) {
-        result.rpcWiringMetaFile = join(rpcDir, 'pikku-rpc-wirings-meta.gen.ts')
+        result.rpcWiringMetaFile = join(
+          externalRPCDirectory,
+          'pikku-rpc-wirings-meta.gen.ts'
+        )
       }
       if (!result.rpcMapDeclarationFile) {
         result.rpcMapDeclarationFile = join(
-          rpcDir,
+          externalRPCDirectory,
           'pikku-rpc-wirings-map.gen.d.ts'
         )
       }

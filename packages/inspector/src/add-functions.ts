@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { InspectorState, InspectorFilters, InspectorLogger } from './types.js'
+import { InspectorLogger, InspectorState } from './types.js'
 import { TypesMap } from './types-map.js'
 import {
   extractFunctionName,
@@ -251,7 +251,6 @@ export function addFunctions(
   node: ts.Node,
   checker: ts.TypeChecker,
   state: InspectorState,
-  filters: InspectorFilters,
   logger: InspectorLogger
 ) {
   if (!ts.isCallExpression(node)) return
@@ -304,7 +303,7 @@ export function addFunctions(
       !fnProp ||
       (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
     ) {
-      console.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
+      logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
       return
     }
     handlerNode = fnProp
@@ -314,7 +313,7 @@ export function addFunctions(
     !ts.isArrowFunction(handlerNode) &&
     !ts.isFunctionExpression(handlerNode)
   ) {
-    console.error(`• Handler for ${name} is not a function.`)
+    logger.error(`• Handler for ${name} is not a function.`)
     return
   }
 
@@ -356,7 +355,7 @@ export function addFunctions(
     genericTypes[0]
   )
   // if (inputTypes.length === 0) {
-  //   console.debug(
+  //   logger.debug(
   //     `\x1b[31m• Unknown input type for '${name}', assuming void.\x1b[0m`
   //   )
   // }
@@ -387,7 +386,7 @@ export function addFunctions(
   }
 
   if (inputNames.length > 1) {
-    console.warn(
+    logger.warn(
       'More than one input type detected, only the first one will be used as a schema.'
     )
   }
@@ -406,26 +405,32 @@ export function addFunctions(
     isDirectFunction,
   }
 
-  if (explicitName || exportedName) {
+  if (exportedName || explicitName) {
     if (!exportedName) {
-      console.error(
+      logger.error(
         `• Function with explicit name '${name}' is not exported, this is not allowed.`
       )
       return
     }
-    if (state.rpc.meta[name]) {
-      console.error(`• Function name '${name}' already exists, skipping.`)
-      return
+
+    if (expose) {
+      state.rpc.exposedMeta[name] = pikkuFuncName
+      state.rpc.exposedFiles.set(name, {
+        path: node.getSourceFile().fileName,
+        exportedName,
+      })
     }
-    state.rpc.meta[name] = {
-      pikkuFuncName,
-      exposed: false,
+
+    // We add it to internal meta to allow autocomplete for everything
+    state.rpc.internalMeta[name] = pikkuFuncName
+
+    // But we only import the actual function if it's actually invoked to keep
+    // bundle size down
+    if (state.rpc.invokedFunctions.has(pikkuFuncName)) {
+      state.rpc.internalFiles.set(name, {
+        path: node.getSourceFile().fileName,
+        exportedName,
+      })
     }
-    state.functions.files.set(name, {
-      path: node.getSourceFile().fileName,
-      exportedName,
-    })
-  } else {
-    console.log(`• Function name '${name}' not exported, skipping.`)
   }
 }

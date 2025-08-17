@@ -33,9 +33,7 @@ export const wireScheduler = <
   if (!taskMeta) {
     throw new Error('Task metadata not found')
   }
-  addFunction(taskMeta.pikkuFuncName, {
-    func: scheduledTask.func,
-  })
+  addFunction(taskMeta.pikkuFuncName, scheduledTask.func)
 
   const tasks = pikkuState('scheduler', 'tasks')
   if (tasks.has(scheduledTask.name)) {

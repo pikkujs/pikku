@@ -6,7 +6,7 @@ export type PikkuRPC<invoke extends Function = any> = {
 
 export type RPCMeta = {
   pikkuFuncName: string
-  exposed: boolean
+  expose: boolean
 }
 
 /**

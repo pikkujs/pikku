@@ -1,5 +1,3 @@
-import type { RPCMeta } from '@pikku/core/rpc'
-
 import { serializeImportMap } from '../../serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
@@ -10,7 +8,7 @@ export const serializeTypedRPCMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  rpcMeta: Record<string, RPCMeta>
+  rpcMeta: Record<string, string>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -54,12 +52,13 @@ export type TypedPikkuRPC = {
   depth: number;
   global: boolean;
   invoke: RPCInvoke;
+  invokeExposed: (name: string, data: any) => Promise<any> 
 }
   `
 }
 
 function generateRPCs(
-  rpcMeta: Record<string, RPCMeta>,
+  rpcMeta: Record<string, string>,
   functionsMeta: FunctionsMeta,
   typesMap: TypesMap,
   requiredTypes: Set<string>
@@ -68,7 +67,7 @@ function generateRPCs(
   const rpcsObj: Record<string, { inputType: string; outputType: string }> = {}
 
   // Iterate through RPC metadata
-  for (const [funcName, { pikkuFuncName }] of Object.entries(rpcMeta)) {
+  for (const [funcName, pikkuFuncName] of Object.entries(rpcMeta)) {
     const functionMeta = functionsMeta[pikkuFuncName]
     if (!functionMeta) {
       throw new Error(

@@ -62,7 +62,7 @@ export const serializeImportMap = (
 
         // If no types file found, use the first available path
         if (!foundPath && allPaths.size > 0) {
-          foundPath = Array.from(allPaths)[0]
+          foundPath = Array.from(allPaths)[0] || null
         }
       }
 
