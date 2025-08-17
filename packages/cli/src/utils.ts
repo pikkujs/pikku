@@ -371,9 +371,38 @@ export function generateCustomTypes(
 ${Array.from(typesMap.customTypes.entries())
   .map(([name, { type, references }]) => {
     references.forEach((name) => {
-      const originalName = typesMap.getTypeMeta(name).originalName
-      requiredTypes.add(originalName)
+      requiredTypes.add(name)
     })
+
+    // Extract type names from the type string that might not be in references
+    const typeString = type
+    // Use regex to extract potential type names (PascalCase identifiers)
+    const typeNameRegex = /\b[A-Z][a-zA-Z0-9]*\b/g
+    const potentialTypes = typeString.match(typeNameRegex) || []
+
+    potentialTypes.forEach((typeName) => {
+      // Skip string literals and common keywords
+      if (
+        typeString.includes(`"${typeName}"`) ||
+        ['Pick', 'Omit', 'Partial', 'Required', 'Record', 'Readonly'].includes(
+          typeName
+        )
+      ) {
+        return
+      }
+
+      // Try to find this type in the typesMap and add it if found
+      try {
+        const typeMeta = typesMap.getTypeMeta(typeName)
+        if (typeMeta.path) {
+          requiredTypes.add(typeName)
+        }
+      } catch (e) {
+        // Type not found in map, but add it anyway for fallback resolution
+        requiredTypes.add(typeName)
+      }
+    })
+
     return `export type ${name} = ${type}`
   })
   .join('\n')}`

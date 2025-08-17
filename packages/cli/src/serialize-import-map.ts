@@ -9,8 +9,73 @@ export const serializeImportMap = (
 ) => {
   const paths = new Map<string, string[]>()
   Array.from(requiredTypes).forEach((requiredType) => {
-    const { originalName, uniqueName, path } =
-      typesMap.getTypeMeta(requiredType)
+    let originalName, uniqueName, path
+
+    try {
+      const typeMeta = typesMap.getTypeMeta(requiredType)
+      originalName = typeMeta.originalName
+      uniqueName = typeMeta.uniqueName
+      path = typeMeta.path
+    } catch (e) {
+      // Handle missing types by trying to find a suitable import path
+      // Look through all existing types in the map to find a path that might contain this type
+      let foundPath: string | null = null
+
+      // Get all unique paths from the typesMap
+      const allPaths = new Set<string>()
+      typesMap.customTypes.forEach(({ type, references }) => {
+        references.forEach((ref) => {
+          try {
+            const refMeta = typesMap.getTypeMeta(ref)
+            if (refMeta.path) {
+              allPaths.add(refMeta.path)
+            }
+          } catch {
+            // Continue
+          }
+        })
+      })
+
+      // Also check direct types in the map
+      try {
+        const mapEntries = (typesMap as any).map?.entries?.() || []
+        for (const [_, typeMeta] of mapEntries) {
+          if (typeMeta.path) {
+            allPaths.add(typeMeta.path)
+          }
+        }
+      } catch {
+        // Continue
+      }
+
+      // For PascalCase types, prefer paths that look like type definition files
+      if (/^[A-Z]/.test(requiredType)) {
+        for (const candidatePath of allPaths) {
+          if (
+            candidatePath.includes('types') ||
+            candidatePath.includes('.d.')
+          ) {
+            foundPath = candidatePath
+            break
+          }
+        }
+
+        // If no types file found, use the first available path
+        if (!foundPath && allPaths.size > 0) {
+          foundPath = Array.from(allPaths)[0]
+        }
+      }
+
+      if (foundPath) {
+        originalName = requiredType
+        uniqueName = requiredType
+        path = foundPath
+      } else {
+        // No suitable path found, skip
+        return
+      }
+    }
+
     if (!path) {
       // This is a custom type that exists in file, so we don't need to import it
       return

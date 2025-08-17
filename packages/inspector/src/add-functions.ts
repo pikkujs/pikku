@@ -84,6 +84,25 @@ const resolveTypeImports = (
         typeRef.typeArguments?.forEach(visitType)
       }
     }
+
+    // Always traverse type arguments for thorough type collection
+    if (currentType.aliasTypeArguments) {
+      currentType.aliasTypeArguments.forEach(visitType)
+    }
+
+    // Always handle intersections and unions
+    if (currentType.isUnionOrIntersection()) {
+      currentType.types.forEach(visitType)
+    }
+
+    // Always handle object types with type arguments
+    if (
+      currentType.flags & ts.TypeFlags.Object &&
+      (currentType as ts.ObjectType).objectFlags & ts.ObjectFlags.Reference
+    ) {
+      const typeRef = currentType as ts.TypeReference
+      typeRef.typeArguments?.forEach(visitType)
+    }
   }
 
   visitType(type)
