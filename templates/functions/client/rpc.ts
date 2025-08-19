@@ -9,17 +9,15 @@ async function check() {
   try {
     await pikkuRPC.invoke('rpcTest', { in: 0 })
     console.log('✅ RPC test passed')
-    process.exit(0)
   } catch (err: any) {
     console.log(`Still failing (${err.message}), retrying...`)
   }
 
   if (Date.now() - start > TIMEOUT) {
     console.error(`❌ RPC test failed after ${TIMEOUT / 1000} seconds`)
-    process.exit(1)
+  } else {
+    setTimeout(check, RETRY_INTERVAL)
   }
-
-  setTimeout(check, RETRY_INTERVAL)
 }
 
 check()

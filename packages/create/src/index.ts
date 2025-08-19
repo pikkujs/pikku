@@ -75,7 +75,7 @@ const templates = [
   {
     template: 'express-middleware',
     description: 'An Express Middleware template',
-    supports: ['http'],
+    supports: ['http', 'scheduled'],
   },
   {
     template: 'fastify',
