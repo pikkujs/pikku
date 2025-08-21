@@ -12,7 +12,10 @@ import { createHTTPInteraction } from '../../http/http-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
-import { runMiddleware } from '../../../middleware-runner.js'
+import {
+  addMiddlewareForTags,
+  runMiddleware,
+} from '../../../middleware-runner.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
@@ -146,7 +149,7 @@ export const runChannelConnect = async ({
       userSession,
     },
     { http },
-    channelConfig.middleware || [],
+    addMiddlewareForTags(channelConfig.middleware, channelConfig.tags),
     main
   )
 }

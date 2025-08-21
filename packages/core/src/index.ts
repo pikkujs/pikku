@@ -21,7 +21,11 @@ export * from './middleware/index.js'
 export * from './time-utils.js'
 export * from './utils.js'
 export { pikkuState } from './pikku-state.js'
-export { runMiddleware } from './middleware-runner.js'
+export {
+  runMiddleware,
+  addMiddleware,
+  addMiddlewareForTags,
+} from './middleware-runner.js'
 export { wireHTTP, addHTTPMiddleware } from './wirings/http/http-runner.js'
 export { wireChannel } from './wirings/channel/channel-runner.js'
 export { wireScheduler } from './wirings/scheduler/scheduler-runner.js'

@@ -14,6 +14,7 @@ import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
+import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -66,53 +67,70 @@ export async function runScheduledTask({
   singletonServices,
   createSessionServices,
 }: RunScheduledTasksParams): Promise<void> {
-  let sessionServices: CoreServices | undefined
-  try {
-    const task = pikkuState('scheduler', 'tasks').get(name)
-    const meta = pikkuState('scheduler', 'meta')[name]
-    if (!task) {
-      throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)
-    }
-    if (!meta) {
-      throw new ScheduledTaskNotFoundError(
-        `Scheduled task meta not found: ${name}`
-      )
-    }
+  let sessionServices: any
+  const task = pikkuState('scheduler', 'tasks').get(name)
+  const meta = pikkuState('scheduler', 'meta')[name]
 
+  if (!task) {
+    throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)
+  }
+  if (!meta) {
+    throw new ScheduledTaskNotFoundError(
+      `Scheduled task meta not found: ${name}`
+    )
+  }
+
+  // Create the scheduled task interaction object
+  const scheduledTask: PikkuScheduledTask = {
+    name,
+    schedule: task.schedule,
+    executionTime: new Date(),
+    skip: (reason?: string) => {
+      throw new ScheduledTaskSkippedError(name, reason)
+    },
+  }
+
+  try {
     singletonServices.logger.info(
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    // Create the scheduled task interaction object
-    const scheduledTask: PikkuScheduledTask = {
-      name,
-      schedule: task.schedule,
-      executionTime: new Date(),
-      skip: (reason?: string) => {
-        throw new ScheduledTaskSkippedError(name, reason)
-      },
-    }
+    let result: any
 
-    const getAllServices = async () => {
-      if (createSessionServices) {
-        const sessionServices = await createSessionServices(
-          singletonServices,
-          { scheduledTask },
-          session
-        )
-        return rpcService.injectRPCService({
-          ...singletonServices,
-          ...sessionServices,
-        })
+    // Main scheduled task execution logic wrapped for middleware handling
+    const runMain = async () => {
+      const getAllServices = async () => {
+        if (createSessionServices) {
+          const services = await createSessionServices(
+            singletonServices,
+            { scheduledTask },
+            session
+          )
+          sessionServices = services
+          return rpcService.injectRPCService({
+            ...singletonServices,
+            ...services,
+          })
+        }
+        return singletonServices
       }
-      return singletonServices
+
+      result = await runPikkuFunc(meta.pikkuFuncName, {
+        getAllServices,
+        session,
+        data: undefined,
+      })
     }
 
-    return await runPikkuFunc(meta.pikkuFuncName, {
-      getAllServices,
-      session,
-      data: undefined,
-    })
+    // Get middleware for tags and run middleware
+    await runMiddleware(
+      singletonServices,
+      { scheduledTask },
+      addMiddlewareForTags(task.middleware, task.tags),
+      runMain
+    )
+
+    return result
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
     if (errorResponse != null) {

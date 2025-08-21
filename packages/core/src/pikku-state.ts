@@ -67,6 +67,7 @@ interface PikkuState {
   misc: {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
+    middleware: Record<string, CorePikkuMiddleware[]>
   }
 }
 
@@ -108,6 +109,7 @@ export const resetPikkuState = () => {
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),
       schemas: globalThis.pikkuState?.misc?.schema || new Map(),
+      middleware: globalThis.pikkuState?.misc?.middleware || {},
     },
   } as PikkuState
 }

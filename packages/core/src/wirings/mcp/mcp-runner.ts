@@ -20,6 +20,7 @@ import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
+import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -228,31 +229,44 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    const getAllServices = async () => {
-      if (createSessionServices) {
-        const services = await createSessionServices(
-          singletonServices,
-          { mcp: interaction },
-          session
-        )
-        sessionServices = services
+    let result: any
+
+    // Main MCP execution logic wrapped for middleware handling
+    const runMain = async () => {
+      const getAllServices = async () => {
+        if (createSessionServices) {
+          const services = await createSessionServices(
+            singletonServices,
+            { mcp: interaction },
+            session
+          )
+          sessionServices = services
+          return rpcService.injectRPCService({
+            ...singletonServices,
+            ...services,
+            mcp: interaction,
+          })
+        }
         return rpcService.injectRPCService({
           ...singletonServices,
-          ...services,
           mcp: interaction,
         })
       }
-      return rpcService.injectRPCService({
-        ...singletonServices,
-        mcp: interaction,
+
+      result = await runPikkuFunc(pikkuFuncName, {
+        getAllServices,
+        session,
+        data: request.params,
       })
     }
 
-    const result = await runPikkuFunc(pikkuFuncName, {
-      getAllServices,
-      session,
-      data: request.params,
-    })
+    // Get middleware for tags and run middleware
+    await runMiddleware(
+      singletonServices,
+      { mcp: interaction },
+      addMiddlewareForTags(mcp.middleware, mcp.tags),
+      runMain
+    )
 
     return {
       id: request.id,

@@ -10,7 +10,10 @@ import {
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { SessionServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { runMiddleware } from '../../../middleware-runner.js'
+import {
+  getMiddlewareForTags,
+  runMiddleware,
+} from '../../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runPikkuFuncDirectly } from '../../../function/function-runner.js'
@@ -42,21 +45,21 @@ export const runLocalChannel = async ({
     route = http?.request?.path()
   }
 
+  const { openingData, channelConfig, meta } = await openChannel({
+    channelId,
+    createSessionServices,
+    respondWith404,
+    request,
+    response,
+    route,
+    singletonServices,
+    skipUserSession,
+    coerceDataFromSchema,
+    userSession,
+  })
+
   const main = async () => {
     try {
-      const { openingData, channelConfig, meta } = await openChannel({
-        channelId,
-        createSessionServices,
-        respondWith404,
-        request,
-        response,
-        route,
-        singletonServices,
-        skipUserSession,
-        coerceDataFromSchema,
-        userSession,
-      })
-
       channelHandler = new PikkuLocalChannelHandler(
         channelId,
         channelConfig.name,
@@ -67,7 +70,7 @@ export const runLocalChannel = async ({
       if (createSessionServices) {
         sessionServices = await createSessionServices(
           singletonServices,
-          { http },
+          { http, channel },
           session
         )
       }
@@ -126,13 +129,14 @@ export const runLocalChannel = async ({
     }
   }
 
+  const taggedMiddleware = getMiddlewareForTags(channelConfig.tags)
   await runMiddleware(
     {
       ...singletonServices,
       userSession,
     },
     { http },
-    route.middleware || [],
+    [...taggedMiddleware, ...(route.middleware || [])],
     main
   )
 

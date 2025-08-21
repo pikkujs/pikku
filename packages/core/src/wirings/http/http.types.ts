@@ -72,6 +72,7 @@ export type CoreHTTPFunction = {
   eventChannel?: false
   returnsJSON?: false
   timeout?: number
+  tags?: string[]
   docs?: Partial<{
     description: string
     response: string

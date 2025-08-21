@@ -24,7 +24,7 @@ import {
   PikkuUserSessionService,
   UserSessionService,
 } from '../../services/user-session-service.js'
-import { runMiddleware } from '../../middleware-runner.js'
+import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -371,7 +371,7 @@ const executeRouteWithMiddleware = async (
   await runMiddleware(
     { ...singletonServices, userSession },
     { http },
-    middleware,
+    addMiddlewareForTags(middleware, route.tags),
     runMain
   )
 

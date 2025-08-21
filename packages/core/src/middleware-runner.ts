@@ -4,6 +4,7 @@ import {
   PikkuInteraction,
   CorePikkuMiddleware,
 } from './types/core.types.js'
+import { pikkuState } from './pikku-state.js'
 
 /**
  * Runs a chain of middleware functions in sequence before executing the main function.
@@ -42,4 +43,108 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   }
   await dispatch(0)
   return result
+}
+
+/**
+ * Adds global middleware for a specific tag.
+ *
+ * This function allows you to register middleware that will be applied to
+ * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
+ *
+ * @template PikkuMiddleware The middleware type.
+ * @param {string} tag - The tag that the middleware should apply to.
+ * @param {PikkuMiddleware[]} middleware - The middleware array to apply for the specified tag.
+ *
+ * @throws {Error} If middleware for the tag already exists.
+ *
+ * @example
+ * ```typescript
+ * // Add admin middleware for admin endpoints
+ * addMiddleware('admin', [adminMiddleware])
+ *
+ * // Add authentication middleware for auth endpoints
+ * addMiddleware('auth', [authMiddleware])
+ *
+ * // Add logging middleware for all API endpoints
+ * addMiddleware('api', [loggingMiddleware])
+ * ```
+ */
+export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
+  tag: string,
+  middleware: PikkuMiddleware[]
+) => {
+  const middlewareStore = pikkuState('misc', 'middleware')
+
+  // Check if tag already exists
+  if (middlewareStore[tag]) {
+    throw new Error(
+      `Middleware for tag '${tag}' already exists. Use a different tag or remove the existing middleware first.`
+    )
+  }
+
+  middlewareStore[tag] = middleware as CorePikkuMiddleware[]
+}
+
+/**
+ * Retrieves middleware for a given set of tags.
+ *
+ * This function looks up all middleware registered for any of the provided tags
+ * and returns them as a flattened array.
+ *
+ * @param {string[]} tags - Array of tags to look up middleware for.
+ * @returns {CorePikkuMiddleware[]} Array of middleware functions that apply to the given tags.
+ *
+ * @example
+ * ```typescript
+ * // Get all middleware for tags 'api' and 'auth'
+ * const middleware = getMiddlewareForTags(['api', 'auth'])
+ * ```
+ */
+export const getMiddlewareForTags = (
+  tags?: string[]
+): CorePikkuMiddleware[] => {
+  if (!tags || tags.length === 0) {
+    return []
+  }
+
+  const middlewareStore = pikkuState('misc', 'middleware')
+  const applicableMiddleware: CorePikkuMiddleware[] = []
+
+  // Collect middleware for all matching tags
+  for (const tag of tags) {
+    const tagMiddleware = middlewareStore[tag]
+    if (tagMiddleware) {
+      applicableMiddleware.push(...tagMiddleware)
+    }
+  }
+
+  return applicableMiddleware
+}
+
+/**
+ * Combines tag-based middleware with wiring-specific middleware.
+ *
+ * This helper function gets middleware for tags and combines it with any
+ * wiring-specific middleware, avoiding the need for manual spreading.
+ *
+ * @param {CorePikkuMiddleware[] | undefined} wiringMiddleware - Wiring-specific middleware.
+ * @param {string[] | undefined} tags - Array of tags to look up middleware for.
+ * @returns {CorePikkuMiddleware[]} Combined array of tag-based and wiring-specific middleware.
+ *
+ * @example
+ * ```typescript
+ * // Instead of:
+ * const taggedMiddleware = getMiddlewareForTags(tags)
+ * const combined = [...taggedMiddleware, ...(middleware || [])]
+ *
+ * // Use:
+ * const combined = addMiddlewareForTags(middleware, tags)
+ * ```
+ */
+export const addMiddlewareForTags = (
+  wiringMiddleware?: CorePikkuMiddleware[],
+  tags?: string[]
+): CorePikkuMiddleware[] => {
+  const taggedMiddleware = getMiddlewareForTags(tags)
+  return [...taggedMiddleware, ...(wiringMiddleware || [])]
 }

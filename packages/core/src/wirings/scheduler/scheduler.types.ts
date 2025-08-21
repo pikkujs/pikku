@@ -1,4 +1,8 @@
-import { PikkuDocs, CoreUserSession } from '../../types/core.types.js'
+import {
+  PikkuDocs,
+  CoreUserSession,
+  CorePikkuMiddleware,
+} from '../../types/core.types.js'
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
 
 /**
@@ -22,12 +26,14 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
  */
 export type CoreScheduledTask<
   PikkuFunction = CorePikkuFunctionSessionless<void, void>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
   schedule: string
   func: PikkuFunction
   docs?: PikkuDocs
   tags?: string[]
+  middleware?: PikkuMiddleware[]
 }
 
 /**

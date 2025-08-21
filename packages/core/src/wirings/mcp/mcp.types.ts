@@ -1,4 +1,5 @@
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import { CorePikkuMiddleware } from '../../types/core.types.js'
 
 export type PikkuMCP<Tools extends string = any> = {
   // elicitInput: <Input>(message: string) => Promise<{ action: string, content: Input }>
@@ -55,6 +56,7 @@ export type MCPPromptMeta = Record<
  */
 export type CoreMCPResource<
   PikkuFunction = CorePikkuFunctionSessionless<any, any>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   uri: string
   title: string
@@ -64,6 +66,7 @@ export type CoreMCPResource<
   streaming?: boolean
   func: PikkuFunction
   tags?: string[]
+  middleware?: PikkuMiddleware[]
 }
 
 /**
@@ -71,6 +74,7 @@ export type CoreMCPResource<
  */
 export type CoreMCPTool<
   PikkuFunction = CorePikkuFunctionSessionless<any, any>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
   title?: string
@@ -79,6 +83,7 @@ export type CoreMCPTool<
   func: PikkuFunction
   tags?: string[]
   streaming?: boolean
+  middleware?: PikkuMiddleware[]
 }
 
 /**
@@ -86,11 +91,13 @@ export type CoreMCPTool<
  */
 export type CoreMCPPrompt<
   PikkuFunction = CorePikkuFunctionSessionless<any, MCPPromptResponse>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
   description?: string
   func: PikkuFunction
   tags?: string[]
+  middleware?: PikkuMiddleware[]
 }
 
 export type JsonRpcRequest = {

@@ -5,6 +5,7 @@ import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { CreateSessionServices } from '../../types/core.types.js'
+import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
 
 /**
  * Error class for queue processor not found
@@ -114,45 +115,58 @@ export async function runQueueJob({
     throw new Error(`Queue worker registration not found for: ${job.queueName}`)
   }
 
+  // Create the queue interaction object
+  const queue: PikkuQueue = {
+    queueName: job.queueName,
+    jobId: job.id,
+    updateProgress:
+      updateProgress ||
+      (async (progress: number | string | object) => {
+        logger.info(`Job ${job.id} progress: ${progress}`)
+        // Default implementation - just log the progress
+      }),
+    fail: async (reason?: string) => {
+      throw new QueueJobFailedError(job.id, reason)
+    },
+    discard: async (reason?: string) => {
+      throw new QueueJobDiscardedError(job.id, reason)
+    },
+  }
+
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
-    // Create the queue interaction object
-    const queue: PikkuQueue = {
-      queueName: job.queueName,
-      jobId: job.id,
-      updateProgress:
-        updateProgress ||
-        (async (progress: number | string | object) => {
-          logger.info(`Job ${job.id} progress: ${progress}`)
-          // Default implementation - just log the progress
-        }),
-      fail: async (reason?: string) => {
-        throw new QueueJobFailedError(job.id, reason)
-      },
-      discard: async (reason?: string) => {
-        throw new QueueJobDiscardedError(job.id, reason)
-      },
+    let result: any
+
+    // Main job execution logic wrapped for middleware handling
+    const runMain = async () => {
+      // Use provided singleton services
+      const getAllServices = () => ({
+        ...singletonServices,
+        ...(createSessionServices
+          ? createSessionServices(singletonServices, { queue }, undefined)
+          : {}),
+      })
+
+      // Execute the pikku function with the job data
+      result = await runPikkuFunc(processorMeta.pikkuFuncName, {
+        getAllServices,
+        data: job.data,
+      })
+
+      logger.debug(
+        `Successfully processed job ${job.id} in queue ${job.queueName}`
+      )
     }
 
-    // Use provided singleton services
-    const getAllServices = () => ({
-      ...singletonServices,
-      ...(createSessionServices
-        ? createSessionServices(singletonServices, { queue }, undefined)
-        : {}),
-    })
-
-    // Execute the pikku function with the job data
-    const result = await runPikkuFunc(processorMeta.pikkuFuncName, {
-      getAllServices,
-      data: job.data,
-      middleware: queueWorker.middleware,
-    })
-
-    logger.debug(
-      `Successfully processed job ${job.id} in queue ${job.queueName}`
+    // Get middleware for tags and combine with queue-specific middleware
+    await runMiddleware(
+      singletonServices,
+      { queue },
+      addMiddlewareForTags(queueWorker.middleware, queueWorker.tags),
+      runMain
     )
+
     return result
   } catch (error: any) {
     logger.error(

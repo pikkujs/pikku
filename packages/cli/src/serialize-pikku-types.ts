@@ -13,7 +13,7 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addMiddlewareForTags } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore } from '@pikku/core/http'
 import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
@@ -118,7 +118,7 @@ type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelDat
  * Type definition for scheduled tasks that run at specified intervals.
  * These are sessionless functions that execute based on cron expressions.
  */
-type SchedulerWiring = CoreScheduledTask<PikkuFunctionSessionless<void, void>>
+type SchedulerWiring = CoreScheduledTask<PikkuFunctionSessionless<void, void>, PikkuMiddleware>
 
 /**
  * Type definition for queue workers that process background jobs.
@@ -350,6 +350,53 @@ export const wireChannel = <ChannelData, Channel extends string>(
  * \`\`\`
  */
 export { addHTTPMiddleware }
+
+/**
+ * Adds global middleware for a specific tag.
+ * 
+ * This function allows you to register middleware that will be applied to 
+ * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
+ * 
+ * @param tag - The tag that the middleware should apply to.
+ * @param middleware - The middleware array to apply for the specified tag.
+ * 
+ * @throws Error if middleware for the tag already exists.
+ * 
+ * @example
+ * \`\`\`typescript
+ * // Add admin middleware for admin endpoints
+ * addMiddleware('admin', [adminMiddleware])
+ * 
+ * // Add authentication middleware for auth endpoints
+ * addMiddleware('auth', [authMiddleware])
+ * 
+ * // Add logging middleware for all API endpoints  
+ * addMiddleware('api', [loggingMiddleware])
+ * \`\`\`
+ */
+export { addMiddleware }
+
+/**
+ * Combines tag-based middleware with wiring-specific middleware.
+ * 
+ * This helper function gets middleware for tags and combines it with any
+ * wiring-specific middleware, avoiding the need for manual spreading.
+ * 
+ * @param wiringMiddleware - Wiring-specific middleware.
+ * @param tags - Array of tags to look up middleware for.
+ * @returns Combined array of tag-based and wiring-specific middleware.
+ * 
+ * @example
+ * \`\`\`typescript
+ * // Instead of:
+ * const taggedMiddleware = getMiddlewareForTags(tags)
+ * const combined = [...taggedMiddleware, ...(middleware || [])]
+ * 
+ * // Use:
+ * const combined = addMiddlewareForTags(middleware, tags)
+ * \`\`\`
+ */
+export { addMiddlewareForTags }
 
 /**
  * Registers an HTTP wiring with the Pikku framework.

@@ -95,5 +95,6 @@ export type CorePikkuFunctionConfig<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
+  tags?: string[]
   docs?: PikkuDocs
 }

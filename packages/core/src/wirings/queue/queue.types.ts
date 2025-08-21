@@ -166,6 +166,7 @@ export type queueWorkersMeta = Record<
  */
 export type CoreQueueWorker<
   PikkuFunction = CorePikkuFunctionSessionless<any, any>,
+  PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   queueName: string
   func: PikkuFunction
@@ -173,7 +174,7 @@ export type CoreQueueWorker<
   docs?: PikkuDocs
   session?: undefined
   tags?: string[]
-  middleware?: CorePikkuMiddleware[]
+  middleware?: PikkuMiddleware[]
 }
 
 /**
