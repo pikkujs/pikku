@@ -1,4 +1,4 @@
-import { PikkuDocs } from '../../types/core.types.js'
+import { PikkuDocs, CorePikkuMiddleware } from '../../types/core.types.js'
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
 import { QueueConfigMapping } from './validate-worker-config.js'
 
@@ -173,4 +173,22 @@ export type CoreQueueWorker<
   docs?: PikkuDocs
   session?: undefined
   tags?: string[]
+  middleware?: CorePikkuMiddleware[]
+}
+
+/**
+ * Represents a queue interaction object for middleware
+ * Provides information and actions for the current queue job execution
+ */
+export interface PikkuQueue {
+  /** The name of the queue being processed */
+  queueName: string
+  /** The current job ID */
+  jobId: string
+  /** Update job progress (0-100 or custom value) */
+  updateProgress: (progress: number | string | object) => Promise<void>
+  /** Fail the current job with optional reason */
+  fail: (reason?: string) => Promise<void>
+  /** Discard/delete the job without retrying */
+  discard: (reason?: string) => Promise<void>
 }

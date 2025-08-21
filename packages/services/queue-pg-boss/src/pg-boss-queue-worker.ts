@@ -5,7 +5,12 @@ import type {
   QueueConfigMapping,
   ConfigValidationResult,
 } from '@pikku/core/queue'
-import { runQueueJob, registerQueueWorkers } from '@pikku/core/queue'
+import {
+  runQueueJob,
+  registerQueueWorkers,
+  QueueJobFailedError,
+  QueueJobDiscardedError,
+} from '@pikku/core/queue'
 import {
   CoreServices,
   CoreSingletonServices,
@@ -165,11 +170,25 @@ export class PgBossQueueWorkers implements QueueWorkers {
               )
               return
             }
-            await runQueueJob({
-              singletonServices: this.singletonServices,
-              createSessionServices: this.createSessionServices,
-              job: mapPgBossJobToQueueJob(job, this.pgBoss),
-            })
+            try {
+              await runQueueJob({
+                singletonServices: this.singletonServices,
+                createSessionServices: this.createSessionServices,
+                job: mapPgBossJobToQueueJob(job, this.pgBoss),
+              })
+            } catch (error: unknown) {
+              if (error instanceof QueueJobFailedError) {
+                // Let pg-boss handle this as a failed job
+                throw new Error(error.message)
+              } else if (error instanceof QueueJobDiscardedError) {
+                // For pg-boss, complete the job successfully to discard it
+                this.singletonServices.logger.info(
+                  `PgBoss job ${job.id} discarded: ${error.message}`
+                )
+                return // Successfully "completed" by discarding
+              }
+              throw error
+            }
           }
         )
         this.activeWorkers.set(queueName, workerId)

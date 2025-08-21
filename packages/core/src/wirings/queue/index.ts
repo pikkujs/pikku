@@ -7,6 +7,8 @@ export {
   runQueueJob,
   getQueueWorkers,
   removeQueueWorker,
+  QueueJobDiscardedError,
+  QueueJobFailedError,
 } from './queue-runner.js'
 
 // Configuration validation

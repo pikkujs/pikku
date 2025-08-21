@@ -4,9 +4,12 @@ import type {
   CoreUserSession,
   CreateSessionServices,
 } from '../../types/core.types.js'
-import type { CoreScheduledTask } from './scheduler.types.js'
+import type {
+  CoreScheduledTask,
+  PikkuScheduledTask,
+} from './scheduler.types.js'
 import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
-import { getErrorResponse } from '../../errors/error-handler.js'
+import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
@@ -42,9 +45,18 @@ export const wireScheduler = <
   tasks.set(scheduledTask.name, scheduledTask)
 }
 
-class ScheduledTaskNotFoundError extends Error {
+class ScheduledTaskNotFoundError extends PikkuError {
   constructor(title: string) {
     super(`Scheduled task not found: ${title}`)
+  }
+}
+
+class ScheduledTaskSkippedError extends PikkuError {
+  constructor(taskName: string, reason?: string) {
+    super(
+      `Scheduled task '${taskName}' was skipped${reason ? `: ${reason}` : ''}`
+    )
+    this.name = 'ScheduledTaskSkippedError'
   }
 }
 
@@ -71,11 +83,21 @@ export async function runScheduledTask({
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
+    // Create the scheduled task interaction object
+    const scheduledTask: PikkuScheduledTask = {
+      name,
+      schedule: task.schedule,
+      executionTime: new Date(),
+      skip: (reason?: string) => {
+        throw new ScheduledTaskSkippedError(name, reason)
+      },
+    }
+
     const getAllServices = async () => {
       if (createSessionServices) {
         const sessionServices = await createSessionServices(
           singletonServices,
-          {},
+          { scheduledTask },
           session
         )
         return rpcService.injectRPCService({

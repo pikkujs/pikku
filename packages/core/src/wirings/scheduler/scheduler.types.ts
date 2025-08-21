@@ -29,3 +29,18 @@ export type CoreScheduledTask<
   docs?: PikkuDocs
   tags?: string[]
 }
+
+/**
+ * Represents a scheduled task interaction object for middleware
+ * Provides information about the current scheduled task execution
+ */
+export interface PikkuScheduledTask {
+  /** The name of the scheduled task being executed */
+  name: string
+  /** The cron schedule expression */
+  schedule: string
+  /** Current execution timestamp */
+  executionTime: Date
+  /** Skip the current task execution */
+  skip: (reason?: string) => void
+}

@@ -1,5 +1,9 @@
 import { SQSBatchResponse, SQSEvent, SQSRecord } from 'aws-lambda'
-import { runQueueJob } from '@pikku/core/queue'
+import {
+  runQueueJob,
+  QueueJobFailedError,
+  QueueJobDiscardedError,
+} from '@pikku/core/queue'
 import type {
   CoreSingletonServices,
   CreateSessionServices,
@@ -66,13 +70,27 @@ export const runSQSQueueWorker = async (
 
   // Process all jobs in parallel
   const results = await Promise.allSettled(
-    jobs.map((job) =>
-      runQueueJob({
-        singletonServices,
-        createSessionServices,
-        job,
-      })
-    )
+    jobs.map(async (job) => {
+      try {
+        return await runQueueJob({
+          singletonServices,
+          createSessionServices,
+          job,
+        })
+      } catch (error: unknown) {
+        if (error instanceof QueueJobFailedError) {
+          // Let SQS handle this as a failed job (will go to retry or DLQ)
+          throw error
+        } else if (error instanceof QueueJobDiscardedError) {
+          // For SQS, discarding means completing successfully (no retry)
+          singletonServices.logger.info(
+            `SQS job ${job.id} discarded: ${error.message}`
+          )
+          return // Successfully "completed" by discarding
+        }
+        throw error
+      }
+    })
   )
 
   // Log any failures but don't throw (SQS will handle retries)

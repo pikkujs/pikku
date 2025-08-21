@@ -1,7 +1,7 @@
 import type { CoreServices } from '../../types/core.types.js'
-import type { CoreQueueWorker, QueueJob } from './queue.types.js'
+import type { CoreQueueWorker, QueueJob, PikkuQueue } from './queue.types.js'
 import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
-import { getErrorResponse } from '../../errors/error-handler.js'
+import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { CreateSessionServices } from '../../types/core.types.js'
@@ -9,9 +9,29 @@ import { CreateSessionServices } from '../../types/core.types.js'
 /**
  * Error class for queue processor not found
  */
-class QueueWorkerNotFoundError extends Error {
+class QueueWorkerNotFoundError extends PikkuError {
   constructor(name: string) {
     super(`Queue processor not found: ${name}`)
+  }
+}
+
+/**
+ * Error class for when a queue job is explicitly failed
+ */
+export class QueueJobFailedError extends PikkuError {
+  constructor(jobId: string, reason?: string) {
+    super(`Queue job ${jobId} failed${reason ? `: ${reason}` : ''}`)
+    this.name = 'QueueJobFailedError'
+  }
+}
+
+/**
+ * Error class for when a queue job is explicitly discarded
+ */
+export class QueueJobDiscardedError extends PikkuError {
+  constructor(jobId: string, reason?: string) {
+    super(`Queue job ${jobId} discarded${reason ? `: ${reason}` : ''}`)
+    this.name = 'QueueJobDiscardedError'
   }
 }
 /**
@@ -72,10 +92,12 @@ export async function runQueueJob({
   singletonServices,
   createSessionServices,
   job,
+  updateProgress,
 }: {
   singletonServices: CoreServices
   createSessionServices?: CreateSessionServices
   job: QueueJob
+  updateProgress?: (progress: number | string | object) => Promise<void>
 }): Promise<void> {
   const logger = singletonServices.logger
 
@@ -85,14 +107,39 @@ export async function runQueueJob({
     throw new Error(`Processor metadata not found for: ${job.queueName}`)
   }
 
+  // Get the queue worker registration to access middleware
+  const registrations = pikkuState('queue', 'registrations')
+  const queueWorker = registrations.get(job.queueName)
+  if (!queueWorker) {
+    throw new Error(`Queue worker registration not found for: ${job.queueName}`)
+  }
+
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
+
+    // Create the queue interaction object
+    const queue: PikkuQueue = {
+      queueName: job.queueName,
+      jobId: job.id,
+      updateProgress:
+        updateProgress ||
+        (async (progress: number | string | object) => {
+          logger.info(`Job ${job.id} progress: ${progress}`)
+          // Default implementation - just log the progress
+        }),
+      fail: async (reason?: string) => {
+        throw new QueueJobFailedError(job.id, reason)
+      },
+      discard: async (reason?: string) => {
+        throw new QueueJobDiscardedError(job.id, reason)
+      },
+    }
 
     // Use provided singleton services
     const getAllServices = () => ({
       ...singletonServices,
       ...(createSessionServices
-        ? createSessionServices(singletonServices, {}, undefined)
+        ? createSessionServices(singletonServices, { queue }, undefined)
         : {}),
     })
 
@@ -100,6 +147,7 @@ export async function runQueueJob({
     const result = await runPikkuFunc(processorMeta.pikkuFuncName, {
       getAllServices,
       data: job.data,
+      middleware: queueWorker.middleware,
     })
 
     logger.debug(

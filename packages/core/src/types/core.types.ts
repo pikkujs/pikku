@@ -6,6 +6,8 @@ import { UserSessionService } from '../services/user-session-service.js'
 import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
+import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
+import { PikkuQueue } from '../wirings/queue/queue.types.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -112,11 +114,15 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 /**
  * Represents different forms of interaction within Pikku and the outside world.
  */
-export interface PikkuInteraction {
-  http?: PikkuHTTP
-  mcp?: PikkuMCP
-  rpc?: PikkuRPC
-}
+export type PikkuInteraction = Partial<{
+  http: PikkuHTTP
+  mcp: PikkuMCP
+  rpc: PikkuRPC
+  channel: PikkuChannel<unknown, unknown>
+  scheduledTask: PikkuScheduledTask
+  queue: PikkuQueue
+  s
+}>
 
 /**
  * A function that can wrap an interaction and be called before or after

@@ -10,7 +10,12 @@ import type {
   QueueConfigMapping,
   ConfigValidationResult,
 } from '@pikku/core/queue'
-import { runQueueJob, registerQueueWorkers } from '@pikku/core/queue'
+import {
+  runQueueJob,
+  registerQueueWorkers,
+  QueueJobFailedError,
+  QueueJobDiscardedError,
+} from '@pikku/core/queue'
 import {
   CoreServices,
   CoreSingletonServices,
@@ -158,15 +163,29 @@ export class BullQueueWorkers implements QueueWorkers {
         const worker = new Worker(
           processor.queueName,
           async (job: Bull.Job) => {
-            return await runQueueJob({
-              singletonServices: this.singletonServices,
-              createSessionServices: this.createSessionServices,
-              job: await mapBullJobToQueueJob(
-                job,
-                this.redisConnectionOptions,
-                this.queueEvents
-              ),
-            })
+            try {
+              return await runQueueJob({
+                singletonServices: this.singletonServices,
+                createSessionServices: this.createSessionServices,
+                job: await mapBullJobToQueueJob(
+                  job,
+                  this.redisConnectionOptions,
+                  this.queueEvents
+                ),
+                updateProgress: async (progress) => {
+                  await job.updateProgress(progress)
+                },
+              })
+            } catch (error) {
+              if (error instanceof QueueJobFailedError) {
+                // Let BullMQ handle this as a failed job
+                throw new Error(error.message)
+              } else if (error instanceof QueueJobDiscardedError) {
+                return // Don't throw, job is discarded, which I guess is considered
+                // a successful job removal
+              }
+              throw error
+            }
           },
           {
             connection: this.redisConnectionOptions,

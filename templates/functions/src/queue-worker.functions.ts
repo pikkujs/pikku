@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
+import { loggingMiddleware } from './middleware.js'
 
 export const queueWorker = pikkuSessionlessFunc<
   { message: string; fail: boolean },
@@ -9,4 +10,16 @@ export const queueWorker = pikkuSessionlessFunc<
     throw new Error('Job failed because it was instructed to')
   }
   return { result: `echo: ${data.message}` }
+})
+
+// Example of queue worker with middleware
+export const queueWorkerWithMiddleware = pikkuSessionlessFunc<
+  { message: string },
+  { result: string }
+>({
+  func: async ({ logger }, data) => {
+    logger.info('Processing message with middleware support')
+    return { result: `processed: ${data.message}` }
+  },
+  middleware: [loggingMiddleware],
 })
