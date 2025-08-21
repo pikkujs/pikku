@@ -1,6 +1,6 @@
 import { ForbiddenError } from '../errors/errors.js'
 import { runMiddleware } from '../middleware-runner.js'
-import { verifyPermissions } from '../permissions.js'
+import { verifyPermissions, getPermissionsForTags } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
@@ -50,6 +50,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     permissions: transportPermissions,
     middleware: transportMiddleware,
     coerceDataFromSchema,
+    tags = [],
   }: {
     getAllServices: () => Promise<CoreServices> | CoreServices
     data: In
@@ -57,6 +58,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     permissions?: CorePermissionGroup
     middleware?: CorePikkuMiddleware[]
     coerceDataFromSchema?: boolean
+    tags?: string[]
   }
 ): Promise<Out> => {
   const funcConfig = pikkuState('function', 'functions').get(funcName)
@@ -92,7 +94,23 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   let permissioned = true
-  if (funcConfig.permissions) {
+
+  // Check tagged permissions first - ALL must pass
+  const taggedPermissions = getPermissionsForTags([
+    ...tags,
+    ...(funcConfig.tags || []),
+  ])
+  if (taggedPermissions.length > 0) {
+    const taggedResults = await Promise.all(
+      taggedPermissions.map((permission) =>
+        permission(allServices, data, session)
+      )
+    )
+    permissioned = taggedResults.every((result) => result)
+  }
+
+  // Only check function permissions if tagged permissions passed
+  if (permissioned && funcConfig.permissions) {
     permissioned = await verifyPermissions(
       funcConfig.permissions,
       allServices,
@@ -100,6 +118,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       session
     )
   }
+
   if (!permissioned && transportPermissions) {
     permissioned = await verifyPermissions(
       transportPermissions,

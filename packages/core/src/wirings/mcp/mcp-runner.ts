@@ -257,6 +257,7 @@ async function runMCPPikkuFunc(
         getAllServices,
         session,
         data: request.params,
+        tags: mcp.tags,
       })
     }
 

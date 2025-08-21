@@ -11,7 +11,7 @@ import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { SessionServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
-  getMiddlewareForTags,
+  addMiddlewareForTags,
   runMiddleware,
 } from '../../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
@@ -45,18 +45,32 @@ export const runLocalChannel = async ({
     route = http?.request?.path()
   }
 
-  const { openingData, channelConfig, meta } = await openChannel({
-    channelId,
-    createSessionServices,
-    respondWith404,
-    request,
-    response,
-    route,
-    singletonServices,
-    skipUserSession,
-    coerceDataFromSchema,
-    userSession,
-  })
+  let openingData, channelConfig, meta
+  try {
+    ;({ openingData, channelConfig, meta } = await openChannel({
+      channelId,
+      createSessionServices,
+      respondWith404,
+      request,
+      response,
+      route,
+      singletonServices,
+      skipUserSession,
+      coerceDataFromSchema,
+      userSession,
+    }))
+  } catch (e) {
+    handleHTTPError(
+      e,
+      http,
+      channelId,
+      singletonServices.logger,
+      logWarningsForStatusCodes,
+      respondWith404,
+      bubbleErrors
+    )
+    return
+  }
 
   const main = async () => {
     try {
@@ -129,14 +143,13 @@ export const runLocalChannel = async ({
     }
   }
 
-  const taggedMiddleware = getMiddlewareForTags(channelConfig.tags)
   await runMiddleware(
     {
       ...singletonServices,
       userSession,
     },
     { http },
-    [...taggedMiddleware, ...(route.middleware || [])],
+    addMiddlewareForTags(channelConfig.middleware, channelConfig.tags),
     main
   )
 

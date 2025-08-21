@@ -152,6 +152,7 @@ export async function runQueueJob({
       result = await runPikkuFunc(processorMeta.pikkuFuncName, {
         getAllServices,
         data: job.data,
+        tags: queueWorker.tags,
       })
 
       logger.debug(

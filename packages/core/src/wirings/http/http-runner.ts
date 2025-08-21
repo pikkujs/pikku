@@ -353,6 +353,7 @@ const executeRouteWithMiddleware = async (
       data,
       permissions: route.permissions,
       coerceDataFromSchema: options.coerceDataFromSchema,
+      tags: route.tags,
     })
 
     // Respond with either a binary or JSON response based on configuration

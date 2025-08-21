@@ -119,6 +119,7 @@ export async function runScheduledTask({
         getAllServices,
         session,
         data: undefined,
+        tags: task.tags,
       })
     }
 

@@ -107,6 +107,7 @@ export const processMessageHandlers = (
       session,
       permissions,
       middleware,
+      tags: channelConfig.tags,
     })
   }
 

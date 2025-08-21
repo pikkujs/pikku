@@ -13,7 +13,7 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addMiddlewareForTags } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addMiddlewareForTags, addPermission } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore } from '@pikku/core/http'
 import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
@@ -397,6 +397,31 @@ export { addMiddleware }
  * \`\`\`
  */
 export { addMiddlewareForTags }
+
+/**
+ * Adds global permissions for a specific tag.
+ * 
+ * This function allows you to register permissions that will be applied to 
+ * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
+ * 
+ * @param tag - The tag that the permissions should apply to.
+ * @param permissions - The permissions array to apply for the specified tag.
+ * 
+ * @throws Error if permissions for the tag already exist.
+ * 
+ * @example
+ * \`\`\`typescript
+ * // Add admin permissions for admin endpoints
+ * addPermission('admin', [adminPermission])
+ * 
+ * // Add authentication permissions for auth endpoints
+ * addPermission('auth', [authPermission])
+ * 
+ * // Add read permissions for all API endpoints
+ * addPermission('api', [readPermission])
+ * \`\`\`
+ */
+export { addPermission }
 
 /**
  * Registers an HTTP wiring with the Pikku framework.

@@ -26,6 +26,7 @@ export {
   addMiddleware,
   addMiddlewareForTags,
 } from './middleware-runner.js'
+export { addPermission, getPermissionsForTags } from './permissions.js'
 export { wireHTTP, addHTTPMiddleware } from './wirings/http/http-runner.js'
 export { wireChannel } from './wirings/channel/channel-runner.js'
 export { wireScheduler } from './wirings/scheduler/scheduler-runner.js'

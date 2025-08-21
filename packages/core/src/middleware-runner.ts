@@ -31,10 +31,13 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   middlewares: Middleware[],
   main?: () => Promise<unknown>
 ): Promise<unknown> => {
+  // Deduplicate middleware using Set to avoid running the same middleware multiple times
+  const uniqueMiddleware = Array.from(new Set(middlewares))
+
   let result: any
   const dispatch = async (index: number): Promise<any> => {
-    if (middlewares && index < middlewares.length) {
-      return await middlewares[index]!(services as any, interaction, () =>
+    if (uniqueMiddleware && index < uniqueMiddleware.length) {
+      return await uniqueMiddleware[index]!(services as any, interaction, () =>
         dispatch(index + 1)
       )
     } else if (main) {
