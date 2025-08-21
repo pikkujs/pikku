@@ -213,7 +213,16 @@ export const createHTTPInteraction = (
 /**
  * Validates the input data and executes the route handler with associated middleware.
  *
- * This function is the central execution point for a route. It performs these steps:
+ * NOTE: HTTP wiring handles middleware differently from other wirings (RPC, MCP, Queue, etc.)
+ * because HTTP needs to:
+ * 1. Check session early for performance (before expensive body parsing)
+ * 2. Handle HTTP-specific concerns (headers, cookies, SSE setup)
+ * 3. Process middleware that may set up authentication/session state
+ *
+ * Other wirings (RPC/MCP/Queue/Scheduler) simply pass middleware/permissions/auth
+ * directly to runPikkuFunc without processing them.
+ *
+ * This function performs these steps:
  *  1. Sets URL parameters on the request.
  *  2. Validates the user session if required.
  *  3. Creates session-specific services.

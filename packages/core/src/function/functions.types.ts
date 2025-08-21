@@ -87,12 +87,13 @@ export type CorePikkuFunctionConfig<
     any,
     any
   > = CorePikkuPermission<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
 > = {
   name?: string
   expose?: boolean
   func: PikkuFunction
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
-  middleware?: CorePikkuMiddleware[]
+  middleware?: PikkuMiddleware[]
   docs?: PikkuDocs
 }

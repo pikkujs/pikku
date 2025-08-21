@@ -201,7 +201,7 @@ export const pikkuFunc = <In, Out = unknown>(
 export const pikkuSessionlessFunc = <In, Out = unknown>(
   func:
     | PikkuFunctionSessionless<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out>, PikkuPermission<In>>
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 ) => {
   return typeof func === 'function' ? func : func.func
 }
