@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.9.4
+
+### Patch Changes
+
+- 92c1926: feat: adding rpc and websocket client cli commands
+- c18800d: feat: adding queue and scheduledTask to interactions
+- Updated dependencies [c18800d]
+  - @pikku/core@0.9.4
+
 ## 0.9.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.4
+
+### Patch Changes
+
+- c18800d: feat: adding queue and scheduledTask to interactions
+
 ## 0.9.3
 
 ### Patch Changes
