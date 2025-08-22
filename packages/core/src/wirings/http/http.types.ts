@@ -83,8 +83,8 @@ export type CoreHTTPFunction = {
 /**
  * Represents a http interaction within Pikku, including a request and response.
  */
-export interface PikkuHTTP {
-  request?: PikkuHTTPRequest
+export interface PikkuHTTP<In = unknown> {
+  request?: PikkuHTTPRequest<In>
   response?: PikkuHTTPResponse
 }
 
@@ -234,7 +234,7 @@ export interface PikkuHTTPRequest<In = unknown> {
   query(): PikkuQuery
 }
 
-export interface PikkuHTTPResponse {
+export interface PikkuHTTPResponse<Out = unknown> {
   status(code: number): this
   cookie(name: string, value: string | null, options: SerializeOptions): this
   header(name: string, value: string | string[]): this
@@ -248,7 +248,7 @@ export interface PikkuHTTPResponse {
       | URLSearchParams
       | ReadableStream
   ): this
-  json(data: unknown): this
+  json(data: Out): this
   redirect(location: string, status?: number): this
   close?: () => void
   setMode?: (mode: 'stream') => void

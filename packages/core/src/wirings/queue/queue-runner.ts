@@ -5,7 +5,7 @@ import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { CreateSessionServices } from '../../types/core.types.js'
-import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
+import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 /**
  * Error class for queue processor not found
@@ -160,11 +160,21 @@ export async function runQueueJob({
       )
     }
 
+    // Get function config for middleware and tags
+    const funcConfig = pikkuState('function', 'functions').get(
+      processorMeta.pikkuFuncName
+    )
+
     // Get middleware for tags and combine with queue-specific middleware
     await runMiddleware(
       singletonServices,
       { queue },
-      addMiddlewareForTags(queueWorker.middleware, queueWorker.tags),
+      combineMiddleware({
+        wiringMiddleware: queueWorker.middleware,
+        wiringTags: queueWorker.tags,
+        funcMiddleware: funcConfig?.middleware,
+        funcTags: funcConfig?.tags,
+      }),
       runMain
     )
 

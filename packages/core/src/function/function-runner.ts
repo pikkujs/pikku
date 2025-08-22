@@ -1,6 +1,6 @@
 import { ForbiddenError } from '../errors/errors.js'
 import { runMiddleware } from '../middleware-runner.js'
-import { verifyPermissions, getPermissionsForTags } from '../permissions.js'
+import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import {
@@ -47,8 +47,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     getAllServices,
     data,
     session,
-    permissions: transportPermissions,
-    middleware: transportMiddleware,
+    permissions: wiringPermissions,
+    middleware: wiringMiddleware,
     coerceDataFromSchema,
     tags = [],
   }: {
@@ -93,46 +93,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
   }
 
-  let permissioned = true
+  // Run permission checks in the specified order
+  await runPermissions({
+    wiringTags: tags,
+    wiringPermissions,
+    funcTags: funcConfig.tags,
+    funcPermissions: funcConfig.permissions,
+    allServices,
+    data,
+    session,
+  })
 
-  // Check tagged permissions first - ALL must pass
-  const taggedPermissions = getPermissionsForTags([
-    ...tags,
-    ...(funcConfig.tags || []),
-  ])
-  if (taggedPermissions.length > 0) {
-    const taggedResults = await Promise.all(
-      taggedPermissions.map((permission) =>
-        permission(allServices, data, session)
-      )
-    )
-    permissioned = taggedResults.every((result) => result)
-  }
-
-  // Only check function permissions if tagged permissions passed
-  if (permissioned && funcConfig.permissions) {
-    permissioned = await verifyPermissions(
-      funcConfig.permissions,
-      allServices,
-      data,
-      session
-    )
-  }
-
-  if (!permissioned && transportPermissions) {
-    permissioned = await verifyPermissions(
-      transportPermissions,
-      allServices,
-      data,
-      session
-    )
-  }
-
-  if (permissioned === false) {
-    throw new ForbiddenError('Permission denied')
-  }
-
-  if (transportMiddleware || funcConfig.middleware) {
+  if (wiringMiddleware || funcConfig.middleware) {
     return (await runMiddleware<CorePikkuMiddleware>(
       allServices,
       {
@@ -140,7 +112,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         mcp: allServices.mcp,
         rpc: allServices.rpc,
       },
-      [...(transportMiddleware || []), ...(funcConfig.middleware || [])],
+      [...(wiringMiddleware || []), ...(funcConfig.middleware || [])],
       async () => await funcConfig.func(allServices, data, session!)
     )) as Out
   }

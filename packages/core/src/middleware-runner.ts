@@ -33,7 +33,6 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
 ): Promise<unknown> => {
   // Deduplicate middleware using Set to avoid running the same middleware multiple times
   const uniqueMiddleware = Array.from(new Set(middlewares))
-
   let result: any
   const dispatch = async (index: number): Promise<any> => {
     if (uniqueMiddleware && index < uniqueMiddleware.length) {
@@ -125,29 +124,51 @@ export const getMiddlewareForTags = (
 }
 
 /**
- * Combines tag-based middleware with wiring-specific middleware.
+ * Combines tag-based middleware with wiring-specific middleware and function-level middleware.
  *
  * This helper function gets middleware for tags and combines it with any
- * wiring-specific middleware, avoiding the need for manual spreading.
+ * wiring-specific middleware and function-level middleware, avoiding the need for manual spreading.
  *
- * @param {CorePikkuMiddleware[] | undefined} wiringMiddleware - Wiring-specific middleware.
- * @param {string[] | undefined} tags - Array of tags to look up middleware for.
+ * @param {object} options - Configuration object for combining middleware.
+ * @param {CorePikkuMiddleware[] | undefined} options.wiringMiddleware - Wiring-specific middleware.
+ * @param {string[] | undefined} options.wiringTags - Array of wiring-level tags to look up middleware for.
+ * @param {CorePikkuMiddleware[] | undefined} options.funcMiddleware - Function-level middleware.
+ * @param {string[] | undefined} options.funcTags - Array of function-level tags to look up middleware for.
  * @returns {CorePikkuMiddleware[]} Combined array of tag-based and wiring-specific middleware.
  *
  * @example
  * ```typescript
- * // Instead of:
- * const taggedMiddleware = getMiddlewareForTags(tags)
- * const combined = [...taggedMiddleware, ...(middleware || [])]
- *
- * // Use:
- * const combined = addMiddlewareForTags(middleware, tags)
+ * const combined = combineMiddleware({
+ *   wiringMiddleware: httpRoute.middleware,
+ *   wiringTags: httpRoute.tags,
+ *   funcMiddleware: funcConfig.middleware,
+ *   funcTags: funcConfig.tags
+ * })
  * ```
  */
-export const addMiddlewareForTags = (
-  wiringMiddleware?: CorePikkuMiddleware[],
-  tags?: string[]
-): CorePikkuMiddleware[] => {
-  const taggedMiddleware = getMiddlewareForTags(tags)
-  return [...taggedMiddleware, ...(wiringMiddleware || [])]
+export const combineMiddleware = ({
+  wiringMiddleware,
+  wiringTags,
+  funcMiddleware,
+  funcTags,
+}: {
+  wiringMiddleware?: CorePikkuMiddleware[]
+  wiringTags?: string[]
+  funcMiddleware?: CorePikkuMiddleware[]
+  funcTags?: string[]
+} = {}): CorePikkuMiddleware[] => {
+  // Run middleware in specific order:
+  // 1) wiringTags middleware
+  // 2) wiringMiddleware
+  // 3) funcMiddleware
+  // 4) funcTags middleware
+  const wiringTaggedMiddleware = getMiddlewareForTags(wiringTags)
+  const funcTaggedMiddleware = getMiddlewareForTags(funcTags)
+
+  return [
+    ...wiringTaggedMiddleware,
+    ...(wiringMiddleware || []),
+    ...(funcMiddleware || []),
+    ...funcTaggedMiddleware,
+  ]
 }

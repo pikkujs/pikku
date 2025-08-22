@@ -10,7 +10,11 @@ import {
   ScheduledTasksMeta,
 } from './wirings/scheduler/scheduler.types.js'
 import { ErrorDetails, PikkuError } from './errors/error-handler.js'
-import { CorePikkuFunctionConfig } from './function/functions.types.js'
+import {
+  CorePermissionGroup,
+  CorePikkuFunctionConfig,
+  CorePikkuPermission,
+} from './function/functions.types.js'
 import {
   queueWorkersMeta,
   CoreQueueWorker,
@@ -68,7 +72,7 @@ interface PikkuState {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
     middleware: Record<string, CorePikkuMiddleware[]>
-    permissions: Record<string, any[]>
+    permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
 }
 

@@ -20,7 +20,7 @@ import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
-import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
+import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -261,11 +261,16 @@ async function runMCPPikkuFunc(
       })
     }
 
-    // Get middleware for tags and run middleware
+    const funcConfig = pikkuState('function', 'functions').get(pikkuFuncName!)
     await runMiddleware(
       singletonServices,
       { mcp: interaction },
-      addMiddlewareForTags(mcp.middleware, mcp.tags),
+      combineMiddleware({
+        wiringMiddleware: mcp.middleware,
+        wiringTags: mcp.tags,
+        funcMiddleware: funcConfig?.middleware,
+        funcTags: funcConfig?.tags,
+      }),
       runMain
     )
 

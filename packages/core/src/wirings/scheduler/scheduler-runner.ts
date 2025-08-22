@@ -14,7 +14,7 @@ import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
-import { addMiddlewareForTags, runMiddleware } from '../../middleware-runner.js'
+import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -123,11 +123,18 @@ export async function runScheduledTask({
       })
     }
 
-    // Get middleware for tags and run middleware
+    const funcConfig = pikkuState('function', 'functions').get(
+      meta.pikkuFuncName
+    )
     await runMiddleware(
       singletonServices,
       { scheduledTask },
-      addMiddlewareForTags(task.middleware, task.tags),
+      combineMiddleware({
+        wiringMiddleware: task.middleware,
+        wiringTags: task.tags,
+        funcMiddleware: funcConfig?.middleware,
+        funcTags: funcConfig?.tags,
+      }),
       runMain
     )
 

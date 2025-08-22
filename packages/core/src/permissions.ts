@@ -1,6 +1,10 @@
 import { CoreServices, CoreUserSession } from './types/core.types.js'
-import { CorePermissionGroup } from './function/functions.types.js'
+import {
+  CorePermissionGroup,
+  CorePikkuPermission,
+} from './function/functions.types.js'
 import { pikkuState } from './pikku-state.js'
+import { ForbiddenError } from './errors/errors.js'
 
 /**
  * This function validates permissions by iterating over permission groups and executing the corresponding permission functions. If all functions in at least one group return true, the permission is considered valid.
@@ -66,7 +70,10 @@ export const verifyPermissions = async (
  * addPermission('api', [readPermission])
  * ```
  */
-export const addPermission = (tag: string, permissions: any[]) => {
+export const addPermission = (
+  tag: string,
+  permissions: CorePermissionGroup | CorePikkuPermission[]
+) => {
   const permissionsStore = pikkuState('misc', 'permissions')
 
   // Check if tag already exists
@@ -106,9 +113,108 @@ export const getPermissionsForTags = (tags?: string[]): any[] => {
   for (const tag of new Set(tags)) {
     const tagPermissions = permissionsStore[tag]
     if (tagPermissions) {
-      applicablePermissions.push(...tagPermissions)
+      if (Array.isArray(tagPermissions)) {
+        applicablePermissions.push(...tagPermissions)
+      } else {
+        applicablePermissions.push(tagPermissions)
+      }
     }
   }
 
   return applicablePermissions
+}
+
+/**
+ * Runs permission checks in the specified order:
+ * 1) wiring tag permissions - at least one must pass if any exist
+ * 2) wiring permissions - must pass if defined
+ * 3) function tag permissions - at least one must pass if any exist
+ * 4) function permissions - must pass if defined
+ */
+export const runPermissions = async ({
+  wiringTags,
+  wiringPermissions,
+  funcTags,
+  funcPermissions,
+  allServices,
+  data,
+  session,
+}: {
+  wiringTags?: string[]
+  wiringPermissions?: CorePermissionGroup
+  funcTags?: string[]
+  funcPermissions?: CorePermissionGroup
+  allServices: CoreServices
+  data: any
+  session?: CoreUserSession
+}) => {
+  let permissioned = true
+
+  // 1. Wiring tag permissions - at least one must pass if any exist
+  const wiringTaggedPermissions = getPermissionsForTags(wiringTags || [])
+  if (wiringTaggedPermissions.length > 0) {
+    permissioned = false // Start false, need at least one to pass
+    for (const permissions of wiringTaggedPermissions) {
+      const result = await verifyPermissions(
+        permissions instanceof Array ? { permissions } : permissions,
+        allServices,
+        data,
+        session
+      )
+      if (result) {
+        permissioned = true
+        break // At least one passed, we're good at this level
+      }
+    }
+    if (!permissioned) {
+      throw new ForbiddenError('Permission denied - wiring tag permissions')
+    }
+  }
+
+  // 2. Wiring permissions - must pass if defined
+  if (wiringPermissions) {
+    permissioned = await verifyPermissions(
+      wiringPermissions,
+      allServices,
+      data,
+      session
+    )
+    if (!permissioned) {
+      throw new ForbiddenError('Permission denied - wiring permissions')
+    }
+  }
+
+  // 3. Function tag permissions - at least one must pass if any exist
+  const funcTaggedPermissions = getPermissionsForTags(funcTags || [])
+  if (funcTaggedPermissions.length > 0) {
+    permissioned = false // Start false, need at least one to pass
+    for (const permissions of funcTaggedPermissions) {
+      const result = await verifyPermissions(
+        permissions instanceof Array ? { permissions } : permissions,
+        allServices,
+        data,
+        session
+      )
+      if (result) {
+        permissioned = true
+        break // At least one passed, we're good at this level
+      }
+    }
+    if (!permissioned) {
+      throw new ForbiddenError('Permission denied - function tag permissions')
+    }
+  }
+
+  // 4. Function permissions - must pass if defined
+  if (funcPermissions) {
+    permissioned = await verifyPermissions(
+      funcPermissions,
+      allServices,
+      data,
+      session
+    )
+    if (!permissioned) {
+      throw new ForbiddenError('Permission denied - function permissions')
+    }
+  }
 }

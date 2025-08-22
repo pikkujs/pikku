@@ -114,14 +114,13 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 /**
  * Represents different forms of interaction within Pikku and the outside world.
  */
-export type PikkuInteraction = Partial<{
-  http: PikkuHTTP
+export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
+  http: PikkuHTTP<In>
   mcp: PikkuMCP
   rpc: PikkuRPC
-  channel: PikkuChannel<unknown, unknown>
+  channel: PikkuChannel<unknown, Out>
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
-  s
 }>
 
 /**
