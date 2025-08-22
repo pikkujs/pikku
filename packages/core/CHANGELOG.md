@@ -1,5 +1,24 @@
 ## 0.9.0
 
+## 0.9.5
+
+### Patch Changes
+
+- 7e1f5b3: feat: implement ordered middleware and permission execution system
+
+  ## New Features
+
+  ### Ordered Execution System
+
+  Both middleware and permissions now execute in a specific hierarchical order:
+
+  1. **Wiring Tags** - Tag-based middleware/permissions from wiring level (e.g., HTTP route tags)
+  2. **Wiring Middleware/Permissions** - Direct wiring-level middleware/permissions
+  3. **Function Middleware** - Function-level middleware
+  4. **Function Tags** - Tag-based middleware/permissions from function level
+
+- b443405: feat: adding middleware and functions by tags
+
 ## 0.9.4
 
 ### Patch Changes
