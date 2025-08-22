@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.9.5
+
+### Patch Changes
+
+- b443405: feat: adding middleware and functions by tags
+- Updated dependencies [7e1f5b3]
+- Updated dependencies [b443405]
+  - @pikku/core@0.9.5
+
 ## 0.9.4
 
 ### Patch Changes
