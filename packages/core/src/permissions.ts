@@ -101,13 +101,17 @@ export const addPermission = (
  * const permissions = getPermissionsForTags(['api', 'auth'])
  * ```
  */
-export const getPermissionsForTags = (tags?: string[]): any[] => {
+export const getPermissionsForTags = (
+  tags?: string[]
+): Array<CorePermissionGroup | CorePikkuPermission> => {
   if (!tags || tags.length === 0) {
     return []
   }
 
   const permissionsStore = pikkuState('misc', 'permissions')
-  const applicablePermissions: any[] = []
+  const applicablePermissions: Array<
+    CorePermissionGroup | CorePikkuPermission
+  > = []
 
   // Collect permissions for all matching tags
   for (const tag of new Set(tags)) {
@@ -156,7 +160,7 @@ export const runPermissions = async ({
     permissioned = false // Start false, need at least one to pass
     for (const permissions of wiringTaggedPermissions) {
       const result = await verifyPermissions(
-        permissions instanceof Array ? { permissions } : permissions,
+        typeof permissions === 'function' ? { permissions } : permissions,
         allServices,
         data,
         session
@@ -190,7 +194,7 @@ export const runPermissions = async ({
     permissioned = false // Start false, need at least one to pass
     for (const permissions of funcTaggedPermissions) {
       const result = await verifyPermissions(
-        permissions instanceof Array ? { permissions } : permissions,
+        typeof permissions === 'function' ? { permissions } : permissions,
         allServices,
         data,
         session

@@ -113,9 +113,9 @@ export const resetPikkuState = () => {
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),
-      schemas: globalThis.pikkuState?.misc?.schema || new Map(),
-      middleware: globalThis.pikkuState?.misc?.middleware || {},
-      permissions: globalThis.pikkuState?.misc?.permissions || {},
+      schemas: new Map(),
+      middleware: {},
+      permissions: {},
     },
   } as PikkuState
 }

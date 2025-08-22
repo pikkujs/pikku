@@ -1,5 +1,5 @@
 import { ForbiddenError } from '../errors/errors.js'
-import { runMiddleware } from '../middleware-runner.js'
+import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
@@ -104,7 +104,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
     session,
   })
 
-  if (wiringMiddleware || funcConfig.middleware) {
+  // Combine all middleware: wiring tags → wiring middleware → func middleware → func tags
+  const allMiddleware = combineMiddleware({
+    wiringTags: tags,
+    wiringMiddleware,
+    funcMiddleware: funcConfig.middleware,
+    funcTags: funcConfig.tags,
+  })
+
+  if (allMiddleware.length > 0) {
     return (await runMiddleware<CorePikkuMiddleware>(
       allServices,
       {
@@ -112,7 +120,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         mcp: allServices.mcp,
         rpc: allServices.rpc,
       },
-      [...(wiringMiddleware || []), ...(funcConfig.middleware || [])],
+      allMiddleware,
       async () => await funcConfig.func(allServices, data, session!)
     )) as Out
   }

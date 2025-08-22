@@ -13,7 +13,7 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addMiddlewareForTags, addPermission } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addPermission } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore } from '@pikku/core/http'
 import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
@@ -375,28 +375,6 @@ export { addHTTPMiddleware }
  * \`\`\`
  */
 export { addMiddleware }
-
-/**
- * Combines tag-based middleware with wiring-specific middleware.
- * 
- * This helper function gets middleware for tags and combines it with any
- * wiring-specific middleware, avoiding the need for manual spreading.
- * 
- * @param wiringMiddleware - Wiring-specific middleware.
- * @param tags - Array of tags to look up middleware for.
- * @returns Combined array of tag-based and wiring-specific middleware.
- * 
- * @example
- * \`\`\`typescript
- * // Instead of:
- * const taggedMiddleware = getMiddlewareForTags(tags)
- * const combined = [...taggedMiddleware, ...(middleware || [])]
- * 
- * // Use:
- * const combined = addMiddlewareForTags(middleware, tags)
- * \`\`\`
- */
-export { addMiddlewareForTags }
 
 /**
  * Adds global permissions for a specific tag.
