@@ -8,7 +8,7 @@ import {
   RunChannelParams,
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import { SessionServices } from '../../../types/core.types.js'
+import { PikkuWiringTypes, SessionServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import { combineMiddleware, runMiddleware } from '../../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
@@ -146,7 +146,7 @@ export const runLocalChannel = async ({
       userSession,
     },
     { http },
-    combineMiddleware({
+    combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
       wiringMiddleware: channelConfig.middleware,
       wiringTags: channelConfig.tags,
     }),

@@ -1,8 +1,9 @@
-import type {
-  CoreServices,
-  CoreSingletonServices,
-  CoreUserSession,
-  CreateSessionServices,
+import {
+  PikkuWiringTypes,
+  type CoreServices,
+  type CoreSingletonServices,
+  type CoreUserSession,
+  type CreateSessionServices,
 } from '../../types/core.types.js'
 import type {
   CoreScheduledTask,
@@ -115,12 +116,17 @@ export async function runScheduledTask({
         return singletonServices
       }
 
-      result = await runPikkuFunc(meta.pikkuFuncName, {
-        getAllServices,
-        session,
-        data: undefined,
-        tags: task.tags,
-      })
+      result = await runPikkuFunc(
+        PikkuWiringTypes.scheduler,
+        meta.name,
+        meta.pikkuFuncName,
+        {
+          getAllServices,
+          session,
+          data: undefined,
+          tags: task.tags,
+        }
+      )
     }
 
     const funcConfig = pikkuState('function', 'functions').get(
@@ -129,7 +135,7 @@ export async function runScheduledTask({
     await runMiddleware(
       singletonServices,
       { scheduledTask },
-      combineMiddleware({
+      combineMiddleware(PikkuWiringTypes.scheduler, meta.name, {
         wiringMiddleware: task.middleware,
         wiringTags: task.tags,
         funcMiddleware: funcConfig?.middleware,

@@ -38,3 +38,22 @@ export const isSerializable = (data: any): boolean => {
     data instanceof Float64Array
   )
 }
+
+const EMPTY_ARRAY = Object.freeze([])
+
+export const freezeDedupe = <T extends Function>(
+  arr?: readonly T[] | T[] | undefined
+): readonly T[] => {
+  if (!arr || arr.length === 0) return EMPTY_ARRAY
+  if (arr.length === 1) return Object.freeze([arr[0]!])
+  const seen = new Set<T>()
+  const out: T[] = []
+  for (let i = 0; i < arr.length; i++) {
+    const fn = arr[i]!
+    if (!seen.has(fn)) {
+      seen.add(fn)
+      out.push(fn)
+    }
+  }
+  return Object.freeze(out)
+}

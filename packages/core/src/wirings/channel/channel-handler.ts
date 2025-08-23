@@ -2,6 +2,7 @@ import {
   CoreServices,
   JSONValue,
   CoreUserSession,
+  PikkuWiringTypes,
 } from '../../types/core.types.js'
 import {
   ChannelMessageMeta,
@@ -98,17 +99,22 @@ export const processMessageHandlers = (
     const middleware =
       typeof onMessage === 'function' ? [] : onMessage.middleware
 
-    return await runPikkuFunc(pikkuFuncName, {
-      getAllServices: () => ({
-        ...services,
-        channel: channelHandler.getChannel(),
-      }),
-      data,
-      session,
-      permissions,
-      middleware,
-      tags: channelConfig.tags,
-    })
+    return await runPikkuFunc(
+      PikkuWiringTypes.channel,
+      channelConfig.name,
+      pikkuFuncName,
+      {
+        getAllServices: () => ({
+          ...services,
+          channel: channelHandler.getChannel(),
+        }),
+        data,
+        session,
+        permissions,
+        middleware,
+        tags: channelConfig.tags,
+      }
+    )
   }
 
   const onMessage = async (rawData): Promise<unknown> => {

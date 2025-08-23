@@ -57,6 +57,9 @@ export class PikkuFetchHTTPRequest<In = unknown>
    * @returns An object containing the cookies.
    */
   public cookie(cookieName: string): string | null {
+    if (this.#cookies?.[cookieName]) {
+      return this.#cookies[cookieName]
+    }
     const cookieHeader = this.header('cookie')
     this.#cookies = cookieHeader ? parseCookie(cookieHeader) : {}
     return this.#cookies[cookieName] || null

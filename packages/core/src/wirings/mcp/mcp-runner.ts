@@ -1,8 +1,9 @@
-import type {
-  CoreServices,
-  CoreSingletonServices,
-  CoreUserSession,
-  CreateSessionServices,
+import {
+  PikkuWiringTypes,
+  type CoreServices,
+  type CoreSingletonServices,
+  type CoreUserSession,
+  type CreateSessionServices,
 } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
@@ -253,19 +254,24 @@ async function runMCPPikkuFunc(
         })
       }
 
-      result = await runPikkuFunc(pikkuFuncName, {
-        getAllServices,
-        session,
-        data: request.params,
-        tags: mcp.tags,
-      })
+      result = await runPikkuFunc(
+        PikkuWiringTypes.mcp,
+        `${type}:${name}`,
+        pikkuFuncName,
+        {
+          getAllServices,
+          session,
+          data: request.params,
+          tags: mcp.tags,
+        }
+      )
     }
 
     const funcConfig = pikkuState('function', 'functions').get(pikkuFuncName!)
     await runMiddleware(
       singletonServices,
       { mcp: interaction },
-      combineMiddleware({
+      combineMiddleware(PikkuWiringTypes.mcp, `${type}:${name}`, {
         wiringMiddleware: mcp.middleware,
         wiringTags: mcp.tags,
         funcMiddleware: funcConfig?.middleware,

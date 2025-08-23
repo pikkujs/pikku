@@ -1,4 +1,8 @@
-import { CoreServices, CoreUserSession } from './types/core.types.js'
+import {
+  CoreServices,
+  CoreUserSession,
+  PikkuWiringTypes,
+} from './types/core.types.js'
 import {
   CorePermissionGroup,
   CorePikkuPermission,
@@ -86,6 +90,8 @@ export const addPermission = (
   permissionsStore[tag] = permissions
 }
 
+const EMPTY: readonly (CorePermissionGroup | CorePikkuPermission)[] = []
+
 /**
  * Retrieves permissions for a given set of tags.
  *
@@ -103,9 +109,9 @@ export const addPermission = (
  */
 export const getPermissionsForTags = (
   tags?: string[]
-): Array<CorePermissionGroup | CorePikkuPermission> => {
+): readonly (CorePermissionGroup | CorePikkuPermission)[] => {
   if (!tags || tags.length === 0) {
-    return []
+    return EMPTY
   }
 
   const permissionsStore = pikkuState('misc', 'permissions')
@@ -128,6 +134,26 @@ export const getPermissionsForTags = (
   return applicablePermissions
 }
 
+const permissionCache: Record<
+  PikkuWiringTypes,
+  Partial<
+    Record<
+      string,
+      {
+        wiringTags: readonly (CorePermissionGroup | CorePikkuPermission)[]
+        funcTags: readonly (CorePermissionGroup | CorePikkuPermission)[]
+      }
+    >
+  >
+> = {
+  [PikkuWiringTypes.http]: {},
+  [PikkuWiringTypes.rpc]: {},
+  [PikkuWiringTypes.channel]: {},
+  [PikkuWiringTypes.queue]: {},
+  [PikkuWiringTypes.scheduler]: {},
+  [PikkuWiringTypes.mcp]: {},
+}
+
 /**
  * Runs permission checks in the specified order:
  * 1) wiring tag permissions - at least one must pass if any exist
@@ -135,27 +161,38 @@ export const getPermissionsForTags = (
  * 3) function tag permissions - at least one must pass if any exist
  * 4) function permissions - must pass if defined
  */
-export const runPermissions = async ({
-  wiringTags,
-  wiringPermissions,
-  funcTags,
-  funcPermissions,
-  allServices,
-  data,
-  session,
-}: {
-  wiringTags?: string[]
-  wiringPermissions?: CorePermissionGroup
-  funcTags?: string[]
-  funcPermissions?: CorePermissionGroup
-  allServices: CoreServices
-  data: any
-  session?: CoreUserSession
-}) => {
+export const runPermissions = async (
+  wireType: PikkuWiringTypes,
+  uid: string,
+  {
+    wiringTags,
+    wiringPermissions,
+    funcTags,
+    funcPermissions,
+    allServices,
+    data,
+    session,
+  }: {
+    wiringTags?: string[]
+    wiringPermissions?: CorePermissionGroup
+    funcTags?: string[]
+    funcPermissions?: CorePermissionGroup
+    allServices: CoreServices
+    data: any
+    session?: CoreUserSession
+  }
+) => {
+  let cachedPermission = permissionCache[wireType][uid]
+  if (!cachedPermission) {
+    cachedPermission = {
+      wiringTags: getPermissionsForTags(wiringTags),
+      funcTags: getPermissionsForTags(funcTags),
+    }
+  }
   let permissioned = true
 
   // 1. Wiring tag permissions - at least one must pass if any exist
-  const wiringTaggedPermissions = getPermissionsForTags(wiringTags || [])
+  const wiringTaggedPermissions = cachedPermission.wiringTags
   if (wiringTaggedPermissions.length > 0) {
     permissioned = false // Start false, need at least one to pass
     for (const permissions of wiringTaggedPermissions) {
@@ -191,7 +228,7 @@ export const runPermissions = async ({
   }
 
   // 3. Function tag permissions - at least one must pass if any exist
-  const funcTaggedPermissions = getPermissionsForTags(funcTags || [])
+  const funcTaggedPermissions = cachedPermission.funcTags
   if (funcTaggedPermissions.length > 0) {
     permissioned = false // Start false, need at least one to pass
     for (const permissions of funcTaggedPermissions) {

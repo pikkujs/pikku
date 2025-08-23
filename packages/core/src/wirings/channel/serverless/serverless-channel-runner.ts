@@ -1,4 +1,4 @@
-import { SessionServices } from '../../../types/core.types.js'
+import { PikkuWiringTypes, SessionServices } from '../../../types/core.types.js'
 import { closeSessionServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
@@ -146,7 +146,7 @@ export const runChannelConnect = async ({
       userSession,
     },
     { http },
-    combineMiddleware({
+    combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
       wiringMiddleware: channelConfig.middleware,
       wiringTags: channelConfig.tags,
     }),

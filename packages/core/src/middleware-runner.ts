@@ -3,8 +3,10 @@ import {
   CoreSingletonServices,
   PikkuInteraction,
   CorePikkuMiddleware,
+  PikkuWiringTypes,
 } from './types/core.types.js'
 import { pikkuState } from './pikku-state.js'
+import { freezeDedupe } from './utils.js'
 
 /**
  * Runs a chain of middleware functions in sequence before executing the main function.
@@ -28,15 +30,14 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
     userSession?: UserSessionService<any>
   },
   interaction: PikkuInteraction,
-  middlewares: Middleware[],
+  middlewares: readonly Middleware[],
   main?: () => Promise<unknown>
 ): Promise<unknown> => {
   // Deduplicate middleware using Set to avoid running the same middleware multiple times
-  const uniqueMiddleware = Array.from(new Set(middlewares))
   let result: any
   const dispatch = async (index: number): Promise<any> => {
-    if (uniqueMiddleware && index < uniqueMiddleware.length) {
-      return await uniqueMiddleware[index]!(services as any, interaction, () =>
+    if (middlewares && index < middlewares.length) {
+      return await middlewares[index]!(services as any, interaction, () =>
         dispatch(index + 1)
       )
     } else if (main) {
@@ -123,6 +124,18 @@ export const getMiddlewareForTags = (
   return applicableMiddleware
 }
 
+const middlewareCache: Record<
+  PikkuWiringTypes,
+  Record<string, readonly CorePikkuMiddleware[]>
+> = {
+  [PikkuWiringTypes.http]: {},
+  [PikkuWiringTypes.rpc]: {},
+  [PikkuWiringTypes.channel]: {},
+  [PikkuWiringTypes.queue]: {},
+  [PikkuWiringTypes.scheduler]: {},
+  [PikkuWiringTypes.mcp]: {},
+}
+
 /**
  * Combines tag-based middleware with wiring-specific middleware and function-level middleware.
  *
@@ -146,17 +159,25 @@ export const getMiddlewareForTags = (
  * })
  * ```
  */
-export const combineMiddleware = ({
-  wiringMiddleware,
-  wiringTags,
-  funcMiddleware,
-  funcTags,
-}: {
-  wiringMiddleware?: CorePikkuMiddleware[]
-  wiringTags?: string[]
-  funcMiddleware?: CorePikkuMiddleware[]
-  funcTags?: string[]
-} = {}): CorePikkuMiddleware[] => {
+export const combineMiddleware = (
+  wireType: PikkuWiringTypes,
+  uid: string,
+  {
+    wiringMiddleware,
+    wiringTags,
+    funcMiddleware,
+    funcTags,
+  }: {
+    wiringMiddleware?: CorePikkuMiddleware[]
+    wiringTags?: string[]
+    funcMiddleware?: CorePikkuMiddleware[]
+    funcTags?: string[]
+  } = {}
+): readonly CorePikkuMiddleware[] => {
+  if (middlewareCache[wireType][uid]) {
+    return middlewareCache[wireType][uid]
+  }
+
   // Run middleware in specific order:
   // 1) wiringTags middleware
   // 2) wiringMiddleware
@@ -165,10 +186,12 @@ export const combineMiddleware = ({
   const wiringTaggedMiddleware = getMiddlewareForTags(wiringTags)
   const funcTaggedMiddleware = getMiddlewareForTags(funcTags)
 
-  return [
+  middlewareCache[wireType][uid] = freezeDedupe([
     ...wiringTaggedMiddleware,
     ...(wiringMiddleware || []),
     ...(funcMiddleware || []),
     ...funcTaggedMiddleware,
-  ]
+  ]) as readonly CorePikkuMiddleware[]
+
+  return middlewareCache[wireType][uid]
 }

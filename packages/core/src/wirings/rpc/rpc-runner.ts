@@ -1,4 +1,4 @@
-import { CoreServices } from '../../types/core.types.js'
+import { CoreServices, PikkuWiringTypes } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
@@ -44,21 +44,26 @@ class ContextAwareRPCService {
     const session = await this.services.userSession?.get()
     const rpcDepth = this.services.rpc?.depth || 0
     const pikkuFuncName = getPikkuFunctionName(funcName)
-    return runPikkuFunc<In, Out>(pikkuFuncName, {
-      getAllServices: () => {
-        this.services.rpc = this.services.rpc
-          ? ({
-              ...this.services.rpc,
-              depth: rpcDepth + 1,
-              global: false,
-            } as any)
-          : undefined
-        return this.services
-      },
-      data,
-      session,
-      coerceDataFromSchema: this.options.coerceDataFromSchema,
-    })
+    return runPikkuFunc<In, Out>(
+      PikkuWiringTypes.rpc,
+      pikkuFuncName,
+      pikkuFuncName,
+      {
+        getAllServices: () => {
+          this.services.rpc = this.services.rpc
+            ? ({
+                ...this.services.rpc,
+                depth: rpcDepth + 1,
+                global: false,
+              } as any)
+            : undefined
+          return this.services
+        },
+        data,
+        session,
+        coerceDataFromSchema: this.options.coerceDataFromSchema,
+      }
+    )
   }
 }
 

@@ -559,7 +559,7 @@ export const pikkuMCPPromptFunc = <In>(
  *     const results = await fileSystem.search(input.query, input.directory)
  *     return [{
  *         type: 'text',
- *         text: \`Found \${results.length} files matching \"\${input.query}\"\`
+ *         text: \`Found \${results.length} files matching "\${input.query}"\`
  *       }]
  *   }
  * })

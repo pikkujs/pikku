@@ -7,6 +7,7 @@ import {
   CoreServices,
   CoreUserSession,
   CorePikkuMiddleware,
+  PikkuWiringTypes,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
@@ -42,6 +43,8 @@ export const runPikkuFuncDirectly = async <In, Out>(
 }
 
 export const runPikkuFunc = async <In = any, Out = any>(
+  wireType: PikkuWiringTypes,
+  wireId: string,
   funcName: string,
   {
     getAllServices,
@@ -94,7 +97,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   // Run permission checks in the specified order
-  await runPermissions({
+  await runPermissions(wireType, wireId, {
     wiringTags: tags,
     wiringPermissions,
     funcTags: funcConfig.tags,
@@ -105,7 +108,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   })
 
   // Combine all middleware: wiring tags → wiring middleware → func middleware → func tags
-  const allMiddleware = combineMiddleware({
+  const allMiddleware = combineMiddleware(wireType, wireId, {
     wiringTags: tags,
     wiringMiddleware,
     funcMiddleware: funcConfig.middleware,

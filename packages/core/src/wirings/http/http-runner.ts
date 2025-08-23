@@ -12,6 +12,7 @@ import {
   CoreUserSession,
   CorePikkuMiddleware,
   SessionServices,
+  PikkuWiringTypes,
 } from '../../types/core.types.js'
 import { match } from 'path-to-regexp'
 import { MissingSessionError, NotFoundError } from '../../errors/errors.js'
@@ -347,14 +348,19 @@ const executeRouteWithMiddleware = async (
       })
     }
 
-    result = await runPikkuFunc(meta.pikkuFuncName, {
-      getAllServices,
-      session,
-      data,
-      permissions: route.permissions,
-      coerceDataFromSchema: options.coerceDataFromSchema,
-      tags: route.tags,
-    })
+    result = await runPikkuFunc(
+      PikkuWiringTypes.http,
+      `${meta.method}:${meta.route}`,
+      meta.pikkuFuncName,
+      {
+        getAllServices,
+        session,
+        data,
+        permissions: route.permissions,
+        coerceDataFromSchema: options.coerceDataFromSchema,
+        tags: route.tags,
+      }
+    )
 
     // Respond with either a binary or JSON response based on configuration
     if (route.returnsJSON === false) {
@@ -375,7 +381,7 @@ const executeRouteWithMiddleware = async (
   await runMiddleware(
     { ...singletonServices, userSession },
     { http },
-    combineMiddleware({
+    combineMiddleware(PikkuWiringTypes.http, `${meta.method}:${meta.route}`, {
       wiringMiddleware: middleware,
       wiringTags: route.tags,
       funcMiddleware: funcConfig?.middleware,

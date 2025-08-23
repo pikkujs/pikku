@@ -4,7 +4,10 @@ import type { CorePikkuFunctionSessionless } from '../../function/functions.type
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { CreateSessionServices } from '../../types/core.types.js'
+import {
+  CreateSessionServices,
+  PikkuWiringTypes,
+} from '../../types/core.types.js'
 import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 /**
@@ -149,11 +152,16 @@ export async function runQueueJob({
       })
 
       // Execute the pikku function with the job data
-      result = await runPikkuFunc(processorMeta.pikkuFuncName, {
-        getAllServices,
-        data: job.data,
-        tags: queueWorker.tags,
-      })
+      result = await runPikkuFunc(
+        PikkuWiringTypes.queue,
+        job.queueName,
+        processorMeta.pikkuFuncName,
+        {
+          getAllServices,
+          data: job.data,
+          tags: queueWorker.tags,
+        }
+      )
 
       logger.debug(
         `Successfully processed job ${job.id} in queue ${job.queueName}`
@@ -169,7 +177,7 @@ export async function runQueueJob({
     await runMiddleware(
       singletonServices,
       { queue },
-      combineMiddleware({
+      combineMiddleware(PikkuWiringTypes.queue, `${job.queueName}:${job.id}`, {
         wiringMiddleware: queueWorker.middleware,
         wiringTags: queueWorker.tags,
         funcMiddleware: funcConfig?.middleware,
