@@ -148,7 +148,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         tags: ['wiringTag'],
       }),
       {
-        message: 'Permission denied - wiring tag permissions',
+        message: 'Permission denied',
       }
     )
   })
@@ -169,7 +169,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         permissions: wiringPermissions,
       }),
       {
-        message: 'Permission denied - wiring permissions',
+        message: 'Permission denied',
       }
     )
   })
@@ -190,7 +190,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: {},
       }),
       {
-        message: 'Permission denied - function tag permissions',
+        message: 'Permission denied',
       }
     )
   })
@@ -211,7 +211,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: {},
       }),
       {
-        message: 'Permission denied - function permissions',
+        message: 'Permission denied',
       }
     )
   })

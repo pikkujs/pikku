@@ -7,6 +7,7 @@ export const serializePikkuTypes = (
   singletonServicesTypeImport: string,
   singletonServicesTypeName: string,
   sessionServicesTypeImport: string,
+  sessionServicesTypeName: string,
   rpcMapTypeImport: string
 ) => {
   return `/**
@@ -26,6 +27,10 @@ ${singletonServicesTypeImport}
 ${sessionServicesTypeImport}
 ${rpcMapTypeImport}
 
+${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
+${sessionServicesTypeName !== 'Services' ? `type Services = ${sessionServicesTypeName}` : ''}
+${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : ''}
+
 /**
  * Type-safe API permission definition that integrates with your application's session type.
  * Use this to define authorization logic for your API endpoints.
@@ -33,7 +38,7 @@ ${rpcMapTypeImport}
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type PikkuPermission<In = unknown, RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CorePikkuPermission<In, RequiredServices, ${userSessionTypeName}>
+type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, Session>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
@@ -41,7 +46,38 @@ export type PikkuPermission<In = unknown, RequiredServices extends ${singletonSe
  * 
  * @template RequiredServices - The services required for this middleware
  */
-export type PikkuMiddleware<RequiredServices extends ${singletonServicesTypeName} = ${singletonServicesTypeName}> = CorePikkuMiddleware<RequiredServices, ${userSessionTypeName}>
+type PikkuMiddleware<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuMiddleware<RequiredServices, Session>
+
+/**
+ * Factory function for creating permissions with tree-shaking support.
+ * This enables the bundler to detect which services your permission actually uses.
+ * 
+ * @example
+ * \`\`\`typescript
+ * const permission = pikkuPermission(({ logger }, data, session) => {
+ *   return session?.isAdmin || false
+ * })
+ * \`\`\`
+ */
+export const pikkuPermission = <In>(func: PikkuPermission<In>) => {
+  return func
+}
+
+/**
+ * Factory function for creating middleware with tree-shaking support.
+ * This enables the bundler to detect which services your middleware actually uses.
+ * 
+ * @example
+ * \`\`\`typescript
+ * const middleware = pikkuMiddleware(({ logger }, interactions, next) => {
+ *   logger.info('Middleware executed')
+ *   await next()
+ * })
+ * \`\`\`
+ */
+export const pikkuMiddleware = (func: PikkuMiddleware) => {
+  return func
+}
 
 /**
  * A sessionless API function that doesn't require user authentication.
@@ -67,7 +103,7 @@ type PikkuFunctionSessionless<
     ? { mcp?: PikkuMCP }  // Optional MCP
     : { mcp: PikkuMCP }  // Required MCP
   )
-> = CorePikkuFunctionSessionless<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
+> = CorePikkuFunctionSessionless<In, Out, ChannelData, RequiredServices, Session>
 
 /**
  * A session-aware API function that requires user authentication.
@@ -93,7 +129,7 @@ type PikkuFunction<
     ? { mcp?: PikkuMCP }  // Optional MCP
     : { mcp: PikkuMCP }  // Required MCP
   )
-> = CorePikkuFunction<In, Out, ChannelData, RequiredServices, ${userSessionTypeName}>
+> = CorePikkuFunction<In, Out, ChannelData, RequiredServices, Session>
 
 /**
  * Type definition for HTTP API wirings with type-safe path parameters.

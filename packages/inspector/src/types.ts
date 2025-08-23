@@ -4,7 +4,7 @@ import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { queueWorkersMeta } from '@pikku/core/queue'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 import { TypesMap } from './types-map.js'
-import { FunctionsMeta } from '@pikku/core'
+import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 
 export type PathToNameAndType = Map<
   string,
@@ -34,6 +34,30 @@ export interface InspectorFunctionState {
 export interface InspectorChannelState {
   meta: ChannelsMeta
   files: Set<string>
+}
+
+export interface InspectorMiddlewareState {
+  meta: Record<
+    string,
+    {
+      services: FunctionServicesMeta
+      sourceFile: string
+      position: number
+      exportedName: string | null
+    }
+  >
+}
+
+export interface InspectorPermissionState {
+  meta: Record<
+    string,
+    {
+      services: FunctionServicesMeta
+      sourceFile: string
+      position: number
+      exportedName: string | null
+    }
+  >
 }
 
 export type InspectorFilters = {
@@ -79,4 +103,6 @@ export interface InspectorState {
     promptsMeta: MCPPromptMeta
     files: Set<string>
   }
+  middleware: InspectorMiddlewareState
+  permissions: InspectorPermissionState
 }

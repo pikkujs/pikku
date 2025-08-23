@@ -74,6 +74,19 @@ export type CorePikkuPermission<
   Session extends CoreUserSession = CoreUserSession,
 > = (services: Services, data: In, session?: Session) => Promise<boolean>
 
+/**
+ * Factory function for creating permissions with tree-shaking support
+ */
+export const pikkuPermission = <
+  In = any,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+>(
+  permission: CorePikkuPermission<In, Services, Session>
+): CorePikkuPermission<In, Services, Session> => {
+  return permission
+}
+
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined

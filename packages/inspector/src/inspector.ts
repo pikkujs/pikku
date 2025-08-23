@@ -67,6 +67,12 @@ export const inspect = (
       promptsMeta: {},
       files: new Set(),
     },
+    middleware: {
+      meta: {},
+    },
+    permissions: {
+      meta: {},
+    },
   }
 
   // First sweep: add all functions

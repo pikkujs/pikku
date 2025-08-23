@@ -11,6 +11,8 @@ import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
 import { addFunctions } from './add-functions.js'
 import { addChannel } from './add-channel.js'
 import { addRPCInvocations } from './add-rpc-invocations.js'
+import { addMiddleware } from './add-middleware.js'
+import { addPermission } from './add-permission.js'
 
 export const visitSetup = (
   checker: ts.TypeChecker,
@@ -77,6 +79,8 @@ export const visitRoutes = (
   addMCPResource(node, checker, state, filters, logger)
   addMCPTool(node, checker, state, filters, logger)
   addMCPPrompt(node, checker, state, filters, logger)
+  addMiddleware(node, checker, state, logger)
+  addPermission(node, checker, state, logger)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(checker, child, state, filters, logger)

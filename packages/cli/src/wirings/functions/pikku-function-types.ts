@@ -43,6 +43,7 @@ export const pikkuFunctionTypes: PikkuCommand = async (
         `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,
         singletonServicesType.type,
         `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(typesFile, sessionServicesType.typePath, packageMappings)}'`,
+        sessionServicesType.type,
         `import type { TypedPikkuRPC } from '${getFileImportRelativePath(typesFile, rpcInternalMapDeclarationFile, packageMappings)}'`
       )
       await writeFileInDir(logger, typesFile, content)

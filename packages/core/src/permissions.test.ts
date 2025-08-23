@@ -267,7 +267,7 @@ describe('runPermissions', () => {
         session: mockSession,
       }),
       {
-        message: 'Permission denied - wiring tag permissions',
+        message: 'Permission denied',
       }
     )
   })
@@ -285,7 +285,7 @@ describe('runPermissions', () => {
         session: mockSession,
       }),
       {
-        message: 'Permission denied - wiring permissions',
+        message: 'Permission denied',
       }
     )
   })
@@ -303,7 +303,7 @@ describe('runPermissions', () => {
         session: mockSession,
       }),
       {
-        message: 'Permission denied - function tag permissions',
+        message: 'Permission denied',
       }
     )
   })
@@ -321,7 +321,7 @@ describe('runPermissions', () => {
         session: mockSession,
       }),
       {
-        message: 'Permission denied - function permissions',
+        message: 'Permission denied',
       }
     )
   })

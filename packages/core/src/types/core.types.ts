@@ -138,6 +138,18 @@ export type CorePikkuMiddleware<
 ) => Promise<void>
 
 /**
+ * Factory function for creating middleware with tree-shaking support
+ */
+export const pikkuMiddleware = <
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+>(
+  middleware: CorePikkuMiddleware<SingletonServices, UserSession>
+): CorePikkuMiddleware<SingletonServices, UserSession> => {
+  return middleware
+}
+
+/**
  * Represents the core services used by Pikku, including singleton services and the request/response interaction.
  */
 export type CoreServices<

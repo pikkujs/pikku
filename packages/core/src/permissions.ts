@@ -171,7 +171,8 @@ export const runPermissions = async ({
       }
     }
     if (!permissioned) {
-      throw new ForbiddenError('Permission denied - wiring tag permissions')
+      allServices.logger.debug('Permission denied - wiring tag permissions')
+      throw new ForbiddenError('Permission denied')
     }
   }
 
@@ -184,7 +185,8 @@ export const runPermissions = async ({
       session
     )
     if (!permissioned) {
-      throw new ForbiddenError('Permission denied - wiring permissions')
+      allServices.logger.debug('Permission denied - wiring permissions')
+      throw new ForbiddenError('Permission denied')
     }
   }
 
@@ -205,7 +207,8 @@ export const runPermissions = async ({
       }
     }
     if (!permissioned) {
-      throw new ForbiddenError('Permission denied - function tag permissions')
+      allServices.logger.debug('Permission denied - function tag permissions')
+      throw new ForbiddenError('Permission denied')
     }
   }
 
@@ -218,7 +221,8 @@ export const runPermissions = async ({
       session
     )
     if (!permissioned) {
-      throw new ForbiddenError('Permission denied - function permissions')
+      allServices.logger.debug('Permission denied - function permissions')
+      throw new ForbiddenError('Permission denied')
     }
   }
 }
