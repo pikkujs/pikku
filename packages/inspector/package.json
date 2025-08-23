@@ -1,6 +1,6 @@
 {
   "name": "@pikku/inspector",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
@@ -17,7 +17,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@pikku/core": "^0.9.3",
+    "@pikku/core": "^0.9.6",
     "path-to-regexp": "^8.2.0",
     "typescript": "^5.9"
   },
