@@ -67,33 +67,37 @@ function generateHTTPWirings(
     Record<string, { inputType: string; outputType: string }>
   > = {}
 
-  for (const meta of routesMeta) {
-    const { route, method, pikkuFuncName } = meta
-    const functionMeta = functionsMeta[pikkuFuncName]
-    if (!functionMeta) {
-      throw new Error(
-        `Function ${pikkuFuncName} not found in functionsMeta. Please check your configuration.`
-      )
-    }
-    const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
-    const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
+  for (const methods of Object.values(routesMeta)) {
+    for (const meta of Object.values(methods)) {
+      const { route, method, pikkuFuncName } = meta
+      const functionMeta = functionsMeta[pikkuFuncName]
+      if (!functionMeta) {
+        throw new Error(
+          `Function ${pikkuFuncName} not found in functionsMeta. Please check your configuration.`
+        )
+      }
+      const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
+      const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
-    // Initialize the route entry if it doesn't exist
-    if (!routesObj[route]) {
-      routesObj[route] = {}
-    }
+      // Initialize the route entry if it doesn't exist
+      if (!routesObj[route]) {
+        routesObj[route] = {}
+      }
 
-    // Store the input and output types separately for RouteHandler
-    const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
-    const outputType = output ? typesMap.getTypeMeta(output).uniqueName : 'null'
+      // Store the input and output types separately for RouteHandler
+      const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
+      const outputType = output
+        ? typesMap.getTypeMeta(output).uniqueName
+        : 'null'
 
-    requiredTypes.add(inputType)
-    requiredTypes.add(outputType)
+      requiredTypes.add(inputType)
+      requiredTypes.add(outputType)
 
-    // Add method entry
-    routesObj[route][method] = {
-      inputType,
-      outputType,
+      // Add method entry
+      routesObj[route][method] = {
+        inputType,
+        outputType,
+      }
     }
   }
 

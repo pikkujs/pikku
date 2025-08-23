@@ -22,13 +22,21 @@ const setHTTPFunctionMap = (func: any) => {
       services: ['userSession'],
     },
   } as any)
-  pikkuState('http', 'meta', [
-    {
-      pikkuFuncName: 'pikku_func_name',
-      route: 'test',
-      method: 'get',
+  pikkuState('http', 'meta', {
+    get: {
+      test: {
+        pikkuFuncName: 'pikku_func_name',
+        route: 'test',
+        method: 'get',
+      },
     },
-  ])
+    post: {},
+    delete: {},
+    patch: {},
+    head: {},
+    put: {},
+    options: {},
+  })
   addFunction('pikku_func_name', { func })
 }
 

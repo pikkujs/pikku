@@ -163,11 +163,13 @@ export const combineMiddleware = (
   wireType: PikkuWiringTypes,
   uid: string,
   {
+    httpMiddleware,
     wiringMiddleware,
     wiringTags,
     funcMiddleware,
     funcTags,
   }: {
+    httpMiddleware?: CorePikkuMiddleware[]
     wiringMiddleware?: CorePikkuMiddleware[]
     wiringTags?: string[]
     funcMiddleware?: CorePikkuMiddleware[]
@@ -187,6 +189,7 @@ export const combineMiddleware = (
   const funcTaggedMiddleware = getMiddlewareForTags(funcTags)
 
   middlewareCache[wireType][uid] = freezeDedupe([
+    ...(httpMiddleware || []),
     ...wiringTaggedMiddleware,
     ...(wiringMiddleware || []),
     ...(funcMiddleware || []),

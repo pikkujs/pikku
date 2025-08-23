@@ -50,32 +50,20 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   middleware?: PikkuMiddleware[]
 ) => {
   const middlewareStore = pikkuState('http', 'middleware')
+  let route = '*'
 
-  if (typeof routeOrMiddleware === 'string' && middleware) {
-    const route = routeOrMiddleware
-
-    // Remove existing entry for this route if it exists
-    const existingIndex = middlewareStore.findIndex(
-      (item) => item.route === route
-    )
-    if (existingIndex !== -1) {
-      middlewareStore.splice(existingIndex, 1)
-    }
-
-    middlewareStore.push({ route, middleware })
+  if (typeof routeOrMiddleware === 'string') {
+    route = routeOrMiddleware
+    middleware = middleware!
   } else {
-    // Handle global middleware
-    const existingIndex = middlewareStore.findIndex(
-      (item) => item.route === '*'
-    )
-    if (existingIndex !== -1) {
-      middlewareStore.splice(existingIndex, 1)
-    }
+    middleware = routeOrMiddleware
+  }
 
-    middlewareStore.push({
-      route: '*',
-      middleware: routeOrMiddleware as any,
-    })
+  const currentMiddleware = middlewareStore.get(route)
+  if (currentMiddleware) {
+    middlewareStore.set(route, [...currentMiddleware, ...middleware])
+  } else {
+    middlewareStore.set(route, middleware)
   }
 }
 
@@ -114,10 +102,7 @@ export const wireHTTP = <
   >
 ) => {
   const httpMeta = pikkuState('http', 'meta')
-  const routeMeta = httpMeta.find(
-    (meta) =>
-      meta.route === httpWiring.route && meta.method === httpWiring.method
-  )
+  const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
@@ -159,22 +144,27 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
     const matchedPath = matchFunc(requestPath.replace(/^\/\//, '/'))
 
     if (matchedPath) {
-      // Aggregate global and route-specific middleware
-      const globalMiddleware = middleware
-        .filter((m) => m.route === '*' || new RegExp(m.route).test(route.route))
-        .map((m) => m.middleware)
-        .flat()
+      const meta = pikkuState('http', 'meta')[
+        requestType.toLowerCase() as PikkuWiringTypes
+      ][route.route]
 
-      const meta = pikkuState('http', 'meta').find(
-        (meta) => meta.route === route.route && meta.method === route.method
-      )
+      // Aggregate global and route-specific middleware
+      const httpMiddleware = Object.entries(middleware)
+        .filter(
+          ([middlewareRoute]) =>
+            middlewareRoute === '*' ||
+            new RegExp(middlewareRoute).test(route.route)
+        )
+        .map(([, middleware]) => middleware)
+        .flat()
 
       return {
         matchedPath,
         params: matchedPath.params,
         route,
         permissions: route.permissions,
-        middleware: [...globalMiddleware, ...(route.middleware || [])],
+        httpMiddleware,
+        middleware: route.middleware,
         meta: meta!,
       }
     }
@@ -252,7 +242,8 @@ const executeRouteWithMiddleware = async (
     matchedPath: any
     params: any
     route: CoreHTTPFunctionWiring<any, any, any>
-    middleware: any[]
+    httpMiddleware: CorePikkuMiddleware[] | undefined
+    middleware: CorePikkuMiddleware[] | undefined
     meta: HTTPWiringMeta
   },
   http: PikkuHTTP,
@@ -260,7 +251,8 @@ const executeRouteWithMiddleware = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const { matchedPath, params, route, middleware, meta } = matchedRoute
+  const { matchedPath, params, route, httpMiddleware, middleware, meta } =
+    matchedRoute
   const {
     singletonServices,
     userSession,
@@ -382,6 +374,7 @@ const executeRouteWithMiddleware = async (
     { ...singletonServices, userSession },
     { http },
     combineMiddleware(PikkuWiringTypes.http, `${meta.method}:${meta.route}`, {
+      httpMiddleware,
       wiringMiddleware: middleware,
       wiringTags: route.tags,
       funcMiddleware: funcConfig?.middleware,
@@ -512,7 +505,8 @@ export const fetchData = async <In, Out>(
       ignoreMiddleware
         ? {
             ...matchedRoute,
-            middleware: [],
+            middleware: undefined,
+            httpMiddleware: undefined,
           }
         : matchedRoute,
       http!,

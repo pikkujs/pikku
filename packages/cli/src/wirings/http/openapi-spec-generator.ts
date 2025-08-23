@@ -79,15 +79,19 @@ const convertSchemasToBodyPayloads = async (
   routesMeta: HTTPWiringsMeta,
   schemas: Record<string, any>
 ) => {
-  const requiredSchemas = new Set(
-    routesMeta
-      .map(({ inputTypes, pikkuFuncName }) => {
-        const output = functionsMeta[pikkuFuncName]?.outputs?.[0]
-        return [inputTypes?.body, output]
-      })
-      .flat()
-      .filter((schema) => !!schema)
-  )
+  const requiredSchemas = new Set<string>()
+  for (const routeMeta of Object.values(routesMeta)) {
+    for (const { inputTypes, pikkuFuncName } of Object.values(routeMeta)) {
+      const output = functionsMeta[pikkuFuncName]?.outputs?.[0]
+      if (inputTypes?.body) {
+        requiredSchemas.add(inputTypes?.body)
+      }
+      if (output) {
+        requiredSchemas.add(output)
+      }
+    }
+  }
+
   const convertedEntries = await Promise.all(
     Object.entries(schemas).map(async ([key, schema]) => {
       if (requiredSchemas.has(key)) {
@@ -105,103 +109,106 @@ const convertSchemasToBodyPayloads = async (
 
 export async function generateOpenAPISpec(
   functionsMeta: FunctionsMeta,
-  routeMeta: HTTPWiringsMeta,
+  httpMeta: HTTPWiringsMeta,
   schemas: Record<string, any>,
   additionalInfo: OpenAPISpecInfo
 ): Promise<OpenAPISpec> {
   const paths: Record<string, any> = {}
 
-  routeMeta.forEach((meta) => {
-    const { route, method, inputTypes, pikkuFuncName, params, query, docs } =
-      meta
-    const functionMeta = functionsMeta[pikkuFuncName]
-    if (!functionMeta) {
-      console.error(
-        `• No function metadata found for '${pikkuFuncName}' in route '${route}'.`
-      )
-      return
-    }
-    const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
-
-    const path = route.replace(/:(\w+)/g, '{$1}') // Convert ":param" to "{param}"
-
-    if (!paths[path]) {
-      paths[path] = {}
-    }
-
-    const responses = {}
-    docs?.errors?.forEach((error) => {
-      const errorResponse = getErrorResponseForConstructorName(error)
-      if (errorResponse) {
-        responses[errorResponse.status] = {
-          description: errorResponse.message,
-        }
+  for (const routeMeta of Object.values(httpMeta)) {
+    for (const meta of Object.values(routeMeta)) {
+      const { route, method, inputTypes, pikkuFuncName, params, query, docs } =
+        meta
+      const functionMeta = functionsMeta[pikkuFuncName]
+      if (!functionMeta) {
+        console.error(
+          `• No function metadata found for '${pikkuFuncName}' in route '${route}'.`
+        )
+        continue
       }
-    })
 
-    const operation: any = {
-      description:
-        docs?.description ||
-        `This endpoint handles the ${method.toUpperCase()} request for the route ${route}.`,
-      tags: docs?.tags || [route.split('/')[1] || 'default'],
-      parameters: [],
-      responses: {
-        ...responses,
-        '200': {
-          description: 'Successful response',
-          content: output
-            ? {
-                'application/json': {
-                  schema:
-                    typeof output === 'string' &&
-                    ['boolean', 'string', 'number'].includes(output)
-                      ? { type: output }
-                      : { $ref: `#/components/schemas/${output}` },
-                },
-              }
-            : undefined,
-        },
-      },
-    }
+      const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
-    const bodyType = inputTypes?.body
-    if (bodyType) {
-      operation.requestBody = {
-        required: true,
-        content: {
-          'application/json': {
-            schema:
-              typeof bodyType === 'string' &&
-              ['boolean', 'string', 'number'].includes(bodyType)
-                ? { type: bodyType }
-                : { $ref: `#/components/schemas/${bodyType}` },
+      const path = route.replace(/:(\w+)/g, '{$1}') // Convert ":param" to "{param}"
+
+      if (!paths[path]) {
+        paths[path] = {}
+      }
+
+      const responses = {}
+      docs?.errors?.forEach((error) => {
+        const errorResponse = getErrorResponseForConstructorName(error)
+        if (errorResponse) {
+          responses[errorResponse.status] = {
+            description: errorResponse.message,
+          }
+        }
+      })
+
+      const operation: any = {
+        description:
+          docs?.description ||
+          `This endpoint handles the ${method.toUpperCase()} request for the route ${route}.`,
+        tags: docs?.tags || [route.split('/')[1] || 'default'],
+        parameters: [],
+        responses: {
+          ...responses,
+          '200': {
+            description: 'Successful response',
+            content: output
+              ? {
+                  'application/json': {
+                    schema:
+                      typeof output === 'string' &&
+                      ['boolean', 'string', 'number'].includes(output)
+                        ? { type: output }
+                        : { $ref: `#/components/schemas/${output}` },
+                  },
+                }
+              : undefined,
           },
         },
       }
-    }
 
-    if (params) {
-      operation.parameters = params.map((param) => ({
-        name: param,
-        in: 'path',
-        required: true,
-        schema: { type: 'string' },
-      }))
-    }
+      const bodyType = inputTypes?.body
+      if (bodyType) {
+        operation.requestBody = {
+          required: true,
+          content: {
+            'application/json': {
+              schema:
+                typeof bodyType === 'string' &&
+                ['boolean', 'string', 'number'].includes(bodyType)
+                  ? { type: bodyType }
+                  : { $ref: `#/components/schemas/${bodyType}` },
+            },
+          },
+        }
+      }
 
-    if (query) {
-      operation.parameters.push(
-        ...query.map((query) => ({
-          name: query,
-          in: 'query',
-          required: false,
+      if (params) {
+        operation.parameters = params.map((param) => ({
+          name: param,
+          in: 'path',
+          required: true,
           schema: { type: 'string' },
         }))
-      )
-    }
+      }
 
-    paths[path][method] = operation
-  })
+      if (query) {
+        operation.parameters.push(
+          ...query.map((query) => ({
+            name: query,
+            in: 'query',
+            required: false,
+            schema: { type: 'string' },
+          }))
+        )
+      }
+
+      paths[path][method] = operation
+    }
+  }
 
   return {
     openapi: '3.1.0',
@@ -211,7 +218,7 @@ export async function generateOpenAPISpec(
     components: {
       schemas: await convertSchemasToBodyPayloads(
         functionsMeta,
-        routeMeta,
+        httpMeta,
         schemas
       ),
       responses: {},

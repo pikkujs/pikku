@@ -22,15 +22,18 @@ export async function generateSchemas(
       }
     }
   }
-  for (const { inputTypes } of httpWiringsMeta) {
-    if (inputTypes?.body) {
-      schemasSet.add(inputTypes.body)
-    }
-    if (inputTypes?.query) {
-      schemasSet.add(inputTypes.query)
-    }
-    if (inputTypes?.params) {
-      schemasSet.add(inputTypes.params)
+
+  for (const wiringRoutes of Object.values(httpWiringsMeta)) {
+    for (const { inputTypes } of Object.values(wiringRoutes)) {
+      if (inputTypes?.body) {
+        schemasSet.add(inputTypes.body)
+      }
+      if (inputTypes?.query) {
+        schemasSet.add(inputTypes.query)
+      }
+      if (inputTypes?.params) {
+        schemasSet.add(inputTypes.params)
+      }
     }
   }
 

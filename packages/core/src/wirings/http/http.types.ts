@@ -208,7 +208,7 @@ export type HTTPWiringMeta = {
   tags?: string[]
   sse?: true
 }
-export type HTTPWiringsMeta = Array<HTTPWiringMeta>
+export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 
 export type HTTPFunctionsMeta = Array<{
   name: string

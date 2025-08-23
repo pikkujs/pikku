@@ -39,7 +39,15 @@ export const inspect = (
     },
     http: {
       metaInputTypes: new Map(),
-      meta: [],
+      meta: {
+        get: {},
+        post: {},
+        put: {},
+        delete: {},
+        head: {},
+        patch: {},
+        options: {},
+      },
       files: new Set(),
     },
     channels: {

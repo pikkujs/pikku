@@ -44,7 +44,8 @@ interface PikkuState {
     >
   }
   http: {
-    middleware: Array<{ route: string; middleware: CorePikkuMiddleware[] }>
+    middleware: Map<string, CorePikkuMiddleware<any, any>[]>
+    permissions: Map<string, CorePermissionGroup | CorePikkuPermission[]>
     routes: Map<HTTPMethod, Map<string, CoreHTTPFunctionWiring<any, any, any>>>
     meta: HTTPWiringsMeta
   }
@@ -87,9 +88,10 @@ export const resetPikkuState = () => {
       files: new Map(),
     },
     http: {
-      middleware: [],
+      permissions: new Map(),
+      middleware: new Map(),
       routes: new Map(),
-      meta: [],
+      meta: {},
     },
     channel: {
       channels: new Map(),

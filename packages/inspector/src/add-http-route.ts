@@ -116,7 +116,7 @@ export const addHTTPRoute = (
 
   // --- record route ---
   state.http.files.add(node.getSourceFile().fileName)
-  state.http.meta.push({
+  state.http.meta[method][route] = {
     pikkuFuncName: funcName,
     route,
     method: method as HTTPMethod,
@@ -125,5 +125,5 @@ export const addHTTPRoute = (
     inputTypes,
     docs,
     tags,
-  })
+  }
 }
