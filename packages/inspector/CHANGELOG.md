@@ -1,5 +1,17 @@
 # @pikku/inspector
 
+## 0.9.4
+
+### Patch Changes
+
+- 6059c87: refactor: move PikkuPermission to pikkuPermission and same for middleware for api consistency to to improve future features
+- 6db63bb: perf: changing http meta to a lookup map to reduce loops
+- Updated dependencies [6059c87]
+- Updated dependencies [6db63bb]
+- Updated dependencies [74f8634]
+- Updated dependencies [766fef1]
+  - @pikku/core@0.9.6
+
 ## 0.9.3
 
 ### Patch Changes

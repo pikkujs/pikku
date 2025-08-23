@@ -1,5 +1,14 @@
 ## 0.9.0
 
+## 0.9.6
+
+### Patch Changes
+
+- 6059c87: refactor: move PikkuPermission to pikkuPermission and same for middleware for api consistency to to improve future features
+- 6db63bb: perf: changing http meta to a lookup map to reduce loops
+- 74f8634: perf: moving router externally to be able to swap them out, similar to hono
+- 766fef1: feat: adding caching for middleware and permissions
+
 ## 0.9.5
 
 ### Patch Changes
