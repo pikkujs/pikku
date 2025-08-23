@@ -3,13 +3,14 @@ import { addFunction } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
 import { UserSessionService } from '../../services/user-session-service.js'
+import { CorePikkuMiddleware } from '../../types/core.types.js'
+import { httpRouter } from '../http/routers/http-router.js'
 import {
   ChannelMeta,
   CoreChannel,
   RunChannelOptions,
   RunChannelParams,
 } from './channel.types.js'
-import { match } from 'path-to-regexp'
 
 /**
  * Adds a channel and registers all functions referenced in it using the
@@ -91,30 +92,33 @@ export const wireChannel = <
 }
 
 const getMatchingChannelConfig = (request: string) => {
-  const channels = pikkuState('channel', 'channels')
-  const channelsMeta = pikkuState('channel', 'meta')
-  for (const channelConfig of channels.values()) {
-    const cleanedRoute = channelConfig.route.replace(/^\/\//, '/')
-    const cleanedRequest = request.replace(/^\/\//, '/')
-    const matchFunc = match(cleanedRoute, {
-      decode: decodeURIComponent,
-    })
-    const matchedPath = matchFunc(cleanedRequest)
-    if (matchedPath) {
-      const channelMeta = channelsMeta[channelConfig.name]
-      if (!channelMeta) {
-        throw new Error(`Channel ${channelConfig.name} not found in metadata`)
-      }
-      return {
-        matchedPath,
-        params: matchedPath.params,
-        channelConfig,
-        schemaName: channelMeta.input,
-        meta: channelMeta,
-      }
-    }
+  const matchedPath = httpRouter.match('get', request)
+  if (!matchedPath) {
+    return null
   }
-  return null
+
+  const meta = pikkuState('channel', 'meta')
+  const channelMeta = Object.values(meta).find(
+    (channelConfig) => channelConfig.route === matchedPath.route
+  )
+  if (!channelMeta) {
+    return null
+  }
+
+  const channels = pikkuState('channel', 'channels')
+  const channelConfig = channels.get(channelMeta.name)
+  if (!channelConfig) {
+    return null
+  }
+
+  return {
+    matchedPath,
+    params: matchedPath.params,
+    channelConfig,
+    schemaName: channelMeta.input,
+    meta: channelMeta,
+    httpMiddleware: matchedPath.middleware,
+  }
 }
 
 export const openChannel = async ({
@@ -129,6 +133,7 @@ export const openChannel = async ({
   openingData: unknown
   channelConfig: CoreChannel<unknown, any>
   meta: ChannelMeta
+  httpMiddleware: CorePikkuMiddleware[] | undefined
 }> => {
   const matchingChannel = getMatchingChannelConfig(route)
   if (!matchingChannel) {
@@ -136,7 +141,8 @@ export const openChannel = async ({
     throw new NotFoundError(`Channel not found: ${route}`)
   }
 
-  const { params, channelConfig, schemaName, meta } = matchingChannel
+  const { params, channelConfig, schemaName, meta, httpMiddleware } =
+    matchingChannel
 
   const requiresSession = channelConfig.auth !== false
   request?.setParams(params)
@@ -159,5 +165,5 @@ export const openChannel = async ({
     )
   }
 
-  return { openingData, channelConfig, meta }
+  return { openingData, channelConfig, meta, httpMiddleware }
 }

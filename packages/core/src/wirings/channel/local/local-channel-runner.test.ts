@@ -10,6 +10,7 @@ import {
   PikkuQuery,
 } from '../../http/http.types.js'
 import { SerializeOptions } from 'cookie'
+import { httpRouter } from '../../http/routers/http-router.js'
 
 /**
  * Minimal stubs for dependencies that runChannel expects.
@@ -138,6 +139,9 @@ test('runChannel should return a channel handler if channel matches and no auth 
     route: '/test-channel',
     auth: false,
   })
+
+  // Initialize router after adding channel (for tests)
+  httpRouter.initialize()
 
   const result = await runLocalChannel({
     singletonServices: mockSingletonServices,

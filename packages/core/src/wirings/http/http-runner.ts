@@ -14,7 +14,6 @@ import {
   SessionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { match } from 'path-to-regexp'
 import { MissingSessionError, NotFoundError } from '../../errors/errors.js'
 import {
   closeSessionServices,
@@ -33,6 +32,7 @@ import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
+import { httpRouter } from './routers/http-router.js'
 
 /**
  * Registers middleware either globally or for a specific route.
@@ -128,48 +128,29 @@ export const wireHTTP = <
  * @returns {Object | undefined} An object with matched route details or undefined if no match.
  */
 const getMatchingRoute = (requestType: string, requestPath: string) => {
-  const allRoutes = pikkuState('http', 'routes')
-  const middleware = pikkuState('http', 'middleware')
-  const routes = allRoutes.get(requestType.toLowerCase() as HTTPMethod)
-  if (!routes) {
-    return undefined
-  }
-  for (const route of routes.values()) {
-    // Generate a matching function from the route pattern
-    const matchFunc = match(`/${route.route}`.replace(/^\/\//, '/'), {
-      decode: decodeURIComponent,
-    })
+  const matchedPath = httpRouter.match(
+    requestType.toLowerCase() as HTTPMethod,
+    requestPath
+  )
 
-    // Attempt to match the request path
-    const matchedPath = matchFunc(requestPath.replace(/^\/\//, '/'))
+  if (matchedPath) {
+    const route = pikkuState('http', 'routes')
+      .get(requestType.toLowerCase() as HTTPMethod)!
+      .get(matchedPath.route)!
+    const meta = pikkuState('http', 'meta')[
+      requestType.toLowerCase() as PikkuWiringTypes
+    ][route.route]
 
-    if (matchedPath) {
-      const meta = pikkuState('http', 'meta')[
-        requestType.toLowerCase() as PikkuWiringTypes
-      ][route.route]
-
-      // Aggregate global and route-specific middleware
-      const httpMiddleware = Object.entries(middleware)
-        .filter(
-          ([middlewareRoute]) =>
-            middlewareRoute === '*' ||
-            new RegExp(middlewareRoute).test(route.route)
-        )
-        .map(([, middleware]) => middleware)
-        .flat()
-
-      return {
-        matchedPath,
-        params: matchedPath.params,
-        route,
-        permissions: route.permissions,
-        httpMiddleware,
-        middleware: route.middleware,
-        meta: meta!,
-      }
+    return {
+      matchedPath,
+      params: matchedPath.params,
+      route,
+      permissions: route.permissions,
+      httpMiddleware: matchedPath.middleware,
+      middleware: route.middleware,
+      meta: meta!,
     }
   }
-  return undefined
 }
 
 /**

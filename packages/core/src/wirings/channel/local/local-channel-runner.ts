@@ -42,9 +42,9 @@ export const runLocalChannel = async ({
     route = http?.request?.path()
   }
 
-  let openingData, channelConfig, meta
+  let openingData, channelConfig, meta, httpMiddleware
   try {
-    ;({ openingData, channelConfig, meta } = await openChannel({
+    ;({ openingData, channelConfig, meta, httpMiddleware } = await openChannel({
       channelId,
       createSessionServices,
       respondWith404,
@@ -149,6 +149,7 @@ export const runLocalChannel = async ({
     combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
       wiringMiddleware: channelConfig.middleware,
       wiringTags: channelConfig.tags,
+      httpMiddleware,
     }),
     main
   )

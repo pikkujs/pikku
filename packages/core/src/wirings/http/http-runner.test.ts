@@ -9,6 +9,7 @@ import {
   PikkuMockResponse,
 } from '../channel/local/local-channel-runner.test.js'
 import { addFunction } from '../../function/function-runner.js'
+import { httpRouter } from './routers/http-router.js'
 
 const sessionMiddleware: CorePikkuMiddleware = async (services, _, next) => {
   services.userSession.set({ userId: 'test' } as any)
@@ -92,6 +93,9 @@ describe('fetch', () => {
       func: routeFunc,
       middleware: [sessionMiddleware],
     })
+
+    // Initialize router after adding route (for tests)
+    httpRouter.initialize()
 
     const result = await fetch(request, {
       singletonServices,
