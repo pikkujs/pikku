@@ -3,11 +3,10 @@ import assert from 'node:assert'
 import {
   combineMiddleware,
   addMiddleware,
-  getMiddlewareForTags,
   runMiddleware,
 } from './middleware-runner.js'
 import { resetPikkuState } from './pikku-state.js'
-import { CorePikkuMiddleware } from './types/core.types.js'
+import { CorePikkuMiddleware, PikkuWiringTypes } from './types/core.types.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -15,17 +14,24 @@ beforeEach(() => {
 
 describe('combineMiddleware', () => {
   test('should return empty array when no parameters provided', () => {
-    const result = combineMiddleware()
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString()
+    )
     assert.deepEqual(result, [])
   })
 
   test('should return empty array when all parameters are undefined', () => {
-    const result = combineMiddleware({
-      wiringMiddleware: undefined,
-      wiringTags: undefined,
-      funcMiddleware: undefined,
-      funcTags: undefined,
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        wiringMiddleware: undefined,
+        wiringTags: undefined,
+        funcMiddleware: undefined,
+        funcTags: undefined,
+      }
+    )
     assert.deepEqual(result, [])
   })
 
@@ -45,9 +51,13 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    const result = combineMiddleware({
-      wiringMiddleware: [mockMiddleware1, mockMiddleware2],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        wiringMiddleware: [mockMiddleware1, mockMiddleware2],
+      }
+    )
 
     assert.equal(result.length, 2)
     assert.equal(result[0], mockMiddleware1)
@@ -70,9 +80,13 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    const result = combineMiddleware({
-      funcMiddleware: [mockMiddleware1, mockMiddleware2],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        funcMiddleware: [mockMiddleware1, mockMiddleware2],
+      }
+    )
 
     assert.equal(result.length, 2)
     assert.equal(result[0], mockMiddleware1)
@@ -114,12 +128,16 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    const result = combineMiddleware({
-      wiringMiddleware: [wiringMiddleware],
-      wiringTags: ['wiringTag'],
-      funcMiddleware: [funcMiddleware],
-      funcTags: ['funcTag'],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        wiringMiddleware: [wiringMiddleware],
+        wiringTags: ['wiringTag'],
+        funcMiddleware: [funcMiddleware],
+        funcTags: ['funcTag'],
+      }
+    )
 
     assert.equal(result.length, 4)
     // Order: wiringTags, wiringMiddleware, funcMiddleware, funcTags
@@ -140,9 +158,13 @@ describe('combineMiddleware', () => {
 
     addMiddleware('testTag', [taggedMiddleware])
 
-    const result = combineMiddleware({
-      wiringTags: ['testTag'],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        wiringTags: ['testTag'],
+      }
+    )
 
     assert.equal(result.length, 1)
     assert.equal(result[0], taggedMiddleware)
@@ -159,9 +181,13 @@ describe('combineMiddleware', () => {
 
     addMiddleware('funcTestTag', [taggedMiddleware])
 
-    const result = combineMiddleware({
-      funcTags: ['funcTestTag'],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        funcTags: ['funcTestTag'],
+      }
+    )
 
     assert.equal(result.length, 1)
     assert.equal(result[0], taggedMiddleware)
@@ -186,9 +212,13 @@ describe('combineMiddleware', () => {
     addMiddleware('tag1', [middleware1])
     addMiddleware('tag2', [middleware2])
 
-    const result = combineMiddleware({
-      wiringTags: ['tag1', 'tag2'],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        wiringTags: ['tag1', 'tag2'],
+      }
+    )
 
     assert.equal(result.length, 2)
     assert.equal(result[0], middleware1)
@@ -206,10 +236,14 @@ describe('combineMiddleware', () => {
 
     addMiddleware('existingTag', [middleware])
 
-    const result = combineMiddleware({
-      wiringTags: ['existingTag', 'nonExistentTag'],
-      funcTags: ['anotherNonExistentTag'],
-    })
+    const result = combineMiddleware(
+      PikkuWiringTypes.http,
+      Math.random().toString(),
+      {
+        wiringTags: ['existingTag', 'nonExistentTag'],
+        funcTags: ['anotherNonExistentTag'],
+      }
+    )
 
     assert.equal(result.length, 1)
     assert.equal(result[0], middleware)
@@ -238,18 +272,12 @@ describe('runMiddleware', () => {
       await next()
     }
 
-    // Pass same middleware multiple times
-    const duplicatedMiddleware = [
-      middleware1,
-      middleware2,
-      middleware1,
-      middleware2,
-    ]
-
     await runMiddleware(
       {} as any,
       {} as any,
-      duplicatedMiddleware,
+      combineMiddleware(PikkuWiringTypes.rpc, Math.random().toString(), {
+        wiringMiddleware: [middleware1, middleware2, middleware1, middleware2],
+      }),
       async () => {
         executionOrder.push('main')
       }

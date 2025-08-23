@@ -6,7 +6,11 @@ import {
   runPermissions,
 } from './permissions.js'
 import { resetPikkuState } from './pikku-state.js'
-import { CoreServices, CoreUserSession } from './types/core.types.js'
+import {
+  CoreServices,
+  CoreUserSession,
+  PikkuWiringTypes,
+} from './types/core.types.js'
 import { CorePermissionGroup } from './function/functions.types.js'
 
 beforeEach(() => {
@@ -160,7 +164,7 @@ describe('getPermissionsForTags', () => {
 describe('runPermissions', () => {
   test('should pass when no permissions are defined', async () => {
     // Should not throw
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       allServices: mockServices,
       data: {},
       session: mockSession,
@@ -176,7 +180,7 @@ describe('runPermissions', () => {
 
     addPermission('wiringTag', [wiringTagPermission])
 
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wiringTags: ['wiringTag'],
       allServices: mockServices,
       data: {},
@@ -219,7 +223,7 @@ describe('runPermissions', () => {
       ],
     }
 
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wiringTags: ['wiringTag'],
       wiringPermissions,
       funcTags: ['funcTag'],
@@ -245,7 +249,7 @@ describe('runPermissions', () => {
     addPermission('atLeastOneTestTag', [failingPermission, passingPermission])
 
     // Should not throw because at least one permission passes
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wiringTags: ['atLeastOneTestTag'],
       allServices: mockServices,
       data: {},
@@ -260,7 +264,7 @@ describe('runPermissions', () => {
     addPermission('allFailTestTag', [failingPermission1, failingPermission2])
 
     await assert.rejects(
-      runPermissions({
+      runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wiringTags: ['allFailTestTag'],
         allServices: mockServices,
         data: {},
@@ -278,7 +282,7 @@ describe('runPermissions', () => {
     }
 
     await assert.rejects(
-      runPermissions({
+      runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wiringPermissions,
         allServices: mockServices,
         data: {},
@@ -296,7 +300,7 @@ describe('runPermissions', () => {
     addPermission('funcTag', [failingPermission])
 
     await assert.rejects(
-      runPermissions({
+      runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         funcTags: ['funcTag'],
         allServices: mockServices,
         data: {},
@@ -314,7 +318,7 @@ describe('runPermissions', () => {
     }
 
     await assert.rejects(
-      runPermissions({
+      runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         funcPermissions,
         allServices: mockServices,
         data: {},
@@ -346,7 +350,7 @@ describe('runPermissions', () => {
     }
 
     await assert.rejects(
-      runPermissions({
+      runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wiringTags: ['failingWiringTag'],
         wiringPermissions,
         allServices: mockServices,
@@ -365,7 +369,7 @@ describe('runPermissions', () => {
     addPermission('arrayTestTag', arrayPermission)
 
     // Should not throw because verifyPermissions handles array properly
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wiringTags: ['arrayTestTag'],
       allServices: mockServices,
       data: {},
@@ -381,7 +385,7 @@ describe('runPermissions', () => {
     addPermission('objectTestTag', permissionGroup)
 
     // Should not throw because verifyPermissions handles objects properly
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wiringTags: ['objectTestTag'],
       allServices: mockServices,
       data: {},
@@ -405,7 +409,7 @@ describe('runPermissions', () => {
 
     addPermission('paramTestTag', [testPermission])
 
-    await runPermissions({
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wiringTags: ['paramTestTag'],
       allServices: mockServices,
       data: testData,

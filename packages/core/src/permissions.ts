@@ -188,6 +188,7 @@ export const runPermissions = async (
       wiringTags: getPermissionsForTags(wiringTags),
       funcTags: getPermissionsForTags(funcTags),
     }
+    permissionCache[wireType][uid] = cachedPermission
   }
   let permissioned = true
 

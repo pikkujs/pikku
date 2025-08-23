@@ -1,4 +1,4 @@
-import { pikku } from '@/pikku-nextjs.gen.js'
+import { pikku } from '../pikku-nextjs.gen.js'
 
 export default async function Page() {
   const result = await pikku().staticGet('/')

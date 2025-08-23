@@ -18,19 +18,9 @@ export * from './wirings/queue/index.js'
 export * from './wirings/mcp/index.js'
 export * from './errors/index.js'
 export * from './middleware/index.js'
-export * from './time-utils.js'
-export * from './utils.js'
 export { pikkuState } from './pikku-state.js'
-export {
-  runMiddleware,
-  addMiddleware,
-  combineMiddleware,
-} from './middleware-runner.js'
-export {
-  addPermission,
-  getPermissionsForTags,
-  runPermissions,
-} from './permissions.js'
+export { addMiddleware } from './middleware-runner.js'
+export { addPermission } from './permissions.js'
 export { wireHTTP, addHTTPMiddleware } from './wirings/http/http-runner.js'
 export { wireChannel } from './wirings/channel/channel-runner.js'
 export { wireScheduler } from './wirings/scheduler/scheduler-runner.js'
