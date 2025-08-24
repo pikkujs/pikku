@@ -32,7 +32,6 @@ export interface PikkuCLICoreOutputFiles {
   rpcInternalMapDeclarationFile: string
 
   // RPC Exposed
-  rpcWiringMetaFile: string
   rpcMapDeclarationFile: string
 
   // Schedulers
@@ -253,12 +252,6 @@ const _getPikkuCLIConfig = async (
       }
 
       // External
-      if (!result.rpcWiringMetaFile) {
-        result.rpcWiringMetaFile = join(
-          externalRPCDirectory,
-          'pikku-rpc-wirings-meta.gen.ts'
-        )
-      }
       if (!result.rpcMapDeclarationFile) {
         result.rpcMapDeclarationFile = join(
           externalRPCDirectory,

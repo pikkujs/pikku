@@ -8,12 +8,7 @@ import { PikkuCommandWithoutState } from '../../types.js'
 
 export const pikkuRPCClient: PikkuCommandWithoutState = async (
   logger,
-  {
-    rpcWiringsFile,
-    rpcMapDeclarationFile,
-    rpcInternalMapDeclarationFile,
-    packageMappings,
-  }
+  { rpcWiringsFile, rpcMapDeclarationFile, packageMappings }
 ) => {
   return await logCommandInfoAndTime(
     logger,

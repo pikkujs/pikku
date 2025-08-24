@@ -86,10 +86,12 @@ export const serializeImportMap = (
       return
     }
 
-    if (originalName === uniqueName) {
-      variables.push(originalName)
-    } else {
-      variables.push(`${originalName} as ${uniqueName}`)
+    const importName =
+      originalName === uniqueName
+        ? originalName
+        : `${originalName} as ${uniqueName}`
+    if (!variables.includes(importName)) {
+      variables.push(importName)
     }
     paths.set(path, variables)
   })

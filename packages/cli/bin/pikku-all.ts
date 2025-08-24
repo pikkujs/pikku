@@ -115,7 +115,6 @@ const runAll = async (
   await pikkuRPCInternalMap(logger, cliConfig, visitState)
   await pikkuRPCExposedMap(logger, cliConfig, visitState)
   await pikkuRPCClient(logger, cliConfig)
-  allImports.push(cliConfig.rpcWiringMetaFile)
 
   const schemas = await pikkuSchemas(logger, cliConfig, visitState)
   if (schemas) {
@@ -127,7 +126,7 @@ const runAll = async (
     logger,
     cliConfig,
     cliConfig.bootstrapFiles.rpc,
-    [cliConfig.rpcWiringMetaFile],
+    [],
     schemas
   )
 

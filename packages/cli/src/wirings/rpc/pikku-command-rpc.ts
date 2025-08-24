@@ -3,7 +3,7 @@ import { PikkuCommand } from '../../types.js'
 
 export const pikkuRPC: PikkuCommand = async (
   logger,
-  { rpcInternalWiringMetaFile, rpcWiringMetaFile },
+  { rpcInternalWiringMetaFile },
   { rpc }
 ) => {
   return await logCommandInfoAndTime(
@@ -17,14 +17,6 @@ export const pikkuRPC: PikkuCommand = async (
           logger,
           rpcInternalWiringMetaFile,
           `import { pikkuState } from '@pikku/core'\npikkuState('rpc', 'meta', ${JSON.stringify(rpc.internalMeta, null, 2)})`
-        )
-      }
-
-      if (rpc.exposedFiles.size > 0) {
-        await writeFileInDir(
-          logger,
-          rpcWiringMetaFile,
-          `import { pikkuState } from '@pikku/core'\npikkuState('rpc', 'meta', ${JSON.stringify(rpc.exposedFiles, null, 2)})`
         )
       }
     }
