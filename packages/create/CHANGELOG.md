@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.9.4
+
+### Patch Changes
+
+- a5c2eff: feat: run sse and other tests on initial start to ensure setup correctly
+
 ## 0.9.3
 
 ### Patch Changes
