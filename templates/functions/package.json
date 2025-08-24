@@ -5,7 +5,8 @@
   "dependencies": {
     "@pikku/core": "^0.9.6",
     "@pikku/jose": "^0.9.3",
-    "@pikku/schema-cfworker": "^0.9.2"
+    "@pikku/schema-cfworker": "^0.9.2",
+    "eventsource": "^4.0.0"
   },
   "devDependencies": {
     "@pikku/cli": "^0.9.7",
@@ -19,8 +20,9 @@
     "tsc": "tsc",
     "pikku": "pikku",
     "test:template": "bash run-tests.sh",
-    "test:http": "npx tsx clients/http.ts",
-    "test:rpc": "npx tsx clients/rpc.ts",
-    "test:websocket": "npx text clients/websocket.ts"
+    "test:http": "npx tsx client/http-fetch.ts",
+    "test:sse": "npx tsx client/http-sse.ts",
+    "test:rpc": "npx tsx client/rpc.ts",
+    "test:websocket": "npx tsx client/websocket.ts"
   }
 }

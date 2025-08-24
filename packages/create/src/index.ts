@@ -35,7 +35,6 @@ const BASE_URL = 'gh:pikkujs/pikku/templates'
 
 const packageManagers = ['npm', 'yarn', 'pnpm'] as const
 
-// type Feature = "http" | "scheduled" | "channel" | "fullstack"
 const templates = [
   {
     template: 'aws-lambda',
@@ -70,22 +69,22 @@ const templates = [
   {
     template: 'express',
     description: 'An Express template',
-    supports: ['http', 'scheduled'],
+    supports: ['http', 'scheduled', 'sse'],
   },
   {
     template: 'express-middleware',
     description: 'An Express Middleware template',
-    supports: ['http', 'scheduled'],
+    supports: ['http', 'scheduled', 'sse'],
   },
   {
     template: 'fastify',
     description: 'A Fastify template',
-    supports: ['http'],
+    supports: ['http', 'sse'],
   },
   {
     template: 'fastify-plugin',
     description: 'A Fastify Plugin template',
-    supports: ['http'],
+    supports: ['http', 'sse'],
   },
   {
     template: 'mcp-server',
@@ -335,16 +334,6 @@ async function run() {
       message: 'Project name:',
       default: cliOptions.name || 'my-app',
     }))
-
-  // const features: Feature[] = await checkbox({
-  //   message: 'Select which features you want to include:',
-  //   choices: [
-  //     { value: 'http', name: 'HTTP' },
-  //     { value: 'scheduled', name: 'Scheduled Tasks' },
-  //     { value: 'channel', name: 'Channel (WebSockets)' },
-  //     { value: 'fullStack', name: 'FullStack (nextJS)' },
-  //   ],
-  // });
 
   const template: (typeof templates)[number]['template'] =
     cliOptions.template ||

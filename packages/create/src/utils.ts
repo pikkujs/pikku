@@ -189,8 +189,8 @@ export function serverlessChanges(targetPath: string, appName: string): void {
 const FILE_FEATURE_MAPPING = {
   'channel.': ['channel'],
   'http.': ['http'],
-  'http-progressive-enhancement.': ['channel'], // This is for channels as mentioned
-  'http-sse.': ['http'],
+  'http-progressive-enhancement.': ['channel', 'sse'],
+  'http-sse.': ['sse'],
   'mcp.': ['mcp'],
   'queue-worker.': ['queue'],
   'rpc.': ['http'], // RPC is typically over HTTP
@@ -201,7 +201,8 @@ const FILE_FEATURE_MAPPING = {
  * Maps client file names to feature types for filtering
  */
 const CLIENT_FEATURE_MAPPING = {
-  'http.ts': ['http'],
+  'http-fetch.ts': ['http'],
+  'http-sse.ts': ['sse'],
   'mcp.ts': ['mcp'],
   'queue-worker.ts': ['queue'],
   'rpc.ts': ['http'],
@@ -344,6 +345,9 @@ export function updatePackageJSONScripts(
     }
     if (supportedFeatures.includes('rpc')) {
       testCommands.push('npm run test:rpc')
+    }
+    if (supportedFeatures.includes('sse')) {
+      testCommands.push('npm run test:sse')
     }
     packageJson.scripts.test = testCommands.join(' && ')
   }
