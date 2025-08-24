@@ -348,7 +348,7 @@ export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unkn
 export const pikkuVoidFunc = (
   func:
     | PikkuFunctionSessionless<void, void>
-    | CorePikkuFunctionConfig<PikkuFunction<void, void>, PikkuPermission<void>>
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void>, PikkuPermission<void>>
 ) => {
   return typeof func === 'function' ? func : func.func
 }
