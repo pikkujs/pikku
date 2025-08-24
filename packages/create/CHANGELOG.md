@@ -1,5 +1,11 @@
 # create-pikku
 
+## 0.9.5
+
+### Patch Changes
+
+- 7e1f9a2: create: run pikku silently on start to reduce noise
+
 ## 0.9.4
 
 ### Patch Changes

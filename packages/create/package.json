@@ -1,6 +1,6 @@
 {
   "name": "create-pikku",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Scaffold a new Pikku project",
   "main": "dist/index.js",
   "bin": "dist/index.js",
