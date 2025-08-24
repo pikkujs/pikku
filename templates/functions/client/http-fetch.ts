@@ -1,11 +1,11 @@
 import { pikkuFetch } from '../.pikku/pikku-fetch.gen.js'
-pikkuFetch.setServerUrl('http://localhost:4002')
 
-const TIMEOUT = 30000
-const RETRY_INTERVAL = 2000
 const start = Date.now()
 
 async function check() {
+  const TIMEOUT = 30000
+  const RETRY_INTERVAL = 2000
+
   try {
     const res = await pikkuFetch.fetch('/', 'GET', null)
     if (res.status === 200) {
@@ -30,4 +30,5 @@ async function check() {
   setTimeout(check, RETRY_INTERVAL)
 }
 
+pikkuFetch.setServerUrl('http://localhost:4002')
 check()

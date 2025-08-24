@@ -1,4 +1,5 @@
 import { wireHTTP } from '../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 export const rpcCaller = pikkuSessionlessFunc<{ name: string; data: unknown }>(
   async ({ rpc }, { name, data }) => {

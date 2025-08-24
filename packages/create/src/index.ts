@@ -190,7 +190,7 @@ async function installDependencies(
     }
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['pikku'], {
+    spawnSync(packageManager, ['pikku', '--silent'], {
       cwd: targetPath,
       stdio: 'inherit',
     })
