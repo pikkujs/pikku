@@ -72,4 +72,3 @@ jobs:
       - run: cd ../test-app && yarn link -A ../pikku && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-      USES_WEBSOCKET: ${{ matrix.template }}

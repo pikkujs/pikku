@@ -77,12 +77,47 @@ jobs:
       - run: cd ../test-app && yarn link -A ../pikku && yarn install && yarn run tsc && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-      USES_WEBSOCKET: ${{ matrix.template }}
+
+  bun-templates:
+    name: Bun Templates
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        template: [
+            # express,
+            express-middleware,
+            # fastify,
+            fastify-plugin,
+            uws,
+            aws-lambda,
+            cloudflare-workers,
+            nextjs,
+          ]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - name: Install dependencies for create
+        run: yarn install # TODO: This should only need to install create
+      - run: cd packages/create && bun ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager bun
+      - run: cd packages/create/my-app && bun run test
+    env:
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: templates
+    needs: [templates, bun-templates]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -105,43 +140,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # bun-templates:
-  #   name: Bun Templates
-  #   runs-on: ubuntu-latest
-  #   needs: release
-  #   strategy:
-  #     matrix:
-  #       template: [
-  #           # express,
-  #           express-middleware,
-  #           # fastify,
-  #           fastify-plugin,
-  #           uws,
-  #           aws-lambda,
-  #           cloudflare-workers,
-  #           nextjs,
-  #         ]
-  #   steps:
-  #     - name: Check out repository code
-  #       uses: actions/checkout@v4
-  #     - run: corepack enable
-  #       shell: bash
-  #     - uses: oven-sh/setup-bun@v2
-  #       with:
-  #         bun-version: latest
-  #     - name: Download built packages
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: built-packages
-  #         path: packages
-  #     - name: Install dependencies for create
-  #       run: yarn install # TODO: This should only need to install create
-  #     - run: cd packages/create && node ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager bun
-  #     - run: cd packages/create/my-app && npm run test
-  #   env:
-  #     SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-  #     USES_WEBSOCKET: ${{ matrix.template }}
 
   sync-templates-stackblitz:
     name: Sync Templates
