@@ -24,33 +24,37 @@ Pikku aims to normalize the different ways you interact with Node.js servers by 
 
 ## Development Setup
 
-Pikku uses [Yarn](https://yarnpkg.com/) as its package manager for this monorepo workspace. 
+Pikku uses [Yarn](https://yarnpkg.com/) as its package manager for this monorepo workspace.
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - Yarn (latest version recommended)
 - Git
 
 ### Getting Started
 
 1. **Fork and Clone**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/pikku.git
    cd pikku
    ```
 
 2. **Install Dependencies**
+
    ```bash
    yarn install
    ```
 
 3. **Build the Project**
+
    ```bash
    yarn build
    ```
 
 4. **Run Tests**
+
    ```bash
    yarn test
    ```
@@ -65,7 +69,7 @@ Pikku uses [Yarn](https://yarnpkg.com/) as its package manager for this monorepo
 Before submitting a PR, please ensure:
 
 - [ ] Your code passes all tests: `yarn test`
-- [ ] TypeScript compilation succeeds: `yarn tsc`  
+- [ ] TypeScript compilation succeeds: `yarn tsc`
 - [ ] Code follows the project's linting rules: `yarn lint`
 - [ ] You've added tests for new functionality
 - [ ] Documentation is updated if needed
@@ -76,7 +80,7 @@ Before submitting a PR, please ensure:
 Pikku is organized as a monorepo with multiple packages:
 
 - **`@pikku/core`** - Main framework with HTTP handlers, channels, schedulers
-- **`@pikku/cli`** - Code generation tool for type-safe clients  
+- **`@pikku/cli`** - Code generation tool for type-safe clients
 - **`@pikku/client-fetch`** - Generated HTTP client
 - **`@pikku/client-websocket`** - Generated WebSocket client
 - **Runtime packages** - Adapters for Express, Fastify, Next.js, AWS Lambda, etc.
@@ -84,14 +88,16 @@ Pikku is organized as a monorepo with multiple packages:
 ### Working with Packages
 
 To run tests for a specific package:
+
 ```bash
 cd packages/core
 yarn test
 ```
 
 To build a specific package:
+
 ```bash
-cd packages/cli  
+cd packages/cli
 yarn build
 ```
 
@@ -110,7 +116,7 @@ yarn build
 yarn test
 
 # Run tests with coverage
-yarn test:coverage  
+yarn test:coverage
 
 # Run specific test file
 npx tsx --test packages/core/src/path/to/file.test.ts

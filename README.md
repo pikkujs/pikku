@@ -39,19 +39,22 @@ At the core of Pikku is the `pikkuFunc` - a unified function that handles data f
 ```ts
 import { pikkuFunc } from '../pikku-types.gen.js'
 
-const addGithubStar = pikkuFunc<{ repo: string }, { success: boolean, repo: string }>({
-    func: async ({ githubService }, { repo }, session) => {
-        await githubService.addStar(repo, session.userId)
-        return { success: true, repo }
-    },
-    auth: true, // Whether a session is needed for function to be invoked
-    permissions: {}, // Permissions to run before function is invoked
-    middleware: [logUsage, rateLimit], // Middleware to wrap functions
-    docs: {
-        name: 'Github star',
-        description: 'Used to add stars to repos!'
-    },
-    expose: true // Expose this function via RPC
+const addGithubStar = pikkuFunc<
+  { repo: string },
+  { success: boolean; repo: string }
+>({
+  func: async ({ githubService }, { repo }, session) => {
+    await githubService.addStar(repo, session.userId)
+    return { success: true, repo }
+  },
+  auth: true, // Whether a session is needed for function to be invoked
+  permissions: {}, // Permissions to run before function is invoked
+  middleware: [logUsage, rateLimit], // Middleware to wrap functions
+  docs: {
+    name: 'Github star',
+    description: 'Used to add stars to repos!',
+  },
+  expose: true, // Expose this function via RPC
 })
 ```
 
@@ -60,22 +63,31 @@ const addGithubStar = pikkuFunc<{ repo: string }, { success: boolean, repo: stri
 Services are initialized at server startup and available to all functions. Pikku uses two types of services:
 
 ```ts
-import { CreateSingletonServices, CreateSessionServices } from '../pikku-types.gen.js'
+import {
+  CreateSingletonServices,
+  CreateSessionServices,
+} from '../pikku-types.gen.js'
 import { ConsoleLogger, JWTService } from '@pikku/core/services'
 
 // Singleton services - created once at startup
-export const createSingletonServices: CreateSingletonServices = async (config) => {
+export const createSingletonServices: CreateSingletonServices = async (
+  config
+) => {
   const logger = new ConsoleLogger()
   const db = new DatabaseClient()
   const jwt = new JWTService(['your-secret-key'], logger)
-  
+
   return { logger, db, jwt }
 }
 
 // Session services - created per request
-export const createSessionServices: CreateSessionServices = async (services, interaction, session) => {
+export const createSessionServices: CreateSessionServices = async (
+  services,
+  interaction,
+  session
+) => {
   return {
-    scopedLogger: new ScopedLogger(session.userId)
+    scopedLogger: new ScopedLogger(session.userId),
   }
 }
 ```
@@ -89,22 +101,23 @@ npx pikku prebuild
 ```
 
 Generates:
+
 - `pikku-fetch.gen.ts` - HTTP client
-- `pikku-websocket.gen.ts` - WebSocket client  
+- `pikku-websocket.gen.ts` - WebSocket client
 - Full TypeScript definitions
 
 ## Runtime Support
 
 Pikku works across multiple runtime environments:
 
-| Runtime | Status | Package |
-|---------|--------|---------|
-| Express | ✅ | `@pikku/express` |
-| Fastify | ✅ | `@pikku/fastify` |
-| Next.js | ✅ | `@pikku/nextjs` |
-| AWS Lambda | ✅ | `@pikku/aws-lambda` |
-| Cloudflare Workers | ✅ | `@pikku/cloudflare-workers` |
-| Bun | ✅ | `@pikku/bun` |
+| Runtime            | Status | Package                     |
+| ------------------ | ------ | --------------------------- |
+| Express            | ✅     | `@pikku/express`            |
+| Fastify            | ✅     | `@pikku/fastify`            |
+| Next.js            | ✅     | `@pikku/nextjs`             |
+| AWS Lambda         | ✅     | `@pikku/aws-lambda`         |
+| Cloudflare Workers | ✅     | `@pikku/cloudflare-workers` |
+| Bun                | ✅     | `@pikku/bun`                |
 
 ## Example: One Function, Multiple Ways
 
@@ -115,7 +128,7 @@ wireHTTP({
   route: '/api/github/star',
   method: 'post',
   func: addGithubStar,
-  auth: true
+  auth: true,
 })
 ```
 
@@ -126,9 +139,9 @@ wireChannel({
   route: '/ws/github',
   name: 'github-api',
   onMessage: {
-    addStar: addGithubStar
+    addStar: addGithubStar,
   },
-  auth: true
+  auth: true,
 })
 ```
 
@@ -137,7 +150,7 @@ Wire it to queue processing:
 ```ts
 wireQueueWorker({
   name: 'github-star-queue',
-  func: addGithubStar
+  func: addGithubStar,
 })
 ```
 
@@ -147,24 +160,22 @@ Wire it as an MCP tool:
 wireMCPTool({
   name: 'github-star',
   description: 'Add a star to a GitHub repository',
-  func: addGithubStar
+  func: addGithubStar,
 })
 ```
 
 Wire a scheduled task (different function since no input/output):
 
 ```ts
-const logStarCount = pikkuVoidFunc(
-  async ({ githubService, logger }) => {
-    const count = await githubService.getTotalStars()
-    logger.info(`Total GitHub stars: ${count}`)
-  }
-)
+const logStarCount = pikkuVoidFunc(async ({ githubService, logger }) => {
+  const count = await githubService.getTotalStars()
+  logger.info(`Total GitHub stars: ${count}`)
+})
 
 wireScheduler({
   name: 'star-counter',
   schedule: '0 0 * * *', // daily
-  func: logStarCount
+  func: logStarCount,
 })
 ```
 
