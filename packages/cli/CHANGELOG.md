@@ -1,5 +1,12 @@
 # @pikku/cli
 
+## 0.9.7
+
+### Patch Changes
+
+- 4fd5e19: fix: removing rpcMeta and duplicate imports
+- d1babed: fix: pikkuVoidFunc should use a sessionless function -- Since its used mostly by scheduled tasks
+
 ## 0.9.6
 
 ### Patch Changes
