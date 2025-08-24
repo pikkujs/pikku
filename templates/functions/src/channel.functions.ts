@@ -50,6 +50,9 @@ export const emitMessage = pikkuChannelFunc<
   { timestamp: string; from: string } | { message: string }
 >(async ({ userSession, eventHub, channel }, data) => {
   const session = await userSession?.get()
+
+  eventHub?.publish('bob', null, {})
+
   await eventHub?.publish(data.name, channel.channelId, {
     timestamp: new Date().toISOString(),
     from: session ?? 'anonymous',
