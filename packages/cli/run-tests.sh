@@ -46,7 +46,7 @@ if [ "$watch_mode" = true ]; then
 fi
 
 if [ "$coverage_mode" = true ]; then
-  node_cmd="$node_cmd --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info"
+  node_cmd="$node_cmd --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info"
 fi
 
 # Execute the node command with the expanded list of files

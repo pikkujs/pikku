@@ -11,9 +11,3 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>({
   },
   expose: true,
 })
-
-export const rpcCaller = pikkuSessionlessFunc<{ name: string; data: unknown }>(
-  async ({ rpc }, { name, data }) => {
-    return await rpc.invokeExposed(name, data)
-  }
-)

@@ -35,58 +35,59 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 
 ## CLI Options
 
-| Option | Short | Description | Example |
-|--------|-------|-------------|---------|
-| `--template <template>` | `-t` | Template to use | `--template express` |
-| `--name <name>` | `-n` | Project name | `--name my-app` |
-| `--install` | `-i` | Install dependencies automatically | `--install` |
-| `--package-manager <manager>` | `-p` | Package manager to use | `--package-manager yarn` |
-| `--version <version>` | `-v` | Template version/branch | `--version main` |
-| `--yarn-link <path>` |  | Link to local Pikku development | `--yarn-link ../pikku` |
-| `--stackblitz` |  | Add StackBlitz configuration | `--stackblitz` |
-| `--help` | `-h` | Display help information | `--help` |
+| Option                        | Short | Description                        | Example                  |
+| ----------------------------- | ----- | ---------------------------------- | ------------------------ |
+| `--template <template>`       | `-t`  | Template to use                    | `--template express`     |
+| `--name <name>`               | `-n`  | Project name                       | `--name my-app`          |
+| `--install`                   | `-i`  | Install dependencies automatically | `--install`              |
+| `--package-manager <manager>` | `-p`  | Package manager to use             | `--package-manager yarn` |
+| `--version <version>`         | `-v`  | Template version/branch            | `--version main`         |
+| `--yarn-link <path>`          |       | Link to local Pikku development    | `--yarn-link ../pikku`   |
+| `--stackblitz`                |       | Add StackBlitz configuration       | `--stackblitz`           |
+| `--help`                      | `-h`  | Display help information           | `--help`                 |
 
 ## Available Templates
 
 ### Server Templates
 
-| Template | Description | Features |
-|----------|-------------|----------|
-| `aws-lambda` | AWS Lambda template | HTTP, Scheduled tasks |
-| `aws-lambda-websocket` | Serverless WebSocket template | Channels (WebSockets) |
-| `cloudflare-workers` | Cloudflare Workers template | HTTP, Scheduled tasks |
-| `cloudflare-websocket` | Cloudflare WebSocket template | Channels (WebSockets) |
-| `express` | Express.js server template | HTTP, Scheduled tasks, SSE |
-| `express-middleware` | Express middleware template | HTTP, Scheduled tasks, SSE |
-| `fastify` | Fastify server template | HTTP, SSE |
-| `fastify-plugin` | Fastify plugin template | HTTP, SSE |
-| `uws` | uWebSockets.js template | HTTP, Channels, Scheduled tasks |
-| `ws` | WebSocket server template | HTTP, Channels, Scheduled tasks |
+| Template               | Description                   | Features                        |
+| ---------------------- | ----------------------------- | ------------------------------- |
+| `aws-lambda`           | AWS Lambda template           | HTTP, Scheduled tasks           |
+| `aws-lambda-websocket` | Serverless WebSocket template | Channels (WebSockets)           |
+| `cloudflare-workers`   | Cloudflare Workers template   | HTTP, Scheduled tasks           |
+| `cloudflare-websocket` | Cloudflare WebSocket template | Channels (WebSockets)           |
+| `express`              | Express.js server template    | HTTP, Scheduled tasks, SSE      |
+| `express-middleware`   | Express middleware template   | HTTP, Scheduled tasks, SSE      |
+| `fastify`              | Fastify server template       | HTTP, SSE                       |
+| `fastify-plugin`       | Fastify plugin template       | HTTP, SSE                       |
+| `uws`                  | uWebSockets.js template       | HTTP, Channels, Scheduled tasks |
+| `ws`                   | WebSocket server template     | HTTP, Channels, Scheduled tasks |
 
 ### Queue Templates
 
-| Template | Description | Features |
-|----------|-------------|----------|
-| `bullmq` | BullMQ Redis queue template | Queue processing |
-| `pg-boss` | PostgreSQL queue template | Queue processing |
+| Template  | Description                 | Features         |
+| --------- | --------------------------- | ---------------- |
+| `bullmq`  | BullMQ Redis queue template | Queue processing |
+| `pg-boss` | PostgreSQL queue template   | Queue processing |
 
 ### Full-Stack Templates
 
-| Template | Description | Features |
-|----------|-------------|----------|
-| `nextjs` | Next.js hello world template | HTTP, Full-stack |
-| `nextjs-full` | Next.js book application | HTTP, Full-stack |
-| `yarn-workspace` | Complete workspace example | HTTP, Channels, Scheduled tasks, Full-stack |
+| Template         | Description                  | Features                                    |
+| ---------------- | ---------------------------- | ------------------------------------------- |
+| `nextjs`         | Next.js hello world template | HTTP, Full-stack                            |
+| `nextjs-full`    | Next.js book application     | HTTP, Full-stack                            |
+| `yarn-workspace` | Complete workspace example   | HTTP, Channels, Scheduled tasks, Full-stack |
 
 ### Specialized Templates
 
-| Template | Description | Features |
-|----------|-------------|----------|
-| `mcp-server` | Model Context Protocol server | MCP |
+| Template     | Description                   | Features |
+| ------------ | ----------------------------- | -------- |
+| `mcp-server` | Model Context Protocol server | MCP      |
 
 ## Package Managers
 
 Supported package managers:
+
 - `npm` - Most popular package manager
 - `yarn` - What Pikku usually uses
 - `bun` - Experimental support
