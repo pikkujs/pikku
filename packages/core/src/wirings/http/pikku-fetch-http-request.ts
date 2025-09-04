@@ -113,7 +113,7 @@ export class PikkuFetchHTTPRequest<In = unknown>
   }
 
   private async body(): Promise<any> {
-    const noBodyMethods: HTTPMethod[] = ['get', 'head', 'options']
+    const noBodyMethods: HTTPMethod[] = ['get', 'head', 'options', 'delete']
     if (noBodyMethods.includes(this.method())) {
       return {}
     }

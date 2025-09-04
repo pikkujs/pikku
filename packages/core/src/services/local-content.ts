@@ -92,6 +92,7 @@ export class LocalContent implements ContentService {
     this.logger.debug(`deleting key: ${assetKey}`)
     try {
       await promises.unlink(`${this.config.localFileUploadPath}/${assetKey}`)
+      return true
     } catch (e: any) {
       this.logger.error(`Error deleting content ${assetKey}`, e)
     }
