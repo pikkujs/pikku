@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.9.6",
+    "@pikku/core": "^0.9.7",
     "@pikku/jose": "^0.9.3",
     "@pikku/schema-cfworker": "^0.9.2",
     "eventsource": "^4.0.0"

@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.7
+
+### Patch Changes
+
+- 85a1c76: fix: fixing delete method return type in local-content and ignoring body (for now) in delete calls
+
 ## 0.9.6
 
 ### Patch Changes

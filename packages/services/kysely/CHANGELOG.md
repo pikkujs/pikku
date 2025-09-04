@@ -1,5 +1,13 @@
 # @pikku/kysely
 
+## 0.9.4
+
+### Patch Changes
+
+- 58fe540: fix: kysely pure script should also clean arrays
+- Updated dependencies [85a1c76]
+  - @pikku/core@0.9.7
+
 ## 0.9.3
 
 ### Patch Changes
