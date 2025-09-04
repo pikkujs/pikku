@@ -34,6 +34,11 @@ const main = async (output: string, input?: string) => {
       'export type Numeric = string | number'
     )
     .replace(/export type Timestamp =.*;/, 'export type Timestamp = Date')
+    .replace(
+      /export type ArrayType<T> = ArrayTypeImpl<T> extends \(infer U\)\[\]\s*\?\s*U\[\]\s*:\s*ArrayTypeImpl<T>;\s*export type ArrayTypeImpl<T> = T extends ColumnType<infer S, infer I, infer U>\s*\?\s*ColumnType<S\[\], I\[\], U\[\]>\s*:\s*T\[\];/gs,
+      ''
+    )
+    .replace(/ArrayType<([^>]+)>/g, '$1[]')
 
   console.log('Writing kysely-pure.gen.ts')
 
