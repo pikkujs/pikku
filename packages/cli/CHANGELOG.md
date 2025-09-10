@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.9.8
+
+### Patch Changes
+
+- ea89575: feat: adding the ability for custom schema validation / retrieving schemas to use (for example with openapi json_response)
+- Updated dependencies [ea89575]
+  - @pikku/core@0.9.8
+
 ## 0.9.7
 
 ### Patch Changes
