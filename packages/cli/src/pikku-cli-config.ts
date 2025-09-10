@@ -83,6 +83,8 @@ export type PikkuCLIConfig = {
 
   middlewareServices?: string[]
 
+  schemasFromTypes?: string[]
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 

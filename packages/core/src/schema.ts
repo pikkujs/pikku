@@ -14,6 +14,18 @@ export const addSchema = (name: string, value: any) => {
 }
 
 /**
+ * Retrieves a schema from the global schemas map.
+ * @param name - The name of the schema.
+ * @returns The schema value or undefined if not found.
+ * @ignore
+ */
+export const getSchema = (
+  name: string
+): Record<string, unknown> | undefined => {
+  return pikkuState('misc', 'schemas').get(name)
+}
+
+/**
  * Loads a schema and compiles it into a validator.
  * @param logger - A logger for logging information.
  */

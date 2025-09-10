@@ -4,7 +4,7 @@ import { PikkuCommand } from './types.js'
 
 export const pikkuSchemas: PikkuCommand = async (
   logger,
-  { tsconfig, schemaDirectory, supportsImportAttributes },
+  { tsconfig, schemaDirectory, supportsImportAttributes, schemasFromTypes },
   { functions, http }
 ) => {
   return await logCommandInfoAndTime(
@@ -18,7 +18,8 @@ export const pikkuSchemas: PikkuCommand = async (
         tsconfig,
         functions.typesMap,
         functions.meta,
-        http.meta
+        http.meta,
+        schemasFromTypes
       )
       await saveSchemas(
         logger,
@@ -26,7 +27,8 @@ export const pikkuSchemas: PikkuCommand = async (
         schemas,
         functions.typesMap,
         functions.meta,
-        supportsImportAttributes
+        supportsImportAttributes,
+        schemasFromTypes
       )
     }
   )

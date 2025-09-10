@@ -6,7 +6,7 @@ import { PikkuCommand } from '../../types.js'
 
 export const pikkuOpenAPI: PikkuCommand = async (
   logger,
-  { tsconfig, openAPI },
+  { tsconfig, openAPI, schemasFromTypes },
   { http, functions }
 ) => {
   return await logCommandInfoAndTime(
@@ -23,7 +23,8 @@ export const pikkuOpenAPI: PikkuCommand = async (
         tsconfig,
         functions.typesMap,
         functions.meta,
-        http.meta
+        http.meta,
+        schemasFromTypes
       )
       const openAPISpec = await generateOpenAPISpec(
         functions.meta,

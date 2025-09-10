@@ -10,7 +10,8 @@ export async function generateSchemas(
   tsconfig: string,
   typesMap: TypesMap,
   functionMeta: FunctionsMeta,
-  httpWiringsMeta: HTTPWiringsMeta
+  httpWiringsMeta: HTTPWiringsMeta,
+  additionalTypes?: string[]
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -34,6 +35,13 @@ export async function generateSchemas(
       if (inputTypes?.params) {
         schemasSet.add(inputTypes.params)
       }
+    }
+  }
+
+  // Add additional types from schemasFromTypes config
+  if (additionalTypes) {
+    for (const type of additionalTypes) {
+      schemasSet.add(type)
     }
   }
 
@@ -72,7 +80,8 @@ export async function saveSchemas(
   schemas: Record<string, JSONValue>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  supportsImportAttributes: boolean
+  supportsImportAttributes: boolean,
+  additionalTypes?: string[]
 ) {
   await writeFileInDir(
     logger,
@@ -80,7 +89,7 @@ export async function saveSchemas(
     'export const empty = null;'
   )
 
-  const desiredSchemas = new Set([
+  const desiredSchemas = new Set<string>([
     ...Object.values(functionsMeta)
       .map(({ inputs, outputs }) => [
         inputs?.[0] ? typesMap.getUniqueName(inputs[0]) : undefined,
@@ -88,11 +97,12 @@ export async function saveSchemas(
       ])
       .flat()
       .filter(
-        (s) =>
+        (s): s is string =>
           !!s &&
           !['boolean', 'string', 'number', 'null', 'undefined'].includes(s)
       ),
     ...typesMap.customTypes.keys(),
+    ...(additionalTypes || []),
   ])
 
   if (desiredSchemas.size === 0) {
@@ -113,7 +123,12 @@ export async function saveSchemas(
     })
   )
 
-  const schemaImports = Array.from(desiredSchemas)
+  // Only include schemas that were successfully generated
+  const availableSchemas = Array.from(desiredSchemas).filter(
+    (schema) => schemas[schema]
+  )
+
+  const schemaImports = availableSchemas
     .map(
       (schema) => `
 import * as ${schema} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
