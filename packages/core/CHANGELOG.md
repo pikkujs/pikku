@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.8
+
+### Patch Changes
+
+- ea89575: feat: adding the ability for custom schema validation / retrieving schemas to use (for example with openapi json_response)
+
 ## 0.9.7
 
 ### Patch Changes
