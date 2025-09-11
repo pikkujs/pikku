@@ -1,5 +1,11 @@
 # @pikku/inspector
 
+## 0.9.5
+
+### Patch Changes
+
+- 501c120: fix: rpc internal meta file wasn't being imported
+
 ## 0.9.4
 
 ### Patch Changes
