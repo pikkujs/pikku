@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.9.10
+
+### Patch Changes
+
+- 501c120: fix: rpc internal meta file wasn't being imported
+- Updated dependencies [501c120]
+  - @pikku/inspector@0.9.5
+
 ## 0.9.9
 
 ### Patch Changes
