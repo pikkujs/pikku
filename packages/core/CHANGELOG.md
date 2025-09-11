@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.9
+
+### Patch Changes
+
+- 99c2b3a: fix: removing duplicated interaction values from pikku functions
+
 ## 0.9.8
 
 ### Patch Changes

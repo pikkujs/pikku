@@ -1,5 +1,13 @@
 # @pikku/cli
 
+## 0.9.9
+
+### Patch Changes
+
+- 99c2b3a: fix: removing duplicated interaction values from pikku functions
+- Updated dependencies [99c2b3a]
+  - @pikku/core@0.9.9
+
 ## 0.9.8
 
 ### Patch Changes
