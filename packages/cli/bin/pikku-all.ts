@@ -116,6 +116,8 @@ const runAll = async (
   await pikkuRPCExposedMap(logger, cliConfig, visitState)
   await pikkuRPCClient(logger, cliConfig)
 
+  allImports.push(cliConfig.rpcInternalWiringMetaFile)
+
   const schemas = await pikkuSchemas(logger, cliConfig, visitState)
   if (schemas) {
     allImports.push(`${cliConfig.schemaDirectory}/register.gen.ts`)

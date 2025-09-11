@@ -426,7 +426,7 @@ export function addFunctions(
 
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
-    if (state.rpc.invokedFunctions.has(pikkuFuncName)) {
+    if (state.rpc.invokedFunctions.has(pikkuFuncName) || expose) {
       state.rpc.internalFiles.set(name, {
         path: node.getSourceFile().fileName,
         exportedName,
