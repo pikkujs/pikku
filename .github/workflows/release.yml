@@ -53,7 +53,7 @@ jobs:
             uws,
             aws-lambda,
             cloudflare-workers,
-            nextjs,
+            # nextjs,
             mcp-server,
           ]
         package-manager: [yarn]
@@ -160,7 +160,7 @@ jobs:
             fastify,
             fastify-plugin,
             mcp-server,
-            nextjs,
+            # nextjs,
             pg-boss,
             uws,
             ws,
