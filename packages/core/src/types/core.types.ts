@@ -155,14 +155,10 @@ export const pikkuMiddleware = <
 export type CoreServices<
   SingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
-  CoreServices extends Record<string, unknown> = {},
 > = SingletonServices &
   PikkuInteraction & {
-    mcp?: PikkuMCP
-    rpc?: PikkuRPC
     userSession?: UserSessionService<UserSession>
-    channel?: PikkuChannel<unknown, unknown>
-  } & CoreServices
+  }
 
 export type SessionServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
