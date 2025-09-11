@@ -1,5 +1,13 @@
 # @pikku/queue-pg-boss
 
+## 0.9.4
+
+### Patch Changes
+
+- 3bb5824: fix: forcing release to see if dist is generated
+- Updated dependencies [99c2b3a]
+  - @pikku/core@0.9.9
+
 ## 0.9.3
 
 ### Patch Changes

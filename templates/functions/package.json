@@ -3,13 +3,13 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.9.8",
+    "@pikku/core": "^0.9.9",
     "@pikku/jose": "^0.9.3",
     "@pikku/schema-cfworker": "^0.9.2",
     "eventsource": "^4.0.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.9.8",
+    "@pikku/cli": "^0.9.9",
     "@pikku/fetch": "^0.9.2",
     "@pikku/websocket": "^0.9.2",
     "@types/node": "^22",
