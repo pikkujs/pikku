@@ -14,7 +14,7 @@ export const serializePikkuTypes = (
 * This is used to provide the application types in the typescript project
 */
   
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addPermission, PikkuInteraction } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addHTTPMiddleware, addMiddleware, addPermission } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore } from '@pikku/core/http'
 import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
@@ -94,7 +94,7 @@ type PikkuFunctionSessionless<
   Out = never, 
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Omit<Services, keyof PikkuInteraction> &
+  RequiredServices extends Services = Services &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -120,7 +120,7 @@ type PikkuFunction<
   Out = never, 
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Omit<Services, keyof PikkuInteraction> &
+  RequiredServices extends Services = Services &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -148,7 +148,8 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
  * @template ChannelData - Type of data exchanged through the channel
  * @template Channel - String literal type for the channel name
  */
-type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelData, Channel, PikkuFunction<void, unknown> | PikkuFunction<void, unknown, ChannelData>, PikkuFunction<void, void> | PikkuFunction<void, void, ChannelData>, PikkuFunction<any, any> | PikkuFunction<any, any, ChannelData>, PikkuPermission>
+type ChannelWiringFunction<I, O, C = {}> = PikkuFunctionSessionless<I, O, C> | PikkuFunction<I, O, C>
+type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelData, Channel, ChannelWiringFunction<void, unknown> | ChannelWiringFunction<void, unknown, ChannelData>, ChannelWiringFunction<void, void> | ChannelWiringFunction<void, void, ChannelData>, ChannelWiringFunction<any, any> | ChannelWiringFunction<any, any, ChannelData>, PikkuPermission>
 
 /**
  * Type definition for scheduled tasks that run at specified intervals.
