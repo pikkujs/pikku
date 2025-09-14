@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.9.11
+
+### Patch Changes
+
+- 0181433: fix: fixing cli pikku-types for channels (allowing sessionless as well)
+
 ## 0.9.10
 
 ### Patch Changes
