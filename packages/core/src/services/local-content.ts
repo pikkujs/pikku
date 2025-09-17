@@ -26,8 +26,8 @@ export class LocalContent implements ContentService {
 
   public async signContentKey(assetKey: string): Promise<string> {
     return this.config.server
-      ? `//${this.config.server}/${this.config.assetUrlPrefix}/${assetKey}?signed=true`
-      : `//${this.config.assetUrlPrefix}/${assetKey}?signed=true`
+      ? `${this.config.server}${this.config.assetUrlPrefix}/${assetKey}?signed=true`
+      : `${this.config.assetUrlPrefix}/${assetKey}?signed=true`
   }
 
   public async getUploadURL(assetKey: string) {
