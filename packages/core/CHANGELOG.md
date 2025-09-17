@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.10
+
+### Patch Changes
+
+- a2062b7: feat: adding a server url prefix for local content
+
 ## 0.9.9
 
 ### Patch Changes
