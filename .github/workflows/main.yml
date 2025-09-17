@@ -37,6 +37,7 @@ jobs:
 
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.3.4
+        continue-on-error: true
 
   templates:
     name: Templates
