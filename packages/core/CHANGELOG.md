@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.11
+
+### Patch Changes
+
+- 6ee87c1: fix: local content server name slashes
+
 ## 0.9.10
 
 ### Patch Changes
