@@ -1,6 +1,6 @@
 import { relative, dirname, resolve } from 'path'
 import { PathToNameAndType, InspectorState, TypesMap } from '@pikku/inspector'
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import chalk from 'chalk'
 import { fileURLToPath } from 'url'
 import { readFileSync } from 'fs'
@@ -301,11 +301,22 @@ export const writeFileInDir = async (
     content = `${ignoreModifyComment ? '' : DO_NOT_MODIFY_COMMENT}${content}`
   }
 
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, content, 'utf-8')
+  // Try to read existing file content
+  let existingContent: string | undefined
+  try {
+    existingContent = await readFile(path, 'utf-8')
+  } catch (error) {
+    // File doesn't exist, so we need to write it
+  }
 
-  if (logWrite) {
-    logger.success(`✓ File written to ${path}`)
+  // Only write if content has changed or file doesn't exist
+  if (existingContent !== content) {
+    await mkdir(dirname(path), { recursive: true })
+    await writeFile(path, content, 'utf-8')
+
+    if (logWrite) {
+      logger.success(`✓ File written to ${path}`)
+    }
   }
 }
 
