@@ -9,7 +9,7 @@
     "eventsource": "^4.0.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.9.11",
+    "@pikku/cli": "^0.9.12",
     "@pikku/fetch": "^0.9.2",
     "@pikku/websocket": "^0.9.2",
     "@types/node": "^22",
