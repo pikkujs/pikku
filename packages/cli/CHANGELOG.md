@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.9.12
+
+### Patch Changes
+
+- eb8ed09: feat: only write files if the content changed / file doesn't exist, this stops triggering restarts for development
+
 ## 0.9.11
 
 ### Patch Changes
