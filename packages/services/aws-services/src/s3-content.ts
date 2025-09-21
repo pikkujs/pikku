@@ -9,7 +9,6 @@ import { ContentService, Logger } from '@pikku/core/services'
 import { readFile } from 'fs/promises'
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer'
 import { Readable } from 'stream'
-import { ReadStream } from 'fs'
 
 export interface S3ContentConfig {
   bucketName: string
@@ -75,7 +74,9 @@ export class S3Content implements ContentService {
     }
   }
 
-  public async readFile(Key: string): Promise<ReadStream> {
+  public async readFile(
+    Key: string
+  ): Promise<ReadableStream | NodeJS.ReadableStream> {
     this.logger.debug(`Getting file, key: ${Key}`)
 
     const response = await this.s3.send(
@@ -89,10 +90,13 @@ export class S3Content implements ContentService {
       throw new Error('No body returned from S3')
     }
 
-    return response.Body as never as ReadStream // <- Cast to ReadStream
+    return response.Body as NodeJS.ReadableStream
   }
 
-  public async writeFile(Key: string, stream: Readable): Promise<boolean> {
+  public async writeFile(
+    Key: string,
+    stream: ReadableStream | NodeJS.ReadableStream
+  ): Promise<boolean> {
     try {
       this.logger.debug(`Writing file, key: ${Key}`)
 
@@ -100,7 +104,7 @@ export class S3Content implements ContentService {
         new PutObjectCommand({
           Bucket: this.config.bucketName,
           Key,
-          Body: stream, // <- Pass the readable stream directly
+          Body: stream as Readable, // <- Pass the readable stream directly
         })
       )
 

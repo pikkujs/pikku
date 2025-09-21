@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream, promises, ReadStream } from 'fs'
+import { createReadStream, createWriteStream, promises } from 'fs'
 import { mkdir } from 'fs/promises'
 import { ContentService, Logger } from '@pikku/core/services'
 import { pipeline } from 'stream/promises'
@@ -38,7 +38,10 @@ export class LocalContent implements ContentService {
     }
   }
 
-  public async writeFile(assetKey: string, stream: Readable): Promise<boolean> {
+  public async writeFile(
+    assetKey: string,
+    stream: ReadableStream | NodeJS.ReadableStream
+  ): Promise<boolean> {
     this.logger.debug(`Writing file: ${assetKey}`)
 
     const path = `${this.config.localFileUploadPath}/${assetKey}`
@@ -47,7 +50,7 @@ export class LocalContent implements ContentService {
       await this.createDirectoryForFile(path)
       const fileStream = createWriteStream(path)
       // Use pipeline to properly manage stream piping and errors
-      await pipeline(stream, fileStream)
+      await pipeline(stream as Readable, fileStream)
       return true
     } catch (e) {
       console.error(e)
@@ -72,7 +75,9 @@ export class LocalContent implements ContentService {
     return false
   }
 
-  public async readFile(assetKey: string): Promise<ReadStream> {
+  public async readFile(
+    assetKey: string
+  ): Promise<ReadableStream | NodeJS.ReadableStream> {
     this.logger.debug(`Getting key: ${assetKey}`)
 
     const filePath = `${this.config.localFileUploadPath}/${assetKey}`

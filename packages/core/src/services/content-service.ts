@@ -1,5 +1,3 @@
-import { ReadStream } from 'fs'
-
 export interface ContentService {
   /**
    * Signs a content key to generate a secure, time-limited access URL.
@@ -49,7 +47,10 @@ export interface ContentService {
    * @param stream - A readable stream of the file contents.
    * @returns A boolean indicating success.
    */
-  writeFile(assetKey: string, stream: ReadStream): Promise<boolean>
+  writeFile(
+    assetKey: string,
+    stream: ReadableStream | NodeJS.ReadableStream
+  ): Promise<boolean>
 
   /**
    * Copies a file from a local absolute path into storage under a new asset key.
@@ -64,5 +65,5 @@ export interface ContentService {
    * @param assetKey - The key of the file to read.
    * @returns A readable file stream.
    */
-  readFile(assetKey: string): Promise<ReadStream>
+  readFile(assetKey: string): Promise<ReadableStream | NodeJS.ReadableStream>
 }
