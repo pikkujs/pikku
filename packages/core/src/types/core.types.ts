@@ -8,6 +8,7 @@ import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
 import { PikkuQueue } from '../wirings/queue/queue.types.js'
+import { PikkuCLI } from '../wirings/cli/cli.types.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -16,6 +17,7 @@ export enum PikkuWiringTypes {
   rpc = 'rpc',
   queue = 'queue',
   mcp = 'mcp',
+  cli = 'cli',
 }
 
 export interface FunctionServicesMeta {
@@ -121,6 +123,7 @@ export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
   channel: PikkuChannel<unknown, Out>
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
+  cli: PikkuCLI
 }>
 
 /**
@@ -205,4 +208,38 @@ export type PikkuDocs = {
   description?: string
   tags?: string[]
   errors?: string[]
+}
+
+/**
+ * Generic renderer type that can transform data into any output format.
+ * Can be used across different wirings for flexible output handling.
+ *
+ * @template Data - The input data type to be rendered
+ * @template Output - The output type after rendering
+ * @template Services - The services available to the renderer
+ * @template Session - The user session type
+ */
+export type CorePikkuRender<
+  Data,
+  Output,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = (
+  services: Services,
+  data: Data,
+  session?: Session
+) => Output | Promise<Output>
+
+/**
+ * Factory function for creating type-safe renderers
+ */
+export const pikkuRender = <
+  Data,
+  Output,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+>(
+  renderer: CorePikkuRender<Data, Output, Services, Session>
+): CorePikkuRender<Data, Output, Services, Session> => {
+  return renderer
 }

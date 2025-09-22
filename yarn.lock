@@ -3497,6 +3497,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/templates-cli-app@workspace:templates/cli":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-cli-app@workspace:templates/cli"
+  dependencies:
+    "@pikku/core": "npm:^0.9.11"
+    "@types/node": "npm:^24"
+    commander: "npm:^12.1.0"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.20.4"
+    typescript: "npm:^5.9"
+  bin:
+    my-cli: dist/cli.js
+  languageName: unknown
+  linkType: soft
+
 "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
@@ -5504,6 +5519,13 @@ __metadata:
   dependencies:
     delayed-stream: "npm:~1.0.0"
   checksum: 10/2e969e637d05d09fa50b02d74c83a1186f6914aae89e6653b62595cc75a221464f884f55f231b8f4df7a49537fba60bdc0427acd2bf324c09a1dbb84837e36e4
+  languageName: node
+  linkType: hard
+
+"commander@npm:^12.1.0":
+  version: 12.1.0
+  resolution: "commander@npm:12.1.0"
+  checksum: 10/cdaeb672d979816853a4eed7f1310a9319e8b976172485c2a6b437ed0db0a389a44cfb222bfbde772781efa9f215bdd1b936f80d6b249485b465c6cb906e1f93
   languageName: node
   linkType: hard
 

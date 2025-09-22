@@ -21,6 +21,7 @@ import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/co
 import { CoreChannel, PikkuChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { CoreQueueWorker, wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'
 import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, wireMCPResource as wireMCPResourceCore, wireMCPTool as wireMCPToolCore, wireMCPPrompt as wireMCPPromptCore, MCPResourceResponse, MCPToolResponse, MCPPromptResponse, PikkuMCP } from '@pikku/core'
+import { CoreCLI, wireCLI as wireCLICore, pikkuCLIOptions } from '@pikku/core'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -181,10 +182,18 @@ type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionSessionless<In, MCPToolRespons
 
 /**
  * Type definition for MCP prompts that provide templates to AI models.
- * 
+ *
  * @template In - Input type for the prompt parameters
  */
 type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionSessionless<In, MCPPromptResponse, null, true>>
+
+/**
+ * Type definition for CLI applications with commands and global options.
+ *
+ * @template Commands - Type describing the command structure
+ * @template GlobalOptions - Type for global CLI options
+ */
+type CLIWiring<Commands, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, any>
 
 /**
  * Creates a Pikku function that can be either session-aware or sessionless.
@@ -510,6 +519,30 @@ export const wireMCPPrompt = <In>(
 ) => {
   wireMCPPromptCore(mcpPrompt as any)
 }
+
+/**
+ * Registers a CLI application with the Pikku framework.
+ * Creates command-line interfaces with type-safe commands and options.
+ *
+ * @template Commands - Type describing the command structure
+ * @template GlobalOptions - Type for global CLI options
+ * @param cli - CLI definition with program name, commands, and global options
+ */
+export const wireCLI = <Commands, GlobalOptions>(
+  cli: CLIWiring<Commands, GlobalOptions>
+) => {
+  wireCLICore(cli as any)
+}
+
+/**
+ * Creates type-safe CLI options configuration.
+ * Use this to define options that can be used globally or per-command.
+ *
+ * @template T - Type for the options object
+ * @param options - Options configuration object
+ * @returns The options configuration for use in CLI commands
+ */
+export { pikkuCLIOptions }
 
 /**
  * Creates a function for handling MCP prompt requests.

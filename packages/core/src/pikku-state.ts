@@ -27,6 +27,7 @@ import {
   MCPToolMeta,
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
+import { CLIProgramMeta, CLIProgramState } from './wirings/cli/cli.types.js'
 
 interface PikkuState {
   function: {
@@ -68,6 +69,10 @@ interface PikkuState {
     toolsMeta: MCPToolMeta
     prompts: Map<string, CoreMCPPrompt>
     promptsMeta: MCPPromptMeta
+  }
+  cli: {
+    meta: Record<string, CLIProgramMeta>
+    programs: Record<string, CLIProgramState>
   }
   misc: {
     errors: Map<PikkuError, ErrorDetails>
@@ -112,6 +117,10 @@ export const resetPikkuState = () => {
       toolsMeta: {} as MCPToolMeta,
       prompts: new Map(),
       promptsMeta: {} as MCPPromptMeta,
+    },
+    cli: {
+      meta: {},
+      programs: {},
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),

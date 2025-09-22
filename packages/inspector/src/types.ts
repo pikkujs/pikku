@@ -3,6 +3,7 @@ import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { queueWorkersMeta } from '@pikku/core/queue'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
+import { CLIMeta } from '@pikku/core'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 
@@ -29,6 +30,7 @@ export interface InspectorHTTPState {
 export interface InspectorFunctionState {
   typesMap: TypesMap
   meta: FunctionsMeta
+  files: Map<string, { path: string; exportedName: string }>
 }
 
 export interface InspectorChannelState {
@@ -101,6 +103,10 @@ export interface InspectorState {
     resourcesMeta: MCPResourceMeta
     toolsMeta: MCPToolMeta
     promptsMeta: MCPPromptMeta
+    files: Set<string>
+  }
+  cli: {
+    meta: CLIMeta
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

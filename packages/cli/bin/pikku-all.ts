@@ -32,6 +32,8 @@ import { pikkuQueueService } from '../src/wirings/queue/pikku-command-queue-serv
 import { pikkuScheduler } from '../src/wirings/scheduler/pikku-command-scheduler.js'
 import { pikkuSchemas } from '../src/schemas.js'
 import { pikkuMCPJSON } from '../src/wirings/mcp/pikku-command-mcp-json.js'
+import { pikkuCLI } from '../src/wirings/cli/pikku-command-cli.js'
+import { pikkuCLIBootstrap } from '../src/wirings/cli/pikku-command-cli-bootstrap.js'
 import { pikkuNext } from '../src/runtimes/nextjs/pikku-command-nextjs.js'
 
 const generateBootstrapFile = async (
@@ -209,6 +211,20 @@ const runAll = async (
       cliConfig,
       cliConfig.bootstrapFiles.mcp,
       [cliConfig.mcpWiringsMetaFile, cliConfig.mcpWiringsFile],
+      schemas
+    )
+  }
+
+  const cli = await pikkuCLI(logger, cliConfig, visitState)
+  if (cli) {
+    await pikkuCLIBootstrap(logger, cliConfig, visitState)
+    allImports.push(cliConfig.cliWiringMetaFile, cliConfig.cliWiringsFile)
+
+    await generateBootstrapFile(
+      logger,
+      cliConfig,
+      cliConfig.bootstrapFiles.cli,
+      [cliConfig.cliWiringMetaFile, cliConfig.cliWiringsFile],
       schemas
     )
   }

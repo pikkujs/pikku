@@ -47,6 +47,11 @@ export interface PikkuCLICoreOutputFiles {
   mcpWiringsFile: string
   mcpWiringsMetaFile: string
 
+  // CLI
+  cliWiringsFile: string
+  cliWiringMetaFile: string
+  cliBootstrapFile: string
+
   // Services
   servicesFile: string
 
@@ -75,6 +80,7 @@ export type PikkuCLIConfig = {
   rpcWiringsFile?: string
   queueWiringsFile?: string
   mcpJsonFile?: string
+  cliFile?: string
 
   openAPI?: {
     outputFile: string
@@ -96,6 +102,7 @@ const CONFIG_DIR_FILES = [
   'rpcWiringsFile',
   'queueWiringsFile',
   'mcpJsonFile',
+  'cliFile',
 ]
 
 export const getPikkuCLIConfig = async (
@@ -177,6 +184,7 @@ const _getPikkuCLIConfig = async (
       const schedulerDir = join(result.outDir, 'scheduler')
       const queueDir = join(result.outDir, 'queue')
       const mcpDir = join(result.outDir, 'mcp')
+      const cliDir = join(result.outDir, 'cli')
 
       // Create directories if they don't exist (will be done lazily when files are written)
 
@@ -317,6 +325,17 @@ const _getPikkuCLIConfig = async (
       }
       if (!result.mcpJsonFile) {
         result.mcpJsonFile = join(mcpDir, 'pikku-mcp.gen.json')
+      }
+
+      // CLI
+      if (!result.cliWiringsFile) {
+        result.cliWiringsFile = join(cliDir, 'pikku-cli-wirings.gen.ts')
+      }
+      if (!result.cliWiringMetaFile) {
+        result.cliWiringMetaFile = join(cliDir, 'pikku-cli-wirings-meta.gen.ts')
+      }
+      if (!result.cliBootstrapFile) {
+        result.cliBootstrapFile = join(cliDir, 'pikku-cli-bootstrap.gen.ts')
       }
 
       result.bootstrapFiles = result.bootstrapFiles || {}

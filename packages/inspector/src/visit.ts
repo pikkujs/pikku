@@ -13,6 +13,7 @@ import { addChannel } from './add-channel.js'
 import { addRPCInvocations } from './add-rpc-invocations.js'
 import { addMiddleware } from './add-middleware.js'
 import { addPermission } from './add-permission.js'
+import { addCLI } from './add-cli.js'
 
 export const visitSetup = (
   checker: ts.TypeChecker,
@@ -76,6 +77,7 @@ export const visitRoutes = (
   addSchedule(node, checker, state, filters, logger)
   addQueueWorker(node, checker, state, filters, logger)
   addChannel(node, checker, state, filters, logger)
+  addCLI(node as ts.CallExpression, node.getSourceFile(), state, checker)
   addMCPResource(node, checker, state, filters, logger)
   addMCPTool(node, checker, state, filters, logger)
   addMCPPrompt(node, checker, state, filters, logger)

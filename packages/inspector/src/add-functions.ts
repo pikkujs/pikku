@@ -405,6 +405,14 @@ export function addFunctions(
     isDirectFunction,
   }
 
+  // Add to functions files map if exported
+  if (exportedName) {
+    state.functions.files.set(pikkuFuncName, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
+  }
+
   if (exportedName || explicitName) {
     if (!exportedName) {
       logger.error(

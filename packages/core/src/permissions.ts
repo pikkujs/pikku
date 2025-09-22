@@ -152,6 +152,7 @@ const permissionCache: Record<
   [PikkuWiringTypes.queue]: {},
   [PikkuWiringTypes.scheduler]: {},
   [PikkuWiringTypes.mcp]: {},
+  [PikkuWiringTypes.cli]: {},
 }
 
 /**
