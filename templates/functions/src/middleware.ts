@@ -9,6 +9,7 @@ import { pikkuMiddleware } from '../.pikku/pikku-types.gen.js'
  * - Channel: { channel: PikkuChannel }
  * - MCP: { mcp: PikkuMCP }
  * - RPC: { rpc: PikkuRPC }
+ * - CLI: { cli: PikkuCLI }
  * - Queue: {} (empty object)
  * - Scheduler: {} (empty object)
  */
@@ -26,6 +27,8 @@ export const loggingMiddleware = pikkuMiddleware(
       interactionType = 'MCP'
     } else if (interaction.rpc) {
       interactionType = 'RPC'
+    } else if (interaction.cli) {
+      interactionType = `CLI ${interaction.cli.command.join(' ')}`
     } else {
       interactionType = 'Queue/Scheduler'
     }

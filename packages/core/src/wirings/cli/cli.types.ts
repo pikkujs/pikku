@@ -66,8 +66,7 @@ export interface CLIPositional {
 export type PikkuCLI = {
   program: string
   command: string[]
-  positionals: Record<string, any>
-  options: Record<string, any>
+  data: Record<string, any>  // All positionals and options merged
 }
 
 /**

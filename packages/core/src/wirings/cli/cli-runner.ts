@@ -157,6 +157,9 @@ function createCLIFunctionWrapper(
     // The data comes in as { program, commandPath, positionals, options }
     const { positionals = {}, options = {} } = data
 
+    // Merge all CLI data into a single object
+    const mergedData = { ...positionals, ...options }
+
     // Get function's expected input schema
     const funcMeta = pikkuState('function', 'meta')[funcName]
     const schemaName = funcMeta?.inputSchemaName
@@ -164,10 +167,9 @@ function createCLIFunctionWrapper(
       ? pikkuState('misc', 'schemas').get(schemaName)
       : null
 
-    // Pluck only the options the function expects
+    // Pluck only the fields the function expects
     const pluckedData = pluckCLIData(
-      positionals,
-      options,
+      mergedData,
       schema,
       availableOptions
     )
@@ -198,33 +200,26 @@ function createCLIFunctionWrapper(
  * Plucks only the data that the function expects based on its schema
  */
 function pluckCLIData(
-  positionals: Record<string, any>,
-  options: Record<string, any>,
+  mergedData: Record<string, any>,
   schema: any,
   availableOptions: Record<string, CLIOption>
 ): Record<string, any> {
-  // Start with positionals (always included)
-  const result = { ...positionals }
-
   if (schema && schema.properties) {
-    // If we have a schema, only include options that are in the schema
+    // If we have a schema, only include fields that are in the schema
+    const result: Record<string, any> = {}
     for (const key of Object.keys(schema.properties)) {
-      if (key in options && !(key in positionals)) {
-        result[key] = options[key]
-      } else if (
-        !(key in positionals) &&
-        availableOptions[key]?.default !== undefined
-      ) {
+      if (key in mergedData) {
+        result[key] = mergedData[key]
+      } else if (availableOptions[key]?.default !== undefined) {
         // Apply default if not provided
         result[key] = availableOptions[key].default
       }
     }
+    return result
   } else {
-    // No schema, include all options (less safe)
-    Object.assign(result, options)
+    // No schema, include all data
+    return { ...mergedData }
   }
-
-  return result
 }
 
 /**
@@ -309,16 +304,16 @@ export async function runCLICommand<Data>({
     }
   }
 
-  // Run middleware
+  // Run middleware with merged data
   const allServices = { ...singletonServices, ...sessionServices }
+  const mergedData = { ...positionals, ...cliOptions }  // Merge all CLI data
   await runMiddleware(
     allServices,
     {
       cli: {
         program,
         command: commandPath,
-        positionals,
-        options: cliOptions,
+        data: mergedData,
       },
     },
     middleware
