@@ -39,9 +39,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "url"
-          ],
+          "required": ["url"],
           "type": "object"
         },
         "info": {
@@ -75,9 +73,7 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "name"
-              ],
+              "required": ["name"],
               "type": "object"
             },
             "termsOfService": {
@@ -90,11 +86,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "title",
-            "version",
-            "description"
-          ],
+          "required": ["title", "version", "description"],
           "type": "object"
         },
         "security": {
@@ -121,9 +113,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "url"
-            ],
+            "required": ["url"],
             "type": "object"
           },
           "type": "array"
@@ -139,18 +129,13 @@
                 "type": "string"
               }
             },
-            "required": [
-              "name"
-            ],
+            "required": ["name"],
             "type": "object"
           },
           "type": "array"
         }
       },
-      "required": [
-        "info",
-        "servers"
-      ],
+      "required": ["info", "servers"],
       "type": "object"
     },
     "PikkuCLIConfig": {
@@ -280,10 +265,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "outputFile",
-            "additionalInfo"
-          ],
+          "required": ["outputFile", "additionalInfo"],
           "type": "object"
         },
         "outDir": {
