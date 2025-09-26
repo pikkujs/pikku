@@ -181,6 +181,28 @@ function processCommand(
     }
   }
 
+  // Handle pikkuCLICommand calls
+  if (ts.isCallExpression(node)) {
+    // Check if it's a pikkuCLICommand call
+    if (
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'pikkuCLICommand' &&
+      node.arguments.length > 0 &&
+      ts.isObjectLiteralExpression(node.arguments[0])
+    ) {
+      // Process the object literal argument
+      return processCommand(
+        name,
+        node.arguments[0],
+        sourceFile,
+        typeChecker,
+        programName,
+        parentPath
+      )
+    }
+    return null
+  }
+
   // Handle full command object
   if (!ts.isObjectLiteralExpression(node)) {
     return null

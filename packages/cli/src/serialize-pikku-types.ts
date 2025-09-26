@@ -188,6 +188,51 @@ type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionSessionless<In, MCPToolRespons
 type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionSessionless<In, MCPPromptResponse, null, true>>
 
 /**
+ * Extract input parameters from a Pikku function type
+ */
+type ExtractFunctionInput<Func> = Func extends PikkuFunctionSessionless<infer Input, any>
+  ? Input
+  : Func extends PikkuFunction<infer Input, any>
+    ? Input
+    : never
+
+/**
+ * Extract output type from a Pikku function type
+ */
+type ExtractFunctionOutput<Func> = Func extends PikkuFunctionSessionless<any, infer Output>
+  ? Output
+  : Func extends PikkuFunction<any, infer Output>
+    ? Output
+    : never
+
+/**
+ * CLI command configuration that infers options from function input type
+ */
+type CLICommandConfig<Func> = {
+  command: string
+  func: Func
+  description?: string
+  render?: (services: any, output: ExtractFunctionOutput<Func>, session?: any) => void | Promise<void>
+  options?: Partial<Record<keyof ExtractFunctionInput<Func>, {
+    description?: string
+    short?: string
+    default?: ExtractFunctionInput<Func>[keyof ExtractFunctionInput<Func>]
+  }>> & Record<string, {
+    description?: string
+    short?: string
+    default?: any
+  }>
+  subcommands?: Record<string, any>
+  auth?: boolean
+  permissions?: any[]
+}
+
+/**
+ * Result type for CLI command configuration
+ */
+type CLICommandResult<Func> = CLICommandConfig<Func>
+
+/**
  * Type definition for CLI applications with commands and global options.
  *
  * @template Commands - Type describing the command structure
@@ -535,14 +580,18 @@ export const wireCLI = <Commands, GlobalOptions>(
 }
 
 /**
- * Creates type-safe CLI options configuration.
- * Use this to define options that can be used globally or per-command.
+ * Creates a CLI command definition with automatic option inference from the function's input type.
+ * This allows TypeScript to automatically derive CLI options from the function signature.
  *
- * @template T - Type for the options object
- * @param options - Options configuration object
- * @returns The options configuration for use in CLI commands
+ * @template Func - The function type to create a CLI command for
+ * @param config - CLI command configuration
+ * @returns CLI command configuration with inferred types
  */
-export { pikkuCLIOptions }
+export const pikkuCLICommand = <Func extends (...args: any[]) => any>(
+  config: CLICommandConfig<Func>
+): CLICommandResult<Func> => {
+  return config as any
+}
 
 /**
  * Creates a function for handling MCP prompt requests.

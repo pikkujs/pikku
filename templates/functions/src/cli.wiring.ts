@@ -1,4 +1,4 @@
-import { wireCLI, pikkuCLIOptions } from '../.pikku/pikku-types.gen.js'
+import { wireCLI, pikkuCLICommand } from '../.pikku/pikku-types.gen.js'
 import {
   greetUser,
   calculate,
@@ -22,49 +22,49 @@ import {
 wireCLI({
   program: 'my-cli',
   commands: {
-    // Simple greeting command
-    greet: {
+    // Simple greeting command with automatic option inference
+    greet: pikkuCLICommand({
       command: 'greet <name>',
       func: greetUser,
       description: 'Greet a user by name',
       render: greetRenderer,
-      options: pikkuCLIOptions<{ loud: boolean }>({
+      options: {
         loud: {
           description: 'Use loud greeting (uppercase)',
           short: 'l',
           default: false,
         },
-      }),
-    },
+      },
+    }),
 
     // Math calculator commands
     calc: {
       description: 'Mathematical calculations',
       subcommands: {
-        add: {
+        add: pikkuCLICommand({
           command: 'add <a> <b>',
           func: addNumbers,
           description: 'Add two numbers',
           render: calcRenderer,
-        },
-        subtract: {
+        }),
+        subtract: pikkuCLICommand({
           command: 'subtract <a> <b>',
           func: subtractNumbers,
           description: 'Subtract two numbers',
           render: calcRenderer,
-        },
-        multiply: {
+        }),
+        multiply: pikkuCLICommand({
           command: 'multiply <a> <b>',
           func: multiplyNumbers,
           description: 'Multiply two numbers',
           render: calcRenderer,
-        },
-        divide: {
+        }),
+        divide: pikkuCLICommand({
           command: 'divide <a> <b>',
           func: divideNumbers,
           description: 'Divide two numbers',
           render: calcRenderer,
-        },
+        }),
       },
     },
 
@@ -72,25 +72,25 @@ wireCLI({
     user: {
       description: 'User management commands',
       subcommands: {
-        create: {
+        create: pikkuCLICommand({
           command: 'create <username> <email>',
           func: createUser,
           description: 'Create a new user',
           render: userRenderer,
-          options: pikkuCLIOptions<{ admin: boolean }>({
+          options: {
             admin: {
               description: 'Create user as admin',
               short: 'a',
               default: false,
             },
-          }),
-        },
-        list: {
+          },
+        }),
+        list: pikkuCLICommand({
           command: 'list',
           func: listUsers,
           description: 'List all users',
           render: userRenderer,
-          options: pikkuCLIOptions<{ limit: number; admin: boolean }>({
+          options: {
             limit: {
               description: 'Limit number of users shown',
               short: 'l',
@@ -100,38 +100,35 @@ wireCLI({
               short: 'a',
               default: false,
             },
-          }),
-        },
+          },
+        }),
       },
     },
 
-    // File operations
-    file: {
+    // File operations with automatic enum detection
+    file: pikkuCLICommand({
       command: 'file <path>',
       func: processFile,
       description: 'Process a file',
       render: fileRenderer,
-      options: pikkuCLIOptions<{
-        action: 'read' | 'info' | 'delete'
-        backup: boolean
-      }>({
+      options: {
         action: {
           description: 'Action to perform on file',
           short: 'a',
           default: 'info' as const,
-          choices: ['read', 'info', 'delete'],
+          // choices will be automatically inferred from the function's enum type
         },
         backup: {
           description: 'Create backup before processing',
           short: 'b',
           default: false,
         },
-      }),
-    },
+      },
+    }),
   },
 
   // Global options for all commands
-  options: pikkuCLIOptions<{ verbose: boolean; config: string }>({
+  options: {
     verbose: {
       description: 'Enable verbose output',
       short: 'v',
@@ -142,7 +139,7 @@ wireCLI({
       short: 'c',
       default: './config.json',
     },
-  }),
+  },
 
   // Global renderer (fallback if command doesn't have specific renderer)
   render: jsonRenderer,
