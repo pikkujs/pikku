@@ -15,7 +15,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addMiddleware, addPermission, PikkuInteraction } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuInteraction } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { PikkuChannel, PikkuMCP } from '@pikku/core'
 
@@ -232,7 +232,9 @@ export const pikkuVoidFunc = (
  * addMiddleware('api', [loggingMiddleware])
  * \`\`\`
  */
-export { addMiddleware }
+export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
+  addMiddlewareCore(tag, middleware)
+}
 
 /**
  * Adds global permissions for a specific tag.
@@ -257,6 +259,8 @@ export { addMiddleware }
  * addPermission('api', [readPermission])
  * \`\`\`
  */
-export { addPermission }
+export const addPermission = <In = unknown>(tag: string, permissions: PikkuPermission<In>[]) => {
+  addPermissionCore(tag, permissions)
+}
 `
 }
