@@ -20,6 +20,14 @@ import type {
   CoreSingletonServices,
   CoreServices,
 } from '../../types/core.types.js'
+import { PikkuChannel } from '../channel/channel.types.js'
+
+/**
+ * Default JSON renderer for CLI output
+ */
+const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
+  console.log(JSON.stringify(data, null, 2))
+}
 
 /**
  * Registers a CLI command tree and all its functions
@@ -45,7 +53,7 @@ export const wireCLI = <
   const programs: Record<string, CLIProgramState> =
     pikkuState('cli', 'programs') || {}
   programs[cli.program] = {
-    defaultRenderer: cli.render,
+    defaultRenderer: cli.render || defaultJSONRenderer,
     globalMiddleware: cli.middleware || [],
     renderers: {},
   }
@@ -174,22 +182,45 @@ function createCLIFunctionWrapper(
     // Pluck only the fields the function expects
     const pluckedData = pluckCLIData(mergedData, schema, availableOptions)
 
-    // Execute the original function with plucked data
-    const output = await func(services, pluckedData, session)
-
-    // Apply renderer if present
+    // Get the renderer
     const programs: Record<string, CLIProgramState> = pikkuState(
       'cli',
       'programs'
     )
     const programData = programs[program]
-    if (programData) {
-      // Try command-specific renderer first
-      const renderer =
-        programData.renderers[commandId] || programData.defaultRenderer
-      if (renderer) {
-        await Promise.resolve(renderer(services, output, session))
-      }
+    const renderer =
+      programData?.renderers[commandId] || programData?.defaultRenderer
+
+    // Create a CLI channel for progressive output
+    let channel: PikkuChannel<unknown, unknown> | undefined
+    channel = {
+      channelId: `cli:${program}:${commandId}`,
+      openingData: pluckedData,
+      send: async (data: any) => {
+        if (renderer) {
+          await Promise.resolve(renderer(services, data, session))
+        }
+      },
+      close: () => {
+        if (channel) {
+          channel.state = 'closed'
+        }
+      },
+      state: 'open',
+    }
+
+    // Add channel to services
+    const servicesWithChannel = { ...services, channel }
+
+    // Execute the original function with plucked data and channel
+    const output = await func(servicesWithChannel, pluckedData, session)
+
+    // Close the channel
+    channel.close()
+
+    // Apply renderer one final time with the final output (if renderer exists)
+    if (renderer) {
+      await Promise.resolve(renderer(services, output, session))
     }
 
     return output
