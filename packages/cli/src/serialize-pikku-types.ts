@@ -21,7 +21,7 @@ import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/co
 import { CoreChannel, PikkuChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { CoreQueueWorker, wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'
 import { CoreMCPResource, CoreMCPTool, CoreMCPPrompt, wireMCPResource as wireMCPResourceCore, wireMCPTool as wireMCPToolCore, wireMCPPrompt as wireMCPPromptCore, MCPResourceResponse, MCPToolResponse, MCPPromptResponse, PikkuMCP } from '@pikku/core'
-import { CoreCLI, wireCLI as wireCLICore, pikkuCLIOptions } from '@pikku/core'
+import { CoreCLI, wireCLI as wireCLICore } from '@pikku/core'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}

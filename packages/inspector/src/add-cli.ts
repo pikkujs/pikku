@@ -86,20 +86,7 @@ function processCLIConfig(
         break
 
       case 'options':
-        if (ts.isCallExpression(prop.initializer)) {
-          // Handle pikkuCLIOptions call
-          const optionsCall = prop.initializer
-          if (
-            optionsCall.arguments.length > 0 &&
-            ts.isObjectLiteralExpression(optionsCall.arguments[0])
-          ) {
-            programMeta.globalOptions = processOptions(
-              optionsCall.arguments[0],
-              sourceFile,
-              typeChecker
-            )
-          }
-        } else if (ts.isObjectLiteralExpression(prop.initializer)) {
+        if (ts.isObjectLiteralExpression(prop.initializer)) {
           programMeta.globalOptions = processOptions(
             prop.initializer,
             sourceFile,
@@ -249,20 +236,7 @@ function processCommand(
         break
 
       case 'options':
-        if (ts.isCallExpression(prop.initializer)) {
-          // Handle pikkuCLIOptions call
-          const optionsCall = prop.initializer
-          if (
-            optionsCall.arguments.length > 0 &&
-            ts.isObjectLiteralExpression(optionsCall.arguments[0])
-          ) {
-            meta.options = processOptions(
-              optionsCall.arguments[0],
-              sourceFile,
-              typeChecker
-            )
-          }
-        } else if (ts.isObjectLiteralExpression(prop.initializer)) {
+        if (ts.isObjectLiteralExpression(prop.initializer)) {
           meta.options = processOptions(
             prop.initializer,
             sourceFile,

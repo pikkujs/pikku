@@ -142,12 +142,14 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
     // Create services
     const singletonServices = await createSingletonServices()
 
+    // Merge positionals and options into single data object
+    const data = { ...parsed.positionals, ...parsed.options }
+
     // Execute the command
     await runCLICommand({
       program: '${programName}',
       commandPath: parsed.commandPath,
-      positionals: parsed.positionals,
-      options: parsed.options,
+      data,
       singletonServices,
       createSessionServices,
     })

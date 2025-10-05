@@ -13,26 +13,6 @@ import {
 } from '../../function/functions.types.js'
 
 /**
- * CLI execution options
- */
-export type RunCLIOptions = Partial<{
-  skipUserSession: boolean
-  coerceDataFromSchema: boolean
-  bubbleErrors: boolean
-}>
-
-/**
- * CLI execution parameters
- */
-export type RunCLIParams<Data> = {
-  commandPath: string[]
-  positionals: Record<string, any>
-  options: Record<string, any>
-  singletonServices: CoreSingletonServices
-  createSessionServices?: (session: CoreUserSession) => Promise<any>
-}
-
-/**
  * CLI option definition
  */
 export interface CLIOption<T = any> {
@@ -194,28 +174,4 @@ export interface CoreCLI<
   middleware?: PikkuMiddleware[]
   render?: CorePikkuCLIRender<GlobalOutput>
   docs?: PikkuDocs
-}
-
-/**
- * Factory function for CLI-specific renderers
- */
-export const pikkuCLIRender = <
-  Data,
-  Services extends CoreSingletonServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
->(
-  renderer: (
-    services: Services,
-    data: Data,
-    session?: Session
-  ) => void | Promise<void>
-): CorePikkuCLIRender<Data, Services, Session> => {
-  return renderer
-}
-
-/**
- * Factory function for CLI options with type inference
- */
-export function pikkuCLIOptions<T>(options: CLIOptions<T>): CLIOptions<T> {
-  return options
 }

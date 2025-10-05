@@ -12,10 +12,14 @@ import { closeSessionServices } from '../../utils.js'
 import {
   CoreCLI,
   CLICommandMeta,
-  RunCLIParams,
   CLIOption,
   CLIProgramState,
+  CorePikkuCLIRender,
 } from './cli.types.js'
+import type {
+  CoreSingletonServices,
+  CoreServices,
+} from '../../types/core.types.js'
 
 /**
  * Registers a CLI command tree and all its functions
@@ -153,12 +157,12 @@ function createCLIFunctionWrapper(
   program: string,
   commandId: string
 ) {
-  return async (services: any, data: any, session?: any) => {
-    // The data comes in as { program, commandPath, positionals, options }
-    const { positionals = {}, options = {} } = data
+  return async (services: any, receivedData: any, session?: any) => {
+    // The data comes in as { program, commandPath, data }
+    const { data = {} } = receivedData
 
-    // Merge all CLI data into a single object
-    const mergedData = { ...positionals, ...options }
+    // Data is already merged
+    const mergedData = data
 
     // Get function's expected input schema
     const funcMeta = pikkuState('function', 'meta')[funcName]
@@ -225,14 +229,19 @@ function pluckCLIData(
 /**
  * Executes a CLI command for a specific program
  */
-export async function runCLICommand<Data>({
+export async function runCLICommand({
   program,
   commandPath,
-  positionals,
-  options: cliOptions,
+  data,
   singletonServices,
   createSessionServices,
-}: RunCLIParams<Data> & { program: string }): Promise<any> {
+}: {
+  program: string
+  commandPath: string[]
+  data: Record<string, any>
+  singletonServices: CoreSingletonServices
+  createSessionServices?: (session: CoreUserSession) => Promise<any>
+}): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState('cli', 'meta')
   const programMeta = cliMeta[program]
@@ -265,8 +274,7 @@ export async function runCLICommand<Data>({
   const processedData = {
     program,
     commandPath,
-    positionals,
-    options: cliOptions,
+    data,
   }
 
   // Get program-specific middleware
@@ -286,42 +294,46 @@ export async function runCLICommand<Data>({
     funcMiddleware: commandMiddleware,
   })
 
-  // Create session services if needed
-  let session: CoreUserSession | undefined
   let sessionServices: SessionServices | undefined
+  let output: any
 
-  if (createSessionServices) {
+  // Main execution logic wrapped for middleware handling
+  const runMain = async () => {
     // For CLI, user session would be managed differently
     // This is a placeholder - CLI auth would work differently than HTTP/WebSocket
-    session = undefined
+    const session: CoreUserSession | undefined = undefined
 
     if (!session && funcConfig.auth !== false) {
       throw new Error('Authentication required')
     }
 
+    // Create session services if needed
     if (session && createSessionServices) {
       sessionServices = await createSessionServices(session)
     }
+
+    // Merge services after session creation
+    const allServices = { ...singletonServices, ...sessionServices }
+
+    // Execute the wrapped function directly (it handles plucking and rendering)
+    output = await funcConfig.func(allServices, processedData, session)
   }
 
-  // Run middleware with merged data
-  const allServices = { ...singletonServices, ...sessionServices }
-  const mergedData = { ...positionals, ...cliOptions }  // Merge all CLI data
-  await runMiddleware(
-    allServices,
-    {
-      cli: {
-        program,
-        command: commandPath,
-        data: mergedData,
-      },
-    },
-    middleware
-  )
-
   try {
-    // Execute the wrapped function directly (it handles plucking and rendering)
-    const output = await funcConfig.func(allServices, processedData, session)
+    // Run middleware, then execute main logic
+    await runMiddleware(
+      singletonServices,
+      {
+        cli: {
+          program,
+          command: commandPath,
+          data,
+        },
+      },
+      middleware,
+      runMain
+    )
+
     return output
   } finally {
     // Clean up session services
@@ -362,4 +374,21 @@ export const addCLIMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   }
 
   pikkuState('cli', 'programs', programs)
+}
+
+/**
+ * Factory function for CLI-specific renderers
+ */
+export const pikkuCLIRender = <
+  Data,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+>(
+  renderer: (
+    services: Services,
+    data: Data,
+    session?: Session
+  ) => void | Promise<void>
+): CorePikkuCLIRender<Data, Services, Session> => {
+  return renderer
 }
