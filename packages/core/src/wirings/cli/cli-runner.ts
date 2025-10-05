@@ -251,6 +251,10 @@ export async function runCLICommand({
 
   // Navigate command tree to find the function name
   let currentCommand = programMeta.commands[commandPath[0]]
+  if (!currentCommand) {
+    throw new NotFoundError(`Command not found: ${commandPath.join(' ')}`)
+  }
+
   for (let i = 1; i < commandPath.length; i++) {
     if (
       !currentCommand.subcommands ||
@@ -281,7 +285,7 @@ export async function runCLICommand({
   const programs: Record<string, CLIProgramState> = pikkuState(
     'cli',
     'programs'
-  )
+  ) || {}
   const programData = programs[program]
   const globalMiddleware = programData?.globalMiddleware || []
 
@@ -299,8 +303,6 @@ export async function runCLICommand({
 
   // Main execution logic wrapped for middleware handling
   const runMain = async () => {
-    // For CLI, user session would be managed differently
-    // This is a placeholder - CLI auth would work differently than HTTP/WebSocket
     const session: CoreUserSession | undefined = undefined
 
     if (!session && funcConfig.auth !== false) {
