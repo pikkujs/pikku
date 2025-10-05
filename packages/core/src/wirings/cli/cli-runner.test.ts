@@ -49,7 +49,7 @@ describe('CLI Runner', () => {
         'test-cli': {
           program: 'test-cli',
           commands: {},
-          globalOptions: {},
+          options: {},
         },
       })
 
@@ -92,7 +92,7 @@ describe('CLI Runner', () => {
               options: {},
             },
           },
-          globalOptions: {},
+          options: {},
         },
       })
 
@@ -153,7 +153,7 @@ describe('CLI Runner', () => {
               options: {},
             },
           },
-          globalOptions: {},
+          options: {},
         },
       })
 
@@ -210,7 +210,7 @@ describe('CLI Runner', () => {
               options: {},
             },
           },
-          globalOptions: {},
+          options: {},
         },
       })
 
@@ -259,7 +259,7 @@ describe('CLI Runner', () => {
               options: {},
             },
           },
-          globalOptions: {},
+          options: {},
         },
       })
 
@@ -308,7 +308,7 @@ describe('CLI Runner', () => {
               },
             },
           },
-          globalOptions: {},
+          options: {},
         },
       })
 
@@ -333,7 +333,7 @@ describe('CLI Runner', () => {
         'my-cli': {
           program: 'my-cli',
           commands: {},
-          globalOptions: {},
+          options: {},
         },
       })
 

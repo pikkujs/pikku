@@ -79,7 +79,7 @@ export interface CLICommandMeta {
 export type CLIProgramMeta = {
   program: string
   commands: Record<string, CLICommandMeta>
-  globalOptions: Record<string, CLIOption>
+  options: Record<string, CLIOption>
   defaultRenderName?: string
 }
 
@@ -164,14 +164,14 @@ export type CLICommandDefinition<
  */
 export interface CoreCLI<
   Commands,
-  GlobalOptions,
+  Options,
   PikkuMiddleware extends CorePikkuMiddleware,
-  GlobalOutput = any,
+  Output = any,
 > {
   program: string
   commands: Commands
-  options?: CLIOptions<GlobalOptions>
+  options?: CLIOptions<Options>
   middleware?: PikkuMiddleware[]
-  render?: CorePikkuCLIRender<GlobalOutput>
+  render?: CorePikkuCLIRender<Output>
   docs?: PikkuDocs
 }

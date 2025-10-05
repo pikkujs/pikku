@@ -6,6 +6,13 @@ import { CLIMeta } from './cli.types.js'
 const testMeta: CLIMeta = {
   'test-cli': {
     program: 'test-cli',
+    options: {
+      verbose: {
+        description: 'Enable verbose output',
+        short: 'v',
+        default: false,
+      },
+    },
     commands: {
       greet: {
         command: 'greet <name>',
@@ -66,13 +73,6 @@ const testMeta: CLIMeta = {
         pikkuFuncName: 'optionalFunc',
         positionals: [{ name: 'name', required: false }],
         options: {},
-      },
-    },
-    globalOptions: {
-      verbose: {
-        description: 'Enable verbose output',
-        short: 'v',
-        default: false,
       },
     },
   },
@@ -297,6 +297,7 @@ describe('Command Parser', () => {
       const metaWithNumber: CLIMeta = {
         'num-cli': {
           program: 'num-cli',
+          options: {},
           commands: {
             test: {
               command: 'test',
@@ -310,7 +311,6 @@ describe('Command Parser', () => {
               },
             },
           },
-          globalOptions: {},
         },
       }
 
@@ -349,7 +349,7 @@ describe('Command Parser', () => {
       assert.ok(help.includes('Usage: test-cli <command>'))
       assert.ok(help.includes('Commands:'))
       assert.ok(help.includes('greet'))
-      assert.ok(help.includes('Global Options:'))
+      assert.ok(help.includes('Options:'))
       assert.ok(help.includes('--verbose'))
     })
 
@@ -375,6 +375,7 @@ describe('Command Parser', () => {
       const metaWithDesc: CLIMeta = {
         'test-cli': {
           program: 'test-cli',
+          options: {},
           commands: {
             greet: {
               command: 'greet <name>',
@@ -384,7 +385,6 @@ describe('Command Parser', () => {
               options: {},
             },
           },
-          globalOptions: {},
         },
       }
 

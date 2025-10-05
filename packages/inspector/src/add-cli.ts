@@ -57,7 +57,7 @@ function processCLIConfig(
   const programMeta: CLIProgramMeta = {
     program: '',
     commands: {},
-    globalOptions: {},
+    options: {},
   }
 
   for (const prop of node.properties) {
@@ -87,7 +87,7 @@ function processCLIConfig(
 
       case 'options':
         if (ts.isObjectLiteralExpression(prop.initializer)) {
-          programMeta.globalOptions = processOptions(
+          programMeta.options = processOptions(
             prop.initializer,
             sourceFile,
             typeChecker

@@ -52,8 +52,8 @@ export function parseCLIArguments(
       currentMeta = {
         program: currentMeta.program,
         commands: currentMeta.commands[arg].subcommands || {},
-        globalOptions: {
-          ...currentMeta.globalOptions,
+        options: {
+          ...currentMeta.options,
           ...currentMeta.commands[arg].options,
         },
         defaultRenderName:
@@ -200,7 +200,7 @@ function collectAvailableOptions(
   meta: CLIProgramMeta,
   path: string[]
 ): Record<string, CLIOption> {
-  let options: Record<string, CLIOption> = { ...meta.globalOptions }
+  let options: Record<string, CLIOption> = { ...meta.options }
 
   if (path.length === 0) {
     return options
@@ -373,10 +373,10 @@ export function generateCommandHelp(
       lines.push(`  ${name.padEnd(20)} ${desc}`)
     }
 
-    if (Object.keys(meta.globalOptions).length > 0) {
+    if (Object.keys(meta.options).length > 0) {
       lines.push('')
-      lines.push('Global Options:')
-      formatOptions(meta.globalOptions, lines)
+      lines.push('Options:')
+      formatOptions(meta.options, lines)
     }
   } else {
     // Command-specific help
