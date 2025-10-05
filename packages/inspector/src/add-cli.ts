@@ -390,6 +390,15 @@ function parseCommandPattern(pattern: string): any[] {
           required: false,
         })
       }
+    } else if (part.trim()) {
+      // Found a non-positional word in the command pattern
+      const commandName = pattern.split(' ')[0]
+      const remainingParts = parts.slice(parts.indexOf(part))
+      throw new Error(
+        `Invalid command pattern '${pattern}': found literal word '${part}' after command name. ` +
+          `Use subcommands for nested command structures instead of multiple words in the command pattern. ` +
+          `Example: Instead of "${commandName} ${remainingParts.join(' ')}", use subcommands: { ${part}: { command: "${remainingParts.join(' ')}", ... } }`
+      )
     }
   }
 
