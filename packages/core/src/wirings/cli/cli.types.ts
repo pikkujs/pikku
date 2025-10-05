@@ -4,7 +4,6 @@ import {
   CoreUserSession,
   PikkuDocs,
   CoreServices,
-  CorePikkuRender,
 } from '../../types/core.types.js'
 import {
   CorePikkuFunction,
@@ -46,7 +45,7 @@ export interface CLIPositional {
 export type PikkuCLI = {
   program: string
   command: string[]
-  data: Record<string, any>  // All positionals and options merged
+  data: Record<string, any> // All positionals and options merged
 }
 
 /**
@@ -175,3 +174,23 @@ export interface CoreCLI<
   render?: CorePikkuCLIRender<Output>
   docs?: PikkuDocs
 }
+
+/**
+ * Generic renderer type that can transform data into any output format.
+ * Can be used across different wirings for flexible output handling.
+ *
+ * @template Data - The input data type to be rendered
+ * @template Output - The output type after rendering
+ * @template Services - The services available to the renderer
+ * @template Session - The user session type
+ */
+export type CorePikkuRender<
+  Data,
+  Output,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = (
+  services: Services,
+  data: Data,
+  session?: Session
+) => Output | Promise<Output>

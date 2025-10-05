@@ -2,7 +2,12 @@ import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
 import { CorePikkuMiddleware } from '../../types/core.types.js'
-import { wireCLI, runCLICommand, addCLIMiddleware, pikkuCLIRender } from './cli-runner.js'
+import {
+  wireCLI,
+  runCLICommand,
+  addCLIMiddleware,
+  pikkuCLIRender,
+} from './cli-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 
@@ -351,15 +356,12 @@ describe('CLI Runner', () => {
     test('should throw error when CLI metadata not found', () => {
       pikkuState('cli', 'meta', {})
 
-      assert.throws(
-        () => {
-          wireCLI({
-            program: 'nonexistent',
-            commands: {},
-          })
-        },
-        /CLI metadata not found for program 'nonexistent'/
-      )
+      assert.throws(() => {
+        wireCLI({
+          program: 'nonexistent',
+          commands: {},
+        })
+      }, /CLI metadata not found for program 'nonexistent'/)
     })
   })
 

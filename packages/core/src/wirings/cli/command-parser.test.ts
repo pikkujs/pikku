@@ -151,11 +151,7 @@ describe('Command Parser', () => {
     })
 
     test('should apply default option values', () => {
-      const result = parseCLIArguments(
-        ['greet', 'Alice'],
-        'test-cli',
-        testMeta
-      )
+      const result = parseCLIArguments(['greet', 'Alice'], 'test-cli', testMeta)
 
       assert.deepStrictEqual(result.options, { loud: false, verbose: false })
     })

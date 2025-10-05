@@ -21,11 +21,13 @@ export interface PikkuCLICoreOutputFiles {
   httpWiringsFile: string
   httpWiringMetaFile: string
   httpMapDeclarationFile: string
+  httpTypesFile: string
 
   // Channels
   channelsWiringFile: string
   channelsWiringMetaFile: string
   channelsMapDeclarationFile: string
+  channelsTypesFile: string
 
   // RPC Internal
   rpcInternalWiringMetaFile: string
@@ -37,20 +39,24 @@ export interface PikkuCLICoreOutputFiles {
   // Schedulers
   schedulersWiringFile: string
   schedulersWiringMetaFile: string
+  schedulersTypesFile: string
 
   // Queue processors
   queueWorkersWiringFile: string
   queueWorkersWiringMetaFile: string
   queueMapDeclarationFile: string
+  queueTypesFile: string
 
   // MCP
   mcpWiringsFile: string
   mcpWiringsMetaFile: string
+  mcpTypesFile: string
 
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string
   cliBootstrapFile: string
+  cliTypesFile: string
 
   // Services
   servicesFile: string
@@ -80,7 +86,6 @@ export type PikkuCLIConfig = {
   rpcWiringsFile?: string
   queueWiringsFile?: string
   mcpJsonFile?: string
-  cliFile?: string
 
   openAPI?: {
     outputFile: string
@@ -102,7 +107,6 @@ const CONFIG_DIR_FILES = [
   'rpcWiringsFile',
   'queueWiringsFile',
   'mcpJsonFile',
-  'cliFile',
 ]
 
 export const getPikkuCLIConfig = async (
@@ -228,6 +232,9 @@ const _getPikkuCLIConfig = async (
           'pikku-http-wirings-map.gen.d.ts'
         )
       }
+      if (!result.httpTypesFile) {
+        result.httpTypesFile = join(httpDir, 'pikku-http-types.gen.ts')
+      }
 
       // Channels/WebSocket
       if (!result.channelsWiringFile) {
@@ -243,6 +250,12 @@ const _getPikkuCLIConfig = async (
         result.channelsMapDeclarationFile = join(
           channelDir,
           'pikku-channels-map.gen.d.ts'
+        )
+      }
+      if (!result.channelsTypesFile) {
+        result.channelsTypesFile = join(
+          channelDir,
+          'pikku-channel-types.gen.ts'
         )
       }
 
@@ -282,6 +295,12 @@ const _getPikkuCLIConfig = async (
           'pikku-schedulers-wirings-meta.gen.ts'
         )
       }
+      if (!result.schedulersTypesFile) {
+        result.schedulersTypesFile = join(
+          schedulerDir,
+          'pikku-scheduler-types.gen.ts'
+        )
+      }
 
       // Queue
       if (!result.queueWorkersWiringFile) {
@@ -301,6 +320,9 @@ const _getPikkuCLIConfig = async (
           queueDir,
           'pikku-queue-workers-wirings-map.gen.d.ts'
         )
+      }
+      if (!result.queueTypesFile) {
+        result.queueTypesFile = join(queueDir, 'pikku-queue-types.gen.ts')
       }
 
       // Services
@@ -326,6 +348,9 @@ const _getPikkuCLIConfig = async (
       if (!result.mcpJsonFile) {
         result.mcpJsonFile = join(mcpDir, 'pikku-mcp.gen.json')
       }
+      if (!result.mcpTypesFile) {
+        result.mcpTypesFile = join(mcpDir, 'pikku-mcp-types.gen.ts')
+      }
 
       // CLI
       if (!result.cliWiringsFile) {
@@ -336,6 +361,9 @@ const _getPikkuCLIConfig = async (
       }
       if (!result.cliBootstrapFile) {
         result.cliBootstrapFile = join(cliDir, 'pikku-cli-bootstrap.gen.ts')
+      }
+      if (!result.cliTypesFile) {
+        result.cliTypesFile = join(cliDir, 'pikku-cli-types.gen.ts')
       }
 
       result.bootstrapFiles = result.bootstrapFiles || {}

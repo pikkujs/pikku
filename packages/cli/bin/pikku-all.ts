@@ -34,6 +34,12 @@ import { pikkuSchemas } from '../src/schemas.js'
 import { pikkuMCPJSON } from '../src/wirings/mcp/pikku-command-mcp-json.js'
 import { pikkuCLI } from '../src/wirings/cli/pikku-command-cli.js'
 import { pikkuCLIBootstrap } from '../src/wirings/cli/pikku-command-cli-bootstrap.js'
+import { pikkuCLITypes } from '../src/wirings/cli/pikku-command-cli-types.js'
+import { pikkuHTTPTypes } from '../src/wirings/http/pikku-command-http-types.js'
+import { pikkuChannelTypes } from '../src/wirings/channels/pikku-command-channel-types.js'
+import { pikkuSchedulerTypes } from '../src/wirings/scheduler/pikku-command-scheduler-types.js'
+import { pikkuQueueTypes } from '../src/wirings/queue/pikku-command-queue-types.js'
+import { pikkuMCPTypes } from '../src/wirings/mcp/pikku-command-mcp-types.js'
 import { pikkuNext } from '../src/runtimes/nextjs/pikku-command-nextjs.js'
 
 const generateBootstrapFile = async (
@@ -100,6 +106,14 @@ const runAll = async (
       cliConfig.filters
     )
   }
+
+  // Generate wiring-specific type files for tree-shaking
+  await pikkuHTTPTypes(logger, cliConfig)
+  await pikkuChannelTypes(logger, cliConfig)
+  await pikkuSchedulerTypes(logger, cliConfig)
+  await pikkuQueueTypes(logger, cliConfig)
+  await pikkuMCPTypes(logger, cliConfig)
+  await pikkuCLITypes(logger, cliConfig)
 
   const functions = pikkuFunctions(logger, cliConfig, visitState)
   if (!functions) {

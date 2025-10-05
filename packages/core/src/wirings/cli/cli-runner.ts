@@ -172,11 +172,7 @@ function createCLIFunctionWrapper(
       : null
 
     // Pluck only the fields the function expects
-    const pluckedData = pluckCLIData(
-      mergedData,
-      schema,
-      availableOptions
-    )
+    const pluckedData = pluckCLIData(mergedData, schema, availableOptions)
 
     // Execute the original function with plucked data
     const output = await func(services, pluckedData, session)
@@ -282,10 +278,8 @@ export async function runCLICommand({
   }
 
   // Get program-specific middleware
-  const programs: Record<string, CLIProgramState> = pikkuState(
-    'cli',
-    'programs'
-  ) || {}
+  const programs: Record<string, CLIProgramState> =
+    pikkuState('cli', 'programs') || {}
   const programData = programs[program]
   const globalMiddleware = programData?.globalMiddleware || []
 
