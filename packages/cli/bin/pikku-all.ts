@@ -8,6 +8,7 @@ import {
 import { getPikkuCLIConfig, PikkuCLIConfig } from '../src/pikku-cli-config.js'
 import { pikkuHTTP } from '../src/wirings/http/pikku-command-http-routes.js'
 import { pikkuFunctionTypes } from '../src/wirings/functions/pikku-command-function-types.js'
+import { pikkuFunctionTypesSplit } from '../src/wirings/functions/pikku-command-function-types-split.js'
 import { pikkuHTTPMap } from '../src/wirings/http/pikku-command-http-map.js'
 import { existsSync } from 'fs'
 import { pikkuChannelsMap } from '../src/wirings/channels/pikku-command-channels-map.js'
@@ -108,6 +109,7 @@ const runAll = async (
   }
 
   // Generate wiring-specific type files for tree-shaking
+  await pikkuFunctionTypesSplit(logger, cliConfig, visitState, options)
   await pikkuHTTPTypes(logger, cliConfig)
   await pikkuChannelTypes(logger, cliConfig)
   await pikkuSchedulerTypes(logger, cliConfig)

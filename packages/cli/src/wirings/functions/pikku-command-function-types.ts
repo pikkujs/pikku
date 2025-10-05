@@ -1,10 +1,9 @@
 import {
   getFileImportRelativePath,
-  getPikkuFilesAndMethods,
   logCommandInfoAndTime,
   writeFileInDir,
 } from '../../utils.js'
-import { serializePikkuTypes } from '../../serialize-pikku-types.js'
+import { serializePikkuTypesHub } from '../../serialize-pikku-types-hub.js'
 import { PikkuCommand } from '../../types.js'
 
 export const pikkuFunctionTypes: PikkuCommand = async (
@@ -12,39 +11,43 @@ export const pikkuFunctionTypes: PikkuCommand = async (
   {
     typesDeclarationFile: typesFile,
     packageMappings,
-    rpcInternalMapDeclarationFile,
+    functionTypesFile,
+    httpTypesFile,
+    channelsTypesFile,
+    schedulersTypesFile,
+    queueTypesFile,
+    mcpTypesFile,
+    cliTypesFile,
   },
-  visitState,
-  options = {}
+  _visitState,
+  _options = {}
 ) => {
   return await logCommandInfoAndTime(
     logger,
-    'Creating api types',
-    'Created api types',
+    'Creating api types hub',
+    'Created api types hub',
     [false],
     async () => {
-      const { userSessionType, sessionServicesType, singletonServicesType } =
-        await getPikkuFilesAndMethods(
-          logger,
-          visitState,
-          packageMappings,
+      const content = serializePikkuTypesHub(
+        getFileImportRelativePath(
           typesFile,
-          options,
-          {
-            userSessionType: true,
-            sessionServiceType: true,
-            singletonServicesType: true,
-          }
-        )
-
-      const content = serializePikkuTypes(
-        `import type { ${userSessionType.type} } from '${getFileImportRelativePath(typesFile, userSessionType.typePath, packageMappings)}'`,
-        userSessionType.type,
-        `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,
-        singletonServicesType.type,
-        `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(typesFile, sessionServicesType.typePath, packageMappings)}'`,
-        sessionServicesType.type,
-        `import type { TypedPikkuRPC } from '${getFileImportRelativePath(typesFile, rpcInternalMapDeclarationFile, packageMappings)}'`
+          functionTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(typesFile, httpTypesFile, packageMappings),
+        getFileImportRelativePath(
+          typesFile,
+          channelsTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(
+          typesFile,
+          schedulersTypesFile,
+          packageMappings
+        ),
+        getFileImportRelativePath(typesFile, queueTypesFile, packageMappings),
+        getFileImportRelativePath(typesFile, mcpTypesFile, packageMappings),
+        getFileImportRelativePath(typesFile, cliTypesFile, packageMappings)
       )
 
       await writeFileInDir(logger, typesFile, content)

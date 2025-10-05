@@ -1,10 +1,14 @@
-import { logCommandInfoAndTime, writeFileInDir } from '../../utils.js'
+import {
+  logCommandInfoAndTime,
+  writeFileInDir,
+  getFileImportRelativePath,
+} from '../../utils.js'
 import { PikkuCommandWithoutState } from '../../types.js'
 import { serializeHTTPTypes } from './serialize-http-types.js'
 
 export const pikkuHTTPTypes: PikkuCommandWithoutState = async (
   logger,
-  { httpTypesFile }
+  { httpTypesFile, functionTypesFile, packageMappings }
 ) => {
   return await logCommandInfoAndTime(
     logger,
@@ -12,7 +16,12 @@ export const pikkuHTTPTypes: PikkuCommandWithoutState = async (
     'Created HTTP types',
     [false],
     async () => {
-      const content = serializeHTTPTypes()
+      const functionTypesImportPath = getFileImportRelativePath(
+        httpTypesFile,
+        functionTypesFile,
+        packageMappings
+      )
+      const content = serializeHTTPTypes(functionTypesImportPath)
       await writeFileInDir(logger, httpTypesFile, content)
     }
   )

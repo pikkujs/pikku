@@ -77,7 +77,7 @@ export const visitRoutes = (
   addSchedule(node, checker, state, filters, logger)
   addQueueWorker(node, checker, state, filters, logger)
   addChannel(node, checker, state, filters, logger)
-  addCLI(node as ts.CallExpression, node.getSourceFile(), state, checker)
+  addCLI(node, state, checker)
   addMCPResource(node, checker, state, filters, logger)
   addMCPTool(node, checker, state, filters, logger)
   addMCPPrompt(node, checker, state, filters, logger)

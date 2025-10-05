@@ -7,11 +7,11 @@ import { extractFunctionName } from './utils.js'
  * Adds CLI command metadata to the inspector state
  */
 export function addCLI(
-  node: ts.CallExpression,
-  sourceFile: ts.SourceFile,
+  node: ts.Node,
   inspectorState: InspectorState,
   typeChecker: TypeChecker
 ): void {
+  if (!ts.isCallExpression(node)) return
   // Check if this is a wireCLI call
   if (!node || !node.expression) {
     return
@@ -30,6 +30,8 @@ export function addCLI(
   if (!ts.isObjectLiteralExpression(arg)) {
     return
   }
+
+  const sourceFile = node.getSourceFile()
 
   // Add to files set
   inspectorState.cli.files.add(sourceFile.fileName)

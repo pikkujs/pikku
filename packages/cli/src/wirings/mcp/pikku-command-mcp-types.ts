@@ -1,10 +1,14 @@
-import { logCommandInfoAndTime, writeFileInDir } from '../../utils.js'
+import {
+  logCommandInfoAndTime,
+  writeFileInDir,
+  getFileImportRelativePath,
+} from '../../utils.js'
 import { PikkuCommandWithoutState } from '../../types.js'
 import { serializeMCPTypes } from './serialize-mcp-types.js'
 
 export const pikkuMCPTypes: PikkuCommandWithoutState = async (
   logger,
-  { mcpTypesFile }
+  { mcpTypesFile, functionTypesFile, packageMappings }
 ) => {
   return await logCommandInfoAndTime(
     logger,
@@ -12,7 +16,12 @@ export const pikkuMCPTypes: PikkuCommandWithoutState = async (
     'Created MCP types',
     [false],
     async () => {
-      const content = serializeMCPTypes()
+      const functionTypesImportPath = getFileImportRelativePath(
+        mcpTypesFile,
+        functionTypesFile,
+        packageMappings
+      )
+      const content = serializeMCPTypes(functionTypesImportPath)
       await writeFileInDir(logger, mcpTypesFile, content)
     }
   )

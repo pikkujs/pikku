@@ -16,6 +16,7 @@ export interface PikkuCLICoreOutputFiles {
   functionsFile: string
   functionsMetaFile: string
   functionsMetaMinFile: string
+  functionTypesFile: string
 
   // HTTP
   httpWiringsFile: string
@@ -210,6 +211,12 @@ const _getPikkuCLIConfig = async (
         result.functionsMetaMinFile = join(
           functionDir,
           'pikku-functions-meta.min.gen.ts'
+        )
+      }
+      if (!result.functionTypesFile) {
+        result.functionTypesFile = join(
+          functionDir,
+          'pikku-function-types.gen.ts'
         )
       }
       if (!result.typesDeclarationFile) {
