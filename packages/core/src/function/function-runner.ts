@@ -11,21 +11,13 @@ import {
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
-  CorePikkuFunction,
   CorePikkuFunctionConfig,
-  CorePikkuFunctionSessionless,
 } from './functions.types.js'
 
 export const addFunction = (
   funcName: string,
-  funcConfig:
-    | CorePikkuFunctionConfig<any, any>
-    | CorePikkuFunctionSessionless<any, any>
-    | CorePikkuFunction<any, any>
+  funcConfig: CorePikkuFunctionConfig<any, any>
 ) => {
-  if (funcConfig instanceof Function) {
-    funcConfig = { func: funcConfig }
-  }
   pikkuState('function', 'functions').set(funcName, funcConfig)
 }
 

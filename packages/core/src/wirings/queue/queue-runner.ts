@@ -61,7 +61,7 @@ export const wireQueueWorker = <
   }
 
   // Register the function with pikku
-  addFunction(processorMeta.pikkuFuncName, queueWorker.func)
+  addFunction(processorMeta.pikkuFuncName, queueWorker)
 
   // Store processor definition in state - runtime adapters will pick this up
   const registrations = pikkuState('queue', 'registrations')

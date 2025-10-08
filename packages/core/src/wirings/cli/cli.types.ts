@@ -161,13 +161,9 @@ export type CLICommandDefinition<
 /**
  * CLI wiring configuration
  */
-export interface CoreCLI<
-  Commands,
-  Options,
-  PikkuMiddleware extends CorePikkuMiddleware,
-  Output = any,
-> {
+export interface CoreCLI<Commands, Options, PikkuMiddleware, Output = any> {
   program: string
+  description?: string
   commands: Commands
   options?: CLIOptions<Options>
   middleware?: PikkuMiddleware[]

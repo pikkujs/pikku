@@ -58,7 +58,7 @@ export const wireMCPResource = <
   if (!mcpResourceMeta) {
     throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
   }
-  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource.func)
+  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource)
   const resources = pikkuState('mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
