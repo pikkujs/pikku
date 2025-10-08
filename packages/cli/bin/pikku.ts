@@ -5,7 +5,7 @@ import { Config, SingletonServices } from '../types/application-types.js'
 import { PikkuRPCService } from '@pikku/core'
 import { TypedPikkuRPC } from '../.pikku/rpc-internal/pikku-rpc-wirings-map.internal.gen.js'
 
-import '../.pikku/rpc/pikku-bootstrap-rpc.gen.js'
+import '../.pikku/pikku-bootstrap.gen.js'
 
 export const action = async (
   command: string,

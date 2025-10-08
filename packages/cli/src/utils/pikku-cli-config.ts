@@ -87,8 +87,7 @@ const _getPikkuCLIConfig = async (
     const functionDir = join(result.outDir, 'function')
     const httpDir = join(result.outDir, 'http')
     const channelDir = join(result.outDir, 'channel')
-    const internalRPCDirectory = join(result.outDir, 'rpc-internal')
-    const externalRPCDirectory = join(result.outDir, 'rpc')
+    const rpcDir = join(result.outDir, 'rpc')
     const schedulerDir = join(result.outDir, 'scheduler')
     const queueDir = join(result.outDir, 'queue')
     const mcpDir = join(result.outDir, 'mcp')
@@ -166,25 +165,24 @@ const _getPikkuCLIConfig = async (
       result.channelsTypesFile = join(channelDir, 'pikku-channel-types.gen.ts')
     }
 
-    // Internal
+    // RPC (internal and external)
     if (!result.rpcInternalWiringMetaFile) {
       result.rpcInternalWiringMetaFile = join(
-        internalRPCDirectory,
+        rpcDir,
         'pikku-rpc-wirings-meta.internal.gen.ts'
       )
     }
 
     if (!result.rpcInternalMapDeclarationFile) {
       result.rpcInternalMapDeclarationFile = join(
-        internalRPCDirectory,
+        rpcDir,
         'pikku-rpc-wirings-map.internal.gen.d.ts'
       )
     }
 
-    // External
     if (!result.rpcMapDeclarationFile) {
       result.rpcMapDeclarationFile = join(
-        externalRPCDirectory,
+        rpcDir,
         'pikku-rpc-wirings-map.gen.d.ts'
       )
     }

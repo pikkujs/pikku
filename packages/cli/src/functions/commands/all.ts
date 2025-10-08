@@ -55,11 +55,12 @@ export const all: unknown = pikkuVoidFunc({
     }
 
     // RPC bootstrap is always generated since RPC is always present
+    // Include the internal meta file
     await generateBootstrapFile(
       logger,
       cliConfig,
       cliConfig.bootstrapFiles.rpc,
-      [],
+      [cliConfig.rpcInternalWiringMetaFile],
       schemas
     )
 

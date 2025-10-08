@@ -7,5 +7,5 @@
     "../inspector/src": "@pikku/inspector"
   },
   "supportsImportAttributes": true,
-  "schema"
+  "schemasFromTypes": ["PikkuCLIConfig"]
 }
