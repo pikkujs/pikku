@@ -26,7 +26,10 @@ export const watch = pikkuSessionlessFunc({
           try {
             const start = Date.now()
             await rpc.invoke('runAll', null)
-            logger.timing(`✓ Generated in ${Date.now() - start}ms`)
+            logger.info({
+              message: `✓ Generated in ${Date.now() - start}ms`,
+              type: 'timing',
+            })
           } catch (err) {
             console.error(err)
             console.info()

@@ -44,7 +44,7 @@ export const writeFileInDir = async (
     await writeFile(path, content, 'utf-8')
 
     if (logWrite) {
-      logger.success(`✓ File written to ${path}`)
+      logger.info({ message: `✓ File written to ${path}`, type: 'success' })
     }
   }
 }

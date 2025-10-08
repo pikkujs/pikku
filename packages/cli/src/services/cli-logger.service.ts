@@ -36,34 +36,32 @@ export class CLILogger implements Logger {
     this.level = level
   }
 
-  primary(message: string) {
-    if (!this.silent) {
-      console.log(chalk.green(message))
+  info(message: string | { message: string; type?: string }) {
+    if (this.level > LogLevel.info || this.silent) return
+
+    let c = chalk.blue
+    if (typeof message === 'object') {
+      if (message.type === 'success') {
+        c = chalk.green
+      } else if (message.type === 'timing') {
+        c = chalk.gray
+      }
     }
-  }
-  success(message: string) {
-    if (!this.silent) {
-      console.log(chalk.green(message))
-    }
-  }
-  info(message: string) {
-    if (!this.silent) {
-      console.log(chalk.blue(message))
-    }
-  }
-  error(message: string) {
-    console.error(chalk.red(message))
-  }
-  warn(message: string) {
-    console.error(chalk.yellow(message))
-  }
-  debug(message: string) {
-    if (process.env.DEBUG && !this.silent) {
-      console.log(chalk.gray(message))
-    }
+    console.log(c(typeof message === 'string' ? message : message.message))
   }
 
-  timing(message: string) {
+  error(message: string) {
+    if (this.level > LogLevel.error) return
+    console.error(chalk.red(message))
+  }
+
+  warn(message: string) {
+    if (this.level > LogLevel.warn) return
+    console.error(chalk.yellow(message))
+  }
+
+  debug(message: string) {
+    if (this.level > LogLevel.debug || this.silent) return
     console.log(chalk.gray(message))
   }
 
@@ -73,5 +71,11 @@ export class CLILogger implements Logger {
       readFileSync(`${dirname(__filename)}/../../package.json`, 'utf-8')
     )
     this.primary(`⚙️ Welcome to the Pikku CLI (v${packageJson.version})\n`)
+  }
+
+  private primary(message: string) {
+    if (!this.silent) {
+      console.log(chalk.green(message))
+    }
   }
 }
