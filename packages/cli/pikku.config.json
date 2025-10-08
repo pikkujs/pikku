@@ -1,10 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src/"],
+  "srcDirectories": ["src", "bin"],
   "outDir": ".pikku",
   "packageMappings": {
     "../inspector/src": "@pikku/inspector"
   },
-  "supportsImportAttributes": true
+  "supportsImportAttributes": true,
+  "schema"
 }

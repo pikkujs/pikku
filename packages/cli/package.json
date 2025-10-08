@@ -11,11 +11,8 @@
   "module": "dist/bin/pikku.js",
   "scripts": {
     "tsc": "tsc",
-    "build:esm": "tsc -b",
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
-    "prebuild": "node prebuild.js",
-    "build": "yarn prebuild && yarn schema",
-    "build:cli": "tsc -b",
+    "build": "tsc -b && yarn schema",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",

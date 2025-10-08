@@ -5,7 +5,7 @@ import { generateSchemas } from '../../../utils/schema-generator.js'
 import { generateOpenAPISpec } from './openapi-spec-generator.js'
 import { stringify } from 'yaml'
 
-export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
+export const pikkuOpenAPI: unknown = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const { http, functions } = await getInspectorState()
     const { tsconfig, openAPI, schemasFromTypes } = cliConfig

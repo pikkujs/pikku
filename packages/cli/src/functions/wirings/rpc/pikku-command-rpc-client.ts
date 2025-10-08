@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeRPCWrapper } from './serialize-rpc-wrapper.js'
 
-export const pikkuRPCClient = pikkuSessionlessFunc<void, void>({
+export const pikkuRPCClient: unknown = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig }) => {
     const { rpcWiringsFile, rpcMapDeclarationFile, packageMappings } = cliConfig
 

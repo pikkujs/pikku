@@ -6,7 +6,10 @@ import {
   serializeFunctionImports,
 } from './serialize-function-imports.js'
 
-export const pikkuFunctions = pikkuSessionlessFunc<void, true | undefined>({
+export const pikkuFunctions: unknown = pikkuSessionlessFunc<
+  void,
+  true | undefined
+>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const { functions, rpc } = await getInspectorState()
     const {

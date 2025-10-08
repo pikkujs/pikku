@@ -3,7 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedChannelsMap } from './serialize-typed-channel-map.js'
 
-export const pikkuChannelsMap = pikkuSessionlessFunc<void, void>({
+export const pikkuChannelsMap: unknown = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const state = await getInspectorState()
     const { channelsMapDeclarationFile, packageMappings } = cliConfig

@@ -6,7 +6,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import type { PikkuCLIConfig } from '../../../../types/config.js'
 import { join } from 'node:path'
 
-export const pikkuCLIBootstrap = pikkuSessionlessFunc<void, void>({
+export const pikkuCLIBootstrap: unknown = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
     const config = cliConfig

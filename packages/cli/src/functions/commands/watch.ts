@@ -1,7 +1,7 @@
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 import chokidar from 'chokidar'
 
-export const watch = pikkuSessionlessFunc({
+export const watch: unknown = pikkuVoidFunc({
   func: async ({ logger, cliConfig, rpc }) => {
     const configWatcher = chokidar.watch(cliConfig.srcDirectories, {
       ignoreInitial: true,

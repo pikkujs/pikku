@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
 
-export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
+export const pikkuFunctionTypes: unknown = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig }) => {
     const {
       typesDeclarationFile: typesFile,

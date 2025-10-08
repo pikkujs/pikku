@@ -1,9 +1,9 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuVoidFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
-export const pikkuChannels = pikkuSessionlessFunc<void, void>({
+export const pikkuChannels: unknown = pikkuVoidFunc({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { channelsWiringFile, channelsWiringMetaFile, packageMappings } =

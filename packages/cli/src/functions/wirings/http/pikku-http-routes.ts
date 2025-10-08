@@ -3,7 +3,7 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
-export const pikkuHTTP = pikkuSessionlessFunc<void, void>({
+export const pikkuHTTP: unknown = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { httpWiringsFile, httpWiringMetaFile, packageMappings } = cliConfig

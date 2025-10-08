@@ -2,8 +2,10 @@
 import { Command } from 'commander'
 import { createSingletonServices } from '../src/services.js'
 import { Config, SingletonServices } from '../types/application-types.js'
-import { PikkuRPCService } from '../../core/src/wirings/rpc/rpc-runner.js'
+import { PikkuRPCService } from '@pikku/core'
 import { TypedPikkuRPC } from '../.pikku/rpc-internal/pikku-rpc-wirings-map.internal.gen.js'
+
+import '../.pikku/rpc/pikku-bootstrap-rpc.gen.js'
 
 export const action = async (
   command: string,

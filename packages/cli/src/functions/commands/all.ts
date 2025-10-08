@@ -1,10 +1,10 @@
 import { existsSync } from 'fs'
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
 import { generateBootstrapFile } from '../../utils/generate-bootstrap-file.js'
 
-export const all = pikkuSessionlessFunc({
+export const all: unknown = pikkuVoidFunc({
   func: async ({ logger, cliConfig, rpc, getInspectorState }) => {
     const allImports: string[] = []
     let typesDeclarationFileExists = true
