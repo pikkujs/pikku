@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeSchedulerMeta } from './serialize-scheduler-meta.js'
 
-export const pikkuScheduler = pikkuSessionlessFunc<void, void>({
+export const pikkuScheduler = pikkuSessionlessFunc<void, true | undefined>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { schedulersWiringFile, schedulersWiringMetaFile, packageMappings } =
@@ -26,6 +26,8 @@ export const pikkuScheduler = pikkuSessionlessFunc<void, void>({
         packageMappings
       )
     )
+
+    return true
   },
   middleware: [
     logCommandInfoAndTime({

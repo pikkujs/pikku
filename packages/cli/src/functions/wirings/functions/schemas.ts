@@ -1,11 +1,14 @@
-import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
-import { saveSchemas, generateSchemas } from '../../utils/schema-generator.js'
-import { logCommandInfoAndTime } from '../../middleware/log-command-info-and-time.js'
+import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import {
+  saveSchemas,
+  generateSchemas,
+} from '../../../utils/schema-generator.js'
+import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 /**
  * Generate JSON schemas from TypeScript types
  */
-export const runSchemas = pikkuSessionlessFunc<void, void>({
+export const pikkuSchemas = pikkuSessionlessFunc<void, true | undefined>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
 
@@ -27,6 +30,8 @@ export const runSchemas = pikkuSessionlessFunc<void, void>({
       cliConfig.supportsImportAttributes,
       cliConfig.schemasFromTypes
     )
+
+    return true
   },
   middleware: [
     logCommandInfoAndTime({

@@ -8,8 +8,9 @@ import { CreateSessionServices, CreateSingletonServices } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
-import { inspectorGlob } from './functions/inspector-glob.js'
-import { InspectorState } from '@pikku/inspector'
+import { inspect, InspectorState } from '@pikku/inspector'
+import { glob } from 'tinyglobby'
+import path from 'path'
 
 /**
  * Singleton services factory for the Pikku CLI
@@ -36,15 +37,15 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectorState: InspectorState | undefined = undefined
   const getInspectorState = async (refresh: boolean = false) => {
     if (refresh || !inspectorState) {
-      // Call inspectorGlob as a pikku function
-      inspectorState = await inspectorGlob.invoke(
-        { logger, variables, config, cliConfig, getInspectorState },
-        {
-          rootDir: cliConfig.rootDir,
-          srcDirectories: cliConfig.srcDirectories,
-          filters: cliConfig.filters,
-        }
-      )
+      const { rootDir, srcDirectories, filters } = cliConfig
+      const wiringFiles = (
+        await Promise.all(
+          srcDirectories.map((dir) =>
+            glob(`${path.join(rootDir, dir)}/**/*.ts`)
+          )
+        )
+      ).flat()
+      return await inspect(logger, wiringFiles, filters)
     }
     return inspectorState!
   }

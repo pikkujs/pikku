@@ -1,12 +1,12 @@
 import { wireCLI, pikkuCLICommand } from '../.pikku/pikku-types.gen.js'
-import { runAll } from './functions/commands/all.js'
-import { runSchemas } from './functions/commands/schemas.js'
+import { pikkuSchemas } from './functions/wirings/functions/schemas.js'
 import { pikkuFetch } from './functions/wirings/fetch/index.js'
 import { pikkuWebSocketTyped } from './functions/wirings/channels/pikku-command-websocket-typed.js'
 import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
+import { all } from '../bin/pikku-all.js'
 
 wireCLI({
   program: 'pikku',
@@ -15,7 +15,7 @@ wireCLI({
   commands: {
     all: pikkuCLICommand({
       command: 'all',
-      func: runAll,
+      func: all,
       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
       options: {
         config: {
@@ -37,7 +37,7 @@ wireCLI({
     }),
     schemas: pikkuCLICommand({
       command: 'schemas',
-      func: runSchemas,
+      func: pikkuSchemas,
       description: 'Generate JSON schemas for function input/output types',
       options: {
         config: {

@@ -58,7 +58,7 @@ const generateArgumentsFromSchema = async (
   }
 }
 
-export const pikkuMCP = pikkuSessionlessFunc<void, void>({
+export const pikkuMCP = pikkuSessionlessFunc<void, true | undefined>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const { mcpEndpoints, functions } = await getInspectorState()
     const {
@@ -102,6 +102,8 @@ pikkuState('mcp', 'resourcesMeta', ${JSON.stringify(mcpEndpoints.resourcesMeta, 
 pikkuState('mcp', 'toolsMeta', ${JSON.stringify(mcpEndpoints.toolsMeta, null, 2)})
 pikkuState('mcp', 'promptsMeta', ${JSON.stringify(promptsMetaWithArguments, null, 2)})`
     )
+
+    return true
   },
   middleware: [
     logCommandInfoAndTime({
