@@ -2,6 +2,7 @@ import { CoreServices, PikkuWiringTypes } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
+import { PikkuRPC } from './rpc-types.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
@@ -68,7 +69,10 @@ class ContextAwareRPCService {
 }
 
 // RPC Service class for the global interface
-export class PikkuRPCService {
+export class PikkuRPCService<
+  Services extends CoreServices,
+  TypedRPC = PikkuRPC,
+> {
   private config?: RPCServiceConfig
 
   // Initialize the RPC service with configuration
@@ -77,9 +81,12 @@ export class PikkuRPCService {
   }
 
   // Convenience function for initializing
-  injectRPCService(coreServices: CoreServices, depth: number = 0) {
+  injectRPCService(
+    services: Services,
+    depth: number = 0
+  ): Services & { rpc: TypedRPC } {
     const serviceCopy = {
-      ...coreServices,
+      ...services,
     }
     const serviceRPC = new ContextAwareRPCService(serviceCopy, {
       coerceDataFromSchema: this.config?.coerceDataFromSchema,
@@ -90,7 +97,7 @@ export class PikkuRPCService {
       invoke: serviceRPC.rpc.bind(serviceRPC),
       invokeExposed: serviceRPC.rpc.bind(serviceRPC),
     } as any
-    return serviceCopy
+    return serviceCopy as Services & { rpc: TypedRPC }
   }
 }
 

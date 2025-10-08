@@ -1,48 +1,12 @@
 import { existsSync } from 'fs'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
-import { PikkuCLIConfig } from '../../../types/config.js'
-import { CLILogger } from '../../services/cli-logger.service.js'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
+import { generateBootstrapFile } from '../../utils/generate-bootstrap-file.js'
 
-const generateBootstrapFile = async (
-  logger: CLILogger,
-  cliConfig: PikkuCLIConfig,
-  bootstrapFile: string,
-  specificImports: string[],
-  schemas?: boolean
-) => {
-  // Common imports that every bootstrap file needs
-  const commonImports = [
-    cliConfig.functionsMetaMinFile,
-    cliConfig.functionsFile,
-  ]
-
-  // Add schema if it exists
-  if (schemas) {
-    commonImports.push(`${cliConfig.schemaDirectory}/register.gen.ts`)
-  }
-
-  // Combine common imports with specific imports
-  const allImports = [...commonImports, ...specificImports]
-
-  await writeFileInDir(
-    logger,
-    bootstrapFile,
-    allImports
-      .map(
-        (to) =>
-          `import '${getFileImportRelativePath(bootstrapFile, to, cliConfig.packageMappings)}'`
-      )
-      .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
-      .join('\n')
-  )
-}
-
-export const runAll = pikkuSessionlessFunc({
+export const all = pikkuSessionlessFunc({
   func: async ({ logger, cliConfig, rpc, getInspectorState }) => {
     const allImports: string[] = []
-    let visitState = await getInspectorState(true)
     let typesDeclarationFileExists = true
 
     if (!existsSync(cliConfig.typesDeclarationFile)) {
@@ -54,7 +18,7 @@ export const runAll = pikkuSessionlessFunc({
     // This is needed since the wireHTTP function will add the routes to the visitState
     if (!typesDeclarationFileExists) {
       logger.info(`• Type file first created, inspecting again...\x1b[0m`)
-      visitState = await getInspectorState(true)
+      await getInspectorState(true)
     }
 
     // Generate wiring-specific type files for tree-shaking
