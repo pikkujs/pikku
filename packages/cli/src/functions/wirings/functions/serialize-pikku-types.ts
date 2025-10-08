@@ -15,7 +15,7 @@ export const serializePikkuTypes = (
 * Core types only - wiring-specific types are in their respective directories for tree-shaking
 */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addMiddleware, addPermission, PikkuInteraction } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addMiddleware, addPermission } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { PikkuChannel, PikkuMCP } from '@pikku/core'
 
@@ -117,7 +117,7 @@ type PikkuFunction<
   Out = never, 
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services &
+  RequiredServices extends Services = Omit<Services, 'rpc'> &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null] 
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -154,7 +154,7 @@ export const pikkuFunc = <In, Out = unknown>(
     | PikkuFunction<In, Out>
     | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -182,7 +182,7 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
     | PikkuFunctionSessionless<In, Out>
     | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -206,7 +206,7 @@ export const pikkuVoidFunc = (
     | PikkuFunctionSessionless<void, void>
     | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void>, PikkuPermission<void>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**

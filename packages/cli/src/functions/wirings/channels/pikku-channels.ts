@@ -3,7 +3,7 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
-export const pikkuChannels: unknown = pikkuVoidFunc({
+export const pikkuChannels: any = pikkuVoidFunc({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { channelsWiringFile, channelsWiringMetaFile, packageMappings } =

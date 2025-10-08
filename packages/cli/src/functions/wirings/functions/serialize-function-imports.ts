@@ -26,44 +26,18 @@ export const serializeFunctionImports = (
       packageMappings
     )
 
-    // Find the function metadata to check if it's a direct function
-    // The functionsMeta is keyed by the function name (exported name)
-    const funcMeta = functionsMeta[name]
-    const isDirectFunction = funcMeta?.isDirectFunction ?? false
-
+    // pikkuFunc/pikkuSessionlessFunc/pikkuVoidFunc always return config objects
     // For directly exported functions, we can just import and register them
     if (name === exportedName) {
       serializedImports.push(`import { ${exportedName} } from '${filePath}'`)
-
-      if (isDirectFunction) {
-        // Direct function: pikkuFunc(fn) - needs to be wrapped
-        serializedRegistrations.push(
-          `addFunction('${name}', { func: ${exportedName} })`
-        )
-      } else {
-        // Object format: pikkuFunc({ func: fn }) - can be used directly
-        serializedRegistrations.push(
-          `addFunction('${name}', ${exportedName} as any) // TODO`
-        )
-      }
+      serializedRegistrations.push(`addFunction('${name}', ${exportedName})`)
     }
     // For renamed functions, we need to import and alias them
     else {
       serializedImports.push(
         `import { ${exportedName} as ${name} } from '${filePath}'`
       )
-
-      if (isDirectFunction) {
-        // Direct function: pikkuFunc(fn) - needs to be wrapped
-        serializedRegistrations.push(
-          `addFunction('${name}', { func: ${name} })`
-        )
-      } else {
-        // Object format: pikkuFunc({ func: fn }) - can be used directly
-        serializedRegistrations.push(
-          `addFunction('${name}', ${name} as any) // TODO`
-        )
-      }
+      serializedRegistrations.push(`addFunction('${name}', ${name})`)
     }
   }
 

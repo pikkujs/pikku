@@ -28,7 +28,7 @@ export const all = (
   description: string
 ): void => {
   program
-    .command(name, { isDefault: true })
+    .command(name, { isDefault: name === 'all' })
     .description(description)
     .option('--pikku-config-type', 'The type of your pikku config object')
     .option(

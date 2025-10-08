@@ -6,7 +6,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from './serialize-nextjs-backend-wrapper.js'
 import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from './serialize-nextjs-http-wrapper.js'
 
-export const pikkuNext: unknown = pikkuSessionlessFunc<void, void>({
+export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const {
       nextBackendFile,

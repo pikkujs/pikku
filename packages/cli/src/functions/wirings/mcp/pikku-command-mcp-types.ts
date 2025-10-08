@@ -4,7 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeMCPTypes } from './serialize-mcp-types.js'
 
-export const pikkuMCPTypes: unknown = pikkuSessionlessFunc<void, void>({
+export const pikkuMCPTypes: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig }) => {
     const { mcpTypesFile, functionTypesFile, packageMappings } = cliConfig
 

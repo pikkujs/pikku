@@ -82,7 +82,7 @@ export const serializeServicesMap = (
   return code
 }
 
-export const pikkuServices: unknown = pikkuSessionlessFunc<void, void>({
+export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
 

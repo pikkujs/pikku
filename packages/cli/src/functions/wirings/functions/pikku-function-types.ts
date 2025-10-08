@@ -5,7 +5,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePikkuTypes } from './serialize-pikku-types.js'
 
-export const pikkuFunctionTypes: unknown = pikkuSessionlessFunc<void, void>({
+export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {

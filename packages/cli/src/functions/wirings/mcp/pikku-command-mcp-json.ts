@@ -3,7 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeMCPJson } from './serialize-mcp-json.js'
 
-export const pikkuMCPJSON: unknown = pikkuSessionlessFunc<void, void>({
+export const pikkuMCPJSON: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
     const { mcpEndpoints, functions } = await getInspectorState()
     const { mcpJsonFile, schemaDirectory } = cliConfig

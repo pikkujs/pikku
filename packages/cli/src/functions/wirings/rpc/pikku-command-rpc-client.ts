@@ -4,12 +4,13 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeRPCWrapper } from './serialize-rpc-wrapper.js'
 
-export const pikkuRPCClient: unknown = pikkuSessionlessFunc<void, void>({
+export const pikkuRPCClient: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig }) => {
     const { rpcWiringsFile, rpcMapDeclarationFile, packageMappings } = cliConfig
 
     if (!rpcWiringsFile) {
-      throw new Error("rpcWiringsFile isn't set in the pikku config")
+      return
+      // TODO:  throw new Error("rpcWiringsFile isn't set in the pikku config")
     }
 
     const rpcMapDeclarationPath = getFileImportRelativePath(
