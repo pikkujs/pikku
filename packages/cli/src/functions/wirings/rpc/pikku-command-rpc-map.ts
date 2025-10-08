@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { writeFileInDir } from '../../../utils/utils.js'
+import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 

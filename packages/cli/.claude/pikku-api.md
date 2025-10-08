@@ -3,6 +3,7 @@
 ## Function Signatures
 
 ### pikkuSessionlessFunc
+
 ```typescript
 // Direct function:
 pikkuSessionlessFunc<InputType, OutputType>(
@@ -32,6 +33,7 @@ pikkuSessionlessFunc<{ name: string }, { success: boolean }>(
 ```
 
 ### pikkuFunc
+
 ```typescript
 // Direct function:
 pikkuFunc<InputType, OutputType>(
@@ -61,6 +63,7 @@ pikkuFunc<{ userId: string }, { user: User }>(
 ```
 
 ### pikkuMiddleware
+
 ```typescript
 pikkuMiddleware(
   async (services, interaction, next) => {
@@ -75,20 +78,20 @@ async ({ logger }, interaction, next) => void
 ```
 
 ### pikkuPermission
+
 ```typescript
-pikkuPermission(
-  async (services, data, session) => {
-    return true // or false
-  }
-)
+pikkuPermission(async (services, data, session) => {
+  return true // or false
+})
 
 // Services parameter is destructured:
-async ({ logger }, data, session) => boolean
+;async ({ logger }, data, session) => boolean
 ```
 
 ## Wiring Functions
 
 ### wireCLI
+
 ```typescript
 wireCLI({
   program: string,
@@ -111,6 +114,7 @@ wireCLI({
 ```
 
 ### pikkuCLICommand
+
 ```typescript
 pikkuCLICommand({
   command: string,           // e.g. "greet <name>"
@@ -131,6 +135,7 @@ pikkuCLICommand({
 ## Examples
 
 ### Simple Sessionless Function
+
 ```typescript
 const myCommand = pikkuSessionlessFunc(
   async ({ logger }, data: { name: string }) => {
@@ -141,6 +146,7 @@ const myCommand = pikkuSessionlessFunc(
 ```
 
 ### Function with Config
+
 ```typescript
 const myCommand = pikkuSessionlessFunc({
   func: async ({ logger }, data: { name: string }) => {
@@ -148,11 +154,12 @@ const myCommand = pikkuSessionlessFunc({
     return { success: true }
   },
   auth: false,
-  expose: true
+  expose: true,
 })
 ```
 
 ### CLI Wiring
+
 ```typescript
 wireCLI({
   program: 'pikku',
@@ -164,15 +171,15 @@ wireCLI({
       options: {
         config: {
           description: 'Path to config file',
-          short: 'c'
+          short: 'c',
         },
         watch: {
           description: 'Watch mode',
           short: 'w',
-          default: false
-        }
-      }
-    })
-  }
+          default: false,
+        },
+      },
+    }),
+  },
 })
 ```

@@ -3,7 +3,7 @@ import { join } from 'path'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { TypesMap } from '@pikku/inspector'
-import { CLILogger } from '../../utils.js'
+import { CLILogger } from '../../../services/cli-logger.service.js'
 
 interface MCPEndpoint {
   name: string

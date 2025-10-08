@@ -1,9 +1,7 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import {
-  getPikkuFilesAndMethods,
-  getFileImportRelativePath,
-  writeFileInDir,
-} from '../../../utils/utils.js'
+import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from './serialize-nextjs-backend-wrapper.js'
 import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from './serialize-nextjs-http-wrapper.js'

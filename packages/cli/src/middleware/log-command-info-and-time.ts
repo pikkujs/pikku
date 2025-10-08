@@ -1,5 +1,15 @@
-import { PikkuMiddleware } from '@pikku/core'
-import type { SingletonServices } from '../../types/application-types.js'
+import type {
+  SingletonServices,
+  Services,
+} from '../../types/application-types.js'
+import type { PikkuInteraction } from '@pikku/core'
+
+// Middleware type for CLI
+type PikkuMiddleware = (
+  services: Services,
+  interaction: PikkuInteraction,
+  next: () => Promise<void>
+) => Promise<void>
 
 export interface LogCommandInfoOptions {
   commandStart: string

@@ -1,7 +1,7 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { writeFileInDir } from '../../../utils/utils.js'
+import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { generateSchemas } from '../../../services/schema-generator.js'
+import { generateSchemas } from '../../../utils/schema-generator.js'
 import { generateOpenAPISpec } from './openapi-spec-generator.js'
 import { stringify } from 'yaml'
 

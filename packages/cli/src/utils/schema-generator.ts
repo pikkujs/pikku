@@ -1,5 +1,5 @@
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
-import { writeFileInDir } from './utils.js'
+import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'

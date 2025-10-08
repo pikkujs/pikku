@@ -1,5 +1,5 @@
-import { wireCLI, pikkuCLICommand } from '../../../.pikku/pikku-types.gen.js'
-import { runAll } from './all.js'
+import { wireCLI, pikkuCLICommand } from '../.pikku/pikku-types.gen.js'
+import { runAll } from './functions/commands/all.js'
 import { runSchemas } from './functions/commands/schemas.js'
 import { pikkuFetch } from './functions/wirings/fetch/index.js'
 import { pikkuWebSocketTyped } from './functions/wirings/channels/pikku-command-websocket-typed.js'

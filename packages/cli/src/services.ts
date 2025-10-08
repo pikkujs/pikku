@@ -1,5 +1,10 @@
-import type { Config, SingletonServices } from '../types/application-types.js'
-import { CreateSingletonServices } from '@pikku/core'
+import type {
+  Config,
+  Services,
+  SingletonServices,
+  UserSession,
+} from '../types/application-types.js'
+import { CreateSessionServices, CreateSingletonServices } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
@@ -51,4 +56,12 @@ export const createSingletonServices: CreateSingletonServices<
     cliConfig,
     getInspectorState,
   }
+}
+
+export const createSessionServices: CreateSessionServices<
+  SingletonServices,
+  Services,
+  UserSession
+> = async (_config, _singletonServices) => {
+  return {}
 }

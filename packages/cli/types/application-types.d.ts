@@ -2,6 +2,7 @@ import type {
   CoreConfig,
   CoreServices,
   CoreSingletonServices,
+  CoreUserSession,
 } from '@pikku/core'
 import type { CLILogger } from '../src/services/cli-logger.service.js'
 import { PikkuCLIConfig } from '../src/utils/pikku-cli-config.ts'
@@ -21,3 +22,5 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
 }
 
 export interface Services extends CoreServices<SingletonServices, {}> {}
+
+export interface UserSession extends CoreUserSession {}

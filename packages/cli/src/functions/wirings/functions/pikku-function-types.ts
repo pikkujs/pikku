@@ -1,11 +1,9 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import {
-  getFileImportRelativePath,
-  getPikkuFilesAndMethods,
-  writeFileInDir,
-} from '../../../utils/utils.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializePikkuTypes } from '../../../services/serialize-pikku-types.js'
+import { serializePikkuTypes } from './serialize-pikku-types.js'
 
 export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {

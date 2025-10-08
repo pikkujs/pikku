@@ -1,5 +1,6 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { serializeFileImports, writeFileInDir } from '../../../utils/utils.js'
+import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
+import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeSchedulerMeta } from './serialize-scheduler-meta.js'
 

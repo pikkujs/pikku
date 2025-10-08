@@ -1,8 +1,8 @@
 import type { queueWorkersMeta } from '@pikku/core/queue'
-import { serializeImportMap } from '../../serialize-import-map.js'
+import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
-import { generateCustomTypes } from '../../utils.js'
+import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
 export const serializeQueueMap = (
   relativeToPath: string,

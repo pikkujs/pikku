@@ -7,7 +7,7 @@ export const serializeChannelTypes = (functionTypesImportPath: string) => {
  * Channel-specific type definitions for tree-shaking optimization
  */
 
-import { CoreChannel, PikkuChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
+import { CoreChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { CorePikkuFunctionConfig } from '@pikku/core'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
 import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission } from '${functionTypesImportPath}'
