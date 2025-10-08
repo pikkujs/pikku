@@ -1,0 +1,30 @@
+import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import {
+  writeFileInDir,
+  getFileImportRelativePath,
+} from '../../../utils/utils.js'
+import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { serializeSchedulerTypes } from './serialize-scheduler-types.js'
+
+export const pikkuSchedulerTypes = pikkuSessionlessFunc<void, void>({
+  func: async ({ logger, cliConfig }) => {
+    const { schedulersTypesFile, functionTypesFile, packageMappings } =
+      cliConfig
+
+    const functionTypesImportPath = getFileImportRelativePath(
+      schedulersTypesFile,
+      functionTypesFile,
+      packageMappings
+    )
+    const content = serializeSchedulerTypes(functionTypesImportPath)
+    await writeFileInDir(logger, schedulersTypesFile, content)
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating scheduler types',
+      commandEnd: 'Created scheduler types',
+      skipCondition: false,
+      skipMessage: '',
+    }),
+  ],
+})

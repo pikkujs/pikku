@@ -1,0 +1,52 @@
+import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { writeFileInDir } from '../../../utils/utils.js'
+import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
+
+export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
+  func: async ({ logger, cliConfig, getInspectorState }) => {
+    const { functions, rpc } = await getInspectorState()
+    const { rpcInternalMapDeclarationFile, packageMappings } = cliConfig
+
+    const content = serializeTypedRPCMap(
+      rpcInternalMapDeclarationFile,
+      packageMappings,
+      functions.typesMap,
+      functions.meta,
+      rpc.internalMeta
+    )
+    await writeFileInDir(logger, rpcInternalMapDeclarationFile, content)
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating RPC internal map',
+      commandEnd: 'Created RPC internal map',
+      skipCondition: false,
+      skipMessage: '',
+    }),
+  ],
+})
+
+export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
+  func: async ({ logger, cliConfig, getInspectorState }) => {
+    const { functions, rpc } = await getInspectorState()
+    const { rpcMapDeclarationFile, packageMappings } = cliConfig
+
+    const content = serializeTypedRPCMap(
+      rpcMapDeclarationFile,
+      packageMappings,
+      functions.typesMap,
+      functions.meta,
+      rpc.exposedMeta
+    )
+    await writeFileInDir(logger, rpcMapDeclarationFile, content)
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Creating RPC external map',
+      commandEnd: 'Created RPC external map',
+      skipCondition: false,
+      skipMessage: '',
+    }),
+  ],
+})

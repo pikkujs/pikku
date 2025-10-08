@@ -1,0 +1,38 @@
+import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { serializeFileImports, writeFileInDir } from '../../../utils/utils.js'
+import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+
+export const pikkuCLI = pikkuSessionlessFunc<void, void>({
+  func: async ({ logger, cliConfig, getInspectorState }) => {
+    const visitState = await getInspectorState()
+    const { cliWiringsFile, cliWiringMetaFile, packageMappings } = cliConfig
+    const { cli } = visitState
+
+    // Generate CLI wirings file
+    await writeFileInDir(
+      logger,
+      cliWiringsFile,
+      serializeFileImports(
+        'wireCLI',
+        cliWiringsFile,
+        cli.files,
+        packageMappings
+      )
+    )
+
+    // Generate CLI metadata file
+    await writeFileInDir(
+      logger,
+      cliWiringMetaFile,
+      `import { pikkuState } from '@pikku/core'\npikkuState('cli', 'meta', ${JSON.stringify(cli.meta, null, 2)})`
+    )
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Finding CLI commands',
+      commandEnd: 'Found CLI commands',
+      skipCondition: false,
+      skipMessage: 'none found',
+    }),
+  ],
+})
