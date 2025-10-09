@@ -196,10 +196,10 @@ export type CreateSessionServices<
 /**
  * Defines a function type for creating config.
  */
-export type CreateConfig<Config extends CoreConfig> = (
-  variables?: VariablesService,
-  ...args: any[]
-) => Promise<Config>
+export type CreateConfig<
+  Config extends CoreConfig,
+  RemainingArgs extends any[] = unknown[],
+> = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
 
 /**
  * Represents the documentation for a route, including summary, description, tags, and errors.
