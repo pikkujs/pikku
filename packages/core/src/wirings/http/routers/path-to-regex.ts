@@ -22,6 +22,13 @@ export class PathToRegexRouter implements Router {
   private precompiledMiddleware: Map<string, CorePikkuMiddleware[]> = new Map()
   private isInitialized = false
 
+  public reset() {
+    this.compiledRoutes = new Map()
+    this.staticRoutes = new Map()
+    this.precompiledMiddleware = new Map()
+    this.isInitialized = false
+  }
+
   public initialize() {
     const routes = pikkuState('http', 'routes')
     const channelRoutes = pikkuState('channel', 'channels')

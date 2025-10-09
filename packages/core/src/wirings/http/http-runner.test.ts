@@ -49,6 +49,7 @@ describe('fetch', () => {
 
   beforeEach(() => {
     resetPikkuState()
+    httpRouter.reset()
 
     singletonServices = {
       logger: {

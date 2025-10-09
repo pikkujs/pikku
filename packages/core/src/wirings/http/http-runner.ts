@@ -106,7 +106,14 @@ export const wireHTTP = <
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
-  addFunction(routeMeta.pikkuFuncName, httpWiring.func as any)
+  addFunction(routeMeta.pikkuFuncName, {
+    func: httpWiring.func,
+    auth: httpWiring.auth,
+    permissions: httpWiring.permissions,
+    middleware: httpWiring.middleware as any,
+    tags: httpWiring.tags,
+    docs: httpWiring.docs as any,
+  })
   const routes = pikkuState('http', 'routes')
   if (!routes.has(httpWiring.method)) {
     routes.set(httpWiring.method, new Map())
