@@ -212,7 +212,7 @@ export const pikkuFunc = <In, Out = unknown>(
     | PikkuFunction<In, Out>
     | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -240,7 +240,7 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
     | PikkuFunctionSessionless<In, Out>
     | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -271,7 +271,7 @@ export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -300,7 +300,7 @@ export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -327,7 +327,7 @@ export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unkn
     | PikkuFunctionSessionless<In, Out, ChannelData>
     | CorePikkuFunctionConfig<PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -351,7 +351,7 @@ export const pikkuVoidFunc = (
     | PikkuFunctionSessionless<void, void>
     | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void>, PikkuPermission<void>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
    
 /**
@@ -542,7 +542,7 @@ export const pikkuMCPPromptFunc = <In>(
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -574,7 +574,7 @@ export const pikkuMCPToolFunc = <In>(
       name?: string
     }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -607,7 +607,7 @@ export const pikkuMCPResourceFunc = <In>(
       name?: string
     }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 `
 }
