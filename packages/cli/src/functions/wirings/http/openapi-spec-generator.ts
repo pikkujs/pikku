@@ -1,5 +1,6 @@
 import { FunctionsMeta, HTTPWiringsMeta, pikkuState } from '@pikku/core'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
+import { CLILogger } from '../../../services/cli-logger.service.js'
 const convertSchema =
   'default' in _convertSchema ? (_convertSchema.default as any) : _convertSchema
 
@@ -108,6 +109,7 @@ const convertSchemasToBodyPayloads = async (
 }
 
 export async function generateOpenAPISpec(
+  logger: CLILogger,
   functionsMeta: FunctionsMeta,
   httpMeta: HTTPWiringsMeta,
   schemas: Record<string, any>,
@@ -121,7 +123,7 @@ export async function generateOpenAPISpec(
         meta
       const functionMeta = functionsMeta[pikkuFuncName]
       if (!functionMeta) {
-        console.error(
+        logger.error(
           `• No function metadata found for '${pikkuFuncName}' in route '${route}'.`
         )
         continue

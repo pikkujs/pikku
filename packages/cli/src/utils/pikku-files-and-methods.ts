@@ -36,21 +36,28 @@ const getMetaTypes = (
   errors: Map<string, PathToNameAndType>,
   map: PathToNameAndType,
   desiredType?: string
-) => {
+): Meta | undefined => {
   if (desiredType) {
-    const entries = Object.entries(map)
-    for (const [file, meta] of entries) {
-      for (const { type, variable, typePath } of meta) {
-        if (type === desiredType) {
-          return { file, variable, type, typePath }
+    for (const [file, meta] of map.entries()) {
+      for (const { type: entryType, variable, typePath } of meta) {
+        if (entryType === desiredType) {
+          if (entryType === null || typePath === null) {
+            throw new Error(
+              `Unknown state due to metaType calculation: entryType or typePath is null for ${desiredType} in ${file}`
+            )
+          }
+          return { file, variable, type: entryType, typePath }
         }
       }
     }
     errors.set(`No ${desiredType} found that extends ${type}`, map)
-    return undefined
+    return
   }
 
-  const totalValues = Object.values(map).flat()
+  const totalValues = Array.from(map.values()).flat()
+
+  console.log(totalValues)
+
   if (totalValues.length === 0) {
     const helpMessage =
       type === 'CoreConfig'
@@ -65,14 +72,19 @@ const getMetaTypes = (
   } else if (totalValues.length > 1) {
     errors.set(`More than one ${type} found`, map)
   } else {
-    const entry = Object.entries(map)[0]
+    const entry = Array.from(map.entries())[0]
     if (entry) {
-      const [file, [{ type, variable, typePath }]] = entry
-      return { file, type, variable, typePath }
+      const [file, [{ type: entryType, variable, typePath }]] = entry
+      if (entryType === null || typePath === null) {
+        throw new Error(
+          `Unknown state due to metaType calculation: entryType or typePath is null for ${type} in ${file}`
+        )
+      }
+      return { file, type: entryType, variable, typePath }
     }
   }
 
-  return undefined
+  return
 }
 
 export const getPikkuFilesAndMethods = async (
@@ -89,6 +101,7 @@ export const getPikkuFilesAndMethods = async (
   outputFile: string,
   {
     configFileType,
+    userSessionType,
     singletonServicesFactoryType,
     sessionServicesFactoryType,
   }: PikkuCLIOptions,
@@ -115,7 +128,7 @@ export const getPikkuFilesAndMethods = async (
       'CoreUserSession',
       requires.userSessionType ? errors : new Map(),
       userSessionTypeImportMap,
-      configFileType
+      userSessionType
     ),
     singletonServicesType: getMetaTypes(
       'CoreSingletonServices',
@@ -147,22 +160,22 @@ export const getPikkuFilesAndMethods = async (
     ),
   }
 
+  console.log(result)
+
   if (errors.size > 0) {
     const result: string[] = ['Found errors:']
     errors.forEach((filesAndMethods, message) => {
       result.push(`- ${message}`)
-      for (const [file, methods] of Object.entries(filesAndMethods)) {
+      filesAndMethods.forEach((methods, file) => {
         result.push(
           `\t* file: ${getFileImportRelativePath(outputFile, file, packageMappings)}`
         )
         result.push(
           `\t* methods: ${methods.map(({ variable, type }) => `${variable}: ${type}`).join(', ')}`
         )
-      }
+      })
     })
-
-    logger.error(result.join('\n'))
-    process.exit(1)
+    throw new Error(result.join('\n'))
   }
 
   return result as FilesAndMethods

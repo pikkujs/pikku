@@ -89,14 +89,22 @@ export function parseCLIArguments(
       if (equalIndex > 0) {
         // --option=value format
         const key = arg.slice(2, equalIndex)
-        const value = arg.slice(equalIndex + 1)
-        optionArgs[key] = parseOptionValue(value, availableOptions[key])
+        const optionDef = availableOptions[key]
+
+        if (!optionDef) {
+          result.errors.push(`Unknown option: --${key}`)
+        } else {
+          const value = arg.slice(equalIndex + 1)
+          optionArgs[key] = parseOptionValue(value, optionDef)
+        }
       } else {
         // --option value format
         const key = arg.slice(2)
         const optionDef = availableOptions[key]
 
-        if (optionDef && optionDef.array) {
+        if (!optionDef) {
+          result.errors.push(`Unknown option: --${key}`)
+        } else if (optionDef.array) {
           // Array option - collect all following non-flag values
           currentIndex++
           const values: any[] = []

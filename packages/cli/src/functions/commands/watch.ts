@@ -31,8 +31,7 @@ export const watch: any = pikkuVoidFunc({
               type: 'timing',
             })
           } catch (err) {
-            console.error(err)
-            console.info()
+            logger.error(err)
           }
         }
 

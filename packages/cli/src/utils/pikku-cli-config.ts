@@ -3,6 +3,7 @@ import { readdir, readFile } from 'fs/promises'
 import { PikkuCLIConfig } from '../../types/config.js'
 import { InspectorFilters } from '@pikku/inspector'
 import { PikkuWiringTypes } from '@pikku/core'
+import { CLILogger } from '../services/cli-logger.service.js'
 
 const CONFIG_DIR_FILES = [
   'nextBackendFile',
@@ -15,12 +16,14 @@ const CONFIG_DIR_FILES = [
 ]
 
 export const getPikkuCLIConfig = async (
+  logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
   filters: InspectorFilters = {},
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   const config = await _getPikkuCLIConfig(
+    logger,
     configFile,
     requiredFields,
     filters,
@@ -30,6 +33,7 @@ export const getPikkuCLIConfig = async (
 }
 
 const _getPikkuCLIConfig = async (
+  logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
   filters: InspectorFilters = {},
@@ -40,13 +44,7 @@ const _getPikkuCLIConfig = async (
     const files = await readdir(execDirectory)
     const file = files.find((file) => /pikku\.config\.(ts|js|json)$/.test(file))
     if (!file) {
-      const errorMessage =
-        '\nConfig file pikku.config.json not found\nExiting...'
-      if (exitProcess) {
-        console.error(errorMessage)
-        process.exit(1)
-      }
-      throw new Error(errorMessage)
+      throw new Error('Config file pikku.config.json not found')
     }
     configFile = join(execDirectory, file)
   }
@@ -58,6 +56,7 @@ const _getPikkuCLIConfig = async (
     const config: PikkuCLIConfig = JSON.parse(file)
     if (config.extends) {
       const extendedConfig = await getPikkuCLIConfig(
+        logger,
         resolve(configDir, config.extends),
         [],
         filters,
@@ -311,9 +310,8 @@ const _getPikkuCLIConfig = async (
 
     return result
   } catch (e: any) {
-    console.error(e)
-    console.error(`Config file not found: ${configFile}`)
-    process.exit(1)
+    logger.error(e)
+    throw new Error(`Config file not found: ${configFile}`)
   }
 }
 
@@ -329,9 +327,8 @@ export const validateCLIConfig = (
   }
 
   if (errors.length > 0) {
-    console.error(
+    throw new Error(
       `${errors.join(', ')} ${errors.length === 1 ? 'is' : 'are'} required in pikku.config.json`
     )
-    process.exit(1)
   }
 }

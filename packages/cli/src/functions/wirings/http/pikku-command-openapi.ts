@@ -23,6 +23,7 @@ export const pikkuOpenAPI: any = pikkuSessionlessFunc<void, void>({
       schemasFromTypes
     )
     const openAPISpec = await generateOpenAPISpec(
+      logger,
       functions.meta,
       http.meta,
       schemas,

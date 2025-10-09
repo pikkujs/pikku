@@ -30,13 +30,13 @@ export const addFileWithFactory = (
           typeDeclarationPath = sourceFile.fileName // Get the path of the file where the type was declared
         }
 
-        const variables = methods[fileName] || []
+        const variables = methods.get(fileName) || []
         variables.push({
           variable: variableName,
           type: typeNameNode.getText(),
           typePath: typeDeclarationPath,
         })
-        methods[fileName] = variables
+        methods.set(fileName, variables)
       }
 
       // Handle qualified type names if necessary
@@ -51,13 +51,13 @@ export const addFileWithFactory = (
             typeDeclarationPath = sourceFile.fileName // Get the path of the file where the type was declared
           }
 
-          const variables = methods[fileName] || []
+          const variables = methods.get(fileName) || []
           variables.push({
             variable: variableName,
             type: typeNameNode.getText(),
             typePath: typeDeclarationPath,
           })
-          methods[fileName] = variables
+          methods.set(fileName, variables)
         }
       }
     }

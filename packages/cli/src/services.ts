@@ -17,11 +17,19 @@ import { glob } from 'tinyglobby'
 import path from 'path'
 import { PikkuCLIConfig } from '../types/config.js'
 
+const logger = new CLILogger({ logLogo: true, silent: false })
+
 export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,
   data
 ) => {
-  const cliConfig = await getPikkuCLIConfig(data.configFile, [], data, true)
+  const cliConfig = await getPikkuCLIConfig(
+    logger,
+    data.configFile,
+    [],
+    data,
+    true
+  )
   return {
     ...cliConfig,
     ...data,
@@ -37,7 +45,6 @@ export const createSingletonServices: CreateSingletonServices<
   SingletonServices
 > = async (config) => {
   const { rootDir, srcDirectories, filters } = config
-  const logger = new CLILogger({ logLogo: true, silent: false })
   const variables = new LocalVariablesService()
 
   let inspectorState: InspectorState | undefined = undefined

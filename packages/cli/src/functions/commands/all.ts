@@ -33,7 +33,7 @@ export const all: any = pikkuVoidFunc({
     const functions = await rpc.invoke('pikkuFunctions', null)
     if (!functions) {
       logger.info(`• No functions found, skipping remaining steps...\x1b[0m`)
-      process.exit(1)
+      return
     }
 
     // Base imports for all bootstrap files

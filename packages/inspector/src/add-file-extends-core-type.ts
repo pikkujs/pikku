@@ -32,13 +32,17 @@ export const addFileExtendsCoreType = (
                 extendedTypeDeclarationPath = sourceFile.fileName // Get the path of the file where the extended type was declared
               }
 
-              const variables = methods[fileName] || []
+              const variables = methods.get(fileName) || []
+
+              if (!typeName) {
+                throw new Error('TODO')
+              }
               variables.push({
-                variable: undefined,
-                type: typeName,
+                variable: typeName,
+                type: typeName || null,
                 typePath: extendedTypeDeclarationPath,
               })
-              methods[fileName] = variables
+              methods.set(fileName, variables)
             }
           }
         }
