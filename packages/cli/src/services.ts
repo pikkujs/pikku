@@ -16,6 +16,7 @@ import { inspect, InspectorState } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
 import { PikkuCLIConfig } from '../types/config.js'
+import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
 
 const logger = new CLILogger({ logLogo: true, silent: false })
 
@@ -74,6 +75,12 @@ export const createSessionServices: CreateSessionServices<
   SingletonServices,
   Services,
   UserSession
-> = async (_config, _singletonServices) => {
-  return {}
+> = async ({ logger }, { cli, channel }) => {
+  const vChannel = cli ? cli.channel : channel
+  if (!vChannel) {
+    throw new Error('No channel provided for CLI services')
+  }
+  return {
+    logger: new CLILoggerForwarder(logger, vChannel),
+  }
 }

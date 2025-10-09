@@ -117,22 +117,25 @@ function registerCLICommands(
       typeof command === 'object' ? command.options || {} : {}
     const mergedOptions = { ...inheritedOptions, ...commandOptions }
 
-    // Create a wrapper that handles option plucking
-    const wrappedFunc = createCLIFunctionWrapper(
-      func,
-      funcName,
-      mergedOptions,
-      program,
-      commandId
+    // Store the options in program state for use during execution
+    const programs: Record<string, CLIProgramState> = pikkuState(
+      'cli',
+      'programs'
     )
+    if (programs[program]) {
+      if (!programs[program].commandOptions) {
+        programs[program].commandOptions = {}
+      }
+      programs[program].commandOptions![commandId] = mergedOptions
+    }
 
-    // Register the wrapped function (keep original name)
+    // Register the function directly (without wrapping)
     const authValue =
       typeof command === 'object' && command.auth !== undefined
         ? command.auth
         : false
     addFunction(funcName, {
-      func: wrappedFunc,
+      func,
       // CLI functions should not require auth by default
       auth: authValue,
       permissions:
@@ -141,10 +144,6 @@ function registerCLICommands(
 
     // Register renderer if provided
     if (typeof command === 'object' && command.render) {
-      const programs: Record<string, CLIProgramState> = pikkuState(
-        'cli',
-        'programs'
-      )
       if (programs[program]) {
         programs[program].renderers[commandId] = command.render
       }
@@ -154,78 +153,6 @@ function registerCLICommands(
     if (typeof command === 'object' && command.subcommands) {
       registerCLICommands(command.subcommands, fullPath, mergedOptions, program)
     }
-  }
-}
-
-/**
- * Creates a wrapper function that handles CLI-specific logic
- */
-function createCLIFunctionWrapper(
-  func: Function,
-  funcName: string,
-  availableOptions: Record<string, CLIOption>,
-  program: string,
-  commandId: string
-) {
-  return async (services: any, receivedData: any, session?: any) => {
-    // The data comes in as { program, commandPath, data }
-    const { data = {} } = receivedData
-
-    // Data is already merged
-    const mergedData = data
-
-    // Get function's expected input schema
-    const funcMeta = pikkuState('function', 'meta')[funcName]
-    const schemaName = funcMeta?.inputSchemaName
-    const schema = schemaName
-      ? pikkuState('misc', 'schemas').get(schemaName)
-      : null
-
-    // Pluck only the fields the function expects
-    const pluckedData = pluckCLIData(mergedData, schema, availableOptions)
-
-    // Get the renderer
-    const programs: Record<string, CLIProgramState> = pikkuState(
-      'cli',
-      'programs'
-    )
-    const programData = programs[program]
-    const renderer =
-      programData?.renderers[commandId] || programData?.defaultRenderer
-
-    // Create a CLI channel for progressive output
-    let channel: PikkuChannel<unknown, unknown> | undefined
-    channel = {
-      channelId: `cli:${program}:${commandId}`,
-      openingData: pluckedData,
-      send: async (data: any) => {
-        if (renderer) {
-          await Promise.resolve(renderer(services, data, session))
-        }
-      },
-      close: () => {
-        if (channel) {
-          channel.state = 'closed'
-        }
-      },
-      state: 'open',
-    }
-
-    // Add channel to services
-    const servicesWithChannel = { ...services, channel }
-
-    // Execute the original function with plucked data and channel
-    const output = await func(servicesWithChannel, pluckedData, session)
-
-    // Close the channel
-    channel.close()
-
-    // Apply renderer one final time with the final output (if renderer exists)
-    if (renderer) {
-      await Promise.resolve(renderer(services, output, session))
-    }
-
-    return output
   }
 }
 
@@ -302,19 +229,47 @@ export async function runCLICommand({
     throw new NotFoundError(`Function not found: ${funcName}`)
   }
 
-  // Pass the full CLI data structure to the wrapper function
-  // The wrapper will handle plucking the correct data and validation
-  const processedData = {
-    program,
-    commandPath,
-    data,
-  }
-
-  // Get program-specific middleware
+  // Get program-specific data
   const programs: Record<string, CLIProgramState> =
     pikkuState('cli', 'programs') || {}
   const programData = programs[program]
   const globalMiddleware = programData?.globalMiddleware || []
+
+  // Get command ID and options
+  const commandId = commandPath.join('.')
+  const availableOptions = programData?.commandOptions?.[commandId] || {}
+
+  // Get function's expected input schema
+  const funcMeta = pikkuState('function', 'meta')[funcName]
+  const schemaName = funcMeta?.inputSchemaName
+  const schema = schemaName
+    ? pikkuState('misc', 'schemas').get(schemaName)
+    : null
+
+  // Pluck only the fields the function expects
+  const pluckedData = pluckCLIData(data, schema, availableOptions)
+
+  // Get the renderer
+  const renderer =
+    programData?.renderers[commandId] || programData?.defaultRenderer
+
+  // Create a CLI channel for progressive output
+  let channel: PikkuChannel<unknown, unknown>
+  channel = {
+    channelId: `cli:${program}:${commandId}`,
+    openingData: pluckedData,
+    send: async (data: any) => {
+      if (renderer) {
+        await Promise.resolve(renderer(singletonServices, data, undefined))
+      }
+    },
+    close: () => {
+      if (channel) {
+        channel.state = 'closed'
+      }
+    },
+    state: 'open',
+  }
 
   // Get command-specific middleware (if stored)
   const commandMiddleware = [] // TODO: Add support for command-specific middleware
@@ -332,7 +287,8 @@ export async function runCLICommand({
     cli: {
       program,
       command: commandPath,
-      data,
+      data: pluckedData,
+      channel,
     },
   }
 
@@ -353,11 +309,19 @@ export async function runCLICommand({
       )
     }
 
-    // Merge services after session creation
-    const allServices = { ...singletonServices, ...sessionServices }
+    // Merge services after session creation and add channel
+    const allServices = { ...singletonServices, ...sessionServices, channel }
 
-    // Execute the wrapped function directly (it handles plucking and rendering)
-    output = await funcConfig.func(allServices, processedData, session)
+    // Execute the function with plucked data
+    output = await funcConfig.func(allServices, pluckedData, session)
+
+    // Close the channel
+    channel.close()
+
+    // Apply renderer one final time with the final output (if renderer exists)
+    if (renderer) {
+      await Promise.resolve(renderer(singletonServices, output, session))
+    }
   }
 
   try {

@@ -10,6 +10,7 @@ import {
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
 } from '../../function/functions.types.js'
+import { PikkuChannel } from '../channel/channel.types.js'
 
 /**
  * CLI option definition
@@ -46,6 +47,7 @@ export type PikkuCLI = {
   program: string
   command: string[]
   data: Record<string, any> // All positionals and options merged
+  channel: PikkuChannel<unknown, unknown>
 }
 
 /**
@@ -55,6 +57,7 @@ export interface CLIProgramState {
   defaultRenderer?: CorePikkuCLIRender<any>
   globalMiddleware: CorePikkuMiddleware[]
   renderers: Record<string, CorePikkuCLIRender<any>>
+  commandOptions?: Record<string, Record<string, CLIOption>>
 }
 
 /**
