@@ -71,6 +71,43 @@ export const wireCLI = <
 }
 
 /**
+ * Unwraps a function from pikku wrappers (pikkuFunc, pikkuSessionlessFunc, etc.)
+ * These wrappers return { func, middleware, ... } but we need the actual function
+ */
+function unwrapFunc(command: any): {
+  func: Function
+  middleware?: any[]
+  auth?: boolean
+  permissions?: any
+  tags?: string[]
+} {
+  if (typeof command === 'function') {
+    return { func: command }
+  }
+
+  // If command has a func property that's an object with func, unwrap it
+  if (
+    command.func &&
+    typeof command.func === 'object' &&
+    'func' in command.func
+  ) {
+    return {
+      func: command.func.func,
+      middleware: [
+        ...(command.middleware || []),
+        ...(command.func.middleware || []),
+      ],
+      auth: command.auth,
+      permissions: command.permissions,
+      tags: command.tags,
+    }
+  }
+
+  // Otherwise return as-is
+  return command
+}
+
+/**
  * Registers CLI commands and their functions recursively
  */
 function registerCLICommands(
@@ -85,9 +122,6 @@ function registerCLICommands(
   for (const [name, command] of Object.entries(commands)) {
     const fullPath = [...path, name]
     const commandId = fullPath.join('.')
-
-    // Get the actual function
-    const func = typeof command === 'function' ? command : command.func
 
     // Navigate metadata to find the actual function name
     let currentMeta: CLICommandMeta | undefined = cliMeta?.commands[fullPath[0]]
@@ -129,17 +163,16 @@ function registerCLICommands(
       programs[program].commandOptions![commandId] = mergedOptions
     }
 
-    // Register the function directly (without wrapping)
-    const authValue =
-      typeof command === 'object' && command.auth !== undefined
-        ? command.auth
-        : false
+    // Unwrap the function from pikku wrappers
+    const unwrapped = unwrapFunc(command)
+
     addFunction(funcName, {
-      func,
+      func: unwrapped.func,
       // CLI functions should not require auth by default
-      auth: authValue,
-      permissions:
-        typeof command === 'object' ? command.permissions : undefined,
+      auth: unwrapped.auth !== undefined ? unwrapped.auth : false,
+      permissions: unwrapped.permissions,
+      middleware: unwrapped.middleware,
+      tags: unwrapped.tags,
     })
 
     // Register renderer if provided

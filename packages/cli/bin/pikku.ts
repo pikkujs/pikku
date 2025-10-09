@@ -8,10 +8,7 @@ import { PikkuRPCService } from '@pikku/core'
 import '../.pikku/pikku-bootstrap.gen.js'
 import { LocalVariablesService } from '@pikku/core/services'
 
-export const action = async (
-  command: string,
-  cliConfig: Config
-): Promise<void> => {
+const action = async (command: string, cliConfig: Config): Promise<void> => {
   const config = await createConfig(new LocalVariablesService(), cliConfig)
   const services = await createSingletonServices(config)
   const rpcWrapper = new PikkuRPCService<SingletonServices, any>()
@@ -24,11 +21,7 @@ export const action = async (
   }
 }
 
-export const all = (
-  program: Command,
-  name: string,
-  description: string
-): void => {
+const all = (program: Command, name: string, description: string): void => {
   program
     .command(name, { isDefault: name === 'all' })
     .description(description)

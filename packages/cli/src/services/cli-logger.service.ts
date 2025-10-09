@@ -1,10 +1,5 @@
 import chalk from 'chalk'
-import { readFileSync } from 'fs'
-import { dirname } from 'path'
-import { fileURLToPath } from 'url'
 import { Logger, LogLevel } from '@pikku/core'
-
-const __filename = fileURLToPath(import.meta.url)
 
 const logo = `
  ______ _ _     _
@@ -67,12 +62,12 @@ export class CLILogger implements Logger {
 
   private logPikkuLogo() {
     this.primary(logo)
-    // When running from dist/, __filename is dist/src/services/cli-logger.service.js
-    // So we need to go up 3 levels: dist/src/services -> dist/src -> dist -> package.json
-    const packageJson = JSON.parse(
-      readFileSync(`${dirname(__filename)}/../../../package.json`, 'utf-8')
-    )
-    this.primary(`⚙️  Welcome to the Pikku CLI (v${packageJson.version})\n`)
+    // // When running from dist/, __filename is dist/src/services/cli-logger.service.js
+    // // So we need to go up 3 levels: dist/src/services -> dist/src -> dist -> package.json
+    // const packageJson = JSON.parse(
+    //   readFileSync(`${dirname(__filename)}/../../../package.json`, 'utf-8')
+    // )
+    // this.primary(`⚙️  Welcome to the Pikku CLI (v${packageJson.version})\n`)
   }
 
   private primary(message: string) {
