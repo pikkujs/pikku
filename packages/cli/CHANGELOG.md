@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.9.13
+
+### Patch Changes
+
+- ccd2a45: fix: adding functions should always be using func config and not pure functions
+
 ## 0.9.12
 
 ### Patch Changes
