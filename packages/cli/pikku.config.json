@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src", "bin"],
+  "srcDirectories": ["src", "bin", "types"],
   "outDir": ".pikku",
   "packageMappings": {
     "../inspector/src": "@pikku/inspector"

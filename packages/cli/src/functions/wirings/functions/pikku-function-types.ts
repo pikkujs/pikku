@@ -3,7 +3,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializePikkuTypes } from './serialize-pikku-types.js'
+import { serializeFunctionTypes } from './serialize-function-types.js'
 
 export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, cliConfig, getInspectorState }) => {
@@ -28,7 +28,7 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
         }
       )
 
-    const content = serializePikkuTypes(
+    const content = serializeFunctionTypes(
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(typesFile, userSessionType.typePath, packageMappings)}'`,
       userSessionType.type,
       `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,

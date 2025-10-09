@@ -19,6 +19,8 @@ import {
 import type {
   CoreSingletonServices,
   CoreServices,
+  CreateSessionServices,
+  PikkuInteraction,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 
@@ -267,7 +269,7 @@ export async function runCLICommand({
   commandPath: string[]
   data: Record<string, any>
   singletonServices: CoreSingletonServices
-  createSessionServices?: (session: CoreUserSession) => Promise<any>
+  createSessionServices?: CreateSessionServices
 }): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState('cli', 'meta')
@@ -326,6 +328,14 @@ export async function runCLICommand({
   let sessionServices: SessionServices | undefined
   let output: any
 
+  const interaction: PikkuInteraction = {
+    cli: {
+      program,
+      command: commandPath,
+      data,
+    },
+  }
+
   // Main execution logic wrapped for middleware handling
   const runMain = async () => {
     const session: CoreUserSession | undefined = undefined
@@ -336,7 +346,11 @@ export async function runCLICommand({
 
     // Create session services if needed
     if (session && createSessionServices) {
-      sessionServices = await createSessionServices(session)
+      sessionServices = await createSessionServices(
+        singletonServices,
+        interaction,
+        session
+      )
     }
 
     // Merge services after session creation
@@ -348,18 +362,7 @@ export async function runCLICommand({
 
   try {
     // Run middleware, then execute main logic
-    await runMiddleware(
-      singletonServices,
-      {
-        cli: {
-          program,
-          command: commandPath,
-          data,
-        },
-      },
-      middleware,
-      runMain
-    )
+    await runMiddleware(singletonServices, interaction, middleware, runMain)
 
     return output
   } finally {

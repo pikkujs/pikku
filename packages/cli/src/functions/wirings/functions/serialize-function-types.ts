@@ -117,7 +117,7 @@ export type PikkuFunction<
   Out = never,
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services &
+  RequiredServices extends Services = Omit<Services, 'rpc'> &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null]
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -135,7 +135,7 @@ export type PikkuFunction<
  * @template In - Input type for the function
  * @template Out - Output type for the function
  * @param func - Function definition, either direct function or configuration object
- * @returns The unwrapped function for internal use
+ * @returns The normalized configuration object
  *
  * @example
  * \\\`\\\`\\\`typescript
@@ -154,7 +154,7 @@ export const pikkuFunc = <In, Out = unknown>(
     | PikkuFunction<In, Out>
     | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -164,7 +164,7 @@ export const pikkuFunc = <In, Out = unknown>(
  * @template In - Input type for the function
  * @template Out - Output type for the function
  * @param func - Function definition, either direct function or configuration object
- * @returns The unwrapped function for internal use
+ * @returns The normalized configuration object
  *
  * @example
  * \\\`\\\`\\\`typescript
@@ -182,7 +182,7 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
     | PikkuFunctionSessionless<In, Out>
     | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -190,7 +190,7 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
  * Useful for health checks, triggers, or cleanup operations.
  *
  * @param func - Function definition, either direct function or configuration object
- * @returns The unwrapped function for internal use
+ * @returns The normalized configuration object
  *
  * @example
  * \\\`\\\`\\\`typescript
@@ -206,7 +206,7 @@ export const pikkuVoidFunc = (
     | PikkuFunctionSessionless<void, void>
     | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void>, PikkuPermission<void>>
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
