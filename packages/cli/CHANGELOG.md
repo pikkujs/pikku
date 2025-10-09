@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.9.14
+
+### Patch Changes
+
+- 798d52c: refactor: move all rpc generated info into rpc and removing rpc-internal
+
 ## 0.9.13
 
 ### Patch Changes
