@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
-import { createSingletonServices } from '../src/services.js'
+import { createConfig, createSingletonServices } from '../src/services.js'
 import { Config, SingletonServices } from '../types/application-types.js'
 import { PikkuRPCService } from '@pikku/core'
 // import { TypedPikkuRPC } from '../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 
 import '../.pikku/pikku-bootstrap.gen.js'
+import { LocalVariablesService } from '@pikku/core/services'
 
 export const action = async (
   command: string,
-  config: Config
+  cliConfig: Config
 ): Promise<void> => {
+  const config = await createConfig(new LocalVariablesService(), cliConfig)
   const services = await createSingletonServices(config)
   const rpcWrapper = new PikkuRPCService<SingletonServices, any>()
   const { rpc } = await rpcWrapper.injectRPCService(services)

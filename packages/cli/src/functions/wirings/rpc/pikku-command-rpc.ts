@@ -3,9 +3,9 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuRPC: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { rpc } = await getInspectorState()
-    const { rpcInternalWiringMetaFile } = cliConfig
+    const { rpcInternalWiringMetaFile } = config
 
     if (rpc.internalFiles.size > 0) {
       await writeFileInDir(

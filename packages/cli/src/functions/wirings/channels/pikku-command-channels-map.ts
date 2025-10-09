@@ -4,9 +4,9 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeTypedChannelsMap } from './serialize-typed-channel-map.js'
 
 export const pikkuChannelsMap: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
-    const { channelsMapDeclarationFile, packageMappings } = cliConfig
+    const { channelsMapDeclarationFile, packageMappings } = config
 
     const content = serializeTypedChannelsMap(
       channelsMapDeclarationFile,

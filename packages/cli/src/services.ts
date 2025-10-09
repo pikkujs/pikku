@@ -15,9 +15,17 @@ import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import { inspect, InspectorState } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
+import { PikkuCLIConfig } from '../types/config.js'
 
-export const createConfig: CreateConfig<Config> = async () => {
-  return {} as any
+export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
+  _variablesService,
+  data
+) => {
+  const cliConfig = await getPikkuCLIConfig(data.configFile, [], data, true)
+  return {
+    ...cliConfig,
+    ...data,
+  }
 }
 
 /**
@@ -28,24 +36,13 @@ export const createSingletonServices: CreateSingletonServices<
   Config,
   SingletonServices
 > = async (config) => {
+  const { rootDir, srcDirectories, filters } = config
   const logger = new CLILogger({ logLogo: true, silent: false })
   const variables = new LocalVariablesService()
-
-  const cliConfig = await getPikkuCLIConfig(
-    config.configFile,
-    [],
-    {
-      tags: config.tags,
-      types: config.types,
-      directories: config.directories,
-    },
-    true
-  )
 
   let inspectorState: InspectorState | undefined = undefined
   const getInspectorState = async (refresh: boolean = false) => {
     if (refresh || !inspectorState) {
-      const { rootDir, srcDirectories, filters } = cliConfig
       const wiringFiles = (
         await Promise.all(
           srcDirectories.map((dir) =>
@@ -62,7 +59,6 @@ export const createSingletonServices: CreateSingletonServices<
     config,
     logger,
     variables,
-    cliConfig,
     getInspectorState,
   }
 }

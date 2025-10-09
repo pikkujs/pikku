@@ -5,11 +5,11 @@ import { writeFileInDir } from '../../utils/file-writer.js'
 import { generateBootstrapFile } from '../../utils/generate-bootstrap-file.js'
 
 export const all: any = pikkuVoidFunc({
-  func: async ({ logger, cliConfig, rpc, getInspectorState }) => {
+  func: async ({ logger, config, rpc, getInspectorState }) => {
     const allImports: string[] = []
     let typesDeclarationFileExists = true
 
-    if (!existsSync(cliConfig.typesDeclarationFile)) {
+    if (!existsSync(config.typesDeclarationFile)) {
       typesDeclarationFileExists = false
     }
 
@@ -37,7 +37,7 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Base imports for all bootstrap files
-    allImports.push(cliConfig.functionsMetaFile, cliConfig.functionsFile)
+    allImports.push(config.functionsMetaFile, config.functionsFile)
 
     // Generate services map
     await rpc.invoke('pikkuServices', null)
@@ -47,20 +47,20 @@ export const all: any = pikkuVoidFunc({
     await rpc.invoke('pikkuRPCExposedMap', null)
     await rpc.invoke('pikkuRPCClient', null)
 
-    allImports.push(cliConfig.rpcInternalWiringMetaFile)
+    allImports.push(config.rpcInternalWiringMetaFile)
 
     const schemas = await rpc.invoke('pikkuSchemas', null)
     if (schemas) {
-      allImports.push(`${cliConfig.schemaDirectory}/register.gen.ts`)
+      allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
     // RPC bootstrap is always generated since RPC is always present
     // Include the internal meta file
     await generateBootstrapFile(
       logger,
-      cliConfig,
-      cliConfig.bootstrapFiles.rpc,
-      [cliConfig.rpcInternalWiringMetaFile],
+      config,
+      config.bootstrapFiles.rpc,
+      [config.rpcInternalWiringMetaFile],
       schemas
     )
 
@@ -68,13 +68,13 @@ export const all: any = pikkuVoidFunc({
     if (http) {
       await rpc.invoke('pikkuHTTPMap', null)
       await rpc.invoke('pikkuFetch', null)
-      allImports.push(cliConfig.httpWiringMetaFile, cliConfig.httpWiringsFile)
+      allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
 
       await generateBootstrapFile(
         logger,
-        cliConfig,
-        cliConfig.bootstrapFiles.http,
-        [cliConfig.httpWiringMetaFile, cliConfig.httpWiringsFile],
+        config,
+        config.bootstrapFiles.http,
+        [config.httpWiringMetaFile, config.httpWiringsFile],
         schemas
       )
     }
@@ -82,15 +82,15 @@ export const all: any = pikkuVoidFunc({
     const scheduler = await rpc.invoke('pikkuScheduler', null)
     if (scheduler) {
       allImports.push(
-        cliConfig.schedulersWiringMetaFile,
-        cliConfig.schedulersWiringFile
+        config.schedulersWiringMetaFile,
+        config.schedulersWiringFile
       )
 
       await generateBootstrapFile(
         logger,
-        cliConfig,
-        cliConfig.bootstrapFiles.scheduler,
-        [cliConfig.schedulersWiringMetaFile, cliConfig.schedulersWiringFile],
+        config,
+        config.bootstrapFiles.scheduler,
+        [config.schedulersWiringMetaFile, config.schedulersWiringFile],
         schemas
       )
     }
@@ -100,18 +100,15 @@ export const all: any = pikkuVoidFunc({
       await rpc.invoke('pikkuQueueMap', null)
       await rpc.invoke('pikkuQueueService', null)
       allImports.push(
-        cliConfig.queueWorkersWiringMetaFile,
-        cliConfig.queueWorkersWiringFile
+        config.queueWorkersWiringMetaFile,
+        config.queueWorkersWiringFile
       )
 
       await generateBootstrapFile(
         logger,
-        cliConfig,
-        cliConfig.bootstrapFiles.queue,
-        [
-          cliConfig.queueWorkersWiringMetaFile,
-          cliConfig.queueWorkersWiringFile,
-        ],
+        config,
+        config.bootstrapFiles.queue,
+        [config.queueWorkersWiringMetaFile, config.queueWorkersWiringFile],
         schemas
       )
     }
@@ -120,16 +117,13 @@ export const all: any = pikkuVoidFunc({
     if (channels) {
       await rpc.invoke('pikkuChannelsMap', null)
       await rpc.invoke('pikkuWebSocketTyped', null)
-      allImports.push(
-        cliConfig.channelsWiringMetaFile,
-        cliConfig.channelsWiringFile
-      )
+      allImports.push(config.channelsWiringMetaFile, config.channelsWiringFile)
 
       await generateBootstrapFile(
         logger,
-        cliConfig,
-        cliConfig.bootstrapFiles.channel,
-        [cliConfig.channelsWiringMetaFile, cliConfig.channelsWiringFile],
+        config,
+        config.bootstrapFiles.channel,
+        [config.channelsWiringMetaFile, config.channelsWiringFile],
         schemas
       )
     }
@@ -137,13 +131,13 @@ export const all: any = pikkuVoidFunc({
     const mcp = await rpc.invoke('pikkuMCP', null)
     if (mcp) {
       await rpc.invoke('pikkuMCPJSON', null)
-      allImports.push(cliConfig.mcpWiringsMetaFile, cliConfig.mcpWiringsFile)
+      allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
 
       await generateBootstrapFile(
         logger,
-        cliConfig,
-        cliConfig.bootstrapFiles.mcp,
-        [cliConfig.mcpWiringsMetaFile, cliConfig.mcpWiringsFile],
+        config,
+        config.bootstrapFiles.mcp,
+        [config.mcpWiringsMetaFile, config.mcpWiringsFile],
         schemas
       )
     }
@@ -151,22 +145,22 @@ export const all: any = pikkuVoidFunc({
     const cli = await rpc.invoke('pikkuCLI', null)
     if (cli) {
       await rpc.invoke('pikkuCLIBootstrap', null)
-      allImports.push(cliConfig.cliWiringMetaFile, cliConfig.cliWiringsFile)
+      allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
 
       await generateBootstrapFile(
         logger,
-        cliConfig,
-        cliConfig.bootstrapFiles.cli,
-        [cliConfig.cliWiringMetaFile, cliConfig.cliWiringsFile],
+        config,
+        config.bootstrapFiles.cli,
+        [config.cliWiringMetaFile, config.cliWiringsFile],
         schemas
       )
     }
 
-    if (cliConfig.nextBackendFile || cliConfig.nextHTTPFile) {
+    if (config.nextBackendFile || config.nextHTTPFile) {
       await rpc.invoke('pikkuNext', null)
     }
 
-    if (cliConfig.openAPI) {
+    if (config.openAPI) {
       logger.info(
         `• OpenAPI requires a reinspection to pickup new generated types..`
       )
@@ -177,11 +171,11 @@ export const all: any = pikkuVoidFunc({
     // Generate main bootstrap file (pass all imports directly since this is the main file)
     await writeFileInDir(
       logger,
-      cliConfig.bootstrapFile,
+      config.bootstrapFile,
       allImports
         .map(
           (to) =>
-            `import '${getFileImportRelativePath(cliConfig.bootstrapFile, to, cliConfig.packageMappings)}'`
+            `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
         )
         .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
         .join('\n')

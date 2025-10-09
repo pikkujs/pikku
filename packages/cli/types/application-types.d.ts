@@ -5,19 +5,13 @@ import type {
   CoreUserSession,
 } from '@pikku/core'
 import type { CLILogger } from '../src/services/cli-logger.service.js'
-import { PikkuCLIConfig } from '../src/utils/pikku-cli-config.ts'
+import { PikkuCLIConfig } from '../types/config.d.ts'
 import { InspectorState } from '@pikku/inspector'
 
-export interface Config extends CoreConfig {
-  configFile: string
-  tags?: string[]
-  types?: string[]
-  directories?: string[]
-}
+export interface Config extends CoreConfig<PikkuCLIConfig> {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   logger: CLILogger
-  cliConfig: PikkuCLIConfig
   getInspectorState: (refresh?: boolean = false) => Promise<InspectorState>
 }
 

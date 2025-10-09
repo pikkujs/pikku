@@ -2,8 +2,8 @@ import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 import chokidar from 'chokidar'
 
 export const watch: any = pikkuVoidFunc({
-  func: async ({ logger, cliConfig, rpc }) => {
-    const configWatcher = chokidar.watch(cliConfig.srcDirectories, {
+  func: async ({ logger, config, rpc }) => {
+    const configWatcher = chokidar.watch(config.srcDirectories, {
       ignoreInitial: true,
       ignored: /.*\.gen\.tsx?/,
     })
@@ -14,9 +14,9 @@ export const watch: any = pikkuVoidFunc({
       watcher.close()
 
       logger.info(
-        `• Watching directories: \n  - ${cliConfig.srcDirectories.join('\n  - ')}`
+        `• Watching directories: \n  - ${config.srcDirectories.join('\n  - ')}`
       )
-      watcher = chokidar.watch(cliConfig.srcDirectories, {
+      watcher = chokidar.watch(config.srcDirectories, {
         ignoreInitial: true,
         ignored: /.*\.gen\.ts/,
       })

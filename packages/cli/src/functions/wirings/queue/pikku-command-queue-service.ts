@@ -5,9 +5,9 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeQueueWrapper } from './serialize-queue-wrapper.js'
 
 export const pikkuQueueService: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig }) => {
+  func: async ({ logger, config }) => {
     const { queueWiringsFile, queueMapDeclarationFile, packageMappings } =
-      cliConfig
+      config
 
     if (!queueWiringsFile) {
       throw new Error("queueWiringsFile is isn't set in the pikku config")
@@ -26,8 +26,7 @@ export const pikkuQueueService: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating queue service wrapper',
       commandEnd: 'Generated queue service wrapper',
-      skipCondition: ({ cliConfig }) =>
-        cliConfig.queueWiringsFile === undefined,
+      skipCondition: ({ config }) => config.queueWiringsFile === undefined,
       skipMessage: "queueWiringsFile isn't set in the pikku config",
     }),
   ],

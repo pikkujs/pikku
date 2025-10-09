@@ -5,13 +5,13 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeQueueMeta } from './serialize-queue-meta.js'
 
 export const pikkuQueue: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {
       queueWorkersWiringFile,
       queueWorkersWiringMetaFile,
       packageMappings,
-    } = cliConfig
+    } = config
     const { queueWorkers } = visitState
 
     await writeFileInDir(

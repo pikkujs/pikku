@@ -1,1 +1,228 @@
-{"$schema":"http://json-schema.org/draft-07/schema#","type":"object","additionalProperties":false,"properties":{"outDir":{"type":"string"},"schemaDirectory":{"type":"string"},"typesDeclarationFile":{"type":"string"},"functionsFile":{"type":"string"},"functionsMetaFile":{"type":"string"},"functionsMetaMinFile":{"type":"string"},"functionTypesFile":{"type":"string"},"httpWiringsFile":{"type":"string"},"httpWiringMetaFile":{"type":"string"},"httpMapDeclarationFile":{"type":"string"},"httpTypesFile":{"type":"string"},"channelsWiringFile":{"type":"string"},"channelsWiringMetaFile":{"type":"string"},"channelsMapDeclarationFile":{"type":"string"},"channelsTypesFile":{"type":"string"},"rpcInternalWiringMetaFile":{"type":"string"},"rpcInternalMapDeclarationFile":{"type":"string"},"rpcMapDeclarationFile":{"type":"string"},"schedulersWiringFile":{"type":"string"},"schedulersWiringMetaFile":{"type":"string"},"schedulersTypesFile":{"type":"string"},"queueWorkersWiringFile":{"type":"string"},"queueWorkersWiringMetaFile":{"type":"string"},"queueMapDeclarationFile":{"type":"string"},"queueTypesFile":{"type":"string"},"mcpWiringsFile":{"type":"string"},"mcpWiringsMetaFile":{"type":"string"},"mcpTypesFile":{"type":"string"},"cliWiringsFile":{"type":"string"},"cliWiringMetaFile":{"type":"string"},"cliBootstrapFile":{"type":"string"},"cliTypesFile":{"type":"string"},"servicesFile":{"type":"string"},"bootstrapFile":{"type":"string"},"bootstrapFiles":{"type":"object","properties":{"http":{"type":"string"},"scheduler":{"type":"string"},"channel":{"type":"string"},"rpc":{"type":"string"},"queue":{"type":"string"},"mcp":{"type":"string"},"cli":{"type":"string"}},"required":["http","scheduler","channel","rpc","queue","mcp","cli"],"additionalProperties":false},"$schema":{"type":"string"},"extends":{"type":"string"},"rootDir":{"type":"string"},"srcDirectories":{"type":"array","items":{"type":"string"}},"packageMappings":{"type":"object","additionalProperties":{"type":"string"}},"supportsImportAttributes":{"type":"boolean"},"configDir":{"type":"string"},"tsconfig":{"type":"string"},"nextBackendFile":{"type":"string"},"nextHTTPFile":{"type":"string"},"fetchFile":{"type":"string"},"websocketFile":{"type":"string"},"rpcWiringsFile":{"type":"string"},"queueWiringsFile":{"type":"string"},"mcpJsonFile":{"type":"string"},"openAPI":{"type":"object","properties":{"outputFile":{"type":"string"},"additionalInfo":{"$ref":"#/definitions/OpenAPISpecInfo"}},"required":["outputFile","additionalInfo"],"additionalProperties":false},"middlewareServices":{"type":"array","items":{"type":"string"}},"schemasFromTypes":{"type":"array","items":{"type":"string"}},"filters":{"$ref":"#/definitions/InspectorFilters"}},"required":["bootstrapFile","bootstrapFiles","channelsMapDeclarationFile","channelsTypesFile","channelsWiringFile","channelsWiringMetaFile","cliBootstrapFile","cliTypesFile","cliWiringMetaFile","cliWiringsFile","configDir","filters","functionTypesFile","functionsFile","functionsMetaFile","functionsMetaMinFile","httpMapDeclarationFile","httpTypesFile","httpWiringMetaFile","httpWiringsFile","mcpTypesFile","mcpWiringsFile","mcpWiringsMetaFile","outDir","packageMappings","queueMapDeclarationFile","queueTypesFile","queueWorkersWiringFile","queueWorkersWiringMetaFile","rootDir","rpcInternalMapDeclarationFile","rpcInternalWiringMetaFile","rpcMapDeclarationFile","schedulersTypesFile","schedulersWiringFile","schedulersWiringMetaFile","schemaDirectory","servicesFile","srcDirectories","supportsImportAttributes","tsconfig","typesDeclarationFile"],"definitions":{"OpenAPISpecInfo":{"type":"object","properties":{"info":{"type":"object","properties":{"title":{"type":"string"},"version":{"type":"string"},"description":{"type":"string"},"termsOfService":{"type":"string"},"contact":{"type":"object","properties":{"name":{"type":"string"},"url":{"type":"string"},"email":{"type":"string"}},"additionalProperties":false},"license":{"type":"object","properties":{"name":{"type":"string"},"url":{"type":"string"}},"required":["name"],"additionalProperties":false}},"required":["title","version","description"],"additionalProperties":false},"servers":{"type":"array","items":{"type":"object","properties":{"url":{"type":"string"},"description":{"type":"string"}},"required":["url"],"additionalProperties":false}},"tags":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"}},"required":["name"],"additionalProperties":false}},"externalDocs":{"type":"object","properties":{"description":{"type":"string"},"url":{"type":"string"}},"required":["url"],"additionalProperties":false},"securitySchemes":{"type":"object"},"security":{"type":"array","items":{"type":"object","additionalProperties":{"type":"array","items":{}}}}},"required":["info","servers"],"additionalProperties":false},"InspectorFilters":{"type":"object","properties":{"tags":{"type":"array","items":{"type":"string"}},"types":{"type":"array","items":{"type":"string"}},"directories":{"type":"array","items":{"type":"string"}}},"additionalProperties":false}}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "outDir": { "type": "string" },
+    "schemaDirectory": { "type": "string" },
+    "typesDeclarationFile": { "type": "string" },
+    "functionsFile": { "type": "string" },
+    "functionsMetaFile": { "type": "string" },
+    "functionsMetaMinFile": { "type": "string" },
+    "functionTypesFile": { "type": "string" },
+    "httpWiringsFile": { "type": "string" },
+    "httpWiringMetaFile": { "type": "string" },
+    "httpMapDeclarationFile": { "type": "string" },
+    "httpTypesFile": { "type": "string" },
+    "channelsWiringFile": { "type": "string" },
+    "channelsWiringMetaFile": { "type": "string" },
+    "channelsMapDeclarationFile": { "type": "string" },
+    "channelsTypesFile": { "type": "string" },
+    "rpcInternalWiringMetaFile": { "type": "string" },
+    "rpcInternalMapDeclarationFile": { "type": "string" },
+    "rpcMapDeclarationFile": { "type": "string" },
+    "schedulersWiringFile": { "type": "string" },
+    "schedulersWiringMetaFile": { "type": "string" },
+    "schedulersTypesFile": { "type": "string" },
+    "queueWorkersWiringFile": { "type": "string" },
+    "queueWorkersWiringMetaFile": { "type": "string" },
+    "queueMapDeclarationFile": { "type": "string" },
+    "queueTypesFile": { "type": "string" },
+    "mcpWiringsFile": { "type": "string" },
+    "mcpWiringsMetaFile": { "type": "string" },
+    "mcpTypesFile": { "type": "string" },
+    "cliWiringsFile": { "type": "string" },
+    "cliWiringMetaFile": { "type": "string" },
+    "cliBootstrapFile": { "type": "string" },
+    "cliTypesFile": { "type": "string" },
+    "servicesFile": { "type": "string" },
+    "bootstrapFile": { "type": "string" },
+    "bootstrapFiles": {
+      "type": "object",
+      "properties": {
+        "http": { "type": "string" },
+        "scheduler": { "type": "string" },
+        "channel": { "type": "string" },
+        "rpc": { "type": "string" },
+        "queue": { "type": "string" },
+        "mcp": { "type": "string" },
+        "cli": { "type": "string" }
+      },
+      "required": [
+        "http",
+        "scheduler",
+        "channel",
+        "rpc",
+        "queue",
+        "mcp",
+        "cli"
+      ],
+      "additionalProperties": false
+    },
+    "$schema": { "type": "string" },
+    "extends": { "type": "string" },
+    "rootDir": { "type": "string" },
+    "srcDirectories": { "type": "array", "items": { "type": "string" } },
+    "packageMappings": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "supportsImportAttributes": { "type": "boolean" },
+    "configFile": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "types": { "type": "array", "items": { "type": "string" } },
+    "configDir": { "type": "string" },
+    "tsconfig": { "type": "string" },
+    "nextBackendFile": { "type": "string" },
+    "nextHTTPFile": { "type": "string" },
+    "fetchFile": { "type": "string" },
+    "websocketFile": { "type": "string" },
+    "rpcWiringsFile": { "type": "string" },
+    "queueWiringsFile": { "type": "string" },
+    "mcpJsonFile": { "type": "string" },
+    "openAPI": {
+      "type": "object",
+      "properties": {
+        "outputFile": { "type": "string" },
+        "additionalInfo": { "$ref": "#/definitions/OpenAPISpecInfo" }
+      },
+      "required": ["outputFile", "additionalInfo"],
+      "additionalProperties": false
+    },
+    "middlewareServices": { "type": "array", "items": { "type": "string" } },
+    "schemasFromTypes": { "type": "array", "items": { "type": "string" } },
+    "filters": { "$ref": "#/definitions/InspectorFilters" }
+  },
+  "required": [
+    "bootstrapFile",
+    "bootstrapFiles",
+    "channelsMapDeclarationFile",
+    "channelsTypesFile",
+    "channelsWiringFile",
+    "channelsWiringMetaFile",
+    "cliBootstrapFile",
+    "cliTypesFile",
+    "cliWiringMetaFile",
+    "cliWiringsFile",
+    "configDir",
+    "filters",
+    "functionTypesFile",
+    "functionsFile",
+    "functionsMetaFile",
+    "functionsMetaMinFile",
+    "httpMapDeclarationFile",
+    "httpTypesFile",
+    "httpWiringMetaFile",
+    "httpWiringsFile",
+    "mcpTypesFile",
+    "mcpWiringsFile",
+    "mcpWiringsMetaFile",
+    "outDir",
+    "packageMappings",
+    "queueMapDeclarationFile",
+    "queueTypesFile",
+    "queueWorkersWiringFile",
+    "queueWorkersWiringMetaFile",
+    "rootDir",
+    "rpcInternalMapDeclarationFile",
+    "rpcInternalWiringMetaFile",
+    "rpcMapDeclarationFile",
+    "schedulersTypesFile",
+    "schedulersWiringFile",
+    "schedulersWiringMetaFile",
+    "schemaDirectory",
+    "servicesFile",
+    "srcDirectories",
+    "supportsImportAttributes",
+    "tsconfig",
+    "typesDeclarationFile"
+  ],
+  "definitions": {
+    "OpenAPISpecInfo": {
+      "type": "object",
+      "properties": {
+        "info": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "version": { "type": "string" },
+            "description": { "type": "string" },
+            "termsOfService": { "type": "string" },
+            "contact": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "url": { "type": "string" },
+                "email": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "license": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "url": { "type": "string" }
+              },
+              "required": ["name"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["title", "version", "description"],
+          "additionalProperties": false
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "required": ["url"],
+            "additionalProperties": false
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
+        },
+        "externalDocs": {
+          "type": "object",
+          "properties": {
+            "description": { "type": "string" },
+            "url": { "type": "string" }
+          },
+          "required": ["url"],
+          "additionalProperties": false
+        },
+        "securitySchemes": { "type": "object" },
+        "security": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": {} }
+          }
+        }
+      },
+      "required": ["info", "servers"],
+      "additionalProperties": false
+    },
+    "InspectorFilters": {
+      "type": "object",
+      "properties": {
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "types": { "type": "array", "items": { "type": "string" } },
+        "directories": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

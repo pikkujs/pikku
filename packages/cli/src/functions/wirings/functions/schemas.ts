@@ -9,26 +9,26 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
  * Generate JSON schemas from TypeScript types
  */
 export const pikkuSchemas: any = pikkuSessionlessFunc<void, true | undefined>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
     const schemas = await generateSchemas(
       logger,
-      cliConfig.tsconfig,
+      config.tsconfig,
       visitState.functions.typesMap,
       visitState.functions.meta,
       visitState.http.meta,
-      cliConfig.schemasFromTypes
+      config.schemasFromTypes
     )
 
     await saveSchemas(
       logger,
-      cliConfig.schemaDirectory,
+      config.schemaDirectory,
       schemas,
       visitState.functions.typesMap,
       visitState.functions.meta,
-      cliConfig.supportsImportAttributes,
-      cliConfig.schemasFromTypes
+      config.supportsImportAttributes,
+      config.schemasFromTypes
     )
 
     return true

@@ -59,14 +59,14 @@ const generateArgumentsFromSchema = async (
 }
 
 export const pikkuMCP: any = pikkuSessionlessFunc<void, true | undefined>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { mcpEndpoints, functions } = await getInspectorState()
     const {
       mcpWiringsFile,
       mcpWiringsMetaFile,
       packageMappings,
       schemaDirectory,
-    } = cliConfig
+    } = config
 
     await writeFileInDir(
       logger,

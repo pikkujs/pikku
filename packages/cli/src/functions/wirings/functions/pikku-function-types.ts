@@ -6,13 +6,13 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeFunctionTypes } from './serialize-function-types.js'
 
 export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {
       typesDeclarationFile: typesFile,
       packageMappings,
       rpcInternalMapDeclarationFile,
-    } = cliConfig
+    } = config
 
     const { userSessionType, sessionServicesType, singletonServicesType } =
       await getPikkuFilesAndMethods(

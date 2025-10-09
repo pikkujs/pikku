@@ -6,13 +6,13 @@ import { serializeSchedulerMeta } from './serialize-scheduler-meta.js'
 
 export const pikkuScheduler: any = pikkuSessionlessFunc<void, true | undefined>(
   {
-    func: async ({ logger, cliConfig, getInspectorState }) => {
+    func: async ({ logger, config, getInspectorState }) => {
       const visitState = await getInspectorState()
       const {
         schedulersWiringFile,
         schedulersWiringMetaFile,
         packageMappings,
-      } = cliConfig
+      } = config
       const { scheduledTasks } = visitState
 
       await writeFileInDir(

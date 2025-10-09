@@ -6,9 +6,9 @@ import { generateOpenAPISpec } from './openapi-spec-generator.js'
 import { stringify } from 'yaml'
 
 export const pikkuOpenAPI: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { http, functions } = await getInspectorState()
-    const { tsconfig, openAPI, schemasFromTypes } = cliConfig
+    const { tsconfig, openAPI, schemasFromTypes } = config
 
     if (!openAPI?.outputFile) {
       throw new Error('openAPI is required')
@@ -49,8 +49,7 @@ export const pikkuOpenAPI: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating OpenAPI spec',
       commandEnd: 'Created OpenAPI spec',
-      skipCondition: ({ cliConfig }) =>
-        cliConfig.openAPI?.outputFile === undefined,
+      skipCondition: ({ config }) => config.openAPI?.outputFile === undefined,
       skipMessage: 'openAPI outfile is not defined',
     }),
   ],

@@ -65,6 +65,39 @@ export interface PikkuCLICoreOutputFiles {
   bootstrapFiles: Record<PikkuWiringTypes, string>
 }
 
+export type PikkuCLIInput = {
+  $schema?: string
+
+  extends?: string
+
+  rootDir: string
+  srcDirectories: string[]
+  packageMappings: Record<string, string>
+  supportsImportAttributes: boolean
+
+  configDir: string
+  tsconfig: string
+
+  nextBackendFile?: string
+  nextHTTPFile?: string
+  fetchFile?: string
+  websocketFile?: string
+  rpcWiringsFile?: string
+  queueWiringsFile?: string
+  mcpJsonFile?: string
+
+  openAPI?: {
+    outputFile: string
+    additionalInfo: OpenAPISpecInfo
+  }
+
+  middlewareServices?: string[]
+
+  schemasFromTypes?: string[]
+
+  filters: InspectorFilters
+} & PikkuCLICoreOutputFiles
+
 export type PikkuCLIConfig = {
   $schema?: string
 
@@ -74,6 +107,10 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   packageMappings: Record<string, string>
   supportsImportAttributes: boolean
+
+  configFile?: string
+  tags?: string[]
+  types?: string[]
 
   configDir: string
   tsconfig: string

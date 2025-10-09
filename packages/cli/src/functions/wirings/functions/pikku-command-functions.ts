@@ -8,14 +8,14 @@ import {
 
 export const pikkuFunctions: any = pikkuSessionlessFunc<void, true | undefined>(
   {
-    func: async ({ logger, cliConfig, getInspectorState }) => {
+    func: async ({ logger, config, getInspectorState }) => {
       const { functions, rpc } = await getInspectorState()
       const {
         functionsMetaFile,
         functionsMetaMinFile,
         functionsFile,
         packageMappings,
-      } = cliConfig
+      } = config
 
       // Generate full metadata
       await writeFileInDir(

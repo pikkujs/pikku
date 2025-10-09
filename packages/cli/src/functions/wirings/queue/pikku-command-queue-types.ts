@@ -5,8 +5,8 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeQueueTypes } from './serialize-queue-types.js'
 
 export const pikkuQueueTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig }) => {
-    const { queueTypesFile, functionTypesFile, packageMappings } = cliConfig
+  func: async ({ logger, config }) => {
+    const { queueTypesFile, functionTypesFile, packageMappings } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
       queueTypesFile,

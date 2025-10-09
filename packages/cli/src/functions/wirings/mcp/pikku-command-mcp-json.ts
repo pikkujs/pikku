@@ -4,9 +4,9 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeMCPJson } from './serialize-mcp-json.js'
 
 export const pikkuMCPJSON: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { mcpEndpoints, functions } = await getInspectorState()
-    const { mcpJsonFile, schemaDirectory } = cliConfig
+    const { mcpJsonFile, schemaDirectory } = config
 
     // Generate MCP JSON file
     if (mcpJsonFile) {
@@ -28,9 +28,9 @@ export const pikkuMCPJSON: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating MCP JSON',
       commandEnd: 'Generated MCP JSON',
-      skipCondition: async ({ getInspectorState, cliConfig }) => {
+      skipCondition: async ({ getInspectorState, config }) => {
         const { mcpEndpoints } = await getInspectorState()
-        return mcpEndpoints.files.size === 0 || !cliConfig.mcpJsonFile
+        return mcpEndpoints.files.size === 0 || !config.mcpJsonFile
       },
       skipMessage: 'none found or mcpJsonFile not set',
     }),

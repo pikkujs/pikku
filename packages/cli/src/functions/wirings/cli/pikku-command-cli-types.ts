@@ -5,8 +5,8 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeCLITypes } from './serialize-cli-types.js'
 
 export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig }) => {
-    const { cliTypesFile, functionTypesFile, packageMappings } = cliConfig
+  func: async ({ logger, config }) => {
+    const { cliTypesFile, functionTypesFile, packageMappings } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
       cliTypesFile,

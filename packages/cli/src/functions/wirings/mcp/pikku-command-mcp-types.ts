@@ -5,8 +5,8 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeMCPTypes } from './serialize-mcp-types.js'
 
 export const pikkuMCPTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig }) => {
-    const { mcpTypesFile, functionTypesFile, packageMappings } = cliConfig
+  func: async ({ logger, config }) => {
+    const { mcpTypesFile, functionTypesFile, packageMappings } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
       mcpTypesFile,

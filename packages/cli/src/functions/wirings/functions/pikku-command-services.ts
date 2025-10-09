@@ -83,15 +83,15 @@ export const serializeServicesMap = (
 }
 
 export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
     const { sessionServicesType, singletonServicesType } =
       await getPikkuFilesAndMethods(
         logger,
         visitState,
-        cliConfig.packageMappings,
-        cliConfig.typesDeclarationFile,
+        config.packageMappings,
+        config.typesDeclarationFile,
         {},
         {
           sessionServiceType: true,
@@ -99,16 +99,16 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
         }
       )
 
-    const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(cliConfig.typesDeclarationFile, singletonServicesType.typePath, cliConfig.packageMappings)}'`
-    const sessionServicesImport = `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(cliConfig.typesDeclarationFile, sessionServicesType.typePath, cliConfig.packageMappings)}'`
+    const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, singletonServicesType.typePath, config.packageMappings)}'`
+    const sessionServicesImport = `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, sessionServicesType.typePath, config.packageMappings)}'`
 
     const servicesCode = serializeServicesMap(
       visitState.functions.meta,
-      cliConfig.middlewareServices,
+      config.middlewareServices,
       servicesImport,
       sessionServicesImport
     )
-    await writeFileInDir(logger, cliConfig.servicesFile, servicesCode)
+    await writeFileInDir(logger, config.servicesFile, servicesCode)
   },
   middleware: [
     logCommandInfoAndTime({

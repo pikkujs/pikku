@@ -5,8 +5,8 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuFetch: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig }) => {
-    const { fetchFile, httpMapDeclarationFile, packageMappings } = cliConfig
+  func: async ({ logger, config }) => {
+    const { fetchFile, httpMapDeclarationFile, packageMappings } = config
 
     if (!fetchFile) {
       throw new Error("fetchFile is isn't set in the pikku config")
@@ -25,7 +25,7 @@ export const pikkuFetch: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating fetch wrapper',
       commandEnd: 'Generated fetch wrapper',
-      skipCondition: ({ cliConfig }) => cliConfig.fetchFile === undefined,
+      skipCondition: ({ config }) => config.fetchFile === undefined,
       skipMessage: "fetchFile isn't set in the pikku config",
     }),
   ],

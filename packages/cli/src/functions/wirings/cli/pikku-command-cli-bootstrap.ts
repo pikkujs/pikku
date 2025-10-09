@@ -3,13 +3,12 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import type { PikkuCLIConfig } from '../../../../types/config.js'
 import { join } from 'node:path'
+import { Config } from '../../../../types/application-types.js'
 
 export const pikkuCLIBootstrap: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
-    const config = cliConfig
 
     // Generate bootstrap files for each program
     for (const [programName, programMeta] of Object.entries(
@@ -112,7 +111,7 @@ function generateCLIBootstrap(
   programName: string,
   programMeta: any,
   bootstrapFile: string,
-  config: PikkuCLIConfig,
+  config: Config,
   pikkuConfigFactory: { file: string; variable: string },
   singletonServicesFactory: { file: string; variable: string },
   sessionServicesFactory: { file: string; variable: string },
@@ -147,7 +146,7 @@ function generateLocalCLIBootstrap(
   programName: string,
   programMeta: any,
   bootstrapFile: string,
-  config: PikkuCLIConfig,
+  config: Config,
   pikkuConfigFactory: { file: string; variable: string },
   singletonServicesFactory: { file: string; variable: string },
   sessionServicesFactory: { file: string; variable: string }
@@ -239,7 +238,7 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
     const data = { ...parsed.positionals, ...parsed.options }
 
     // Create config (pass data in case it needs to use any parsed options)
-    const config = await createConfig(new LocalVariablesService(), data)
+    const config = await createConfig(new LocalVariablesService(), data as any)
 
     // Create services with config
     const singletonServices = await createSingletonServices(config)
@@ -338,7 +337,7 @@ function generateHTTPRPCCLIBootstrap(
   programName: string,
   _programMeta: any,
   bootstrapFile: string,
-  config: PikkuCLIConfig
+  config: Config
 ): string {
   const capitalizedName =
     programName.charAt(0).toUpperCase() + programName.slice(1).replace(/-/g, '')

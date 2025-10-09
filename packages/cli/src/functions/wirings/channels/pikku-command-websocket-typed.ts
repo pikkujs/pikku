@@ -5,9 +5,9 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeWebsocketWrapper } from './serialize-websocket-wrapper.js'
 
 export const pikkuWebSocketTyped: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig }) => {
+  func: async ({ logger, config }) => {
     const { websocketFile, channelsMapDeclarationFile, packageMappings } =
-      cliConfig
+      config
 
     if (!websocketFile) {
       throw new Error("fetchFile is isn't set in the pikku config")
@@ -26,7 +26,7 @@ export const pikkuWebSocketTyped: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating websocket wrapper',
       commandEnd: 'Generated websocket wrapper',
-      skipCondition: ({ cliConfig }) => cliConfig.websocketFile === undefined,
+      skipCondition: ({ config }) => config.websocketFile === undefined,
       skipMessage: "websocketFile isn't set in the pikku config",
     }),
   ],

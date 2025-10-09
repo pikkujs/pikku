@@ -7,7 +7,7 @@ import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from './
 import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from './serialize-nextjs-http-wrapper.js'
 
 export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const {
       nextBackendFile,
       nextHTTPFile,
@@ -15,7 +15,7 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       packageMappings,
       fetchFile,
       bootstrapFiles,
-    } = cliConfig
+    } = config
     const visitState = await getInspectorState()
     const options = {}
 
@@ -99,9 +99,9 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating nextjs wrapper',
       commandEnd: 'Generated nextjs wrapper',
-      skipCondition: ({ cliConfig }) =>
-        cliConfig.nextBackendFile === undefined &&
-        cliConfig.nextHTTPFile === undefined,
+      skipCondition: ({ config }) =>
+        config.nextBackendFile === undefined &&
+        config.nextHTTPFile === undefined,
       skipMessage: 'nextjs outfile is not defined',
     }),
   ],

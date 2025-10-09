@@ -4,9 +4,9 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuCLI: any = pikkuSessionlessFunc<void, true | undefined>({
-  func: async ({ logger, cliConfig, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
-    const { cliWiringsFile, cliWiringMetaFile, packageMappings } = cliConfig
+    const { cliWiringsFile, cliWiringMetaFile, packageMappings } = config
     const { cli } = visitState
 
     // Generate CLI wirings file
