@@ -34,11 +34,12 @@ ${Array.from(typesMap.customTypes.entries())
       try {
         const typeMeta = typesMap.getTypeMeta(typeName)
         if (typeMeta.path) {
-          requiredTypes.add(typeName)
+          // Add originalName to preserve canonical import name
+          requiredTypes.add(typeMeta.originalName)
         }
       } catch (e) {
-        // Type not found in map, but add it anyway for fallback resolution
-        requiredTypes.add(typeName)
+        // Type not found in map (ambient/builtin type) - ignore it
+        // Do NOT add to requiredTypes to avoid crashes in serializeImportMap
       }
     })
 

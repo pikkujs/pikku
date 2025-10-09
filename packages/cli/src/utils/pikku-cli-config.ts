@@ -285,10 +285,20 @@ const _getPikkuCLIConfig = async (
         const relativeTo = CONFIG_DIR_FILES.includes(objectKey)
           ? result.configDir
           : result.rootDir
-        if (result[objectKey]) {
+        // Only normalize string values to avoid corrupting nested objects
+        if (result[objectKey] && typeof result[objectKey] === 'string') {
           if (!isAbsolute(result[objectKey])) {
             result[objectKey] = join(relativeTo, result[objectKey])
           }
+        }
+      }
+    }
+
+    // Separately normalize bootstrapFiles (Record<string, string>)
+    if (result.bootstrapFiles && typeof result.bootstrapFiles === 'object') {
+      for (const [key, value] of Object.entries(result.bootstrapFiles)) {
+        if (typeof value === 'string' && !isAbsolute(value)) {
+          result.bootstrapFiles[key] = join(result.rootDir, value)
         }
       }
     }

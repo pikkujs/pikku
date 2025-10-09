@@ -56,8 +56,6 @@ const getMetaTypes = (
 
   const totalValues = Array.from(map.values()).flat()
 
-  console.log(totalValues)
-
   if (totalValues.length === 0) {
     const helpMessage =
       type === 'CoreConfig'
@@ -159,8 +157,6 @@ export const getPikkuFilesAndMethods = async (
       sessionServicesFactoryType
     ),
   }
-
-  console.log(result)
 
   if (errors.size > 0) {
     const result: string[] = ['Found errors:']

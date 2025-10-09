@@ -35,6 +35,12 @@ export const writeFileInDir = async (
   try {
     existingContent = await readFile(path, 'utf-8')
   } catch (error) {
+    // Only suppress ENOENT (file not found) errors
+    // Rethrow permission, I/O, encoding, or other errors
+    const nodeError = error as NodeJS.ErrnoException
+    if (nodeError.code !== 'ENOENT') {
+      throw error
+    }
     // File doesn't exist, so we need to write it
   }
 

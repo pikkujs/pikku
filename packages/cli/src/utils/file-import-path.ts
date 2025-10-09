@@ -38,7 +38,9 @@ export const getFileImportRelativePath = (
     for (const [path, packageName] of Object.entries(packageMappings)) {
       if (absolutePath.includes(path)) {
         // usesPackageName = true
-        filePath = absolutePath.replace(new RegExp(`.*${path}`), packageName)
+        // Use string slicing instead of regex to avoid ReDoS and ensure correct behavior
+        const pathIndex = absolutePath.indexOf(path)
+        filePath = packageName + absolutePath.slice(pathIndex + path.length)
         break
       }
     }

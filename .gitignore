@@ -13,6 +13,7 @@ dist
 
 my-app
 .pikku
+cli.schema.json
 
 # Logs
 logs

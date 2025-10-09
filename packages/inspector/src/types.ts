@@ -82,7 +82,7 @@ export interface InspectorState {
   sessionServicesFactories: PathToNameAndType
   configFactories: PathToNameAndType
   http: InspectorHTTPState
-  functions: InspectorFunctionState
+  functions: Omit<InspectorFunctionState, 'files'>
   channels: InspectorChannelState
   scheduledTasks: {
     meta: ScheduledTasksMeta

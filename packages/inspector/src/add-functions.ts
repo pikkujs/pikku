@@ -419,11 +419,6 @@ export function addFunctions(
         path: node.getSourceFile().fileName,
         exportedName,
       })
-
-      state.functions.files.set(pikkuFuncName, {
-        path: node.getSourceFile().fileName,
-        exportedName,
-      })
     }
 
     // We add it to internal meta to allow autocomplete for everything

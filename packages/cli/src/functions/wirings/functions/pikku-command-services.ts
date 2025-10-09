@@ -114,10 +114,6 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating Pikku services map',
       commandEnd: 'Generated Pikku services map',
-      skipCondition: async ({ getInspectorState }) => {
-        const visitState = await getInspectorState()
-        return visitState.functions.files.size === 0
-      },
       skipMessage: '',
     }),
   ],

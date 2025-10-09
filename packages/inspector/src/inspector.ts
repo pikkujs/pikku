@@ -36,7 +36,6 @@ export const inspect = (
     functions: {
       typesMap: new TypesMap(),
       meta: {},
-      files: new Map(),
     },
     http: {
       metaInputTypes: new Map(),

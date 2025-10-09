@@ -45,7 +45,8 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<void, true | undefined>(
         )
       }
 
-      return functions.files.size > 0 ? true : undefined
+      // console.log(functions)
+      return true
     },
     middleware: [
       logCommandInfoAndTime({
