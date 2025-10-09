@@ -24,13 +24,17 @@ const addTestFunction = (funcName: string, funcConfig: any) => {
   }
 }
 
-const mockServices: CoreServices = {
+const mockSingletonServices = {
   logger: {
     info: () => {},
     warn: () => {},
     error: () => {},
     debug: () => {},
   },
+} as any
+
+const mockServices: CoreServices = {
+  ...mockSingletonServices,
 } as any
 
 describe('runPikkuFunc - Integration Tests', () => {
@@ -61,10 +65,12 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         middleware: [createMiddleware('wiringMiddleware')],
         tags: ['wiringTag'],
+        interaction: {},
       }
     )
 
@@ -128,10 +134,12 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         permissions: wiringPermissions,
         tags: ['wiringTag'],
+        interaction: {},
       }
     )
 
@@ -157,9 +165,11 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         tags: ['wiringTag'],
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -178,9 +188,11 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         permissions: wiringPermissions,
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -200,8 +212,10 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -221,8 +235,10 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -256,8 +272,10 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }
     )
 
@@ -305,8 +323,10 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }
     )
 
@@ -330,8 +350,10 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'simpleFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }
     )
 
@@ -371,10 +393,12 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         middleware: [wiringMiddleware],
         permissions: wiringPermissions,
+        interaction: {},
       }
     )
 
@@ -421,8 +445,10 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }
     )
 
@@ -456,9 +482,11 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: testData,
-        session: testSession,
+        data: () => testData,
+        userSession: { get: () => testSession, set: () => {} } as any,
+        interaction: {},
       }
     )
 
@@ -488,8 +516,10 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: asyncGetServices,
-        data: {},
+        data: () => ({}),
+        interaction: {},
       }
     )
 
