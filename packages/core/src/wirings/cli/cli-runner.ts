@@ -1,5 +1,5 @@
 import { NotFoundError } from '../../errors/errors.js'
-import { addFunction } from '../../function/function-runner.js'
+import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import {
   CorePikkuMiddleware,
@@ -7,7 +7,6 @@ import {
   SessionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 import { closeSessionServices } from '../../utils.js'
 import {
   CoreCLI,
@@ -23,6 +22,8 @@ import type {
   PikkuInteraction,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
+import { rpcService } from '../rpc/rpc-runner.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 
 /**
  * Default JSON renderer for CLI output
@@ -93,13 +94,10 @@ function unwrapFunc(command: any): {
   ) {
     return {
       func: command.func.func,
-      middleware: [
-        ...(command.middleware || []),
-        ...(command.func.middleware || []),
-      ],
-      auth: command.auth,
-      permissions: command.permissions,
-      tags: command.tags,
+      middleware: command.func.middleware,
+      auth: command.func.auth,
+      permissions: command.func.permissions,
+      tags: command.func.tags,
     }
   }
 
@@ -304,17 +302,9 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  // Get command-specific middleware (if stored)
-  const commandMiddleware = [] // TODO: Add support for command-specific middleware
-
-  // Combine middleware
-  const middleware = combineMiddleware(PikkuWiringTypes.cli, funcName, {
-    wiringMiddleware: globalMiddleware,
-    funcMiddleware: commandMiddleware,
-  })
-
+  const session: CoreUserSession | undefined = undefined
+  const userSession = new PikkuUserSessionService<CoreUserSession>(session)
   let sessionServices: SessionServices | undefined
-  let output: any
 
   const interaction: PikkuInteraction = {
     cli: {
@@ -325,43 +315,46 @@ export async function runCLICommand({
     },
   }
 
-  // Main execution logic wrapped for middleware handling
-  const runMain = async () => {
-    const session: CoreUserSession | undefined = undefined
+  const getAllServices = async () => {
+    // Create session-specific services for handling the command
+    sessionServices = await createSessionServices?.(
+      singletonServices,
+      interaction,
+      session
+    )
 
-    if (!session && funcConfig.auth !== false) {
-      throw new Error('Authentication required')
-    }
+    return rpcService.injectRPCService({
+      ...singletonServices,
+      ...sessionServices,
+      userSession,
+      channel,
+    })
+  }
 
-    // Create session services if needed
-    if (session && createSessionServices) {
-      sessionServices = await createSessionServices(
-        singletonServices,
-        interaction,
-        session
-      )
-    }
-
-    // Merge services after session creation and add channel
-    const allServices = { ...singletonServices, ...sessionServices, channel }
-
-    // Execute the function with plucked data
-    output = await funcConfig.func(allServices, pluckedData, session)
+  try {
+    const result = await runPikkuFunc(
+      PikkuWiringTypes.cli,
+      commandId,
+      funcName,
+      {
+        getAllServices,
+        session,
+        data: pluckedData,
+        middleware: globalMiddleware,
+        permissions: funcConfig.permissions,
+        tags: funcConfig.tags,
+      }
+    )
 
     // Close the channel
     channel.close()
 
     // Apply renderer one final time with the final output (if renderer exists)
     if (renderer) {
-      await Promise.resolve(renderer(singletonServices, output, session))
+      await Promise.resolve(renderer(singletonServices, result, session))
     }
-  }
 
-  try {
-    // Run middleware, then execute main logic
-    await runMiddleware(singletonServices, interaction, middleware, runMain)
-
-    return output
+    return result
   } finally {
     // Clean up session services
     if (sessionServices) {
