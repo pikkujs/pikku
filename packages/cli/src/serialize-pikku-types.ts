@@ -184,7 +184,7 @@ export const pikkuFunc = <In, Out = unknown>(
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -215,7 +215,7 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -246,7 +246,7 @@ export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -275,7 +275,7 @@ export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -305,7 +305,7 @@ export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unkn
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -332,7 +332,7 @@ export const pikkuVoidFunc = (
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
    
 /**
@@ -452,7 +452,7 @@ export const pikkuMCPPromptFunc = <In>(
         name?: string
       }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -484,7 +484,7 @@ export const pikkuMCPToolFunc = <In>(
       name?: string
     }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -517,7 +517,7 @@ export const pikkuMCPResourceFunc = <In>(
       name?: string
     }
 ) => {
-  return typeof func === 'function' ? func : func.func
+  return typeof func === 'function' ? { func } : func
 }
 `
 }
