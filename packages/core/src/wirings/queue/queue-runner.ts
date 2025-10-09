@@ -8,7 +8,6 @@ import {
   CreateSessionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 /**
  * Error class for queue processor not found
@@ -139,51 +138,37 @@ export async function runQueueJob({
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
-    let result: any
+    // Use provided singleton services
+    const getAllServices = async () => {
+      const sessionServices = await createSessionServices?.(
+        singletonServices,
+        { queue },
+        undefined
+      )
 
-    // Main job execution logic wrapped for middleware handling
-    const runMain = async () => {
-      // Use provided singleton services
-      const getAllServices = () => ({
+      return {
         ...singletonServices,
-        ...(createSessionServices
-          ? createSessionServices(singletonServices, { queue }, undefined)
-          : {}),
-      })
-
-      // Execute the pikku function with the job data
-      result = await runPikkuFunc(
-        PikkuWiringTypes.queue,
-        job.queueName,
-        processorMeta.pikkuFuncName,
-        {
-          getAllServices,
-          data: job.data,
-          tags: queueWorker.tags,
-        }
-      )
-
-      logger.debug(
-        `Successfully processed job ${job.id} in queue ${job.queueName}`
-      )
+        ...sessionServices,
+      }
     }
 
-    // Get function config for middleware and tags
-    const funcConfig = pikkuState('function', 'functions').get(
-      processorMeta.pikkuFuncName
+    // Execute the pikku function with the job data
+    const result = await runPikkuFunc(
+      PikkuWiringTypes.queue,
+      job.queueName,
+      processorMeta.pikkuFuncName,
+      {
+        singletonServices,
+        getAllServices,
+        data: job.data,
+        middleware: queueWorker.middleware,
+        tags: queueWorker.tags,
+        interaction: { queue },
+      }
     )
 
-    // Get middleware for tags and combine with queue-specific middleware
-    await runMiddleware(
-      singletonServices,
-      { queue },
-      combineMiddleware(PikkuWiringTypes.queue, `${job.queueName}:${job.id}`, {
-        wiringMiddleware: queueWorker.middleware,
-        wiringTags: queueWorker.tags,
-        funcMiddleware: funcConfig?.middleware,
-        funcTags: funcConfig?.tags,
-      }),
-      runMain
+    logger.debug(
+      `Successfully processed job ${job.id} in queue ${job.queueName}`
     )
 
     return result

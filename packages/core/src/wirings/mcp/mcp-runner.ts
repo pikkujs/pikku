@@ -21,7 +21,6 @@ import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -32,7 +31,6 @@ export class MCPError extends Error {
 }
 
 export type RunMCPEndpointParams<Tools extends string = any> = {
-  session?: CoreUserSession
   singletonServices: CoreSingletonServices
   mcp?: PikkuMCP<Tools>
   createSessionServices?: CreateSessionServices<
@@ -200,7 +198,6 @@ async function runMCPPikkuFunc(
   mcp: CoreMCPResource | CoreMCPTool | CoreMCPPrompt | undefined,
   pikkuFuncName: string | undefined,
   {
-    session,
     singletonServices,
     createSessionServices,
     mcp: interaction,
@@ -230,54 +227,33 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    let result: any
-
-    // Main MCP execution logic wrapped for middleware handling
-    const runMain = async () => {
-      const getAllServices = async () => {
-        if (createSessionServices) {
-          const services = await createSessionServices(
-            singletonServices,
-            { mcp: interaction },
-            session
-          )
-          sessionServices = services
-          return rpcService.injectRPCService({
-            ...singletonServices,
-            ...services,
-            mcp: interaction,
-          })
-        }
-        return rpcService.injectRPCService({
-          ...singletonServices,
-          mcp: interaction,
-        })
-      }
-
-      result = await runPikkuFunc(
-        PikkuWiringTypes.mcp,
-        `${type}:${name}`,
-        pikkuFuncName,
-        {
-          getAllServices,
-          session,
-          data: request.params,
-          tags: mcp.tags,
-        }
+    const getAllServices = async () => {
+      sessionServices = await createSessionServices?.(
+        singletonServices,
+        { mcp: interaction },
+        undefined
       )
+
+      return rpcService.injectRPCService({
+        ...singletonServices,
+        ...sessionServices,
+        mcp: interaction,
+      })
     }
 
-    const funcConfig = pikkuState('function', 'functions').get(pikkuFuncName!)
-    await runMiddleware(
-      singletonServices,
-      { mcp: interaction },
-      combineMiddleware(PikkuWiringTypes.mcp, `${type}:${name}`, {
-        wiringMiddleware: mcp.middleware,
-        wiringTags: mcp.tags,
-        funcMiddleware: funcConfig?.middleware,
-        funcTags: funcConfig?.tags,
-      }),
-      runMain
+    const result = await runPikkuFunc(
+      PikkuWiringTypes.mcp,
+      `${type}:${name}`,
+      pikkuFuncName,
+      {
+        singletonServices,
+        getAllServices,
+        userSession: undefined, // TODO
+        data: request.params,
+        middleware: mcp.middleware,
+        tags: mcp.tags,
+        interaction: { mcp: interaction },
+      }
     )
 
     return {

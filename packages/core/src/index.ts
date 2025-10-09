@@ -42,8 +42,4 @@ export {
   getMCPToolsMeta,
   getMCPPromptsMeta,
 } from './wirings/mcp/mcp-runner.js'
-export {
-  wireCLI,
-  runCLICommand,
-  addCLIMiddleware,
-} from './wirings/cli/cli-runner.js'
+export { wireCLI, runCLICommand } from './wirings/cli/cli-runner.js'

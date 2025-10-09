@@ -6,55 +6,55 @@ import {
   serializeFunctionImports,
 } from './serialize-function-imports.js'
 
-export const pikkuFunctions: any = pikkuSessionlessFunc<void, true | undefined>(
-  {
-    func: async ({ logger, config, getInspectorState }) => {
-      const { functions, rpc } = await getInspectorState()
-      const {
-        functionsMetaFile,
-        functionsMetaMinFile,
+export const pikkuFunctions: any = pikkuSessionlessFunc<
+  void,
+  boolean | undefined
+>({
+  func: async ({ logger, config, getInspectorState }) => {
+    const { functions, rpc } = await getInspectorState()
+    const {
+      functionsMetaFile,
+      functionsMetaMinFile,
+      functionsFile,
+      packageMappings,
+    } = config
+
+    // Generate full metadata
+    await writeFileInDir(
+      logger,
+      functionsMetaFile,
+      `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(functions.meta, null, 2)})`
+    )
+
+    // Generate minimal metadata (runtime)
+    const runtimeMeta = generateRuntimeMeta(functions.meta)
+    await writeFileInDir(
+      logger,
+      functionsMetaMinFile,
+      `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(runtimeMeta, null, 2)})`
+    )
+
+    if (rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0) {
+      await writeFileInDir(
+        logger,
         functionsFile,
-        packageMappings,
-      } = config
-
-      // Generate full metadata
-      await writeFileInDir(
-        logger,
-        functionsMetaFile,
-        `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(functions.meta, null, 2)})`
-      )
-
-      // Generate minimal metadata (runtime)
-      const runtimeMeta = generateRuntimeMeta(functions.meta)
-      await writeFileInDir(
-        logger,
-        functionsMetaMinFile,
-        `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(runtimeMeta, null, 2)})`
-      )
-
-      if (rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0) {
-        await writeFileInDir(
-          logger,
+        serializeFunctionImports(
           functionsFile,
-          serializeFunctionImports(
-            functionsFile,
-            rpc.internalFiles,
-            functions.meta,
-            packageMappings
-          )
+          rpc.internalFiles,
+          functions.meta,
+          packageMappings
         )
-      }
+      )
+    }
 
-      // console.log(functions)
-      return true
-    },
-    middleware: [
-      logCommandInfoAndTime({
-        commandStart: 'Serializing Pikku functions',
-        commandEnd: 'Serialized Pikku functions',
-        skipCondition: false,
-        skipMessage: '',
-      }),
-    ],
-  }
-)
+    return rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0
+  },
+  middleware: [
+    logCommandInfoAndTime({
+      commandStart: 'Serializing Pikku functions',
+      commandEnd: 'Serialized Pikku functions',
+      skipCondition: false,
+      skipMessage: '',
+    }),
+  ],
+})

@@ -8,11 +8,14 @@ import {
   CoreUserSession,
   CorePikkuMiddleware,
   PikkuWiringTypes,
+  CoreSingletonServices,
+  PikkuInteraction,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
 } from './functions.types.js'
+import { UserSessionService } from '../services/user-session-service.js'
 
 export const addFunction = (
   funcName: string,
@@ -40,20 +43,28 @@ export const runPikkuFunc = async <In = any, Out = any>(
   funcName: string,
   {
     getAllServices,
+    singletonServices,
     data,
-    session,
+    userSession,
+    auth: wiringAuth,
     permissions: wiringPermissions,
     middleware: wiringMiddleware,
     coerceDataFromSchema,
     tags = [],
+    interaction,
   }: {
-    getAllServices: () => Promise<CoreServices> | CoreServices
-    data: In
-    session?: CoreUserSession
+    singletonServices: CoreSingletonServices
+    getAllServices: (
+      session?: CoreUserSession
+    ) => Promise<CoreServices> | CoreServices
+    userSession?: UserSessionService<CoreUserSession>
+    data: () => Promise<In> | In
+    auth?: boolean
     permissions?: CorePermissionGroup
     middleware?: CorePikkuMiddleware[]
     coerceDataFromSchema?: boolean
     tags?: string[]
+    interaction: PikkuInteraction
   }
 ): Promise<Out> => {
   const funcConfig = pikkuState('function', 'functions').get(funcName)
@@ -65,20 +76,13 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
 
-  if (funcConfig.auth && !session) {
-    throw new ForbiddenError(
-      `Function ${funcName} requires authentication even though transport does not`
-    )
-  }
-
-  const allServices = await getAllServices()
-
+  // Check authentication
   const inputSchemaName = funcMeta.inputSchemaName
   if (inputSchemaName) {
     // Validate request data against the defined schema, if any
     await validateSchema(
-      allServices.logger,
-      allServices.schema,
+      singletonServices.logger,
+      singletonServices.schema,
       inputSchemaName,
       data
     )
@@ -87,17 +91,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
       coerceTopLevelDataFromSchema(inputSchemaName, data)
     }
   }
-
-  // Run permission checks in the specified order
-  await runPermissions(wireType, wireId, {
-    wiringTags: tags,
-    wiringPermissions,
-    funcTags: funcConfig.tags,
-    funcPermissions: funcConfig.permissions,
-    allServices,
-    data,
-    session,
-  })
 
   // Combine all middleware: wiring tags → wiring middleware → func middleware → func tags
   const allMiddleware = combineMiddleware(wireType, wireId, {
@@ -109,16 +102,34 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   if (allMiddleware.length > 0) {
     return (await runMiddleware<CorePikkuMiddleware>(
-      allServices,
       {
-        http: allServices.http,
-        mcp: allServices.mcp,
-        rpc: allServices.rpc,
+        ...singletonServices,
+        userSession,
       },
+      interaction,
       allMiddleware,
-      async () => await funcConfig.func(allServices, data, session!)
+      async () => {
+        const session = userSession?.get()
+        if (!session) {
+          if (wiringAuth === false || funcConfig.auth === false) {
+            throw new ForbiddenError()
+          }
+        }
+        const allServices = await getAllServices(session)
+        await runPermissions(wireType, wireId, {
+          wiringTags: tags,
+          wiringPermissions,
+          funcTags: funcConfig.tags,
+          funcPermissions: funcConfig.permissions,
+          allServices,
+          data,
+          session,
+        })
+        return await funcConfig.func(allServices, data, session!)
+      }
     )) as Out
   }
 
-  return (await funcConfig.func(allServices, data, session!)) as Out
+  const allServices = await getAllServices()
+  return (await funcConfig.func(allServices, data)) as Out
 }

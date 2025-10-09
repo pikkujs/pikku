@@ -55,7 +55,7 @@ export type PikkuCLI = {
  */
 export interface CLIProgramState {
   defaultRenderer?: CorePikkuCLIRender<any>
-  globalMiddleware: CorePikkuMiddleware[]
+  middleware: CorePikkuMiddleware[]
   renderers: Record<string, CorePikkuCLIRender<any>>
   commandOptions?: Record<string, Record<string, CLIOption>>
 }

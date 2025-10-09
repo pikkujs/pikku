@@ -61,7 +61,6 @@ const validateAuth = (
 
 export const processMessageHandlers = (
   services: CoreServices,
-  session: CoreUserSession | undefined,
   channelConfig: CoreChannel<any, any>,
   channelHandler: PikkuChannelHandler
 ) => {
@@ -71,7 +70,6 @@ export const processMessageHandlers = (
   const processMessage = async (
     data: JSONValue,
     onMessage: any,
-    session: CoreUserSession | undefined,
     routingProperty?: string,
     routerValue?: string
   ): Promise<unknown> => {
@@ -104,15 +102,17 @@ export const processMessageHandlers = (
       channelConfig.name,
       pikkuFuncName,
       {
+        singletonServices: services,
         getAllServices: () => ({
           ...services,
           channel: channelHandler.getChannel(),
         }),
-        data,
-        session,
+        data: () => data,
+        userSession: services.userSession,
         permissions,
         middleware,
         tags: channelConfig.tags,
+        interaction: { channel: channelHandler.getChannel() },
       }
     )
   }
@@ -133,7 +133,6 @@ export const processMessageHandlers = (
             result = await processMessage(
               messageData,
               routes[routerValue],
-              session,
               routingProperty,
               routerValue
             )
@@ -144,11 +143,7 @@ export const processMessageHandlers = (
         // Default handler if no routes matched but json data was parsed
         if (!processed && channelConfig.onMessage) {
           processed = true
-          result = await processMessage(
-            messageData,
-            channelConfig.onMessage,
-            session
-          )
+          result = await processMessage(messageData, channelConfig.onMessage)
         }
       } catch (error) {
         // Most likely a json error.. ignore
@@ -158,7 +153,7 @@ export const processMessageHandlers = (
     // Default handler if no routes matched and json data wasn't parsed
     if (!processed && channelConfig.onMessage) {
       processed = true
-      result = await processMessage(rawData, channelConfig.onMessage, session)
+      result = await processMessage(rawData, channelConfig.onMessage)
     }
 
     if (!processed) {

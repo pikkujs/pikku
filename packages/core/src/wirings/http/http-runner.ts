@@ -14,17 +14,13 @@ import {
   SessionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { MissingSessionError, NotFoundError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import {
   closeSessionServices,
   createWeakUID,
   isSerializable,
 } from '../../utils.js'
-import {
-  PikkuUserSessionService,
-  UserSessionService,
-} from '../../services/user-session-service.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -218,10 +214,9 @@ export const createHTTPInteraction = (
  * @returns {Promise<any>} An object containing the route handler result and session services (if any).
  * @throws Throws errors like MissingSessionError or ForbiddenError on validation failures.
  */
-const executeRouteWithMiddleware = async (
+const executeRoute = async (
   services: {
     singletonServices: any
-    userSession: UserSessionService<CoreUserSession>
     createSessionServices: Function
     skipUserSession: boolean
     requestId: string
@@ -239,11 +234,10 @@ const executeRouteWithMiddleware = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const { matchedPath, params, route, httpMiddleware, middleware, meta } =
-    matchedRoute
+  const userSession = new PikkuUserSessionService<CoreUserSession>()
+  const { params, route, httpMiddleware, middleware, meta } = matchedRoute
   const {
     singletonServices,
-    userSession,
     createSessionServices,
     skipUserSession,
     requestId,
@@ -260,116 +254,88 @@ const executeRouteWithMiddleware = async (
     `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`
   )
 
-  // Main route execution logic wrapped for middleware handling
-  const runMain = async () => {
-    const session = userSession.get()
-
-    // Ensure session is available when required
-    if (skipUserSession && requiresSession) {
-      throw new Error(
-        "Can't skip trying to get user session if auth is required"
-      )
-    }
-
-    if (requiresSession && !session) {
-      singletonServices.logger.info({
-        action: 'Rejecting route (invalid session)',
-        path: matchedPath,
-      })
-      throw new MissingSessionError()
-    }
-
-    const data = await http.request!.data()
-
-    const getAllServices = async () => {
-      let channel: PikkuChannel<unknown, unknown> | undefined
-      if (matchedRoute.route.sse) {
-        const response = http?.response
-        if (!response) {
-          throw new Error('SSE requires a valid HTTP response object')
-        }
-        if (!response.setMode) {
-          throw new Error('Response object does not support SSE mode')
-        }
-        response.setMode('stream')
-        response.header('Content-Type', 'text/event-stream')
-        response.header('Cache-Control', 'no-cache')
-        response.header('Connection', 'keep-alive')
-        response.header('Transfer-Encoding', 'chunked')
-        channel = {
-          channelId: requestId,
-          openingData: data,
-          send: (data: any) => {
-            response.arrayBuffer(
-              isSerializable(data) ? JSON.stringify(data) : data
-            )
-          },
-          close: () => {
-            channel!.state = 'closed'
-            response.close?.()
-          },
-          state: 'open',
-        }
-      }
-
-      // Create session-specific services for handling the request
-      sessionServices = await createSessionServices(
-        { ...singletonServices, userSession, channel },
-        { http },
-        session
-      )
-
-      return rpcService.injectRPCService({
-        ...singletonServices,
-        ...sessionServices,
-        http,
-        userSession,
-        channel,
-      })
-    }
-
-    result = await runPikkuFunc(
-      PikkuWiringTypes.http,
-      `${meta.method}:${meta.route}`,
-      meta.pikkuFuncName,
-      {
-        getAllServices,
-        session,
-        data,
-        permissions: route.permissions,
-        coerceDataFromSchema: options.coerceDataFromSchema,
-        tags: route.tags,
-      }
-    )
-
-    // Respond with either a binary or JSON response based on configuration
-    if (route.returnsJSON === false) {
-      http?.response?.arrayBuffer(result)
-    } else {
-      http?.response?.json(result)
-    }
-
-    http?.response?.status(200)
-    // TODO: Evaluate if the response stream should be explicitly ended.
-    // http?.response?.end()
+  // Ensure session is available when required
+  if (skipUserSession && requiresSession) {
+    throw new Error("Can't skip trying to get user session if auth is required")
   }
 
-  // Get function config for middleware and tags
-  const funcConfig = pikkuState('function', 'functions').get(meta.pikkuFuncName)
+  const data = async () => await http.request!.data()
+  let channel: PikkuChannel<unknown, unknown> | undefined
 
-  // Execute middleware, then run the main logic
-  await runMiddleware(
-    { ...singletonServices, userSession },
-    { http },
-    combineMiddleware(PikkuWiringTypes.http, `${meta.method}:${meta.route}`, {
-      httpMiddleware,
-      wiringMiddleware: middleware,
-      wiringTags: route.tags,
-      funcMiddleware: funcConfig?.middleware,
-      funcTags: funcConfig?.tags,
-    }),
-    runMain
+  if (matchedRoute.route.sse) {
+    const response = http?.response
+    if (!response) {
+      throw new Error('SSE requires a valid HTTP response object')
+    }
+    if (!response.setMode) {
+      throw new Error('Response object does not support SSE mode')
+    }
+    response.setMode('stream')
+    response.header('Content-Type', 'text/event-stream')
+    response.header('Cache-Control', 'no-cache')
+    response.header('Connection', 'keep-alive')
+    response.header('Transfer-Encoding', 'chunked')
+    channel = {
+      channelId: requestId,
+      openingData: await data(),
+      send: (data: any) => {
+        response.arrayBuffer(isSerializable(data) ? JSON.stringify(data) : data)
+      },
+      close: () => {
+        channel!.state = 'closed'
+        response.close?.()
+      },
+      state: 'open',
+    }
+  }
+
+  const getAllServices = async (session?: CoreUserSession) => {
+    let channel: PikkuChannel<unknown, unknown> | undefined
+
+    // Create session-specific services for handling the request
+    sessionServices = await createSessionServices(
+      { ...singletonServices, userSession, channel },
+      { http },
+      session
+    )
+
+    return rpcService.injectRPCService({
+      ...singletonServices,
+      ...sessionServices,
+      http,
+      userSession,
+      channel,
+    })
+  }
+
+  result = await runPikkuFunc(
+    PikkuWiringTypes.http,
+    `${meta.method}:${meta.route}`,
+    meta.pikkuFuncName,
+    {
+      singletonServices,
+      getAllServices,
+      auth: route.auth !== false,
+      userSession,
+      middleware: [...(httpMiddleware || []), ...(middleware || [])],
+      data,
+      permissions: route.permissions,
+      coerceDataFromSchema: options.coerceDataFromSchema,
+      tags: route.tags,
+      interaction: { http, channel },
+    }
   )
+
+  // Respond with either a binary or JSON response based on configuration
+  if (route.returnsJSON === false) {
+    http?.response?.arrayBuffer(result)
+  } else {
+    http?.response?.json(result)
+  }
+
+  http?.response?.status(200)
+  // TODO: Evaluate if the response stream should be explicitly ended.
+  // http?.response?.end()
 
   return sessionServices ? { result, sessionServices } : { result }
 }
@@ -456,7 +422,6 @@ export const fetchData = async <In, Out>(
     (request as any).getHeader?.('x-request-id') ||
     generateRequestId?.() ||
     createWeakUID()
-  const userSession = new PikkuUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
 
@@ -482,10 +447,9 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ;({ result, sessionServices } = await executeRouteWithMiddleware(
+    ;({ result, sessionServices } = await executeRoute(
       {
         singletonServices,
-        userSession,
         createSessionServices,
         skipUserSession,
         requestId,

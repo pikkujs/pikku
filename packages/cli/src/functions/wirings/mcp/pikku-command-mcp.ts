@@ -58,7 +58,7 @@ const generateArgumentsFromSchema = async (
   }
 }
 
-export const pikkuMCP: any = pikkuSessionlessFunc<void, true | undefined>({
+export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const { mcpEndpoints, functions } = await getInspectorState()
     const {

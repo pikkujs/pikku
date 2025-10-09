@@ -42,7 +42,6 @@ class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const session = await this.services.userSession?.get()
     const rpcDepth = this.services.rpc?.depth || 0
     const pikkuFuncName = getPikkuFunctionName(funcName)
     return runPikkuFunc<In, Out>(
@@ -50,6 +49,7 @@ class ContextAwareRPCService {
       pikkuFuncName,
       pikkuFuncName,
       {
+        singletonServices: this.services,
         getAllServices: () => {
           this.services.rpc = this.services.rpc
             ? ({
@@ -60,9 +60,16 @@ class ContextAwareRPCService {
             : undefined
           return this.services
         },
-        data,
-        session,
+        data: () => data,
+        userSession: this.services.userSession,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
+        interaction: {
+          rpc: this.services.rpc,
+          channel: this.services.channel,
+          http: this.services.http,
+          mcp: this.services.mcp,
+          scheduledTask: this.services.scheduledTask,
+        },
       }
     )
   }

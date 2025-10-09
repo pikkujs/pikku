@@ -118,7 +118,6 @@ export const runLocalChannel = async ({
       channelHandler.registerOnMessage(
         processMessageHandlers(
           allServices,
-          session,
           channelConfig as any,
           channelHandler
         )

@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeQueueMeta } from './serialize-queue-meta.js'
 
-export const pikkuQueue: any = pikkuSessionlessFunc<void, true | undefined>({
+export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {

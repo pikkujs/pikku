@@ -2,12 +2,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
 import { CorePikkuMiddleware } from '../../types/core.types.js'
-import {
-  wireCLI,
-  runCLICommand,
-  addCLIMiddleware,
-  pikkuCLIRender,
-} from './cli-runner.js'
+import { wireCLI, runCLICommand, pikkuCLIRender } from './cli-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 
@@ -61,7 +56,7 @@ describe('CLI Runner', () => {
       pikkuState('cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
-          globalMiddleware: [],
+          middleware: [],
           renderers: {},
         },
       })
@@ -104,7 +99,7 @@ describe('CLI Runner', () => {
       pikkuState('cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
-          globalMiddleware: [],
+          middleware: [],
           renderers: {},
         },
       })
@@ -165,7 +160,7 @@ describe('CLI Runner', () => {
       pikkuState('cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
-          globalMiddleware: [testMiddleware],
+          middleware: [testMiddleware],
           renderers: {},
         },
       })
@@ -222,7 +217,7 @@ describe('CLI Runner', () => {
       pikkuState('cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
-          globalMiddleware: [testMiddleware],
+          middleware: [testMiddleware],
           renderers: {},
         },
       })
@@ -326,7 +321,7 @@ describe('CLI Runner', () => {
 
       const programs = pikkuState('cli', 'programs')
       assert.ok(programs['my-cli'])
-      assert.strictEqual(programs['my-cli'].globalMiddleware.length, 0)
+      assert.strictEqual(programs['my-cli'].middleware.length, 0)
     })
 
     test('should register CLI with global middleware', () => {
@@ -349,8 +344,8 @@ describe('CLI Runner', () => {
       })
 
       const programs = pikkuState('cli', 'programs')
-      assert.strictEqual(programs['my-cli'].globalMiddleware.length, 1)
-      assert.strictEqual(programs['my-cli'].globalMiddleware[0], middleware)
+      assert.strictEqual(programs['my-cli'].middleware.length, 1)
+      assert.strictEqual(programs['my-cli'].middleware[0], middleware)
     })
 
     test('should throw error when CLI metadata not found', () => {
@@ -374,7 +369,7 @@ describe('CLI Runner', () => {
       pikkuState('cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
-          globalMiddleware: [],
+          middleware: [],
           renderers: {},
         },
       })
@@ -386,13 +381,7 @@ describe('CLI Runner', () => {
     })
 
     test('should create program state if it does not exist', () => {
-      const middleware: CorePikkuMiddleware = async (_s, _i, next) => {
-        await next()
-      }
-
       pikkuState('cli', 'programs', {})
-
-      addCLIMiddleware('new-cli', [], [middleware])
 
       const programs = pikkuState('cli', 'programs')
       assert.ok(programs['new-cli'])

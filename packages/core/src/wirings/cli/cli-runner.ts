@@ -57,7 +57,7 @@ export const wireCLI = <
     pikkuState('cli', 'programs') || {}
   programs[cli.program] = {
     defaultRenderer: cli.render || defaultJSONRenderer,
-    globalMiddleware: cli.middleware || [],
+    middleware: cli.middleware || [],
     renderers: {},
   }
   pikkuState('cli', 'programs', programs)
@@ -192,9 +192,15 @@ function registerCLICommands(
  */
 function pluckCLIData(
   mergedData: Record<string, any>,
-  schema: any,
+  funcName: string,
   availableOptions: Record<string, CLIOption>
 ): Record<string, any> {
+  const funcMeta = pikkuState('function', 'meta')[funcName]
+  const schemaName = funcMeta?.inputSchemaName
+  const schema = schemaName
+    ? pikkuState('misc', 'schemas').get(schemaName)
+    : null
+
   if (schema && schema.properties) {
     // If we have a schema, only include fields that are in the schema
     const result: Record<string, any> = {}
@@ -254,31 +260,18 @@ export async function runCLICommand({
 
   const funcName = currentCommand.pikkuFuncName
 
-  // Get function config and metadata
-  const funcConfig = pikkuState('function', 'functions').get(funcName)
-  if (!funcConfig) {
-    throw new NotFoundError(`Function not found: ${funcName}`)
-  }
-
   // Get program-specific data
   const programs: Record<string, CLIProgramState> =
     pikkuState('cli', 'programs') || {}
   const programData = programs[program]
-  const globalMiddleware = programData?.globalMiddleware || []
+  const programMiddleware = programData?.middleware || []
 
   // Get command ID and options
   const commandId = commandPath.join('.')
   const availableOptions = programData?.commandOptions?.[commandId] || {}
 
-  // Get function's expected input schema
-  const funcMeta = pikkuState('function', 'meta')[funcName]
-  const schemaName = funcMeta?.inputSchemaName
-  const schema = schemaName
-    ? pikkuState('misc', 'schemas').get(schemaName)
-    : null
-
   // Pluck only the fields the function expects
-  const pluckedData = pluckCLIData(data, schema, availableOptions)
+  const pluckedData = () => pluckCLIData(data, funcName, availableOptions)
 
   // Get the renderer
   const renderer =
@@ -302,8 +295,7 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  const session: CoreUserSession | undefined = undefined
-  const userSession = new PikkuUserSessionService<CoreUserSession>(session)
+  const userSession = new PikkuUserSessionService<CoreUserSession>()
   let sessionServices: SessionServices | undefined
 
   const interaction: PikkuInteraction = {
@@ -315,7 +307,7 @@ export async function runCLICommand({
     },
   }
 
-  const getAllServices = async () => {
+  const getAllServices = async (session?: CoreUserSession) => {
     // Create session-specific services for handling the command
     sessionServices = await createSessionServices?.(
       singletonServices,
@@ -337,63 +329,32 @@ export async function runCLICommand({
       commandId,
       funcName,
       {
+        singletonServices,
         getAllServices,
-        session,
         data: pluckedData,
-        middleware: globalMiddleware,
-        permissions: funcConfig.permissions,
-        tags: funcConfig.tags,
+        userSession,
+        middleware: programMiddleware,
+        interaction,
       }
     )
 
-    // Close the channel
-    channel.close()
-
     // Apply renderer one final time with the final output (if renderer exists)
     if (renderer) {
-      await Promise.resolve(renderer(singletonServices, result, session))
+      await Promise.resolve(
+        renderer(singletonServices, result, userSession.get())
+      )
     }
 
     return result
   } finally {
+    // Close the channel
+    channel.close()
+
     // Clean up session services
     if (sessionServices) {
       await closeSessionServices(singletonServices.logger, sessionServices)
     }
   }
-}
-
-/**
- * Helper to add CLI-specific middleware
- */
-export const addCLIMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
-  program: string,
-  commandPath: string | string[],
-  middleware: PikkuMiddleware[]
-) => {
-  const programs: Record<string, CLIProgramState> =
-    pikkuState('cli', 'programs') || {}
-
-  if (!programs[program]) {
-    programs[program] = {
-      defaultRenderer: undefined,
-      globalMiddleware: [],
-      renderers: {},
-    }
-  }
-
-  if (Array.isArray(commandPath)) {
-    // Global program middleware
-    programs[program].globalMiddleware = [
-      ...programs[program].globalMiddleware,
-      ...middleware,
-    ]
-  } else {
-    // Command-specific middleware (TODO: implement command-specific middleware storage)
-    console.warn('Command-specific middleware not yet implemented')
-  }
-
-  pikkuState('cli', 'programs', programs)
 }
 
 /**

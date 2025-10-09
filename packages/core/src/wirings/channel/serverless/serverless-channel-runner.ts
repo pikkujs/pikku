@@ -171,7 +171,7 @@ export const runChannelDisconnect = async ({
   if (!sessionServices && params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
-      {},
+      { channel },
       session
     )
   }
@@ -195,7 +195,8 @@ export const runChannelMessage = async (
   let sessionServices: SessionServices | undefined
   const { openingData, channelName, session } =
     await params.channelStore.getChannelAndSession(params.channelId)
-  const { channelHandler, channelConfig } = getVariablesForChannel({
+
+  const { channel, channelHandler, channelConfig } = getVariablesForChannel({
     ...params,
     openingData,
     channelName,
@@ -203,7 +204,7 @@ export const runChannelMessage = async (
   if (params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
-      {},
+      { channel },
       session
     )
   }
@@ -211,7 +212,6 @@ export const runChannelMessage = async (
   try {
     const onMessage = processMessageHandlers(
       { ...singletonServices, ...sessionServices },
-      session,
       channelConfig,
       channelHandler
     )
