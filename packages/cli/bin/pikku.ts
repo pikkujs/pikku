@@ -3,7 +3,7 @@ import { Command } from 'commander'
 import { createSingletonServices } from '../src/services.js'
 import { Config, SingletonServices } from '../types/application-types.js'
 import { PikkuRPCService } from '@pikku/core'
-import { TypedPikkuRPC } from '../.pikku/rpc-internal/pikku-rpc-wirings-map.internal.gen.js'
+// import { TypedPikkuRPC } from '../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 
@@ -12,7 +12,7 @@ export const action = async (
   config: Config
 ): Promise<void> => {
   const services = await createSingletonServices(config)
-  const rpcWrapper = new PikkuRPCService<SingletonServices, TypedPikkuRPC>()
+  const rpcWrapper = new PikkuRPCService<SingletonServices, any>()
   const { rpc } = await rpcWrapper.injectRPCService(services)
 
   if (command === 'watch') {

@@ -4,13 +4,21 @@ import type {
   SingletonServices,
   UserSession,
 } from '../types/application-types.js'
-import { CreateSessionServices, CreateSingletonServices } from '@pikku/core'
+import {
+  CreateConfig,
+  CreateSessionServices,
+  CreateSingletonServices,
+} from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import { inspect, InspectorState } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
+
+export const createConfig: CreateConfig<Config> = async () => {
+  return {} as any
+}
 
 /**
  * Singleton services factory for the Pikku CLI

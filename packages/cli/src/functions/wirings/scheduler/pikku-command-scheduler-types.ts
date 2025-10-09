@@ -19,7 +19,7 @@ export const pikkuSchedulerTypes: any = pikkuSessionlessFunc<void, void>({
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Creating scheduler types',
+      commandStart: 'Creating cheduler types',
       commandEnd: 'Created scheduler types',
       skipCondition: false,
       skipMessage: '',

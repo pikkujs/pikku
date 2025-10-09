@@ -52,7 +52,16 @@ const getMetaTypes = (
 
   const totalValues = Object.values(map).flat()
   if (totalValues.length === 0) {
-    errors.set(`No ${type} found`, map)
+    const helpMessage =
+      type === 'CoreConfig'
+        ? `No ${type} found. Make sure you have exported a createConfig function in your codebase:\n\n` +
+          `export const createConfig: CreateConfig<Config> = async () => {\n` +
+          `  return {}\n` +
+          `}\n\n` +
+          `Possible issues:\n` +
+          `- srcDirectories in pikku.config.json doesn't include the file with the createConfig method`
+        : `No ${type} found`
+    errors.set(helpMessage, map)
   } else if (totalValues.length > 1) {
     errors.set(`More than one ${type} found`, map)
   } else {

@@ -34,8 +34,8 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, true | undefined>({
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Finding queues',
-      commandEnd: 'Found queue',
+      commandStart: 'Finding Queues',
+      commandEnd: 'Found Queues',
       skipCondition: async ({ getInspectorState }) => {
         const visitState = await getInspectorState()
         return visitState.queueWorkers.files.size === 0

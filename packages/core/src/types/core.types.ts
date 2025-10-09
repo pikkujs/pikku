@@ -197,7 +197,8 @@ export type CreateSessionServices<
  * Defines a function type for creating config.
  */
 export type CreateConfig<Config extends CoreConfig> = (
-  variables?: VariablesService
+  variables?: VariablesService,
+  ...args: any[]
 ) => Promise<Config>
 
 /**
