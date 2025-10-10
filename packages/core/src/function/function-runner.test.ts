@@ -70,6 +70,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: () => ({}),
         middleware: [createMiddleware('wiringMiddleware')],
         tags: ['wiringTag'],
+        auth: false,
         interaction: {},
       }
     )
@@ -139,6 +140,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: () => ({}),
         permissions: wiringPermissions,
         tags: ['wiringTag'],
+        auth: false,
         interaction: {},
       }
     )
@@ -169,6 +171,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         tags: ['wiringTag'],
+        auth: false,
         interaction: {},
       }),
       {
@@ -192,6 +195,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         permissions: wiringPermissions,
+        auth: false,
         interaction: {},
       }),
       {
@@ -215,6 +219,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }),
       {
@@ -238,6 +243,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }),
       {
@@ -275,6 +281,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }
     )
@@ -326,6 +333,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }
     )
@@ -353,6 +361,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }
     )
@@ -398,14 +407,16 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: () => ({}),
         middleware: [wiringMiddleware],
         permissions: wiringPermissions,
+        auth: false,
         interaction: {},
       }
     )
 
     assert.equal(result, 'success')
+    // Permissions run after middleware (middleware can set/modify session)
     assert.deepEqual(executionOrder, [
-      'wiringPermission',
       'wiringMiddleware',
+      'wiringPermission',
       'main',
     ])
   })
@@ -448,14 +459,16 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }
     )
 
     assert.equal(result, 'success')
+    // Permissions run after middleware (middleware can set/modify session)
     assert.deepEqual(executionOrder, [
-      'funcPermission',
       'funcMiddleware',
+      'funcPermission',
       'main',
     ])
   })
@@ -486,6 +499,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => testData,
         userSession: { get: () => testSession, set: () => {} } as any,
+        auth: false,
         interaction: {},
       }
     )
@@ -519,6 +533,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: asyncGetServices,
         data: () => ({}),
+        auth: false,
         interaction: {},
       }
     )

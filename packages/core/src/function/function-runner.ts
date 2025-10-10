@@ -15,6 +15,7 @@ import {
   CorePikkuFunctionConfig,
 } from './functions.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
+import { ForbiddenError } from '../errors/errors.js'
 
 export const addFunction = (
   funcName: string,
@@ -75,23 +76,52 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
 
-  // Evaluate the data from the lazy function
-  const actualData = await data()
-
-  // Validate and coerce data if schema is defined
-  const inputSchemaName = funcMeta.inputSchemaName
-  if (inputSchemaName) {
-    // Validate request data against the defined schema, if any
-    await validateSchema(
-      singletonServices.logger,
-      singletonServices.schema,
-      inputSchemaName,
-      actualData
-    )
-    // Coerce (top level) query string parameters or date objects if specified by the schema
-    if (coerceDataFromSchema) {
-      coerceTopLevelDataFromSchema(inputSchemaName, actualData)
+  // Helper function to run permissions and execute the function
+  const executeFunction = async () => {
+    const session = userSession?.get()
+    if (wiringAuth === true || funcConfig.auth === true) {
+      // This means it was explicitly enabled in either wiring or function and has to be respected
+      if (!session) {
+        throw new ForbiddenError('Authentication required')
+      }
     }
+    if (wiringAuth === undefined && funcConfig.auth === undefined) {
+      // We always default to requiring auth unless explicitly disabled
+      if (!session) {
+        throw new ForbiddenError('Authentication required')
+      }
+    }
+
+    // Evaluate the data from the lazy function
+    const actualData = await data()
+
+    // Validate and coerce data if schema is defined
+    const inputSchemaName = funcMeta.inputSchemaName
+    if (inputSchemaName) {
+      // Validate request data against the defined schema, if any
+      await validateSchema(
+        singletonServices.logger,
+        singletonServices.schema,
+        inputSchemaName,
+        actualData
+      )
+      // Coerce (top level) query string parameters or date objects if specified by the schema
+      if (coerceDataFromSchema) {
+        coerceTopLevelDataFromSchema(inputSchemaName, actualData)
+      }
+    }
+
+    const allServices = await getAllServices(session)
+    await runPermissions(wireType, wireId, {
+      wiringTags: tags,
+      wiringPermissions,
+      funcTags: funcConfig.tags,
+      funcPermissions: funcConfig.permissions,
+      allServices,
+      data: actualData,
+      session,
+    })
+    return await funcConfig.func(allServices, actualData, session!)
   }
 
   // Combine all middleware: wiring tags → wiring middleware → func middleware → func tags
@@ -110,28 +140,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       },
       interaction,
       allMiddleware,
-      async () => {
-        const session = userSession?.get()
-        // const authExplicitlyDisabled =
-        //   wiringAuth === false || funcConfig.auth === false
-        // if (!authExplicitlyDisabled && !session) {
-        //   throw new ForbiddenError()
-        // }
-        const allServices = await getAllServices(session)
-        await runPermissions(wireType, wireId, {
-          wiringTags: tags,
-          wiringPermissions,
-          funcTags: funcConfig.tags,
-          funcPermissions: funcConfig.permissions,
-          allServices,
-          data: actualData,
-          session,
-        })
-        return await funcConfig.func(allServices, actualData, session!)
-      }
+      executeFunction
     )) as Out
   }
 
-  const allServices = await getAllServices()
-  return (await funcConfig.func(allServices, actualData)) as Out
+  return (await executeFunction()) as Out
 }
