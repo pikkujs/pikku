@@ -20,10 +20,14 @@ import type {
   CoreServices,
   CreateSessionServices,
   PikkuInteraction,
+  CreateConfig,
+  CreateSingletonServices,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import { LocalVariablesService } from '../../services/local-variables.js'
+import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
 /**
  * Default JSON renderer for CLI output
@@ -376,4 +380,99 @@ export const pikkuCLIRender = <
   ) => void | Promise<void>
 ): CorePikkuCLIRender<Data, Services, Session> => {
   return renderer
+}
+
+/**
+ * Execute a CLI program with the given arguments
+ * This is the main entry point for CLI programs
+ */
+export async function executeCLI({
+  programName,
+  args = process.argv.slice(2),
+  createConfig,
+  createSingletonServices,
+  createSessionServices,
+}: {
+  programName: string
+  args?: string[]
+  createConfig: CreateConfig<any, any>
+  createSingletonServices: CreateSingletonServices<any, any>
+  createSessionServices?: CreateSessionServices<any, any>
+}): Promise<void> {
+  try {
+    // Get CLI metadata from state
+    const allCLIMeta = pikkuState('cli', 'meta') || {}
+    const programMeta = allCLIMeta[programName]
+
+    if (!programMeta) {
+      console.error(`Error: CLI program "${programName}" not found`)
+      process.exit(1)
+    }
+
+    // Parse arguments for this specific program
+    const parsed = parseCLIArguments(args, programName, allCLIMeta)
+
+    // Handle help (check after parsing to support subcommand help)
+    if (args.includes('--help') || args.includes('-h') || args.length === 0) {
+      const helpText = generateCommandHelp(
+        programName,
+        allCLIMeta,
+        parsed.commandPath
+      )
+      console.log(helpText)
+      return
+    }
+
+    if (parsed.errors.length > 0) {
+      // Check if any error is about an unknown command
+      const hasUnknownCommand = parsed.errors.some(
+        (error) =>
+          error.startsWith('Unknown command:') ||
+          error.startsWith('Command not found:')
+      )
+
+      if (hasUnknownCommand) {
+        // Show help instead of error for unknown commands
+        const helpText = generateCommandHelp(
+          programName,
+          allCLIMeta,
+          parsed.commandPath
+        )
+        console.log(helpText)
+        process.exit(1)
+      } else {
+        // Show errors for other types of errors
+        console.error('Errors:')
+        parsed.errors.forEach((error) => console.error(`  ${error}`))
+        process.exit(1)
+      }
+    }
+
+    // Merge positionals and options into single data object
+    const data = { ...parsed.positionals, ...parsed.options }
+
+    // Create config (pass data in case it needs to use any parsed options)
+    const config = await createConfig(new LocalVariablesService(), data)
+
+    // Create services with config
+    const singletonServices = await createSingletonServices(config)
+
+    // Execute the command
+    await runCLICommand({
+      program: programName,
+      commandPath: parsed.commandPath,
+      data,
+      singletonServices,
+      createSessionServices,
+    })
+  } catch (error: any) {
+    console.error('Error:', error)
+
+    // Show stack trace in verbose mode
+    if (args.includes('--verbose') || args.includes('-v')) {
+      console.error('Stack trace:', error.stack)
+    }
+
+    process.exit(1)
+  }
 }
