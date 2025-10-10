@@ -314,12 +314,16 @@ export async function runCLICommand({
       session
     )
 
-    return rpcService.injectRPCService({
-      ...singletonServices,
-      ...sessionServices,
-      userSession,
-      channel,
-    })
+    return rpcService.injectRPCService(
+      {
+        ...singletonServices,
+        ...sessionServices,
+        userSession,
+        channel,
+      },
+      interaction,
+      false
+    )
   }
 
   try {
@@ -331,7 +335,7 @@ export async function runCLICommand({
         singletonServices,
         getAllServices,
         data: pluckedData,
-        auth: false, // TODO: CLI functions do not require auth by default
+        auth: false,
         userSession,
         middleware: programMiddleware,
         interaction,

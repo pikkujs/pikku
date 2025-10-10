@@ -73,9 +73,21 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
     }
 
     if (parsed.errors.length > 0) {
-      console.error('Errors:')
-      parsed.errors.forEach(error => console.error(\`  \${error}\`))
-      process.exit(1)
+      // Check if any error is about an unknown command
+      const hasUnknownCommand = parsed.errors.some(error =>
+        error.startsWith('Unknown command:') || error.startsWith('Command not found:')
+      )
+
+      if (hasUnknownCommand) {
+        // Show help instead of error for unknown commands
+        showHelp(programMeta, parsed.commandPath, allCLIMeta)
+        process.exit(1)
+      } else {
+        // Show errors for other types of errors
+        console.error('Errors:')
+        parsed.errors.forEach(error => console.error(\`  \${error}\`))
+        process.exit(1)
+      }
     }
 
     // Merge positionals and options into single data object

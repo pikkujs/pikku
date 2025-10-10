@@ -13,6 +13,7 @@ import {
   CorePikkuMiddleware,
   SessionServices,
   PikkuWiringTypes,
+  PikkuInteraction,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import {
@@ -289,6 +290,8 @@ const executeRoute = async (
     }
   }
 
+  const interaction: PikkuInteraction = { http, channel }
+
   const getAllServices = async (session?: CoreUserSession) => {
     let channel: PikkuChannel<unknown, unknown> | undefined
 
@@ -299,13 +302,17 @@ const executeRoute = async (
       session
     )
 
-    return rpcService.injectRPCService({
-      ...singletonServices,
-      ...sessionServices,
-      http,
-      userSession,
-      channel,
-    })
+    return rpcService.injectRPCService(
+      {
+        ...singletonServices,
+        ...sessionServices,
+        http,
+        userSession,
+        channel,
+      },
+      interaction,
+      route.auth
+    )
   }
 
   result = await runPikkuFunc(
@@ -322,7 +329,7 @@ const executeRoute = async (
       permissions: route.permissions,
       coerceDataFromSchema: options.coerceDataFromSchema,
       tags: route.tags,
-      interaction: { http, channel },
+      interaction,
     }
   )
 

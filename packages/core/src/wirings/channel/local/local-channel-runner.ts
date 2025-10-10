@@ -8,7 +8,11 @@ import {
   RunChannelParams,
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import { PikkuWiringTypes, SessionServices } from '../../../types/core.types.js'
+import {
+  PikkuInteraction,
+  PikkuWiringTypes,
+  SessionServices,
+} from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import { combineMiddleware, runMiddleware } from '../../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
@@ -86,13 +90,19 @@ export const runLocalChannel = async ({
         )
       }
 
-      const allServices = rpcService.injectRPCService({
-        ...singletonServices,
-        ...sessionServices,
-        userSession: userSession,
-      })
+      const interaction: PikkuInteraction = { channel }
 
       channelHandler.registerOnOpen(() => {
+        const allServices = rpcService.injectRPCService(
+          {
+            ...singletonServices,
+            ...sessionServices,
+            userSession,
+          },
+          interaction,
+          false
+        )
+
         if (channelConfig.onConnect && meta.connect) {
           runPikkuFuncDirectly(
             meta.connect.pikkuFuncName,
@@ -103,6 +113,16 @@ export const runLocalChannel = async ({
       })
 
       channelHandler.registerOnClose(async () => {
+        const allServices = rpcService.injectRPCService(
+          {
+            ...singletonServices,
+            ...sessionServices,
+            userSession,
+          },
+          interaction,
+          false
+        )
+
         if (channelConfig.onDisconnect && meta.disconnect) {
           runPikkuFuncDirectly(
             meta.disconnect.pikkuFuncName,
@@ -110,10 +130,20 @@ export const runLocalChannel = async ({
             openingData
           )
         }
+
         if (sessionServices) {
           await closeSessionServices(singletonServices.logger, sessionServices)
         }
       })
+
+      const allServices = rpcService.injectRPCService(
+        {
+          ...singletonServices,
+          ...sessionServices,
+          userSession,
+        },
+        interaction
+      )
 
       channelHandler.registerOnMessage(
         processMessageHandlers(

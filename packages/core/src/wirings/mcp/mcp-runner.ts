@@ -1,4 +1,5 @@
 import {
+  PikkuInteraction,
   PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
@@ -200,7 +201,7 @@ async function runMCPPikkuFunc(
   {
     singletonServices,
     createSessionServices,
-    mcp: interaction,
+    mcp: mcpInteraction,
   }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
   let sessionServices: any
@@ -227,18 +228,22 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
+    const interaction: PikkuInteraction = { mcp: mcpInteraction }
+
     const getAllServices = async () => {
       sessionServices = await createSessionServices?.(
         singletonServices,
-        { mcp: interaction },
+        interaction,
         undefined
       )
 
-      return rpcService.injectRPCService({
-        ...singletonServices,
-        ...sessionServices,
-        mcp: interaction,
-      })
+      return rpcService.injectRPCService(
+        {
+          ...singletonServices,
+          ...sessionServices,
+        },
+        interaction
+      )
     }
 
     const result = await runPikkuFunc(
@@ -252,7 +257,7 @@ async function runMCPPikkuFunc(
         data: () => request.params,
         middleware: mcp.middleware,
         tags: mcp.tags,
-        interaction: { mcp: interaction },
+        interaction,
       }
     )
 

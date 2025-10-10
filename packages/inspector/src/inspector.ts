@@ -1,12 +1,7 @@
 import * as ts from 'typescript'
 import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
-import {
-  InspectorState,
-  InspectorHTTPState,
-  InspectorLogger,
-  InspectorOptions,
-} from './types.js'
+import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 
 export const inspect = (

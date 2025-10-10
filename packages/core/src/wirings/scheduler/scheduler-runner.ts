@@ -108,10 +108,13 @@ export async function runScheduledTask({
         session
       )
 
-      return rpcService.injectRPCService({
-        ...singletonServices,
-        ...sessionServices,
-      })
+      return rpcService.injectRPCService(
+        {
+          ...singletonServices,
+          ...sessionServices,
+        },
+        interaction
+      )
     }
 
     const result = await runPikkuFunc(

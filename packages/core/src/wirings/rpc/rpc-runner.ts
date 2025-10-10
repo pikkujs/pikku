@@ -1,4 +1,8 @@
-import { CoreServices, PikkuWiringTypes } from '../../types/core.types.js'
+import {
+  CoreServices,
+  PikkuInteraction,
+  PikkuWiringTypes,
+} from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
@@ -22,8 +26,10 @@ const getPikkuFunctionName = (rpcName: string): string => {
 class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
+    private interaction: PikkuInteraction,
     private options: {
       coerceDataFromSchema?: boolean
+      requiresAuth?: boolean
     }
   ) {}
 
@@ -49,6 +55,7 @@ class ContextAwareRPCService {
       pikkuFuncName,
       pikkuFuncName,
       {
+        auth: this.options.requiresAuth,
         singletonServices: this.services,
         getAllServices: () => {
           this.services.rpc = this.services.rpc
@@ -63,13 +70,7 @@ class ContextAwareRPCService {
         data: () => data,
         userSession: this.services.userSession,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
-        interaction: {
-          rpc: this.services.rpc,
-          channel: this.services.channel,
-          http: this.services.http,
-          mcp: this.services.mcp,
-          scheduledTask: this.services.scheduledTask,
-        },
+        interaction: this.interaction,
       }
     )
   }
@@ -90,13 +91,16 @@ export class PikkuRPCService<
   // Convenience function for initializing
   injectRPCService(
     services: Services,
+    interaction: PikkuInteraction,
+    requiresAuth?: boolean | undefined,
     depth: number = 0
   ): Services & { rpc: TypedRPC } {
     const serviceCopy = {
       ...services,
     }
-    const serviceRPC = new ContextAwareRPCService(serviceCopy, {
+    const serviceRPC = new ContextAwareRPCService(serviceCopy, interaction, {
       coerceDataFromSchema: this.config?.coerceDataFromSchema,
+      requiresAuth,
     })
     serviceCopy.rpc = {
       depth,
