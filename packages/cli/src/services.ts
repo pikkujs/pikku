@@ -17,25 +17,24 @@ import { inspect, InspectorState } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
 import { PikkuCLIConfig } from '../types/config.js'
-import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
+import {
+  CLILoggerForwarder,
+  ForwardedLogMessage,
+} from './services/cli-logger-forwarder.service.js'
 
 const logger = new CLILogger({ logLogo: true, silent: false })
 
 /**
  * Default CLI renderer that logs output using the logger
  */
-export const defaultCLIRenderer = pikkuCLIRender<any, SingletonServices>(
-  (services, data) => {
-    // Default renderer that logs output to console
-    if (data !== undefined && data !== null) {
-      if (typeof data === 'object') {
-        logger.info(JSON.stringify(data, null, 2))
-      } else {
-        logger.info(String(data))
-      }
-    }
+export const defaultCLIRenderer = pikkuCLIRender<
+  ForwardedLogMessage,
+  SingletonServices
+>((_services, data) => {
+  if (data) {
+    logger[data.level]({ message: data.message, type: data.type })
   }
-)
+})
 
 export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,

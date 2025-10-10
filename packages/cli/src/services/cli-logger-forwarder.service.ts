@@ -3,7 +3,7 @@ import { Logger, LogLevel, PikkuChannel } from '@pikku/core'
 /**
  * Log message structure sent through the channel
  */
-export interface LogMessage {
+export interface ForwardedLogMessage {
   message: string
   level: 'trace' | 'debug' | 'info' | 'warn' | 'error'
   type?: string
@@ -18,7 +18,7 @@ export class CLILoggerForwarder implements Logger {
 
   constructor(
     private logger: Logger,
-    private channel: PikkuChannel<unknown, LogMessage>
+    private channel: PikkuChannel<unknown, ForwardedLogMessage>
   ) {}
 
   setLevel(level: LogLevel): void {
@@ -26,7 +26,7 @@ export class CLILoggerForwarder implements Logger {
   }
 
   private log(
-    level: LogMessage['level'],
+    level: ForwardedLogMessage['level'],
     logLevel: LogLevel,
     messageOrObj: string | Record<string, any> | Error,
     type?: string
