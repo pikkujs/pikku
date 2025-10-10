@@ -31,7 +31,6 @@ export const all: any = pikkuVoidFunc({
     await rpc.invoke('pikkuCLITypes', null)
 
     const functions = await rpc.invoke('pikkuFunctions', null)
-    console.log(functions)
     if (!functions) {
       logger.info(`• No functions found, skipping remaining steps...\x1b[0m`)
       return
@@ -152,7 +151,11 @@ export const all: any = pikkuVoidFunc({
         logger,
         config,
         config.bootstrapFiles.cli,
-        [config.cliWiringMetaFile, config.cliWiringsFile],
+        [
+          config.rpcInternalWiringMetaFile,
+          config.cliWiringMetaFile,
+          config.cliWiringsFile,
+        ],
         schemas
       )
     }

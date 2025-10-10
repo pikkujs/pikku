@@ -1,4 +1,3 @@
-import { ForbiddenError } from '../errors/errors.js'
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
 import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
@@ -76,7 +75,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
 
-  // Check authentication
+  // Evaluate the data from the lazy function
+  const actualData = await data()
+
+  // Validate and coerce data if schema is defined
   const inputSchemaName = funcMeta.inputSchemaName
   if (inputSchemaName) {
     // Validate request data against the defined schema, if any
@@ -84,11 +86,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
       singletonServices.logger,
       singletonServices.schema,
       inputSchemaName,
-      data
+      actualData
     )
     // Coerce (top level) query string parameters or date objects if specified by the schema
     if (coerceDataFromSchema) {
-      coerceTopLevelDataFromSchema(inputSchemaName, data)
+      coerceTopLevelDataFromSchema(inputSchemaName, actualData)
     }
   }
 
@@ -110,11 +112,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
       allMiddleware,
       async () => {
         const session = userSession?.get()
-        if (!session) {
-          if (wiringAuth === false || funcConfig.auth === false) {
-            throw new ForbiddenError()
-          }
-        }
+        // const authExplicitlyDisabled =
+        //   wiringAuth === false || funcConfig.auth === false
+        // if (!authExplicitlyDisabled && !session) {
+        //   throw new ForbiddenError()
+        // }
         const allServices = await getAllServices(session)
         await runPermissions(wireType, wireId, {
           wiringTags: tags,
@@ -122,14 +124,14 @@ export const runPikkuFunc = async <In = any, Out = any>(
           funcTags: funcConfig.tags,
           funcPermissions: funcConfig.permissions,
           allServices,
-          data,
+          data: actualData,
           session,
         })
-        return await funcConfig.func(allServices, data, session!)
+        return await funcConfig.func(allServices, actualData, session!)
       }
     )) as Out
   }
 
   const allServices = await getAllServices()
-  return (await funcConfig.func(allServices, data)) as Out
+  return (await funcConfig.func(allServices, actualData)) as Out
 }

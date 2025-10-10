@@ -91,6 +91,10 @@ export type PikkuCLIInput = {
     additionalInfo: OpenAPISpecInfo
   }
 
+  cli?: {
+    entrypoints?: Record<string, { path: string } | string>
+  }
+
   middlewareServices?: string[]
 
   schemasFromTypes?: string[]
@@ -126,6 +130,10 @@ export type PikkuCLIConfig = {
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo
+  }
+
+  cli?: {
+    entrypoints?: Record<string, { path: string } | string>
   }
 
   middlewareServices?: string[]

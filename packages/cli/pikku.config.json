@@ -7,5 +7,10 @@
     "../inspector/src": "@pikku/inspector"
   },
   "supportsImportAttributes": true,
-  "schemasFromTypes": ["PikkuCLIConfig"]
+  "schemasFromTypes": ["PikkuCLIConfig"],
+  "cli": {
+    "entrypoints": {
+      "pikku": ".pikku/cli/pikku-bootstrap-pikku-cli.gen.ts"
+    }
+  }
 }

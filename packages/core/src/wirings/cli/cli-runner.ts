@@ -56,7 +56,8 @@ export const wireCLI = <
   const programs: Record<string, CLIProgramState> =
     pikkuState('cli', 'programs') || {}
   programs[cli.program] = {
-    defaultRenderer: cli.render || defaultJSONRenderer,
+    defaultRenderer: (cli.render ||
+      defaultJSONRenderer) as CorePikkuCLIRender<any>,
     middleware: cli.middleware || [],
     renderers: {},
   }
@@ -166,8 +167,7 @@ function registerCLICommands(
 
     addFunction(funcName, {
       func: unwrapped.func,
-      // CLI functions should not require auth by default
-      auth: unwrapped.auth !== undefined ? unwrapped.auth : false,
+      auth: unwrapped.auth,
       permissions: unwrapped.permissions,
       middleware: unwrapped.middleware,
       tags: unwrapped.tags,
@@ -278,8 +278,7 @@ export async function runCLICommand({
     programData?.renderers[commandId] || programData?.defaultRenderer
 
   // Create a CLI channel for progressive output
-  let channel: PikkuChannel<unknown, unknown>
-  channel = {
+  const channel: PikkuChannel<unknown, unknown> = {
     channelId: `cli:${program}:${commandId}`,
     openingData: pluckedData,
     send: async (data: any) => {
@@ -332,6 +331,7 @@ export async function runCLICommand({
         singletonServices,
         getAllServices,
         data: pluckedData,
+        auth: false, // TODO: CLI functions do not require auth by default
         userSession,
         middleware: programMiddleware,
         interaction,

@@ -249,7 +249,7 @@ async function runMCPPikkuFunc(
         singletonServices,
         getAllServices,
         userSession: undefined, // TODO
-        data: request.params,
+        data: () => request.params,
         middleware: mcp.middleware,
         tags: mcp.tags,
         interaction: { mcp: interaction },

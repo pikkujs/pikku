@@ -1,116 +1,126 @@
-// import { pikkuSchemas } from './functions/wirings/functions/schemas.js'
-// import { pikkuFetch } from './functions/wirings/fetch/index.js'
-// import { pikkuWebSocketTyped } from './functions/wirings/channels/pikku-command-websocket-typed.js'
-// import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
-// import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
-// import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
-// import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
-// import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-// import { all } from './functions/commands/all.js'
+import { pikkuSchemas } from './functions/wirings/functions/schemas.js'
+import { pikkuFetch } from './functions/wirings/fetch/index.js'
+import { pikkuWebSocketTyped } from './functions/wirings/channels/pikku-command-websocket-typed.js'
+import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
+import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
+import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
+import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
+import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
+import { all } from './functions/commands/all.js'
 
-// wireCLI({
-//   program: 'pikku',
-//   description:
-//     'Pikku CLI - Code generation tool for type-safe backend development',
-//   commands: {
-//     all: pikkuCLICommand({
-//       command: 'all',
-//       func: all,
-//       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//         tags: {
-//           description: 'Filter functions by tags (comma-separated)',
-//           short: 't',
-//         },
-//         types: {
-//           description: 'Filter functions by types (comma-separated)',
-//         },
-//         directories: {
-//           description: 'Filter functions by directories (comma-separated)',
-//           short: 'd',
-//         },
-//       },
-//     }),
-//     schemas: pikkuCLICommand({
-//       command: 'schemas',
-//       func: pikkuSchemas,
-//       description: 'Generate JSON schemas for function input/output types',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//     fetch: pikkuCLICommand({
-//       command: 'fetch',
-//       func: pikkuFetch,
-//       description: 'Generate type-safe HTTP fetch client',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//     websocket: pikkuCLICommand({
-//       command: 'websocket',
-//       func: pikkuWebSocketTyped,
-//       description: 'Generate type-safe WebSocket client',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//     rpc: pikkuCLICommand({
-//       command: 'rpc',
-//       func: pikkuRPCClient,
-//       description: 'Generate RPC client wrappers',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//     'queue-service': pikkuCLICommand({
-//       command: 'queue-service',
-//       func: pikkuQueueService,
-//       description: 'Generate queue service wrapper',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//     openapi: pikkuCLICommand({
-//       command: 'openapi',
-//       func: pikkuOpenAPI,
-//       description: 'Generate OpenAPI specification from HTTP routes',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//     nextjs: pikkuCLICommand({
-//       command: 'nextjs',
-//       func: pikkuNext,
-//       description: 'Generate Next.js backend and HTTP wrappers',
-//       options: {
-//         config: {
-//           description: 'Path to pikku.config.json file',
-//           short: 'c',
-//         },
-//       },
-//     }),
-//   },
-// })
+wireCLI({
+  program: 'pikku',
+  description:
+    'Pikku CLI - Code generation tool for type-safe backend development',
+  render: (services, data) => {
+    // Default renderer that logs output to console
+    if (data !== undefined && data !== null) {
+      if (typeof data === 'object') {
+        services.logger.info(JSON.stringify(data, null, 2))
+      } else {
+        services.logger.info(String(data))
+      }
+    }
+  },
+  commands: {
+    all: pikkuCLICommand({
+      command: 'all',
+      func: all,
+      description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+        tags: {
+          description: 'Filter functions by tags (comma-separated)',
+          short: 't',
+        },
+        types: {
+          description: 'Filter functions by types (comma-separated)',
+        },
+        directories: {
+          description: 'Filter functions by directories (comma-separated)',
+          short: 'd',
+        },
+      },
+    }),
+    schemas: pikkuCLICommand({
+      command: 'schemas',
+      func: pikkuSchemas,
+      description: 'Generate JSON schemas for function input/output types',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+    fetch: pikkuCLICommand({
+      command: 'fetch',
+      func: pikkuFetch,
+      description: 'Generate type-safe HTTP fetch client',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+    websocket: pikkuCLICommand({
+      command: 'websocket',
+      func: pikkuWebSocketTyped,
+      description: 'Generate type-safe WebSocket client',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+    rpc: pikkuCLICommand({
+      command: 'rpc',
+      func: pikkuRPCClient,
+      description: 'Generate RPC client wrappers',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+    'queue-service': pikkuCLICommand({
+      command: 'queue-service',
+      func: pikkuQueueService,
+      description: 'Generate queue service wrapper',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+    openapi: pikkuCLICommand({
+      command: 'openapi',
+      func: pikkuOpenAPI,
+      description: 'Generate OpenAPI specification from HTTP routes',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+    nextjs: pikkuCLICommand({
+      command: 'nextjs',
+      func: pikkuNext,
+      description: 'Generate Next.js backend and HTTP wrappers',
+      options: {
+        config: {
+          description: 'Path to pikku.config.json file',
+          short: 'c',
+        },
+      },
+    }),
+  },
+})
