@@ -63,14 +63,14 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
       process.exit(1)
     }
 
-    // Handle help
-    if (args.includes('--help') || args.includes('-h') || args.length === 0) {
-      showHelp(programMeta)
-      return
-    }
-
     // Parse arguments for this specific program
     const parsed = parseCLIArguments(args, '${programName}', allCLIMeta)
+
+    // Handle help (check after parsing to support subcommand help)
+    if (args.includes('--help') || args.includes('-h') || args.length === 0) {
+      showHelp(programMeta, parsed.commandPath)
+      return
+    }
 
     if (parsed.errors.length > 0) {
       console.error('Errors:')
@@ -109,37 +109,109 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
 }
 
 /**
- * Show help for the CLI program
+ * Show help for the CLI program or a specific command
  */
-function showHelp(programMeta: any): void {
-  console.log(\`Usage: ${programName} [options] <command>\`)
-  console.log()
-
-  if (programMeta.description) {
-    console.log(programMeta.description)
+function showHelp(programMeta: any, commandPath: string[] = []): void {
+  // If no command path, show top-level help
+  if (commandPath.length === 0) {
+    console.log(\`Usage: ${programName} [options] <command>\`)
     console.log()
-  }
 
-  // Show global options
-  if (programMeta.options && Object.keys(programMeta.options).length > 0) {
-    console.log('Global Options:')
-    for (const [name, option] of Object.entries(programMeta.options)) {
-      const opt = option as any
-      const short = opt.short ? \`-\${opt.short}, \` : ''
-      const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
-      console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
+    if (programMeta.description) {
+      console.log(programMeta.description)
+      console.log()
     }
+
+    // Show global options
+    if (programMeta.options && Object.keys(programMeta.options).length > 0) {
+      console.log('Global Options:')
+      for (const [name, option] of Object.entries(programMeta.options)) {
+        const opt = option as any
+        const short = opt.short ? \`-\${opt.short}, \` : ''
+        const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
+        console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
+      }
+      console.log()
+    }
+
+    // Show commands
+    if (programMeta.commands && Object.keys(programMeta.commands).length > 0) {
+      console.log('Commands:')
+      showCommandsHelp(programMeta.commands, '')
+    }
+
     console.log()
+    console.log('Use --help with any command for more details')
+    return
   }
 
-  // Show commands
-  if (programMeta.commands && Object.keys(programMeta.commands).length > 0) {
+  // Navigate to the specific command
+  let currentCommand = programMeta.commands[commandPath[0]]
+  let commandPathStr = commandPath[0]
+
+  if (!currentCommand) {
+    console.error(\`Command not found: \${commandPath.join(' ')}\`)
+    return
+  }
+
+  for (let i = 1; i < commandPath.length; i++) {
+    if (!currentCommand.subcommands || !currentCommand.subcommands[commandPath[i]]) {
+      console.error(\`Command not found: \${commandPath.join(' ')}\`)
+      return
+    }
+    currentCommand = currentCommand.subcommands[commandPath[i]]
+    commandPathStr = commandPath.slice(0, i + 1).join(' ')
+  }
+
+  // Show help for this specific command
+  if (currentCommand.command) {
+    // This is a leaf command
+    console.log(\`Usage: ${programName} \${commandPathStr} [options]\`)
+    console.log()
+
+    if (currentCommand.description) {
+      console.log(currentCommand.description)
+      console.log()
+    }
+
+    // Show command-specific options
+    if (currentCommand.options && Object.keys(currentCommand.options).length > 0) {
+      console.log('Options:')
+      for (const [name, option] of Object.entries(currentCommand.options)) {
+        const opt = option as any
+        const short = opt.short ? \`-\${opt.short}, \` : ''
+        const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
+        console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
+      }
+      console.log()
+    }
+
+    // Show positionals if any
+    if (currentCommand.positionals && currentCommand.positionals.length > 0) {
+      console.log('Arguments:')
+      for (const positional of currentCommand.positionals) {
+        const required = positional.required ? '(required)' : '(optional)'
+        const variadic = positional.variadic ? '...' : ''
+        console.log(\`  \${positional.name}\${variadic} \${required}\`)
+      }
+      console.log()
+    }
+  } else if (currentCommand.subcommands) {
+    // This is a command group
+    console.log(\`Usage: ${programName} \${commandPathStr} <command>\`)
+    console.log()
+
+    if (currentCommand.description) {
+      console.log(currentCommand.description)
+      console.log()
+    }
+
+    // Show subcommands
     console.log('Commands:')
-    showCommandsHelp(programMeta.commands, '')
+    showCommandsHelp(currentCommand.subcommands, '')
+    console.log()
+    console.log('Use --help with any command for more details')
   }
-
-  console.log()
-  console.log('Use --help with any command for more details')
 }
 
 /**
