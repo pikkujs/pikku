@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import { AddWiring } from './types.js'
-import { extractFunctionName, extractServicesFromFunction } from './utils.js'
+import { extractFunctionName } from './utils/extract-function-name.js'
+import { extractServicesFromFunction } from './utils/extract-services.js'
 
 /**
  * Inspect pikkuPermission calls and extract first-arg destructuring

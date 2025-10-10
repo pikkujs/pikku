@@ -1,10 +1,8 @@
 import * as ts from 'typescript'
 import { AddWiring } from './types.js'
 import { TypesMap } from './types-map.js'
-import {
-  extractFunctionName,
-  getPropertyAssignmentInitializer,
-} from './utils.js'
+import { extractFunctionName } from './utils/extract-function-name.js'
+import { getPropertyAssignmentInitializer } from './utils/type-utils.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
 import { getPropertyValue } from './utils/get-property-value.js'
 

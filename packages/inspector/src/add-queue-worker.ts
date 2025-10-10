@@ -2,11 +2,9 @@ import * as ts from 'typescript'
 import { getPropertyValue } from './utils/get-property-value.js'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from './types.js'
-import {
-  extractFunctionName,
-  getPropertyAssignmentInitializer,
-  matchesFilters,
-} from './utils.js'
+import { extractFunctionName } from './utils/extract-function-name.js'
+import { getPropertyAssignmentInitializer } from './utils/type-utils.js'
+import { matchesFilters } from './utils/filter-utils.js'
 
 export const addQueueWorker: AddWiring = (
   logger,

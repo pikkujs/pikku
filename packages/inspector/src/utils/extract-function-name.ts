@@ -1,8 +1,6 @@
 import * as ts from 'typescript'
-import { InspectorFilters, InspectorLogger } from './types.js'
-import { PikkuWiringTypes, FunctionServicesMeta } from '@pikku/core'
 
-type ExtractedFunctionName = {
+export type ExtractedFunctionName = {
   pikkuFuncName: string
   name: string
   explicitName: string | null
@@ -731,7 +729,7 @@ export function extractFunctionName(
 /**
  * Helper function to populate the 'name' field based on priority
  */
-function populateNameByPriority(result: ExtractedFunctionName): void {
+export function populateNameByPriority(result: ExtractedFunctionName): void {
   // Priority 1: If we have an explict name, use that
   if (result.explicitName) {
     result.name = result.explicitName
@@ -754,7 +752,7 @@ function populateNameByPriority(result: ExtractedFunctionName): void {
 /**
  * Helper function to check if a variable declaration is a named export
  */
-function isNamedExport(declaration: ts.VariableDeclaration): boolean {
+export function isNamedExport(declaration: ts.VariableDeclaration): boolean {
   let parent: any = declaration.parent
   if (!parent) return false
 
@@ -773,181 +771,4 @@ function isNamedExport(declaration: ts.VariableDeclaration): boolean {
   }
 
   return false
-}
-
-// Until here
-export const extractTypeKeys = (type: ts.Type): string[] => {
-  return type.getProperties().map((symbol) => symbol.getName())
-}
-
-export function getPropertyAssignmentInitializer(
-  obj: ts.ObjectLiteralExpression,
-  propName: string,
-  followShorthand = false,
-  checker?: ts.TypeChecker
-): ts.Expression | undefined {
-  for (const prop of obj.properties) {
-    // ①  foo: () => {}
-    if (
-      ts.isPropertyAssignment(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === propName
-    ) {
-      return prop.initializer
-    }
-
-    // ②  foo() { … }
-    if (
-      ts.isMethodDeclaration(prop) &&
-      ts.isIdentifier(prop.name) &&
-      prop.name.text === propName
-    ) {
-      return prop.name // the method node *is* the function
-    }
-
-    // ③  { foo }  (shorthand)
-    if (
-      followShorthand &&
-      ts.isShorthandPropertyAssignment(prop) &&
-      prop.name.text === propName
-    ) {
-      if (!checker) return prop.name // best effort without a checker
-
-      let sym = checker.getSymbolAtLocation(prop.name)
-      if (sym && sym.flags & ts.SymbolFlags.Alias) {
-        sym = checker.getAliasedSymbol(sym)
-      }
-
-      const decl = sym?.declarations?.[0]
-
-      // const foo = () => {}
-      if (
-        decl &&
-        ts.isVariableDeclaration(decl) &&
-        decl.initializer &&
-        (ts.isArrowFunction(decl.initializer) ||
-          ts.isFunctionExpression(decl.initializer))
-      ) {
-        return decl.initializer
-      }
-
-      // function foo() {}
-      if (
-        decl &&
-        (ts.isFunctionDeclaration(decl) ||
-          ts.isArrowFunction(decl) ||
-          ts.isFunctionExpression(decl))
-      ) {
-        return decl as ts.Expression
-      }
-
-      // fallback – just give back the identifier
-      return prop.name
-    }
-  }
-
-  return undefined
-}
-
-export const matchesFilters = (
-  filters: InspectorFilters,
-  params: { tags?: string[] },
-  meta: {
-    type: PikkuWiringTypes
-    name: string
-    filePath?: string
-  },
-  logger: InspectorLogger
-) => {
-  // If no filters are provided, allow everything
-  if (Object.keys(filters).length === 0) {
-    return true
-  }
-
-  // If all filter arrays are empty, allow everything
-  if (
-    (!filters.tags || filters.tags.length === 0) &&
-    (!filters.types || filters.types.length === 0) &&
-    (!filters.directories || filters.directories.length === 0)
-  ) {
-    return true
-  }
-
-  // Check type filter
-  if (filters.types && filters.types.length > 0) {
-    if (!filters.types.includes(meta.type)) {
-      logger.debug(`⒡ Filtered by type: ${meta.type}:${meta.name}`)
-      return false
-    }
-  }
-
-  // Check directory filter
-  if (filters.directories && filters.directories.length > 0) {
-    if (!meta.filePath) {
-      logger.debug(
-        `⒡ Filtered by directory: ${meta.type}:${meta.name} (${meta.filePath})`
-      )
-      return false
-    }
-
-    const matchesDirectory = filters.directories.some((dir) => {
-      // Normalize paths for comparison
-      const normalizedFilePath = meta.filePath!.replace(/\\/g, '/')
-      const normalizedDir = dir.replace(/\\/g, '/')
-      return normalizedFilePath.includes(normalizedDir)
-    })
-
-    if (!matchesDirectory) {
-      logger.debug(
-        `⒡ Filtered by directory: ${meta.type}:${meta.name} (${meta.filePath})`
-      )
-      return false
-    }
-  }
-
-  // Check tag filter
-  if (filters.tags && filters.tags.length > 0) {
-    if (
-      !params.tags ||
-      !filters.tags.some((tag) => params.tags!.includes(tag))
-    ) {
-      logger.debug(`⒡ Filtered by tags: ${meta.type}:${meta.name}`)
-      return false
-    }
-  }
-
-  return true
-}
-
-/**
- * Extract services from a function's first parameter destructuring pattern
- */
-export function extractServicesFromFunction(
-  handlerNode: ts.FunctionExpression | ts.ArrowFunction
-): FunctionServicesMeta {
-  const services: FunctionServicesMeta = {
-    optimized: true,
-    services: [],
-  }
-
-  const firstParam = handlerNode.parameters[0]
-  if (firstParam) {
-    if (ts.isObjectBindingPattern(firstParam.name)) {
-      for (const elem of firstParam.name.elements) {
-        const original =
-          elem.propertyName && ts.isIdentifier(elem.propertyName)
-            ? elem.propertyName.text
-            : ts.isIdentifier(elem.name)
-              ? elem.name.text
-              : undefined
-        if (original) {
-          services.services.push(original)
-        }
-      }
-    } else if (ts.isIdentifier(firstParam.name)) {
-      services.optimized = false
-    }
-  }
-
-  return services
 }
