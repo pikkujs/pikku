@@ -259,7 +259,7 @@ const executeRoute = async (
     throw new Error("Can't skip trying to get user session if auth is required")
   }
 
-  const data = async () => await http.request!.data()
+  const data = http.request!.data
   let channel: PikkuChannel<unknown, unknown> | undefined
 
   if (matchedRoute.route.sse) {

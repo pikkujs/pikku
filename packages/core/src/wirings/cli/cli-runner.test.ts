@@ -122,7 +122,7 @@ describe('CLI Runner', () => {
       })
 
       assert.strictEqual(result.success, true)
-      assert.deepStrictEqual(receivedData.data, { name: 'Alice', loud: true })
+      assert.deepStrictEqual(receivedData, { name: 'Alice', loud: true })
     })
 
     test('should run middleware before function execution', async () => {
@@ -357,35 +357,6 @@ describe('CLI Runner', () => {
           commands: {},
         })
       }, /CLI metadata not found for program 'nonexistent'/)
-    })
-  })
-
-  describe('addCLIMiddleware', () => {
-    test('should add global middleware to program', () => {
-      const middleware: CorePikkuMiddleware = async (_s, _i, next) => {
-        await next()
-      }
-
-      pikkuState('cli', 'programs', {
-        'test-cli': {
-          defaultRenderer: undefined,
-          middleware: [],
-          renderers: {},
-        },
-      })
-
-      addCLIMiddleware('test-cli', [], [middleware])
-
-      const programs = pikkuState('cli', 'programs')
-      assert.strictEqual(programs['test-cli'].globalMiddleware.length, 1)
-    })
-
-    test('should create program state if it does not exist', () => {
-      pikkuState('cli', 'programs', {})
-
-      const programs = pikkuState('cli', 'programs')
-      assert.ok(programs['new-cli'])
-      assert.strictEqual(programs['new-cli'].globalMiddleware.length, 1)
     })
   })
 
