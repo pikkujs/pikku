@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { PathToNameAndType } from './types.js'
+import { PathToNameAndType } from '../types.js'
 
 export const addFileWithFactory = (
   node: ts.Node,

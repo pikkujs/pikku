@@ -1,12 +1,12 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from './utils/get-property-value.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
-import { extractFunctionName } from './utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from './utils/type-utils.js'
-import { matchesFilters } from './utils/filter-utils.js'
-import { AddWiring } from './types.js'
+import { extractFunctionName } from '../utils/extract-function-name.js'
+import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import { matchesFilters } from '../utils/filter-utils.js'
+import { AddWiring } from '../types.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,

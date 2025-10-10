@@ -1,12 +1,12 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from './utils/get-property-value.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
 import { PikkuWiringTypes } from '@pikku/core'
-import { AddWiring } from './types.js'
-import { extractFunctionName } from './utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from './utils/type-utils.js'
-import { matchesFilters } from './utils/filter-utils.js'
+import { AddWiring } from '../types.js'
+import { extractFunctionName } from '../utils/extract-function-name.js'
+import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import { matchesFilters } from '../utils/filter-utils.js'
 
-export const addMCPResource: AddWiring = (
+export const addMCPTool: AddWiring = (
   logger,
   node,
   checker,
@@ -21,8 +21,8 @@ export const addMCPResource: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to wireMCPResource
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireMCPResource') {
+  // Check if the call is to wireMCPTool
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireMCPTool') {
     return
   }
 
@@ -33,7 +33,7 @@ export const addMCPResource: AddWiring = (
   if (ts.isObjectLiteralExpression(firstArg)) {
     const obj = firstArg
 
-    const uriValue = getPropertyValue(obj, 'uri') as string | null
+    const nameValue = getPropertyValue(obj, 'name') as string | null
     const titleValue = getPropertyValue(obj, 'title') as string | null
     const descriptionValue = getPropertyValue(obj, 'description') as
       | string
@@ -48,9 +48,7 @@ export const addMCPResource: AddWiring = (
       checker
     )
     if (!funcInitializer) {
-      console.error(
-        `• No valid 'func' property for MCP resource '${uriValue}'.`
-      )
+      console.error(`• No valid 'func' property for MCP tool '${nameValue}'.`)
       return
     }
 
@@ -59,20 +57,13 @@ export const addMCPResource: AddWiring = (
       checker
     ).pikkuFuncName
 
-    if (!uriValue) {
-      console.error(`• MCP resource is missing the required 'uri' property.`)
-      return
-    }
-
-    if (!titleValue) {
-      console.error(
-        `• MCP resource '${uriValue}' is missing the required 'title' property.`
-      )
+    if (!nameValue) {
+      console.error(`• MCP tool is missing the required 'name' property.`)
       return
     }
 
     if (!descriptionValue) {
-      console.error(`• MCP resource '${uriValue}' is missing a description.`)
+      console.error(`• MCP tool '${nameValue}' is missing a description.`)
       return
     }
 
@@ -82,7 +73,7 @@ export const addMCPResource: AddWiring = (
       !matchesFilters(
         options.filters || {},
         { tags },
-        { type: PikkuWiringTypes.mcp, name: uriValue, filePath },
+        { type: PikkuWiringTypes.mcp, name: nameValue, filePath },
         logger
       )
     ) {
@@ -100,10 +91,10 @@ export const addMCPResource: AddWiring = (
 
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 
-    state.mcpEndpoints.resourcesMeta[uriValue] = {
+    state.mcpEndpoints.toolsMeta[nameValue] = {
       pikkuFuncName,
-      uri: uriValue,
-      title: titleValue,
+      name: nameValue,
+      title: titleValue || undefined,
       description: descriptionValue,
       ...(streamingValue !== null && { streaming: streamingValue }),
       tags,

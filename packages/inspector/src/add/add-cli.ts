@@ -1,7 +1,7 @@
 import ts, { TypeChecker } from 'typescript'
-import { AddWiring, InspectorOptions, InspectorState } from './types.js'
+import { AddWiring, InspectorOptions, InspectorState } from '../types.js'
 import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
-import { extractFunctionName } from './utils/extract-function-name.js'
+import { extractFunctionName } from '../utils/extract-function-name.js'
 
 /**
  * Adds CLI command metadata to the inspector state

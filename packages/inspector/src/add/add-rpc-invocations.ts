@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { InspectorState, InspectorLogger } from './types.js'
+import { InspectorState, InspectorLogger } from '../types.js'
 
 /**
  * Scan for rpc.invoke() calls to track which functions are actually being invoked

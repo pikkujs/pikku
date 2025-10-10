@@ -1,23 +1,23 @@
 import * as ts from 'typescript'
-import { AddWiring } from './types.js'
-import { extractFunctionName } from './utils/extract-function-name.js'
-import { extractServicesFromFunction } from './utils/extract-services.js'
+import { AddWiring } from '../types.js'
+import { extractFunctionName } from '../utils/extract-function-name.js'
+import { extractServicesFromFunction } from '../utils/extract-services.js'
 
 /**
- * Inspect pikkuMiddleware calls and extract first-arg destructuring
+ * Inspect pikkuPermission calls and extract first-arg destructuring
  * for tree shaking optimization.
  */
-export const addMiddleware: AddWiring = (logger, node, checker, state) => {
+export const addPermission: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node
 
-  // only handle calls like pikkuMiddleware(...)
+  // only handle calls like pikkuPermission(...)
   if (!ts.isIdentifier(expression)) {
     return
   }
 
-  if (expression.text !== 'pikkuMiddleware') {
+  if (expression.text !== 'pikkuPermission') {
     return
   }
 
@@ -28,13 +28,15 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     !ts.isArrowFunction(handlerNode) &&
     !ts.isFunctionExpression(handlerNode)
   ) {
-    logger.error(`• Handler for pikkuMiddleware is not a function.`)
+    logger.error(`• Handler for pikkuPermission is not a function.`)
     return
   }
 
   const services = extractServicesFromFunction(handlerNode)
+
   const { pikkuFuncName, exportedName } = extractFunctionName(node, checker)
-  state.middleware.meta[pikkuFuncName] = {
+
+  state.permissions.meta[pikkuFuncName] = {
     services,
     sourceFile: node.getSourceFile().fileName,
     position: node.getStart(),
@@ -42,6 +44,6 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
   }
 
   logger.debug(
-    `• Found middleware with services: ${services.services.join(', ')}`
+    `• Found permission with services: ${services.services.join(', ')}`
   )
 }

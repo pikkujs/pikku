@@ -9,12 +9,6 @@ import {
 } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 
-export const normalizeHTTPTypes = (
-  httpState: InspectorHTTPState
-): InspectorHTTPState => {
-  return httpState
-}
-
 export const inspect = (
   logger: InspectorLogger,
   routeFiles: string[],
@@ -105,9 +99,6 @@ export const inspect = (
       visitRoutes(logger, checker, child, state, options)
     )
   }
-
-  // Normalise the typesMap
-  state.http = normalizeHTTPTypes(state.http)
 
   // Populate filesAndMethods
   const { result, errors } = getFilesAndMethods(state, options.types)

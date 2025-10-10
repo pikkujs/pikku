@@ -1,10 +1,10 @@
 import * as ts from 'typescript'
-import { AddWiring } from './types.js'
-import { TypesMap } from './types-map.js'
-import { extractFunctionName } from './utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from './utils/type-utils.js'
+import { AddWiring } from '../types.js'
+import { TypesMap } from '../types-map.js'
+import { extractFunctionName } from '../utils/extract-function-name.js'
+import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
-import { getPropertyValue } from './utils/get-property-value.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
