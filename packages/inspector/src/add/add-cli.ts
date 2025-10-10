@@ -1,5 +1,10 @@
 import ts, { TypeChecker } from 'typescript'
-import { AddWiring, InspectorOptions, InspectorState } from '../types.js'
+import {
+  AddWiring,
+  InspectorLogger,
+  InspectorOptions,
+  InspectorState,
+} from '../types.js'
 import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 
@@ -7,7 +12,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
  * Adds CLI command metadata to the inspector state
  */
 export const addCLI: AddWiring = (
-  _logger,
+  logger,
   node,
   typeChecker,
   inspectorState,
@@ -40,6 +45,7 @@ export const addCLI: AddWiring = (
 
   // Process the CLI configuration
   const cliConfig = processCLIConfig(
+    logger,
     arg,
     sourceFile,
     typeChecker,
@@ -59,6 +65,7 @@ export const addCLI: AddWiring = (
  * Processes a CLI configuration object
  */
 function processCLIConfig(
+  logger: InspectorLogger,
   node: ts.ObjectLiteralExpression,
   sourceFile: ts.SourceFile,
   typeChecker: TypeChecker,
@@ -89,6 +96,7 @@ function processCLIConfig(
       case 'commands':
         if (ts.isObjectLiteralExpression(prop.initializer)) {
           programMeta.commands = processCommands(
+            logger,
             prop.initializer,
             sourceFile,
             typeChecker,
@@ -102,6 +110,7 @@ function processCLIConfig(
       case 'options':
         if (ts.isObjectLiteralExpression(prop.initializer)) {
           programMeta.options = processOptions(
+            logger,
             prop.initializer,
             typeChecker,
             inspectorState,
@@ -128,6 +137,7 @@ function processCLIConfig(
  * Processes the commands object
  */
 function processCommands(
+  logger: InspectorLogger,
   node: ts.ObjectLiteralExpression,
   sourceFile: ts.SourceFile,
   typeChecker: TypeChecker,
@@ -144,6 +154,7 @@ function processCommands(
     if (!commandName) continue
 
     const commandMeta = processCommand(
+      logger,
       inspectorState,
       options,
       commandName,
@@ -165,6 +176,7 @@ function processCommands(
  * Processes a single command
  */
 function processCommand(
+  logger: InspectorLogger,
   inspectorState: InspectorState,
   options: InspectorOptions,
   name: string,
@@ -200,6 +212,7 @@ function processCommand(
     ) {
       // Process the object literal argument
       return processCommand(
+        logger,
         inspectorState,
         options,
         name,
@@ -284,6 +297,7 @@ function processCommand(
         // Process with pikkuFuncName from first pass
         if (optionsNode) {
           meta.options = processOptions(
+            logger,
             optionsNode,
             typeChecker,
             inspectorState,
@@ -303,6 +317,7 @@ function processCommand(
             if (!subName) continue
 
             const subCommand = processCommand(
+              logger,
               inspectorState,
               options,
               subName,
@@ -329,6 +344,7 @@ function processCommand(
  * Processes CLI options and extracts enum values from function input types
  */
 function processOptions(
+  logger: InspectorLogger,
   node: ts.ObjectLiteralExpression,
   typeChecker: TypeChecker,
   inspectorState: InspectorState,
@@ -413,6 +429,7 @@ function processOptions(
       } else {
         // Fallback: try to extract from Config type
         derivedChoices = extractEnumFromConfigType(
+          logger,
           optionName,
           typeChecker,
           inspectorState,
@@ -538,6 +555,7 @@ function extractEnumFromPropertyType(
  * Extracts enum values from the Config type
  */
 function extractEnumFromConfigType(
+  logger: InspectorLogger,
   propertyName: string,
   typeChecker: TypeChecker,
   inspectorState: InspectorState,
@@ -546,7 +564,7 @@ function extractEnumFromConfigType(
   // Look for Config type in typesLookup
   const configTypes = inspectorState.typesLookup.get('Config')
   if (!configTypes || configTypes.length === 0) {
-    console.warn(
+    logger.warn(
       `Warning: Could not find Config type in typesLookup for option "${propertyName}". ` +
         `Make sure you have a Config interface extending CoreConfig in your codebase.`
     )
@@ -556,7 +574,7 @@ function extractEnumFromConfigType(
   // Use the first Config type (there should only be one)
   const configType = configTypes[0]
   if (!configType) {
-    console.warn(
+    logger.warn(
       `Warning: Config type is undefined in typesLookup for option "${propertyName}".`
     )
     return null
