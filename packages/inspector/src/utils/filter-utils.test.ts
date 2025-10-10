@@ -1,8 +1,8 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { matchesFilters } from './utils/filter-utils.js'
-import { InspectorFilters } from './types.js'
 import { PikkuWiringTypes } from '@pikku/core'
+import { InspectorFilters } from '../types'
+import { matchesFilters } from './filter-utils'
 
 describe('matchesFilters', () => {
   // Mock logger for testing
