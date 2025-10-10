@@ -8,6 +8,7 @@ import {
   CreateConfig,
   CreateSessionServices,
   CreateSingletonServices,
+  pikkuCLIRender,
 } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
@@ -19,6 +20,22 @@ import { PikkuCLIConfig } from '../types/config.js'
 import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
 
 const logger = new CLILogger({ logLogo: true, silent: false })
+
+/**
+ * Default CLI renderer that logs output using the logger
+ */
+export const defaultCLIRenderer = pikkuCLIRender<any, SingletonServices>(
+  (services, data) => {
+    // Default renderer that logs output to console
+    if (data !== undefined && data !== null) {
+      if (typeof data === 'object') {
+        logger.info(JSON.stringify(data, null, 2))
+      } else {
+        logger.info(String(data))
+      }
+    }
+  }
+)
 
 export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,
