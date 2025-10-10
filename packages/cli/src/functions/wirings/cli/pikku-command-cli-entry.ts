@@ -5,6 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { join } from 'node:path'
 import { serializeLocalCLIBootstrap } from './serialize-local-cli-bootstrap.js'
 import { serializeChannelCLI } from './serialize-channel-cli.js'
+import { serializeChannelCLIClient } from './serialize-channel-cli-client.js'
 
 export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -70,6 +71,8 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
             channelWireFile,
             visitState.functions.files,
             config.packageMappings,
+            config.channelsTypesFile,
+            config.typesDeclarationFile,
             channelName,
             channelRoute
           )
@@ -79,10 +82,22 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
             `Serialized CLI channel for ${programName}: ${channelWireFile}`
           )
 
-          // TODO: Generate client code if clientPath is provided
+          // Generate client code if clientPath is provided
           if (channelClientPath) {
+            const channelClientFile = join(config.rootDir, channelClientPath)
+
+            const clientCode = serializeChannelCLIClient(
+              programName,
+              programMeta,
+              channelClientFile,
+              config,
+              config.bootstrapFiles.cli,
+              channelRoute
+            )
+
+            await writeFileInDir(logger, channelClientFile, clientCode)
             logger.info(
-              `TODO: Generate channel client for ${programName}: ${channelClientPath}`
+              `Serialized CLI channel client for ${programName}: ${channelClientFile}`
             )
           }
 

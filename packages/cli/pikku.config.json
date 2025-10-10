@@ -8,13 +8,15 @@
   },
   "supportsImportAttributes": true,
   "schemasFromTypes": ["PikkuCLIConfig"],
+  "websocketFile": ".pikku/pikku-websocket.gen.ts",
   "cli": {
     "entrypoints": {
       "pikku": [
         ".pikku/cli/pikku-bootstrap-pikku-cli.gen.ts",
         {
           "type": "channel",
-          "wirePath": ".pikku/cli/pikku-channel.gen.ts"
+          "wirePath": ".pikku/cli/pikku-channel.wire.gen.ts",
+          "path": ".pikku/cli/pikku-channel.client.gen.ts"
         }
       ]
     }

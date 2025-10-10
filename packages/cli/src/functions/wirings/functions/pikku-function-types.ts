@@ -1,48 +1,43 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeFunctionTypes } from './serialize-function-types.js'
+import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
 
 export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
-    const visitState = await getInspectorState()
+  func: async ({ logger, config }) => {
     const {
       typesDeclarationFile: typesFile,
       packageMappings,
-      rpcInternalMapDeclarationFile,
+      functionTypesFile,
+      httpTypesFile,
+      channelsTypesFile,
+      schedulersTypesFile,
+      queueTypesFile,
+      mcpTypesFile,
+      cliTypesFile,
     } = config
 
-    // Check for required types
-    checkRequiredTypes(visitState.filesAndMethodsErrors, {
-      userSessionType: true,
-      sessionServiceType: true,
-      singletonServicesType: true,
-    })
-
-    const { userSessionType, sessionServicesType, singletonServicesType } =
-      visitState.filesAndMethods
-
-    if (!userSessionType || !sessionServicesType || !singletonServicesType) {
-      throw new Error('Required types not found')
-    }
-
-    const content = serializeFunctionTypes(
-      `import type { ${userSessionType.type} } from '${getFileImportRelativePath(typesFile, userSessionType.typePath, packageMappings)}'`,
-      userSessionType.type,
-      `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(typesFile, singletonServicesType.typePath, packageMappings)}'`,
-      singletonServicesType.type,
-      `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(typesFile, sessionServicesType.typePath, packageMappings)}'`,
-      sessionServicesType.type,
-      `import type { TypedPikkuRPC } from '${getFileImportRelativePath(typesFile, rpcInternalMapDeclarationFile, packageMappings)}'`
+    const content = serializePikkuTypesHub(
+      getFileImportRelativePath(typesFile, functionTypesFile, packageMappings),
+      getFileImportRelativePath(typesFile, httpTypesFile, packageMappings),
+      getFileImportRelativePath(typesFile, channelsTypesFile, packageMappings),
+      getFileImportRelativePath(
+        typesFile,
+        schedulersTypesFile,
+        packageMappings
+      ),
+      getFileImportRelativePath(typesFile, queueTypesFile, packageMappings),
+      getFileImportRelativePath(typesFile, mcpTypesFile, packageMappings),
+      getFileImportRelativePath(typesFile, cliTypesFile, packageMappings)
     )
+
     await writeFileInDir(logger, typesFile, content)
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Creating api types',
-      commandEnd: 'Created api types',
+      commandStart: 'Creating api types hub',
+      commandEnd: 'Created api types hub',
       skipCondition: false,
       skipMessage: '',
     }),

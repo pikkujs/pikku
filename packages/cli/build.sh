@@ -7,8 +7,8 @@ echo "Starting Pikku CLI build process..."
 
 # Step 1: Clean the dist directory
 # Remove any previously built files to ensure a fresh build
-# echo "Cleaning dist directory..."
-# rm -rf dist
+# # echo "Cleaning dist directory..."
+# rm -rf .pikku/cli
 
 # Step 2: Generate types using the published version of @pikku/cli
 # We use the latest published version from npm to generate Pikku types because

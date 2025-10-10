@@ -10,7 +10,7 @@ export const serializeChannelTypes = (functionTypesImportPath: string) => {
 import { CoreChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { CorePikkuFunctionConfig } from '@pikku/core'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission } from '${functionTypesImportPath}'
+import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 
 /**
  * Type definition for WebSocket channels with typed data exchange.
@@ -20,7 +20,7 @@ import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission } from '$
  * @template Channel - String literal type for the channel name
  */
 type ChannelWiringFunction<I, O, C = {}> = PikkuFunctionSessionless<I, O, C> | PikkuFunction<I, O, C>
-type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelData, Channel, ChannelWiringFunction<void, unknown> | ChannelWiringFunction<void, unknown, ChannelData>, ChannelWiringFunction<void, void> | ChannelWiringFunction<void, void, ChannelData>, ChannelWiringFunction<any, any> | ChannelWiringFunction<any, any, ChannelData>, PikkuPermission>
+type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelData, Channel, ChannelWiringFunction<void, unknown> | ChannelWiringFunction<void, unknown, ChannelData>, ChannelWiringFunction<void, void> | ChannelWiringFunction<void, void, ChannelData>, ChannelWiringFunction<any, any> | ChannelWiringFunction<any, any, ChannelData>, PikkuPermission, PikkuMiddleware>
 
 /**
  * Creates a function that handles WebSocket channel connections.

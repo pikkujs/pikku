@@ -67,6 +67,7 @@ export type CoreChannel<
     | CorePikkuFunction<unknown, unknown, ChannelData>
     | CorePikkuFunctionSessionless<unknown, unknown, ChannelData>,
   PikkuPermission = CorePikkuPermission<ChannelData>,
+  PikkuMiddleware = CorePikkuMiddleware,
 > = {
   name: string
   route: Channel
@@ -91,7 +92,7 @@ export type CoreChannel<
         }
     >
   >
-  middleware?: CorePikkuMiddleware[]
+  middleware?: PikkuMiddleware[]
   permissions?: Record<string, PikkuPermission[] | PikkuPermission>
   auth?: boolean
   docs?: Partial<{
