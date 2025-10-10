@@ -92,7 +92,29 @@ export type PikkuCLIInput = {
   }
 
   cli?: {
-    entrypoints?: Record<string, { path: string } | string>
+    entrypoints?: Record<
+      string,
+      | string
+      | { type: 'cli'; path: string }
+      | {
+          type: 'channel'
+          name?: string
+          route?: string
+          wirePath: string
+          path?: string
+        }
+      | Array<
+          | string
+          | { type: 'cli'; path: string }
+          | {
+              type: 'channel'
+              name?: string
+              route?: string
+              wirePath: string
+              path?: string
+            }
+        >
+    >
   }
 
   middlewareServices?: string[]
@@ -133,7 +155,29 @@ export type PikkuCLIConfig = {
   }
 
   cli?: {
-    entrypoints?: Record<string, { path: string } | string>
+    entrypoints?: Record<
+      string,
+      | string
+      | { type: 'cli'; path: string }
+      | {
+          type: 'channel'
+          name?: string
+          route?: string
+          wirePath: string
+          path?: string
+        }
+      | Array<
+          | string
+          | { type: 'cli'; path: string }
+          | {
+              type: 'channel'
+              name?: string
+              route?: string
+              wirePath: string
+              path?: string
+            }
+        >
+    >
   }
 
   middlewareServices?: string[]

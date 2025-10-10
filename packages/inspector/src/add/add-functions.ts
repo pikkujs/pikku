@@ -403,6 +403,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     state.typesLookup.set(pikkuFuncName, inputTypes)
   }
 
+  // Store function file location for wiring generation
+  if (exportedName) {
+    state.functions.files.set(pikkuFuncName, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
+  }
+
   if (exportedName || explicitName) {
     if (!exportedName) {
       logger.error(

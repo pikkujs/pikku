@@ -10,7 +10,13 @@
   "schemasFromTypes": ["PikkuCLIConfig"],
   "cli": {
     "entrypoints": {
-      "pikku": ".pikku/cli/pikku-bootstrap-pikku-cli.gen.ts"
+      "pikku": [
+        ".pikku/cli/pikku-bootstrap-pikku-cli.gen.ts",
+        {
+          "type": "channel",
+          "wirePath": ".pikku/cli/pikku-channel.gen.ts"
+        }
+      ]
     }
   }
 }

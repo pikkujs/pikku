@@ -150,7 +150,7 @@ export interface InspectorState {
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
   http: InspectorHTTPState
-  functions: Omit<InspectorFunctionState, 'files'>
+  functions: InspectorFunctionState
   channels: InspectorChannelState
   scheduledTasks: {
     meta: ScheduledTasksMeta
