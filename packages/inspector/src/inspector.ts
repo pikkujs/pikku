@@ -7,7 +7,7 @@ import {
   InspectorLogger,
   InspectorOptions,
 } from './types.js'
-import { getFilesAndMethods } from './get-files-and-methods.js'
+import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 
 export const normalizeHTTPTypes = (
   httpState: InspectorHTTPState
@@ -31,11 +31,13 @@ export const inspect = (
     singletonServicesTypeImportMap: new Map(),
     sessionServicesTypeImportMap: new Map(),
     userSessionTypeImportMap: new Map(),
+    configTypeImportMap: new Map(),
     singletonServicesFactories: new Map(),
     sessionServicesFactories: new Map(),
     configFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),
+    typesLookup: new Map(),
     functions: {
       typesMap: new TypesMap(),
       meta: {},

@@ -1,4 +1,8 @@
-import { PathToNameAndType, InspectorState, InspectorOptions } from './types.js'
+import {
+  PathToNameAndType,
+  InspectorState,
+  InspectorOptions,
+} from '../types.js'
 
 interface Meta {
   file: string

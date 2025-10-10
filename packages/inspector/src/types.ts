@@ -112,6 +112,12 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
+  pikkuConfigType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
   pikkuConfigFactory?: {
     file: string
     variable: string
@@ -136,11 +142,13 @@ export interface InspectorState {
   singletonServicesTypeImportMap: PathToNameAndType
   sessionServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType
+  configTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType
   sessionServicesFactories: PathToNameAndType
   configFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
+  typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
   http: InspectorHTTPState
   functions: Omit<InspectorFunctionState, 'files'>
   channels: InspectorChannelState

@@ -1,11 +1,12 @@
 import * as ts from 'typescript'
-import { PathToNameAndType } from './types.js'
+import { PathToNameAndType, InspectorState } from './types.js'
 
 export const addFileExtendsCoreType = (
   node: ts.Node,
   checker: ts.TypeChecker,
   methods: PathToNameAndType,
-  expectedTypeName: string
+  expectedTypeName: string,
+  state?: InspectorState
 ) => {
   if (ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node)) {
     const fileName = node.getSourceFile().fileName
@@ -43,6 +44,16 @@ export const addFileExtendsCoreType = (
                 typePath: extendedTypeDeclarationPath,
               })
               methods.set(fileName, variables)
+
+              // Store the type in typesLookup if state is provided
+              if (state && node.name) {
+                const symbol = checker.getSymbolAtLocation(node.name)
+                if (symbol) {
+                  const declaredType = checker.getDeclaredTypeOfSymbol(symbol)
+                  // Use the type name as the key in typesLookup
+                  state.typesLookup.set(typeName, [declaredType])
+                }
+              }
             }
           }
         }

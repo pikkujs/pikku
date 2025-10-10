@@ -26,21 +26,32 @@ export const visitSetup = (
     node,
     checker,
     state.singletonServicesTypeImportMap,
-    'CoreSingletonServices'
+    'CoreSingletonServices',
+    state
   )
 
   addFileExtendsCoreType(
     node,
     checker,
     state.sessionServicesTypeImportMap,
-    'CoreServices'
+    'CoreServices',
+    state
   )
 
   addFileExtendsCoreType(
     node,
     checker,
     state.userSessionTypeImportMap,
-    'CoreUserSession'
+    'CoreUserSession',
+    state
+  )
+
+  addFileExtendsCoreType(
+    node,
+    checker,
+    state.configTypeImportMap,
+    'CoreConfig',
+    state
   )
 
   addFileWithFactory(

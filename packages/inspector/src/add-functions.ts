@@ -6,7 +6,7 @@ import {
   getPropertyAssignmentInitializer,
 } from './utils.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
-import { getPropertyValue } from './get-property-value.js'
+import { getPropertyValue } from './utils/get-property-value.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -342,7 +342,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     .map((t) => unwrapPromise(checker, t))
 
   // --- Input Extraction ---
-  let { names: inputNames } = getNamesAndTypes(
+  let { names: inputNames, types: inputTypes } = getNamesAndTypes(
     checker,
     state.functions.typesMap,
     'Input',
@@ -398,6 +398,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     tags: tags || undefined,
     docs: docs || undefined,
     isDirectFunction,
+  }
+
+  // Store the input type for later use
+  if (inputTypes.length > 0) {
+    state.typesLookup.set(pikkuFuncName, inputTypes)
   }
 
   if (exportedName || explicitName) {

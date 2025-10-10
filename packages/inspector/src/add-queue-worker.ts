@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from './get-property-value.js'
+import { getPropertyValue } from './utils/get-property-value.js'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from './types.js'
 import {
