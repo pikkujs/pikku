@@ -1,16 +1,18 @@
 import ts, { TypeChecker } from 'typescript'
-import { InspectorState } from './types.js'
+import { AddWiring } from './types.js'
 import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
 import { extractFunctionName } from './utils.js'
 
 /**
  * Adds CLI command metadata to the inspector state
  */
-export function addCLI(
-  node: ts.Node,
-  inspectorState: InspectorState,
-  typeChecker: TypeChecker
-): void {
+export const addCLI: AddWiring = (
+  _logger,
+  node,
+  typeChecker,
+  inspectorState,
+  _options
+) => {
   if (!ts.isCallExpression(node)) return
   // Check if this is a wireCLI call
   if (!node || !node.expression) {
@@ -327,6 +329,22 @@ function processOptions(
               optProp.initializer.kind === ts.SyntaxKind.FalseKeyword
             ) {
               option.default = false
+            }
+
+            // Extract enum choices if the type is an enum
+            const type = typeChecker.getTypeAtLocation(optProp.initializer)
+            if (type && type.isUnion()) {
+              const enumValues: (string | number)[] = []
+              for (const unionType of type.types) {
+                if (unionType.isStringLiteral()) {
+                  enumValues.push((unionType as ts.StringLiteralType).value)
+                } else if (unionType.isNumberLiteral()) {
+                  enumValues.push((unionType as ts.NumberLiteralType).value)
+                }
+              }
+              if (enumValues.length > 0) {
+                option.choices = enumValues
+              }
             }
             break
         }

@@ -144,7 +144,7 @@ export const all: any = pikkuVoidFunc({
 
     const cli = await rpc.invoke('pikkuCLI', null)
     if (cli) {
-      await rpc.invoke('pikkuCLIBootstrap', null)
+      await rpc.invoke('pikkuCLIEntry', null)
       allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
 
       await generateBootstrapFile(

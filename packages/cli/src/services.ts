@@ -58,7 +58,16 @@ export const createSingletonServices: CreateSingletonServices<
           )
         )
       ).flat()
-      return await inspect(logger, wiringFiles, filters)
+      inspectorState = await inspect(logger, wiringFiles, {
+        filters,
+        types: {
+          configFileType: config.configFile,
+          userSessionType: config.tags?.[0], // TODO: Properly handle type selection
+          singletonServicesFactoryType: undefined,
+          sessionServicesFactoryType: undefined,
+        },
+      })
+      return inspectorState
     }
     return inspectorState!
   }

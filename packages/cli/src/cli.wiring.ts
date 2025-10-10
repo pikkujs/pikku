@@ -27,6 +27,11 @@ wireCLI({
       description: 'Path to pikku.config.json file',
       short: 'c',
     },
+    logLevel: {
+      description: 'Set log level',
+      default: 'info',
+      short: 'l',
+    },
   },
   commands: {
     all: pikkuCLICommand({
@@ -44,11 +49,6 @@ wireCLI({
         directories: {
           description: 'Filter functions by directories (comma-separated)',
           short: 'd',
-        },
-        logLevel: {
-          description: 'Set log level',
-          default: 'info',
-          short: 'l',
         },
       },
     }),

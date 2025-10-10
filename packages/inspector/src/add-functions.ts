@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { InspectorLogger, InspectorState } from './types.js'
+import { AddWiring } from './types.js'
 import { TypesMap } from './types-map.js'
 import {
   extractFunctionName,
@@ -247,12 +247,7 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
  * Inspect pikkuFunc calls, extract input/output and first-arg destructuring,
  * then push into state.functions.meta.
  */
-export function addFunctions(
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  logger: InspectorLogger
-) {
+export const addFunctions: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args, typeArguments } = node

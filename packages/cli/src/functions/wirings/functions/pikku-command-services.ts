@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
@@ -86,18 +86,20 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
+    // Check for required types
+    checkRequiredTypes(visitState.filesAndMethodsErrors, {
+      sessionServiceType: true,
+      singletonServicesType: true,
+    })
+
     const { sessionServicesType, singletonServicesType } =
-      await getPikkuFilesAndMethods(
-        logger,
-        visitState,
-        config.packageMappings,
-        config.typesDeclarationFile,
-        {},
-        {
-          sessionServiceType: true,
-          singletonServicesType: true,
-        }
+      visitState.filesAndMethods
+
+    if (!sessionServicesType || !singletonServicesType) {
+      throw new Error(
+        'Required types not found: sessionServicesType or singletonServicesType'
       )
+    }
 
     const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, singletonServicesType.typePath, config.packageMappings)}'`
     const sessionServicesImport = `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, sessionServicesType.typePath, config.packageMappings)}'`

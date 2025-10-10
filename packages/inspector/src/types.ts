@@ -1,3 +1,4 @@
+import * as ts from 'typescript'
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
@@ -68,12 +69,69 @@ export type InspectorFilters = {
   directories?: string[]
 }
 
+export type InspectorOptions = Partial<{
+  types: Partial<{
+    configFileType: string
+    userSessionType: string
+    singletonServicesFactoryType: string
+    sessionServicesFactoryType: string
+  }>
+  filters: InspectorFilters
+}>
+
 export interface InspectorLogger {
   info: (message: string) => void
   error: (message: string) => void
   warn: (message: string) => void
   debug: (message: string) => void
 }
+
+export type AddWiring = (
+  logger: InspectorLogger,
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  state: InspectorState,
+  options: InspectorOptions
+) => void
+export interface InspectorFilesAndMethods {
+  userSessionType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  sessionServicesType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  singletonServicesType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  pikkuConfigFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  singletonServicesFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  sessionServicesFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+}
+
 export interface InspectorState {
   singletonServicesTypeImportMap: PathToNameAndType
   sessionServicesTypeImportMap: PathToNameAndType
@@ -81,6 +139,8 @@ export interface InspectorState {
   singletonServicesFactories: PathToNameAndType
   sessionServicesFactories: PathToNameAndType
   configFactories: PathToNameAndType
+  filesAndMethods: InspectorFilesAndMethods
+  filesAndMethodsErrors: Map<string, PathToNameAndType>
   http: InspectorHTTPState
   functions: Omit<InspectorFunctionState, 'files'>
   channels: InspectorChannelState

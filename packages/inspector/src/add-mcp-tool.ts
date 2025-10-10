@@ -1,19 +1,19 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { PikkuWiringTypes } from '@pikku/core'
-import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
+import { AddWiring } from './types.js'
 import {
   extractFunctionName,
   getPropertyAssignmentInitializer,
   matchesFilters,
 } from './utils.js'
 
-export const addMCPTool = (
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
+export const addMCPTool: AddWiring = (
+  logger,
+  node,
+  checker,
+  state,
+  options
 ) => {
   if (!ts.isCallExpression(node)) {
     return
@@ -73,7 +73,7 @@ export const addMCPTool = (
 
     if (
       !matchesFilters(
-        filters,
+        options.filters || {},
         { tags },
         { type: PikkuWiringTypes.mcp, name: nameValue, filePath },
         logger

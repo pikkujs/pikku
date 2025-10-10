@@ -1,17 +1,12 @@
 import * as ts from 'typescript'
-import { InspectorLogger, InspectorState } from './types.js'
+import { AddWiring } from './types.js'
 import { extractFunctionName, extractServicesFromFunction } from './utils.js'
 
 /**
  * Inspect pikkuMiddleware calls and extract first-arg destructuring
  * for tree shaking optimization.
  */
-export function addMiddleware(
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  logger: InspectorLogger
-) {
+export const addMiddleware: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args } = node

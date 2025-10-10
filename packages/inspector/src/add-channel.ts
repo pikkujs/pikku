@@ -8,14 +8,10 @@ import {
   matchesFilters,
 } from './utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
-import type {
-  InspectorFilters,
-  InspectorState,
-  InspectorLogger,
-} from './types.js'
+import type { InspectorState, AddWiring } from './types.js'
 
 /**
- * Safely get the “initializer” expression of a property-like AST node:
+ * Safely get the "initializer" expression of a property-like AST node:
  * - for `foo: expr`, returns `expr`
  * - for `{ foo }` shorthand, returns the identifier `foo`
  * - otherwise, returns undefined
@@ -363,13 +359,14 @@ export function addMessagesRoutes(
  * Inspect addChannel calls, look up all handlers in state.functions.meta,
  * and emit one entry into state.channels.meta.
  */
-export function addChannel(
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
-) {
+export const addChannel: AddWiring = (
+  logger,
+  node,
+  checker,
+  state,
+  options
+) => {
+  const filters = options.filters || {}
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
   if (!ts.isIdentifier(expression) || expression.text !== 'wireChannel') return

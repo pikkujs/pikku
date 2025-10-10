@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -17,7 +17,6 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       bootstrapFiles,
     } = config
     const visitState = await getInspectorState()
-    const options = {}
 
     if (!nextBackendFile && !nextHTTPFile) {
       throw new Error(
@@ -32,22 +31,26 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
     }
 
     if (nextBackendFile) {
+      // Check for required types
+      checkRequiredTypes(visitState.filesAndMethodsErrors, {
+        config: true,
+        singletonServicesFactory: true,
+        sessionServicesFactory: true,
+      })
+
       const {
         pikkuConfigFactory,
         singletonServicesFactory,
         sessionServicesFactory,
-      } = await getPikkuFilesAndMethods(
-        logger,
-        visitState,
-        packageMappings,
-        nextBackendFile,
-        options,
-        {
-          config: true,
-          singletonServicesFactory: true,
-          sessionServicesFactory: true,
-        }
-      )
+      } = visitState.filesAndMethods
+
+      if (
+        !pikkuConfigFactory ||
+        !singletonServicesFactory ||
+        !sessionServicesFactory
+      ) {
+        throw new Error('Required types not found')
+      }
 
       const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
       const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`

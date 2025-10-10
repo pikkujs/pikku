@@ -1,11 +1,11 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
-import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { join } from 'node:path'
 import { serializeLocalCLIBootstrap } from './serialize-local-cli-bootstrap.js'
 
-export const pikkuCLIBootstrap: any = pikkuSessionlessFunc<void, void>({
+export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
@@ -44,22 +44,26 @@ export const pikkuCLIBootstrap: any = pikkuSessionlessFunc<void, void>({
       const bootstrapFile = join(config.rootDir, entrypointPath)
 
       // Get service factories for local mode
+      // Check for required types
+      checkRequiredTypes(visitState.filesAndMethodsErrors, {
+        config: true,
+        singletonServicesFactory: true,
+        sessionServicesFactory: true,
+      })
+
       const {
         pikkuConfigFactory,
         singletonServicesFactory,
         sessionServicesFactory,
-      } = await getPikkuFilesAndMethods(
-        logger,
-        visitState,
-        config.packageMappings,
-        bootstrapFile,
-        {}, // options
-        {
-          config: true,
-          singletonServicesFactory: true,
-          sessionServicesFactory: true,
-        }
-      )
+      } = visitState.filesAndMethods
+
+      if (
+        !pikkuConfigFactory ||
+        !singletonServicesFactory ||
+        !sessionServicesFactory
+      ) {
+        throw new Error('Required types not found')
+      }
 
       const bootstrapCode = serializeLocalCLIBootstrap(
         programName,

@@ -4,9 +4,10 @@ import { TypesMap } from './types-map.js'
 import {
   InspectorState,
   InspectorHTTPState,
-  InspectorFilters,
   InspectorLogger,
+  InspectorOptions,
 } from './types.js'
+import { getFilesAndMethods } from './get-files-and-methods.js'
 
 export const normalizeHTTPTypes = (
   httpState: InspectorHTTPState
@@ -17,7 +18,7 @@ export const normalizeHTTPTypes = (
 export const inspect = (
   logger: InspectorLogger,
   routeFiles: string[],
-  filters: InspectorFilters
+  options: InspectorOptions = {}
 ): InspectorState => {
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
@@ -33,6 +34,8 @@ export const inspect = (
     singletonServicesFactories: new Map(),
     sessionServicesFactories: new Map(),
     configFactories: new Map(),
+    filesAndMethods: {},
+    filesAndMethodsErrors: new Map(),
     functions: {
       typesMap: new TypesMap(),
       meta: {},
@@ -90,19 +93,24 @@ export const inspect = (
   // First sweep: add all functions
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visitSetup(checker, child, state, filters, logger)
+      visitSetup(logger, checker, child, state, options)
     )
   }
 
   // Second sweep: add all transports
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visitRoutes(checker, child, state, filters, logger)
+      visitRoutes(logger, checker, child, state, options)
     )
   }
 
   // Normalise the typesMap
   state.http = normalizeHTTPTypes(state.http)
+
+  // Populate filesAndMethods
+  const { result, errors } = getFilesAndMethods(state, options.types)
+  state.filesAndMethods = result
+  state.filesAndMethodsErrors = errors
 
   return state
 }

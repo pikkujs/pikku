@@ -130,7 +130,8 @@ function showHelp(programMeta: any, commandPath: string[] = [], allCLIMeta: any 
         const opt = option as any
         const short = opt.short ? \`-\${opt.short}, \` : ''
         const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
-        console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
+        const choices = opt.choices ? \` [choices: \${opt.choices.join(', ')}]\` : ''
+        console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\${choices}\`)
       }
     }
     console.log()
@@ -200,7 +201,8 @@ function showHelp(programMeta: any, commandPath: string[] = [], allCLIMeta: any 
         const opt = option as any
         const short = opt.short ? \`-\${opt.short}, \` : ''
         const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
-        console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
+        const choices = opt.choices ? \` [choices: \${opt.choices.join(', ')}]\` : ''
+        console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\${choices}\`)
       }
     }
     console.log()

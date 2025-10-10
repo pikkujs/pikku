@@ -7,7 +7,7 @@ import { addQueueWorker } from './add-queue-worker.js'
 import { addMCPResource } from './add-mcp-resource.js'
 import { addMCPTool } from './add-mcp-tool.js'
 import { addMCPPrompt } from './add-mcp-prompt.js'
-import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
+import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { addFunctions } from './add-functions.js'
 import { addChannel } from './add-channel.js'
 import { addRPCInvocations } from './add-rpc-invocations.js'
@@ -16,11 +16,11 @@ import { addPermission } from './add-permission.js'
 import { addCLI } from './add-cli.js'
 
 export const visitSetup = (
+  logger: InspectorLogger,
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
+  options: InspectorOptions
 ) => {
   addFileExtendsCoreType(
     node,
@@ -61,30 +61,30 @@ export const visitSetup = (
   addRPCInvocations(node, state, logger)
 
   ts.forEachChild(node, (child) =>
-    visitSetup(checker, child, state, filters, logger)
+    visitSetup(logger, checker, child, state, options)
   )
 }
 
 export const visitRoutes = (
+  logger: InspectorLogger,
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
+  options: InspectorOptions
 ) => {
-  addFunctions(node, checker, state, logger)
-  addHTTPRoute(node, checker, state, filters, logger)
-  addSchedule(node, checker, state, filters, logger)
-  addQueueWorker(node, checker, state, filters, logger)
-  addChannel(node, checker, state, filters, logger)
-  addCLI(node, state, checker)
-  addMCPResource(node, checker, state, filters, logger)
-  addMCPTool(node, checker, state, filters, logger)
-  addMCPPrompt(node, checker, state, filters, logger)
-  addMiddleware(node, checker, state, logger)
-  addPermission(node, checker, state, logger)
+  addFunctions(logger, node, checker, state, options)
+  addHTTPRoute(logger, node, checker, state, options)
+  addSchedule(logger, node, checker, state, options)
+  addQueueWorker(logger, node, checker, state, options)
+  addChannel(logger, node, checker, state, options)
+  addCLI(logger, node, checker, state, options)
+  addMCPResource(logger, node, checker, state, options)
+  addMCPTool(logger, node, checker, state, options)
+  addMCPPrompt(logger, node, checker, state, options)
+  addMiddleware(logger, node, checker, state, options)
+  addPermission(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
-    visitRoutes(checker, child, state, filters, logger)
+    visitRoutes(logger, checker, child, state, options)
   )
 }

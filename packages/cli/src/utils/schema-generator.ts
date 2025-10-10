@@ -59,6 +59,7 @@ export async function generateSchemas(
     additionalProperties: false,
   })
   const schemas: Record<string, JSONValue> = {}
+
   schemasSet.forEach((schema) => {
     try {
       schemas[schema] = generator.createSchema(schema) as JSONValue

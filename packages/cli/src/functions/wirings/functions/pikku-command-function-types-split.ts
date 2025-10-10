@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeFunctionTypes } from './serialize-function-types.js'
@@ -14,19 +14,19 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
       rpcInternalMapDeclarationFile,
     } = config
 
+    // Check for required types
+    checkRequiredTypes(visitState.filesAndMethodsErrors, {
+      userSessionType: true,
+      sessionServiceType: true,
+      singletonServicesType: true,
+    })
+
     const { userSessionType, sessionServicesType, singletonServicesType } =
-      await getPikkuFilesAndMethods(
-        logger,
-        visitState,
-        packageMappings,
-        functionTypesFile,
-        {},
-        {
-          userSessionType: true,
-          sessionServiceType: true,
-          singletonServicesType: true,
-        }
-      )
+      visitState.filesAndMethods
+
+    if (!userSessionType || !sessionServicesType || !singletonServicesType) {
+      throw new Error('Required types not found')
+    }
 
     const content = serializeFunctionTypes(
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(functionTypesFile, userSessionType.typePath, packageMappings)}'`,

@@ -3,7 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeCLITypes } from './serialize-cli-types.js'
-import { getPikkuFilesAndMethods } from '../../../utils/pikku-files-and-methods.js'
+import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 
 export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -16,20 +16,19 @@ export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
       packageMappings
     )
 
-    // Get type information for SingletonServices and Session
+    // Check for required types
+    checkRequiredTypes(visitState.filesAndMethodsErrors, {
+      userSessionType: true,
+      sessionServiceType: true,
+      singletonServicesType: true,
+    })
+
     const { userSessionType, singletonServicesType } =
-      await getPikkuFilesAndMethods(
-        logger,
-        visitState,
-        packageMappings,
-        cliTypesFile,
-        {},
-        {
-          userSessionType: true,
-          sessionServiceType: true,
-          singletonServicesType: true,
-        }
-      )
+      visitState.filesAndMethods
+
+    if (!userSessionType || !singletonServicesType) {
+      throw new Error('Required types not found')
+    }
 
     const content = serializeCLITypes(
       functionTypesImportPath,

@@ -1,15 +1,10 @@
-import {
-  PathToNameAndType,
-  InspectorState,
-  InspectorOptions,
-} from '@pikku/inspector'
+import { PathToNameAndType, InspectorState, InspectorOptions } from './types.js'
 
 interface Meta {
   file: string
   variable: string
   type: string
   typePath: string
-  errors: Map<string, string[]>
 }
 
 export type FilesAndMethods = {
@@ -21,13 +16,14 @@ export type FilesAndMethods = {
   sessionServicesFactory: Meta
 }
 
+export type FilesAndMethodsErrors = Map<string, PathToNameAndType>
+
 const getMetaTypes = (
   type: string,
   map: PathToNameAndType,
-  desiredType?: string
+  desiredType?: string,
+  errors?: FilesAndMethodsErrors
 ): Meta | undefined => {
-  const errors = new Map()
-
   if (desiredType) {
     for (const [file, meta] of map.entries()) {
       for (const { type: entryType, variable, typePath } of meta) {
@@ -37,11 +33,13 @@ const getMetaTypes = (
               `Unknown state due to metaType calculation: entryType or typePath is null for ${desiredType} in ${file}`
             )
           }
-          return { file, variable, type: entryType, typePath, errors }
+          return { file, variable, type: entryType, typePath }
         }
       }
     }
-    errors.set(`No ${desiredType} found that extends ${type}`, map)
+    if (errors) {
+      errors.set(`No ${desiredType} found that extends ${type}`, map)
+    }
     return
   }
 
@@ -57,9 +55,13 @@ const getMetaTypes = (
           `Possible issues:\n` +
           `- srcDirectories in pikku.config.json doesn't include the file with the createConfig method`
         : `No ${type} found`
-    errors.set(helpMessage, map)
+    if (errors) {
+      errors.set(helpMessage, map)
+    }
   } else if (totalValues.length > 1) {
-    errors.set(`More than one ${type} found`, map)
+    if (errors) {
+      errors.set(`More than one ${type} found`, map)
+    }
   } else {
     const entry = Array.from(map.entries())[0]
     if (entry) {
@@ -69,80 +71,69 @@ const getMetaTypes = (
           `Unknown state due to metaType calculation: entryType or typePath is null for ${type} in ${file}`
         )
       }
-      return { file, type: entryType, variable, typePath, errors }
+      return { file, type: entryType, variable, typePath }
     }
   }
 
   return
 }
 
-/**
- * @deprecated Use state.filesAndMethods from InspectorState instead
- */
-export const getPikkuFilesAndMethods = async (
-  state: InspectorState,
-  options: InspectorOptions['types'] = {}
-): Promise<FilesAndMethods> => {
-  const {
+export const getFilesAndMethods = (
+  {
     singletonServicesTypeImportMap,
     sessionServicesTypeImportMap,
     userSessionTypeImportMap,
     sessionServicesFactories,
     singletonServicesFactories,
     configFactories,
-  } = state
-
-  const {
+  }: InspectorState,
+  {
     configFileType,
     userSessionType,
     singletonServicesFactoryType,
     sessionServicesFactoryType,
-  } = options
-  let errors = new Map<string, PathToNameAndType>()
+  }: InspectorOptions['types'] = {}
+): { result: Partial<FilesAndMethods>; errors: FilesAndMethodsErrors } => {
+  const errors: FilesAndMethodsErrors = new Map()
 
   const result: Partial<FilesAndMethods> = {
     userSessionType: getMetaTypes(
       'CoreUserSession',
       userSessionTypeImportMap,
-      userSessionType
+      userSessionType,
+      errors
     ),
     singletonServicesType: getMetaTypes(
       'CoreSingletonServices',
-      singletonServicesTypeImportMap
+      singletonServicesTypeImportMap,
+      undefined,
+      errors
     ),
     sessionServicesType: getMetaTypes(
       'CoreServices',
-      sessionServicesTypeImportMap
+      sessionServicesTypeImportMap,
+      undefined,
+      errors
     ),
     pikkuConfigFactory: getMetaTypes(
       'CoreConfig',
       configFactories,
-      configFileType
+      configFileType,
+      errors
     ),
     singletonServicesFactory: getMetaTypes(
       'CreateSingletonServices',
       singletonServicesFactories,
-      singletonServicesFactoryType
+      singletonServicesFactoryType,
+      errors
     ),
     sessionServicesFactory: getMetaTypes(
       'CreateSessionServices',
       sessionServicesFactories,
-      sessionServicesFactoryType
+      sessionServicesFactoryType,
+      errors
     ),
   }
 
-  if (errors.size > 0) {
-    const result: string[] = ['Found errors:']
-    errors.forEach((filesAndMethods, message) => {
-      result.push(`- ${message}`)
-      filesAndMethods.forEach((methods, file) => {
-        result.push(
-          `\t* methods: ${methods.map(({ variable, type }) => `${variable}: ${type}`).join(', ')}`
-        )
-      })
-    })
-    throw new Error(result.join('\n'))
-  }
-
-  return result as FilesAndMethods
+  return { result, errors }
 }

@@ -8,7 +8,7 @@ import {
   getPropertyAssignmentInitializer,
   matchesFilters,
 } from './utils.js'
-import { InspectorState, InspectorFilters, InspectorLogger } from './types.js'
+import { AddWiring } from './types.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -39,12 +39,12 @@ export const getInputTypes = (
  * Simplified wireHTTP: re-uses function metadata from state.functions.meta
  * instead of re-inferring types here.
  */
-export const addHTTPRoute = (
-  node: ts.Node,
-  checker: ts.TypeChecker,
-  state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
+export const addHTTPRoute: AddWiring = (
+  logger,
+  node,
+  checker,
+  state,
+  options
 ) => {
   // only look at calls
   if (!ts.isCallExpression(node)) return
@@ -74,7 +74,7 @@ export const addHTTPRoute = (
 
   if (
     !matchesFilters(
-      filters,
+      options.filters || {},
       { tags },
       { type: PikkuWiringTypes.http, name: route, filePath },
       logger
