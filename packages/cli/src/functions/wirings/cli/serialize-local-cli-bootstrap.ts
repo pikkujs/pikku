@@ -68,7 +68,7 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
 
     // Handle help (check after parsing to support subcommand help)
     if (args.includes('--help') || args.includes('-h') || args.length === 0) {
-      showHelp(programMeta, parsed.commandPath)
+      showHelp(programMeta, parsed.commandPath, allCLIMeta)
       return
     }
 
@@ -111,7 +111,7 @@ export async function ${capitalizedName}CLI(args: string[] = process.argv.slice(
 /**
  * Show help for the CLI program or a specific command
  */
-function showHelp(programMeta: any, commandPath: string[] = []): void {
+function showHelp(programMeta: any, commandPath: string[] = [], allCLIMeta: any = {}): void {
   // If no command path, show top-level help
   if (commandPath.length === 0) {
     console.log(\`Usage: ${programName} [options] <command>\`)
@@ -123,25 +123,24 @@ function showHelp(programMeta: any, commandPath: string[] = []): void {
     }
 
     // Show global options
+    console.log('Options:')
+    console.log('  -h, --help  Show help information')
     if (programMeta.options && Object.keys(programMeta.options).length > 0) {
-      console.log('Global Options:')
       for (const [name, option] of Object.entries(programMeta.options)) {
         const opt = option as any
         const short = opt.short ? \`-\${opt.short}, \` : ''
         const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
         console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
       }
-      console.log()
     }
+    console.log()
 
     // Show commands
     if (programMeta.commands && Object.keys(programMeta.commands).length > 0) {
       console.log('Commands:')
       showCommandsHelp(programMeta.commands, '')
+      console.log()
     }
-
-    console.log()
-    console.log('Use --help with any command for more details')
     return
   }
 
@@ -174,17 +173,37 @@ function showHelp(programMeta: any, commandPath: string[] = []): void {
       console.log()
     }
 
-    // Show command-specific options
-    if (currentCommand.options && Object.keys(currentCommand.options).length > 0) {
-      console.log('Options:')
-      for (const [name, option] of Object.entries(currentCommand.options)) {
+    // Collect all inherited options (global + command-specific)
+    const allOptions: Record<string, any> = { ...programMeta.options }
+
+    // Navigate through command path to collect inherited options
+    let navCommand = programMeta.commands[commandPath[0]]
+    for (let i = 0; i < commandPath.length - 1; i++) {
+      if (navCommand.options) {
+        Object.assign(allOptions, navCommand.options)
+      }
+      if (navCommand.subcommands) {
+        navCommand = navCommand.subcommands[commandPath[i + 1]]
+      }
+    }
+
+    // Add current command options
+    if (currentCommand.options) {
+      Object.assign(allOptions, currentCommand.options)
+    }
+
+    // Show all options (inherited + command-specific)
+    console.log('Options:')
+    console.log('  -h, --help  Show help information')
+    if (Object.keys(allOptions).length > 0) {
+      for (const [name, option] of Object.entries(allOptions)) {
         const opt = option as any
         const short = opt.short ? \`-\${opt.short}, \` : ''
         const defaultVal = opt.default !== undefined ? \` (default: \${opt.default})\` : ''
         console.log(\`  \${short}--\${name}  \${opt.description || ''}\${defaultVal}\`)
       }
-      console.log()
     }
+    console.log()
 
     // Show positionals if any
     if (currentCommand.positionals && currentCommand.positionals.length > 0) {
@@ -206,11 +225,14 @@ function showHelp(programMeta: any, commandPath: string[] = []): void {
       console.log()
     }
 
+    console.log('Options:')
+    console.log('  -h, --help  Show help information')
+    console.log()
+
     // Show subcommands
     console.log('Commands:')
     showCommandsHelp(currentCommand.subcommands, '')
     console.log()
-    console.log('Use --help with any command for more details')
   }
 }
 
