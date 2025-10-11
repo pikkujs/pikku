@@ -25,6 +25,19 @@ export interface FunctionServicesMeta {
   services: string[]
 }
 
+/**
+ * Metadata for middleware at any level (wire, global, or function)
+ * - type: 'wire' | 'global' = wire/global level middleware
+ * - type: undefined = function-level middleware
+ */
+export type MiddlewareMetadata = {
+  type?: 'wire' | 'global' // Omit for function-level
+  name: string // Middleware function name (pikkuMiddlewareName)
+  src?: 'tag' | 'http' // How it was added (omit if explicit)
+  tag?: string // If src='tag', which tag
+  pattern?: string // If src='http', which route pattern
+}
+
 export type FunctionRuntimeMeta = {
   pikkuFuncName: string
   inputSchemaName: string | null
@@ -41,6 +54,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
     tags: string[]
     docs: PikkuDocs
     isDirectFunction: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
+    middleware: MiddlewareMetadata[] // Function-level middleware (type will be undefined)
   }>
 
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>

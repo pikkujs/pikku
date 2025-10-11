@@ -44,6 +44,8 @@ export const inspect = (
         options: {},
       },
       files: new Set(),
+      globalMiddleware: [],
+      routeMiddleware: new Map(),
     },
     channels: {
       files: new Set(),
@@ -76,6 +78,7 @@ export const inspect = (
     },
     middleware: {
       meta: {},
+      tagMiddleware: new Map(),
     },
     permissions: {
       meta: {},

@@ -5,6 +5,10 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getMiddleware,
+  resolveFunctionMiddleware,
+} from '../utils/middleware.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -274,6 +278,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let tags: string[] | undefined
   let expose: boolean | undefined
   let docs: PikkuDocs | undefined
+  let explicitMiddlewareNode: ts.Expression | undefined
 
   // determine the actual handler expression:
   // either the `func` prop or the first argument directly
@@ -285,6 +290,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
     expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
     docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
+    explicitMiddlewareNode = getMiddleware(handlerNode)
 
     const fnProp = getPropertyAssignmentInitializer(
       handlerNode,
@@ -384,6 +390,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     )
   }
 
+  // --- resolve middleware ---
+  const middleware = resolveFunctionMiddleware(
+    state,
+    tags,
+    explicitMiddlewareNode,
+    checker
+  )
+
   state.functions.meta[pikkuFuncName] = {
     pikkuFuncName,
     name,
@@ -396,6 +410,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     tags: tags || undefined,
     docs: docs || undefined,
     isDirectFunction,
+    middleware,
   }
 
   // Store the input type for later use

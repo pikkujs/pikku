@@ -7,6 +7,7 @@ import type {
   CoreUserSession,
   CreateSessionServices,
   CorePikkuMiddleware,
+  MiddlewareMetadata,
 } from '../../types/core.types.js'
 import type {
   CorePikkuFunction,
@@ -207,6 +208,7 @@ export type HTTPWiringMeta = {
   docs?: PikkuDocs
   tags?: string[]
   sse?: true
+  middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (global + route + tag + explicit + efunc)
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 

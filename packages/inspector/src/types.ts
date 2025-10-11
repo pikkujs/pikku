@@ -26,6 +26,9 @@ export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
   meta: HTTPWiringsMeta
   files: Set<string>
+  // HTTP middleware calls tracking
+  globalMiddleware: string[] // Global HTTP middleware (from addHTTPMiddleware([...]))
+  routeMiddleware: Map<string, string[]> // pattern -> middleware names (from addHTTPMiddleware('/path', [...]))
 }
 
 export interface InspectorFunctionState {
@@ -40,6 +43,7 @@ export interface InspectorChannelState {
 }
 
 export interface InspectorMiddlewareState {
+  // Individual middleware function metadata
   meta: Record<
     string,
     {
@@ -49,6 +53,8 @@ export interface InspectorMiddlewareState {
       exportedName: string | null
     }
   >
+  // Tag-based middleware calls tracking
+  tagMiddleware: Map<string, string[]> // tag -> middleware names (from addMiddleware)
 }
 
 export interface InspectorPermissionState {
