@@ -1,5 +1,8 @@
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
-import { CorePikkuMiddleware } from '../../types/core.types.js'
+import {
+  CorePikkuMiddleware,
+  MiddlewareMetadata,
+} from '../../types/core.types.js'
 
 export type PikkuMCP<Tools extends string = any> = {
   // elicitInput: <Input>(message: string) => Promise<{ action: string, content: Input }>
@@ -15,10 +18,11 @@ export type PikkuMCP<Tools extends string = any> = {
  */
 export type MCPResourceMeta = Record<
   string,
-  Omit<CoreMCPResource, 'func'> & {
+  Omit<CoreMCPResource, 'func' | 'middleware'> & {
     pikkuFuncName: string
     inputSchema: string | null
     outputSchema: string | null
+    middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   }
 >
 
@@ -27,10 +31,11 @@ export type MCPResourceMeta = Record<
  */
 export type MCPToolMeta = Record<
   string,
-  Omit<CoreMCPTool, 'func'> & {
+  Omit<CoreMCPTool, 'func' | 'middleware'> & {
     pikkuFuncName: string
     inputSchema: string | null
     outputSchema: string | null
+    middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   }
 >
 
@@ -39,7 +44,7 @@ export type MCPToolMeta = Record<
  */
 export type MCPPromptMeta = Record<
   string,
-  Omit<CoreMCPPrompt, 'func'> & {
+  Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
     pikkuFuncName: string
     inputSchema: string | null
     outputSchema: string | null
@@ -48,6 +53,7 @@ export type MCPPromptMeta = Record<
       description: string
       required: boolean
     }>
+    middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   }
 >
 

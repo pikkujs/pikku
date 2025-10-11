@@ -1,4 +1,8 @@
-import { PikkuDocs, CorePikkuMiddleware } from '../../types/core.types.js'
+import {
+  PikkuDocs,
+  CorePikkuMiddleware,
+  MiddlewareMetadata,
+} from '../../types/core.types.js'
 import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
 import { QueueConfigMapping } from './validate-worker-config.js'
 
@@ -158,6 +162,7 @@ export type queueWorkersMeta = Record<
     docs?: PikkuDocs
     tags?: string[]
     config?: PikkuWorkerConfig
+    middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   }
 >
 

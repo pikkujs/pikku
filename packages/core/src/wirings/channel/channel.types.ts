@@ -9,6 +9,7 @@ import {
   CoreSingletonServices,
   CreateSessionServices,
   CorePikkuMiddleware,
+  MiddlewareMetadata,
 } from '../../types/core.types.js'
 import {
   CorePikkuFunction,
@@ -50,6 +51,7 @@ export interface ChannelMeta {
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
   docs?: PikkuDocs
   tags?: string[]
+  middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
 }
 
 export type ChannelsMeta = Record<string, ChannelMeta>
