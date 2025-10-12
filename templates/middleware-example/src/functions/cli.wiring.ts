@@ -17,12 +17,10 @@ wireCLI({
   tags: ['cli'],
   commands: {
     command: pikkuCLICommand({
-      command: 'command',
       func: noOpFunction,
       middleware: [wireMiddleware('command')],
       subcommands: {
         subcommand: pikkuCLICommand({
-          command: 'subcommand',
           func: noOpFunction,
           middleware: [wireMiddleware('subcommand')],
         }),

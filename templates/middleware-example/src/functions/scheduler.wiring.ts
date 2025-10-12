@@ -11,6 +11,6 @@ wireScheduler({
   name: 'testScheduledTask',
   schedule: '*/1 * * * *', // Every minute
   tags: ['scheduler'],
-  middleware: [wireMiddleware],
+  middleware: [wireMiddleware('scheduler')],
   func: noOpFunction,
 })

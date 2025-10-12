@@ -2,13 +2,15 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type {
   InspectorMiddlewareState,
   InspectorHTTPState,
+  InspectorState,
 } from '@pikku/inspector'
 
 export const serializeMiddlewareImports = (
   outputPath: string,
   middlewareState: InspectorMiddlewareState,
   httpState: InspectorHTTPState,
-  packageMappings: Record<string, string> = {}
+  packageMappings: Record<string, string> = {},
+  fullState?: InspectorState
 ) => {
   const serializedImports: string[] = []
   const serializedFactoryCalls: string[] = []

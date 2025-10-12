@@ -280,9 +280,9 @@ function processCommand(
     const propName = prop.name.text
 
     switch (propName) {
-      case 'command':
+      case 'parameters':
         if (ts.isStringLiteral(prop.initializer)) {
-          meta.command = prop.initializer.text
+          meta.parameters = prop.initializer.text
           meta.positionals = parseCommandPattern(prop.initializer.text)
         }
         break
@@ -609,13 +609,14 @@ function getPropertyName(prop: ts.PropertyAssignment): string | null {
 }
 
 /**
- * Parses a command pattern to extract positional arguments
+ * Parses a parameters string to extract positional arguments
+ * Parameters format: "<env> [region] [files...]"
  */
 function parseCommandPattern(pattern: string): any[] {
   const positionals: any[] = []
 
-  // Remove command name (first word)
-  const parts = pattern.split(' ').slice(1)
+  // Split by spaces to get all parameter definitions
+  const parts = pattern.split(' ').filter((p) => p.trim())
 
   for (const part of parts) {
     if (part.startsWith('<') && part.endsWith('>')) {
@@ -649,13 +650,11 @@ function parseCommandPattern(pattern: string): any[] {
         })
       }
     } else if (part.trim()) {
-      // Found a non-positional word in the command pattern
-      const commandName = pattern.split(' ')[0]
-      const remainingParts = parts.slice(parts.indexOf(part))
+      // Found a literal word in the parameters pattern
       throw new Error(
-        `Invalid command pattern '${pattern}': found literal word '${part}' after command name. ` +
-          `Use subcommands for nested command structures instead of multiple words in the command pattern. ` +
-          `Example: Instead of "${commandName} ${remainingParts.join(' ')}", use subcommands: { ${part}: { command: "${remainingParts.join(' ')}", ... } }`
+        `Invalid parameters pattern '${pattern}': found literal word '${part}'. ` +
+          `Parameters should only contain <required> or [optional] arguments. ` +
+          `Example: "<env> [region]" or "<files...>"`
       )
     }
   }

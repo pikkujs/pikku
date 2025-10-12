@@ -13,6 +13,6 @@ export const queueTagMiddleware = () =>
 wireQueueWorker({
   queueName: 'test-queue',
   tags: ['queue'],
-  middleware: [wireMiddleware],
+  middleware: [wireMiddleware('queue')],
   func: noOpFunction,
 })

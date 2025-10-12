@@ -68,7 +68,7 @@ export interface CLIProgramState {
  * CLI command metadata for runtime
  */
 export interface CLICommandMeta {
-  command?: string
+  parameters?: string
   pikkuFuncName: string
   positionals: CLIPositional[]
   options: Record<string, CLIOption>
@@ -105,50 +105,6 @@ export type CorePikkuCLIRender<
 > = CorePikkuRender<Data, void, Services, Session>
 
 /**
- * Base type for any CLI command or subcommand structure.
- * This ensures type safety for the commands object in CoreCLI.
- *
- * @template PikkuFunction - The Pikku function config type (defaults to any compatible config)
- * @template PikkuPermission - The permission type (defaults to any permission)
- * @template PikkuMiddleware - The middleware type (defaults to any middleware)
- * @template PikkuCLIRender - The CLI render type (defaults to any renderer)
- */
-export type AnyCLICommand<
-  PikkuFunction extends
-    | CorePikkuFunctionConfig<any>
-    | any = CorePikkuFunctionConfig<any>,
-  PikkuPermission extends CorePikkuPermission<any, any, any> | any =
-    | CorePikkuPermission<any, any, any>
-    | any,
-  PikkuMiddleware extends CorePikkuMiddleware | any = CorePikkuMiddleware | any,
-  PikkuCLIRender extends CorePikkuRender<any, any, any, any> | any =
-    | CorePikkuRender<any, any, any, any>
-    | any,
-> = {
-  command?: string
-  func?: PikkuFunction
-  render?: PikkuCLIRender
-  description?: string
-  options?: Record<string, CLIOption>
-  middleware?: PikkuMiddleware[]
-  permissions?:
-    | Record<string, PikkuPermission | PikkuPermission[]>
-    | PikkuPermission
-    | PikkuPermission[]
-  auth?: boolean
-  docs?: PikkuDocs
-  subcommands?: Record<
-    string,
-    AnyCLICommand<
-      PikkuFunction,
-      PikkuPermission,
-      PikkuMiddleware,
-      PikkuCLIRender
-    >
-  >
-}
-
-/**
  * Extract input parameters from a Pikku function config type
  */
 export type ExtractFunctionInput<Func> =
@@ -157,6 +113,44 @@ export type ExtractFunctionInput<Func> =
         | CorePikkuFunction<infer Input, any, any, any, any>
         | CorePikkuFunctionSessionless<infer Input, any, any, any, any>
       ? Input
+      : never
+    : never
+
+/**
+ * Strip < > [ ] characters from a string
+ */
+type StripBrackets<S extends string> = S extends `<${infer Inner}>`
+  ? Inner
+  : S extends `[${infer Inner}]`
+    ? Inner
+    : S
+
+/**
+ * Split string by spaces
+ */
+type SplitBySpace<S extends string> = S extends `${infer First} ${infer Rest}`
+  ? [First, ...SplitBySpace<Rest>]
+  : S extends ''
+    ? []
+    : [S]
+
+/**
+ * Extract parameter names from CLI parameter string
+ * Example: "<env> [region]" => ["env", "region"]
+ */
+type ExtractParameterNames<S extends string> = {
+  [K in keyof SplitBySpace<S>]: SplitBySpace<S>[K] extends string
+    ? StripBrackets<SplitBySpace<S>[K]>
+    : never
+}
+
+/**
+ * Validate that all parameter names are valid keys of the function input
+ */
+export type ValidateParameters<Params extends string, Input> =
+  ExtractParameterNames<Params> extends (infer P)[]
+    ? P extends keyof Input
+      ? Params
       : never
     : never
 
@@ -184,8 +178,8 @@ export interface CoreCLICommandConfig<
     any
   >,
 > {
-  command: string
-  func: Func
+  parameters?: ValidateParameters<string, ExtractFunctionInput<Func>>
+  func?: Func
   description?: string
   render?: PikkuCLIRender
   options?: Partial<
@@ -209,7 +203,7 @@ export interface CoreCLICommandConfig<
   middleware?: PikkuMiddleware[]
   subcommands?: Record<
     string,
-    AnyCLICommand<any, any, PikkuMiddleware, PikkuCLIRender>
+    CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender>
   >
   auth?: boolean
   permissions?: any[]
@@ -228,12 +222,12 @@ export interface CoreCLICommand<
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
   Options = any,
-  Subcommands extends Record<string, AnyCLICommand> = Record<
+  Subcommands extends Record<
     string,
-    AnyCLICommand
-  >,
+    CoreCLICommandConfig<any, any, any>
+  > = Record<string, CoreCLICommandConfig<any, any, any>>,
 > {
-  command?: string
+  parameters?: string
   func: PikkuFunction
   render?: CorePikkuCLIRender<Out>
   description?: string
@@ -270,10 +264,10 @@ export type CLICommandDefinition<
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
   Options = any,
-  Subcommands extends Record<string, AnyCLICommand> = Record<
+  Subcommands extends Record<
     string,
-    AnyCLICommand
-  >,
+    CoreCLICommandConfig<any, any, any>
+  > = Record<string, CoreCLICommandConfig<any, any, any>>,
 > =
   | CoreCLICommand<
       In,
@@ -290,10 +284,7 @@ export type CLICommandDefinition<
  * CLI wiring configuration
  */
 export interface CoreCLI<
-  Commands extends Record<
-    string,
-    AnyCLICommand<any, any, PikkuMiddleware, PikkuCLIRender>
-  >,
+  Commands extends Record<string, CoreCLICommandConfig<any, any, any>>,
   Options,
   PikkuMiddleware,
   PikkuCLIRender,

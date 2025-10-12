@@ -9,10 +9,14 @@ import {
   pikkuMiddleware,
   wireHTTP,
 } from '../../.pikku/pikku-types.gen.js'
-import { httpGlobalMiddleware, httpRouteMiddleware } from '../middleware/http.js'
+import {
+  httpGlobalMiddleware,
+  httpRouteMiddleware,
+} from '../middleware/http.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
-export const apiTagMiddleware = () => addMiddleware('api', [httpRouteMiddleware])
+export const apiTagMiddleware = () =>
+  addMiddleware('api', [httpRouteMiddleware])
 
 // HTTP-specific global middleware - Also works: Direct call (no tree-shaking)
 export const httpMiddleware = addHTTPMiddleware('*', [httpGlobalMiddleware])
@@ -41,7 +45,7 @@ wireHTTP({
   method: 'get',
   route: '/api/test',
   tags: ['api'],
-  middleware: [wireMiddleware, inlineWireMiddleware],
+  middleware: [wireMiddleware('api-test'), inlineWireMiddleware],
   func: noOpFunction,
   auth: false, // No authentication required for this example
 })

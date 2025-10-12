@@ -14,7 +14,7 @@ import {
   CLIOption,
   CLIProgramState,
   CorePikkuCLIRender,
-  AnyCLICommand,
+  CoreCLICommandConfig,
 } from './cli.types.js'
 import type {
   CoreSingletonServices,
@@ -41,10 +41,7 @@ const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
  * Registers a CLI command tree and all its functions
  */
 export const wireCLI = <
-  Commands extends Record<
-    string,
-    AnyCLICommand<any, any, PikkuMiddleware, GlobalOutput>
-  >,
+  Commands extends Record<string, CoreCLICommandConfig<any, any, any>>,
   GlobalOptions,
   PikkuMiddleware extends CorePikkuMiddleware,
   GlobalOutput,

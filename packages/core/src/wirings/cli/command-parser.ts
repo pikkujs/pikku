@@ -391,11 +391,8 @@ export function generateCommandHelp(
 
     // Usage line
     let usage = `${programName} ${commandPath.join(' ')}`
-    if (commandMeta.command) {
-      const parts = commandMeta.command.split(' ').slice(1) // Remove command name
-      if (parts.length > 0) {
-        usage += ' ' + parts.join(' ')
-      }
+    if (commandMeta.parameters) {
+      usage += ' ' + commandMeta.parameters
     }
     lines.push(`Usage: ${usage} [options]`)
 

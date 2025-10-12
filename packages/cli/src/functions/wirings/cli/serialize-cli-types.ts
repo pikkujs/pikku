@@ -13,7 +13,7 @@ export const serializeCLITypes = (
  * CLI-specific type definitions for tree-shaking optimization
  */
 
-import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender, AnyCLICommand as AnyCLICommandCore, CoreCLICommandConfig } from '@pikku/core'
+import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender, CoreCLICommandConfig } from '@pikku/core'
 import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -42,18 +42,12 @@ type CLICommandConfig<Func extends PikkuFunctionConfig<any, any>> = CoreCLIComma
 type CLICommandResult<Func extends PikkuFunctionConfig<any, any>> = CLICommandConfig<Func>
 
 /**
- * CLI-specific command type with proper typing.
- * Uses the core AnyCLICommand type with local middleware and render types.
- */
-type AnyCLICommand = AnyCLICommandCore<PikkuFunctionConfig<any, any>, any, PikkuMiddleware, PikkuCLIRender<any>>
-
-/**
  * Type definition for CLI applications with commands and global options.
  *
  * @template Commands - Type describing the command structure
  * @template GlobalOptions - Type for global CLI options
  */
-type CLIWiring<Commands extends Record<string, AnyCLICommand>, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, PikkuCLIRender<any>>
+type CLIWiring<Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>>>, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, PikkuCLIRender<any>>
 
 /**
  * Registers a CLI application with the Pikku framework.
@@ -63,7 +57,7 @@ type CLIWiring<Commands extends Record<string, AnyCLICommand>, GlobalOptions> = 
  * @template GlobalOptions - Type for global CLI options
  * @param cli - CLI definition with program name, commands, and global options
  */
-export const wireCLI = <Commands extends Record<string, AnyCLICommand>, GlobalOptions>(
+export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>>>, GlobalOptions>(
   cli: CLIWiring<Commands, GlobalOptions>
 ) => {
   wireCLICore(cli as any)
