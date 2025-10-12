@@ -4,8 +4,15 @@ import {
   createSessionServices,
 } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
+import '../.pikku/middleware/pikku-middleware.gen.js' // Load middleware factories
 import '../.pikku/http/pikku-http-wirings-meta.gen.js' // Load HTTP metadata
+import '../.pikku/scheduler/pikku-schedulers-wirings-meta.gen.js' // Load scheduler metadata
+import '../.pikku/cli/pikku-cli-wirings-meta.gen.js' // Load CLI metadata
 import './functions/http.wiring.js' // Import HTTP wirings to register routes
+import './functions/scheduler.wiring.js' // Import scheduler wirings
+import './functions/queue.wiring.js' // Import queue wirings
+import './functions/cli.wiring.js' // Import CLI wirings
+import './functions/mcp.wiring.js' // Import MCP wirings
 import { fetch } from '@pikku/core/http'
 
 async function main(): Promise<void> {
@@ -18,9 +25,18 @@ async function main(): Promise<void> {
     console.log(
       '\nThis example demonstrates middleware generation and execution order.'
     )
+    console.log('\nAll wiring types are configured with middleware:')
+    console.log('  - HTTP: Routes with tag, route pattern, and wire middleware')
+    console.log('  - Scheduler: Cron tasks with tag and wire middleware')
+    console.log('  - Queue: Background jobs with tag and wire middleware')
+    console.log('  - CLI: Commands with tag and wire middleware')
+    console.log('  - MCP: Tools with tag and wire middleware')
     console.log('\nGenerated files:')
-    console.log('  .pikku/pikku-middleware.gen.ts')
+    console.log('  .pikku/middleware/pikku-middleware.gen.ts')
+    console.log('  .pikku/middleware/pikku-middleware-groups-meta.gen.ts')
     console.log('  .pikku/http/pikku-http-wirings-meta.gen.ts')
+    console.log('  .pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts')
+    console.log('  .pikku/cli/pikku-cli-wirings-meta.gen.ts')
 
     // Test 1: /api/test route (should have all middleware layers)
     console.log('\n\nTest 1: GET /api/test')
@@ -73,9 +89,18 @@ async function main(): Promise<void> {
       console.log('  No middleware executed')
     }
 
-    console.log('\n✓ Middleware execution completed successfully')
+    console.log('\n✓ HTTP middleware execution tests completed successfully')
+    console.log(
+      '\nNote: Scheduler, Queue, CLI, and MCP wirings are also configured'
+    )
+    console.log('with middleware. To test them, you would need to:')
+    console.log('  - Scheduler: Run the cron scheduler')
+    console.log('  - Queue: Enqueue and process jobs')
+    console.log('  - CLI: Execute CLI commands')
+    console.log('  - MCP: Invoke MCP tools through the protocol')
   } catch (e: any) {
-    console.error('\n✗ Error:', e.toString())
+    console.error('\n✗ Error:', e.message)
+    console.error(e.stack)
     process.exit(1)
   }
 }
