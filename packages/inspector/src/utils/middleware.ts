@@ -84,56 +84,27 @@ export function resolveHTTPMiddleware(
 ): MiddlewareMetadata[] | undefined {
   const resolved: MiddlewareMetadata[] = []
 
-  // 1. HTTP route middleware (includes '*' for global)
-  for (const [
-    pattern,
-    middlewareNames,
-  ] of state.http.routeMiddleware.entries()) {
+  // 1. HTTP route middleware groups (includes '*' for global)
+  for (const [pattern, groupMeta] of state.http.routeMiddleware.entries()) {
     if (routeMatchesPattern(route, pattern)) {
-      for (const name of middlewareNames) {
-        // Validate: HTTP middleware cannot be inline
-        const meta = state.middleware.meta[name]
-        if (meta && meta.exportedName === null) {
-          logger.error(
-            `Inline middleware cannot be used with addHTTPMiddleware. ` +
-              `Pattern '${pattern}' references inline middleware '${name}'. ` +
-              `See https://pikku.dev/docs/errors/inline-support for more info.`
-          )
-          continue
-        }
-
-        resolved.push({
-          type: 'http',
-          name,
-          route: pattern,
-        })
-      }
+      // Just reference the group by route pattern
+      resolved.push({
+        type: 'http',
+        route: pattern,
+      })
     }
   }
 
-  // 2. Tag-based middleware (becomes wire-level with tag property)
+  // 2. Tag-based middleware groups
   if (tags && tags.length > 0) {
     for (const tag of tags) {
-      const middlewareNames = state.middleware.tagMiddleware.get(tag)
-      if (middlewareNames) {
-        for (const name of middlewareNames) {
-          // Validate: tag-based middleware cannot be inline
-          const meta = state.middleware.meta[name]
-          if (meta && meta.exportedName === null) {
-            logger.error(
-              `Inline middleware cannot be used with addMiddleware. ` +
-                `Tag '${tag}' references inline middleware '${name}'. ` +
-                `See https://pikku.dev/docs/errors/inline-support for more info.`
-            )
-            continue
-          }
-
-          resolved.push({
-            type: 'wire',
-            name,
-            tag,
-          })
-        }
+      const groupMeta = state.middleware.tagMiddleware.get(tag)
+      if (groupMeta) {
+        // Just reference the group by tag
+        resolved.push({
+          type: 'tag',
+          tag,
+        })
       }
     }
   }
@@ -145,9 +116,11 @@ export function resolveHTTPMiddleware(
       checker
     )
     for (const name of middlewareNames) {
+      const meta = state.middleware.meta[name]
       resolved.push({
         type: 'wire',
         name,
+        inline: meta?.exportedName === null,
       })
     }
   }
@@ -169,29 +142,16 @@ function resolveTagAndExplicitMiddleware(
 ): MiddlewareMetadata[] {
   const resolved: MiddlewareMetadata[] = []
 
-  // 1. Tag-based middleware (becomes wire-level with tag property)
+  // 1. Tag-based middleware groups
   if (tags && tags.length > 0) {
     for (const tag of tags) {
-      const middlewareNames = state.middleware.tagMiddleware.get(tag)
-      if (middlewareNames) {
-        for (const name of middlewareNames) {
-          // Validate: tag-based middleware cannot be inline
-          const meta = state.middleware.meta[name]
-          if (meta && meta.exportedName === null) {
-            logger.error(
-              `Inline middleware cannot be used with addMiddleware. ` +
-                `Tag '${tag}' references inline middleware '${name}'. ` +
-                `See https://pikku.dev/docs/errors/inline-support for more info.`
-            )
-            continue
-          }
-
-          resolved.push({
-            type: 'wire',
-            name,
-            tag,
-          })
-        }
+      const groupMeta = state.middleware.tagMiddleware.get(tag)
+      if (groupMeta) {
+        // Just reference the group by tag
+        resolved.push({
+          type: 'tag',
+          tag,
+        })
       }
     }
   }
@@ -203,9 +163,11 @@ function resolveTagAndExplicitMiddleware(
       checker
     )
     for (const name of middlewareNames) {
+      const meta = state.middleware.meta[name]
       resolved.push({
         type: 'wire',
         name,
+        inline: meta?.exportedName === null,
       })
     }
   }

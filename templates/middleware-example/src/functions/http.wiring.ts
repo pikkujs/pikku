@@ -10,14 +10,19 @@ import {
 } from '../../.pikku/pikku-types.gen.js'
 import { httpMiddleware } from '../middleware/http.js'
 
-// Global middleware applied to all tagged functions
-addMiddleware('api', [globalMiddleware])
+// Global tag middleware - Recommended: Use factory pattern for tree-shaking
+export const apiTagMiddleware = () => addMiddleware('api', [globalMiddleware])
 
-// HTTP-specific global middleware
-addHTTPMiddleware([httpMiddleware])
+// HTTP-specific global middleware - Also works: Direct call (no tree-shaking)
+export const httpGlobalMiddleware = addHTTPMiddleware('*', [httpMiddleware])
 
-// Route-pattern middleware
-addHTTPMiddleware('/api/*', [routeMiddleware])
+// Route-pattern middleware - Recommended: Use factory pattern
+export const apiRouteMiddleware = () =>
+  addHTTPMiddleware('/api/*', [routeMiddleware])
+
+// Call the factories to register middleware at module evaluation
+apiTagMiddleware()
+apiRouteMiddleware()
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(

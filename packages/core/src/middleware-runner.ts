@@ -191,46 +191,64 @@ export const combineMiddleware = (
     return middlewareCache[wireType][uid]
   }
 
-  // Resolve inherited middleware metadata, filtering out wire middleware without tags
-  // (those are passed separately as wireMiddleware to avoid duplication)
-  const resolvedInheritedWireMiddleware: CorePikkuMiddleware[] = []
+  const resolved: CorePikkuMiddleware[] = []
+
+  // 1. Resolve wire inherited middleware (HTTP + tag groups + individual wire middleware)
   if (wireInheritedMiddleware) {
     for (const meta of wireInheritedMiddleware) {
-      // Skip wire middleware without tags - those are passed separately
-      if (meta.type === 'wire' && !meta.tag) {
-        continue
-      }
-      const middleware = getMiddlewareByName(meta.name)
-      if (middleware) {
-        resolvedInheritedWireMiddleware.push(middleware)
+      if (meta.type === 'http') {
+        // Look up HTTP middleware group from pikkuState
+        const group = pikkuState('middleware', 'httpGroup')[meta.route]
+        if (group) {
+          // At runtime, all factories should be resolved to middleware
+          resolved.push(...(group as CorePikkuMiddleware[]))
+        }
+      } else if (meta.type === 'tag') {
+        // Look up tag middleware group from pikkuState
+        const group = pikkuState('middleware', 'tagGroup')[meta.tag]
+        if (group) {
+          // At runtime, all factories should be resolved to middleware
+          resolved.push(...(group as CorePikkuMiddleware[]))
+        }
+      } else if (meta.type === 'wire') {
+        // Individual wire middleware (exported, not inline)
+        const middleware = getMiddlewareByName(meta.name)
+        if (middleware) {
+          resolved.push(middleware)
+        }
       }
     }
   }
 
-  const resolvedInheritedFuncMiddleware: CorePikkuMiddleware[] = []
+  // 2. Add inline wire middleware
+  if (wireMiddleware) {
+    resolved.push(...wireMiddleware)
+  }
+
+  // 3. Resolve function inherited middleware (only tags, wire middleware already handled)
   if (funcInheritedMiddleware) {
     for (const meta of funcInheritedMiddleware) {
-      // Skip function middleware without tags - those are passed separately
-      if (meta.type !== 'tag') {
-        continue
+      if (meta.type === 'tag') {
+        // Look up tag middleware group from pikkuState
+        const group = pikkuState('middleware', 'tagGroup')[meta.tag]
+        if (group) {
+          // At runtime, all factories should be resolved to middleware
+          resolved.push(...(group as CorePikkuMiddleware[]))
+        }
       }
-      const middleware = getMiddlewareByName(meta.name)
-      if (middleware) {
-        resolvedInheritedFuncMiddleware.push(middleware)
-      }
+      // Note: wire middleware is already handled in wireInheritedMiddleware
     }
   }
 
-  // Run middleware in specific order:
-  // 1) inheritedMiddleware (HTTP + tag-based + wire with tags)
-  // 2) wireMiddleware (inline wire middleware)
-  // 3) funcMiddleware (function tags + function inline)
-  middlewareCache[wireType][uid] = freezeDedupe([
-    ...resolvedInheritedWireMiddleware,
-    ...(wireMiddleware || []),
-    ...resolvedInheritedFuncMiddleware,
-    ...(funcMiddleware || []),
-  ]) as readonly CorePikkuMiddleware[]
+  // 4. Add inline function middleware
+  if (funcMiddleware) {
+    resolved.push(...funcMiddleware)
+  }
+
+  // Deduplicate and freeze
+  middlewareCache[wireType][uid] = freezeDedupe(
+    resolved
+  ) as readonly CorePikkuMiddleware[]
 
   return middlewareCache[wireType][uid]
 }
