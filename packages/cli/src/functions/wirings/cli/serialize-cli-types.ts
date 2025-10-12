@@ -14,7 +14,7 @@ export const serializeCLITypes = (
  */
 
 import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender } from '@pikku/core'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuMiddleware } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
 
@@ -31,22 +31,18 @@ ${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : 
 type PikkuCLIRender<Data, RequiredServices extends SingletonServices = SingletonServices> = CorePikkuCLIRender<Data, RequiredServices, Session>
 
 /**
- * Extract input parameters from a Pikku function type
+ * Extract input parameters from a Pikku function config type
  */
-type ExtractFunctionInput<Func> = Func extends PikkuFunctionSessionless<infer Input, any>
+type ExtractFunctionInput<Func> = Func extends PikkuFunctionConfig<infer Input, any>
   ? Input
-  : Func extends PikkuFunction<infer Input, any>
-    ? Input
-    : never
+  : never
 
 /**
- * Extract output type from a Pikku function type
+ * Extract output type from a Pikku function config type
  */
-type ExtractFunctionOutput<Func> = Func extends PikkuFunctionSessionless<any, infer Output>
+type ExtractFunctionOutput<Func> = Func extends PikkuFunctionConfig<any, infer Output>
   ? Output
-  : Func extends PikkuFunction<any, infer Output>
-    ? Output
-    : never
+  : never
 
 /**
  * CLI command configuration that infers options from function input type

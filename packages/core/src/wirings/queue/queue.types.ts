@@ -1,9 +1,5 @@
-import {
-  PikkuDocs,
-  CorePikkuMiddleware,
-  MiddlewareMetadata,
-} from '../../types/core.types.js'
-import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import { PikkuDocs, MiddlewareMetadata } from '../../types/core.types.js'
+import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { QueueConfigMapping } from './validate-worker-config.js'
 
 /**
@@ -170,16 +166,19 @@ export type queueWorkersMeta = Record<
  * Core queue processor definition
  */
 export type CoreQueueWorker<
-  PikkuFunction = CorePikkuFunctionSessionless<any, any>,
-  PikkuMiddleware = CorePikkuMiddleware<any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    any,
+    any,
+    any
+  > = CorePikkuFunctionConfig<any, any, any>,
 > = {
   queueName: string
-  func: PikkuFunction
+  func: PikkuFunctionConfig
   config?: PikkuWorkerConfig
   docs?: PikkuDocs
   session?: undefined
   tags?: string[]
-  middleware?: PikkuMiddleware[]
+  middleware?: PikkuFunctionConfig['middleware']
 }
 
 /**

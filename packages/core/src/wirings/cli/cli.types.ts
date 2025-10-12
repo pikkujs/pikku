@@ -7,9 +7,10 @@ import {
   MiddlewareMetadata,
 } from '../../types/core.types.js'
 import {
+  CorePikkuFunctionConfig,
+  CorePikkuPermission,
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
-  CorePikkuPermission,
 } from '../../function/functions.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 
@@ -107,9 +108,10 @@ export type CorePikkuCLIRender<
 export interface CoreCLICommand<
   In,
   Out,
-  PikkuFunction extends
+  PikkuFunction extends CorePikkuFunctionConfig<
     | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>,
+    | CorePikkuFunctionSessionless<In, Out, any, any, any>
+  >,
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
   Options = any,
@@ -133,9 +135,10 @@ export interface CoreCLICommand<
 export type CLICommandShorthand<
   In,
   Out,
-  PikkuFunction extends
+  PikkuFunction extends CorePikkuFunctionConfig<
     | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>,
+    | CorePikkuFunctionSessionless<In, Out, any, any, any>
+  >,
 > = PikkuFunction
 
 /**
@@ -144,9 +147,10 @@ export type CLICommandShorthand<
 export type CLICommandDefinition<
   In,
   Out,
-  PikkuFunction extends
+  PikkuFunction extends CorePikkuFunctionConfig<
     | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>,
+    | CorePikkuFunctionSessionless<In, Out, any, any, any>
+  >,
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
   Options = any,

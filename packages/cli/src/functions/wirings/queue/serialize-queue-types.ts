@@ -8,7 +8,7 @@ export const serializeQueueTypes = (functionTypesImportPath: string) => {
  */
 
 import { CoreQueueWorker, wireQueueWorker as wireQueueWorkerCore } from '@pikku/core/queue'
-import type { PikkuFunctionSessionless } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
 
 /**
  * Type definition for queue workers that process background jobs.
@@ -16,7 +16,7 @@ import type { PikkuFunctionSessionless } from '${functionTypesImportPath}'
  * @template In - Input type for the queue job
  * @template Out - Output type for the queue job
  */
-type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionSessionless<In, Out>>
+type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionConfig<In, Out>>
 
 /**
  * Registers a queue worker with the Pikku framework.

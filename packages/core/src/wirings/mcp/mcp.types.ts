@@ -1,4 +1,7 @@
-import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 import {
   CorePikkuMiddleware,
   MiddlewareMetadata,
@@ -61,7 +64,9 @@ export type MCPPromptMeta = Record<
  * Represents an MCP resource with specific properties.
  */
 export type CoreMCPResource<
-  PikkuFunction = CorePikkuFunctionSessionless<any, any>,
+  PikkuFunction = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   uri: string
@@ -79,7 +84,9 @@ export type CoreMCPResource<
  * Represents an MCP tool with specific properties.
  */
 export type CoreMCPTool<
-  PikkuFunction = CorePikkuFunctionSessionless<any, any>,
+  PikkuFunction = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
@@ -96,7 +103,9 @@ export type CoreMCPTool<
  * Represents an MCP prompt with specific properties.
  */
 export type CoreMCPPrompt<
-  PikkuFunction = CorePikkuFunctionSessionless<any, MCPPromptResponse>,
+  PikkuFunction = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, MCPPromptResponse>
+  >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string

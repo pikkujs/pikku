@@ -8,13 +8,13 @@ export const serializeSchedulerTypes = (functionTypesImportPath: string) => {
  */
 
 import { CoreScheduledTask, wireScheduler as wireSchedulerCore } from '@pikku/core/scheduler'
-import type { PikkuFunctionSessionless, PikkuMiddleware } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 
 /**
  * Type definition for scheduled tasks that run at specified intervals.
  * These are sessionless functions that execute based on cron expressions.
  */
-type SchedulerWiring = CoreScheduledTask<PikkuFunctionSessionless<void, void>, PikkuMiddleware>
+type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void>, PikkuMiddleware>
 
 /**
  * Registers a scheduled task with the Pikku framework.

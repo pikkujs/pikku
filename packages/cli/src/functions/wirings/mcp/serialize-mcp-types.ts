@@ -19,28 +19,28 @@ import {
   MCPPromptResponse
 } from '@pikku/core'
 
-import type { PikkuFunctionSessionless } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTypesImportPath}'
 
 /**
  * Type definition for MCP resources that provide data to AI models.
  *
  * @template In - Input type for the resource request
  */
-type MCPResourceWiring<In> = CoreMCPResource<PikkuFunctionSessionless<In, MCPResourceResponse, null, true>>
+type MCPResourceWiring<In> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse>>
 
 /**
  * Type definition for MCP tools that AI models can invoke.
  *
  * @template In - Input type for the tool invocation
  */
-type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionSessionless<In, MCPToolResponse, null, true>>
+type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionConfig<In, MCPToolResponse>>
 
 /**
  * Type definition for MCP prompts that provide templates to AI models.
  *
  * @template In - Input type for the prompt parameters
  */
-type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionSessionless<In, MCPPromptResponse, null, true>>
+type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptResponse>>
 
 /**
  * Registers an MCP resource with the Pikku framework.
