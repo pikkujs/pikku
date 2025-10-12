@@ -48,28 +48,31 @@ export const all: any = pikkuVoidFunc({
     // Generate services map
     await rpc.invoke('pikkuServices', null)
 
-    await rpc.invoke('pikkuRPC', null)
+    const hasInternalRPCs = await rpc.invoke('pikkuRPC', null)
     await rpc.invoke('pikkuRPCInternalMap', null)
     await rpc.invoke('pikkuRPCExposedMap', null)
     await rpc.invoke('pikkuRPCClient', null)
 
-    allImports.push(config.rpcInternalWiringMetaFile)
+    if (hasInternalRPCs) {
+      allImports.push(config.rpcInternalWiringMetaFile)
+    }
 
     const schemas = await rpc.invoke('pikkuSchemas', null)
     if (schemas) {
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
-    // RPC bootstrap is always generated since RPC is always present
-    // Include the internal meta file
-    await generateBootstrapFile(
-      logger,
-      config,
-      config.bootstrapFiles.rpc,
-      [config.rpcInternalWiringMetaFile],
-      schemas,
-      middleware
-    )
+    // RPC bootstrap - only include internal meta file if internal RPCs exist
+    if (hasInternalRPCs) {
+      await generateBootstrapFile(
+        logger,
+        config,
+        config.bootstrapFiles.rpc,
+        [config.rpcInternalWiringMetaFile],
+        schemas,
+        middleware
+      )
+    }
 
     const http = await rpc.invoke('pikkuHTTP', null)
     if (http) {
@@ -159,15 +162,19 @@ export const all: any = pikkuVoidFunc({
       await rpc.invoke('pikkuCLIEntry', null)
       allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
 
+      const cliBootstrapImports = [
+        config.cliWiringMetaFile,
+        config.cliWiringsFile,
+      ]
+      if (hasInternalRPCs) {
+        cliBootstrapImports.unshift(config.rpcInternalWiringMetaFile)
+      }
+
       await generateBootstrapFile(
         logger,
         config,
         config.bootstrapFiles.cli,
-        [
-          config.rpcInternalWiringMetaFile,
-          config.cliWiringMetaFile,
-          config.cliWiringsFile,
-        ],
+        cliBootstrapImports,
         schemas,
         middleware
       )
