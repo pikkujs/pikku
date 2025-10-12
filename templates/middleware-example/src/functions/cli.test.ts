@@ -18,8 +18,8 @@ export async function testCLIWiring(
     async () => {
       await runCLICommand({
         program: 'test-cli',
-        commandPath: ['test'],
-        data: {},
+        commandPath: ['greet'],
+        data: { name: 'World' },
         singletonServices,
         createSessionServices,
       })
