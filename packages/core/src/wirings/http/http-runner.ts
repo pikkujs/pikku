@@ -16,6 +16,7 @@ import {
 import {
   CoreUserSession,
   CorePikkuMiddleware,
+  CorePikkuMiddlewareGroup,
   SessionServices,
   PikkuWiringTypes,
   PikkuInteraction,
@@ -37,35 +38,41 @@ import { rpcService } from '../rpc/rpc-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
 /**
- * Registers HTTP middleware either globally or for a specific route pattern.
+ * Registers HTTP middleware for a specific route pattern.
  *
- * This is a marker function used by the CLI during inspection to discover HTTP middleware
- * dependencies and generate metadata. At runtime, this function is a no-op.
+ * This function registers middleware at runtime that will be applied to
+ * HTTP routes matching the specified pattern.
  *
- * When a string route pattern is provided along with middleware, the middleware
- * is applied only to that route. Otherwise, if an array is provided, it is treated
- * as global middleware (applied to all routes).
+ * For tree-shaking benefits, wrap in a factory function:
+ * `export const x = () => addHTTPMiddleware('pattern', [...])`
  *
  * @template PikkuMiddleware The middleware type.
- * @param {PikkuMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
- * @param {PikkuMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
+ * @param {string} pattern - Route pattern (e.g., '*' for all routes, '/api/*' for specific routes).
+ * @param {CorePikkuMiddlewareGroup} middleware - Array of middleware for this route pattern.
+ *
+ * @returns {CorePikkuMiddlewareGroup} The middleware array (for chaining/wrapping).
  *
  * @example
  * ```typescript
- * // Add global HTTP middleware
- * addHTTPMiddleware([authMiddleware, loggingMiddleware])
+ * // Recommended: tree-shakeable
+ * export const httpGlobal = () => addHTTPMiddleware('*', [
+ *   corsMiddleware,
+ *   loggingMiddleware
+ * ])
  *
- * // Add route-specific middleware
- * addHTTPMiddleware('/api/admin/*', [adminAuthMiddleware])
+ * // Also works: no tree-shaking
+ * export const apiMiddleware = addHTTPMiddleware('/api/*', [
+ *   authMiddleware
+ * ])
  * ```
  */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
-  _routeOrMiddleware: PikkuMiddleware[] | string,
-  _middleware?: PikkuMiddleware[]
-) => {
-  // No-op: This function exists only for CLI inspection to discover HTTP middleware
-  // The CLI reads the source code to find addHTTPMiddleware calls and generates
-  // metadata that includes the middleware in the correct order (HTTP global, HTTP pattern, etc.)
+  pattern: string,
+  middleware: CorePikkuMiddlewareGroup
+): CorePikkuMiddlewareGroup => {
+  const httpGroups = pikkuState('middleware', 'httpGroup')
+  httpGroups[pattern] = middleware
+  return middleware
 }
 
 /**

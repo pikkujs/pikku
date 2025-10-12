@@ -22,14 +22,23 @@ export type MetaInputTypes = Map<
   }
 >
 
+export interface MiddlewareGroupMeta {
+  exportName: string | null // null if not exported
+  sourceFile: string
+  position: number
+  services: FunctionServicesMeta
+  middlewareCount: number
+  isFactory: boolean // true if wrapped in () => add...()
+}
+
 export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
   meta: HTTPWiringsMeta
   files: Set<string>
-  // HTTP middleware calls tracking - route pattern -> middleware names
-  // Pattern '*' matches all routes (from addHTTPMiddleware([...]))
+  // HTTP middleware calls tracking - route pattern -> group metadata
+  // Pattern '*' matches all routes (from addHTTPMiddleware('*', [...]))
   // Pattern '/api/*' matches specific routes (from addHTTPMiddleware('/api/*', [...]))
-  routeMiddleware: Map<string, string[]>
+  routeMiddleware: Map<string, MiddlewareGroupMeta>
 }
 
 export interface InspectorFunctionState {
@@ -55,8 +64,9 @@ export interface InspectorMiddlewareState {
       factory?: boolean // true if wrapped with pikkuMiddlewareFactory
     }
   >
-  // Tag-based middleware calls tracking
-  tagMiddleware: Map<string, string[]> // tag -> middleware names (from addMiddleware)
+  // Tag-based middleware calls tracking - tag -> group metadata
+  // e.g., export const adminMiddleware = () => addMiddleware('admin', [...])
+  tagMiddleware: Map<string, MiddlewareGroupMeta>
 }
 
 export interface InspectorPermissionState {

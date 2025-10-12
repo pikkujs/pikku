@@ -25,7 +25,7 @@ export interface LogCommandInfoOptions {
  * Replaces the logCommandInfoAndTime wrapper function
  *
  * The skipCondition can be:
- * - A boolean value
+ * - A boolean valuewe
  * - A function that receives services and returns a boolean (can access getInspectorState)
  */
 export const logCommandInfoAndTime = ({

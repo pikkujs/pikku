@@ -27,25 +27,23 @@ export interface FunctionServicesMeta {
 
 /**
  * Metadata for middleware at any level
- * - type: 'http' = HTTP route middleware (global or pattern-specific)
- * - type: 'tag' = Tag-based middleware
- * - type: 'wire' = Wire-level middleware (explicit or from tags)
+ * - type: 'http' = HTTP route middleware group (references httpGroup in pikkuState)
+ * - type: 'tag' = Tag-based middleware group (references tagGroup in pikkuState)
+ * - type: 'wire' = Wire-level individual middleware
  */
 export type MiddlewareMetadata =
   | {
       type: 'http'
-      name: string
       route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
     }
   | {
       type: 'tag'
-      name: string
       tag: string // Tag name
     }
   | {
       type: 'wire'
       name: string
-      tag?: string // Optional: if wire middleware came from a tag
+      inline?: boolean // true if inline middleware
     }
 
 export type FunctionRuntimeMeta = {
@@ -165,6 +163,28 @@ export type CorePikkuMiddleware<
 ) => Promise<void>
 
 /**
+ * A factory function that takes input and returns middleware
+ * Used when middleware needs configuration/input parameters
+ */
+export type CorePikkuMiddlewareFactory<
+  In = any,
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
+
+/**
+ * A group of middleware (combination of regular middleware and factories)
+ * Used with addMiddleware() and addHTTPMiddleware() to group related middleware together
+ */
+export type CorePikkuMiddlewareGroup<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = Array<
+  | CorePikkuMiddleware<SingletonServices, UserSession>
+  | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
+>
+
+/**
  * Factory function for creating middleware with tree-shaking support
  */
 export const pikkuMiddleware = <
@@ -194,8 +214,8 @@ export const pikkuMiddleware = <
  * ```
  */
 export const pikkuMiddlewareFactory = <In = any>(
-  factory: (input: In) => CorePikkuMiddleware
-): ((input: In) => CorePikkuMiddleware) => {
+  factory: CorePikkuMiddlewareFactory<In>
+): CorePikkuMiddlewareFactory<In> => {
   return factory
 }
 

@@ -3,6 +3,8 @@ import {
   CoreSingletonServices,
   PikkuInteraction,
   CorePikkuMiddleware,
+  CorePikkuMiddlewareFactory,
+  CorePikkuMiddlewareGroup,
   PikkuWiringTypes,
   MiddlewareMetadata,
 } from './types/core.types.js'
@@ -50,34 +52,45 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
 }
 
 /**
- * Adds global middleware for a specific tag.
+ * Registers global middleware for a specific tag.
  *
- * This function allows you to register middleware that will be applied to
- * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
+ * This function registers middleware at runtime that will be applied to
+ * any wiring (HTTP, Channel, Queue, Scheduler, MCP, CLI) that includes the matching tag.
+ *
+ * For tree-shaking benefits, wrap in a factory function:
+ * `export const x = () => addMiddleware('tag', [...])`
+ *
+ * Accepts an array that can contain:
+ * - Direct middleware functions (CorePikkuMiddleware)
+ * - Factory middleware functions (CorePikkuMiddlewareFactory)
  *
  * @template PikkuMiddleware The middleware type.
  * @param {string} tag - The tag that the middleware should apply to.
- * @param {PikkuMiddleware[]} middleware - The middleware array to apply for the specified tag.
+ * @param {CorePikkuMiddlewareGroup} middleware - Array of middleware for this tag.
  *
- * @throws {Error} If middleware for the tag already exists.
+ * @returns {CorePikkuMiddlewareGroup} The middleware array (for chaining/wrapping).
  *
  * @example
  * ```typescript
- * // Add admin middleware for admin endpoints
- * addMiddleware('admin', [adminMiddleware])
+ * // Recommended: tree-shakeable
+ * export const adminMiddleware = () => addMiddleware('admin', [
+ *   authMiddleware,
+ *   loggingMiddleware({ level: 'info' })
+ * ])
  *
- * // Add authentication middleware for auth endpoints
- * addMiddleware('auth', [authMiddleware])
- *
- * // Add logging middleware for all API endpoints
- * addMiddleware('api', [loggingMiddleware])
+ * // Also works: no tree-shaking
+ * export const apiMiddleware = addMiddleware('api', [
+ *   rateLimitMiddleware
+ * ])
  * ```
  */
 export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
-  _tag: string,
-  _middleware: PikkuMiddleware[]
-) => {
-  // This doesn't need to do anything at runtime - it's used by the CLI to generate
+  tag: string,
+  middleware: CorePikkuMiddlewareGroup
+): CorePikkuMiddlewareGroup => {
+  const tagGroups = pikkuState('middleware', 'tagGroup')
+  tagGroups[tag] = middleware
+  return middleware
 }
 
 /**
