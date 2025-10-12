@@ -234,6 +234,11 @@ const _getPikkuCLIConfig = async (
       result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')
     }
 
+    // Middleware
+    if (!result.middlewareFile) {
+      result.middlewareFile = join(result.outDir, 'pikku-middleware.gen.ts')
+    }
+
     // Bootstrap files
     if (!result.bootstrapFile) {
       result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')

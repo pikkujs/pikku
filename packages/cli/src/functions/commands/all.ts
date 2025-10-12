@@ -36,7 +36,13 @@ export const all: any = pikkuVoidFunc({
       return
     }
 
-    // Base imports for all bootstrap files
+    // Generate and register middleware
+    const middleware = await rpc.invoke('pikkuMiddleware', null)
+    // Middleware must be imported before functions meta to ensure registration happens first
+    if (middleware) {
+      allImports.push(config.middlewareFile)
+    }
+
     allImports.push(config.functionsMetaFile, config.functionsFile)
 
     // Generate services map
@@ -61,7 +67,8 @@ export const all: any = pikkuVoidFunc({
       config,
       config.bootstrapFiles.rpc,
       [config.rpcInternalWiringMetaFile],
-      schemas
+      schemas,
+      middleware
     )
 
     const http = await rpc.invoke('pikkuHTTP', null)
@@ -75,7 +82,8 @@ export const all: any = pikkuVoidFunc({
         config,
         config.bootstrapFiles.http,
         [config.httpWiringMetaFile, config.httpWiringsFile],
-        schemas
+        schemas,
+        middleware
       )
     }
 
@@ -91,7 +99,8 @@ export const all: any = pikkuVoidFunc({
         config,
         config.bootstrapFiles.scheduler,
         [config.schedulersWiringMetaFile, config.schedulersWiringFile],
-        schemas
+        schemas,
+        middleware
       )
     }
 
@@ -109,7 +118,8 @@ export const all: any = pikkuVoidFunc({
         config,
         config.bootstrapFiles.queue,
         [config.queueWorkersWiringMetaFile, config.queueWorkersWiringFile],
-        schemas
+        schemas,
+        middleware
       )
     }
 
@@ -124,7 +134,8 @@ export const all: any = pikkuVoidFunc({
         config,
         config.bootstrapFiles.channel,
         [config.channelsWiringMetaFile, config.channelsWiringFile],
-        schemas
+        schemas,
+        middleware
       )
     }
 
@@ -138,7 +149,8 @@ export const all: any = pikkuVoidFunc({
         config,
         config.bootstrapFiles.mcp,
         [config.mcpWiringsMetaFile, config.mcpWiringsFile],
-        schemas
+        schemas,
+        middleware
       )
     }
 
@@ -156,7 +168,8 @@ export const all: any = pikkuVoidFunc({
           config.cliWiringMetaFile,
           config.cliWiringsFile,
         ],
-        schemas
+        schemas,
+        middleware
       )
     }
 

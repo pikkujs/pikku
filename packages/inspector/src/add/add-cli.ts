@@ -7,6 +7,8 @@ import {
 } from '../types.js'
 import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
+import { resolveMiddleware } from '../utils/middleware.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
 
 /**
  * Adds CLI command metadata to the inspector state
@@ -237,9 +239,10 @@ function processCommand(
     options: {},
   }
 
-  // First pass: extract pikkuFuncName so we can use it when processing options
+  // First pass: extract pikkuFuncName and tags so we can use them when processing options/middleware
   let pikkuFuncName: string | undefined
   let optionsNode: ts.ObjectLiteralExpression | undefined
+  let tags: string[] | undefined
 
   for (const prop of node.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
@@ -258,7 +261,21 @@ function processCommand(
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
       optionsNode = prop.initializer
+    } else if (propName === 'tags') {
+      tags = (getPropertyValue(node, 'tags') as string[]) || undefined
     }
+  }
+
+  // Resolve middleware
+  const middleware = resolveMiddleware(
+    logger,
+    inspectorState,
+    node,
+    tags,
+    typeChecker
+  )
+  if (middleware) {
+    meta.middleware = middleware
   }
 
   // Second pass: process all properties

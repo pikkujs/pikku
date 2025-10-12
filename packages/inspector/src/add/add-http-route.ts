@@ -7,7 +7,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { AddWiring } from '../types.js'
-import { getMiddleware, resolveHTTPMiddleware } from '../utils/middleware.js'
+import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -68,7 +68,6 @@ export const addHTTPRoute: AddWiring = (
   const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
   const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
   const query = (getPropertyValue(obj, 'query') as string[]) || []
-  const explicitMiddlewareNode = getMiddleware(obj)
 
   const filePath = node.getSourceFile().fileName
 
@@ -115,11 +114,12 @@ export const addHTTPRoute: AddWiring = (
   )
 
   // --- resolve middleware ---
-  const middleware = resolveHTTPMiddleware(
+  const middleware = resolveHTTPMiddlewareFromObject(
+    logger,
     state,
     route,
+    obj,
     tags,
-    explicitMiddlewareNode,
     checker
   )
 

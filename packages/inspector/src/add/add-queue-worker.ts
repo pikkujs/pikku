@@ -5,6 +5,7 @@ import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
+import { resolveMiddleware } from '../utils/middleware.js'
 
 export const addQueueWorker: AddWiring = (
   logger,
@@ -79,12 +80,16 @@ export const addQueueWorker: AddWiring = (
       return
     }
 
+    // --- resolve middleware ---
+    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+
     state.queueWorkers.files.add(node.getSourceFile().fileName)
     state.queueWorkers.meta[queueName] = {
       pikkuFuncName,
       queueName,
       docs,
       tags,
+      middleware,
     }
   }
 }

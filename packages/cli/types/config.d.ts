@@ -60,6 +60,9 @@ export interface PikkuCLICoreOutputFiles {
   // Services
   servicesFile: string
 
+  // Middleware
+  middlewareFile: string
+
   // Application bootstrap
   bootstrapFile: string
   bootstrapFiles: Record<PikkuWiringTypes, string>

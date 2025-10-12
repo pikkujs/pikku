@@ -8,10 +8,18 @@ export const generateBootstrapFile = async (
   config: Config,
   bootstrapFile: string,
   specificImports: string[],
-  schemas?: boolean
+  schemas?: boolean,
+  hasMiddleware?: boolean
 ) => {
   // Common imports that every bootstrap file needs
-  const commonImports = [config.functionsMetaMinFile, config.functionsFile]
+  const commonImports: string[] = []
+
+  // Add middleware first (must be registered before functions meta)
+  if (hasMiddleware) {
+    commonImports.push(config.middlewareFile)
+  }
+
+  commonImports.push(config.functionsMetaMinFile, config.functionsFile)
 
   // Add schema if it exists
   if (schemas) {

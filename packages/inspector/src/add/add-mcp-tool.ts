@@ -5,6 +5,7 @@ import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
+import { resolveMiddleware } from '../utils/middleware.js'
 
 export const addMCPTool: AddWiring = (
   logger,
@@ -89,6 +90,9 @@ export const addMCPTool: AddWiring = (
     const inputSchema = fnMeta.inputs?.[0] || null
     const outputSchema = fnMeta.outputs?.[0] || null
 
+    // --- resolve middleware ---
+    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 
     state.mcpEndpoints.toolsMeta[nameValue] = {
@@ -100,6 +104,7 @@ export const addMCPTool: AddWiring = (
       tags,
       inputSchema,
       outputSchema,
+      middleware,
     }
   }
 }

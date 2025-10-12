@@ -7,10 +7,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
-import {
-  getMiddleware,
-  resolveFunctionMiddleware,
-} from '../utils/middleware.js'
+import { resolveMiddleware } from '../utils/middleware.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -394,7 +391,6 @@ export const addChannel: AddWiring = (
   const docs = getPropertyValue(obj, 'docs') as PikkuDocs | undefined
   const tags = getPropertyValue(obj, 'tags') as string[] | undefined
   const query = getPropertyValue(obj, 'query') as string[] | []
-  const explicitMiddlewareNode = getMiddleware(obj)
 
   const filePath = node.getSourceFile().fileName
 
@@ -451,12 +447,7 @@ export const addChannel: AddWiring = (
   const messageWirings = addMessagesRoutes(obj, state, checker)
 
   // --- resolve middleware ---
-  const middleware = resolveFunctionMiddleware(
-    state,
-    tags,
-    explicitMiddlewareNode,
-    checker
-  )
+  const middleware = resolveMiddleware(logger, state, obj, tags, checker)
 
   // record into state
   state.channels.files.add(node.getSourceFile().fileName)

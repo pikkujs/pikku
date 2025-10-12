@@ -71,6 +71,9 @@ export const visitSetup = (
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
   addRPCInvocations(node, state, logger)
 
+  addMiddleware(logger, node, checker, state, options)
+  addPermission(logger, node, checker, state, options)
+
   ts.forEachChild(node, (child) =>
     visitSetup(logger, checker, child, state, options)
   )
@@ -92,8 +95,6 @@ export const visitRoutes = (
   addMCPResource(logger, node, checker, state, options)
   addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)
-  addMiddleware(logger, node, checker, state, options)
-  addPermission(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, options)

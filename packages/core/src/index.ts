@@ -22,7 +22,12 @@ export * from './middleware/index.js'
 export * from './utils.js'
 export * from './time-utils.js'
 export { pikkuState } from './pikku-state.js'
-export { addMiddleware, runMiddleware } from './middleware-runner.js'
+export {
+  addMiddleware,
+  runMiddleware,
+  registerMiddleware,
+  getMiddlewareByName,
+} from './middleware-runner.js'
 export { addPermission } from './permissions.js'
 export { wireHTTP, addHTTPMiddleware } from './wirings/http/http-runner.js'
 export { wireChannel } from './wirings/channel/channel-runner.js'

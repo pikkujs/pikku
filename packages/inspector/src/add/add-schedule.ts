@@ -5,6 +5,7 @@ import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
+import { resolveMiddleware } from '../utils/middleware.js'
 
 export const addSchedule: AddWiring = (
   logger,
@@ -73,6 +74,9 @@ export const addSchedule: AddWiring = (
       return
     }
 
+    // --- resolve middleware ---
+    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+
     state.scheduledTasks.files.add(node.getSourceFile().fileName)
     state.scheduledTasks.meta[nameValue] = {
       pikkuFuncName,
@@ -80,6 +84,7 @@ export const addSchedule: AddWiring = (
       schedule: scheduleValue,
       docs,
       tags,
+      middleware,
     }
   }
 }

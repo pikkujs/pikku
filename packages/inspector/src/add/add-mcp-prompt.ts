@@ -5,6 +5,7 @@ import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
+import { resolveMiddleware } from '../utils/middleware.js'
 
 export const addMCPPrompt: AddWiring = (
   logger,
@@ -87,6 +88,9 @@ export const addMCPPrompt: AddWiring = (
     const inputSchema = fnMeta.inputs?.[0] || null
     const outputSchema = fnMeta.outputs?.[0] || null
 
+    // --- resolve middleware ---
+    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 
     state.mcpEndpoints.promptsMeta[nameValue] = {
@@ -97,6 +101,7 @@ export const addMCPPrompt: AddWiring = (
       inputSchema,
       outputSchema,
       arguments: [], // Will be populated by CLI during serialization
+      middleware,
     }
   }
 }

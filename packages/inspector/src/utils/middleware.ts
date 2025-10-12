@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import { MiddlewareMetadata } from '@pikku/core'
 import { extractFunctionName } from './extract-function-name.js'
+import { InspectorLogger, InspectorState } from '../types.js'
 
 /**
  * Extract middleware pikkuFuncNames from an array literal expression
@@ -29,7 +30,7 @@ export function extractMiddlewarePikkuNames(
  * Get middleware array from an object literal expression property
  * Returns the initializer node for the 'middleware' property if it exists
  */
-export function getMiddleware(
+export function getMiddlewareNode(
   obj: ts.ObjectLiteralExpression
 ): ts.Expression | undefined {
   const middlewareProp = obj.properties.find(
@@ -68,7 +69,8 @@ export function routeMatchesPattern(route: string, pattern: string): boolean {
  * Returns undefined if no middleware is found, otherwise returns array with at least one item
  */
 export function resolveHTTPMiddleware(
-  state: any,
+  logger: InspectorLogger,
+  state: InspectorState,
   route: string,
   tags: string[] | undefined,
   explicitMiddlewareNode: ts.Expression | undefined,
@@ -78,6 +80,17 @@ export function resolveHTTPMiddleware(
 
   // 1. Global HTTP middleware
   for (const name of state.http.globalMiddleware) {
+    // Validate: global HTTP middleware cannot be inline
+    const meta = state.middleware.meta[name]
+    if (meta && meta.exportedName === null) {
+      logger.error(
+        `Inline middleware cannot be used with addHTTPMiddleware. ` +
+          `Global HTTP middleware references inline middleware '${name}'. ` +
+          `See https://pikku.dev/docs/errors/inline-support for more info.`
+      )
+      continue
+    }
+
     resolved.push({
       type: 'global',
       name,
@@ -92,6 +105,17 @@ export function resolveHTTPMiddleware(
   ] of state.http.routeMiddleware.entries()) {
     if (routeMatchesPattern(route, pattern)) {
       for (const name of middlewareNames) {
+        // Validate: route-specific HTTP middleware cannot be inline
+        const meta = state.middleware.meta[name]
+        if (meta && meta.exportedName === null) {
+          logger.error(
+            `Inline middleware cannot be used with addHTTPMiddleware. ` +
+              `Pattern '${pattern}' references inline middleware '${name}'. ` +
+              `See https://pikku.dev/docs/errors/inline-support for more info.`
+          )
+          continue
+        }
+
         resolved.push({
           type: 'wire',
           name,
@@ -104,6 +128,7 @@ export function resolveHTTPMiddleware(
 
   // 3 & 4. Tag-based and explicit middleware (reuse common logic)
   const tagAndExplicit = resolveTagAndExplicitMiddleware(
+    logger,
     state,
     tags,
     explicitMiddlewareNode,
@@ -121,7 +146,8 @@ export function resolveHTTPMiddleware(
  * 2. Explicit middleware (wireHTTP/pikkuFunc({ middleware: [...] }))
  */
 function resolveTagAndExplicitMiddleware(
-  state: any,
+  logger: InspectorLogger,
+  state: InspectorState,
   tags: string[] | undefined,
   explicitMiddlewareNode: ts.Expression | undefined,
   checker: ts.TypeChecker,
@@ -135,6 +161,17 @@ function resolveTagAndExplicitMiddleware(
       const middlewareNames = state.middleware.tagMiddleware.get(tag)
       if (middlewareNames) {
         for (const name of middlewareNames) {
+          // Validate: tag-based middleware cannot be inline
+          const meta = state.middleware.meta[name]
+          if (meta && meta.exportedName === null) {
+            logger.error(
+              `Inline middleware cannot be used with addMiddleware. ` +
+                `Tag '${tag}' references inline middleware '${name}'. ` +
+                `See https://pikku.dev/docs/errors/inline-support for more info.`
+            )
+            continue
+          }
+
           resolved.push({
             type,
             name,
@@ -146,7 +183,7 @@ function resolveTagAndExplicitMiddleware(
     }
   }
 
-  // 2. Explicit middleware
+  // 2. Explicit middleware (inline is OK here - used directly in wire/function)
   if (explicitMiddlewareNode) {
     const middlewareNames = extractMiddlewarePikkuNames(
       explicitMiddlewareNode,
@@ -169,19 +206,120 @@ function resolveTagAndExplicitMiddleware(
  * 2. Explicit function middleware (pikkuFunc({ middleware: [...] }))
  * Returns undefined if no middleware is found, otherwise returns array with at least one item
  */
-export function resolveFunctionMiddleware(
-  state: any,
+function resolveFunctionMiddlewareInternal(
+  logger: InspectorLogger,
+  state: InspectorState,
   tags: string[] | undefined,
   explicitMiddlewareNode: ts.Expression | undefined,
   checker: ts.TypeChecker
 ): MiddlewareMetadata[] | undefined {
   const resolved = resolveTagAndExplicitMiddleware(
+    logger,
     state,
     tags,
     explicitMiddlewareNode,
     checker,
     undefined // function-level has no type field
   )
+
+  return resolved.length > 0 ? resolved : undefined
+}
+
+/**
+ * Convenience wrapper: Extract middleware node from object and resolve
+ * Use this in add-* files for cleaner code
+ */
+export function resolveMiddleware(
+  logger: InspectorLogger,
+  state: InspectorState,
+  obj: ts.ObjectLiteralExpression,
+  tags: string[] | undefined,
+  checker: ts.TypeChecker
+): MiddlewareMetadata[] | undefined {
+  const explicitMiddlewareNode = getMiddlewareNode(obj)
+  return resolveFunctionMiddlewareInternal(
+    logger,
+    state,
+    tags,
+    explicitMiddlewareNode,
+    checker
+  )
+}
+
+/**
+ * Convenience wrapper for HTTP: Extract middleware and resolve with HTTP-specific logic
+ * Use this in add-http-route.ts for cleaner code
+ */
+export function resolveHTTPMiddlewareFromObject(
+  logger: InspectorLogger,
+  state: InspectorState,
+  route: string,
+  obj: ts.ObjectLiteralExpression,
+  tags: string[] | undefined,
+  checker: ts.TypeChecker
+): MiddlewareMetadata[] | undefined {
+  const explicitMiddlewareNode = getMiddlewareNode(obj)
+
+  const resolved: MiddlewareMetadata[] = []
+
+  // 1. Global HTTP middleware
+  for (const name of state.http.globalMiddleware) {
+    // Validate: global HTTP middleware cannot be inline
+    const meta = state.middleware.meta[name]
+    if (meta && meta.exportedName === null) {
+      logger.error(
+        `Inline middleware cannot be used with addHTTPMiddleware. ` +
+          `Global HTTP middleware references inline middleware '${name}'. ` +
+          `See https://pikku.dev/docs/errors/inline-support for more info.`
+      )
+      continue
+    }
+
+    resolved.push({
+      type: 'global',
+      name,
+      src: 'http',
+    })
+  }
+
+  // 2. Route-specific HTTP middleware
+  for (const [
+    pattern,
+    middlewareNames,
+  ] of state.http.routeMiddleware.entries()) {
+    if (routeMatchesPattern(route, pattern)) {
+      for (const name of middlewareNames) {
+        // Validate: route-specific HTTP middleware cannot be inline
+        const meta = state.middleware.meta[name]
+        if (meta && meta.exportedName === null) {
+          logger.error(
+            `Inline middleware cannot be used with addHTTPMiddleware. ` +
+              `Pattern '${pattern}' references inline middleware '${name}'. ` +
+              `See https://pikku.dev/docs/errors/inline-support for more info.`
+          )
+          continue
+        }
+
+        resolved.push({
+          type: 'wire',
+          name,
+          src: 'http',
+          pattern,
+        })
+      }
+    }
+  }
+
+  // 3 & 4. Tag-based and explicit middleware
+  const tagAndExplicit = resolveTagAndExplicitMiddleware(
+    logger,
+    state,
+    tags,
+    explicitMiddlewareNode,
+    checker,
+    'wire'
+  )
+  resolved.push(...tagAndExplicit)
 
   return resolved.length > 0 ? resolved : undefined
 }
