@@ -44,6 +44,7 @@ async function main(): Promise<void> {
         { name: 'global', type: 'http' },
         { name: 'wire', type: 'wire' },
         { name: 'inline', type: 'wire' },
+        { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
@@ -54,6 +55,7 @@ async function main(): Promise<void> {
       '/simple',
       [
         { name: 'global', type: 'http' },
+        { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
@@ -63,8 +65,9 @@ async function main(): Promise<void> {
     // Test Scheduler
     const schedulerPassed = await testSchedulerWiring(
       [
-        { name: 'api', type: 'tag' },
+        { name: 'scheduler', type: 'tag' },
         { name: 'wire', type: 'wire' },
+        { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
@@ -74,8 +77,9 @@ async function main(): Promise<void> {
     // Test Queue
     const queuePassed = await testQueueWiring(
       [
-        { name: 'api', type: 'tag' },
+        { name: 'queue', type: 'tag' },
         { name: 'wire', type: 'wire' },
+        { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
@@ -86,6 +90,7 @@ async function main(): Promise<void> {
     const cliPassed = await testCLIWiring(
       [
         { name: 'wire', type: 'wire' },
+        { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
