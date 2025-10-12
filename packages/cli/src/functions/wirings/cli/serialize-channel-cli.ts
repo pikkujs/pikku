@@ -12,7 +12,7 @@ export function serializeChannelCLI(
   functionFiles: Map<string, { path: string; exportedName: string }>,
   packageMappings: Record<string, string>,
   channelTypesFile: string,
-  pikkuTypesFile: string,
+  functionTypesFile: string,
   channelName?: string,
   channelRoute?: string
 ): string {
@@ -80,9 +80,9 @@ export function serializeChannelCLI(
     channelTypesFile,
     packageMappings
   )
-  const pikkuTypesPath = getFileImportRelativePath(
+  const functionTypesPath = getFileImportRelativePath(
     channelFile,
-    pikkuTypesFile,
+    functionTypesFile,
     packageMappings
   )
 
@@ -91,7 +91,7 @@ export function serializeChannelCLI(
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { PikkuMiddleware } from '${pikkuTypesPath}'
+import { PikkuMiddleware } from '${functionTypesPath}'
 ${imports}
 
 // Middleware to close channel after command execution

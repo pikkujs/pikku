@@ -72,7 +72,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
             visitState.functions.files,
             config.packageMappings,
             config.channelsTypesFile,
-            config.typesDeclarationFile,
+            config.functionTypesFile,
             channelName,
             channelRoute
           )

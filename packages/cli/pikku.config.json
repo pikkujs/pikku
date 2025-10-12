@@ -12,7 +12,7 @@
   "cli": {
     "entrypoints": {
       "pikku": [
-        ".pikku/cli/pikku-bootstrap-pikku-cli.gen.ts",
+        ".pikku/cli/pikku-cli.gen.ts",
         {
           "type": "channel",
           "wirePath": ".pikku/cli/pikku-channel.wire.gen.ts",
