@@ -447,7 +447,7 @@ export const addChannel: AddWiring = (
   const messageWirings = addMessagesRoutes(obj, state, checker)
 
   // --- resolve middleware ---
-  const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+  const middleware = resolveMiddleware(state, obj, tags, checker)
 
   // record into state
   state.channels.files.add(node.getSourceFile().fileName)

@@ -75,7 +75,7 @@ export const addSchedule: AddWiring = (
     }
 
     // --- resolve middleware ---
-    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+    const middleware = resolveMiddleware(state, obj, tags, checker)
 
     state.scheduledTasks.files.add(node.getSourceFile().fileName)
     state.scheduledTasks.meta[nameValue] = {

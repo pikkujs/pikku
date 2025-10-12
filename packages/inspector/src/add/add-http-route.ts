@@ -115,7 +115,6 @@ export const addHTTPRoute: AddWiring = (
 
   // --- resolve middleware ---
   const middleware = resolveHTTPMiddlewareFromObject(
-    logger,
     state,
     route,
     obj,

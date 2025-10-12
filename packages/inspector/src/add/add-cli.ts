@@ -267,13 +267,7 @@ function processCommand(
   }
 
   // Resolve middleware
-  const middleware = resolveMiddleware(
-    logger,
-    inspectorState,
-    node,
-    tags,
-    typeChecker
-  )
+  const middleware = resolveMiddleware(inspectorState, node, tags, typeChecker)
   if (middleware) {
     meta.middleware = middleware
   }

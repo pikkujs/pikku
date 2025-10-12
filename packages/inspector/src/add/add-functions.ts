@@ -389,7 +389,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   // --- resolve middleware ---
   const middleware = objectNode
-    ? resolveMiddleware(logger, state, objectNode, tags, checker)
+    ? resolveMiddleware(state, objectNode, tags, checker)
     : undefined
 
   state.functions.meta[pikkuFuncName] = {

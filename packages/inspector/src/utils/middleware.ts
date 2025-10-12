@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { MiddlewareMetadata } from '@pikku/core'
 import { extractFunctionName } from './extract-function-name.js'
-import { InspectorLogger, InspectorState } from '../types.js'
+import { InspectorState } from '../types.js'
 
 /**
  * Extract middleware pikkuFuncNames from an array literal expression
@@ -75,7 +75,6 @@ export function routeMatchesPattern(route: string, pattern: string): boolean {
  * Returns undefined if no middleware is found, otherwise returns array with at least one item
  */
 export function resolveHTTPMiddleware(
-  logger: InspectorLogger,
   state: InspectorState,
   route: string,
   tags: string[] | undefined,
@@ -85,7 +84,7 @@ export function resolveHTTPMiddleware(
   const resolved: MiddlewareMetadata[] = []
 
   // 1. HTTP route middleware groups (includes '*' for global)
-  for (const [pattern, groupMeta] of state.http.routeMiddleware.entries()) {
+  for (const [pattern, _groupMeta] of state.http.routeMiddleware.entries()) {
     if (routeMatchesPattern(route, pattern)) {
       // Just reference the group by route pattern
       resolved.push({
@@ -98,8 +97,7 @@ export function resolveHTTPMiddleware(
   // 2. Tag-based middleware groups
   if (tags && tags.length > 0) {
     for (const tag of tags) {
-      const groupMeta = state.middleware.tagMiddleware.get(tag)
-      if (groupMeta) {
+      if (state.middleware.tagMiddleware.has(tag)) {
         // Just reference the group by tag
         resolved.push({
           type: 'tag',
@@ -134,7 +132,6 @@ export function resolveHTTPMiddleware(
  * 2. Explicit middleware (wireHTTP/pikkuFunc({ middleware: [...] }))
  */
 function resolveTagAndExplicitMiddleware(
-  logger: InspectorLogger,
   state: InspectorState,
   tags: string[] | undefined,
   explicitMiddlewareNode: ts.Expression | undefined,
@@ -145,8 +142,7 @@ function resolveTagAndExplicitMiddleware(
   // 1. Tag-based middleware groups
   if (tags && tags.length > 0) {
     for (const tag of tags) {
-      const groupMeta = state.middleware.tagMiddleware.get(tag)
-      if (groupMeta) {
+      if (state.middleware.tagMiddleware.has(tag)) {
         // Just reference the group by tag
         resolved.push({
           type: 'tag',
@@ -182,14 +178,12 @@ function resolveTagAndExplicitMiddleware(
  * Returns undefined if no middleware is found, otherwise returns array with at least one item
  */
 function resolveFunctionMiddlewareInternal(
-  logger: InspectorLogger,
   state: InspectorState,
   tags: string[] | undefined,
   explicitMiddlewareNode: ts.Expression | undefined,
   checker: ts.TypeChecker
 ): MiddlewareMetadata[] | undefined {
   const resolved = resolveTagAndExplicitMiddleware(
-    logger,
     state,
     tags,
     explicitMiddlewareNode,
@@ -204,7 +198,6 @@ function resolveFunctionMiddlewareInternal(
  * Use this in add-* files for cleaner code
  */
 export function resolveMiddleware(
-  logger: InspectorLogger,
   state: InspectorState,
   obj: ts.ObjectLiteralExpression,
   tags: string[] | undefined,
@@ -212,7 +205,6 @@ export function resolveMiddleware(
 ): MiddlewareMetadata[] | undefined {
   const explicitMiddlewareNode = getMiddlewareNode(obj)
   return resolveFunctionMiddlewareInternal(
-    logger,
     state,
     tags,
     explicitMiddlewareNode,
@@ -225,7 +217,6 @@ export function resolveMiddleware(
  * Use this in add-http-route.ts for cleaner code
  */
 export function resolveHTTPMiddlewareFromObject(
-  logger: InspectorLogger,
   state: InspectorState,
   route: string,
   obj: ts.ObjectLiteralExpression,
@@ -234,7 +225,6 @@ export function resolveHTTPMiddlewareFromObject(
 ): MiddlewareMetadata[] | undefined {
   const explicitMiddlewareNode = getMiddlewareNode(obj)
   return resolveHTTPMiddleware(
-    logger,
     state,
     route,
     tags,

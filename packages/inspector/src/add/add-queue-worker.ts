@@ -81,7 +81,7 @@ export const addQueueWorker: AddWiring = (
     }
 
     // --- resolve middleware ---
-    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+    const middleware = resolveMiddleware(state, obj, tags, checker)
 
     state.queueWorkers.files.add(node.getSourceFile().fileName)
     state.queueWorkers.meta[queueName] = {

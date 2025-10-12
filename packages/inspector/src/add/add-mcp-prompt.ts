@@ -89,7 +89,7 @@ export const addMCPPrompt: AddWiring = (
     const outputSchema = fnMeta.outputs?.[0] || null
 
     // --- resolve middleware ---
-    const middleware = resolveMiddleware(logger, state, obj, tags, checker)
+    const middleware = resolveMiddleware(state, obj, tags, checker)
 
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 

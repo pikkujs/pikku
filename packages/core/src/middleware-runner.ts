@@ -3,7 +3,6 @@ import {
   CoreSingletonServices,
   PikkuInteraction,
   CorePikkuMiddleware,
-  CorePikkuMiddlewareFactory,
   CorePikkuMiddlewareGroup,
   PikkuWiringTypes,
   MiddlewareMetadata,
