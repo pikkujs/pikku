@@ -163,7 +163,7 @@ type SchedulerWiring = CoreScheduledTask<PikkuFunctionSessionless<void, void>, P
  * @template In - Input type for the queue job
  * @template Out - Output type for the queue job
  */
-type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionSessionless<In, Out>>
+type QueueWiring<In, Out> = CoreQueueWorker<any>
 
 /**
  * Type definition for MCP resources that provide data to AI models.
@@ -449,7 +449,7 @@ export { addPermission }
 export const wireHTTP = <In, Out, Route extends string>(
   httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
 ) => {
-  wireHTTPCore(httpWiring)
+  wireHTTPCore(httpWiring as any) // TODO
 }
 
 /**
