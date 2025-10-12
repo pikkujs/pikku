@@ -17,8 +17,7 @@ import {
 type SingletonServices = Awaited<ReturnType<typeof createSingletonServices>>
 
 async function testHTTPWiring(
-  singletonServices: SingletonServices,
-  createSessionServices: typeof createSessionServices
+  singletonServices: SingletonServices
 ): Promise<void> {
   // Test 1: /api/test route (should have all middleware layers)
   console.log('\n\nTest 1: GET /api/test')
@@ -75,16 +74,16 @@ async function testHTTPWiring(
 }
 
 async function testSchedulerWiring(
-  singletonServices: SingletonServices,
-  createSessionServices: typeof createSessionServices
+  singletonServices: SingletonServices
 ): Promise<void> {
   // Test 3: Scheduler task
   console.log('\n\nTest 3: Run Scheduled Task')
   console.log('─────────────────────────')
   console.log('Expected middleware order:')
-  console.log('  1. globalMiddleware (Tag: scheduler)')
-  console.log('  2. wireMiddleware (Wire-level)')
-  console.log('  3. functionMiddleware (Function-level)')
+  console.log('  1. Tag middleware (Wire tags: scheduler)')
+  console.log('  2. Wire-level middleware')
+  console.log('  3. Tag middleware (Function tags: function)')
+  console.log('  4. Function-level middleware')
 
   singletonServices.logger.clear()
   await runScheduledTask({
@@ -109,16 +108,16 @@ async function testSchedulerWiring(
 }
 
 async function testQueueWiring(
-  singletonServices: SingletonServices,
-  createSessionServices: typeof createSessionServices
+  singletonServices: SingletonServices
 ): Promise<void> {
   // Test 4: Queue job
   console.log('\n\nTest 4: Run Queue Job')
   console.log('─────────────────────────')
   console.log('Expected middleware order:')
-  console.log('  1. globalMiddleware (Tag: queue)')
-  console.log('  2. wireMiddleware (Wire-level)')
-  console.log('  3. functionMiddleware (Function-level)')
+  console.log('  1. Tag middleware (Wire tags: queue)')
+  console.log('  2. Wire-level middleware')
+  console.log('  3. Tag middleware (Function tags: function)')
+  console.log('  4. Function-level middleware')
 
   singletonServices.logger.clear()
   await runQueueJob({
@@ -153,16 +152,16 @@ async function testQueueWiring(
 }
 
 async function testCLIWiring(
-  singletonServices: SingletonServices,
-  createSessionServices: typeof createSessionServices
+  singletonServices: SingletonServices
 ): Promise<void> {
   // Test 5: CLI command
   console.log('\n\nTest 5: Run CLI Command')
   console.log('─────────────────────────')
   console.log('Expected middleware order:')
-  console.log('  1. globalMiddleware (Tag: cli)')
-  console.log('  2. wireMiddleware (Wire-level)')
-  console.log('  3. functionMiddleware (Function-level)')
+  console.log('  1. Tag middleware (Wire tags: cli)')
+  console.log('  2. Wire-level middleware')
+  console.log('  3. Tag middleware (Function tags: function)')
+  console.log('  4. Function-level middleware')
 
   singletonServices.logger.clear()
   await runCLICommand({
@@ -211,10 +210,9 @@ async function main(): Promise<void> {
     console.log('  .pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts')
     console.log('  .pikku/cli/pikku-cli-wirings-meta.gen.ts')
 
-    await testHTTPWiring(singletonServices, createSessionServices)
-    await testSchedulerWiring(singletonServices, createSessionServices)
-    await testQueueWiring(singletonServices, createSessionServices)
-    await testCLIWiring(singletonServices, createSessionServices)
+    await testHTTPWiring(singletonServices)
+    await testSchedulerWiring(singletonServices)
+    await testQueueWiring(singletonServices)
 
     // TODO: Test 6: MCP tool - skipped for now (metadata generation issue)
     // await testMCPWiring(singletonServices, createSessionServices)

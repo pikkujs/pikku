@@ -96,13 +96,12 @@ export const wireCLI = <Commands, GlobalOptions>(
 /**
  * Creates a CLI command definition with automatic option inference from the function's input type.
  * This allows TypeScript to automatically derive CLI options from the function signature.
- * The unwrapping of pikku function wrappers is handled by the core CLI runner.
  *
- * @template Func - The function type to create a CLI command for
+ * @template Func - The Pikku function config type to create a CLI command for
  * @param config - CLI command configuration
  * @returns CLI command configuration with inferred types
  */
-export const pikkuCLICommand = <Func extends (...args: any[]) => any>(
+export const pikkuCLICommand = <Func extends PikkuFunctionConfig<any, any>>(
   config: CLICommandConfig<Func>
 ): CLICommandResult<Func> => {
   return config as any
