@@ -50,50 +50,6 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
 }
 
 /**
- * Registers a single middleware function by name in the global middleware store.
- *
- * This function is used by CLI-generated code to register middleware functions
- * that can be referenced by name in metadata. It stores middleware in a special
- * namespace to avoid conflicts with tag-based middleware.
- *
- * @param {string} name - The unique name (pikkuFuncName) of the middleware function.
- * @param {CorePikkuMiddleware} middleware - The middleware function to register.
- *
- * @example
- * ```typescript
- * // Called by CLI-generated pikku-middleware.gen.ts
- * registerMiddleware('authMiddleware_src_middleware_ts_10_5', authMiddleware)
- * registerMiddleware('loggingMiddleware_src_middleware_ts_20_10', loggingMiddleware)
- * ```
- */
-export const registerMiddleware = (
-  name: string,
-  middleware: CorePikkuMiddleware
-) => {
-  const middlewareStore = pikkuState('misc', 'middleware')
-  middlewareStore[`__pikku_middleware__${name}`] = [middleware]
-}
-
-/**
- * Retrieves a registered middleware function by its name.
- *
- * This function looks up middleware that was registered with registerMiddleware.
- * It's used internally by the framework to resolve middleware references in metadata.
- *
- * @param {string} name - The unique name (pikkuFuncName) of the middleware function.
- * @returns {CorePikkuMiddleware | undefined} The middleware function, or undefined if not found.
- *
- * @internal
- */
-export const getMiddlewareByName = (
-  name: string
-): CorePikkuMiddleware | undefined => {
-  const middlewareStore = pikkuState('misc', 'middleware')
-  const middleware = middlewareStore[`__pikku_middleware__${name}`]
-  return middleware?.[0]
-}
-
-/**
  * Adds global middleware for a specific tag.
  *
  * This function allows you to register middleware that will be applied to
@@ -118,55 +74,54 @@ export const getMiddlewareByName = (
  * ```
  */
 export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
-  tag: string,
-  middleware: PikkuMiddleware[]
+  _tag: string,
+  _middleware: PikkuMiddleware[]
 ) => {
-  const middlewareStore = pikkuState('misc', 'middleware')
-
-  // Check if tag already exists
-  if (middlewareStore[tag]) {
-    throw new Error(
-      `Middleware for tag '${tag}' already exists. Use a different tag or remove the existing middleware first.`
-    )
-  }
-
-  middlewareStore[tag] = middleware as CorePikkuMiddleware[]
+  // This doesn't need to do anything at runtime - it's used by the CLI to generate
 }
 
 /**
- * Retrieves middleware for a given set of tags.
+ * Registers a single middleware function by name in the global middleware store.
  *
- * This function looks up all middleware registered for any of the provided tags
- * and returns them as a flattened array.
+ * This function is used by CLI-generated code to register middleware functions
+ * that can be referenced by name in metadata. It stores middleware in a special
+ * namespace to avoid conflicts with tag-based middleware.
  *
- * @param {string[]} tags - Array of tags to look up middleware for.
- * @returns {CorePikkuMiddleware[]} Array of middleware functions that apply to the given tags.
+ * @param {string} name - The unique name (pikkuFuncName) of the middleware function.
+ * @param {CorePikkuMiddleware} middleware - The middleware function to register.
  *
  * @example
  * ```typescript
- * // Get all middleware for tags 'api' and 'auth'
- * const middleware = getMiddlewareForTags(['api', 'auth'])
+ * // Called by CLI-generated pikku-middleware.gen.ts
+ * registerMiddleware('authMiddleware_src_middleware_ts_10_5', authMiddleware)
+ * registerMiddleware('loggingMiddleware_src_middleware_ts_20_10', loggingMiddleware)
  * ```
  */
-export const getMiddlewareForTags = (
-  tags?: string[]
-): CorePikkuMiddleware[] => {
-  if (!tags || tags.length === 0) {
-    return []
-  }
-
+export const registerMiddleware = (
+  name: string,
+  middleware: CorePikkuMiddleware
+) => {
   const middlewareStore = pikkuState('misc', 'middleware')
-  const applicableMiddleware: CorePikkuMiddleware[] = []
+  middlewareStore[name] = [middleware]
+}
 
-  // Collect middleware for all matching tags
-  for (const tag of tags) {
-    const tagMiddleware = middlewareStore[tag]
-    if (tagMiddleware) {
-      applicableMiddleware.push(...tagMiddleware)
-    }
-  }
-
-  return applicableMiddleware
+/**
+ * Retrieves a registered middleware function by its name.
+ *
+ * This function looks up middleware that was registered with registerMiddleware.
+ * It's used internally by the framework to resolve middleware references in metadata.
+ *
+ * @param {string} name - The unique name (pikkuFuncName) of the middleware function.
+ * @returns {CorePikkuMiddleware | undefined} The middleware function, or undefined if not found.
+ *
+ * @internal
+ */
+export const getMiddlewareByName = (
+  name: string
+): CorePikkuMiddleware | undefined => {
+  const middlewareStore = pikkuState('misc', 'middleware')
+  const middleware = middlewareStore[name]
+  return middleware?.[0]
 }
 
 const middlewareCache: Record<
@@ -208,13 +163,15 @@ export const combineMiddleware = (
   wireType: PikkuWiringTypes,
   uid: string,
   {
-    inheritedMiddleware,
+    wireInheritedMiddleware,
     wireMiddleware,
+    funcInheritedMiddleware,
     funcMiddleware,
   }: {
-    inheritedMiddleware?: MiddlewareMetadata[]
+    wireInheritedMiddleware?: MiddlewareMetadata[]
     wireMiddleware?: CorePikkuMiddleware[]
-    funcMiddleware?: MiddlewareMetadata[]
+    funcInheritedMiddleware?: MiddlewareMetadata[]
+    funcMiddleware?: CorePikkuMiddleware[]
   } = {}
 ): readonly CorePikkuMiddleware[] => {
   if (middlewareCache[wireType][uid]) {
@@ -223,27 +180,30 @@ export const combineMiddleware = (
 
   // Resolve inherited middleware metadata, filtering out wire middleware without tags
   // (those are passed separately as wireMiddleware to avoid duplication)
-  const resolvedInheritedMiddleware: CorePikkuMiddleware[] = []
-  if (inheritedMiddleware) {
-    for (const meta of inheritedMiddleware) {
+  const resolvedInheritedWireMiddleware: CorePikkuMiddleware[] = []
+  if (wireInheritedMiddleware) {
+    for (const meta of wireInheritedMiddleware) {
       // Skip wire middleware without tags - those are passed separately
       if (meta.type === 'wire' && !meta.tag) {
         continue
       }
       const middleware = getMiddlewareByName(meta.name)
       if (middleware) {
-        resolvedInheritedMiddleware.push(middleware)
+        resolvedInheritedWireMiddleware.push(middleware)
       }
     }
   }
 
-  // Resolve function middleware from metadata
-  const resolvedFuncMiddleware: CorePikkuMiddleware[] = []
-  if (funcMiddleware) {
-    for (const meta of funcMiddleware) {
+  const resolvedInheritedFuncMiddleware: CorePikkuMiddleware[] = []
+  if (funcInheritedMiddleware) {
+    for (const meta of funcInheritedMiddleware) {
+      // Skip function middleware without tags - those are passed separately
+      if (meta.type !== 'tag') {
+        continue
+      }
       const middleware = getMiddlewareByName(meta.name)
       if (middleware) {
-        resolvedFuncMiddleware.push(middleware)
+        resolvedInheritedFuncMiddleware.push(middleware)
       }
     }
   }
@@ -253,9 +213,10 @@ export const combineMiddleware = (
   // 2) wireMiddleware (inline wire middleware)
   // 3) funcMiddleware (function tags + function inline)
   middlewareCache[wireType][uid] = freezeDedupe([
-    ...resolvedInheritedMiddleware,
+    ...resolvedInheritedWireMiddleware,
     ...(wireMiddleware || []),
-    ...resolvedFuncMiddleware,
+    ...resolvedInheritedFuncMiddleware,
+    ...(funcMiddleware || []),
   ]) as readonly CorePikkuMiddleware[]
 
   return middlewareCache[wireType][uid]

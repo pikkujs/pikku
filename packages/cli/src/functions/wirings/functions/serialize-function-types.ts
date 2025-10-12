@@ -72,7 +72,7 @@ export const pikkuPermission = <In>(func: PikkuPermission<In>) => {
  * })
  * \`\`\`
  */
-export const pikkuMiddleware = <In>(func: PikkuMiddleware<In>) => {
+export const pikkuMiddleware = (func: PikkuMiddleware) => {
   return func
 }
 

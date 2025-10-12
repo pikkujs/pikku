@@ -129,9 +129,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   // Combine all middleware: inheritedMiddleware → wireMiddleware → funcMiddleware
   const allMiddleware = combineMiddleware(wireType, wireId, {
-    inheritedMiddleware,
+    wireInheritedMiddleware: inheritedMiddleware,
     wireMiddleware,
-    funcMiddleware: funcMeta.middleware,
+    funcInheritedMiddleware: funcMeta.middleware,
+    funcMiddleware: funcConfig.middleware,
   })
 
   if (allMiddleware.length > 0) {

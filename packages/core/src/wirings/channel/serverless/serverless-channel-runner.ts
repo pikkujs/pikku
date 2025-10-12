@@ -147,7 +147,7 @@ export const runChannelConnect = async ({
     },
     { http },
     combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
-      inheritedMiddleware: meta.middleware,
+      wireInheritedMiddleware: meta.middleware,
       wireMiddleware: channelConfig.middleware,
     }),
     main
