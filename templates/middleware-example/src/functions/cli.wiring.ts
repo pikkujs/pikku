@@ -15,9 +15,8 @@ wireCLI({
   middleware: [wireMiddleware],
   commands: {
     greet: pikkuCLICommand({
-      command: 'greet <name>',
+      command: 'test <name>',
       func: noOpFunction,
-      description: 'Greet a user by name',
     }),
   },
 })
