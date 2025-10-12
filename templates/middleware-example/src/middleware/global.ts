@@ -1,10 +1,10 @@
 import { pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
 
 export const globalMiddleware = pikkuMiddleware(
-  async ({ middlewareChecker }, _interaction, next) => {
-    middlewareChecker.log({ type: 'global', name: 'global', phase: 'before' })
+  async ({ logger }, _interaction, next) => {
+    logger.info({ type: 'tag', name: 'api', phase: 'before' })
     const result = await next()
-    middlewareChecker.log({ type: 'global', name: 'global', phase: 'after' })
+    logger.info({ type: 'tag', name: 'api', phase: 'after' })
     return result
   }
 )

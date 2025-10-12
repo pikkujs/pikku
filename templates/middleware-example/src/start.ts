@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     })
 
     console.log('\nActual execution order:')
-    const execution1 = singletonServices.middlewareChecker.getLastRun()
+    const execution1 = singletonServices.logger.getLogs()
     const beforeEvents1 = execution1.filter((e) => e.phase === 'before')
     if (beforeEvents1.length > 0) {
       beforeEvents1.forEach((event, index) => {
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     } else {
       console.log('  No middleware executed')
     }
-    singletonServices.middlewareChecker.clear()
+    singletonServices.logger.clear()
 
     // Test 2: /simple route (should only have global HTTP middleware)
     console.log('\n\nTest 2: GET /simple')
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
     })
 
     console.log('\nActual execution order:')
-    const execution2 = singletonServices.middlewareChecker.getLastRun()
+    const execution2 = singletonServices.logger.getLogs()
     const beforeEvents2 = execution2.filter((e) => e.phase === 'before')
     if (beforeEvents2.length > 0) {
       beforeEvents2.forEach((event, index) => {

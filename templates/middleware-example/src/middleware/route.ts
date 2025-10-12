@@ -1,10 +1,10 @@
 import { pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
 
 export const routeMiddleware = pikkuMiddleware(
-  async ({ middlewareChecker }, _interaction, next) => {
-    middlewareChecker.log({ type: 'http', name: 'route', phase: 'before' })
+  async ({ logger }, _interaction, next) => {
+    logger.info({ type: 'route', name: '/api/*', phase: 'before' })
     const result = await next()
-    middlewareChecker.log({ type: 'http', name: 'route', phase: 'after' })
+    logger.info({ type: 'route', name: '/api/*', phase: 'after' })
     return result
   }
 )

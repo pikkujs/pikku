@@ -9,8 +9,8 @@ import {
   CreateSessionServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
-import { MiddlewareChecker } from './services/middleware-checker.service.js'
+import { LocalVariablesService } from '@pikku/core/services'
+import { CustomLogger } from './services/custom-logger.service.js'
 import { RequiredSingletonServices } from '../.pikku/pikku-services.gen.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
@@ -21,19 +21,17 @@ export const createSingletonServices: CreateSingletonServices<
   Config,
   RequiredSingletonServices
 > = async (config: Config): Promise<RequiredSingletonServices> => {
-  const logger = new ConsoleLogger()
-  const middlewareChecker = new MiddlewareChecker()
+  const logger = new CustomLogger()
 
   return {
     variables: new LocalVariablesService(),
     config,
     logger,
-    middlewareChecker,
   }
 }
 
 export const createSessionServices: CreateSessionServices<
-  SingletonServices,
+  RequiredSingletonServices,
   Services,
   UserSession
 > = async (_services, _session) => {

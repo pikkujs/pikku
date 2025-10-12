@@ -20,16 +20,12 @@ export const httpGlobalMiddleware = addHTTPMiddleware('*', [httpMiddleware])
 export const apiRouteMiddleware = () =>
   addHTTPMiddleware('/api/*', [routeMiddleware])
 
-// Call the factories to register middleware at module evaluation
-apiTagMiddleware()
-apiRouteMiddleware()
-
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(
-  async ({ middlewareChecker }, _interaction, next) => {
-    middlewareChecker.log({ type: 'wire', name: 'inline', phase: 'before' })
+  async ({ logger }, _interaction, next) => {
+    logger.info({ type: 'wire', name: 'inline', phase: 'before' })
     const result = await next()
-    middlewareChecker.log({ type: 'wire', name: 'inline', phase: 'after' })
+    logger.info({ type: 'wire', name: 'inline', phase: 'after' })
     return result
   }
 )

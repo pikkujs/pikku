@@ -4,12 +4,12 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
 } from '@pikku/core'
-import type { MiddlewareCheckerService } from '../services/middleware-checker.service.js'
+import type { CustomLogger } from '../services/custom-logger.service.js'
 
 export type Config = CoreConfig
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
-  middlewareChecker: MiddlewareCheckerService
+  logger: CustomLogger
 }
 
 export interface Services
