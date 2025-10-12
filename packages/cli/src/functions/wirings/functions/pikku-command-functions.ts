@@ -47,7 +47,7 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       )
     }
 
-    return rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0
+    return true
   },
   middleware: [
     logCommandInfoAndTime({

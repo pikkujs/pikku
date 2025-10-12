@@ -118,13 +118,23 @@ export type CoreHTTPFunctionWiring<
   In,
   Out,
   R extends string,
-  PikkuFunction extends CorePikkuFunction<In, Out> = CorePikkuFunction<In, Out>,
+  PikkuFunction extends CorePikkuFunction<
+    In,
+    Out,
+    any,
+    any
+  > = CorePikkuFunction<In, Out>,
   PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
     In,
-    Out
+    Out,
+    any,
+    any
   > = CorePikkuFunctionSessionless<In, Out>,
-  PikkuPermission extends CorePikkuPermission<In> = CorePikkuPermission<In>,
-  PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
+  PikkuPermission extends CorePikkuPermission<In, any> = CorePikkuPermission<
+    In,
+    any
+  >,
+  PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
 > =
   | (CoreHTTPFunction & {
       route: R

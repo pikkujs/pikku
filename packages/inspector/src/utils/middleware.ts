@@ -6,6 +6,7 @@ import { InspectorLogger, InspectorState } from '../types.js'
 /**
  * Extract middleware pikkuFuncNames from an array literal expression
  * Resolves each identifier to its pikkuFuncName using extractFunctionName
+ * Also handles call expressions (like logCommandInfoAndTime({...}))
  */
 export function extractMiddlewarePikkuNames(
   arrayNode: ts.Expression,
@@ -19,6 +20,11 @@ export function extractMiddlewarePikkuNames(
   for (const element of arrayNode.elements) {
     if (ts.isIdentifier(element)) {
       // Resolve the identifier to its pikkuFuncName
+      const { pikkuFuncName } = extractFunctionName(element, checker)
+      names.push(pikkuFuncName)
+    } else if (ts.isCallExpression(element)) {
+      // Handle call expressions like logCommandInfoAndTime({...})
+      // These create inline middleware, so we use the call expression itself as the name
       const { pikkuFuncName } = extractFunctionName(element, checker)
       names.push(pikkuFuncName)
     }
@@ -62,7 +68,7 @@ export function routeMatchesPattern(route: string, pattern: string): boolean {
 
 /**
  * Resolve middleware for an HTTP wiring based on:
- * 1. Global HTTP middleware (addHTTPMiddleware([...]))
+ * 1. Global HTTP middleware (addd([...]))
  * 2. Route-specific HTTP middleware (addHTTPMiddleware('/pattern', [...]))
  * 3. Tag-based middleware (addMiddleware('tag', [...]))
  * 4. Explicit wiring middleware (wireHTTP({ middleware: [...] }))

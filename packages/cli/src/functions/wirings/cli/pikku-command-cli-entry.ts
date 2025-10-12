@@ -78,7 +78,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
           )
 
           await writeFileInDir(logger, channelWireFile, channelCode)
-          logger.info(
+          logger.debug(
             `Serialized CLI channel for ${programName}: ${channelWireFile}`
           )
 
@@ -96,7 +96,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
             )
 
             await writeFileInDir(logger, channelClientFile, clientCode)
-            logger.info(
+            logger.debug(
               `Serialized CLI channel client for ${programName}: ${channelClientFile}`
             )
           }
@@ -153,7 +153,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
         )
 
         await writeFileInDir(logger, bootstrapFile, bootstrapCode)
-        logger.info(
+        logger.debug(
           `Serialized CLI bootstrap for ${programName}: ${bootstrapFile}`
         )
       }

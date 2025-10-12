@@ -1,5 +1,4 @@
 import { globalMiddleware } from '../middleware/global.js'
-import { httpMiddleware } from '../middleware/http.js'
 import { routeMiddleware } from '../middleware/route.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
@@ -9,6 +8,7 @@ import {
   pikkuMiddleware,
   wireHTTP,
 } from '../../.pikku/pikku-types.gen.js'
+import { httpMiddleware } from '../middleware/http.js'
 
 // Global middleware applied to all tagged functions
 addMiddleware('api', [globalMiddleware])
@@ -41,6 +41,7 @@ wireHTTP({
   tags: ['api'],
   middleware: [wireMiddleware, inlineWireMiddleware],
   func: noOpFunction,
+  auth: false, // No authentication required for this example
 })
 
 // HTTP endpoint with only function-level middleware to test isolation
@@ -48,4 +49,5 @@ wireHTTP({
   method: 'get',
   route: '/simple',
   func: noOpFunction,
+  auth: false, // No authentication required for this example
 })

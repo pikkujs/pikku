@@ -94,7 +94,6 @@ export const resetPikkuState = () => {
     },
     http: {
       permissions: new Map(),
-      middleware: new Map(),
       routes: new Map(),
       meta: {},
     },

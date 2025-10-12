@@ -1,4 +1,4 @@
-import { pikkuMiddleware } from '../.pikku/pikku-types.gen.js'
+import { pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
 
 export const globalMiddleware = pikkuMiddleware(
   async ({ middlewareChecker }, _interaction, next) => {

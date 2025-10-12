@@ -45,6 +45,61 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
+  // Handle pikkuMiddlewareFactory(...) - middleware factory function
+  if (expression.text === 'pikkuMiddlewareFactory') {
+    const factoryNode = args[0]
+    if (!factoryNode) return
+
+    if (
+      !ts.isArrowFunction(factoryNode) &&
+      !ts.isFunctionExpression(factoryNode)
+    ) {
+      logger.error(`• Handler for pikkuMiddlewareFactory is not a function.`)
+      return
+    }
+
+    // Extract services by looking inside the factory function body
+    // The factory should return pikkuMiddleware(...), so we need to find that call
+    let services = { optimized: false, services: [] as string[] }
+
+    const findPikkuMiddlewareCall = (
+      node: ts.Node
+    ): ts.CallExpression | undefined => {
+      if (ts.isCallExpression(node)) {
+        const expr = node.expression
+        if (ts.isIdentifier(expr) && expr.text === 'pikkuMiddleware') {
+          return node
+        }
+      }
+      return ts.forEachChild(node, findPikkuMiddlewareCall)
+    }
+
+    const pikkuMiddlewareCall = findPikkuMiddlewareCall(factoryNode)
+    if (pikkuMiddlewareCall && pikkuMiddlewareCall.arguments[0]) {
+      const middlewareHandler = pikkuMiddlewareCall.arguments[0]
+      if (
+        ts.isArrowFunction(middlewareHandler) ||
+        ts.isFunctionExpression(middlewareHandler)
+      ) {
+        services = extractServicesFromFunction(middlewareHandler)
+      }
+    }
+
+    const { pikkuFuncName, exportedName } = extractFunctionName(node, checker)
+    state.middleware.meta[pikkuFuncName] = {
+      services,
+      sourceFile: node.getSourceFile().fileName,
+      position: node.getStart(),
+      exportedName,
+      factory: true,
+    }
+
+    logger.debug(
+      `• Found middleware factory with services: ${services.services.join(', ')}`
+    )
+    return
+  }
+
   // Handle addMiddleware('tag', [middleware1, middleware2])
   if (expression.text === 'addMiddleware') {
     const tagArg = args[0]

@@ -177,6 +177,29 @@ export const pikkuMiddleware = <
 }
 
 /**
+ * Factory function for creating middleware factories
+ * Use this when your middleware needs configuration/input parameters
+ *
+ * @example
+ * ```typescript
+ * export const logMiddleware = pikkuMiddlewareFactory<LogOptions>(({
+ *   message,
+ *   level = 'info'
+ * }) => {
+ *   return pikkuMiddleware(async ({ logger }, _interaction, next) => {
+ *     logger[level](message)
+ *     await next()
+ *   })
+ * })
+ * ```
+ */
+export const pikkuMiddlewareFactory = <In = any>(
+  factory: (input: In) => CorePikkuMiddleware
+): ((input: In) => CorePikkuMiddleware) => {
+  return factory
+}
+
+/**
  * Represents the core services used by Pikku, including singleton services and the request/response interaction.
  */
 export type CoreServices<

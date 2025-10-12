@@ -52,6 +52,7 @@ export interface InspectorMiddlewareState {
       sourceFile: string
       position: number
       exportedName: string | null
+      factory?: boolean // true if wrapped with pikkuMiddlewareFactory
     }
   >
   // Tag-based middleware calls tracking

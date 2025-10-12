@@ -72,8 +72,31 @@ export const pikkuPermission = <In>(func: PikkuPermission<In>) => {
  * })
  * \`\`\`
  */
-export const pikkuMiddleware = (func: PikkuMiddleware) => {
+export const pikkuMiddleware = <In>(func: PikkuMiddleware<In>) => {
   return func
+}
+
+/**
+ * Factory function for creating middleware factories
+ * Use this when your middleware needs configuration/input parameters
+ *
+ * @example
+ * \`\`\`typescript
+ * export const logMiddleware = pikkuMiddlewareFactory<LogOptions>(({
+ *   message,
+ *   level = 'info'
+ * }) => {
+ *   return pikkuMiddleware(async ({ logger }, _interaction, next) => {
+ *     logger[level](message)
+ *     await next()
+ *   })
+ * })
+ * \`\`\`
+ */
+export const pikkuMiddlewareFactory = <In = any>(
+  factory: (input: In) => PikkuMiddleware
+): ((input: In) => PikkuMiddleware) => {
+  return factory
 }
 
 /**
