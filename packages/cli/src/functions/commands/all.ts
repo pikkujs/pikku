@@ -30,11 +30,7 @@ export const all: any = pikkuVoidFunc({
     await rpc.invoke('pikkuMCPTypes', null)
     await rpc.invoke('pikkuCLITypes', null)
 
-    const functions = await rpc.invoke('pikkuFunctions', null)
-    if (!functions) {
-      logger.info(`• No functions found, skipping remaining steps...\x1b[0m`)
-      return
-    }
+    const hasFunctionRegistrations = await rpc.invoke('pikkuFunctions', null)
 
     // Generate and register middleware
     const middleware = await rpc.invoke('pikkuMiddleware', null)
@@ -43,7 +39,13 @@ export const all: any = pikkuVoidFunc({
       allImports.push(config.middlewareFile)
     }
 
-    allImports.push(config.functionsMetaFile, config.functionsFile)
+    // Always import functions meta (needed for all function metadata)
+    allImports.push(config.functionsMetaFile)
+
+    // Only import functionsFile if it was generated (has internal/external RPCs)
+    if (hasFunctionRegistrations) {
+      allImports.push(config.functionsFile)
+    }
 
     // Generate services map
     await rpc.invoke('pikkuServices', null)

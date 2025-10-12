@@ -34,7 +34,8 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(runtimeMeta, null, 2)})`
     )
 
-    if (rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0) {
+    const hasRPCs = rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0
+    if (hasRPCs) {
       await writeFileInDir(
         logger,
         functionsFile,
@@ -47,7 +48,7 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       )
     }
 
-    return true
+    return hasRPCs
   },
   middleware: [
     logCommandInfoAndTime({
