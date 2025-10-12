@@ -126,7 +126,8 @@ export async function runScheduledTask({
         getAllServices,
         userSession,
         data: () => undefined,
-        middleware: task.middleware,
+        inheritedMiddleware: meta.middleware,
+        wireMiddleware: task.middleware,
         tags: task.tags,
         interaction,
       }

@@ -7,8 +7,9 @@ export const serializeHTTPTypes = (functionTypesImportPath: string) => {
  * HTTP-specific type definitions for tree-shaking optimization
  */
 
-import { CoreHTTPFunctionWiring, AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware } from '@pikku/core/http'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
+import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore } from '@pikku/core/http'
+import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { CoreHTTPFunctionWiring } from '@pikku/core/http'
 
 /**
  * Type definition for HTTP API wirings with type-safe path parameters.
@@ -31,11 +32,11 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
 export const wireHTTP = <In, Out, Route extends string>(
   httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
 ) => {
-  wireHTTPCore(httpWiring)
+  wireHTTPCore(httpWiring as any)
 }
 
 /**
- * Registers middleware either globally or for a specific route.
+ * Registers HTTP middleware either globally or for a specific route pattern.
  *
  * When a string route pattern is provided along with middleware, the middleware
  * is applied only to that route. Otherwise, if an array is provided, it is treated
@@ -46,13 +47,18 @@ export const wireHTTP = <In, Out, Route extends string>(
  *
  * @example
  * \`\`\`typescript
- * // Add global middleware
+ * // Add global HTTP middleware
  * addHTTPMiddleware([authMiddleware, loggingMiddleware])
  *
  * // Add route-specific middleware
  * addHTTPMiddleware('/api/admin/*', [adminAuthMiddleware])
  * \`\`\`
  */
-export { addHTTPMiddleware }
+export const addHTTPMiddleware = (
+  routeOrMiddleware: PikkuMiddleware[] | string,
+  middleware?: PikkuMiddleware[]
+) => {
+  addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any)
+}
 `
 }

@@ -46,9 +46,9 @@ export const runLocalChannel = async ({
     route = http?.request?.path()
   }
 
-  let openingData, channelConfig, meta, httpMiddleware
+  let openingData, channelConfig, meta
   try {
-    ;({ openingData, channelConfig, meta, httpMiddleware } = await openChannel({
+    ;({ openingData, channelConfig, meta } = await openChannel({
       channelId,
       createSessionServices,
       respondWith404,
@@ -90,43 +90,34 @@ export const runLocalChannel = async ({
         )
       }
 
-      const interaction: PikkuInteraction = { channel }
-
-      channelHandler.registerOnOpen(() => {
-        const allServices = rpcService.injectRPCService(
+      const getAllServices = (channel: any, requiresAuth?: boolean) =>
+        rpcService.injectRPCService(
           {
             ...singletonServices,
             ...sessionServices,
             userSession,
           },
           interaction,
-          false
+          requiresAuth
         )
 
+      const interaction: PikkuInteraction = { channel }
+
+      channelHandler.registerOnOpen(() => {
         if (channelConfig.onConnect && meta.connect) {
           runPikkuFuncDirectly(
             meta.connect.pikkuFuncName,
-            { ...allServices, channel },
+            getAllServices(channel, false),
             openingData
           )
         }
       })
 
       channelHandler.registerOnClose(async () => {
-        const allServices = rpcService.injectRPCService(
-          {
-            ...singletonServices,
-            ...sessionServices,
-            userSession,
-          },
-          interaction,
-          false
-        )
-
         if (channelConfig.onDisconnect && meta.disconnect) {
           runPikkuFuncDirectly(
             meta.disconnect.pikkuFuncName,
-            { ...allServices, channel },
+            getAllServices(channel, false),
             openingData
           )
         }
@@ -136,18 +127,9 @@ export const runLocalChannel = async ({
         }
       })
 
-      const allServices = rpcService.injectRPCService(
-        {
-          ...singletonServices,
-          ...sessionServices,
-          userSession,
-        },
-        interaction
-      )
-
       channelHandler.registerOnMessage(
         processMessageHandlers(
-          allServices,
+          getAllServices(channel),
           channelConfig as any,
           channelHandler
         )
@@ -176,9 +158,8 @@ export const runLocalChannel = async ({
     },
     { http },
     combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
-      wiringMiddleware: channelConfig.middleware,
-      wiringTags: channelConfig.tags,
-      httpMiddleware,
+      inheritedMiddleware: meta.middleware,
+      wireMiddleware: channelConfig.middleware,
     }),
     main
   )

@@ -129,6 +129,20 @@ export type PikkuFunction<
 > = CorePikkuFunction<In, Out, ChannelData, RequiredServices, Session>
 
 /**
+ * Configuration object for Pikku functions with optional middleware, permissions, tags, and documentation.
+ * This type wraps CorePikkuFunctionConfig with the user's custom types.
+ *
+ * @template In - The input type
+ * @template Out - The output type
+ * @template PikkuFunc - The function type (can be narrowed to PikkuFunction or PikkuFunctionSessionless)
+ */
+export type PikkuFunctionConfig<
+  In = unknown,
+  Out = unknown,
+  PikkuFunc extends PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out> = PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out>
+> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
+
+/**
  * Creates a Pikku function that can be either session-aware or sessionless.
  * This is the main function wrapper for creating API endpoints.
  *

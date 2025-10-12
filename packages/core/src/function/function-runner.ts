@@ -9,6 +9,7 @@ import {
   PikkuWiringTypes,
   CoreSingletonServices,
   PikkuInteraction,
+  MiddlewareMetadata,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
@@ -48,7 +49,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     userSession,
     auth: wiringAuth,
     permissions: wiringPermissions,
-    middleware: wiringMiddleware,
+    inheritedMiddleware,
+    wireMiddleware,
     coerceDataFromSchema,
     tags = [],
     interaction,
@@ -61,7 +63,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     data: () => Promise<In> | In
     auth?: boolean
     permissions?: CorePermissionGroup
-    middleware?: CorePikkuMiddleware[]
+    inheritedMiddleware?: MiddlewareMetadata[]
+    wireMiddleware?: CorePikkuMiddleware[]
     coerceDataFromSchema?: boolean
     tags?: string[]
     interaction: PikkuInteraction
@@ -124,12 +127,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
     return await funcConfig.func(allServices, actualData, session!)
   }
 
-  // Combine all middleware: wiring tags → wiring middleware → func middleware → func tags
+  // Combine all middleware: inheritedMiddleware → wireMiddleware → funcMiddleware
   const allMiddleware = combineMiddleware(wireType, wireId, {
-    wiringTags: tags,
-    wiringMiddleware,
-    funcMiddleware: funcConfig.middleware,
-    funcTags: funcConfig.tags,
+    inheritedMiddleware,
+    wireMiddleware,
+    funcMiddleware: funcMeta.middleware,
   })
 
   if (allMiddleware.length > 0) {

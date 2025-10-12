@@ -9,6 +9,11 @@ import {
   HTTPMethod,
 } from './http.types.js'
 import {
+  CorePikkuFunction,
+  CorePikkuFunctionSessionless,
+  CorePikkuPermission,
+} from '../../function/functions.types.js'
+import {
   CoreUserSession,
   CorePikkuMiddleware,
   SessionServices,
@@ -32,7 +37,10 @@ import { rpcService } from '../rpc/rpc-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
 /**
- * Registers middleware either globally or for a specific route.
+ * Registers HTTP middleware either globally or for a specific route pattern.
+ *
+ * This is a marker function used by the CLI during inspection to discover HTTP middleware
+ * dependencies and generate metadata. At runtime, this function is a no-op.
  *
  * When a string route pattern is provided along with middleware, the middleware
  * is applied only to that route. Otherwise, if an array is provided, it is treated
@@ -41,27 +49,23 @@ import { httpRouter } from './routers/http-router.js'
  * @template PikkuMiddleware The middleware type.
  * @param {PikkuMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
  * @param {PikkuMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
+ *
+ * @example
+ * ```typescript
+ * // Add global HTTP middleware
+ * addHTTPMiddleware([authMiddleware, loggingMiddleware])
+ *
+ * // Add route-specific middleware
+ * addHTTPMiddleware('/api/admin/*', [adminAuthMiddleware])
+ * ```
  */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
-  routeOrMiddleware: PikkuMiddleware[] | string,
-  middleware?: PikkuMiddleware[]
+  _routeOrMiddleware: PikkuMiddleware[] | string,
+  _middleware?: PikkuMiddleware[]
 ) => {
-  const middlewareStore = pikkuState('http', 'middleware')
-  let route = '*'
-
-  if (typeof routeOrMiddleware === 'string') {
-    route = routeOrMiddleware
-    middleware = middleware!
-  } else {
-    middleware = routeOrMiddleware
-  }
-
-  const currentMiddleware = middlewareStore.get(route)
-  if (currentMiddleware) {
-    middlewareStore.set(route, [...currentMiddleware, ...middleware])
-  } else {
-    middlewareStore.set(route, middleware)
-  }
+  // No-op: This function exists only for CLI inspection to discover HTTP middleware
+  // The CLI reads the source code to find addHTTPMiddleware calls and generates
+  // metadata that includes the middleware in the correct order (HTTP global, HTTP pattern, etc.)
 }
 
 /**
@@ -83,10 +87,14 @@ export const wireHTTP = <
   In,
   Out,
   Route extends string,
-  PikkuFunction,
-  PikkuFunctionSessionless,
-  PikkuPermissionGroup,
-  PikkuMiddleware,
+  PikkuFunction extends CorePikkuFunction<In, Out> = CorePikkuFunction<In, Out>,
+  PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
+    In,
+    Out
+  > = CorePikkuFunctionSessionless<In, Out>,
+  PikkuPermissionGroup extends
+    CorePikkuPermission<In> = CorePikkuPermission<In>,
+  PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
 >(
   httpWiring: CoreHTTPFunctionWiring<
     In,
@@ -150,8 +158,6 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
       params: matchedPath.params,
       route,
       permissions: route.permissions,
-      httpMiddleware: matchedPath.middleware,
-      middleware: route.middleware,
       meta: meta!,
     }
   }
@@ -187,16 +193,7 @@ export const createHTTPInteraction = (
 }
 
 /**
- * Validates the input data and executes the route handler with associated middleware.
- *
- * NOTE: HTTP wiring handles middleware differently from other wirings (RPC, MCP, Queue, etc.)
- * because HTTP needs to:
- * 1. Check session early for performance (before expensive body parsing)
- * 2. Handle HTTP-specific concerns (headers, cookies, SSE setup)
- * 3. Process middleware that may set up authentication/session state
- *
- * Other wirings (RPC/MCP/Queue/Scheduler) simply pass middleware/permissions/auth
- * directly to runPikkuFunc without processing them.
+ * Validates the input data and executes the route handler
  *
  * This function performs these steps:
  *  1. Sets URL parameters on the request.
@@ -209,7 +206,7 @@ export const createHTTPInteraction = (
  *  8. Sends the appropriate response.
  *
  * @param {Object} services - A collection of shared services and utilities.
- * @param {Object} matchedRoute - Contains route details, URL parameters, middleware, and optional schema.
+ * @param {Object} matchedRoute - Contains route details, URL parameters, and optional schema.
  * @param {PikkuHTTP | undefined} http - The HTTP interaction object.
  * @param {Object} options - Options for route execution (e.g., whether to coerce query strings to arrays).
  * @returns {Promise<any>} An object containing the route handler result and session services (if any).
@@ -226,8 +223,6 @@ const executeRoute = async (
     matchedPath: any
     params: any
     route: CoreHTTPFunctionWiring<any, any, any>
-    httpMiddleware: CorePikkuMiddleware[] | undefined
-    middleware: CorePikkuMiddleware[] | undefined
     meta: HTTPWiringMeta
   },
   http: PikkuHTTP,
@@ -236,7 +231,7 @@ const executeRoute = async (
   }
 ) => {
   const userSession = new PikkuUserSessionService<CoreUserSession>()
-  const { params, route, httpMiddleware, middleware, meta } = matchedRoute
+  const { params, route, meta } = matchedRoute
   const {
     singletonServices,
     createSessionServices,
@@ -324,9 +319,10 @@ const executeRoute = async (
       getAllServices,
       auth: route.auth !== false,
       userSession,
-      middleware: [...(httpMiddleware || []), ...(middleware || [])],
       data,
       permissions: route.permissions,
+      inheritedMiddleware: meta.middleware,
+      wireMiddleware: route.middleware,
       coerceDataFromSchema: options.coerceDataFromSchema,
       tags: route.tags,
       interaction,
@@ -422,7 +418,6 @@ export const fetchData = async <In, Out>(
     coerceDataFromSchema = true,
     bubbleErrors = false,
     generateRequestId,
-    ignoreMiddleware = false,
   }: RunHTTPWiringOptions & RunHTTPWiringParams
 ): Promise<Out | void> => {
   const requestId =
@@ -461,13 +456,7 @@ export const fetchData = async <In, Out>(
         skipUserSession,
         requestId,
       },
-      ignoreMiddleware
-        ? {
-            ...matchedRoute,
-            middleware: undefined,
-            httpMiddleware: undefined,
-          }
-        : matchedRoute,
+      matchedRoute,
       http!,
       { coerceDataFromSchema }
     ))

@@ -3,7 +3,6 @@ import { addFunction } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
 import { UserSessionService } from '../../services/user-session-service.js'
-import { CorePikkuMiddleware } from '../../types/core.types.js'
 import { httpRouter } from '../http/routers/http-router.js'
 import {
   ChannelMeta,
@@ -117,7 +116,6 @@ const getMatchingChannelConfig = (request: string) => {
     channelConfig,
     schemaName: channelMeta.input,
     meta: channelMeta,
-    httpMiddleware: matchedPath.middleware,
   }
 }
 
@@ -133,7 +131,6 @@ export const openChannel = async ({
   openingData: unknown
   channelConfig: CoreChannel<unknown, any>
   meta: ChannelMeta
-  httpMiddleware: CorePikkuMiddleware[] | undefined
 }> => {
   const matchingChannel = getMatchingChannelConfig(route)
   if (!matchingChannel) {
@@ -141,8 +138,7 @@ export const openChannel = async ({
     throw new NotFoundError(`Channel not found: ${route}`)
   }
 
-  const { params, channelConfig, schemaName, meta, httpMiddleware } =
-    matchingChannel
+  const { params, channelConfig, schemaName, meta } = matchingChannel
 
   const requiresSession = channelConfig.auth !== false
   request?.setParams(params)
@@ -165,5 +161,5 @@ export const openChannel = async ({
     )
   }
 
-  return { openingData, channelConfig, meta, httpMiddleware }
+  return { openingData, channelConfig, meta }
 }

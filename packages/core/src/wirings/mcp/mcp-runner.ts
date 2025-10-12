@@ -246,6 +246,16 @@ async function runMCPPikkuFunc(
       )
     }
 
+    // Get metadata for the MCP endpoint to access pre-resolved middleware
+    let meta: any
+    if (type === 'resource') {
+      meta = pikkuState('mcp', 'resourcesMeta')[name]
+    } else if (type === 'tool') {
+      meta = pikkuState('mcp', 'toolsMeta')[name]
+    } else if (type === 'prompt') {
+      meta = pikkuState('mcp', 'promptsMeta')[name]
+    }
+
     const result = await runPikkuFunc(
       PikkuWiringTypes.mcp,
       `${type}:${name}`,
@@ -255,7 +265,8 @@ async function runMCPPikkuFunc(
         getAllServices,
         userSession: undefined, // TODO
         data: () => request.params,
-        middleware: mcp.middleware,
+        inheritedMiddleware: meta?.middleware,
+        wireMiddleware: mcp.middleware,
         tags: mcp.tags,
         interaction,
       }

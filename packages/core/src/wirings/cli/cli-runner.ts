@@ -341,7 +341,8 @@ export async function runCLICommand({
         data: pluckedData,
         auth: false,
         userSession,
-        middleware: programMiddleware,
+        inheritedMiddleware: undefined, // TODO: Add CLI metadata support
+        wireMiddleware: programMiddleware,
         interaction,
       }
     )

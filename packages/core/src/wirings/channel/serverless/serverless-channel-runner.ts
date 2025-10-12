@@ -85,16 +85,15 @@ export const runChannelConnect = async ({
 
   const userSession = new PikkuUserSessionService(channelStore, channelId)
 
-  const { channelConfig, openingData, meta, httpMiddleware } =
-    await openChannel({
-      channelId,
-      createSessionServices,
-      request,
-      route,
-      singletonServices,
-      coerceDataFromSchema,
-      userSession,
-    })
+  const { channelConfig, openingData, meta } = await openChannel({
+    channelId,
+    createSessionServices,
+    request,
+    route,
+    singletonServices,
+    coerceDataFromSchema,
+    userSession,
+  })
 
   const main = async () => {
     try {
@@ -148,9 +147,8 @@ export const runChannelConnect = async ({
     },
     { http },
     combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
-      wiringMiddleware: channelConfig.middleware,
-      wiringTags: channelConfig.tags,
-      httpMiddleware,
+      inheritedMiddleware: meta.middleware,
+      wireMiddleware: channelConfig.middleware,
     }),
     main
   )

@@ -4,6 +4,7 @@ import {
   PikkuInteraction,
   CorePikkuMiddleware,
   PikkuWiringTypes,
+  MiddlewareMetadata,
 } from './types/core.types.js'
 import { pikkuState } from './pikku-state.js'
 import { freezeDedupe } from './utils.js'
@@ -182,25 +183,24 @@ const middlewareCache: Record<
 }
 
 /**
- * Combines tag-based middleware with wiring-specific middleware and function-level middleware.
+ * Combines wiring-specific middleware with function-level middleware.
  *
- * This helper function gets middleware for tags and combines it with any
- * wiring-specific middleware and function-level middleware, avoiding the need for manual spreading.
+ * This function resolves middleware metadata into actual middleware functions and combines them.
+ * It filters out wire middleware without tags from inheritedMiddleware to avoid duplication
+ * (those are passed separately as wireMiddleware).
  *
  * @param {object} options - Configuration object for combining middleware.
- * @param {CorePikkuMiddleware[] | undefined} options.wiringMiddleware - Wiring-specific middleware.
- * @param {string[] | undefined} options.wiringTags - Array of wiring-level tags to look up middleware for.
- * @param {CorePikkuMiddleware[] | undefined} options.funcMiddleware - Function-level middleware.
- * @param {string[] | undefined} options.funcTags - Array of function-level tags to look up middleware for.
- * @returns {CorePikkuMiddleware[]} Combined array of tag-based and wiring-specific middleware.
+ * @param {MiddlewareMetadata[] | undefined} options.inheritedMiddleware - Metadata from wiring (HTTP + tags + wire with tags).
+ * @param {CorePikkuMiddleware[] | undefined} options.wireMiddleware - Inline wire middleware.
+ * @param {MiddlewareMetadata[] | undefined} options.funcMiddleware - Function middleware metadata.
+ * @returns {CorePikkuMiddleware[]} Combined array of resolved middleware.
  *
  * @example
  * ```typescript
- * const combined = combineMiddleware({
- *   wiringMiddleware: httpRoute.middleware,
- *   wiringTags: httpRoute.tags,
- *   funcMiddleware: funcConfig.middleware,
- *   funcTags: funcConfig.tags
+ * const combined = combineMiddleware(wireType, wireId, {
+ *   inheritedMiddleware: meta.middleware,
+ *   wireMiddleware: [inlineMiddleware],
+ *   funcMiddleware: funcMeta.middleware
  * })
  * ```
  */
@@ -208,37 +208,54 @@ export const combineMiddleware = (
   wireType: PikkuWiringTypes,
   uid: string,
   {
-    httpMiddleware,
-    wiringMiddleware,
-    wiringTags,
+    inheritedMiddleware,
+    wireMiddleware,
     funcMiddleware,
-    funcTags,
   }: {
-    httpMiddleware?: CorePikkuMiddleware[]
-    wiringMiddleware?: CorePikkuMiddleware[]
-    wiringTags?: string[]
-    funcMiddleware?: CorePikkuMiddleware[]
-    funcTags?: string[]
+    inheritedMiddleware?: MiddlewareMetadata[]
+    wireMiddleware?: CorePikkuMiddleware[]
+    funcMiddleware?: MiddlewareMetadata[]
   } = {}
 ): readonly CorePikkuMiddleware[] => {
   if (middlewareCache[wireType][uid]) {
     return middlewareCache[wireType][uid]
   }
 
-  // Run middleware in specific order:
-  // 1) wiringTags middleware
-  // 2) wiringMiddleware
-  // 3) funcMiddleware
-  // 4) funcTags middleware
-  const wiringTaggedMiddleware = getMiddlewareForTags(wiringTags)
-  const funcTaggedMiddleware = getMiddlewareForTags(funcTags)
+  // Resolve inherited middleware metadata, filtering out wire middleware without tags
+  // (those are passed separately as wireMiddleware to avoid duplication)
+  const resolvedInheritedMiddleware: CorePikkuMiddleware[] = []
+  if (inheritedMiddleware) {
+    for (const meta of inheritedMiddleware) {
+      // Skip wire middleware without tags - those are passed separately
+      if (meta.type === 'wire' && !meta.tag) {
+        continue
+      }
+      const middleware = getMiddlewareByName(meta.name)
+      if (middleware) {
+        resolvedInheritedMiddleware.push(middleware)
+      }
+    }
+  }
 
+  // Resolve function middleware from metadata
+  const resolvedFuncMiddleware: CorePikkuMiddleware[] = []
+  if (funcMiddleware) {
+    for (const meta of funcMiddleware) {
+      const middleware = getMiddlewareByName(meta.name)
+      if (middleware) {
+        resolvedFuncMiddleware.push(middleware)
+      }
+    }
+  }
+
+  // Run middleware in specific order:
+  // 1) inheritedMiddleware (HTTP + tag-based + wire with tags)
+  // 2) wireMiddleware (inline wire middleware)
+  // 3) funcMiddleware (function tags + function inline)
   middlewareCache[wireType][uid] = freezeDedupe([
-    ...(httpMiddleware || []),
-    ...wiringTaggedMiddleware,
-    ...(wiringMiddleware || []),
-    ...(funcMiddleware || []),
-    ...funcTaggedMiddleware,
+    ...resolvedInheritedMiddleware,
+    ...(wireMiddleware || []),
+    ...resolvedFuncMiddleware,
   ]) as readonly CorePikkuMiddleware[]
 
   return middlewareCache[wireType][uid]

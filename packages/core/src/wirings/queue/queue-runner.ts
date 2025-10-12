@@ -161,7 +161,8 @@ export async function runQueueJob({
         singletonServices,
         getAllServices,
         data: () => job.data,
-        middleware: queueWorker.middleware,
+        inheritedMiddleware: processorMeta.middleware,
+        wireMiddleware: queueWorker.middleware,
         tags: queueWorker.tags,
         interaction: { queue },
       }
