@@ -8,7 +8,7 @@ export const serializeHTTPTypes = (functionTypesImportPath: string) => {
  */
 
 import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore } from '@pikku/core/http'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 import type { CoreHTTPFunctionWiring } from '@pikku/core/http'
 
 /**

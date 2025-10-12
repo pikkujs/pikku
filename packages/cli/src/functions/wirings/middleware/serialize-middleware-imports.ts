@@ -1,58 +1,76 @@
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import type { InspectorMiddlewareState } from '@pikku/inspector'
+import type {
+  InspectorMiddlewareState,
+  InspectorHTTPState,
+} from '@pikku/inspector'
 
 export const serializeMiddlewareImports = (
   outputPath: string,
   middlewareState: InspectorMiddlewareState,
+  httpState: InspectorHTTPState,
   packageMappings: Record<string, string> = {}
 ) => {
-  const serializedImports: string[] = [
-    `/* Import and register middleware functions */`,
-    `import { registerMiddleware } from '@pikku/core'`,
-  ]
+  const serializedImports: string[] = []
+  const serializedFactoryCalls: string[] = []
 
-  const serializedRegistrations: string[] = []
+  // Collect factory imports and calls for HTTP middleware groups
+  const httpFactories = new Map<
+    string,
+    { exportName: string; filePath: string }
+  >()
+  for (const [, groupMeta] of httpState.routeMiddleware.entries()) {
+    if (groupMeta.exportName && groupMeta.isFactory) {
+      const filePath = getFileImportRelativePath(
+        outputPath,
+        groupMeta.sourceFile,
+        packageMappings
+      )
+      httpFactories.set(groupMeta.exportName, {
+        exportName: groupMeta.exportName,
+        filePath,
+      })
+    }
+  }
 
-  // Filter out inline middleware (those with exportedName === null)
-  // and sort by pikkuFuncName for consistent output
-  const exportableMiddleware = Object.entries(middlewareState.meta)
-    .filter(([, meta]) => meta.exportedName !== null)
-    .sort((a, b) => a[0].localeCompare(b[0]))
+  // Collect factory imports and calls for tag middleware groups
+  const tagFactories = new Map<
+    string,
+    { exportName: string; filePath: string }
+  >()
+  for (const [, groupMeta] of middlewareState.tagMiddleware.entries()) {
+    if (groupMeta.exportName && groupMeta.isFactory) {
+      const filePath = getFileImportRelativePath(
+        outputPath,
+        groupMeta.sourceFile,
+        packageMappings
+      )
+      tagFactories.set(groupMeta.exportName, {
+        exportName: groupMeta.exportName,
+        filePath,
+      })
+    }
+  }
 
-  for (const [pikkuFuncName, meta] of exportableMiddleware) {
-    const { sourceFile, exportedName } = meta
+  // Combine all factories and deduplicate by exportName (same factory might be used in multiple groups)
+  const allFactories = new Map([...httpFactories, ...tagFactories])
 
-    // exportedName is guaranteed to be non-null due to filter above
-    const filePath = getFileImportRelativePath(
-      outputPath,
-      sourceFile,
-      packageMappings
+  // Add factory imports and calls
+  if (allFactories.size > 0) {
+    serializedImports.push(
+      '/* Call middleware group factories to register at module evaluation */'
     )
 
-    // pikkuMiddleware always returns config objects
-    // For directly exported middleware, we can just import and register them
-    if (pikkuFuncName === exportedName) {
-      serializedImports.push(`import { ${exportedName} } from '${filePath}'`)
-      serializedRegistrations.push(
-        `registerMiddleware('${pikkuFuncName}', ${exportedName})`
-      )
+    // Import factories
+    for (const [exportName, { filePath }] of allFactories) {
+      serializedImports.push(`import { ${exportName} } from '${filePath}'`)
     }
-    // For renamed middleware, we need to import and alias them
-    else {
-      serializedImports.push(
-        `import { ${exportedName} as ${pikkuFuncName} } from '${filePath}'`
-      )
-      serializedRegistrations.push(
-        `registerMiddleware('${pikkuFuncName}', ${pikkuFuncName})`
-      )
+
+    // Call factories
+    for (const [exportName] of allFactories) {
+      serializedFactoryCalls.push(`${exportName}()`)
     }
   }
 
-  // Add a blank line between imports and registrations
-  if (serializedImports.length > 0 && serializedRegistrations.length > 0) {
-    serializedImports.push('')
-  }
-
-  // Combine the imports and registrations
-  return [...serializedImports, ...serializedRegistrations].join('\n')
+  // Return combined output
+  return [...serializedImports, ...serializedFactoryCalls].join('\n')
 }

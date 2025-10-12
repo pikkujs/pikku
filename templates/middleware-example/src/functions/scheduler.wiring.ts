@@ -16,6 +16,7 @@ const schedulerNoOpFunction = pikkuVoidFunc({
     logger.info({ type: 'function', name: 'noOp', phase: 'execute' })
   },
   middleware: [functionMiddleware],
+  auth: false, // No authentication required for this example
 })
 
 wireScheduler({

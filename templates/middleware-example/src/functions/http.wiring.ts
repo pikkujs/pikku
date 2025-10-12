@@ -1,3 +1,6 @@
+// Ensure HTTP metadata is loaded before calling wireHTTP
+import '../../.pikku/http/pikku-http-wirings-meta.gen.js'
+
 import { globalMiddleware } from '../middleware/global.js'
 import { routeMiddleware } from '../middleware/route.js'
 import { wireMiddleware } from '../middleware/wire.js'

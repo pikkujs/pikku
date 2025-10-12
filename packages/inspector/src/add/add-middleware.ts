@@ -1,6 +1,9 @@
 import * as ts from 'typescript'
 import { AddWiring } from '../types.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  isNamedExport,
+} from '../utils/extract-function-name.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 import { extractMiddlewarePikkuNames } from '../utils/middleware.js'
 
@@ -154,6 +157,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     // Check if this call is wrapped in a factory function
     // We need to walk up the tree to see if the parent is: const x = () => addMiddleware(...)
     let isFactory = false
+    let exportedName: string | null = null
     let parent = node.parent
 
     // Check if parent is arrow function: () => addMiddleware(...)
@@ -161,11 +165,26 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       // Check if arrow function has no parameters
       if (parent.parameters.length === 0) {
         isFactory = true
+
+        // For factories, we need to check the arrow function's parent for the export name
+        // const apiTagMiddleware = () => addMiddleware(...)
+        const arrowParent = parent.parent
+        if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
+          if (ts.isIdentifier(arrowParent.name)) {
+            // Check if it's exported
+            if (isNamedExport(arrowParent)) {
+              exportedName = arrowParent.name.text
+            }
+          }
+        }
       }
     }
 
-    // Get export name
-    const { exportedName } = extractFunctionName(node, checker)
+    // If not a factory, get export name from the call expression itself
+    if (!isFactory) {
+      const extracted = extractFunctionName(node, checker)
+      exportedName = extracted.exportedName
+    }
 
     // Log warning if not using factory pattern
     if (!isFactory && exportedName) {
@@ -249,6 +268,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
     // Check if this call is wrapped in a factory function
     let isFactory = false
+    let exportedName: string | null = null
     let parent = node.parent
 
     // Check if parent is arrow function: () => addHTTPMiddleware(...)
@@ -256,11 +276,26 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       // Check if arrow function has no parameters
       if (parent.parameters.length === 0) {
         isFactory = true
+
+        // For factories, we need to check the arrow function's parent for the export name
+        // const apiRouteMiddleware = () => addHTTPMiddleware(...)
+        const arrowParent = parent.parent
+        if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
+          if (ts.isIdentifier(arrowParent.name)) {
+            // Check if it's exported
+            if (isNamedExport(arrowParent)) {
+              exportedName = arrowParent.name.text
+            }
+          }
+        }
       }
     }
 
-    // Get export name
-    const { exportedName } = extractFunctionName(node, checker)
+    // If not a factory, get export name from the call expression itself
+    if (!isFactory) {
+      const extracted = extractFunctionName(node, checker)
+      exportedName = extracted.exportedName
+    }
 
     // Log warning if not using factory pattern
     if (!isFactory && exportedName) {

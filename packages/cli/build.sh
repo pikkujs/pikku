@@ -5,24 +5,24 @@ set -e
 
 echo "Starting Pikku CLI build process..."
 
-# Step 1: Clean the dist directory
-# Remove any previously built files to ensure a fresh build
-# # echo "Cleaning dist directory..."
-# rm -rf .pikku/cli
+# # Step 1: Clean the dist directory
+# # Remove any previously built files to ensure a fresh build
+# # # echo "Cleaning dist directory..."
+# # rm -rf .pikku/cli
 
-# Step 2: Generate types using the published version of @pikku/cli
-# We use the latest published version from npm to generate Pikku types because
-# the CLI package needs its own generated types to build itself (bootstrap problem).
-# This relies on the published version being backwards compatible enough to generate
-# types that work with the current codebase.
-echo "Generating Pikku types using published @pikku/cli..."
-npx -y @pikku/cli@latest
+# # Step 2: Generate types using the published version of @pikku/cli
+# # We use the latest published version from npm to generate Pikku types because
+# # the CLI package needs its own generated types to build itself (bootstrap problem).
+# # This relies on the published version being backwards compatible enough to generate
+# # types that work with the current codebase.
+# echo "Generating Pikku types using published @pikku/cli..."
+# npx -y @pikku/cli@latest
 
-# Step 3: Build the TypeScript source to dist
-# Now that we have the generated types (from the published version),
-# we can compile the TypeScript source code
-echo "Building TypeScript to dist..."
-tsc -b
+# # Step 3: Build the TypeScript source to dist
+# # Now that we have the generated types (from the published version),
+# # we can compile the TypeScript source code
+# echo "Building TypeScript to dist..."
+# tsc -b
 
 # Step 4: Remove the generated .pikku directory
 # The types we generated in step 2 were from the old published version.

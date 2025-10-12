@@ -3,7 +3,6 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeMiddlewareImports } from './serialize-middleware-imports.js'
 import { serializeMiddlewareGroupsMeta } from './serialize-middleware-groups-meta.js'
-import path from 'path'
 
 export const pikkuMiddleware: any = pikkuSessionlessFunc<
   void,
@@ -12,21 +11,30 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
     const { middleware } = state
-    const { middlewareFile, packageMappings, outDir } = config
+    const { middlewareFile, packageMappings } = config
 
     let filesGenerated = false
 
-    // Count exportable middleware (filter out inline middleware)
-    const exportableMiddleware = Object.entries(middleware.meta).filter(
-      ([, meta]) => meta.exportedName !== null
-    )
+    // Check if there are any middleware group factories
+    const hasHTTPFactories = Array.from(
+      state.http.routeMiddleware.values()
+    ).some((meta) => meta.exportName && meta.isFactory)
+    const hasTagFactories = Array.from(
+      state.middleware.tagMiddleware.values()
+    ).some((meta) => meta.exportName && meta.isFactory)
+    const hasFactories = hasHTTPFactories || hasTagFactories
 
-    // Generate individual middleware imports file
-    if (exportableMiddleware.length > 0) {
+    // Generate middleware imports file if there are factories
+    if (hasFactories) {
       await writeFileInDir(
         logger,
         middlewareFile,
-        serializeMiddlewareImports(middlewareFile, middleware, packageMappings)
+        serializeMiddlewareImports(
+          middlewareFile,
+          middleware,
+          state.http,
+          packageMappings
+        )
       )
       filesGenerated = true
     }
@@ -36,14 +44,9 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
     const hasTagGroups = state.middleware.tagMiddleware.size > 0
 
     if (hasHTTPGroups || hasTagGroups) {
-      const middlewareGroupsMetaFile = path.join(
-        outDir,
-        'middleware',
-        'pikku-middleware-groups-meta.gen.ts'
-      )
       await writeFileInDir(
         logger,
-        middlewareGroupsMetaFile,
+        config.middlewareGroupsMetaFile,
         serializeMiddlewareGroupsMeta(state)
       )
       filesGenerated = true

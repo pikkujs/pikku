@@ -15,7 +15,10 @@ import type {
   JsonRpcErrorResponse,
   PikkuMCP,
 } from './mcp.types.js'
-import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import type {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -48,9 +51,11 @@ export type JsonRpcError = {
 }
 
 export const wireMCPResource = <
-  PikkuFunction extends CorePikkuFunctionSessionless<any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
 >(
-  mcpResource: CoreMCPResource<PikkuFunction>
+  mcpResource: CoreMCPResource<PikkuFunctionConfig>
 ) => {
   const resourcesMeta = pikkuState('mcp', 'resourcesMeta')
   const mcpResourceMeta = resourcesMeta[mcpResource.uri]
@@ -66,9 +71,11 @@ export const wireMCPResource = <
 }
 
 export const wireMCPTool = <
-  PikkuFunction extends CorePikkuFunctionSessionless<any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
 >(
-  mcpTool: CoreMCPTool<PikkuFunction>
+  mcpTool: CoreMCPTool<PikkuFunctionConfig>
 ) => {
   const toolsMeta = pikkuState('mcp', 'toolsMeta')
   const mcpToolMeta = toolsMeta[mcpTool.name]
@@ -84,9 +91,11 @@ export const wireMCPTool = <
 }
 
 export const wireMCPPrompt = <
-  PikkuFunction extends CorePikkuFunctionSessionless<any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
 >(
-  mcpPrompt: CoreMCPPrompt<PikkuFunction>
+  mcpPrompt: CoreMCPPrompt<PikkuFunctionConfig>
 ) => {
   const promptsMeta = pikkuState('mcp', 'promptsMeta')
   const mcpPromptMeta = promptsMeta[mcpPrompt.name]

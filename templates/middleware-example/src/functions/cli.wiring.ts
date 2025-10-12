@@ -17,6 +17,7 @@ const cliNoOpFunction = pikkuSessionlessFunc({
     return { success: true }
   },
   middleware: [functionMiddleware],
+  auth: false, // No authentication required for this example
 })
 
 wireCLI({

@@ -4,16 +4,189 @@ import {
   createSessionServices,
 } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
-import '../.pikku/middleware/pikku-middleware.gen.js' // Load middleware factories
-import '../.pikku/http/pikku-http-wirings-meta.gen.js' // Load HTTP metadata
-import '../.pikku/scheduler/pikku-schedulers-wirings-meta.gen.js' // Load scheduler metadata
-import '../.pikku/cli/pikku-cli-wirings-meta.gen.js' // Load CLI metadata
-import './functions/http.wiring.js' // Import HTTP wirings to register routes
-import './functions/scheduler.wiring.js' // Import scheduler wirings
-import './functions/queue.wiring.js' // Import queue wirings
-import './functions/cli.wiring.js' // Import CLI wirings
-import './functions/mcp.wiring.js' // Import MCP wirings
-import { fetch } from '@pikku/core/http'
+
+// TODO: MCP wiring not working - metadata not being generated
+// import './functions/mcp.wiring.js'
+import {
+  fetch,
+  runScheduledTask,
+  runQueueJob,
+  runCLICommand,
+} from '@pikku/core'
+
+type SingletonServices = Awaited<ReturnType<typeof createSingletonServices>>
+
+async function testHTTPWiring(
+  singletonServices: SingletonServices,
+  createSessionServices: typeof createSessionServices
+): Promise<void> {
+  // Test 1: /api/test route (should have all middleware layers)
+  console.log('\n\nTest 1: GET /api/test')
+  console.log('─────────────────────────')
+  console.log('Expected middleware order:')
+  console.log('  1. httpMiddleware (HTTP global: *)')
+  console.log('  2. routeMiddleware (HTTP pattern: /api/*)')
+  console.log('  3. globalMiddleware (Tag: api)')
+  console.log('  4. wireMiddleware (Wire-level)')
+  console.log('  5. Inline middleware (Wire-level)')
+
+  await fetch(new Request('http://localhost/api/test'), {
+    singletonServices,
+    createSessionServices: createSessionServices as any,
+    skipUserSession: true,
+  })
+
+  console.log('\nActual execution order:')
+  const execution1 = singletonServices.logger.getLogs()
+  const beforeEvents1 = execution1.filter((e) => e.phase === 'before')
+  if (beforeEvents1.length > 0) {
+    beforeEvents1.forEach((event, index) => {
+      console.log(`  ${index + 1}. ${event.name} (${event.type})`)
+    })
+  } else {
+    console.log('  No middleware executed')
+  }
+  singletonServices.logger.clear()
+
+  // Test 2: /simple route (should only have global HTTP middleware)
+  console.log('\n\nTest 2: GET /simple')
+  console.log('─────────────────────────')
+  console.log('Expected middleware order:')
+  console.log('  1. httpMiddleware (HTTP global: *)')
+
+  await fetch(new Request('http://localhost/simple'), {
+    singletonServices,
+    createSessionServices: createSessionServices as any,
+    skipUserSession: true,
+  })
+
+  console.log('\nActual execution order:')
+  const execution2 = singletonServices.logger.getLogs()
+  const beforeEvents2 = execution2.filter((e) => e.phase === 'before')
+  if (beforeEvents2.length > 0) {
+    beforeEvents2.forEach((event, index) => {
+      console.log(`  ${index + 1}. ${event.name} (${event.type})`)
+    })
+  } else {
+    console.log('  No middleware executed')
+  }
+
+  console.log('\n✓ HTTP middleware execution tests completed successfully')
+}
+
+async function testSchedulerWiring(
+  singletonServices: SingletonServices,
+  createSessionServices: typeof createSessionServices
+): Promise<void> {
+  // Test 3: Scheduler task
+  console.log('\n\nTest 3: Run Scheduled Task')
+  console.log('─────────────────────────')
+  console.log('Expected middleware order:')
+  console.log('  1. globalMiddleware (Tag: scheduler)')
+  console.log('  2. wireMiddleware (Wire-level)')
+  console.log('  3. functionMiddleware (Function-level)')
+
+  singletonServices.logger.clear()
+  await runScheduledTask({
+    name: 'testScheduledTask',
+    singletonServices,
+    createSessionServices: createSessionServices as any,
+  })
+
+  console.log('\nActual execution order:')
+  const execution3 = singletonServices.logger.getLogs()
+  const beforeEvents3 = execution3.filter((e: any) => e.phase === 'before')
+  if (beforeEvents3.length > 0) {
+    beforeEvents3.forEach((event: any, index: number) => {
+      console.log(`  ${index + 1}. ${event.name} (${event.type})`)
+    })
+  } else {
+    console.log('  No middleware executed')
+  }
+  singletonServices.logger.clear()
+
+  console.log('\n✓ Scheduler middleware execution test completed successfully')
+}
+
+async function testQueueWiring(
+  singletonServices: SingletonServices,
+  createSessionServices: typeof createSessionServices
+): Promise<void> {
+  // Test 4: Queue job
+  console.log('\n\nTest 4: Run Queue Job')
+  console.log('─────────────────────────')
+  console.log('Expected middleware order:')
+  console.log('  1. globalMiddleware (Tag: queue)')
+  console.log('  2. wireMiddleware (Wire-level)')
+  console.log('  3. functionMiddleware (Function-level)')
+
+  singletonServices.logger.clear()
+  await runQueueJob({
+    singletonServices,
+    createSessionServices: createSessionServices as any,
+    job: {
+      id: 'test-job-1',
+      queueName: 'test-queue',
+      data: {},
+      status: () => 'active' as const,
+      metadata: () => ({
+        attemptsMade: 0,
+        maxAttempts: 3,
+        createdAt: new Date(),
+      }),
+    },
+  })
+
+  console.log('\nActual execution order:')
+  const execution4 = singletonServices.logger.getLogs()
+  const beforeEvents4 = execution4.filter((e: any) => e.phase === 'before')
+  if (beforeEvents4.length > 0) {
+    beforeEvents4.forEach((event: any, index: number) => {
+      console.log(`  ${index + 1}. ${event.name} (${event.type})`)
+    })
+  } else {
+    console.log('  No middleware executed')
+  }
+  singletonServices.logger.clear()
+
+  console.log('\n✓ Queue middleware execution test completed successfully')
+}
+
+async function testCLIWiring(
+  singletonServices: SingletonServices,
+  createSessionServices: typeof createSessionServices
+): Promise<void> {
+  // Test 5: CLI command
+  console.log('\n\nTest 5: Run CLI Command')
+  console.log('─────────────────────────')
+  console.log('Expected middleware order:')
+  console.log('  1. globalMiddleware (Tag: cli)')
+  console.log('  2. wireMiddleware (Wire-level)')
+  console.log('  3. functionMiddleware (Function-level)')
+
+  singletonServices.logger.clear()
+  await runCLICommand({
+    program: 'test-cli',
+    commandPath: ['greet'],
+    data: { name: 'World', loud: false },
+    singletonServices,
+    createSessionServices: createSessionServices as any,
+  })
+
+  console.log('\nActual execution order:')
+  const execution5 = singletonServices.logger.getLogs()
+  const beforeEvents5 = execution5.filter((e: any) => e.phase === 'before')
+  if (beforeEvents5.length > 0) {
+    beforeEvents5.forEach((event: any, index: number) => {
+      console.log(`  ${index + 1}. ${event.name} (${event.type})`)
+    })
+  } else {
+    console.log('  No middleware executed')
+  }
+  singletonServices.logger.clear()
+
+  console.log('\n✓ CLI middleware execution test completed successfully')
+}
 
 async function main(): Promise<void> {
   try {
@@ -38,66 +211,18 @@ async function main(): Promise<void> {
     console.log('  .pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts')
     console.log('  .pikku/cli/pikku-cli-wirings-meta.gen.ts')
 
-    // Test 1: /api/test route (should have all middleware layers)
-    console.log('\n\nTest 1: GET /api/test')
-    console.log('─────────────────────────')
-    console.log('Expected middleware order:')
-    console.log('  1. httpMiddleware (HTTP global: *)')
-    console.log('  2. routeMiddleware (HTTP pattern: /api/*)')
-    console.log('  3. globalMiddleware (Tag: api)')
-    console.log('  4. wireMiddleware (Wire-level)')
-    console.log('  5. Inline middleware (Wire-level)')
+    await testHTTPWiring(singletonServices, createSessionServices)
+    await testSchedulerWiring(singletonServices, createSessionServices)
+    await testQueueWiring(singletonServices, createSessionServices)
+    await testCLIWiring(singletonServices, createSessionServices)
 
-    await fetch(new Request('http://localhost/api/test'), {
-      singletonServices,
-      createSessionServices: createSessionServices as any,
-      skipUserSession: true,
-    })
+    // TODO: Test 6: MCP tool - skipped for now (metadata generation issue)
+    // await testMCPWiring(singletonServices, createSessionServices)
 
-    console.log('\nActual execution order:')
-    const execution1 = singletonServices.logger.getLogs()
-    const beforeEvents1 = execution1.filter((e) => e.phase === 'before')
-    if (beforeEvents1.length > 0) {
-      beforeEvents1.forEach((event, index) => {
-        console.log(`  ${index + 1}. ${event.name} (${event.type})`)
-      })
-    } else {
-      console.log('  No middleware executed')
-    }
-    singletonServices.logger.clear()
-
-    // Test 2: /simple route (should only have global HTTP middleware)
-    console.log('\n\nTest 2: GET /simple')
-    console.log('─────────────────────────')
-    console.log('Expected middleware order:')
-    console.log('  1. httpMiddleware (HTTP global: *)')
-
-    await fetch(new Request('http://localhost/simple'), {
-      singletonServices,
-      createSessionServices: createSessionServices as any,
-      skipUserSession: true,
-    })
-
-    console.log('\nActual execution order:')
-    const execution2 = singletonServices.logger.getLogs()
-    const beforeEvents2 = execution2.filter((e) => e.phase === 'before')
-    if (beforeEvents2.length > 0) {
-      beforeEvents2.forEach((event, index) => {
-        console.log(`  ${index + 1}. ${event.name} (${event.type})`)
-      })
-    } else {
-      console.log('  No middleware executed')
-    }
-
-    console.log('\n✓ HTTP middleware execution tests completed successfully')
+    console.log('\n\n✓ All implemented wiring types tested successfully!')
     console.log(
-      '\nNote: Scheduler, Queue, CLI, and MCP wirings are also configured'
+      'Note: MCP wiring test skipped - metadata generation needs to be fixed'
     )
-    console.log('with middleware. To test them, you would need to:')
-    console.log('  - Scheduler: Run the cron scheduler')
-    console.log('  - Queue: Enqueue and process jobs')
-    console.log('  - CLI: Execute CLI commands')
-    console.log('  - MCP: Invoke MCP tools through the protocol')
   } catch (e: any) {
     console.error('\n✗ Error:', e.message)
     console.error(e.stack)

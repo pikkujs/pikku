@@ -7,13 +7,16 @@ import {
   type CreateSessionServices,
 } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
-import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -27,16 +30,25 @@ export type RunScheduledTasksParams = {
 }
 
 export const wireScheduler = <
-  PikkuFunction extends CorePikkuFunctionSessionless<void, void>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<void, void>
+  >,
 >(
-  scheduledTask: CoreScheduledTask<PikkuFunction>
+  scheduledTask: CoreScheduledTask<PikkuFunctionConfig>
 ) => {
   const meta = pikkuState('scheduler', 'meta')
   const taskMeta = meta[scheduledTask.name]
   if (!taskMeta) {
     throw new Error('Task metadata not found')
   }
-  addFunction(taskMeta.pikkuFuncName, scheduledTask)
+  addFunction(taskMeta.pikkuFuncName, {
+    func: scheduledTask.func.func,
+    auth: scheduledTask.func.auth,
+    permissions: scheduledTask.func.permissions,
+    middleware: scheduledTask.func.middleware as any,
+    tags: scheduledTask.func.tags,
+    docs: scheduledTask.func.docs as any,
+  })
 
   const tasks = pikkuState('scheduler', 'tasks')
   if (tasks.has(scheduledTask.name)) {

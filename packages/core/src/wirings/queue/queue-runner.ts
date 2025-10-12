@@ -1,6 +1,9 @@
 import type { CoreServices } from '../../types/core.types.js'
 import type { CoreQueueWorker, QueueJob, PikkuQueue } from './queue.types.js'
-import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import type {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
@@ -43,12 +46,13 @@ export class QueueJobDiscardedError extends PikkuError {
 export const wireQueueWorker = <
   InputData = any,
   OutputData = any,
-  PikkuFunction extends CorePikkuFunctionSessionless<
-    InputData,
-    OutputData
-  > = CorePikkuFunctionSessionless<InputData, OutputData>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<InputData, OutputData>
+  > = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<InputData, OutputData>
+  >,
 >(
-  queueWorker: CoreQueueWorker<PikkuFunction>
+  queueWorker: CoreQueueWorker<PikkuFunctionConfig>
 ) => {
   // Get processor metadata
   const meta = pikkuState('queue', 'meta')
@@ -60,7 +64,14 @@ export const wireQueueWorker = <
   }
 
   // Register the function with pikku
-  addFunction(processorMeta.pikkuFuncName, queueWorker)
+  addFunction(processorMeta.pikkuFuncName, {
+    func: queueWorker.func.func,
+    auth: queueWorker.func.auth,
+    permissions: queueWorker.func.permissions,
+    middleware: queueWorker.func.middleware as any,
+    tags: queueWorker.func.tags,
+    docs: queueWorker.func.docs as any,
+  })
 
   // Store processor definition in state - runtime adapters will pick this up
   const registrations = pikkuState('queue', 'registrations')

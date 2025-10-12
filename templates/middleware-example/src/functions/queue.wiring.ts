@@ -1,3 +1,6 @@
+// Ensure queue metadata is loaded before calling wireQueueWorker
+import '../../.pikku/queue/pikku-queue-workers-wirings-meta.gen.js'
+
 import { wireQueueWorker, addMiddleware } from '../../.pikku/pikku-types.gen.js'
 import { globalMiddleware } from '../middleware/global.js'
 import { wireMiddleware } from '../middleware/wire.js'

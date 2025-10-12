@@ -336,9 +336,8 @@ export function extractFunctionName(
     }
   }
 
-  // First, figure out what function we're really dealing with
-  let mainFunc = callExpr
-  let originalCallExpr = callExpr // Keep track of the original call expression for name extraction
+  // Keep track of the original call expression for position-based naming
+  let originalCallExpr = callExpr
 
   // For direct pikku function calls where callExpr is the call expression itself
   if (ts.isCallExpression(callExpr)) {
@@ -371,7 +370,7 @@ export function extractFunctionName(
             ts.isArrowFunction(firstArg) ||
             ts.isFunctionExpression(firstArg)
           ) {
-            mainFunc = firstArg // Use the arrow function directly instead of the call expression
+            // mainFunc = firstArg // Use the arrow function directly instead of the call expression
           }
         }
       }
@@ -418,7 +417,7 @@ export function extractFunctionName(
                         (ts.isArrowFunction(firstArg) ||
                           ts.isFunctionExpression(firstArg))
                       ) {
-                        mainFunc = firstArg
+                        // mainFunc = firstArg
 
                         // Check if the variable is exported
                         if (
@@ -437,7 +436,7 @@ export function extractFunctionName(
                       ts.isFunctionExpression(funcDecl.initializer) ||
                       ts.isArrowFunction(funcDecl.initializer)
                     ) {
-                      mainFunc = funcDecl.initializer
+                      // mainFunc = funcDecl.initializer
 
                       // Check if the variable is exported
                       if (
@@ -453,7 +452,7 @@ export function extractFunctionName(
                       break
                     }
                   } else if (ts.isFunctionDeclaration(funcDecl)) {
-                    mainFunc = funcDecl
+                    // mainFunc = funcDecl
 
                     // Check if the function is exported
                     if (
@@ -477,7 +476,7 @@ export function extractFunctionName(
                 }
               } else {
                 // If we can't resolve the symbol, use the identifier itself
-                mainFunc = prop.initializer
+                // mainFunc = prop.initializer
               }
               break
             } else if (
@@ -485,7 +484,7 @@ export function extractFunctionName(
               ts.isArrowFunction(prop.initializer)
             ) {
               // func: () => {} or func: function() {} - use directly
-              mainFunc = prop.initializer
+              // mainFunc = prop.initializer
               break
             }
           } else if (
@@ -520,7 +519,7 @@ export function extractFunctionName(
                     (ts.isArrowFunction(firstArg) ||
                       ts.isFunctionExpression(firstArg))
                   ) {
-                    mainFunc = firstArg
+                    // mainFunc = firstArg
 
                     // Check if the variable is exported
                     if (
@@ -539,7 +538,7 @@ export function extractFunctionName(
                   ts.isFunctionExpression(shorthandDecl.initializer) ||
                   ts.isArrowFunction(shorthandDecl.initializer)
                 ) {
-                  mainFunc = shorthandDecl.initializer
+                  // mainFunc = shorthandDecl.initializer
 
                   // Check if the variable is exported
                   if (
@@ -555,7 +554,7 @@ export function extractFunctionName(
                   break
                 }
               } else if (ts.isFunctionDeclaration(shorthandDecl)) {
-                mainFunc = shorthandDecl
+                // mainFunc = shorthandDecl
 
                 // Check if the function is exported
                 if (
@@ -603,6 +602,10 @@ export function extractFunctionName(
             ts.isIdentifier(decl.initializer.expression) &&
             decl.initializer.expression.text.startsWith('pikku')
           ) {
+            // Update originalCallExpr to use the call expression position
+            // instead of the variable declaration position
+            originalCallExpr = decl.initializer
+
             // Check for object with 'name' property in first argument
             const firstArg = decl.initializer.arguments[0]
             if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
@@ -626,7 +629,7 @@ export function extractFunctionName(
                 (ts.isArrowFunction(firstArg) ||
                   ts.isFunctionExpression(firstArg))
               ) {
-                mainFunc = firstArg
+                // mainFunc = firstArg
               }
             }
 
@@ -643,7 +646,7 @@ export function extractFunctionName(
             ts.isFunctionExpression(decl.initializer) ||
             ts.isArrowFunction(decl.initializer)
           ) {
-            mainFunc = decl.initializer
+            // mainFunc = decl.initializer
 
             // Check if the variable is exported
             if (isNamedExport(decl) && ts.isIdentifier(decl.name)) {
@@ -653,7 +656,7 @@ export function extractFunctionName(
             }
           }
         } else if (ts.isFunctionDeclaration(decl)) {
-          mainFunc = decl
+          // mainFunc = decl
 
           // Check if the function is exported
           if (
@@ -672,8 +675,10 @@ export function extractFunctionName(
     }
   }
 
-  // Now generate the deterministic function name based on the resolved function
-  result.pikkuFuncName = makeDeterministicAnonName(mainFunc, checker)
+  // Generate the deterministic function name based on the original call expression
+  // (the config), not the resolved inner function. This ensures the metadata key
+  // matches what will be looked up at runtime when referencing the config object.
+  result.pikkuFuncName = makeDeterministicAnonName(originalCallExpr, checker)
 
   // Continue with regular name extraction for remaining cases
   // 1) const foo = pikkuFunc(...)

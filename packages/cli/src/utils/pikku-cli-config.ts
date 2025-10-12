@@ -91,6 +91,7 @@ const _getPikkuCLIConfig = async (
     const queueDir = join(result.outDir, 'queue')
     const mcpDir = join(result.outDir, 'mcp')
     const cliDir = join(result.outDir, 'cli')
+    const middlewareDir = join(result.outDir, 'middleware')
 
     // Create directories if they don't exist (will be done lazily when files are written)
 
@@ -236,7 +237,13 @@ const _getPikkuCLIConfig = async (
 
     // Middleware
     if (!result.middlewareFile) {
-      result.middlewareFile = join(result.outDir, 'pikku-middleware.gen.ts')
+      result.middlewareFile = join(middlewareDir, 'pikku-middleware.gen.ts')
+    }
+    if (!result.middlewareGroupsMetaFile) {
+      result.middlewareGroupsMetaFile = join(
+        middlewareDir,
+        'pikku-middleware-groups-meta.gen.ts'
+      )
     }
 
     // Bootstrap files
