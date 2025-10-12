@@ -26,9 +26,10 @@ export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
   meta: HTTPWiringsMeta
   files: Set<string>
-  // HTTP middleware calls tracking
-  globalMiddleware: string[] // Global HTTP middleware (from addHTTPMiddleware([...]))
-  routeMiddleware: Map<string, string[]> // pattern -> middleware names (from addHTTPMiddleware('/path', [...]))
+  // HTTP middleware calls tracking - route pattern -> middleware names
+  // Pattern '*' matches all routes (from addHTTPMiddleware([...]))
+  // Pattern '/api/*' matches specific routes (from addHTTPMiddleware('/api/*', [...]))
+  routeMiddleware: Map<string, string[]>
 }
 
 export interface InspectorFunctionState {

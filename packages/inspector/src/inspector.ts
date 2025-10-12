@@ -44,7 +44,6 @@ export const inspect = (
         options: {},
       },
       files: new Set(),
-      globalMiddleware: [],
       routeMiddleware: new Map(),
     },
     channels: {

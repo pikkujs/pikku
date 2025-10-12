@@ -26,17 +26,27 @@ export interface FunctionServicesMeta {
 }
 
 /**
- * Metadata for middleware at any level (wire, global, or function)
- * - type: 'wire' | 'global' = wire/global level middleware
- * - type: undefined = function-level middleware
+ * Metadata for middleware at any level
+ * - type: 'http' = HTTP route middleware (global or pattern-specific)
+ * - type: 'tag' = Tag-based middleware
+ * - type: 'wire' = Wire-level middleware (explicit or from tags)
  */
-export type MiddlewareMetadata = {
-  type?: 'wire' | 'global' // Omit for function-level
-  name: string // Middleware function name (pikkuMiddlewareName)
-  src?: 'tag' | 'http' // How it was added (omit if explicit)
-  tag?: string // If src='tag', which tag
-  pattern?: string // If src='http', which route pattern
-}
+export type MiddlewareMetadata =
+  | {
+      type: 'http'
+      name: string
+      route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
+    }
+  | {
+      type: 'tag'
+      name: string
+      tag: string // Tag name
+    }
+  | {
+      type: 'wire'
+      name: string
+      tag?: string // Optional: if wire middleware came from a tag
+    }
 
 export type FunctionRuntimeMeta = {
   pikkuFuncName: string

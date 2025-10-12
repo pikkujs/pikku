@@ -1,0 +1,18 @@
+{
+  "name": "@pikku/templates-middleware-example",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "tsc": "tsc",
+    "pikku": "pikku",
+    "test": "node --test --import tsx src/tests/*.test.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.9.11"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.9.14",
+    "@types/node": "^24",
+    "typescript": "^5.6"
+  }
+}

@@ -78,42 +78,34 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  // Handle addHTTPMiddleware(...) - global or route-specific
+  // Handle addHTTPMiddleware(...) - route-based middleware
   if (expression.text === 'addHTTPMiddleware') {
     // Two signatures:
-    // 1. addHTTPMiddleware([middleware1, middleware2]) - global
-    // 2. addHTTPMiddleware('/path/*', [middleware1, middleware2]) - route-specific
+    // 1. addHTTPMiddleware([middleware1, middleware2]) - defaults to route '*'
+    // 2. addHTTPMiddleware('/path/*', [middleware1, middleware2]) - specific route
 
     const firstArg = args[0]
     if (!firstArg) return
 
-    // Check if first arg is a string (route pattern) or array (global middleware)
+    let pattern = '*' // default to all routes
+    let middlewareArrayArg = firstArg
+
+    // Check if first arg is a string (route pattern)
     if (ts.isStringLiteral(firstArg)) {
-      // Route-specific: addHTTPMiddleware('/path', [middleware])
-      const pattern = firstArg.text
-      const middlewareArrayArg = args[1]
-
+      pattern = firstArg.text
+      middlewareArrayArg = args[1]
       if (!middlewareArrayArg) return
+    }
 
-      const middlewareNames = extractMiddlewarePikkuNames(
-        middlewareArrayArg,
-        checker
+    const middlewareNames = extractMiddlewarePikkuNames(
+      middlewareArrayArg,
+      checker
+    )
+    if (middlewareNames.length > 0) {
+      state.http.routeMiddleware.set(pattern, middlewareNames)
+      logger.debug(
+        `• Found HTTP route middleware: ${pattern} -> [${middlewareNames.join(', ')}]`
       )
-      if (middlewareNames.length > 0) {
-        state.http.routeMiddleware.set(pattern, middlewareNames)
-        logger.debug(
-          `• Found HTTP route middleware: ${pattern} -> [${middlewareNames.join(', ')}]`
-        )
-      }
-    } else {
-      // Global: addHTTPMiddleware([middleware])
-      const middlewareNames = extractMiddlewarePikkuNames(firstArg, checker)
-      if (middlewareNames.length > 0) {
-        state.http.globalMiddleware.push(...middlewareNames)
-        logger.debug(
-          `• Found HTTP global middleware: [${middlewareNames.join(', ')}]`
-        )
-      }
     }
     return
   }
