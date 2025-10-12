@@ -8,15 +8,25 @@ import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
 
 // Tag middleware for CLI
-export const cliTagMiddleware = () => addMiddleware('cli', [tagMiddleware('cli')])
+export const cliTagMiddleware = () =>
+  addMiddleware('cli', [tagMiddleware('cli')])
 
 wireCLI({
   program: 'test-cli',
-  middleware: [wireMiddleware],
+  middleware: [wireMiddleware('cli')],
+  tags: ['cli'],
   commands: {
-    greet: pikkuCLICommand({
-      command: 'test <name>',
+    command: pikkuCLICommand({
+      command: 'command',
       func: noOpFunction,
+      middleware: [wireMiddleware('command')],
+      subcommands: {
+        subcommand: pikkuCLICommand({
+          command: 'subcommand',
+          func: noOpFunction,
+          middleware: [wireMiddleware('subcommand')],
+        }),
+      },
     }),
   },
 })

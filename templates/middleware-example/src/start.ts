@@ -40,9 +40,9 @@ async function main(): Promise<void> {
     const httpTest1Passed = await testHTTPWiring(
       '/api/test',
       [
-        { name: '/api/*', type: 'route' },
         { name: 'global', type: 'http' },
-        { name: 'wire', type: 'wire' },
+        { name: '/api/*', type: 'route' },
+        { name: 'api-test', type: 'wire' },
         { name: 'inline', type: 'wire' },
         { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     const schedulerPassed = await testSchedulerWiring(
       [
         { name: 'scheduler', type: 'tag' },
-        { name: 'wire', type: 'wire' },
+        { name: 'scheduler', type: 'wire' },
         { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     const queuePassed = await testQueueWiring(
       [
         { name: 'queue', type: 'tag' },
-        { name: 'wire', type: 'wire' },
+        { name: 'queue', type: 'wire' },
         { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],
@@ -89,7 +89,17 @@ async function main(): Promise<void> {
     // Test CLI
     const cliPassed = await testCLIWiring(
       [
-        { name: 'wire', type: 'wire' },
+        { name: 'cli', type: 'tag' },
+        { name: 'cli', type: 'wire' },
+        { name: 'command', type: 'wire' },
+        { name: 'function', type: 'tag' },
+        { name: 'noOp', type: 'function' },
+      ],
+      [
+        { name: 'cli', type: 'tag' },
+        { name: 'cli', type: 'wire' },
+        { name: 'command', type: 'wire' },
+        { name: 'subcommand', type: 'wire' },
         { name: 'function', type: 'tag' },
         { name: 'noOp', type: 'function' },
       ],

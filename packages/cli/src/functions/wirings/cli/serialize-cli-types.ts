@@ -13,7 +13,7 @@ export const serializeCLITypes = (
  * CLI-specific type definitions for tree-shaking optimization
  */
 
-import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender } from '@pikku/core'
+import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender, AnyCLICommand as AnyCLICommandCore, CoreCLICommandConfig } from '@pikku/core'
 import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -31,45 +31,21 @@ ${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : 
 type PikkuCLIRender<Data, RequiredServices extends SingletonServices = SingletonServices> = CorePikkuCLIRender<Data, RequiredServices, Session>
 
 /**
- * Extract input parameters from a Pikku function config type
+ * CLI command configuration with project-specific types.
+ * Uses CoreCLICommandConfig from @pikku/core with local middleware and render types.
  */
-type ExtractFunctionInput<Func> = Func extends PikkuFunctionConfig<infer Input, any>
-  ? Input
-  : never
-
-/**
- * Extract output type from a Pikku function config type
- */
-type ExtractFunctionOutput<Func> = Func extends PikkuFunctionConfig<any, infer Output>
-  ? Output
-  : never
-
-/**
- * CLI command configuration that infers options from function input type
- */
-type CLICommandConfig<Func> = {
-  command: string
-  func: Func
-  description?: string
-  render?: PikkuCLIRender<ExtractFunctionOutput<Func>>
-  options?: Partial<Record<keyof ExtractFunctionInput<Func>, {
-    description?: string
-    short?: string
-    default?: ExtractFunctionInput<Func>[keyof ExtractFunctionInput<Func>]
-  }>> & Record<string, {
-    description?: string
-    short?: string
-    default?: any
-  }>
-  subcommands?: Record<string, any>
-  auth?: boolean
-  permissions?: any[]
-}
+type CLICommandConfig<Func extends PikkuFunctionConfig<any, any>> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>>
 
 /**
  * Result type for CLI command configuration
  */
-type CLICommandResult<Func> = CLICommandConfig<Func>
+type CLICommandResult<Func extends PikkuFunctionConfig<any, any>> = CLICommandConfig<Func>
+
+/**
+ * CLI-specific command type with proper typing.
+ * Uses the core AnyCLICommand type with local middleware and render types.
+ */
+type AnyCLICommand = AnyCLICommandCore<PikkuFunctionConfig<any, any>, any, PikkuMiddleware, PikkuCLIRender<any>>
 
 /**
  * Type definition for CLI applications with commands and global options.
@@ -77,7 +53,7 @@ type CLICommandResult<Func> = CLICommandConfig<Func>
  * @template Commands - Type describing the command structure
  * @template GlobalOptions - Type for global CLI options
  */
-type CLIWiring<Commands, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, PikkuCLIRender<any>>
+type CLIWiring<Commands extends Record<string, AnyCLICommand>, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, PikkuCLIRender<any>>
 
 /**
  * Registers a CLI application with the Pikku framework.
@@ -87,7 +63,7 @@ type CLIWiring<Commands, GlobalOptions> = CoreCLI<Commands, GlobalOptions, Pikku
  * @template GlobalOptions - Type for global CLI options
  * @param cli - CLI definition with program name, commands, and global options
  */
-export const wireCLI = <Commands, GlobalOptions>(
+export const wireCLI = <Commands extends Record<string, AnyCLICommand>, GlobalOptions>(
   cli: CLIWiring<Commands, GlobalOptions>
 ) => {
   wireCLICore(cli as any)

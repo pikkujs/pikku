@@ -14,6 +14,7 @@ import {
   CLIOption,
   CLIProgramState,
   CorePikkuCLIRender,
+  AnyCLICommand,
 } from './cli.types.js'
 import type {
   CoreSingletonServices,
@@ -40,7 +41,10 @@ const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
  * Registers a CLI command tree and all its functions
  */
 export const wireCLI = <
-  Commands,
+  Commands extends Record<
+    string,
+    AnyCLICommand<any, any, PikkuMiddleware, GlobalOutput>
+  >,
   GlobalOptions,
   PikkuMiddleware extends CorePikkuMiddleware,
   GlobalOutput,
@@ -64,6 +68,7 @@ export const wireCLI = <
       defaultJSONRenderer) as CorePikkuCLIRender<any>,
     middleware: cli.middleware || [],
     renderers: {},
+    tags: cli.tags,
   }
   pikkuState('cli', 'programs', programs)
 
@@ -154,7 +159,7 @@ function registerCLICommands(
       typeof command === 'object' ? command.options || {} : {}
     const mergedOptions = { ...inheritedOptions, ...commandOptions }
 
-    // Store the options in program state for use during execution
+    // Store the options and middleware in program state for use during execution
     const programs: Record<string, CLIProgramState> = pikkuState(
       'cli',
       'programs'
@@ -164,6 +169,14 @@ function registerCLICommands(
         programs[program].commandOptions = {}
       }
       programs[program].commandOptions![commandId] = mergedOptions
+
+      // Store command middleware from the wire config
+      if (typeof command === 'object' && command.middleware) {
+        if (!programs[program].commandMiddleware) {
+          programs[program].commandMiddleware = {}
+        }
+        programs[program].commandMiddleware![commandId] = command.middleware
+      }
     }
 
     // Unwrap the function from pikku wrappers
@@ -268,7 +281,22 @@ export async function runCLICommand({
   const programs: Record<string, CLIProgramState> =
     pikkuState('cli', 'programs') || {}
   const programData = programs[program]
-  const programMiddleware = programData?.middleware || []
+
+  // Combine program middleware + command middleware from the hierarchy
+  const allWireMiddleware: CorePikkuMiddleware[] = [
+    ...(programData?.middleware || []),
+  ]
+
+  // Walk through the command path and collect middleware from the runtime config
+  const commandParts: string[] = []
+  for (const part of commandPath) {
+    commandParts.push(part)
+    const commandId = commandParts.join('.')
+    const middleware = programData?.commandMiddleware?.[commandId]
+    if (middleware) {
+      allWireMiddleware.push(...middleware)
+    }
+  }
 
   // Get command ID and options
   const commandId = commandPath.join('.')
@@ -330,6 +358,14 @@ export async function runCLICommand({
     )
   }
 
+  // Build inherited middleware from tags
+  const inheritedMiddleware: any[] = []
+  if (programData?.tags) {
+    for (const tag of programData.tags) {
+      inheritedMiddleware.push({ type: 'tag', tag })
+    }
+  }
+
   try {
     const result = await runPikkuFunc(
       PikkuWiringTypes.cli,
@@ -341,8 +377,8 @@ export async function runCLICommand({
         data: pluckedData,
         auth: false,
         userSession,
-        inheritedMiddleware: undefined, // TODO: Add CLI metadata support
-        wireMiddleware: programMiddleware,
+        inheritedMiddleware,
+        wireMiddleware: allWireMiddleware,
         interaction,
       }
     )

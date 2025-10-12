@@ -6,20 +6,21 @@ import type { ExpectedMiddleware } from '../utils/assert-middleware.js'
  * Test CLI command middleware execution
  */
 export async function testCLIWiring(
-  expected: ExpectedMiddleware[],
+  expectedCommand: ExpectedMiddleware[],
+  expectedSubcommand: ExpectedMiddleware[],
   singletonServices: any,
   createSessionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run CLI Command')
   console.log('─────────────────────────')
 
-  const passed = await assertMiddleware(
-    expected,
+  const commandPassed = await assertMiddleware(
+    expectedCommand,
     async () => {
       await runCLICommand({
         program: 'test-cli',
-        commandPath: ['greet'],
-        data: { name: 'World' },
+        commandPath: ['command'],
+        data: {},
         singletonServices,
         createSessionServices,
       })
@@ -27,11 +28,25 @@ export async function testCLIWiring(
     singletonServices.logger
   )
 
-  if (passed) {
+  const subCommandPassed = await assertMiddleware(
+    expectedSubcommand,
+    async () => {
+      await runCLICommand({
+        program: 'test-cli',
+        commandPath: ['command', 'subcommand'],
+        data: {},
+        singletonServices,
+        createSessionServices,
+      })
+    },
+    singletonServices.logger
+  )
+
+  if (commandPassed && subCommandPassed) {
     console.log('\n✓ CLI middleware execution test completed successfully')
   } else {
     console.log('\n✗ CLI middleware execution test failed')
   }
 
-  return passed
+  return commandPassed && subCommandPassed
 }
