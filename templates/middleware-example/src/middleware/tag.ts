@@ -1,11 +1,11 @@
 import { pikkuMiddlewareFactory } from '../../.pikku/pikku-types.gen.js'
 
-export const functionMiddleware = pikkuMiddlewareFactory(
+export const tagMiddleware = pikkuMiddlewareFactory(
   (name: string) =>
     async ({ logger }, _interaction, next) => {
-      logger.info({ type: 'function', name, phase: 'before' })
+      logger.info({ type: 'tag', name, phase: 'before' })
       const result = await next()
-      logger.info({ type: 'function', name, phase: 'after' })
+      logger.info({ type: 'tag', name, phase: 'after' })
       return result
     }
 )

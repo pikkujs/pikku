@@ -40,9 +40,8 @@ async function main(): Promise<void> {
     const httpTest1Passed = await testHTTPWiring(
       '/api/test',
       [
-        { name: 'global', type: 'http' },
         { name: '/api/*', type: 'route' },
-        { name: 'api', type: 'tag' },
+        { name: 'global', type: 'http' },
         { name: 'wire', type: 'wire' },
         { name: 'inline', type: 'wire' },
         { name: 'noOp', type: 'function' },

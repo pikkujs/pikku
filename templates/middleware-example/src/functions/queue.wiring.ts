@@ -2,13 +2,13 @@
 import '../../.pikku/queue/pikku-queue-workers-wirings-meta.gen.js'
 
 import { wireQueueWorker, addMiddleware } from '../../.pikku/pikku-types.gen.js'
-import { globalMiddleware } from '../middleware/global.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
+import { tagMiddleware } from '../middleware/tag.js'
 
 // Tag middleware for queue
 export const queueTagMiddleware = () =>
-  addMiddleware('queue', [globalMiddleware])
+  addMiddleware('queue', [tagMiddleware('queue')])
 
 wireQueueWorker({
   queueName: 'test-queue',

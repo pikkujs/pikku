@@ -1,8 +1,6 @@
 // Ensure HTTP metadata is loaded before calling wireHTTP
 import '../../.pikku/http/pikku-http-wirings-meta.gen.js'
 
-import { globalMiddleware } from '../middleware/global.js'
-import { routeMiddleware } from '../middleware/route.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
 import {
@@ -11,17 +9,17 @@ import {
   pikkuMiddleware,
   wireHTTP,
 } from '../../.pikku/pikku-types.gen.js'
-import { httpMiddleware } from '../middleware/http.js'
+import { httpGlobalMiddleware, httpRouteMiddleware } from '../middleware/http.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
-export const apiTagMiddleware = () => addMiddleware('api', [globalMiddleware])
+export const apiTagMiddleware = () => addMiddleware('api', [httpRouteMiddleware])
 
 // HTTP-specific global middleware - Also works: Direct call (no tree-shaking)
-export const httpGlobalMiddleware = addHTTPMiddleware('*', [httpMiddleware])
+export const httpMiddleware = addHTTPMiddleware('*', [httpGlobalMiddleware])
 
 // Route-pattern middleware - Recommended: Use factory pattern
 export const apiRouteMiddleware = () =>
-  addHTTPMiddleware('/api/*', [routeMiddleware])
+  addHTTPMiddleware('/api/*', [httpRouteMiddleware])
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(

@@ -3,12 +3,12 @@ import {
   pikkuCLICommand,
   addMiddleware,
 } from '../../.pikku/pikku-types.gen.js'
-import { globalMiddleware } from '../middleware/global.js'
+import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
 
 // Tag middleware for CLI
-export const cliTagMiddleware = () => addMiddleware('cli', [globalMiddleware])
+export const cliTagMiddleware = () => addMiddleware('cli', [tagMiddleware('cli')])
 
 wireCLI({
   program: 'test-cli',
