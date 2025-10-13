@@ -2,7 +2,6 @@ import { existsSync } from 'fs'
 import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
-import { generateBootstrapFile } from '../../utils/generate-bootstrap-file.js'
 
 export const all: any = pikkuVoidFunc({
   func: async ({ logger, config, rpc, getInspectorState }) => {
@@ -64,51 +63,24 @@ export const all: any = pikkuVoidFunc({
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
-    // RPC bootstrap - only include internal meta file if internal RPCs exist
-    if (hasInternalRPCs) {
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.rpc,
-        [config.rpcInternalWiringMetaFile],
-        schemas,
-        middleware
-      )
-    }
-
+    // Generate HTTP
     const http = await rpc.invoke('pikkuHTTP', null)
     if (http) {
       await rpc.invoke('pikkuHTTPMap', null)
       await rpc.invoke('pikkuFetch', null)
       allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
-
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.http,
-        [config.httpWiringMetaFile, config.httpWiringsFile],
-        schemas,
-        middleware
-      )
     }
 
+    // Generate Scheduler
     const scheduler = await rpc.invoke('pikkuScheduler', null)
     if (scheduler) {
       allImports.push(
         config.schedulersWiringMetaFile,
         config.schedulersWiringFile
       )
-
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.scheduler,
-        [config.schedulersWiringMetaFile, config.schedulersWiringFile],
-        schemas,
-        middleware
-      )
     }
 
+    // Generate Queues
     const queues = await rpc.invoke('pikkuQueue', null)
     if (queues) {
       await rpc.invoke('pikkuQueueMap', null)
@@ -117,69 +89,28 @@ export const all: any = pikkuVoidFunc({
         config.queueWorkersWiringMetaFile,
         config.queueWorkersWiringFile
       )
-
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.queue,
-        [config.queueWorkersWiringMetaFile, config.queueWorkersWiringFile],
-        schemas,
-        middleware
-      )
     }
 
+    // Generate Channels
     const channels = await rpc.invoke('pikkuChannels', null)
     if (channels) {
       await rpc.invoke('pikkuChannelsMap', null)
       await rpc.invoke('pikkuWebSocketTyped', null)
       allImports.push(config.channelsWiringMetaFile, config.channelsWiringFile)
-
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.channel,
-        [config.channelsWiringMetaFile, config.channelsWiringFile],
-        schemas,
-        middleware
-      )
     }
 
+    // Generate MCP
     const mcp = await rpc.invoke('pikkuMCP', null)
     if (mcp) {
       await rpc.invoke('pikkuMCPJSON', null)
       allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
-
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.mcp,
-        [config.mcpWiringsMetaFile, config.mcpWiringsFile],
-        schemas,
-        middleware
-      )
     }
 
+    // Generate CLI
     const cli = await rpc.invoke('pikkuCLI', null)
     if (cli) {
       await rpc.invoke('pikkuCLIEntry', null)
       allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
-
-      const cliBootstrapImports = [
-        config.cliWiringMetaFile,
-        config.cliWiringsFile,
-      ]
-      if (hasInternalRPCs) {
-        cliBootstrapImports.unshift(config.rpcInternalWiringMetaFile)
-      }
-
-      await generateBootstrapFile(
-        logger,
-        config,
-        config.bootstrapFiles.cli,
-        cliBootstrapImports,
-        schemas,
-        middleware
-      )
     }
 
     if (config.nextBackendFile || config.nextHTTPFile) {

@@ -3,7 +3,7 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
-export const pikkuHTTP: any = pikkuSessionlessFunc<void, void>({
+export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { httpWiringsFile, httpWiringMetaFile, packageMappings } = config
@@ -24,6 +24,7 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, void>({
       httpWiringMetaFile,
       `import { pikkuState } from '@pikku/core'\npikkuState('http', 'meta', ${JSON.stringify(http.meta, null, 2)})`
     )
+    return true
   },
   middleware: [
     logCommandInfoAndTime({
