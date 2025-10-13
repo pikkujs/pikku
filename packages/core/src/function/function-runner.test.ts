@@ -17,10 +17,15 @@ beforeEach(() => {
 // Helper function to add function with metadata for tests
 const addTestFunction = (funcName: string, funcConfig: any) => {
   addFunction(funcName, funcConfig)
+  // Convert tags to middleware metadata
+  const middleware = funcConfig.tags
+    ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
+    : undefined
   pikkuState('function', 'meta')[funcName] = {
     pikkuFuncName: funcName,
     inputSchemaName: null,
     outputSchemaName: null,
+    middleware,
   }
 }
 
@@ -38,7 +43,7 @@ const mockServices: CoreServices = {
 } as any
 
 describe('runPikkuFunc - Integration Tests', () => {
-  test('should execute middleware in correct order: wiringTags → wiringMiddleware → funcMiddleware → funcTags', async () => {
+  test('should execute middleware in correct order: wiringTags → wiringMiddleware → funcTags → funcMiddleware', async () => {
     const executionOrder: string[] = []
     const createMiddleware = (name: string): CorePikkuMiddleware => {
       return async (services, interaction, next) => {
@@ -68,20 +73,20 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
-        middleware: [createMiddleware('wiringMiddleware')],
-        tags: ['wiringTag'],
+        wireMiddleware: [createMiddleware('wiringMiddleware')],
+        inheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
         auth: false,
         interaction: {},
       }
     )
 
     assert.equal(result, 'success')
-    // Order: wiringTags, wiringMiddleware, funcMiddleware, funcTags
+    // Order: wireInheritedMiddleware (tags), wireMiddleware, funcInheritedMiddleware (tags), funcMiddleware
     assert.deepEqual(executionOrder, [
       'wiringTag',
       'wiringMiddleware',
-      'funcMiddleware',
       'funcTag',
+      'funcMiddleware',
       'main',
     ])
   })
@@ -405,7 +410,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
-        middleware: [wiringMiddleware],
+        wireMiddleware: [wiringMiddleware],
         permissions: wiringPermissions,
         auth: false,
         interaction: {},

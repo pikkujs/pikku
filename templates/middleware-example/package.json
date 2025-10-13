@@ -5,7 +5,7 @@
   "scripts": {
     "tsc": "tsc",
     "pikku": "pikku",
-    "test": "node --test --import tsx src/tests/*.test.ts"
+    "test": "bash run-tests.sh"
   },
   "dependencies": {
     "@pikku/core": "^0.9.11"

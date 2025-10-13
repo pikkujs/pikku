@@ -55,7 +55,7 @@ describe('combineMiddleware', () => {
       PikkuWiringTypes.http,
       Math.random().toString(),
       {
-        wiringMiddleware: [mockMiddleware1, mockMiddleware2],
+        wireMiddleware: [mockMiddleware1, mockMiddleware2],
       }
     )
 
@@ -93,7 +93,7 @@ describe('combineMiddleware', () => {
     assert.equal(result[1], mockMiddleware2)
   })
 
-  test('should execute middleware in correct order: wiringTags → wiringMiddleware → funcMiddleware → funcTags', () => {
+  test('should execute middleware in correct order: wireInheritedMiddleware (tags) → wireMiddleware → funcInheritedMiddleware (tags) → funcMiddleware', () => {
     // Setup tagged middleware
     const wiringTagMiddleware: CorePikkuMiddleware = async (
       services,
@@ -132,19 +132,19 @@ describe('combineMiddleware', () => {
       PikkuWiringTypes.http,
       Math.random().toString(),
       {
-        wiringMiddleware: [wiringMiddleware],
-        wiringTags: ['wiringTag'],
+        wireInheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
+        wireMiddleware: [wiringMiddleware],
+        funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTag' }],
         funcMiddleware: [funcMiddleware],
-        funcTags: ['funcTag'],
       }
     )
 
     assert.equal(result.length, 4)
-    // Order: wiringTags, wiringMiddleware, funcMiddleware, funcTags
-    assert.equal(result[0], wiringTagMiddleware) // wiringTags first
-    assert.equal(result[1], wiringMiddleware) // wiringMiddleware second
-    assert.equal(result[2], funcMiddleware) // funcMiddleware third
-    assert.equal(result[3], funcTagMiddleware) // funcTags last
+    // Order: wireInheritedMiddleware (tags), wireMiddleware, funcInheritedMiddleware (tags), funcMiddleware
+    assert.equal(result[0], wiringTagMiddleware) // wireInheritedMiddleware tags first
+    assert.equal(result[1], wiringMiddleware) // wireMiddleware second
+    assert.equal(result[2], funcTagMiddleware) // funcInheritedMiddleware tags third
+    assert.equal(result[3], funcMiddleware) // funcMiddleware last
   })
 
   test('should handle wiring tags only', () => {
@@ -162,7 +162,7 @@ describe('combineMiddleware', () => {
       PikkuWiringTypes.http,
       Math.random().toString(),
       {
-        wiringTags: ['testTag'],
+        wireInheritedMiddleware: [{ type: 'tag', tag: 'testTag' }],
       }
     )
 
@@ -185,7 +185,7 @@ describe('combineMiddleware', () => {
       PikkuWiringTypes.http,
       Math.random().toString(),
       {
-        funcTags: ['funcTestTag'],
+        funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTestTag' }],
       }
     )
 
@@ -216,7 +216,10 @@ describe('combineMiddleware', () => {
       PikkuWiringTypes.http,
       Math.random().toString(),
       {
-        wiringTags: ['tag1', 'tag2'],
+        wireInheritedMiddleware: [
+          { type: 'tag', tag: 'tag1' },
+          { type: 'tag', tag: 'tag2' },
+        ],
       }
     )
 
@@ -240,8 +243,13 @@ describe('combineMiddleware', () => {
       PikkuWiringTypes.http,
       Math.random().toString(),
       {
-        wiringTags: ['existingTag', 'nonExistentTag'],
-        funcTags: ['anotherNonExistentTag'],
+        wireInheritedMiddleware: [
+          { type: 'tag', tag: 'existingTag' },
+          { type: 'tag', tag: 'nonExistentTag' },
+        ],
+        funcInheritedMiddleware: [
+          { type: 'tag', tag: 'anotherNonExistentTag' },
+        ],
       }
     )
 
@@ -276,7 +284,7 @@ describe('runMiddleware', () => {
       {} as any,
       {} as any,
       combineMiddleware(PikkuWiringTypes.rpc, Math.random().toString(), {
-        wiringMiddleware: [middleware1, middleware2, middleware1, middleware2],
+        wireMiddleware: [middleware1, middleware2, middleware1, middleware2],
       }),
       async () => {
         executionOrder.push('main')

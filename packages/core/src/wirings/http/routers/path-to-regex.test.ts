@@ -46,7 +46,6 @@ describe('PathToRegexRouter', () => {
       assert.ok(staticResult, 'Static route should match')
       assert.strictEqual(staticResult.route, '/static')
       assert.deepStrictEqual(staticResult.params, {})
-      assert.strictEqual(staticResult.middleware?.length, 0)
 
       const aboutResult = router.match('get', '/api/about')
       assert.ok(aboutResult, 'Static route /api/about should match')
@@ -229,7 +228,7 @@ describe('PathToRegexRouter', () => {
   })
 
   describe('Middleware Integration', () => {
-    test('should include global and route-specific middleware', () => {
+    test('should match route without returning middleware', () => {
       const globalMiddleware = [async () => {}]
       const routeMiddleware = [async () => {}]
 
@@ -252,9 +251,9 @@ describe('PathToRegexRouter', () => {
 
       const result = router.match('get', '/api/test')
       assert.ok(result, 'Route should match')
-      assert.strictEqual(result.middleware?.length, 2) // global + route-specific
-      assert.strictEqual(result.middleware?.[0], globalMiddleware[0])
-      assert.strictEqual(result.middleware?.[1], routeMiddleware[0])
+      // Router only returns route and params, middleware is handled separately
+      assert.strictEqual(result.route, '/api/test')
+      assert.deepStrictEqual(result.params, {})
     })
   })
 

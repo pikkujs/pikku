@@ -8,10 +8,10 @@ import '../.pikku/pikku-bootstrap.gen.js'
 // TODO: MCP wiring not working - metadata not being generated
 // import './functions/mcp.wiring.js'
 
-import { testHTTPWiring } from './functions/http.test.js'
-import { testSchedulerWiring } from './functions/scheduler.test.js'
-import { testQueueWiring } from './functions/queue.test.js'
-import { testCLIWiring } from './functions/cli.test.js'
+import { testHTTPWiring } from './functions/http.assert.js'
+import { testSchedulerWiring } from './functions/scheduler.assert.js'
+import { testQueueWiring } from './functions/queue.assert.js'
+import { testCLIWiring } from './functions/cli.assert.js'
 
 async function main(): Promise<void> {
   try {
