@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.9.14",
+  "version": "0.9.15",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "bin": {

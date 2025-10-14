@@ -1,5 +1,11 @@
 # @pikku/cli
 
+## 0.9.15
+
+### Patch Changes
+
+- 749d921: chore: intermin combat with new cli changes
+
 ## 0.9.14
 
 ### Patch Changes
