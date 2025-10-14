@@ -9,6 +9,7 @@ import {
   CoreSingletonServices,
   CreateSessionServices,
   CorePikkuMiddleware,
+  MiddlewareMetadata,
 } from '../../types/core.types.js'
 import {
   CorePikkuFunction,
@@ -35,6 +36,7 @@ export type RunChannelParams<ChannelData> = {
 export interface ChannelMessageMeta {
   pikkuFuncName: string
   docs?: PikkuDocs
+  middleware?: MiddlewareMetadata[]
 }
 
 export interface ChannelMeta {
@@ -50,6 +52,7 @@ export interface ChannelMeta {
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
   docs?: PikkuDocs
   tags?: string[]
+  middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
 }
 
 export type ChannelsMeta = Record<string, ChannelMeta>
@@ -67,6 +70,7 @@ export type CoreChannel<
     | CorePikkuFunction<unknown, unknown, ChannelData>
     | CorePikkuFunctionSessionless<unknown, unknown, ChannelData>,
   PikkuPermission = CorePikkuPermission<ChannelData>,
+  PikkuMiddleware = CorePikkuMiddleware,
 > = {
   name: string
   route: Channel
@@ -91,7 +95,7 @@ export type CoreChannel<
         }
     >
   >
-  middleware?: CorePikkuMiddleware[]
+  middleware?: PikkuMiddleware[]
   permissions?: Record<string, PikkuPermission[] | PikkuPermission>
   auth?: boolean
   docs?: Partial<{

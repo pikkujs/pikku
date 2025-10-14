@@ -2,35 +2,31 @@ import { match, MatchFunction } from 'path-to-regexp'
 import { MatchResult, Router } from './http-router.js'
 import { HTTPMethod } from '../http.types.js'
 import { pikkuState } from '../../../pikku-state.js'
-import { CorePikkuMiddleware } from '../../../types/core.types.js'
 
 interface CompiledRoute {
   matcher: MatchFunction<Partial<Record<string, string | string[]>>>
   route: string
-  middleware: CorePikkuMiddleware[]
 }
 
 interface StaticRoute {
   route: string
-  middleware: CorePikkuMiddleware[]
 }
 
 export class PathToRegexRouter implements Router {
   private compiledRoutes: Map<HTTPMethod, Map<string, CompiledRoute>> =
     new Map()
   private staticRoutes: Map<HTTPMethod, Map<string, StaticRoute>> = new Map()
-  private precompiledMiddleware: Map<string, CorePikkuMiddleware[]> = new Map()
   private isInitialized = false
+
+  public reset() {
+    this.compiledRoutes = new Map()
+    this.staticRoutes = new Map()
+    this.isInitialized = false
+  }
 
   public initialize() {
     const routes = pikkuState('http', 'routes')
     const channelRoutes = pikkuState('channel', 'channels')
-    const middlewareMap = pikkuState('http', 'middleware')
-
-    // Precompile middleware lookups
-    for (const [middlewareRoute, middlewareArray] of middlewareMap.entries()) {
-      this.precompiledMiddleware.set(middlewareRoute, middlewareArray)
-    }
 
     // Helper function to compile routes for a given method
     const compileRoutesForMethod = (
@@ -51,40 +47,10 @@ export class PathToRegexRouter implements Router {
         // Check if route is static (no parameters or wildcards)
         const isStaticRoute = !/\*|:/.test(normalizedRoutePath)
 
-        // Precompute middleware for this route
-        const routeMiddleware: CorePikkuMiddleware[] = []
-
-        // Add global middleware (*)
-        const globalMiddleware = this.precompiledMiddleware.get('*')
-        if (globalMiddleware) {
-          routeMiddleware.push(...globalMiddleware)
-        }
-
-        // Add route-specific middleware
-        for (const [
-          middlewareRoute,
-          middlewareArray,
-        ] of this.precompiledMiddleware.entries()) {
-          if (middlewareRoute !== '*') {
-            // Use regex test for pattern matching
-            try {
-              if (new RegExp(middlewareRoute).test(normalizedRoutePath)) {
-                routeMiddleware.push(...middlewareArray)
-              }
-            } catch {
-              // If regex is invalid, do exact match
-              if (middlewareRoute === normalizedRoutePath) {
-                routeMiddleware.push(...middlewareArray)
-              }
-            }
-          }
-        }
-
         if (isStaticRoute) {
           // Store static routes for O(1) lookup
           methodStaticRoutes.set(normalizedRoutePath, {
             route: routePath, // Keep the original route path for lookup in pikkuState
-            middleware: routeMiddleware,
           })
         } else {
           // Compile dynamic routes with path-to-regexp
@@ -95,7 +61,6 @@ export class PathToRegexRouter implements Router {
           methodCompiledRoutes.set(normalizedRoutePath, {
             matcher,
             route: routePath, // Keep the original route path for lookup in pikkuState
-            middleware: routeMiddleware,
           })
         }
       }
@@ -134,7 +99,6 @@ export class PathToRegexRouter implements Router {
         return {
           route: staticRoute.route,
           params: {},
-          middleware: staticRoute.middleware,
         }
       }
     }
@@ -152,7 +116,6 @@ export class PathToRegexRouter implements Router {
         return {
           route: compiledRoute.route,
           params: result.params,
-          middleware: compiledRoute.middleware,
         }
       }
     }

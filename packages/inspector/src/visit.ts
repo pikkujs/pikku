@@ -1,45 +1,57 @@
 import * as ts from 'typescript'
-import { addFileWithFactory } from './add-file-with-factory.js'
-import { addFileExtendsCoreType } from './add-file-extends-core-type.js'
-import { addHTTPRoute } from './add-http-route.js'
-import { addSchedule } from './add-schedule.js'
-import { addQueueWorker } from './add-queue-worker.js'
-import { addMCPResource } from './add-mcp-resource.js'
-import { addMCPTool } from './add-mcp-tool.js'
-import { addMCPPrompt } from './add-mcp-prompt.js'
-import { InspectorFilters, InspectorState, InspectorLogger } from './types.js'
-import { addFunctions } from './add-functions.js'
-import { addChannel } from './add-channel.js'
-import { addRPCInvocations } from './add-rpc-invocations.js'
-import { addMiddleware } from './add-middleware.js'
-import { addPermission } from './add-permission.js'
+import { addFileWithFactory } from './add/add-file-with-factory.js'
+import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
+import { addHTTPRoute } from './add/add-http-route.js'
+import { addSchedule } from './add/add-schedule.js'
+import { addQueueWorker } from './add/add-queue-worker.js'
+import { addMCPResource } from './add/add-mcp-resource.js'
+import { addMCPTool } from './add/add-mcp-tool.js'
+import { addMCPPrompt } from './add/add-mcp-prompt.js'
+import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
+import { addFunctions } from './add/add-functions.js'
+import { addChannel } from './add/add-channel.js'
+import { addRPCInvocations } from './add/add-rpc-invocations.js'
+import { addMiddleware } from './add/add-middleware.js'
+import { addPermission } from './add/add-permission.js'
+import { addCLI } from './add/add-cli.js'
 
 export const visitSetup = (
+  logger: InspectorLogger,
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
+  options: InspectorOptions
 ) => {
   addFileExtendsCoreType(
     node,
     checker,
     state.singletonServicesTypeImportMap,
-    'CoreSingletonServices'
+    'CoreSingletonServices',
+    state
   )
 
   addFileExtendsCoreType(
     node,
     checker,
     state.sessionServicesTypeImportMap,
-    'CoreServices'
+    'CoreServices',
+    state
   )
 
   addFileExtendsCoreType(
     node,
     checker,
     state.userSessionTypeImportMap,
-    'CoreUserSession'
+    'CoreUserSession',
+    state
+  )
+
+  addFileExtendsCoreType(
+    node,
+    checker,
+    state.configTypeImportMap,
+    'CoreConfig',
+    state
   )
 
   addFileWithFactory(
@@ -59,30 +71,32 @@ export const visitSetup = (
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
   addRPCInvocations(node, state, logger)
 
+  addMiddleware(logger, node, checker, state, options)
+  addPermission(logger, node, checker, state, options)
+
   ts.forEachChild(node, (child) =>
-    visitSetup(checker, child, state, filters, logger)
+    visitSetup(logger, checker, child, state, options)
   )
 }
 
 export const visitRoutes = (
+  logger: InspectorLogger,
   checker: ts.TypeChecker,
   node: ts.Node,
   state: InspectorState,
-  filters: InspectorFilters,
-  logger: InspectorLogger
+  options: InspectorOptions
 ) => {
-  addFunctions(node, checker, state, logger)
-  addHTTPRoute(node, checker, state, filters, logger)
-  addSchedule(node, checker, state, filters, logger)
-  addQueueWorker(node, checker, state, filters, logger)
-  addChannel(node, checker, state, filters, logger)
-  addMCPResource(node, checker, state, filters, logger)
-  addMCPTool(node, checker, state, filters, logger)
-  addMCPPrompt(node, checker, state, filters, logger)
-  addMiddleware(node, checker, state, logger)
-  addPermission(node, checker, state, logger)
+  addFunctions(logger, node, checker, state, options)
+  addHTTPRoute(logger, node, checker, state, options)
+  addSchedule(logger, node, checker, state, options)
+  addQueueWorker(logger, node, checker, state, options)
+  addChannel(logger, node, checker, state, options)
+  addCLI(logger, node, checker, state, options)
+  addMCPResource(logger, node, checker, state, options)
+  addMCPTool(logger, node, checker, state, options)
+  addMCPPrompt(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
-    visitRoutes(checker, child, state, filters, logger)
+    visitRoutes(logger, checker, child, state, options)
   )
 }

@@ -97,7 +97,6 @@ export class PikkuNextJS {
       createSessionServices: this.createSessionServices,
       skipUserSession: true,
       bubbleErrors: true,
-      ignoreMiddleware: true,
     })) as Out
   }
 

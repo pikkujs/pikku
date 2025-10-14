@@ -8,6 +8,7 @@ import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
 import { PikkuQueue } from '../wirings/queue/queue.types.js'
+import { PikkuCLI } from '../wirings/cli/cli.types.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -16,12 +17,34 @@ export enum PikkuWiringTypes {
   rpc = 'rpc',
   queue = 'queue',
   mcp = 'mcp',
+  cli = 'cli',
 }
 
 export interface FunctionServicesMeta {
   optimized: boolean
   services: string[]
 }
+
+/**
+ * Metadata for middleware at any level
+ * - type: 'http' = HTTP route middleware group (references httpGroup in pikkuState)
+ * - type: 'tag' = Tag-based middleware group (references tagGroup in pikkuState)
+ * - type: 'wire' = Wire-level individual middleware
+ */
+export type MiddlewareMetadata =
+  | {
+      type: 'http'
+      route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
+    }
+  | {
+      type: 'tag'
+      tag: string // Tag name
+    }
+  | {
+      type: 'wire'
+      name: string
+      inline?: boolean // true if inline middleware
+    }
 
 export type FunctionRuntimeMeta = {
   pikkuFuncName: string
@@ -39,6 +62,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
     tags: string[]
     docs: PikkuDocs
     isDirectFunction: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
+    middleware: MiddlewareMetadata[] // Function-level middleware (type will be undefined)
   }>
 
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
@@ -121,6 +145,7 @@ export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
   channel: PikkuChannel<unknown, Out>
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
+  cli: PikkuCLI
 }>
 
 /**
@@ -138,6 +163,28 @@ export type CorePikkuMiddleware<
 ) => Promise<void>
 
 /**
+ * A factory function that takes input and returns middleware
+ * Used when middleware needs configuration/input parameters
+ */
+export type CorePikkuMiddlewareFactory<
+  In = any,
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = (input: In) => CorePikkuMiddleware<SingletonServices, UserSession>
+
+/**
+ * A group of middleware (combination of regular middleware and factories)
+ * Used with addMiddleware() and addHTTPMiddleware() to group related middleware together
+ */
+export type CorePikkuMiddlewareGroup<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = Array<
+  | CorePikkuMiddleware<SingletonServices, UserSession>
+  | CorePikkuMiddlewareFactory<any, SingletonServices, UserSession>
+>
+
+/**
  * Factory function for creating middleware with tree-shaking support
  */
 export const pikkuMiddleware = <
@@ -147,6 +194,29 @@ export const pikkuMiddleware = <
   middleware: CorePikkuMiddleware<SingletonServices, UserSession>
 ): CorePikkuMiddleware<SingletonServices, UserSession> => {
   return middleware
+}
+
+/**
+ * Factory function for creating middleware factories
+ * Use this when your middleware needs configuration/input parameters
+ *
+ * @example
+ * ```typescript
+ * export const logMiddleware = pikkuMiddlewareFactory<LogOptions>(({
+ *   message,
+ *   level = 'info'
+ * }) => {
+ *   return pikkuMiddleware(async ({ logger }, _interaction, next) => {
+ *     logger[level](message)
+ *     await next()
+ *   })
+ * })
+ * ```
+ */
+export const pikkuMiddlewareFactory = <In = any>(
+  factory: CorePikkuMiddlewareFactory<In>
+): CorePikkuMiddlewareFactory<In> => {
+  return factory
 }
 
 /**
@@ -193,9 +263,10 @@ export type CreateSessionServices<
 /**
  * Defines a function type for creating config.
  */
-export type CreateConfig<Config extends CoreConfig> = (
-  variables?: VariablesService
-) => Promise<Config>
+export type CreateConfig<
+  Config extends CoreConfig,
+  RemainingArgs extends any[] = unknown[],
+> = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
 
 /**
  * Represents the documentation for a route, including summary, description, tags, and errors.

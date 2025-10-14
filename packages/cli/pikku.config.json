@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "bin", "types"],
+  "outDir": ".pikku",
+  "packageMappings": {
+    "../inspector/src": "@pikku/inspector"
+  },
+  "supportsImportAttributes": true,
+  "schemasFromTypes": ["PikkuCLIConfig"],
+  "websocketFile": ".pikku/pikku-websocket.gen.ts",
+  "cli": {
+    "entrypoints": {
+      "pikku": [
+        ".pikku/cli/pikku-cli.gen.ts",
+        {
+          "type": "channel",
+          "wirePath": ".pikku/cli/pikku-channel.wire.gen.ts",
+          "path": ".pikku/cli/pikku-channel.client.gen.ts"
+        }
+      ]
+    }
+  }
+}

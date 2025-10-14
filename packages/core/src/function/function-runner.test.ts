@@ -17,14 +17,19 @@ beforeEach(() => {
 // Helper function to add function with metadata for tests
 const addTestFunction = (funcName: string, funcConfig: any) => {
   addFunction(funcName, funcConfig)
+  // Convert tags to middleware metadata
+  const middleware = funcConfig.tags
+    ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
+    : undefined
   pikkuState('function', 'meta')[funcName] = {
     pikkuFuncName: funcName,
     inputSchemaName: null,
     outputSchemaName: null,
+    middleware,
   }
 }
 
-const mockServices: CoreServices = {
+const mockSingletonServices = {
   logger: {
     info: () => {},
     warn: () => {},
@@ -33,8 +38,12 @@ const mockServices: CoreServices = {
   },
 } as any
 
+const mockServices: CoreServices = {
+  ...mockSingletonServices,
+} as any
+
 describe('runPikkuFunc - Integration Tests', () => {
-  test('should execute middleware in correct order: wiringTags → wiringMiddleware → funcMiddleware → funcTags', async () => {
+  test('should execute middleware in correct order: wiringTags → wiringMiddleware → funcTags → funcMiddleware', async () => {
     const executionOrder: string[] = []
     const createMiddleware = (name: string): CorePikkuMiddleware => {
       return async (services, interaction, next) => {
@@ -61,20 +70,23 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
-        middleware: [createMiddleware('wiringMiddleware')],
-        tags: ['wiringTag'],
+        data: () => ({}),
+        wireMiddleware: [createMiddleware('wiringMiddleware')],
+        inheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
+        auth: false,
+        interaction: {},
       }
     )
 
     assert.equal(result, 'success')
-    // Order: wiringTags, wiringMiddleware, funcMiddleware, funcTags
+    // Order: wireInheritedMiddleware (tags), wireMiddleware, funcInheritedMiddleware (tags), funcMiddleware
     assert.deepEqual(executionOrder, [
       'wiringTag',
       'wiringMiddleware',
-      'funcMiddleware',
       'funcTag',
+      'funcMiddleware',
       'main',
     ])
   })
@@ -128,10 +140,13 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         permissions: wiringPermissions,
         tags: ['wiringTag'],
+        auth: false,
+        interaction: {},
       }
     )
 
@@ -157,9 +172,12 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         tags: ['wiringTag'],
+        auth: false,
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -178,9 +196,12 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
         permissions: wiringPermissions,
+        auth: false,
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -200,8 +221,11 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -221,8 +245,11 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     await assert.rejects(
       runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }),
       {
         message: 'Permission denied',
@@ -256,8 +283,11 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }
     )
 
@@ -305,8 +335,11 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }
     )
 
@@ -330,8 +363,11 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'simpleFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }
     )
 
@@ -371,17 +407,21 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
-        middleware: [wiringMiddleware],
+        data: () => ({}),
+        wireMiddleware: [wiringMiddleware],
         permissions: wiringPermissions,
+        auth: false,
+        interaction: {},
       }
     )
 
     assert.equal(result, 'success')
+    // Permissions run after middleware (middleware can set/modify session)
     assert.deepEqual(executionOrder, [
-      'wiringPermission',
       'wiringMiddleware',
+      'wiringPermission',
       'main',
     ])
   })
@@ -421,15 +461,19 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }
     )
 
     assert.equal(result, 'success')
+    // Permissions run after middleware (middleware can set/modify session)
     assert.deepEqual(executionOrder, [
-      'funcPermission',
       'funcMiddleware',
+      'funcPermission',
       'main',
     ])
   })
@@ -456,9 +500,12 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
-        data: testData,
-        session: testSession,
+        data: () => testData,
+        userSession: { get: () => testSession, set: () => {} } as any,
+        auth: false,
+        interaction: {},
       }
     )
 
@@ -488,8 +535,11 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
+        singletonServices: mockSingletonServices,
         getAllServices: asyncGetServices,
-        data: {},
+        data: () => ({}),
+        auth: false,
+        interaction: {},
       }
     )
 

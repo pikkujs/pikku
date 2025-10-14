@@ -9,22 +9,25 @@ import {
   HTTPMethod,
 } from './http.types.js'
 import {
+  CorePikkuFunction,
+  CorePikkuFunctionSessionless,
+  CorePikkuPermission,
+} from '../../function/functions.types.js'
+import {
   CoreUserSession,
   CorePikkuMiddleware,
+  CorePikkuMiddlewareGroup,
   SessionServices,
   PikkuWiringTypes,
+  PikkuInteraction,
 } from '../../types/core.types.js'
-import { MissingSessionError, NotFoundError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import {
   closeSessionServices,
   createWeakUID,
   isSerializable,
 } from '../../utils.js'
-import {
-  PikkuUserSessionService,
-  UserSessionService,
-} from '../../services/user-session-service.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -35,36 +38,41 @@ import { rpcService } from '../rpc/rpc-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
 /**
- * Registers middleware either globally or for a specific route.
+ * Registers HTTP middleware for a specific route pattern.
  *
- * When a string route pattern is provided along with middleware, the middleware
- * is applied only to that route. Otherwise, if an array is provided, it is treated
- * as global middleware (applied to all routes).
+ * This function registers middleware at runtime that will be applied to
+ * HTTP routes matching the specified pattern.
+ *
+ * For tree-shaking benefits, wrap in a factory function:
+ * `export const x = () => addHTTPMiddleware('pattern', [...])`
  *
  * @template PikkuMiddleware The middleware type.
- * @param {PikkuMiddleware[] | string} routeOrMiddleware - Either a global middleware array or a route pattern string.
- * @param {PikkuMiddleware[]} [middleware] - The middleware array to apply when a route pattern is specified.
+ * @param {string} pattern - Route pattern (e.g., '*' for all routes, '/api/*' for specific routes).
+ * @param {CorePikkuMiddlewareGroup} middleware - Array of middleware for this route pattern.
+ *
+ * @returns {CorePikkuMiddlewareGroup} The middleware array (for chaining/wrapping).
+ *
+ * @example
+ * ```typescript
+ * // Recommended: tree-shakeable
+ * export const httpGlobal = () => addHTTPMiddleware('*', [
+ *   corsMiddleware,
+ *   loggingMiddleware
+ * ])
+ *
+ * // Also works: no tree-shaking
+ * export const apiMiddleware = addHTTPMiddleware('/api/*', [
+ *   authMiddleware
+ * ])
+ * ```
  */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
-  routeOrMiddleware: PikkuMiddleware[] | string,
-  middleware?: PikkuMiddleware[]
-) => {
-  const middlewareStore = pikkuState('http', 'middleware')
-  let route = '*'
-
-  if (typeof routeOrMiddleware === 'string') {
-    route = routeOrMiddleware
-    middleware = middleware!
-  } else {
-    middleware = routeOrMiddleware
-  }
-
-  const currentMiddleware = middlewareStore.get(route)
-  if (currentMiddleware) {
-    middlewareStore.set(route, [...currentMiddleware, ...middleware])
-  } else {
-    middlewareStore.set(route, middleware)
-  }
+  pattern: string,
+  middleware: CorePikkuMiddlewareGroup
+): CorePikkuMiddlewareGroup => {
+  const httpGroups = pikkuState('middleware', 'httpGroup')
+  httpGroups[pattern] = middleware
+  return middleware
 }
 
 /**
@@ -86,10 +94,14 @@ export const wireHTTP = <
   In,
   Out,
   Route extends string,
-  PikkuFunction,
-  PikkuFunctionSessionless,
-  PikkuPermissionGroup,
-  PikkuMiddleware,
+  PikkuFunction extends CorePikkuFunction<In, Out> = CorePikkuFunction<In, Out>,
+  PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
+    In,
+    Out
+  > = CorePikkuFunctionSessionless<In, Out>,
+  PikkuPermissionGroup extends
+    CorePikkuPermission<In> = CorePikkuPermission<In>,
+  PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
 >(
   httpWiring: CoreHTTPFunctionWiring<
     In,
@@ -106,7 +118,7 @@ export const wireHTTP = <
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
-  addFunction(routeMeta.pikkuFuncName, httpWiring.func as any)
+  addFunction(routeMeta.pikkuFuncName, httpWiring.func)
   const routes = pikkuState('http', 'routes')
   if (!routes.has(httpWiring.method)) {
     routes.set(httpWiring.method, new Map())
@@ -146,8 +158,6 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
       params: matchedPath.params,
       route,
       permissions: route.permissions,
-      httpMiddleware: matchedPath.middleware,
-      middleware: route.middleware,
       meta: meta!,
     }
   }
@@ -183,16 +193,7 @@ export const createHTTPInteraction = (
 }
 
 /**
- * Validates the input data and executes the route handler with associated middleware.
- *
- * NOTE: HTTP wiring handles middleware differently from other wirings (RPC, MCP, Queue, etc.)
- * because HTTP needs to:
- * 1. Check session early for performance (before expensive body parsing)
- * 2. Handle HTTP-specific concerns (headers, cookies, SSE setup)
- * 3. Process middleware that may set up authentication/session state
- *
- * Other wirings (RPC/MCP/Queue/Scheduler) simply pass middleware/permissions/auth
- * directly to runPikkuFunc without processing them.
+ * Validates the input data and executes the route handler
  *
  * This function performs these steps:
  *  1. Sets URL parameters on the request.
@@ -205,16 +206,15 @@ export const createHTTPInteraction = (
  *  8. Sends the appropriate response.
  *
  * @param {Object} services - A collection of shared services and utilities.
- * @param {Object} matchedRoute - Contains route details, URL parameters, middleware, and optional schema.
+ * @param {Object} matchedRoute - Contains route details, URL parameters, and optional schema.
  * @param {PikkuHTTP | undefined} http - The HTTP interaction object.
  * @param {Object} options - Options for route execution (e.g., whether to coerce query strings to arrays).
  * @returns {Promise<any>} An object containing the route handler result and session services (if any).
  * @throws Throws errors like MissingSessionError or ForbiddenError on validation failures.
  */
-const executeRouteWithMiddleware = async (
+const executeRoute = async (
   services: {
     singletonServices: any
-    userSession: UserSessionService<CoreUserSession>
     createSessionServices: Function
     skipUserSession: boolean
     requestId: string
@@ -223,8 +223,6 @@ const executeRouteWithMiddleware = async (
     matchedPath: any
     params: any
     route: CoreHTTPFunctionWiring<any, any, any>
-    httpMiddleware: CorePikkuMiddleware[] | undefined
-    middleware: CorePikkuMiddleware[] | undefined
     meta: HTTPWiringMeta
   },
   http: PikkuHTTP,
@@ -232,11 +230,10 @@ const executeRouteWithMiddleware = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const { matchedPath, params, route, httpMiddleware, middleware, meta } =
-    matchedRoute
+  const userSession = new PikkuUserSessionService<CoreUserSession>()
+  const { params, route, meta } = matchedRoute
   const {
     singletonServices,
-    userSession,
     createSessionServices,
     skipUserSession,
     requestId,
@@ -253,116 +250,95 @@ const executeRouteWithMiddleware = async (
     `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`
   )
 
-  // Main route execution logic wrapped for middleware handling
-  const runMain = async () => {
-    const session = userSession.get()
+  // Ensure session is available when required
+  if (skipUserSession && requiresSession) {
+    throw new Error("Can't skip trying to get user session if auth is required")
+  }
 
-    // Ensure session is available when required
-    if (skipUserSession && requiresSession) {
-      throw new Error(
-        "Can't skip trying to get user session if auth is required"
-      )
+  const data = () => http.request!.data()
+  let channel: PikkuChannel<unknown, unknown> | undefined
+
+  if (matchedRoute.route.sse) {
+    const response = http?.response
+    if (!response) {
+      throw new Error('SSE requires a valid HTTP response object')
     }
-
-    if (requiresSession && !session) {
-      singletonServices.logger.info({
-        action: 'Rejecting route (invalid session)',
-        path: matchedPath,
-      })
-      throw new MissingSessionError()
+    if (!response.setMode) {
+      throw new Error('Response object does not support SSE mode')
     }
+    response.setMode('stream')
+    response.header('Content-Type', 'text/event-stream')
+    response.header('Cache-Control', 'no-cache')
+    response.header('Connection', 'keep-alive')
+    response.header('Transfer-Encoding', 'chunked')
+    channel = {
+      channelId: requestId,
+      openingData: await data(),
+      send: (data: any) => {
+        response.arrayBuffer(isSerializable(data) ? JSON.stringify(data) : data)
+      },
+      close: () => {
+        channel!.state = 'closed'
+        response.close?.()
+      },
+      state: 'open',
+    }
+  }
 
-    const data = await http.request!.data()
+  const interaction: PikkuInteraction = { http, channel }
 
-    const getAllServices = async () => {
-      let channel: PikkuChannel<unknown, unknown> | undefined
-      if (matchedRoute.route.sse) {
-        const response = http?.response
-        if (!response) {
-          throw new Error('SSE requires a valid HTTP response object')
-        }
-        if (!response.setMode) {
-          throw new Error('Response object does not support SSE mode')
-        }
-        response.setMode('stream')
-        response.header('Content-Type', 'text/event-stream')
-        response.header('Cache-Control', 'no-cache')
-        response.header('Connection', 'keep-alive')
-        response.header('Transfer-Encoding', 'chunked')
-        channel = {
-          channelId: requestId,
-          openingData: data,
-          send: (data: any) => {
-            response.arrayBuffer(
-              isSerializable(data) ? JSON.stringify(data) : data
-            )
-          },
-          close: () => {
-            channel!.state = 'closed'
-            response.close?.()
-          },
-          state: 'open',
-        }
-      }
+  const getAllServices = async (session?: CoreUserSession) => {
+    let channel: PikkuChannel<unknown, unknown> | undefined
 
-      // Create session-specific services for handling the request
-      sessionServices = await createSessionServices(
-        { ...singletonServices, userSession, channel },
-        { http },
-        session
-      )
+    // Create session-specific services for handling the request
+    sessionServices = await createSessionServices(
+      { ...singletonServices, userSession, channel },
+      { http },
+      session
+    )
 
-      return rpcService.injectRPCService({
+    return rpcService.injectRPCService(
+      {
         ...singletonServices,
         ...sessionServices,
         http,
         userSession,
         channel,
-      })
-    }
-
-    result = await runPikkuFunc(
-      PikkuWiringTypes.http,
-      `${meta.method}:${meta.route}`,
-      meta.pikkuFuncName,
-      {
-        getAllServices,
-        session,
-        data,
-        permissions: route.permissions,
-        coerceDataFromSchema: options.coerceDataFromSchema,
-        tags: route.tags,
-      }
+      },
+      interaction,
+      route.auth
     )
-
-    // Respond with either a binary or JSON response based on configuration
-    if (route.returnsJSON === false) {
-      http?.response?.arrayBuffer(result)
-    } else {
-      http?.response?.json(result)
-    }
-
-    http?.response?.status(200)
-    // TODO: Evaluate if the response stream should be explicitly ended.
-    // http?.response?.end()
   }
 
-  // Get function config for middleware and tags
-  const funcConfig = pikkuState('function', 'functions').get(meta.pikkuFuncName)
-
-  // Execute middleware, then run the main logic
-  await runMiddleware(
-    { ...singletonServices, userSession },
-    { http },
-    combineMiddleware(PikkuWiringTypes.http, `${meta.method}:${meta.route}`, {
-      httpMiddleware,
-      wiringMiddleware: middleware,
-      wiringTags: route.tags,
-      funcMiddleware: funcConfig?.middleware,
-      funcTags: funcConfig?.tags,
-    }),
-    runMain
+  result = await runPikkuFunc(
+    PikkuWiringTypes.http,
+    `${meta.method}:${meta.route}`,
+    meta.pikkuFuncName,
+    {
+      singletonServices,
+      getAllServices,
+      auth: route.auth !== false,
+      userSession,
+      data,
+      permissions: route.permissions,
+      inheritedMiddleware: meta.middleware,
+      wireMiddleware: route.middleware,
+      coerceDataFromSchema: options.coerceDataFromSchema,
+      tags: route.tags,
+      interaction,
+    }
   )
+
+  // Respond with either a binary or JSON response based on configuration
+  if (route.returnsJSON === false) {
+    http?.response?.arrayBuffer(result)
+  } else {
+    http?.response?.json(result)
+  }
+
+  http?.response?.status(200)
+  // TODO: Evaluate if the response stream should be explicitly ended.
+  // http?.response?.end()
 
   return sessionServices ? { result, sessionServices } : { result }
 }
@@ -442,14 +418,12 @@ export const fetchData = async <In, Out>(
     coerceDataFromSchema = true,
     bubbleErrors = false,
     generateRequestId,
-    ignoreMiddleware = false,
   }: RunHTTPWiringOptions & RunHTTPWiringParams
 ): Promise<Out | void> => {
   const requestId =
     (request as any).getHeader?.('x-request-id') ||
     generateRequestId?.() ||
     createWeakUID()
-  const userSession = new PikkuUserSessionService()
   let sessionServices: SessionServices<typeof singletonServices> | undefined
   let result: Out
 
@@ -475,21 +449,14 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ;({ result, sessionServices } = await executeRouteWithMiddleware(
+    ;({ result, sessionServices } = await executeRoute(
       {
         singletonServices,
-        userSession,
         createSessionServices,
         skipUserSession,
         requestId,
       },
-      ignoreMiddleware
-        ? {
-            ...matchedRoute,
-            middleware: undefined,
-            httpMiddleware: undefined,
-          }
-        : matchedRoute,
+      matchedRoute,
       http!,
       { coerceDataFromSchema }
     ))

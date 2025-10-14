@@ -85,16 +85,15 @@ export const runChannelConnect = async ({
 
   const userSession = new PikkuUserSessionService(channelStore, channelId)
 
-  const { channelConfig, openingData, meta, httpMiddleware } =
-    await openChannel({
-      channelId,
-      createSessionServices,
-      request,
-      route,
-      singletonServices,
-      coerceDataFromSchema,
-      userSession,
-    })
+  const { channelConfig, openingData, meta } = await openChannel({
+    channelId,
+    createSessionServices,
+    request,
+    route,
+    singletonServices,
+    coerceDataFromSchema,
+    userSession,
+  })
 
   const main = async () => {
     try {
@@ -148,9 +147,8 @@ export const runChannelConnect = async ({
     },
     { http },
     combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
-      wiringMiddleware: channelConfig.middleware,
-      wiringTags: channelConfig.tags,
-      httpMiddleware,
+      wireInheritedMiddleware: meta.middleware,
+      wireMiddleware: channelConfig.middleware,
     }),
     main
   )
@@ -171,7 +169,7 @@ export const runChannelDisconnect = async ({
   if (!sessionServices && params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
-      {},
+      { channel },
       session
     )
   }
@@ -195,7 +193,8 @@ export const runChannelMessage = async (
   let sessionServices: SessionServices | undefined
   const { openingData, channelName, session } =
     await params.channelStore.getChannelAndSession(params.channelId)
-  const { channelHandler, channelConfig } = getVariablesForChannel({
+
+  const { channel, channelHandler, channelConfig } = getVariablesForChannel({
     ...params,
     openingData,
     channelName,
@@ -203,7 +202,7 @@ export const runChannelMessage = async (
   if (params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
-      {},
+      { channel },
       session
     )
   }
@@ -211,7 +210,6 @@ export const runChannelMessage = async (
   try {
     const onMessage = processMessageHandlers(
       { ...singletonServices, ...sessionServices },
-      session,
       channelConfig,
       channelHandler
     )

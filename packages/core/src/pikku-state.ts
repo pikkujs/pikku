@@ -4,7 +4,12 @@ import {
   HTTPMethod,
   HTTPWiringsMeta,
 } from './wirings/http/http.types.js'
-import { FunctionsMeta, CorePikkuMiddleware } from './types/core.types.js'
+import {
+  FunctionsMeta,
+  CorePikkuMiddleware,
+  CorePikkuMiddlewareGroup,
+  FunctionServicesMeta,
+} from './types/core.types.js'
 import {
   CoreScheduledTask,
   ScheduledTasksMeta,
@@ -27,6 +32,7 @@ import {
   MCPToolMeta,
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
+import { CLIProgramMeta, CLIProgramState } from './wirings/cli/cli.types.js'
 
 interface PikkuState {
   function: {
@@ -69,6 +75,36 @@ interface PikkuState {
     prompts: Map<string, CoreMCPPrompt>
     promptsMeta: MCPPromptMeta
   }
+  cli: {
+    meta: Record<string, CLIProgramMeta>
+    programs: Record<string, CLIProgramState>
+  }
+  middleware: {
+    tagGroup: Record<string, CorePikkuMiddlewareGroup>
+    httpGroup: Record<string, CorePikkuMiddlewareGroup>
+    tagGroupMeta: Record<
+      string,
+      {
+        exportName: string | null
+        sourceFile: string
+        position: number
+        services: FunctionServicesMeta
+        middlewareCount: number
+        isFactory: boolean
+      }
+    >
+    httpGroupMeta: Record<
+      string,
+      {
+        exportName: string | null
+        sourceFile: string
+        position: number
+        services: FunctionServicesMeta
+        middlewareCount: number
+        isFactory: boolean
+      }
+    >
+  }
   misc: {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
@@ -89,7 +125,6 @@ export const resetPikkuState = () => {
     },
     http: {
       permissions: new Map(),
-      middleware: new Map(),
       routes: new Map(),
       meta: {},
     },
@@ -112,6 +147,16 @@ export const resetPikkuState = () => {
       toolsMeta: {} as MCPToolMeta,
       prompts: new Map(),
       promptsMeta: {} as MCPPromptMeta,
+    },
+    cli: {
+      meta: {},
+      programs: {},
+    },
+    middleware: {
+      tagGroup: {},
+      httpGroup: {},
+      tagGroupMeta: {},
+      httpGroupMeta: {},
     },
     misc: {
       errors: globalThis.pikkuState?.misc?.errors || new Map(),

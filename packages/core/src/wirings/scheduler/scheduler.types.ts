@@ -2,8 +2,12 @@ import {
   PikkuDocs,
   CoreUserSession,
   CorePikkuMiddleware,
+  MiddlewareMetadata,
 } from '../../types/core.types.js'
-import { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 
 /**
  * Represents metadata for scheduled tasks, including title, schedule, and documentation.
@@ -18,6 +22,7 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
       session?: UserSession
       docs?: PikkuDocs
       tags?: string[]
+      middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
     }
   >
 
@@ -25,7 +30,9 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
  * Represents a core scheduled task.
  */
 export type CoreScheduledTask<
-  PikkuFunction = CorePikkuFunctionSessionless<void, void>,
+  PikkuFunction = CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<void, void>
+  >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string

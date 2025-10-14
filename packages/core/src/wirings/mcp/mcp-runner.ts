@@ -1,4 +1,5 @@
 import {
+  PikkuInteraction,
   PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
@@ -14,14 +15,16 @@ import type {
   JsonRpcErrorResponse,
   PikkuMCP,
 } from './mcp.types.js'
-import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import type {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -32,7 +35,6 @@ export class MCPError extends Error {
 }
 
 export type RunMCPEndpointParams<Tools extends string = any> = {
-  session?: CoreUserSession
   singletonServices: CoreSingletonServices
   mcp?: PikkuMCP<Tools>
   createSessionServices?: CreateSessionServices<
@@ -49,16 +51,18 @@ export type JsonRpcError = {
 }
 
 export const wireMCPResource = <
-  PikkuFunction extends CorePikkuFunctionSessionless<any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
 >(
-  mcpResource: CoreMCPResource<PikkuFunction>
+  mcpResource: CoreMCPResource<PikkuFunctionConfig>
 ) => {
   const resourcesMeta = pikkuState('mcp', 'resourcesMeta')
   const mcpResourceMeta = resourcesMeta[mcpResource.uri]
   if (!mcpResourceMeta) {
     throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
   }
-  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource.func)
+  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource)
   const resources = pikkuState('mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
@@ -67,9 +71,11 @@ export const wireMCPResource = <
 }
 
 export const wireMCPTool = <
-  PikkuFunction extends CorePikkuFunctionSessionless<any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
 >(
-  mcpTool: CoreMCPTool<PikkuFunction>
+  mcpTool: CoreMCPTool<PikkuFunctionConfig>
 ) => {
   const toolsMeta = pikkuState('mcp', 'toolsMeta')
   const mcpToolMeta = toolsMeta[mcpTool.name]
@@ -85,9 +91,11 @@ export const wireMCPTool = <
 }
 
 export const wireMCPPrompt = <
-  PikkuFunction extends CorePikkuFunctionSessionless<any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<any, any>
+  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
 >(
-  mcpPrompt: CoreMCPPrompt<PikkuFunction>
+  mcpPrompt: CoreMCPPrompt<PikkuFunctionConfig>
 ) => {
   const promptsMeta = pikkuState('mcp', 'promptsMeta')
   const mcpPromptMeta = promptsMeta[mcpPrompt.name]
@@ -200,10 +208,9 @@ async function runMCPPikkuFunc(
   mcp: CoreMCPResource | CoreMCPTool | CoreMCPPrompt | undefined,
   pikkuFuncName: string | undefined,
   {
-    session,
     singletonServices,
     createSessionServices,
-    mcp: interaction,
+    mcp: mcpInteraction,
   }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
   let sessionServices: any
@@ -230,54 +237,48 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    let result: any
+    const interaction: PikkuInteraction = { mcp: mcpInteraction }
 
-    // Main MCP execution logic wrapped for middleware handling
-    const runMain = async () => {
-      const getAllServices = async () => {
-        if (createSessionServices) {
-          const services = await createSessionServices(
-            singletonServices,
-            { mcp: interaction },
-            session
-          )
-          sessionServices = services
-          return rpcService.injectRPCService({
-            ...singletonServices,
-            ...services,
-            mcp: interaction,
-          })
-        }
-        return rpcService.injectRPCService({
-          ...singletonServices,
-          mcp: interaction,
-        })
-      }
+    const getAllServices = async () => {
+      sessionServices = await createSessionServices?.(
+        singletonServices,
+        interaction,
+        undefined
+      )
 
-      result = await runPikkuFunc(
-        PikkuWiringTypes.mcp,
-        `${type}:${name}`,
-        pikkuFuncName,
+      return rpcService.injectRPCService(
         {
-          getAllServices,
-          session,
-          data: request.params,
-          tags: mcp.tags,
-        }
+          ...singletonServices,
+          ...sessionServices,
+        },
+        interaction
       )
     }
 
-    const funcConfig = pikkuState('function', 'functions').get(pikkuFuncName!)
-    await runMiddleware(
-      singletonServices,
-      { mcp: interaction },
-      combineMiddleware(PikkuWiringTypes.mcp, `${type}:${name}`, {
-        wiringMiddleware: mcp.middleware,
-        wiringTags: mcp.tags,
-        funcMiddleware: funcConfig?.middleware,
-        funcTags: funcConfig?.tags,
-      }),
-      runMain
+    // Get metadata for the MCP endpoint to access pre-resolved middleware
+    let meta: any
+    if (type === 'resource') {
+      meta = pikkuState('mcp', 'resourcesMeta')[name]
+    } else if (type === 'tool') {
+      meta = pikkuState('mcp', 'toolsMeta')[name]
+    } else if (type === 'prompt') {
+      meta = pikkuState('mcp', 'promptsMeta')[name]
+    }
+
+    const result = await runPikkuFunc(
+      PikkuWiringTypes.mcp,
+      `${type}:${name}`,
+      pikkuFuncName,
+      {
+        singletonServices,
+        getAllServices,
+        userSession: undefined, // TODO
+        data: () => request.params,
+        inheritedMiddleware: meta?.middleware,
+        wireMiddleware: mcp.middleware,
+        tags: mcp.tags,
+        interaction,
+      }
     )
 
     return {

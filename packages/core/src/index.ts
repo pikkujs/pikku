@@ -16,12 +16,18 @@ export * from './wirings/scheduler/index.js'
 export * from './wirings/rpc/index.js'
 export * from './wirings/queue/index.js'
 export * from './wirings/mcp/index.js'
+export * from './wirings/cli/index.js'
 export * from './errors/index.js'
 export * from './middleware/index.js'
 export * from './utils.js'
 export * from './time-utils.js'
 export { pikkuState } from './pikku-state.js'
-export { addMiddleware, runMiddleware } from './middleware-runner.js'
+export {
+  runMiddleware,
+  registerMiddleware,
+  getMiddlewareByName,
+  addMiddleware,
+} from './middleware-runner.js'
 export { addPermission } from './permissions.js'
 export { wireHTTP, addHTTPMiddleware } from './wirings/http/http-runner.js'
 export { wireChannel } from './wirings/channel/channel-runner.js'
@@ -41,3 +47,4 @@ export {
   getMCPToolsMeta,
   getMCPPromptsMeta,
 } from './wirings/mcp/mcp-runner.js'
+export { wireCLI, runCLICommand } from './wirings/cli/cli-runner.js'

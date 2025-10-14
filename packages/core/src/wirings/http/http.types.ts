@@ -7,12 +7,14 @@ import type {
   CoreUserSession,
   CreateSessionServices,
   CorePikkuMiddleware,
+  MiddlewareMetadata,
 } from '../../types/core.types.js'
 import type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
   CorePermissionGroup,
+  CorePikkuFunctionConfig,
 } from '../../function/functions.types.js'
 
 type ExtractHTTPWiringParams<S extends string> =
@@ -39,7 +41,6 @@ export type RunHTTPWiringOptions = Partial<{
   coerceDataFromSchema: boolean
   bubbleErrors: boolean
   generateRequestId: () => string
-  ignoreMiddleware: boolean
 }>
 
 export type RunHTTPWiringParams = {
@@ -117,15 +118,32 @@ export type CoreHTTPFunctionWiring<
   In,
   Out,
   R extends string,
-  PikkuFunction = CorePikkuFunction<In, Out>,
-  PikkuFunctionSessionless = CorePikkuFunctionSessionless<In, Out>,
-  PikkuPermission = CorePikkuPermission<In>,
-  PikkuMiddleware = CorePikkuMiddleware,
+  PikkuFunction extends CorePikkuFunction<
+    In,
+    Out,
+    any,
+    any
+  > = CorePikkuFunction<In, Out>,
+  PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
+    In,
+    Out,
+    any,
+    any
+  > = CorePikkuFunctionSessionless<In, Out>,
+  PikkuPermission extends CorePikkuPermission<In, any> = CorePikkuPermission<
+    In,
+    any
+  >,
+  PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
 > =
   | (CoreHTTPFunction & {
       route: R
       method: HTTPMethod
-      func: PikkuFunction
+      func: CorePikkuFunctionConfig<
+        PikkuFunction,
+        PikkuPermission,
+        PikkuMiddleware
+      >
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       tags?: string[]
@@ -135,7 +153,11 @@ export type CoreHTTPFunctionWiring<
   | (CoreHTTPFunction & {
       route: R
       method: HTTPMethod
-      func: PikkuFunctionSessionless
+      func: CorePikkuFunctionConfig<
+        PikkuFunctionSessionless,
+        PikkuPermission,
+        PikkuMiddleware
+      >
       permissions?: undefined
       auth?: false
       tags?: string[]
@@ -145,7 +167,11 @@ export type CoreHTTPFunctionWiring<
   | (CoreHTTPFunction & {
       route: R
       method: 'get'
-      func: PikkuFunction
+      func: CorePikkuFunctionConfig<
+        PikkuFunction,
+        PikkuPermission,
+        PikkuMiddleware
+      >
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       sse?: boolean
@@ -155,7 +181,11 @@ export type CoreHTTPFunctionWiring<
   | (CoreHTTPFunction & {
       route: R
       method: 'get'
-      func: PikkuFunctionSessionless
+      func: CorePikkuFunctionConfig<
+        PikkuFunctionSessionless,
+        PikkuPermission,
+        PikkuMiddleware
+      >
       permissions?: undefined
       auth?: false
       sse?: boolean
@@ -165,7 +195,11 @@ export type CoreHTTPFunctionWiring<
   | (CoreHTTPFunction & {
       route: R
       method: 'post'
-      func: PikkuFunction
+      func: CorePikkuFunctionConfig<
+        PikkuFunction,
+        PikkuPermission,
+        PikkuMiddleware
+      >
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
       query?: Array<keyof In>
@@ -176,7 +210,11 @@ export type CoreHTTPFunctionWiring<
   | (CoreHTTPFunction & {
       route: R
       method: 'post'
-      func: PikkuFunctionSessionless
+      func: CorePikkuFunctionConfig<
+        PikkuFunctionSessionless,
+        PikkuPermission,
+        PikkuMiddleware
+      >
       permissions?: undefined
       auth?: false
       query?: Array<keyof In>
@@ -207,6 +245,7 @@ export type HTTPWiringMeta = {
   docs?: PikkuDocs
   tags?: string[]
   sse?: true
+  middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (global + route + tag + explicit + efunc)
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 

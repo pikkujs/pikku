@@ -8,8 +8,8 @@
     "declaration": true,
     "resolveJsonModule": true
   },
-  "include": ["bin/**/*.ts", "src/**/*.ts"],
-  "exclude": ["**/*.test.ts", "node_modules", "bin/dist"],
+  "include": ["bin/**/*.ts", "src/**/*.ts", ".pikku/**/*.ts", "types/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules"],
   "references": [
     {
       "path": "../core/tsconfig.json"

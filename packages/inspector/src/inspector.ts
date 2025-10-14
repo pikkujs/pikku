@@ -1,23 +1,13 @@
 import * as ts from 'typescript'
 import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
-import {
-  InspectorState,
-  InspectorHTTPState,
-  InspectorFilters,
-  InspectorLogger,
-} from './types.js'
-
-export const normalizeHTTPTypes = (
-  httpState: InspectorHTTPState
-): InspectorHTTPState => {
-  return httpState
-}
+import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
+import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 
 export const inspect = (
   logger: InspectorLogger,
   routeFiles: string[],
-  filters: InspectorFilters
+  options: InspectorOptions = {}
 ): InspectorState => {
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
@@ -30,12 +20,17 @@ export const inspect = (
     singletonServicesTypeImportMap: new Map(),
     sessionServicesTypeImportMap: new Map(),
     userSessionTypeImportMap: new Map(),
+    configTypeImportMap: new Map(),
     singletonServicesFactories: new Map(),
     sessionServicesFactories: new Map(),
     configFactories: new Map(),
+    filesAndMethods: {},
+    filesAndMethodsErrors: new Map(),
+    typesLookup: new Map(),
     functions: {
       typesMap: new TypesMap(),
       meta: {},
+      files: new Map(),
     },
     http: {
       metaInputTypes: new Map(),
@@ -49,6 +44,7 @@ export const inspect = (
         options: {},
       },
       files: new Set(),
+      routeMiddleware: new Map(),
     },
     channels: {
       files: new Set(),
@@ -75,8 +71,13 @@ export const inspect = (
       promptsMeta: {},
       files: new Set(),
     },
+    cli: {
+      meta: {},
+      files: new Set(),
+    },
     middleware: {
       meta: {},
+      tagMiddleware: new Map(),
     },
     permissions: {
       meta: {},
@@ -86,19 +87,21 @@ export const inspect = (
   // First sweep: add all functions
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visitSetup(checker, child, state, filters, logger)
+      visitSetup(logger, checker, child, state, options)
     )
   }
 
   // Second sweep: add all transports
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
-      visitRoutes(checker, child, state, filters, logger)
+      visitRoutes(logger, checker, child, state, options)
     )
   }
 
-  // Normalise the typesMap
-  state.http = normalizeHTTPTypes(state.http)
+  // Populate filesAndMethods
+  const { result, errors } = getFilesAndMethods(state, options.types)
+  state.filesAndMethods = result
+  state.filesAndMethodsErrors = errors
 
   return state
 }

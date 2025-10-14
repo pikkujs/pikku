@@ -1,21 +1,22 @@
 import {
+  PikkuInteraction,
   PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
   type CreateSessionServices,
 } from '../../types/core.types.js'
-import type {
-  CoreScheduledTask,
-  PikkuScheduledTask,
-} from './scheduler.types.js'
-import type { CorePikkuFunctionSessionless } from '../../function/functions.types.js'
+import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
-import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import {
+  CorePikkuFunctionConfig,
+  CorePikkuFunctionSessionless,
+} from '../../function/functions.types.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -29,16 +30,25 @@ export type RunScheduledTasksParams = {
 }
 
 export const wireScheduler = <
-  PikkuFunction extends CorePikkuFunctionSessionless<void, void>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
+    CorePikkuFunctionSessionless<void, void>
+  >,
 >(
-  scheduledTask: CoreScheduledTask<PikkuFunction>
+  scheduledTask: CoreScheduledTask<PikkuFunctionConfig>
 ) => {
   const meta = pikkuState('scheduler', 'meta')
   const taskMeta = meta[scheduledTask.name]
   if (!taskMeta) {
     throw new Error('Task metadata not found')
   }
-  addFunction(taskMeta.pikkuFuncName, scheduledTask.func)
+  addFunction(taskMeta.pikkuFuncName, {
+    func: scheduledTask.func.func,
+    auth: scheduledTask.func.auth,
+    permissions: scheduledTask.func.permissions,
+    middleware: scheduledTask.func.middleware as any,
+    tags: scheduledTask.func.tags,
+    docs: scheduledTask.func.docs as any,
+  })
 
   const tasks = pikkuState('scheduler', 'tasks')
   if (tasks.has(scheduledTask.name)) {
@@ -72,6 +82,11 @@ export async function runScheduledTask({
   const task = pikkuState('scheduler', 'tasks').get(name)
   const meta = pikkuState('scheduler', 'meta')[name]
 
+  const userSession = new PikkuUserSessionService()
+  if (session) {
+    userSession.set(session)
+  }
+
   if (!task) {
     throw new ScheduledTaskNotFoundError(`Scheduled task not found: ${name}`)
   }
@@ -82,12 +97,14 @@ export async function runScheduledTask({
   }
 
   // Create the scheduled task interaction object
-  const scheduledTask: PikkuScheduledTask = {
-    name,
-    schedule: task.schedule,
-    executionTime: new Date(),
-    skip: (reason?: string) => {
-      throw new ScheduledTaskSkippedError(name, reason)
+  const interaction: PikkuInteraction = {
+    scheduledTask: {
+      name,
+      schedule: task.schedule,
+      executionTime: new Date(),
+      skip: (reason?: string) => {
+        throw new ScheduledTaskSkippedError(name, reason)
+      },
     },
   }
 
@@ -96,52 +113,36 @@ export async function runScheduledTask({
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    let result: any
+    const getAllServices = async () => {
+      sessionServices = await createSessionServices?.(
+        singletonServices,
+        interaction,
+        session
+      )
 
-    // Main scheduled task execution logic wrapped for middleware handling
-    const runMain = async () => {
-      const getAllServices = async () => {
-        if (createSessionServices) {
-          const services = await createSessionServices(
-            singletonServices,
-            { scheduledTask },
-            session
-          )
-          sessionServices = services
-          return rpcService.injectRPCService({
-            ...singletonServices,
-            ...services,
-          })
-        }
-        return singletonServices
-      }
-
-      result = await runPikkuFunc(
-        PikkuWiringTypes.scheduler,
-        meta.name,
-        meta.pikkuFuncName,
+      return rpcService.injectRPCService(
         {
-          getAllServices,
-          session,
-          data: undefined,
-          tags: task.tags,
-        }
+          ...singletonServices,
+          ...sessionServices,
+        },
+        interaction
       )
     }
 
-    const funcConfig = pikkuState('function', 'functions').get(
-      meta.pikkuFuncName
-    )
-    await runMiddleware(
-      singletonServices,
-      { scheduledTask },
-      combineMiddleware(PikkuWiringTypes.scheduler, meta.name, {
-        wiringMiddleware: task.middleware,
-        wiringTags: task.tags,
-        funcMiddleware: funcConfig?.middleware,
-        funcTags: funcConfig?.tags,
-      }),
-      runMain
+    const result = await runPikkuFunc(
+      PikkuWiringTypes.scheduler,
+      meta.name,
+      meta.pikkuFuncName,
+      {
+        singletonServices,
+        getAllServices,
+        userSession,
+        data: () => undefined,
+        inheritedMiddleware: meta.middleware,
+        wireMiddleware: task.middleware,
+        tags: task.tags,
+        interaction,
+      }
     )
 
     return result

@@ -1,6 +1,5 @@
 import { CronJob } from 'cron'
 import {
-  CorePikkuFunctionSessionless,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
@@ -54,9 +53,7 @@ export class PikkuTaskScheduler<TaskName extends string> {
     }
   }
 
-  private startJobSchedule(
-    task: CoreScheduledTask<CorePikkuFunctionSessionless<void, void>>
-  ) {
+  private startJobSchedule(task: CoreScheduledTask) {
     const job = new CronJob(
       task.schedule,
       async () => {

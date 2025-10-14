@@ -1,8 +1,10 @@
+import * as ts from 'typescript'
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { queueWorkersMeta } from '@pikku/core/queue'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
+import { CLIMeta } from '@pikku/core'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 
@@ -20,15 +22,29 @@ export type MetaInputTypes = Map<
   }
 >
 
+export interface MiddlewareGroupMeta {
+  exportName: string | null // null if not exported
+  sourceFile: string
+  position: number
+  services: FunctionServicesMeta
+  middlewareCount: number
+  isFactory: boolean // true if wrapped in () => add...()
+}
+
 export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
   meta: HTTPWiringsMeta
   files: Set<string>
+  // HTTP middleware calls tracking - route pattern -> group metadata
+  // Pattern '*' matches all routes (from addHTTPMiddleware('*', [...]))
+  // Pattern '/api/*' matches specific routes (from addHTTPMiddleware('/api/*', [...]))
+  routeMiddleware: Map<string, MiddlewareGroupMeta>
 }
 
 export interface InspectorFunctionState {
   typesMap: TypesMap
   meta: FunctionsMeta
+  files: Map<string, { path: string; exportedName: string }>
 }
 
 export interface InspectorChannelState {
@@ -37,6 +53,7 @@ export interface InspectorChannelState {
 }
 
 export interface InspectorMiddlewareState {
+  // Individual middleware function metadata
   meta: Record<
     string,
     {
@@ -44,8 +61,12 @@ export interface InspectorMiddlewareState {
       sourceFile: string
       position: number
       exportedName: string | null
+      factory?: boolean // true if wrapped with pikkuMiddlewareFactory
     }
   >
+  // Tag-based middleware calls tracking - tag -> group metadata
+  // e.g., export const adminMiddleware = () => addMiddleware('admin', [...])
+  tagMiddleware: Map<string, MiddlewareGroupMeta>
 }
 
 export interface InspectorPermissionState {
@@ -66,19 +87,86 @@ export type InspectorFilters = {
   directories?: string[]
 }
 
+export type InspectorOptions = Partial<{
+  types: Partial<{
+    configFileType: string
+    userSessionType: string
+    singletonServicesFactoryType: string
+    sessionServicesFactoryType: string
+  }>
+  filters: InspectorFilters
+}>
+
 export interface InspectorLogger {
   info: (message: string) => void
   error: (message: string) => void
   warn: (message: string) => void
   debug: (message: string) => void
 }
+
+export type AddWiring = (
+  logger: InspectorLogger,
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  state: InspectorState,
+  options: InspectorOptions
+) => void
+export interface InspectorFilesAndMethods {
+  userSessionType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  sessionServicesType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  singletonServicesType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  pikkuConfigType?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  pikkuConfigFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  singletonServicesFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  sessionServicesFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+}
+
 export interface InspectorState {
   singletonServicesTypeImportMap: PathToNameAndType
   sessionServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType
+  configTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType
   sessionServicesFactories: PathToNameAndType
   configFactories: PathToNameAndType
+  filesAndMethods: InspectorFilesAndMethods
+  filesAndMethodsErrors: Map<string, PathToNameAndType>
+  typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
   http: InspectorHTTPState
   functions: InspectorFunctionState
   channels: InspectorChannelState
@@ -101,6 +189,10 @@ export interface InspectorState {
     resourcesMeta: MCPResourceMeta
     toolsMeta: MCPToolMeta
     promptsMeta: MCPPromptMeta
+    files: Set<string>
+  }
+  cli: {
+    meta: CLIMeta
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

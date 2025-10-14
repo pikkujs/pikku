@@ -1,7 +1,12 @@
-import { CoreServices, PikkuWiringTypes } from '../../types/core.types.js'
+import {
+  CoreServices,
+  PikkuInteraction,
+  PikkuWiringTypes,
+} from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
+import { PikkuRPC } from './rpc-types.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
@@ -21,8 +26,10 @@ const getPikkuFunctionName = (rpcName: string): string => {
 class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
+    private interaction: PikkuInteraction,
     private options: {
       coerceDataFromSchema?: boolean
+      requiresAuth?: boolean
     }
   ) {}
 
@@ -41,7 +48,6 @@ class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const session = await this.services.userSession?.get()
     const rpcDepth = this.services.rpc?.depth || 0
     const pikkuFuncName = getPikkuFunctionName(funcName)
     return runPikkuFunc<In, Out>(
@@ -49,6 +55,8 @@ class ContextAwareRPCService {
       pikkuFuncName,
       pikkuFuncName,
       {
+        auth: this.options.requiresAuth,
+        singletonServices: this.services,
         getAllServices: () => {
           this.services.rpc = this.services.rpc
             ? ({
@@ -59,16 +67,20 @@ class ContextAwareRPCService {
             : undefined
           return this.services
         },
-        data,
-        session,
+        data: () => data,
+        userSession: this.services.userSession,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
+        interaction: this.interaction,
       }
     )
   }
 }
 
 // RPC Service class for the global interface
-export class PikkuRPCService {
+export class PikkuRPCService<
+  Services extends CoreServices,
+  TypedRPC = PikkuRPC,
+> {
   private config?: RPCServiceConfig
 
   // Initialize the RPC service with configuration
@@ -77,12 +89,18 @@ export class PikkuRPCService {
   }
 
   // Convenience function for initializing
-  injectRPCService(coreServices: CoreServices, depth: number = 0) {
+  injectRPCService(
+    services: Services,
+    interaction: PikkuInteraction,
+    requiresAuth?: boolean | undefined,
+    depth: number = 0
+  ): Services & { rpc: TypedRPC } {
     const serviceCopy = {
-      ...coreServices,
+      ...services,
     }
-    const serviceRPC = new ContextAwareRPCService(serviceCopy, {
+    const serviceRPC = new ContextAwareRPCService(serviceCopy, interaction, {
       coerceDataFromSchema: this.config?.coerceDataFromSchema,
+      requiresAuth,
     })
     serviceCopy.rpc = {
       depth,
@@ -90,7 +108,7 @@ export class PikkuRPCService {
       invoke: serviceRPC.rpc.bind(serviceRPC),
       invokeExposed: serviceRPC.rpc.bind(serviceRPC),
     } as any
-    return serviceCopy
+    return serviceCopy as Services & { rpc: TypedRPC }
   }
 }
 
