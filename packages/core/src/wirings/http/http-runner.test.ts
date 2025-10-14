@@ -91,8 +91,7 @@ describe('fetch', () => {
     wireHTTP({
       route: 'test',
       method: 'get',
-      func: routeFunc,
-      middleware: [sessionMiddleware],
+      func: { func: routeFunc, middleware: [sessionMiddleware] },
     })
 
     // Initialize router after adding route (for tests)
@@ -114,9 +113,11 @@ describe('fetch', () => {
     wireHTTP({
       route: 'test',
       method: 'get',
-      func: routeFunc,
-      permissions,
-      middleware: [sessionMiddleware],
+      func: {
+        func: routeFunc,
+        permissions,
+        middleware: [sessionMiddleware],
+      },
     })
 
     await fetch(request, {
@@ -136,8 +137,7 @@ describe('fetch', () => {
     wireHTTP({
       route: 'test',
       method: 'get',
-      func: routeFunc,
-      middleware: [sessionMiddleware],
+      func: { func: routeFunc, middleware: [sessionMiddleware] },
     })
     await assert.rejects(
       async () =>

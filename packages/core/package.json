@@ -31,6 +31,7 @@
     "./cli/channel": "./dist/wirings/cli/channel/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
+    "./services/local-content": "./dist/services/local-content.js",
     "./schema": "./dist/schema.js",
     "./types": "./dist/types/index.d.ts"
   },

@@ -176,16 +176,7 @@ function registerCLICommands(
       }
     }
 
-    // Unwrap the function from pikku wrappers
-    const unwrapped = unwrapFunc(command)
-
-    addFunction(funcName, {
-      func: unwrapped.func,
-      auth: unwrapped.auth,
-      permissions: unwrapped.permissions,
-      middleware: unwrapped.middleware,
-      tags: unwrapped.tags,
-    })
+    addFunction(funcName, unwrapFunc(command))
 
     // Register renderer if provided
     if (typeof command === 'object' && command.render) {
