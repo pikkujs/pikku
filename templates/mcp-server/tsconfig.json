@@ -4,7 +4,8 @@
     "noEmit": false,
     "outDir": "./dist",
     "resolveJsonModule": true,
-    "module": "node18"
+    "module": "node18",
+    "skipLibCheck": true
   },
   "include": ["src/", ".pikku/*", "client/mcp.ts", "client/mcp-server.test.ts"],
   "files": []

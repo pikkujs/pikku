@@ -19,7 +19,7 @@ import { createConfig as createConfig } from '../functions/src/services.js'
 import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'
 import { createSessionServices as createSessionServices } from '../functions/src/services.js'
 
-import './.pikku/http/pikku-bootstrap-http.gen.js'
+import '../functions/.pikku/pikku-bootstrap.gen.js'
 
 let _pikku: PikkuNextJS | undefined
 

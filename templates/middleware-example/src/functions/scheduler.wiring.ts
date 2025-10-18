@@ -1,4 +1,7 @@
-import { wireScheduler, addMiddleware } from '../../.pikku/pikku-types.gen.js'
+import {
+  wireScheduler,
+  addMiddleware,
+} from '../../../functions/.pikku/pikku-types.gen.js'
 import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'

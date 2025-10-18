@@ -1,5 +1,5 @@
 import { PikkuWebSocket } from '../.pikku/pikku-websocket.gen.js'
-import { EventHubTopics } from '../src/eventhub-topics.js'
+import { EventHubTopics } from '../types/eventhub-topics.js'
 
 export const check = async (serverUrl: string, userId: string) => {
   let authenticationState: 'initial' | 'authenticated' | 'unauthenticated' =

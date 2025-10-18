@@ -2,7 +2,6 @@ import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import { PikkuCLIConfig } from '../../types/config.js'
 import { InspectorFilters } from '@pikku/inspector'
-import { PikkuWiringTypes } from '@pikku/core'
 import { CLILogger } from '../services/cli-logger.service.js'
 
 const CONFIG_DIR_FILES = [
@@ -279,15 +278,6 @@ const _getPikkuCLIConfig = async (
       result.cliTypesFile = join(cliDir, 'pikku-cli-types.gen.ts')
     }
 
-    result.bootstrapFiles = result.bootstrapFiles || {}
-    for (const key of Object.keys(PikkuWiringTypes)) {
-      const eventDir = join(result.outDir, key.toLowerCase())
-      result.bootstrapFiles[key] = join(
-        eventDir,
-        `pikku-bootstrap-${key}.gen.ts`
-      )
-    }
-
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)
     }
@@ -302,15 +292,6 @@ const _getPikkuCLIConfig = async (
           if (!isAbsolute(result[objectKey])) {
             result[objectKey] = join(relativeTo, result[objectKey])
           }
-        }
-      }
-    }
-
-    // Separately normalize bootstrapFiles (Record<string, string>)
-    if (result.bootstrapFiles && typeof result.bootstrapFiles === 'object') {
-      for (const [key, value] of Object.entries(result.bootstrapFiles)) {
-        if (typeof value === 'string' && !isAbsolute(value)) {
-          result.bootstrapFiles[key] = join(result.rootDir, value)
         }
       }
     }

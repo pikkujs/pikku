@@ -7,7 +7,7 @@ import type {
   JWTService,
   SecretService,
 } from '@pikku/core'
-import { EventHubTopics } from '../src/eventhub-topics.js'
+import { EventHubTopics } from './eventhub-topics.js'
 
 export type Config = CoreConfig
 

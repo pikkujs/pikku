@@ -1,11 +1,13 @@
 import * as ts from 'typescript'
-import { PathToNameAndType } from '../types.js'
+import { PathToNameAndType, InspectorState } from '../types.js'
+import { extractServicesFromFunction } from '../utils/extract-services.js'
 
 export const addFileWithFactory = (
   node: ts.Node,
   checker: ts.TypeChecker,
   methods: PathToNameAndType = new Map(),
-  expectedTypeName: string
+  expectedTypeName: string,
+  state?: InspectorState
 ) => {
   if (ts.isVariableDeclaration(node)) {
     const fileName = node.getSourceFile().fileName
@@ -37,6 +39,25 @@ export const addFileWithFactory = (
           typePath: typeDeclarationPath,
         })
         methods.set(fileName, variables)
+
+        // Extract singleton services for CreateSessionServices factories
+        if (
+          expectedTypeName === 'CreateSessionServices' &&
+          state &&
+          node.initializer
+        ) {
+          let functionNode: ts.ArrowFunction | ts.FunctionExpression | undefined
+          if (ts.isArrowFunction(node.initializer)) {
+            functionNode = node.initializer
+          } else if (ts.isFunctionExpression(node.initializer)) {
+            functionNode = node.initializer
+          }
+
+          if (functionNode) {
+            const servicesMeta = extractServicesFromFunction(functionNode)
+            state.sessionServicesMeta.set(variableName, servicesMeta.services)
+          }
+        }
       }
 
       // Handle qualified type names if necessary
@@ -58,6 +79,28 @@ export const addFileWithFactory = (
             typePath: typeDeclarationPath,
           })
           methods.set(fileName, variables)
+
+          // Extract singleton services for CreateSessionServices factories
+          if (
+            expectedTypeName === 'CreateSessionServices' &&
+            state &&
+            node.initializer
+          ) {
+            let functionNode:
+              | ts.ArrowFunction
+              | ts.FunctionExpression
+              | undefined
+            if (ts.isArrowFunction(node.initializer)) {
+              functionNode = node.initializer
+            } else if (ts.isFunctionExpression(node.initializer)) {
+              functionNode = node.initializer
+            }
+
+            if (functionNode) {
+              const servicesMeta = extractServicesFromFunction(functionNode)
+              state.sessionServicesMeta.set(variableName, servicesMeta.services)
+            }
+          }
         }
       }
     }

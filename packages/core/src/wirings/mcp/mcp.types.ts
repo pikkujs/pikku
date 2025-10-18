@@ -1,6 +1,8 @@
 import {
+  CorePermissionGroup,
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
+  CorePikkuPermission,
 } from '../../function/functions.types.js'
 import {
   CorePikkuMiddleware,
@@ -67,17 +69,19 @@ export type CoreMCPResource<
   PikkuFunction = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
   >,
+  PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   uri: string
   title: string
-  description?: string
+  description: string
   mimeType?: string
   size?: number
   streaming?: boolean
   func: PikkuFunction
   tags?: string[]
   middleware?: PikkuMiddleware[]
+  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 /**
@@ -87,16 +91,17 @@ export type CoreMCPTool<
   PikkuFunction = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
   >,
+  PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
   title?: string
   description: string
-  annotations?: Record<string, any>
   func: PikkuFunction
   tags?: string[]
   streaming?: boolean
   middleware?: PikkuMiddleware[]
+  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 /**
@@ -106,6 +111,7 @@ export type CoreMCPPrompt<
   PikkuFunction = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, MCPPromptResponse>
   >,
+  PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
@@ -113,6 +119,7 @@ export type CoreMCPPrompt<
   func: PikkuFunction
   tags?: string[]
   middleware?: PikkuMiddleware[]
+  permissions?: CorePermissionGroup<PikkuPermission>
 }
 
 export type JsonRpcRequest = {

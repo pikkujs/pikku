@@ -114,7 +114,7 @@ export type PikkuFunctionSessionless<
   Out = never,
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services &
+  RequiredServices extends Services = Omit<Services, 'rpc' | 'channel' | 'mcp'> &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null]
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -140,7 +140,7 @@ export type PikkuFunction<
   Out = never,
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Omit<Services, 'rpc'> &
+  RequiredServices extends Services = Omit<Services, 'rpc' | 'channel' | 'mcp'> &
     { rpc: TypedPikkuRPC } & (
     [ChannelData] extends [null]
       ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
@@ -157,12 +157,16 @@ export type PikkuFunction<
  *
  * @template In - The input type
  * @template Out - The output type
+ * @template ChannelData - Channel data type
+ * @template MCPData - MCP data type
  * @template PikkuFunc - The function type (can be narrowed to PikkuFunction or PikkuFunctionSessionless)
  */
 export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
-  PikkuFunc extends PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out> = PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out>
+  ChannelData = unknown,
+  MCPData = unknown,
+  PikkuFunc extends PikkuFunction<In, Out, ChannelData, MCPData> | PikkuFunctionSessionless<In, Out, ChannelData, MCPData> = PikkuFunction<In, Out, ChannelData, MCPData> | PikkuFunctionSessionless<In, Out, ChannelData, MCPData>
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
 
 /**
@@ -189,7 +193,7 @@ export type PikkuFunctionConfig<
 export const pikkuFunc = <In, Out = unknown>(
   func:
     | PikkuFunction<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>>
+    | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 ) => {
   return typeof func === 'function' ? { func } : func
 }

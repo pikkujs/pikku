@@ -6,7 +6,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 
 export const serializeServicesMap = (
   functionsMetaData: Record<string, any>,
-  middlewareServices: string[] = [],
+  forceRequiredServices: string[] = [],
   servicesImport: string,
   sessionServicesImport: string
 ): string => {
@@ -28,7 +28,7 @@ export const serializeServicesMap = (
   }
 
   // Add middleware services that might not be detected from function inspection
-  middlewareServices.forEach((service) => {
+  forceRequiredServices.forEach((service) => {
     if (!internalServices.has(service)) {
       usedServices.add(service)
     }
@@ -106,7 +106,7 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
 
     const servicesCode = serializeServicesMap(
       visitState.functions.meta,
-      config.middlewareServices,
+      config.forceRequiredServices,
       servicesImport,
       sessionServicesImport
     )

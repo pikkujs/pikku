@@ -24,7 +24,10 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.62",
     "@cloudflare/workers-types": "^4.20250813.0",
-    "typescript": "^5.9.2"
+    "@vitest/runner": "^3.0.0",
+    "@vitest/snapshot": "^3.0.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.0.0"
   },
   "engines": {
     "node": ">=18"

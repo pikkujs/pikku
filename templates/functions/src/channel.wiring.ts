@@ -7,6 +7,7 @@ import {
   subscribe,
   unsubscribe,
   emitMessage,
+  logout,
 } from './channel.functions.js'
 
 wireChannel({
@@ -35,6 +36,7 @@ wireChannel({
         func: authenticate,
         auth: false,
       },
+      logout,
       // A wiring with an nested function. This is to allow permissions
       // to be applied to the wiring.
       subscribe: {

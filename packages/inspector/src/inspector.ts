@@ -23,6 +23,7 @@ export const inspect = (
     configTypeImportMap: new Map(),
     singletonServicesFactories: new Map(),
     sessionServicesFactories: new Map(),
+    sessionServicesMeta: new Map(),
     configFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),

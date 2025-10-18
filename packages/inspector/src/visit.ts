@@ -65,7 +65,8 @@ export const visitSetup = (
     node,
     checker,
     state.sessionServicesFactories,
-    'CreateSessionServices'
+    'CreateSessionServices',
+    state
   )
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')

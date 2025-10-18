@@ -12,7 +12,9 @@ import {
   MiddlewareMetadata,
 } from '../../types/core.types.js'
 import {
+  CorePermissionGroup,
   CorePikkuFunction,
+  CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
 } from '../../function/functions.types.js'
@@ -60,15 +62,24 @@ export type ChannelsMeta = Record<string, ChannelMeta>
 export type CoreChannel<
   ChannelData,
   Channel extends string,
-  ChannelConnect =
+  ChannelConnect = CorePikkuFunctionConfig<
     | CorePikkuFunction<void, unknown, ChannelData>
     | CorePikkuFunctionSessionless<void, unknown, ChannelData>,
-  ChannelDisconnect =
+    CorePikkuPermission<void>,
+    CorePikkuMiddleware
+  >,
+  ChannelDisconnect = CorePikkuFunctionConfig<
     | CorePikkuFunction<void, void, ChannelData>
     | CorePikkuFunctionSessionless<void, void, ChannelData>,
-  ChannelFunctionMessage =
+    CorePikkuPermission<void>,
+    CorePikkuMiddleware
+  >,
+  ChannelFunctionMessage = CorePikkuFunctionConfig<
     | CorePikkuFunction<unknown, unknown, ChannelData>
     | CorePikkuFunctionSessionless<unknown, unknown, ChannelData>,
+    CorePikkuPermission<unknown>,
+    CorePikkuMiddleware
+  >,
   PikkuPermission = CorePikkuPermission<ChannelData>,
   PikkuMiddleware = CorePikkuMiddleware,
 > = {
@@ -76,13 +87,7 @@ export type CoreChannel<
   route: Channel
   onConnect?: ChannelConnect
   onDisconnect?: ChannelDisconnect
-  onMessage?:
-    | {
-        func: ChannelFunctionMessage
-        permissions?: Record<string, PikkuPermission[] | PikkuPermission>
-        auth?: boolean
-      }
-    | ChannelFunctionMessage
+  onMessage?: ChannelFunctionMessage
   onMessageWiring?: Record<
     string,
     Record<
@@ -90,13 +95,14 @@ export type CoreChannel<
       | ChannelFunctionMessage
       | {
           func: ChannelFunctionMessage
-          permissions?: Record<string, PikkuPermission[] | PikkuPermission>
+          permissions?: CorePermissionGroup<PikkuPermission>
           auth?: boolean
+          middleware?: PikkuMiddleware[]
         }
     >
   >
   middleware?: PikkuMiddleware[]
-  permissions?: Record<string, PikkuPermission[] | PikkuPermission>
+  permissions?: CorePermissionGroup<PikkuPermission>
   auth?: boolean
   docs?: Partial<{
     description: string
@@ -107,16 +113,16 @@ export type CoreChannel<
   tags?: string[]
 }
 
-export interface PikkuChannel<OpeningData, Out> {
+export interface PikkuChannel<OpeningData, out Out> {
   // The channel identifier
   channelId: string
   // The data the channel was created with. This could be query parameters
   // or parameters in the url.
   openingData: OpeningData
   // The data to send. This will fail is the stream has been closed.
-  send: (data: Out, isBinary?: boolean) => Promise<void> | void
+  send(data: Out, isBinary?: boolean): Promise<void> | void
   // This will close the channel.
-  close: () => Promise<void> | void
+  close(): Promise<void> | void
   // The current state of the channel
   state: 'initial' | 'open' | 'closed'
 }

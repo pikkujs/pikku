@@ -34,12 +34,7 @@ type PikkuCLIRender<Data, RequiredServices extends SingletonServices = Singleton
  * CLI command configuration with project-specific types.
  * Uses CoreCLICommandConfig from @pikku/core with local middleware and render types.
  */
-type CLICommandConfig<Func extends PikkuFunctionConfig<any, any>> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>>
-
-/**
- * Result type for CLI command configuration
- */
-type CLICommandResult<Func extends PikkuFunctionConfig<any, any>> = CLICommandConfig<Func>
+type CLICommandConfig<Func extends PikkuFunctionConfig<In, Out>, In = any, Out = any, Params extends string = string> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>, Params>
 
 /**
  * Type definition for CLI applications with commands and global options.
@@ -47,7 +42,7 @@ type CLICommandResult<Func extends PikkuFunctionConfig<any, any>> = CLICommandCo
  * @template Commands - Type describing the command structure
  * @template GlobalOptions - Type for global CLI options
  */
-type CLIWiring<Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>>>, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, PikkuCLIRender<any>>
+type CLIWiring<Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>, any>>, GlobalOptions> = CoreCLI<Commands, GlobalOptions, PikkuMiddleware, PikkuCLIRender<any>>
 
 /**
  * Registers a CLI application with the Pikku framework.
@@ -57,7 +52,7 @@ type CLIWiring<Commands extends Record<string, CoreCLICommandConfig<any, PikkuMi
  * @template GlobalOptions - Type for global CLI options
  * @param cli - CLI definition with program name, commands, and global options
  */
-export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>>>, GlobalOptions>(
+export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>, any>>, GlobalOptions>(
   cli: CLIWiring<Commands, GlobalOptions>
 ) => {
   wireCLICore(cli as any)
@@ -67,13 +62,17 @@ export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any
  * Creates a CLI command definition with automatic option inference from the function's input type.
  * This allows TypeScript to automatically derive CLI options from the function signature.
  *
- * @template Func - The Pikku function config type to create a CLI command for
+ * @template FuncConfig - The Pikku function config type
+ * @template Params - The parameters string literal type
  * @param config - CLI command configuration
  * @returns CLI command configuration with inferred types
  */
-export const pikkuCLICommand = <Func extends PikkuFunctionConfig<any, any>>(
-  config: CLICommandConfig<Func>
-): CLICommandResult<Func> => {
+export const pikkuCLICommand = <
+  FuncConfig extends PikkuFunctionConfig<any, any>,
+  Params extends string
+>(
+  config: CLICommandConfig<FuncConfig, any, any, Params>
+): CoreCLICommandConfig<FuncConfig, PikkuMiddleware, PikkuCLIRender<any>, string> => {
   return config as any
 }
 `

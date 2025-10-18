@@ -3,7 +3,8 @@
   "compilerOptions": {
     "module": "Node18",
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
   "include": ["src/", ".pikku/*"],
   "files": []

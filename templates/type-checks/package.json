@@ -1,0 +1,19 @@
+{
+  "name": "@pikku/templates-type-checks",
+  "type": "module",
+  "private": true,
+  "description": "TypeScript type constraint tests for Pikku framework",
+  "dependencies": {
+    "@pikku/core": "^0.9.12-next.0"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.9.16-next.0",
+    "@types/node": "^22",
+    "typescript": "^5.6"
+  },
+  "scripts": {
+    "prebuild": "pikku prebuild",
+    "tsc": "tsc --noEmit",
+    "pikku": "pikku"
+  }
+}

@@ -96,8 +96,8 @@ export const pikkuMCPPromptFunc = <In>(
         func: PikkuFunctionSessionless<In, MCPPromptResponse>
         name?: string
       }
-) => {
-  return typeof func === 'function' ? func : func.func
+): PikkuFunctionConfig<In, MCPPromptResponse> => {
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -115,8 +115,8 @@ export const pikkuMCPToolFunc = <In>(
       func: PikkuFunctionSessionless<In, MCPToolResponse, null, true>
       name?: string
     }
-) => {
-  return typeof func === 'function' ? func : func.func
+): PikkuFunctionConfig<In, MCPToolResponse> => {
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -134,8 +134,8 @@ export const pikkuMCPResourceFunc = <In>(
       func: PikkuFunctionSessionless<In, MCPResourceResponse, null, true>
       name?: string
     }
-) => {
-  return typeof func === 'function' ? func : func.func
+): PikkuFunctionConfig<In, MCPResourceResponse> => {
+  return typeof func === 'function' ? { func } : func
 }
 `
 }

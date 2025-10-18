@@ -48,7 +48,7 @@ async function main(): Promise<void> {
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
-      createSessionServices as any
+      createSessionServices
     )
 
     const httpTest2Passed = await testHTTPWiring(
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
-      createSessionServices as any
+      createSessionServices
     )
 
     // Test Scheduler
@@ -71,7 +71,7 @@ async function main(): Promise<void> {
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
-      createSessionServices as any
+      createSessionServices
     )
 
     // Test Queue
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
         { name: 'noOp', type: 'function' },
       ],
       singletonServices,
-      createSessionServices as any
+      createSessionServices
     )
 
     // Test CLI

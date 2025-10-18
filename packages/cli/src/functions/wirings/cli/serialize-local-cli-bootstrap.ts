@@ -34,7 +34,7 @@ export function serializeLocalCLIBootstrap(
   )
   const cliBootstrapPath = getFileImportRelativePath(
     bootstrapFile,
-    config.bootstrapFiles.cli,
+    config.bootstrapFile,
     config.packageMappings
   )
 

@@ -66,7 +66,6 @@ export interface PikkuCLICoreOutputFiles {
 
   // Application bootstrap
   bootstrapFile: string
-  bootstrapFiles: Record<PikkuWiringTypes, string>
 }
 
 export type PikkuCLIInput = {
@@ -121,7 +120,7 @@ export type PikkuCLIInput = {
     >
   }
 
-  middlewareServices?: string[]
+  forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
 
@@ -184,7 +183,7 @@ export type PikkuCLIConfig = {
     >
   }
 
-  middlewareServices?: string[]
+  forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
 
