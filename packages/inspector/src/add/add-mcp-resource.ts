@@ -6,6 +6,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { resolvePermissions } from '../utils/permissions.js'
 
 export const addMCPResource: AddWiring = (
   logger,
@@ -102,6 +103,9 @@ export const addMCPResource: AddWiring = (
     // --- resolve middleware ---
     const middleware = resolveMiddleware(state, obj, tags, checker)
 
+    // --- resolve permissions ---
+    const permissions = resolvePermissions(state, obj, tags, checker)
+
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 
     state.mcpEndpoints.resourcesMeta[uriValue] = {
@@ -114,6 +118,7 @@ export const addMCPResource: AddWiring = (
       inputSchema,
       outputSchema,
       middleware,
+      permissions,
     }
   }
 }
