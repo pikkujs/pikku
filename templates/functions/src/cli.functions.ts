@@ -2,7 +2,7 @@ import { pikkuFunc, pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 // Simple greeting function
 export const greetUser = pikkuSessionlessFunc<
-  { name: string; loud?: boolean },
+  { name: string; loud: boolean },
   { message: string; timestamp: string }
 >({
   func: async (services, data) => {

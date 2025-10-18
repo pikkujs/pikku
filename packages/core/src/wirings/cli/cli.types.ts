@@ -108,7 +108,7 @@ export type CorePikkuCLIRender<
  * Extract input parameters from a Pikku function config type
  */
 export type ExtractFunctionInput<Func> =
-  Func extends CorePikkuFunctionConfig<infer FuncType>
+  Func extends CorePikkuFunctionConfig<infer FuncType, any, any>
     ? FuncType extends
         | CorePikkuFunction<infer Input, any, any, any, any>
         | CorePikkuFunctionSessionless<infer Input, any, any, any, any>
@@ -135,30 +135,47 @@ type SplitBySpace<S extends string> = S extends `${infer First} ${infer Rest}`
     : [S]
 
 /**
- * Extract parameter names from CLI parameter string
+ * Recursively build a tuple by stripping brackets from each element
+ */
+type BuildParamsTuple<Parts extends readonly string[]> =
+  Parts extends readonly [
+    infer First extends string,
+    ...infer Rest extends string[],
+  ]
+    ? [StripBrackets<First>, ...BuildParamsTuple<Rest>]
+    : []
+
+/**
+ * Extract parameter names from CLI parameter string into a tuple
  * Example: "<env> [region]" => ["env", "region"]
  */
-type ExtractParameterNames<S extends string> = {
-  [K in keyof SplitBySpace<S>]: SplitBySpace<S>[K] extends string
-    ? StripBrackets<SplitBySpace<S>[K]>
-    : never
-}
+type ExtractParameterNames<S extends string> = BuildParamsTuple<SplitBySpace<S>>
+
+/**
+ * Check if all elements of a tuple are valid keys of Input
+ */
+type AllParamsValid<
+  Params extends readonly any[],
+  Input,
+> = Params extends readonly [infer First, ...infer Rest]
+  ? First extends keyof Input
+    ? AllParamsValid<Rest, Input>
+    : false
+  : true
 
 /**
  * Validate that all parameter names are valid keys of the function input
  */
 export type ValidateParameters<Params extends string, Input> =
-  ExtractParameterNames<Params> extends (infer P)[]
-    ? P extends keyof Input
-      ? Params
-      : never
+  AllParamsValid<ExtractParameterNames<Params>, Input> extends true
+    ? Params
     : never
 
 /**
  * Extract output type from a Pikku function config type
  */
 export type ExtractFunctionOutput<Func> =
-  Func extends CorePikkuFunctionConfig<infer FuncType>
+  Func extends CorePikkuFunctionConfig<infer FuncType, any, any>
     ? FuncType extends
         | CorePikkuFunction<any, infer Output, any, any, any>
         | CorePikkuFunctionSessionless<any, infer Output, any, any, any>
@@ -170,36 +187,30 @@ export type ExtractFunctionOutput<Func> =
  * CLI command configuration that infers options from function input type.
  * This is a helper type for creating type-safe CLI commands.
  */
-export interface CoreCLICommandConfig<
-  Func,
+export type CoreCLICommandConfig<
+  FuncConfig,
   PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
   PikkuCLIRender extends CorePikkuCLIRender<any, any, any> = CorePikkuCLIRender<
     any,
     any
   >,
-> {
-  parameters?: ValidateParameters<string, ExtractFunctionInput<Func>>
-  func?: Func
+  Params extends string = string,
+> = {
+  parameters?: ValidateParameters<Params, ExtractFunctionInput<FuncConfig>>
+  func?: FuncConfig
   description?: string
   render?: PikkuCLIRender
   options?: {
-    [K in keyof ExtractFunctionInput<Func>]?: {
+    [K in keyof ExtractFunctionInput<FuncConfig>]?: {
       description?: string
       short?: string
-      default?: ExtractFunctionInput<Func>[K]
+      default?: ExtractFunctionInput<FuncConfig>[K]
     }
-  } & Record<
-    string,
-    {
-      description?: string
-      short?: string
-      default?: any
-    }
-  >
+  }
   middleware?: PikkuMiddleware[]
   subcommands?: Record<
     string,
-    CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender>
+    CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender, any>
   >
   auth?: boolean
   permissions?: any[]
@@ -211,7 +222,7 @@ export interface CoreCLICommandConfig<
 export interface CoreCLICommand<
   In,
   Out,
-  PikkuFunction extends CorePikkuFunctionConfig<
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
     | CorePikkuFunction<In, Out, any, any, any>
     | CorePikkuFunctionSessionless<In, Out, any, any, any>
   >,
@@ -224,7 +235,7 @@ export interface CoreCLICommand<
   > = Record<string, CoreCLICommandConfig<any, any, any>>,
 > {
   parameters?: string
-  func: PikkuFunction
+  func: PikkuFunctionConfig
   render?: CorePikkuCLIRender<Out>
   description?: string
   options?: CLIOptions<Options>
@@ -241,11 +252,11 @@ export interface CoreCLICommand<
 export type CLICommandShorthand<
   In,
   Out,
-  PikkuFunction extends CorePikkuFunctionConfig<
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
     | CorePikkuFunction<In, Out, any, any, any>
     | CorePikkuFunctionSessionless<In, Out, any, any, any>
   >,
-> = PikkuFunction
+> = PikkuFunctionConfig
 
 /**
  * Command definition (either full or shorthand)
@@ -253,7 +264,7 @@ export type CLICommandShorthand<
 export type CLICommandDefinition<
   In,
   Out,
-  PikkuFunction extends CorePikkuFunctionConfig<
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<
     | CorePikkuFunction<In, Out, any, any, any>
     | CorePikkuFunctionSessionless<In, Out, any, any, any>
   >,
@@ -268,13 +279,13 @@ export type CLICommandDefinition<
   | CoreCLICommand<
       In,
       Out,
-      PikkuFunction,
+      PikkuFunctionConfig,
       PikkuPermission,
       PikkuMiddleware,
       Options,
       Subcommands
     >
-  | CLICommandShorthand<In, Out, PikkuFunction>
+  | CLICommandShorthand<In, Out, PikkuFunctionConfig>
 
 /**
  * CLI wiring configuration
