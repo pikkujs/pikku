@@ -182,24 +182,20 @@ export interface CoreCLICommandConfig<
   func?: Func
   description?: string
   render?: PikkuCLIRender
-  options?: Partial<
-    Record<
-      keyof ExtractFunctionInput<Func>,
-      {
-        description?: string
-        short?: string
-        default?: ExtractFunctionInput<Func>[keyof ExtractFunctionInput<Func>]
-      }
-    >
-  > &
-    Record<
-      string,
-      {
-        description?: string
-        short?: string
-        default?: any
-      }
-    >
+  options?: {
+    [K in keyof ExtractFunctionInput<Func>]?: {
+      description?: string
+      short?: string
+      default?: ExtractFunctionInput<Func>[K]
+    }
+  } & Record<
+    string,
+    {
+      description?: string
+      short?: string
+      default?: any
+    }
+  >
   middleware?: PikkuMiddleware[]
   subcommands?: Record<
     string,

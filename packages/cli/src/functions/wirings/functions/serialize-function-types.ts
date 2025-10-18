@@ -157,12 +157,16 @@ export type PikkuFunction<
  *
  * @template In - The input type
  * @template Out - The output type
+ * @template ChannelData - Channel data type
+ * @template MCPData - MCP data type
  * @template PikkuFunc - The function type (can be narrowed to PikkuFunction or PikkuFunctionSessionless)
  */
 export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
-  PikkuFunc extends PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out> = PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out>
+  ChannelData = unknown,
+  MCPData = unknown,
+  PikkuFunc extends PikkuFunction<In, Out, ChannelData, MCPData> | PikkuFunctionSessionless<In, Out, ChannelData, MCPData> = PikkuFunction<In, Out, ChannelData, MCPData> | PikkuFunctionSessionless<In, Out, ChannelData, MCPData>
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
 
 /**

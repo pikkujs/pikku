@@ -6,6 +6,6 @@
     "module": "node18",
     "types": ["node"]
   },
-  "include": ["src/", ".pikku/*"],
+  "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],
   "files": []
 }
