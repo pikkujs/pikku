@@ -14,7 +14,6 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       httpMapDeclarationFile,
       packageMappings,
       fetchFile,
-      bootstrapFiles,
     } = config
     const visitState = await getInspectorState()
 
@@ -56,9 +55,9 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
       const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
 
-      const httpBootstrapPath = getFileImportRelativePath(
+      const bootstrapPath = getFileImportRelativePath(
         nextBackendFile,
-        bootstrapFiles.http,
+        config.bootstrapFile,
         packageMappings
       )
 
@@ -69,7 +68,7 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       )
 
       const content = serializeNextBackendWrapper(
-        httpBootstrapPath,
+        bootstrapPath,
         routesMapDeclarationPath,
         pikkuConfigImport,
         singletonServicesImport,

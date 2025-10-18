@@ -17,13 +17,13 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.9.12-next.0"
-  },
-  "dependencies": {
-    "fastify": "^5.5.0",
+    "@pikku/core": "^0.9.12-next.0",
+    "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.1"
   },
   "devDependencies": {
+    "fastify": "^5.5.0",
+    "fastify-plugin": "^5.0.1",
     "typescript": "^5.9.2"
   },
   "engines": {

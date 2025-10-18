@@ -13,7 +13,7 @@ import {
   CreateSessionServices,
 } from '@pikku/core'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
-import { LocalContentConfig } from '@pikku/core/src/services/local-content.js'
+import { LocalContentConfig } from '@pikku/core/services/local-content'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.

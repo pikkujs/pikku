@@ -66,7 +66,6 @@ export interface PikkuCLICoreOutputFiles {
 
   // Application bootstrap
   bootstrapFile: string
-  bootstrapFiles: Record<PikkuWiringTypes, string>
 }
 
 export type PikkuCLIInput = {

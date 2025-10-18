@@ -91,7 +91,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
               programMeta,
               channelClientFile,
               config,
-              config.bootstrapFiles.cli,
+              config.bootstrapFile,
               channelRoute
             )
 
