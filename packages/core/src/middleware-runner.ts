@@ -111,7 +111,7 @@ export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
  */
 export const registerMiddleware = (
   name: string,
-  middleware: CorePikkuMiddleware
+  middleware: CorePikkuMiddleware<any, any>
 ) => {
   const middlewareStore = pikkuState('misc', 'middleware')
   middlewareStore[name] = [middleware]

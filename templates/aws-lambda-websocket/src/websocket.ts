@@ -23,7 +23,7 @@ import {
   createSingletonServices,
 } from '../../functions/src/services.js'
 
-import '../../functions/.pikku/pikku-channels.gen.js'
+import '../../functions/.pikku/channel/pikku-channels.gen.js'
 
 let state:
   | {

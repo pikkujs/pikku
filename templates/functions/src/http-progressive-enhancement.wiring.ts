@@ -1,4 +1,4 @@
-import { wireChannel, wireHTTP } from '../.pikku/pikku-types.gen.js'
+import { wireHTTP } from '../.pikku/pikku-types.gen.js'
 import { progressiveEnhancementExample } from './http-progressive-enhancement.functions.js'
 
 wireHTTP({
@@ -8,16 +8,16 @@ wireHTTP({
   func: progressiveEnhancementExample,
 })
 
-wireChannel({
-  name: 'progressive-enhancement',
-  route: '/status/websocket',
-  auth: false,
-  onMessageWiring: {
-    action: {
-      status: progressiveEnhancementExample,
-    },
-  },
-})
+// wireChannel({
+//   name: 'progressive-enhancement',
+//   route: '/status/websocket',
+//   auth: false,
+//   onMessageWiring: {
+//     action: {
+//       status: progressiveEnhancementExample,
+//     },
+//   },
+// })
 
 wireHTTP({
   auth: false,

@@ -31,7 +31,7 @@ export const createSingletonServices: CreateSingletonServices<
 }
 
 export const createSessionServices: CreateSessionServices<
-  RequiredSingletonServices,
+  SingletonServices,
   Services,
   UserSession
 > = async (_services, _session) => {
