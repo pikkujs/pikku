@@ -5,6 +5,7 @@ This package contains TypeScript type constraint tests for the Pikku framework. 
 ## Purpose
 
 The type-checks package ensures that:
+
 - Invalid route/query/param configurations are caught at compile time
 - Function signatures are properly validated
 - Channel, middleware, and other wiring types are correctly enforced
@@ -43,14 +44,14 @@ import type { CorePikkuFunctionSessionless } from '@pikku/core'
 wireHTTP({
   method: 'get',
   route: '/users/:id',
-  func: (async () => {}) as CorePikkuFunctionSessionless<{}, void>
+  func: (async () => {}) as CorePikkuFunctionSessionless<{}, void>,
 })
 
 // This should work fine (no error expected)
 wireHTTP({
   method: 'get',
   route: '/users/:id',
-  func: (async () => {}) as CorePikkuFunctionSessionless<{ id: string }, void>
+  func: (async () => {}) as CorePikkuFunctionSessionless<{ id: string }, void>,
 })
 ```
 
@@ -65,6 +66,7 @@ bash run-tests.sh
 ```
 
 The test script will:
+
 1. Run TypeScript compiler in check mode (`tsc --noEmit`)
 2. Verify that every `// @ts-expect-error` annotation has a corresponding type error
 3. Verify that no unexpected errors occur
@@ -76,6 +78,7 @@ The test script will:
 - ❌ Fail: Missing expected errors or unexpected errors found
 
 The script will show detailed information about:
+
 - Which `@ts-expect-error` lines are missing errors
 - Which lines have unexpected errors
 - A summary of total errors vs expected errors

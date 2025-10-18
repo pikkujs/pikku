@@ -74,7 +74,7 @@ export type CoreMCPResource<
 > = {
   uri: string
   title: string
-  description?: string
+  description: string
   mimeType?: string
   size?: number
   streaming?: boolean

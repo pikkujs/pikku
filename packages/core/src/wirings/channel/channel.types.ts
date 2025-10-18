@@ -113,16 +113,16 @@ export type CoreChannel<
   tags?: string[]
 }
 
-export interface PikkuChannel<OpeningData, Out> {
+export interface PikkuChannel<OpeningData, out Out> {
   // The channel identifier
   channelId: string
   // The data the channel was created with. This could be query parameters
   // or parameters in the url.
   openingData: OpeningData
   // The data to send. This will fail is the stream has been closed.
-  send: (data: Out, isBinary?: boolean) => Promise<void> | void
+  send(data: Out, isBinary?: boolean): Promise<void> | void
   // This will close the channel.
-  close: () => Promise<void> | void
+  close(): Promise<void> | void
   // The current state of the channel
   state: 'initial' | 'open' | 'closed'
 }

@@ -1,5 +1,4 @@
 import {
-  pikkuFunc,
   pikkuChannelFunc,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
@@ -34,8 +33,8 @@ export const authenticate = pikkuSessionlessFunc<
   return { authResult, action: 'auth' }
 })
 
-export const logout = pikkuFunc<void, { action: 'auth' }>({
-  func: async ({ userSession }, data) => {
+export const logout = pikkuSessionlessFunc<void, { action: 'auth' }>({
+  func: async ({ userSession }) => {
     await userSession?.clear()
     return { action: 'auth' }
   },
@@ -47,8 +46,13 @@ export const subscribe = pikkuChannelFunc<{ name: string }, void>(
   }
 )
 
-export const unsubscribe = pikkuChannelFunc<{ name: string }, void>(
+export const unsubscribe = pikkuChannelFunc<{ name: string }, 'valid'>(
   async ({ channel, eventHub }, data) => {
+    // @ts-expect-error - We should only be able to send data that is in the output type
+    channel.send('invalid')
+
+    channel.send('valid')
+
     await eventHub?.unsubscribe(data.name, channel.channelId)
   }
 )

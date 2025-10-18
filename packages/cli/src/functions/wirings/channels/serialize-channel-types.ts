@@ -10,7 +10,7 @@ export const serializeChannelTypes = (functionTypesImportPath: string) => {
 import { CoreChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { CorePikkuFunctionConfig } from '@pikku/core'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
+import type { PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 
 /**
  * Type definition for WebSocket channels with typed data exchange.
@@ -22,9 +22,9 @@ import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMid
 type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
   ChannelData,
   Channel,
-  CorePikkuFunctionConfig<PikkuFunctionSessionless<void, unknown, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
+  CorePikkuFunctionConfig<PikkuFunctionSessionless<void, any, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
   CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
-  CorePikkuFunctionConfig<PikkuFunctionSessionless<any, any, ChannelData> | PikkuFunction<any, any, ChannelData>, PikkuPermission<any>, PikkuMiddleware>,
+  CorePikkuFunctionConfig<PikkuFunctionSessionless<any, any, ChannelData>, PikkuPermission<any>, PikkuMiddleware>,
   PikkuPermission,
   PikkuMiddleware
 >
@@ -34,21 +34,14 @@ type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
  * Called when a client connects to a channel.
  *
  * @template Out - Output type for connection response
- * @template ChannelData - Type of data associated with the channel
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  */
-export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>(
-  func: PikkuFunctionSessionless<void, Out, ChannelData>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>(
-  func: CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>(
+export const pikkuChannelConnectionFunc = <Out = unknown>(
   func:
-    | PikkuFunctionSessionless<void, Out, ChannelData>
-    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware> {
+    | PikkuFunctionSessionless<void, Out, unknown>
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, unknown>, PikkuPermission<void>, PikkuMiddleware>
+) => {
   return typeof func === 'function' ? { func } : func
 }
 
@@ -56,49 +49,32 @@ export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>
  * Creates a function that handles WebSocket channel disconnections.
  * Called when a client disconnects from a channel.
  *
- * @template ChannelData - Type of data associated with the channel
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  */
-export function pikkuChannelDisconnectionFunc<ChannelData = unknown>(
-  func: PikkuFunctionSessionless<void, void, ChannelData>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-export function pikkuChannelDisconnectionFunc<ChannelData = unknown>(
-  func: CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-export function pikkuChannelDisconnectionFunc<ChannelData = unknown>(
+export const pikkuChannelDisconnectionFunc = (
   func:
-    | PikkuFunctionSessionless<void, void, ChannelData>
-    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware> {
+    | PikkuFunctionSessionless<void, void, unknown>
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, unknown>, PikkuPermission<void>, PikkuMiddleware>
+) => {
   return typeof func === 'function' ? { func } : func
 }
 
 /**
  * Creates a function that handles WebSocket channel messages.
  * Called when a message is received on a channel.
+ * This is the same as pikkuSessionlessFunc but with ChannelData = unknown by default.
  *
  * @template In - Input type for channel messages
  * @template Out - Output type for channel responses
- * @template ChannelData - Type of data associated with the channel
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  */
-export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
-  func: PikkuFunctionSessionless<In, Out, ChannelData>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
-export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
-  func: PikkuFunction<In, Out, ChannelData>
-): CorePikkuFunctionConfig<PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
-export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
-  func: CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
-export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
+export const pikkuChannelFunc = <In, Out = unknown>(
   func:
-    | PikkuFunctionSessionless<In, Out, ChannelData>
-    | PikkuFunction<In, Out, ChannelData>
-    | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
-): CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware> {
+    | PikkuFunctionSessionless<In, Out, unknown>
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, unknown>, PikkuPermission<In>, PikkuMiddleware>
+) => {
   return typeof func === 'function' ? { func } : func
 }
 

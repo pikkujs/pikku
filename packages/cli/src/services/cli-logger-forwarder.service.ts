@@ -18,7 +18,7 @@ export class CLILoggerForwarder implements Logger {
 
   constructor(
     private logger: Logger,
-    private channel: PikkuChannel<unknown, ForwardedLogMessage>
+    private channel: PikkuChannel<unknown, any>
   ) {}
 
   setLevel(level: LogLevel): void {

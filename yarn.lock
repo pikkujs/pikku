@@ -3637,6 +3637,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/templates-type-checks@workspace:templates/type-checks":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-type-checks@workspace:templates/type-checks"
+  dependencies:
+    "@pikku/cli": "npm:^0.9.16-next.0"
+    "@pikku/core": "npm:^0.9.12-next.0"
+    "@types/node": "npm:^22"
+    typescript: "npm:^5.6"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/templates-uws@workspace:templates/uws":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-uws@workspace:templates/uws"
