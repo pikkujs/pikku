@@ -12,6 +12,7 @@ import {
   MiddlewareMetadata,
 } from '../../types/core.types.js'
 import {
+  CorePermissionGroup,
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
@@ -79,7 +80,7 @@ export type CoreChannel<
   onMessage?:
     | {
         func: ChannelFunctionMessage
-        permissions?: Record<string, PikkuPermission[] | PikkuPermission>
+        permissions?: CorePermissionGroup<PikkuPermission>
         auth?: boolean
       }
     | ChannelFunctionMessage
@@ -90,13 +91,13 @@ export type CoreChannel<
       | ChannelFunctionMessage
       | {
           func: ChannelFunctionMessage
-          permissions?: Record<string, PikkuPermission[] | PikkuPermission>
+          permissions?: CorePermissionGroup<PikkuPermission>
           auth?: boolean
         }
     >
   >
   middleware?: PikkuMiddleware[]
-  permissions?: Record<string, PikkuPermission[] | PikkuPermission>
+  permissions?: CorePermissionGroup<PikkuPermission>
   auth?: boolean
   docs?: Partial<{
     description: string

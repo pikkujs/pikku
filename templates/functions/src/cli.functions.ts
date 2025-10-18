@@ -14,47 +14,6 @@ export const greetUser = pikkuSessionlessFunc<
   },
 })
 
-// Math calculation function
-export const calculate = pikkuFunc<
-  {
-    operation: 'add' | 'subtract' | 'multiply' | 'divide'
-    a: number
-    b: number
-  },
-  { operation: string; operands: number[]; result: number; expression: string }
->({
-  func: async (services, data) => {
-    let result: number
-
-    switch (data.operation) {
-      case 'add':
-        result = data.a + data.b
-        break
-      case 'subtract':
-        result = data.a - data.b
-        break
-      case 'multiply':
-        result = data.a * data.b
-        break
-      case 'divide':
-        if (data.b === 0) {
-          throw new Error('Division by zero is not allowed')
-        }
-        result = data.a / data.b
-        break
-      default:
-        throw new Error(`Unknown operation: ${data.operation}`)
-    }
-
-    return {
-      operation: data.operation,
-      operands: [data.a, data.b],
-      result,
-      expression: `${data.a} ${data.operation} ${data.b} = ${result}`,
-    }
-  },
-})
-
 // Individual calculation functions for CLI
 export const addNumbers = pikkuFunc<
   { a: number; b: number },

@@ -189,7 +189,7 @@ export type PikkuFunctionConfig<
 export const pikkuFunc = <In, Out = unknown>(
   func:
     | PikkuFunction<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>>
+    | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>, PikkuMiddleware>
 ) => {
   return typeof func === 'function' ? { func } : func
 }

@@ -20,7 +20,15 @@ import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMid
  * @template Channel - String literal type for the channel name
  */
 type ChannelWiringFunction<I, O, C = {}> = PikkuFunctionSessionless<I, O, C> | PikkuFunction<I, O, C>
-type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<ChannelData, Channel, ChannelWiringFunction<void, unknown> | ChannelWiringFunction<void, unknown, ChannelData>, ChannelWiringFunction<void, void> | ChannelWiringFunction<void, void, ChannelData>, ChannelWiringFunction<any, any> | ChannelWiringFunction<any, any, ChannelData>, PikkuPermission, PikkuMiddleware>
+type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
+  ChannelData, 
+  Channel, 
+  PikkuPermission, 
+  PikkuMiddleware, 
+  ChannelWiringFunction<void, unknown> | ChannelWiringFunction<void, unknown, ChannelData>, 
+  ChannelWiringFunction<void, void> | ChannelWiringFunction<void, void, ChannelData>, 
+  ChannelWiringFunction<any, any> | ChannelWiringFunction<any, any, ChannelData>
+>
 
 /**
  * Creates a function that handles WebSocket channel connections.
