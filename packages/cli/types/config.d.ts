@@ -121,7 +121,7 @@ export type PikkuCLIInput = {
     >
   }
 
-  middlewareServices?: string[]
+  forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
 
@@ -184,7 +184,7 @@ export type PikkuCLIConfig = {
     >
   }
 
-  middlewareServices?: string[]
+  forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
 

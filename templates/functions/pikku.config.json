@@ -9,5 +9,5 @@
   "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
   "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
   "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
-  "middlewareServices": ["jwt"]
+  "forceRequiredServices": ["jwt"]
 }

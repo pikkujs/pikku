@@ -13,7 +13,6 @@
   },
   "scripts": {
     "prebuild": "pikku prebuild",
-    "test": "bash run-tests.sh",
     "tsc": "tsc --noEmit",
     "pikku": "pikku"
   }

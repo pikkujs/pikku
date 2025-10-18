@@ -163,6 +163,7 @@ export interface InspectorState {
   configTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType
   sessionServicesFactories: PathToNameAndType
+  sessionServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
   configFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
