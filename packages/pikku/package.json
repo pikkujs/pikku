@@ -9,8 +9,7 @@
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
-    "build:esm": "tsc -b",
-    "build": "yarn build:esm",
+    "build": "tsc -b",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh"
   },

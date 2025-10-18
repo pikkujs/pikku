@@ -17,7 +17,10 @@
     "typescript": "^5.6"
   },
   "scripts": {
+    "build": "tsc -b",
     "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
     "test:template": "bash run-tests.sh",
     "test:http": "npx tsx client/http-fetch.ts",

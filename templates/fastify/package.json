@@ -4,7 +4,10 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "tsc -b",
     "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts"
   },

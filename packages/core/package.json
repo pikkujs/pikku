@@ -8,8 +8,7 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "build:esm": "tsc -b",
-    "build": "yarn build:esm",
+    "build": "tsc -b",
     "ncu": "npx npm-check-updates",
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",

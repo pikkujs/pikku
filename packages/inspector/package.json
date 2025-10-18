@@ -8,8 +8,7 @@
   "main": "dist/index.js",
   "scripts": {
     "tsc": "tsc",
-    "build:esm": "tsc -b",
-    "build": "yarn build:esm",
+    "build": "tsc -b",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",

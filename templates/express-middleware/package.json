@@ -19,9 +19,11 @@
     "typescript": "^5.9"
   },
   "scripts": {
+    "build": "tsc -b",
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts",
     "tsc": "tsc",
-    "ncu": "npx npm-check-updates"
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   }
 }

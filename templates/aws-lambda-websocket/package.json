@@ -10,7 +10,8 @@
     "build": "npm run build:offline --external:\"@aws-sdk/*\"",
     "deploy": "npm run build && serverless deploy",
     "tsc": "tsc",
-    "ncu": "npx npm-check-updates"
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
   "dependencies": {
     "@pikku/aws-services": "^0.9.2",

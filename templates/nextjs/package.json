@@ -3,10 +3,11 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "tsc -b",
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "dev": "next dev",
-    "build": "next build",
     "pikku": "pikku",
     "start": "next start",
     "lint": "next lint",
