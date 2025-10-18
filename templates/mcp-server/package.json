@@ -4,7 +4,6 @@
   "description": "Pikku Model Context Protocol (MCP) Server Template",
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts",
     "tsc": "tsc",
