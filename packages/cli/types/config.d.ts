@@ -64,6 +64,9 @@ export interface PikkuCLICoreOutputFiles {
   middlewareFile: string
   middlewareGroupsMetaFile: string
 
+  // Permissions
+  permissionsFile: string
+
   // Application bootstrap
   bootstrapFile: string
 }

@@ -245,6 +245,12 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Permissions
+    const permissionsDir = join(result.outDir, 'permissions')
+    if (!result.permissionsFile) {
+      result.permissionsFile = join(permissionsDir, 'pikku-permissions.gen.ts')
+    }
+
     // Bootstrap files
     if (!result.bootstrapFile) {
       result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')
