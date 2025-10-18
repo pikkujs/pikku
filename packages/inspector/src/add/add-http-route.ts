@@ -8,6 +8,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { AddWiring } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
+import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -122,6 +123,15 @@ export const addHTTPRoute: AddWiring = (
     checker
   )
 
+  // --- resolve permissions ---
+  const permissions = resolveHTTPPermissionsFromObject(
+    state,
+    route,
+    obj,
+    tags,
+    checker
+  )
+
   // --- record route ---
   state.http.files.add(node.getSourceFile().fileName)
   state.http.meta[method][route] = {
@@ -134,5 +144,6 @@ export const addHTTPRoute: AddWiring = (
     docs,
     tags,
     middleware,
+    permissions,
   }
 }
