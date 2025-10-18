@@ -8,7 +8,7 @@ import {
   addMiddleware,
   pikkuMiddleware,
   wireHTTP,
-} from '../../.pikku/pikku-types.gen.js'
+} from '../../../functions/.pikku/pikku-types.gen.js'
 import {
   httpGlobalMiddleware,
   httpRouteMiddleware,

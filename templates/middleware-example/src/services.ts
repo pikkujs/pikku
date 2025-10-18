@@ -11,7 +11,7 @@ import {
 } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
-import { RequiredSingletonServices } from '../.pikku/pikku-services.gen.js'
+import { RequiredSingletonServices } from '../../functions/.pikku/pikku-services.gen.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}
