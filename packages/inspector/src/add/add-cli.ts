@@ -75,12 +75,29 @@ function processCLIConfig(
   options: InspectorOptions
 ): { programName: string; programMeta: CLIProgramMeta } | null {
   let programName = ''
+  let programTags: string[] | undefined
   const programMeta: CLIProgramMeta = {
     program: '',
     commands: {},
     options: {},
   }
 
+  // First pass: extract program name and tags
+  for (const prop of node.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue
+    if (!ts.isIdentifier(prop.name)) continue
+
+    const propName = prop.name.text
+
+    if (propName === 'program' && ts.isStringLiteral(prop.initializer)) {
+      programName = prop.initializer.text
+      programMeta.program = programName
+    } else if (propName === 'tags') {
+      programTags = (getPropertyValue(node, 'tags') as string[]) || undefined
+    }
+  }
+
+  // Second pass: process other properties with program tags available
   for (const prop of node.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
     if (!ts.isIdentifier(prop.name)) continue
@@ -89,10 +106,8 @@ function processCLIConfig(
 
     switch (propName) {
       case 'program':
-        if (ts.isStringLiteral(prop.initializer)) {
-          programName = prop.initializer.text
-          programMeta.program = programName
-        }
+      case 'tags':
+        // Already handled in first pass
         break
 
       case 'commands':
@@ -104,7 +119,8 @@ function processCLIConfig(
             typeChecker,
             programName,
             inspectorState,
-            options
+            options,
+            programTags
           )
         }
         break
@@ -145,7 +161,8 @@ function processCommands(
   typeChecker: TypeChecker,
   programName: string,
   inspectorState: InspectorState,
-  options: InspectorOptions
+  options: InspectorOptions,
+  programTags?: string[]
 ): Record<string, CLICommandMeta> {
   const commands: Record<string, CLICommandMeta> = {}
 
@@ -163,7 +180,9 @@ function processCommands(
       prop.initializer,
       sourceFile,
       typeChecker,
-      programName
+      programName,
+      [],
+      programTags
     )
 
     if (commandMeta) {
@@ -186,7 +205,8 @@ function processCommand(
   sourceFile: ts.SourceFile,
   typeChecker: TypeChecker,
   programName: string,
-  parentPath: string[] = []
+  parentPath: string[] = [],
+  programTags?: string[]
 ): CLICommandMeta | null {
   const fullPath = [...parentPath, name]
 
@@ -222,7 +242,8 @@ function processCommand(
         sourceFile,
         typeChecker,
         programName,
-        parentPath
+        parentPath,
+        programTags
       )
     }
     return null
@@ -266,10 +287,23 @@ function processCommand(
     }
   }
 
+  // Merge program-level tags with command-level tags
+  const allTags = [...(programTags || []), ...(tags || [])]
+
   // Resolve middleware
-  const middleware = resolveMiddleware(inspectorState, node, tags, typeChecker)
+  const middleware = resolveMiddleware(
+    inspectorState,
+    node,
+    allTags.length > 0 ? allTags : undefined,
+    typeChecker
+  )
   if (middleware) {
     meta.middleware = middleware
+  }
+
+  // Add merged tags to metadata
+  if (allTags.length > 0) {
+    meta.tags = allTags
   }
 
   // Second pass: process all properties
@@ -336,7 +370,8 @@ function processCommand(
               sourceFile,
               typeChecker,
               programName,
-              fullPath
+              fullPath,
+              programTags
             )
 
             if (subCommand) {

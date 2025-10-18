@@ -46,6 +46,7 @@ export const inspect = (
       },
       files: new Set(),
       routeMiddleware: new Map(),
+      routePermissions: new Map(),
     },
     channels: {
       files: new Set(),
@@ -82,6 +83,7 @@ export const inspect = (
     },
     permissions: {
       meta: {},
+      tagPermissions: new Map(),
     },
   }
 

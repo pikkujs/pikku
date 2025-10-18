@@ -346,14 +346,6 @@ export async function runCLICommand({
     )
   }
 
-  // Build inherited middleware from tags
-  const inheritedMiddleware: any[] = []
-  if (programData?.tags) {
-    for (const tag of programData.tags) {
-      inheritedMiddleware.push({ type: 'tag', tag })
-    }
-  }
-
   try {
     const result = await runPikkuFunc(
       PikkuWiringTypes.cli,
@@ -365,8 +357,11 @@ export async function runCLICommand({
         data: pluckedData,
         auth: false,
         userSession,
-        inheritedMiddleware,
+        inheritedMiddleware: currentCommand.middleware,
         wireMiddleware: allWireMiddleware,
+        inheritedPermissions: currentCommand.permissions,
+        wirePermissions: undefined,
+        tags: programData?.tags,
         interaction,
       }
     )

@@ -46,6 +46,27 @@ export type MiddlewareMetadata =
       inline?: boolean // true if inline middleware
     }
 
+/**
+ * Metadata for permissions at any level
+ * - type: 'http' = HTTP route permission group (references httpGroup in pikkuState)
+ * - type: 'tag' = Tag-based permission group (references tagGroup in pikkuState)
+ * - type: 'wire' = Wire-level individual permission
+ */
+export type PermissionMetadata =
+  | {
+      type: 'http'
+      route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
+    }
+  | {
+      type: 'tag'
+      tag: string // Tag name
+    }
+  | {
+      type: 'wire'
+      name: string
+      inline?: boolean // true if inline permission
+    }
+
 export type FunctionRuntimeMeta = {
   pikkuFuncName: string
   inputSchemaName: string | null
@@ -62,7 +83,8 @@ export type FunctionMeta = FunctionRuntimeMeta &
     tags: string[]
     docs: PikkuDocs
     isDirectFunction: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
-    middleware: MiddlewareMetadata[] // Function-level middleware (type will be undefined)
+    middleware: MiddlewareMetadata[] // Function-level middleware
+    permissions: PermissionMetadata[] // Function-level permissions
   }>
 
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>

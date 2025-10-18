@@ -5,6 +5,7 @@ import {
   PikkuDocs,
   CoreServices,
   MiddlewareMetadata,
+  PermissionMetadata,
 } from '../../types/core.types.js'
 import {
   CorePikkuFunctionConfig,
@@ -78,6 +79,7 @@ export interface CLICommandMeta {
   tags?: string[]
   subcommands?: Record<string, CLICommandMeta>
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
+  permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
 }
 
 /**

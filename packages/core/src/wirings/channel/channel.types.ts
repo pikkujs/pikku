@@ -10,6 +10,7 @@ import {
   CreateSessionServices,
   CorePikkuMiddleware,
   MiddlewareMetadata,
+  PermissionMetadata,
 } from '../../types/core.types.js'
 import {
   CorePermissionGroup,
@@ -39,6 +40,7 @@ export interface ChannelMessageMeta {
   pikkuFuncName: string
   docs?: PikkuDocs
   middleware?: MiddlewareMetadata[]
+  permissions?: PermissionMetadata[]
 }
 
 export interface ChannelMeta {
@@ -55,6 +57,7 @@ export interface ChannelMeta {
   docs?: PikkuDocs
   tags?: string[]
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
+  permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
 }
 
 export type ChannelsMeta = Record<string, ChannelMeta>

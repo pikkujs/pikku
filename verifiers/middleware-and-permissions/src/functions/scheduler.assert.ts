@@ -1,19 +1,19 @@
 import { runScheduledTask } from '@pikku/core'
-import { assertMiddleware } from '../utils/assert-middleware.js'
-import type { ExpectedMiddleware } from '../utils/assert-middleware.js'
+import { assertMiddlewareAndPermissions } from '../assert-combined.js'
+import type { ExpectedEvent } from '../assert-combined.js'
 
 /**
- * Test scheduler task middleware execution
+ * Test scheduler task middleware and permission execution
  */
 export async function testSchedulerWiring(
-  expected: ExpectedMiddleware[],
+  expected: ExpectedEvent[],
   singletonServices: any,
   createSessionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run Scheduled Task')
   console.log('─────────────────────────')
 
-  const passed = await assertMiddleware(
+  const passed = await assertMiddlewareAndPermissions(
     expected,
     async () => {
       await runScheduledTask({

@@ -1,4 +1,4 @@
-import { pikkuMiddlewareFactory } from '../../../functions/.pikku/pikku-types.gen.js'
+import { pikkuMiddlewareFactory } from '../../.pikku/pikku-types.gen.js'
 
 export const tagMiddleware = pikkuMiddlewareFactory(
   (name: string) =>

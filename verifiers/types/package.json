@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/templates-type-checks",
+  "name": "@pikku/verifiers-types",
   "type": "module",
   "private": true,
   "description": "TypeScript type constraint tests for Pikku framework",
@@ -12,7 +12,7 @@
     "typescript": "^5.6"
   },
   "scripts": {
-    "prebuild": "pikku prebuild",
+    "prebuild": "pikku",
     "tsc": "tsc --noEmit",
     "pikku": "pikku"
   }

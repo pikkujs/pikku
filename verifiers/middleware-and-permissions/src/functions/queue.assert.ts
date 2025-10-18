@@ -1,19 +1,19 @@
 import { runQueueJob } from '@pikku/core'
-import { assertMiddleware } from '../utils/assert-middleware.js'
-import type { ExpectedMiddleware } from '../utils/assert-middleware.js'
+import { assertMiddlewareAndPermissions } from '../assert-combined.js'
+import type { ExpectedEvent } from '../assert-combined.js'
 
 /**
  * Test queue worker middleware execution
  */
 export async function testQueueWiring(
-  expected: ExpectedMiddleware[],
+  expected: ExpectedEvent[],
   singletonServices: any,
   createSessionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run Queue Job')
   console.log('─────────────────────────')
 
-  const passed = await assertMiddleware(
+  const passed = await assertMiddlewareAndPermissions(
     expected,
     async () => {
       await runQueueJob({

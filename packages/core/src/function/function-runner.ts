@@ -10,10 +10,12 @@ import {
   CoreSingletonServices,
   PikkuInteraction,
   MiddlewareMetadata,
+  PermissionMetadata,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
+  CorePikkuPermission,
 } from './functions.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
@@ -48,9 +50,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     data,
     userSession,
     auth: wiringAuth,
-    permissions: wiringPermissions,
     inheritedMiddleware,
     wireMiddleware,
+    inheritedPermissions,
+    wirePermissions,
     coerceDataFromSchema,
     tags = [],
     interaction,
@@ -62,9 +65,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     userSession?: UserSessionService<CoreUserSession>
     data: () => Promise<In> | In
     auth?: boolean
-    permissions?: CorePermissionGroup
     inheritedMiddleware?: MiddlewareMetadata[]
     wireMiddleware?: CorePikkuMiddleware[]
+    inheritedPermissions?: PermissionMetadata[]
+    wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     coerceDataFromSchema?: boolean
     tags?: string[]
     interaction: PikkuInteraction
@@ -115,15 +119,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     const allServices = await getAllServices(session)
+
+    // Run permissions check with combined permissions: inheritedPermissions → wirePermissions → funcPermissions
     await runPermissions(wireType, wireId, {
-      wiringTags: tags,
-      wiringPermissions,
-      funcTags: funcConfig.tags,
+      wireInheritedPermissions: inheritedPermissions,
+      wirePermissions: wirePermissions,
+      funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       allServices,
       data: actualData,
       session,
     })
+
     return await funcConfig.func(allServices, actualData, session!)
   }
 
