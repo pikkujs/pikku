@@ -107,7 +107,9 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     const cookieHeader = Array.from(this.#cookies.entries()).map(
       ([name, { value, flags }]) => serializeCookie(name, value, flags)
     )
-    this.#headers.set('Set-Cookie', cookieHeader.join(', '))
+    // Multiple Set-Cookie headers must be appended separately, not joined with commas
+    // per HTTP specification (RFC 6265)
+    cookieHeader.forEach((cookie) => this.#headers.append('Set-Cookie', cookie))
     return new Response(this.#body, {
       ...args,
       status: this.#statusCode,
