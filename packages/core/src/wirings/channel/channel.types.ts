@@ -14,6 +14,7 @@ import {
 import {
   CorePermissionGroup,
   CorePikkuFunction,
+  CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
 } from '../../function/functions.types.js'
@@ -61,15 +62,24 @@ export type ChannelsMeta = Record<string, ChannelMeta>
 export type CoreChannel<
   ChannelData,
   Channel extends string,
-  ChannelConnect =
+  ChannelConnect = CorePikkuFunctionConfig<
     | CorePikkuFunction<void, unknown, ChannelData>
     | CorePikkuFunctionSessionless<void, unknown, ChannelData>,
-  ChannelDisconnect =
+    CorePikkuPermission<void>,
+    CorePikkuMiddleware
+  >,
+  ChannelDisconnect = CorePikkuFunctionConfig<
     | CorePikkuFunction<void, void, ChannelData>
     | CorePikkuFunctionSessionless<void, void, ChannelData>,
-  ChannelFunctionMessage =
+    CorePikkuPermission<void>,
+    CorePikkuMiddleware
+  >,
+  ChannelFunctionMessage = CorePikkuFunctionConfig<
     | CorePikkuFunction<unknown, unknown, ChannelData>
     | CorePikkuFunctionSessionless<unknown, unknown, ChannelData>,
+    CorePikkuPermission<unknown>,
+    CorePikkuMiddleware
+  >,
   PikkuPermission = CorePikkuPermission<ChannelData>,
   PikkuMiddleware = CorePikkuMiddleware,
 > = {
@@ -77,13 +87,7 @@ export type CoreChannel<
   route: Channel
   onConnect?: ChannelConnect
   onDisconnect?: ChannelDisconnect
-  onMessage?:
-    | {
-        func: ChannelFunctionMessage
-        permissions?: CorePermissionGroup<PikkuPermission>
-        auth?: boolean
-      }
-    | ChannelFunctionMessage
+  onMessage?: ChannelFunctionMessage
   onMessageWiring?: Record<
     string,
     Record<
@@ -93,6 +97,7 @@ export type CoreChannel<
           func: ChannelFunctionMessage
           permissions?: CorePermissionGroup<PikkuPermission>
           auth?: boolean
+          middleware?: PikkuMiddleware[]
         }
     >
   >

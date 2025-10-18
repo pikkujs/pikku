@@ -21,7 +21,7 @@ wireCLI({
     },
     logLevel: {
       description: 'Set log level',
-      default: 'info',
+      default: 'info' as const,
       short: 'l',
     },
   },

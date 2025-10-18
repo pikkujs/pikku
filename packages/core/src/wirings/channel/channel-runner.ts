@@ -35,27 +35,20 @@ export const wireChannel = <
 
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {
-    addFunction(channelMeta.connect.pikkuFuncName, {
-      func: channel.onConnect as any,
-    })
+    addFunction(channelMeta.connect.pikkuFuncName, channel.onConnect as any)
   }
 
   // Register onDisconnect function if provided
   if (channel.onDisconnect && channelMeta.disconnect) {
-    addFunction(channelMeta.disconnect.pikkuFuncName, {
-      func: channel.onDisconnect,
-    })
+    addFunction(
+      channelMeta.disconnect.pikkuFuncName,
+      channel.onDisconnect as any
+    )
   }
 
   // Register onMessage function if provided
   if (channel.onMessage && channelMeta.message?.pikkuFuncName) {
-    const messageFunc =
-      typeof channel.onMessage === 'function'
-        ? channel.onMessage
-        : channel.onMessage.func
-    addFunction(channelMeta.message.pikkuFuncName, {
-      func: messageFunc,
-    })
+    addFunction(channelMeta.message.pikkuFuncName, channel.onMessage as any)
   }
 
   // Register functions in onMessageWiring
@@ -70,18 +63,8 @@ export const wireChannel = <
         const wiringMeta = channelWirings[wiringKey]
         if (!wiringMeta) return
 
-        // Extract the function from the handler
-        const wiringFunc =
-          typeof handler === 'function'
-            ? { func: handler }
-            : {
-                func: handler.func,
-                auth: handler.auth,
-                permissions: handler.permissions,
-              }
-
         // Register the function using the pikku name from metadata
-        addFunction(wiringMeta.pikkuFuncName, wiringFunc)
+        addFunction(wiringMeta.pikkuFuncName, handler as any)
       })
     })
   }

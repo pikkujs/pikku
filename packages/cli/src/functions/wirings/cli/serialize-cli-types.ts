@@ -37,11 +37,6 @@ type PikkuCLIRender<Data, RequiredServices extends SingletonServices = Singleton
 type CLICommandConfig<Func extends PikkuFunctionConfig<In, Out>, In = any, Out = any, Params extends string = string> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>, Params>
 
 /**
- * Result type for CLI command configuration
- */
-type CLICommandResult<Func extends PikkuFunctionConfig<In, Out>, In = any, Out = any, Params extends string = string> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>, Params>
-
-/**
  * Type definition for CLI applications with commands and global options.
  *
  * @template Commands - Type describing the command structure

@@ -3,6 +3,7 @@ import {
   pikkuChannelFunc,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
+  pikkuSessionlessFunc,
 } from '../.pikku/pikku-types.gen.js'
 
 export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
@@ -22,7 +23,7 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
   }
 )
 
-export const authenticate = pikkuFunc<
+export const authenticate = pikkuSessionlessFunc<
   { token: string; userId: string },
   { authResult: boolean; action: 'auth' }
 >(async ({ userSession }, data) => {
@@ -31,6 +32,13 @@ export const authenticate = pikkuFunc<
     await userSession?.set({ userId: data.userId })
   }
   return { authResult, action: 'auth' }
+})
+
+export const logout = pikkuFunc<void, { action: 'auth' }>({
+  func: async ({ userSession }, data) => {
+    await userSession?.clear()
+    return { action: 'auth' }
+  },
 })
 
 export const subscribe = pikkuChannelFunc<{ name: string }, void>(

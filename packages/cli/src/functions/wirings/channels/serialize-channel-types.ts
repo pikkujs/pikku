@@ -19,15 +19,14 @@ import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMid
  * @template ChannelData - Type of data exchanged through the channel
  * @template Channel - String literal type for the channel name
  */
-type ChannelWiringFunction<I, O, C = {}> = PikkuFunctionSessionless<I, O, C> | PikkuFunction<I, O, C>
 type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
-  ChannelData, 
-  Channel, 
-  PikkuPermission, 
-  PikkuMiddleware, 
-  ChannelWiringFunction<void, unknown> | ChannelWiringFunction<void, unknown, ChannelData>, 
-  ChannelWiringFunction<void, void> | ChannelWiringFunction<void, void, ChannelData>, 
-  ChannelWiringFunction<any, any> | ChannelWiringFunction<any, any, ChannelData>
+  ChannelData,
+  Channel,
+  CorePikkuFunctionConfig<PikkuFunctionSessionless<void, unknown, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
+  CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
+  CorePikkuFunctionConfig<PikkuFunctionSessionless<any, any, ChannelData> | PikkuFunction<any, any, ChannelData>, PikkuPermission<any>, PikkuMiddleware>,
+  PikkuPermission,
+  PikkuMiddleware
 >
 
 /**
@@ -37,17 +36,20 @@ type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
  * @template Out - Output type for connection response
  * @template ChannelData - Type of data associated with the channel
  * @param func - Function definition, either direct function or configuration object
- * @returns The unwrapped function for internal use
+ * @returns The normalized configuration object
  */
-export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>(
+export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>(
+  func: PikkuFunctionSessionless<void, Out, ChannelData>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>(
+  func: CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+export function pikkuChannelConnectionFunc<Out = unknown, ChannelData = unknown>(
   func:
     | PikkuFunctionSessionless<void, Out, ChannelData>
-    | {
-        func: PikkuFunctionSessionless<void, Out, ChannelData>
-        name?: string
-      }
-) => {
-  return typeof func === 'function' ? func : func.func
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, Out, ChannelData>, PikkuPermission<void>, PikkuMiddleware> {
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -56,17 +58,20 @@ export const pikkuChannelConnectionFunc = <Out = unknown, ChannelData = unknown>
  *
  * @template ChannelData - Type of data associated with the channel
  * @param func - Function definition, either direct function or configuration object
- * @returns The unwrapped function for internal use
+ * @returns The normalized configuration object
  */
-export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
+export function pikkuChannelDisconnectionFunc<ChannelData = unknown>(
+  func: PikkuFunctionSessionless<void, void, ChannelData>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+export function pikkuChannelDisconnectionFunc<ChannelData = unknown>(
+  func: CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+export function pikkuChannelDisconnectionFunc<ChannelData = unknown>(
   func:
     | PikkuFunctionSessionless<void, void, ChannelData>
-    | {
-        func: PikkuFunction<void, void, ChannelData>
-        name?: string
-      }
-) => {
-  return typeof func === 'function' ? func : func.func
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware> {
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
@@ -77,14 +82,24 @@ export const pikkuChannelDisconnectionFunc = <ChannelData = unknown>(
  * @template Out - Output type for channel responses
  * @template ChannelData - Type of data associated with the channel
  * @param func - Function definition, either direct function or configuration object
- * @returns The unwrapped function for internal use
+ * @returns The normalized configuration object
  */
-export const pikkuChannelFunc = <In = unknown, Out = unknown, ChannelData = unknown>(
+export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
+  func: PikkuFunctionSessionless<In, Out, ChannelData>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
+export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
+  func: PikkuFunction<In, Out, ChannelData>
+): CorePikkuFunctionConfig<PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
+export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
+  func: CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
+export function pikkuChannelFunc<In = unknown, Out = unknown, ChannelData = unknown>(
   func:
     | PikkuFunctionSessionless<In, Out, ChannelData>
-    | CorePikkuFunctionConfig<PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>>
-) => {
-  return typeof func === 'function' ? func : func.func
+    | PikkuFunction<In, Out, ChannelData>
+    | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware>
+): CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out, ChannelData> | PikkuFunction<In, Out, ChannelData>, PikkuPermission<In>, PikkuMiddleware> {
+  return typeof func === 'function' ? { func } : func
 }
 
 /**
