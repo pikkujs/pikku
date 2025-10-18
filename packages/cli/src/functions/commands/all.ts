@@ -38,6 +38,13 @@ export const all: any = pikkuVoidFunc({
       allImports.push(config.middlewareFile)
     }
 
+    // Generate and register permissions
+    const permissions = await rpc.invoke('pikkuPermissions', null)
+    // Permissions must be imported before functions meta to ensure registration happens first
+    if (permissions) {
+      allImports.push(config.permissionsFile)
+    }
+
     // Always import functions meta (needed for all function metadata)
     allImports.push(config.functionsMetaFile)
 
