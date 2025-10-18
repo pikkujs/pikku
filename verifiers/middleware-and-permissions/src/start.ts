@@ -4,11 +4,10 @@ import {
   createSessionServices,
 } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
-
-// TODO: MCP wiring not working - metadata not being generated
-// import './functions/mcp.wiring.js'
+import './functions/mcp.wiring.js'
 
 import { testHTTPWiring } from './functions/http.assert.js'
+import { testMCPWiring } from './functions/mcp.assert.js'
 import { testSchedulerWiring } from './functions/scheduler.assert.js'
 import { testQueueWiring } from './functions/queue.assert.js'
 import { testCLIWiring } from './functions/cli.assert.js'
@@ -127,26 +126,33 @@ async function main(): Promise<void> {
       createSessionServices as any
     )
 
-    // TODO: Test 6: MCP tool - skipped for now (metadata generation issue)
-    // await testMCPWiring(singletonServices, createSessionServices)
+    // Test MCP
+    const mcpPassed = await testMCPWiring(
+      [
+        { name: 'mcp', type: 'tag', phase: 'before' },
+        { name: 'mcp', type: 'wire', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'noOp', type: 'function', phase: 'before' },
+        { name: 'mcp', type: 'tag-permission' },
+        { name: 'mcp-wire', type: 'wire-permission' },
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices,
+      createSessionServices
+    )
 
     const allPassed =
       httpTest1Passed &&
       httpTest2Passed &&
       schedulerPassed &&
       queuePassed &&
-      cliPassed
+      cliPassed &&
+      mcpPassed
 
     if (allPassed) {
-      console.log('\n\n✓ All implemented wiring types tested successfully!')
-      console.log(
-        'Note: MCP wiring test skipped - metadata generation needs to be fixed'
-      )
+      console.log('\n\n✓ All wiring types tested successfully!')
     } else {
       console.log('\n\n✗ Some tests failed!')
-      console.log(
-        'Note: MCP wiring test skipped - metadata generation needs to be fixed'
-      )
       process.exit(1)
     }
   } catch (e: any) {

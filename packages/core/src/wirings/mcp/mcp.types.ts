@@ -24,7 +24,7 @@ export type PikkuMCP<Tools extends string = any> = {
  */
 export type MCPResourceMeta = Record<
   string,
-  Omit<CoreMCPResource, 'func' | 'middleware'> & {
+  Omit<CoreMCPResource, 'func' | 'middleware' | 'permissions'> & {
     pikkuFuncName: string
     inputSchema: string | null
     outputSchema: string | null
@@ -38,7 +38,7 @@ export type MCPResourceMeta = Record<
  */
 export type MCPToolMeta = Record<
   string,
-  Omit<CoreMCPTool, 'func' | 'middleware'> & {
+  Omit<CoreMCPTool, 'func' | 'middleware' | 'permissions'> & {
     pikkuFuncName: string
     inputSchema: string | null
     outputSchema: string | null
@@ -52,7 +52,7 @@ export type MCPToolMeta = Record<
  */
 export type MCPPromptMeta = Record<
   string,
-  Omit<CoreMCPPrompt, 'func' | 'middleware'> & {
+  Omit<CoreMCPPrompt, 'func' | 'middleware' | 'permissions'> & {
     pikkuFuncName: string
     inputSchema: string | null
     outputSchema: string | null
