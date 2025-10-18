@@ -1,5 +1,13 @@
 # @pikku/inspector
 
+## 0.9.6-next.0
+
+### Patch Changes
+
+- feat: running @pikku/cli using pikku
+- Updated dependencies
+  - @pikku/core@0.9.12-next.0
+
 ## 0.9.5
 
 ### Patch Changes

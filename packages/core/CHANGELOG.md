@@ -1,5 +1,11 @@
 ## 0.9.0
 
+## 0.9.12-next.0
+
+### Patch Changes
+
+- feat: running @pikku/cli using pikku
+
 ## 0.9.11
 
 ### Patch Changes

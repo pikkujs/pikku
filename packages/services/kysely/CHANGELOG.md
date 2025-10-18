@@ -1,5 +1,12 @@
 # @pikku/kysely
 
+## 0.9.5-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @pikku/core@0.9.12-next.0
+
 ## 0.9.4
 
 ### Patch Changes

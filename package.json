@@ -23,7 +23,7 @@
     "tsc": "yarn workspaces foreach -A -p run tsc",
     "build:packages": "yarn workspaces foreach -p -A --include 'packages/**' run build",
     "build:templates": "yarn workspaces foreach -p -A --include 'templates/**' run build",
-    "build": "yarn build:packages && yarn pikku && yarn build:templates",
+    "build": "yarn build:packages && yarn pikku",
     "release": "yarn build && npx changeset publish",
     "ncu": "yarn workspaces foreach -p -A run ncu",
     "ncu:pikku": "yarn workspaces foreach -p -A run ncu -f '/@pikku/.*/'",

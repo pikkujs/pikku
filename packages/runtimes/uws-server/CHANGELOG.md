@@ -1,5 +1,13 @@
 # @pikku/uws
 
+## 0.9.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @pikku/core@0.9.12-next.0
+  - @pikku/uws-handler@0.9.3-next.0
+
 ## 0.9.2
 
 ### Patch Changes
