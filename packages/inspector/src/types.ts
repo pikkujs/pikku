@@ -31,6 +31,15 @@ export interface MiddlewareGroupMeta {
   isFactory: boolean // true if wrapped in () => add...()
 }
 
+export interface PermissionGroupMeta {
+  exportName: string | null // null if not exported
+  sourceFile: string
+  position: number
+  services: FunctionServicesMeta
+  permissionCount: number
+  isFactory: boolean // true if wrapped in () => add...()
+}
+
 export interface InspectorHTTPState {
   metaInputTypes: MetaInputTypes
   meta: HTTPWiringsMeta
@@ -39,6 +48,10 @@ export interface InspectorHTTPState {
   // Pattern '*' matches all routes (from addHTTPMiddleware('*', [...]))
   // Pattern '/api/*' matches specific routes (from addHTTPMiddleware('/api/*', [...]))
   routeMiddleware: Map<string, MiddlewareGroupMeta>
+  // HTTP permission calls tracking - route pattern -> group metadata
+  // Pattern '*' matches all routes (from addHTTPPermission('*', [...]))
+  // Pattern '/api/*' matches specific routes (from addHTTPPermission('/api/*', [...]))
+  routePermissions: Map<string, PermissionGroupMeta>
 }
 
 export interface InspectorFunctionState {
@@ -70,6 +83,7 @@ export interface InspectorMiddlewareState {
 }
 
 export interface InspectorPermissionState {
+  // Individual permission function metadata
   meta: Record<
     string,
     {
@@ -79,6 +93,9 @@ export interface InspectorPermissionState {
       exportedName: string | null
     }
   >
+  // Tag-based permission calls tracking - tag -> group metadata
+  // e.g., export const adminPermissions = () => addPermission('admin', [...])
+  tagPermissions: Map<string, PermissionGroupMeta>
 }
 
 export type InspectorFilters = {

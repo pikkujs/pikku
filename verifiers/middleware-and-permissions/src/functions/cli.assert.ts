@@ -1,20 +1,20 @@
 import { runCLICommand } from '@pikku/core'
-import { assertMiddleware } from '../utils/assert-middleware.js'
-import type { ExpectedMiddleware } from '../utils/assert-middleware.js'
+import { assertMiddlewareAndPermissions } from '../assert-combined.js'
+import type { ExpectedEvent } from '../assert-combined.js'
 
 /**
- * Test CLI command middleware execution
+ * Test CLI command middleware and permission execution
  */
 export async function testCLIWiring(
-  expectedCommand: ExpectedMiddleware[],
-  expectedSubcommand: ExpectedMiddleware[],
+  expectedCommand: ExpectedEvent[],
+  expectedSubcommand: ExpectedEvent[],
   singletonServices: any,
   createSessionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run CLI Command')
   console.log('─────────────────────────')
 
-  const commandPassed = await assertMiddleware(
+  const commandPassed = await assertMiddlewareAndPermissions(
     expectedCommand,
     async () => {
       await runCLICommand({
@@ -28,7 +28,7 @@ export async function testCLIWiring(
     singletonServices.logger
   )
 
-  const subCommandPassed = await assertMiddleware(
+  const subCommandPassed = await assertMiddlewareAndPermissions(
     expectedSubcommand,
     async () => {
       await runCLICommand({

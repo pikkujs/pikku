@@ -1,0 +1,39 @@
+import {
+  wireScheduler,
+  addMiddleware,
+  addPermission,
+  pikkuPermission,
+} from '../../.pikku/pikku-types.gen.js'
+import { tagMiddleware } from '../middleware/tag.js'
+import { wireMiddleware } from '../middleware/wire.js'
+import { wirePermission } from '../permissions/wire.js'
+import { noOpFunction } from './no-op.function.js'
+
+// Tag middleware for scheduler
+export const schedulerTagMiddleware = () =>
+  addMiddleware('scheduler', [tagMiddleware('scheduler')])
+
+// Tag permissions for scheduler
+export const schedulerTagPermissions = () =>
+  addPermission('scheduler', {
+    schedulerPermission: pikkuPermission(async ({ logger }, _data, session) => {
+      logger.info({
+        type: 'tag-permission',
+        name: 'scheduler',
+        sessionExists: !!session,
+      })
+      // Return false to ensure all permissions run
+      return false
+    }),
+  })
+
+wireScheduler({
+  name: 'testScheduledTask',
+  schedule: '*/1 * * * *', // Every minute
+  tags: ['scheduler'],
+  middleware: [wireMiddleware('scheduler')],
+  permissions: {
+    wire: wirePermission,
+  },
+  func: noOpFunction,
+})

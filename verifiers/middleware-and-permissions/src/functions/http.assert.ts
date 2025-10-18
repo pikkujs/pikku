@@ -1,20 +1,20 @@
 import { fetch } from '@pikku/core'
-import { assertMiddleware } from '../utils/assert-middleware.js'
-import type { ExpectedMiddleware } from '../utils/assert-middleware.js'
+import { assertMiddlewareAndPermissions } from '../assert-combined.js'
+import type { ExpectedEvent } from '../assert-combined.js'
 
 /**
- * Test HTTP endpoint middleware execution
+ * Test HTTP endpoint middleware and permission execution
  */
 export async function testHTTPWiring(
   url: string,
-  expected: ExpectedMiddleware[],
+  expected: ExpectedEvent[],
   singletonServices: any,
   createSessionServices: any
 ): Promise<boolean> {
-  console.log(`\n\nTest: GET ${url}`)
+  console.log(`\n\nTest: ${url}`)
   console.log('─────────────────────────')
 
-  const passed = await assertMiddleware(
+  const passed = await assertMiddlewareAndPermissions(
     expected,
     async () => {
       await fetch(new Request(`http://localhost${url}`), {

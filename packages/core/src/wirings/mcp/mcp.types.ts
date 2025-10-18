@@ -7,6 +7,7 @@ import {
 import {
   CorePikkuMiddleware,
   MiddlewareMetadata,
+  PermissionMetadata,
 } from '../../types/core.types.js'
 
 export type PikkuMCP<Tools extends string = any> = {
@@ -28,6 +29,7 @@ export type MCPResourceMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
+    permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   }
 >
 
@@ -41,6 +43,7 @@ export type MCPToolMeta = Record<
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
+    permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   }
 >
 
@@ -59,6 +62,7 @@ export type MCPPromptMeta = Record<
       required: boolean
     }>
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
+    permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
   }
 >
 

@@ -3879,17 +3879,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-middleware-example@workspace:templates/middleware-example":
-  version: 0.0.0-use.local
-  resolution: "@pikku/templates-middleware-example@workspace:templates/middleware-example"
-  dependencies:
-    "@pikku/cli": "npm:^0.9.16-next.0"
-    "@pikku/core": "npm:^0.9.12-next.0"
-    "@types/node": "npm:^24"
-    typescript: "npm:^5.6"
-  languageName: unknown
-  linkType: soft
-
 "@pikku/templates-pg-boss@workspace:templates/pg-boss":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-pg-boss@workspace:templates/pg-boss"
@@ -3899,17 +3888,6 @@ __metadata:
     "@types/node": "npm:^22"
     tslib: "npm:^2.7.0"
     tsx: "npm:^4.19.2"
-    typescript: "npm:^5.6"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/templates-type-checks@workspace:templates/type-checks":
-  version: 0.0.0-use.local
-  resolution: "@pikku/templates-type-checks@workspace:templates/type-checks"
-  dependencies:
-    "@pikku/cli": "npm:^0.9.16-next.0"
-    "@pikku/core": "npm:^0.9.12-next.0"
-    "@types/node": "npm:^22"
     typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft
@@ -3967,6 +3945,28 @@ __metadata:
     uWebSockets.js: "uNetworking/uWebSockets.js#v20.52.0"
   peerDependencies:
     "@pikku/core": ^0.9.12-next.0
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-types@workspace:verifiers/types":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-types@workspace:verifiers/types"
+  dependencies:
+    "@pikku/cli": "npm:^0.9.16-next.0"
+    "@pikku/core": "npm:^0.9.12-next.0"
+    "@types/node": "npm:^22"
+    typescript: "npm:^5.6"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verify-middleware-and-permissions@workspace:verifiers/middleware-and-permissions":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verify-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
+  dependencies:
+    "@pikku/cli": "npm:^0.9.16-next.0"
+    "@pikku/core": "npm:^0.9.12-next.0"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.6"
   languageName: unknown
   linkType: soft
 

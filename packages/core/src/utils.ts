@@ -41,7 +41,7 @@ export const isSerializable = (data: any): boolean => {
 
 const EMPTY_ARRAY = Object.freeze([])
 
-export const freezeDedupe = <T extends Function>(
+export const freezeDedupe = <T>(
   arr?: readonly T[] | T[] | undefined
 ): readonly T[] => {
   if (!arr || arr.length === 0) return EMPTY_ARRAY

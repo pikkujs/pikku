@@ -85,16 +85,16 @@ export const processMessageHandlers = (
       return
     }
 
-    const { pikkuFuncName, middleware: inheritedMiddleware } = getRouteMeta(
-      channelConfig.name,
-      routingProperty,
-      routerValue
-    )
+    const {
+      pikkuFuncName,
+      middleware: inheritedMiddleware,
+      permissions: inheritedPermissions,
+    } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
 
-    const permissions =
-      typeof onMessage === 'function' ? {} : onMessage.permissions
+    const wirePermissions =
+      typeof onMessage === 'function' ? undefined : onMessage.permissions
 
-    const middleware =
+    const wireMiddleware =
       typeof onMessage === 'function' ? [] : onMessage.middleware
 
     return await runPikkuFunc(
@@ -109,9 +109,10 @@ export const processMessageHandlers = (
         }),
         data: () => data,
         userSession: services.userSession,
-        permissions,
         inheritedMiddleware,
-        wireMiddleware: middleware,
+        wireMiddleware,
+        inheritedPermissions,
+        wirePermissions,
         tags: channelConfig.tags,
         interaction: { channel: channelHandler.getChannel() },
       }

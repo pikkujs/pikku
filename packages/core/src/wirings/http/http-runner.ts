@@ -12,6 +12,7 @@ import {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
+  CorePermissionGroup,
 } from '../../function/functions.types.js'
 import {
   CoreUserSession,
@@ -73,6 +74,44 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   const httpGroups = pikkuState('middleware', 'httpGroup')
   httpGroups[pattern] = middleware
   return middleware
+}
+
+/**
+ * Registers HTTP permissions for a specific route pattern.
+ *
+ * This function registers permissions at runtime that will be applied to
+ * HTTP routes matching the specified pattern.
+ *
+ * For tree-shaking benefits, wrap in a factory function:
+ * `export const x = () => addHTTPPermission('pattern', [...])`
+ *
+ * @template PikkuPermission The permission type.
+ * @param {string} pattern - Route pattern (e.g., '*' for all routes, '/api/*' for specific routes).
+ * @param {CorePermissionGroup | CorePikkuPermission[]} permissions - Permissions for this route pattern.
+ *
+ * @returns {CorePermissionGroup | CorePikkuPermission[]} The permissions (for chaining/wrapping).
+ *
+ * @example
+ * ```typescript
+ * // Recommended: tree-shakeable
+ * export const httpGlobalPermissions = () => addHTTPPermission('*', [
+ *   authenticatedPermission,
+ *   rateLimitPermission
+ * ])
+ *
+ * // Also works: no tree-shaking
+ * export const apiPermissions = addHTTPPermission('/api/*', [
+ *   adminPermission
+ * ])
+ * ```
+ */
+export const addHTTPPermission = <PikkuPermission extends CorePikkuPermission>(
+  pattern: string,
+  permissions: CorePermissionGroup | CorePikkuPermission[]
+): CorePermissionGroup | CorePikkuPermission[] => {
+  const httpGroups = pikkuState('permissions', 'httpGroup')
+  httpGroups[pattern] = permissions
+  return permissions
 }
 
 /**
@@ -320,9 +359,10 @@ const executeRoute = async (
       auth: route.auth !== false,
       userSession,
       data,
-      permissions: route.permissions,
       inheritedMiddleware: meta.middleware,
       wireMiddleware: route.middleware,
+      inheritedPermissions: meta.permissions,
+      wirePermissions: route.permissions,
       coerceDataFromSchema: options.coerceDataFromSchema,
       tags: route.tags,
       interaction,

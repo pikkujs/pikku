@@ -105,6 +105,32 @@ interface PikkuState {
       }
     >
   }
+  permissions: {
+    tagGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
+    httpGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
+    tagGroupMeta: Record<
+      string,
+      {
+        exportName: string | null
+        sourceFile: string
+        position: number
+        services: FunctionServicesMeta
+        permissionCount: number
+        isFactory: boolean
+      }
+    >
+    httpGroupMeta: Record<
+      string,
+      {
+        exportName: string | null
+        sourceFile: string
+        position: number
+        services: FunctionServicesMeta
+        permissionCount: number
+        isFactory: boolean
+      }
+    >
+  }
   misc: {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
@@ -153,6 +179,12 @@ export const resetPikkuState = () => {
       programs: {},
     },
     middleware: {
+      tagGroup: {},
+      httpGroup: {},
+      tagGroupMeta: {},
+      httpGroupMeta: {},
+    },
+    permissions: {
       tagGroup: {},
       httpGroup: {},
       tagGroupMeta: {},
