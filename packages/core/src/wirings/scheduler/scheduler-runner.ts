@@ -137,6 +137,7 @@ export async function runScheduledTask({
         singletonServices,
         getAllServices,
         userSession,
+        auth: false,
         data: () => undefined,
         inheritedMiddleware: meta.middleware,
         wireMiddleware: task.middleware,
