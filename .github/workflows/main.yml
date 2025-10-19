@@ -39,9 +39,9 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-      # - name: Coveralls GitHub Action
-      #   uses: coverallsapp/github-action@v2.3.4
-      #   continue-on-error: true
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2.3.4
+        continue-on-error: true
 
   templates:
     name: Templates

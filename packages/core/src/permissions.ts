@@ -133,6 +133,11 @@ export const addPermission = (
   permissions: CorePermissionGroup | CorePikkuPermission[]
 ): CorePermissionGroup | CorePikkuPermission[] => {
   const tagGroups = pikkuState('permissions', 'tagGroup')
+  if (tagGroups[tag]) {
+    throw new Error(
+      `Permissions for tag '${tag}' already exist. Use a different tag or remove the existing permissions first.`
+    )
+  }
   tagGroups[tag] = permissions
   return permissions
 }
@@ -161,7 +166,7 @@ export const getPermissionsForTags = (
     return EMPTY
   }
 
-  const permissionsStore = pikkuState('misc', 'permissions')
+  const permissionsStore = pikkuState('permissions', 'tagGroup')
   const applicablePermissions: Array<
     CorePermissionGroup | CorePikkuPermission
   > = []
@@ -362,7 +367,7 @@ export const runPermissions = async (
       )
       if (result) {
         permissioned = true
-        break // At least one passed, we're good
+        // Continue executing all permissions (don't break early)
       }
     }
     if (!permissioned) {

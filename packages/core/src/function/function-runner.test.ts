@@ -21,11 +21,16 @@ const addTestFunction = (funcName: string, funcConfig: any) => {
   const middleware = funcConfig.tags
     ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
     : undefined
+  // Convert tags to permissions metadata
+  const permissions = funcConfig.tags
+    ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
+    : undefined
   pikkuState('function', 'meta')[funcName] = {
     pikkuFuncName: funcName,
     inputSchemaName: null,
     outputSchemaName: null,
     middleware,
+    permissions,
   }
 }
 
@@ -143,7 +148,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
-        permissions: wiringPermissions,
+        wirePermissions: wiringPermissions,
         tags: ['wiringTag'],
         auth: false,
         interaction: {},
@@ -199,7 +204,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
-        permissions: wiringPermissions,
+        wirePermissions: wiringPermissions,
         auth: false,
         interaction: {},
       }),
@@ -411,7 +416,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         wireMiddleware: [wiringMiddleware],
-        permissions: wiringPermissions,
+        wirePermissions: wiringPermissions,
         auth: false,
         interaction: {},
       }

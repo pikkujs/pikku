@@ -181,7 +181,7 @@ describe('runPermissions', () => {
     addPermission('wiringTag', [wiringTagPermission])
 
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      wiringTags: ['wiringTag'],
+      wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
       allServices: mockServices,
       data: {},
       session: mockSession,
@@ -205,7 +205,7 @@ describe('runPermissions', () => {
     addPermission('wiringTag', [wiringTagPermission])
     addPermission('funcTag', [funcTagPermission])
 
-    const wiringPermissions: CorePermissionGroup = {
+    const wirePermissions: CorePermissionGroup = {
       permissions: [
         async () => {
           executionOrder.push('wiringPermission')
@@ -224,16 +224,16 @@ describe('runPermissions', () => {
     }
 
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      wiringTags: ['wiringTag'],
-      wiringPermissions,
-      funcTags: ['funcTag'],
+      wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
+      wirePermissions,
+      funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
       funcPermissions,
       allServices: mockServices,
       data: {},
       session: mockSession,
     })
 
-    // Order: wiringTags → wiringPermissions → funcTags → funcPermissions
+    // Order: wireInheritedPermissions (wiringTag) → wirePermissions → funcInheritedPermissions (funcTag) → funcPermissions
     assert.deepEqual(executionOrder, [
       'wiringTag',
       'wiringPermission',
@@ -250,7 +250,7 @@ describe('runPermissions', () => {
 
     // Should not throw because at least one permission passes
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      wiringTags: ['atLeastOneTestTag'],
+      wireInheritedPermissions: [{ type: 'tag', tag: 'atLeastOneTestTag' }],
       allServices: mockServices,
       data: {},
       session: mockSession,
@@ -265,7 +265,7 @@ describe('runPermissions', () => {
 
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-        wiringTags: ['allFailTestTag'],
+        wireInheritedPermissions: [{ type: 'tag', tag: 'allFailTestTag' }],
         allServices: mockServices,
         data: {},
         session: mockSession,
@@ -277,13 +277,13 @@ describe('runPermissions', () => {
   })
 
   test('should throw error when wiring permissions fail', async () => {
-    const wiringPermissions: CorePermissionGroup = {
+    const wirePermissions: CorePermissionGroup = {
       permissions: [async () => false],
     }
 
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-        wiringPermissions,
+        wirePermissions,
         allServices: mockServices,
         data: {},
         session: mockSession,
@@ -301,7 +301,7 @@ describe('runPermissions', () => {
 
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-        funcTags: ['funcTag'],
+        funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
         allServices: mockServices,
         data: {},
         session: mockSession,
@@ -330,7 +330,7 @@ describe('runPermissions', () => {
     )
   })
 
-  test('should stop execution at first failing level', async () => {
+  test('should evaluate all permissions and pass if at least one succeeds', async () => {
     const executionOrder: string[] = []
 
     const failingWiringTagPermission = async () => {
@@ -340,7 +340,7 @@ describe('runPermissions', () => {
 
     addPermission('failingWiringTag', [failingWiringTagPermission])
 
-    const wiringPermissions: CorePermissionGroup = {
+    const wirePermissions: CorePermissionGroup = {
       permissions: [
         async () => {
           executionOrder.push('wiringPermission')
@@ -349,18 +349,17 @@ describe('runPermissions', () => {
       ],
     }
 
-    await assert.rejects(
-      runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-        wiringTags: ['failingWiringTag'],
-        wiringPermissions,
-        allServices: mockServices,
-        data: {},
-        session: mockSession,
-      })
-    )
+    // Should NOT throw because at least one permission (wirePermissions) passes
+    await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
+      wireInheritedPermissions: [{ type: 'tag', tag: 'failingWiringTag' }],
+      wirePermissions,
+      allServices: mockServices,
+      data: {},
+      session: mockSession,
+    })
 
-    // Should only execute wiring tag permissions, not wiring permissions
-    assert.deepEqual(executionOrder, ['wiringTag'])
+    // Both permissions should be evaluated
+    assert.deepEqual(executionOrder, ['wiringTag', 'wiringPermission'])
   })
 
   test('should handle array permissions in tag-based permissions', async () => {
@@ -370,7 +369,7 @@ describe('runPermissions', () => {
 
     // Should not throw because verifyPermissions handles array properly
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      wiringTags: ['arrayTestTag'],
+      wireInheritedPermissions: [{ type: 'tag', tag: 'arrayTestTag' }],
       allServices: mockServices,
       data: {},
       session: mockSession,
@@ -386,7 +385,7 @@ describe('runPermissions', () => {
 
     // Should not throw because verifyPermissions handles objects properly
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      wiringTags: ['objectTestTag'],
+      wireInheritedPermissions: [{ type: 'tag', tag: 'objectTestTag' }],
       allServices: mockServices,
       data: {},
       session: mockSession,
@@ -410,7 +409,7 @@ describe('runPermissions', () => {
     addPermission('paramTestTag', [testPermission])
 
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      wiringTags: ['paramTestTag'],
+      wireInheritedPermissions: [{ type: 'tag', tag: 'paramTestTag' }],
       allServices: mockServices,
       data: testData,
       session: mockSession,
