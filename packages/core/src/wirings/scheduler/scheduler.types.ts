@@ -30,14 +30,14 @@ export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
  * Represents a core scheduled task.
  */
 export type CoreScheduledTask<
-  PikkuFunction = CorePikkuFunctionConfig<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<void, void>
   >,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
   schedule: string
-  func: PikkuFunction
+  func: PikkuFunctionConfig
   docs?: PikkuDocs
   tags?: string[]
   middleware?: PikkuMiddleware[]
