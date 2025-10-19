@@ -8,7 +8,9 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test": "npx tsx test-treeshaking.ts"
+    "test": "npx tsx test-treeshaking.ts",
+    "generate:readme": "npx tsx scripts/generate-readme.ts",
+    "prebuild": "npm run generate:readme"
   },
   "dependencies": {
     "@pikku/core": "^0.9.12-next.0"

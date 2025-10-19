@@ -6,7 +6,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
-import { extractWireNames } from '../post-process.js'
+import { extractWireNames } from '../utils/post-process.js'
 
 export const addSchedule: AddWiring = (
   logger,

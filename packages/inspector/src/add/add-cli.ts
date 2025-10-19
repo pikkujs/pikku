@@ -8,7 +8,7 @@ import {
 import { CLIProgramMeta, CLICommandMeta, PikkuWiringTypes } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
-import { extractWireNames } from '../post-process.js'
+import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 

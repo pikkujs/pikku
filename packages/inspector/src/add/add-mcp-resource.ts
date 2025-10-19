@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
-import { extractWireNames } from '../post-process.js'
+import { extractWireNames } from '../utils/post-process.js'
 import { PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'

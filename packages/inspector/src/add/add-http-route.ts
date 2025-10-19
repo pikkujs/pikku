@@ -9,7 +9,7 @@ import { matchesFilters } from '../utils/filter-utils.js'
 import { AddWiring } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
-import { extractWireNames } from '../post-process.js'
+import { extractWireNames } from '../utils/post-process.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,

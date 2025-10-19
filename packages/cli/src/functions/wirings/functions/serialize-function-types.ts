@@ -99,6 +99,31 @@ export const pikkuMiddlewareFactory = <In = any>(
 }
 
 /**
+ * Factory function for creating permission factories
+ * Use this when your permission needs configuration/input parameters
+ *
+ * @example
+ * \`\`\`typescript
+ * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
+ *   role
+ * }) => {
+ *   return pikkuPermission(async ({ logger }, data, session) => {
+ *     if (!session || session.role !== role) {
+ *       logger.warn(\`Permission denied: required role '\${role}'\`)
+ *       return false
+ *     }
+ *     return true
+ *   })
+ * })
+ * \`\`\`
+ */
+export const pikkuPermissionFactory = <In = any>(
+  factory: (input: In) => PikkuPermission<any>
+): ((input: In) => PikkuPermission<any>) => {
+  return factory
+}
+
+/**
  * A sessionless API function that doesn't require user authentication.
  * Use this for public endpoints, health checks, or operations that don't need user context.
  *

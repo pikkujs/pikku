@@ -8,7 +8,7 @@ import { matchesFilters } from '../utils/filter-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
 import { resolveMiddleware } from '../utils/middleware.js'
-import { extractWireNames } from '../post-process.js'
+import { extractWireNames } from '../utils/post-process.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:

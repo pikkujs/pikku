@@ -47,86 +47,9 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 **Note**: `email` and `logger` are always included because `createSessionServices` destructures them.
 
-## Test Matrix
+<!-- TEST_MATRIX -->
 
-### Baseline
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `(none)` | analytics, email, logger, payment, sms, storage | All services should be included when no filters are applied |
-
-### Single Tag Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--tags=notifications` | email, logger, sms | Email, sms, logger (middleware), and session services should be included |
-| `--tags=email` | email, logger | Email (function + permissions), logger (middleware), and session services |
-| `--tags=sms` | email, logger, sms | SMS (function), logger (middleware), and session services (email, logger) |
-| `--tags=payments` | analytics, email, logger, payment, storage | Payment route uses payment + analytics (function + middleware) + logger + storage (middleware) + session services |
-| `--tags=storage` | email, logger, storage | Storage (function) and session services (email, logger) |
-
-### Multiple Tag Filters (OR logic)
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--tags=notifications,payments` | analytics, email, logger, payment, sms, storage | All notification routes + payment route + session services |
-| `--tags=email,sms` | email, logger, sms | Both email and SMS routes + session services |
-| `--tags=notifications,storage` | email, logger, sms, storage | All notification + storage routes + session services |
-
-### Type Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--types=http` | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are HTTP) + session services |
-
-### HTTP Method Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--httpMethods=POST` | analytics, email, logger, payment, sms, storage | All services should be included (all routes are POST) + session services |
-| `--httpMethods=GET` | email, logger | No GET routes exist, only session services |
-
-### HTTP Route Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--httpRoutes=/api/notifications/*` | email, logger, sms | Only notification routes + session services |
-| `--httpRoutes=/api/payments/*` | analytics, email, logger, payment, storage | Only payment routes + session services |
-| `--httpRoutes=/api/storage/*` | email, logger, storage | Only storage routes + session services |
-
-### Directory Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--directories=src/functions` | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are in src/functions) + session services |
-| `--directories=src/nonexistent` | email, logger | No wirings in nonexistent directory, only session services |
-
-### Combination Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--tags=notifications --httpMethods=POST` | email, logger, sms | Notification routes that are POST + session services |
-| `--tags=payments --types=http` | analytics, email, logger, payment, storage | Payment HTTP routes + session services |
-
-### Wildcard Name Filters
-
-| Filter | Expected Services | Rationale |
-| ------ | ----------------- | --------- |
-| `--names=send*` | email, logger, sms | Routes using sendEmail and sendSMS functions + middleware + session services |
-| `--names=process*` | analytics, email, logger, payment, storage | Routes using processPayment function + middleware + session services |
-| `--names=*Payment` | analytics, email, logger, payment, storage | Routes using functions ending with "Payment" + middleware + session services |
-| `--names=saveData` | email, logger, storage | Routes using saveData function + session services |
-
-## Expected Service Counts by Filter
-
-| Scenario | Service Count | Services |
-| -------- | ------------- | -------- |
-| Baseline (no filters) | 6 | analytics, email, logger, payment, sms, storage |
-| Tag: payments | 5 | analytics, email, logger, payment, storage |
-| Tags: notifications,storage | 4 | email, logger, sms, storage |
-| Tag: notifications | 3 | email, logger, sms |
-| Tag: storage | 3 | email, logger, storage |
-| Tag: email | 2 | email, logger |
+<!-- SERVICE_COUNTS -->
 
 ## Running Tests
 
