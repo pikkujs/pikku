@@ -13,7 +13,9 @@
   },
   "scripts": {
     "prebuild": "pikku",
-    "tsc": "tsc --noEmit",
-    "pikku": "pikku"
+    "test": "tsc --noEmit",
+    "pikku": "pikku",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   }
 }
