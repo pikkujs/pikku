@@ -15,7 +15,8 @@ import {
   wireMCPPrompt as wireMCPPromptCore,
   MCPResourceResponse,
   MCPToolResponse,
-  MCPPromptResponse
+  MCPPromptResponse,
+  AssertMCPResourceURIParams
 } from '@pikku/core'
 
 import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTypesImportPath}'
@@ -24,8 +25,9 @@ import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTy
  * Type definition for MCP resources that provide data to AI models.
  *
  * @template In - Input type for the resource request
+ * @template URI - URI template string type for compile-time parameter validation
  */
-type MCPResourceWiring<In> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse>>
+type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse>> & { uri: URI }
 
 /**
  * Type definition for MCP tools that AI models can invoke.
@@ -46,10 +48,11 @@ type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptRespon
  * Resources provide data that AI models can access.
  *
  * @template In - Input type for the resource request
+ * @template URI - URI template string for compile-time parameter validation
  * @param mcpResource - MCP resource definition with data provider function
  */
-export const wireMCPResource = <In>(
-  mcpResource: MCPResourceWiring<In>
+export const wireMCPResource = <In, URI extends string>(
+  mcpResource: MCPResourceWiring<In, URI> & AssertMCPResourceURIParams<In, URI>
 ) => {
   wireMCPResourceCore(mcpResource as any)
 }
