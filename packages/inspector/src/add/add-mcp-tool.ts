@@ -75,7 +75,7 @@ export const addMCPTool: AddWiring = (
     if (
       !matchesFilters(
         options.filters || {},
-        { tags },
+        { tags, name: nameValue },
         { type: PikkuWiringTypes.mcp, name: nameValue, filePath },
         logger
       )

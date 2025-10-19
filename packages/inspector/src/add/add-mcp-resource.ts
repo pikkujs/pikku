@@ -84,7 +84,7 @@ export const addMCPResource: AddWiring = (
     if (
       !matchesFilters(
         options.filters || {},
-        { tags },
+        { tags, name: uriValue },
         { type: PikkuWiringTypes.mcp, name: uriValue, filePath },
         logger
       )

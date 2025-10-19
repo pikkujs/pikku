@@ -5,10 +5,11 @@ import {
   InspectorOptions,
   InspectorState,
 } from '../types.js'
-import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
+import { CLIProgramMeta, CLICommandMeta, PikkuWiringTypes } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
+import { matchesFilters } from '../utils/filter-utils.js'
 
 /**
  * Adds CLI command metadata to the inspector state
@@ -97,6 +98,24 @@ function processCLIConfig(
     }
   }
 
+  if (!programName) {
+    return null
+  }
+
+  const filePath = sourceFile.fileName
+
+  // Apply filters
+  if (
+    !matchesFilters(
+      options.filters || {},
+      { tags: programTags, name: programName },
+      { type: PikkuWiringTypes.cli, name: programName, filePath },
+      logger
+    )
+  ) {
+    return null
+  }
+
   // Second pass: process other properties with program tags available
   for (const prop of node.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
@@ -142,10 +161,6 @@ function processCLIConfig(
         programMeta.defaultRenderName = 'defaultRenderer'
         break
     }
-  }
-
-  if (!programName) {
-    return null
   }
 
   return { programName, programMeta }

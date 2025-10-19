@@ -4,13 +4,19 @@ import { PikkuWiringTypes } from '@pikku/core'
 /**
  * Match a value against a pattern with wildcard support
  * Supports "*" suffix only (e.g., "email-*" matches "email-worker", "email-sender")
+ * The wildcard requires at least one character after the prefix, unless the pattern is just '*'.
  * @param value - The value to check
  * @param pattern - The pattern with optional "*" suffix
  */
 export function matchesWildcard(value: string, pattern: string): boolean {
   if (pattern.endsWith('*')) {
     const prefix = pattern.slice(0, -1)
-    return value.startsWith(prefix)
+    // If pattern is just '*', match everything
+    if (prefix === '') {
+      return true
+    }
+    // Otherwise, value must start with prefix AND be longer than prefix
+    return value.startsWith(prefix) && value.length > prefix.length
   }
   return value === pattern
 }
