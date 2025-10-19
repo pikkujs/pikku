@@ -9,7 +9,7 @@ import {
   CreateSessionServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import { LocalVariablesService } from '@pikku/core/services'
+import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { EmailService } from './services/email.service.js'
 import { SMSService } from './services/sms.service.js'
 import { PaymentService } from './services/payment.service.js'
@@ -28,7 +28,7 @@ export const createSingletonServices: CreateSingletonServices<
 
   return {
     config: _config,
-    logger: console,
+    logger: new ConsoleLogger(),
     variables,
     schema: {} as any,
     email: new EmailService(),
@@ -43,6 +43,8 @@ export const createSessionServices: CreateSessionServices<
   SingletonServices,
   Services,
   UserSession
-> = async (_singletonServices, _interaction) => {
+> = async ({ email, logger }, _interaction) => {
+  // Destructure services to test session service aggregation
+  logger.log('Creating session services with email')
   return {} as Services
 }
