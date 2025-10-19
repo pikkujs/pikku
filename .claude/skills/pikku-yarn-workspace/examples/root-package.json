@@ -3,11 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": {
-    "packages": [
-      "packages/**",
-      "apps/**",
-      "backends/**"
-    ]
+    "packages": ["packages/**", "apps/**", "backends/**"]
   },
   "scripts": {
     "pikku": "pikku all && yarn workspaces foreach -p -A run pikku",

@@ -19,7 +19,7 @@ CLI wiring transforms Pikku functions into command-line programs with:
 - Option inheritance from global → command → subcommand
 - Smart type plucking (functions receive only declared options)
 
-**Domain logic stays in `packages/functions/src/functions/**/*.function.ts`.**
+**Domain logic stays in `packages/functions/src/functions/**/\*.function.ts`.\*\*
 
 ## File Naming Rules
 
