@@ -70,7 +70,7 @@ export type MCPPromptMeta = Record<
  * Represents an MCP resource with specific properties.
  */
 export type CoreMCPResource<
-  PikkuFunction = CorePikkuFunctionConfig<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
   >,
   PikkuPermission = CorePikkuPermission<any, any>,
@@ -82,7 +82,7 @@ export type CoreMCPResource<
   mimeType?: string
   size?: number
   streaming?: boolean
-  func: PikkuFunction
+  func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]
   permissions?: CorePermissionGroup<PikkuPermission>
@@ -92,7 +92,7 @@ export type CoreMCPResource<
  * Represents an MCP tool with specific properties.
  */
 export type CoreMCPTool<
-  PikkuFunction = CorePikkuFunctionConfig<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, any>
   >,
   PikkuPermission = CorePikkuPermission<any, any>,
@@ -101,7 +101,7 @@ export type CoreMCPTool<
   name: string
   title?: string
   description: string
-  func: PikkuFunction
+  func: PikkuFunctionConfig
   tags?: string[]
   streaming?: boolean
   middleware?: PikkuMiddleware[]
@@ -112,7 +112,7 @@ export type CoreMCPTool<
  * Represents an MCP prompt with specific properties.
  */
 export type CoreMCPPrompt<
-  PikkuFunction = CorePikkuFunctionConfig<
+  PikkuFunctionConfig = CorePikkuFunctionConfig<
     CorePikkuFunctionSessionless<any, MCPPromptResponse>
   >,
   PikkuPermission = CorePikkuPermission<any, any>,
@@ -120,7 +120,7 @@ export type CoreMCPPrompt<
 > = {
   name: string
   description?: string
-  func: PikkuFunction
+  func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]
   permissions?: CorePermissionGroup<PikkuPermission>
