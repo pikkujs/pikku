@@ -100,9 +100,12 @@ export interface InspectorPermissionState {
 }
 
 export type InspectorFilters = {
+  names?: string[] // Wildcard support: "email-*" matches "email-worker", "email-sender"
   tags?: string[]
   types?: string[]
   directories?: string[]
+  httpRoutes?: string[] // HTTP route patterns: "/api/*", "/webhooks/*"
+  httpMethods?: string[] // HTTP methods: "GET", "POST", "DELETE", etc.
 }
 
 export type InspectorOptions = Partial<{

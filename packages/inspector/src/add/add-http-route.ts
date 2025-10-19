@@ -76,7 +76,13 @@ export const addHTTPRoute: AddWiring = (
     !matchesFilters(
       options.filters || {},
       { tags },
-      { type: PikkuWiringTypes.http, name: route, filePath },
+      {
+        type: PikkuWiringTypes.http,
+        name: route,
+        filePath,
+        httpRoute: route,
+        httpMethod: method,
+      },
       logger
     )
   ) {
