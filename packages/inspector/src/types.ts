@@ -220,4 +220,10 @@ export interface InspectorState {
   }
   middleware: InspectorMiddlewareState
   permissions: InspectorPermissionState
+  serviceAggregation: {
+    requiredServices: Set<string> // All services needed across the app
+    usedFunctions: Set<string> // Function names actually wired/exposed
+    usedMiddleware: Set<string> // Middleware names used by wired functions
+    usedPermissions: Set<string> // Permission names used by wired functions
+  }
 }
