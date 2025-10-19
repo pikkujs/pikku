@@ -3,6 +3,7 @@ import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
+import { findCommonAncestor } from './utils/find-root-dir.js'
 
 export const inspect = (
   logger: InspectorLogger,
@@ -16,7 +17,11 @@ export const inspect = (
   const checker = program.getTypeChecker()
   const sourceFiles = program.getSourceFiles()
 
+  // Infer root directory from source files
+  const rootDir = findCommonAncestor(riouteFiles)
+
   const state: InspectorState = {
+    rootDir,
     singletonServicesTypeImportMap: new Map(),
     sessionServicesTypeImportMap: new Map(),
     userSessionTypeImportMap: new Map(),

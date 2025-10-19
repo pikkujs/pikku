@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { toRelativePath } from './find-root-dir.js'
 
 export type ExtractedFunctionName = {
   pikkuFuncName: string
@@ -16,7 +17,8 @@ export type ExtractedFunctionName = {
  */
 export function makeDeterministicAnonName(
   start: ts.Node,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  rootDir: string
 ): string {
   let node: ts.Node = start
   let target: ts.Node = start
@@ -45,7 +47,8 @@ export function makeDeterministicAnonName(
           target = decl.initializer
           // Return early - we found the function directly
           const sf = target.getSourceFile()
-          const file = sf.fileName.replace(/[^A-Za-z0-9_]/g, '_')
+          const relativePath = toRelativePath(sf.fileName, rootDir)
+          const file = relativePath.replace(/[^A-Za-z0-9_]/g, '_')
           const { line, character } = ts.getLineAndCharacterOfPosition(
             sf,
             target.getStart()
@@ -91,7 +94,8 @@ export function makeDeterministicAnonName(
             target = decl.initializer
             // Return early - we found the function directly
             const sf = target.getSourceFile()
-            const file = sf.fileName.replace(/[^A-Za-z0-9_]/g, '_')
+            const relativePath = toRelativePath(sf.fileName, rootDir)
+            const file = relativePath.replace(/[^A-Za-z0-9_]/g, '_')
             const { line, character } = ts.getLineAndCharacterOfPosition(
               sf,
               target.getStart()
@@ -103,7 +107,8 @@ export function makeDeterministicAnonName(
           target = decl
           // Return early
           const sf = target.getSourceFile()
-          const file = sf.fileName.replace(/[^A-Za-z0-9_]/g, '_')
+          const relativePath = toRelativePath(sf.fileName, rootDir)
+          const file = relativePath.replace(/[^A-Za-z0-9_]/g, '_')
           const { line, character } = ts.getLineAndCharacterOfPosition(
             sf,
             target.getStart()
@@ -238,7 +243,8 @@ export function makeDeterministicAnonName(
   }
 
   const sf = target.getSourceFile()
-  const file = sf.fileName.replace(/[^A-Za-z0-9_]/g, '_')
+  const relativePath = toRelativePath(sf.fileName, rootDir)
+  const file = relativePath.replace(/[^A-Za-z0-9_]/g, '_')
   const { line, character } = ts.getLineAndCharacterOfPosition(
     sf,
     target.getStart()
@@ -255,7 +261,8 @@ export function makeDeterministicAnonName(
  */
 export function extractFunctionName(
   callExpr: ts.Node,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  rootDir: string
 ): ExtractedFunctionName {
   const parent: any = callExpr.parent
 
@@ -304,7 +311,8 @@ export function extractFunctionName(
               // Use the function directly for position calculation
               result.pikkuFuncName = makeDeterministicAnonName(
                 firstArg,
-                checker
+                checker,
+                rootDir
               )
 
               // Continue with name extraction
@@ -678,7 +686,11 @@ export function extractFunctionName(
   // Generate the deterministic function name based on the original call expression
   // (the config), not the resolved inner function. This ensures the metadata key
   // matches what will be looked up at runtime when referencing the config object.
-  result.pikkuFuncName = makeDeterministicAnonName(originalCallExpr, checker)
+  result.pikkuFuncName = makeDeterministicAnonName(
+    originalCallExpr,
+    checker,
+    rootDir
+  )
 
   // Continue with regular name extraction for remaining cases
   // 1) const foo = pikkuFunc(...)

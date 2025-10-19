@@ -34,7 +34,11 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(handlerNode)
-    const { pikkuFuncName, exportedName } = extractFunctionName(node, checker)
+    const { pikkuFuncName, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
     state.middleware.meta[pikkuFuncName] = {
       services,
       sourceFile: node.getSourceFile().fileName,
@@ -88,7 +92,11 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    const { pikkuFuncName, exportedName } = extractFunctionName(node, checker)
+    const { pikkuFuncName, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
     state.middleware.meta[pikkuFuncName] = {
       services,
       sourceFile: node.getSourceFile().fileName,
@@ -135,7 +143,8 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     // Extract middleware pikkuFuncNames from array
     const middlewareNames = extractMiddlewarePikkuNames(
       middlewareArrayArg,
-      checker
+      checker,
+      state.rootDir
     )
 
     if (middlewareNames.length === 0) {
@@ -182,7 +191,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
     // If not a factory, get export name from the call expression itself
     if (!isFactory) {
-      const extracted = extractFunctionName(node, checker)
+      const extracted = extractFunctionName(node, checker, state.rootDir)
       exportedName = extracted.exportedName
     }
 
@@ -245,7 +254,8 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     // Extract middleware pikkuFuncNames from array
     const middlewareNames = extractMiddlewarePikkuNames(
       middlewareArrayArg,
-      checker
+      checker,
+      state.rootDir
     )
 
     if (middlewareNames.length === 0) {
@@ -293,7 +303,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
     // If not a factory, get export name from the call expression itself
     if (!isFactory) {
-      const extracted = extractFunctionName(node, checker)
+      const extracted = extractFunctionName(node, checker, state.rootDir)
       exportedName = extracted.exportedName
     }
 

@@ -33,7 +33,8 @@ function getInitializerOf(
  */
 function getHandlerNameFromExpression(
   expr: ts.Expression,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  rootDir: string
 ): string | null {
   // Handle direct identifier case (which includes shorthand properties)
   if (ts.isIdentifier(expr)) {
@@ -59,27 +60,28 @@ function getHandlerNameFromExpression(
             // Extract function name from the declaration's initializer
             const { pikkuFuncName } = extractFunctionName(
               decl.initializer,
-              checker
+              checker,
+              rootDir
             )
             return pikkuFuncName
           }
         }
         // For function declarations, use directly
         else if (ts.isFunctionDeclaration(decl)) {
-          const { pikkuFuncName } = extractFunctionName(decl, checker)
+          const { pikkuFuncName } = extractFunctionName(decl, checker, rootDir)
           return pikkuFuncName
         }
       }
     }
 
     // Fallback: try to extract directly from the identifier
-    const { pikkuFuncName } = extractFunctionName(expr, checker)
+    const { pikkuFuncName } = extractFunctionName(expr, checker, rootDir)
     return pikkuFuncName
   }
 
   // Handle call expressions
   if (ts.isCallExpression(expr)) {
-    const { pikkuFuncName } = extractFunctionName(expr, checker)
+    const { pikkuFuncName } = extractFunctionName(expr, checker, rootDir)
     return pikkuFuncName
   }
 
@@ -87,7 +89,7 @@ function getHandlerNameFromExpression(
   if (ts.isObjectLiteralExpression(expr)) {
     const fnProp = getPropertyAssignmentInitializer(expr, 'func', true, checker)
     if (fnProp) {
-      return getHandlerNameFromExpression(fnProp, checker)
+      return getHandlerNameFromExpression(fnProp, checker, rootDir)
     }
   }
 
@@ -178,7 +180,8 @@ export function addMessagesRoutes(
                   ) {
                     const { pikkuFuncName } = extractFunctionName(
                       importDecl.initializer,
-                      checker
+                      checker,
+                      state.rootDir
                     )
                     const handlerName = pikkuFuncName
 
@@ -195,7 +198,8 @@ export function addMessagesRoutes(
                   // Extract from the function declaration
                   const { pikkuFuncName } = extractFunctionName(
                     importDecl,
-                    checker
+                    checker,
+                    state.rootDir
                   )
                   const handlerName = pikkuFuncName
 
@@ -230,7 +234,8 @@ export function addMessagesRoutes(
                       ) {
                         const { pikkuFuncName } = extractFunctionName(
                           exportDecl.initializer,
-                          checker
+                          checker,
+                          state.rootDir
                         )
                         const handlerName = pikkuFuncName
 
@@ -244,7 +249,8 @@ export function addMessagesRoutes(
                       } else if (ts.isFunctionDeclaration(exportDecl)) {
                         const { pikkuFuncName } = extractFunctionName(
                           exportDecl,
-                          checker
+                          checker,
+                          state.rootDir
                         )
                         const handlerName = pikkuFuncName
 
@@ -312,7 +318,8 @@ export function addMessagesRoutes(
               // Extract the function name directly from the actual function
               const { pikkuFuncName } = extractFunctionName(
                 actualFunction,
-                checker
+                checker,
+                state.rootDir
               )
               const handlerName = pikkuFuncName
 
@@ -331,7 +338,11 @@ export function addMessagesRoutes(
       }
 
       // Normal processing for non-shorthand properties
-      const handlerName = getHandlerNameFromExpression(init, checker)
+      const handlerName = getHandlerNameFromExpression(
+        init,
+        checker,
+        state.rootDir
+      )
       if (!handlerName) {
         console.error(
           `Could not resolve handler for message route '${routeKey}'`
@@ -428,7 +439,8 @@ export const addChannel: AddWiring = (
 
   if (onMsgProp) {
     const handlerName =
-      onMsgProp && getHandlerNameFromExpression(onMsgProp, checker)
+      onMsgProp &&
+      getHandlerNameFromExpression(onMsgProp, checker, state.rootDir)
     const fnMeta = handlerName && state.functions.meta[handlerName]
     if (!fnMeta) {
       console.error(
@@ -437,8 +449,11 @@ export const addChannel: AddWiring = (
       throw new Error()
     } else {
       message = {
-        pikkuFuncName: extractFunctionName(onMsgProp as any, checker)
-          .pikkuFuncName,
+        pikkuFuncName: extractFunctionName(
+          onMsgProp as any,
+          checker,
+          state.rootDir
+        ).pikkuFuncName,
       }
     }
   }
@@ -465,12 +480,18 @@ export const addChannel: AddWiring = (
     //   params
     // ),
     connect: connect
-      ? { pikkuFuncName: extractFunctionName(connect, checker).pikkuFuncName }
+      ? {
+          pikkuFuncName: extractFunctionName(connect, checker, state.rootDir)
+            .pikkuFuncName,
+        }
       : null,
     disconnect: disconnect
       ? {
-          pikkuFuncName: extractFunctionName(disconnect as any, checker)
-            .pikkuFuncName,
+          pikkuFuncName: extractFunctionName(
+            disconnect as any,
+            checker,
+            state.rootDir
+          ).pikkuFuncName,
         }
       : null,
     message,

@@ -174,6 +174,7 @@ export interface InspectorFilesAndMethods {
 }
 
 export interface InspectorState {
+  rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   sessionServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType
