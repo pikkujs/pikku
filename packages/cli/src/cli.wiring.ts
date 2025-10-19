@@ -51,6 +51,16 @@ wireCLI({
           description: 'Filter functions by directories (comma-separated)',
           short: 'd',
         },
+        httpMethods: {
+          description: 'Filter HTTP routes by methods (comma-separated)',
+        },
+        httpRoutes: {
+          description: 'Filter HTTP routes by route patterns (comma-separated)',
+        },
+        names: {
+          description: 'Filter functions by name patterns (supports wildcards)',
+          short: 'n',
+        },
       },
     }),
     schemas: pikkuCLICommand({

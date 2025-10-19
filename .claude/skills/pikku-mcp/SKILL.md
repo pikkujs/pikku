@@ -147,7 +147,9 @@ export const createIssueMCP = pikkuMCPToolFunc<
 >({
   func: async ({ rpc }, input) => {
     const issue = await rpc.invoke('createIssue', input)
-    return [{ type: 'text', text: `Created issue #${issue.id}: ${issue.title}` }]
+    return [
+      { type: 'text', text: `Created issue #${issue.id}: ${issue.title}` },
+    ]
   },
   docs: {
     summary: 'Create issue (MCP adapter)',
@@ -181,10 +183,10 @@ export const generateReviewPrompt = pikkuFunc<
 >({
   func: async ({ database }, input) => {
     const file = await database.query('files', {
-      where: { path: input.filePath }
+      where: { path: input.filePath },
     })
     return {
-      promptText: `Review this code:\n\nFile: ${input.filePath}\n\nContext: ${input.context}\n\nCode:\n${file.content}`
+      promptText: `Review this code:\n\nFile: ${input.filePath}\n\nContext: ${input.context}\n\nCode:\n${file.content}`,
     }
   },
   docs: {
@@ -203,8 +205,8 @@ export const generateReviewPromptMCP = pikkuMCPPromptFunc<
     return [
       {
         role: 'user',
-        content: { type: 'text', text: result.promptText }
-      }
+        content: { type: 'text', text: result.promptText },
+      },
     ]
   },
   docs: {
