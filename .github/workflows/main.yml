@@ -23,6 +23,7 @@ jobs:
       - run: yarn install
       - run: yarn build
       - run: yarn test:coverage
+      - run: yarn test:verifiers
       - run: yarn prettier
       - run: yarn lint
       - run: cd templates/functions && yarn pikku && cd ../..

@@ -29,6 +29,7 @@
     "release": "yarn build && npx changeset publish",
     "ncu": "yarn workspaces foreach -p -A run ncu",
     "ncu:pikku": "yarn workspaces foreach -p -A run ncu -f '/@pikku/.*/'",
+    "test:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run test",
     "test": "yarn workspaces foreach -A run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
     "lint": "npx --yes oxlint@latest",
