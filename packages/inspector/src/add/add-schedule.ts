@@ -67,7 +67,7 @@ export const addSchedule: AddWiring = (
     if (
       !matchesFilters(
         options.filters || {},
-        { tags },
+        { tags, name: nameValue },
         { type: PikkuWiringTypes.scheduler, name: nameValue, filePath },
         logger
       )

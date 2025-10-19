@@ -73,7 +73,7 @@ export const addMCPPrompt: AddWiring = (
     if (
       !matchesFilters(
         options.filters || {},
-        { tags },
+        { tags, name: nameValue },
         { type: PikkuWiringTypes.mcp, name: nameValue, filePath },
         logger
       )
