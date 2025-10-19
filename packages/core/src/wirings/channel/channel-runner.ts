@@ -1,8 +1,10 @@
 import { NotFoundError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
+import { CorePikkuPermission } from '../../function/functions.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
 import { UserSessionService } from '../../services/user-session-service.js'
+import { CorePikkuMiddleware } from '../../types/core.types.js'
 import { httpRouter } from '../http/routers/http-router.js'
 import {
   ChannelMeta,
@@ -18,11 +20,11 @@ import {
 export const wireChannel = <
   In,
   Channel extends string,
+  PikkuPermission extends CorePikkuPermission<In>,
+  PikkuMiddleware extends CorePikkuMiddleware,
   ChannelFunction,
-  ChannelFunctionSessionless,
-  PikkuPermission,
 >(
-  channel: CoreChannel<In, Channel, ChannelFunction, PikkuPermission>
+  channel: CoreChannel<In, Channel, PikkuPermission, PikkuMiddleware, ChannelFunction>
 ) => {
   // Get the channel metadata
   const channelsMeta = pikkuState('channel', 'meta')

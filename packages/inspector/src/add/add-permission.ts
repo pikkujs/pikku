@@ -67,6 +67,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
     // Extract services by looking inside the factory function body
     // The factory should return pikkuPermission(...), so we need to find that call
+    // If no wrapper is found, extract from the factory's returned function directly
     let services = { optimized: false, services: [] as string[] }
 
     const findPikkuPermissionCall = (
@@ -89,6 +90,16 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
         ts.isFunctionExpression(permissionHandler)
       ) {
         services = extractServicesFromFunction(permissionHandler)
+      }
+    } else {
+      // No pikkuPermission wrapper found - extract from factory's return value directly
+      // Factory pattern: (config) => (services, data, session) => { ... }
+      if (ts.isArrowFunction(factoryNode) || ts.isFunctionExpression(factoryNode)) {
+        const factoryBody = factoryNode.body
+        // Check if the body is an arrow function (direct return)
+        if (ts.isArrowFunction(factoryBody) || ts.isFunctionExpression(factoryBody)) {
+          services = extractServicesFromFunction(factoryBody)
+        }
       }
     }
 

@@ -24,9 +24,9 @@ export function extractMiddlewarePikkuNames(
       const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
       names.push(pikkuFuncName)
     } else if (ts.isCallExpression(element)) {
-      // Handle call expressions like logCommandInfoAndTime({...})
-      // These create inline middleware, so we use the call expression itself as the name
-      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
+      // Handle call expressions like rateLimiter(10) or logCommandInfoAndTime({...})
+      // Extract the function being called (e.g., 'rateLimiter' from 'rateLimiter(10)')
+      const { pikkuFuncName } = extractFunctionName(element.expression, checker, rootDir)
       names.push(pikkuFuncName)
     }
   }

@@ -33,10 +33,13 @@ function parseCommaSeparated(
 ): string[] | undefined {
   if (!value) return undefined
 
-  // If already an array, return it
+  // If already an array, flatten and split any comma-separated values
   if (Array.isArray(value)) {
-    const filtered = value.filter((item) => item && item.trim().length > 0)
-    return filtered.length > 0 ? filtered : undefined
+    const flattened = value
+      .flatMap((item) => item.split(','))
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+    return flattened.length > 0 ? flattened : undefined
   }
 
   // If string, split by comma

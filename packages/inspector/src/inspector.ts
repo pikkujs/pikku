@@ -4,7 +4,7 @@ import { TypesMap } from './types-map.js'
 import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
-import { aggregateRequiredServices } from './post-process.js'
+import { aggregateRequiredServices } from './utils/post-process.js'
 
 export const inspect = (
   logger: InspectorLogger,

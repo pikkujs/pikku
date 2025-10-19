@@ -231,6 +231,52 @@ wireHTTP({
 })
 ```
 
+## Wiring External RPC Endpoint
+
+To allow external clients to invoke any exposed function via HTTP, create an RPC caller function:
+
+```typescript
+// packages/functions/src/rpc-caller.function.ts
+import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+
+export const rpcCaller = pikkuFuncSessionless<
+  { name: string; data: unknown },
+  unknown
+>({
+  func: async ({ rpc }, { name, data }) => {
+    return await rpc.invokeExposed(name, data)
+  },
+  docs: {
+    summary: 'Call any exposed function via RPC',
+    tags: ['rpc'],
+  },
+})
+```
+
+```typescript
+// packages/functions/src/rpc.http.ts
+import { wireHTTP } from './pikku-types.gen.js'
+import { rpcCaller } from './functions/rpc-caller.function.js'
+
+wireHTTP({
+  method: 'post',
+  route: '/rpc',
+  func: rpcCaller,
+})
+```
+
+External clients can now call any function with `expose: true`:
+
+```bash
+POST /rpc
+Content-Type: application/json
+
+{
+  "name": "calculateOrderTotal",
+  "data": { "items": [...] }
+}
+```
+
 ## Examples
 
 See the `examples/` directory for complete HTTP wiring examples including:

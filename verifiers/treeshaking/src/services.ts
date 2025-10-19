@@ -45,6 +45,6 @@ export const createSessionServices: CreateSessionServices<
   UserSession
 > = async ({ email, logger }, _interaction) => {
   // Destructure services to test session service aggregation
-  logger.log('Creating session services with email')
+  logger.info('Creating session services with email')
   return {} as Services
 }

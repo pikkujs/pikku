@@ -12,6 +12,7 @@ import type {
  *
  * @template In - The input type.
  * @template Out - The output type.
+ * @template ChannelData - The channel data type.
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Session - The session type, defaults to `CoreUserSession`.
  */
@@ -39,6 +40,7 @@ export type CorePikkuFunction<
  *
  * @template In - The input type.
  * @template Out - The output type.
+ * @template ChannelData - The channel data type.
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Session - The session type, defaults to `CoreUserSession`.
  */
