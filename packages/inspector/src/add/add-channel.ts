@@ -8,6 +8,7 @@ import { matchesFilters } from '../utils/filter-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { extractWireNames } from '../post-process.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -463,6 +464,38 @@ export const addChannel: AddWiring = (
 
   // --- resolve middleware ---
   const middleware = resolveMiddleware(state, obj, tags, checker)
+
+  // --- track used functions/middleware for service aggregation ---
+  // Track connect/disconnect/message handlers
+  if (connect) {
+    const connectFuncName = extractFunctionName(
+      connect,
+      checker,
+      state.rootDir
+    ).pikkuFuncName
+    state.serviceAggregation.usedFunctions.add(connectFuncName)
+  }
+  if (disconnect) {
+    const disconnectFuncName = extractFunctionName(
+      disconnect as any,
+      checker,
+      state.rootDir
+    ).pikkuFuncName
+    state.serviceAggregation.usedFunctions.add(disconnectFuncName)
+  }
+  if (message) {
+    state.serviceAggregation.usedFunctions.add(message.pikkuFuncName)
+  }
+  // Track message wiring handlers
+  for (const channelHandlers of Object.values(messageWirings)) {
+    for (const handler of Object.values(channelHandlers)) {
+      state.serviceAggregation.usedFunctions.add(handler.pikkuFuncName)
+    }
+  }
+  // Track middleware
+  extractWireNames(middleware).forEach((name) =>
+    state.serviceAggregation.usedMiddleware.add(name)
+  )
 
   // record into state
   state.channels.files.add(node.getSourceFile().fileName)

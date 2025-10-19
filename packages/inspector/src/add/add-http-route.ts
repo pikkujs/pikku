@@ -9,6 +9,7 @@ import { matchesFilters } from '../utils/filter-utils.js'
 import { AddWiring } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
+import { extractWireNames } from '../post-process.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -140,6 +141,15 @@ export const addHTTPRoute: AddWiring = (
     obj,
     tags,
     checker
+  )
+
+  // --- track used functions/middleware/permissions for service aggregation ---
+  state.serviceAggregation.usedFunctions.add(funcName)
+  extractWireNames(middleware).forEach((name) =>
+    state.serviceAggregation.usedMiddleware.add(name)
+  )
+  extractWireNames(permissions).forEach((name) =>
+    state.serviceAggregation.usedPermissions.add(name)
   )
 
   // --- record route ---

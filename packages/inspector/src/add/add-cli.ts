@@ -8,6 +8,7 @@ import {
 import { CLIProgramMeta, CLICommandMeta, PikkuWiringTypes } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { extractWireNames } from '../post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 
@@ -403,6 +404,13 @@ function processCommand(
         break
     }
   }
+
+  // --- track used functions/middleware for service aggregation ---
+  inspectorState.serviceAggregation.usedFunctions.add(meta.pikkuFuncName)
+  extractWireNames(meta.middleware).forEach((name) =>
+    inspectorState.serviceAggregation.usedMiddleware.add(name)
+  )
+  // Note: subcommands are tracked recursively when they're processed
 
   return meta
 }

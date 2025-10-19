@@ -434,6 +434,8 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
         path: node.getSourceFile().fileName,
         exportedName,
       })
+      // Track exposed RPC function for service aggregation
+      state.serviceAggregation.usedFunctions.add(pikkuFuncName)
     }
 
     // We add it to internal meta to allow autocomplete for everything
