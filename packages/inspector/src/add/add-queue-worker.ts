@@ -70,7 +70,7 @@ export const addQueueWorker: AddWiring = (
     if (
       !matchesFilters(
         options.filters || {},
-        { tags },
+        { tags, name: queueName },
         { type: PikkuWiringTypes.queue, name: queueName, filePath },
         logger
       )

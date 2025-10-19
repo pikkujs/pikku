@@ -1,0 +1,27 @@
+{
+  "name": "my-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/**",
+      "apps/**",
+      "backends/**"
+    ]
+  },
+  "scripts": {
+    "pikku": "pikku all && yarn workspaces foreach -p -A run pikku",
+    "pikku:watch": "pikku all --watch",
+    "prebuild": "yarn run pikku && yarn workspaces foreach -p -A run prebuild",
+    "verify": "yarn run tsc",
+    "tsc": "yarn workspaces foreach -p -A run tsc",
+    "test": "yarn workspaces foreach -p -A run test",
+    "lint": "npx oxlint@latest",
+    "prettier": "npx prettier . --write"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.9.0",
+    "typescript": "^5.0.0",
+    "prettier": "^3.0.0"
+  }
+}

@@ -408,7 +408,7 @@ export const addChannel: AddWiring = (
   if (
     !matchesFilters(
       filters,
-      { tags },
+      { tags, name },
       { type: PikkuWiringTypes.channel, name, filePath },
       logger
     )
