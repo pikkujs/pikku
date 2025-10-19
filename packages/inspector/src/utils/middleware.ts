@@ -10,7 +10,8 @@ import { InspectorState } from '../types.js'
  */
 export function extractMiddlewarePikkuNames(
   arrayNode: ts.Expression,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  rootDir: string
 ): string[] {
   if (!ts.isArrayLiteralExpression(arrayNode)) {
     return []
@@ -20,12 +21,12 @@ export function extractMiddlewarePikkuNames(
   for (const element of arrayNode.elements) {
     if (ts.isIdentifier(element)) {
       // Resolve the identifier to its pikkuFuncName
-      const { pikkuFuncName } = extractFunctionName(element, checker)
+      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
       names.push(pikkuFuncName)
     } else if (ts.isCallExpression(element)) {
       // Handle call expressions like logCommandInfoAndTime({...})
       // These create inline middleware, so we use the call expression itself as the name
-      const { pikkuFuncName } = extractFunctionName(element, checker)
+      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
       names.push(pikkuFuncName)
     }
   }
@@ -111,7 +112,8 @@ export function resolveHTTPMiddleware(
   if (explicitMiddlewareNode) {
     const middlewareNames = extractMiddlewarePikkuNames(
       explicitMiddlewareNode,
-      checker
+      checker,
+      state.rootDir
     )
     for (const name of middlewareNames) {
       const meta = state.middleware.meta[name]
@@ -156,7 +158,8 @@ function resolveTagAndExplicitMiddleware(
   if (explicitMiddlewareNode) {
     const middlewareNames = extractMiddlewarePikkuNames(
       explicitMiddlewareNode,
-      checker
+      checker,
+      state.rootDir
     )
     for (const name of middlewareNames) {
       const meta = state.middleware.meta[name]

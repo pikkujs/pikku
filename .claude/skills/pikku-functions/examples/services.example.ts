@@ -20,24 +20,33 @@ import {
   singletonServices,
 } from '../.pikku/pikku-services.gen.js'
 
+/**
+ * Application configuration
+ * Created once on startup
+ */
 export const createConfig: CreateConfig<Config> = async () => {
-  return {}
+  return {
+    // Your config here
+  }
 }
 
 /**
- * This function creates the singleton services used by the application and is created once on start.
- * It's important to use the types here, as the pikku CLI uses them to improve the development experience!
+ * Singleton services - created once on application start
+ *
+ * IMPORTANT: Use conditional/async loading for services to enable tree-shaking
+ * Only load services that are actually used in your functions
  */
 export const createSingletonServices: CreateSingletonServices<
   Config,
   RequiredSingletonServices
 > = async (config: Config): Promise<RequiredSingletonServices> => {
+  // Always-needed services
   const variables = new LocalVariablesService()
   const logger = new ConsoleLogger()
-
   const schema = new CFWorkerSchemaService(logger)
 
-  // Only create JWT service if it's actually needed
+  // ✅ IMPORTANT: Conditional loading - only create JWT service if used
+  // This enables tree-shaking and reduces bundle size
   let jwt: JWTService | undefined
   if (singletonServices.jwt) {
     const { JoseJWTService } = await import('@pikku/jose')
@@ -62,13 +71,24 @@ export const createSingletonServices: CreateSingletonServices<
 }
 
 /**
- * This function creates the session services on each request.
- * It's important to use the type CreateSessionServices here, as the pikku CLI uses them to improve the development experience!
+ * Session services - created on each request
+ * Use for request-scoped services like database connections
+ *
+ * CRITICAL: Always destructure services in the first parameter
  */
 export const createSessionServices: CreateSessionServices<
   SingletonServices,
   Services,
   UserSession
-> = async ({}, _session) => {
-  return {}
+> = async ({ logger, config }, interaction, session) => {
+  // ✅ CORRECT: Services destructured in parameter list
+  // interaction contains route, method, etc.
+  // session contains user session data
+
+  // Example: Create a database connection per request
+  // const db = await createDbConnection(config.dbUrl)
+
+  return {
+    // Add your session services here
+  }
 }

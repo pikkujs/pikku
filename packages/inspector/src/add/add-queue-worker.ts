@@ -54,7 +54,8 @@ export const addQueueWorker: AddWiring = (
 
     const pikkuFuncName = extractFunctionName(
       funcInitializer,
-      checker
+      checker,
+      state.rootDir
     ).pikkuFuncName
 
     if (!queueName) {

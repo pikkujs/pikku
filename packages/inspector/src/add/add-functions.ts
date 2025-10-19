@@ -6,6 +6,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { toRelativePath } from '../utils/find-root-dir.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -270,7 +271,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   if (args.length === 0) return
 
   const { pikkuFuncName, name, explicitName, exportedName } =
-    extractFunctionName(node, checker)
+    extractFunctionName(node, checker, state.rootDir)
 
   let tags: string[] | undefined
   let expose: boolean | undefined

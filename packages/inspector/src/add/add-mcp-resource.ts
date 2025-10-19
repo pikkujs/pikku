@@ -58,7 +58,8 @@ export const addMCPResource: AddWiring = (
 
     const pikkuFuncName = extractFunctionName(
       funcInitializer,
-      checker
+      checker,
+      state.rootDir
     ).pikkuFuncName
 
     if (!uriValue) {

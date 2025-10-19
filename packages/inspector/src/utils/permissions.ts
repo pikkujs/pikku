@@ -14,17 +14,18 @@ import { InspectorState } from '../types.js'
  */
 export function extractPermissionPikkuNames(
   node: ts.Expression,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  rootDir: string
 ): string[] {
   const names: string[] = []
 
   // Helper to extract from a single element
   const extractFromElement = (element: ts.Expression) => {
     if (ts.isIdentifier(element)) {
-      const { pikkuFuncName } = extractFunctionName(element, checker)
+      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
       names.push(pikkuFuncName)
     } else if (ts.isCallExpression(element)) {
-      const { pikkuFuncName } = extractFunctionName(element, checker)
+      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
       names.push(pikkuFuncName)
     } else if (ts.isArrayLiteralExpression(element)) {
       // Nested array (for Record values that are arrays)
@@ -130,7 +131,8 @@ export function resolveHTTPPermissions(
   if (explicitPermissionsNode) {
     const permissionNames = extractPermissionPikkuNames(
       explicitPermissionsNode,
-      checker
+      checker,
+      state.rootDir
     )
     for (const name of permissionNames) {
       const meta = state.permissions.meta[name]
@@ -175,7 +177,8 @@ function resolveTagAndExplicitPermissions(
   if (explicitPermissionsNode) {
     const permissionNames = extractPermissionPikkuNames(
       explicitPermissionsNode,
-      checker
+      checker,
+      state.rootDir
     )
     for (const name of permissionNames) {
       const meta = state.permissions.meta[name]

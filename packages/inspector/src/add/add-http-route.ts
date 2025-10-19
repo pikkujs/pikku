@@ -95,7 +95,11 @@ export const addHTTPRoute: AddWiring = (
     return
   }
 
-  const funcName = extractFunctionName(funcInitializer, checker).pikkuFuncName
+  const funcName = extractFunctionName(
+    funcInitializer,
+    checker,
+    state.rootDir
+  ).pikkuFuncName
 
   // lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]

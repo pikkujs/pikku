@@ -34,7 +34,11 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(handlerNode)
-    const { pikkuFuncName, exportedName } = extractFunctionName(node, checker)
+    const { pikkuFuncName, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
     state.permissions.meta[pikkuFuncName] = {
       services,
       sourceFile: node.getSourceFile().fileName,
@@ -83,7 +87,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // Extract permission pikkuFuncNames from array
     const permissionNames = extractPermissionPikkuNames(
       permissionsArrayArg,
-      checker
+      checker,
+      state.rootDir
     )
 
     if (permissionNames.length === 0) {
@@ -130,7 +135,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
     // If not a factory, get export name from the call expression itself
     if (!isFactory) {
-      const extracted = extractFunctionName(node, checker)
+      const extracted = extractFunctionName(node, checker, state.rootDir)
       exportedName = extracted.exportedName
     }
 
@@ -196,7 +201,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // Extract permission pikkuFuncNames from array
     const permissionNames = extractPermissionPikkuNames(
       permissionsArrayArg,
-      checker
+      checker,
+      state.rootDir
     )
 
     if (permissionNames.length === 0) {
@@ -244,7 +250,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
     // If not a factory, get export name from the call expression itself
     if (!isFactory) {
-      const extracted = extractFunctionName(node, checker)
+      const extracted = extractFunctionName(node, checker, state.rootDir)
       exportedName = extracted.exportedName
     }
 

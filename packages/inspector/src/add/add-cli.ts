@@ -217,7 +217,11 @@ function processCommand(
     ts.isFunctionExpression(node)
   ) {
     return {
-      pikkuFuncName: extractFunctionName(node, typeChecker).pikkuFuncName,
+      pikkuFuncName: extractFunctionName(
+        node,
+        typeChecker,
+        inspectorState.rootDir
+      ).pikkuFuncName,
       positionals: [],
       options: {},
     }
@@ -274,7 +278,8 @@ function processCommand(
     if (propName === 'func') {
       pikkuFuncName = extractFunctionName(
         prop.initializer,
-        typeChecker
+        typeChecker,
+        inspectorState.rootDir
       ).pikkuFuncName
       meta.pikkuFuncName = pikkuFuncName
     } else if (
@@ -334,7 +339,8 @@ function processCommand(
       case 'render':
         meta.renderName = extractFunctionName(
           prop.initializer,
-          typeChecker
+          typeChecker,
+          inspectorState.rootDir
         ).pikkuFuncName
         break
 

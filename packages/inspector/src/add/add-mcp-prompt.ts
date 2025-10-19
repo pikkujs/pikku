@@ -54,7 +54,8 @@ export const addMCPPrompt: AddWiring = (
 
     const pikkuFuncName = extractFunctionName(
       funcInitializer,
-      checker
+      checker,
+      state.rootDir
     ).pikkuFuncName
 
     if (!nameValue) {
