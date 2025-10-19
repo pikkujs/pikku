@@ -1,7 +1,6 @@
 import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import { PikkuCLIConfig } from '../../types/config.js'
-import { InspectorFilters } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
 
 const CONFIG_DIR_FILES = [
@@ -18,14 +17,12 @@ export const getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  filters: InspectorFilters = {},
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   const config = await _getPikkuCLIConfig(
     logger,
     configFile,
     requiredFields,
-    filters,
     exitProcess
   )
   return config
@@ -35,7 +32,6 @@ const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  filters: InspectorFilters = {},
   exitProcess: boolean = false
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
@@ -58,7 +54,6 @@ const _getPikkuCLIConfig = async (
         logger,
         resolve(configDir, config.extends),
         [],
-        filters,
         exitProcess
       )
       result = {
@@ -300,17 +295,6 @@ const _getPikkuCLIConfig = async (
           }
         }
       }
-    }
-
-    result.filters = result.filters || {}
-    if (filters.tags && filters.tags.length > 0) {
-      result.filters.tags = filters.tags
-    }
-    if (filters.types && filters.types.length > 0) {
-      result.filters.types = filters.types
-    }
-    if (filters.directories && filters.directories.length > 0) {
-      result.filters.directories = filters.directories
     }
 
     if (!isAbsolute(result.tsconfig)) {
