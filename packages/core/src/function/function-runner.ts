@@ -83,6 +83,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
 
+  // Convert tags to PermissionMetadata and merge with inheritedPermissions
+  const mergedInheritedPermissions: PermissionMetadata[] = [
+    ...(inheritedPermissions || []),
+    ...(tags?.map((tag) => ({ type: 'tag' as const, tag })) || []),
+  ]
+
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
     const session = userSession?.get()
@@ -120,9 +126,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     const allServices = await getAllServices(session)
 
-    // Run permissions check with combined permissions: inheritedPermissions → wirePermissions → funcPermissions
+    // Run permissions check with combined permissions: inheritedPermissions (including tags) → wirePermissions → funcPermissions
     await runPermissions(wireType, wireId, {
-      wireInheritedPermissions: inheritedPermissions,
+      wireInheritedPermissions: mergedInheritedPermissions,
       wirePermissions: wirePermissions,
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
