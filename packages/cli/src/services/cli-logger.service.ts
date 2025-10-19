@@ -13,6 +13,7 @@ const logo = `
 export class CLILogger implements Logger {
   private silent: boolean
   private level: LogLevel = LogLevel.info
+  private criticalErrors: string[] = []
 
   constructor({
     logLogo,
@@ -58,6 +59,15 @@ export class CLILogger implements Logger {
   debug(message: string) {
     if (this.level > LogLevel.debug || this.silent) return
     console.log(chalk.gray(message))
+  }
+
+  critical(message: string) {
+    this.criticalErrors.push(message)
+    console.error(chalk.red.bold(message))
+  }
+
+  hasCriticalErrors(): boolean {
+    return this.criticalErrors.length > 0
   }
 
   private logPikkuLogo() {

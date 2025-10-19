@@ -27,7 +27,11 @@ export function extractPermissionPikkuNames(
     } else if (ts.isCallExpression(element)) {
       // Handle call expressions like hasEmailQuota(100) or rolePermission({...})
       // Extract the function being called (e.g., 'hasEmailQuota' from 'hasEmailQuota(100)')
-      const { pikkuFuncName } = extractFunctionName(element.expression, checker, rootDir)
+      const { pikkuFuncName } = extractFunctionName(
+        element.expression,
+        checker,
+        rootDir
+      )
       names.push(pikkuFuncName)
     } else if (ts.isArrayLiteralExpression(element)) {
       // Nested array (for Record values that are arrays)

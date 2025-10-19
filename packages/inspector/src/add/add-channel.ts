@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getPropertyValue,
+  getPropertyTags,
+} from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
@@ -401,7 +404,7 @@ export const addChannel: AddWiring = (
     : []
 
   const docs = getPropertyValue(obj, 'docs') as PikkuDocs | undefined
-  const tags = getPropertyValue(obj, 'tags') as string[] | undefined
+  const tags = getPropertyTags(obj, 'Channel', route, logger)
   const query = getPropertyValue(obj, 'query') as string[] | []
 
   const filePath = node.getSourceFile().fileName

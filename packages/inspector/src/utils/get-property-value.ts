@@ -91,3 +91,29 @@ export const getPropertyValue = (
 
   return null
 }
+
+/**
+ * Gets the 'tags' property from an object and validates it's an array.
+ * Logs a critical error if tags is not an array but still returns the value.
+ * @param logger - Optional logger instance; if not provided, uses console.error
+ */
+export const getPropertyTags = (
+  obj: ts.ObjectLiteralExpression,
+  wiringType: string,
+  wiringName: string | null,
+  logger?: { critical: (message: string) => void }
+): string[] | undefined => {
+  const tagsValue = getPropertyValue(obj, 'tags')
+
+  if (tagsValue !== null && !Array.isArray(tagsValue)) {
+    const errorMsg = `• ${wiringType} '${wiringName}' has invalid 'tags' property - must be an array of strings.`
+    if (logger) {
+      logger.critical(errorMsg)
+    } else {
+      console.error(errorMsg)
+    }
+    // Return undefined but don't stop processing - error will be caught by the exit handler
+  }
+
+  return Array.isArray(tagsValue) ? tagsValue : undefined
+}

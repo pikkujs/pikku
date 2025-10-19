@@ -106,17 +106,35 @@ export function aggregateRequiredServices(state: InspectorState): void {
 
   // 4. Services from middleware/permission groups used in wirings
   // We need to check all wirings and expand any tag/HTTP-pattern groups they use
-  for (const method of ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'] as const) {
+  for (const method of [
+    'get',
+    'post',
+    'put',
+    'patch',
+    'delete',
+    'head',
+    'options',
+  ] as const) {
     for (const routeMeta of Object.values(state.http.meta[method])) {
       expandAndAddGroupServices(routeMeta.middleware, state, addServices, true)
-      expandAndAddGroupServices(routeMeta.permissions, state, addServices, false)
+      expandAndAddGroupServices(
+        routeMeta.permissions,
+        state,
+        addServices,
+        false
+      )
     }
   }
 
   // Also check other wiring types (channels, queues, schedulers, MCP)
   for (const channelMeta of Object.values(state.channels.meta)) {
     expandAndAddGroupServices(channelMeta.middleware, state, addServices, true)
-    expandAndAddGroupServices(channelMeta.permissions, state, addServices, false)
+    expandAndAddGroupServices(
+      channelMeta.permissions,
+      state,
+      addServices,
+      false
+    )
   }
 
   for (const queueMeta of Object.values(state.queueWorkers.meta)) {
@@ -141,7 +159,12 @@ export function aggregateRequiredServices(state: InspectorState): void {
 
   for (const resourceMeta of Object.values(state.mcpEndpoints.resourcesMeta)) {
     expandAndAddGroupServices(resourceMeta.middleware, state, addServices, true)
-    expandAndAddGroupServices(resourceMeta.permissions, state, addServices, false)
+    expandAndAddGroupServices(
+      resourceMeta.permissions,
+      state,
+      addServices,
+      false
+    )
   }
 
   // 5. Services from session service factories

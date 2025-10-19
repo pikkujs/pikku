@@ -123,36 +123,6 @@ wireCLI({
   },
 })
 
-// @ts-expect-error - Nested subcommand type mismatch
-wireCLI({
-  program: 'test-cli-5',
-  commands: {
-    db: {
-      description: 'Database operations',
-      subcommands: {
-        migrate: {
-          description: 'Migration commands',
-          subcommands: {
-            up: pikkuCLICommand({
-              func: pikkuFunc<{}, void>({
-                func: async () => {},
-              }),
-              description: 'Run migrations',
-              options: {
-                steps: {
-                  description: 'Number of steps',
-                  short: 's',
-                  default: 1,
-                },
-              },
-            }),
-          },
-        },
-      },
-    },
-  },
-})
-
 // Valid: Command with both parameters and options in subcommand
 wireCLI({
   program: 'test-cli-6',

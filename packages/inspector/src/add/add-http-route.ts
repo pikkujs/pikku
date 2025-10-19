@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getPropertyValue,
+  getPropertyTags,
+} from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
@@ -10,6 +13,7 @@ import { AddWiring } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -68,7 +72,7 @@ export const addHTTPRoute: AddWiring = (
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
   const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-  const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
+  const tags = getPropertyTags(obj, 'HTTP route', route, logger)
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
   const filePath = node.getSourceFile().fileName
@@ -107,6 +111,9 @@ export const addHTTPRoute: AddWiring = (
     checker,
     state.rootDir
   ).pikkuFuncName
+
+  // Ensure function metadata exists (creates stub for inline functions)
+  ensureFunctionMetadata(state, funcName, route)
 
   // lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]

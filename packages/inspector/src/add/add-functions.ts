@@ -300,6 +300,17 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
       (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
     ) {
       logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
+      // Create stub metadata to prevent "function not found" errors in wirings
+      state.functions.meta[pikkuFuncName] = {
+        pikkuFuncName,
+        name,
+        services: { optimized: false, services: [] },
+        inputSchemaName: null,
+        outputSchemaName: null,
+        inputs: [],
+        outputs: [],
+        middleware: undefined,
+      }
       return
     }
     handlerNode = fnProp
@@ -310,6 +321,17 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     !ts.isFunctionExpression(handlerNode)
   ) {
     logger.error(`• Handler for ${name} is not a function.`)
+    // Create stub metadata to prevent "function not found" errors in wirings
+    state.functions.meta[pikkuFuncName] = {
+      pikkuFuncName,
+      name,
+      services: { optimized: false, services: [] },
+      inputSchemaName: null,
+      outputSchemaName: null,
+      inputs: [],
+      outputs: [],
+      middleware: undefined,
+    }
     return
   }
 

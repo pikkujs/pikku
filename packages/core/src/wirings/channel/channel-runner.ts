@@ -24,7 +24,13 @@ export const wireChannel = <
   PikkuMiddleware extends CorePikkuMiddleware,
   ChannelFunction,
 >(
-  channel: CoreChannel<In, Channel, PikkuPermission, PikkuMiddleware, ChannelFunction>
+  channel: CoreChannel<
+    In,
+    Channel,
+    PikkuPermission,
+    PikkuMiddleware,
+    ChannelFunction
+  >
 ) => {
   // Get the channel metadata
   const channelsMeta = pikkuState('channel', 'meta')

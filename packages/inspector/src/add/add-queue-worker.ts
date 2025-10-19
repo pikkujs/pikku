@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getPropertyValue,
+  getPropertyTags,
+} from '../utils/get-property-value.js'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
@@ -37,7 +40,7 @@ export const addQueueWorker: AddWiring = (
 
     const queueName = getPropertyValue(obj, 'queueName') as string | null
     const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-    const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
+    const tags = getPropertyTags(obj, 'Queue worker', queueName, logger)
 
     // --- find the referenced function ---
     const funcInitializer = getPropertyAssignmentInitializer(

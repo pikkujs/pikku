@@ -94,10 +94,16 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     } else {
       // No pikkuPermission wrapper found - extract from factory's return value directly
       // Factory pattern: (config) => (services, data, session) => { ... }
-      if (ts.isArrowFunction(factoryNode) || ts.isFunctionExpression(factoryNode)) {
+      if (
+        ts.isArrowFunction(factoryNode) ||
+        ts.isFunctionExpression(factoryNode)
+      ) {
         const factoryBody = factoryNode.body
         // Check if the body is an arrow function (direct return)
-        if (ts.isArrowFunction(factoryBody) || ts.isFunctionExpression(factoryBody)) {
+        if (
+          ts.isArrowFunction(factoryBody) ||
+          ts.isFunctionExpression(factoryBody)
+        ) {
           services = extractServicesFromFunction(factoryBody)
         }
       }
