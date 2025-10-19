@@ -17,7 +17,10 @@ export const serializeTypedChannelsMap = (
   )
   typesMap.customTypes.forEach(({ references }) => {
     for (const reference of references) {
-      requiredTypes.add(reference)
+      // Skip __object types (placeholder types for invalid/broken functions)
+      if (reference !== '__object' && !reference.startsWith('__object_')) {
+        requiredTypes.add(reference)
+      }
     }
   })
   const imports = serializeImportMap(

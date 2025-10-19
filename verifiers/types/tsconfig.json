@@ -3,16 +3,11 @@
   "compilerOptions": {
     "noEmit": true,
     "skipLibCheck": false,
+    "resolveJsonModule": true,
     "types": ["node"]
   },
   "include": [
-    "src/http/**/*",
-    "src/channel/**/*",
-    "src/function/**/*",
-    "src/mcp/**/*",
-    "src/scheduler/**/*",
-    "src/queue/**/*",
-    "src/cli/**/*",
+    "src/*",
     ".pikku/**/*"
   ]
 }

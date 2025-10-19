@@ -1,6 +1,10 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getPropertyValue,
+  getPropertyTags,
+} from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
@@ -42,7 +46,7 @@ export const addMCPTool: AddWiring = (
       | string
       | null
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
-    const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
+    const tags = getPropertyTags(obj, 'MCP tool', nameValue, logger)
 
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,
@@ -60,6 +64,9 @@ export const addMCPTool: AddWiring = (
       checker,
       state.rootDir
     ).pikkuFuncName
+
+    // Ensure function metadata exists (creates stub for inline functions)
+    ensureFunctionMetadata(state, pikkuFuncName, nameValue || undefined)
 
     if (!nameValue) {
       console.error(`• MCP tool is missing the required 'name' property.`)

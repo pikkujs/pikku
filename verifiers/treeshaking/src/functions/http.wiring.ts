@@ -1,7 +1,11 @@
 import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 import { sendEmail, sendSMS, processPayment, saveData } from './functions.js'
 import { logRequest, trackAnalytics, rateLimiter } from './middleware.js'
-import { canSendEmail, canProcessPayment, hasEmailQuota } from './permissions.js'
+import {
+  canSendEmail,
+  canProcessPayment,
+  hasEmailQuota,
+} from './permissions.js'
 
 // Notifications with middleware and permissions
 wireHTTP({

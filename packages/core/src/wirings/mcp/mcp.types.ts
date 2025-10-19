@@ -119,7 +119,7 @@ export type CoreMCPPrompt<
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
   name: string
-  description?: string
+  description: string
   func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]

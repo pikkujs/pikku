@@ -9,8 +9,14 @@ export function generateCustomTypes(
 // or are broken into simpler types
 ${Array.from(typesMap.customTypes.entries())
   .map(([name, { type, references }]) => {
-    references.forEach((name) => {
-      requiredTypes.add(name)
+    references.forEach((refName) => {
+      // Skip __object types (including those with suffixes like __object_abc123)
+      // These are placeholder types created by the inspector for invalid/broken functions
+      // (e.g., functions with type errors or missing return statements). Attempting to
+      // import these would fail since the source files don't actually export __object.
+      if (refName !== '__object' && !refName.startsWith('__object_')) {
+        requiredTypes.add(refName)
+      }
     })
 
     // Extract type names from the type string that might not be in references

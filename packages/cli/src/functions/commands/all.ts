@@ -144,5 +144,10 @@ export const all: any = pikkuVoidFunc({
         .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
         .join('\n')
     )
+
+    // Check for critical errors and exit if any were logged
+    if (logger.hasCriticalErrors()) {
+      process.exit(1)
+    }
   },
 })

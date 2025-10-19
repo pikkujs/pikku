@@ -26,7 +26,11 @@ export function extractMiddlewarePikkuNames(
     } else if (ts.isCallExpression(element)) {
       // Handle call expressions like rateLimiter(10) or logCommandInfoAndTime({...})
       // Extract the function being called (e.g., 'rateLimiter' from 'rateLimiter(10)')
-      const { pikkuFuncName } = extractFunctionName(element.expression, checker, rootDir)
+      const { pikkuFuncName } = extractFunctionName(
+        element.expression,
+        checker,
+        rootDir
+      )
       names.push(pikkuFuncName)
     }
   }

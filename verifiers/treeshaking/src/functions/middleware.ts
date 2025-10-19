@@ -16,8 +16,9 @@ export const trackAnalytics = pikkuMiddleware(
 )
 
 export const rateLimiter = pikkuMiddlewareFactory(
-  (limit: number) => async ({ storage }, _data, _userSession) => {
-    // Use storage to track rate limits
-    await storage.save('rate_limit', limit)
-  }
+  (limit: number) =>
+    async ({ storage }, _data, _userSession) => {
+      // Use storage to track rate limits
+      await storage.save('rate_limit', limit)
+    }
 )

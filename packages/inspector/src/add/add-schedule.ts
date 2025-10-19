@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getPropertyValue,
+  getPropertyTags,
+} from '../utils/get-property-value.js'
 import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
@@ -38,7 +41,7 @@ export const addSchedule: AddWiring = (
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const scheduleValue = getPropertyValue(obj, 'schedule') as string | null
     const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-    const tags = (getPropertyValue(obj, 'tags') as string[]) || undefined
+    const tags = getPropertyTags(obj, 'Scheduler', nameValue, logger)
 
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,

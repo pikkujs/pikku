@@ -3,12 +3,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc -b",
-    "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test": "npx tsx src/start.ts"
+    "test": "pikku && npx tsx src/start.ts"
   },
   "dependencies": {
     "@pikku/core": "^0.9.12-next.0"

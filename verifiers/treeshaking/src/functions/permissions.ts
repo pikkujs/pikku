@@ -18,8 +18,9 @@ export const canProcessPayment = pikkuPermission(
 )
 
 export const hasEmailQuota = pikkuPermissionFactory(
-  (quota: number) => async ({ email }, _data, _userSession) => {
-    // Check email quota
-    return true
-  }
+  (quota: number) =>
+    async ({ email }, _data, _userSession) => {
+      // Check email quota
+      return true
+    }
 )

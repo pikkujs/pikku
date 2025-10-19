@@ -123,6 +123,8 @@ export interface InspectorLogger {
   error: (message: string) => void
   warn: (message: string) => void
   debug: (message: string) => void
+  critical: (message: string) => void
+  hasCriticalErrors: () => boolean
 }
 
 export type AddWiring = (
