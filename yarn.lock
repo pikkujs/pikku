@@ -3970,6 +3970,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verify-treeshaking@workspace:verifiers/treeshaking":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verify-treeshaking@workspace:verifiers/treeshaking"
+  dependencies:
+    "@pikku/cli": "npm:^0.9.16-next.0"
+    "@pikku/core": "npm:^0.9.12-next.0"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.6"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/websocket@npm:^0.9.2, @pikku/websocket@workspace:packages/client-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/websocket@workspace:packages/client-websocket"

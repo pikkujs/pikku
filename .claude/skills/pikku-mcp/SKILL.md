@@ -23,6 +23,8 @@ MCP wiring is a **thin binding layer** that:
 - Leaves all logic inside `packages/functions/src/functions/**/*.function.ts`
 - Never touches services directly from wiring
 
+**Recommended Pattern:** MCP functions should be thin adapters that use `rpc.invoke()` to call existing domain functions, then format the response for MCP. This keeps business logic reusable across all transports (HTTP, WebSocket, queues, CLI, MCP).
+
 ## File Naming Rules
 
 - MCP wiring files must end with `.mcp.ts`
@@ -72,42 +74,155 @@ type MCPPromptResponse = Array<{
 
 ## Basic Wiring
 
-**Resource:**
+**Resource Example - Recommended Pattern:**
 
 ```typescript
+// code-search.function.ts
+// Both domain function and MCP adapter in same file
+
+// Domain function - reusable across all transports
+export const searchCode = pikkuFunc<CodeSearchInput, CodeSearchResult>({
+  func: async ({ database }, input) => {
+    return await database.query('code_index', {
+      where: { content: { contains: input.query } },
+      limit: input.limit ?? 20,
+    })
+  },
+  docs: {
+    summary: 'Search codebase',
+    tags: ['code-search'],
+  },
+})
+
+// MCP adapter - just formats for MCP protocol
+export const searchCodeMCP = pikkuMCPResourceFunc<
+  CodeSearchInput,
+  MCPResourceResponse
+>({
+  func: async ({ rpc }, input) => {
+    const results = await rpc.invoke('searchCode', input)
+    return [{ uri: 'pikku://code-search', text: JSON.stringify(results) }]
+  },
+  docs: {
+    summary: 'Search codebase (MCP adapter)',
+    tags: ['mcp', 'code-search'],
+  },
+})
+```
+
+```typescript
+// code-search.mcp.ts
 import { wireMCPResource } from './pikku-types.gen.js'
-import { codeSearch } from './functions/code-search.function.js'
+import { searchCodeMCP } from './functions/code-search.function.js'
 
 wireMCPResource({
   name: 'codeSearch',
   description: 'Search codebase',
-  func: codeSearch,
+  func: searchCodeMCP,
 })
 ```
 
-**Tool:**
+**Tool Example - Recommended Pattern:**
 
 ```typescript
+// issues.function.ts
+// Both domain function and MCP adapter in same file
+
+// Domain function - reusable across all transports
+export const createIssue = pikkuFunc<CreateIssueInput, Issue>({
+  func: async ({ database, logger }, input) => {
+    logger.info('Creating issue', { title: input.title })
+    return await database.insert('issues', input)
+  },
+  docs: {
+    summary: 'Create a new issue',
+    tags: ['issues'],
+  },
+})
+
+// MCP adapter - just formats for MCP protocol
+export const createIssueMCP = pikkuMCPToolFunc<
+  CreateIssueInput,
+  MCPToolResponse
+>({
+  func: async ({ rpc }, input) => {
+    const issue = await rpc.invoke('createIssue', input)
+    return [{ type: 'text', text: `Created issue #${issue.id}: ${issue.title}` }]
+  },
+  docs: {
+    summary: 'Create issue (MCP adapter)',
+    tags: ['mcp', 'issues'],
+  },
+})
+```
+
+```typescript
+// issues.mcp.ts
 import { wireMCPTool } from './pikku-types.gen.js'
-import { annotateFile } from './functions/code-ops.function.js'
+import { createIssueMCP } from './functions/issues.function.js'
 
 wireMCPTool({
-  name: 'annotateFile',
-  description: 'Add annotation to code',
-  func: annotateFile,
+  name: 'createIssue',
+  description: 'Create a new issue',
+  func: createIssueMCP,
 })
 ```
 
-**Prompt:**
+**Prompt Example - Recommended Pattern:**
 
 ```typescript
+// review.function.ts
+// Both domain function and MCP adapter in same file
+
+// Domain function - reusable across all transports
+export const generateReviewPrompt = pikkuFunc<
+  { filePath: string; context: string },
+  { promptText: string }
+>({
+  func: async ({ database }, input) => {
+    const file = await database.query('files', {
+      where: { path: input.filePath }
+    })
+    return {
+      promptText: `Review this code:\n\nFile: ${input.filePath}\n\nContext: ${input.context}\n\nCode:\n${file.content}`
+    }
+  },
+  docs: {
+    summary: 'Generate code review prompt',
+    tags: ['code-review'],
+  },
+})
+
+// MCP adapter - just formats for MCP protocol
+export const generateReviewPromptMCP = pikkuMCPPromptFunc<
+  { filePath: string; context: string },
+  MCPPromptResponse
+>({
+  func: async ({ rpc }, input) => {
+    const result = await rpc.invoke('generateReviewPrompt', input)
+    return [
+      {
+        role: 'user',
+        content: { type: 'text', text: result.promptText }
+      }
+    ]
+  },
+  docs: {
+    summary: 'Generate review prompt (MCP adapter)',
+    tags: ['mcp', 'code-review'],
+  },
+})
+```
+
+```typescript
+// review.mcp.ts
 import { wireMCPPrompt } from './pikku-types.gen.js'
-import { reviewPrompt } from './functions/review-prompt.function.js'
+import { generateReviewPromptMCP } from './functions/review.function.js'
 
 wireMCPPrompt({
   name: 'reviewCode',
   description: 'Generate code review prompt',
-  func: reviewPrompt,
+  func: generateReviewPromptMCP,
 })
 ```
 

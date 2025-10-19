@@ -1,10 +1,9 @@
-import { pikkuMCPResourceFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuFunc, pikkuMCPResourceFunc } from '#pikku/pikku-types.gen.js'
 import type { MCPResourceResponse } from '../pikku-types.gen.js'
 
 /**
- * MCP Resource function
- * Resources provide data sources for AI models
- * CRITICAL: Always specify MCPResourceResponse as output type
+ * Domain function - performs the actual code search
+ * This function can be used from HTTP, WebSocket, queues, CLI, or MCP
  */
 
 type CodeSearchInput = {
@@ -12,22 +11,41 @@ type CodeSearchInput = {
   limit?: number
 }
 
-export const codeSearch = pikkuMCPResourceFunc<
-  CodeSearchInput,
-  MCPResourceResponse
->({
+type CodeSearchResult = Array<{
+  file: string
+  line: number
+  content: string
+}>
+
+export const searchCode = pikkuFunc<CodeSearchInput, CodeSearchResult>({
+  func: async ({ database }, input) => {
+    const results = await database.query('code_index', {
+      where: { content: { contains: input.query } },
+      limit: input.limit ?? 20,
+    })
+
+    return results
+  },
   docs: {
     summary: 'Search codebase',
     description: 'Search through codebase and return matching results',
-    tags: ['mcp', 'code-search'],
-    errors: [],
+    tags: ['code-search'],
   },
-  // ✅ CORRECT: Destructure services, use rpc for orchestration
+})
+
+/**
+ * MCP Resource adapter - formats search results for AI agents
+ * CRITICAL: Always specify MCPResourceResponse as output type
+ * RECOMMENDED: Use rpc.invoke() to call domain function, then format for MCP
+ */
+
+export const searchCodeMCP = pikkuMCPResourceFunc<
+  CodeSearchInput,
+  MCPResourceResponse
+>({
   func: async ({ rpc }, input) => {
-    const results = await rpc.invoke('searchCode', {
-      query: input.query,
-      limit: input.limit ?? 20,
-    })
+    // ✅ CORRECT: Use rpc.invoke() to call the domain function
+    const results = await rpc.invoke('searchCode', input)
 
     // ✅ CORRECT: Return MCPResourceResponse format
     return [
@@ -36,5 +54,9 @@ export const codeSearch = pikkuMCPResourceFunc<
         text: JSON.stringify(results),
       },
     ]
+  },
+  docs: {
+    summary: 'Search codebase (MCP adapter)',
+    tags: ['mcp', 'code-search'],
   },
 })

@@ -50,7 +50,7 @@ export type PikkuMiddleware<RequiredServices extends SingletonServices = Singlet
  *
  * @example
  * \`\`\`typescript
- * const permission = pikkuPermission(({ logger }, data, session) => {
+ * const permission = on(({ logger }, data, session) => {
  *   return session?.isAdmin || false
  * })
  * \`\`\`
