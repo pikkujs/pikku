@@ -5,29 +5,23 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const serializeServicesMap = (
-  functionsMetaData: Record<string, any>,
+  requiredServices: Set<string>,
   forceRequiredServices: string[] = [],
   servicesImport: string,
   sessionServicesImport: string
 ): string => {
-  // Extract all unique services from all functions
-  const usedServices = new Set<string>()
+  // Use pre-aggregated services from inspector state
+  // This includes services from:
+  // - Wired functions (HTTP, channels, queues, schedulers, MCP, CLI, RPC)
+  // - Middleware used by wired functions
+  // - Permissions used by wired functions
+  // - Session factories
+  const usedServices = new Set(requiredServices)
 
   // Internal services that are created internally and not via the create service script
   const internalServices = new Set(['rpc', 'mcp', 'channel', 'userSession'])
 
-  for (const funcMeta of Object.values(functionsMetaData)) {
-    if (funcMeta.services && Array.isArray(funcMeta.services.services)) {
-      funcMeta.services.services.forEach((service: string) => {
-        // Only include services that are not internal
-        if (!internalServices.has(service)) {
-          usedServices.add(service)
-        }
-      })
-    }
-  }
-
-  // Add middleware services that might not be detected from function inspection
+  // Add force-required services that might not be detected from function inspection
   forceRequiredServices.forEach((service) => {
     if (!internalServices.has(service)) {
       usedServices.add(service)
@@ -101,7 +95,7 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
     const sessionServicesImport = `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, sessionServicesType.typePath, config.packageMappings)}'`
 
     const servicesCode = serializeServicesMap(
-      visitState.functions.meta,
+      visitState.serviceAggregation.requiredServices,
       config.forceRequiredServices,
       servicesImport,
       sessionServicesImport
