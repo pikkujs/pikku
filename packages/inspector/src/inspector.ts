@@ -4,6 +4,7 @@ import { TypesMap } from './types-map.js'
 import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
+import { aggregateRequiredServices } from './post-process.js'
 
 export const inspect = (
   logger: InspectorLogger,
@@ -90,6 +91,12 @@ export const inspect = (
       meta: {},
       tagPermissions: new Map(),
     },
+    serviceAggregation: {
+      requiredServices: new Set(),
+      usedFunctions: new Set(),
+      usedMiddleware: new Set(),
+      usedPermissions: new Set(),
+    },
   }
 
   // First sweep: add all functions
@@ -110,6 +117,9 @@ export const inspect = (
   const { result, errors } = getFilesAndMethods(state, options.types)
   state.filesAndMethods = result
   state.filesAndMethodsErrors = errors
+
+  // Post-processing: Aggregate required services from wired functions/middleware/permissions
+  aggregateRequiredServices(state)
 
   return state
 }
