@@ -6,7 +6,6 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
-import { toRelativePath } from '../utils/find-root-dir.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/

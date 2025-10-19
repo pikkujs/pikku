@@ -52,6 +52,65 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     return
   }
 
+  // Handle pikkuPermissionFactory(...) - permission factory function
+  if (expression.text === 'pikkuPermissionFactory') {
+    const factoryNode = args[0]
+    if (!factoryNode) return
+
+    if (
+      !ts.isArrowFunction(factoryNode) &&
+      !ts.isFunctionExpression(factoryNode)
+    ) {
+      logger.error(`• Handler for pikkuPermissionFactory is not a function.`)
+      return
+    }
+
+    // Extract services by looking inside the factory function body
+    // The factory should return pikkuPermission(...), so we need to find that call
+    let services = { optimized: false, services: [] as string[] }
+
+    const findPikkuPermissionCall = (
+      node: ts.Node
+    ): ts.CallExpression | undefined => {
+      if (ts.isCallExpression(node)) {
+        const expr = node.expression
+        if (ts.isIdentifier(expr) && expr.text === 'pikkuPermission') {
+          return node
+        }
+      }
+      return ts.forEachChild(node, findPikkuPermissionCall)
+    }
+
+    const pikkuPermissionCall = findPikkuPermissionCall(factoryNode)
+    if (pikkuPermissionCall && pikkuPermissionCall.arguments[0]) {
+      const permissionHandler = pikkuPermissionCall.arguments[0]
+      if (
+        ts.isArrowFunction(permissionHandler) ||
+        ts.isFunctionExpression(permissionHandler)
+      ) {
+        services = extractServicesFromFunction(permissionHandler)
+      }
+    }
+
+    const { pikkuFuncName, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
+    state.permissions.meta[pikkuFuncName] = {
+      services,
+      sourceFile: node.getSourceFile().fileName,
+      position: node.getStart(),
+      exportedName,
+      factory: true,
+    }
+
+    logger.debug(
+      `• Found permission factory with services: ${services.services.join(', ')}`
+    )
+    return
+  }
+
   // Handle addPermission('tag', [permission1, permission2])
   // Supports two patterns:
   // 1. export const x = () => addPermission('tag', [...])  (factory - tree-shakeable)

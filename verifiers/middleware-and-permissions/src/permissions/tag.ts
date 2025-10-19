@@ -1,15 +1,18 @@
-import { pikkuPermission } from '../../.pikku/pikku-types.gen.js'
+import {
+  pikkuPermission,
+  pikkuPermissionFactory,
+} from '../../.pikku/pikku-types.gen.js'
 
-export const adminTagPermission = pikkuPermission(
-  async ({ logger }, _data, session) => {
+export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
+  pikkuPermission(async ({ logger }, _data, session) => {
     logger.info({
       type: 'tag-permission',
-      name: 'admin',
+      name,
       sessionExists: !!session,
     })
     // Return false to ensure all permissions run
     return false
-  }
+  })
 )
 
 export const readTagPermission = pikkuPermission(

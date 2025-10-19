@@ -91,6 +91,7 @@ export interface InspectorPermissionState {
       sourceFile: string
       position: number
       exportedName: string | null
+      factory?: boolean // true if wrapped with pikkuPermissionFactory
     }
   >
   // Tag-based permission calls tracking - tag -> group metadata
