@@ -87,6 +87,45 @@ export const pikkuPermission = <
   return permission
 }
 
+/**
+ * A factory function that takes input and returns a permission
+ * Used when permissions need configuration/input parameters
+ *
+ * @template In - The input type for the factory.
+ * @template Services - The services type, defaults to `CoreServices`.
+ * @template Session - The session type, defaults to `CoreUserSession`.
+ */
+export type CorePikkuPermissionFactory<
+  In = any,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = (input: In) => CorePikkuPermission<any, Services, Session>
+
+/**
+ * Factory function for creating permission factories
+ * Use this when your permission needs configuration/input parameters
+ *
+ * @example
+ * ```typescript
+ * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
+ *   role
+ * }) => {
+ *   return pikkuPermission(async ({ logger }, data, session) => {
+ *     if (!session || session.role !== role) {
+ *       logger.warn(`Permission denied: required role '${role}'`)
+ *       return false
+ *     }
+ *     return true
+ *   })
+ * })
+ * ```
+ */
+export const pikkuPermissionFactory = <In = any>(
+  factory: CorePikkuPermissionFactory<In>
+): CorePikkuPermissionFactory<In> => {
+  return factory
+}
+
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined

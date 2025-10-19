@@ -18,7 +18,7 @@ export const inspect = (
   const sourceFiles = program.getSourceFiles()
 
   // Infer root directory from source files
-  const rootDir = findCommonAncestor(riouteFiles)
+  const rootDir = findCommonAncestor(routeFiles)
 
   const state: InspectorState = {
     rootDir,

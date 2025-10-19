@@ -21,7 +21,7 @@ import {
   httpGlobalPermission,
   httpRoutePermission,
 } from '../permissions/http.js'
-import { adminTagPermission, readTagPermission } from '../permissions/tag.js'
+import { permissionTagFactory, readTagPermission } from '../permissions/tag.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
 export const apiTagMiddleware = () =>
@@ -32,7 +32,7 @@ export const apiTagPermissions = () =>
   addPermission('api', { read: readTagPermission })
 
 export const adminTagPermissions = () =>
-  addPermission('admin', { admin: adminTagPermission })
+  addPermission('admin', { admin: permissionTagFactory('admin') })
 
 // HTTP-specific global middleware - Also works: Direct call (no tree-shaking)
 export const httpMiddleware = addHTTPMiddleware('*', [httpGlobalMiddleware])
