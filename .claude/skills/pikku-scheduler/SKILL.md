@@ -50,13 +50,21 @@ The Scheduler adapter:
 
 ```typescript
 import { wireScheduler } from './pikku-types.gen.js'
-import { runMaintenance } from './functions/maintenance.function.js'
+import { runDailyMaintenance } from './functions/maintenance.function.js'
 
 wireScheduler({
-  cron: '0 3 * * *', // 03:00 UTC daily
-  func: runMaintenance,
+  cron: '0 3 * * *', // Run at 3:00 AM UTC every day
+  func: runDailyMaintenance,
 })
 ```
+
+That's it! Your function will now run every day at 3 AM UTC.
+
+:::note
+
+If triggered by a serverless function like Lambda, that overrides this. This cron is only for in-process scheduling.
+
+:::
 
 See `examples/basic.schedule.ts`.
 

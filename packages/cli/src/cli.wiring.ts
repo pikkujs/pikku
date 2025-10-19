@@ -24,6 +24,16 @@ wireCLI({
       default: 'info' as const,
       short: 'l',
     },
+    userSessionType: {
+      description:
+        'Specify which UserSession type to use (when multiple exist)',
+    },
+    singletonServicesFactoryType: {
+      description: 'Specify which singleton services factory to use',
+    },
+    sessionServicesFactoryType: {
+      description: 'Specify which session services factory to use',
+    },
   },
   commands: {
     all: pikkuCLICommand({

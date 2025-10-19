@@ -25,12 +25,21 @@ import {
 const logger = new CLILogger({ logLogo: true, silent: false })
 
 /**
- * Parse a comma-separated string into an array of trimmed, non-empty strings
+ * Parse a comma-separated string or array into an array of trimmed, non-empty strings
  * Returns undefined if the input is empty/undefined or results in an empty array
  */
-function parseCommaSeparated(value: string | undefined): string[] | undefined {
+function parseCommaSeparated(
+  value: string | string[] | undefined
+): string[] | undefined {
   if (!value) return undefined
 
+  // If already an array, return it
+  if (Array.isArray(value)) {
+    const filtered = value.filter((item) => item && item.trim().length > 0)
+    return filtered.length > 0 ? filtered : undefined
+  }
+
+  // If string, split by comma
   const parsed = value
     .split(',')
     .map((item) => item.trim())
@@ -118,9 +127,9 @@ export const createSingletonServices: CreateSingletonServices<
         filters,
         types: {
           configFileType: config.configFile,
-          userSessionType: config.tags?.[0], // TODO: Properly handle type selection
-          singletonServicesFactoryType: undefined,
-          sessionServicesFactoryType: undefined,
+          userSessionType: config.userSessionType,
+          singletonServicesFactoryType: config.singletonServicesFactoryType,
+          sessionServicesFactoryType: config.sessionServicesFactoryType,
         },
       })
       return inspectorState
