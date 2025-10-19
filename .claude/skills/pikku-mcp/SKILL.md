@@ -18,6 +18,7 @@ This skill helps you wire Pikku functions to MCP (Model Context Protocol) resour
 ## Core Principles
 
 MCP wiring is a **thin binding layer** that:
+
 - Registers exported MCP functions to the MCP runtime
 - Leaves all logic inside `packages/functions/src/functions/**/*.function.ts`
 - Never touches services directly from wiring
@@ -39,16 +40,19 @@ MCP wiring is a **thin binding layer** that:
 **IMPORTANT: Always specify the output type explicitly.**
 
 **Resources:** Data sources for AI models
+
 ```typescript
 pikkuMCPResourceFunc<In, MCPResourceResponse>(...)
 ```
 
 **Tools:** Actions AI models can invoke
+
 ```typescript
 pikkuMCPToolFunc<In, MCPToolResponse>(...)
 ```
 
 **Prompts:** Reusable prompt templates
+
 ```typescript
 pikkuMCPPromptFunc<In, MCPPromptResponse>(...)
 ```
@@ -58,8 +62,7 @@ pikkuMCPPromptFunc<In, MCPPromptResponse>(...)
 ```typescript
 type MCPResourceResponse = Array<{ uri: string; text: string }>
 type MCPToolResponse = Array<
-  | { type: 'text'; text: string }
-  | { type: 'image'; data: string }
+  { type: 'text'; text: string } | { type: 'image'; data: string }
 >
 type MCPPromptResponse = Array<{
   role: 'user' | 'assistant' | 'system'
@@ -70,6 +73,7 @@ type MCPPromptResponse = Array<{
 ## Basic Wiring
 
 **Resource:**
+
 ```typescript
 import { wireMCPResource } from './pikku-types.gen.js'
 import { codeSearch } from './functions/code-search.function.js'
@@ -82,6 +86,7 @@ wireMCPResource({
 ```
 
 **Tool:**
+
 ```typescript
 import { wireMCPTool } from './pikku-types.gen.js'
 import { annotateFile } from './functions/code-ops.function.js'
@@ -94,6 +99,7 @@ wireMCPTool({
 ```
 
 **Prompt:**
+
 ```typescript
 import { wireMCPPrompt } from './pikku-types.gen.js'
 import { reviewPrompt } from './functions/review-prompt.function.js'
@@ -143,6 +149,7 @@ addError(NotFoundError, {
 ## Examples
 
 See `examples/` directory:
+
 - `code-search.function.ts` - MCP resource function
 - `code-ops.function.ts` - MCP tool function
 - `review-prompt.function.ts` - MCP prompt function

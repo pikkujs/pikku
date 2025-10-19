@@ -67,11 +67,7 @@ See `examples/` for configurations.
   "name": "my-workspace",
   "private": true,
   "workspaces": {
-    "packages": [
-      "packages/**",
-      "apps/**",
-      "backends/**"
-    ]
+    "packages": ["packages/**", "apps/**", "backends/**"]
   },
   "scripts": {
     "pikku": "pikku all && yarn workspaces foreach -p -A run pikku",
@@ -109,11 +105,13 @@ Use workspace protocol and #imports for generated files:
 Runtime adapter hosts - each is a separate workspace package:
 
 **Key requirements:**
+
 - Import `pikku-bootstrap.gen` to load all wiring
 - Import functions package for config and services
 - Start the Pikku server
 
 Each backend is minimal bootstrapping code. See these skills for backend-specific setup:
+
 - **pikku-express** (todo)
 - **pikku-fastify** (todo)
 - **pikku-aws-lambda** (todo)
@@ -128,7 +126,10 @@ import { PikkuExpressServer } from '@pikku/express'
 
 // Import config and services from functions package
 import { createConfig } from '@my-app/functions/src/config'
-import { createSingletonServices, createSessionServices } from '@my-app/functions/src/services'
+import {
+  createSingletonServices,
+  createSessionServices,
+} from '@my-app/functions/src/services'
 
 // ✅ CRITICAL: Import bootstrap to load all wiring
 import '@my-app/functions/.pikku/pikku-bootstrap.gen'
@@ -157,6 +158,7 @@ const client = createPikkuClient({ baseURL: 'http://localhost:3000' })
 Core backend logic - see related skills for details on each file type.
 
 **Key points:**
+
 - **Functions:** See **pikku-functions** skill
 - **Wiring:** See **pikku-http**, **pikku-channel**, **pikku-queue**, **pikku-scheduler**, **pikku-mcp**, **pikku-cli** skills
 - **Services:** Keep Pikku-agnostic (no `@pikku/*` imports in service classes)
@@ -164,6 +166,7 @@ Core backend logic - see related skills for details on each file type.
 ### packages/sdk/ (Optional)
 
 Shared types for frontend apps:
+
 - Database types (Kysely codegen)
 - Shared constants
 - **No business logic**
@@ -213,6 +216,7 @@ Wiring lives **next to functions** using suffix-based naming:
 - `.cli.ts` - CLI commands
 
 **Rules:**
+
 - Never mix transports in one file
 - Import ONLY from `#pikku/pikku-types.gen.js` + functions/permissions/middleware
 - No services imports
@@ -225,11 +229,13 @@ See transport-specific skills for wiring details.
 **Never edit - regenerate with `yarn pikku`:**
 
 In `packages/functions/.pikku/`:
+
 - `pikku-types.gen.ts` - Wiring surface (wireHTTP, pikkuFunc, etc.)
 - `pikku-services.gen.ts` - Singleton service flags for tree-shaking
 - `pikku-bootstrap.gen.ts` - Wiring loader (imported by backends)
 
 In `packages/sdk/.pikku/` (if configured in `pikku.config.json`):
+
 - `pikku-fetch.gen.ts` - Type-safe HTTP client
 - `pikku-websocket.gen.ts` - Type-safe WebSocket client
 - `routes-map.gen.d.ts` - Route type definitions
@@ -295,9 +301,11 @@ Each imports the same `@my-app/functions` package.
 ## Related Skills
 
 **Core concepts:**
+
 - **pikku-functions** - Writing Pikku functions, permissions, middleware, RPC
 
 **Transport wiring:**
+
 - **pikku-http** - HTTP routes, SSE, middleware, permissions
 - **pikku-channel** - WebSocket channels, connection handlers
 - **pikku-queue** - Queue workers, config, error handling
@@ -306,6 +314,7 @@ Each imports the same `@my-app/functions` package.
 - **pikku-cli** - CLI commands, renderers, options
 
 **Backend runtimes:**
+
 - **pikku-express** (todo) - Express server setup
 - **pikku-fastify** (todo) - Fastify server setup
 - **pikku-aws-lambda** (todo) - AWS Lambda setup
@@ -314,5 +323,6 @@ Each imports the same `@my-app/functions` package.
 ## Examples
 
 See `examples/` directory for:
+
 - pikku.config.json - Client generation configuration
 - root-package.json - Workspace configuration
