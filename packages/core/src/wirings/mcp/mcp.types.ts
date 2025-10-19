@@ -10,6 +10,31 @@ import {
   PermissionMetadata,
 } from '../../types/core.types.js'
 
+/**
+ * Extract URI parameters from MCP resource URI template.
+ * E.g., "user/{userId}/post/{postId}" => "userId" | "postId"
+ */
+type ExtractMCPURIParams<S extends string> =
+  S extends `${string}{${infer Param}}/${infer Rest}`
+    ? Param | ExtractMCPURIParams<Rest>
+    : S extends `${string}{${infer Param}}`
+      ? Param
+      : never
+
+/**
+ * Type-level assertion that MCP resource URI parameters are present in the input type.
+ * This ensures compile-time safety for URI parameter validation.
+ */
+export type AssertMCPResourceURIParams<In, URI extends string> =
+  ExtractMCPURIParams<URI> extends keyof In
+    ? unknown
+    : [
+        'Error: MCP Resource URI parameters',
+        ExtractMCPURIParams<URI>,
+        'not in input type',
+        keyof In,
+      ]
+
 export type PikkuMCP<Tools extends string = any> = {
   // elicitInput: <Input>(message: string) => Promise<{ action: string, content: Input }>
   uri?: string

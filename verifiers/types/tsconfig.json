@@ -6,8 +6,5 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": [
-    "src/*",
-    ".pikku/**/*"
-  ]
+  "include": ["src/*", ".pikku/**/*"]
 }
