@@ -19,12 +19,13 @@ This skill helps you wire Pikku functions to HTTP routes using the generated ada
 ## Core Principles
 
 The HTTP adapter is responsible for:
+
 - Matching incoming HTTP requests to a function
 - Merging path/query/body into the `data` parameter
 - Enforcing `auth` and `permissions` defined on the function
 - Returning typed responses or mapped `PikkuError`s
 
-**Domain logic stays entirely in `packages/functions/src/functions/**/*.function.ts`.**
+**Domain logic stays entirely in `packages/functions/src/functions/**/\*.function.ts`.\*\*
 
 ## File Naming Rules
 
@@ -33,6 +34,7 @@ The HTTP adapter is responsible for:
 - You may group multiple HTTP routes in a single file only if `agent.filePerWire` is `false` in `pikku.config.json`
 
 Examples:
+
 ```
 packages/functions/src/get-card.http.ts
 packages/functions/src/cards.http.ts       # grouped HTTP routes
@@ -43,6 +45,7 @@ packages/functions/src/cards.http.ts       # grouped HTTP routes
 From wiring files:
 
 ✅ **Allowed:**
+
 - `wireHTTP`, `addHTTPMiddleware`, `addHTTPPermission` from `./pikku-types.gen.ts`
 - Exported Pikku functions from `./functions/**/*.function.ts`
 - `permissions` from `./permissions.ts`
@@ -50,6 +53,7 @@ From wiring files:
 - `config` for routing prefixes or tags
 
 ❌ **Never:**
+
 - Import from `./services/**`
 - Implement business logic in wiring files
 
@@ -61,7 +65,7 @@ import { wireHTTP } from './pikku-types.gen.js'
 import { getCard } from './functions/board.function.js'
 
 wireHTTP({
-  method: 'get',             // 'get' | 'post' | 'put' | 'patch' | 'delete'
+  method: 'get', // 'get' | 'post' | 'put' | 'patch' | 'delete'
   route: '/v1/cards/:cardId',
   func: getCard,
 })
@@ -125,12 +129,13 @@ import { requireAuth, requireAdmin } from './permissions.js'
 // Prefix-scoped permissions - applies to all routes starting with /admin
 addHTTPPermission('/admin', {
   auth: requireAuth,
-  admin: requireAdmin
+  admin: requireAdmin,
 })
 
 // Global permissions - applies to all HTTP routes
-addHTTPPermission({
-  auth: requireAuth
+// Use '*' for global permissions
+addHTTPPermission('*', {
+  auth: requireAuth,
 })
 ```
 
@@ -155,6 +160,7 @@ wireHTTP({
 You can progressively enhance HTTP GET routes with SSE by setting `sse: true`.
 
 **Requirements:**
+
 - Must be a `GET` route
 - A `services.channel` is injected
 - For `pikkuFunc`, the channel is **optional**
@@ -188,18 +194,21 @@ wireHTTP({
 ## Choosing Between `pikkuFunc` and `pikkuChannelFunc`
 
 **Progressive enhancement (HTTP + optional SSE):**
+
 - Use **`pikkuFunc` / `pikkuFuncSessionless`**
 - The channel is **optional** (`services.channel?`)
 - Works over plain HTTP
 - If SSE is enabled (`sse: true`), you can send incremental updates without breaking non-SSE clients
 
 **Always-realtime (channel must exist):**
+
 - Use **`pikkuChannelFunc`** when the function **expects a channel to always be present**
 - Dedicated WebSocket flows
 - HTTP/SSE routes where the channel presence is guaranteed and required
 - This makes the channel **required** in the function signature
 
 **Need both HTTP and WS:**
+
 - Keep business logic in a regular `pikkuFunc`
 - Call it from your channel handler via `rpc.invoke(...)`
 - Avoids duplication and keeps one source of truth
@@ -225,6 +234,7 @@ wireHTTP({
 ## Examples
 
 See the `examples/` directory for complete HTTP wiring examples including:
+
 - Basic GET/POST routes
 - SSE progressive enhancement
 - Middleware and permissions

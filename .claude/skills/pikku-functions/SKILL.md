@@ -136,30 +136,113 @@ Attach permissions to functions via the `permissions` property. Prefer function-
 
 Middleware wraps a Pikku function before/after execution.
 
+**CRITICAL: Always guard for the interaction type. If your middleware EXPECTS a specific interaction, throw an error instead of failing silently.**
+
+The `interaction` object contains different properties depending on the transport:
+
+- `interaction.http` - HTTP requests (has `method`, `path`, `headers`, etc.)
+- `interaction.queue` - Queue jobs (has `queueName`, `jobId`, `updateProgress`, `fail`, `discard`)
+- `interaction.channel` - WebSocket channels (has channel info)
+- `interaction.scheduledTask` - Scheduled tasks
+- `interaction.mcp` - MCP interactions
+- `interaction.rpc` - RPC calls
+
+**Example 1: Middleware that works across transports (optional interaction):**
+
 ```typescript
-export const audit: PikkuMiddleware = async (
-  { userSession, logger },
-  interaction,
-  next
-) => {
-  const t0 = Date.now()
-  try {
-    await next()
-  } finally {
-    const userId = await userSession.get('userId').catch(() => undefined)
-    logger?.info?.('audit', {
-      route: interaction.route,
-      userId,
-      ms: Date.now() - t0,
-    })
+export const audit = pikkuMiddleware(
+  async ({ userSession, logger }, interaction, next) => {
+    const t0 = Date.now()
+    try {
+      await next()
+    } finally {
+      const userId = await userSession.get('userId').catch(() => undefined)
+
+      // Optional: Log different info based on transport
+      if (interaction.http) {
+        logger?.info?.('audit', {
+          method: interaction.http.method,
+          path: interaction.http.path,
+          userId,
+          ms: Date.now() - t0,
+        })
+      } else if (interaction.queue) {
+        logger?.info?.('audit', {
+          queueName: interaction.queue.queueName,
+          jobId: interaction.queue.jobId,
+          userId,
+          ms: Date.now() - t0,
+        })
+      }
+    }
   }
-}
+)
 ```
+
+**Example 2: Middleware that REQUIRES a specific interaction (HTTP-only):**
+
+```typescript
+import { InvalidMiddlewareInteractionError } from '@pikku/core/errors'
+
+export const requireHTTPS = pikkuMiddleware(
+  async ({ logger }, interaction, next) => {
+    // ✅ CRITICAL: If middleware expects HTTP, throw error if not present
+    if (!interaction.http) {
+      throw new InvalidMiddlewareInteractionError(
+        'requireHTTPS middleware can only be used with HTTP interactions'
+      )
+    }
+
+    // Now we can safely access HTTP-specific properties
+    if (interaction.http.headers['x-forwarded-proto'] !== 'https') {
+      throw new ForbiddenError('HTTPS required')
+    }
+
+    await next()
+  }
+)
+```
+
+**When to throw vs. when to guard:**
+
+- ❌ **Silent fail**: Don't silently skip middleware logic if you need a specific interaction
+- ✅ **Throw error**: If middleware is transport-specific (e.g., HTTP-only), throw `InvalidMiddlewareInteractionError`
+- ✅ **Optional guard**: If middleware adapts to different transports, use `if (interaction.http)` guards
+
+**Note:** Consider adding `InvalidMiddlewareInteractionError` to `@pikku/core/errors` (maps to 500 status code)
 
 ## userSession
 
-- Set session attributes inside **any** protocol using the `userSession` service
-- Persistence is provided by transport middleware (e.g., HTTP cookies)
+The `userSession` service allows you to set and clear session data across any protocol (HTTP, WebSocket, etc.).
+
+**Setting/upserting the session:**
+
+```typescript
+// ✅ CORRECT: Pass the entire session object to userSession.set()
+// This upserts the session data
+await userSession.set({ userId: user.id, role: user.role })
+```
+
+**Clearing the session (logout):**
+
+```typescript
+// ✅ CORRECT: Clear the session
+await userSession.clear()
+```
+
+**Getting session values:**
+
+```typescript
+const userId = await userSession.get('userId')
+const role = await userSession.get('role')
+```
+
+**Key points:**
+
+- Use `userSession.set()` to upsert session data (login, authentication)
+- Use `userSession.clear()` to clear session data (logout)
+- Session data is stored in a store (local or remote, depending on your persistence strategy)
+- Works across **any** protocol (HTTP, WebSocket, Queue, Scheduler, MCP)
 - Do not manually check for session presence in functions; rely on `auth` and permissions
 
 ## EventHub (transport-agnostic pub/sub)
