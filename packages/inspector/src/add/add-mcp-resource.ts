@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
+import { extractWireNames } from '../post-process.js'
 import { PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
@@ -106,6 +107,15 @@ export const addMCPResource: AddWiring = (
 
     // --- resolve permissions ---
     const permissions = resolvePermissions(state, obj, tags, checker)
+
+    // --- track used functions/middleware/permissions for service aggregation ---
+    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
+    extractWireNames(middleware).forEach((name) =>
+      state.serviceAggregation.usedMiddleware.add(name)
+    )
+    extractWireNames(permissions).forEach((name) =>
+      state.serviceAggregation.usedPermissions.add(name)
+    )
 
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 

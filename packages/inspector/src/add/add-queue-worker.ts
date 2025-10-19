@@ -6,6 +6,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { extractWireNames } from '../post-process.js'
 
 export const addQueueWorker: AddWiring = (
   logger,
@@ -83,6 +84,12 @@ export const addQueueWorker: AddWiring = (
 
     // --- resolve middleware ---
     const middleware = resolveMiddleware(state, obj, tags, checker)
+
+    // --- track used functions/middleware for service aggregation ---
+    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
+    extractWireNames(middleware).forEach((name) =>
+      state.serviceAggregation.usedMiddleware.add(name)
+    )
 
     state.queueWorkers.files.add(node.getSourceFile().fileName)
     state.queueWorkers.meta[queueName] = {
