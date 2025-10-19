@@ -3,6 +3,12 @@
  */
 import { addError, PikkuError } from './error-handler.js'
 
+export class InvalidMiddlewareInteractionError extends PikkuError {}
+addError(InvalidMiddlewareInteractionError, {
+  status: 500,
+  message: 'The middleware interaction is invalid for the current wiring type.',
+})
+
 /**
  * The server cannot or will not process the request due to client error (e.g., malformed request syntax).
  * @group Error
