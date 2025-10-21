@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { ErrorCode } from '../error-codes.js'
 import {
   getPropertyValue,
   getPropertyTags,
@@ -105,6 +106,10 @@ function getHandlerNameFromExpression(
  * in state.functions.meta instead of re-inferring it here.
  */
 export function addMessagesRoutes(
+  logger: {
+    error: (msg: string) => void
+    critical: (code: ErrorCode, msg: string) => void
+  },
   obj: ts.ObjectLiteralExpression,
   state: InspectorState,
   checker: ts.TypeChecker
@@ -287,7 +292,8 @@ export function addMessagesRoutes(
             if (possibleMatch) {
               const fnMeta = state.functions.meta[possibleMatch]
               if (!fnMeta) {
-                console.error(
+                logger.critical(
+                  ErrorCode.FUNCTION_METADATA_NOT_FOUND,
                   `No function metadata found for handler '${possibleMatch}'`
                 )
                 continue
@@ -348,7 +354,7 @@ export function addMessagesRoutes(
         state.rootDir
       )
       if (!handlerName) {
-        console.error(
+        logger.error(
           `Could not resolve handler for message route '${routeKey}'`
         )
         continue
@@ -356,7 +362,10 @@ export function addMessagesRoutes(
 
       const fnMeta = state.functions.meta[handlerName]
       if (!fnMeta) {
-        console.error(`No function metadata found for handler '${handlerName}'`)
+        logger.critical(
+          ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+          `No function metadata found for handler '${handlerName}'`
+        )
         continue
       }
 
@@ -392,7 +401,7 @@ export const addChannel: AddWiring = (
   const route = (getPropertyValue(obj, 'route') as string) ?? ''
 
   if (!name) {
-    console.error('Channel name is required')
+    logger.critical(ErrorCode.MISSING_CHANNEL_NAME, 'Channel name is required')
     return
   }
 
@@ -463,7 +472,7 @@ export const addChannel: AddWiring = (
   }
 
   // nested message-routes
-  const messageWirings = addMessagesRoutes(obj, state, checker)
+  const messageWirings = addMessagesRoutes(logger, obj, state, checker)
 
   // --- resolve middleware ---
   const middleware = resolveMiddleware(state, obj, tags, checker)

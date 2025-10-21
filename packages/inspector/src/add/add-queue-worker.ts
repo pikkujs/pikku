@@ -10,6 +10,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { ErrorCode } from '../error-codes.js'
 
 export const addQueueWorker: AddWiring = (
   logger,
@@ -50,8 +51,9 @@ export const addQueueWorker: AddWiring = (
       checker
     )
     if (!funcInitializer) {
-      console.error(
-        `• No valid 'func' property for queue processor '${queueName}'.`
+      logger.critical(
+        ErrorCode.MISSING_FUNC,
+        `No valid 'func' property for queue processor '${queueName}'.`
       )
       return
     }
@@ -63,8 +65,9 @@ export const addQueueWorker: AddWiring = (
     ).pikkuFuncName
 
     if (!queueName) {
-      console.error(
-        `• No 'queueName' provided for queue processor function '${pikkuFuncName}'.`
+      logger.critical(
+        ErrorCode.MISSING_QUEUE_NAME,
+        `No 'queueName' provided for queue processor function '${pikkuFuncName}'.`
       )
       return
     }

@@ -7,6 +7,7 @@ import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 import { CLIMeta } from '@pikku/core'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
+import { ErrorCode } from './error-codes.js'
 
 export type PathToNameAndType = Map<
   string,
@@ -123,7 +124,7 @@ export interface InspectorLogger {
   error: (message: string) => void
   warn: (message: string) => void
   debug: (message: string) => void
-  critical: (message: string) => void
+  critical: (code: ErrorCode, message: string) => void
   hasCriticalErrors: () => boolean
 }
 

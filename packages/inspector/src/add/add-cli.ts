@@ -12,6 +12,9 @@ import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 
+// Track if we've warned about missing Config type to avoid duplicate warnings
+const configTypeWarningShown = new Set<string>()
+
 /**
  * Adds CLI command metadata to the inspector state
  */
@@ -639,19 +642,24 @@ function extractEnumFromConfigType(
   // Look for Config type in typesLookup
   const configTypes = inspectorState.typesLookup.get('Config')
   if (!configTypes || configTypes.length === 0) {
-    logger.warn(
-      `Warning: Could not find Config type in typesLookup for option "${propertyName}". ` +
-        `Make sure you have a Config interface extending CoreConfig in your codebase.`
-    )
+    // Only warn once per CLI file to avoid spamming logs
+    if (!configTypeWarningShown.has('missing-config-type')) {
+      configTypeWarningShown.add('missing-config-type')
+      logger.warn(
+        `Could not find Config type in typesLookup. ` +
+          `Make sure you have a Config interface extending CoreConfig in your codebase.`
+      )
+    }
     return null
   }
 
   // Use the first Config type (there should only be one)
   const configType = configTypes[0]
   if (!configType) {
-    logger.warn(
-      `Warning: Config type is undefined in typesLookup for option "${propertyName}".`
-    )
+    if (!configTypeWarningShown.has('undefined-config-type')) {
+      configTypeWarningShown.add('undefined-config-type')
+      logger.warn(`Config type is undefined in typesLookup.`)
+    }
     return null
   }
 

@@ -14,6 +14,7 @@ import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
+import { ErrorCode } from '../error-codes.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -102,7 +103,10 @@ export const addHTTPRoute: AddWiring = (
     checker
   )
   if (!funcInitializer) {
-    console.error(`• No valid 'func' property for route '${route}'.`)
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      `No valid 'func' property for route '${route}'.`
+    )
     return
   }
 
@@ -118,7 +122,10 @@ export const addHTTPRoute: AddWiring = (
   // lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]
   if (!fnMeta) {
-    console.error(`• No function metadata found for '${funcName}'.`)
+    logger.critical(
+      ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+      `No function metadata found for '${funcName}'.`
+    )
     return
   }
   const input = fnMeta.inputs?.[0] || null

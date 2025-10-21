@@ -3,7 +3,7 @@ import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'
-import { TypesMap } from '@pikku/inspector'
+import { TypesMap, ErrorCode } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
 
 export async function generateSchemas(
@@ -66,10 +66,14 @@ export async function generateSchemas(
     } catch (e) {
       // Ignore rootless errors
       if (e instanceof RootlessError) {
-        logger.error(`Error generating schema since it has no root: ${schema}`)
+        logger.error(
+          `[${ErrorCode.SCHEMA_NO_ROOT}] Error generating schema since it has no root: ${schema}`
+        )
         return
       }
-      logger.error(`Error generating schema: ${schema}`)
+      logger.error(
+        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}`
+      )
     }
   })
 

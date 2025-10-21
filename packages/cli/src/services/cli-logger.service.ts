@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import { Logger, LogLevel } from '@pikku/core'
+import { ErrorCode } from '@pikku/inspector'
 
 const logo = `
  ______ _ _     _
@@ -9,6 +10,8 @@ const logo = `
 | |    | |  _ (|  _ (|  _ (| |_| |
 |_|    |_|_| _)_| _)____/
 `
+
+const BASE_ERROR_URL = 'https://pikku.dev/docs/cli-errors'
 
 export class CLILogger implements Logger {
   private silent: boolean
@@ -61,9 +64,11 @@ export class CLILogger implements Logger {
     console.log(chalk.gray(message))
   }
 
-  critical(message: string) {
-    this.criticalErrors.push(message)
-    console.error(chalk.red.bold(message))
+  critical(code: ErrorCode, message: string) {
+    const url = `${BASE_ERROR_URL}/${code.toLowerCase()}`
+    const formattedMessage = `[${code}] ${message}\n  → ${url}`
+    this.criticalErrors.push(formattedMessage)
+    console.error(chalk.red.bold(formattedMessage))
   }
 
   hasCriticalErrors(): boolean {

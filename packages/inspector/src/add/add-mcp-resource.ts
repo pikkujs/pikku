@@ -12,6 +12,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { ErrorCode } from '../error-codes.js'
 
 export const addMCPResource: AddWiring = (
   logger,
@@ -55,8 +56,9 @@ export const addMCPResource: AddWiring = (
       checker
     )
     if (!funcInitializer) {
-      console.error(
-        `• No valid 'func' property for MCP resource '${uriValue}'.`
+      logger.critical(
+        ErrorCode.MISSING_FUNC,
+        `No valid 'func' property for MCP resource '${uriValue}'.`
       )
       return
     }
@@ -71,19 +73,26 @@ export const addMCPResource: AddWiring = (
     ensureFunctionMetadata(state, pikkuFuncName, uriValue || undefined)
 
     if (!uriValue) {
-      console.error(`• MCP resource is missing the required 'uri' property.`)
+      logger.critical(
+        ErrorCode.MISSING_URI,
+        "MCP resource is missing the required 'uri' property."
+      )
       return
     }
 
     if (!titleValue) {
-      console.error(
-        `• MCP resource '${uriValue}' is missing the required 'title' property.`
+      logger.critical(
+        ErrorCode.MISSING_TITLE,
+        `MCP resource '${uriValue}' is missing the required 'title' property.`
       )
       return
     }
 
     if (!descriptionValue) {
-      console.error(`• MCP resource '${uriValue}' is missing a description.`)
+      logger.critical(
+        ErrorCode.MISSING_DESCRIPTION,
+        `MCP resource '${uriValue}' is missing a description.`
+      )
       return
     }
 
@@ -103,7 +112,10 @@ export const addMCPResource: AddWiring = (
     // lookup existing function metadata
     const fnMeta = state.functions.meta[pikkuFuncName]
     if (!fnMeta) {
-      console.error(`• No function metadata found for '${pikkuFuncName}'.`)
+      logger.critical(
+        ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+        `No function metadata found for '${pikkuFuncName}'.`
+      )
       return
     }
     const inputSchema = fnMeta.inputs?.[0] || null

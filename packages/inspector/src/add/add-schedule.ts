@@ -11,6 +11,7 @@ import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 
+import { ErrorCode } from '../error-codes.js'
 export const addSchedule: AddWiring = (
   logger,
   node,
@@ -50,8 +51,9 @@ export const addSchedule: AddWiring = (
       checker
     )
     if (!funcInitializer) {
-      console.error(
-        `• No valid 'func' property for scheduled task '${nameValue}'.`
+      logger.critical(
+        ErrorCode.MISSING_FUNC,
+        `No valid 'func' property for scheduled task '${nameValue}'.`
       )
       return
     }
