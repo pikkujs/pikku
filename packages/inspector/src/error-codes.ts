@@ -3,44 +3,40 @@
  *
  * Each error has a unique code and links to documentation at pikku.dev
  *
- * Error code ranges:
- * - PKU001-099: Validation errors (missing required properties, invalid types)
- * - PKU100-199: Configuration errors (missing Config type, invalid schemas)
- * - PKU200-299: Function errors (invalid functions, missing metadata)
- * - PKU300-399: Type generation errors (schema errors, import errors)
- * - PKU400-499: Runtime errors (file system, parsing errors)
+ * Error codes use random 3-digit numbers to avoid implying a sequential order.
+ * Each code links to detailed documentation and troubleshooting steps.
  */
 
 export enum ErrorCode {
-  // Validation errors (001-099)
-  MISSING_NAME = 'PKU001',
-  MISSING_DESCRIPTION = 'PKU002',
-  MISSING_URI = 'PKU003',
-  MISSING_FUNC = 'PKU004',
-  INVALID_TAGS_TYPE = 'PKU005',
-  INVALID_HANDLER = 'PKU006',
-  MISSING_TITLE = 'PKU007',
-  MISSING_QUEUE_NAME = 'PKU008',
-  MISSING_CHANNEL_NAME = 'PKU009',
+  // Validation errors
+  MISSING_NAME = 'PKU111',
+  MISSING_DESCRIPTION = 'PKU123',
+  MISSING_URI = 'PKU220',
+  MISSING_FUNC = 'PKU236',
+  INVALID_TAGS_TYPE = 'PKU247',
+  INVALID_HANDLER = 'PKU300',
+  MISSING_TITLE = 'PKU370',
+  MISSING_QUEUE_NAME = 'PKU384',
+  MISSING_CHANNEL_NAME = 'PKU400',
 
-  // Configuration errors (100-199)
-  CONFIG_TYPE_NOT_FOUND = 'PKU100',
-  CONFIG_TYPE_UNDEFINED = 'PKU101',
-  SCHEMA_NO_ROOT = 'PKU102',
-  SCHEMA_GENERATION_ERROR = 'PKU103',
-  SCHEMA_LOAD_ERROR = 'PKU104',
+  // Configuration errors
+  CONFIG_TYPE_NOT_FOUND = 'PKU426',
+  CONFIG_TYPE_UNDEFINED = 'PKU427',
+  SCHEMA_NO_ROOT = 'PKU431',
+  SCHEMA_GENERATION_ERROR = 'PKU456',
+  SCHEMA_LOAD_ERROR = 'PKU488',
 
-  // Function errors (200-299)
-  FUNCTION_METADATA_NOT_FOUND = 'PKU200',
-  HANDLER_NOT_RESOLVED = 'PKU201',
+  // Function errors
+  FUNCTION_METADATA_NOT_FOUND = 'PKU559',
+  HANDLER_NOT_RESOLVED = 'PKU568',
 
-  // Middleware/Permission errors (300-399)
-  MIDDLEWARE_HANDLER_INVALID = 'PKU300',
-  MIDDLEWARE_TAG_INVALID = 'PKU301',
-  MIDDLEWARE_EMPTY_ARRAY = 'PKU302',
-  MIDDLEWARE_PATTERN_INVALID = 'PKU303',
-  PERMISSION_HANDLER_INVALID = 'PKU310',
-  PERMISSION_TAG_INVALID = 'PKU311',
-  PERMISSION_EMPTY_ARRAY = 'PKU312',
-  PERMISSION_PATTERN_INVALID = 'PKU313',
+  // Middleware/Permission errors
+  MIDDLEWARE_HANDLER_INVALID = 'PKU685',
+  MIDDLEWARE_TAG_INVALID = 'PKU715',
+  MIDDLEWARE_EMPTY_ARRAY = 'PKU736',
+  MIDDLEWARE_PATTERN_INVALID = 'PKU787',
+  PERMISSION_HANDLER_INVALID = 'PKU835',
+  PERMISSION_TAG_INVALID = 'PKU836',
+  PERMISSION_EMPTY_ARRAY = 'PKU937',
+  PERMISSION_PATTERN_INVALID = 'PKU975',
 }

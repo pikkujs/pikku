@@ -1,16 +1,33 @@
 #!/usr/bin/env node
-import { Command } from 'commander'
-import { createConfig, createSingletonServices } from '../src/services.js'
-import { Config, SingletonServices } from '../types/application-types.js'
-import { PikkuRPCService } from '@pikku/core'
 
-import '../.pikku/pikku-bootstrap.gen.js'
-import { LocalVariablesService } from '@pikku/core/services'
+// // Check if the generated CLI exists
+// if (existsSync(generatedCLIPath)) {
+//   // Use the generated Pikku CLI (supports all options including --names, --httpMethods, etc.)
+//   const { PikkuCLI } = await import(generatedCLIPath)
+//   PikkuCLI().catch((error) => {
+//     console.error('Fatal error:', error.message)
+//     process.exit(1)
+//   })
+// } else {
+// Fallback to Commander-based CLI for bootstrap (during initial build)
+const { Command } = await import('commander')
+const { createConfig, createSingletonServices } = await import(
+  '../src/services.js'
+)
+const { PikkuRPCService } = await import('@pikku/core')
+const { LocalVariablesService } = await import('@pikku/core/services')
 
-const action = async (command: string, cliConfig: Config): Promise<void> => {
+// Import bootstrap if it exists
+try {
+  await import('../.pikku/pikku-bootstrap.gen.js')
+} catch {
+  // Bootstrap doesn't exist yet, continue anyway
+}
+
+const action = async (command, cliConfig) => {
   const config = await createConfig(new LocalVariablesService(), cliConfig)
   const services = await createSingletonServices(config)
-  const rpcWrapper = new PikkuRPCService<SingletonServices, any>()
+  const rpcWrapper = new PikkuRPCService()
   const { rpc } = await rpcWrapper.injectRPCService(services, {}, false)
 
   if (command === 'watch') {
@@ -20,7 +37,7 @@ const action = async (command: string, cliConfig: Config): Promise<void> => {
   }
 }
 
-const all = (program: Command, name: string, description: string): void => {
+const all = (program, name, description) => {
   program
     .command(name, { isDefault: name === 'all' })
     .description(description)
@@ -51,3 +68,4 @@ all(program, 'all', 'Generate all pikku wirings and files')
 all(program, 'watch', 'Watch for changes in pikku files')
 
 program.parse(process.argv)
+// }
