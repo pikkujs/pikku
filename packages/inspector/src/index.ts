@@ -7,3 +7,4 @@ export type {
   FilesAndMethods,
   FilesAndMethodsErrors,
 } from './utils/get-files-and-methods.js'
+export { ErrorCode } from './error-codes.js'

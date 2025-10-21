@@ -12,6 +12,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { ErrorCode } from '../error-codes.js'
 
 export const addMCPPrompt: AddWiring = (
   logger,
@@ -53,7 +54,10 @@ export const addMCPPrompt: AddWiring = (
       checker
     )
     if (!funcInitializer) {
-      console.error(`• No valid 'func' property for MCP prompt '${nameValue}'.`)
+      logger.critical(
+        ErrorCode.MISSING_FUNC,
+        `No valid 'func' property for MCP prompt '${nameValue}'.`
+      )
       return
     }
 
@@ -67,12 +71,18 @@ export const addMCPPrompt: AddWiring = (
     ensureFunctionMetadata(state, pikkuFuncName, nameValue || undefined)
 
     if (!nameValue) {
-      console.error(`• MCP prompt is missing the required 'name' property.`)
+      logger.critical(
+        ErrorCode.MISSING_NAME,
+        "MCP prompt is missing the required 'name' property."
+      )
       return
     }
 
     if (!descriptionValue) {
-      console.error(`• MCP prompt '${nameValue}' is missing a description.`)
+      logger.critical(
+        ErrorCode.MISSING_DESCRIPTION,
+        `MCP prompt '${nameValue}' is missing a description.`
+      )
       return
     }
 
@@ -92,7 +102,10 @@ export const addMCPPrompt: AddWiring = (
     // lookup existing function metadata
     const fnMeta = state.functions.meta[pikkuFuncName]
     if (!fnMeta) {
-      console.error(`• No function metadata found for '${pikkuFuncName}'.`)
+      logger.critical(
+        ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+        `No function metadata found for '${pikkuFuncName}'.`
+      )
       return
     }
     const inputSchema = fnMeta.inputs?.[0] || null

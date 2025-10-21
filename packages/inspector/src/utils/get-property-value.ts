@@ -1,5 +1,6 @@
 import { PikkuDocs } from '@pikku/core'
 import * as ts from 'typescript'
+import { ErrorCode } from '../error-codes.js'
 
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
@@ -101,14 +102,14 @@ export const getPropertyTags = (
   obj: ts.ObjectLiteralExpression,
   wiringType: string,
   wiringName: string | null,
-  logger?: { critical: (message: string) => void }
+  logger?: { critical: (code: ErrorCode, message: string) => void }
 ): string[] | undefined => {
   const tagsValue = getPropertyValue(obj, 'tags')
 
   if (tagsValue !== null && !Array.isArray(tagsValue)) {
-    const errorMsg = `• ${wiringType} '${wiringName}' has invalid 'tags' property - must be an array of strings.`
+    const errorMsg = `${wiringType} '${wiringName}' has invalid 'tags' property - must be an array of strings.`
     if (logger) {
-      logger.critical(errorMsg)
+      logger.critical(ErrorCode.INVALID_TAGS_TYPE, errorMsg)
     } else {
       console.error(errorMsg)
     }

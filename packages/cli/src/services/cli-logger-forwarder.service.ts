@@ -1,4 +1,5 @@
 import { Logger, LogLevel, PikkuChannel } from '@pikku/core'
+import { ErrorCode } from '@pikku/inspector'
 
 /**
  * Log message structure sent through the channel
@@ -73,5 +74,16 @@ export class CLILoggerForwarder implements Logger {
 
   trace(message: string, ..._meta: any[]) {
     this.log('trace', LogLevel.trace, message)
+  }
+
+  critical(code: ErrorCode, message: string) {
+    const url = `https://pikku.dev/docs/cli-errors/${code.toLowerCase()}`
+    const formattedMessage = `[${code}] ${message}\n  → ${url}`
+    this.error(formattedMessage)
+  }
+
+  hasCriticalErrors(): boolean {
+    // The underlying logger (CLILogger) tracks critical errors
+    return (this.logger as any).hasCriticalErrors?.() ?? false
   }
 }

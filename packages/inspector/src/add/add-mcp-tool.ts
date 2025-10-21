@@ -12,6 +12,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { ErrorCode } from '../error-codes.js'
 
 export const addMCPTool: AddWiring = (
   logger,
@@ -55,7 +56,10 @@ export const addMCPTool: AddWiring = (
       checker
     )
     if (!funcInitializer) {
-      console.error(`• No valid 'func' property for MCP tool '${nameValue}'.`)
+      logger.critical(
+        ErrorCode.MISSING_FUNC,
+        `No valid 'func' property for MCP tool '${nameValue}'.`
+      )
       return
     }
 
@@ -69,12 +73,18 @@ export const addMCPTool: AddWiring = (
     ensureFunctionMetadata(state, pikkuFuncName, nameValue || undefined)
 
     if (!nameValue) {
-      console.error(`• MCP tool is missing the required 'name' property.`)
+      logger.critical(
+        ErrorCode.MISSING_NAME,
+        "MCP tool is missing the required 'name' property."
+      )
       return
     }
 
     if (!descriptionValue) {
-      console.error(`• MCP tool '${nameValue}' is missing a description.`)
+      logger.critical(
+        ErrorCode.MISSING_DESCRIPTION,
+        `MCP tool '${nameValue}' is missing a description.`
+      )
       return
     }
 
@@ -94,7 +104,10 @@ export const addMCPTool: AddWiring = (
     // lookup existing function metadata
     const fnMeta = state.functions.meta[pikkuFuncName]
     if (!fnMeta) {
-      console.error(`• No function metadata found for '${pikkuFuncName}'.`)
+      logger.critical(
+        ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+        `No function metadata found for '${pikkuFuncName}'.`
+      )
       return
     }
     const inputSchema = fnMeta.inputs?.[0] || null
