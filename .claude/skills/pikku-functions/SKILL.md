@@ -121,6 +121,22 @@ packages/functions/src/
 
 A permission is a boolean-returning guard with the same parameters as a Pikku function.
 
+**IMPORTANT: Always use the object syntax with `name` and `description` metadata for better AI understanding and documentation.**
+
+```typescript
+export const requireOwner = pikkuPermission<{
+  resourceOwnerId: string
+}>({
+  name: 'Require Owner',
+  description: 'Verifies that the current user owns the specified resource',
+  func: async ({ ownership }, data, session) => {
+    if (!session?.userId) return false
+    return ownership.isOwner(session.userId, data.resourceOwnerId)
+  }
+})
+```
+
+Direct function syntax (discouraged):
 ```typescript
 export const requireOwner: PikkuPermission<{
   resourceOwnerId: string
@@ -136,6 +152,8 @@ Attach permissions to functions via the `permissions` property. Prefer function-
 
 Middleware wraps a Pikku function before/after execution.
 
+**IMPORTANT: Always use the object syntax with `name` and `description` metadata for better AI understanding and documentation.**
+
 **CRITICAL: Always guard for the interaction type. If your middleware EXPECTS a specific interaction, throw an error instead of failing silently.**
 
 The `interaction` object contains different properties depending on the transport:
@@ -147,11 +165,13 @@ The `interaction` object contains different properties depending on the transpor
 - `interaction.mcp` - MCP interactions
 - `interaction.rpc` - RPC calls
 
-**Example 1: Middleware that works across transports (optional interaction):**
+**Example 1: Middleware that works across transports (with metadata):**
 
 ```typescript
-export const audit = pikkuMiddleware(
-  async ({ userSession, logger }, interaction, next) => {
+export const audit = pikkuMiddleware({
+  name: 'Audit Logger',
+  description: 'Logs execution time and user info for all function calls across any transport',
+  func: async ({ userSession, logger }, interaction, next) => {
     const t0 = Date.now()
     try {
       await next()
@@ -176,16 +196,18 @@ export const audit = pikkuMiddleware(
       }
     }
   }
-)
+})
 ```
 
-**Example 2: Middleware that REQUIRES a specific interaction (HTTP-only):**
+**Example 2: Middleware that REQUIRES a specific interaction (HTTP-only, with metadata):**
 
 ```typescript
 import { InvalidMiddlewareInteractionError } from '@pikku/core/errors'
 
-export const requireHTTPS = pikkuMiddleware(
-  async ({ logger }, interaction, next) => {
+export const requireHTTPS = pikkuMiddleware({
+  name: 'Require HTTPS',
+  description: 'Enforces HTTPS for all HTTP requests, rejects non-HTTPS connections',
+  func: async ({ logger }, interaction, next) => {
     // ✅ CRITICAL: If middleware expects HTTP, throw error if not present
     if (!interaction.http) {
       throw new InvalidMiddlewareInteractionError(
@@ -199,6 +221,15 @@ export const requireHTTPS = pikkuMiddleware(
     }
 
     await next()
+  }
+})
+```
+
+Direct function syntax (discouraged):
+```typescript
+export const audit = pikkuMiddleware(
+  async ({ userSession, logger }, interaction, next) => {
+    // ... implementation
   }
 )
 ```
@@ -290,6 +321,7 @@ When creating or reviewing Pikku functions:
 - [ ] Services are Pikku-agnostic by default and assembled in `services.ts`
 - [ ] Errors extend `PikkuError`
 - [ ] Every function has a `docs` block
+- [ ] **Permissions and middleware use object syntax with `name` and `description` metadata**
 - [ ] No `any` or `@ts-ignore` without justification
 
 ## Code Style
