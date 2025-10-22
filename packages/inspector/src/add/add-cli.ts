@@ -184,6 +184,7 @@ function processCommands(
   programTags?: string[]
 ): Record<string, CLICommandMeta> {
   const commands: Record<string, CLICommandMeta> = {}
+  let defaultCommandName: string | null = null
 
   for (const prop of node.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
@@ -206,6 +207,22 @@ function processCommands(
 
     if (commandMeta) {
       commands[commandName] = commandMeta
+
+      // Validate only one default command
+      if (commandMeta.isDefault) {
+        if (defaultCommandName !== null) {
+          const position = prop.getStart(sourceFile)
+          const { line, character } =
+            sourceFile.getLineAndCharacterOfPosition(position)
+
+          throw new Error(
+            `Multiple default commands found in CLI program "${programName}" at ${sourceFile.fileName}:${line + 1}:${character + 1}.\n` +
+              `Commands "${defaultCommandName}" and "${commandName}" are both marked as default.\n` +
+              `Only one command can be marked as default per program.`
+          )
+        }
+        defaultCommandName = commandName
+      }
     }
   }
 
@@ -403,6 +420,15 @@ function processCommand(
               meta.subcommands[subName] = subCommand
             }
           }
+        }
+        break
+
+      case 'isDefault':
+        if (
+          prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+          prop.initializer.kind === ts.SyntaxKind.FalseKeyword
+        ) {
+          meta.isDefault = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
         }
         break
     }

@@ -1,21 +1,8 @@
 #!/usr/bin/env node
-
-// // Check if the generated CLI exists
-// if (existsSync(generatedCLIPath)) {
-//   // Use the generated Pikku CLI (supports all options including --names, --httpMethods, etc.)
-//   const { PikkuCLI } = await import(generatedCLIPath)
-//   PikkuCLI().catch((error) => {
-//     console.error('Fatal error:', error.message)
-//     process.exit(1)
-//   })
-// } else {
-// Fallback to Commander-based CLI for bootstrap (during initial build)
-const { Command } = await import('commander')
-const { createConfig, createSingletonServices } = await import(
-  '../src/services.js'
-)
-const { PikkuRPCService } = await import('@pikku/core')
-const { LocalVariablesService } = await import('@pikku/core/services')
+import { Command } from 'commander'
+import { createConfig, createSingletonServices } from '../src/services.js'
+import { PikkuRPCService } from '@pikku/core'
+import { LocalVariablesService } from '@pikku/core/services'
 
 // Import bootstrap if it exists
 try {
@@ -50,14 +37,29 @@ const all = (program, name, description) => {
       '--session-services-factory-type',
       'The type of your session services factory'
     )
-    .option('-c | --config <string>', 'The path to pikku cli config file')
-    .option('-t | --tags <tags...>', 'Which tags to filter by')
+    .option('-c, --config <string>', 'The path to pikku cli config file')
+    .option('-t, --tags <tags...>', 'Which tags to filter by')
     .option(
       '--types <types...>',
       'Which types to filter by (http, channel, queue, scheduler, rpc, mcp)'
     )
-    .option('--directories <directories...>', 'Which directories to filter by')
-    .option('-s | --silent', 'Silent mode - only show errors')
+    .option(
+      '-d, --directories <directories...>',
+      'Which directories to filter by'
+    )
+    .option(
+      '-n, --names <names...>',
+      'Filter functions by name patterns (supports wildcards)'
+    )
+    .option(
+      '--httpMethods <methods...>',
+      'Filter HTTP routes by methods (comma-separated)'
+    )
+    .option(
+      '--httpRoutes <routes...>',
+      'Filter HTTP routes by route patterns (comma-separated)'
+    )
+    .option('-s, --silent', 'Silent mode - only show errors')
     .action((c) => action(name, c))
 }
 
@@ -68,4 +70,3 @@ all(program, 'all', 'Generate all pikku wirings and files')
 all(program, 'watch', 'Watch for changes in pikku files')
 
 program.parse(process.argv)
-// }

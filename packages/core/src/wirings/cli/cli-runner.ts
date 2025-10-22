@@ -433,7 +433,13 @@ export async function executeCLI({
     const parsed = parseCLIArguments(args, programName, allCLIMeta)
 
     // Handle help (check after parsing to support subcommand help)
-    if (args.includes('--help') || args.includes('-h') || args.length === 0) {
+    // Show help if --help/-h is present, or if no args AND no default command
+    const shouldShowHelp =
+      args.includes('--help') ||
+      args.includes('-h') ||
+      (args.length === 0 && parsed.commandPath.length === 0)
+
+    if (shouldShowHelp) {
       const helpText = generateCommandHelp(
         programName,
         allCLIMeta,

@@ -39,6 +39,7 @@ wireCLI({
     all: pikkuCLICommand({
       func: all,
       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
+      isDefault: true,
       options: {
         tags: {
           description: 'Filter functions by tags (comma-separated)',
