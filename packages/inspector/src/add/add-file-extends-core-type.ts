@@ -36,11 +36,14 @@ export const addFileExtendsCoreType = (
               const variables = methods.get(fileName) || []
 
               if (!typeName) {
-                throw new Error('TODO')
+                throw new Error(
+                  `Found anonymous ${ts.isClassDeclaration(node) ? 'class' : 'interface'} extending ${expectedTypeName} in ${fileName}. ` +
+                    `Classes and interfaces that extend core types must have a name.`
+                )
               }
               variables.push({
                 variable: typeName,
-                type: typeName || null,
+                type: typeName,
                 typePath: extendedTypeDeclarationPath,
               })
               methods.set(fileName, variables)

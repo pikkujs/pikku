@@ -15,7 +15,7 @@ const testMeta: CLIMeta = {
     },
     commands: {
       greet: {
-        command: 'greet <name>',
+        parameters: '<name>',
         pikkuFuncName: 'greetFunc',
         positionals: [{ name: 'name', required: true }],
         options: {
@@ -27,13 +27,12 @@ const testMeta: CLIMeta = {
         },
       },
       user: {
-        command: 'user',
         pikkuFuncName: '',
         positionals: [],
         options: {},
         subcommands: {
           create: {
-            command: 'create <name> <email>',
+            parameters: '<name> <email>',
             pikkuFuncName: 'createUserFunc',
             positionals: [
               { name: 'name', required: true },
@@ -49,7 +48,7 @@ const testMeta: CLIMeta = {
             },
           },
           delete: {
-            command: 'delete <id>',
+            parameters: '<id>',
             pikkuFuncName: 'deleteUserFunc',
             positionals: [{ name: 'id', required: true }],
             options: {
@@ -63,13 +62,13 @@ const testMeta: CLIMeta = {
         },
       },
       files: {
-        command: 'files <paths...>',
+        parameters: '<paths...>',
         pikkuFuncName: 'filesFunc',
         positionals: [{ name: 'paths', required: true, variadic: true }],
         options: {},
       },
       optional: {
-        command: 'optional [name]',
+        parameters: '[name]',
         pikkuFuncName: 'optionalFunc',
         positionals: [{ name: 'name', required: false }],
         options: {},
@@ -296,7 +295,6 @@ describe('Command Parser', () => {
           options: {},
           commands: {
             test: {
-              command: 'test',
               pikkuFuncName: 'testFunc',
               positionals: [],
               options: {
@@ -349,8 +347,7 @@ describe('Command Parser', () => {
       assert.ok(help.includes('--verbose'))
     })
 
-    // TODO: Fix this test - help generation issue
-    test.skip('should generate help for specific command', () => {
+    test('should generate help for specific command', () => {
       const help = generateCommandHelp('test-cli', testMeta, ['greet'])
 
       assert.ok(help.includes('Usage: test-cli greet'))
@@ -359,8 +356,7 @@ describe('Command Parser', () => {
       assert.ok(help.includes('Use loud greeting'))
     })
 
-    // TODO: Fix this test - help generation issue
-    test.skip('should generate help for subcommand', () => {
+    test('should generate help for subcommand', () => {
       const help = generateCommandHelp('test-cli', testMeta, ['user', 'create'])
 
       assert.ok(help.includes('Usage: test-cli user create'))
@@ -376,7 +372,7 @@ describe('Command Parser', () => {
           options: {},
           commands: {
             greet: {
-              command: 'greet <name>',
+              parameters: '<name>',
               pikkuFuncName: 'greetFunc',
               description: 'Greet a user',
               positionals: [{ name: 'name', required: true }],
