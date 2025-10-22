@@ -38,6 +38,7 @@ npm install -D serverless serverless-offline esbuild @types/aws-lambda
 **Workspace:** Create handlers in `src/` based on [workspace-starter/backends/aws-lambda](https://github.com/vramework/examples/blob/main/workspace-starter/backends/aws-lambda/src/http.ts)
 
 **Key imports:**
+
 - Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
 - Import handler functions from `@pikku/lambda/http` or `@pikku/lambda/scheduler`
 - Import config, services, and session factory
@@ -46,6 +47,7 @@ npm install -D serverless serverless-offline esbuild @types/aws-lambda
 ### 3. Configure Serverless Framework
 
 Create `serverless.yml` with functions, events, and esbuild configuration:
+
 - HTTP functions → API Gateway events
 - Scheduled functions → EventBridge/CloudWatch Events
 - Queue functions → SQS events
@@ -62,7 +64,8 @@ let singletonServices: SingletonServices
 
 export const coldStart = async () => {
   if (!config) config = await createConfig()
-  if (!singletonServices) singletonServices = await createSingletonServices(config)
+  if (!singletonServices)
+    singletonServices = await createSingletonServices(config)
   return singletonServices
 }
 ```
@@ -116,6 +119,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/aws-lambda/src/main.ts](https://github.com/vramework/pikku/blob/main/templates/aws-lambda/src/main.ts)
 
 **Key points:**
+
 - Import bootstrap from local `./.pikku/pikku-bootstrap.gen.js`
 - Import services from local files
 - Use cold start pattern to cache singleton services
@@ -129,12 +133,14 @@ Backend imports functions from the functions package.
 **Example:** [workspace-starter/backends/aws-lambda/src/http.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/aws-lambda/src/http.ts)
 
 **Key differences:**
+
 - Import config/services from functions package: `@my-app/functions/src/config`
 - Import bootstrap from functions: `@my-app/functions/.pikku/pikku-bootstrap.gen`
 - No `pikku` script needed in backend package.json
 - Uses functions package filters
 
 **Tradeoffs:**
+
 - ✅ Faster: No extra build step per backend
 - ✅ Simpler: One source of truth
 - ❌ Can't customize filtering (uses functions package filters)
@@ -144,6 +150,7 @@ Backend imports functions from the functions package.
 Backend has its own `pikku.config.json` with custom filters.
 
 **Backend pikku.config.json:**
+
 ```json
 {
   "extends": "../../packages/functions/pikku.config.json",
@@ -156,17 +163,20 @@ Backend has its own `pikku.config.json` with custom filters.
 ```
 
 **Bootstrap import:**
+
 ```typescript
 // Import from backend's .pikku directory (custom filters)
 import '../.pikku/pikku-bootstrap.gen'
 ```
 
 **Build process:**
+
 1. `cd backends/aws-lambda`
 2. `yarn pikku` (reads local pikku.config.json, applies custom filters)
 3. Generated files in `backends/aws-lambda/.pikku/` include only filtered functions
 
 **Tradeoffs:**
+
 - ✅ Custom filtering: Different API subsets per backend
 - ✅ Tree-shaking: Better bundle size per backend
 - ✅ Runtime-specific: Exclude incompatible functions per backend
@@ -181,6 +191,7 @@ import '../.pikku/pikku-bootstrap.gen'
 Handle API Gateway HTTP events.
 
 **Standalone:**
+
 ```typescript
 import { APIGatewayProxyEvent } from 'aws-lambda'
 import { runFetch } from '@pikku/lambda/http'
@@ -196,6 +207,7 @@ export const httpRoute = async (event: APIGatewayProxyEvent) => {
 ```
 
 **Workspace with CORS:**
+
 ```typescript
 import { APIGatewayProxyEvent } from 'aws-lambda'
 import { corsHTTP, corslessHTTP } from '@pikku/lambda/http'
@@ -256,6 +268,7 @@ export const mySQSWorker: SQSHandler = async (event) => {
 Lambda functions experience cold starts when not recently invoked. Cache singleton services to minimize initialization time.
 
 **Pattern:**
+
 ```typescript
 import { AWSSecrets } from '@pikku/aws-services'
 import { createConfig, createSingletonServices } from './services.js'
@@ -277,6 +290,7 @@ export const coldStart = async () => {
 ```
 
 **Key points:**
+
 - Cache config and singletonServices at module level
 - Only initialize once per Lambda container
 - Reduces latency on subsequent invocations
@@ -293,11 +307,13 @@ Lambda supports WebSocket connections via API Gateway WebSocket API.
 **Example:** [workspace-starter/backends/aws-lambda-websocket/src/websocket.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/aws-lambda-websocket/src/websocket.ts)
 
 **Required services:**
+
 - `LambdaEventHubService`: Manages WebSocket connections
 - `KyselyChannelStore`: Stores channel subscriptions (requires database)
 - `KyselyEventHubStore`: Stores WebSocket connection info
 
 **Handlers:**
+
 ```typescript
 import { APIGatewayProxyHandler } from 'aws-lambda'
 import {
@@ -331,6 +347,7 @@ export const defaultHandler: APIGatewayProxyHandler = async (event) => {
 ## Serverless Framework Configuration
 
 **serverless.yml:**
+
 ```yaml
 service: my-pikku-app
 
@@ -385,6 +402,7 @@ resources:
 Use esbuild for fast bundling and minification.
 
 **package.json:**
+
 ```json
 {
   "scripts": {
@@ -396,6 +414,7 @@ Use esbuild for fast bundling and minification.
 ```
 
 **Key flags:**
+
 - `--format=esm`: ES modules
 - `--minify`: Reduce bundle size
 - `--external:"@aws-sdk/*"`: Don't bundle AWS SDK (provided by Lambda runtime)
@@ -413,6 +432,7 @@ Use esbuild for fast bundling and minification.
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -426,6 +446,7 @@ Use esbuild for fast bundling and minification.
 ```
 
 **Workspace (no backend config):**
+
 ```json
 {
   "scripts": {
@@ -437,6 +458,7 @@ Use esbuild for fast bundling and minification.
 ```
 
 **Workspace (with backend config):**
+
 ```json
 {
   "scripts": {
@@ -508,10 +530,12 @@ export AWS_REGION=us-east-1
 ## Examples
 
 **Standalone:**
+
 - [templates/aws-lambda](https://github.com/vramework/pikku/tree/main/templates/aws-lambda) - HTTP, cron, SQS
 - [templates/aws-lambda-websocket](https://github.com/vramework/pikku/tree/main/templates/aws-lambda-websocket) - WebSocket
 
 **Workspace:**
+
 - [workspace-starter/backends/aws-lambda](https://github.com/vramework/examples/tree/main/workspace-starter/backends/aws-lambda) - Workspace HTTP backend
 - [workspace-starter/backends/aws-lambda-websocket](https://github.com/vramework/examples/tree/main/workspace-starter/backends/aws-lambda-websocket) - Workspace WebSocket backend
 
@@ -570,18 +594,18 @@ export AWS_REGION=us-east-1
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
 - [pikku-scheduler](/skills/pikku-scheduler) - Scheduled task configuration
 - [pikku-queue](/skills/pikku-queue) - SQS queue function definitions
 
-**Service Integration:**
-- [pikku-aws-services](/skills/pikku-aws-services) - AWS SDK integration (Secrets Manager, DynamoDB, S3, SQS)
-
 **Alternative Runtimes:**
+
 - [pikku-cloudflare](/skills/pikku-cloudflare) - Edge computing alternative
 - [pikku-express](/skills/pikku-express) - Traditional server deployment
 - [pikku-fastify](/skills/pikku-fastify) - Traditional server deployment
