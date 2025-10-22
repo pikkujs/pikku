@@ -66,6 +66,25 @@ export function parseCLIArguments(
     }
   }
 
+  // If no command was parsed, check for a default command
+  if (result.commandPath.length === 0 && meta.commands) {
+    for (const [name, cmd] of Object.entries(meta.commands)) {
+      if (cmd.isDefault) {
+        result.commandPath.push(name)
+        currentMeta = {
+          program: currentMeta.program,
+          commands: cmd.subcommands || {},
+          options: {
+            ...currentMeta.options,
+            ...cmd.options,
+          },
+          defaultRenderName: cmd.renderName || currentMeta.defaultRenderName,
+        }
+        break
+      }
+    }
+  }
+
   // Get the final command metadata
   const commandMeta = getCommandMeta(meta, result.commandPath)
   if (!commandMeta) {
@@ -374,7 +393,8 @@ export function generateCommandHelp(
 
     for (const [name, cmd] of Object.entries(meta.commands)) {
       const desc = cmd.description || ''
-      lines.push(`  ${name.padEnd(20)} ${desc}`)
+      const defaultMarker = cmd.isDefault ? ' (default)' : ''
+      lines.push(`  ${name.padEnd(20)} ${desc}${defaultMarker}`)
     }
 
     if (Object.keys(meta.options).length > 0) {

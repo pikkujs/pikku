@@ -80,6 +80,7 @@ export interface CLICommandMeta {
   subcommands?: Record<string, CLICommandMeta>
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
+  isDefault?: boolean
 }
 
 /**
@@ -216,6 +217,7 @@ export type CoreCLICommandConfig<
   >
   auth?: boolean
   permissions?: any[]
+  isDefault?: boolean
 }
 
 /**
@@ -246,6 +248,7 @@ export interface CoreCLICommand<
   auth?: boolean
   docs?: PikkuDocs
   subcommands?: Subcommands
+  isDefault?: boolean
 }
 
 /**
