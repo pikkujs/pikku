@@ -78,24 +78,7 @@ export const addHTTPRoute: AddWiring = (
 
   const filePath = node.getSourceFile().fileName
 
-  if (
-    !matchesFilters(
-      options.filters || {},
-      { tags },
-      {
-        type: PikkuWiringTypes.http,
-        name: route,
-        filePath,
-        httpRoute: route,
-        httpMethod: method,
-      },
-      logger
-    )
-  ) {
-    return
-  }
-
-  // --- find the referenced function ---
+  // --- find the referenced function name first for filtering ---
   const funcInitializer = getPropertyAssignmentInitializer(
     obj,
     'func',
@@ -115,6 +98,24 @@ export const addHTTPRoute: AddWiring = (
     checker,
     state.rootDir
   ).pikkuFuncName
+
+  // Now apply filters with both route and function name
+  if (
+    !matchesFilters(
+      options.filters || {},
+      { tags, name: funcName },
+      {
+        type: PikkuWiringTypes.http,
+        name: route,
+        filePath,
+        httpRoute: route,
+        httpMethod: method,
+      },
+      logger
+    )
+  ) {
+    return
+  }
 
   // Ensure function metadata exists (creates stub for inline functions)
   ensureFunctionMetadata(state, funcName, route)
