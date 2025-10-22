@@ -81,38 +81,11 @@ export function serializeChannelCLI(
     packageMappings
   )
 
-  // Build messageWirings metadata
-  const messageWiringsMetadataEntries = Object.entries(commandMap)
-    .map(([commandKey, { pikkuFuncName }]) => {
-      return `        '${commandKey}': { pikkuFuncName: '${pikkuFuncName}' }`
-    })
-    .join(',\n')
-
-  const messageWiringsMetadataCode = `    'command': {\n${messageWiringsMetadataEntries}\n    }`
-
   return `/**
-
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuState } from '@pikku/core'
 ${imports}
-
-// Register channel metadata
-const channelsMeta = pikkuState('channel', 'meta') || {}
-channelsMeta['${finalChannelName}'] = {
-  name: '${finalChannelName}',
-  route: '${finalChannelRoute}',
-  input: null,
-  connect: null,
-  disconnect: null,
-  message: null,
-  messageWirings: {
-${messageWiringsMetadataCode}
-  },
-  tags: ['cli', '${programName}']
-}
-pikkuState('channel', 'meta', channelsMeta)
 
 wireChannel({
   name: '${finalChannelName}',
