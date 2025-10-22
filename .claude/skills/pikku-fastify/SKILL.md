@@ -17,6 +17,69 @@ This skill helps you set up and deploy Pikku functions using Fastify as the runt
 - Want Fastify's plugin ecosystem
 - Performance-critical applications
 
+## Quick Setup
+
+**Prerequisites:** See [pikku-project-setup](/skills/pikku-project-setup) for project structure detection and common setup patterns.
+
+### 1. Install Packages
+
+**Server mode:**
+```bash
+npm install @pikku/fastify @pikku/core @pikku/schedule
+```
+
+**Plugin mode:**
+```bash
+npm install @pikku/fastify-plugin @pikku/core
+```
+
+### 2. Create Server File
+
+**Standalone (Server mode):** Create `src/start.ts` based on [templates/fastify/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/fastify/src/start.ts)
+
+**Standalone (Plugin mode):** Create `src/start.ts` based on [templates/fastify-plugin/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/fastify-plugin/src/start.ts)
+
+**Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/fastify/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/fastify/bin/start.ts)
+
+**Key imports:**
+- Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
+- **Server mode:** Import `PikkuFastifyServer` from `@pikku/fastify`
+- **Plugin mode:** Import `pikkuFastifyPlugin` from `@pikku/fastify-plugin`
+- Import config, services, and session factory
+
+### 3. Configure Fastify-Specific Settings
+
+```typescript
+type FastifyCoreConfig = CoreConfig & {
+  port: number              // Default: 3000
+  hostname: string          // Default: 'localhost' (use '0.0.0.0' for Docker)
+  healthCheckPath?: string  // Default: '/health-check'
+}
+```
+
+**Server mode tip:** Access `server.app` to register Fastify plugins before calling `init()`.
+
+### 4. Update Package.json Scripts
+
+See [pikku-project-setup](/skills/pikku-project-setup) for complete script patterns. Fastify uses same scripts as Express.
+
+### 5. Generate & Verify
+
+```bash
+# Generate wiring (if applicable to your project type)
+npm run pikku
+
+# Start development server
+npm run dev
+
+# Verify health check
+curl http://localhost:3000/health-check
+```
+
+**Expected outcome:** Server starts on configured port, health check returns `{"status":"ok"}`, Pikku routes are registered. Fastify logs show startup time.
+
+---
+
 ## Runtime Modes
 
 Pikku provides two Fastify integration modes:
@@ -26,6 +89,7 @@ Pikku provides two Fastify integration modes:
 Full Fastify server managed by Pikku with automatic setup.
 
 **Use when:**
+
 - Starting a new Fastify server
 - Want automatic configuration
 - Need built-in health checks
@@ -35,6 +99,7 @@ Full Fastify server managed by Pikku with automatic setup.
 Integrate Pikku into an existing Fastify app as a plugin.
 
 **Use when:**
+
 - Integrating into existing Fastify application
 - Need custom Fastify configuration
 - Want full control over plugin registration order
@@ -44,11 +109,13 @@ Integrate Pikku into an existing Fastify app as a plugin.
 ## Installation
 
 **Server mode:**
+
 ```bash
 npm install @pikku/fastify @pikku/core @pikku/schedule
 ```
 
 **Plugin mode:**
+
 ```bash
 npm install @pikku/fastify-plugin @pikku/core
 ```
@@ -64,6 +131,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/fastify/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/fastify/src/start.ts)
 
 **Key points:**
+
 - Import bootstrap from local `./.pikku/pikku-bootstrap.gen.js`
 - Import services from local files
 - Create `PikkuFastifyServer` with config, services, and session factory
@@ -77,21 +145,24 @@ Backend imports all functions from the functions package without filtering.
 **Example:** [workspace-starter/backends/fastify/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/fastify/bin/start.ts)
 
 **Key differences:**
+
 - Import config/services from functions package: `@my-app/functions/src/config`
 - Import bootstrap from functions: `@my-app/functions/.pikku/pikku-bootstrap.gen`
 - No `pikku` script needed in backend package.json
 - All functions included (no filtering)
 
 **Tradeoffs:**
+
 - ✅ Faster: No extra build step per backend
 - ✅ Simpler: One source of truth
-- ❌ No filtering: All functions included
+- ❌ Can't customize filtering (uses functions package filters)
 
 ### Workspace - With Backend Config (Filtered)
 
 Backend has its own `pikku.config.json` that filters which functions are included.
 
 **Directory structure:**
+
 ```
 backends/
   fastify/
@@ -108,6 +179,7 @@ packages/
 ```
 
 **Backend pikku.config.json:**
+
 ```json
 {
   "extends": "../../packages/functions/pikku.config.json",
@@ -120,17 +192,20 @@ packages/
 ```
 
 **Bootstrap import:**
+
 ```typescript
 // Import from backend's .pikku directory (filtered)
 import '../.pikku/pikku-bootstrap.gen'
 ```
 
 **Build process:**
+
 1. `cd backends/fastify`
 2. `yarn pikku` (reads local pikku.config.json, applies filters)
 3. Generated files in `backends/fastify/.pikku/` include only filtered functions
 
 **Tradeoffs:**
+
 - ✅ Filtering: Different API subsets per backend
 - ✅ Tree-shaking: Better bundle size
 - ✅ Runtime-specific: Exclude incompatible functions
@@ -143,8 +218,8 @@ Server mode extends `CoreConfig` with Fastify-specific options:
 ```typescript
 type FastifyCoreConfig = CoreConfig & {
   port: number
-  hostname: string              // Use '0.0.0.0' for Docker
-  healthCheckPath?: string      // Default: '/health-check'
+  hostname: string // Use '0.0.0.0' for Docker
+  healthCheckPath?: string // Default: '/health-check'
 }
 ```
 
@@ -153,10 +228,14 @@ type FastifyCoreConfig = CoreConfig & {
 ### Lifecycle
 
 ```typescript
-const server = new PikkuFastifyServer(config, singletonServices, createSessionServices)
-server.enableExitOnSigInt()  // Graceful shutdown
-await server.init()           // Initialize (required)
-await server.start()          // Start listening
+const server = new PikkuFastifyServer(
+  config,
+  singletonServices,
+  createSessionServices
+)
+server.enableExitOnSigInt() // Graceful shutdown
+await server.init() // Initialize (required)
+await server.start() // Start listening
 ```
 
 ### With Scheduler
@@ -178,7 +257,11 @@ scheduler.startAll()
 Access the Fastify app to register custom plugins or routes:
 
 ```typescript
-const server = new PikkuFastifyServer(config, singletonServices, createSessionServices)
+const server = new PikkuFastifyServer(
+  config,
+  singletonServices,
+  createSessionServices
+)
 
 // Register Fastify plugins before init()
 server.app.register(somePlugin)
@@ -196,6 +279,7 @@ Integrate Pikku into an existing Fastify application.
 **Example:** [templates/fastify-plugin/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/fastify-plugin/src/start.ts)
 
 **Setup:**
+
 ```typescript
 import Fastify from 'fastify'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
@@ -210,8 +294,8 @@ app.register(pikkuFastifyPlugin, {
   pikku: {
     singletonServices,
     createSessionServices,
-    logRoutes: true,       // Log registered routes
-    loadSchemas: true,     // Enable schema validation
+    logRoutes: true, // Log registered routes
+    loadSchemas: true, // Enable schema validation
   },
 })
 
@@ -232,6 +316,7 @@ await app.listen({ port: 4002, host: 'localhost' })
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -244,6 +329,7 @@ await app.listen({ port: 4002, host: 'localhost' })
 ```
 
 **Workspace (no backend config):**
+
 ```json
 {
   "scripts": {
@@ -254,6 +340,7 @@ await app.listen({ port: 4002, host: 'localhost' })
 ```
 
 **Workspace (with backend config):**
+
 ```json
 {
   "scripts": {
@@ -286,10 +373,12 @@ Fastify servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0'`
 ## Examples
 
 **Standalone:**
+
 - [templates/fastify](https://github.com/vramework/pikku/tree/main/templates/fastify) - Server mode
 - [templates/fastify-plugin](https://github.com/vramework/pikku/tree/main/templates/fastify-plugin) - Plugin mode
 
 **Workspace:**
+
 - [workspace-starter/backends/fastify](https://github.com/vramework/examples/tree/main/workspace-starter/backends/fastify) - Workspace backend
 
 ---
@@ -330,3 +419,21 @@ Fastify servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0'`
 - [ ] Configure health check endpoint
 - [ ] Enable graceful shutdown
 - [ ] Consider cluster mode for production
+
+---
+
+## Related Skills
+
+**Prerequisites:**
+- [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
+- [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
+
+**Wiring:**
+- [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
+- [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring
+- [pikku-scheduler](/skills/pikku-scheduler) - Scheduled task configuration
+
+**Alternative Runtimes:**
+- [pikku-express](/skills/pikku-express) - More common, larger ecosystem
+- [pikku-uws](/skills/pikku-uws) - Even higher performance with µWebSockets
+- [pikku-aws-lambda](/skills/pikku-aws-lambda) - Serverless deployment

@@ -132,11 +132,12 @@ export const requireOwner = pikkuPermission<{
   func: async ({ ownership }, data, session) => {
     if (!session?.userId) return false
     return ownership.isOwner(session.userId, data.resourceOwnerId)
-  }
+  },
 })
 ```
 
 Direct function syntax (discouraged):
+
 ```typescript
 export const requireOwner: PikkuPermission<{
   resourceOwnerId: string
@@ -170,7 +171,8 @@ The `interaction` object contains different properties depending on the transpor
 ```typescript
 export const audit = pikkuMiddleware({
   name: 'Audit Logger',
-  description: 'Logs execution time and user info for all function calls across any transport',
+  description:
+    'Logs execution time and user info for all function calls across any transport',
   func: async ({ userSession, logger }, interaction, next) => {
     const t0 = Date.now()
     try {
@@ -195,7 +197,7 @@ export const audit = pikkuMiddleware({
         })
       }
     }
-  }
+  },
 })
 ```
 
@@ -206,7 +208,8 @@ import { InvalidMiddlewareInteractionError } from '@pikku/core/errors'
 
 export const requireHTTPS = pikkuMiddleware({
   name: 'Require HTTPS',
-  description: 'Enforces HTTPS for all HTTP requests, rejects non-HTTPS connections',
+  description:
+    'Enforces HTTPS for all HTTP requests, rejects non-HTTPS connections',
   func: async ({ logger }, interaction, next) => {
     // ✅ CRITICAL: If middleware expects HTTP, throw error if not present
     if (!interaction.http) {
@@ -221,11 +224,12 @@ export const requireHTTPS = pikkuMiddleware({
     }
 
     await next()
-  }
+  },
 })
 ```
 
 Direct function syntax (discouraged):
+
 ```typescript
 export const audit = pikkuMiddleware(
   async ({ userSession, logger }, interaction, next) => {
