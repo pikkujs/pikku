@@ -76,6 +76,8 @@ export interface InspectorMiddlewareState {
       position: number
       exportedName: string | null
       factory?: boolean // true if wrapped with pikkuMiddlewareFactory
+      name?: string // optional name from pikkuMiddleware({ name: '...' })
+      description?: string // optional description from pikkuMiddleware({ description: '...' })
     }
   >
   // Tag-based middleware calls tracking - tag -> group metadata

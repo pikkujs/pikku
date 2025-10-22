@@ -6,6 +6,8 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 import { extractMiddlewarePikkuNames } from '../utils/middleware.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
+import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 
 /**
  * Inspect pikkuMiddleware calls, addMiddleware calls, and addHTTPMiddleware calls
@@ -22,18 +24,46 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
   // Handle pikkuMiddleware(...) - individual middleware function definition
   if (expression.text === 'pikkuMiddleware') {
-    const handlerNode = args[0]
-    if (!handlerNode) return
+    const arg = args[0]
+    if (!arg) return
 
-    if (
-      !ts.isArrowFunction(handlerNode) &&
-      !ts.isFunctionExpression(handlerNode)
-    ) {
+    let actualHandler: ts.ArrowFunction | ts.FunctionExpression
+    let name: string | undefined
+    let description: string | undefined
+
+    // Check if using object syntax: pikkuMiddleware({ func: ..., name: '...', description: '...' })
+    if (ts.isObjectLiteralExpression(arg)) {
+      // Extract name and description metadata
+      const nameValue = getPropertyValue(arg, 'name')
+      const descValue = getPropertyValue(arg, 'description')
+      name = typeof nameValue === 'string' ? nameValue : undefined
+      description = typeof descValue === 'string' ? descValue : undefined
+
+      // Extract the func property
+      const fnProp = getPropertyAssignmentInitializer(
+        arg,
+        'func',
+        true,
+        checker
+      )
+      if (
+        !fnProp ||
+        (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
+      ) {
+        logger.error(
+          `• pikkuMiddleware object missing required 'func' property.`
+        )
+        return
+      }
+      actualHandler = fnProp
+    } else if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) {
+      actualHandler = arg
+    } else {
       logger.error(`• Handler for pikkuMiddleware is not a function.`)
       return
     }
 
-    const services = extractServicesFromFunction(handlerNode)
+    const services = extractServicesFromFunction(actualHandler)
     const { pikkuFuncName, exportedName } = extractFunctionName(
       node,
       checker,
@@ -44,10 +74,12 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
+      name,
+      description,
     }
 
     logger.debug(
-      `• Found middleware with services: ${services.services.join(', ')}`
+      `• Found middleware with services: ${services.services.join(', ')}${name ? ` (name: ${name})` : ''}${description ? ` (description: ${description})` : ''}`
     )
     return
   }

@@ -185,6 +185,24 @@ export type CorePikkuMiddleware<
 ) => Promise<void>
 
 /**
+ * Configuration object for creating middleware with metadata
+ *
+ * @template SingletonServices - The singleton services type
+ * @template UserSession - The user session type
+ */
+export type CorePikkuMiddlewareConfig<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = {
+  /** The middleware function */
+  func: CorePikkuMiddleware<SingletonServices, UserSession>
+  /** Optional human-readable name for the middleware */
+  name?: string
+  /** Optional description of what the middleware does */
+  description?: string
+}
+
+/**
  * A factory function that takes input and returns middleware
  * Used when middleware needs configuration/input parameters
  */
@@ -208,14 +226,38 @@ export type CorePikkuMiddlewareGroup<
 
 /**
  * Factory function for creating middleware with tree-shaking support
+ * Supports both direct function and configuration object syntax
+ *
+ * @example
+ * ```typescript
+ * // Direct function syntax
+ * export const logMiddleware = pikkuMiddleware(
+ *   async ({ logger }, _interaction, next) => {
+ *     logger.info('Request started')
+ *     await next()
+ *   }
+ * )
+ *
+ * // Configuration object syntax with metadata
+ * export const logMiddleware = pikkuMiddleware({
+ *   name: 'Request Logger',
+ *   description: 'Logs request information',
+ *   func: async ({ logger }, _interaction, next) => {
+ *     logger.info('Request started')
+ *     await next()
+ *   }
+ * })
+ * ```
  */
 export const pikkuMiddleware = <
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
 >(
-  middleware: CorePikkuMiddleware<SingletonServices, UserSession>
+  middleware:
+    | CorePikkuMiddleware<SingletonServices, UserSession>
+    | CorePikkuMiddlewareConfig<SingletonServices, UserSession>
 ): CorePikkuMiddleware<SingletonServices, UserSession> => {
-  return middleware
+  return typeof middleware === 'function' ? middleware : middleware.func
 }
 
 /**
