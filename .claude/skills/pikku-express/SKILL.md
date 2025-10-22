@@ -16,6 +16,78 @@ This skill helps you set up and deploy Pikku functions using Express.js as the r
 - Development and production Express deployments
 - Need for middleware ecosystem and Express plugins
 
+## Quick Setup
+
+**Prerequisites:** See [pikku-project-setup](/skills/pikku-project-setup) for project structure detection and common setup patterns.
+
+### 1. Install Packages
+
+**Server mode:**
+```bash
+npm install @pikku/express @pikku/core @pikku/schedule
+```
+
+**Middleware mode:**
+```bash
+npm install @pikku/express-middleware @pikku/core
+```
+
+### 2. Create Server File
+
+**Standalone:** Create `src/start.ts` based on [templates/express/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/express/src/start.ts)
+
+**Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/express/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/express/bin/start.ts)
+
+**Key imports:**
+- Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
+- Import `PikkuExpressServer` from `@pikku/express`
+- Import config, services, and session factory
+
+### 3. Configure Express-Specific Settings
+
+```typescript
+type ExpressCoreConfig = CoreConfig & {
+  port: number              // Default: 3000
+  hostname: string          // Default: 'localhost' (use '0.0.0.0' for Docker)
+  healthCheckPath?: string  // Default: '/health-check'
+  limits?: {
+    json?: string           // Default: '1mb'
+    xml?: string
+    urlencoded?: string
+  }
+}
+```
+
+### 4. Update Package.json Scripts
+
+See [pikku-project-setup](/skills/pikku-project-setup) for complete script patterns.
+
+**Express-specific tip:** Pipe logs through pino-pretty for development:
+```json
+{
+  "scripts": {
+    "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid"
+  }
+}
+```
+
+### 5. Generate & Verify
+
+```bash
+# Generate wiring (if applicable to your project type)
+npm run pikku
+
+# Start development server
+npm run dev
+
+# Verify health check
+curl http://localhost:3000/health-check
+```
+
+**Expected outcome:** Server starts on configured port, health check returns `{"status":"ok"}`, Pikku routes are registered.
+
+---
+
 ## Runtime Modes
 
 Pikku provides two Express integration modes:
@@ -91,7 +163,7 @@ Backend imports all functions from the functions package without filtering.
 
 - ✅ Faster: No extra build step per backend
 - ✅ Simpler: One source of truth
-- ❌ No filtering: All functions included
+- ❌ Can't customize filtering (uses functions package filters)
 
 ### Workspace - With Backend Config (Filtered)
 
@@ -361,3 +433,21 @@ Express servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0'`
 - [ ] Use `hostname: '0.0.0.0'` in Docker/containers
 - [ ] Configure health check endpoint
 - [ ] Enable graceful shutdown
+
+---
+
+## Related Skills
+
+**Prerequisites:**
+- [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
+- [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
+
+**Wiring:**
+- [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
+- [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring
+- [pikku-scheduler](/skills/pikku-scheduler) - Scheduled task configuration
+
+**Alternative Runtimes:**
+- [pikku-fastify](/skills/pikku-fastify) - Higher performance alternative
+- [pikku-uws](/skills/pikku-uws) - Extreme performance with µWebSockets
+- [pikku-aws-lambda](/skills/pikku-aws-lambda) - Serverless deployment

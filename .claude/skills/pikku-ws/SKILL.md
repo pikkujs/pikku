@@ -16,6 +16,70 @@ This skill helps you set up standalone WebSocket servers using the `ws` library.
 - Need standalone WebSocket server without HTTP framework
 - Simple WebSocket-only deployments
 
+## Quick Setup
+
+**Prerequisites:** See [pikku-project-setup](/skills/pikku-project-setup) for project structure detection and common setup patterns.
+
+### 1. Install Packages
+
+```bash
+npm install @pikku/ws @pikku/core ws
+```
+
+### 2. Create Server File
+
+**Standalone:** Create `src/start.ts` based on [templates/ws/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/ws/src/start.ts)
+
+**Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/ws/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/ws/bin/start.ts)
+
+**Key imports:**
+- Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
+- Import `pikkuWebsocketHandler` from `@pikku/ws`
+- Import `Server` from `http` and `WebSocketServer` from `ws`
+- Import config, services, and session factory
+
+### 3. Create Servers Manually
+
+```typescript
+const server = new Server()                    // HTTP server for upgrades
+const wss = new WebSocketServer({ noServer: true })  // WebSocket server
+pikkuWebsocketHandler({ server, wss, singletonServices, createSessionServices })
+```
+
+**Note:** Unlike Express/Fastify, ws adapter has no built-in server class. You create HTTP and WebSocket servers manually.
+
+### 4. Add Health Check
+
+```typescript
+server.on('request', (req, res) => {
+  if (req.method === 'GET' && req.url === '/health-check') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ status: 'ok' }))
+  }
+})
+```
+
+### 5. Update Package.json Scripts
+
+See [pikku-project-setup](/skills/pikku-project-setup) for complete script patterns. WebSocket uses same scripts as Express/Fastify.
+
+### 6. Generate & Verify
+
+```bash
+# Generate wiring (if applicable to your project type)
+npm run pikku
+
+# Start development server
+npm run dev
+
+# Verify health check
+curl http://localhost:3000/health-check
+```
+
+**Expected outcome:** Server starts on configured port, health check returns `{"status":"ok"}`, Pikku WebSocket channels are registered.
+
+---
+
 ## Installation
 
 ```bash
@@ -33,6 +97,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/ws/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/ws/src/start.ts)
 
 **Key points:**
+
 - Import bootstrap from local `./.pikku/pikku-bootstrap.gen.js`
 - Create HTTP server and WebSocketServer
 - Use `pikkuWebsocketHandler` to integrate Pikku
@@ -45,6 +110,7 @@ Backend imports functions from workspace package.
 **Example:** [workspace-starter/backends/ws/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/ws/bin/start.ts)
 
 **Key differences:**
+
 - Import config/services from functions package: `@my-app/functions/src/...`
 - Import bootstrap from functions: `@my-app/functions/.pikku/pikku-bootstrap.gen`
 - Use config for port/hostname
@@ -106,6 +172,7 @@ server.listen(config.port, config.hostname)
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -118,6 +185,7 @@ server.listen(config.port, config.hostname)
 ```
 
 **Workspace:**
+
 ```json
 {
   "scripts": {
@@ -142,9 +210,11 @@ WebSocket servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0
 ## Examples
 
 **Standalone:**
+
 - [templates/ws](https://github.com/vramework/pikku/tree/main/templates/ws) - Standalone WebSocket server
 
 **Workspace:**
+
 - [workspace-starter/backends/ws](https://github.com/vramework/examples/tree/main/workspace-starter/backends/ws) - Workspace backend
 
 ---
@@ -171,3 +241,19 @@ WebSocket servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0
 - [ ] Configure load balancer for WebSocket upgrades
 - [ ] Use sticky sessions if load balancing
 - [ ] Ensure health check responds on HTTP
+
+---
+
+## Related Skills
+
+**Prerequisites:**
+- [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
+- [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
+
+**Wiring:**
+- [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring and configuration
+
+**Alternative Runtimes:**
+- [pikku-uws](/skills/pikku-uws) - Higher performance WebSocket with µWebSockets
+- [pikku-express](/skills/pikku-express) - HTTP + WebSocket in one server
+- [pikku-fastify](/skills/pikku-fastify) - HTTP + WebSocket in one server
