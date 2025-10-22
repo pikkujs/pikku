@@ -22,9 +22,9 @@
     "fastify-plugin": "^5.0.1"
   },
   "devDependencies": {
-    "fastify": "^5.5.0",
-    "fastify-plugin": "^5.0.1",
-    "typescript": "^5.9.2"
+    "fastify": "^5.6.1",
+    "fastify-plugin": "^5.1.0",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18"

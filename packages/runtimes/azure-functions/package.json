@@ -19,12 +19,12 @@
     "@pikku/core": "^0.9.12-next.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "@azure/functions": "4.7.2-preview"
+    "@azure/functions": "4.8.0"
   }
 }

@@ -16,7 +16,7 @@
     "@pikku/core": "^0.9.12-next.0"
   },
   "dependencies": {
-    "pg-boss": "^10.3.2"
+    "pg-boss": "^11.1.1"
   },
   "devDependencies": {
     "typescript": "^5.9"
