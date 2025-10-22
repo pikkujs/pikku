@@ -1,6 +1,72 @@
-import { CLIProgramMeta } from '@pikku/core'
+import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { Config } from '../../../../types/application-types.js'
+
+/**
+ * Collect all unique renderer names from CLI metadata (populated by inspector)
+ */
+export function collectRendererNames(programMeta: CLIProgramMeta): Set<string> {
+  const rendererNames = new Set<string>()
+
+  // Add program-level default renderer
+  if (programMeta.defaultRenderName) {
+    rendererNames.add(programMeta.defaultRenderName)
+  }
+
+  // Recursively collect renderer names from commands
+  function collectFromCommand(command: CLICommandMeta): void {
+    if (command.renderName) {
+      rendererNames.add(command.renderName)
+    }
+
+    // Recursively process subcommands
+    if (command.subcommands) {
+      for (const subCommand of Object.values(command.subcommands)) {
+        collectFromCommand(subCommand)
+      }
+    }
+  }
+
+  // Process all commands
+  for (const command of Object.values(programMeta.commands)) {
+    collectFromCommand(command)
+  }
+
+  return rendererNames
+}
+
+/**
+ * Build a renderers map for CLI commands
+ */
+function buildRenderersMap(programMeta: CLIProgramMeta): string {
+  const entries: string[] = []
+
+  // Build map entries for each command that has a renderer
+  function addCommandRenderer(command: CLICommandMeta, path: string[]): void {
+    const commandId = path.join('.')
+    if (command.renderName) {
+      entries.push(`    '${commandId}': ${command.renderName}`)
+    }
+
+    // Recursively process subcommands
+    if (command.subcommands) {
+      for (const [subName, subCommand] of Object.entries(command.subcommands)) {
+        addCommandRenderer(subCommand, [...path, subName])
+      }
+    }
+  }
+
+  // Process all commands
+  for (const [commandName, command] of Object.entries(programMeta.commands)) {
+    addCommandRenderer(command, [commandName])
+  }
+
+  if (entries.length === 0) {
+    return '{}'
+  }
+
+  return `{\n${entries.join(',\n')}\n  }`
+}
 
 /**
  * Serializes a CLI-over-Channel client bootstrap file
@@ -12,7 +78,8 @@ export function serializeChannelCLIClient(
   clientFile: string,
   config: Config,
   cliBootstrapPath: string,
-  channelRoute?: string
+  channelRoute?: string,
+  renderersMeta?: Record<string, any>
 ): string {
   const capitalizedName =
     programName.charAt(0).toUpperCase() + programName.slice(1).replace(/-/g, '')
@@ -25,14 +92,48 @@ export function serializeChannelCLIClient(
     config.packageMappings
   )
 
-  // TODO: Collect renderer imports and create renderers map
-  // For now, renderers are not implemented
+  // Collect all unique renderer names from CLI metadata (populated by inspector)
+  const rendererNames = collectRendererNames(programMeta)
+
+  // Generate renderer imports from their source files
+  let rendererImports = ''
+  if (rendererNames.size > 0 && renderersMeta) {
+    const importsByFile = new Map<string, string[]>()
+
+    for (const rendererName of rendererNames) {
+      const meta = renderersMeta[rendererName]
+      if (meta?.exportedName && meta?.filePath) {
+        const relativePath = getFileImportRelativePath(
+          clientFile,
+          meta.filePath,
+          config.packageMappings
+        )
+        if (!importsByFile.has(relativePath)) {
+          importsByFile.set(relativePath, [])
+        }
+        importsByFile.get(relativePath)!.push(meta.exportedName)
+      }
+    }
+
+    // Generate import statements
+    for (const [path, names] of importsByFile) {
+      rendererImports += `import { ${names.join(', ')} } from '${path}'\n`
+    }
+  }
+
+  // Build renderers map
+  const renderersMap = buildRenderersMap(programMeta)
+
+  // Determine default renderer
+  const defaultRendererCode = programMeta.defaultRenderName
+    ? `,\n    defaultRenderer: ${programMeta.defaultRenderName}`
+    : ''
 
   return `
 import { executeCLIViaChannel } from '@pikku/core/cli/channel'
 import { CorePikkuWebsocket } from '@pikku/websocket'
 import '${bootstrapImportPath}'
-
+${rendererImports}
 /**
  * ${capitalizedName} CLI Client (via WebSocket Channel)
  * Executes CLI commands over a WebSocket connection
@@ -44,14 +145,14 @@ export async function ${capitalizedName}CLIClient(
   // Create WebSocket connection
   const pikkuWS = new CorePikkuWebsocket(url)
 
-  // TODO: Import and register renderers when renderer tracking is implemented
-  const renderers = {}
+  // Register renderers for CLI commands
+  const renderers = ${renderersMap}
 
   await executeCLIViaChannel({
     programName: '${programName}',
     pikkuWS,
     args,
-    renderers,
+    renderers${defaultRendererCode},
   })
 }
 

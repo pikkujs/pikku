@@ -33,7 +33,7 @@ export function parseCLIArguments(
     errors: [],
   }
 
-  const meta = allMeta[programName]
+  const meta = allMeta.programs[programName]
   if (!meta) {
     result.errors.push(`Program not found: ${programName}`)
     return result
@@ -379,7 +379,7 @@ export function generateCommandHelp(
   commandPath: string[] = []
 ): string {
   const lines: string[] = []
-  const meta = allMeta[programName]
+  const meta = allMeta.programs[programName]
 
   if (!meta) {
     return `Program not found: ${programName}`

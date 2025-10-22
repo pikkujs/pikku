@@ -7,13 +7,13 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { all } from './functions/commands/all.js'
-import { defaultCLIRenderer } from './services.js'
+import { clientCLIRenderer } from './services.js'
 
 wireCLI({
   program: 'pikku',
   description:
     'Pikku CLI - Code generation tool for type-safe backend development',
-  render: defaultCLIRenderer,
+  render: clientCLIRenderer,
   options: {
     config: {
       description: 'Path to pikku.config.json file',
