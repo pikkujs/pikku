@@ -39,6 +39,7 @@ npm install @pikku/queue-pg-boss @pikku/core pg-boss
 **Workspace:** Create worker file importing from functions package
 
 **Key imports:**
+
 - Import bootstrap from **queue subdirectory** (see [pikku-project-setup](/skills/pikku-project-setup) for queue bootstrap paths)
 - Standalone: `./.pikku/queue/pikku-bootstrap-queue.gen.js`
 - Workspace: `@my-app/functions/.pikku/queue/pikku-bootstrap-queue.gen.js`
@@ -64,6 +65,7 @@ const pgBossQueueWorkers = new PgBossQueueWorkers(
 ### 4. Setup Queue Service (for enqueuing)
 
 Add `PgBossQueueService` to singleton services in your HTTP/channel handlers:
+
 ```typescript
 import { PgBossQueueService } from '@pikku/queue-pg-boss'
 
@@ -110,6 +112,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/pg-boss/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/pg-boss/src/start.ts)
 
 **Pattern:**
+
 ```typescript
 import { PgBossQueueWorkers } from '@pikku/queue-pg-boss'
 import {
@@ -160,6 +163,7 @@ main()
 ```
 
 **Key points:**
+
 - Import bootstrap from `./.pikku/queue/pikku-bootstrap-queue.gen.js` (note `/queue/` directory)
 - Create `PgBossQueueWorkers` with connection string, services, and session factory
 - Call `await init()` to start pg-boss (creates database tables)
@@ -171,6 +175,7 @@ main()
 Backend imports functions from the functions package.
 
 **Pattern:**
+
 ```typescript
 import { PgBossQueueWorkers } from '@pikku/queue-pg-boss'
 import {
@@ -200,6 +205,7 @@ main()
 ```
 
 **Key differences:**
+
 - Import config/services from functions package
 - Import bootstrap from functions: `@my-app/functions/.pikku/queue/pikku-bootstrap-queue.gen.js`
 - No custom filtering support for queue workers
@@ -211,6 +217,7 @@ main()
 PG-Boss requires PostgreSQL connection configuration.
 
 **Connection string:**
+
 ```typescript
 const connectionString = 'postgres://user:password@host:port/database'
 
@@ -222,6 +229,7 @@ const pgBossQueueWorkers = new PgBossQueueWorkers(
 ```
 
 **Connection options object:**
+
 ```typescript
 import PgBoss from 'pg-boss'
 
@@ -229,17 +237,17 @@ const options: PgBoss.ConstructorOptions = {
   connectionString: process.env.DATABASE_URL,
 
   // Connection pool settings
-  max: 20,  // Max connections in pool
+  max: 20, // Max connections in pool
 
   // Application name for monitoring
   application_name: 'pikku-queue-worker',
 
   // Archival settings (automatic job cleanup)
-  archiveCompletedAfterSeconds: 60 * 60 * 24,  // Archive completed jobs after 1 day
-  deleteAfterDays: 7,  // Delete archived jobs after 7 days
+  archiveCompletedAfterSeconds: 60 * 60 * 24, // Archive completed jobs after 1 day
+  deleteAfterDays: 7, // Delete archived jobs after 7 days
 
   // Maintenance settings
-  maintenanceIntervalMinutes: 15,  // Run maintenance every 15 minutes
+  maintenanceIntervalMinutes: 15, // Run maintenance every 15 minutes
 }
 
 const pgBossQueueWorkers = new PgBossQueueWorkers(
@@ -253,6 +261,7 @@ const pgBossQueueWorkers = new PgBossQueueWorkers(
 PG-Boss automatically creates required tables on `init()`. No manual schema setup needed.
 
 **Production tips:**
+
 - Use connection pooling (adjust `max` based on workload)
 - Configure archival to prevent database bloat
 - Enable SSL for secure connections
@@ -266,14 +275,13 @@ PG-Boss automatically creates required tables on `init()`. No manual schema setu
 Use `PgBossQueueService` to add jobs to queues from your HTTP/channel handlers.
 
 **Setup in services:**
+
 ```typescript
 import { PgBossQueueService } from '@pikku/queue-pg-boss'
 import type { QueueService } from '@pikku/core/queue'
 
 export const createSingletonServices = async (config: Config) => {
-  const queue: QueueService = new PgBossQueueService(
-    process.env.DATABASE_URL
-  )
+  const queue: QueueService = new PgBossQueueService(process.env.DATABASE_URL)
 
   return {
     queue,
@@ -284,6 +292,7 @@ export const createSingletonServices = async (config: Config) => {
 ```
 
 **Adding jobs:**
+
 ```typescript
 // In your Pikku function
 await services.queue.add('emailQueue', {
@@ -294,14 +303,15 @@ await services.queue.add('emailQueue', {
 
 // With options
 await services.queue.add('emailQueue', data, {
-  priority: 1,           // Higher priority = processed first
-  delay: 5000,          // Delay 5 seconds before processing
-  attempts: 3,          // Retry up to 3 times
-  jobId: 'unique-id',   // Deduplicate jobs
+  priority: 1, // Higher priority = processed first
+  delay: 5000, // Delay 5 seconds before processing
+  attempts: 3, // Retry up to 3 times
+  jobId: 'unique-id', // Deduplicate jobs
 })
 ```
 
 **Job options:**
+
 - `priority`: Job priority (lower number = higher priority)
 - `delay`: Delay in milliseconds before processing
 - `attempts`: Number of retry attempts
@@ -316,6 +326,7 @@ await services.queue.add('emailQueue', data, {
 Configure worker behavior using `workerConfig` in your queue function definition.
 
 **Example:**
+
 ```typescript
 import { defineQueue } from '@pikku/core/queue'
 
@@ -323,20 +334,21 @@ export const sendEmailQueue = defineQueue({
   func: sendEmail,
   queueName: 'emailQueue',
   workerConfig: {
-    batchSize: 5,              // Process 5 jobs in a batch
-    pollInterval: 2000,        // Poll every 2 seconds
+    batchSize: 5, // Process 5 jobs in a batch
+    pollInterval: 2000, // Poll every 2 seconds
   },
 })
 ```
 
 **Worker config options:**
 
-| Option | Description | PG-Boss Mapping |
-|--------|-------------|-----------------|
-| `batchSize` | Jobs to process in a batch | `batchSize` |
-| `pollInterval` | Polling interval (ms) | `pollingIntervalSeconds` (converts ms to seconds) |
+| Option         | Description                | PG-Boss Mapping                                   |
+| -------------- | -------------------------- | ------------------------------------------------- |
+| `batchSize`    | Jobs to process in a batch | `batchSize`                                       |
+| `pollInterval` | Polling interval (ms)      | `pollingIntervalSeconds` (converts ms to seconds) |
 
 **Unsupported options (ignored):**
+
 - `name`: PG-Boss identifies workers by queue name
 - `autorun`: Always enabled in PG-Boss
 - `lockDuration`: Managed by job-level expiration
@@ -346,6 +358,7 @@ export const sendEmailQueue = defineQueue({
 - `visibilityTimeout`: Uses PostgreSQL locks instead
 
 **Fallback options (managed by PG-Boss):**
+
 - `removeOnComplete`: Managed by archival system (see archiveCompletedAfterSeconds)
 - `removeOnFail`: Managed by archival system
 
@@ -354,6 +367,7 @@ export const sendEmailQueue = defineQueue({
 ## Job Lifecycle
 
 **Job states:**
+
 1. **created**: Job added to queue
 2. **active**: Job being processed
 3. **completed**: Job finished successfully
@@ -363,10 +377,12 @@ export const sendEmailQueue = defineQueue({
 
 **Job archival:**
 PG-Boss automatically archives completed and failed jobs based on configuration:
+
 - `archiveCompletedAfterSeconds`: Move completed jobs to archive table
 - `deleteAfterDays`: Delete old archived jobs
 
 **Job control:**
+
 ```typescript
 // Fail job with custom error
 throw new QueueJobFailedError('Invalid email format')
@@ -382,6 +398,7 @@ throw new QueueJobDiscardedError('Job no longer needed')
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -394,6 +411,7 @@ throw new QueueJobDiscardedError('Job no longer needed')
 ```
 
 **Workspace:**
+
 ```json
 {
   "scripts": {
@@ -406,6 +424,7 @@ throw new QueueJobDiscardedError('Job no longer needed')
 ### Local Development
 
 Run PostgreSQL locally:
+
 ```bash
 # Docker
 docker run -d -p 5432:5432 \
@@ -418,6 +437,7 @@ docker-compose up postgres
 ```
 
 Start worker:
+
 ```bash
 npm run dev
 ```
@@ -431,6 +451,7 @@ npm run dev
 PG-Boss workers can run in containers alongside your HTTP servers or as dedicated worker instances.
 
 **Example Dockerfile:**
+
 ```dockerfile
 FROM node:20-slim
 WORKDIR /app
@@ -450,6 +471,7 @@ docker-compose up --scale worker=5
 ```
 
 **Key points:**
+
 - Multiple workers automatically share jobs via PostgreSQL locks
 - No coordination service needed
 - Scale based on queue depth and job duration
@@ -489,6 +511,7 @@ SELECT COUNT(*) FROM pgboss.archive;
 ### Metrics
 
 Monitor key metrics:
+
 - Queue depth per queue
 - Active jobs count
 - Failed jobs count
@@ -512,6 +535,7 @@ Monitor key metrics:
 - **Priorities:** Use sparingly (adds query overhead)
 
 **Database maintenance:**
+
 ```sql
 -- Vacuum job table
 VACUUM ANALYZE pgboss.job;
@@ -524,23 +548,25 @@ VACUUM ANALYZE pgboss.archive;
 
 ## Comparison: PG-Boss vs BullMQ
 
-| Feature | PG-Boss | BullMQ |
-|---------|---------|--------|
-| Backing store | PostgreSQL | Redis |
-| Delivery | Polling | Push (pub/sub) |
-| Throughput | Medium | High |
-| Durability | ACID guarantees | Redis persistence |
-| Setup complexity | Simpler (one less service) | Requires Redis |
-| Job archival | Automatic | Manual |
-| Monitoring | SQL queries | Bull Board UI |
+| Feature          | PG-Boss                    | BullMQ            |
+| ---------------- | -------------------------- | ----------------- |
+| Backing store    | PostgreSQL                 | Redis             |
+| Delivery         | Polling                    | Push (pub/sub)    |
+| Throughput       | Medium                     | High              |
+| Durability       | ACID guarantees            | Redis persistence |
+| Setup complexity | Simpler (one less service) | Requires Redis    |
+| Job archival     | Automatic                  | Manual            |
+| Monitoring       | SQL queries                | Bull Board UI     |
 
 **Choose PG-Boss if:**
+
 - Already using PostgreSQL
 - Want simpler infrastructure (no Redis)
 - Need ACID guarantees
 - Prefer SQL-based monitoring
 
 **Choose BullMQ if:**
+
 - Need high throughput
 - Want push-based delivery
 - Prefer Redis
@@ -551,6 +577,7 @@ VACUUM ANALYZE pgboss.archive;
 ## Examples
 
 **Standalone:**
+
 - [templates/pg-boss](https://github.com/vramework/pikku/tree/main/templates/pg-boss) - PG-Boss worker
 
 ---
@@ -627,11 +654,14 @@ VACUUM ANALYZE pgboss.archive;
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-queue](/skills/pikku-queue) - Queue function definitions and enqueue patterns
 
 **Alternative Queue Runtimes:**
+
 - [pikku-queue-bullmq](/skills/pikku-queue-bullmq) - Redis-based queue alternative (higher throughput)

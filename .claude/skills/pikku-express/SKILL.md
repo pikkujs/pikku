@@ -23,11 +23,13 @@ This skill helps you set up and deploy Pikku functions using Express.js as the r
 ### 1. Install Packages
 
 **Server mode:**
+
 ```bash
 npm install @pikku/express @pikku/core @pikku/schedule
 ```
 
 **Middleware mode:**
+
 ```bash
 npm install @pikku/express-middleware @pikku/core
 ```
@@ -39,6 +41,7 @@ npm install @pikku/express-middleware @pikku/core
 **Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/express/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/express/bin/start.ts)
 
 **Key imports:**
+
 - Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
 - Import `PikkuExpressServer` from `@pikku/express`
 - Import config, services, and session factory
@@ -47,11 +50,11 @@ npm install @pikku/express-middleware @pikku/core
 
 ```typescript
 type ExpressCoreConfig = CoreConfig & {
-  port: number              // Default: 3000
-  hostname: string          // Default: 'localhost' (use '0.0.0.0' for Docker)
-  healthCheckPath?: string  // Default: '/health-check'
+  port: number // Default: 3000
+  hostname: string // Default: 'localhost' (use '0.0.0.0' for Docker)
+  healthCheckPath?: string // Default: '/health-check'
   limits?: {
-    json?: string           // Default: '1mb'
+    json?: string // Default: '1mb'
     xml?: string
     urlencoded?: string
   }
@@ -63,6 +66,7 @@ type ExpressCoreConfig = CoreConfig & {
 See [pikku-project-setup](/skills/pikku-project-setup) for complete script patterns.
 
 **Express-specific tip:** Pipe logs through pino-pretty for development:
+
 ```json
 {
   "scripts": {
@@ -439,15 +443,18 @@ Express servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0'`
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
 - [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring
 - [pikku-scheduler](/skills/pikku-scheduler) - Scheduled task configuration
 
 **Alternative Runtimes:**
+
 - [pikku-fastify](/skills/pikku-fastify) - Higher performance alternative
 - [pikku-uws](/skills/pikku-uws) - Extreme performance with µWebSockets
 - [pikku-aws-lambda](/skills/pikku-aws-lambda) - Serverless deployment

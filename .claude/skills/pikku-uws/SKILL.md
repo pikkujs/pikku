@@ -36,6 +36,7 @@ npm install @pikku/uws @pikku/core uWebSockets.js
 **Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/uws/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/uws/bin/start.ts)
 
 **Key imports:**
+
 - Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
 - Import `PikkuUWSServer` from `@pikku/uws`
 - Import config, services, and session factory
@@ -44,9 +45,9 @@ npm install @pikku/uws @pikku/core uWebSockets.js
 
 ```typescript
 type UWSCoreConfig = CoreConfig & {
-  port: number              // Default: 3000
-  hostname: string          // Default: 'localhost' (use '0.0.0.0' for Docker)
-  healthCheckPath?: string  // Default: '/health-check'
+  port: number // Default: 3000
+  hostname: string // Default: 'localhost' (use '0.0.0.0' for Docker)
+  healthCheckPath?: string // Default: '/health-check'
 }
 ```
 
@@ -88,6 +89,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/uws/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/uws/src/start.ts)
 
 **Key points:**
+
 - Import bootstrap from local `./.pikku/pikku-bootstrap.gen.js`
 - Import services from local files
 - Create `PikkuUWSServer` with config, services, and session factory
@@ -101,12 +103,14 @@ Backend imports functions from the functions package.
 **Example:** [workspace-starter/backends/uws/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/uws/bin/start.ts)
 
 **Key differences:**
+
 - Import config/services from functions package: `@my-app/functions/src/config`
 - Import bootstrap from functions: `@my-app/functions/.pikku/pikku-bootstrap.gen`
 - No `pikku` script needed in backend package.json
 - Uses functions package filters
 
 **Tradeoffs:**
+
 - ✅ Faster: No extra build step per backend
 - ✅ Simpler: One source of truth
 - ❌ Can't customize filtering (uses functions package filters)
@@ -116,6 +120,7 @@ Backend imports functions from the functions package.
 Backend has its own `pikku.config.json` with custom filters.
 
 **Backend pikku.config.json:**
+
 ```json
 {
   "extends": "../../packages/functions/pikku.config.json",
@@ -128,17 +133,20 @@ Backend has its own `pikku.config.json` with custom filters.
 ```
 
 **Bootstrap import:**
+
 ```typescript
 // Import from backend's .pikku directory (custom filters)
 import '../.pikku/pikku-bootstrap.gen'
 ```
 
 **Build process:**
+
 1. `cd backends/uws`
 2. `yarn pikku` (reads local pikku.config.json, applies custom filters)
 3. Generated files in `backends/uws/.pikku/` include only filtered functions
 
 **Tradeoffs:**
+
 - ✅ Custom filtering: Different API subsets per backend
 - ✅ Tree-shaking: Better bundle size per backend
 - ✅ Runtime-specific: Exclude incompatible functions per backend
@@ -153,8 +161,8 @@ Server mode extends `CoreConfig` with uws-specific options:
 ```typescript
 type UWSCoreConfig = CoreConfig & {
   port: number
-  hostname: string              // Use '0.0.0.0' for Docker
-  healthCheckPath?: string      // Default: '/health-check'
+  hostname: string // Use '0.0.0.0' for Docker
+  healthCheckPath?: string // Default: '/health-check'
 }
 ```
 
@@ -165,10 +173,14 @@ type UWSCoreConfig = CoreConfig & {
 ## Lifecycle
 
 ```typescript
-const server = new PikkuUWSServer(config, singletonServices, createSessionServices)
-server.enableExitOnSigInt()  // Graceful shutdown
-await server.init()           // Initialize (required)
-await server.start()          // Start listening
+const server = new PikkuUWSServer(
+  config,
+  singletonServices,
+  createSessionServices
+)
+server.enableExitOnSigInt() // Graceful shutdown
+await server.init() // Initialize (required)
+await server.start() // Start listening
 ```
 
 ---
@@ -178,6 +190,7 @@ await server.start()          // Start listening
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -190,6 +203,7 @@ await server.start()          // Start listening
 ```
 
 **Workspace (no backend config):**
+
 ```json
 {
   "scripts": {
@@ -200,6 +214,7 @@ await server.start()          // Start listening
 ```
 
 **Workspace (with backend config):**
+
 ```json
 {
   "scripts": {
@@ -226,6 +241,7 @@ Customize via config: `{ healthCheckPath: '/health' }`
 **Docker:** [workspace-starter/docker/Dockerfile.uws](https://github.com/vramework/examples/blob/main/workspace-starter/docker/Dockerfile.uws)
 
 **Performance Tips:**
+
 - Use cluster mode or multiple instances for multi-core systems
 - Monitor memory usage (uws is more memory-efficient)
 - Profile with load testing tools (wrk, autocannon)
@@ -236,9 +252,11 @@ Customize via config: `{ healthCheckPath: '/health' }`
 ## Examples
 
 **Standalone:**
+
 - [templates/uws](https://github.com/vramework/pikku/tree/main/templates/uws) - Standalone uws server
 
 **Workspace:**
+
 - [workspace-starter/backends/uws](https://github.com/vramework/examples/tree/main/workspace-starter/backends/uws) - Workspace backend
 
 ---
@@ -280,14 +298,17 @@ Customize via config: `{ healthCheckPath: '/health' }`
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
 - [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring
 
 **Alternative Runtimes:**
+
 - [pikku-express](/skills/pikku-express) - More common, larger ecosystem
 - [pikku-fastify](/skills/pikku-fastify) - High performance alternative
 - [pikku-ws](/skills/pikku-ws) - Simple WebSocket server

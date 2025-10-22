@@ -32,7 +32,7 @@ import {
   MCPToolMeta,
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
-import { CLIProgramMeta, CLIProgramState } from './wirings/cli/cli.types.js'
+import { CLIMeta, CLIProgramState } from './wirings/cli/cli.types.js'
 
 interface PikkuState {
   function: {
@@ -76,7 +76,7 @@ interface PikkuState {
     promptsMeta: MCPPromptMeta
   }
   cli: {
-    meta: Record<string, CLIProgramMeta>
+    meta: CLIMeta | Record<string, any> // Backward compatible with old published CLI format
     programs: Record<string, CLIProgramState>
   }
   middleware: {
@@ -175,7 +175,7 @@ export const resetPikkuState = () => {
       promptsMeta: {} as MCPPromptMeta,
     },
     cli: {
-      meta: {},
+      meta: { programs: {}, renderers: {} },
       programs: {},
     },
     middleware: {

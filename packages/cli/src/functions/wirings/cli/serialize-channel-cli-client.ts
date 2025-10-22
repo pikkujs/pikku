@@ -162,7 +162,7 @@ export default ${capitalizedName}CLIClient
 // For direct execution (if this file is run directly)
 if (import.meta.url === \`file://\${process.argv[1]}\`) {
   const url = process.env.PIKKU_WS_URL || 'ws://localhost:3000${finalChannelRoute}'
-  ${capitalizedName}CLIClient(url).catch(error => {
+  ${capitalizedName}CLIClient(url, process.argv.slice(2)).catch(error => {
     console.error('Fatal error:', error.message)
     process.exit(1)
   })

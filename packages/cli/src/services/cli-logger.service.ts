@@ -11,7 +11,7 @@ const logo = `
 |_|    |_|_| _)_| _)____/
 `
 
-const BASE_ERROR_URL = 'https://pikku.dev/docs/errors'
+const BASE_ERROR_URL = 'https://pikku.dev/errors'
 
 export class CLILogger implements Logger {
   private silent: boolean

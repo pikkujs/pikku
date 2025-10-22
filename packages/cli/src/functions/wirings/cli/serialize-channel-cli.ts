@@ -74,44 +74,50 @@ export function serializeChannelCLI(
     })
     .join('\n')
 
-  // Get relative paths to type files
+  // Get relative path to channel types file
   const channelTypesPath = getFileImportRelativePath(
     channelFile,
     channelTypesFile,
     packageMappings
   )
-  const functionTypesPath = getFileImportRelativePath(
-    channelFile,
-    functionTypesFile,
-    packageMappings
-  )
+
+  // Build messageWirings metadata
+  const messageWiringsMetadataEntries = Object.entries(commandMap)
+    .map(([commandKey, { pikkuFuncName }]) => {
+      return `        '${commandKey}': { pikkuFuncName: '${pikkuFuncName}' }`
+    })
+    .join(',\n')
+
+  const messageWiringsMetadataCode = `    'command': {\n${messageWiringsMetadataEntries}\n    }`
 
   return `/**
 
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { PikkuMiddleware } from '${functionTypesPath}'
+import { pikkuState } from '@pikku/core'
 ${imports}
 
-// Middleware to close channel after command execution
-const closeAfterExecution: PikkuMiddleware = async (_services, interaction, next) => {
-  try {
-    const result = await next()
-    return result
-  } finally {
-    // Close the channel after function completes
-    if (interaction.channel) {
-      await interaction.channel.close()
-    }
-  }
+// Register channel metadata
+const channelsMeta = pikkuState('channel', 'meta') || {}
+channelsMeta['${finalChannelName}'] = {
+  name: '${finalChannelName}',
+  route: '${finalChannelRoute}',
+  input: null,
+  connect: null,
+  disconnect: null,
+  message: null,
+  messageWirings: {
+${messageWiringsMetadataCode}
+  },
+  tags: ['cli', '${programName}']
 }
+pikkuState('channel', 'meta', channelsMeta)
 
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
   auth: false,
-  middleware: [closeAfterExecution],
   onMessageWiring: {
     command: {
 ${commandEntries}
