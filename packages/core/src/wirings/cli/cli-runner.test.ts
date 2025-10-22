@@ -30,7 +30,7 @@ describe('CLI Runner', () => {
 
   describe('runCLICommand', () => {
     test('should throw NotFoundError when program not found', async () => {
-      pikkuState('cli', 'meta', {})
+      pikkuState('cli', 'meta', { programs: {}, renderers: {} })
 
       await assert.rejects(
         async () =>
@@ -46,11 +46,14 @@ describe('CLI Runner', () => {
 
     test('should throw NotFoundError when command not found', async () => {
       pikkuState('cli', 'meta', {
-        'test-cli': {
-          program: 'test-cli',
-          commands: {},
-          options: {},
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {},
+            options: {},
+          },
         },
+        renderers: {},
       })
 
       pikkuState('cli', 'programs', {
@@ -82,18 +85,21 @@ describe('CLI Runner', () => {
 
       // Setup metadata
       pikkuState('cli', 'meta', {
-        'test-cli': {
-          program: 'test-cli',
-          commands: {
-            greet: {
-              command: 'greet <name>',
-              pikkuFuncName: 'greetFunc',
-              positionals: [{ name: 'name', required: true }],
-              options: {},
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                pikkuFuncName: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
             },
+            options: {},
           },
-          options: {},
         },
+        renderers: {},
       })
 
       pikkuState('cli', 'programs', {
@@ -143,18 +149,21 @@ describe('CLI Runner', () => {
       }
 
       pikkuState('cli', 'meta', {
-        'test-cli': {
-          program: 'test-cli',
-          commands: {
-            test: {
-              command: 'test',
-              pikkuFuncName: 'testFunc',
-              positionals: [],
-              options: {},
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              test: {
+                command: 'test',
+                pikkuFuncName: 'testFunc',
+                positionals: [],
+                options: {},
+              },
             },
+            options: {},
           },
-          options: {},
         },
+        renderers: {},
       })
 
       pikkuState('cli', 'programs', {
@@ -200,18 +209,21 @@ describe('CLI Runner', () => {
       const testFunc = async () => ({ success: true })
 
       pikkuState('cli', 'meta', {
-        'test-cli': {
-          program: 'test-cli',
-          commands: {
-            greet: {
-              command: 'greet <name>',
-              pikkuFuncName: 'greetFunc',
-              positionals: [{ name: 'name', required: true }],
-              options: {},
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                pikkuFuncName: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
             },
+            options: {},
           },
-          options: {},
         },
+        renderers: {},
       })
 
       pikkuState('cli', 'programs', {
@@ -249,18 +261,21 @@ describe('CLI Runner', () => {
       const testFunc = async () => ({ success: true })
 
       pikkuState('cli', 'meta', {
-        'test-cli': {
-          program: 'test-cli',
-          commands: {
-            secure: {
-              command: 'secure',
-              pikkuFuncName: 'secureFunc',
-              positionals: [],
-              options: {},
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              secure: {
+                command: 'secure',
+                pikkuFuncName: 'secureFunc',
+                positionals: [],
+                options: {},
+              },
             },
+            options: {},
           },
-          options: {},
         },
+        renderers: {},
       })
 
       pikkuState('function', 'meta', {
@@ -292,24 +307,27 @@ describe('CLI Runner', () => {
       const greetFunc = async () => 'Hello'
 
       pikkuState('cli', 'meta', {
-        'my-cli': {
-          program: 'my-cli',
-          commands: {
-            greet: {
-              command: 'greet <name>',
-              pikkuFuncName: 'greetFunc',
-              positionals: [{ name: 'name', required: true }],
-              options: {
-                loud: {
-                  description: 'Use loud greeting',
-                  short: 'l',
-                  default: false,
+        programs: {
+          'my-cli': {
+            program: 'my-cli',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                pikkuFuncName: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {
+                  loud: {
+                    description: 'Use loud greeting',
+                    short: 'l',
+                    default: false,
+                  },
                 },
               },
             },
+            options: {},
           },
-          options: {},
         },
+        renderers: {},
       })
 
       wireCLI({
@@ -330,11 +348,14 @@ describe('CLI Runner', () => {
       }
 
       pikkuState('cli', 'meta', {
-        'my-cli': {
-          program: 'my-cli',
-          commands: {},
-          options: {},
+        programs: {
+          'my-cli': {
+            program: 'my-cli',
+            commands: {},
+            options: {},
+          },
         },
+        renderers: {},
       })
 
       wireCLI({
@@ -349,7 +370,7 @@ describe('CLI Runner', () => {
     })
 
     test('should throw error when CLI metadata not found', () => {
-      pikkuState('cli', 'meta', {})
+      pikkuState('cli', 'meta', { programs: {}, renderers: {} })
 
       assert.throws(() => {
         wireCLI({
