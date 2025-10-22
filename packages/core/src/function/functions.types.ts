@@ -77,16 +77,58 @@ export type CorePikkuPermission<
 > = (services: Services, data: In, session?: Session) => Promise<boolean>
 
 /**
+ * Configuration object for creating a permission with metadata
+ *
+ * @template In - The input type.
+ * @template Services - The services type, defaults to `CoreServices`.
+ * @template Session - The session type, defaults to `CoreUserSession`.
+ */
+export type CorePikkuPermissionConfig<
+  In = any,
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = {
+  /** The permission function */
+  func: CorePikkuPermission<In, Services, Session>
+  /** Optional human-readable name for the permission */
+  name?: string
+  /** Optional description of what the permission checks */
+  description?: string
+}
+
+/**
  * Factory function for creating permissions with tree-shaking support
+ * Supports both direct function and configuration object syntax
+ *
+ * @example
+ * ```typescript
+ * // Direct function syntax
+ * export const adminPermission = pikkuPermission(
+ *   async ({ logger }, data, session) => {
+ *     return session?.role === 'admin'
+ *   }
+ * )
+ *
+ * // Configuration object syntax with metadata
+ * export const adminPermission = pikkuPermission({
+ *   name: 'Admin Permission',
+ *   description: 'Checks if user has admin role',
+ *   func: async ({ logger }, data, session) => {
+ *     return session?.role === 'admin'
+ *   }
+ * })
+ * ```
  */
 export const pikkuPermission = <
   In = any,
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
 >(
-  permission: CorePikkuPermission<In, Services, Session>
+  permission:
+    | CorePikkuPermission<In, Services, Session>
+    | CorePikkuPermissionConfig<In, Services, Session>
 ): CorePikkuPermission<In, Services, Session> => {
-  return permission
+  return typeof permission === 'function' ? permission : permission.func
 }
 
 /**

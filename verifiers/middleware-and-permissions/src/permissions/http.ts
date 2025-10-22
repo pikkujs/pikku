@@ -23,3 +23,18 @@ export const httpRoutePermission = pikkuPermission(
     return false
   }
 )
+
+// Example using new object syntax with metadata
+export const httpRoutePermissionWithMetadata = pikkuPermission({
+  name: 'HTTP Route Permission',
+  description: 'Validates permissions for all /api/* routes',
+  func: async ({ logger }, _data, session) => {
+    logger.info({
+      type: 'http-permission-with-metadata',
+      name: '/api/*',
+      sessionExists: !!session,
+    })
+    // Return false to ensure all permissions run
+    return false
+  },
+})
