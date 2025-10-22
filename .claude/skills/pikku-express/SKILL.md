@@ -309,7 +309,7 @@ Customize via config: `{ healthCheckPath: '/health' }`
 
 Express servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0'` for containerized deployments.
 
-For Docker-specific guidance, see [Docker's Node.js guide](https://docs.docker.com/language/nodejs/).
+**Docker:** [workspace-starter/docker/Dockerfile.express](https://github.com/vramework/examples/blob/main/workspace-starter/docker/Dockerfile.express)
 
 ---
 
