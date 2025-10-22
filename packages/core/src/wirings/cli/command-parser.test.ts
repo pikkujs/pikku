@@ -4,77 +4,80 @@ import { parseCLIArguments, generateCommandHelp } from './command-parser.js'
 import { CLIMeta } from './cli.types.js'
 
 const testMeta: CLIMeta = {
-  'test-cli': {
-    program: 'test-cli',
-    options: {
-      verbose: {
-        description: 'Enable verbose output',
-        short: 'v',
-        default: false,
-      },
-    },
-    commands: {
-      greet: {
-        parameters: '<name>',
-        pikkuFuncName: 'greetFunc',
-        positionals: [{ name: 'name', required: true }],
-        options: {
-          loud: {
-            description: 'Use loud greeting',
-            short: 'l',
-            default: false,
-          },
+  programs: {
+    'test-cli': {
+      program: 'test-cli',
+      options: {
+        verbose: {
+          description: 'Enable verbose output',
+          short: 'v',
+          default: false,
         },
       },
-      user: {
-        pikkuFuncName: '',
-        positionals: [],
-        options: {},
-        subcommands: {
-          create: {
-            parameters: '<name> <email>',
-            pikkuFuncName: 'createUserFunc',
-            positionals: [
-              { name: 'name', required: true },
-              { name: 'email', required: true },
-            ],
-            options: {
-              role: {
-                description: 'User role',
-                short: 'r',
-                default: 'user',
-                choices: ['admin', 'user', 'guest'],
-              },
-            },
-          },
-          delete: {
-            parameters: '<id>',
-            pikkuFuncName: 'deleteUserFunc',
-            positionals: [{ name: 'id', required: true }],
-            options: {
-              force: {
-                description: 'Force delete',
-                short: 'f',
-                default: false,
-              },
+      commands: {
+        greet: {
+          parameters: '<name>',
+          pikkuFuncName: 'greetFunc',
+          positionals: [{ name: 'name', required: true }],
+          options: {
+            loud: {
+              description: 'Use loud greeting',
+              short: 'l',
+              default: false,
             },
           },
         },
-      },
-      files: {
-        parameters: '<paths...>',
-        pikkuFuncName: 'filesFunc',
-        positionals: [{ name: 'paths', required: true, variadic: true }],
-        options: {},
-      },
-      optional: {
-        parameters: '[name]',
-        pikkuFuncName: 'optionalFunc',
-        positionals: [{ name: 'name', required: false }],
-        options: {},
+        user: {
+          pikkuFuncName: '',
+          positionals: [],
+          options: {},
+          subcommands: {
+            create: {
+              parameters: '<name> <email>',
+              pikkuFuncName: 'createUserFunc',
+              positionals: [
+                { name: 'name', required: true },
+                { name: 'email', required: true },
+              ],
+              options: {
+                role: {
+                  description: 'User role',
+                  short: 'r',
+                  default: 'user',
+                  choices: ['admin', 'user', 'guest'],
+                },
+              },
+            },
+            delete: {
+              parameters: '<id>',
+              pikkuFuncName: 'deleteUserFunc',
+              positionals: [{ name: 'id', required: true }],
+              options: {
+                force: {
+                  description: 'Force delete',
+                  short: 'f',
+                  default: false,
+                },
+              },
+            },
+          },
+        },
+        files: {
+          parameters: '<paths...>',
+          pikkuFuncName: 'filesFunc',
+          positionals: [{ name: 'paths', required: true, variadic: true }],
+          options: {},
+        },
+        optional: {
+          parameters: '[name]',
+          pikkuFuncName: 'optionalFunc',
+          positionals: [{ name: 'name', required: false }],
+          options: {},
+        },
       },
     },
   },
+  renderers: {},
 }
 
 describe('Command Parser', () => {
@@ -290,22 +293,25 @@ describe('Command Parser', () => {
 
     test('should parse number values correctly', () => {
       const metaWithNumber: CLIMeta = {
-        'num-cli': {
-          program: 'num-cli',
-          options: {},
-          commands: {
-            test: {
-              pikkuFuncName: 'testFunc',
-              positionals: [],
-              options: {
-                port: {
-                  description: 'Port number',
-                  default: 3000,
+        programs: {
+          'num-cli': {
+            program: 'num-cli',
+            options: {},
+            commands: {
+              test: {
+                pikkuFuncName: 'testFunc',
+                positionals: [],
+                options: {
+                  port: {
+                    description: 'Port number',
+                    default: 3000,
+                  },
                 },
               },
             },
           },
         },
+        renderers: {},
       }
 
       const result = parseCLIArguments(
@@ -367,19 +373,22 @@ describe('Command Parser', () => {
 
     test('should show command description if available', () => {
       const metaWithDesc: CLIMeta = {
-        'test-cli': {
-          program: 'test-cli',
-          options: {},
-          commands: {
-            greet: {
-              parameters: '<name>',
-              pikkuFuncName: 'greetFunc',
-              description: 'Greet a user',
-              positionals: [{ name: 'name', required: true }],
-              options: {},
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            options: {},
+            commands: {
+              greet: {
+                parameters: '<name>',
+                pikkuFuncName: 'greetFunc',
+                description: 'Greet a user',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
             },
           },
         },
+        renderers: {},
       }
 
       const help = generateCommandHelp('test-cli', metaWithDesc, ['greet'])
