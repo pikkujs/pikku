@@ -11,7 +11,16 @@
   "websocketFile": ".pikku/pikku-websocket.gen.ts",
   "cli": {
     "entrypoints": {
-      "pikku": [".pikku/cli/pikku-cli.gen.ts"]
+      "pikku": [
+        ".pikku/cli/pikku-cli.gen.ts",
+        {
+          "type": "channel",
+          "wirePath": ".pikku/cli/pikku-cli-channel.gen.ts",
+          "path": ".pikku/cli/pikku-cli-client.gen.ts",
+          "name": "pikku-cli",
+          "route": "/cli/pikku"
+        }
+      ]
     }
   }
 }

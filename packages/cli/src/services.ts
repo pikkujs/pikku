@@ -92,6 +92,20 @@ export const defaultCLIRenderer = pikkuCLIRender<
   }
 })
 
+/**
+ * Client-safe CLI renderer that outputs to console (no service dependencies)
+ * This renderer can be used in CLI-over-channel clients
+ */
+export const clientCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
+  (_services, data) => {
+    if (data) {
+      // Simple console output without service dependencies
+      const prefix = data.type ? `[${data.type}] ` : ''
+      console.log(`${prefix}${data.message}`)
+    }
+  }
+)
+
 export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,
   data

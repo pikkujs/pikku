@@ -65,7 +65,8 @@ export const addCLI: AddWiring = (
   }
 
   // Add this program to the CLI metadata
-  inspectorState.cli.meta[cliConfig.programName] = cliConfig.programMeta
+  inspectorState.cli.meta.programs[cliConfig.programName] =
+    cliConfig.programMeta
 }
 
 /**
@@ -161,8 +162,12 @@ function processCLIConfig(
         break
 
       case 'render':
-        // Track that a default renderer exists
-        programMeta.defaultRenderName = 'defaultRenderer'
+        // Extract the actual renderer function name
+        programMeta.defaultRenderName = extractFunctionName(
+          prop.initializer,
+          typeChecker,
+          inspectorState.rootDir
+        ).pikkuFuncName
         break
     }
   }
@@ -758,4 +763,75 @@ function parseCommandPattern(pattern: string): any[] {
   }
 
   return positionals
+}
+
+/**
+ * Adds CLI renderer metadata to the inspector state
+ */
+export const addCLIRenderers: AddWiring = (
+  logger,
+  node,
+  typeChecker,
+  inspectorState,
+  options
+) => {
+  if (!ts.isCallExpression(node)) return
+
+  const { expression, arguments: args, typeArguments } = node
+
+  // Only handle pikkuCLIRender calls
+  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuCLIRender') {
+    return
+  }
+
+  if (args.length === 0) return
+
+  // Extract renderer name
+  const { pikkuFuncName, exportedName } = extractFunctionName(
+    node,
+    typeChecker,
+    inspectorState.rootDir
+  )
+
+  // Get the source file path
+  const sourceFile = node.getSourceFile()
+  const filePath = sourceFile.fileName
+
+  // Extract services from type parameters (second type param is Services)
+  const services: { optimized: boolean; services: string[] } = {
+    optimized: true,
+    services: [],
+  }
+
+  if (typeArguments && typeArguments.length >= 2) {
+    // Second type parameter is the Services type
+    const servicesTypeNode = typeArguments[1]
+    if (servicesTypeNode) {
+      const servicesType = typeChecker.getTypeFromTypeNode(servicesTypeNode)
+
+      // Extract property names from the Services type
+      const properties = servicesType.getProperties()
+      for (const prop of properties) {
+        services.services.push(prop.getName())
+      }
+
+      // If no specific services found, it might be using the full services object
+      if (properties.length === 0) {
+        services.optimized = false
+      }
+    }
+  }
+
+  // Store renderer metadata
+  inspectorState.cli.meta.renderers[pikkuFuncName] = {
+    name: pikkuFuncName,
+    exportedName: exportedName ?? undefined,
+    services,
+    filePath,
+  }
+
+  // Add to files map if exported
+  if (exportedName) {
+    inspectorState.cli.files.add(filePath)
+  }
 }

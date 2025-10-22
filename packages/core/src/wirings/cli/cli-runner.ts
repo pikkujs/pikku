@@ -15,6 +15,7 @@ import {
   CLIProgramState,
   CorePikkuCLIRender,
   CoreCLICommandConfig,
+  CLIMeta,
 } from './cli.types.js'
 import type {
   CoreSingletonServices,
@@ -421,8 +422,15 @@ export async function executeCLI({
 }): Promise<void> {
   try {
     // Get CLI metadata from state
-    const allCLIMeta = pikkuState('cli', 'meta') || {}
-    const programMeta = allCLIMeta[programName]
+    const allCLIMeta = pikkuState('cli', 'meta') as unknown as
+      | CLIMeta
+      | undefined
+    if (!allCLIMeta) {
+      throw new Error(
+        '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/docs/errors/pku342 for more information.'
+      )
+    }
+    const programMeta = allCLIMeta.programs[programName]
 
     if (!programMeta) {
       console.error(`Error: CLI program "${programName}" not found`)

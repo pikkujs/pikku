@@ -13,7 +13,7 @@ import { addChannel } from './add/add-channel.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
-import { addCLI } from './add/add-cli.js'
+import { addCLI, addCLIRenderers } from './add/add-cli.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -93,6 +93,7 @@ export const visitRoutes = (
   addQueueWorker(logger, node, checker, state, options)
   addChannel(logger, node, checker, state, options)
   addCLI(logger, node, checker, state, options)
+  addCLIRenderers(logger, node, checker, state, options)
   addMCPResource(logger, node, checker, state, options)
   addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)

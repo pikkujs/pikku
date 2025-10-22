@@ -94,9 +94,27 @@ export type CLIProgramMeta = {
 }
 
 /**
+ * Renderer metadata for CLI commands
+ */
+export interface RendererMeta {
+  name: string
+  exportedName?: string
+  services: {
+    optimized: boolean
+    services: string[]
+  }
+  filePath: string
+}
+
+export type RenderersMeta = Record<string, RendererMeta>
+
+/**
  * All CLI programs metadata
  */
-export type CLIMeta = Record<string, CLIProgramMeta>
+export interface CLIMeta {
+  programs: Record<string, CLIProgramMeta>
+  renderers: RenderersMeta
+}
 
 /**
  * CLI-specific renderer that outputs to console

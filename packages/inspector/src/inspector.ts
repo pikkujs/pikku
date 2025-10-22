@@ -80,7 +80,10 @@ export const inspect = (
       files: new Set(),
     },
     cli: {
-      meta: {},
+      meta: {
+        programs: {},
+        renderers: {},
+      },
       files: new Set(),
     },
     middleware: {

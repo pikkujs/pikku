@@ -5,7 +5,13 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { join } from 'node:path'
 import { serializeLocalCLIBootstrap } from './serialize-local-cli-bootstrap.js'
 import { serializeChannelCLI } from './serialize-channel-cli.js'
-import { serializeChannelCLIClient } from './serialize-channel-cli-client.js'
+import {
+  serializeChannelCLIClient,
+  collectRendererNames,
+} from './serialize-channel-cli-client.js'
+import { existsSync } from 'fs'
+import { rm } from 'fs/promises'
+import { ErrorCode } from '@pikku/inspector'
 
 export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -28,7 +34,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
     for (const [programName, entrypointConfigs] of Object.entries(
       config.cli.entrypoints
     )) {
-      const programMeta = visitState.cli.meta[programName]
+      const programMeta = visitState.cli.meta.programs[programName]
 
       if (!programMeta) {
         logger.warn(
@@ -86,13 +92,55 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
           if (channelClientPath) {
             const channelClientFile = join(config.rootDir, channelClientPath)
 
+            // Validate that renderers don't depend on services (client-side renderers can't access server services)
+            const rendererNames = collectRendererNames(programMeta)
+            const problematicRenderers: Array<{
+              name: string
+              services: string[]
+            }> = []
+
+            for (const rendererName of rendererNames) {
+              const rendererMeta = visitState.cli.meta.renderers[rendererName]
+              if (rendererMeta?.services?.services?.length > 0) {
+                problematicRenderers.push({
+                  name: rendererName,
+                  services: rendererMeta.services.services,
+                })
+              }
+            }
+
+            // If any renderers depend on services, abort client generation
+            if (problematicRenderers.length > 0) {
+              const details = problematicRenderers
+                .map(
+                  (r) => `  - ${r.name} depends on: ${r.services.join(', ')}`
+                )
+                .join('\n')
+
+              logger.critical(
+                ErrorCode.CLI_CLIENTSIDE_RENDERER_HAS_SERVICES,
+                `Cannot generate CLI channel client for '${programName}': renderers cannot depend on services (client-side execution)\n${details}\n\nRenderers used in CLI-over-channel must be service-free since they execute on the client.`
+              )
+
+              // Delete existing client file if it exists
+              if (existsSync(channelClientFile)) {
+                await rm(channelClientFile)
+                logger.debug(
+                  `Deleted existing CLI channel client: ${channelClientFile}`
+                )
+              }
+
+              continue
+            }
+
             const clientCode = serializeChannelCLIClient(
               programName,
               programMeta,
               channelClientFile,
               config,
               config.bootstrapFile,
-              channelRoute
+              channelRoute,
+              visitState.cli.meta.renderers
             )
 
             await writeFileInDir(logger, channelClientFile, clientCode)
