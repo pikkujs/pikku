@@ -84,19 +84,44 @@ export const pikkuPermission = <In>(
 }
 
 /**
+ * Configuration object for creating middleware with metadata
+ */
+export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = SingletonServices> = {
+  /** The middleware function */
+  func: PikkuMiddleware<RequiredServices>
+  /** Optional human-readable name for the middleware */
+  name?: string
+  /** Optional description of what the middleware does */
+  description?: string
+}
+
+/**
  * Factory function for creating middleware with tree-shaking support.
- * This enables the bundler to detect which services your middleware actually uses.
+ * Supports both direct function and configuration object syntax.
  *
  * @example
  * \`\`\`typescript
+ * // Direct function syntax
  * const middleware = pikkuMiddleware(({ logger }, interactions, next) => {
  *   logger.info('Middleware executed')
  *   await next()
  * })
+ *
+ * // Configuration object syntax with metadata
+ * const logMiddleware = pikkuMiddleware({
+ *   name: 'Request Logger',
+ *   description: 'Logs all incoming requests',
+ *   func: async ({ logger }, interactions, next) => {
+ *     logger.info('Request started')
+ *     await next()
+ *   }
+ * })
  * \`\`\`
  */
-export const pikkuMiddleware = (func: PikkuMiddleware) => {
-  return func
+export const pikkuMiddleware = <RequiredServices extends SingletonServices = SingletonServices>(
+  middleware: PikkuMiddleware<RequiredServices> | PikkuMiddlewareConfig<RequiredServices>
+): PikkuMiddleware<RequiredServices> => {
+  return typeof middleware === 'function' ? middleware : middleware.func
 }
 
 /**
