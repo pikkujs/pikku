@@ -45,18 +45,42 @@ export type PikkuPermission<In = unknown, RequiredServices extends Services = Se
 export type PikkuMiddleware<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuMiddleware<RequiredServices, Session>
 
 /**
+ * Configuration object for creating a permission with metadata
+ */
+export type PikkuPermissionConfig<In = unknown, RequiredServices extends Services = Services> = {
+  /** The permission function */
+  func: PikkuPermission<In, RequiredServices>
+  /** Optional human-readable name for the permission */
+  name?: string
+  /** Optional description of what the permission checks */
+  description?: string
+}
+
+/**
  * Factory function for creating permissions with tree-shaking support.
- * This enables the bundler to detect which services your permission actually uses.
+ * Supports both direct function and configuration object syntax.
  *
  * @example
  * \`\`\`typescript
- * const permission = on(({ logger }, data, session) => {
- *   return session?.isAdmin || false
+ * // Direct function syntax
+ * const permission = pikkuPermission(({ logger }, data, session) => {
+ *   return session?.role === 'admin'
+ * })
+ *
+ * // Configuration object syntax with metadata
+ * const adminPermission = pikkuPermission({
+ *   name: 'Admin Permission',
+ *   description: 'Checks if user has admin role',
+ *   func: async ({ logger }, data, session) => {
+ *     return session?.role === 'admin'
+ *   }
  * })
  * \`\`\`
  */
-export const pikkuPermission = <In>(func: PikkuPermission<In>) => {
-  return func
+export const pikkuPermission = <In>(
+  permission: PikkuPermission<In> | PikkuPermissionConfig<In>
+): PikkuPermission<In> => {
+  return typeof permission === 'function' ? permission : permission.func
 }
 
 /**

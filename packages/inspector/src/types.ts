@@ -93,6 +93,8 @@ export interface InspectorPermissionState {
       position: number
       exportedName: string | null
       factory?: boolean // true if wrapped with pikkuPermissionFactory
+      name?: string // optional name from pikkuPermission({ name: '...' })
+      description?: string // optional description from pikkuPermission({ description: '...' })
     }
   >
   // Tag-based permission calls tracking - tag -> group metadata

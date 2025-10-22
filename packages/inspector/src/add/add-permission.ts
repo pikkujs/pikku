@@ -6,6 +6,8 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 import { extractPermissionPikkuNames } from '../utils/permissions.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
+import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 
 /**
  * Inspect pikkuPermission calls, addPermission calls, and addHTTPPermission calls
@@ -22,18 +24,46 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
   // Handle pikkuPermission(...) - individual permission function definition
   if (expression.text === 'pikkuPermission') {
-    const handlerNode = args[0]
-    if (!handlerNode) return
+    const arg = args[0]
+    if (!arg) return
 
-    if (
-      !ts.isArrowFunction(handlerNode) &&
-      !ts.isFunctionExpression(handlerNode)
-    ) {
+    let actualHandler: ts.ArrowFunction | ts.FunctionExpression
+    let name: string | undefined
+    let description: string | undefined
+
+    // Check if using object syntax: pikkuPermission({ func: ..., name: '...', description: '...' })
+    if (ts.isObjectLiteralExpression(arg)) {
+      // Extract name and description metadata
+      const nameValue = getPropertyValue(arg, 'name')
+      const descValue = getPropertyValue(arg, 'description')
+      name = typeof nameValue === 'string' ? nameValue : undefined
+      description = typeof descValue === 'string' ? descValue : undefined
+
+      // Extract the func property
+      const fnProp = getPropertyAssignmentInitializer(
+        arg,
+        'func',
+        true,
+        checker
+      )
+      if (
+        !fnProp ||
+        (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
+      ) {
+        logger.error(
+          `• pikkuPermission object missing required 'func' property.`
+        )
+        return
+      }
+      actualHandler = fnProp
+    } else if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) {
+      actualHandler = arg
+    } else {
       logger.error(`• Handler for pikkuPermission is not a function.`)
       return
     }
 
-    const services = extractServicesFromFunction(handlerNode)
+    const services = extractServicesFromFunction(actualHandler)
     const { pikkuFuncName, exportedName } = extractFunctionName(
       node,
       checker,
@@ -44,10 +74,12 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
+      name,
+      description,
     }
 
     logger.debug(
-      `• Found permission with services: ${services.services.join(', ')}`
+      `• Found permission with services: ${services.services.join(', ')}${name ? ` (name: ${name})` : ''}${description ? ` (description: ${description})` : ''}`
     )
     return
   }
