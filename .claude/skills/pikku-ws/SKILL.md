@@ -33,6 +33,7 @@ npm install @pikku/ws @pikku/core ws
 **Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/ws/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/ws/bin/start.ts)
 
 **Key imports:**
+
 - Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
 - Import `pikkuWebsocketHandler` from `@pikku/ws`
 - Import `Server` from `http` and `WebSocketServer` from `ws`
@@ -41,8 +42,8 @@ npm install @pikku/ws @pikku/core ws
 ### 3. Create Servers Manually
 
 ```typescript
-const server = new Server()                    // HTTP server for upgrades
-const wss = new WebSocketServer({ noServer: true })  // WebSocket server
+const server = new Server() // HTTP server for upgrades
+const wss = new WebSocketServer({ noServer: true }) // WebSocket server
 pikkuWebsocketHandler({ server, wss, singletonServices, createSessionServices })
 ```
 
@@ -247,13 +248,16 @@ WebSocket servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring and configuration
 
 **Alternative Runtimes:**
+
 - [pikku-uws](/skills/pikku-uws) - Higher performance WebSocket with µWebSockets
 - [pikku-express](/skills/pikku-express) - HTTP + WebSocket in one server
 - [pikku-fastify](/skills/pikku-fastify) - HTTP + WebSocket in one server

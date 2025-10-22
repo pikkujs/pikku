@@ -52,7 +52,7 @@ export const wireCLI = <
   // Get the existing metadata that was generated during inspection
   const cliMeta = pikkuState('cli', 'meta') || {}
 
-  if (!cliMeta[cli.program]) {
+  if (!cliMeta.programs?.[cli.program]) {
     throw new Error(
       `CLI metadata not found for program '${cli.program}'. Did you run 'pikku all'?`
     )
@@ -123,7 +123,7 @@ function registerCLICommands(
   program: string
 ) {
   // Get the CLI metadata to find actual function names
-  const cliMeta = pikkuState('cli', 'meta')[program]
+  const cliMeta = pikkuState('cli', 'meta').programs[program]
 
   for (const [name, command] of Object.entries(commands)) {
     const fullPath = [...path, name]
@@ -243,7 +243,7 @@ export async function runCLICommand({
 }): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState('cli', 'meta')
-  const programMeta = cliMeta[program]
+  const programMeta = cliMeta.programs?.[program]
   if (!programMeta) {
     throw new NotFoundError(`Program not found: ${program}`)
   }
@@ -427,7 +427,7 @@ export async function executeCLI({
       | undefined
     if (!allCLIMeta) {
       throw new Error(
-        '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/docs/errors/pku342 for more information.'
+        '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/errors/pku342 for more information.'
       )
     }
     const programMeta = allCLIMeta.programs[programName]

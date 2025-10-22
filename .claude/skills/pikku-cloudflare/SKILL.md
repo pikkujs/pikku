@@ -39,6 +39,7 @@ npm install -D wrangler @cloudflare/workers-types typescript
 **Workspace:** Create `src/index.ts` based on [workspace-starter/backends/cloudflare/src/index.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/cloudflare/src/index.ts)
 
 **Key imports:**
+
 - Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
 - Import `runFetch` and `runScheduled` from `@pikku/cloudflare`
 - Import setup functions and services
@@ -47,6 +48,7 @@ npm install -D wrangler @cloudflare/workers-types typescript
 ### 3. Configure wrangler.toml
 
 Create `wrangler.toml` with:
+
 - Worker name and main entry point
 - Compatibility flags (nodejs_compat)
 - Environment variables and bindings
@@ -62,7 +64,9 @@ Create `wrangler.toml` with:
 const localVariables = new LocalVariablesService(env)
 const config = await createConfig(localVariables)
 const localSecrets = new LocalSecretService(localVariables)
-const singletonServices = await createSingletonServices(config, { secrets: localSecrets })
+const singletonServices = await createSingletonServices(config, {
+  secrets: localSecrets,
+})
 ```
 
 **Note:** No cold start caching needed (Workers start in < 1ms).
@@ -115,6 +119,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/cloudflare-workers/src/index.ts](https://github.com/vramework/pikku/blob/main/templates/cloudflare-workers/src/index.ts)
 
 **Key points:**
+
 - Import bootstrap from local `./.pikku/pikku-bootstrap.gen.js`
 - Import services from local files
 - Export default object with `fetch` and `scheduled` handlers
@@ -128,12 +133,14 @@ Backend imports functions from the functions package.
 **Example:** [workspace-starter/backends/cloudflare/src/index.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/cloudflare/src/index.ts)
 
 **Key differences:**
+
 - Import config/services from functions package: `@my-app/functions/src/services`
 - Import bootstrap from functions: `@my-app/functions/.pikku/pikku-bootstrap.gen`
 - No `pikku` script needed in backend package.json
 - Uses functions package filters
 
 **Tradeoffs:**
+
 - ✅ Faster: No extra build step per backend
 - ✅ Simpler: One source of truth
 - ❌ Can't customize filtering (uses functions package filters)
@@ -143,6 +150,7 @@ Backend imports functions from the functions package.
 Backend has its own `pikku.config.json` with custom filters.
 
 **Backend pikku.config.json:**
+
 ```json
 {
   "extends": "../../packages/functions/pikku.config.json",
@@ -155,17 +163,20 @@ Backend has its own `pikku.config.json` with custom filters.
 ```
 
 **Bootstrap import:**
+
 ```typescript
 // Import from backend's .pikku directory (custom filters)
 import '../.pikku/pikku-bootstrap.gen'
 ```
 
 **Build process:**
+
 1. `cd backends/cloudflare`
 2. `yarn pikku` (reads local pikku.config.json, applies custom filters)
 3. Generated files in `backends/cloudflare/.pikku/` include only filtered functions
 
 **Tradeoffs:**
+
 - ✅ Custom filtering: Different API subsets per backend
 - ✅ Tree-shaking: Better bundle size per backend
 - ✅ Runtime-specific: Exclude incompatible functions per backend
@@ -180,6 +191,7 @@ import '../.pikku/pikku-bootstrap.gen'
 Handle HTTP requests at the edge.
 
 **Pattern:**
+
 ```typescript
 import { runFetch } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
@@ -207,6 +219,7 @@ export default {
 Handle cron triggers.
 
 **Pattern:**
+
 ```typescript
 import { runScheduled } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
@@ -221,6 +234,7 @@ export default {
 ```
 
 **Configure cron in wrangler.toml:**
+
 ```toml
 [triggers]
 crons = ["0 0 * * *"]  # Daily at midnight UTC
@@ -233,6 +247,7 @@ crons = ["0 0 * * *"]  # Daily at midnight UTC
 Services are initialized from Cloudflare environment variables.
 
 **Pattern:**
+
 ```typescript
 import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
 import { createConfig, createSingletonServices } from './services.js'
@@ -251,6 +266,7 @@ export const setupServices = async (
 ```
 
 **Key points:**
+
 - `LocalVariablesService`: Reads from Cloudflare env vars
 - `LocalSecretService`: Reads secrets from env vars (set via wrangler)
 - No cold start caching needed (Workers are fast)
@@ -266,6 +282,7 @@ Cloudflare Workers support WebSockets via Durable Objects with hibernation.
 **Example:** [templates/cloudflare-websocket/src/websocket-hibernation-server.ts](https://github.com/vramework/pikku/blob/main/templates/cloudflare-websocket/src/websocket-hibernation-server.ts)
 
 **Pattern:**
+
 ```typescript
 import { CloudflareWebSocketHibernationServer } from '@pikku/cloudflare'
 import { CloudflareEventHubService } from '@pikku/cloudflare'
@@ -292,12 +309,14 @@ export class WebSocketHibernationServer extends CloudflareWebSocketHibernationSe
 ```
 
 **Key points:**
+
 - Extends `CloudflareWebSocketHibernationServer`
 - Uses `CloudflareEventHubService` for WebSocket management
 - Hibernation reduces memory usage when connections are idle
 - Requires Durable Objects (paid plan)
 
 **WebSocket examples:**
+
 - [templates/cloudflare-websocket](https://github.com/vramework/pikku/tree/main/templates/cloudflare-websocket)
 - [workspace-starter/backends/cloudflare-websocket](https://github.com/vramework/examples/tree/main/workspace-starter/backends/cloudflare-websocket)
 
@@ -306,6 +325,7 @@ export class WebSocketHibernationServer extends CloudflareWebSocketHibernationSe
 ## Wrangler Configuration
 
 **wrangler.toml:**
+
 ```toml
 #:schema node_modules/wrangler/config-schema.json
 name = "my-pikku-app"
@@ -324,6 +344,7 @@ crons = ["0 0 * * *"]
 ```
 
 **Key settings:**
+
 - `main`: Entry point file (Wrangler compiles TypeScript automatically)
 - `compatibility_date`: Cloudflare Workers API version
 - `compatibility_flags`: Enable Node.js compatibility
@@ -331,6 +352,7 @@ crons = ["0 0 * * *"]
 - `[triggers]`: Cron schedules
 
 **Secrets:** Set via wrangler CLI (not in wrangler.toml):
+
 ```bash
 wrangler secret put DATABASE_URL
 wrangler secret put JWT_SECRET
@@ -345,6 +367,7 @@ wrangler secret put JWT_SECRET
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -358,6 +381,7 @@ wrangler secret put JWT_SECRET
 ```
 
 **Workspace (no backend config):**
+
 ```json
 {
   "scripts": {
@@ -369,6 +393,7 @@ wrangler secret put JWT_SECRET
 ```
 
 **Workspace (with backend config):**
+
 ```json
 {
   "scripts": {
@@ -391,6 +416,7 @@ npm run dev
 ```
 
 **Features:**
+
 - Hot reload on file changes
 - Local environment variables
 - Simulates edge runtime locally
@@ -421,6 +447,7 @@ wrangler deployments list
 
 **Authentication:**
 Login to Cloudflare:
+
 ```bash
 wrangler login
 ```
@@ -447,10 +474,12 @@ Configure in Cloudflare Dashboard → Workers & Pages → your worker → Settin
 ## Examples
 
 **Standalone:**
+
 - [templates/cloudflare-workers](https://github.com/vramework/pikku/tree/main/templates/cloudflare-workers) - HTTP + cron
 - [templates/cloudflare-websocket](https://github.com/vramework/pikku/tree/main/templates/cloudflare-websocket) - WebSocket with Durable Objects
 
 **Workspace:**
+
 - [workspace-starter/backends/cloudflare](https://github.com/vramework/examples/tree/main/workspace-starter/backends/cloudflare) - Workspace HTTP backend
 - [workspace-starter/backends/cloudflare-websocket](https://github.com/vramework/examples/tree/main/workspace-starter/backends/cloudflare-websocket) - Workspace WebSocket backend
 
@@ -516,15 +545,18 @@ Configure in Cloudflare Dashboard → Workers & Pages → your worker → Settin
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
 - [pikku-scheduler](/skills/pikku-scheduler) - Scheduled task configuration
 - [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring (with Durable Objects)
 
 **Alternative Runtimes:**
+
 - [pikku-aws-lambda](/skills/pikku-aws-lambda) - Serverless alternative
 - [pikku-express](/skills/pikku-express) - Traditional server deployment
 - [pikku-fastify](/skills/pikku-fastify) - Traditional server deployment

@@ -39,6 +39,7 @@ npm install @pikku/queue-bullmq @pikku/core bullmq ioredis
 **Workspace:** Create worker file importing from functions package
 
 **Key imports:**
+
 - Import bootstrap from **queue subdirectory** (see [pikku-project-setup](/skills/pikku-project-setup) for queue bootstrap paths)
 - Standalone: `./.pikku/queue/pikku-bootstrap-queue.gen.js`
 - Workspace: `@my-app/functions/.pikku/queue/pikku-bootstrap-queue.gen.js`
@@ -64,6 +65,7 @@ const bullQueueWorkers = new BullQueueWorkers(
 ### 4. Setup Queue Service (for enqueuing)
 
 Add `BullQueueService` to singleton services in your HTTP/channel handlers:
+
 ```typescript
 import { BullQueueService } from '@pikku/queue-bullmq'
 
@@ -107,6 +109,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/bullmq/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/bullmq/src/start.ts)
 
 **Pattern:**
+
 ```typescript
 import { BullQueueWorkers } from '@pikku/queue-bullmq'
 import {
@@ -123,7 +126,7 @@ async function main(): Promise<void> {
   singletonServices.logger.info('Starting Bull queue workers...')
 
   const bullQueueWorkers = new BullQueueWorkers(
-    {},  // Redis connection options
+    {}, // Redis connection options
     singletonServices,
     createSessionServices
   )
@@ -135,6 +138,7 @@ main()
 ```
 
 **Key points:**
+
 - Import bootstrap from `./.pikku/queue/pikku-bootstrap-queue.gen.js` (note `/queue/` directory)
 - Create `BullQueueWorkers` with Redis connection, services, and session factory
 - Call `registerQueues()` to start processing
@@ -145,6 +149,7 @@ main()
 Backend imports functions from the functions package.
 
 **Pattern:**
+
 ```typescript
 import { BullQueueWorkers } from '@pikku/queue-bullmq'
 import {
@@ -171,6 +176,7 @@ main()
 ```
 
 **Key differences:**
+
 - Import config/services from functions package
 - Import bootstrap from functions: `@my-app/functions/.pikku/queue/pikku-bootstrap-queue.gen.js`
 - No custom filtering support for queue workers
@@ -182,6 +188,7 @@ main()
 BullMQ requires Redis connection configuration.
 
 **Pattern:**
+
 ```typescript
 import { ConnectionOptions } from 'bullmq'
 
@@ -208,6 +215,7 @@ const bullQueueWorkers = new BullQueueWorkers(
 ```
 
 **Redis URL:** You can also use a connection string:
+
 ```typescript
 const redisConnectionOptions = {
   connection: 'redis://user:password@host:6379/0',
@@ -215,6 +223,7 @@ const redisConnectionOptions = {
 ```
 
 **Production tips:**
+
 - Use Redis Cluster for high availability
 - Enable TLS for secure connections
 - Use connection pooling for multiple workers
@@ -227,6 +236,7 @@ const redisConnectionOptions = {
 Use `BullQueueService` to add jobs to queues from your HTTP/channel handlers.
 
 **Setup in services:**
+
 ```typescript
 import { BullQueueService } from '@pikku/queue-bullmq'
 import type { QueueService } from '@pikku/core/queue'
@@ -247,6 +257,7 @@ export const createSingletonServices = async (config: Config) => {
 ```
 
 **Adding jobs:**
+
 ```typescript
 // In your Pikku function
 await services.queue.add('emailQueue', {
@@ -257,16 +268,17 @@ await services.queue.add('emailQueue', {
 
 // With options
 await services.queue.add('emailQueue', data, {
-  priority: 1,           // Higher priority = processed first
-  delay: 5000,          // Delay 5 seconds before processing
-  attempts: 3,          // Retry up to 3 times
-  jobId: 'unique-id',   // Deduplicate jobs
+  priority: 1, // Higher priority = processed first
+  delay: 5000, // Delay 5 seconds before processing
+  attempts: 3, // Retry up to 3 times
+  jobId: 'unique-id', // Deduplicate jobs
   removeOnComplete: 10, // Keep last 10 completed jobs
-  removeOnFail: 50,     // Keep last 50 failed jobs
+  removeOnFail: 50, // Keep last 50 failed jobs
 })
 ```
 
 **Job options:**
+
 - `priority`: Job priority (lower number = higher priority)
 - `delay`: Delay in milliseconds before processing
 - `attempts`: Number of retry attempts
@@ -283,6 +295,7 @@ await services.queue.add('emailQueue', data, {
 Configure worker behavior using `workerConfig` in your queue function definition.
 
 **Example:**
+
 ```typescript
 import { defineQueue } from '@pikku/core/queue'
 
@@ -291,31 +304,32 @@ export const sendEmailQueue = defineQueue({
   queueName: 'emailQueue',
   workerConfig: {
     name: 'email-worker',
-    batchSize: 5,              // Process 5 jobs concurrently
-    autorun: true,             // Start processing automatically
-    lockDuration: 30000,       // Job lock duration (30s)
-    drainDelay: 5,             // Poll delay when queue empty (5ms)
-    maxStalledCount: 3,        // Max recoveries from stalled state
-    removeOnComplete: 100,     // Keep last 100 completed jobs
-    removeOnFail: 500,         // Keep last 500 failed jobs
+    batchSize: 5, // Process 5 jobs concurrently
+    autorun: true, // Start processing automatically
+    lockDuration: 30000, // Job lock duration (30s)
+    drainDelay: 5, // Poll delay when queue empty (5ms)
+    maxStalledCount: 3, // Max recoveries from stalled state
+    removeOnComplete: 100, // Keep last 100 completed jobs
+    removeOnFail: 500, // Keep last 500 failed jobs
   },
 })
 ```
 
 **Worker config options:**
 
-| Option | Description | BullMQ Mapping |
-|--------|-------------|----------------|
-| `name` | Worker identifier | `name` |
-| `batchSize` | Concurrent job processing | `concurrency` |
-| `autorun` | Auto-start processing | `autorun` |
-| `lockDuration` | Job lock duration (ms) | `lockDuration` |
-| `drainDelay` | Empty queue poll delay (ms) | `drainDelay` |
-| `maxStalledCount` | Max stalled recoveries | `maxStalledCount` |
-| `removeOnComplete` | Keep N completed jobs | `removeOnComplete` |
-| `removeOnFail` | Keep N failed jobs | `removeOnFail` |
+| Option             | Description                 | BullMQ Mapping     |
+| ------------------ | --------------------------- | ------------------ |
+| `name`             | Worker identifier           | `name`             |
+| `batchSize`        | Concurrent job processing   | `concurrency`      |
+| `autorun`          | Auto-start processing       | `autorun`          |
+| `lockDuration`     | Job lock duration (ms)      | `lockDuration`     |
+| `drainDelay`       | Empty queue poll delay (ms) | `drainDelay`       |
+| `maxStalledCount`  | Max stalled recoveries      | `maxStalledCount`  |
+| `removeOnComplete` | Keep N completed jobs       | `removeOnComplete` |
+| `removeOnFail`     | Keep N failed jobs          | `removeOnFail`     |
 
 **Unsupported options:**
+
 - `visibilityTimeout`: BullMQ uses locks instead
 - `pollInterval`: BullMQ is push-based (pub/sub)
 - `prefetch`: BullMQ manages automatically
@@ -325,6 +339,7 @@ export const sendEmailQueue = defineQueue({
 ## Job Lifecycle
 
 **Job states:**
+
 1. **waiting**: Job added to queue
 2. **active**: Job being processed
 3. **completed**: Job finished successfully
@@ -333,8 +348,13 @@ export const sendEmailQueue = defineQueue({
 6. **stalled**: Job exceeded lock duration
 
 **Progress tracking:**
+
 ```typescript
-async function processVideo(data: VideoData, services: Services, job: QueueJob) {
+async function processVideo(
+  data: VideoData,
+  services: Services,
+  job: QueueJob
+) {
   // Update progress
   await job.updateProgress(25)
   // ... do work ...
@@ -347,6 +367,7 @@ async function processVideo(data: VideoData, services: Services, job: QueueJob) 
 ```
 
 **Job control:**
+
 ```typescript
 // Fail job with custom error
 throw new QueueJobFailedError('Invalid video format')
@@ -362,6 +383,7 @@ throw new QueueJobDiscardedError('Job no longer needed')
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -374,6 +396,7 @@ throw new QueueJobDiscardedError('Job no longer needed')
 ```
 
 **Workspace:**
+
 ```json
 {
   "scripts": {
@@ -386,6 +409,7 @@ throw new QueueJobDiscardedError('Job no longer needed')
 ### Local Development
 
 Run Redis locally:
+
 ```bash
 # Docker
 docker run -d -p 6379:6379 redis:7-alpine
@@ -395,6 +419,7 @@ docker-compose up redis
 ```
 
 Start worker:
+
 ```bash
 npm run dev
 ```
@@ -408,6 +433,7 @@ npm run dev
 BullMQ workers can run in containers alongside your HTTP servers or as dedicated worker instances.
 
 **Example Dockerfile:**
+
 ```dockerfile
 FROM node:20-slim
 WORKDIR /app
@@ -427,6 +453,7 @@ docker-compose up --scale worker=5
 ```
 
 **Key points:**
+
 - Multiple workers automatically share jobs
 - Use worker names for monitoring
 - Scale based on queue depth and job duration
@@ -456,6 +483,7 @@ npm install @bull-board/api @bull-board/express
 ```
 
 **Setup:**
+
 ```typescript
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
@@ -475,6 +503,7 @@ app.use('/admin/queues', serverAdapter.getRouter())
 ### Metrics
 
 Monitor key metrics:
+
 - Queue depth (waiting jobs)
 - Processing rate (jobs/second)
 - Completion rate
@@ -496,6 +525,7 @@ Monitor key metrics:
 - **Backoff:** Configure exponential backoff for retries
 
 **Redis memory management:**
+
 ```typescript
 workerConfig: {
   removeOnComplete: 10,   // Keep minimal completed jobs
@@ -508,6 +538,7 @@ workerConfig: {
 ## Examples
 
 **Standalone:**
+
 - [templates/bullmq](https://github.com/vramework/pikku/tree/main/templates/bullmq) - BullMQ worker
 
 ---
@@ -577,11 +608,14 @@ workerConfig: {
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-queue](/skills/pikku-queue) - Queue function definitions and enqueue patterns
 
 **Alternative Queue Runtimes:**
+
 - [pikku-queue-pg-boss](/skills/pikku-queue-pg-boss) - PostgreSQL-based queue alternative (no Redis required)

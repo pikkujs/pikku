@@ -24,11 +24,13 @@ This skill helps you set up and deploy Pikku functions using Fastify as the runt
 ### 1. Install Packages
 
 **Server mode:**
+
 ```bash
 npm install @pikku/fastify @pikku/core @pikku/schedule
 ```
 
 **Plugin mode:**
+
 ```bash
 npm install @pikku/fastify-plugin @pikku/core
 ```
@@ -42,6 +44,7 @@ npm install @pikku/fastify-plugin @pikku/core
 **Workspace:** Create `bin/start.ts` based on [workspace-starter/backends/fastify/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/fastify/bin/start.ts)
 
 **Key imports:**
+
 - Import bootstrap (see [pikku-project-setup](/skills/pikku-project-setup) for correct path)
 - **Server mode:** Import `PikkuFastifyServer` from `@pikku/fastify`
 - **Plugin mode:** Import `pikkuFastifyPlugin` from `@pikku/fastify-plugin`
@@ -51,9 +54,9 @@ npm install @pikku/fastify-plugin @pikku/core
 
 ```typescript
 type FastifyCoreConfig = CoreConfig & {
-  port: number              // Default: 3000
-  hostname: string          // Default: 'localhost' (use '0.0.0.0' for Docker)
-  healthCheckPath?: string  // Default: '/health-check'
+  port: number // Default: 3000
+  hostname: string // Default: 'localhost' (use '0.0.0.0' for Docker)
+  healthCheckPath?: string // Default: '/health-check'
 }
 ```
 
@@ -425,15 +428,18 @@ Fastify servers can be deployed anywhere Node.js runs. Use `hostname: '0.0.0.0'`
 ## Related Skills
 
 **Prerequisites:**
+
 - [pikku-project-setup](/skills/pikku-project-setup) - Project structure and common setup patterns
 - [pikku-functions](/skills/pikku-functions) - Creating Pikku function definitions
 
 **Wiring:**
+
 - [pikku-http](/skills/pikku-http) - HTTP route wiring and configuration
 - [pikku-channel](/skills/pikku-channel) - WebSocket/channel wiring
 - [pikku-scheduler](/skills/pikku-scheduler) - Scheduled task configuration
 
 **Alternative Runtimes:**
+
 - [pikku-express](/skills/pikku-express) - More common, larger ecosystem
 - [pikku-uws](/skills/pikku-uws) - Even higher performance with µWebSockets
 - [pikku-aws-lambda](/skills/pikku-aws-lambda) - Serverless deployment
