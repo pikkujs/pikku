@@ -25,6 +25,7 @@ Pikku provides two Express integration modes:
 Full Express server managed by Pikku with automatic setup.
 
 **Use when:**
+
 - Starting a new Express server
 - Want automatic configuration (JSON parsing, cookies, CORS)
 - Need built-in features (health checks, static assets, file uploads)
@@ -34,6 +35,7 @@ Full Express server managed by Pikku with automatic setup.
 Integrate Pikku into an existing Express app as middleware.
 
 **Use when:**
+
 - Integrating into existing Express application
 - Need custom Express configuration
 - Want full control over middleware stack
@@ -43,11 +45,13 @@ Integrate Pikku into an existing Express app as middleware.
 ## Installation
 
 **Server mode:**
+
 ```bash
 npm install @pikku/express @pikku/core @pikku/schedule
 ```
 
 **Middleware mode:**
+
 ```bash
 npm install @pikku/express-middleware @pikku/core
 ```
@@ -63,6 +67,7 @@ For standalone projects where functions are in the same package.
 **Example:** [templates/express/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/express/src/start.ts)
 
 **Key points:**
+
 - Import bootstrap from local `./.pikku/pikku-bootstrap.gen.js`
 - Import services from local files
 - Create `PikkuExpressServer` with config, services, and session factory
@@ -76,12 +81,14 @@ Backend imports all functions from the functions package without filtering.
 **Example:** [workspace-starter/backends/express/bin/start.ts](https://github.com/vramework/examples/blob/main/workspace-starter/backends/express/bin/start.ts)
 
 **Key differences:**
+
 - Import config/services from functions package: `@my-app/functions/src/config`
 - Import bootstrap from functions: `@my-app/functions/.pikku/pikku-bootstrap.gen`
 - No `pikku` script needed in backend package.json
 - All functions included (no filtering)
 
 **Tradeoffs:**
+
 - ✅ Faster: No extra build step per backend
 - ✅ Simpler: One source of truth
 - ❌ No filtering: All functions included
@@ -91,6 +98,7 @@ Backend imports all functions from the functions package without filtering.
 Backend has its own `pikku.config.json` that filters which functions are included.
 
 **Directory structure:**
+
 ```
 backends/
   express/
@@ -107,6 +115,7 @@ packages/
 ```
 
 **Backend pikku.config.json:**
+
 ```json
 {
   "extends": "../../packages/functions/pikku.config.json",
@@ -119,17 +128,20 @@ packages/
 ```
 
 **Bootstrap import:**
+
 ```typescript
 // Import from backend's .pikku directory (filtered)
 import '../.pikku/pikku-bootstrap.gen'
 ```
 
 **Build process:**
+
 1. `cd backends/express`
 2. `yarn pikku` (reads local pikku.config.json, applies filters)
 3. Generated files in `backends/express/.pikku/` include only filtered functions
 
 **Tradeoffs:**
+
 - ✅ Filtering: Different API subsets per backend
 - ✅ Tree-shaking: Better bundle size
 - ✅ Runtime-specific: Exclude incompatible functions
@@ -142,10 +154,10 @@ Server mode extends `CoreConfig` with Express-specific options:
 ```typescript
 type ExpressCoreConfig = CoreConfig & {
   port: number
-  hostname: string              // Use '0.0.0.0' for Docker
-  healthCheckPath?: string      // Default: '/health-check'
+  hostname: string // Use '0.0.0.0' for Docker
+  healthCheckPath?: string // Default: '/health-check'
   limits?: {
-    json?: string               // Default: '1mb'
+    json?: string // Default: '1mb'
     xml?: string
     urlencoded?: string
   }
@@ -157,10 +169,14 @@ type ExpressCoreConfig = CoreConfig & {
 ### Lifecycle
 
 ```typescript
-const server = new PikkuExpressServer(config, singletonServices, createSessionServices)
-server.enableExitOnSigInt()  // Graceful shutdown
-await server.init()           // Initialize (required)
-await server.start()          // Start listening
+const server = new PikkuExpressServer(
+  config,
+  singletonServices,
+  createSessionServices
+)
+server.enableExitOnSigInt() // Graceful shutdown
+await server.init() // Initialize (required)
+await server.start() // Start listening
 ```
 
 ### With Scheduler
@@ -180,16 +196,19 @@ scheduler.startAll()
 ### Optional Features
 
 **CORS:**
+
 ```typescript
 server.enableCors({ origin: '*', credentials: true })
 ```
 
 **Static Assets:**
+
 ```typescript
 server.enableStaticAssets() // Requires content config
 ```
 
 **File Uploads:**
+
 ```typescript
 server.enableReaper() // Enables PUT /reaper/:path
 ```
@@ -205,6 +224,7 @@ Integrate Pikku into an existing Express application.
 **Example:** [templates/express-middleware/src/start.ts](https://github.com/vramework/pikku/blob/main/templates/express-middleware/src/start.ts)
 
 **Setup:**
+
 ```typescript
 import express from 'express'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
@@ -241,6 +261,7 @@ app.listen(3000)
 ### Scripts
 
 **Standalone:**
+
 ```json
 {
   "scripts": {
@@ -253,6 +274,7 @@ app.listen(3000)
 ```
 
 **Workspace (no backend config):**
+
 ```json
 {
   "scripts": {
@@ -263,6 +285,7 @@ app.listen(3000)
 ```
 
 **Workspace (with backend config):**
+
 ```json
 {
   "scripts": {
@@ -293,10 +316,12 @@ For Docker-specific guidance, see [Docker's Node.js guide](https://docs.docker.c
 ## Examples
 
 **Standalone:**
+
 - [templates/express](https://github.com/vramework/pikku/tree/main/templates/express) - Server mode
 - [templates/express-middleware](https://github.com/vramework/pikku/tree/main/templates/express-middleware) - Middleware mode
 
 **Workspace:**
+
 - [workspace-starter/backends/express](https://github.com/vramework/examples/tree/main/workspace-starter/backends/express) - Workspace backend
 
 ---

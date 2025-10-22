@@ -3,21 +3,37 @@ import { PikkuWiringTypes } from '@pikku/core'
 
 /**
  * Match a value against a pattern with wildcard support
- * Supports "*" suffix only (e.g., "email-*" matches "email-worker", "email-sender")
- * The wildcard requires at least one character after the prefix, unless the pattern is just '*'.
+ * Supports "*" at the beginning, end, or both (e.g., "send*", "*Payment", "*process*")
  * @param value - The value to check
- * @param pattern - The pattern with optional "*" suffix
+ * @param pattern - The pattern with optional "*" wildcard(s)
  */
 export function matchesWildcard(value: string, pattern: string): boolean {
-  if (pattern.endsWith('*')) {
-    const prefix = pattern.slice(0, -1)
-    // If pattern is just '*', match everything
-    if (prefix === '') {
-      return true
+  // If pattern is just '*', match everything
+  if (pattern === '*') {
+    return true
+  }
+
+  const startsWithWildcard = pattern.startsWith('*')
+  const endsWithWildcard = pattern.endsWith('*')
+
+  if (startsWithWildcard && endsWithWildcard) {
+    // Pattern like "*middle*" - check if value contains the middle part
+    const middle = pattern.slice(1, -1)
+    if (middle === '') {
+      return true // Pattern is "**", match everything
     }
-    // Otherwise, value must start with prefix AND be longer than prefix
+    return value.includes(middle)
+  } else if (startsWithWildcard) {
+    // Pattern like "*suffix" - check if value ends with suffix and has content before
+    const suffix = pattern.slice(1)
+    return value.endsWith(suffix) && value.length > suffix.length
+  } else if (endsWithWildcard) {
+    // Pattern like "prefix*" - check if value starts with prefix and has content after
+    const prefix = pattern.slice(0, -1)
     return value.startsWith(prefix) && value.length > prefix.length
   }
+
+  // No wildcard, exact match
   return value === pattern
 }
 
