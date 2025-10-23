@@ -65,6 +65,46 @@ import type { Order, Ingredient, Dish } from '../../application-types.d.js' // D
 
 **Application types that don't come from the database (DTOs, input/output types) should live in `function-types.ts`.**
 
+### 2.1 Define Complex Input Types Separately
+
+**When using utility types like `PickRequired`, `Partial`, or `Pick` for function input types, define them as separate type aliases above the function. OpenAPI schema generation may have issues with inline complex types.**
+
+✅ **Correct:**
+
+```typescript
+// Define the type separately
+type UpdateCardInput = PickRequired<
+  Partial<Pick<Card, 'cardId' | 'title' | 'description' | 'dueDate'>>,
+  'cardId'
+>
+
+export const updateCard = pikkuFunc<UpdateCardInput, void>({
+  func: async ({ kysely }, { cardId, title, description, dueDate }) => {
+    // ...
+  }
+})
+```
+
+❌ **Wrong:**
+
+```typescript
+// Inline complex type - may cause OpenAPI schema generation errors
+export const updateCard = pikkuFunc<
+  PickRequired<Partial<Pick<Card, 'cardId' | 'title' | 'description'>>, 'cardId'>,
+  void
+>({
+  func: async ({ kysely }, { cardId, title, description }) => {
+    // ...
+  }
+})
+```
+
+**Why this matters:**
+- OpenAPI/JSON Schema generators struggle with nested utility types
+- Separate types are easier to read and maintain
+- You'll see `[PKU456] Error generating schema` warnings for complex inline types
+- The types still work for TypeScript but may not generate proper API documentation
+
 ### Type Organization in Yarn Workspaces with SDK Package
 
 **When using a yarn workspace with an SDK package, ALL types should live in the SDK package and be imported from there:**
