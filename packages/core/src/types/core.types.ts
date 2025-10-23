@@ -1,6 +1,7 @@
 import type { Logger, LogLevel } from '../services/logger.js'
 import { VariablesService } from '../services/variables-service.js'
 import { SchemaService } from '../services/schema-service.js'
+import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
 import { UserSessionService } from '../services/user-session-service.js'
 import { PikkuChannel } from '../wirings/channel/channel.types.js'
@@ -149,6 +150,8 @@ export interface CoreUserSession {}
 export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** The schema library used to validate data */
   schema?: SchemaService
+  /** The JWT service used to encode and decode tokens */
+  jwt?: JWTService
   /** The core configuration for the application. */
   config: Config
   /** The logger used by the application. */

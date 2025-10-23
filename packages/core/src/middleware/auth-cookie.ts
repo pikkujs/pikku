@@ -3,7 +3,8 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CoreUserSession,
-  CorePikkuMiddleware,
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
 } from '../types/core.types.js'
 import {
   getRelativeTimeOffsetFromNow,
@@ -16,34 +17,27 @@ import {
  * @param options.name - List of cookie names to check.
  * @param options.getSessionForCookieValue - Function to retrieve a session using a cookie value.
  */
-export const authCookie = <
-  SingletonServices extends CoreSingletonServices<CoreConfig>,
-  UserSession extends CoreUserSession,
->({
-  name,
-  getSessionForCookieValue,
-  jwt,
-  options,
-  expiresIn,
-}: {
-  name: string
-  options: SerializeOptions
-  expiresIn: RelativeTimeInput
-} & (
-  | {
-      getSessionForCookieValue: (
-        services: SingletonServices,
-        cookieValue: string,
-        cookieName: string
-      ) => Promise<UserSession>
-      jwt?: false
-    }
-  | {
-      getSessionForCookieValue?: undefined
-      jwt: true
-    }
-)): CorePikkuMiddleware => {
-  const middleware: CorePikkuMiddleware = async (services, { http }, next) => {
+export const authCookie = pikkuMiddlewareFactory<
+  {
+    name: string
+    options: SerializeOptions
+    expiresIn: RelativeTimeInput
+  } & (
+    | {
+        getSessionForCookieValue: (
+          services: CoreSingletonServices<CoreConfig>,
+          cookieValue: string,
+          cookieName: string
+        ) => Promise<CoreUserSession>
+        jwt?: false
+      }
+    | {
+        getSessionForCookieValue?: undefined
+        jwt: true
+      }
+  )
+>(({ name, getSessionForCookieValue, jwt, options, expiresIn }) =>
+  pikkuMiddleware(async (services, { http }, next) => {
     const {
       userSession: userSessionService,
       jwt: jwtService,
@@ -53,7 +47,7 @@ export const authCookie = <
       return next()
     }
 
-    let userSession: UserSession | null = null
+    let userSession: CoreUserSession | null = null
     const cookieValue = http.request.cookie(name)
     if (cookieValue) {
       if (jwt) {
@@ -98,6 +92,5 @@ export const authCookie = <
         logger.warn('No JWT service available, unable to set cookie')
       }
     }
-  }
-  return middleware
-}
+  })
+)

@@ -1,38 +1,25 @@
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CoreUserSession,
-  CorePikkuMiddleware,
-} from '../types/core.types.js'
+import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
 /**
  * API key middleware that retrieves a session from the 'x-api-key' header using a provided callback.
  *
  * @param options.getSessionForAPIKey - A function that returns a session when provided an API key.
  */
-export const authAPIKey = <
-  SingletonServices extends CoreSingletonServices<CoreConfig>,
-  UserSession extends CoreUserSession,
->({
-  source,
-  getSessionForAPIKey,
-  jwt,
-}: {
-  source: 'header' | 'query' | 'all'
-} & (
-  | {
-      getSessionForAPIKey?: undefined
-      jwt?: true
-    }
-  | {
-      getSessionForAPIKey: (
-        services: SingletonServices,
-        apiKey: string
-      ) => Promise<any>
-      jwt?: false
-    }
-)) => {
-  const middleware: CorePikkuMiddleware = async (services, { http }, next) => {
+export const authAPIKey = pikkuMiddlewareFactory<
+  {
+    source: 'header' | 'query' | 'all'
+  } & (
+    | {
+        getSessionForAPIKey?: undefined
+        jwt?: true
+      }
+    | {
+        getSessionForAPIKey: (services: any, apiKey: string) => Promise<any>
+        jwt?: false
+      }
+  )
+>(({ source, getSessionForAPIKey, jwt }) =>
+  pikkuMiddleware(async (services, { http }, next) => {
     const { userSession: userSessionService, jwt: jwtService } = services as any
     if (!http?.request || userSessionService.get()) {
       return next()
@@ -46,7 +33,7 @@ export const authAPIKey = <
       apiKey = http.request.query().apiKey as string | null
     }
     if (apiKey) {
-      let userSession: UserSession | null = null
+      let userSession: any | null = null
       if (jwt) {
         if (!jwtService) {
           throw new Error('JWT service is required for JWT decoding.')
@@ -60,7 +47,5 @@ export const authAPIKey = <
       }
     }
     return next()
-  }
-
-  return middleware
-}
+  })
+)

@@ -3,31 +3,25 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CoreUserSession,
-  CorePikkuMiddleware,
+  pikkuMiddleware,
+  pikkuMiddlewareFactory,
 } from '../types/core.types.js'
 
 /**
  * Extracts the Bearer token from the Authorization header
  */
-export const authBearer = <
-  SingletonServices extends CoreSingletonServices<CoreConfig>,
-  UserSession extends CoreUserSession,
->({
-  token,
-  jwt,
-  getSession,
-}: {
+export const authBearer = pikkuMiddlewareFactory<{
   token?: {
     value: string
-    userSession: UserSession
+    userSession: CoreUserSession
   }
   jwt?: boolean
   getSession?: (
-    services: SingletonServices,
+    services: CoreSingletonServices<CoreConfig>,
     token: string
-  ) => Promise<UserSession> | UserSession
-} = {}): CorePikkuMiddleware => {
-  const middleware: CorePikkuMiddleware = async (services, { http }, next) => {
+  ) => Promise<CoreUserSession> | CoreUserSession
+}>(({ token, jwt, getSession } = {}) =>
+  pikkuMiddleware(async (services, { http }, next) => {
     const { userSession: userSessionService, jwt: jwtService } = services as any
     // Skip if session already exists.
     if (!http?.request || userSessionService.get()) {
@@ -42,7 +36,7 @@ export const authBearer = <
       if (scheme !== 'Bearer' || !token || !bearerToken) {
         throw new InvalidSessionError()
       }
-      let userSession: UserSession | null = null
+      let userSession: CoreUserSession | null = null
       if (jwt) {
         if (!jwtService) {
           throw new Error('JWT service is required for JWT decoding.')
@@ -61,6 +55,5 @@ export const authBearer = <
       }
     }
     return next()
-  }
-  return middleware
-}
+  })
+)
