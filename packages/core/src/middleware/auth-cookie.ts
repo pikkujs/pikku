@@ -1,96 +1,84 @@
 import { SerializeOptions } from 'cookie'
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CoreUserSession,
-  pikkuMiddleware,
-  pikkuMiddlewareFactory,
-} from '../types/core.types.js'
+import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 import {
   getRelativeTimeOffsetFromNow,
   RelativeTimeInput,
 } from '../time-utils.js'
 
 /**
- * Cookie middleware that extracts a session from cookies.
+ * Cookie-based session middleware that uses JWT for encoding/decoding session data.
  *
- * @param options.name - List of cookie names to check.
- * @param options.getSessionForCookieValue - Function to retrieve a session using a cookie value.
+ * Reads session from a cookie on incoming requests and automatically updates the cookie
+ * when the session changes (e.g., after login).
+ *
+ * @param options.name - Cookie name
+ * @param options.expiresIn - Cookie expiration time (e.g., { value: 30, unit: 'day' })
+ * @param options.options - Cookie serialization options (httpOnly, secure, sameSite, etc.)
+ *
+ * @example
+ * ```typescript
+ * import { authCookie } from '@pikku/core/middleware'
+ *
+ * addHTTPMiddleware([
+ *   authCookie({
+ *     name: 'session',
+ *     expiresIn: { value: 30, unit: 'day' },
+ *     options: {
+ *       httpOnly: true,
+ *       secure: true,
+ *       sameSite: 'strict',
+ *       path: '/'
+ *     }
+ *   })
+ * ])
+ * ```
  */
-export const authCookie = pikkuMiddlewareFactory<
-  {
-    name: string
-    options: SerializeOptions
-    expiresIn: RelativeTimeInput
-  } & (
-    | {
-        getSessionForCookieValue: (
-          services: CoreSingletonServices<CoreConfig>,
-          cookieValue: string,
-          cookieName: string
-        ) => Promise<CoreUserSession>
-        jwt?: false
+export const authCookie = pikkuMiddlewareFactory<{
+  name: string
+  options: SerializeOptions
+  expiresIn: RelativeTimeInput
+}>(({ name, options, expiresIn }) =>
+  pikkuMiddleware(
+    async (
+      { userSession: userSessionService, jwt: jwtService, logger },
+      { http },
+      next
+    ) => {
+      if (!http?.request || userSessionService.get()) {
+        return next()
       }
-    | {
-        getSessionForCookieValue?: undefined
-        jwt: true
+
+      // Try to decode session from cookie
+      const cookieValue = http.request.cookie(name)
+      if (cookieValue && jwtService) {
+        const userSession = await jwtService.decode(cookieValue)
+        if (userSession) {
+          userSessionService.setInitial(userSession)
+        }
       }
+
+      await next()
+
+      // Set the cookie in the response if the session has changed
+      if (!http?.response) {
+        return
+      }
+
+      if (userSessionService.sessionChanged) {
+        const session = userSessionService.get()
+        if (jwtService) {
+          http.response.cookie(
+            name,
+            await jwtService.encode(expiresIn, session),
+            {
+              ...options,
+              expires: getRelativeTimeOffsetFromNow(expiresIn),
+            }
+          )
+        } else {
+          logger.warn('No JWT service available, unable to set cookie')
+        }
+      }
+    }
   )
->(({ name, getSessionForCookieValue, jwt, options, expiresIn }) =>
-  pikkuMiddleware(async (services, { http }, next) => {
-    const {
-      userSession: userSessionService,
-      jwt: jwtService,
-      logger,
-    } = services as any
-    if (!http?.request || userSessionService.get()) {
-      return next()
-    }
-
-    let userSession: CoreUserSession | null = null
-    const cookieValue = http.request.cookie(name)
-    if (cookieValue) {
-      if (jwt) {
-        if (!jwtService) {
-          throw new Error('JWT service is required for JWT decoding.')
-        }
-        userSession = await jwtService.decode(cookieValue)
-      } else if (getSessionForCookieValue) {
-        userSession = await getSessionForCookieValue(
-          services as any,
-          cookieValue,
-          name
-        )
-      }
-    }
-
-    if (userSession) {
-      userSessionService.setInitial(userSession)
-    }
-    await next()
-
-    // Set the cookie in the response if the session has changed
-    if (!http?.response) {
-      return
-    }
-
-    if (userSessionService.sessionChanged) {
-      const session = userSessionService.get()
-      if (jwt) {
-        if (!jwtService) {
-          throw new Error('JWT service is required for JWT encoding.')
-        }
-        http.response.cookie(
-          name,
-          await jwtService.encode(expiresIn, session),
-          {
-            ...options,
-            expires: getRelativeTimeOffsetFromNow(expiresIn),
-          }
-        )
-      } else {
-        logger.warn('No JWT service available, unable to set cookie')
-      }
-    }
-  })
 )

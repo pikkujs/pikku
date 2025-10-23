@@ -1,23 +1,25 @@
 import { authCookie } from '@pikku/core/middleware'
-import { addHTTPMiddleware } from './pikku-types.gen.js'
 
 /**
  * Cookie-based authentication using JWT
  *
- * - Reads session cookie and decodes JWT
- * - Automatically updates cookie when session changes
- * - Cookie is httpOnly and secure
+ * Reads session from cookies using JWT and automatically updates cookies when session changes.
+ * The JWT service must be configured for this middleware to work.
+ *
+ * Example usage:
+ * ```typescript
+ * import { cookieJWT } from './middleware'
+ *
+ * addHTTPMiddleware('*', [cookieJWT])
+ * ```
  */
 export const cookieJWT = authCookie({
-  name: 'session',
-  jwt: true,
-  expiresIn: { value: 7, unit: 'day' },
+  name: 'pikku:session',
+  expiresIn: { value: 4, unit: 'week' },
   options: {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
   },
 })
-
-addHTTPMiddleware([cookieJWT])

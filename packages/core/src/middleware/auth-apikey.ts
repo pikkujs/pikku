@@ -1,51 +1,51 @@
 import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
 /**
- * API key middleware that retrieves a session from the 'x-api-key' header using a provided callback.
+ * API key middleware that retrieves a session from the 'x-api-key' header using JWT decoding.
  *
- * @param options.getSessionForAPIKey - A function that returns a session when provided an API key.
+ * Extracts API key from either the 'x-api-key' header or 'apiKey' query parameter
+ * and decodes it using the JWT service.
+ *
+ * @param options.source - Where to look for the API key: 'header', 'query', or 'all'
+ *
+ * @example
+ * ```typescript
+ * import { authAPIKey } from '@pikku/core/middleware'
+ *
+ * addHTTPMiddleware([
+ *   authAPIKey({ source: 'header' })
+ * ])
+ * ```
  */
-export const authAPIKey = pikkuMiddlewareFactory<
-  {
-    source: 'header' | 'query' | 'all'
-  } & (
-    | {
-        getSessionForAPIKey?: undefined
-        jwt?: true
+export const authAPIKey = pikkuMiddlewareFactory<{
+  source: 'header' | 'query' | 'all'
+}>(({ source }) =>
+  pikkuMiddleware(
+    async (
+      { userSession: userSessionService, jwt: jwtService },
+      { http },
+      next
+    ) => {
+      if (!http?.request || userSessionService.get()) {
+        return next()
       }
-    | {
-        getSessionForAPIKey: (services: any, apiKey: string) => Promise<any>
-        jwt?: false
+
+      let apiKey: string | null = null
+      if (source === 'header' || source === 'all') {
+        apiKey = http.request.header('x-api-key') as string | null
       }
-  )
->(({ source, getSessionForAPIKey, jwt }) =>
-  pikkuMiddleware(async (services, { http }, next) => {
-    const { userSession: userSessionService, jwt: jwtService } = services as any
-    if (!http?.request || userSessionService.get()) {
+      if (!apiKey && (source === 'query' || source === 'all')) {
+        apiKey = http.request.query().apiKey as string | null
+      }
+
+      if (apiKey && jwtService) {
+        const userSession = await jwtService.decode(apiKey)
+        if (userSession) {
+          userSessionService.setInitial(userSession)
+        }
+      }
+
       return next()
     }
-
-    let apiKey: string | null = null
-    if (source === 'header' || source === 'all') {
-      apiKey = http.request.header('x-api-key') as string | null
-    }
-    if (!apiKey && (source === 'query' || source === 'all')) {
-      apiKey = http.request.query().apiKey as string | null
-    }
-    if (apiKey) {
-      let userSession: any | null = null
-      if (jwt) {
-        if (!jwtService) {
-          throw new Error('JWT service is required for JWT decoding.')
-        }
-        userSession = await jwtService.decode(apiKey)
-      } else {
-        userSession = await getSessionForAPIKey!(services as any, apiKey)
-      }
-      if (userSession) {
-        userSessionService.setInitial(userSession)
-      }
-    }
-    return next()
-  })
+  )
 )
