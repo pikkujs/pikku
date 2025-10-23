@@ -22,12 +22,12 @@
     "@pikku/core": "^0.9.12-next.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.8.62",
-    "@cloudflare/workers-types": "^4.20250813.0",
-    "@vitest/runner": "^3.0.0",
-    "@vitest/snapshot": "^3.0.0",
-    "typescript": "^5.9.2",
-    "vitest": "^3.0.0"
+    "@cloudflare/vitest-pool-workers": "^0.9.14",
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "@vitest/runner": "^3.2.4",
+    "@vitest/snapshot": "^3.2.4",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18"

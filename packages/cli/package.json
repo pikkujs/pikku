@@ -21,24 +21,24 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@openapi-contrib/json-schema-to-openapi-schema": "^4.0.2",
+    "@openapi-contrib/json-schema-to-openapi-schema": "^4.2.0",
     "@pikku/core": "^0.9.12-next.0",
     "@pikku/inspector": "^0.9.6-next.0",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
-    "@types/uuid": "^10.0.0",
-    "chalk": "^5.5.0",
+    "@types/uuid": "^11.0.0",
+    "chalk": "^5.6.2",
     "chokidar": "^4.0.3",
     "commander": "^14",
     "openapi-types": "^12.1.3",
-    "path-to-regexp": "^8.2.0",
+    "path-to-regexp": "^8.3.0",
     "tinyglobby": "^0.2.12",
     "ts-json-schema-generator": "^2.4.0",
     "typescript": "^5.9",
     "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@types/node": "^24.2.1"
+    "@types/node": "^24.9.1"
   },
   "engines": {
     "node": ">=18"

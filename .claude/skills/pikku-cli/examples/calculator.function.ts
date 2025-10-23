@@ -1,4 +1,4 @@
-import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
 /**
  * Calculator functions for CLI
@@ -17,7 +17,7 @@ type CalcOutput = {
   expression: string
 }
 
-export const addNumbers = pikkuFuncSessionless<CalcInput, CalcOutput>({
+export const addNumbers = pikkuSessionlessFunc<CalcInput, CalcOutput>({
   docs: {
     summary: 'Add two numbers',
     tags: ['cli', 'calculator'],
@@ -34,7 +34,7 @@ export const addNumbers = pikkuFuncSessionless<CalcInput, CalcOutput>({
   },
 })
 
-export const subtractNumbers = pikkuFuncSessionless<CalcInput, CalcOutput>({
+export const subtractNumbers = pikkuSessionlessFunc<CalcInput, CalcOutput>({
   docs: {
     summary: 'Subtract two numbers',
     tags: ['cli', 'calculator'],

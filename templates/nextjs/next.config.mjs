@@ -6,6 +6,9 @@ const nextConfig = {
     }
     return config
   },
+  turbopack: {
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js'],
+  },
 }
 
 export default nextConfig

@@ -43,7 +43,7 @@ The Queue adapter:
 
 - Queue workers are **internal background jobs** without user sessions
 - If a function has `auth: true` or `permissions`, it's likely **wrong for queue usage**
-- Queue workers should typically set `auth: false` or use `pikkuFuncSessionless`
+- Queue workers should typically set `auth: false` or use `pikkuSessionlessFunc`
 - Only use auth/permissions if explicitly setting a service account session
 
 **Don't create unnecessary wrappers:**
@@ -53,7 +53,7 @@ The Queue adapter:
 
 ## Function Patterns
 
-- Prefer `pikkuFuncSessionless`
+- Prefer `pikkuSessionlessFunc`
 - Use `void` for `Out` generic when no return value
 - Functions must be `async`
 - Keep functions thin

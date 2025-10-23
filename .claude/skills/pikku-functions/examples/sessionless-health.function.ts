@@ -1,10 +1,10 @@
-import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
 /**
  * Sessionless health check function
  * No auth required, no session, exposed as public API
  */
-export const health = pikkuFuncSessionless<void, { status: string }>({
+export const health = pikkuSessionlessFunc<void, { status: string }>({
   auth: false,
   expose: true,
   docs: {

@@ -20,10 +20,10 @@
     "@pikku/core": "^0.9.12-next.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.15.0"
+    "@modelcontextprotocol/sdk": "^1.20.1"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18"

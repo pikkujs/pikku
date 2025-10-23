@@ -168,7 +168,7 @@ You can progressively enhance HTTP GET routes with SSE by setting `sse: true`.
 
 ```typescript
 // Function with optional channel for progressive enhancement
-export const progressiveEnhancementExample = pikkuFuncSessionless<
+export const progressiveEnhancementExample = pikkuSessionlessFunc<
   void,
   { state: 'initial' | 'pending' | 'done' }
 >({
@@ -195,7 +195,7 @@ wireHTTP({
 
 **Progressive enhancement (HTTP + optional SSE):**
 
-- Use **`pikkuFunc` / `pikkuFuncSessionless`**
+- Use **`pikkuFunc` / `pikkuSessionlessFunc`**
 - The channel is **optional** (`services.channel?`)
 - Works over plain HTTP
 - If SSE is enabled (`sse: true`), you can send incremental updates without breaking non-SSE clients
@@ -237,9 +237,9 @@ To allow external clients to invoke any exposed function via HTTP, create an RPC
 
 ```typescript
 // packages/functions/src/rpc-caller.function.ts
-import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
-export const rpcCaller = pikkuFuncSessionless<
+export const rpcCaller = pikkuSessionlessFunc<
   { name: string; data: unknown },
   unknown
 >({

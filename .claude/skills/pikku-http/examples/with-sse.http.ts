@@ -1,11 +1,11 @@
 import { wireHTTP } from './pikku-types.gen.js'
-import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
 /**
  * Progressive enhancement example with optional SSE
  * Works as regular HTTP GET, but also supports SSE
  */
-export const statusCheck = pikkuFuncSessionless<
+export const statusCheck = pikkuSessionlessFunc<
   void,
   { state: 'initial' | 'pending' | 'done' }
 >({

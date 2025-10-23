@@ -49,6 +49,12 @@ export const addMCPTool: AddWiring = (
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
     const tags = getPropertyTags(obj, 'MCP tool', nameValue, logger)
 
+    if (streamingValue === true) {
+      logger.warn(
+        `MCP tool '${nameValue}' has streaming enabled, but streaming is not yet supported.`
+      )
+    }
+
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,
       'func',

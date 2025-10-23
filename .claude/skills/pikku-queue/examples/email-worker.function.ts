@@ -1,4 +1,4 @@
-import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
 /**
  * Email worker function
@@ -11,7 +11,7 @@ type SendEmailIn = {
   data: Record<string, unknown>
 }
 
-export const sendEmail = pikkuFuncSessionless<SendEmailIn, void>({
+export const sendEmail = pikkuSessionlessFunc<SendEmailIn, void>({
   docs: {
     summary: 'Send email job',
     description: 'Background worker for sending emails',

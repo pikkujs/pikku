@@ -16,9 +16,9 @@
     "@pikku/core": "^0.9.12-next.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241218.0",
-    "@types/node": "^22",
-    "typescript": "^5.5.2",
-    "wrangler": "^4.6.0"
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "@types/node": "^24",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.44.0"
   }
 }

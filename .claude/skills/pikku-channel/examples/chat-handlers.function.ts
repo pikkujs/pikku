@@ -8,7 +8,7 @@ import {
  * Connection handler
  * Called when a client connects to the channel
  *
- * These are simple wrappers around pikkuFuncSessionless where channel always exists
+ * These are simple wrappers around pikkuSessionlessFunc where channel always exists
  */
 export const onConnect = pikkuChannelConnectionFunc<
   { welcome: string; channelId: string }, // Out - sent to client

@@ -101,7 +101,7 @@ wireCLI({
   commands: {
     commandName: {
       command: 'commandName <required> [optional]',  // positional pattern
-      func: pikkuFunc | pikkuFuncSessionless,
+      func: pikkuFunc | pikkuSessionlessFunc,
       render: pikkuCLIRender<OutputType>(...),       // optional command-specific renderer
       description: 'Command description',
       options: pikkuCLIOptions<T>({...}),

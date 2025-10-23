@@ -25,14 +25,14 @@
   "devDependencies": {
     "@pikku/core": "^0.9.12-next.0",
     "@types/express": "^5",
-    "@types/express-serve-static-core": "^5.0.7",
+    "@types/express-serve-static-core": "^5.1.0",
     "express": "^5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "raw-body": "^3.0.0"
+    "raw-body": "^3.0.1"
   }
 }

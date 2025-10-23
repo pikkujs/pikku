@@ -17,11 +17,11 @@
   },
   "dependencies": {
     "@pikku/core": "^0.9.12-next.0",
-    "path-to-regexp": "^8.2.0",
+    "path-to-regexp": "^8.3.0",
     "typescript": "^5.9"
   },
   "devDependencies": {
-    "@types/node": "^24.2.1"
+    "@types/node": "^24.9.1"
   },
   "engines": {
     "node": ">=18"

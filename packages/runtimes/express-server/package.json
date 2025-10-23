@@ -25,15 +25,15 @@
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
     "@types/express": "^5",
-    "@types/express-serve-static-core": "^5.0.7",
+    "@types/express-serve-static-core": "^5.1.0",
     "content-type": "^1.0.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5",
-    "raw-body": "^3.0.0"
+    "raw-body": "^3.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18"

@@ -42,7 +42,7 @@ The Scheduler adapter:
 
 **Function Signature:**
 
-- Cron jobs must use `pikkuFuncSessionless<void, void>` — aliased as **`pikkuVoidFunc`**
+- Cron jobs must use `pikkuSessionlessFunc<void, void>` — aliased as **`pikkuVoidFunc`**
 - Keep the job **thin**; orchestrate via `rpc.invoke()` if needed
 - Don't perform manual auth checks; jobs are internal
 
@@ -116,7 +116,7 @@ See `examples/` directory:
 
 - [ ] File name ends in `.schedule.ts`
 - [ ] Adapter imports only from `./pikku-types.gen.ts`
-- [ ] **CRITICAL: Functions use `pikkuVoidFunc` (pikkuFuncSessionless<void, void>)**
+- [ ] **CRITICAL: Functions use `pikkuVoidFunc` (pikkuSessionlessFunc<void, void>)**
 - [ ] Cron expressions are explicit or sourced from config
 - [ ] If observability needed, middleware is attached
 - [ ] Middleware guards for `interaction.scheduledTask`

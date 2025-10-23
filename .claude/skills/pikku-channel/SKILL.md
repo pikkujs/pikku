@@ -48,7 +48,7 @@ packages/functions/src/notifications.channel.ts
   - `pikkuChannelConnectionFunc`
   - `pikkuChannelDisconnectionFunc`
   - `pikkuChannelFunc`
-- Exported regular functions (`pikkuFunc`, `pikkuFuncSessionless`) - channel is optional inside them
+- Exported regular functions (`pikkuFunc`, `pikkuSessionlessFunc`) - channel is optional inside them
 - Optional `permissions` from `./permissions.ts`
 - Optional `middleware` from `./middleware.ts`
 
@@ -66,12 +66,12 @@ packages/functions/src/notifications.channel.ts
 - `pikkuChannelDisconnectionFunc`
 - `pikkuChannelFunc`
 
-These are **simple wrappers around `pikkuFuncSessionless`** with one key difference: **`services.channel` always exists** (not optional).
+These are **simple wrappers around `pikkuSessionlessFunc`** with one key difference: **`services.channel` always exists** (not optional).
 
 **When to use each:**
 
 - **Channel required** → Use `pikkuChannelFunc` (and `pikkuChannelConnectionFunc` / `pikkuChannelDisconnectionFunc`) - channel is guaranteed to exist
-- **Reuse domain logic** → You may wire a `pikkuFunc` / `pikkuFuncSessionless` to a channel action; inside those, `services.channel` is **optional** (`services.channel?`)
+- **Reuse domain logic** → You may wire a `pikkuFunc` / `pikkuSessionlessFunc` to a channel action; inside those, `services.channel` is **optional** (`services.channel?`)
 - **Need WS + HTTP** → Keep core logic in a `pikkuFunc` and call it via `rpc.invoke(...)` from channel handlers
 
 ## Channel Data vs. Input
@@ -229,7 +229,7 @@ export const audit = pikkuMiddleware(
 
 ## Channel Function Definitions
 
-Channel functions are defined using specialized APIs that are simple wrappers around `pikkuFuncSessionless`, with `services.channel` always present (not optional).
+Channel functions are defined using specialized APIs that are simple wrappers around `pikkuSessionlessFunc`, with `services.channel` always present (not optional).
 
 **Connection Handler:**
 

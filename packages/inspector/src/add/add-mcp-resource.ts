@@ -49,6 +49,12 @@ export const addMCPResource: AddWiring = (
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
     const tags = getPropertyTags(obj, 'MCP resource', uriValue, logger)
 
+    if (streamingValue === true) {
+      logger.warn(
+        `MCP resource '${uriValue}' has streaming enabled, but streaming is not yet supported.`
+      )
+    }
+
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,
       'func',
