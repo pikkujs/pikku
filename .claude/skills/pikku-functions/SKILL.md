@@ -18,7 +18,7 @@ This skill helps you write Pikku functions that are transport-agnostic, type-saf
 
 ## Core Function Syntax
 
-All domain functions **must** use the object form of `pikkuFunc` / `pikkuFuncSessionless`.
+All domain functions **must** use the object form of `pikkuFunc` / `pikkuSessionlessFunc`.
 
 ```typescript
 pikkuFunc<In, Out>({
@@ -33,7 +33,7 @@ pikkuFunc<In, Out>({
 Sessionless variant:
 
 ```typescript
-pikkuFuncSessionless<In, Out>({
+pikkuSessionlessFunc<In, Out>({
   func: async (services, data) => Out, // MUST be async
   // same options (minus session usage)
 })
@@ -65,7 +65,7 @@ func: async (services, data) => {
 - **Errors are thrown, not returned**: Must extend `PikkuError`
 - **Cross-function calls use RPC**: `rpc.invoke('<ExactExportName>', input)` — never import another Pikku function directly
 - **Public APIs must set `expose: true`**: So generated client types include it
-- **Always import from generated types**: Import `pikkuFunc` and `pikkuFuncSessionless` from `#pikku/pikku-types.gen.js`, never from `@pikku/core`
+- **Always import from generated types**: Import `pikkuFunc` and `pikkuSessionlessFunc` from `#pikku/pikku-types.gen.js`, never from `@pikku/core`
 
 ## RPC Usage Rules
 
@@ -108,7 +108,7 @@ packages/functions/src/
 
 ### Functions (`*.function.ts`)
 
-- **Allowed imports**: local types, `pikkuFunc` / `pikkuFuncSessionless`, error/permission/middleware symbols
+- **Allowed imports**: local types, `pikkuFunc` / `pikkuSessionlessFunc`, error/permission/middleware symbols
 - **No wiring/adapters/env/globals** in these files
 - **Private helpers** allowed if **not exported**
 
@@ -123,15 +123,40 @@ A permission is a boolean-returning guard with the same parameters as a Pikku fu
 
 **IMPORTANT: Always use the object syntax with `name` and `description` metadata for better AI understanding and documentation.**
 
+### Naming Convention
+
+Permissions **must** be named using `isX` or `canX` patterns (not `requireX`):
+
+✅ **Correct:**
+- `isOwner`
+- `isBoardMember`
+- `canEditResource`
+- `canAccessBoard`
+- `isOrganizationAdmin`
+
+❌ **Wrong:**
+- `requireOwner`
+- `requireBoardMember`
+- `checkIfOwner`
+
+### Defining Permissions
+
 ```typescript
-export const requireOwner = pikkuPermission<{
-  resourceOwnerId: string
+export const isOwner = pikkuPermission<{
+  resourceId: string
 }>({
-  name: 'Require Owner',
+  name: 'Is Owner',
   description: 'Verifies that the current user owns the specified resource',
-  func: async ({ ownership }, data, session) => {
+  func: async ({ kysely }, data, session) => {
     if (!session?.userId) return false
-    return ownership.isOwner(session.userId, data.resourceOwnerId)
+
+    const resource = await kysely
+      .selectFrom('resource')
+      .select(['ownerId'])
+      .where('resourceId', '=', data.resourceId)
+      .executeTakeFirst()
+
+    return resource?.ownerId === session.userId
   },
 })
 ```
@@ -139,15 +164,65 @@ export const requireOwner = pikkuPermission<{
 Direct function syntax (discouraged):
 
 ```typescript
-export const requireOwner: PikkuPermission<{
-  resourceOwnerId: string
-}> = async ({ ownership }, data, session) => {
+export const isOwner: PikkuPermission<{
+  resourceId: string
+}> = async ({ kysely }, data, session) => {
   if (!session?.userId) return false
-  return ownership.isOwner(session.userId, data.resourceOwnerId)
+  // ... same logic
 }
 ```
 
-Attach permissions to functions via the `permissions` property. Prefer function-level permissions; use transport-level overrides sparingly.
+### Using Permissions in Functions
+
+**CRITICAL: Always use object syntax `permissions: { ... }` even for single permissions.**
+
+**Single Permission:**
+
+```typescript
+export const deleteResource = pikkuFunc<{ resourceId: string }, void>({
+  func: async ({ kysely }, { resourceId }) => {
+    await kysely.deleteFrom('resource').where('resourceId', '=', resourceId).execute()
+  },
+  permissions: { isOwner },  // Object syntax, even for single permission
+  docs: { ... }
+})
+```
+
+**Multiple Permissions:**
+
+When using multiple permissions, the key should be a **friendly English name** for the collection of permissions, **not a field name**:
+
+✅ **Correct:**
+
+```typescript
+export const transferResource = pikkuFunc<{
+  resourceId: string
+  newOwnerId: string
+}, void>({
+  func: async ({ kysely }, { resourceId, newOwnerId }) => {
+    // transfer logic
+  },
+  permissions: {
+    ownership: isOwner,           // Named collection, not field name
+    canTransfer: canTransferItems,
+  },
+  docs: { ... }
+})
+```
+
+❌ **Wrong:**
+
+```typescript
+permissions: {
+  resourceId: isOwner,  // DON'T use field names as keys!
+}
+
+// or
+
+permissions: isOwner  // DON'T use bare permission without object wrapper!
+```
+
+Prefer function-level permissions; use transport-level overrides sparingly.
 
 ## Middleware
 

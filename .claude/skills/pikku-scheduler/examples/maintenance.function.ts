@@ -2,7 +2,7 @@ import { pikkuVoidFunc } from '#pikku/pikku-types.gen.js'
 
 /**
  * Maintenance job function
- * Uses pikkuVoidFunc (alias for pikkuFuncSessionless<void, void>)
+ * Uses pikkuVoidFunc (alias for pikkuSessionlessFunc<void, void>)
  * No auth needed - scheduled jobs are internal
  */
 export const runMaintenance = pikkuVoidFunc({

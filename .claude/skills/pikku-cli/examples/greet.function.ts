@@ -1,4 +1,4 @@
-import { pikkuFuncSessionless } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
 /**
  * Simple greeting function for CLI
@@ -15,7 +15,7 @@ type GreetOutput = {
   timestamp: string
 }
 
-export const greetUser = pikkuFuncSessionless<GreetInput, GreetOutput>({
+export const greetUser = pikkuSessionlessFunc<GreetInput, GreetOutput>({
   docs: {
     summary: 'Greet a user by name',
     description: 'Generate a greeting message for a user',

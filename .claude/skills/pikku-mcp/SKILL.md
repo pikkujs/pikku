@@ -116,9 +116,11 @@ import { wireMCPResource } from './pikku-types.gen.js'
 import { searchCodeMCP } from './functions/code-search.function.js'
 
 wireMCPResource({
-  name: 'codeSearch',
-  description: 'Search codebase',
+  uri: 'codeSearch',
+  title: 'Code Search',
+  description: 'Search through the codebase',
   func: searchCodeMCP,
+  tags: ['code', 'search'],
 })
 ```
 
@@ -232,14 +234,41 @@ wireMCPPrompt({
 
 All MCP wiring functions support optional properties:
 
+**wireMCPResource:**
+```typescript
+wireMCPResource({
+  uri: 'annotateFile/{fileId}',  // Required - can include params like {fileId}
+  title: 'File Annotation',       // Required
+  description: 'Add annotation to code',  // Required
+  func: annotateFile,             // Required
+  tags: ['code-ops', 'ai'],       // Optional
+  middleware: [auditMiddleware],  // Optional
+  permissions: { admin: requireAdmin },  // Optional
+})
+```
+
+**wireMCPTool:**
 ```typescript
 wireMCPTool({
-  name: 'annotateFile',
-  description: 'Add annotation to code',
-  func: annotateFile,
-  tags: ['code-ops', 'ai'],
-  middleware: [auditMiddleware],
-  permissions: { admin: requireAdmin },
+  name: 'annotateFile',           // Required
+  title: 'File Annotation',       // Optional - display name for the tool
+  description: 'Add annotation to code',  // Required
+  func: annotateFile,             // Required
+  tags: ['code-ops', 'ai'],       // Optional
+  middleware: [auditMiddleware],  // Optional
+  permissions: { admin: requireAdmin },  // Optional
+})
+```
+
+**wireMCPPrompt:**
+```typescript
+wireMCPPrompt({
+  name: 'codeReviewPrompt',       // Required
+  description: 'Generate code review prompt',  // Required
+  func: generateReviewPromptMCP,  // Required
+  tags: ['review', 'ai'],         // Optional
+  middleware: [auditMiddleware],  // Optional
+  permissions: { admin: requireAdmin },  // Optional
 })
 ```
 
@@ -279,9 +308,11 @@ See `examples/` directory:
 
 - [ ] File ends with `.mcp.ts`
 - [ ] Adapter imports only from `./pikku-types.gen.ts`
-- [ ] **CRITICAL: MCP wiring uses object form with `func`, `name`, `description`**
+- [ ] **CRITICAL: wireMCPResource uses `uri`, `title`, `description`, `func`**
+- [ ] **CRITICAL: wireMCPTool and wireMCPPrompt use `name`, `description`, `func`**
 - [ ] **CRITICAL: MCP functions specify output type (MCPResourceResponse | MCPToolResponse | MCPPromptResponse)**
 - [ ] Functions are `async` and destructure services
 - [ ] Keep functions thin; prefer `rpc.invoke` for reuse
 - [ ] Errors registered with `addError` including `status` and `mcpCode`
 - [ ] Functions defined in `./functions/**/*.function.ts`, not in wiring files
+- [ ] Do NOT use `streaming: true` (not yet supported - will show warning)
