@@ -128,6 +128,7 @@ A permission is a boolean-returning guard with the same parameters as a Pikku fu
 Permissions **must** be named using `isX` or `canX` patterns (not `requireX`):
 
 ✅ **Correct:**
+
 - `isOwner`
 - `isBoardMember`
 - `canEditResource`
@@ -135,6 +136,7 @@ Permissions **must** be named using `isX` or `canX` patterns (not `requireX`):
 - `isOrganizationAdmin`
 
 ❌ **Wrong:**
+
 - `requireOwner`
 - `requireBoardMember`
 - `checkIfOwner`

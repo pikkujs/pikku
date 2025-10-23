@@ -235,40 +235,43 @@ wireMCPPrompt({
 All MCP wiring functions support optional properties:
 
 **wireMCPResource:**
+
 ```typescript
 wireMCPResource({
-  uri: 'annotateFile/{fileId}',  // Required - can include params like {fileId}
-  title: 'File Annotation',       // Required
-  description: 'Add annotation to code',  // Required
-  func: annotateFile,             // Required
-  tags: ['code-ops', 'ai'],       // Optional
-  middleware: [auditMiddleware],  // Optional
-  permissions: { admin: requireAdmin },  // Optional
+  uri: 'annotateFile/{fileId}', // Required - can include params like {fileId}
+  title: 'File Annotation', // Required
+  description: 'Add annotation to code', // Required
+  func: annotateFile, // Required
+  tags: ['code-ops', 'ai'], // Optional
+  middleware: [auditMiddleware], // Optional
+  permissions: { admin: requireAdmin }, // Optional
 })
 ```
 
 **wireMCPTool:**
+
 ```typescript
 wireMCPTool({
-  name: 'annotateFile',           // Required
-  title: 'File Annotation',       // Optional - display name for the tool
-  description: 'Add annotation to code',  // Required
-  func: annotateFile,             // Required
-  tags: ['code-ops', 'ai'],       // Optional
-  middleware: [auditMiddleware],  // Optional
-  permissions: { admin: requireAdmin },  // Optional
+  name: 'annotateFile', // Required
+  title: 'File Annotation', // Optional - display name for the tool
+  description: 'Add annotation to code', // Required
+  func: annotateFile, // Required
+  tags: ['code-ops', 'ai'], // Optional
+  middleware: [auditMiddleware], // Optional
+  permissions: { admin: requireAdmin }, // Optional
 })
 ```
 
 **wireMCPPrompt:**
+
 ```typescript
 wireMCPPrompt({
-  name: 'codeReviewPrompt',       // Required
-  description: 'Generate code review prompt',  // Required
-  func: generateReviewPromptMCP,  // Required
-  tags: ['review', 'ai'],         // Optional
-  middleware: [auditMiddleware],  // Optional
-  permissions: { admin: requireAdmin },  // Optional
+  name: 'codeReviewPrompt', // Required
+  description: 'Generate code review prompt', // Required
+  func: generateReviewPromptMCP, // Required
+  tags: ['review', 'ai'], // Optional
+  middleware: [auditMiddleware], // Optional
+  permissions: { admin: requireAdmin }, // Optional
 })
 ```
 

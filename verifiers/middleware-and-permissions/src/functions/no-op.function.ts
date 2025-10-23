@@ -1,8 +1,4 @@
-import {
-  addMiddleware,
-  addPermission,
-  pikkuVoidFunc,
-} from '../../.pikku/pikku-types.gen.js'
+import { addMiddleware, pikkuVoidFunc } from '../../.pikku/pikku-types.gen.js'
 import { functionMiddleware } from '../middleware/function.js'
 import { tagMiddleware } from '../middleware/tag.js'
 import { functionPermission } from '../permissions/function.js'

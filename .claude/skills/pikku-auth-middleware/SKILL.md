@@ -71,9 +71,9 @@ addHTTPMiddleware('*', [
   authCookie({
     name: 'session',
     expiresIn: { value: 30, unit: 'day' },
-    options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/' }
+    options: { httpOnly: true, secure: true, sameSite: 'strict', path: '/' },
   }),
-  authAPIKey({ source: 'all' })
+  authAPIKey({ source: 'all' }),
 ])
 ```
 

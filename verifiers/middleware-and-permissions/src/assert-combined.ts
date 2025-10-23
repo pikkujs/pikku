@@ -78,10 +78,10 @@ export async function assertMiddlewareAndPermissions(
       ) {
         console.log(`\nMismatch at position ${i + 1}:`)
         console.log(
-          `  Expected: ${expectedItem.name} (${expectedItem.type}) ${expectedItem.phase || ''}`
+          `  Expected: ${expectedItem?.name} (${expectedItem?.type}) ${expectedItem?.phase || ''}`
         )
         console.log(
-          `  Actual: ${actualItem.name} (${actualItem.type}) ${actualItem.phase || ''}`
+          `  Actual: ${actualItem?.name} (${actualItem?.type}) ${actualItem?.phase || ''}`
         )
         matches = false
         break
