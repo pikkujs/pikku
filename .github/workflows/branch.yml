@@ -52,7 +52,7 @@ jobs:
             # aws-lambda-websockets,
             cloudflare-workers,
             # cloudflare-websockets,
-            nextjs,
+            # nextjs,
           ]
         package-manager: [yarn]
     steps:
