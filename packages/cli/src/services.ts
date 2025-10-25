@@ -13,7 +13,14 @@ import {
 import { LocalVariablesService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
-import { inspect, InspectorState, InspectorFilters } from '@pikku/inspector'
+import {
+  inspect,
+  InspectorState,
+  InspectorFilters,
+  serializeInspectorState,
+  deserializeInspectorState,
+  filterInspectorState,
+} from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
 import { PikkuCLIConfig } from '../types/config.js'
@@ -21,6 +28,7 @@ import {
   CLILoggerForwarder,
   ForwardedLogMessage,
 } from './services/cli-logger-forwarder.service.js'
+import { readFile, writeFile } from 'fs/promises'
 
 const logger = new CLILogger({ logLogo: true, silent: false })
 
@@ -112,10 +120,30 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
 ) => {
   const cliConfig = await getPikkuCLIConfig(logger, data.configFile, [], true)
 
+  // Load inspector state from file if stateInput is provided
+  let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =
+    undefined
+
+  if (data.stateInput) {
+    try {
+      logger.info(`Loading inspector state from ${data.stateInput}`)
+      const stateJson = await readFile(data.stateInput, 'utf-8')
+      const serializedState = JSON.parse(stateJson)
+      preloadedInspectorState = deserializeInspectorState(serializedState)
+      logger.info(`Inspector state loaded successfully`)
+    } catch (error: any) {
+      logger.error(
+        `Failed to load inspector state from ${data.stateInput}: ${error.message}`
+      )
+      throw error
+    }
+  }
+
   return {
     ...cliConfig,
     ...data,
     filters: parseCLIFilters(data),
+    preloadedInspectorState,
   }
 }
 
@@ -127,12 +155,25 @@ export const createSingletonServices: CreateSingletonServices<
   Config,
   SingletonServices
 > = async (config) => {
-  const { rootDir, srcDirectories, filters } = config
+  const {
+    rootDir,
+    srcDirectories,
+    filters,
+    preloadedInspectorState,
+    stateOutput,
+  } = config
   const variables = new LocalVariablesService()
 
-  let inspectorState: InspectorState | undefined = undefined
+  // Store unfiltered state
+  let unfilteredState:
+    | InspectorState
+    | Omit<InspectorState, 'typesLookup'>
+    | undefined = preloadedInspectorState
+
   const getInspectorState = async (refresh: boolean = false) => {
-    if (refresh || !inspectorState) {
+    // Get or refresh the unfiltered state
+    if (!unfilteredState || refresh) {
+      // Run inspector WITHOUT filters to get full state
       const wiringFiles = (
         await Promise.all(
           srcDirectories.map((dir) =>
@@ -140,8 +181,8 @@ export const createSingletonServices: CreateSingletonServices<
           )
         )
       ).flat()
-      inspectorState = await inspect(logger, wiringFiles, {
-        filters,
+      unfilteredState = await inspect(logger, wiringFiles, {
+        // NO filters here - inspector returns full unfiltered state
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,
@@ -149,9 +190,31 @@ export const createSingletonServices: CreateSingletonServices<
           sessionServicesFactoryType: config.sessionServicesFactoryType,
         },
       })
-      return inspectorState
+
+      // Save unfiltered inspector state to file if stateOutput is provided
+      if (stateOutput && 'typesLookup' in unfilteredState) {
+        try {
+          logger.info(`Saving inspector state to ${stateOutput}`)
+          const serialized = serializeInspectorState(unfilteredState)
+          await writeFile(
+            stateOutput,
+            JSON.stringify(serialized, null, 2),
+            'utf-8'
+          )
+          logger.info(`Inspector state saved successfully`)
+        } catch (error: any) {
+          logger.error(
+            `Failed to save inspector state to ${stateOutput}: ${error.message}`
+          )
+          // Don't throw - state saving is optional/nice-to-have
+        }
+      }
     }
-    return inspectorState!
+
+    // Apply filters as a post-processing step
+    const filteredState = filterInspectorState(unfilteredState, filters, logger)
+
+    return filteredState as InspectorState
   }
 
   return {

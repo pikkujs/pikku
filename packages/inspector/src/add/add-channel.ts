@@ -5,10 +5,9 @@ import {
   getPropertyTags,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
+import { PikkuDocs } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import { matchesFilters } from '../utils/filter-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
 import { resolveMiddleware } from '../utils/middleware.js'
@@ -389,7 +388,6 @@ export const addChannel: AddWiring = (
   state,
   options
 ) => {
-  const filters = options.filters || {}
   if (!ts.isCallExpression(node)) return
   const { expression, arguments: args } = node
   if (!ts.isIdentifier(expression) || expression.text !== 'wireChannel') return
@@ -415,18 +413,6 @@ export const addChannel: AddWiring = (
   const docs = getPropertyValue(obj, 'docs') as PikkuDocs | undefined
   const tags = getPropertyTags(obj, 'Channel', route, logger)
   const query = getPropertyValue(obj, 'query') as string[] | []
-
-  const filePath = node.getSourceFile().fileName
-
-  if (
-    !matchesFilters(
-      filters,
-      { tags, name },
-      { type: PikkuWiringTypes.channel, name, filePath },
-      logger
-    )
-  )
-    return
 
   const connect = getPropertyAssignmentInitializer(
     obj,

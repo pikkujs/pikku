@@ -127,6 +127,9 @@ export type PikkuCLIInput = {
 
   schemasFromTypes?: string[]
 
+  stateOutput?: string
+  stateInput?: string
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -193,6 +196,9 @@ export type PikkuCLIConfig = {
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
+
+  stateOutput?: string
+  stateInput?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

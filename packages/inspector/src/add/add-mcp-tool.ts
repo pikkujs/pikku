@@ -5,11 +5,9 @@ import {
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
-import { PikkuWiringTypes } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
@@ -91,19 +89,6 @@ export const addMCPTool: AddWiring = (
         ErrorCode.MISSING_DESCRIPTION,
         `MCP tool '${nameValue}' is missing a description.`
       )
-      return
-    }
-
-    const filePath = node.getSourceFile().fileName
-
-    if (
-      !matchesFilters(
-        options.filters || {},
-        { tags, name: nameValue },
-        { type: PikkuWiringTypes.mcp, name: nameValue, filePath },
-        logger
-      )
-    ) {
       return
     }
 

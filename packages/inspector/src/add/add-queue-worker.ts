@@ -3,11 +3,10 @@ import {
   getPropertyValue,
   getPropertyTags,
 } from '../utils/get-property-value.js'
-import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
+import { PikkuDocs } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
@@ -68,22 +67,6 @@ export const addQueueWorker: AddWiring = (
       logger.critical(
         ErrorCode.MISSING_QUEUE_NAME,
         `No 'queueName' provided for queue processor function '${pikkuFuncName}'.`
-      )
-      return
-    }
-
-    const filePath = node.getSourceFile().fileName
-
-    if (
-      !matchesFilters(
-        options.filters || {},
-        { tags, name: queueName },
-        { type: PikkuWiringTypes.queue, name: queueName, filePath },
-        logger
-      )
-    ) {
-      console.info(
-        `• Skipping queue processor '${pikkuFuncName}' for queue '${queueName}' due to filter mismatch.`
       )
       return
     }

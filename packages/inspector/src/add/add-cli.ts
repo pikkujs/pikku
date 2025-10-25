@@ -5,12 +5,11 @@ import {
   InspectorOptions,
   InspectorState,
 } from '../types.js'
-import { CLIProgramMeta, CLICommandMeta, PikkuWiringTypes } from '@pikku/core'
+import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
-import { matchesFilters } from '../utils/filter-utils.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
 const configTypeWarningShown = new Set<string>()
@@ -104,20 +103,6 @@ function processCLIConfig(
   }
 
   if (!programName) {
-    return null
-  }
-
-  const filePath = sourceFile.fileName
-
-  // Apply filters
-  if (
-    !matchesFilters(
-      options.filters || {},
-      { tags: programTags, name: programName },
-      { type: PikkuWiringTypes.cli, name: programName, filePath },
-      logger
-    )
-  ) {
     return null
   }
 

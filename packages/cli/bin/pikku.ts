@@ -60,6 +60,14 @@ const all = (program, name, description) => {
       'Filter HTTP routes by route patterns (comma-separated)'
     )
     .option('-s, --silent', 'Silent mode - only show errors')
+    .option(
+      '--state-output <path>',
+      'Save inspector state to JSON file for reuse'
+    )
+    .option(
+      '--state-input <path>',
+      'Load inspector state from JSON file (skips inspection)'
+    )
     .action((c) => action(name, c))
 }
 

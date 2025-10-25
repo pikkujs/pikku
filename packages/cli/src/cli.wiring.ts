@@ -34,6 +34,12 @@ wireCLI({
     sessionServicesFactoryType: {
       description: 'Specify which session services factory to use',
     },
+    stateOutput: {
+      description: 'Save inspector state to JSON file for reuse',
+    },
+    stateInput: {
+      description: 'Load inspector state from JSON file (skips inspection)',
+    },
   },
   commands: {
     all: pikkuCLICommand({

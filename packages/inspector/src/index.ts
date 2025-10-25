@@ -8,3 +8,9 @@ export type {
   FilesAndMethodsErrors,
 } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
+export {
+  serializeInspectorState,
+  deserializeInspectorState,
+} from './utils/serialize-inspector-state.js'
+export type { SerializableInspectorState } from './utils/serialize-inspector-state.js'
+export { filterInspectorState } from './utils/filter-inspector-state.js'

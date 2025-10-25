@@ -120,7 +120,6 @@ export type InspectorOptions = Partial<{
     singletonServicesFactoryType: string
     sessionServicesFactoryType: string
   }>
-  filters: InspectorFilters
 }>
 
 export interface InspectorLogger {

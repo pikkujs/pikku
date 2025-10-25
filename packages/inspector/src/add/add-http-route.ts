@@ -5,10 +5,9 @@ import {
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
+import { PikkuDocs } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import { matchesFilters } from '../utils/filter-utils.js'
 import { AddWiring } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
@@ -76,8 +75,6 @@ export const addHTTPRoute: AddWiring = (
   const tags = getPropertyTags(obj, 'HTTP route', route, logger)
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
-  const filePath = node.getSourceFile().fileName
-
   // --- find the referenced function name first for filtering ---
   const funcInitializer = getPropertyAssignmentInitializer(
     obj,
@@ -98,24 +95,6 @@ export const addHTTPRoute: AddWiring = (
     checker,
     state.rootDir
   ).pikkuFuncName
-
-  // Now apply filters with both route and function name
-  if (
-    !matchesFilters(
-      options.filters || {},
-      { tags, name: funcName },
-      {
-        type: PikkuWiringTypes.http,
-        name: route,
-        filePath,
-        httpRoute: route,
-        httpMethod: method,
-      },
-      logger
-    )
-  ) {
-    return
-  }
 
   // Ensure function metadata exists (creates stub for inline functions)
   ensureFunctionMetadata(state, funcName, route)

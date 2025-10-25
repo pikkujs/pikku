@@ -81,7 +81,7 @@ type UpdateCardInput = PickRequired<
 export const updateCard = pikkuFunc<UpdateCardInput, void>({
   func: async ({ kysely }, { cardId, title, description, dueDate }) => {
     // ...
-  }
+  },
 })
 ```
 
@@ -90,16 +90,20 @@ export const updateCard = pikkuFunc<UpdateCardInput, void>({
 ```typescript
 // Inline complex type - may cause OpenAPI schema generation errors
 export const updateCard = pikkuFunc<
-  PickRequired<Partial<Pick<Card, 'cardId' | 'title' | 'description'>>, 'cardId'>,
+  PickRequired<
+    Partial<Pick<Card, 'cardId' | 'title' | 'description'>>,
+    'cardId'
+  >,
   void
 >({
   func: async ({ kysely }, { cardId, title, description }) => {
     // ...
-  }
+  },
 })
 ```
 
 **Why this matters:**
+
 - OpenAPI/JSON Schema generators struggle with nested utility types
 - Separate types are easier to read and maintain
 - You'll see `[PKU456] Error generating schema` warnings for complex inline types
@@ -198,11 +202,47 @@ See [joined-queries.example.ts](examples/joined-queries.example.ts) for detailed
 - More performant than client-side mapping
 - Proper handling of optional vs required relationships
 
-### 5. Use Single Query Patterns
+### 5. ALWAYS Use .executeTakeFirstOrThrow()
 
-**DO: Use single update with `.executeTakeFirstOrThrow()` instead of read-then-update**
+**CRITICAL: Never use `.executeTakeFirst()` followed by a null check. Always use `.executeTakeFirstOrThrow()` with an error factory.**
 
 ✅ **Correct:**
+
+```typescript
+const card = await kysely
+  .selectFrom('card')
+  .innerJoin('list', 'list.listId', 'card.listId')
+  .innerJoin('board', 'board.boardId', 'list.boardId')
+  .select(['board.ownerId'])
+  .where('cardId', '=', cardId)
+  .executeTakeFirstOrThrow(() => new NotFoundError('Card not found'))
+```
+
+❌ **Wrong:**
+
+```typescript
+const card = await kysely
+  .selectFrom('card')
+  .innerJoin('list', 'list.listId', 'card.listId')
+  .innerJoin('board', 'board.boardId', 'list.boardId')
+  .select(['board.ownerId'])
+  .where('cardId', '=', cardId)
+  .executeTakeFirst()
+
+if (!card) {
+  throw new NotFoundError('Card not found')
+}
+```
+
+**Why this matters:**
+
+- Eliminates boilerplate null checks
+- Cleaner, more concise code
+- Consistent error handling pattern
+- The error factory function runs only if no record is found
+- Works for SELECT, UPDATE, DELETE, and INSERT operations
+
+**Pattern for updates:**
 
 ```typescript
 const updatedOrder = await kysely
@@ -213,25 +253,49 @@ const updatedOrder = await kysely
   .executeTakeFirstOrThrow(() => new NotFoundError('Order not found'))
 ```
 
+### 6. Direct Return for Simple Queries
+
+**When a function only queries and returns data, return directly without assigning to a variable.**
+
+✅ **Correct:**
+
+```typescript
+export const getCardAssignments = pikkuFunc<
+  { cardId: string },
+  CardAssignment[]
+>({
+  func: async ({ kysely }, { cardId }) => {
+    return await kysely
+      .selectFrom('cardAssignment')
+      .selectAll()
+      .where('cardId', '=', cardId)
+      .orderBy('assignedAt', 'asc')
+      .execute()
+  },
+})
+```
+
 ❌ **Wrong:**
 
 ```typescript
-const order = await kysely
-  .selectFrom('order')
-  .select(['orderId'])
-  .where('orderId', '=', orderId)
-  .executeTakeFirst()
+export const getCardAssignments = pikkuFunc<
+  { cardId: string },
+  CardAssignment[]
+>({
+  func: async ({ kysely }, { cardId }) => {
+    const assignments = await kysely
+      .selectFrom('cardAssignment')
+      .selectAll()
+      .where('cardId', '=', cardId)
+      .orderBy('assignedAt', 'asc')
+      .execute()
 
-if (!order) throw new NotFoundError('Order not found')
-
-await kysely
-  .updateTable('order')
-  .set({ status: 'cancelled' })
-  .where('orderId', '=', orderId)
-  .execute()
+    return assignments // Unnecessary variable
+  },
+})
 ```
 
-### 6. Use `.returningAll()` for Full Entities
+### 7. Use `.returningAll()` for Full Entities
 
 ```typescript
 // ✅ Good

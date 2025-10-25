@@ -12,6 +12,7 @@
     "typescript": "^5.9"
   },
   "scripts": {
+    "tsc": "tsc --noEmit",
     "test": "(pikku || true) && tsc --noEmit",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"

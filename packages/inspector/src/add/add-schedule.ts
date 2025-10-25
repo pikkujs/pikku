@@ -3,11 +3,10 @@ import {
   getPropertyValue,
   getPropertyTags,
 } from '../utils/get-property-value.js'
-import { PikkuDocs, PikkuWiringTypes } from '@pikku/core'
+import { PikkuDocs } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import { matchesFilters } from '../utils/filter-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 
@@ -65,19 +64,6 @@ export const addSchedule: AddWiring = (
     ).pikkuFuncName
 
     if (!nameValue || !scheduleValue) {
-      return
-    }
-
-    const filePath = node.getSourceFile().fileName
-
-    if (
-      !matchesFilters(
-        options.filters || {},
-        { tags, name: nameValue },
-        { type: PikkuWiringTypes.scheduler, name: nameValue, filePath },
-        logger
-      )
-    ) {
       return
     }
 
