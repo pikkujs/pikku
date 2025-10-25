@@ -20,7 +20,6 @@ export async function testHTTPWiring(
       await fetch(new Request(`http://localhost${url}`), {
         singletonServices,
         createSessionServices,
-        skipUserSession: true,
       })
     },
     singletonServices.logger

@@ -11,10 +11,13 @@ import { noOpFunction } from './no-op.function.js'
 export const cliTagMiddleware = () =>
   addMiddleware('cli', [tagMiddleware('cli')])
 
+// Session tag middleware - re-export from shared location
+export { sessionTagMiddleware } from '../middleware/fake-session.js'
+
 wireCLI({
   program: 'test-cli',
   middleware: [wireMiddleware('cli')],
-  tags: ['cli'],
+  tags: ['session', 'cli'],
   commands: {
     command: pikkuCLICommand({
       func: noOpFunction,

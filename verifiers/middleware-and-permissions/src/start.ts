@@ -49,6 +49,8 @@ async function main(): Promise<void> {
       [
         { name: 'global', type: 'http', phase: 'before' },
         { name: '/api/*', type: 'route', phase: 'before' },
+        { name: 'session', type: 'tag', phase: 'before' },
+        { name: 'api', type: 'tag', phase: 'before' },
         { name: 'api-test', type: 'wire', phase: 'before' },
         { name: 'inline', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
@@ -68,6 +70,7 @@ async function main(): Promise<void> {
       '/simple',
       [
         { name: 'global', type: 'http', phase: 'before' },
+        { name: 'session', type: 'tag', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
         { name: 'global', type: 'http-permission' },
@@ -80,6 +83,7 @@ async function main(): Promise<void> {
     // Test Scheduler
     const schedulerPassed = await testSchedulerWiring(
       [
+        { name: 'session', type: 'tag', phase: 'before' },
         { name: 'scheduler', type: 'tag', phase: 'before' },
         { name: 'scheduler', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
@@ -94,6 +98,7 @@ async function main(): Promise<void> {
     // Test Queue
     const queuePassed = await testQueueWiring(
       [
+        { name: 'session', type: 'tag', phase: 'before' },
         { name: 'queue', type: 'tag', phase: 'before' },
         { name: 'queue', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },
@@ -108,6 +113,7 @@ async function main(): Promise<void> {
     // Test CLI
     const cliPassed = await testCLIWiring(
       [
+        { name: 'session', type: 'tag', phase: 'before' },
         { name: 'cli', type: 'tag', phase: 'before' },
         { name: 'cli', type: 'wire', phase: 'before' },
         { name: 'command', type: 'wire', phase: 'before' },
@@ -116,6 +122,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       [
+        { name: 'session', type: 'tag', phase: 'before' },
         { name: 'cli', type: 'tag', phase: 'before' },
         { name: 'cli', type: 'wire', phase: 'before' },
         { name: 'command', type: 'wire', phase: 'before' },
@@ -131,6 +138,7 @@ async function main(): Promise<void> {
     // Test MCP
     const mcpPassed = await testMCPWiring(
       [
+        { name: 'session', type: 'tag', phase: 'before' },
         { name: 'mcp', type: 'tag', phase: 'before' },
         { name: 'mcp', type: 'wire', phase: 'before' },
         { name: 'function', type: 'tag', phase: 'before' },

@@ -26,9 +26,12 @@ export const queueTagPermissions = () =>
     }),
   })
 
+// Session tag middleware - re-export from shared location
+export { sessionTagMiddleware } from '../middleware/fake-session.js'
+
 wireQueueWorker({
   queueName: 'test-queue',
-  tags: ['queue'],
+  tags: ['session', 'queue'],
   middleware: [wireMiddleware('queue')],
   func: noOpFunction,
 })

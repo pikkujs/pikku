@@ -26,10 +26,13 @@ export const schedulerTagPermissions = () =>
     }),
   })
 
+// Session tag middleware - re-export from shared location
+export { sessionTagMiddleware } from '../middleware/fake-session.js'
+
 wireScheduler({
   name: 'testScheduledTask',
   schedule: '*/1 * * * *', // Every minute
-  tags: ['scheduler'],
+  tags: ['session', 'scheduler'],
   middleware: [wireMiddleware('scheduler')],
   func: noOpFunction,
 })

@@ -17,15 +17,17 @@ import {
   httpGlobalMiddleware,
   httpRouteMiddleware,
 } from '../middleware/http.js'
+import { tagMiddleware } from '../middleware/tag.js'
 import {
   httpGlobalPermission,
   httpRoutePermission,
 } from '../permissions/http.js'
 import { permissionTagFactory, readTagPermission } from '../permissions/tag.js'
+import { sessionTagMiddleware } from '../middleware/fake-session.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
 export const apiTagMiddleware = () =>
-  addMiddleware('api', [httpRouteMiddleware])
+  addMiddleware('api', [tagMiddleware('api')])
 
 // Global tag permissions - Recommended: Use factory pattern for tree-shaking
 export const apiTagPermissions = () =>
@@ -33,6 +35,9 @@ export const apiTagPermissions = () =>
 
 export const adminTagPermissions = () =>
   addPermission('admin', { admin: permissionTagFactory('admin') })
+
+// Session tag middleware - applies to all wirings with 'session' tag
+export { sessionTagMiddleware } from '../middleware/fake-session.js'
 
 // HTTP-specific global middleware - Also works: Direct call (no tree-shaking)
 export const httpMiddleware = addHTTPMiddleware('*', [httpGlobalMiddleware])
@@ -82,20 +87,20 @@ const inlineWirePermission = pikkuPermission(
 wireHTTP({
   method: 'get',
   route: '/api/test',
-  tags: ['api'],
+  tags: ['session', 'api'],
   middleware: [wireMiddleware('api-test'), inlineWireMiddleware],
   permissions: {
     wire: [wirePermission, inlineWirePermission],
   },
   func: noOpFunction,
-  auth: true, // Auth required when permissions are present
+  auth: false, // Session set by sessionTagMiddleware, then checked by permissions
 })
 
 // HTTP endpoint with admin tag permissions
 wireHTTP({
   method: 'post',
   route: '/api/admin',
-  tags: ['admin'],
+  tags: ['session', 'admin'],
   func: noOpFunction,
   auth: false, // No authentication required for this example
 })
@@ -104,6 +109,7 @@ wireHTTP({
 wireHTTP({
   method: 'get',
   route: '/simple',
+  tags: ['session'],
   func: noOpFunction,
   auth: false, // No authentication required for this example
 })
