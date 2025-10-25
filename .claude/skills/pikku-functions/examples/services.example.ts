@@ -5,10 +5,10 @@ import type {
   UserSession,
 } from '../types/application-types.d.js'
 import {
-  CreateConfig,
-  CreateSessionServices,
-  CreateSingletonServices,
-} from '@pikku/core'
+  pikkuConfig,
+  pikkuServices,
+  pikkuSessionServices,
+} from '../.pikku/pikku-types.gen.js'
 import {
   ConsoleLogger,
   JWTService,
@@ -24,11 +24,11 @@ import {
  * Application configuration
  * Created once on startup
  */
-export const createConfig: CreateConfig<Config> = async () => {
+export const createConfig = pikkuConfig(async () => {
   return {
     // Your config here
   }
-}
+})
 
 /**
  * Singleton services - created once on application start
@@ -36,39 +36,38 @@ export const createConfig: CreateConfig<Config> = async () => {
  * IMPORTANT: Use conditional/async loading for services to enable tree-shaking
  * Only load services that are actually used in your functions
  */
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  RequiredSingletonServices
-> = async (config: Config): Promise<RequiredSingletonServices> => {
-  // Always-needed services
-  const variables = new LocalVariablesService()
-  const logger = new ConsoleLogger()
-  const schema = new CFWorkerSchemaService(logger)
+export const createSingletonServices = pikkuServices(
+  async (config, existingServices): Promise<RequiredSingletonServices> => {
+    // Always-needed services
+    const variables = new LocalVariablesService()
+    const logger = new ConsoleLogger()
+    const schema = new CFWorkerSchemaService(logger)
 
-  // ✅ IMPORTANT: Conditional loading - only create JWT service if used
-  // This enables tree-shaking and reduces bundle size
-  let jwt: JWTService | undefined
-  if (singletonServices.jwt) {
-    const { JoseJWTService } = await import('@pikku/jose')
-    jwt = new JoseJWTService(
-      async () => [
-        {
-          id: 'my-key',
-          value: 'the-yellow-puppet',
-        },
-      ],
-      logger
-    )
-  }
+    // ✅ IMPORTANT: Conditional loading - only create JWT service if used
+    // This enables tree-shaking and reduces bundle size
+    let jwt: JWTService | undefined
+    if (singletonServices.jwt) {
+      const { JoseJWTService } = await import('@pikku/jose')
+      jwt = new JoseJWTService(
+        async () => [
+          {
+            id: 'my-key',
+            value: 'the-yellow-puppet',
+          },
+        ],
+        logger
+      )
+    }
 
-  return {
-    config,
-    logger,
-    variables,
-    schema,
-    jwt,
+    return {
+      config,
+      logger,
+      variables,
+      schema,
+      jwt,
+    }
   }
-}
+)
 
 /**
  * Session services - created on each request
@@ -76,19 +75,17 @@ export const createSingletonServices: CreateSingletonServices<
  *
  * CRITICAL: Always destructure services in the first parameter
  */
-export const createSessionServices: CreateSessionServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async ({ logger, config }, interaction, session) => {
-  // ✅ CORRECT: Services destructured in parameter list
-  // interaction contains route, method, etc.
-  // session contains user session data
+export const createSessionServices = pikkuSessionServices(
+  async ({ logger, config }, interaction, session) => {
+    // ✅ CORRECT: Services destructured in parameter list
+    // interaction contains route, method, etc.
+    // session contains user session data
 
-  // Example: Create a database connection per request
-  // const db = await createDbConnection(config.dbUrl)
+    // Example: Create a database connection per request
+    // const db = await createDbConnection(config.dbUrl)
 
-  return {
-    // Add your session services here
+    return {
+      // Add your session services here
+    }
   }
-}
+)
