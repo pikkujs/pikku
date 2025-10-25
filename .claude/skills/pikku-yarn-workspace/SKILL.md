@@ -125,7 +125,11 @@ Each backend is minimal bootstrapping code. See these skills for backend-specifi
 import { PikkuExpressServer } from '@pikku/express'
 
 // Import config and services from functions package
-import { createConfig, createSingletonServices, createSessionServices } from '@my-app/functions/src/services'
+import {
+  createConfig,
+  createSingletonServices,
+  createSessionServices,
+} from '@my-app/functions/src/services'
 
 // ✅ CRITICAL: Import bootstrap to load all wiring
 import '@my-app/functions/.pikku/pikku-bootstrap.gen'
@@ -177,20 +181,22 @@ Use `singletonServices` flags from generated file for tree-shaking:
 import { singletonServices } from '../.pikku/pikku-services.gen.js'
 import { pikkuServices } from '../.pikku/pikku-types.gen.js'
 
-export const createSingletonServices = pikkuServices(async (config, existingServices) => {
-  const logger = new ConsoleLogger()
+export const createSingletonServices = pikkuServices(
+  async (config, existingServices) => {
+    const logger = new ConsoleLogger()
 
-  // Conditional service loading
-  let kysely: Kysely<DB> | undefined
-  if (singletonServices.kysely) {
-    const { PikkuKysely } = await import('@pikku/kysely')
-    const pikkuKysely = new PikkuKysely(logger, config.db, 'app')
-    await pikkuKysely.init()
-    kysely = pikkuKysely.kysely
+    // Conditional service loading
+    let kysely: Kysely<DB> | undefined
+    if (singletonServices.kysely) {
+      const { PikkuKysely } = await import('@pikku/kysely')
+      const pikkuKysely = new PikkuKysely(logger, config.db, 'app')
+      await pikkuKysely.init()
+      kysely = pikkuKysely.kysely
+    }
+
+    return { logger, kysely }
   }
-
-  return { logger, kysely }
-})
+)
 ```
 
 **Important:** If a required service depends on an optional service, **you must handle those dependencies yourself**. Pikku doesn't manage service dependencies to keep the framework lightweight.

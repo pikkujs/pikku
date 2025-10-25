@@ -3,12 +3,9 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  EventHubService,
-  JWTService,
-  SecretService,
 } from '@pikku/core'
 
-export type Config = CoreConfig
+export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {}
 

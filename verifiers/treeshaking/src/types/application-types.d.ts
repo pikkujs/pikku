@@ -10,7 +10,7 @@ import type { PaymentService } from '../services/payment.service.js'
 import type { AnalyticsService } from '../services/analytics.service.js'
 import type { StorageService } from '../services/storage.service.js'
 
-export type Config = CoreConfig
+export interface Config extends CoreConfig {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   email: EmailService

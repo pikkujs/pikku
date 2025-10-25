@@ -6,7 +6,7 @@ import type {
 } from '@pikku/core'
 import type { CustomLogger } from '../services/custom-logger.service.js'
 
-export type Config = CoreConfig
+export interface Config extends CoreConfig {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   logger: CustomLogger

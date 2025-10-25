@@ -9,7 +9,7 @@ import type {
 } from '@pikku/core'
 import { EventHubTopics } from './eventhub-topics.js'
 
-export type Config = CoreConfig
+export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {
   userId: string
