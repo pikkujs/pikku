@@ -14,7 +14,7 @@ wireHTTP({
   tags: ['notifications', 'email'],
   func: sendEmail,
   middleware: [logRequest],
-  permissions: [canSendEmail, hasEmailQuota(100)],
+  permissions: { allowed: [canSendEmail, hasEmailQuota(100)] },
 })
 
 wireHTTP({
@@ -32,7 +32,7 @@ wireHTTP({
   tags: ['payments'],
   func: processPayment,
   middleware: [logRequest, trackAnalytics, rateLimiter(10)],
-  permissions: [canProcessPayment],
+  permissions: { canProcessPayment },
 })
 
 // Storage

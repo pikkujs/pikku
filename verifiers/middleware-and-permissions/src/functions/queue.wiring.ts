@@ -5,7 +5,6 @@ import {
   pikkuPermission,
 } from '../../.pikku/pikku-types.gen.js'
 import { wireMiddleware } from '../middleware/wire.js'
-import { wirePermission } from '../permissions/wire.js'
 import { noOpFunction } from './no-op.function.js'
 import { tagMiddleware } from '../middleware/tag.js'
 

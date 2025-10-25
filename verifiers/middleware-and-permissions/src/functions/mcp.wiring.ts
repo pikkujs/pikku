@@ -3,10 +3,11 @@ import {
   addMiddleware,
   addPermission,
   pikkuPermission,
+  pikkuFunc,
 } from '../../.pikku/pikku-types.gen.js'
 import { wireMiddleware } from '../middleware/wire.js'
-import { noOpFunction } from './no-op.function.js'
 import { tagMiddleware } from '../middleware/tag.js'
+import { MCPToolResponse } from '@pikku/core'
 
 // Tag middleware for MCP
 export const mcpTagMiddleware = () =>
@@ -39,11 +40,20 @@ export const mcpWirePermission = pikkuPermission(
   }
 )
 
+// MCP-specific function that returns MCPToolResponse
+const mcpToolFunction = pikkuFunc<void, MCPToolResponse>({
+  func: async ({ logger }) => {
+    logger.info({ type: 'function', name: 'mcpTool', phase: 'execute' })
+    return [{ type: 'text', text: 'MCP tool executed successfully' }]
+  },
+  auth: false,
+})
+
 wireMCPTool({
   name: 'test-tool',
   description: 'Test MCP tool',
   tags: ['mcp'],
   middleware: [wireMiddleware('mcp')],
-  permissions: [mcpWirePermission],
-  func: noOpFunction,
+  permissions: { wire: [mcpWirePermission] },
+  func: mcpToolFunction,
 })

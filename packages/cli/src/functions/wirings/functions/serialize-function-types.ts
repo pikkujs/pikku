@@ -14,7 +14,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { PikkuChannel, PikkuMCP } from '@pikku/core'
 
@@ -357,7 +357,7 @@ export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
  * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
  *
  * @param tag - The tag that the permissions should apply to.
- * @param permissions - The permissions array to apply for the specified tag.
+ * @param permissions - The permissions array or object to apply for the specified tag.
  *
  * @throws Error if permissions for the tag already exist.
  *
@@ -369,11 +369,11 @@ export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
  * // Add authentication permissions for auth endpoints
  * addPermission('auth', [authPermission])
  *
- * // Add read permissions for all API endpoints
- * addPermission('api', [readPermission])
+ * // Add read permissions for all API endpoints (as object)
+ * addPermission('api', { read: readPermission })
  * \`\`\`
  */
-export const addPermission = <In = unknown>(tag: string, permissions: PikkuPermission<In>[]) => {
+export const addPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
   addPermissionCore(tag, permissions as any)
 }
 `

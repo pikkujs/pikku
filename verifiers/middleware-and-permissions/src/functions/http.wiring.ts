@@ -88,7 +88,7 @@ wireHTTP({
     wire: [wirePermission, inlineWirePermission],
   },
   func: noOpFunction,
-  auth: false, // No authentication required for this example
+  auth: true, // Auth required when permissions are present
 })
 
 // HTTP endpoint with admin tag permissions

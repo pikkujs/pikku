@@ -6,7 +6,6 @@ import {
 } from '../../.pikku/pikku-types.gen.js'
 import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'
-import { wirePermission } from '../permissions/wire.js'
 import { noOpFunction } from './no-op.function.js'
 
 // Tag middleware for scheduler
@@ -32,8 +31,5 @@ wireScheduler({
   schedule: '*/1 * * * *', // Every minute
   tags: ['scheduler'],
   middleware: [wireMiddleware('scheduler')],
-  permissions: {
-    wire: wirePermission,
-  },
   func: noOpFunction,
 })
