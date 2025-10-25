@@ -12,6 +12,7 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings,
       rpcInternalMapDeclarationFile,
+      servicesFile,
     } = config
 
     // Check for required types
@@ -21,12 +22,20 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
       singletonServicesType: true,
     })
 
-    const { userSessionType, sessionServicesType, singletonServicesType } =
-      visitState.filesAndMethods
+    const {
+      userSessionType,
+      sessionServicesType,
+      singletonServicesType,
+      pikkuConfigType,
+    } = visitState.filesAndMethods
 
     if (!userSessionType || !sessionServicesType || !singletonServicesType) {
       throw new Error('Required types not found')
     }
+
+    const configTypeImport = pikkuConfigType
+      ? `import type { ${pikkuConfigType.type} } from '${getFileImportRelativePath(functionTypesFile, pikkuConfigType.typePath, packageMappings)}'`
+      : '// Config type not found, will use fallback'
 
     const content = serializeFunctionTypes(
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(functionTypesFile, userSessionType.typePath, packageMappings)}'`,
@@ -35,7 +44,9 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
       singletonServicesType.type,
       `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, sessionServicesType.typePath, packageMappings)}'`,
       sessionServicesType.type,
-      `import type { TypedPikkuRPC } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`
+      `import type { TypedPikkuRPC } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
+      `import type { RequiredSingletonServices, RequiredSessionServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
+      configTypeImport
     )
 
     await writeFileInDir(logger, functionTypesFile, content)

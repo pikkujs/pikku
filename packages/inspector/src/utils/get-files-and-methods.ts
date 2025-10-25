@@ -15,6 +15,7 @@ export type FilesAndMethods = {
   userSessionType: Meta
   sessionServicesType: Meta
   singletonServicesType: Meta
+  pikkuConfigType: Meta
   pikkuConfigFactory: Meta
   singletonServicesFactory: Meta
   sessionServicesFactory: Meta
@@ -87,6 +88,7 @@ export const getFilesAndMethods = (
     singletonServicesTypeImportMap,
     sessionServicesTypeImportMap,
     userSessionTypeImportMap,
+    configTypeImportMap,
     sessionServicesFactories,
     singletonServicesFactories,
     configFactories,
@@ -116,6 +118,12 @@ export const getFilesAndMethods = (
     sessionServicesType: getMetaTypes(
       'CoreServices',
       sessionServicesTypeImportMap,
+      undefined,
+      errors
+    ),
+    pikkuConfigType: getMetaTypes(
+      'CoreConfig',
+      configTypeImportMap,
       undefined,
       errors
     ),

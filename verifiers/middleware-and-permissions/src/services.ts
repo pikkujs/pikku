@@ -1,26 +1,16 @@
-import type {
-  Config,
-  Services,
-  SingletonServices,
-  UserSession,
-} from './types/application-types.d.js'
 import {
-  CreateConfig,
-  CreateSessionServices,
-  CreateSingletonServices,
-} from '@pikku/core'
+  pikkuConfig,
+  pikkuServices,
+  pikkuSessionServices,
+} from '../.pikku/pikku-types.gen.js'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
-import { RequiredSingletonServices } from '../.pikku/pikku-services.gen.js'
 
-export const createConfig: CreateConfig<Config> = async () => {
+export const createConfig = pikkuConfig(async () => {
   return {}
-}
+})
 
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  RequiredSingletonServices
-> = async (config: Config): Promise<RequiredSingletonServices> => {
+export const createSingletonServices = pikkuServices(async (config) => {
   const logger = new CustomLogger()
 
   return {
@@ -28,12 +18,10 @@ export const createSingletonServices: CreateSingletonServices<
     config,
     logger,
   }
-}
+})
 
-export const createSessionServices: CreateSessionServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async (_services, _interaction, _session) => {
-  return {}
-}
+export const createSessionServices = pikkuSessionServices(
+  async (_services, _interaction, _session) => {
+    return {}
+  }
+)

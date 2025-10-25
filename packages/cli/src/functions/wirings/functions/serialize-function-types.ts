@@ -8,7 +8,9 @@ export const serializeFunctionTypes = (
   singletonServicesTypeName: string,
   sessionServicesTypeImport: string,
   sessionServicesTypeName: string,
-  rpcMapTypeImport: string
+  rpcMapTypeImport: string,
+  requiredServicesTypeImport: string,
+  configTypeImport: string
 ) => {
   return `/**
  * Core function, middleware, and permission types for all wirings
@@ -21,11 +23,14 @@ import { PikkuChannel, PikkuMCP } from '@pikku/core'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
 ${sessionServicesTypeImport}
+${configTypeImport}
 ${rpcMapTypeImport}
+${requiredServicesTypeImport}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
 ${sessionServicesTypeName !== 'Services' ? `type Services = ${sessionServicesTypeName}` : ''}
 ${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : ''}
+${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
 
 /**
  * Type-safe API permission definition that integrates with your application's session type.
@@ -322,6 +327,73 @@ export const pikkuVoidFunc = (
 ) => {
   return typeof func === 'function' ? { func } : func
 }
+
+/**
+ * Creates a Pikku config factory.
+ * Use this to define your application's configuration factory.
+ *
+ * @param func - Config factory function that returns your application's config
+ * @returns The config factory function
+ *
+ * @example
+ * \`\`\`typescript
+ * export const createConfig = pikkuConfig(async () => {
+ *   return {
+ *     apiUrl: process.env.API_URL || 'http://localhost:3000',
+ *     dbUrl: process.env.DATABASE_URL
+ *   }
+ * })
+ * \`\`\`
+ */
+export const pikkuConfig = (
+  func: (variables?: any, ...args: any[]) => Promise<Config>
+) => func
+
+/**
+ * Creates a Pikku singleton services factory.
+ * Use this to define services that are created once and shared across all requests.
+ *
+ * @param func - Singleton services factory function
+ * @returns The singleton services factory function
+ *
+ * @example
+ * \`\`\`typescript
+ * export const createSingletonServices = pikkuServices(async (config, existingServices) => {
+ *   return {
+ *     config,
+ *     logger: new CustomLogger(),
+ *     db: await createDatabaseConnection(config.dbUrl)
+ *   }
+ * })
+ * \`\`\`
+ */
+export const pikkuServices = (
+  func: (config: Config, existingServices?: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
+) => func
+
+/**
+ * Creates a Pikku session services factory.
+ * Use this to define services that are created per-request/session.
+ *
+ * @param func - Session services factory function
+ * @returns The session services factory function
+ *
+ * @example
+ * \`\`\`typescript
+ * export const createSessionServices = pikkuSessionServices(async (services, interaction, session) => {
+ *   return {
+ *     userCache: new UserCache(session?.userId)
+ *   }
+ * })
+ * \`\`\`
+ */
+export const pikkuSessionServices = (
+  func: (
+    services: SingletonServices,
+    interaction: any,
+    session: Session | undefined
+  ) => Promise<RequiredSessionServices>
+) => func
 
 /**
  * Adds global middleware for a specific tag.
