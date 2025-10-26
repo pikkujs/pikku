@@ -1,0 +1,1885 @@
+{
+  "rootDir": "src",
+  "singletonServicesTypeImportMap": [
+    [
+      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      [
+        {
+          "variable": "SingletonServices",
+          "type": "SingletonServices",
+          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+        }
+      ]
+    ]
+  ],
+  "sessionServicesTypeImportMap": [
+    [
+      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      [
+        {
+          "variable": "Services",
+          "type": "Services",
+          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+        }
+      ]
+    ]
+  ],
+  "userSessionTypeImportMap": [
+    [
+      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      [
+        {
+          "variable": "UserSession",
+          "type": "UserSession",
+          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+        }
+      ]
+    ]
+  ],
+  "configTypeImportMap": [
+    [
+      "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      [
+        {
+          "variable": "Config",
+          "type": "Config",
+          "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+        }
+      ]
+    ]
+  ],
+  "singletonServicesFactories": [
+    [
+      "src/services.ts",
+      [
+        {
+          "variable": "createSingletonServices",
+          "type": "CreateSingletonServices",
+          "typePath": "src/services.ts"
+        }
+      ]
+    ]
+  ],
+  "sessionServicesFactories": [
+    [
+      "src/services.ts",
+      [
+        {
+          "variable": "createSessionServices",
+          "type": "CreateSessionServices",
+          "typePath": "src/services.ts"
+        }
+      ]
+    ]
+  ],
+  "sessionServicesMeta": [
+    [
+      "createSessionServices",
+      []
+    ]
+  ],
+  "configFactories": [
+    [
+      "src/services.ts",
+      [
+        {
+          "variable": "createConfig",
+          "type": "CreateConfig",
+          "typePath": "src/services.ts"
+        }
+      ]
+    ]
+  ],
+  "filesAndMethods": {
+    "userSessionType": {
+      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "type": "UserSession",
+      "variable": "UserSession",
+      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+    },
+    "singletonServicesType": {
+      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "type": "SingletonServices",
+      "variable": "SingletonServices",
+      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+    },
+    "sessionServicesType": {
+      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "type": "Services",
+      "variable": "Services",
+      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+    },
+    "pikkuConfigType": {
+      "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
+      "type": "Config",
+      "variable": "Config",
+      "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
+    },
+    "pikkuConfigFactory": {
+      "file": "src/services.ts",
+      "type": "CreateConfig",
+      "variable": "createConfig",
+      "typePath": "src/services.ts"
+    },
+    "singletonServicesFactory": {
+      "file": "src/services.ts",
+      "type": "CreateSingletonServices",
+      "variable": "createSingletonServices",
+      "typePath": "src/services.ts"
+    },
+    "sessionServicesFactory": {
+      "file": "src/services.ts",
+      "type": "CreateSessionServices",
+      "variable": "createSessionServices",
+      "typePath": "src/services.ts"
+    }
+  },
+  "filesAndMethodsErrors": [],
+  "functions": {
+    "typesMap": {
+      "map": [
+        [
+          "__object_4eav85",
+          {
+            "originalName": "__object",
+            "path": "src/mcp.functions.ts"
+          }
+        ]
+      ],
+      "customTypes": [
+        [
+          "OnConnectInput",
+          {
+            "type": "\"hello!\"",
+            "references": []
+          }
+        ],
+        [
+          "AuthenticateInput",
+          {
+            "type": "{ token: string; userId: string; }",
+            "references": []
+          }
+        ],
+        [
+          "AuthenticateOutput",
+          {
+            "type": "{ authResult: boolean; action: \"auth\"; }",
+            "references": []
+          }
+        ],
+        [
+          "LogoutOutput",
+          {
+            "type": "{ action: \"auth\"; }",
+            "references": []
+          }
+        ],
+        [
+          "SubscribeInput",
+          {
+            "type": "{ name: string; }",
+            "references": []
+          }
+        ],
+        [
+          "UnsubscribeInput",
+          {
+            "type": "{ name: string; }",
+            "references": []
+          }
+        ],
+        [
+          "UnsubscribeOutput",
+          {
+            "type": "\"valid\"",
+            "references": []
+          }
+        ],
+        [
+          "EmitMessageInput",
+          {
+            "type": "{ name: string; }",
+            "references": []
+          }
+        ],
+        [
+          "EmitMessageOutput",
+          {
+            "type": "{ timestamp: string; from: string; } | { message: string; }",
+            "references": []
+          }
+        ],
+        [
+          "OnMessageInput",
+          {
+            "type": "\"hello\"",
+            "references": []
+          }
+        ],
+        [
+          "OnMessageOutput",
+          {
+            "type": "\"hey\"",
+            "references": []
+          }
+        ],
+        [
+          "GreetUserInput",
+          {
+            "type": "{ name: string; loud: boolean; }",
+            "references": []
+          }
+        ],
+        [
+          "GreetUserOutput",
+          {
+            "type": "{ message: string; timestamp: string; }",
+            "references": []
+          }
+        ],
+        [
+          "AddNumbersInput",
+          {
+            "type": "{ a: number; b: number; }",
+            "references": []
+          }
+        ],
+        [
+          "AddNumbersOutput",
+          {
+            "type": "{ operation: string; operands: number[]; result: number; expression: string; }",
+            "references": []
+          }
+        ],
+        [
+          "SubtractNumbersInput",
+          {
+            "type": "{ a: number; b: number; }",
+            "references": []
+          }
+        ],
+        [
+          "SubtractNumbersOutput",
+          {
+            "type": "{ operation: string; operands: number[]; result: number; expression: string; }",
+            "references": []
+          }
+        ],
+        [
+          "MultiplyNumbersInput",
+          {
+            "type": "{ a: number; b: number; }",
+            "references": []
+          }
+        ],
+        [
+          "MultiplyNumbersOutput",
+          {
+            "type": "{ operation: string; operands: number[]; result: number; expression: string; }",
+            "references": []
+          }
+        ],
+        [
+          "DivideNumbersInput",
+          {
+            "type": "{ a: number; b: number; }",
+            "references": []
+          }
+        ],
+        [
+          "DivideNumbersOutput",
+          {
+            "type": "{ operation: string; operands: number[]; result: number; expression: string; }",
+            "references": []
+          }
+        ],
+        [
+          "CreateUserInput",
+          {
+            "type": "{ username: string; email: string; admin?: boolean; }",
+            "references": []
+          }
+        ],
+        [
+          "CreateUserOutput",
+          {
+            "type": "{ id: number; username: string; email: string; admin: boolean; created: string; }",
+            "references": []
+          }
+        ],
+        [
+          "ListUsersInput",
+          {
+            "type": "{ limit?: number; admin?: boolean; }",
+            "references": []
+          }
+        ],
+        [
+          "ListUsersOutput",
+          {
+            "type": "{ users: any[]; total: number; filtered: boolean; }",
+            "references": []
+          }
+        ],
+        [
+          "ProcessFileInput",
+          {
+            "type": "{ path: string; action: \"read\" | \"info\" | \"delete\"; backup?: boolean; }",
+            "references": []
+          }
+        ],
+        [
+          "ProcessFileOutput",
+          {
+            "type": "{ path: string; action: string; backup: boolean; processed: boolean; timestamp: string; size: number; }",
+            "references": []
+          }
+        ],
+        [
+          "ProgressiveEnhancementExampleOutput",
+          {
+            "type": "{ state: \"initial\" | \"pending\" | \"done\"; }",
+            "references": []
+          }
+        ],
+        [
+          "TimeSinceOpenedOutput",
+          {
+            "type": "{ count: number; }",
+            "references": []
+          }
+        ],
+        [
+          "SayHelloInput",
+          {
+            "type": "{ name?: string; }",
+            "references": []
+          }
+        ],
+        [
+          "SayHelloOutput",
+          {
+            "type": "{ type: string; text: string; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "DisableToolInput",
+          {
+            "type": "{ name: string; }",
+            "references": []
+          }
+        ],
+        [
+          "DisableToolOutput",
+          {
+            "type": "{ type: string; text: string; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "CalculateInput",
+          {
+            "type": "{ operation: \"add\" | \"subtract\" | \"multiply\" | \"divide\"; a: number; b: number; }",
+            "references": []
+          }
+        ],
+        [
+          "CalculateOutput",
+          {
+            "type": "{ type: string; text: string; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "GetStaticResourceOutput",
+          {
+            "type": "{ uri: any; text: string; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "GetUserInfoInput",
+          {
+            "type": "{ userId: string; }",
+            "references": []
+          }
+        ],
+        [
+          "GetUserInfoOutput",
+          {
+            "type": "{ uri: string; text: string; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "StaticPromptGeneratorOutput",
+          {
+            "type": "{ role: string; content: { type: string; text: string; }; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "DynamicPromptGeneratorInput",
+          {
+            "type": "{ topic: string; complexity: \"beginner\" | \"intermediate\" | \"advanced\"; includeExamples?: string; }",
+            "references": []
+          }
+        ],
+        [
+          "DynamicPromptGeneratorOutput",
+          {
+            "type": "{ role: \"user\"; content: { type: \"text\"; text: string; }; }[]",
+            "references": [
+              "__object_4eav85",
+              "__object_4eav85"
+            ]
+          }
+        ],
+        [
+          "QueueWorkerInput",
+          {
+            "type": "{ message: string; fail: boolean; }",
+            "references": []
+          }
+        ],
+        [
+          "QueueWorkerOutput",
+          {
+            "type": "{ result: string; }",
+            "references": []
+          }
+        ],
+        [
+          "QueueWorkerWithMiddlewareInput",
+          {
+            "type": "{ message: string; }",
+            "references": []
+          }
+        ],
+        [
+          "QueueWorkerWithMiddlewareOutput",
+          {
+            "type": "{ result: string; }",
+            "references": []
+          }
+        ],
+        [
+          "RpcTestInput",
+          {
+            "type": "{ in: number; }",
+            "references": []
+          }
+        ],
+        [
+          "RpcCallerInput",
+          {
+            "type": "{ name: string; data: unknown; }",
+            "references": []
+          }
+        ]
+      ]
+    },
+    "meta": {
+      "onConnect": {
+        "pikkuFuncName": "onConnect",
+        "name": "onConnect",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger",
+            "channel"
+          ]
+        },
+        "inputSchemaName": "OnConnectInput",
+        "outputSchemaName": null,
+        "inputs": [
+          "OnConnectInput"
+        ],
+        "outputs": [],
+        "isDirectFunction": true
+      },
+      "onDisconnect": {
+        "pikkuFuncName": "onDisconnect",
+        "name": "onDisconnect",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger",
+            "channel"
+          ]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": null,
+        "inputs": [],
+        "outputs": [],
+        "isDirectFunction": true
+      },
+      "authenticate": {
+        "pikkuFuncName": "authenticate",
+        "name": "authenticate",
+        "services": {
+          "optimized": true,
+          "services": [
+            "userSession"
+          ]
+        },
+        "inputSchemaName": "AuthenticateInput",
+        "outputSchemaName": "AuthenticateOutput",
+        "inputs": [
+          "AuthenticateInput"
+        ],
+        "outputs": [
+          "AuthenticateOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "logout": {
+        "pikkuFuncName": "logout",
+        "name": "logout",
+        "services": {
+          "optimized": true,
+          "services": [
+            "userSession"
+          ]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "LogoutOutput",
+        "inputs": [],
+        "outputs": [
+          "LogoutOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "subscribe": {
+        "pikkuFuncName": "subscribe",
+        "name": "subscribe",
+        "services": {
+          "optimized": true,
+          "services": [
+            "eventHub",
+            "channel"
+          ]
+        },
+        "inputSchemaName": "SubscribeInput",
+        "outputSchemaName": null,
+        "inputs": [
+          "SubscribeInput"
+        ],
+        "outputs": [],
+        "isDirectFunction": true
+      },
+      "unsubscribe": {
+        "pikkuFuncName": "unsubscribe",
+        "name": "unsubscribe",
+        "services": {
+          "optimized": true,
+          "services": [
+            "channel",
+            "eventHub"
+          ]
+        },
+        "inputSchemaName": "UnsubscribeInput",
+        "outputSchemaName": "UnsubscribeOutput",
+        "inputs": [
+          "UnsubscribeInput"
+        ],
+        "outputs": [
+          "UnsubscribeOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "emitMessage": {
+        "pikkuFuncName": "emitMessage",
+        "name": "emitMessage",
+        "services": {
+          "optimized": true,
+          "services": [
+            "userSession",
+            "eventHub",
+            "channel"
+          ]
+        },
+        "inputSchemaName": "EmitMessageInput",
+        "outputSchemaName": "EmitMessageOutput",
+        "inputs": [
+          "EmitMessageInput"
+        ],
+        "outputs": [
+          "EmitMessageOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "onMessage": {
+        "pikkuFuncName": "onMessage",
+        "name": "onMessage",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger",
+            "channel"
+          ]
+        },
+        "inputSchemaName": "OnMessageInput",
+        "outputSchemaName": "OnMessageOutput",
+        "inputs": [
+          "OnMessageInput"
+        ],
+        "outputs": [
+          "OnMessageOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "greetUser": {
+        "pikkuFuncName": "greetUser",
+        "name": "greetUser",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "GreetUserInput",
+        "outputSchemaName": "GreetUserOutput",
+        "inputs": [
+          "GreetUserInput"
+        ],
+        "outputs": [
+          "GreetUserOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "addNumbers": {
+        "pikkuFuncName": "addNumbers",
+        "name": "addNumbers",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "AddNumbersInput",
+        "outputSchemaName": "AddNumbersOutput",
+        "inputs": [
+          "AddNumbersInput"
+        ],
+        "outputs": [
+          "AddNumbersOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "subtractNumbers": {
+        "pikkuFuncName": "subtractNumbers",
+        "name": "subtractNumbers",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "SubtractNumbersInput",
+        "outputSchemaName": "SubtractNumbersOutput",
+        "inputs": [
+          "SubtractNumbersInput"
+        ],
+        "outputs": [
+          "SubtractNumbersOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "multiplyNumbers": {
+        "pikkuFuncName": "multiplyNumbers",
+        "name": "multiplyNumbers",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "MultiplyNumbersInput",
+        "outputSchemaName": "MultiplyNumbersOutput",
+        "inputs": [
+          "MultiplyNumbersInput"
+        ],
+        "outputs": [
+          "MultiplyNumbersOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "divideNumbers": {
+        "pikkuFuncName": "divideNumbers",
+        "name": "divideNumbers",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "DivideNumbersInput",
+        "outputSchemaName": "DivideNumbersOutput",
+        "inputs": [
+          "DivideNumbersInput"
+        ],
+        "outputs": [
+          "DivideNumbersOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "createUser": {
+        "pikkuFuncName": "createUser",
+        "name": "createUser",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "CreateUserInput",
+        "outputSchemaName": "CreateUserOutput",
+        "inputs": [
+          "CreateUserInput"
+        ],
+        "outputs": [
+          "CreateUserOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "listUsers": {
+        "pikkuFuncName": "listUsers",
+        "name": "listUsers",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "ListUsersInput",
+        "outputSchemaName": "ListUsersOutput",
+        "inputs": [
+          "ListUsersInput"
+        ],
+        "outputs": [
+          "ListUsersOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "processFile": {
+        "pikkuFuncName": "processFile",
+        "name": "processFile",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "ProcessFileInput",
+        "outputSchemaName": "ProcessFileOutput",
+        "inputs": [
+          "ProcessFileInput"
+        ],
+        "outputs": [
+          "ProcessFileOutput"
+        ],
+        "isDirectFunction": false
+      },
+      "progressiveEnhancementExample": {
+        "pikkuFuncName": "progressiveEnhancementExample",
+        "name": "progressiveEnhancementExample",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "ProgressiveEnhancementExampleOutput",
+        "inputs": [],
+        "outputs": [
+          "ProgressiveEnhancementExampleOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "timeSinceOpened": {
+        "pikkuFuncName": "timeSinceOpened",
+        "name": "timeSinceOpened",
+        "services": {
+          "optimized": true,
+          "services": [
+            "channel"
+          ]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "TimeSinceOpenedOutput",
+        "inputs": [],
+        "outputs": [
+          "TimeSinceOpenedOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "welcomeToPikku": {
+        "pikkuFuncName": "welcomeToPikku",
+        "name": "welcomeToPikku",
+        "services": {
+          "optimized": true,
+          "services": []
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "string",
+        "inputs": [],
+        "outputs": [
+          "string"
+        ],
+        "isDirectFunction": true
+      },
+      "helloWorld": {
+        "pikkuFuncName": "helloWorld",
+        "name": "helloWorld",
+        "services": {
+          "optimized": true,
+          "services": []
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "string",
+        "inputs": [],
+        "outputs": [
+          "string"
+        ],
+        "isDirectFunction": true
+      },
+      "sayHello": {
+        "pikkuFuncName": "sayHello",
+        "name": "sayHello",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "SayHelloInput",
+        "outputSchemaName": "SayHelloOutput",
+        "inputs": [
+          "SayHelloInput"
+        ],
+        "outputs": [
+          "SayHelloOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "disableTool": {
+        "pikkuFuncName": "disableTool",
+        "name": "disableTool",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "DisableToolInput",
+        "outputSchemaName": "DisableToolOutput",
+        "inputs": [
+          "DisableToolInput"
+        ],
+        "outputs": [
+          "DisableToolOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "calculate": {
+        "pikkuFuncName": "calculate",
+        "name": "calculate",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger"
+          ]
+        },
+        "inputSchemaName": "CalculateInput",
+        "outputSchemaName": "CalculateOutput",
+        "inputs": [
+          "CalculateInput"
+        ],
+        "outputs": [
+          "CalculateOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "getStaticResource": {
+        "pikkuFuncName": "getStaticResource",
+        "name": "getStaticResource",
+        "services": {
+          "optimized": true,
+          "services": [
+            "mcp"
+          ]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "GetStaticResourceOutput",
+        "inputs": [],
+        "outputs": [
+          "GetStaticResourceOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "getUserInfo": {
+        "pikkuFuncName": "getUserInfo",
+        "name": "getUserInfo",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "GetUserInfoInput",
+        "outputSchemaName": "GetUserInfoOutput",
+        "inputs": [
+          "GetUserInfoInput"
+        ],
+        "outputs": [
+          "GetUserInfoOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "staticPromptGenerator": {
+        "pikkuFuncName": "staticPromptGenerator",
+        "name": "staticPromptGenerator",
+        "services": {
+          "optimized": true,
+          "services": []
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "StaticPromptGeneratorOutput",
+        "inputs": [],
+        "outputs": [
+          "StaticPromptGeneratorOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "dynamicPromptGenerator": {
+        "pikkuFuncName": "dynamicPromptGenerator",
+        "name": "dynamicPromptGenerator",
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "inputSchemaName": "DynamicPromptGeneratorInput",
+        "outputSchemaName": "DynamicPromptGeneratorOutput",
+        "inputs": [
+          "DynamicPromptGeneratorInput"
+        ],
+        "outputs": [
+          "DynamicPromptGeneratorOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "queueWorker": {
+        "pikkuFuncName": "queueWorker",
+        "name": "queueWorker",
+        "services": {
+          "optimized": true,
+          "services": []
+        },
+        "inputSchemaName": "QueueWorkerInput",
+        "outputSchemaName": "QueueWorkerOutput",
+        "inputs": [
+          "QueueWorkerInput"
+        ],
+        "outputs": [
+          "QueueWorkerOutput"
+        ],
+        "isDirectFunction": true
+      },
+      "queueWorkerWithMiddleware": {
+        "pikkuFuncName": "queueWorkerWithMiddleware",
+        "name": "queueWorkerWithMiddleware",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger"
+          ]
+        },
+        "inputSchemaName": "QueueWorkerWithMiddlewareInput",
+        "outputSchemaName": "QueueWorkerWithMiddlewareOutput",
+        "inputs": [
+          "QueueWorkerWithMiddlewareInput"
+        ],
+        "outputs": [
+          "QueueWorkerWithMiddlewareOutput"
+        ],
+        "isDirectFunction": false,
+        "middleware": [
+          {
+            "type": "wire",
+            "name": "loggingMiddleware",
+            "inline": false
+          }
+        ]
+      },
+      "rpcTest": {
+        "pikkuFuncName": "rpcTest",
+        "name": "rpcTest",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger",
+            "rpc"
+          ]
+        },
+        "inputSchemaName": "RpcTestInput",
+        "outputSchemaName": null,
+        "inputs": [
+          "RpcTestInput"
+        ],
+        "outputs": [],
+        "expose": true,
+        "isDirectFunction": false
+      },
+      "rpcCaller": {
+        "pikkuFuncName": "rpcCaller",
+        "name": "rpcCaller",
+        "services": {
+          "optimized": true,
+          "services": [
+            "rpc"
+          ]
+        },
+        "inputSchemaName": "RpcCallerInput",
+        "outputSchemaName": null,
+        "inputs": [
+          "RpcCallerInput"
+        ],
+        "outputs": [],
+        "isDirectFunction": true
+      },
+      "myScheduledTask": {
+        "pikkuFuncName": "myScheduledTask",
+        "name": "myScheduledTask",
+        "services": {
+          "optimized": true,
+          "services": [
+            "logger"
+          ]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": null,
+        "inputs": [],
+        "outputs": [],
+        "isDirectFunction": true
+      }
+    },
+    "files": [
+      [
+        "onConnect",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "onConnect"
+        }
+      ],
+      [
+        "onDisconnect",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "onDisconnect"
+        }
+      ],
+      [
+        "authenticate",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "authenticate"
+        }
+      ],
+      [
+        "logout",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "logout"
+        }
+      ],
+      [
+        "subscribe",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "subscribe"
+        }
+      ],
+      [
+        "unsubscribe",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "unsubscribe"
+        }
+      ],
+      [
+        "emitMessage",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "emitMessage"
+        }
+      ],
+      [
+        "onMessage",
+        {
+          "path": "src/channel.functions.ts",
+          "exportedName": "onMessage"
+        }
+      ],
+      [
+        "greetUser",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "greetUser"
+        }
+      ],
+      [
+        "addNumbers",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "addNumbers"
+        }
+      ],
+      [
+        "subtractNumbers",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "subtractNumbers"
+        }
+      ],
+      [
+        "multiplyNumbers",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "multiplyNumbers"
+        }
+      ],
+      [
+        "divideNumbers",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "divideNumbers"
+        }
+      ],
+      [
+        "createUser",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "createUser"
+        }
+      ],
+      [
+        "listUsers",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "listUsers"
+        }
+      ],
+      [
+        "processFile",
+        {
+          "path": "src/cli.functions.ts",
+          "exportedName": "processFile"
+        }
+      ],
+      [
+        "progressiveEnhancementExample",
+        {
+          "path": "src/http-progressive-enhancement.functions.ts",
+          "exportedName": "progressiveEnhancementExample"
+        }
+      ],
+      [
+        "timeSinceOpened",
+        {
+          "path": "src/http-sse.functions.ts",
+          "exportedName": "timeSinceOpened"
+        }
+      ],
+      [
+        "welcomeToPikku",
+        {
+          "path": "src/http.functions.ts",
+          "exportedName": "welcomeToPikku"
+        }
+      ],
+      [
+        "helloWorld",
+        {
+          "path": "src/http.functions.ts",
+          "exportedName": "helloWorld"
+        }
+      ],
+      [
+        "sayHello",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "sayHello"
+        }
+      ],
+      [
+        "disableTool",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "disableTool"
+        }
+      ],
+      [
+        "calculate",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "calculate"
+        }
+      ],
+      [
+        "getStaticResource",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "getStaticResource"
+        }
+      ],
+      [
+        "getUserInfo",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "getUserInfo"
+        }
+      ],
+      [
+        "staticPromptGenerator",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "staticPromptGenerator"
+        }
+      ],
+      [
+        "dynamicPromptGenerator",
+        {
+          "path": "src/mcp.functions.ts",
+          "exportedName": "dynamicPromptGenerator"
+        }
+      ],
+      [
+        "queueWorker",
+        {
+          "path": "src/queue-worker.functions.ts",
+          "exportedName": "queueWorker"
+        }
+      ],
+      [
+        "queueWorkerWithMiddleware",
+        {
+          "path": "src/queue-worker.functions.ts",
+          "exportedName": "queueWorkerWithMiddleware"
+        }
+      ],
+      [
+        "rpcTest",
+        {
+          "path": "src/rpc.functions.ts",
+          "exportedName": "rpcTest"
+        }
+      ],
+      [
+        "rpcCaller",
+        {
+          "path": "src/rpc.wiring.ts",
+          "exportedName": "rpcCaller"
+        }
+      ],
+      [
+        "myScheduledTask",
+        {
+          "path": "src/scheduled-task.functions.ts",
+          "exportedName": "myScheduledTask"
+        }
+      ]
+    ]
+  },
+  "http": {
+    "metaInputTypes": [
+      [
+        "RpcCallerInput",
+        {
+          "query": [],
+          "params": [],
+          "body": []
+        }
+      ]
+    ],
+    "meta": {
+      "get": {
+        "/status/sse": {
+          "pikkuFuncName": "progressiveEnhancementExample",
+          "route": "/status/sse",
+          "method": "get"
+        },
+        "/status/http": {
+          "pikkuFuncName": "progressiveEnhancementExample",
+          "route": "/status/http",
+          "method": "get"
+        },
+        "/sse": {
+          "pikkuFuncName": "timeSinceOpened",
+          "route": "/sse",
+          "method": "get"
+        },
+        "/": {
+          "pikkuFuncName": "welcomeToPikku",
+          "route": "/",
+          "method": "get",
+          "tags": [
+            "welcome"
+          ]
+        },
+        "/hello-world": {
+          "pikkuFuncName": "helloWorld",
+          "route": "/hello-world",
+          "method": "get",
+          "tags": [
+            "hello"
+          ]
+        }
+      },
+      "post": {
+        "/rpc": {
+          "pikkuFuncName": "rpcCaller",
+          "route": "/rpc",
+          "method": "post"
+        }
+      },
+      "put": {},
+      "delete": {},
+      "head": {},
+      "patch": {},
+      "options": {}
+    },
+    "files": [
+      "src/http-progressive-enhancement.wiring.ts",
+      "src/http-sse.wiring.ts",
+      "src/http.wiring.ts",
+      "src/rpc.wiring.ts"
+    ],
+    "routeMiddleware": [],
+    "routePermissions": []
+  },
+  "channels": {
+    "files": [
+      "src/channel.wiring.ts",
+      "src/http-progressive-enhancement.wiring.ts"
+    ],
+    "meta": {
+      "events": {
+        "name": "events",
+        "route": "/",
+        "input": null,
+        "connect": null,
+        "disconnect": null,
+        "message": null,
+        "messageWirings": {
+          "action": {
+            "auth": {
+              "pikkuFuncName": "authenticate"
+            },
+            "logout": {
+              "pikkuFuncName": "logout"
+            },
+            "subscribe": {
+              "pikkuFuncName": "subscribe"
+            },
+            "unsubscribe": {
+              "pikkuFuncName": "unsubscribe"
+            },
+            "emit": {
+              "pikkuFuncName": "emitMessage"
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "progressive-enhancement": {
+        "name": "progressive-enhancement",
+        "route": "/status/websocket",
+        "input": null,
+        "connect": null,
+        "disconnect": null,
+        "message": null,
+        "messageWirings": {
+          "action": {
+            "status": {
+              "pikkuFuncName": "progressiveEnhancementExample"
+            }
+          }
+        }
+      }
+    }
+  },
+  "scheduledTasks": {
+    "meta": {
+      "myScheduledTask": {
+        "pikkuFuncName": "myScheduledTask",
+        "name": "myScheduledTask",
+        "schedule": "*/1 * * * *",
+        "tags": [
+          "hello"
+        ]
+      }
+    },
+    "files": [
+      "src/scheduled-task.wiring.ts"
+    ]
+  },
+  "queueWorkers": {
+    "meta": {
+      "hello-world-queue": {
+        "pikkuFuncName": "queueWorker",
+        "queueName": "hello-world-queue"
+      }
+    },
+    "files": [
+      "src/queue-worker.wiring.ts"
+    ]
+  },
+  "rpc": {
+    "internalMeta": {
+      "onConnect": "onConnect",
+      "onDisconnect": "onDisconnect",
+      "authenticate": "authenticate",
+      "logout": "logout",
+      "subscribe": "subscribe",
+      "unsubscribe": "unsubscribe",
+      "emitMessage": "emitMessage",
+      "onMessage": "onMessage",
+      "greetUser": "greetUser",
+      "addNumbers": "addNumbers",
+      "subtractNumbers": "subtractNumbers",
+      "multiplyNumbers": "multiplyNumbers",
+      "divideNumbers": "divideNumbers",
+      "createUser": "createUser",
+      "listUsers": "listUsers",
+      "processFile": "processFile",
+      "progressiveEnhancementExample": "progressiveEnhancementExample",
+      "timeSinceOpened": "timeSinceOpened",
+      "welcomeToPikku": "welcomeToPikku",
+      "helloWorld": "helloWorld",
+      "sayHello": "sayHello",
+      "disableTool": "disableTool",
+      "calculate": "calculate",
+      "getStaticResource": "getStaticResource",
+      "getUserInfo": "getUserInfo",
+      "staticPromptGenerator": "staticPromptGenerator",
+      "dynamicPromptGenerator": "dynamicPromptGenerator",
+      "queueWorker": "queueWorker",
+      "queueWorkerWithMiddleware": "queueWorkerWithMiddleware",
+      "rpcTest": "rpcTest",
+      "rpcCaller": "rpcCaller",
+      "myScheduledTask": "myScheduledTask"
+    },
+    "internalFiles": [
+      [
+        "rpcTest",
+        {
+          "path": "src/rpc.functions.ts",
+          "exportedName": "rpcTest"
+        }
+      ]
+    ],
+    "exposedMeta": {
+      "rpcTest": "rpcTest"
+    },
+    "exposedFiles": [
+      [
+        "rpcTest",
+        {
+          "path": "src/rpc.functions.ts",
+          "exportedName": "rpcTest"
+        }
+      ]
+    ],
+    "invokedFunctions": [
+      "rpcTest"
+    ]
+  },
+  "mcpEndpoints": {
+    "resourcesMeta": {
+      "getStaticResource": {
+        "pikkuFuncName": "getStaticResource",
+        "uri": "getStaticResource",
+        "title": "Static Resource",
+        "description": "Gets a static resource with predefined data",
+        "inputSchema": null,
+        "outputSchema": "GetStaticResourceOutput"
+      },
+      "getUserInfo/{userId}": {
+        "pikkuFuncName": "getUserInfo",
+        "uri": "getUserInfo/{userId}",
+        "title": "User Information",
+        "description": "Retrieve user information by user ID",
+        "tags": [
+          "user",
+          "profile",
+          "data"
+        ],
+        "inputSchema": "GetUserInfoInput",
+        "outputSchema": "GetUserInfoOutput"
+      }
+    },
+    "toolsMeta": {
+      "sayHello": {
+        "pikkuFuncName": "sayHello",
+        "name": "sayHello",
+        "description": "Greet someone with a friendly hello message",
+        "tags": [
+          "greeting",
+          "hello",
+          "demo"
+        ],
+        "inputSchema": "SayHelloInput",
+        "outputSchema": "SayHelloOutput"
+      },
+      "disableTool": {
+        "pikkuFuncName": "disableTool",
+        "name": "disableTool",
+        "description": "Disable a tool by name",
+        "inputSchema": "DisableToolInput",
+        "outputSchema": "DisableToolOutput"
+      },
+      "calculate": {
+        "pikkuFuncName": "calculate",
+        "name": "calculate",
+        "description": "Perform basic mathematical operations (add, subtract, multiply, divide)",
+        "tags": [
+          "math",
+          "calculator",
+          "arithmetic"
+        ],
+        "inputSchema": "CalculateInput",
+        "outputSchema": "CalculateOutput"
+      }
+    },
+    "promptsMeta": {
+      "getStaticResource": {
+        "pikkuFuncName": "staticPromptGenerator",
+        "name": "getStaticResource",
+        "description": "A static prompt that returns a predefined message",
+        "inputSchema": null,
+        "outputSchema": "StaticPromptGeneratorOutput",
+        "arguments": []
+      },
+      "dynamicPromptGenerator": {
+        "pikkuFuncName": "dynamicPromptGenerator",
+        "name": "dynamicPromptGenerator",
+        "description": "Generate educational content with progressive complexity and optional examples",
+        "tags": [
+          "education",
+          "content",
+          "progressive",
+          "examples"
+        ],
+        "inputSchema": "DynamicPromptGeneratorInput",
+        "outputSchema": "DynamicPromptGeneratorOutput",
+        "arguments": []
+      }
+    },
+    "files": [
+      "src/mcp.wiring.ts"
+    ]
+  },
+  "cli": {
+    "meta": {
+      "programs": {
+        "my-cli": {
+          "program": "my-cli",
+          "commands": {
+            "greet": {
+              "pikkuFuncName": "greetUser",
+              "positionals": [
+                {
+                  "name": "name",
+                  "required": true
+                }
+              ],
+              "options": {
+                "loud": {
+                  "description": "Use loud greeting (uppercase)",
+                  "short": "l",
+                  "default": false
+                }
+              },
+              "parameters": "<name>",
+              "description": "Greet a user by name",
+              "renderName": "greetRenderer"
+            },
+            "calc": {
+              "pikkuFuncName": "",
+              "positionals": [],
+              "options": {},
+              "description": "Mathematical calculations",
+              "subcommands": {
+                "add": {
+                  "pikkuFuncName": "addNumbers",
+                  "positionals": [
+                    {
+                      "name": "a",
+                      "required": true
+                    },
+                    {
+                      "name": "b",
+                      "required": true
+                    }
+                  ],
+                  "options": {},
+                  "parameters": "<a> <b>",
+                  "description": "Add two numbers",
+                  "renderName": "calcRenderer"
+                },
+                "subtract": {
+                  "pikkuFuncName": "subtractNumbers",
+                  "positionals": [
+                    {
+                      "name": "a",
+                      "required": true
+                    },
+                    {
+                      "name": "b",
+                      "required": true
+                    }
+                  ],
+                  "options": {},
+                  "parameters": "<a> <b>",
+                  "description": "Subtract two numbers",
+                  "renderName": "calcRenderer"
+                },
+                "multiply": {
+                  "pikkuFuncName": "multiplyNumbers",
+                  "positionals": [
+                    {
+                      "name": "a",
+                      "required": true
+                    },
+                    {
+                      "name": "b",
+                      "required": true
+                    }
+                  ],
+                  "options": {},
+                  "parameters": "<a> <b>",
+                  "description": "Multiply two numbers",
+                  "renderName": "calcRenderer"
+                },
+                "divide": {
+                  "pikkuFuncName": "divideNumbers",
+                  "positionals": [
+                    {
+                      "name": "a",
+                      "required": true
+                    },
+                    {
+                      "name": "b",
+                      "required": true
+                    }
+                  ],
+                  "options": {},
+                  "parameters": "<a> <b>",
+                  "description": "Divide two numbers",
+                  "renderName": "calcRenderer"
+                }
+              }
+            },
+            "user": {
+              "pikkuFuncName": "",
+              "positionals": [],
+              "options": {},
+              "description": "User management commands",
+              "subcommands": {
+                "create": {
+                  "pikkuFuncName": "createUser",
+                  "positionals": [
+                    {
+                      "name": "username",
+                      "required": true
+                    },
+                    {
+                      "name": "email",
+                      "required": true
+                    }
+                  ],
+                  "options": {
+                    "admin": {
+                      "description": "Create user as admin",
+                      "short": "a",
+                      "default": false
+                    }
+                  },
+                  "parameters": "<username> <email>",
+                  "description": "Create a new user",
+                  "renderName": "userRenderer"
+                },
+                "list": {
+                  "pikkuFuncName": "listUsers",
+                  "positionals": [],
+                  "options": {
+                    "limit": {
+                      "description": "Limit number of users shown",
+                      "short": "l"
+                    },
+                    "admin": {
+                      "description": "Show only admin users",
+                      "short": "a",
+                      "default": false
+                    }
+                  },
+                  "description": "List all users",
+                  "renderName": "userRenderer"
+                }
+              }
+            },
+            "file": {
+              "pikkuFuncName": "processFile",
+              "positionals": [
+                {
+                  "name": "path",
+                  "required": true
+                }
+              ],
+              "options": {
+                "action": {
+                  "description": "Action to perform on file",
+                  "short": "a",
+                  "choices": [
+                    "read",
+                    "info",
+                    "delete"
+                  ]
+                },
+                "backup": {
+                  "description": "Create backup before processing",
+                  "short": "b",
+                  "default": false
+                }
+              },
+              "parameters": "<path>",
+              "description": "Process a file",
+              "renderName": "fileRenderer"
+            }
+          },
+          "options": {
+            "verbose": {
+              "description": "Enable verbose output",
+              "short": "v",
+              "default": false
+            },
+            "config": {
+              "description": "Configuration file path",
+              "short": "c",
+              "default": "./config.json"
+            }
+          },
+          "defaultRenderName": "jsonRenderer"
+        }
+      },
+      "renderers": {
+        "jsonRenderer": {
+          "name": "jsonRenderer",
+          "exportedName": "jsonRenderer",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "filePath": "src/cli.render.ts"
+        },
+        "userRenderer": {
+          "name": "userRenderer",
+          "exportedName": "userRenderer",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "filePath": "src/cli.render.ts"
+        },
+        "greetRenderer": {
+          "name": "greetRenderer",
+          "exportedName": "greetRenderer",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "filePath": "src/cli.render.ts"
+        },
+        "calcRenderer": {
+          "name": "calcRenderer",
+          "exportedName": "calcRenderer",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "filePath": "src/cli.render.ts"
+        },
+        "fileRenderer": {
+          "name": "fileRenderer",
+          "exportedName": "fileRenderer",
+          "services": {
+            "optimized": true,
+            "services": []
+          },
+          "filePath": "src/cli.render.ts"
+        }
+      }
+    },
+    "files": [
+      "src/cli.render.ts",
+      "src/cli.wiring.ts"
+    ]
+  },
+  "middleware": {
+    "meta": {
+      "loggingMiddleware": {
+        "services": {
+          "optimized": false,
+          "services": []
+        },
+        "sourceFile": "src/middleware.ts",
+        "position": 513,
+        "exportedName": "loggingMiddleware"
+      }
+    },
+    "tagMiddleware": []
+  },
+  "permissions": {
+    "meta": {},
+    "tagPermissions": []
+  },
+  "serviceAggregation": {
+    "requiredServices": [
+      "eventHub",
+      "logger"
+    ],
+    "usedFunctions": [
+      "authenticate",
+      "logout",
+      "subscribe",
+      "unsubscribe",
+      "emitMessage",
+      "greetUser",
+      "addNumbers",
+      "subtractNumbers",
+      "multiplyNumbers",
+      "divideNumbers",
+      "",
+      "createUser",
+      "listUsers",
+      "processFile",
+      "progressiveEnhancementExample",
+      "timeSinceOpened",
+      "welcomeToPikku",
+      "helloWorld",
+      "sayHello",
+      "disableTool",
+      "calculate",
+      "getStaticResource",
+      "getUserInfo",
+      "staticPromptGenerator",
+      "dynamicPromptGenerator",
+      "queueWorker",
+      "rpcTest",
+      "rpcCaller",
+      "myScheduledTask"
+    ],
+    "usedMiddleware": [],
+    "usedPermissions": []
+  }
+}
