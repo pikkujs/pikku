@@ -43,8 +43,6 @@ export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating CLI types',
       commandEnd: 'Created CLI types',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

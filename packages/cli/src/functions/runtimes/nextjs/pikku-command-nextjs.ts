@@ -15,13 +15,18 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       packageMappings,
       fetchFile,
     } = config
-    const visitState = await getInspectorState()
 
+    // If both files are undefined, clean up any existing files and return
     if (!nextBackendFile && !nextHTTPFile) {
-      throw new Error(
-        'nextBackendFile or nextHTTPFile is required in pikku config for nextJS'
-      )
+      logger.info({
+        message:
+          'Skipping generating nextjs wrapper since nextjs outfile is not defined.',
+        type: 'skip',
+      })
+      return
     }
+
+    const visitState = await getInspectorState()
 
     if (nextHTTPFile && !fetchFile) {
       throw new Error(
@@ -101,10 +106,6 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating nextjs wrapper',
       commandEnd: 'Generated nextjs wrapper',
-      skipCondition: ({ config }) =>
-        config.nextBackendFile === undefined &&
-        config.nextHTTPFile === undefined,
-      skipMessage: 'nextjs outfile is not defined',
     }),
   ],
 })

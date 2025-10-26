@@ -38,8 +38,6 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating api types hub',
       commandEnd: 'Created api types hub',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

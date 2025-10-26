@@ -211,11 +211,6 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Serializing CLI',
       commandEnd: 'Serialized CLI',
-      skipCondition: async ({ getInspectorState }) => {
-        const visitState = await getInspectorState()
-        return visitState.cli.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

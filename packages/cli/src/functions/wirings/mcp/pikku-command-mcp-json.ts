@@ -28,11 +28,6 @@ export const pikkuMCPJSON: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating MCP JSON',
       commandEnd: 'Generated MCP JSON',
-      skipCondition: async ({ getInspectorState, config }) => {
-        const { mcpEndpoints } = await getInspectorState()
-        return mcpEndpoints.files.size === 0 || !config.mcpJsonFile
-      },
-      skipMessage: 'none found or mcpJsonFile not set',
     }),
   ],
 })

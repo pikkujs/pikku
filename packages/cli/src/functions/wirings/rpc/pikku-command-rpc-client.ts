@@ -8,9 +8,14 @@ export const pikkuRPCClient: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const { rpcWiringsFile, rpcMapDeclarationFile, packageMappings } = config
 
+    // If rpcWiringsFile is not set, clean up any existing file and return
     if (!rpcWiringsFile) {
+      logger.info({
+        message:
+          "Skipping generating RPC wrappers since rpcWiringsFile isn't set in the pikku config.",
+        type: 'skip',
+      })
       return
-      // TODO:  throw new Error("rpcWiringsFile isn't set in the pikku config")
     }
 
     const rpcMapDeclarationPath = getFileImportRelativePath(
@@ -25,8 +30,6 @@ export const pikkuRPCClient: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating RPC wrappers',
       commandEnd: 'Generated RPC wrappers',
-      skipCondition: ({ config }) => config.rpcWiringsFile === undefined,
-      skipMessage: "rpcWiringsFile isn't set in the pikku config",
     }),
   ],
 })

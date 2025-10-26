@@ -1,5 +1,6 @@
 import { dirname } from 'path'
-import { mkdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readFile, writeFile, rm } from 'fs/promises'
+import { existsSync } from 'fs'
 import { CLILogger } from '../services/cli-logger.service.js'
 import { getCLIVersion } from './get-cli-version.js'
 
@@ -51,6 +52,21 @@ export const writeFileInDir = async (
 
     if (logWrite) {
       logger.info({ message: `✓ File written to ${path}`, type: 'success' })
+    }
+  }
+}
+
+export const removeFileInDir = async (
+  logger: CLILogger,
+  path: string,
+  { logRemove = true }: { logRemove?: boolean } = {}
+) => {
+  // Check if file exists before attempting removal
+  if (existsSync(path)) {
+    await rm(path, { force: true })
+
+    if (logRemove) {
+      logger.info({ message: `✓ File removed at ${path}`, type: 'success' })
     }
   }
 }

@@ -21,8 +21,6 @@ export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating RPC internal map',
       commandEnd: 'Created RPC internal map',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })
@@ -45,8 +43,6 @@ export const pikkuRPCExposedMap: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating RPC external map',
       commandEnd: 'Created RPC external map',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

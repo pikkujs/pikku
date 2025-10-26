@@ -8,8 +8,14 @@ export const pikkuFetch: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const { fetchFile, httpMapDeclarationFile, packageMappings } = config
 
+    // If fetchFile is not set, clean up any existing file and return
     if (!fetchFile) {
-      throw new Error("fetchFile is isn't set in the pikku config")
+      logger.info({
+        message:
+          "Skipping generating fetch wrapper since fetchFile isn't set in the pikku config.",
+        type: 'skip',
+      })
+      return
     }
 
     const routesMapDeclarationPath = getFileImportRelativePath(
@@ -25,8 +31,6 @@ export const pikkuFetch: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating fetch wrapper',
       commandEnd: 'Generated fetch wrapper',
-      skipCondition: ({ config }) => config.fetchFile === undefined,
-      skipMessage: "fetchFile isn't set in the pikku config",
     }),
   ],
 })

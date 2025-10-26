@@ -20,8 +20,6 @@ export const pikkuQueueTypes: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating queue types',
       commandEnd: 'Created queue types',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

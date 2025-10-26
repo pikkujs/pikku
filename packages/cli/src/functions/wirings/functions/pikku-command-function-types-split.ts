@@ -55,8 +55,6 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating function types',
       commandEnd: 'Created function types',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

@@ -20,8 +20,6 @@ export const pikkuHTTPTypes: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating HTTP types',
       commandEnd: 'Created HTTP types',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

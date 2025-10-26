@@ -58,8 +58,6 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
     logCommandInfoAndTime({
       commandStart: 'Serializing Pikku middleware',
       commandEnd: 'Serialized Pikku middleware',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

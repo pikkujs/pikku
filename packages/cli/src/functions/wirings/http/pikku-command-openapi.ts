@@ -7,12 +7,19 @@ import { stringify } from 'yaml'
 
 export const pikkuOpenAPI: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { http, functions } = await getInspectorState()
     const { tsconfig, openAPI, schemasFromTypes } = config
 
+    // If openAPI outputFile is not defined, clean up any existing file and return
     if (!openAPI?.outputFile) {
-      throw new Error('openAPI is required')
+      logger.info({
+        message:
+          'Skipping creating OpenAPI spec since openAPI outfile is not defined.',
+        type: 'skip',
+      })
+      return
     }
+
+    const { http, functions } = await getInspectorState()
 
     const schemas = await generateSchemas(
       logger,
@@ -50,8 +57,6 @@ export const pikkuOpenAPI: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating OpenAPI spec',
       commandEnd: 'Created OpenAPI spec',
-      skipCondition: ({ config }) => config.openAPI?.outputFile === undefined,
-      skipMessage: 'openAPI outfile is not defined',
     }),
   ],
 })

@@ -54,8 +54,6 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     logCommandInfoAndTime({
       commandStart: 'Serializing Pikku functions',
       commandEnd: 'Serialized Pikku functions',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

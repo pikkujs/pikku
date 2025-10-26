@@ -9,8 +9,14 @@ export const pikkuWebSocketTyped: any = pikkuSessionlessFunc<void, void>({
     const { websocketFile, channelsMapDeclarationFile, packageMappings } =
       config
 
+    // If websocketFile is not set, clean up any existing file and return
     if (!websocketFile) {
-      throw new Error("fetchFile is isn't set in the pikku config")
+      logger.info({
+        message:
+          "Skipping generating websocket wrapper since websocketFile isn't set in the pikku config.",
+        type: 'skip',
+      })
+      return
     }
 
     const channelsMapDeclarationPath = getFileImportRelativePath(
@@ -26,8 +32,6 @@ export const pikkuWebSocketTyped: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating websocket wrapper',
       commandEnd: 'Generated websocket wrapper',
-      skipCondition: ({ config }) => config.websocketFile === undefined,
-      skipMessage: "websocketFile isn't set in the pikku config",
     }),
   ],
 })

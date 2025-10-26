@@ -22,11 +22,6 @@ export const pikkuHTTPMap: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating HTTP map',
       commandEnd: 'Created HTTP map',
-      skipCondition: async ({ getInspectorState }) => {
-        const { http } = await getInspectorState()
-        return http.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

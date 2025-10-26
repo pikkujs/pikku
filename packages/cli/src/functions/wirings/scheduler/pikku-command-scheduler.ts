@@ -36,11 +36,6 @@ export const pikkuScheduler: any = pikkuSessionlessFunc<
     logCommandInfoAndTime({
       commandStart: 'Finding Scheduled tasks',
       commandEnd: 'Found Scheduled tasks',
-      skipCondition: async ({ getInspectorState }) => {
-        const visitState = await getInspectorState()
-        return visitState.scheduledTasks.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

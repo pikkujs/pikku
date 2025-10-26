@@ -40,8 +40,6 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
     logCommandInfoAndTime({
       commandStart: 'Generating schemas',
       commandEnd: 'Generated schemas',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })
