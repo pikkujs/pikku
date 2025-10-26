@@ -72,12 +72,7 @@
       ]
     ]
   ],
-  "sessionServicesMeta": [
-    [
-      "createSessionServices",
-      []
-    ]
-  ],
+  "sessionServicesMeta": [["createSessionServices", []]],
   "configFactories": [
     [
       "src/services.ts",
@@ -361,10 +356,7 @@
           "SayHelloOutput",
           {
             "type": "{ type: string; text: string; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
@@ -378,10 +370,7 @@
           "DisableToolOutput",
           {
             "type": "{ type: string; text: string; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
@@ -395,20 +384,14 @@
           "CalculateOutput",
           {
             "type": "{ type: string; text: string; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
           "GetStaticResourceOutput",
           {
             "type": "{ uri: any; text: string; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
@@ -422,20 +405,14 @@
           "GetUserInfoOutput",
           {
             "type": "{ uri: string; text: string; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
           "StaticPromptGeneratorOutput",
           {
             "type": "{ role: string; content: { type: string; text: string; }; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
@@ -449,10 +426,7 @@
           "DynamicPromptGeneratorOutput",
           {
             "type": "{ role: \"user\"; content: { type: \"text\"; text: string; }; }[]",
-            "references": [
-              "__object_4eav85",
-              "__object_4eav85"
-            ]
+            "references": ["__object_4eav85", "__object_4eav85"]
           }
         ],
         [
@@ -505,16 +479,11 @@
         "name": "onConnect",
         "services": {
           "optimized": true,
-          "services": [
-            "logger",
-            "channel"
-          ]
+          "services": ["logger", "channel"]
         },
         "inputSchemaName": "OnConnectInput",
         "outputSchemaName": null,
-        "inputs": [
-          "OnConnectInput"
-        ],
+        "inputs": ["OnConnectInput"],
         "outputs": [],
         "isDirectFunction": true
       },
@@ -523,10 +492,7 @@
         "name": "onDisconnect",
         "services": {
           "optimized": true,
-          "services": [
-            "logger",
-            "channel"
-          ]
+          "services": ["logger", "channel"]
         },
         "inputSchemaName": null,
         "outputSchemaName": null,
@@ -539,18 +505,12 @@
         "name": "authenticate",
         "services": {
           "optimized": true,
-          "services": [
-            "userSession"
-          ]
+          "services": ["userSession"]
         },
         "inputSchemaName": "AuthenticateInput",
         "outputSchemaName": "AuthenticateOutput",
-        "inputs": [
-          "AuthenticateInput"
-        ],
-        "outputs": [
-          "AuthenticateOutput"
-        ],
+        "inputs": ["AuthenticateInput"],
+        "outputs": ["AuthenticateOutput"],
         "isDirectFunction": true
       },
       "logout": {
@@ -558,16 +518,12 @@
         "name": "logout",
         "services": {
           "optimized": true,
-          "services": [
-            "userSession"
-          ]
+          "services": ["userSession"]
         },
         "inputSchemaName": null,
         "outputSchemaName": "LogoutOutput",
         "inputs": [],
-        "outputs": [
-          "LogoutOutput"
-        ],
+        "outputs": ["LogoutOutput"],
         "isDirectFunction": false
       },
       "subscribe": {
@@ -575,16 +531,11 @@
         "name": "subscribe",
         "services": {
           "optimized": true,
-          "services": [
-            "eventHub",
-            "channel"
-          ]
+          "services": ["eventHub", "channel"]
         },
         "inputSchemaName": "SubscribeInput",
         "outputSchemaName": null,
-        "inputs": [
-          "SubscribeInput"
-        ],
+        "inputs": ["SubscribeInput"],
         "outputs": [],
         "isDirectFunction": true
       },
@@ -593,19 +544,12 @@
         "name": "unsubscribe",
         "services": {
           "optimized": true,
-          "services": [
-            "channel",
-            "eventHub"
-          ]
+          "services": ["channel", "eventHub"]
         },
         "inputSchemaName": "UnsubscribeInput",
         "outputSchemaName": "UnsubscribeOutput",
-        "inputs": [
-          "UnsubscribeInput"
-        ],
-        "outputs": [
-          "UnsubscribeOutput"
-        ],
+        "inputs": ["UnsubscribeInput"],
+        "outputs": ["UnsubscribeOutput"],
         "isDirectFunction": true
       },
       "emitMessage": {
@@ -613,20 +557,12 @@
         "name": "emitMessage",
         "services": {
           "optimized": true,
-          "services": [
-            "userSession",
-            "eventHub",
-            "channel"
-          ]
+          "services": ["userSession", "eventHub", "channel"]
         },
         "inputSchemaName": "EmitMessageInput",
         "outputSchemaName": "EmitMessageOutput",
-        "inputs": [
-          "EmitMessageInput"
-        ],
-        "outputs": [
-          "EmitMessageOutput"
-        ],
+        "inputs": ["EmitMessageInput"],
+        "outputs": ["EmitMessageOutput"],
         "isDirectFunction": true
       },
       "onMessage": {
@@ -634,19 +570,12 @@
         "name": "onMessage",
         "services": {
           "optimized": true,
-          "services": [
-            "logger",
-            "channel"
-          ]
+          "services": ["logger", "channel"]
         },
         "inputSchemaName": "OnMessageInput",
         "outputSchemaName": "OnMessageOutput",
-        "inputs": [
-          "OnMessageInput"
-        ],
-        "outputs": [
-          "OnMessageOutput"
-        ],
+        "inputs": ["OnMessageInput"],
+        "outputs": ["OnMessageOutput"],
         "isDirectFunction": true
       },
       "greetUser": {
@@ -658,12 +587,8 @@
         },
         "inputSchemaName": "GreetUserInput",
         "outputSchemaName": "GreetUserOutput",
-        "inputs": [
-          "GreetUserInput"
-        ],
-        "outputs": [
-          "GreetUserOutput"
-        ],
+        "inputs": ["GreetUserInput"],
+        "outputs": ["GreetUserOutput"],
         "isDirectFunction": false
       },
       "addNumbers": {
@@ -675,12 +600,8 @@
         },
         "inputSchemaName": "AddNumbersInput",
         "outputSchemaName": "AddNumbersOutput",
-        "inputs": [
-          "AddNumbersInput"
-        ],
-        "outputs": [
-          "AddNumbersOutput"
-        ],
+        "inputs": ["AddNumbersInput"],
+        "outputs": ["AddNumbersOutput"],
         "isDirectFunction": false
       },
       "subtractNumbers": {
@@ -692,12 +613,8 @@
         },
         "inputSchemaName": "SubtractNumbersInput",
         "outputSchemaName": "SubtractNumbersOutput",
-        "inputs": [
-          "SubtractNumbersInput"
-        ],
-        "outputs": [
-          "SubtractNumbersOutput"
-        ],
+        "inputs": ["SubtractNumbersInput"],
+        "outputs": ["SubtractNumbersOutput"],
         "isDirectFunction": false
       },
       "multiplyNumbers": {
@@ -709,12 +626,8 @@
         },
         "inputSchemaName": "MultiplyNumbersInput",
         "outputSchemaName": "MultiplyNumbersOutput",
-        "inputs": [
-          "MultiplyNumbersInput"
-        ],
-        "outputs": [
-          "MultiplyNumbersOutput"
-        ],
+        "inputs": ["MultiplyNumbersInput"],
+        "outputs": ["MultiplyNumbersOutput"],
         "isDirectFunction": false
       },
       "divideNumbers": {
@@ -726,12 +639,8 @@
         },
         "inputSchemaName": "DivideNumbersInput",
         "outputSchemaName": "DivideNumbersOutput",
-        "inputs": [
-          "DivideNumbersInput"
-        ],
-        "outputs": [
-          "DivideNumbersOutput"
-        ],
+        "inputs": ["DivideNumbersInput"],
+        "outputs": ["DivideNumbersOutput"],
         "isDirectFunction": false
       },
       "createUser": {
@@ -743,12 +652,8 @@
         },
         "inputSchemaName": "CreateUserInput",
         "outputSchemaName": "CreateUserOutput",
-        "inputs": [
-          "CreateUserInput"
-        ],
-        "outputs": [
-          "CreateUserOutput"
-        ],
+        "inputs": ["CreateUserInput"],
+        "outputs": ["CreateUserOutput"],
         "isDirectFunction": false
       },
       "listUsers": {
@@ -760,12 +665,8 @@
         },
         "inputSchemaName": "ListUsersInput",
         "outputSchemaName": "ListUsersOutput",
-        "inputs": [
-          "ListUsersInput"
-        ],
-        "outputs": [
-          "ListUsersOutput"
-        ],
+        "inputs": ["ListUsersInput"],
+        "outputs": ["ListUsersOutput"],
         "isDirectFunction": false
       },
       "processFile": {
@@ -777,12 +678,8 @@
         },
         "inputSchemaName": "ProcessFileInput",
         "outputSchemaName": "ProcessFileOutput",
-        "inputs": [
-          "ProcessFileInput"
-        ],
-        "outputs": [
-          "ProcessFileOutput"
-        ],
+        "inputs": ["ProcessFileInput"],
+        "outputs": ["ProcessFileOutput"],
         "isDirectFunction": false
       },
       "progressiveEnhancementExample": {
@@ -795,9 +692,7 @@
         "inputSchemaName": null,
         "outputSchemaName": "ProgressiveEnhancementExampleOutput",
         "inputs": [],
-        "outputs": [
-          "ProgressiveEnhancementExampleOutput"
-        ],
+        "outputs": ["ProgressiveEnhancementExampleOutput"],
         "isDirectFunction": true
       },
       "timeSinceOpened": {
@@ -805,16 +700,12 @@
         "name": "timeSinceOpened",
         "services": {
           "optimized": true,
-          "services": [
-            "channel"
-          ]
+          "services": ["channel"]
         },
         "inputSchemaName": null,
         "outputSchemaName": "TimeSinceOpenedOutput",
         "inputs": [],
-        "outputs": [
-          "TimeSinceOpenedOutput"
-        ],
+        "outputs": ["TimeSinceOpenedOutput"],
         "isDirectFunction": true
       },
       "welcomeToPikku": {
@@ -827,9 +718,7 @@
         "inputSchemaName": null,
         "outputSchemaName": "string",
         "inputs": [],
-        "outputs": [
-          "string"
-        ],
+        "outputs": ["string"],
         "isDirectFunction": true
       },
       "helloWorld": {
@@ -842,9 +731,7 @@
         "inputSchemaName": null,
         "outputSchemaName": "string",
         "inputs": [],
-        "outputs": [
-          "string"
-        ],
+        "outputs": ["string"],
         "isDirectFunction": true
       },
       "sayHello": {
@@ -856,12 +743,8 @@
         },
         "inputSchemaName": "SayHelloInput",
         "outputSchemaName": "SayHelloOutput",
-        "inputs": [
-          "SayHelloInput"
-        ],
-        "outputs": [
-          "SayHelloOutput"
-        ],
+        "inputs": ["SayHelloInput"],
+        "outputs": ["SayHelloOutput"],
         "isDirectFunction": true
       },
       "disableTool": {
@@ -873,12 +756,8 @@
         },
         "inputSchemaName": "DisableToolInput",
         "outputSchemaName": "DisableToolOutput",
-        "inputs": [
-          "DisableToolInput"
-        ],
-        "outputs": [
-          "DisableToolOutput"
-        ],
+        "inputs": ["DisableToolInput"],
+        "outputs": ["DisableToolOutput"],
         "isDirectFunction": true
       },
       "calculate": {
@@ -886,18 +765,12 @@
         "name": "calculate",
         "services": {
           "optimized": true,
-          "services": [
-            "logger"
-          ]
+          "services": ["logger"]
         },
         "inputSchemaName": "CalculateInput",
         "outputSchemaName": "CalculateOutput",
-        "inputs": [
-          "CalculateInput"
-        ],
-        "outputs": [
-          "CalculateOutput"
-        ],
+        "inputs": ["CalculateInput"],
+        "outputs": ["CalculateOutput"],
         "isDirectFunction": true
       },
       "getStaticResource": {
@@ -905,16 +778,12 @@
         "name": "getStaticResource",
         "services": {
           "optimized": true,
-          "services": [
-            "mcp"
-          ]
+          "services": ["mcp"]
         },
         "inputSchemaName": null,
         "outputSchemaName": "GetStaticResourceOutput",
         "inputs": [],
-        "outputs": [
-          "GetStaticResourceOutput"
-        ],
+        "outputs": ["GetStaticResourceOutput"],
         "isDirectFunction": true
       },
       "getUserInfo": {
@@ -926,12 +795,8 @@
         },
         "inputSchemaName": "GetUserInfoInput",
         "outputSchemaName": "GetUserInfoOutput",
-        "inputs": [
-          "GetUserInfoInput"
-        ],
-        "outputs": [
-          "GetUserInfoOutput"
-        ],
+        "inputs": ["GetUserInfoInput"],
+        "outputs": ["GetUserInfoOutput"],
         "isDirectFunction": true
       },
       "staticPromptGenerator": {
@@ -944,9 +809,7 @@
         "inputSchemaName": null,
         "outputSchemaName": "StaticPromptGeneratorOutput",
         "inputs": [],
-        "outputs": [
-          "StaticPromptGeneratorOutput"
-        ],
+        "outputs": ["StaticPromptGeneratorOutput"],
         "isDirectFunction": true
       },
       "dynamicPromptGenerator": {
@@ -958,12 +821,8 @@
         },
         "inputSchemaName": "DynamicPromptGeneratorInput",
         "outputSchemaName": "DynamicPromptGeneratorOutput",
-        "inputs": [
-          "DynamicPromptGeneratorInput"
-        ],
-        "outputs": [
-          "DynamicPromptGeneratorOutput"
-        ],
+        "inputs": ["DynamicPromptGeneratorInput"],
+        "outputs": ["DynamicPromptGeneratorOutput"],
         "isDirectFunction": true
       },
       "queueWorker": {
@@ -975,12 +834,8 @@
         },
         "inputSchemaName": "QueueWorkerInput",
         "outputSchemaName": "QueueWorkerOutput",
-        "inputs": [
-          "QueueWorkerInput"
-        ],
-        "outputs": [
-          "QueueWorkerOutput"
-        ],
+        "inputs": ["QueueWorkerInput"],
+        "outputs": ["QueueWorkerOutput"],
         "isDirectFunction": true
       },
       "queueWorkerWithMiddleware": {
@@ -988,18 +843,12 @@
         "name": "queueWorkerWithMiddleware",
         "services": {
           "optimized": true,
-          "services": [
-            "logger"
-          ]
+          "services": ["logger"]
         },
         "inputSchemaName": "QueueWorkerWithMiddlewareInput",
         "outputSchemaName": "QueueWorkerWithMiddlewareOutput",
-        "inputs": [
-          "QueueWorkerWithMiddlewareInput"
-        ],
-        "outputs": [
-          "QueueWorkerWithMiddlewareOutput"
-        ],
+        "inputs": ["QueueWorkerWithMiddlewareInput"],
+        "outputs": ["QueueWorkerWithMiddlewareOutput"],
         "isDirectFunction": false,
         "middleware": [
           {
@@ -1014,16 +863,11 @@
         "name": "rpcTest",
         "services": {
           "optimized": true,
-          "services": [
-            "logger",
-            "rpc"
-          ]
+          "services": ["logger", "rpc"]
         },
         "inputSchemaName": "RpcTestInput",
         "outputSchemaName": null,
-        "inputs": [
-          "RpcTestInput"
-        ],
+        "inputs": ["RpcTestInput"],
         "outputs": [],
         "expose": true,
         "isDirectFunction": false
@@ -1033,15 +877,11 @@
         "name": "rpcCaller",
         "services": {
           "optimized": true,
-          "services": [
-            "rpc"
-          ]
+          "services": ["rpc"]
         },
         "inputSchemaName": "RpcCallerInput",
         "outputSchemaName": null,
-        "inputs": [
-          "RpcCallerInput"
-        ],
+        "inputs": ["RpcCallerInput"],
         "outputs": [],
         "isDirectFunction": true
       },
@@ -1050,9 +890,7 @@
         "name": "myScheduledTask",
         "services": {
           "optimized": true,
-          "services": [
-            "logger"
-          ]
+          "services": ["logger"]
         },
         "inputSchemaName": null,
         "outputSchemaName": null,
@@ -1320,17 +1158,13 @@
           "pikkuFuncName": "welcomeToPikku",
           "route": "/",
           "method": "get",
-          "tags": [
-            "welcome"
-          ]
+          "tags": ["welcome"]
         },
         "/hello-world": {
           "pikkuFuncName": "helloWorld",
           "route": "/hello-world",
           "method": "get",
-          "tags": [
-            "hello"
-          ]
+          "tags": ["hello"]
         }
       },
       "post": {
@@ -1387,9 +1221,7 @@
             }
           }
         },
-        "tags": [
-          "events"
-        ]
+        "tags": ["events"]
       },
       "progressive-enhancement": {
         "name": "progressive-enhancement",
@@ -1414,14 +1246,10 @@
         "pikkuFuncName": "myScheduledTask",
         "name": "myScheduledTask",
         "schedule": "*/1 * * * *",
-        "tags": [
-          "hello"
-        ]
+        "tags": ["hello"]
       }
     },
-    "files": [
-      "src/scheduled-task.wiring.ts"
-    ]
+    "files": ["src/scheduled-task.wiring.ts"]
   },
   "queueWorkers": {
     "meta": {
@@ -1430,9 +1258,7 @@
         "queueName": "hello-world-queue"
       }
     },
-    "files": [
-      "src/queue-worker.wiring.ts"
-    ]
+    "files": ["src/queue-worker.wiring.ts"]
   },
   "rpc": {
     "internalMeta": {
@@ -1490,9 +1316,7 @@
         }
       ]
     ],
-    "invokedFunctions": [
-      "rpcTest"
-    ]
+    "invokedFunctions": ["rpcTest"]
   },
   "mcpEndpoints": {
     "resourcesMeta": {
@@ -1509,11 +1333,7 @@
         "uri": "getUserInfo/{userId}",
         "title": "User Information",
         "description": "Retrieve user information by user ID",
-        "tags": [
-          "user",
-          "profile",
-          "data"
-        ],
+        "tags": ["user", "profile", "data"],
         "inputSchema": "GetUserInfoInput",
         "outputSchema": "GetUserInfoOutput"
       }
@@ -1523,11 +1343,7 @@
         "pikkuFuncName": "sayHello",
         "name": "sayHello",
         "description": "Greet someone with a friendly hello message",
-        "tags": [
-          "greeting",
-          "hello",
-          "demo"
-        ],
+        "tags": ["greeting", "hello", "demo"],
         "inputSchema": "SayHelloInput",
         "outputSchema": "SayHelloOutput"
       },
@@ -1542,11 +1358,7 @@
         "pikkuFuncName": "calculate",
         "name": "calculate",
         "description": "Perform basic mathematical operations (add, subtract, multiply, divide)",
-        "tags": [
-          "math",
-          "calculator",
-          "arithmetic"
-        ],
+        "tags": ["math", "calculator", "arithmetic"],
         "inputSchema": "CalculateInput",
         "outputSchema": "CalculateOutput"
       }
@@ -1564,20 +1376,13 @@
         "pikkuFuncName": "dynamicPromptGenerator",
         "name": "dynamicPromptGenerator",
         "description": "Generate educational content with progressive complexity and optional examples",
-        "tags": [
-          "education",
-          "content",
-          "progressive",
-          "examples"
-        ],
+        "tags": ["education", "content", "progressive", "examples"],
         "inputSchema": "DynamicPromptGeneratorInput",
         "outputSchema": "DynamicPromptGeneratorOutput",
         "arguments": []
       }
     },
-    "files": [
-      "src/mcp.wiring.ts"
-    ]
+    "files": ["src/mcp.wiring.ts"]
   },
   "cli": {
     "meta": {
@@ -1740,11 +1545,7 @@
                 "action": {
                   "description": "Action to perform on file",
                   "short": "a",
-                  "choices": [
-                    "read",
-                    "info",
-                    "delete"
-                  ]
+                  "choices": ["read", "info", "delete"]
                 },
                 "backup": {
                   "description": "Create backup before processing",
@@ -1820,10 +1621,7 @@
         }
       }
     },
-    "files": [
-      "src/cli.render.ts",
-      "src/cli.wiring.ts"
-    ]
+    "files": ["src/cli.render.ts", "src/cli.wiring.ts"]
   },
   "middleware": {
     "meta": {
@@ -1844,10 +1642,7 @@
     "tagPermissions": []
   },
   "serviceAggregation": {
-    "requiredServices": [
-      "eventHub",
-      "logger"
-    ],
+    "requiredServices": ["eventHub", "logger"],
     "usedFunctions": [
       "authenticate",
       "logout",

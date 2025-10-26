@@ -68,7 +68,8 @@ jobs:
     strategy:
       matrix:
         version: [20]
-        template: [
+        template:
+          [
             express,
             express-middleware,
             fastify,
@@ -109,7 +110,8 @@ jobs:
     needs: templates
     strategy:
       matrix:
-        template: [
+        template:
+          [
             express,
             express-middleware,
             fastify,

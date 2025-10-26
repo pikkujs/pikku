@@ -458,6 +458,8 @@ export function filterInspectorState(
   }
 
   // Filter CLI programs (note: CLI filtering might be more complex with nested commands)
+  const referencedRenderers = new Set<string>()
+
   for (const programName of Object.keys(filteredState.cli.meta.programs)) {
     const programMeta = filteredState.cli.meta.programs[programName]
 
@@ -485,6 +487,10 @@ export function filterInspectorState(
         extractWireNames(commandMeta.middleware).forEach((name: string) =>
           filteredState.serviceAggregation.usedMiddleware.add(name)
         )
+        // Track referenced renderers
+        if (commandMeta.defaultRenderName) {
+          referencedRenderers.add(commandMeta.defaultRenderName)
+        }
       }
     }
 
@@ -494,8 +500,20 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate cli.files if any CLI programs remain
-  if (Object.keys(filteredState.cli.meta.programs).length > 0) {
+  // Filter out renderers that aren't referenced by any remaining commands
+  for (const rendererName of Object.keys(
+    filteredState.cli.meta.renderers || {}
+  )) {
+    if (!referencedRenderers.has(rendererName)) {
+      delete filteredState.cli.meta.renderers![rendererName]
+    }
+  }
+
+  // Repopulate cli.files if any CLI programs or referenced renderers remain
+  const hasCliPrograms = Object.keys(filteredState.cli.meta.programs).length > 0
+  const hasCliRenderers =
+    Object.keys(filteredState.cli.meta.renderers || {}).length > 0
+  if (hasCliPrograms || hasCliRenderers) {
     filteredState.cli.files = new Set(state.cli.files)
   }
 
