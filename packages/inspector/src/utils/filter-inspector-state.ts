@@ -174,18 +174,22 @@ export function filterInspectorState(
     http: {
       ...state.http,
       meta: JSON.parse(JSON.stringify(state.http.meta)), // Deep clone metadata
+      files: new Set<string>(), // Will be repopulated with filtered files
     },
     channels: {
       ...state.channels,
       meta: JSON.parse(JSON.stringify(state.channels.meta)),
+      files: new Set<string>(), // Will be repopulated with filtered files
     },
     scheduledTasks: {
       ...state.scheduledTasks,
       meta: JSON.parse(JSON.stringify(state.scheduledTasks.meta)),
+      files: new Set<string>(), // Will be repopulated with filtered files
     },
     queueWorkers: {
       ...state.queueWorkers,
       meta: JSON.parse(JSON.stringify(state.queueWorkers.meta)),
+      files: new Set<string>(), // Will be repopulated with filtered files
     },
     mcpEndpoints: {
       ...state.mcpEndpoints,
@@ -194,10 +198,12 @@ export function filterInspectorState(
         JSON.stringify(state.mcpEndpoints.resourcesMeta)
       ),
       promptsMeta: JSON.parse(JSON.stringify(state.mcpEndpoints.promptsMeta)),
+      files: new Set<string>(), // Will be repopulated with filtered files
     },
     cli: {
       ...state.cli,
       meta: JSON.parse(JSON.stringify(state.cli.meta)),
+      files: new Set<string>(), // Will be repopulated with filtered files
     },
   }
 
@@ -245,6 +251,14 @@ export function filterInspectorState(
     }
   }
 
+  // Repopulate http.files if any routes remain
+  const hasHttpRoutes = Object.values(
+    filteredState.http.meta as Record<string, any>
+  ).some((routes) => Object.keys(routes).length > 0)
+  if (hasHttpRoutes) {
+    filteredState.http.files = new Set(state.http.files)
+  }
+
   // Filter channels
   for (const name of Object.keys(filteredState.channels.meta)) {
     const channelMeta = filteredState.channels.meta[name]
@@ -275,6 +289,11 @@ export function filterInspectorState(
     }
   }
 
+  // Repopulate channels.files if any channels remain
+  if (Object.keys(filteredState.channels.meta).length > 0) {
+    filteredState.channels.files = new Set(state.channels.files)
+  }
+
   // Filter scheduled tasks
   for (const name of Object.keys(filteredState.scheduledTasks.meta)) {
     const taskMeta = filteredState.scheduledTasks.meta[name]
@@ -302,6 +321,11 @@ export function filterInspectorState(
     }
   }
 
+  // Repopulate scheduledTasks.files if any tasks remain
+  if (Object.keys(filteredState.scheduledTasks.meta).length > 0) {
+    filteredState.scheduledTasks.files = new Set(state.scheduledTasks.files)
+  }
+
   // Filter queue workers
   for (const name of Object.keys(filteredState.queueWorkers.meta)) {
     const workerMeta = filteredState.queueWorkers.meta[name]
@@ -327,6 +351,11 @@ export function filterInspectorState(
         filteredState.serviceAggregation.usedMiddleware.add(name)
       )
     }
+  }
+
+  // Repopulate queueWorkers.files if any workers remain
+  if (Object.keys(filteredState.queueWorkers.meta).length > 0) {
+    filteredState.queueWorkers.files = new Set(state.queueWorkers.files)
   }
 
   // Filter MCP tools
@@ -419,6 +448,15 @@ export function filterInspectorState(
     }
   }
 
+  // Repopulate mcpEndpoints.files if any MCP endpoints remain
+  const hasMcpEndpoints =
+    Object.keys(filteredState.mcpEndpoints.toolsMeta).length > 0 ||
+    Object.keys(filteredState.mcpEndpoints.resourcesMeta).length > 0 ||
+    Object.keys(filteredState.mcpEndpoints.promptsMeta).length > 0
+  if (hasMcpEndpoints) {
+    filteredState.mcpEndpoints.files = new Set(state.mcpEndpoints.files)
+  }
+
   // Filter CLI programs (note: CLI filtering might be more complex with nested commands)
   for (const programName of Object.keys(filteredState.cli.meta.programs)) {
     const programMeta = filteredState.cli.meta.programs[programName]
@@ -454,6 +492,11 @@ export function filterInspectorState(
     if (Object.keys(programMeta.commands).length === 0) {
       delete filteredState.cli.meta.programs[programName]
     }
+  }
+
+  // Repopulate cli.files if any CLI programs remain
+  if (Object.keys(filteredState.cli.meta.programs).length > 0) {
+    filteredState.cli.files = new Set(state.cli.files)
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions
