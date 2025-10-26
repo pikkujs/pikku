@@ -20,8 +20,6 @@ export const pikkuMCPTypes: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating MCP types',
       commandEnd: 'Created MCP types',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

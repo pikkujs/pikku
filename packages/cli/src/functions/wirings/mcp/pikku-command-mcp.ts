@@ -109,11 +109,6 @@ pikkuState('mcp', 'promptsMeta', ${JSON.stringify(promptsMetaWithArguments, null
     logCommandInfoAndTime({
       commandStart: 'Finding MCP endpoints',
       commandEnd: 'Found MCP endpoints',
-      skipCondition: async ({ getInspectorState }) => {
-        const { mcpEndpoints } = await getInspectorState()
-        return mcpEndpoints.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

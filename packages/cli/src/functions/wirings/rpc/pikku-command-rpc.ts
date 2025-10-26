@@ -21,8 +21,6 @@ export const pikkuRPC: any = pikkuSessionlessFunc<void, boolean>({
     logCommandInfoAndTime({
       commandStart: 'Finding RPCs tasks',
       commandEnd: 'Found RPCs',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

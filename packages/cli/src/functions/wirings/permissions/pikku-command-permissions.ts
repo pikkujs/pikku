@@ -44,8 +44,6 @@ export const pikkuPermissions: any = pikkuSessionlessFunc<
     logCommandInfoAndTime({
       commandStart: 'Serializing Pikku permissions',
       commandEnd: 'Serialized Pikku permissions',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

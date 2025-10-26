@@ -20,8 +20,6 @@ export const pikkuChannelTypes: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Creating channel types',
       commandEnd: 'Created channel types',
-      skipCondition: false,
-      skipMessage: '',
     }),
   ],
 })

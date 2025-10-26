@@ -34,8 +34,6 @@ export const pikkuCLI: any = pikkuSessionlessFunc<void, boolean | undefined>({
     logCommandInfoAndTime({
       commandStart: 'Finding CLI commands',
       commandEnd: 'Found CLI commands',
-      skipCondition: false,
-      skipMessage: 'none found',
     }),
   ],
 })

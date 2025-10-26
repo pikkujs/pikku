@@ -106,7 +106,6 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating Pikku services map',
       commandEnd: 'Generated Pikku services map',
-      skipMessage: '',
     }),
   ],
 })

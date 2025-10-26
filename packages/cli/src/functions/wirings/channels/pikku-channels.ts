@@ -30,11 +30,6 @@ export const pikkuChannels: any = pikkuVoidFunc({
     logCommandInfoAndTime({
       commandStart: 'Finding Channels',
       commandEnd: 'Found channels',
-      skipCondition: async ({ getInspectorState }: any) => {
-        const visitState = await getInspectorState()
-        return visitState.channels.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

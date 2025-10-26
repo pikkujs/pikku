@@ -30,11 +30,6 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean>({
     logCommandInfoAndTime({
       commandStart: 'Finding HTTP routes',
       commandEnd: 'Found HTTP routes',
-      skipCondition: async ({ getInspectorState }) => {
-        const visitState = await getInspectorState()
-        return visitState.http.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

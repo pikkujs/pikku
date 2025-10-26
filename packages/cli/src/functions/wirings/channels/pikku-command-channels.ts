@@ -35,11 +35,6 @@ export const pikkuChannels: any = pikkuSessionlessFunc<
     logCommandInfoAndTime({
       commandStart: 'Finding Channels',
       commandEnd: 'Found channels',
-      skipCondition: async ({ getInspectorState }) => {
-        const visitState = await getInspectorState()
-        return visitState.channels.files.size === 0
-      },
-      skipMessage: 'none found',
     }),
   ],
 })

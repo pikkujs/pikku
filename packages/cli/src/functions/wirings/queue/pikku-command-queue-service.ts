@@ -9,8 +9,14 @@ export const pikkuQueueService: any = pikkuSessionlessFunc<void, void>({
     const { queueWiringsFile, queueMapDeclarationFile, packageMappings } =
       config
 
+    // If queueWiringsFile is not set, clean up any existing file and return
     if (!queueWiringsFile) {
-      throw new Error("queueWiringsFile is isn't set in the pikku config")
+      logger.info({
+        message:
+          "Skipping generating queue service wrapper since queueWiringsFile isn't set in the pikku config.",
+        type: 'skip',
+      })
+      return
     }
 
     const queueMapDeclarationPath = getFileImportRelativePath(
@@ -26,8 +32,6 @@ export const pikkuQueueService: any = pikkuSessionlessFunc<void, void>({
     logCommandInfoAndTime({
       commandStart: 'Generating queue service wrapper',
       commandEnd: 'Generated queue service wrapper',
-      skipCondition: ({ config }) => config.queueWiringsFile === undefined,
-      skipMessage: "queueWiringsFile isn't set in the pikku config",
     }),
   ],
 })
