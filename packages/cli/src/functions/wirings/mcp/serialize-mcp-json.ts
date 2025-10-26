@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
+import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { TypesMap } from '@pikku/inspector'
 import { CLILogger } from '../../../services/cli-logger.service.js'

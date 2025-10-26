@@ -18,7 +18,8 @@ export const serializeFunctionTypes = (
 
 import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
-import { PikkuChannel, PikkuMCP } from '@pikku/core'
+import { PikkuChannel } from '@pikku/core/channel'
+import { PikkuMCP } from '@pikku/core/mcp'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}

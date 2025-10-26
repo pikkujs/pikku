@@ -1,4 +1,4 @@
-import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
+import { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { Config } from '../../../../types/application-types.js'
 

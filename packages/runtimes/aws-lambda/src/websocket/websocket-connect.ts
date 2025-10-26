@@ -2,9 +2,8 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
-  PikkuFetchHTTPRequest,
-  PikkuFetchHTTPResponse,
 } from '@pikku/core'
+import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { responseToLambdaResult } from '../response-converter.js'
 import { runChannelConnect } from '@pikku/core/channel/serverless'

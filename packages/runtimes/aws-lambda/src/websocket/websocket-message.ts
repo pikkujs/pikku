@@ -2,8 +2,8 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
-  PikkuFetchHTTPResponse,
 } from '@pikku/core'
+import { PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { runChannelMessage } from '@pikku/core/channel/serverless'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { getServerlessDependencies } from './utils.js'

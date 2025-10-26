@@ -24,27 +24,7 @@ export * from './time-utils.js'
 export { pikkuState } from './pikku-state.js'
 export {
   runMiddleware,
-  registerMiddleware,
-  getMiddlewareByName,
   addMiddleware,
+  getMiddlewareByName,
 } from './middleware-runner.js'
 export { addPermission } from './permissions.js'
-export { wireHTTP, addHTTPMiddleware } from './wirings/http/http-runner.js'
-export { wireChannel } from './wirings/channel/channel-runner.js'
-export { wireScheduler } from './wirings/scheduler/scheduler-runner.js'
-export { wireQueueWorker } from './wirings/queue/queue-runner.js'
-export {
-  wireMCPResource,
-  wireMCPTool,
-  wireMCPPrompt,
-  runMCPResource,
-  runMCPTool,
-  runMCPPrompt,
-  getMCPTools,
-  getMCPResources,
-  getMCPPrompts,
-  getMCPResourcesMeta,
-  getMCPToolsMeta,
-  getMCPPromptsMeta,
-} from './wirings/mcp/mcp-runner.js'
-export { wireCLI, runCLICommand } from './wirings/cli/cli-runner.js'

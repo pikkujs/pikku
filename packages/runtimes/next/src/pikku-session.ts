@@ -1,8 +1,5 @@
-import {
-  PikkuFetchHTTPRequest,
-  PikkuUserSessionService,
-  runMiddleware,
-} from '@pikku/core'
+import { PikkuUserSessionService, runMiddleware } from '@pikku/core'
+import { PikkuFetchHTTPRequest } from '@pikku/core/http'
 import type {
   CoreSingletonServices,
   CoreUserSession,

@@ -12,11 +12,8 @@ import {
 import { CloudflareWebsocketStore } from './cloudflare-channel-store.js'
 import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-handler-factory.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
-import {
-  CoreSingletonServices,
-  PikkuFetchHTTPRequest,
-  PikkuFetchHTTPResponse,
-} from '@pikku/core'
+import { CoreSingletonServices } from '@pikku/core'
+import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,

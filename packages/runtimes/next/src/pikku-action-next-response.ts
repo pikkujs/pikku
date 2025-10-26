@@ -1,4 +1,4 @@
-import { PikkuHTTPResponse } from '@pikku/core'
+import { PikkuHTTPResponse } from '@pikku/core/http'
 import type { SerializeOptions } from 'cookie'
 import { cookies } from 'next/headers.js'
 
