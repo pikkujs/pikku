@@ -1,4 +1,5 @@
-import { FunctionsMeta, HTTPWiringsMeta, pikkuState } from '@pikku/core'
+import { FunctionsMeta, pikkuState } from '@pikku/core'
+import { HTTPWiringsMeta } from '@pikku/core/http'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
 import { CLILogger } from '../../../services/cli-logger.service.js'
 const convertSchema =

@@ -27,6 +27,7 @@
     "./scheduler": "./dist/wirings/scheduler/index.js",
     "./rpc": "./dist/wirings/rpc/index.js",
     "./mcp": "./dist/wirings/mcp/index.js",
+    "./cli": "./dist/wirings/cli/index.js",
     "./cli/channel": "./dist/wirings/cli/channel/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",

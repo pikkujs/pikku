@@ -39,7 +39,7 @@ export function serializeLocalCLIBootstrap(
   )
 
   return `
-import { executeCLI } from '@pikku/core'
+import { executeCLI, CLIError } from '@pikku/core/cli'
 import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'
 import { ${singletonServicesFactory.variable} as createSingletonServices } from '${singletonServicesPath}'
 import { ${sessionServicesFactory.variable} as createSessionServices } from '${sessionServicesPath}'
@@ -49,14 +49,21 @@ import '${cliBootstrapPath}'
  * ${capitalizedName} CLI function
  * Handles command line arguments and executes the appropriate function
  */
-export async function ${capitalizedName}CLI(args?: string[]): Promise<void> {
-  await executeCLI({
-    programName: '${programName}',
-    args,
-    createConfig,
-    createSingletonServices,
-    createSessionServices,
-  })
+export async function ${capitalizedName}CLI(args: string[]): Promise<void> {
+  try {
+    await executeCLI({
+      programName: '${programName}',
+      args,
+      createConfig,
+      createSingletonServices,
+      createSessionServices,
+    })
+  } catch (error) {
+    if (error instanceof CLIError) {
+      process.exit(error.exitCode)
+    }
+    throw error
+  }
 }
 
 // Export as default for easy importing
@@ -64,7 +71,7 @@ export default ${capitalizedName}CLI
 
 // For direct execution (if this file is run directly)
 if (import.meta.url === \`file://\${process.argv[1]}\`) {
-  ${capitalizedName}CLI().catch(error => {
+  ${capitalizedName}CLI(process.argv.slice(2)).catch(error => {
     console.error('Fatal error:', error.message)
     process.exit(1)
   })

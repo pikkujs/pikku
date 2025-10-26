@@ -4,12 +4,8 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import type {
-  CoreSingletonServices,
-  CreateSessionServices,
-  QueueJob,
-  QueueJobStatus,
-} from '@pikku/core'
+import type { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 
 /**
  * Enhanced version with additional SQS-specific features

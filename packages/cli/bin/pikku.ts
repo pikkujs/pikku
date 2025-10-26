@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
 import { createConfig, createSingletonServices } from '../src/services.js'
-import { PikkuRPCService } from '@pikku/core'
+import { PikkuRPCService } from '@pikku/core/rpc'
 import { LocalVariablesService } from '@pikku/core/services'
 
 // Import bootstrap if it exists

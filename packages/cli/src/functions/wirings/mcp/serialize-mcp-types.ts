@@ -17,7 +17,7 @@ import {
   MCPToolResponse,
   MCPPromptResponse,
   AssertMCPResourceURIParams
-} from '@pikku/core'
+} from '@pikku/core/mcp'
 
 import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTypesImportPath}'
 

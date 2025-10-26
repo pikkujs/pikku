@@ -1,4 +1,4 @@
-import { queueWorkersMeta } from '@pikku/core'
+import { queueWorkersMeta } from '@pikku/core/queue'
 
 export const serializeQueueMeta = (queueWorkersMeta: queueWorkersMeta) => {
   const serializedOutput: string[] = []

@@ -7,6 +7,7 @@ export {
   runCLICommand,
   pikkuCLIRender,
   executeCLI,
+  CLIError,
 } from './cli-runner.js'
 
 export { parseCLIArguments, generateCommandHelp } from './command-parser.js'

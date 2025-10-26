@@ -32,6 +32,20 @@ import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
 /**
+ * CLI command execution error - thrown when CLI execution fails
+ * Should be caught by the wrapper to call process.exit()
+ */
+export class CLIError extends Error {
+  constructor(
+    message: string,
+    public exitCode: number = 1
+  ) {
+    super(message)
+    this.name = 'CLIError'
+  }
+}
+
+/**
  * Default JSON renderer for CLI output
  */
 const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
@@ -406,16 +420,18 @@ export const pikkuCLIRender = <
 /**
  * Execute a CLI program with the given arguments
  * This is the main entry point for CLI programs
+ *
+ * @throws {CLIError} When CLI execution fails - should be caught by wrapper to call process.exit()
  */
 export async function executeCLI({
   programName,
-  args = process.argv.slice(2),
+  args,
   createConfig,
   createSingletonServices,
   createSessionServices,
 }: {
   programName: string
-  args?: string[]
+  args: string[]
   createConfig: CreateConfig<any, any>
   createSingletonServices: CreateSingletonServices<any, any>
   createSessionServices?: CreateSessionServices<any, any>
@@ -433,8 +449,7 @@ export async function executeCLI({
     const programMeta = allCLIMeta.programs[programName]
 
     if (!programMeta) {
-      console.error(`Error: CLI program "${programName}" not found`)
-      process.exit(1)
+      throw new CLIError(`CLI program "${programName}" not found`, 1)
     }
 
     // Parse arguments for this specific program
@@ -473,12 +488,12 @@ export async function executeCLI({
           parsed.commandPath
         )
         console.log(helpText)
-        process.exit(1)
+        throw new CLIError('Unknown command', 1)
       } else {
         // Show errors for other types of errors
         console.error('Errors:')
         parsed.errors.forEach((error) => console.error(`  ${error}`))
-        process.exit(1)
+        throw new CLIError(parsed.errors.join('\n'), 1)
       }
     }
 
@@ -500,6 +515,12 @@ export async function executeCLI({
       createSessionServices,
     })
   } catch (error: any) {
+    // Re-throw CLIError as-is
+    if (error instanceof CLIError) {
+      throw error
+    }
+
+    // Wrap other errors in CLIError
     console.error('Error:', error)
 
     // Show stack trace in verbose mode
@@ -507,6 +528,6 @@ export async function executeCLI({
       console.error('Stack trace:', error.stack)
     }
 
-    process.exit(1)
+    throw new CLIError(error.message || String(error), 1)
   }
 }

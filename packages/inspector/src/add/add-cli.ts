@@ -5,7 +5,7 @@ import {
   InspectorOptions,
   InspectorState,
 } from '../types.js'
-import { CLIProgramMeta, CLICommandMeta } from '@pikku/core'
+import { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'

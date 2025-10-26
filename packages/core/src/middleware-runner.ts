@@ -93,31 +93,6 @@ export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
 }
 
 /**
- * Registers a single middleware function by name in the global middleware store.
- *
- * This function is used by CLI-generated code to register middleware functions
- * that can be referenced by name in metadata. It stores middleware in a special
- * namespace to avoid conflicts with tag-based middleware.
- *
- * @param {string} name - The unique name (pikkuFuncName) of the middleware function.
- * @param {CorePikkuMiddleware} middleware - The middleware function to register.
- *
- * @example
- * ```typescript
- * // Called by CLI-generated pikku-middleware.gen.ts
- * registerMiddleware('authMiddleware_src_middleware_ts_10_5', authMiddleware)
- * registerMiddleware('loggingMiddleware_src_middleware_ts_20_10', loggingMiddleware)
- * ```
- */
-export const registerMiddleware = (
-  name: string,
-  middleware: CorePikkuMiddleware<any, any>
-) => {
-  const middlewareStore = pikkuState('misc', 'middleware')
-  middlewareStore[name] = [middleware]
-}
-
-/**
  * Retrieves a registered middleware function by its name.
  *
  * This function looks up middleware that was registered with registerMiddleware.

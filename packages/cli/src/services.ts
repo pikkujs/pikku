@@ -8,8 +8,8 @@ import {
   CreateConfig,
   CreateSessionServices,
   CreateSingletonServices,
-  pikkuCLIRender,
 } from '@pikku/core'
+import { pikkuCLIRender } from '@pikku/core/cli'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
