@@ -61,7 +61,7 @@ jobs:
             nextjs,
             mcp-server,
             # pgboss,
-            # bullmq,
+            bullmq,
           ]
         package-manager: [yarn]
     steps:
@@ -99,7 +99,7 @@ jobs:
             uws,
             aws-lambda,
             cloudflare-workers,
-            # nextjs,
+            # nextjs,t
           ]
     steps:
       - name: Check out repository code
