@@ -3510,13 +3510,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:^0.10.0, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:^0.10.0, @pikku/cli@npm:^0.10.1, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.2.0"
-    "@pikku/core": "npm:^0.10.0"
-    "@pikku/inspector": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
+    "@pikku/inspector": "npm:^0.10.1"
     "@types/cookie": "npm:^1.0.0"
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.9.1"
@@ -3550,7 +3550,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:^0.10.0, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:^0.10.0, @pikku/core@npm:^0.10.1, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -3640,11 +3640,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/inspector@npm:^0.10.0, @pikku/inspector@workspace:packages/inspector":
+"@pikku/inspector@npm:^0.10.1, @pikku/inspector@workspace:packages/inspector":
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@types/node": "npm:^24.9.1"
     path-to-regexp: "npm:^8.3.0"
     typescript: "npm:^5.9"
@@ -3741,8 +3741,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/nextjs-app-starter@workspace:templates/nextjs"
   dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/cli": "npm:^0.10.1"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/fetch": "npm:^0.10.0"
     "@pikku/jose": "npm:^0.10.0"
     "@pikku/next": "npm:^0.10.0"
@@ -3840,7 +3840,7 @@ __metadata:
     "@aws-sdk/cloudfront-signer": "npm:^3.914.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.914.0"
     "@pikku/aws-services": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/lambda": "npm:^0.10.0"
     "@types/aws-lambda": "npm:^8.10.156"
     "@types/node": "npm:^24"
@@ -3863,7 +3863,7 @@ __metadata:
     "@aws-sdk/cloudfront-signer": "npm:^3.914.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.914.0"
     "@pikku/aws-services": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/jose": "npm:^0.10.0"
     "@pikku/lambda": "npm:^0.10.0"
     "@pikku/schema-cfworker": "npm:^0.10.0"
@@ -3883,7 +3883,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-bullmq@workspace:templates/bullmq"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/queue-bullmq": "npm:^0.10.0"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
@@ -3899,7 +3899,7 @@ __metadata:
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20251014.0"
     "@pikku/cloudflare": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9.3"
     wrangler: "npm:^4.44.0"
@@ -3912,7 +3912,7 @@ __metadata:
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20251014.0"
     "@pikku/cloudflare": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9.3"
     wrangler: "npm:^4.44.0"
@@ -3923,8 +3923,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/cli": "npm:^0.10.1"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/express-middleware": "npm:^0.10.0"
     "@pikku/jose": "npm:^0.10.0"
     "@pikku/schedule": "npm:^0.10.0"
@@ -3943,7 +3943,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-server@workspace:templates/express"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/express": "npm:^0.10.0"
     "@pikku/schedule": "npm:^0.10.0"
     "@types/node": "npm:^24"
@@ -3958,7 +3958,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-plugin@workspace:templates/fastify-plugin"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/fastify-plugin": "npm:^0.10.0"
     "@pikku/schedule": "npm:^0.10.0"
     "@types/node": "npm:^24"
@@ -3974,7 +3974,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-server@workspace:templates/fastify"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/fastify": "npm:^0.10.0"
     "@types/node": "npm:^24"
     fastify: "npm:^5.6.1"
@@ -3988,8 +3988,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/cli": "npm:^0.10.1"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/fetch": "npm:^0.10.0"
     "@pikku/jose": "npm:^0.10.0"
     "@pikku/schema-cfworker": "npm:^0.10.0"
@@ -4018,7 +4018,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-pg-boss@workspace:templates/pg-boss"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/queue-pg-boss": "npm:^0.10.0"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
@@ -4031,7 +4031,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-uws@workspace:templates/uws"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/uws": "npm:^0.10.0"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
@@ -4044,7 +4044,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-ws-server@workspace:templates/ws"
   dependencies:
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.1"
     "@pikku/ws": "npm:^0.10.0"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -4087,8 +4087,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
   dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/cli": "npm:^0.10.1"
+    "@pikku/core": "npm:^0.10.1"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -4098,8 +4098,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verify-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
   dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/cli": "npm:^0.10.1"
+    "@pikku/core": "npm:^0.10.1"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -4109,8 +4109,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verify-treeshaking@workspace:verifiers/treeshaking"
   dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
+    "@pikku/cli": "npm:^0.10.1"
+    "@pikku/core": "npm:^0.10.1"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown

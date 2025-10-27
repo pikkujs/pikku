@@ -1,5 +1,14 @@
 # @pikku/cli
 
+## 0.10.1
+
+### Patch Changes
+
+- 778267e: fix: fixing inspector ensuring pikkuConfig is set
+- Updated dependencies [778267e]
+  - @pikku/inspector@0.10.1
+  - @pikku/core@0.10.1
+
 ## 0.10.0
 
 This release includes significant improvements across the framework including tree-shaking support, middleware/permission factories, enhanced CLI functionality, improved TypeScript type safety, and comprehensive test strategies.

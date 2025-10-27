@@ -12,7 +12,7 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.10.0",
+    "@pikku/core": "^0.10.1",
     "@pikku/queue-pg-boss": "^0.10.0",
     "tslib": "^2.8.1",
     "tsx": "^4.20.6",
