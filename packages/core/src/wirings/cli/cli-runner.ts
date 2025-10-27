@@ -431,11 +431,17 @@ export async function executeCLI({
   createSessionServices,
 }: {
   programName: string
-  args: string[]
+  args?: string[]
   createConfig: CreateConfig<any, any>
   createSingletonServices: CreateSingletonServices<any, any>
   createSessionServices?: CreateSessionServices<any, any>
 }): Promise<void> {
+  if (!args) {
+    throw new Error(
+      'CLI arguments are required, this is to satisfy release diffs'
+    )
+  }
+
   try {
     // Get CLI metadata from state
     const allCLIMeta = pikkuState('cli', 'meta') as unknown as

@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@types/react": "^19",
-    "next": "^16",
+    "next": "^15",
     "react": "^19",
     "react-dom": "^19",
     "typescript": "^5.9.3"
