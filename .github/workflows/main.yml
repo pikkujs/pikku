@@ -99,7 +99,7 @@ jobs:
             uws,
             aws-lambda,
             cloudflare-workers,
-            # nextjs,t
+            # nextjs
           ]
     steps:
       - name: Check out repository code

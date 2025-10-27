@@ -54,9 +54,9 @@ const getMetaTypes = (
     const helpMessage =
       type === 'CoreConfig'
         ? `No ${type} found. Make sure you have exported a createConfig function in your codebase:\n\n` +
-          `export const createConfig: CreateConfig<Config> = async () => {\n` +
+          `export const createConfig = pikkuConfig(async () => {\n` +
           `  return {}\n` +
-          `}\n\n` +
+          `})\n\n` +
           `Possible issues:\n` +
           `- srcDirectories in pikku.config.json doesn't include the file with the createConfig method`
         : `No ${type} found`
