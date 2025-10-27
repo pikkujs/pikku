@@ -1,6 +1,6 @@
 {
   "name": "@pikku/express-middleware",
-  "version": "0.9.3-next.0",
+  "version": "0.10.0",
   "description": "The pikku express middleware",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

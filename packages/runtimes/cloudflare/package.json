@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cloudflare",
-  "version": "0.9.3-next.0",
+  "version": "0.10.0",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",

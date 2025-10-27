@@ -1,6 +1,6 @@
 {
   "name": "@pikku/queue-bullmq",
-  "version": "0.9.5-next.0",
+  "version": "0.10.0",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ws",
-  "version": "0.9.3-next.0",
+  "version": "0.10.0",
   "description": "The pikku ws server",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

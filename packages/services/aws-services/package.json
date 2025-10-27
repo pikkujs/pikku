@@ -1,6 +1,6 @@
 {
   "name": "@pikku/aws-services",
-  "version": "0.9.3-next.0",
+  "version": "0.10.0",
   "author": "yasser.fadl@gmail.com",
   "license": "UNLICENSED",
   "module": "dist/index.js",
