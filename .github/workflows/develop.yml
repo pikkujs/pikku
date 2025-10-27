@@ -2,8 +2,8 @@ name: Main
 
 on:
   push:
-    branches:
-      - develop
+    branches-ignore:
+      - main
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
