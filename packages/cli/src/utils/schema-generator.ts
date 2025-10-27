@@ -72,7 +72,7 @@ export async function generateSchemas(
         return
       }
       logger.error(
-        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}`
+        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}. Message: ${e.message}`
       )
     }
   })
