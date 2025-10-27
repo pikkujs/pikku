@@ -80,7 +80,7 @@ jobs:
             nextjs,
             mcp-server,
             # pgboss,
-            # bullmq,
+            bullmq,
           ]
         package-manager: [yarn]
     steps:
