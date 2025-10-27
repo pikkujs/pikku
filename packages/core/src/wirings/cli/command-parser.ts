@@ -67,7 +67,11 @@ export function parseCLIArguments(
   }
 
   // If no command was parsed, check for a default command
-  if (result.commandPath.length === 0 && meta.commands) {
+  // Only use default if user didn't provide any non-flag arguments
+  const hasNonFlagArgs = args.some(
+    (arg, idx) => idx >= currentIndex && !arg.startsWith('-')
+  )
+  if (result.commandPath.length === 0 && meta.commands && !hasNonFlagArgs) {
     for (const [name, cmd] of Object.entries(meta.commands)) {
       if (cmd.isDefault) {
         result.commandPath.push(name)
@@ -88,7 +92,17 @@ export function parseCLIArguments(
   // Get the final command metadata
   const commandMeta = getCommandMeta(meta, result.commandPath)
   if (!commandMeta) {
-    result.errors.push(`Unknown command: ${result.commandPath.join(' ')}`)
+    // If we have no command path but there are non-flag args, the first arg is likely an unknown command
+    if (
+      result.commandPath.length === 0 &&
+      hasNonFlagArgs &&
+      args.length > 0 &&
+      !args[0].startsWith('-')
+    ) {
+      result.errors.push(`Unknown command: ${args[0]}`)
+    } else {
+      result.errors.push(`Unknown command: ${result.commandPath.join(' ')}`)
+    }
     return result
   }
 
