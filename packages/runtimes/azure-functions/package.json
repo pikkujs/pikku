@@ -16,7 +16,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.9.12-next.0"
+    "@pikku/core": "^0.10.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

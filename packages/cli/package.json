@@ -22,8 +22,8 @@
   },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.2.0",
-    "@pikku/core": "^0.9.12-next.0",
-    "@pikku/inspector": "^0.9.6-next.0",
+    "@pikku/core": "^0.10.0",
+    "@pikku/inspector": "^0.10.0",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",
     "@types/uuid": "^11.0.0",
