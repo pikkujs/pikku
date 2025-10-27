@@ -14,9 +14,9 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
   "dependencies": {
-    "@pikku/aws-services": "^0.9.3-next.0",
-    "@pikku/core": "^0.9.12-next.0",
-    "@pikku/lambda": "^0.9.4-next.0",
+    "@pikku/aws-services": "^0.10.0",
+    "@pikku/core": "^0.10.0",
+    "@pikku/lambda": "^0.10.0",
     "tslib": "^2.8.1"
   },
   "devDependencies": {

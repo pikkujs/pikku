@@ -10,10 +10,10 @@
     "test": "pikku && npx tsx src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.9.12-next.0"
+    "@pikku/core": "^0.10.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.9.16-next.0",
+    "@pikku/cli": "^0.10.0",
     "@types/node": "^24",
     "typescript": "^5.9"
   }

@@ -13,7 +13,7 @@
     "release": "npm run build && npm test"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.9.12-next.0"
+    "@pikku/core": "^0.10.0"
   },
   "dependencies": {
     "jose": "^6.1.0"
