@@ -79,8 +79,8 @@ jobs:
             cloudflare-workers,
             nextjs,
             mcp-server,
-            pgboss,
-            bullmq,
+            # pgboss,
+            # bullmq,
           ]
         package-manager: [yarn]
     steps:
@@ -107,7 +107,7 @@ jobs:
   bun-templates:
     name: Bun Templates
     runs-on: ubuntu-latest
-    needs: templates
+    needs: build
     strategy:
       matrix:
         template:
@@ -119,7 +119,7 @@ jobs:
             uws,
             aws-lambda,
             cloudflare-workers,
-            nextjs,
+            # nextjs,
           ]
     steps:
       - name: Check out repository code

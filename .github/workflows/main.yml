@@ -51,15 +51,17 @@ jobs:
       matrix:
         version: [20]
         template: [
-            # express,
+            express,
             express-middleware,
-            # fastify,
+            fastify,
             fastify-plugin,
             uws,
             aws-lambda,
             cloudflare-workers,
-            # nextjs,
+            nextjs,
             mcp-server,
+            # pgboss,
+            # bullmq,
           ]
         package-manager: [yarn]
     steps:
@@ -90,9 +92,9 @@ jobs:
     strategy:
       matrix:
         template: [
-            # express,
+            express,
             express-middleware,
-            # fastify,
+            fastify,
             fastify-plugin,
             uws,
             aws-lambda,
@@ -164,7 +166,7 @@ jobs:
             fastify,
             fastify-plugin,
             mcp-server,
-            # nextjs,
+            nextjs,
             pg-boss,
             uws,
             ws,
