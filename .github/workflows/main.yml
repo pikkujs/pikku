@@ -60,8 +60,8 @@ jobs:
             cloudflare-workers,
             nextjs,
             mcp-server,
-            # pgboss,
-            bullmq,
+            # pg-boss,
+            # bullmq,
           ]
         package-manager: [yarn]
     steps:
@@ -155,7 +155,8 @@ jobs:
     strategy:
       matrix:
         version: [20]
-        template: [
+        template:
+          [
             aws-lambda,
             aws-lambda-websocket,
             bullmq,
