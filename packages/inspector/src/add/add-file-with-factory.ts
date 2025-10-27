@@ -2,6 +2,13 @@ import * as ts from 'typescript'
 import { PathToNameAndType, InspectorState } from '../types.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 
+// Mapping of wrapper function names to their corresponding types
+const wrapperFunctionMap: Record<string, string> = {
+  pikkuConfig: 'CreateConfig',
+  pikkuServices: 'CreateSingletonServices',
+  pikkuSessionServices: 'CreateSessionServices',
+}
+
 export const addFileWithFactory = (
   node: ts.Node,
   checker: ts.TypeChecker,
@@ -13,6 +20,68 @@ export const addFileWithFactory = (
     const fileName = node.getSourceFile().fileName
     const variableTypeNode = node.type
     const variableName = node.name.getText()
+
+    // Check for wrapper function calls FIRST (e.g., pikkuConfig(...), pikkuServices(...))
+    // This handles both cases: with and without explicit type annotations
+    if (node.initializer && ts.isCallExpression(node.initializer)) {
+      const callExpression = node.initializer
+      const expression = callExpression.expression
+
+      if (ts.isIdentifier(expression)) {
+        const wrapperFunctionName = expression.text
+        const inferredType = wrapperFunctionMap[wrapperFunctionName]
+
+        if (inferredType === expectedTypeName) {
+          // Get the type declaration path from the wrapper function
+          const typeSymbol = checker.getSymbolAtLocation(expression)
+          let typeDeclarationPath: string | null = null
+
+          if (
+            typeSymbol &&
+            typeSymbol.declarations &&
+            typeSymbol.declarations[0]
+          ) {
+            const declaration = typeSymbol.declarations[0]
+            const sourceFile = declaration.getSourceFile()
+            typeDeclarationPath = sourceFile.fileName
+          }
+
+          const variables = methods.get(fileName) || []
+          variables.push({
+            variable: variableName,
+            type: inferredType,
+            typePath: typeDeclarationPath,
+          })
+          methods.set(fileName, variables)
+
+          // Extract singleton services for CreateSessionServices factories
+          if (
+            expectedTypeName === 'CreateSessionServices' &&
+            state &&
+            callExpression.arguments.length > 0
+          ) {
+            const firstArg = callExpression.arguments[0]
+            let functionNode:
+              | ts.ArrowFunction
+              | ts.FunctionExpression
+              | undefined
+
+            if (ts.isArrowFunction(firstArg)) {
+              functionNode = firstArg
+            } else if (ts.isFunctionExpression(firstArg)) {
+              functionNode = firstArg
+            }
+
+            if (functionNode) {
+              const servicesMeta = extractServicesFromFunction(functionNode)
+              state.sessionServicesMeta.set(variableName, servicesMeta.services)
+            }
+          }
+
+          return // Early return since we found a match
+        }
+      }
+    }
 
     if (variableTypeNode && ts.isTypeReferenceNode(variableTypeNode)) {
       const typeNameNode = variableTypeNode.typeName || null

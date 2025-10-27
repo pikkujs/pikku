@@ -13,8 +13,23 @@ export const checkRequiredTypes = (
   errors: FilesAndMethodsErrors,
   requires: RequiredTypes = {}
 ): void => {
+  // Filter out errors that are about missing Types when we have the corresponding Factory
+  // e.g., if we have a CreateConfig factory, we don't need a CoreConfig type
+  const errorMessages = Array.from(errors.keys())
+  const hasCreateConfigFactory = errorMessages.every(
+    (msg) => !msg.includes('No CreateConfig found')
+  )
+
   // Only throw if there are errors AND we require those types
-  const hasRequiredErrors = Array.from(errors.keys()).some((message) => {
+  const hasRequiredErrors = errorMessages.some((message) => {
+    // Skip CoreConfig type errors if we have a CreateConfig factory
+    if (
+      requires.config &&
+      message.includes('No CoreConfig found') &&
+      hasCreateConfigFactory
+    ) {
+      return false
+    }
     if (requires.config && message.includes('CoreConfig')) return true
     if (requires.sessionServiceType && message.includes('CoreServices'))
       return true
