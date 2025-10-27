@@ -53,7 +53,7 @@ export async function ${capitalizedName}CLI(args: string[]): Promise<void> {
   try {
     await executeCLI({
       programName: '${programName}',
-      args,
+      args: args || process.argv.slice(2),
       createConfig,
       createSingletonServices,
       createSessionServices,
