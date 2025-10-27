@@ -54,6 +54,7 @@ export class PgBossQueueService implements QueueService {
     data: In,
     options?: JobOptions
   ): Promise<string> {
+    await this.pgBoss.createQueue(queueName)
     const jobId = await this.pgBoss.send(
       queueName,
       data as any,
