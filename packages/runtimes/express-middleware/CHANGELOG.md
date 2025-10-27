@@ -1,5 +1,11 @@
 # @pikku/express-middleware
 
+## 0.10.0
+
+This release includes significant improvements across the framework including tree-shaking support, middleware/permission factories, enhanced CLI functionality, improved TypeScript type safety, and comprehensive test strategies.
+
+For complete details, see https://pikku.dev/changelogs/0_10_0.md
+
 ## 0.9.3-next.0
 
 ### Patch Changes
