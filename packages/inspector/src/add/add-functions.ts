@@ -27,7 +27,8 @@ const nullifyTypes = (type: string | null) => {
 const resolveTypeImports = (
   type: ts.Type,
   resolvedTypes: TypesMap,
-  isCustom: boolean
+  isCustom: boolean,
+  checker: ts.TypeChecker
 ): string[] => {
   const types: string[] = []
 
@@ -42,10 +43,14 @@ const resolveTypeImports = (
         const path = sourceFile.fileName
 
         // Skip built-in utility types or TypeScript lib types
+        // Skip enum members (but not the enum type itself)
+        const isEnumMember = declaration && ts.isEnumMember(declaration)
+
         if (
           !path.includes('node_modules/typescript') &&
           symbol.getName() !== '__type' &&
-          !isPrimitiveType(currentType)
+          !isPrimitiveType(currentType) &&
+          !isEnumMember
         ) {
           const originalName = symbol.getName()
           // Check if the type is already in the map
@@ -101,6 +106,32 @@ const resolveTypeImports = (
     ) {
       const typeRef = currentType as ts.TypeReference
       typeRef.typeArguments?.forEach(visitType)
+    }
+
+    // Handle anonymous object types with enum properties (e.g., { userType: UserType })
+    // Only traverse into enum property types to avoid over-importing other named types
+    if (currentType.flags & ts.TypeFlags.Object) {
+      const objectType = currentType as ts.ObjectType
+      const typeSymbol = objectType.getSymbol()
+
+      // Only traverse properties for anonymous object types (no symbol or __type symbol)
+      // Skip named types, interfaces, and enums to avoid over-importing
+      const isAnonymousObject = !typeSymbol || typeSymbol.getName() === '__type'
+
+      if (isAnonymousObject) {
+        const properties = objectType.getProperties()
+        for (const prop of properties) {
+          if (prop.valueDeclaration) {
+            const propType = checker.getTypeOfSymbolAtLocation(
+              prop,
+              prop.valueDeclaration
+            )
+            if (propType) {
+              visitType(propType)
+            }
+          }
+        }
+      }
     }
   }
 
@@ -170,7 +201,7 @@ const getNamesAndTypes = (
 
     // record the alias in your TypesMap
     const references = rawTypes
-      .map((t) => resolveTypeImports(t, typesMap, true))
+      .map((t) => resolveTypeImports(t, typesMap, true, checker))
       .flat()
 
     typesMap.addCustomType(aliasName, aliasType, references)
@@ -192,7 +223,7 @@ const getNamesAndTypes = (
         return name
       }
       // non-primitive: import/alias it inline
-      return resolveTypeImports(t, typesMap, false)
+      return resolveTypeImports(t, typesMap, false, checker)
     })
     .flat()
 
