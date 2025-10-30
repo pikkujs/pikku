@@ -170,7 +170,10 @@ export const createSingletonServices: CreateSingletonServices<
     | Omit<InspectorState, 'typesLookup'>
     | undefined = preloadedInspectorState
 
-  const getInspectorState = async (refresh: boolean = false) => {
+  const getInspectorState = async (
+    refresh: boolean = false,
+    setupOnly: boolean = false
+  ) => {
     // Get or refresh the unfiltered state
     if (!unfilteredState || refresh) {
       // Run inspector WITHOUT filters to get full state
@@ -181,8 +184,8 @@ export const createSingletonServices: CreateSingletonServices<
           )
         )
       ).flat()
-      unfilteredState = await inspect(logger, wiringFiles, {
-        // NO filters here - inspector returns full unfiltered state
+      unfilteredState = inspect(logger, wiringFiles, {
+        setupOnly,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,
