@@ -64,6 +64,15 @@ const _getPikkuCLIConfig = async (
           ...extendedConfig.packageMappings,
           ...config.packageMappings,
         },
+        ignoreFiles: config.ignoreFiles ??
+          extendedConfig.ignoreFiles ?? [
+            '**/*.gen.ts',
+            '**/*.test.ts',
+            '**/*.spec.ts',
+            '**/node_modules/**',
+            '**/.pikku/**',
+            '**/dist/**',
+          ],
       }
     } else {
       result = {
@@ -73,6 +82,14 @@ const _getPikkuCLIConfig = async (
         rootDir: config.rootDir
           ? resolve(configDir, config.rootDir)
           : configDir,
+        ignoreFiles: config.ignoreFiles ?? [
+          '**/*.gen.ts',
+          '**/*.test.ts',
+          '**/*.spec.ts',
+          '**/node_modules/**',
+          '**/.pikku/**',
+          '**/dist/**',
+        ],
       }
     }
 
