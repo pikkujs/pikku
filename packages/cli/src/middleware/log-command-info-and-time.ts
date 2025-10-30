@@ -30,6 +30,9 @@ export const logCommandInfoAndTime = ({
     await next()
 
     // Log completion
-    logger.info(`✓ ${commandEnd} in ${Date.now() - start}ms.`)
+    logger.info({
+      type: 'success',
+      message: `✓ ${commandEnd} in ${Date.now() - start}ms.`,
+    })
   }
 }
