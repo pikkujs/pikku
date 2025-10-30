@@ -10,7 +10,7 @@ import {
   CreateSingletonServices,
 } from '@pikku/core'
 import { pikkuCLIRender } from '@pikku/core/cli'
-import { LocalVariablesService } from '@pikku/core/services'
+import { LocalVariablesService, LogLevel } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import {
@@ -118,6 +118,12 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,
   data
 ) => {
+  // Set log level if provided via CLI option
+  const logLevel = (data as any).logLevel
+  if (logLevel && LogLevel[logLevel] !== undefined) {
+    logger.setLevel(LogLevel[logLevel as keyof typeof LogLevel])
+  }
+
   const cliConfig = await getPikkuCLIConfig(logger, data.configFile, [], true)
 
   // Load inspector state from file if stateInput is provided
