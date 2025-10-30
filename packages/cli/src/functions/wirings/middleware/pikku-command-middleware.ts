@@ -15,17 +15,18 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
 
     let filesGenerated = false
 
-    // Check if there are any middleware group factories
-    const hasHTTPFactories = Array.from(
-      state.http.routeMiddleware.values()
-    ).some((meta) => meta.exportName && meta.isFactory)
-    const hasTagFactories = Array.from(
-      state.middleware.tagMiddleware.values()
-    ).some((meta) => meta.exportName && meta.isFactory)
-    const hasFactories = hasHTTPFactories || hasTagFactories
+    // Check if there are any middleware groups
+    const hasHTTPGroups = state.http.routeMiddleware.size > 0
+    const hasTagGroups = state.middleware.tagMiddleware.size > 0
 
-    // Generate middleware imports file if there are factories
-    if (hasFactories) {
+    if (hasHTTPGroups || hasTagGroups) {
+      await writeFileInDir(
+        logger,
+        config.middlewareGroupsMetaFile,
+        serializeMiddlewareGroupsMeta(state)
+      )
+
+      // Always generate middleware imports file when groups exist (even if empty)
       await writeFileInDir(
         logger,
         middlewareFile,
@@ -36,19 +37,7 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
           packageMappings
         )
       )
-      filesGenerated = true
-    }
 
-    // Generate middleware groups metadata file
-    const hasHTTPGroups = state.http.routeMiddleware.size > 0
-    const hasTagGroups = state.middleware.tagMiddleware.size > 0
-
-    if (hasHTTPGroups || hasTagGroups) {
-      await writeFileInDir(
-        logger,
-        config.middlewareGroupsMetaFile,
-        serializeMiddlewareGroupsMeta(state)
-      )
       filesGenerated = true
     }
 
