@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { performance } from 'perf_hooks'
 import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
@@ -11,12 +12,26 @@ export const inspect = (
   routeFiles: string[],
   options: InspectorOptions = {}
 ): InspectorState => {
+  const startProgram = performance.now()
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.CommonJS,
   })
+  logger.debug(
+    `Created program in ${(performance.now() - startProgram).toFixed(2)}ms`
+  )
+
+  const startChecker = performance.now()
   const checker = program.getTypeChecker()
+  logger.debug(
+    `Got type checker in ${(performance.now() - startChecker).toFixed(2)}ms`
+  )
+
+  const startSourceFiles = performance.now()
   const sourceFiles = program.getSourceFiles()
+  logger.debug(
+    `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
+  )
 
   // Infer root directory from source files
   const rootDir = findCommonAncestor(routeFiles)
@@ -103,28 +118,44 @@ export const inspect = (
   }
 
   // First sweep: add all functions
+  const startSetup = performance.now()
   for (const sourceFile of sourceFiles) {
     ts.forEachChild(sourceFile, (child) =>
       visitSetup(logger, checker, child, state, options)
     )
   }
+  logger.debug(
+    `Visit setup phase completed in ${(performance.now() - startSetup).toFixed(2)}ms`
+  )
 
   if (!options.setupOnly) {
     // Second sweep: add all transports
+    const startRoutes = performance.now()
     for (const sourceFile of sourceFiles) {
       ts.forEachChild(sourceFile, (child) =>
         visitRoutes(logger, checker, child, state, options)
       )
     }
+    logger.debug(
+      `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(2)}ms`
+    )
   }
 
   // Populate filesAndMethods
+  const startFilesAndMethods = performance.now()
   const { result, errors } = getFilesAndMethods(state, options.types)
   state.filesAndMethods = result
   state.filesAndMethodsErrors = errors
+  logger.debug(
+    `Get files and methods completed in ${(performance.now() - startFilesAndMethods).toFixed(2)}ms`
+  )
 
   if (!options.setupOnly) {
+    const startAggregate = performance.now()
     aggregateRequiredServices(state)
+    logger.debug(
+      `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
+    )
   }
 
   return state
