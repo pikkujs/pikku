@@ -78,6 +78,7 @@ export type PikkuCLIInput = {
 
   rootDir: string
   srcDirectories: string[]
+  ignoreFiles?: string[]
   packageMappings: Record<string, string>
   supportsImportAttributes: boolean
 
@@ -140,6 +141,7 @@ export type PikkuCLIConfig = {
 
   rootDir: string
   srcDirectories: string[]
+  ignoreFiles?: string[]
   packageMappings: Record<string, string>
   supportsImportAttributes: boolean
 

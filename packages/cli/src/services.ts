@@ -186,7 +186,9 @@ export const createSingletonServices: CreateSingletonServices<
       const wiringFiles = (
         await Promise.all(
           srcDirectories.map((dir) =>
-            glob(`${path.join(rootDir, dir)}/**/*.ts`)
+            glob(`${path.join(rootDir, dir)}/**/*.ts`, {
+              ignore: config.ignoreFiles || [],
+            })
           )
         )
       ).flat()
