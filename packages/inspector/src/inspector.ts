@@ -17,6 +17,11 @@ export const inspect = (
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.CommonJS,
     skipLibCheck: true,
+    skipDefaultLibCheck: true,
+    moduleResolution: ts.ModuleResolutionKind.Node10,
+    types: [],
+    allowJs: false,
+    checkJs: false,
   })
   logger.debug(
     `Created program in ${(performance.now() - startProgram).toFixed(2)}ms`
