@@ -31,6 +31,28 @@ ${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : 
 type PikkuCLIRender<Data, RequiredServices extends SingletonServices = SingletonServices> = CorePikkuCLIRender<Data, RequiredServices, Session>
 
 /**
+ * Creates a type-safe CLI renderer with access to your application's singleton services.
+ * The renderer receives the full singleton services and output data to format and display results.
+ *
+ * @template Data - The output data type from the CLI command
+ * @template RequiredServices - The minimum services required for type checking (defaults to SingletonServices)
+ * @param render - Function that receives singleton services and data to render output
+ * @returns A CLI renderer configuration
+ *
+ * @example
+ * \`\`\`typescript
+ * const myRenderer = pikkuCLIRender<MyData>(({ logger }, data) => {
+ *   logger.info(data.message)
+ * })
+ * \`\`\`
+ */
+export const pikkuCLIRender = <Data, RequiredServices extends SingletonServices = SingletonServices>(
+  render: (services: SingletonServices, data: Data) => void | Promise<void>
+): PikkuCLIRender<Data, RequiredServices> => {
+  return render as any
+}
+
+/**
  * CLI command configuration with project-specific types.
  * Uses CoreCLICommandConfig from @pikku/core with local middleware and render types.
  */
