@@ -1,5 +1,11 @@
 # @pikku/core
 
+## 0.10.2
+
+### Patch Changes
+
+- 44d71a8: fix: fixing inspector ensuring pikkuConfig is set
+
 ## 0.10.1
 
 ### Patch Changes
