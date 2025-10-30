@@ -1,5 +1,36 @@
 # @pikku/cli
 
+## 0.10.2
+
+### Patch Changes
+
+- ca58805: Add bootstrap command, performance optimizations, and CLI improvements
+
+  **New Features:**
+
+  - Add `pikku bootstrap` command for type-only generation (~13.5% faster than `pikku all`)
+  - Add configurable `ignoreFiles` option to pikku.config.json with sensible defaults (_.gen.ts, _.test.ts, \*.spec.ts)
+  - Export pikkuCLIRender helper from serialize-cli-types.ts with JSDoc documentation
+
+  **Performance Improvements:**
+
+  - Add aggressive TypeScript compiler options (skipDefaultLibCheck, types: []) - ~37% faster TypeScript setup
+  - Add detailed performance timing to inspector phases (--logLevel=debug)
+  - Optimize file inspection with ignore patterns - ~10-20% faster overall
+
+  **Enhancements:**
+
+  - Fix --logLevel flag to properly apply log level to logger
+  - Update middleware logging to use structured log format
+  - Improve CLI renderers to consistently use destructured logger service
+  - Fix middleware file generation when middleware groups exist
+
+- 44d71a8: fix: fixing inspector ensuring pikkuConfig is set
+- Updated dependencies [ca58805]
+- Updated dependencies [44d71a8]
+  - @pikku/inspector@0.10.2
+  - @pikku/core@0.10.2
+
 ## 0.10.1
 
 ### Patch Changes
