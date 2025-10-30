@@ -7,6 +7,7 @@ import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { all } from './functions/commands/all.js'
+import { bootstrap } from './functions/commands/bootstrap.js'
 import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -69,6 +70,10 @@ wireCLI({
           short: 'n',
         },
       },
+    }),
+    bootstrap: pikkuCLICommand({
+      func: bootstrap,
+      description: 'Generate only type files (setup phase only)',
     }),
     schemas: pikkuCLICommand({
       func: pikkuSchemas,

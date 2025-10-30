@@ -109,11 +109,13 @@ export const inspect = (
     )
   }
 
-  // Second sweep: add all transports
-  for (const sourceFile of sourceFiles) {
-    ts.forEachChild(sourceFile, (child) =>
-      visitRoutes(logger, checker, child, state, options)
-    )
+  if (!options.setupOnly) {
+    // Second sweep: add all transports
+    for (const sourceFile of sourceFiles) {
+      ts.forEachChild(sourceFile, (child) =>
+        visitRoutes(logger, checker, child, state, options)
+      )
+    }
   }
 
   // Populate filesAndMethods
@@ -121,8 +123,9 @@ export const inspect = (
   state.filesAndMethods = result
   state.filesAndMethodsErrors = errors
 
-  // Post-processing: Aggregate required services from wired functions/middleware/permissions
-  aggregateRequiredServices(state)
+  if (!options.setupOnly) {
+    aggregateRequiredServices(state)
+  }
 
   return state
 }
