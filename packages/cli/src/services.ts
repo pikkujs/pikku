@@ -94,7 +94,7 @@ function parseCLIFilters(data: any): InspectorFilters {
 export const defaultCLIRenderer = pikkuCLIRender<
   ForwardedLogMessage,
   SingletonServices
->((_services, data) => {
+>(({ logger }, data) => {
   if (data) {
     logger[data.level]({ message: data.message, type: data.type })
   }
@@ -105,11 +105,9 @@ export const defaultCLIRenderer = pikkuCLIRender<
  * This renderer can be used in CLI-over-channel clients
  */
 export const clientCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
-  (_services, data) => {
+  ({ logger }, data) => {
     if (data) {
-      // Simple console output without service dependencies
-      const prefix = data.type ? `[${data.type}] ` : ''
-      console.log(`${prefix}${data.message}`)
+      logger[data.level]?.({ message: data.message, type: data.type } as any)
     }
   }
 )
