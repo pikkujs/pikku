@@ -16,6 +16,7 @@ export const inspect = (
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.CommonJS,
+    skipLibCheck: true,
   })
   logger.debug(
     `Created program in ${(performance.now() - startProgram).toFixed(2)}ms`
