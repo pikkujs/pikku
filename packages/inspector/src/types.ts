@@ -114,6 +114,7 @@ export type InspectorFilters = {
 }
 
 export type InspectorOptions = Partial<{
+  setupOnly: boolean
   types: Partial<{
     configFileType: string
     userSessionType: string

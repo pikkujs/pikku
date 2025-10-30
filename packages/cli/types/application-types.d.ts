@@ -15,7 +15,10 @@ export interface Config extends CoreConfig<PikkuCLIConfig> {
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   logger: CLILogger
-  getInspectorState: (refresh?: boolean = false) => Promise<InspectorState>
+  getInspectorState: (
+    refresh?: boolean,
+    setupOnly?: boolean
+  ) => Promise<InspectorState>
 }
 
 export interface Services extends CoreServices<SingletonServices, {}> {}

@@ -70,8 +70,8 @@ export const visitSetup = (
   )
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
-  addRPCInvocations(node, state, logger)
 
+  addRPCInvocations(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
 
