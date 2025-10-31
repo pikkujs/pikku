@@ -6,8 +6,9 @@
  */
 import {
   wireChannel,
-  pikkuChannelMiddleware,
+  pikkuChannelMessageFunc,
 } from '../.pikku/channel/pikku-channel-types.gen.js'
+import { pikkuMiddleware } from '../.pikku/function/pikku-function-types.gen.js'
 import { greetUser } from '../../functions/src/cli.functions.js'
 import { addNumbers } from '../../functions/src/cli.functions.js'
 import { subtractNumbers } from '../../functions/src/cli.functions.js'
@@ -17,31 +18,44 @@ import { createUser } from '../../functions/src/cli.functions.js'
 import { listUsers } from '../../functions/src/cli.functions.js'
 import { processFile } from '../../functions/src/cli.functions.js'
 
-// Middleware to close the channel after each CLI command completes
-const closeAfterCommand = pikkuChannelMiddleware(async ({ channel }, next) => {
-  try {
-    await next()
-  } finally {
-    // Close the channel after the command completes
-    channel.close()
+// Middleware to close the channel after CLI command completes
+const cliCloseOnComplete = pikkuMiddleware(
+  async (services, { channel }, next) => {
+    console.log('[CLI Middleware] Starting command execution')
+    try {
+      const result = await next()
+      console.log('[CLI Middleware] Command completed, closing channel')
+      channel?.close()
+      console.log('[CLI Middleware] Channel close called')
+      return result
+    } catch (error) {
+      console.log('[CLI Middleware] Command failed, closing channel')
+      channel?.close()
+      throw error
+    }
   }
+)
+
+// Wrap CLI command handlers with close middleware
+const wrapForCLI = (func: any) => ({
+  func,
+  middleware: [cliCloseOnComplete],
 })
 
 wireChannel({
   name: 'cli',
   route: '/cli',
   auth: false,
-  middleware: [closeAfterCommand],
   onMessageWiring: {
     command: {
-      greet: greetUser,
-      'calc.add': addNumbers,
-      'calc.subtract': subtractNumbers,
-      'calc.multiply': multiplyNumbers,
-      'calc.divide': divideNumbers,
-      'user.create': createUser,
-      'user.list': listUsers,
-      file: processFile,
+      greet: wrapForCLI(greetUser),
+      'calc.add': wrapForCLI(addNumbers),
+      'calc.subtract': wrapForCLI(subtractNumbers),
+      'calc.multiply': wrapForCLI(multiplyNumbers),
+      'calc.divide': wrapForCLI(divideNumbers),
+      'user.create': wrapForCLI(createUser),
+      'user.list': wrapForCLI(listUsers),
+      file: wrapForCLI(processFile),
     },
   },
   tags: ['cli', 'my-cli'],

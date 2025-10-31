@@ -8,6 +8,7 @@
   },
   "schemasFromTypes": ["PikkuCLIConfig"],
   "websocketFile": ".pikku/pikku-websocket.gen.ts",
+  "supportsImportAttributes": true,
   "schema": {
     "supportsImportAttributes": true
   },
