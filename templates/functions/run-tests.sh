@@ -6,6 +6,10 @@ SERVER_CMD="npm run start"
 BUILD_CMD=""
 HELLO_WORLD_URL_PREFIX="http://localhost:4002"
 RUN_WS_TESTS=false
+RUN_RPC_TESTS=false
+RUN_HTTP_SSE_TESTS=false
+RUN_QUEUE_TESTS=false
+RUN_MCP_TESTS=false
 
 # -------- ARGUMENT PARSING --------
 while [[ $# -gt 0 ]]; do
@@ -24,6 +28,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --websocket)
             RUN_WS_TESTS=true
+            shift
+            ;;
+        --rpc)
+            RUN_RPC_TESTS=true
+            shift
+            ;;
+        --http-sse)
+            RUN_HTTP_SSE_TESTS=true
+            shift
+            ;;
+        --queue)
+            RUN_QUEUE_TESTS=true
+            shift
+            ;;
+        --mcp)
+            RUN_MCP_TESTS=true
             shift
             ;;
         *)
@@ -45,35 +65,36 @@ bash -c "$SERVER_CMD" & SERVER_PID=$!
 trap "kill $SERVER_PID" EXIT
 
 # -------- HTTP TEST (Health check is the test) --------
-TIMEOUT=30
-START_TIME=$(date +%s)
-
-echo "Running HTTP test via health check at: $HELLO_WORLD_URL_PREFIX/hello-world"
-
-while true; do
-    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$HELLO_WORLD_URL_PREFIX/hello-world" || echo "000")
-
-    if [ "$RESPONSE" -eq 200 ]; then
-        echo "✅ HTTP test passed with 200 OK"
-        break
-    fi
-
-    CURRENT_TIME=$(date +%s)
-    ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
-
-    if [ "$ELAPSED_TIME" -ge "$TIMEOUT" ]; then
-        echo "❌ HTTP test failed after $TIMEOUT seconds (last status: $RESPONSE)"
-        exit 1
-    fi
-
-    echo "Still failing (status $RESPONSE), retrying..."
-    sleep 2
-done
+yarn run test:http-fetch
 
 # -------- RUN WEBSOCKET TESTS IF REQUESTED --------
 if $RUN_WS_TESTS; then
     echo "Running WebSocket tests..."
-    # bash run-ws-tests.sh
+    yarn run test:websocket
+fi
+
+# -------- RUN RPC TESTS IF REQUESTED --------
+if $RUN_RPC_TESTS; then
+    echo "Running RPC tests..."
+    yarn run test:rpc
+fi
+
+# -------- RUN HTTP-SSE TESTS IF REQUESTED --------
+if $RUN_HTTP_SSE_TESTS; then
+    echo "Running HTTP-SSE tests..."
+    yarn run test:http-sse
+fi
+
+# -------- RUN QUEUE TESTS IF REQUESTED --------
+if $RUN_QUEUE_TESTS; then
+    echo "Running Queue tests..."
+    yarn run test:queue
+fi
+
+# -------- RUN MCP TESTS IF REQUESTED --------
+if $RUN_MCP_TESTS; then
+    echo "Running MCP tests..."
+    yarn run test:mcp
 fi
 
 echo "✅ All tests completed successfully."

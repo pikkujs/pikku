@@ -329,16 +329,12 @@ export function updatePackageJSONScripts(
 
   packageJson.scripts.postinstall = 'pikku all'
 
-  if (!stackblitz) {
-    packageJson.scripts.test = packageJson.scripts['test:template']
-    delete packageJson.scripts['test:template']
-  }
-
+  // Create test script based on supported features
   if (stackblitz) {
-    // For stackblitz, create test script based on supported features
+    // For stackblitz, run individual test commands
     const testCommands: string[] = []
     if (supportedFeatures.includes('http')) {
-      testCommands.push('npm run test:http')
+      testCommands.push('npm run test:http-fetch')
     }
     if (supportedFeatures.includes('channel')) {
       testCommands.push('npm run test:websocket')
@@ -347,9 +343,35 @@ export function updatePackageJSONScripts(
       testCommands.push('npm run test:rpc')
     }
     if (supportedFeatures.includes('sse')) {
-      testCommands.push('npm run test:sse')
+      testCommands.push('npm run test:http-sse')
+    }
+    if (supportedFeatures.includes('queue')) {
+      testCommands.push('npm run test:queue')
+    }
+    if (supportedFeatures.includes('mcp')) {
+      testCommands.push('npm run test:mcp')
     }
     packageJson.scripts.test = testCommands.join(' && ')
+  } else {
+    // For regular templates, construct run-tests.sh command with appropriate flags
+    const testFlags: string[] = []
+    if (supportedFeatures.includes('channel')) {
+      testFlags.push('--websocket')
+    }
+    if (supportedFeatures.includes('rpc')) {
+      testFlags.push('--rpc')
+    }
+    if (supportedFeatures.includes('sse')) {
+      testFlags.push('--http-sse')
+    }
+    if (supportedFeatures.includes('queue')) {
+      testFlags.push('--queue')
+    }
+    if (supportedFeatures.includes('mcp')) {
+      testFlags.push('--mcp')
+    }
+    packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
+    delete packageJson.scripts['test:template']
   }
 
   if (packageManager === 'yarn') {
