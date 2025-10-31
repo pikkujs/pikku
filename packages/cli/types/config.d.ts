@@ -80,7 +80,6 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  supportsImportAttributes: boolean
 
   configDir: string
   tsconfig: string
@@ -96,6 +95,11 @@ export type PikkuCLIInput = {
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo
+  }
+
+  schema?: {
+    additionalProperties?: boolean
+    supportsImportAttributes?: boolean
   }
 
   cli?: {
@@ -143,7 +147,6 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  supportsImportAttributes: boolean
 
   configFile?: string
   tags?: string[]
@@ -167,6 +170,11 @@ export type PikkuCLIConfig = {
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo
+  }
+
+  schema?: {
+    additionalProperties?: boolean
+    supportsImportAttributes?: boolean
   }
 
   cli?: {

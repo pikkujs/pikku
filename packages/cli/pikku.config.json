@@ -6,9 +6,11 @@
   "packageMappings": {
     "../inspector/src": "@pikku/inspector"
   },
-  "supportsImportAttributes": true,
   "schemasFromTypes": ["PikkuCLIConfig"],
   "websocketFile": ".pikku/pikku-websocket.gen.ts",
+  "schema": {
+    "supportsImportAttributes": true
+  },
   "cli": {
     "entrypoints": {
       "pikku": [

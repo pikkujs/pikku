@@ -12,7 +12,8 @@ export async function generateSchemas(
   typesMap: TypesMap,
   functionMeta: FunctionsMeta,
   httpWiringsMeta: HTTPWiringsMeta,
-  additionalTypes?: string[]
+  additionalTypes?: string[],
+  additionalProperties: boolean = false
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -56,7 +57,7 @@ export async function generateSchemas(
     sortProps: true,
     strictTuples: false,
     encodeRefs: false,
-    additionalProperties: false,
+    additionalProperties,
   })
   const schemas: Record<string, JSONValue> = {}
 
@@ -86,8 +87,8 @@ export async function saveSchemas(
   schemas: Record<string, JSONValue>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  supportsImportAttributes: boolean,
-  additionalTypes?: string[]
+  additionalTypes?: string[],
+  supportsImportAttributes: boolean = false
 ) {
   await writeFileInDir(
     logger,

@@ -3,7 +3,10 @@
   "srcDirectories": ["../functions/src", "./src"],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
-  "supportsImportAttributes": true,
+  "schema": {
+    "supportsImportAttributes": true,
+    "additionalProperties": true
+  },
   "cli": {
     "entrypoints": {
       "my-cli": [

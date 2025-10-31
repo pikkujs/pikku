@@ -73,6 +73,12 @@ const _getPikkuCLIConfig = async (
             '**/.pikku/**',
             '**/dist/**',
           ],
+        schema: {
+          additionalProperties: false,
+          supportsImportAttributes: false,
+          ...extendedConfig.schema,
+          ...config.schema,
+        },
       }
     } else {
       result = {
@@ -90,6 +96,11 @@ const _getPikkuCLIConfig = async (
           '**/.pikku/**',
           '**/dist/**',
         ],
+        schema: {
+          additionalProperties: false,
+          supportsImportAttributes: false,
+          ...config.schema,
+        },
       }
     }
 
