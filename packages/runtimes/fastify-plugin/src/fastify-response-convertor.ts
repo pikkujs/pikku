@@ -8,8 +8,11 @@ export async function sendResponseToFastify(
   reply.status(response.status)
 
   // Copy all headers from the Response to FastifyReply.
+  // Skip Transfer-Encoding as Fastify manages it automatically
   response.headers.forEach((value, key) => {
-    reply.header(key, value)
+    if (key.toLowerCase() !== 'transfer-encoding') {
+      reply.header(key, value)
+    }
   })
 
   // Determine the content type.

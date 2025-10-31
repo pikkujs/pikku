@@ -3884,7 +3884,6 @@ __metadata:
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
-    ws: "npm:^8.18.3"
   languageName: unknown
   linkType: soft
 
@@ -4009,7 +4008,6 @@ __metadata:
     eventsource: "npm:^4.0.0"
     tsx: "npm:^4.19.2"
     typescript: "npm:^5.9"
-    ws: "npm:^8.18.3"
   languageName: unknown
   linkType: soft
 
@@ -4046,9 +4044,11 @@ __metadata:
     "@pikku/core": "npm:^0.10.0"
     "@pikku/uws": "npm:^0.10.0"
     "@types/node": "npm:^24"
+    "@types/ws": "npm:^8"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
+    ws: "npm:^8.18.3"
   languageName: unknown
   linkType: soft
 

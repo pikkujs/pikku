@@ -21,15 +21,13 @@ import { processFile } from '../../functions/src/cli.functions.js'
 // Middleware to close the channel after CLI command completes
 const cliCloseOnComplete = pikkuMiddleware(
   async (services, { channel }, next) => {
-    console.log('[CLI Middleware] Starting command execution')
     try {
       const result = await next()
-      console.log('[CLI Middleware] Command completed, closing channel')
+      // Close the channel after command completes
       channel?.close()
-      console.log('[CLI Middleware] Channel close called')
       return result
     } catch (error) {
-      console.log('[CLI Middleware] Command failed, closing channel')
+      // Close the channel even on error
       channel?.close()
       throw error
     }
