@@ -4043,6 +4043,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.10.0"
     "@pikku/uws": "npm:^0.10.0"
+    "@pikku/websocket": "npm:^0.10.0"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
     tslib: "npm:^2.8.1"

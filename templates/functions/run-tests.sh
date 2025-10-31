@@ -64,6 +64,9 @@ if [ -n "$BUILD_CMD" ]; then
     bash -c "$BUILD_CMD"
 fi
 
+# -------- EXPORT URL FOR TEST SCRIPTS --------
+export HELLO_WORLD_URL_PREFIX
+
 # -------- START SERVER --------
 echo "Starting server: $SERVER_CMD"
 bash -c "$SERVER_CMD" & SERVER_PID=$!

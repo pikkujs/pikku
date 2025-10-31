@@ -58,5 +58,6 @@ export const check = async (serverUrl: string, userId: string) => {
   }
 }
 
-check('http://localhost:4002', 'Pikku User 1')
-check('http://localhost:4002', 'Pikku User 2')
+const serverUrl = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+check(serverUrl, 'Pikku User 1')
+check(serverUrl, 'Pikku User 2')

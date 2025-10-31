@@ -30,5 +30,7 @@ async function check() {
   setTimeout(check, RETRY_INTERVAL)
 }
 
-pikkuFetch.setServerUrl('http://localhost:4002')
+pikkuFetch.setServerUrl(
+  process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+)
 check()

@@ -7,7 +7,7 @@ import {
 } from '../../functions/src/services.js'
 
 import mcpJSON from '../../functions/.pikku/mcp/mcp.gen.json' with { type: 'json' }
-import '../../functions/.pikku/mcp/pikku-bootstrap-mcp.gen.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 async function main() {

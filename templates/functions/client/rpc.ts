@@ -1,5 +1,7 @@
 import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
-pikkuRPC.setServerUrl('http://localhost:4002')
+pikkuRPC.setServerUrl(
+  process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+)
 
 const TIMEOUT = 30000
 const RETRY_INTERVAL = 2000

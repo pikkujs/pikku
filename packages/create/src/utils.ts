@@ -195,6 +195,7 @@ const FILE_FEATURE_MAPPING = {
   'queue-worker.': ['queue'],
   'rpc.': ['http'], // RPC is typically over HTTP
   'scheduled-task.': ['scheduled'],
+  'cli.': ['cli'],
 } as const
 
 /**
@@ -376,6 +377,11 @@ export function updatePackageJSONScripts(
     // Only add test script if it doesn't already exist
     if (!packageJson.scripts.test) {
       packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
+    } else {
+      packageJson.scripts.test = packageJson.scripts.test.replace(
+        '../functions/run-tests.sh',
+        'run-tests.sh'
+      )
     }
   }
 
