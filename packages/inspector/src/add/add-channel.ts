@@ -136,7 +136,15 @@ export function addMessagesRoutes(
       const init = getInitializerOf(routeElem)
       if (!init) continue
 
-      const routeKey = routeElem.name!.getText()
+      // Get the route key, stripping quotes if it's a string literal
+      const routeName = routeElem.name
+      if (!routeName) continue
+
+      let routeKey = routeName.getText()
+      // For string literals like 'greet' or "greet", strip the quotes
+      if (ts.isStringLiteral(routeName)) {
+        routeKey = routeName.text
+      }
 
       // For shorthand properties, we need to resolve the identifier to its declaration
       if (ts.isShorthandPropertyAssignment(routeElem)) {
