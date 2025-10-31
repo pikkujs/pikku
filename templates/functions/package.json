@@ -13,9 +13,11 @@
     "@pikku/fetch": "^0.10.0",
     "@pikku/websocket": "^0.10.0",
     "@types/node": "^24",
+    "@types/ws": "^8",
     "concurrently": "^9.2.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.9"
+    "typescript": "^5.9",
+    "ws": "^8.18.3"
   },
   "scripts": {
     "build": "tsc -b",

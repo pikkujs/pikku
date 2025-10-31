@@ -4004,10 +4004,12 @@ __metadata:
     "@pikku/schema-cfworker": "npm:^0.10.0"
     "@pikku/websocket": "npm:^0.10.0"
     "@types/node": "npm:^24"
+    "@types/ws": "npm:^8"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.0.0"
     tsx: "npm:^4.19.2"
     typescript: "npm:^5.9"
+    ws: "npm:^8.18.3"
   languageName: unknown
   linkType: soft
 
