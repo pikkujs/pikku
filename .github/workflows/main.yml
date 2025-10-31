@@ -68,6 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     strategy:
+      fail-fast: false
       matrix:
         version: [20]
         template: [
@@ -110,6 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     strategy:
+      fail-fast: false
       matrix:
         template: [
             express,
@@ -173,6 +175,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: release
     strategy:
+      fail-fast: false
       matrix:
         version: [20]
         template:
