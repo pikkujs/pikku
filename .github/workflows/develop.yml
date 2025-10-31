@@ -99,6 +99,7 @@ jobs:
             cloudflare-workers,
             nextjs,
             mcp-server,
+            cli,
             # pgboss,
             # bullmq,
           ]

@@ -81,6 +81,7 @@ jobs:
             cloudflare-workers,
             nextjs,
             mcp-server,
+            cli,
             # pg-boss,
             # bullmq,
           ]
@@ -183,6 +184,7 @@ jobs:
             aws-lambda,
             aws-lambda-websocket,
             bullmq,
+            cli,
             cloudflare-websocket,
             cloudflare-workers,
             express,
