@@ -204,8 +204,17 @@ export function addMessagesRoutes(
                     // Look up in the registry
                     const fnMeta = state.functions.meta[handlerName]
                     if (fnMeta) {
+                      // Resolve middleware for this route
+                      const routeTags = ts.isObjectLiteralExpression(init)
+                        ? getPropertyTags(init, 'channel', channelKey, logger)
+                        : undefined
+                      const routeMiddleware = ts.isObjectLiteralExpression(init)
+                        ? resolveMiddleware(state, init, routeTags, checker)
+                        : undefined
+
                       result[channelKey]![routeKey] = {
                         pikkuFuncName: handlerName,
+                        middleware: routeMiddleware,
                       }
                       continue
                     }
@@ -222,8 +231,17 @@ export function addMessagesRoutes(
                   // Look up in the registry
                   const fnMeta = state.functions.meta[handlerName]
                   if (fnMeta) {
+                    // Resolve middleware for this route
+                    const routeTags = ts.isObjectLiteralExpression(init)
+                      ? getPropertyTags(init, 'channel', channelKey, logger)
+                      : undefined
+                    const routeMiddleware = ts.isObjectLiteralExpression(init)
+                      ? resolveMiddleware(state, init, routeTags, checker)
+                      : undefined
+
                     result[channelKey]![routeKey] = {
                       pikkuFuncName: handlerName,
+                      middleware: routeMiddleware,
                     }
                     continue
                   }
@@ -257,8 +275,24 @@ export function addMessagesRoutes(
 
                         const fnMeta = state.functions.meta[handlerName]
                         if (fnMeta) {
+                          // Resolve middleware for this route
+                          const routeTags = ts.isObjectLiteralExpression(init)
+                            ? getPropertyTags(
+                                init,
+                                'channel',
+                                channelKey,
+                                logger
+                              )
+                            : undefined
+                          const routeMiddleware = ts.isObjectLiteralExpression(
+                            init
+                          )
+                            ? resolveMiddleware(state, init, routeTags, checker)
+                            : undefined
+
                           result[channelKey]![routeKey] = {
                             pikkuFuncName: handlerName,
+                            middleware: routeMiddleware,
                           }
                           continue
                         }
@@ -272,8 +306,24 @@ export function addMessagesRoutes(
 
                         const fnMeta = state.functions.meta[handlerName]
                         if (fnMeta) {
+                          // Resolve middleware for this route
+                          const routeTags = ts.isObjectLiteralExpression(init)
+                            ? getPropertyTags(
+                                init,
+                                'channel',
+                                channelKey,
+                                logger
+                              )
+                            : undefined
+                          const routeMiddleware = ts.isObjectLiteralExpression(
+                            init
+                          )
+                            ? resolveMiddleware(state, init, routeTags, checker)
+                            : undefined
+
                           result[channelKey]![routeKey] = {
                             pikkuFuncName: handlerName,
+                            middleware: routeMiddleware,
                           }
                           continue
                         }
@@ -344,8 +394,17 @@ export function addMessagesRoutes(
               const fnMeta = state.functions.meta[handlerName]
 
               if (fnMeta) {
+                // Resolve middleware for this route
+                const routeTags = ts.isObjectLiteralExpression(init)
+                  ? getPropertyTags(init, 'channel', channelKey, logger)
+                  : undefined
+                const routeMiddleware = ts.isObjectLiteralExpression(init)
+                  ? resolveMiddleware(state, init, routeTags, checker)
+                  : undefined
+
                 result[channelKey]![routeKey] = {
                   pikkuFuncName: handlerName,
+                  middleware: routeMiddleware,
                 }
                 continue // Skip the normal processing below
               }
@@ -376,8 +435,18 @@ export function addMessagesRoutes(
         continue
       }
 
+      // Resolve middleware and permissions for this route
+      // Check if the route config is an object literal with middleware/permissions
+      const routeTags = ts.isObjectLiteralExpression(init)
+        ? getPropertyTags(init, 'channel', channelKey, logger)
+        : undefined
+      const routeMiddleware = ts.isObjectLiteralExpression(init)
+        ? resolveMiddleware(state, init, routeTags, checker)
+        : undefined
+
       result[channelKey]![routeKey] = {
         pikkuFuncName: handlerName,
+        middleware: routeMiddleware,
       }
     }
   }

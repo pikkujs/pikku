@@ -87,19 +87,42 @@ export const processMessageHandlers = (
 
     const {
       pikkuFuncName,
-      middleware: inheritedMiddleware,
+      middleware: routeInheritedMiddleware,
       permissions: inheritedPermissions,
     } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
 
-    const wirePermissions =
-      typeof onMessage === 'function' ? undefined : onMessage.permissions
+    // Get wire middleware: channel-level middleware + message-specific middleware
+    const channelWireMiddleware = channelConfig.middleware || []
 
-    const wireMiddleware =
-      typeof onMessage === 'function' ? [] : onMessage.middleware
+    // Check if onMessage is a wrapper object vs direct function config:
+    // - Direct config: onMessage.func is a plain Function
+    // - Wrapper: onMessage.func is a CorePikkuFunctionConfig (has onMessage.func.func)
+    const isWrapper =
+      onMessage &&
+      typeof onMessage === 'object' &&
+      'func' in onMessage &&
+      typeof onMessage.func === 'object' &&
+      'func' in onMessage.func
+    const messageWireMiddleware = isWrapper ? onMessage.middleware || [] : []
+
+    // Combine channel middleware with message middleware (actual functions)
+    // Channel middleware runs first, then message middleware
+    const wireMiddleware = [...channelWireMiddleware, ...messageWireMiddleware]
+
+    // Inherited middleware comes from metadata (tag groups, non-inline wire)
+    const inheritedMiddleware = routeInheritedMiddleware || []
+
+    const wirePermissions = isWrapper ? onMessage.permissions : undefined
+
+    // Create unique cache key that includes routing info to avoid cache collisions
+    // when multiple message handlers use the same function
+    const cacheKey = routingProperty
+      ? `${channelConfig.name}:${routingProperty}:${routerValue}`
+      : `${channelConfig.name}:default`
 
     return await runPikkuFunc(
       PikkuWiringTypes.channel,
-      channelConfig.name,
+      cacheKey,
       pikkuFuncName,
       {
         singletonServices: services,

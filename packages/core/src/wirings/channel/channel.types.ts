@@ -88,8 +88,18 @@ export type CoreChannel<
 > = {
   name: string
   route: Channel
-  onConnect?: ChannelConnect
-  onDisconnect?: ChannelDisconnect
+  onConnect?:
+    | ChannelConnect
+    | {
+        func?: ChannelConnect
+        middleware?: PikkuMiddleware[]
+      }
+  onDisconnect?:
+    | ChannelDisconnect
+    | {
+        func?: ChannelDisconnect
+        middleware?: PikkuMiddleware[]
+      }
   onMessage?: ChannelFunctionMessage
   onMessageWiring?: Record<
     string,
