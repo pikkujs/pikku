@@ -137,10 +137,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       session,
     })
 
-    console.log('<', funcConfig.func)
-    const result = await funcConfig.func(allServices, actualData, session!)
-    console.log('>', result)
-    return result
+    return await funcConfig.func(allServices, actualData, session!)
   }
 
   // Combine all middleware: inheritedMiddleware → wireMiddleware → funcMiddleware

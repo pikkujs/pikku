@@ -1,22 +1,16 @@
-import { existsSync } from 'fs'
 import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 
 export const bootstrap: any = pikkuVoidFunc({
   func: async ({ logger, config, rpc, getInspectorState }) => {
-    let typesDeclarationFileExists = true
-
-    if (!existsSync(config.typesDeclarationFile)) {
-      typesDeclarationFileExists = false
-    }
+    // Initialize inspector state in bootstrap mode with core types only
+    // This allows bootstrap to run immediately without inspecting the codebase
+    // All subsequent RPC commands will use this cached state
+    await getInspectorState(false, false, true)
 
     await rpc.invoke('pikkuFunctionTypes', null)
 
-    if (!typesDeclarationFileExists) {
-      logger.info(`• Type file first created, inspecting again...\x1b[0m`)
-      await getInspectorState(true, true)
-    }
-
     // Generate wiring-specific type files for tree-shaking
+    // These use the bootstrap mode state with core types
     await rpc.invoke('pikkuFunctionTypesSplit', null)
     await rpc.invoke('pikkuHTTPTypes', null)
     await rpc.invoke('pikkuChannelTypes', null)

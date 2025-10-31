@@ -17,7 +17,8 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   logger: CLILogger
   getInspectorState: (
     refresh?: boolean,
-    setupOnly?: boolean
+    setupOnly?: boolean,
+    bootstrapMode?: boolean
   ) => Promise<InspectorState>
 }
 
