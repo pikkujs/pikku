@@ -10,6 +10,7 @@ RUN_RPC_TESTS=false
 RUN_HTTP_SSE_TESTS=false
 RUN_QUEUE_TESTS=false
 RUN_MCP_TESTS=false
+RUN_CLI_TESTS=false
 
 # -------- ARGUMENT PARSING --------
 while [[ $# -gt 0 ]]; do
@@ -44,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --mcp)
             RUN_MCP_TESTS=true
+            shift
+            ;;
+        --cli)
+            RUN_CLI_TESTS=true
             shift
             ;;
         *)
@@ -95,6 +100,15 @@ fi
 if $RUN_MCP_TESTS; then
     echo "Running MCP tests..."
     yarn run test:mcp
+fi
+
+# -------- RUN CLI TESTS IF REQUESTED --------
+if $RUN_CLI_TESTS; then
+    echo "Running CLI tests..."
+    echo "Testing local CLI..."
+    yarn run test:cli:local
+    echo "Testing remote CLI..."
+    yarn run test:cli:remote
 fi
 
 echo "✅ All tests completed successfully."

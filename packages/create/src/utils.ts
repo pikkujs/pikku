@@ -370,8 +370,13 @@ export function updatePackageJSONScripts(
     if (supportedFeatures.includes('mcp')) {
       testFlags.push('--mcp')
     }
-    packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
-    delete packageJson.scripts['test:template']
+    if (supportedFeatures.includes('cli')) {
+      testFlags.push('--cli')
+    }
+    // Only add test script if it doesn't already exist
+    if (!packageJson.scripts.test) {
+      packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
+    }
   }
 
   if (packageManager === 'yarn') {

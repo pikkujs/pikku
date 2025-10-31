@@ -9,9 +9,8 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "dev": "next dev",
     "pikku": "pikku",
-    "start": "next start",
-    "lint": "next lint",
-    "test:template": "bash run-tests.sh --build 'next build' --url http://localhost:3000/api"
+    "start": "next build && next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@pikku/core": "^0.10.0",
