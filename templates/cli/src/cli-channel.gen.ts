@@ -4,7 +4,10 @@
 /**
  * WebSocket channel backend for 'my-cli' CLI commands
  */
-import { wireChannel } from '../.pikku/channel/pikku-channel-types.gen.js'
+import {
+  wireChannel,
+  pikkuChannelMiddleware,
+} from '../.pikku/channel/pikku-channel-types.gen.js'
 import { greetUser } from '../../functions/src/cli.functions.js'
 import { addNumbers } from '../../functions/src/cli.functions.js'
 import { subtractNumbers } from '../../functions/src/cli.functions.js'
@@ -14,10 +17,21 @@ import { createUser } from '../../functions/src/cli.functions.js'
 import { listUsers } from '../../functions/src/cli.functions.js'
 import { processFile } from '../../functions/src/cli.functions.js'
 
+// Middleware to close the channel after each CLI command completes
+const closeAfterCommand = pikkuChannelMiddleware(async ({ channel }, next) => {
+  try {
+    await next()
+  } finally {
+    // Close the channel after the command completes
+    channel.close()
+  }
+})
+
 wireChannel({
   name: 'cli',
   route: '/cli',
   auth: false,
+  middleware: [closeAfterCommand],
   onMessageWiring: {
     command: {
       greet: greetUser,

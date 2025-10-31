@@ -112,6 +112,9 @@ export const pikkuWebsocketHandler = ({
           ws.send(data as any)
         }
       })
+      channelHandler.registerOnClose(() => {
+        ws.close()
+      })
       eventHub.onChannelOpened(channelHandler.channelId, ws)
       channelHandler.open()
     },

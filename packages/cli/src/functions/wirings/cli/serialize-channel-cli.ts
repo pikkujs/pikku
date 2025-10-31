@@ -84,13 +84,24 @@ export function serializeChannelCLI(
   return `/**
  * WebSocket channel backend for '${programName}' CLI commands
  */
-import { wireChannel } from '${channelTypesPath}'
+import { wireChannel, pikkuChannelMiddleware } from '${channelTypesPath}'
 ${imports}
+
+// Middleware to close the channel after each CLI command completes
+const closeAfterCommand = pikkuChannelMiddleware(async ({ channel }, next) => {
+  try {
+    await next()
+  } finally {
+    // Close the channel after the command completes
+    channel.close()
+  }
+})
 
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
   auth: false,
+  middleware: [closeAfterCommand],
   onMessageWiring: {
     command: {
 ${commandEntries}

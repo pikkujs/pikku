@@ -434,7 +434,7 @@ export async function executeCLI({
   args?: string[]
   createConfig: CreateConfig<any, any>
   createSingletonServices: CreateSingletonServices<any, any>
-  createSessionServices?: CreateSessionServices<any, any>
+  createSessionServices?: CreateSessionServices<any, any, any>
 }): Promise<void> {
   if (!args) {
     throw new Error(

@@ -2,7 +2,7 @@
 set -e
 
 # -------- DEFAULTS --------
-SERVER_CMD="npm run start"
+SERVER_CMD="yarn run start"
 BUILD_CMD=""
 HELLO_WORLD_URL_PREFIX="http://localhost:4002"
 RUN_WS_TESTS=false
