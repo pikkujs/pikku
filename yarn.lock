@@ -4006,6 +4006,7 @@ __metadata:
     "@types/node": "npm:^24"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.0.0"
+    tsx: "npm:^4.19.2"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
