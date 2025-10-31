@@ -119,7 +119,7 @@ export const processMessageHandlers = (
     )
   }
 
-  const onMessage = async (rawData): Promise<unknown> => {
+  return async (rawData): Promise<unknown> => {
     let result: unknown
     let processed = false
 
@@ -137,25 +137,26 @@ export const processMessageHandlers = (
         for (const [routingProperty, routes] of entries) {
           const routerValue = messageData[routingProperty]
           if (routerValue && routes[routerValue]) {
-            processed = true
-
             const { [routingProperty]: _, ...data } = messageData
-            result = await processMessage(
-              data as any,
-              routes[routerValue],
-              routingProperty,
-              routerValue
-            )
+
+            processed = true
+            result =
+              (await processMessage(
+                data as any,
+                routes[routerValue],
+                routingProperty,
+                routerValue
+              )) || {}
             ;(result as any)[routingProperty] = routerValue
             break
           }
         }
-      }
 
-      // Default handler if no routes matched but json data was parsed
-      if (!processed && channelConfig.onMessage) {
-        processed = true
-        result = await processMessage(messageData, channelConfig.onMessage)
+        // Default handler if no routes matched but json data was parsed
+        if (!processed && channelConfig.onMessage) {
+          processed = true
+          result = await processMessage(messageData, channelConfig.onMessage)
+        }
       }
     }
 
@@ -174,6 +175,4 @@ export const processMessageHandlers = (
 
     return result
   }
-
-  return onMessage
 }

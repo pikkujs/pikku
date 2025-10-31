@@ -37,20 +37,22 @@ export function getPropertyAssignmentInitializer(
     ) {
       if (!checker) return prop.name // best effort without a checker
 
-      let sym = checker.getSymbolAtLocation(prop.name)
+      // Use the proper TypeScript API for shorthand property resolution
+      let sym = checker.getShorthandAssignmentValueSymbol(prop)
       if (sym && sym.flags & ts.SymbolFlags.Alias) {
         sym = checker.getAliasedSymbol(sym)
       }
 
       const decl = sym?.declarations?.[0]
 
-      // const foo = () => {}
+      // const foo = () => {} or const foo = pikkuFunc(...)
       if (
         decl &&
         ts.isVariableDeclaration(decl) &&
         decl.initializer &&
         (ts.isArrowFunction(decl.initializer) ||
-          ts.isFunctionExpression(decl.initializer))
+          ts.isFunctionExpression(decl.initializer) ||
+          ts.isCallExpression(decl.initializer))
       ) {
         return decl.initializer
       }

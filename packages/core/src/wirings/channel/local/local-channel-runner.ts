@@ -95,6 +95,7 @@ export const runLocalChannel = async ({
           {
             ...singletonServices,
             ...sessionServices,
+            channel,
             userSession,
           },
           interaction,
@@ -103,23 +104,34 @@ export const runLocalChannel = async ({
 
       const interaction: PikkuInteraction = { channel }
 
-      channelHandler.registerOnOpen(() => {
+      channelHandler.registerOnOpen(async () => {
         if (channelConfig.onConnect && meta.connect) {
-          runPikkuFuncDirectly(
-            meta.connect.pikkuFuncName,
-            getAllServices(channel, false),
-            openingData
-          )
+          try {
+            const result = await runPikkuFuncDirectly(
+              meta.connect.pikkuFuncName,
+              getAllServices(channel, false),
+              openingData
+            )
+            await channel.send(result)
+          } catch (e) {
+            singletonServices.logger.error(`Error handling onConnect: ${e}`)
+            channel.send({ error: e.message || 'Unknown error' })
+          }
         }
       })
 
       channelHandler.registerOnClose(async () => {
         if (channelConfig.onDisconnect && meta.disconnect) {
-          runPikkuFuncDirectly(
-            meta.disconnect.pikkuFuncName,
-            getAllServices(channel, false),
-            openingData
-          )
+          try {
+            await runPikkuFuncDirectly(
+              meta.disconnect.pikkuFuncName,
+              getAllServices(channel, false),
+              openingData
+            )
+          } catch (e) {
+            singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
+            channel.send({ error: e.message || 'Unknown error' })
+          }
         }
 
         if (sessionServices) {
@@ -127,13 +139,20 @@ export const runLocalChannel = async ({
         }
       })
 
-      channelHandler.registerOnMessage(
-        processMessageHandlers(
-          getAllServices(channel),
-          channelConfig as any,
-          channelHandler
-        )
+      const onMessage = processMessageHandlers(
+        getAllServices(channel),
+        channelConfig as any,
+        channelHandler
       )
+      channelHandler.registerOnMessage(async (data) => {
+        try {
+          const result = await onMessage(data)
+          await channel.send(result)
+        } catch (e) {
+          singletonServices.logger.error(`Error handling message: ${e.message}`)
+          channel.send({ error: e.message || 'Unknown error' })
+        }
+      })
     } catch (e: any) {
       handleHTTPError(
         e,

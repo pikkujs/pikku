@@ -34,8 +34,8 @@ export const check = async (serverUrl: string, userId: string) => {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
 
-    // Default handler
-    websocket.send(`Hello from ${userId}`)
+    // Default handler - intentionally sending invalid message to test error handling
+    websocket.send('hello')
 
     // Route handler
     route.send('subscribe', { name: 'test' })

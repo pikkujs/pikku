@@ -417,13 +417,13 @@ export const addChannel: AddWiring = (
   const connect = getPropertyAssignmentInitializer(
     obj,
     'onConnect',
-    false,
+    true,
     checker
   )
   const disconnect = getPropertyAssignmentInitializer(
     obj,
     'onDisconnect',
-    false,
+    true,
     checker
   )
 
@@ -432,28 +432,26 @@ export const addChannel: AddWiring = (
   const onMsgProp = getPropertyAssignmentInitializer(
     obj,
     'onMessage',
-    false,
+    true,
     checker
   )
 
   if (onMsgProp) {
-    const handlerName =
-      onMsgProp &&
-      getHandlerNameFromExpression(onMsgProp, checker, state.rootDir)
-    const fnMeta = handlerName && state.functions.meta[handlerName]
+    const { pikkuFuncName } = extractFunctionName(
+      onMsgProp,
+      checker,
+      state.rootDir
+    )
+    const fnMeta = state.functions.meta[pikkuFuncName]
     if (!fnMeta) {
-      console.error(
-        `No function metadata for onMessage handler '${handlerName}'`
+      logger.critical(
+        ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+        `No function metadata found for onMessage handler '${pikkuFuncName}'`
       )
-      throw new Error()
-    } else {
-      message = {
-        pikkuFuncName: extractFunctionName(
-          onMsgProp as any,
-          checker,
-          state.rootDir
-        ).pikkuFuncName,
-      }
+      return
+    }
+    message = {
+      pikkuFuncName,
     }
   }
 

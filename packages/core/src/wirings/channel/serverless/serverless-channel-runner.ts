@@ -174,11 +174,17 @@ export const runChannelDisconnect = async ({
     )
   }
   if (channelConfig.onDisconnect && meta.disconnect) {
-    await runPikkuFuncDirectly(
-      meta.disconnect.pikkuFuncName,
-      { ...singletonServices, ...sessionServices, channel },
-      undefined
-    )
+    try {
+      await runPikkuFuncDirectly(
+        meta.disconnect.pikkuFuncName,
+        { ...singletonServices, ...sessionServices, channel },
+        undefined
+      )
+    } catch (e: any) {
+      singletonServices.logger.error(
+        `Error handling onDisconnect: ${e.message || e}`
+      )
+    }
   }
   await params.channelStore.removeChannels([channel.channelId])
   if (sessionServices) {
@@ -214,6 +220,11 @@ export const runChannelMessage = async (
       channelHandler
     )
     response = await onMessage(data)
+  } catch (e: any) {
+    singletonServices.logger.error(
+      `Error processing message: ${e.message || e}`
+    )
+    channel.send({ error: e.message || 'Unknown error' })
   } finally {
     if (sessionServices) {
       await closeSessionServices(singletonServices.logger, sessionServices)
