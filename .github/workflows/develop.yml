@@ -23,7 +23,6 @@ jobs:
       - run: yarn install
       - run: yarn build
       - run: yarn test:coverage
-      - run: yarn test:verifiers
       - run: yarn prettier
       - run: yarn lint
       - run: cd templates/functions && yarn pikku && cd ../..
@@ -42,6 +41,27 @@ jobs:
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.3.4
         continue-on-error: true
+
+  verifiers:
+    name: Verifiers
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: yarn install
+      - run: yarn test:verifiers
 
   templates:
     name: Templates
