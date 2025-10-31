@@ -1,4 +1,4 @@
-import { SessionServices } from '../../../types/core.types.js'
+import { PikkuInteraction, SessionServices } from '../../../types/core.types.js'
 import { closeSessionServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
@@ -16,6 +16,7 @@ import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
+import { rpcService } from '../../rpc/rpc-runner.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -94,56 +95,66 @@ export const runChannelConnect = async ({
     userSession,
   })
 
-  const main = async () => {
-    try {
-      await channelStore.addChannel({
-        channelId,
-        channelName: channelConfig.name,
-        openingData,
-        channelObject,
-      })
-      const { channel } = getVariablesForChannel({
-        channelId,
-        channelHandlerFactory,
-        channelName: channelConfig.name,
-      })
-      if (createSessionServices) {
-        sessionServices = await createSessionServices(
-          singletonServices,
-          { http },
-          await userSession.get()
-        )
-      }
-      if (channelConfig.onConnect && meta.connect) {
-        await runChannelLifecycleWithMiddleware({
-          channelConfig,
-          meta: meta.connect,
-          lifecycleConfig: channelConfig.onConnect,
-          lifecycleType: 'connect',
-          services: { ...singletonServices, ...sessionServices },
-          channel,
-          data: openingData,
-        })
-      }
-      http?.response?.status(101)
-    } catch (e: any) {
-      handleHTTPError(
-        e,
-        http,
-        channelId,
-        singletonServices.logger,
-        logWarningsForStatusCodes,
-        respondWith404,
-        bubbleErrors
+  try {
+    await channelStore.addChannel({
+      channelId,
+      channelName: channelConfig.name,
+      openingData,
+      channelObject,
+    })
+    const { channel } = getVariablesForChannel({
+      channelId,
+      channelHandlerFactory,
+      channelName: channelConfig.name,
+    })
+    if (createSessionServices) {
+      sessionServices = await createSessionServices(
+        singletonServices,
+        { http },
+        await userSession.get()
       )
-    } finally {
-      if (sessionServices) {
-        await closeSessionServices(singletonServices.logger, sessionServices)
-      }
+    }
+
+    const interaction: PikkuInteraction = { channel }
+    const getAllServices = (requiresAuth?: boolean) =>
+      rpcService.injectRPCService(
+        {
+          ...singletonServices,
+          ...sessionServices,
+          channel,
+          userSession,
+        },
+        interaction,
+        requiresAuth
+      )
+
+    if (channelConfig.onConnect && meta.connect) {
+      await runChannelLifecycleWithMiddleware({
+        channelConfig,
+        meta: meta.connect,
+        lifecycleConfig: channelConfig.onConnect,
+        lifecycleType: 'connect',
+        services: getAllServices(false),
+        channel,
+        data: openingData,
+      })
+    }
+    http?.response?.status(101)
+  } catch (e: any) {
+    handleHTTPError(
+      e,
+      http,
+      channelId,
+      singletonServices.logger,
+      logWarningsForStatusCodes,
+      respondWith404,
+      bubbleErrors
+    )
+  } finally {
+    if (sessionServices) {
+      await closeSessionServices(singletonServices.logger, sessionServices)
     }
   }
-
-  await main()
 }
 
 export const runChannelDisconnect = async ({
@@ -158,6 +169,10 @@ export const runChannelDisconnect = async ({
     openingData,
     channelName,
   })
+  const userSession = new PikkuUserSessionService(
+    params.channelStore,
+    params.channelId
+  )
   if (!sessionServices && params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
@@ -165,6 +180,20 @@ export const runChannelDisconnect = async ({
       session
     )
   }
+
+  const interaction: PikkuInteraction = { channel }
+  const getAllServices = (requiresAuth?: boolean) =>
+    rpcService.injectRPCService(
+      {
+        ...singletonServices,
+        ...sessionServices,
+        channel,
+        userSession,
+      },
+      interaction,
+      requiresAuth
+    )
+
   if (channelConfig.onDisconnect && meta.disconnect) {
     try {
       await runChannelLifecycleWithMiddleware({
@@ -172,7 +201,7 @@ export const runChannelDisconnect = async ({
         meta: meta.disconnect,
         lifecycleConfig: channelConfig.onDisconnect,
         lifecycleType: 'disconnect',
-        services: { ...singletonServices, ...sessionServices },
+        services: getAllServices(false),
         channel,
       })
     } catch (e: any) {
@@ -200,6 +229,10 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
+  const userSession = new PikkuUserSessionService(
+    params.channelStore,
+    params.channelId
+  )
   if (params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
@@ -207,10 +240,23 @@ export const runChannelMessage = async (
       session
     )
   }
+
+  const interaction: PikkuInteraction = { channel }
+  const getAllServices = () =>
+    rpcService.injectRPCService(
+      {
+        ...singletonServices,
+        ...sessionServices,
+        channel,
+        userSession,
+      },
+      interaction
+    )
+
   let response: unknown
   try {
     const onMessage = processMessageHandlers(
-      { ...singletonServices, ...sessionServices },
+      getAllServices(),
       channelConfig,
       channelHandler
     )
@@ -219,7 +265,7 @@ export const runChannelMessage = async (
     singletonServices.logger.error(
       `Error processing message: ${e.message || e}`
     )
-    channel.send({ error: e.message || 'Unknown error' })
+    return { error: e.message || 'Unknown error' }
   } finally {
     if (sessionServices) {
       await closeSessionServices(singletonServices.logger, sessionServices)
