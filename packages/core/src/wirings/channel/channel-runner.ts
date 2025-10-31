@@ -56,7 +56,12 @@ export const wireChannel = <
 
   // Register onMessage function if provided
   if (channel.onMessage && channelMeta.message?.pikkuFuncName) {
-    addFunction(channelMeta.message.pikkuFuncName, channel.onMessage as any)
+    addFunction(
+      channelMeta.message.pikkuFuncName,
+      (channel.onMessage as any).func instanceof Function
+        ? channel.onMessage
+        : (channel.onMessage as any).func
+    )
   }
 
   // Register functions in onMessageWiring
@@ -72,7 +77,13 @@ export const wireChannel = <
         if (!wiringMeta) return
 
         // Register the function using the pikku name from metadata
-        addFunction(wiringMeta.pikkuFuncName, handler as any)
+        // It could be a FuncConfig or a wiring override with a funcConfig
+        addFunction(
+          wiringMeta.pikkuFuncName,
+          (handler as any).func instanceof Function
+            ? handler
+            : (handler as any).func
+        )
       })
     })
   }

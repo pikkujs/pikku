@@ -3893,6 +3893,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/templates-cli@workspace:templates/cli":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-cli@workspace:templates/cli"
+  dependencies:
+    "@pikku/cli": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.0"
+    "@pikku/uws": "npm:^0.10.0"
+    "@pikku/websocket": "npm:^0.10.0"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"

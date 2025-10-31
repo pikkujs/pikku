@@ -125,30 +125,37 @@ export const processMessageHandlers = (
 
     // Route-specific handling
     if (typeof rawData === 'string' && channelConfig.onMessageWiring) {
+      let messageData: any
       try {
-        const messageData = JSON.parse(rawData)
+        messageData = JSON.parse(rawData)
+      } catch (error) {
+        // Most likely a json error.. ignore
+      }
+
+      if (messageData) {
         const entries = Object.entries(channelConfig.onMessageWiring)
         for (const [routingProperty, routes] of entries) {
           const routerValue = messageData[routingProperty]
           if (routerValue && routes[routerValue]) {
             processed = true
+
+            const { [routingProperty]: _, ...data } = messageData
             result = await processMessage(
-              messageData,
+              data as any,
               routes[routerValue],
               routingProperty,
               routerValue
             )
+            ;(result as any)[routingProperty] = routerValue
             break
           }
         }
+      }
 
-        // Default handler if no routes matched but json data was parsed
-        if (!processed && channelConfig.onMessage) {
-          processed = true
-          result = await processMessage(messageData, channelConfig.onMessage)
-        }
-      } catch (error) {
-        // Most likely a json error.. ignore
+      // Default handler if no routes matched but json data was parsed
+      if (!processed && channelConfig.onMessage) {
+        processed = true
+        result = await processMessage(messageData, channelConfig.onMessage)
       }
     }
 
