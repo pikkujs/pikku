@@ -1,7 +1,7 @@
-// import { pikku } from '@/pikku-nextjs.js'
-import { NextRequest } from 'next/server.js'
+import { pikkuAPIRequest } from '@/pikku-nextjs.gen.js'
 
-export async function GET(_req: NextRequest) {
-  // return pikku().apiRequest(req, res);
-  return Response.json({})
-}
+export const GET = pikkuAPIRequest
+export const POST = pikkuAPIRequest
+export const PUT = pikkuAPIRequest
+export const PATCH = pikkuAPIRequest
+export const DELETE = pikkuAPIRequest

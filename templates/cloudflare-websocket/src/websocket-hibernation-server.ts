@@ -21,3 +21,10 @@ export class WebSocketHibernationServer extends CloudflareWebSocketHibernationSe
     }
   }
 }
+
+export default {
+  fetch,
+  durable_objects: {
+    WEBSOCKET_HIBERNATION_SERVER: WebSocketHibernationServer,
+  },
+}

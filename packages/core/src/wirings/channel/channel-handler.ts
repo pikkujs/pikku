@@ -97,12 +97,13 @@ export const processMessageHandlers = (
     // Check if onMessage is a wrapper object vs direct function config:
     // - Direct config: onMessage.func is a plain Function
     // - Wrapper: onMessage.func is a CorePikkuFunctionConfig (has onMessage.func.func)
+    // - Simple wrapper: onMessage has both func (plain Function) and middleware properties
     const isWrapper =
       onMessage &&
       typeof onMessage === 'object' &&
       'func' in onMessage &&
-      typeof onMessage.func === 'object' &&
-      'func' in onMessage.func
+      ((typeof onMessage.func === 'object' && 'func' in onMessage.func) ||
+        'middleware' in onMessage)
     const messageWireMiddleware = isWrapper ? onMessage.middleware || [] : []
 
     // Combine channel middleware with message middleware (actual functions)

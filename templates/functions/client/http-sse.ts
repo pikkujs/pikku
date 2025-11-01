@@ -8,6 +8,8 @@ async function check() {
 
     const serverUrl =
       process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+    console.log('Starting HTTP SSE test with url:', serverUrl)
+
     const evtSource = new EventSource(`${serverUrl}/sse`, {
       withCredentials: true,
     })

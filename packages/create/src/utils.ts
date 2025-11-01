@@ -96,6 +96,7 @@ export function replaceFunctionReferences(
       .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
       .replaceAll('../functions/types/', './types/')
       .replaceAll('.pikku', pikkuDir)
+      .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
     fs.writeFileSync(filePath, updatedContent)
   }
 
@@ -130,12 +131,35 @@ export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
 }
 
 /**
- * Cleans up the pikku.config.json file
+ * Cleans up the pikku.config.json file and removes config options for unsupported features
  */
-export function cleanPikkuConfig(targetPath: string): void {
+export function cleanPikkuConfig(
+  targetPath: string,
+  supportedFeatures: string[]
+): void {
   const pikkuConfigFile = path.join(targetPath, 'pikku.config.json')
   const pikkuConfig = JSON.parse(fs.readFileSync(pikkuConfigFile, 'utf-8'))
+
   delete pikkuConfig.extends
+
+  // Remove config options for unsupported features
+  if (!supportedFeatures.includes('http')) {
+    delete pikkuConfig.fetchFile
+    delete pikkuConfig.rpcWiringsFile
+  }
+
+  if (!supportedFeatures.includes('channel')) {
+    delete pikkuConfig.websocketFile
+  }
+
+  if (!supportedFeatures.includes('queue')) {
+    delete pikkuConfig.queueWiringsFile
+  }
+
+  if (!supportedFeatures.includes('mcp')) {
+    delete pikkuConfig.mcpJsonFile
+  }
+
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
 }
 
@@ -380,11 +404,6 @@ export function updatePackageJSONScripts(
     // Only add test script if it doesn't already exist
     if (!packageJson.scripts.test) {
       packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
-    } else {
-      packageJson.scripts.test = packageJson.scripts.test.replace(
-        '../functions/run-tests.sh',
-        'run-tests.sh'
-      )
     }
   }
 

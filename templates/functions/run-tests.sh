@@ -12,6 +12,7 @@ RUN_HTTP_SSE_TESTS=false
 RUN_QUEUE_TESTS=false
 RUN_MCP_TESTS=false
 RUN_CLI_TESTS=false
+IGNORE_SERVER_READY_CHECK=false
 
 # -------- ARGUMENT PARSING --------
 while [[ $# -gt 0 ]]; do
@@ -23,6 +24,10 @@ while [[ $# -gt 0 ]]; do
         --server)
             SERVER_CMD="$2"
             shift 2
+            ;;
+        --ignore-server-ready-check)
+            IGNORE_SERVER_READY_CHECK=true
+            shift
             ;;
         --url)
             HELLO_WORLD_URL_PREFIX="$2"
@@ -76,6 +81,39 @@ export HELLO_WORLD_URL_PREFIX
 echo "Starting server: $SERVER_CMD"
 bash -c "$SERVER_CMD" & SERVER_PID=$!
 trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+
+# -------- WAIT FOR SERVER TO BE READY --------
+if $IGNORE_SERVER_READY_CHECK; then
+    echo "Ignoring server ready check as per flag."
+    sleep 2  # Give a brief moment for the server to start
+else
+    echo "Waiting for server to be ready..."
+    SERVER_READY=false
+    for i in {1..30}; do
+        # Extract host and port from HELLO_WORLD_URL_PREFIX
+        SERVER_HOST=$(echo "$HELLO_WORLD_URL_PREFIX" | sed -e 's|http://||' -e 's|/.*||' -e 's|:.*||')
+        SERVER_PORT=$(echo "$HELLO_WORLD_URL_PREFIX" | sed -e 's|.*:||' -e 's|/.*||')
+
+        # Try to connect to the server
+        if nc -z "$SERVER_HOST" "$SERVER_PORT" 2>/dev/null; then
+            echo "✅ Server is ready on $HELLO_WORLD_URL_PREFIX"
+            SERVER_READY=true
+            break
+        fi
+
+        if [ $i -eq 30 ]; then
+            echo "❌ Server failed to start within 30 seconds"
+            exit 1
+        fi
+
+        sleep 1
+    done
+fi
+
+if [ "$SERVER_READY" = false ]; then
+  echo "❌ Server never became ready"
+  exit 1
+fi
 
 # -------- RUN HTTP TESTS IF REQUESTED --------
 if $RUN_HTTP_TESTS; then

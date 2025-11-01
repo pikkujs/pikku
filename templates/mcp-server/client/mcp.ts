@@ -234,3 +234,8 @@ export async function runMCPClientTest(
     await client.disconnect()
   }
 }
+
+// For direct execution (if this file is run directly)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await runMCPClientTest('dist/src/start.js')
+}

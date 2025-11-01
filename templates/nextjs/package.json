@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/nextjs-app-starter",
+  "name": "@pikku/templates-nextjs",
   "type": "module",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "dev": "next dev",
     "pikku": "pikku",
     "start": "next build && next start",
-    "test": "bash ../functions/run-tests.sh --url http://localhost:3000 --http",
+    "test": "bash ../functions/run-tests.sh --url http://localhost:3000/api --http",
     "lint": "next lint"
   },
   "dependencies": {

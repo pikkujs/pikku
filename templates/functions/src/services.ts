@@ -17,7 +17,7 @@ import {
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import {
   RequiredSingletonServices,
-  singletonServices,
+  requiredSingletonServices,
 } from '../.pikku/pikku-services.gen.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
@@ -39,7 +39,7 @@ export const createSingletonServices: CreateSingletonServices<
 
   // Only create JWT service if it's actually needed
   let jwt: JWTService | undefined
-  if (singletonServices.jwt) {
+  if (requiredSingletonServices.jwt) {
     const { JoseJWTService } = await import('@pikku/jose')
     jwt = new JoseJWTService(
       async () => [

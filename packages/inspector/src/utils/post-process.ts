@@ -4,6 +4,7 @@ import {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '@pikku/core'
+import { extractTypeKeys } from './type-utils.js'
 
 /**
  * Helper to extract wire-level middleware/permission names from metadata.
@@ -28,7 +29,7 @@ export function extractWireNames(
  */
 function expandAndAddGroupServices(
   list: MiddlewareMetadata[] | PermissionMetadata[] | undefined,
-  state: InspectorState,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
   addServices: (services: FunctionServicesMeta | undefined) => void,
   isMiddleware: boolean
 ): void {
@@ -58,13 +59,50 @@ function expandAndAddGroupServices(
 }
 
 /**
+ * Extracts all service names from SingletonServices and Services types.
+ * This provides the complete list of available services for code generation.
+ * Only runs if typesLookup is available (omitted in deserialized states).
+ */
+function extractAllServices(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  // Skip if typesLookup is not available (e.g., deserialized state)
+  if (!('typesLookup' in state)) {
+    return
+  }
+
+  // Extract all singleton services from the SingletonServices type
+  const singletonServicesTypes = state.typesLookup.get('SingletonServices')
+  if (singletonServicesTypes && singletonServicesTypes.length > 0) {
+    const singletonServiceNames = extractTypeKeys(singletonServicesTypes[0])
+    state.serviceAggregation.allSingletonServices = singletonServiceNames.sort()
+  }
+
+  // Extract all services from the Services type
+  const servicesTypes = state.typesLookup.get('Services')
+  if (servicesTypes && servicesTypes.length > 0) {
+    const allServiceNames = extractTypeKeys(servicesTypes[0])
+    // Session services are those in Services but not in SingletonServices
+    const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
+    state.serviceAggregation.allSessionServices = allServiceNames
+      .filter((name) => !singletonSet.has(name))
+      .sort()
+  }
+}
+
+/**
  * Aggregates all required services from wired functions, middleware, and permissions.
  * Must be called after AST traversal completes.
  *
  * Note: usedFunctions, usedMiddleware, and usedPermissions are tracked directly
  * in the add-* methods during AST traversal for efficiency.
  */
-export function aggregateRequiredServices(state: InspectorState): void {
+export function aggregateRequiredServices(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  // First, extract all available services from types
+  extractAllServices(state)
+
   const { requiredServices, usedFunctions, usedMiddleware, usedPermissions } =
     state.serviceAggregation
 

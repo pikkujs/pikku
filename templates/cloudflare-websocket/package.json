@@ -8,7 +8,7 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "deploy": "wrangler deploy",
-    "start": "wrangler",
+    "start": "wrangler dev",
     "test": "bash ../functions/run-tests.sh --url http://localhost:8787 --http --websocket"
   },
   "dependencies": {

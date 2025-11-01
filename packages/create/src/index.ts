@@ -49,7 +49,7 @@ const templates = [
   {
     template: 'cloudflare-websocket',
     description: 'A Cloudflare Workers WebSocket template',
-    supports: ['channel'],
+    supports: ['channel', 'http'],
   },
   {
     template: 'bullmq',
@@ -239,7 +239,7 @@ async function setupTemplate(cliOptions: CliOptions) {
     mergeDirectories(templatePath, targetPath)
     replaceFunctionReferences(targetPath, cliOptions.stackblitz)
     cleanTSConfig(targetPath, cliOptions.stackblitz)
-    cleanPikkuConfig(targetPath)
+    cleanPikkuConfig(targetPath, supportedFeatures)
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
     updatePackageJSONScripts(

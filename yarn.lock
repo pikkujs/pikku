@@ -3658,7 +3658,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.10.0, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -3729,29 +3729,6 @@ __metadata:
     "@pikku/core": ^0.10.0
     next: ^15
     react-dom: "*"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/nextjs-app-starter@workspace:templates/nextjs":
-  version: 0.0.0-use.local
-  resolution: "@pikku/nextjs-app-starter@workspace:templates/nextjs"
-  dependencies:
-    "@pikku/cli": "npm:^0.10.0"
-    "@pikku/core": "npm:^0.10.0"
-    "@pikku/fetch": "npm:^0.10.0"
-    "@pikku/jose": "npm:^0.10.0"
-    "@pikku/next": "npm:^0.10.0"
-    "@types/node": "npm:^24"
-    "@types/react": "npm:^19"
-    "@types/react-dom": "npm:^19"
-    next: "npm:^15"
-    postcss: "npm:^8"
-    react: "npm:^19"
-    react-dom: "npm:^19"
-    tailwindcss: "npm:^4.1.15"
-    tslib: "npm:^2.8.1"
-    tsx: "npm:^4.20.6"
-    typescript: "npm:^5"
   languageName: unknown
   linkType: soft
 
@@ -3836,6 +3813,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.914.0"
     "@pikku/aws-services": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.0"
+    "@pikku/kysely": "npm:^0.10.0"
     "@pikku/lambda": "npm:^0.10.0"
     "@types/aws-lambda": "npm:^8.10.156"
     "@types/node": "npm:^24"
@@ -4022,6 +4000,29 @@ __metadata:
     "@types/node": "npm:^24.9.1"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-nextjs@workspace:templates/nextjs":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
+  dependencies:
+    "@pikku/cli": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.0"
+    "@pikku/fetch": "npm:^0.10.0"
+    "@pikku/jose": "npm:^0.10.0"
+    "@pikku/next": "npm:^0.10.0"
+    "@types/node": "npm:^24"
+    "@types/react": "npm:^19"
+    "@types/react-dom": "npm:^19"
+    next: "npm:^15"
+    postcss: "npm:^8"
+    react: "npm:^19"
+    react-dom: "npm:^19"
+    tailwindcss: "npm:^4.1.15"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5"
   languageName: unknown
   linkType: soft
 

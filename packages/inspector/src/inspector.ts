@@ -91,6 +91,8 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       usedFunctions: new Set(),
       usedMiddleware: new Set(),
       usedPermissions: new Set(),
+      allSingletonServices: [],
+      allSessionServices: [],
     },
   }
 }

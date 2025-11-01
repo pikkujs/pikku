@@ -1,7 +1,8 @@
 export interface TestScenario {
   name: string
   filter: string
-  expectedServices: string[]
+  expectedSingletonServices: string[]
+  expectedSessionServices: string[]
   description: string
 }
 
@@ -10,14 +11,14 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Baseline (no filters)',
     filter: '',
-    expectedServices: [
+    expectedSingletonServices: [
       'analytics',
       'email',
       'logger',
       'payment',
       'sms',
-      'storage',
     ],
+    expectedSessionServices: ['storage'],
     description: 'All services should be included when no filters are applied',
   },
 
@@ -25,185 +26,198 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Tag: notifications',
     filter: '--tags=notifications',
-    expectedServices: ['email', 'logger', 'sms'],
-    description:
-      'Email, sms, logger (middleware), and session services should be included',
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: [],
+    description: 'Email, sms, logger (middleware) from notification routes',
   },
   {
     name: 'Tag: email',
     filter: '--tags=email',
-    expectedServices: ['email', 'logger'],
-    description:
-      'Email (function + permissions), logger (middleware), and session services',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedSessionServices: [],
+    description: 'Email (function + permissions), logger (middleware)',
   },
   {
     name: 'Tag: sms',
     filter: '--tags=sms',
-    expectedServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: [],
     description:
-      'SMS (function), logger (middleware), and session services (email, logger)',
+      'SMS (function), logger (middleware), email/logger from session creation',
   },
   {
     name: 'Tag: payments',
     filter: '--tags=payments',
-    expectedServices: ['analytics', 'email', 'logger', 'payment', 'storage'],
+    expectedSingletonServices: ['analytics', 'email', 'logger', 'payment'],
+    expectedSessionServices: ['storage'],
     description:
-      'Payment route uses payment + analytics (function + middleware) + logger + storage (middleware) + session services',
+      'Payment route uses payment + analytics (function + middleware) + logger + storage (rateLimiter middleware)',
   },
   {
     name: 'Tag: storage',
     filter: '--tags=storage',
-    expectedServices: ['email', 'logger', 'storage'],
-    description: 'Storage (function) and session services (email, logger)',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedSessionServices: ['storage'],
+    description:
+      'Storage (session service) with email/logger from session creation',
   },
 
   // Multiple tag filters (OR logic)
   {
     name: 'Tags: notifications,payments',
     filter: '--tags=notifications,payments',
-    expectedServices: [
+    expectedSingletonServices: [
       'analytics',
       'email',
       'logger',
       'payment',
       'sms',
-      'storage',
     ],
-    description: 'All notification routes + payment route + session services',
+    expectedSessionServices: ['storage'],
+    description: 'All notification routes + payment route',
   },
   {
     name: 'Tags: email,sms',
     filter: '--tags=email,sms',
-    expectedServices: ['email', 'logger', 'sms'],
-    description: 'Both email and SMS routes + session services',
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: [],
+    description: 'Both email and SMS routes',
   },
   {
     name: 'Tags: notifications,storage',
     filter: '--tags=notifications,storage',
-    expectedServices: ['email', 'logger', 'sms', 'storage'],
-    description: 'All notification + storage routes + session services',
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: ['storage'],
+    description: 'All notification + storage routes',
   },
 
   // Type filters
   {
     name: 'Type: http',
     filter: '--types=http',
-    expectedServices: [
+    expectedSingletonServices: [
       'analytics',
       'email',
       'logger',
       'payment',
       'sms',
-      'storage',
     ],
-    description:
-      'All services should be included (all wirings are HTTP) + session services',
+    expectedSessionServices: ['storage'],
+    description: 'All services should be included (all wirings are HTTP)',
   },
 
   // HTTP method filters
   {
     name: 'HTTP Method: POST',
     filter: '--httpMethods=POST',
-    expectedServices: [
+    expectedSingletonServices: [
       'analytics',
       'email',
       'logger',
       'payment',
       'sms',
-      'storage',
     ],
-    description:
-      'All services should be included (all routes are POST) + session services',
+    expectedSessionServices: ['storage'],
+    description: 'All services should be included (all routes are POST)',
   },
   {
     name: 'HTTP Method: GET',
     filter: '--httpMethods=GET',
-    expectedServices: ['email', 'logger'],
-    description: 'No GET routes exist, only session services',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedSessionServices: [],
+    description: 'No GET routes exist, only email/logger from session creation',
   },
 
   // HTTP route filters
   {
     name: 'HTTP Route: /api/notifications/*',
     filter: '--httpRoutes=/api/notifications/*',
-    expectedServices: ['email', 'logger', 'sms'],
-    description: 'Only notification routes + session services',
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: [],
+    description: 'Only notification routes',
   },
   {
     name: 'HTTP Route: /api/payments/*',
     filter: '--httpRoutes=/api/payments/*',
-    expectedServices: ['analytics', 'email', 'logger', 'payment', 'storage'],
-    description: 'Only payment routes + session services',
+    expectedSingletonServices: ['analytics', 'email', 'logger', 'payment'],
+    expectedSessionServices: ['storage'],
+    description: 'Only payment routes',
   },
   {
     name: 'HTTP Route: /api/storage/*',
     filter: '--httpRoutes=/api/storage/*',
-    expectedServices: ['email', 'logger', 'storage'],
-    description: 'Only storage routes + session services',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedSessionServices: ['storage'],
+    description: 'Only storage routes',
   },
 
   // Directory filters
   {
     name: 'Directory: src/functions',
     filter: '--directories=src/functions',
-    expectedServices: [
+    expectedSingletonServices: [
       'analytics',
       'email',
       'logger',
       'payment',
       'sms',
-      'storage',
     ],
+    expectedSessionServices: ['storage'],
     description:
-      'All services should be included (all wirings are in src/functions) + session services',
+      'All services should be included (all wirings are in src/functions)',
   },
   {
     name: 'Directory: src/nonexistent',
     filter: '--directories=src/nonexistent',
-    expectedServices: ['email', 'logger'],
-    description: 'No wirings in nonexistent directory, only session services',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedSessionServices: [],
+    description:
+      'No wirings in nonexistent directory, only email/logger from session creation',
   },
 
   // Combination filters
   {
     name: 'Combo: notifications + POST',
     filter: '--tags=notifications --httpMethods=POST',
-    expectedServices: ['email', 'logger', 'sms'],
-    description: 'Notification routes that are POST + session services',
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: [],
+    description: 'Notification routes that are POST',
   },
   {
     name: 'Combo: payments + http',
     filter: '--tags=payments --types=http',
-    expectedServices: ['analytics', 'email', 'logger', 'payment', 'storage'],
-    description: 'Payment HTTP routes + session services',
+    expectedSingletonServices: ['analytics', 'email', 'logger', 'payment'],
+    expectedSessionServices: ['storage'],
+    description: 'Payment HTTP routes',
   },
 
   // Wildcard name filters
   {
     name: 'Name: send*',
     filter: '--names=send*',
-    expectedServices: ['email', 'logger', 'sms'],
-    description:
-      'Routes using sendEmail and sendSMS functions + middleware + session services',
+    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSessionServices: [],
+    description: 'Routes using sendEmail and sendSMS functions + middleware',
   },
   {
     name: 'Name: process*',
     filter: '--names=process*',
-    expectedServices: ['analytics', 'email', 'logger', 'payment', 'storage'],
-    description:
-      'Routes using processPayment function + middleware + session services',
+    expectedSingletonServices: ['analytics', 'email', 'logger', 'payment'],
+    expectedSessionServices: ['storage'],
+    description: 'Routes using processPayment function + middleware',
   },
   {
     name: 'Name: *Payment',
     filter: '--names=*Payment',
-    expectedServices: ['analytics', 'email', 'logger', 'payment', 'storage'],
-    description:
-      'Routes using functions ending with "Payment" + middleware + session services',
+    expectedSingletonServices: ['analytics', 'email', 'logger', 'payment'],
+    expectedSessionServices: ['storage'],
+    description: 'Routes using functions ending with "Payment" + middleware',
   },
   {
     name: 'Name: saveData',
     filter: '--names=saveData',
-    expectedServices: ['email', 'logger', 'storage'],
-    description: 'Routes using saveData function + session services',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedSessionServices: ['storage'],
+    description: 'Routes using saveData function',
   },
 ]
