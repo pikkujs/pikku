@@ -10,6 +10,7 @@
     "dev": "next dev",
     "pikku": "pikku",
     "start": "next build && next start",
+    "test": "bash ../functions/run-tests.sh --url http://localhost:3000",
     "lint": "next lint"
   },
   "dependencies": {
