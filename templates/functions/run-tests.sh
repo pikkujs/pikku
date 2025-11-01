@@ -75,7 +75,7 @@ export HELLO_WORLD_URL_PREFIX
 # -------- START SERVER --------
 echo "Starting server: $SERVER_CMD"
 bash -c "$SERVER_CMD" & SERVER_PID=$!
-trap "kill $SERVER_PID" EXIT
+trap "kill $SERVER_PID 2>/dev/null || true" EXIT
 
 # -------- RUN HTTP TESTS IF REQUESTED --------
 if $RUN_HTTP_TESTS; then
