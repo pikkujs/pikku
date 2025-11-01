@@ -106,7 +106,7 @@ export type PikkuCLIInput = {
     entrypoints?: Record<
       string,
       | string
-      | { type: 'cli'; path: string }
+      | { type: 'local'; path: string }
       | {
           type: 'channel'
           name?: string
@@ -116,7 +116,7 @@ export type PikkuCLIInput = {
         }
       | Array<
           | string
-          | { type: 'cli'; path: string }
+          | { type: 'local'; path: string }
           | {
               type: 'channel'
               name?: string
@@ -181,7 +181,7 @@ export type PikkuCLIConfig = {
     entrypoints?: Record<
       string,
       | string
-      | { type: 'cli'; path: string }
+      | { type: 'local'; path: string }
       | {
           type: 'channel'
           name?: string
@@ -191,7 +191,7 @@ export type PikkuCLIConfig = {
         }
       | Array<
           | string
-          | { type: 'cli'; path: string }
+          | { type: 'local'; path: string }
           | {
               type: 'channel'
               name?: string

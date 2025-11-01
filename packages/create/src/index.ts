@@ -121,6 +121,11 @@ const templates = [
     description: 'The official yarn workspace',
     supports: ['http', 'channel', 'scheduled', 'fullstack'],
   },
+  {
+    template: 'cli',
+    description: 'A CLI application template',
+    supports: ['cli'],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]

@@ -13,7 +13,7 @@
     "cli:remote": "tsx src/cli-remote.gen.ts",
     "server": "tsx src/server.ts",
     "dev:server": "tsx watch src/server.ts",
-    "test": "bash ../functions/run-tests.sh --cli",
+    "test": "bash ../functions/run-tests.sh --cli --url http://localhost:3000",
     "test:cli:local": "npx tsx src/cli-local.gen.ts greet TestUser",
     "test:cli:remote": "npx tsx src/cli-remote.gen.ts greet TestUser",
     "ncu": "npx npm-check-updates",

@@ -114,7 +114,7 @@ The key to this template is the `pikku.config.json` file:
     "entrypoints": {
       "my-cli": [
         {
-          "type": "cli",
+          "type": "local",
           "path": ".pikku/cli-local.gen.ts"
         },
         {
@@ -283,13 +283,13 @@ You can define multiple CLI programs:
     "entrypoints": {
       "admin-cli": [
         {
-          "type": "cli",
+          "type": "local",
           "path": ".pikku/admin-local.gen.ts"
         }
       ],
       "user-cli": [
         {
-          "type": "cli",
+          "type": "local",
           "path": ".pikku/user-local.gen.ts"
         }
       ]

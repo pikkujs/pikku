@@ -74,11 +74,18 @@ export function serializeChannelCLI(
     packageMappings
   )
 
+  // Get relative path to function types file
+  const functionTypesPath = getFileImportRelativePath(
+    channelFile,
+    functionTypesFile,
+    packageMappings
+  )
+
   return `/**
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuMiddleware } from '../function/pikku-function-types.gen.js'
+import { pikkuMiddleware } from '${functionTypesPath}'
 ${imports}
 
 // Middleware to close the channel after CLI command completes
