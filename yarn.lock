@@ -4008,6 +4008,7 @@ __metadata:
     eventsource: "npm:^4.0.0"
     tsx: "npm:^4.19.2"
     typescript: "npm:^5.9"
+    ws: "npm:^8.18.3"
   languageName: unknown
   linkType: soft
 

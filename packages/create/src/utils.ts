@@ -356,6 +356,9 @@ export function updatePackageJSONScripts(
   } else {
     // For regular templates, construct run-tests.sh command with appropriate flags
     const testFlags: string[] = []
+    if (supportedFeatures.includes('http')) {
+      testFlags.push('--http')
+    }
     if (supportedFeatures.includes('channel')) {
       testFlags.push('--websocket')
     }

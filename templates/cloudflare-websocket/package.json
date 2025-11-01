@@ -9,7 +9,7 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "deploy": "wrangler deploy",
     "start": "wrangler",
-    "test": "bash ../functions/run-tests.sh --url http://localhost:8787  --websocket"
+    "test": "bash ../functions/run-tests.sh --url http://localhost:8787 --http --websocket"
   },
   "dependencies": {
     "@pikku/cloudflare": "^0.10.0",

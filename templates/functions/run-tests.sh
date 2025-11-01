@@ -5,6 +5,7 @@ set -e
 SERVER_CMD="yarn run start"
 BUILD_CMD=""
 HELLO_WORLD_URL_PREFIX="http://localhost:4002"
+RUN_HTTP_TESTS=false
 RUN_WS_TESTS=false
 RUN_RPC_TESTS=false
 RUN_HTTP_SSE_TESTS=false
@@ -26,6 +27,10 @@ while [[ $# -gt 0 ]]; do
         --url)
             HELLO_WORLD_URL_PREFIX="$2"
             shift 2
+            ;;
+        --http)
+            RUN_HTTP_TESTS=true
+            shift
             ;;
         --websocket)
             RUN_WS_TESTS=true
@@ -72,8 +77,11 @@ echo "Starting server: $SERVER_CMD"
 bash -c "$SERVER_CMD" & SERVER_PID=$!
 trap "kill $SERVER_PID" EXIT
 
-# -------- HTTP TEST (Health check is the test) --------
-yarn run test:http-fetch
+# -------- RUN HTTP TESTS IF REQUESTED --------
+if $RUN_HTTP_TESTS; then
+    echo "Running HTTP tests..."
+    yarn run test:http-fetch
+fi
 
 # -------- RUN WEBSOCKET TESTS IF REQUESTED --------
 if $RUN_WS_TESTS; then

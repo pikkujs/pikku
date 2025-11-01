@@ -233,7 +233,6 @@ describe('Functions Test Suite', () => {
     const pkgContent = {
       scripts: {
         build: 'npm run build',
-        'test:template': 'bash run-tests.sh',
         tsc: 'tsc',
         ncu: 'ncu',
       },
@@ -266,7 +265,7 @@ describe('Functions Test Suite', () => {
     // Verify test script is constructed correctly for http-only template
     assert.strictEqual(
       updatedPackage.scripts.test,
-      'bash run-tests.sh',
+      'bash run-tests.sh --http',
       'test script should be bash run-tests.sh for http-only template'
     )
   })
