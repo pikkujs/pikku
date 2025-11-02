@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "srcDirectories": ["../functions/src", "./src"],
+  "outDir": "./.pikku",
+  "tsconfig": "./tsconfig.json",
+  "schema": {
+    "supportsImportAttributes": true,
+    "additionalProperties": true
+  },
+  "cli": {
+    "entrypoints": {
+      "my-cli": [
+        {
+          "type": "local",
+          "path": "src/cli-local.ts"
+        },
+        {
+          "type": "channel",
+          "name": "cli",
+          "route": "/cli",
+          "wirePath": "src/cli-channel.ts",
+          "path": "src/cli-remote.ts"
+        }
+      ]
+    }
+  }
+}

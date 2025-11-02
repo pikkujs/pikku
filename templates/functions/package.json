@@ -6,14 +6,17 @@
     "@pikku/core": "^0.10.0",
     "@pikku/jose": "^0.10.0",
     "@pikku/schema-cfworker": "^0.10.0",
-    "eventsource": "^4.0.0"
+    "eventsource": "^4.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@pikku/cli": "^0.10.0",
     "@pikku/fetch": "^0.10.0",
     "@pikku/websocket": "^0.10.0",
     "@types/node": "^24",
+    "@types/ws": "^8",
     "concurrently": "^9.2.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.9"
   },
   "scripts": {
@@ -22,10 +25,11 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test:template": "bash run-tests.sh",
-    "test:http": "npx tsx client/http-fetch.ts",
-    "test:sse": "npx tsx client/http-sse.ts",
+    "test:http-fetch": "npx tsx client/http-fetch.ts",
+    "test:http-sse": "npx tsx client/http-sse.ts",
     "test:rpc": "npx tsx client/rpc.ts",
-    "test:websocket": "npx tsx client/websocket.ts"
+    "test:websocket": "npx tsx client/websocket.ts",
+    "test:queue": "npx tsx client/queue-worker.ts",
+    "test:mcp": "npx tsx client/mcp.ts"
   }
 }

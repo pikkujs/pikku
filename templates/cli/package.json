@@ -1,0 +1,33 @@
+{
+  "name": "@pikku/templates-cli",
+  "type": "module",
+  "private": true,
+  "description": "Pikku CLI template showcasing both local and remote (channel-based) CLI approaches",
+  "scripts": {
+    "pikku": "pikku all",
+    "build": "tsc -b",
+    "tsc": "tsc",
+    "start": "tsx src/server.ts",
+    "cli": "tsx src/cli-local.ts",
+    "cli:local": "tsx src/cli-local.ts",
+    "cli:remote": "tsx src/cli-remote.ts",
+    "server": "tsx src/server.ts",
+    "dev:server": "tsx watch src/server.ts",
+    "test": "bash ../functions/run-tests.sh --cli",
+    "test:cli:local": "npx tsx src/cli-local.ts greet TestUser",
+    "test:cli:remote": "npx tsx src/cli-remote.ts greet TestUser",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.10.0",
+    "@pikku/uws": "^0.10.0",
+    "@pikku/websocket": "^0.10.0"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.10.0",
+    "@types/node": "^24",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9"
+  }
+}
