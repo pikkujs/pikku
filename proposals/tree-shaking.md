@@ -720,7 +720,7 @@ verifiers/treeshaking/
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@types/node": "^24",
-    "esbuild": "^0.24",
+    "esbuild": "^0.25",
     "tsx": "^4",
     "typescript": "^5.6"
   }

@@ -17,7 +17,7 @@ import {
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import {
   RequiredSingletonServices,
-  singletonServices,
+  requiredSingletonServices,
 } from '../.pikku/pikku-services.gen.js'
 
 /**
@@ -46,7 +46,7 @@ export const createSingletonServices = pikkuServices(
     // ✅ IMPORTANT: Conditional loading - only create JWT service if used
     // This enables tree-shaking and reduces bundle size
     let jwt: JWTService | undefined
-    if (singletonServices.jwt) {
+    if (requiredSingletonServices.jwt) {
       const { JoseJWTService } = await import('@pikku/jose')
       jwt = new JoseJWTService(
         async () => [
