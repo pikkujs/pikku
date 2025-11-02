@@ -21,7 +21,10 @@ export const createSingletonServices = pikkuServices(async (config) => {
 })
 
 export const createSessionServices = pikkuSessionServices(
-  async (_services, _interaction, _session) => {
-    return {}
+  async (_services, interaction, _session) => {
+    return {
+      mcp: interaction.mcp,
+      channel: interaction.channel,
+    } as any
   }
 )
