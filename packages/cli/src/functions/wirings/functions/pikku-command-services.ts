@@ -5,6 +5,8 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const serializeServicesMap = (
+  allSingletonServices: string[],
+  allSessionServices: string[],
   requiredServices: Set<string>,
   forceRequiredServices: string[] = [],
   servicesImport: string,
@@ -18,8 +20,18 @@ export const serializeServicesMap = (
   // - Session factories
   const usedServices = new Set(requiredServices)
 
-  // Internal services that are created internally and not via the create service script
-  const internalServices = new Set(['rpc', 'mcp', 'channel', 'userSession'])
+  // Internal services that are created internally by the framework (PikkuInteraction)
+  // These should not appear in the services maps
+  const internalServices = new Set([
+    'rpc',
+    'mcp',
+    'channel',
+    'userSession',
+    'cli',
+    'http',
+    'queue',
+    'scheduledTask',
+  ])
 
   // Add force-required services that might not be detected from function inspection
   forceRequiredServices.forEach((service) => {
@@ -28,44 +40,59 @@ export const serializeServicesMap = (
     }
   })
 
-  // Create a map of services with true for all needed services
-  const servicesMap = Object.fromEntries(
-    Array.from(usedServices)
-      .sort()
-      .map((service) => [service, true])
-  )
-
-  // Generate the TypeScript code
-  const serviceKeys = Object.keys(servicesMap).sort()
-
   // Services that are always required internally by the framework
   const defaultServices = ['config', 'logger', 'variables', 'schema']
+  defaultServices.forEach((service) => usedServices.add(service))
 
-  // Combine default services with detected services
-  const allRequiredServices = [
-    ...new Set([...defaultServices, ...serviceKeys]),
-  ].sort()
+  // Create singleton services map: all singleton services with true/false based on usage
+  const singletonServicesMap: Record<string, boolean> = {}
+  allSingletonServices.forEach((service) => {
+    singletonServicesMap[service] = usedServices.has(service)
+  })
 
-  // For RequiredSingletonServices, we need to pick from the actual SingletonServices interface
-  // This will be resolved at compile time based on what's actually in the SingletonServices interface
-  // We don't need to hardcode which services are singletons beyond the core framework ones
+  // Create session services map: all session services with true/false based on usage
+  // Exclude internal framework services (PikkuInteraction)
+  const sessionServicesMap: Record<string, boolean> = {}
+  allSessionServices.forEach((service) => {
+    if (!internalServices.has(service)) {
+      sessionServicesMap[service] = usedServices.has(service)
+    }
+  })
+
+  // Get all required service names (those marked as true)
+  const requiredSingletonServiceNames = Object.keys(singletonServicesMap)
+    .filter((key) => singletonServicesMap[key])
+    .sort()
+  const requiredSessionServiceNames = Object.keys(sessionServicesMap)
+    .filter((key) => sessionServicesMap[key])
+    .sort()
 
   const code = [
     servicesImport,
     sessionServicesImport,
-    "import type { PikkuInteraction } from '@pikku/core'",
     '',
-    'export const singletonServices = {',
-    ...Object.keys(servicesMap).map((service) => `    '${service}': true,`),
+    '// Singleton services map: true if required, false if available but unused',
+    'export const requiredSingletonServices = {',
+    ...Object.keys(singletonServicesMap)
+      .sort()
+      .map((service) => `  '${service}': ${singletonServicesMap[service]},`),
     '} as const',
     '',
-    '// Singleton services (created once at startup)',
-    '// Only includes services that are both required and available in SingletonServices',
-    `export type RequiredSingletonServices = Pick<SingletonServices, Extract<keyof SingletonServices, ${allRequiredServices.map((key) => `'${key}'`).join(' | ')}>> & Partial<Omit<SingletonServices, ${allRequiredServices.map((key) => `'${key}'`).join(' | ')}>>`,
+    '// Session services map: true if required, false if available but unused',
+    'export const requiredSessionServices = {',
+    ...Object.keys(sessionServicesMap)
+      .sort()
+      .map((service) => `  '${service}': ${sessionServicesMap[service]},`),
+    '} as const',
     '',
-    '// Session services (created per request, can access singleton services)',
-    '// Omits singleton services and PikkuInteraction (mcp, rpc, http, channel)',
-    `export type RequiredSessionServices = Omit<Services, keyof SingletonServices | keyof PikkuInteraction>`,
+    '// Type exports',
+    requiredSingletonServiceNames.length > 0
+      ? `export type RequiredSingletonServices = Pick<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
+      : 'export type RequiredSingletonServices = Partial<SingletonServices>',
+    '',
+    requiredSessionServiceNames.length > 0
+      ? `export type RequiredSessionServices = Pick<Services, ${requiredSessionServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<Services, ${requiredSessionServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
+      : 'export type RequiredSessionServices = Partial<Services>',
     '',
   ].join('\n')
 
@@ -95,6 +122,8 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
     const sessionServicesImport = `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, sessionServicesType.typePath, config.packageMappings)}'`
 
     const servicesCode = serializeServicesMap(
+      visitState.serviceAggregation.allSingletonServices,
+      visitState.serviceAggregation.allSessionServices,
       visitState.serviceAggregation.requiredServices,
       config.forceRequiredServices,
       servicesImport,

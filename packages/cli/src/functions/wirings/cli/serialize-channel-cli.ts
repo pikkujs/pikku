@@ -47,13 +47,6 @@ export function serializeChannelCLI(
 
   collectCommands(programMeta.commands)
 
-  // Generate the wireChannel call
-  const commandEntries = Object.entries(commandMap)
-    .map(([commandKey, { pikkuFuncName }]) => {
-      return `      '${commandKey}': ${pikkuFuncName}`
-    })
-    .join(',\n')
-
   // Generate imports from function file locations
   const funcNames = [
     ...new Set(Object.values(commandMap).map((v) => v.pikkuFuncName)),
@@ -81,11 +74,42 @@ export function serializeChannelCLI(
     packageMappings
   )
 
+  // Get relative path to function types file
+  const functionTypesPath = getFileImportRelativePath(
+    channelFile,
+    functionTypesFile,
+    packageMappings
+  )
+
   return `/**
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
+import { pikkuMiddleware } from '${functionTypesPath}'
 ${imports}
+
+// Middleware to close the channel after CLI command completes
+const cliCloseOnComplete = pikkuMiddleware(async (services, { channel }, next) => {
+  const closeChannel = () => {
+    setTimeout(async () => {
+      try {
+        // This gives time for the response to be sent before closing
+        await channel?.close()
+      } catch (err) {
+        // Ignore errors on close
+      }
+    }, 200)
+  }
+  
+  try {
+    const result = await next()
+    closeChannel()
+    return result
+  } catch (error) {
+    closeChannel()
+    throw error
+  }
+})
 
 wireChannel({
   name: '${finalChannelName}',
@@ -93,7 +117,15 @@ wireChannel({
   auth: false,
   onMessageWiring: {
     command: {
-${commandEntries}
+${Object.entries(commandMap)
+  .map(
+    ([commandKey, { pikkuFuncName }]) =>
+      `      '${commandKey}': {
+        func: ${pikkuFuncName},
+        middleware: [cliCloseOnComplete],
+      }`
+  )
+  .join(',\n')}
     }
   },
   tags: ['cli', '${programName}']

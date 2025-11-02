@@ -20,6 +20,7 @@ import {
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
+  getInitialInspectorState,
 } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
@@ -176,8 +177,46 @@ export const createSingletonServices: CreateSingletonServices<
 
   const getInspectorState = async (
     refresh: boolean = false,
-    setupOnly: boolean = false
+    setupOnly: boolean = false,
+    bootstrapMode: boolean = false
   ) => {
+    // In bootstrap mode, return a minimal "zero state" with core types
+    // This allows bootstrap to run immediately without inspecting the codebase
+    if (bootstrapMode) {
+      const corePackagePath = '@pikku/core'
+      const initialState = getInitialInspectorState(rootDir)
+
+      // Populate filesAndMethods with core types from @pikku/core
+      initialState.filesAndMethods = {
+        userSessionType: {
+          file: corePackagePath,
+          variable: 'CoreUserSession',
+          type: 'CoreUserSession',
+          typePath: corePackagePath,
+        },
+        sessionServicesType: {
+          file: corePackagePath,
+          variable: 'CoreServices',
+          type: 'CoreServices',
+          typePath: corePackagePath,
+        },
+        singletonServicesType: {
+          file: corePackagePath,
+          variable: 'CoreSingletonServices',
+          type: 'CoreSingletonServices',
+          typePath: corePackagePath,
+        },
+        pikkuConfigType: {
+          file: corePackagePath,
+          variable: 'CoreConfig',
+          type: 'CoreConfig',
+          typePath: corePackagePath,
+        },
+      }
+
+      return initialState
+    }
+
     // Get or refresh the unfiltered state
     if (!unfilteredState || refresh) {
       // Run inspector WITHOUT filters to get full state

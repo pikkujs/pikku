@@ -21,7 +21,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       visitState.functions.typesMap,
       visitState.functions.meta,
       visitState.http.meta,
-      config.schemasFromTypes
+      config.schemasFromTypes,
+      config.schema?.additionalProperties
     )
 
     await saveSchemas(
@@ -30,8 +31,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       schemas,
       visitState.functions.typesMap,
       visitState.functions.meta,
-      config.supportsImportAttributes,
-      config.schemasFromTypes
+      config.schemasFromTypes,
+      config.schema?.supportsImportAttributes
     )
 
     return true

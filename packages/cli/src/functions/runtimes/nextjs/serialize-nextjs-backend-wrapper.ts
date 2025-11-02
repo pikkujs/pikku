@@ -6,13 +6,16 @@ export const serializeNextJsBackendWrapper = (
   sessionServicesImport: string
 ) => {
   return `'server-only'
-  
+
 /**
  * This file provides a wrapper around the PikkuNextJS class to allow for methods to be type checked against your routes.
  * It ensures type safety for route handling methods when integrating with the @pikku/core framework.
  */
 import { PikkuNextJS } from '@pikku/next'
+import { NextRequest } from 'next/server.js'
 import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '${routesMapPath}'
+
+type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
 ${configImport}
 ${singleServicesFactoryImport}
@@ -21,6 +24,11 @@ ${sessionServicesImport}
 import '${bootstrapPath}'
 
 let _pikku: PikkuNextJS | undefined
+let _removeAPIPrefix = true
+
+export const removeAPIPrefix = (enable: boolean) => {
+  _removeAPIPrefix = enable
+}
 
 /**
  * Initializes and returns an instance of PikkuNextJS with helper methods for handling route requests.
@@ -178,8 +186,44 @@ export const pikku = (_options?: any) => {
     patch: dynamicPatch,
     del: dynamicDel,
     staticGet,
-    staticPost
+    staticPost,
   }
+}
+
+/**
+ * Pre-bound API request handler for Next.js App Router route handlers.
+ * Use this to directly export route handlers without losing context.
+ *
+ * @param req - The Next.js request object.
+ * @param context - Next.js route context (unused by Pikku, but required by Next.js signature).
+ * @returns A promise that resolves to a Next.js Response object.
+ *
+ * @example
+ * export const GET = pikkuAPIRequest
+ * export const POST = pikkuAPIRequest
+ */
+export const pikkuAPIRequest = (
+  req: NextRequest,
+  context: RouteContext
+): Promise<Response> => {
+  if (!_pikku) {
+    _pikku = new PikkuNextJS(
+      createConfig as any,
+      createSingletonServices as any,
+      createSessionServices
+    )
+  }
+  if (_removeAPIPrefix) {
+    const url = new URL(req.url)
+    url.pathname = url.pathname.replace(/^\\/api/, '') || '/'
+    req = new NextRequest(url.toString(), {
+      method: req.method,
+      headers: req.headers,
+      body: req.body,
+      duplex: 'half',
+    } as any)
+  }
+  return _pikku.apiRequest(req)
 }
 `
 }
