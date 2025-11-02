@@ -82,7 +82,7 @@ wireMCPTool({
 const mcpResourceFunction = pikkuFunc<void, MCPResourceResponse>({
   func: async ({ logger, mcp }) => {
     logger.info({ type: 'function', name: 'mcpResource', phase: 'execute' })
-    return [{ uri: mcp.uri!, text: 'MCP resource executed successfully' }]
+    return [{ uri: mcp!.uri!, text: 'MCP resource executed successfully' }]
   },
   middleware: [functionMiddleware('noOp')],
   permissions: {
@@ -106,14 +106,12 @@ wireMCPResource({
 const mcpPromptFunction = pikkuFunc<void, MCPPromptResponse>({
   func: async ({ logger }) => {
     logger.info({ type: 'function', name: 'mcpPrompt', phase: 'execute' })
-    return {
-      messages: [
-        {
-          role: 'user',
-          content: { type: 'text', text: 'MCP prompt executed successfully' },
-        },
-      ],
-    }
+    return [
+      {
+        role: 'user',
+        content: { type: 'text', text: 'MCP prompt executed successfully' },
+      },
+    ]
   },
   middleware: [functionMiddleware('noOp')],
   permissions: {
