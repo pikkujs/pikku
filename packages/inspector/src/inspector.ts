@@ -7,42 +7,13 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import { aggregateRequiredServices } from './utils/post-process.js'
 
-export const inspect = (
-  logger: InspectorLogger,
-  routeFiles: string[],
-  options: InspectorOptions = {}
-): InspectorState => {
-  const startProgram = performance.now()
-  const program = ts.createProgram(routeFiles, {
-    target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.CommonJS,
-    skipLibCheck: true,
-    skipDefaultLibCheck: true,
-    moduleResolution: ts.ModuleResolutionKind.Node10,
-    types: [],
-    allowJs: false,
-    checkJs: false,
-  })
-  logger.debug(
-    `Created program in ${(performance.now() - startProgram).toFixed(2)}ms`
-  )
-
-  const startChecker = performance.now()
-  const checker = program.getTypeChecker()
-  logger.debug(
-    `Got type checker in ${(performance.now() - startChecker).toFixed(2)}ms`
-  )
-
-  const startSourceFiles = performance.now()
-  const sourceFiles = program.getSourceFiles()
-  logger.debug(
-    `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
-  )
-
-  // Infer root directory from source files
-  const rootDir = findCommonAncestor(routeFiles)
-
-  const state: InspectorState = {
+/**
+ * Creates an initial/empty inspector state with all required properties initialized
+ * @param rootDir - The root directory for the project
+ * @returns A fresh InspectorState with empty collections
+ */
+export function getInitialInspectorState(rootDir: string): InspectorState {
+  return {
     rootDir,
     singletonServicesTypeImportMap: new Map(),
     sessionServicesTypeImportMap: new Map(),
@@ -120,8 +91,48 @@ export const inspect = (
       usedFunctions: new Set(),
       usedMiddleware: new Set(),
       usedPermissions: new Set(),
+      allSingletonServices: [],
+      allSessionServices: [],
     },
   }
+}
+
+export const inspect = (
+  logger: InspectorLogger,
+  routeFiles: string[],
+  options: InspectorOptions = {}
+): InspectorState => {
+  const startProgram = performance.now()
+  const program = ts.createProgram(routeFiles, {
+    target: ts.ScriptTarget.ESNext,
+    module: ts.ModuleKind.CommonJS,
+    skipLibCheck: true,
+    skipDefaultLibCheck: true,
+    moduleResolution: ts.ModuleResolutionKind.Node10,
+    types: [],
+    allowJs: false,
+    checkJs: false,
+  })
+  logger.debug(
+    `Created program in ${(performance.now() - startProgram).toFixed(2)}ms`
+  )
+
+  const startChecker = performance.now()
+  const checker = program.getTypeChecker()
+  logger.debug(
+    `Got type checker in ${(performance.now() - startChecker).toFixed(2)}ms`
+  )
+
+  const startSourceFiles = performance.now()
+  const sourceFiles = program.getSourceFiles()
+  logger.debug(
+    `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
+  )
+
+  // Infer root directory from source files
+  const rootDir = findCommonAncestor(routeFiles)
+
+  const state = getInitialInspectorState(rootDir)
 
   // First sweep: add all functions
   const startSetup = performance.now()
