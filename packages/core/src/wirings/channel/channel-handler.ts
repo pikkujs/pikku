@@ -87,19 +87,43 @@ export const processMessageHandlers = (
 
     const {
       pikkuFuncName,
-      middleware: inheritedMiddleware,
+      middleware: routeInheritedMiddleware,
       permissions: inheritedPermissions,
     } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
 
-    const wirePermissions =
-      typeof onMessage === 'function' ? undefined : onMessage.permissions
+    // Get wire middleware: channel-level middleware + message-specific middleware
+    const channelWireMiddleware = channelConfig.middleware || []
 
-    const wireMiddleware =
-      typeof onMessage === 'function' ? [] : onMessage.middleware
+    // Check if onMessage is a wrapper object vs direct function config:
+    // - Direct config: onMessage.func is a plain Function
+    // - Wrapper: onMessage.func is a CorePikkuFunctionConfig (has onMessage.func.func)
+    // - Simple wrapper: onMessage has both func (plain Function) and middleware properties
+    const isWrapper =
+      onMessage &&
+      typeof onMessage === 'object' &&
+      'func' in onMessage &&
+      ((typeof onMessage.func === 'object' && 'func' in onMessage.func) ||
+        'middleware' in onMessage)
+    const messageWireMiddleware = isWrapper ? onMessage.middleware || [] : []
+
+    // Combine channel middleware with message middleware (actual functions)
+    // Channel middleware runs first, then message middleware
+    const wireMiddleware = [...channelWireMiddleware, ...messageWireMiddleware]
+
+    // Inherited middleware comes from metadata (tag groups, non-inline wire)
+    const inheritedMiddleware = routeInheritedMiddleware || []
+
+    const wirePermissions = isWrapper ? onMessage.permissions : undefined
+
+    // Create unique cache key that includes routing info to avoid cache collisions
+    // when multiple message handlers use the same function
+    const cacheKey = routingProperty
+      ? `${channelConfig.name}:${routingProperty}:${routerValue}`
+      : `${channelConfig.name}:default`
 
     return await runPikkuFunc(
       PikkuWiringTypes.channel,
-      channelConfig.name,
+      cacheKey,
       pikkuFuncName,
       {
         singletonServices: services,
@@ -119,25 +143,35 @@ export const processMessageHandlers = (
     )
   }
 
-  const onMessage = async (rawData): Promise<unknown> => {
+  return async (rawData): Promise<unknown> => {
     let result: unknown
     let processed = false
 
     // Route-specific handling
     if (typeof rawData === 'string' && channelConfig.onMessageWiring) {
+      let messageData: any
       try {
-        const messageData = JSON.parse(rawData)
+        messageData = JSON.parse(rawData)
+      } catch (error) {
+        // Most likely a json error.. ignore
+      }
+
+      if (messageData) {
         const entries = Object.entries(channelConfig.onMessageWiring)
         for (const [routingProperty, routes] of entries) {
           const routerValue = messageData[routingProperty]
           if (routerValue && routes[routerValue]) {
+            const { [routingProperty]: _, ...data } = messageData
+
             processed = true
-            result = await processMessage(
-              messageData,
-              routes[routerValue],
-              routingProperty,
-              routerValue
-            )
+            result =
+              (await processMessage(
+                data as any,
+                routes[routerValue],
+                routingProperty,
+                routerValue
+              )) || {}
+            ;(result as any)[routingProperty] = routerValue
             break
           }
         }
@@ -147,8 +181,6 @@ export const processMessageHandlers = (
           processed = true
           result = await processMessage(messageData, channelConfig.onMessage)
         }
-      } catch (error) {
-        // Most likely a json error.. ignore
       }
     }
 
@@ -167,6 +199,4 @@ export const processMessageHandlers = (
 
     return result
   }
-
-  return onMessage
 }

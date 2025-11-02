@@ -92,6 +92,18 @@ export async function executeCLIViaChannel({
     const commandRoute = pikkuWS.getRoute('command')
 
     const responseHandler = (response: any) => {
+      // Check if this is a control message
+      if (
+        response?.action === 'cli-control' &&
+        response?.event === 'complete'
+      ) {
+        // Server signals command is complete, close the connection client-side
+        commandRoute.unsubscribe(commandId, responseHandler)
+        pikkuWS.ws.close()
+        resolve(undefined)
+        return
+      }
+
       // Call renderer for any output
       renderer(null as any, response, undefined)
     }

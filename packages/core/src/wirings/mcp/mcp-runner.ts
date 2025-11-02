@@ -160,7 +160,9 @@ export async function runMCPResource(
     uri,
     endpoint,
     pikkuFuncName,
-    { ...params, mcp: { uri } } as RunMCPEndpointParams<keyof CoreMCPResource>
+    { ...params, mcp: { ...params.mcp, uri } } as RunMCPEndpointParams<
+      keyof CoreMCPResource
+    >
   )
 }
 

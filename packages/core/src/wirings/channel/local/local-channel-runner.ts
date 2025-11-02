@@ -8,17 +8,12 @@ import {
   RunChannelParams,
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import {
-  PikkuInteraction,
-  PikkuWiringTypes,
-  SessionServices,
-} from '../../../types/core.types.js'
+import { PikkuInteraction, SessionServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { combineMiddleware, runMiddleware } from '../../../middleware-runner.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
-import { runPikkuFuncDirectly } from '../../../function/function-runner.js'
 import { rpcService } from '../../rpc/rpc-runner.js'
+import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
 export const runLocalChannel = async ({
   singletonServices,
@@ -95,6 +90,7 @@ export const runLocalChannel = async ({
           {
             ...singletonServices,
             ...sessionServices,
+            channel,
             userSession,
           },
           interaction,
@@ -103,23 +99,43 @@ export const runLocalChannel = async ({
 
       const interaction: PikkuInteraction = { channel }
 
-      channelHandler.registerOnOpen(() => {
+      channelHandler.registerOnOpen(async () => {
         if (channelConfig.onConnect && meta.connect) {
-          runPikkuFuncDirectly(
-            meta.connect.pikkuFuncName,
-            getAllServices(channel, false),
-            openingData
-          )
+          try {
+            const result = await runChannelLifecycleWithMiddleware({
+              channelConfig,
+              meta: meta.connect,
+              lifecycleConfig: channelConfig.onConnect,
+              lifecycleType: 'connect',
+              services: getAllServices(channel, false),
+              channel,
+              data: openingData,
+            })
+            if (result !== undefined) {
+              await channel.send(result)
+            }
+          } catch (e) {
+            singletonServices.logger.error(`Error handling onConnect: ${e}`)
+            channel.send({ error: e.message || 'Unknown error' })
+          }
         }
       })
 
       channelHandler.registerOnClose(async () => {
         if (channelConfig.onDisconnect && meta.disconnect) {
-          runPikkuFuncDirectly(
-            meta.disconnect.pikkuFuncName,
-            getAllServices(channel, false),
-            openingData
-          )
+          try {
+            await runChannelLifecycleWithMiddleware({
+              channelConfig,
+              meta: meta.disconnect,
+              lifecycleConfig: channelConfig.onDisconnect,
+              lifecycleType: 'disconnect',
+              services: getAllServices(channel, false),
+              channel,
+            })
+          } catch (e) {
+            singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
+            channel.send({ error: e.message || 'Unknown error' })
+          }
         }
 
         if (sessionServices) {
@@ -127,13 +143,20 @@ export const runLocalChannel = async ({
         }
       })
 
-      channelHandler.registerOnMessage(
-        processMessageHandlers(
-          getAllServices(channel),
-          channelConfig as any,
-          channelHandler
-        )
+      const onMessage = processMessageHandlers(
+        getAllServices(channel),
+        channelConfig as any,
+        channelHandler
       )
+      channelHandler.registerOnMessage(async (data) => {
+        try {
+          const result = await onMessage(data)
+          await channel.send(result)
+        } catch (e) {
+          singletonServices.logger.error(`Error handling message: ${e.message}`)
+          channel.send({ error: e.message || 'Unknown error' })
+        }
+      })
     } catch (e: any) {
       handleHTTPError(
         e,
@@ -151,18 +174,7 @@ export const runLocalChannel = async ({
     }
   }
 
-  await runMiddleware(
-    {
-      ...singletonServices,
-      userSession,
-    },
-    { http },
-    combineMiddleware(PikkuWiringTypes.channel, channelConfig.name, {
-      wireInheritedMiddleware: meta.middleware,
-      wireMiddleware: channelConfig.middleware,
-    }),
-    main
-  )
+  await main()
 
   return channelHandler
 }
