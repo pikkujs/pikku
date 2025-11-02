@@ -41,10 +41,11 @@ export async function assertMiddlewareAndPermissions(
   console.log('\nActual execution order:')
   const logs = logger.getLogs()
 
-  // Filter to only middleware 'before' events and all permission events
+  // Filter to relevant events: middleware 'before', lifecycle 'execute', and permission events
   const relevantEvents = logs.filter(
     (e: ActualEvent) =>
       e.phase === 'before' || // Middleware before phase
+      (e.phase === 'execute' && e.type === 'lifecycle') || // Lifecycle events only (onConnect, onDisconnect)
       (e.type && e.type.includes('permission') && !e.phase) // Permission events (no phase)
   )
 
