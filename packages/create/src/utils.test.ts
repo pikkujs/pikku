@@ -233,7 +233,6 @@ describe('Functions Test Suite', () => {
     const pkgContent = {
       scripts: {
         build: 'npm run build',
-        'test:template': 'npm run test',
         tsc: 'tsc',
         ncu: 'ncu',
       },
@@ -257,15 +256,17 @@ describe('Functions Test Suite', () => {
       !('ncu' in updatedPackage.scripts),
       'ncu script should be removed'
     )
-    // Verify that "npm run" was replaced with "yarn run"
-
+    // Verify that "npm run" was replaced with "yarn run" in build script
     assert.ok(
       updatedPackage.scripts.build.includes('yarn run'),
       'build script should be updated'
     )
-    assert.ok(
-      updatedPackage.scripts.test.includes('yarn run'),
-      'test script should be updated'
+
+    // Verify test script is constructed correctly for http-only template
+    assert.strictEqual(
+      updatedPackage.scripts.test,
+      'bash run-tests.sh --http',
+      'test script should be bash run-tests.sh for http-only template'
     )
   })
 

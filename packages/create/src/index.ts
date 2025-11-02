@@ -49,7 +49,7 @@ const templates = [
   {
     template: 'cloudflare-websocket',
     description: 'A Cloudflare Workers WebSocket template',
-    supports: ['channel'],
+    supports: ['channel', 'http'],
   },
   {
     template: 'bullmq',
@@ -121,6 +121,11 @@ const templates = [
     description: 'The official yarn workspace',
     supports: ['http', 'channel', 'scheduled', 'fullstack'],
   },
+  {
+    template: 'cli',
+    description: 'A CLI application template',
+    supports: ['cli'],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]
@@ -150,7 +155,7 @@ const cliOptions = program.opts()
 
 async function installDependencies(
   targetPath: string,
-  { packageManager, install, yarnLink }: CliOptions
+  { packageManager, install, yarnLink, template }: CliOptions
 ) {
   if (install) {
     if (yarnLink) {
@@ -194,6 +199,16 @@ async function installDependencies(
       cwd: targetPath,
       stdio: 'inherit',
     })
+
+    if (template === 'cli') {
+      console.log(
+        chalk.blue('🚀 Running pikku again to setup up the remote channel.')
+      )
+      spawnSync(packageManager, ['pikku', '--silent'], {
+        cwd: targetPath,
+        stdio: 'inherit',
+      })
+    }
   }
 }
 
@@ -239,7 +254,7 @@ async function setupTemplate(cliOptions: CliOptions) {
     mergeDirectories(templatePath, targetPath)
     replaceFunctionReferences(targetPath, cliOptions.stackblitz)
     cleanTSConfig(targetPath, cliOptions.stackblitz)
-    cleanPikkuConfig(targetPath)
+    cleanPikkuConfig(targetPath, supportedFeatures)
     wranglerChanges(targetPath, name)
     serverlessChanges(targetPath, name)
     updatePackageJSONScripts(
