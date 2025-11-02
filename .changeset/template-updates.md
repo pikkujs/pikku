@@ -15,10 +15,12 @@
 Update templates for channel middleware and add new CLI template
 
 **New Features:**
+
 - Add new CLI template with channel support
 - Improve channel middleware examples across templates
 
 **Updates:**
+
 - Update all templates to demonstrate channel middleware patterns
 - Improve channel function examples (auth, logout, etc.)
 - Update client examples for channels
@@ -27,5 +29,6 @@ Update templates for channel middleware and add new CLI template
 - Remove unnecessary test scripts from some templates
 
 **Bug Fixes:**
+
 - Simplify channel function return types in examples
 - Fix Next.js API route configuration
