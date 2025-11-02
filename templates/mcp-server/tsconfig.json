@@ -1,8 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "noEmit": false,
-    "outDir": "./dist",
+    "noEmit": true,
     "resolveJsonModule": true,
     "module": "node18",
     "skipLibCheck": true

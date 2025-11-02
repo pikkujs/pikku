@@ -101,7 +101,7 @@ jobs:
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
-            # mcp-server,
+            mcp-server,
             cli,
             # pgboss,
             # bullmq,
