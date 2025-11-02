@@ -72,6 +72,9 @@ export const createSessionServices: CreateSessionServices<
   SingletonServices,
   Services,
   UserSession
-> = async ({}, _session) => {
-  return {}
+> = async (singletonServices, interaction, session) => {
+  return {
+    mcp: interaction.mcp,
+    channel: interaction.channel,
+  } as any
 }
