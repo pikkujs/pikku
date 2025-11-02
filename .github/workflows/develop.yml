@@ -103,8 +103,8 @@ jobs:
             nextjs,
             mcp-server,
             cli,
-            # pgboss,
-            # bullmq,
+            pgboss,
+            bullmq,
           ]
         package-manager: [yarn]
     steps:
