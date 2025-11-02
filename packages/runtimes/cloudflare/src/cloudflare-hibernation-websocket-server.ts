@@ -47,7 +47,7 @@ export abstract class CloudflareWebSocketHibernationServer<
         ...params,
         channelId,
         channelObject: server,
-        route: request,
+        route: request.path(),
         request,
         response,
         bubbleErrors: true,
@@ -56,10 +56,11 @@ export abstract class CloudflareWebSocketHibernationServer<
       // Something went wrong, the cloudflare response will deal with it.
     }
 
-    return response.toResponse({ webSocket: client }) as any
+    return response.status(101).toResponse({ webSocket: client }) as any
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    console.log('websocket message received')
     const params = await this.getAllParams(ws)
     const channelId = this.ctx.getTags(ws)[0]!
     const result = await runChannelMessage(
