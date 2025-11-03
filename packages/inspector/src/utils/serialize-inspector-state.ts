@@ -112,6 +112,10 @@ export interface SerializableInspectorState {
     meta: InspectorState['queueWorkers']['meta']
     files: string[]
   }
+  workflows: {
+    meta: InspectorState['workflows']['meta']
+    files: string[]
+  }
   rpc: {
     internalMeta: InspectorState['rpc']['internalMeta']
     internalFiles: Array<[string, { path: string; exportedName: string }]>
@@ -243,6 +247,10 @@ export function serializeInspectorState(
       meta: state.queueWorkers.meta,
       files: Array.from(state.queueWorkers.files),
     },
+    workflows: {
+      meta: state.workflows.meta,
+      files: Array.from(state.workflows.files),
+    },
     rpc: {
       internalMeta: state.rpc.internalMeta,
       internalFiles: Array.from(state.rpc.internalFiles.entries()),
@@ -343,6 +351,10 @@ export function deserializeInspectorState(
     queueWorkers: {
       meta: data.queueWorkers.meta,
       files: new Set(data.queueWorkers.files),
+    },
+    workflows: {
+      meta: data.workflows.meta,
+      files: new Set(data.workflows.files),
     },
     rpc: {
       internalMeta: data.rpc.internalMeta,

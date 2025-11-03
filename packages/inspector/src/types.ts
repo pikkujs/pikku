@@ -3,6 +3,7 @@ import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { queueWorkersMeta } from '@pikku/core/queue'
+import { workflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
 import { TypesMap } from './types-map.js'
@@ -206,6 +207,10 @@ export interface InspectorState {
   }
   queueWorkers: {
     meta: queueWorkersMeta
+    files: Set<string>
+  }
+  workflows: {
+    meta: workflowsMeta
     files: Set<string>
   }
   rpc: {

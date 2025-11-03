@@ -88,8 +88,40 @@ export interface PikkuWorkflowInteraction {
   /** Get the current workflow run */
   getRun: () => Promise<WorkflowRun>
 
-  // Note: workflow.do() is implemented in the runner and injected at runtime
-  // It cannot be typed here as it requires runtime context
+  /**
+   * Execute a workflow step - RPC form
+   * Generates a dedicated queue worker for isolated execution with retries
+   * @param stepName - Cache key for step result (must be deterministic)
+   * @param rpcName - Name of the RPC function to invoke
+   * @param data - Input data for the RPC
+   * @param options - Step options (description, etc.)
+   */
+  do<TOutput = any, TInput = any>(
+    stepName: string,
+    rpcName: string,
+    data: TInput,
+    options?: WorkflowStepOptions
+  ): Promise<TOutput>
+
+  /**
+   * Execute a workflow step - Inline form
+   * Executes locally in orchestrator, result is cached for replay
+   * @param stepName - Cache key for step result (must be deterministic)
+   * @param fn - Function to execute (must be deterministic)
+   * @param options - Step options (description, etc.)
+   */
+  do<T>(
+    stepName: string,
+    fn: () => Promise<T> | T,
+    options?: WorkflowStepOptions
+  ): Promise<T>
+
+  /**
+   * Sleep for a duration (Phase 2)
+   * @param duration - Sleep duration (ms or duration string)
+   * @param options - Step options
+   */
+  sleep(duration: string | number, options?: WorkflowStepOptions): Promise<void>
 }
 
 /**

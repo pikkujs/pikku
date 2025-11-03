@@ -26,6 +26,7 @@ export const all: any = pikkuVoidFunc({
     await rpc.invoke('pikkuChannelTypes', null)
     await rpc.invoke('pikkuSchedulerTypes', null)
     await rpc.invoke('pikkuQueueTypes', null)
+    await rpc.invoke('pikkuWorkflowTypes', null)
     await rpc.invoke('pikkuMCPTypes', null)
     await rpc.invoke('pikkuCLITypes', null)
 
@@ -95,6 +96,16 @@ export const all: any = pikkuVoidFunc({
       allImports.push(
         config.queueWorkersWiringMetaFile,
         config.queueWorkersWiringFile
+      )
+    }
+
+    // Generate Workflows
+    const workflows = await rpc.invoke('pikkuWorkflow', null)
+    if (workflows) {
+      await rpc.invoke('pikkuWorkflowMap', null)
+      allImports.push(
+        config.workflowsWiringMetaFile,
+        config.workflowsWiringFile
       )
     }
 

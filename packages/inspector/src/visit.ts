@@ -4,6 +4,7 @@ import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
 import { addSchedule } from './add/add-schedule.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
+import { addWorkflow } from './add/add-workflow.js'
 import { addMCPResource } from './add/add-mcp-resource.js'
 import { addMCPTool } from './add/add-mcp-tool.js'
 import { addMCPPrompt } from './add/add-mcp-prompt.js'
@@ -91,6 +92,7 @@ export const visitRoutes = (
   addHTTPRoute(logger, node, checker, state, options)
   addSchedule(logger, node, checker, state, options)
   addQueueWorker(logger, node, checker, state, options)
+  addWorkflow(logger, node, checker, state, options)
   addChannel(logger, node, checker, state, options)
   addCLI(logger, node, checker, state, options)
   addCLIRenderers(logger, node, checker, state, options)
