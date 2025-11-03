@@ -162,8 +162,24 @@ export const runChannelDisconnect = async ({
   ...params
 }: RunServerlessChannelParams<unknown>): Promise<void> => {
   let sessionServices: SessionServices | undefined
-  const { openingData, channelName, session } =
-    await params.channelStore.getChannelAndSession(params.channelId)
+
+  // Try to get channel from store. In serverless environments (especially with
+  // serverless-offline or worker threads), disconnect can be called multiple times
+  // or after the channel has already been cleaned up. If channel doesn't exist,
+  // there's nothing to disconnect, so we can return early.
+  let channelData
+  try {
+    channelData = await params.channelStore.getChannelAndSession(
+      params.channelId
+    )
+  } catch (error) {
+    singletonServices.logger.info(
+      `Channel ${params.channelId} not found during disconnect - already cleaned up`
+    )
+    return
+  }
+
+  const { openingData, channelName, session } = channelData
   const { channel, channelConfig, meta } = getVariablesForChannel({
     ...params,
     openingData,

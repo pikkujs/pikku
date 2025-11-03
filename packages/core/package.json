@@ -32,6 +32,8 @@
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
     "./services/local-content": "./dist/services/local-content.js",
+    "./services/file-channel-store": "./dist/services/file-channel-store.js",
+    "./services/file-eventhub-store": "./dist/services/file-eventhub-store.js",
     "./schema": "./dist/schema.js",
     "./types": "./dist/types/index.d.ts"
   },
