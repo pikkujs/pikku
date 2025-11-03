@@ -89,7 +89,8 @@ jobs:
       fail-fast: false
       matrix:
         version: [20]
-        template: [
+        template:
+          [
             express,
             express-middleware,
             fastify,
