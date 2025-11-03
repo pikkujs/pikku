@@ -89,7 +89,8 @@ jobs:
       fail-fast: false
       matrix:
         version: [20]
-        template: [
+        template:
+          [
             express,
             express-middleware,
             fastify,
@@ -97,14 +98,14 @@ jobs:
             uws,
             ws,
             aws-lambda,
-            # aws-lambda-websocket,
+            aws-lambda-websocket,
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
-            # mcp-server,
+            mcp-server,
             cli,
-            # pgboss,
-            # bullmq,
+            pg-boss,
+            bullmq,
           ]
         package-manager: [yarn]
     steps:
@@ -127,6 +128,8 @@ jobs:
       - run: cd ../test-app && yarn link -A ../pikku && yarn install && yarn run tsc && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
+      REDIS_URL: redis://localhost:6379
 
   # bun-templates:
   #   name: Bun Templates
