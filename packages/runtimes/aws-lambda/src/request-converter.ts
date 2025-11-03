@@ -14,11 +14,11 @@ export const lambdaEventToRequest = (event: APIGatewayProxyEvent): Request => {
       ? Buffer.from(event.body, 'base64')
       : event.body || undefined
 
+  const method = event.httpMethod || 'GET'
+
   return new Request(url.toString(), {
-    method: event.httpMethod,
+    method,
     headers: event.headers as HeadersInit,
-    body: ['GET', 'HEAD'].includes(event.httpMethod.toUpperCase())
-      ? undefined
-      : body,
+    body: ['GET', 'HEAD'].includes(method.toUpperCase()) ? undefined : body,
   })
 }
