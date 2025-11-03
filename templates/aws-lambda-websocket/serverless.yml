@@ -6,7 +6,7 @@ app: lambda
 service: pikku-serverless-ws-example
 provider:
   name: aws
-  runtime: nodejs20.x
+  runtime: nodejs22.x
   websocketsApiName: custom-websockets-api-name
   websocketsApiRouteSelectionExpression: $request.body.action
   websocketsDescription: Pikku Serverless Websockets Example
