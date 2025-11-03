@@ -4,7 +4,7 @@
   "main": "dist/index.mjs",
   "private": true,
   "scripts": {
-    "build:offline": "rm -rf dist && esbuild ./src/websocket.ts --format=esm --minify --bundle --keep-names --sourcemap --platform=node --target=node20 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json --packages=external",
+    "build:offline": "rm -rf dist && esbuild ./src/websocket.ts --format=esm --minify --bundle --keep-names --sourcemap --platform=node --target=node24 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json --packages=external",
     "start": "npm run build:offline && serverless offline",
     "dev": "npm run build:offline && serverless offline",
     "test": "bash ../functions/run-tests.sh --url http://localhost:3001/production --websocket",
