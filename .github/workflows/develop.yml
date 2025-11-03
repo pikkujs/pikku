@@ -97,7 +97,7 @@ jobs:
             uws,
             ws,
             aws-lambda,
-            # aws-lambda-websocket,
+            aws-lambda-websocket,
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
