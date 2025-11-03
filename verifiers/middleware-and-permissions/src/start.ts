@@ -6,7 +6,11 @@ import {
 import '../.pikku/pikku-bootstrap.gen.js'
 
 import { testHTTPWiring } from './functions/http.assert.js'
-import { testMCPWiring } from './functions/mcp.assert.js'
+import {
+  testMCPToolWiring,
+  testMCPResourceWiring,
+  testMCPPromptWiring,
+} from './functions/mcp.assert.js'
 import { testSchedulerWiring } from './functions/scheduler.assert.js'
 import { testQueueWiring } from './functions/queue.assert.js'
 import { testCLIWiring } from './functions/cli.assert.js'
@@ -36,7 +40,9 @@ async function main(): Promise<void> {
       '  - Queue: Background jobs with tag and wire middleware/permissions'
     )
     console.log('  - CLI: Commands with tag and wire middleware/permissions')
-    console.log('  - MCP: Tools with tag and wire middleware/permissions')
+    console.log(
+      '  - MCP: Tools, Resources, and Prompts with tag and wire middleware/permissions'
+    )
     console.log('\nGenerated files:')
     console.log('  .pikku/middleware/pikku-middleware.gen.ts')
     console.log('  .pikku/middleware/pikku-middleware-groups-meta.gen.ts')
@@ -136,8 +142,40 @@ async function main(): Promise<void> {
       createSessionServices as any
     )
 
-    // Test MCP
-    const mcpPassed = await testMCPWiring(
+    // Test MCP Tool
+    const mcpToolPassed = await testMCPToolWiring(
+      [
+        { name: 'session', type: 'tag', phase: 'before' },
+        { name: 'mcp', type: 'tag', phase: 'before' },
+        { name: 'mcp', type: 'wire', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'noOp', type: 'function', phase: 'before' },
+        { name: 'mcp', type: 'tag-permission' },
+        { name: 'mcp-wire', type: 'wire-permission' },
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices,
+      createSessionServices
+    )
+
+    // Test MCP Resource
+    const mcpResourcePassed = await testMCPResourceWiring(
+      [
+        { name: 'session', type: 'tag', phase: 'before' },
+        { name: 'mcp', type: 'tag', phase: 'before' },
+        { name: 'mcp', type: 'wire', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'noOp', type: 'function', phase: 'before' },
+        { name: 'mcp', type: 'tag-permission' },
+        { name: 'mcp-wire', type: 'wire-permission' },
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices,
+      createSessionServices
+    )
+
+    // Test MCP Prompt
+    const mcpPromptPassed = await testMCPPromptWiring(
       [
         { name: 'session', type: 'tag', phase: 'before' },
         { name: 'mcp', type: 'tag', phase: 'before' },
@@ -303,7 +341,9 @@ async function main(): Promise<void> {
       schedulerPassed &&
       queuePassed &&
       cliPassed &&
-      mcpPassed &&
+      mcpToolPassed &&
+      mcpResourcePassed &&
+      mcpPromptPassed &&
       channelTest1Passed &&
       channelTest2Passed &&
       channelTest3Passed &&
