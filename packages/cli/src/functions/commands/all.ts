@@ -2,9 +2,11 @@ import { existsSync } from 'fs'
 import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
+import { CommandSummary } from '../../utils/command-summary.js'
 
 export const all: any = pikkuVoidFunc({
   func: async ({ logger, config, rpc, getInspectorState }) => {
+    const summary = new CommandSummary('all')
     const allImports: string[] = []
     let typesDeclarationFileExists = true
 
@@ -16,7 +18,7 @@ export const all: any = pikkuVoidFunc({
 
     // This is needed since the wireHTTP function will add the routes to the visitState
     if (!typesDeclarationFileExists) {
-      logger.info(`• Type file first created, inspecting again...\x1b[0m`)
+      logger.debug(`• Type file first created, inspecting again...`)
       await getInspectorState(true)
     }
 
@@ -125,7 +127,7 @@ export const all: any = pikkuVoidFunc({
     }
 
     if (config.openAPI) {
-      logger.info(
+      logger.debug(
         `• OpenAPI requires a reinspection to pickup new generated types..`
       )
       await getInspectorState(true)
@@ -144,6 +146,40 @@ export const all: any = pikkuVoidFunc({
         .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
         .join('\n')
     )
+
+    // Get final inspector state and collect stats for summary
+    const state = await getInspectorState()
+    if (state.http?.meta)
+      summary.set('httpRoutes', Object.keys(state.http.meta).length)
+    if (state.channels?.meta)
+      summary.set('channels', Object.keys(state.channels.meta).length)
+    if (state.scheduledTasks?.meta)
+      summary.set(
+        'scheduledTasks',
+        Object.keys(state.scheduledTasks.meta).length
+      )
+    if (state.queueWorkers?.meta)
+      summary.set('queueWorkers', Object.keys(state.queueWorkers.meta).length)
+    if (state.mcpEndpoints) {
+      const mcpTotal =
+        Object.keys(state.mcpEndpoints.toolsMeta || {}).length +
+        Object.keys(state.mcpEndpoints.resourcesMeta || {}).length +
+        Object.keys(state.mcpEndpoints.promptsMeta || {}).length
+      if (mcpTotal > 0) summary.set('mcpEndpoints', mcpTotal)
+    }
+    if (state.cli?.meta) {
+      // Count total CLI commands across all programs
+      const totalCommands = Object.values(state.cli.meta).reduce(
+        (sum, program) => sum + (program.commands?.length || 0),
+        0
+      )
+      if (totalCommands > 0) summary.set('cliCommands', totalCommands)
+    }
+
+    // Display summary (unless in silent mode)
+    if (!logger.isSilent()) {
+      console.log(summary.format())
+    }
 
     // Check for critical errors and exit if any were logged
     if (logger.hasCriticalErrors()) {

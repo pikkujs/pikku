@@ -84,7 +84,16 @@ const all = (program, name, description) => {
       '--httpRoutes <routes...>',
       'Filter HTTP routes by route patterns (comma-separated)'
     )
-    .option('-s, --silent', 'Silent mode - only show errors')
+    .option('-s, --silent', 'Silent mode - only show critical errors')
+    .option(
+      '--info',
+      'Show info messages and above (info, warn, error, critical)'
+    )
+    .option('--verbose', 'Show all debug messages (most detailed)')
+    .option(
+      '--loglevel <level>',
+      'Set explicit log level (trace, debug, info, warn, error, critical)'
+    )
     .option(
       '--state-output <path>',
       'Save inspector state to JSON file for reuse'
