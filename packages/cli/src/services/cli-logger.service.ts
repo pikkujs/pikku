@@ -15,7 +15,7 @@ const BASE_ERROR_URL = 'https://pikku.dev/errors'
 
 export class CLILogger implements Logger {
   private silent: boolean
-  private level: LogLevel = LogLevel.info
+  private level: LogLevel = LogLevel.warn // default to warn level
   private criticalErrors: string[] = []
 
   constructor({
@@ -27,12 +27,20 @@ export class CLILogger implements Logger {
   }) {
     this.silent = silent
     if (logLogo && !silent) {
-      this.logPikkuLogo()
+      this.logLogo()
     }
   }
 
   setLevel(level: LogLevel): void {
     this.level = level
+  }
+
+  setSilent(silent: boolean): void {
+    this.silent = silent
+  }
+
+  isSilent(): boolean {
+    return this.silent
   }
 
   info(message: string | { message: string; type?: string }) {
@@ -59,9 +67,16 @@ export class CLILogger implements Logger {
     console.error(chalk.yellow(message))
   }
 
-  debug(message: string) {
+  debug(message: string | { message: string; type?: string }) {
     if (this.level > LogLevel.debug || this.silent) return
-    console.log(chalk.gray(message))
+
+    let c = chalk.gray
+    if (typeof message === 'object') {
+      if (message.type === 'success') {
+        c = chalk.green
+      }
+    }
+    console.log(c(typeof message === 'string' ? message : message.message))
   }
 
   critical(code: ErrorCode, message: string) {
@@ -75,7 +90,7 @@ export class CLILogger implements Logger {
     return this.criticalErrors.length > 0
   }
 
-  private logPikkuLogo() {
+  logLogo() {
     this.primary(logo)
     // // When running from dist/, __filename is dist/src/services/cli-logger.service.js
     // // So we need to go up 3 levels: dist/src/services -> dist/src -> dist -> package.json
