@@ -266,6 +266,12 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-wirings-meta.gen.ts'
       )
     }
+    if (!result.workflowsWorkersFile) {
+      result.workflowsWorkersFile = join(
+        workflowDir,
+        'pikku-workflow-workers.gen.ts'
+      )
+    }
     if (!result.workflowMapDeclarationFile) {
       result.workflowMapDeclarationFile = join(
         workflowDir,

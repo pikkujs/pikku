@@ -105,7 +105,8 @@ export const all: any = pikkuVoidFunc({
       await rpc.invoke('pikkuWorkflowMap', null)
       allImports.push(
         config.workflowsWiringMetaFile,
-        config.workflowsWiringFile
+        config.workflowsWiringFile,
+        config.workflowsWorkersFile
       )
     }
 

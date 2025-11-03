@@ -49,6 +49,7 @@ export interface PikkuCLICoreOutputFiles {
   // Workflows
   workflowsWiringFile: string
   workflowsWiringMetaFile: string
+  workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
 

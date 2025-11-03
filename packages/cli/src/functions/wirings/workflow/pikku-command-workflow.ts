@@ -5,6 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
+import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuWorkflow: any = pikkuSessionlessFunc<
@@ -16,6 +17,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const {
       workflowsWiringFile,
       workflowsWiringMetaFile,
+      workflowsWorkersFile,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
@@ -63,6 +65,18 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
         packageMappings,
         typesMap,
         functionState.meta,
+        workflows.meta
+      )
+    )
+
+    // Write workflow workers (queue workers for RPC steps and orchestrators)
+    await writeFileInDir(
+      logger,
+      workflowsWorkersFile,
+      serializeWorkflowWorkers(
+        workflowsWorkersFile,
+        workflowTypesFile,
+        packageMappings,
         workflows.meta
       )
     )
