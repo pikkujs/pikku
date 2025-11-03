@@ -3,10 +3,10 @@ import assert from 'node:assert'
 import { PikkuMCPTestClient } from './mcp.js'
 
 // Test configuration - adjust based on your MCP server setup
-const TEST_SERVER_COMMAND = 'node'
+const TEST_SERVER_COMMAND = process.env.MCP_SERVER_COMMAND || 'npx'
 const TEST_SERVER_ARGS = process.env.MCP_SERVER_START
   ? [process.env.MCP_SERVER_START]
-  : ['dist/mcp-server/src/start.js']
+  : ['tsx', 'src/start.ts']
 
 test('MCP Server - Basic Connection and Capabilities', async () => {
   const client = new PikkuMCPTestClient(TEST_SERVER_COMMAND, TEST_SERVER_ARGS)
