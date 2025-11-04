@@ -14,11 +14,13 @@ This template demonstrates how to use Pikku workflows for orchestrating multi-st
 ## Getting Started
 
 1. Install dependencies:
+
    ```bash
    yarn install
    ```
 
 2. Start the workflow workers:
+
    ```bash
    yarn start
    ```
@@ -40,6 +42,7 @@ See `../functions/src/workflow.functions.ts` and `../functions/src/workflow.wiri
 ## Workflow State Storage
 
 Workflow state is stored in `.workflows/` directory by default. Each workflow run gets a unique ID and tracks:
+
 - Run status (running, completed, failed)
 - Step results (cached for replay)
 - Step errors (for debugging failed steps)

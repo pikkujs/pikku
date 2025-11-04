@@ -146,6 +146,7 @@ export type WorkflowsMeta = Record<
     docs?: PikkuDocs
     tags?: string[]
     middleware?: MiddlewareMetadata[]
+    steps: WorkflowStepMeta[]
   }
 >
 

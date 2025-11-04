@@ -175,6 +175,16 @@ export const addWorkflow: AddWiring = (
       true,
       checker
     )
+
+    if (!workflowName) {
+      logger.critical(
+        ErrorCode.MISSING_NAME,
+        `Wasn't able to determine 'name' property for workflow wiring.`
+      )
+      return
+    }
+
+
     if (!funcInitializer) {
       logger.critical(
         ErrorCode.MISSING_FUNC,
@@ -188,14 +198,6 @@ export const addWorkflow: AddWiring = (
       checker,
       state.rootDir
     ).pikkuFuncName
-
-    if (!workflowName) {
-      logger.critical(
-        ErrorCode.MISSING_NAME,
-        `No 'name' provided for workflow function '${pikkuFuncName}'.`
-      )
-      return
-    }
 
     // --- resolve middleware ---
     const middleware = resolveMiddleware(state, obj, tags, checker)
@@ -213,14 +215,7 @@ export const addWorkflow: AddWiring = (
     const resolvedFunc = resolveFunctionDeclaration(funcInitializer, checker)
     const steps: WorkflowStepMeta[] = []
     if (resolvedFunc) {
-      console.log(
-        `[DEBUG] Resolved function for ${workflowName}:`,
-        ts.SyntaxKind[resolvedFunc.kind]
-      )
       getWorkflowInvocations(resolvedFunc, checker, steps)
-      console.log(`[DEBUG] Extracted ${steps.length} steps for ${workflowName}`)
-    } else {
-      console.log(`[DEBUG] Failed to resolve function for ${workflowName}`)
     }
 
     state.workflows.meta[workflowName] = {
@@ -231,13 +226,7 @@ export const addWorkflow: AddWiring = (
       docs,
       tags,
       middleware,
-      meta: {
-        name: workflowName,
-        description,
-        executionMode,
-        steps,
-        tags,
-      },
+      steps
     }
   }
 }

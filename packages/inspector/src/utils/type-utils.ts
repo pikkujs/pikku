@@ -33,8 +33,31 @@ export function resolveFunctionDeclaration(
     const symbol = checker.getSymbolAtLocation(node)
     if (!symbol) return null
 
-    const decl = symbol.valueDeclaration
+    // Try valueDeclaration first, then fallback to declarations[0]
+    const decl = symbol.valueDeclaration || symbol.declarations?.[0]
     if (!decl) return null
+
+    // If it's an import specifier, resolve the aliased symbol
+    if (ts.isImportSpecifier(decl)) {
+      const aliasedSymbol = checker.getAliasedSymbol(symbol)
+      if (aliasedSymbol) {
+        const aliasedDecl =
+          aliasedSymbol.valueDeclaration || aliasedSymbol.declarations?.[0]
+        if (aliasedDecl) {
+          // For variable declarations, get the initializer
+          if (
+            ts.isVariableDeclaration(aliasedDecl) &&
+            aliasedDecl.initializer
+          ) {
+            return resolveFunctionDeclaration(aliasedDecl.initializer, checker)
+          }
+          // For function declarations, return directly
+          if (ts.isFunctionDeclaration(aliasedDecl)) {
+            return aliasedDecl
+          }
+        }
+      }
+    }
 
     // If it's a variable declaration, get the initializer
     if (ts.isVariableDeclaration(decl) && decl.initializer) {

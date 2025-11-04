@@ -81,7 +81,7 @@ class ContextAwareRPCService {
   ): Promise<{ runId: string }> {
     // Import startWorkflow dynamically to avoid circular dependencies
     const { startWorkflow } = await import('../workflow/workflow-runner.js')
-    return startWorkflow(workflowName, input, this.services)
+    return startWorkflow(workflowName, input, this.services, this.rpc.bind(this))
   }
 }
 

@@ -8,5 +8,11 @@
  * - RPC step workers (one per RPC form step)
  * - Orchestrator workers (one per workflow)
  *
- * Do not edit manually - regenerate with 'npx pikku prebuild'
+ * Do not edit manually - regenerate with 'npx pikku'
  */
+
+
+
+
+
+

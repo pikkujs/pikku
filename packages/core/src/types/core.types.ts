@@ -8,8 +8,10 @@ import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
-import { PikkuQueue } from '../wirings/queue/queue.types.js'
+import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
+import { PikkuWorkflowInteraction } from '../wirings/workflow/workflow.types.js'
+import { WorkflowStateService } from '../wirings/workflow/workflow-state.types.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -19,6 +21,7 @@ export enum PikkuWiringTypes {
   queue = 'queue',
   mcp = 'mcp',
   cli = 'cli',
+  workflow = 'workflow',
 }
 
 export interface FunctionServicesMeta {
@@ -158,6 +161,10 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   /** The variable service to be used */
   variables: VariablesService
+  /** The workflow state service */
+  workflowState?: WorkflowStateService
+  /** The queue service */
+  queueService?: QueueService
 }
 
 /**
@@ -171,6 +178,7 @@ export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
   cli: PikkuCLI
+  workflow: PikkuWorkflowInteraction
 }>
 
 /**

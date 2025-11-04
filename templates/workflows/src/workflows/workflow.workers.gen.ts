@@ -8,12 +8,51 @@
  * - RPC step workers (one per RPC form step)
  * - Orchestrator workers (one per workflow)
  *
- * Do not edit manually - regenerate with 'npx pikku prebuild'
+ * Do not edit manually - regenerate with 'npx pikku'
  */
 
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { wireQueueWorker } from '@pikku/core/queue'
 import { runWorkflowJob } from '@pikku/core/workflow'
+
+
+// RPC step: Send welcome email to user
+export const OnboardingSend welcome email to userWorker = pikkuSessionlessFunc({
+  name: 'OnboardingSend welcome email to userWorker',
+  func: async (services, payload: any) => {
+    const { runId, stepName, rpcName, data } = payload
+
+    // Idempotency check - skip if already done
+    const stepState = await services.workflowState.getStepState(runId, stepName)
+    if (stepState.status === 'done') {
+      return
+    }
+
+    try {
+      // Execute RPC
+      const result = await services.rpc.invoke(rpcName, data)
+
+      // Store result
+      await services.workflowState.setStepResult(runId, stepName, result)
+
+      // Trigger orchestrator to continue workflow
+      await services.workflowState.addToQueue('onboarding', runId)
+    } catch (error: any) {
+      // Store error
+      await services.workflowState.setStepError(runId, stepName, error)
+
+      // Mark workflow as failed
+      await services.workflowState.updateRunStatus(runId, 'failed', undefined, {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+      })
+
+      throw error
+    }
+  }
+})
+
 
 // Orchestrator for: User onboarding workflow with email and profile setup
 export const OnboardingOrchestratorWorker = pikkuSessionlessFunc({
@@ -32,23 +71,27 @@ export const OnboardingOrchestratorWorker = pikkuSessionlessFunc({
       }
 
       // Real error - mark workflow as failed
-      await services.workflowState!.updateRunStatus(
-        runId,
-        'failed',
-        undefined,
-        {
-          message: error.message,
-          stack: error.stack,
-          code: error.code,
-        }
-      )
+      await services.workflowState!.updateRunStatus(runId, 'failed', undefined, {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+      })
 
       throw error
     }
-  },
+  }
 })
+
+
+
+wireQueueWorker({
+  queueName: 'workflow-onboarding-Send welcome email to user',
+  func: OnboardingSend welcome email to userWorker as any,
+})
+
 
 wireQueueWorker({
   queueName: 'workflow-onboarding-orchestrator',
   func: OnboardingOrchestratorWorker as any,
 })
+

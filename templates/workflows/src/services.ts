@@ -1,33 +1,20 @@
+import { pikkuConfig, pikkuServices, pikkuSessionServices } from '../.pikku/pikku-types.gen.js'
 import type {
-  Config,
   Services,
   SingletonServices,
-  UserSession,
 } from '../types/application-types.js'
-import {
-  CreateConfig,
-  CreateSessionServices,
-  CreateSingletonServices,
-} from '@pikku/core'
 
-export const createConfig: CreateConfig<Config> = async () => {
+export const createConfig = pikkuConfig(async () => {
   return {}
-}
+})
 
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  SingletonServices
-> = async (config, additionalServices) => {
+export const createSingletonServices = pikkuServices(async (config, additionalServices) => {
   return {
     config,
     ...additionalServices,
   } as SingletonServices
-}
+})
 
-export const createSessionServices: CreateSessionServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async (singletonServices) => {
+export const createSessionServices = pikkuSessionServices(async (singletonServices) => {
   return {} as Services
-}
+})

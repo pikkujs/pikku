@@ -25,6 +25,8 @@
     "noUncheckedIndexedAccess": true, // Ensures index access is checked
     "forceConsistentCasingInFileNames": true, // Ensures case-sensitive imports
     "paths": {
+      "@pikku/cli": ["./packages/cli"],
+      "@pikku/cli/*": ["./packages/cli/*"],
       "@pikku/core": ["./packages/core"],
       "@pikku/core/*": ["./packages/core/*"],
       "@pikku/inspector": ["./packages/inspector"],

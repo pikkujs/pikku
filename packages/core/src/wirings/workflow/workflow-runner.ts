@@ -1,17 +1,16 @@
-import type { CoreServices } from '../../types/core.types.js'
 import type {
   CoreWorkflow,
   PikkuWorkflowInteraction,
 } from './workflow.types.js'
 import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import type {
-  WorkflowStateService,
   WorkflowRun,
 } from './workflow-state.types.js'
 import { PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
-import { runPikkuFuncDirectly } from '../../function/function-runner.js'
+import { runPikkuFunc } from '../../function/function-runner.js'
 import { WorkflowAsyncException } from './workflow.types.js'
+import { CoreSingletonServices, PikkuWiringTypes } from '../../types/core.types.js'
 
 /**
  * Error class for workflow not found
@@ -19,17 +18,6 @@ import { WorkflowAsyncException } from './workflow.types.js'
 class WorkflowNotFoundError extends PikkuError {
   constructor(name: string) {
     super(`Workflow not found: ${name}`)
-  }
-}
-
-/**
- * Error class for workflow state service not configured
- */
-class WorkflowStateServiceNotConfiguredError extends PikkuError {
-  constructor() {
-    super(
-      'WorkflowStateService not configured. Please provide a workflowState service in your service factory.'
-    )
   }
 }
 
@@ -65,8 +53,10 @@ export const wireWorkflow = <
 export async function startWorkflow<I>(
   name: string,
   input: I,
-  singletonServices: CoreServices
+  singletonServices: CoreSingletonServices,
+  rpcInvoke: Function,
 ): Promise<{ runId: string }> {
+  const { workflowState, queueService } = singletonServices
   const registrations = pikkuState('workflows', 'registrations')
   const workflow = registrations.get(name)
 
@@ -74,23 +64,23 @@ export async function startWorkflow<I>(
     throw new WorkflowNotFoundError(name)
   }
 
-  const workflowState = (singletonServices as any)
-    .workflowState as WorkflowStateService
   if (!workflowState) {
-    throw new WorkflowStateServiceNotConfiguredError()
+    throw new Error('WorkflowState service not available')
   }
 
-  // Get workflow metadata
-  const meta = pikkuState('workflows', 'meta')
-  const workflowMeta = meta[name]
+  if (!queueService && workflow.executionMode === 'remote') {
+    throw new Error(
+      'QueueService is required for remote workflow execution mode'
+    )
+  }
 
   // Create workflow run in state
-  const runId = await workflowState.createRun(workflowMeta.meta, input)
+  const runId = await workflowState.createRun(name, input)
 
   // If inline mode, execute directly via runWorkflowJob
   if (workflow.executionMode === 'inline') {
     try {
-      await runWorkflowJob(runId, singletonServices)
+      await runWorkflowJob(runId, singletonServices, rpcInvoke)
       return { runId }
     } catch (error: any) {
       // Mark as failed
@@ -115,15 +105,14 @@ export async function startWorkflow<I>(
  */
 export async function runWorkflowJob(
   runId: string,
-  singletonServices: CoreServices
+  singletonServices: CoreSingletonServices,
+  rpcInvoke: Function,
 ): Promise<void> {
-  const workflowState = (singletonServices as any)
-    .workflowState as WorkflowStateService
-  if (!workflowState) {
-    throw new WorkflowStateServiceNotConfiguredError()
-  }
+  const { workflowState, queueService } = singletonServices
 
-  const queueService = (singletonServices as any).queue
+  if (!workflowState) {
+    throw new Error('WorkflowState service not available')
+  }
 
   // Get the run
   const run = await workflowState.getRun(runId)
@@ -194,7 +183,7 @@ export async function runWorkflowJob(
           } else {
             // No queue service - execute inline (for inline workflow mode)
             try {
-              const result = await (singletonServices as any).rpc.invoke(
+              const result = await rpcInvoke(
                 rpcName,
                 data
               )
@@ -262,19 +251,15 @@ export async function runWorkflowJob(
 
     // Execute workflow function with workflow interaction
     try {
-      // Create services with workflow interaction
-      const allServices = {
-        ...singletonServices,
-        workflow: workflowInteraction,
-      } as any
-
-      const result = await runPikkuFuncDirectly(
-        workflowMeta.pikkuFuncName,
-        allServices,
-        run.input,
-        undefined // No session for workflows
-      )
-
+      const result = await runPikkuFunc(PikkuWiringTypes.workflow, workflowMeta.workflowName, workflowMeta.pikkuFuncName, {
+        singletonServices,
+        interaction: { workflow: workflowInteraction},
+        getAllServices: async (singletonServices) => ({
+          ...singletonServices,
+          workflow: workflowInteraction,
+        } as any),
+        data: () => run.input,
+      })
       // Workflow completed successfully
       await workflowState.updateRunStatus(runId, 'completed', result)
     } catch (error: any) {

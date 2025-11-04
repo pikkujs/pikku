@@ -122,6 +122,7 @@ const middlewareCache: Record<
   [PikkuWiringTypes.scheduler]: {},
   [PikkuWiringTypes.mcp]: {},
   [PikkuWiringTypes.cli]: {},
+  [PikkuWiringTypes.workflow]: {},
 }
 
 /**
