@@ -1,5 +1,23 @@
 # @pikku/cloudflare
 
+## 0.10.1
+
+### Patch Changes
+
+- 730adb6: Update runtime adapters for channel middleware support
+
+  **Updates:**
+
+  - Update Cloudflare hibernation WebSocket server for middleware changes
+  - Update Fastify response convertor for improved channel handling
+  - Update MCP server for channel middleware support
+  - Update Next.js runtime adapter for channel improvements
+
+- Updated dependencies [ea652dc]
+- Updated dependencies [4349ec5]
+- Updated dependencies [44d71a8]
+  - @pikku/core@0.10.2
+
 ## 0.10.0
 
 This release includes significant improvements across the framework including tree-shaking support, middleware/permission factories, enhanced CLI functionality, improved TypeScript type safety, and comprehensive test strategies.

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/fastify-plugin",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "The pikku fastify plugin",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -17,7 +17,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.10.0",
+    "@pikku/core": "^0.10.2",
     "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.1"
   },
