@@ -232,5 +232,7 @@ export interface InspectorState {
     usedFunctions: Set<string> // Function names actually wired/exposed
     usedMiddleware: Set<string> // Middleware names used by wired functions
     usedPermissions: Set<string> // Permission names used by wired functions
+    allSingletonServices: string[] // All services available in SingletonServices type
+    allSessionServices: string[] // All services available in Services type (excluding SingletonServices)
   }
 }

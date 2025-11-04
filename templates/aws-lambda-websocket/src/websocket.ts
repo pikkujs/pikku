@@ -1,3 +1,4 @@
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import { APIGatewayEvent, APIGatewayProxyHandler } from 'aws-lambda'
 
 import {
@@ -7,13 +8,9 @@ import {
   processWebsocketMessage,
 } from '@pikku/lambda/websocket'
 
-import { AWSSecrets } from '@pikku/aws-services'
-
-import { KyselyChannelStore } from '../../../packages/services/kysely/src/kysely-channel-store.js'
 import { ChannelStore } from '@pikku/core/channel'
-import { KyselyEventHubStore } from '../../../packages/services/kysely/src/kysely-eventhub-store.js'
-import { MakeRequired } from '@pikku/core'
 import { LocalVariablesService } from '@pikku/core/services'
+
 import {
   Config,
   SingletonServices,
@@ -22,8 +19,8 @@ import {
   createConfig,
   createSingletonServices,
 } from '../../functions/src/services.js'
-
-// import '../../functions/.pikku/channel/pikku-channels.gen.js'
+import { FileChannelStore } from '@pikku/core/services/file-channel-store'
+import { FileEventHubStore } from '@pikku/core/services/file-eventhub-store'
 
 let state:
   | {
@@ -39,13 +36,11 @@ const getParams = async (event: APIGatewayEvent) => {
     const variables = new LocalVariablesService()
     const singletonServices = await createSingletonServices(config, {
       variables,
-      // @ts-ignore TODO
-      secrets: new AWSSecrets(config),
     })
-    // @ts-ignore
-    const channelStore = new KyselyChannelStore(singletonServices.kysely)
-    // @ts-ignore
-    const eventHubStore = new KyselyEventHubStore(singletonServices.kysely)
+    // Note: This would run locally, but to deploy you would need to use
+    // a database that AWS Lambda can connect to, e.g. RDS or Aurora Serverless
+    const channelStore = new FileChannelStore()
+    const eventHubStore = new FileEventHubStore()
     singletonServices.eventHub = new LambdaEventHubService(
       singletonServices.logger,
       event,
@@ -54,10 +49,7 @@ const getParams = async (event: APIGatewayEvent) => {
     )
     state = {
       config,
-      singletonServices: singletonServices as MakeRequired<
-        typeof singletonServices,
-        'eventHub'
-      >,
+      singletonServices,
       channelStore,
     }
   }

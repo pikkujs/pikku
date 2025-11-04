@@ -1,11 +1,14 @@
 import { PikkuWebSocket } from '../.pikku/pikku-websocket.gen.js'
 import { EventHubTopics } from '../types/eventhub-topics.js'
+import WSWebsocket from 'ws'
 
 export const check = async (serverUrl: string, userId: string) => {
   let authenticationState: 'initial' | 'authenticated' | 'unauthenticated' =
     'initial'
-  const websocket = new PikkuWebSocket<'events', EventHubTopics>(serverUrl)
-  websocket.ws.onopen = async () => {
+  const ws = new WSWebsocket(serverUrl)
+  const websocket = new PikkuWebSocket<'events', EventHubTopics>(ws as any)
+
+  ws.onopen = async () => {
     console.log('Websocket connected')
     websocket.subscribe((data) => {
       console.log(`${userId}: Global message:`, data)
@@ -34,8 +37,8 @@ export const check = async (serverUrl: string, userId: string) => {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
 
-    // Default handler
-    websocket.send(`Hello from ${userId}`)
+    // Default handler - intentionally sending invalid message to test error handling
+    websocket.send('hello')
 
     // Route handler
     route.send('subscribe', { name: 'test' })
@@ -46,17 +49,20 @@ export const check = async (serverUrl: string, userId: string) => {
     route.send('emit', { name: 'test' })
 
     setTimeout(() => {
-      websocket.ws.onclose = () => {
+      ws.onclose = () => {
         console.log(`${userId}: Websocket closed`)
       }
-      websocket.ws.close()
+      ws.close()
     }, 5000)
   }
 
-  websocket.ws.onerror = (e) => {
+  ws.onerror = (e) => {
     console.error('Error with websocket', e)
   }
 }
 
-check('http://localhost:4002', 'Pikku User 1')
-check('http://localhost:4002', 'Pikku User 2')
+const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+console.log('Starting Websocket test with url:', url)
+
+check(url, 'Pikku User 1')
+check(url, 'Pikku User 2')

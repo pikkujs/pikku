@@ -24,19 +24,18 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
 
 export const authenticate = pikkuSessionlessFunc<
   { token: string; userId: string },
-  { authResult: boolean; action: 'auth' }
+  { authResult: boolean }
 >(async ({ userSession }, data) => {
   const authResult = data.token === 'valid'
   if (authResult) {
     await userSession?.set({ userId: data.userId })
   }
-  return { authResult, action: 'auth' }
+  return { authResult }
 })
 
-export const logout = pikkuSessionlessFunc<void, { action: 'auth' }>({
+export const logout = pikkuSessionlessFunc<void, void>({
   func: async ({ userSession }) => {
     await userSession?.clear()
-    return { action: 'auth' }
   },
 })
 

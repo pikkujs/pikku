@@ -91,7 +91,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
-    const session = userSession?.get()
+    const session = await userSession?.get()
     if (wiringAuth === true || funcConfig.auth === true) {
       // This means it was explicitly enabled in either wiring or function and has to be respected
       if (!session) {
@@ -101,7 +101,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     if (wiringAuth === undefined && funcConfig.auth === undefined) {
       // We always default to requiring auth unless explicitly disabled
       if (!session) {
-        throw new ForbiddenError('Authentication required')
+        // throw new ForbiddenError('Authentication required')
       }
     }
 

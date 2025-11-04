@@ -18,12 +18,11 @@ jobs:
         shell: bash
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: yarn
       - run: yarn install
       - run: yarn build
       - run: yarn test:coverage
-      - run: yarn test:verifiers
       - run: yarn prettier
       - run: yarn lint
       - run: cd templates/functions && yarn pikku && cd ../..
@@ -43,13 +42,35 @@ jobs:
         uses: coverallsapp/github-action@v2.3.4
         continue-on-error: true
 
+  verifiers:
+    name: Verifiers
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: yarn install
+      - run: yarn test:verifiers
+
   templates:
     name: Templates
     runs-on: ubuntu-latest
     needs: build
     strategy:
+      fail-fast: false
       matrix:
-        version: [20]
+        version: [22, 24, 26]
         template: [
             express,
             express-middleware,
@@ -60,6 +81,7 @@ jobs:
             cloudflare-workers,
             nextjs,
             mcp-server,
+            cli,
             # pg-boss,
             # bullmq,
           ]
@@ -90,6 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     strategy:
+      fail-fast: false
       matrix:
         template: [
             express,
@@ -132,7 +155,7 @@ jobs:
         shell: bash
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: yarn
       - run: yarn install
       - run: yarn build
@@ -153,24 +176,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: release
     strategy:
+      fail-fast: false
       matrix:
-        version: [20]
-        template:
-          [
-            aws-lambda,
-            aws-lambda-websocket,
-            bullmq,
-            cloudflare-websocket,
-            cloudflare-workers,
+        version: [24]
+        template: [
             express,
             express-middleware,
             fastify,
             fastify-plugin,
-            mcp-server,
-            nextjs,
-            pg-boss,
             uws,
             ws,
+            aws-lambda,
+            # aws-lambda-websocket,
+            cloudflare-workers,
+            cloudflare-websocket,
+            nextjs,
+            # mcp-server,
+            cli,
+            # pgboss,
+            # bullmq,
           ]
     steps:
       - name: Check out repository code

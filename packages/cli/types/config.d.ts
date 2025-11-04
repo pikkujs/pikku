@@ -80,7 +80,6 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  supportsImportAttributes: boolean
 
   configDir: string
   tsconfig: string
@@ -98,11 +97,16 @@ export type PikkuCLIInput = {
     additionalInfo: OpenAPISpecInfo
   }
 
+  schema?: {
+    additionalProperties?: boolean
+    supportsImportAttributes?: boolean
+  }
+
   cli?: {
     entrypoints?: Record<
       string,
       | string
-      | { type: 'cli'; path: string }
+      | { type: 'local'; path: string }
       | {
           type: 'channel'
           name?: string
@@ -112,7 +116,7 @@ export type PikkuCLIInput = {
         }
       | Array<
           | string
-          | { type: 'cli'; path: string }
+          | { type: 'local'; path: string }
           | {
               type: 'channel'
               name?: string
@@ -143,7 +147,6 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  supportsImportAttributes: boolean
 
   configFile?: string
   tags?: string[]
@@ -169,11 +172,16 @@ export type PikkuCLIConfig = {
     additionalInfo: OpenAPISpecInfo
   }
 
+  schema?: {
+    additionalProperties?: boolean
+    supportsImportAttributes?: boolean
+  }
+
   cli?: {
     entrypoints?: Record<
       string,
       | string
-      | { type: 'cli'; path: string }
+      | { type: 'local'; path: string }
       | {
           type: 'channel'
           name?: string
@@ -183,7 +191,7 @@ export type PikkuCLIConfig = {
         }
       | Array<
           | string
-          | { type: 'cli'; path: string }
+          | { type: 'local'; path: string }
           | {
               type: 'channel'
               name?: string

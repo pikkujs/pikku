@@ -51,7 +51,7 @@ export const writeFileInDir = async (
     await writeFile(path, content, 'utf-8')
 
     if (logWrite) {
-      logger.info({ message: `✓ File written to ${path}`, type: 'success' })
+      logger.debug({ message: `✓ File written to ${path}`, type: 'success' })
     }
   }
 }
@@ -66,7 +66,7 @@ export const removeFileInDir = async (
     await rm(path, { force: true })
 
     if (logRemove) {
-      logger.info({ message: `✓ File removed at ${path}`, type: 'success' })
+      logger.debug({ message: `✓ File removed at ${path}`, type: 'success' })
     }
   }
 }

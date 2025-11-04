@@ -7,7 +7,7 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
-    "test:template": "bash run-tests.sh --url http://localhost:8787",
+    "test": "bash ../functions/run-tests.sh --url http://localhost:8787 --http",
     "deploy": "wrangler deploy",
     "start": "wrangler dev"
   },

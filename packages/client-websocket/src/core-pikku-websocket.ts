@@ -1,35 +1,32 @@
 import { CorePikkuRouteHandler } from './core-pikku-route-handler.js'
 
-let WebSocketClass: typeof WebSocket
-
-if (typeof WebSocket !== 'undefined') {
-  WebSocketClass = WebSocket
-} else {
-  try {
-    WebSocketClass = require('ws')
-  } catch (e) {
-    console.error('WebSocket not supported and `ws` library is not available.')
-    process.exit(1)
-  }
-}
-
 /**
- * The `CorePikkuWebsocket` class provides a utility for making websocket connections, including handling authorization,
- * and managing server URLs. This class is designed to simplify API interactions
- * with configurable options and support for JWT and API key-based authentication.
+ * The `CorePikkuWebsocket` class provides a utility for managing websocket connections,
+ * handling routes, and managing subscriptions. This class is designed to simplify
+ * WebSocket interactions with configurable options.
  */
 export class CorePikkuWebsocket {
-  public ws: WebSocket
-
   private routes = new Map<string, CorePikkuRouteHandler>()
   private subscriptions = new Set<(data: unknown) => void>()
 
   /**
-   * Constructs a new instance of the `CorePikkuFetch` class.
+   * Constructs a new instance of the `CorePikkuWebsocket` class.
+   *
+   * @param ws - An instantiated WebSocket instance
+   *
+   * @example
+   * // Browser usage
+   * const ws = new WebSocket('ws://localhost:3000')
+   * const pikkuWS = new CorePikkuWebsocket(ws)
+   *
+   * @example
+   * // Node.js usage with 'ws' package
+   * import WebSocket from 'ws'
+   * const ws = new WebSocket('ws://localhost:3000')
+   * const pikkuWS = new CorePikkuWebsocket(ws)
    */
-  constructor(url: string | URL, protocols?: string | string[]) {
-    this.ws = new WebSocketClass(url, protocols)
-    this.ws.onmessage = this.handleMessage.bind(this)
+  constructor(protected ws: WebSocket) {
+    ws.onmessage = this.handleMessage.bind(this)
   }
 
   public getRoute(route: string | symbol | number): CorePikkuRouteHandler {

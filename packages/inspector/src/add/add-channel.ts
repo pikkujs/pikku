@@ -136,7 +136,15 @@ export function addMessagesRoutes(
       const init = getInitializerOf(routeElem)
       if (!init) continue
 
-      const routeKey = routeElem.name!.getText()
+      // Get the route key, stripping quotes if it's a string literal
+      const routeName = routeElem.name
+      if (!routeName) continue
+
+      let routeKey = routeName.getText()
+      // For string literals like 'greet' or "greet", strip the quotes
+      if (ts.isStringLiteral(routeName)) {
+        routeKey = routeName.text
+      }
 
       // For shorthand properties, we need to resolve the identifier to its declaration
       if (ts.isShorthandPropertyAssignment(routeElem)) {
@@ -196,8 +204,17 @@ export function addMessagesRoutes(
                     // Look up in the registry
                     const fnMeta = state.functions.meta[handlerName]
                     if (fnMeta) {
+                      // Resolve middleware for this route
+                      const routeTags = ts.isObjectLiteralExpression(init)
+                        ? getPropertyTags(init, 'channel', channelKey, logger)
+                        : undefined
+                      const routeMiddleware = ts.isObjectLiteralExpression(init)
+                        ? resolveMiddleware(state, init, routeTags, checker)
+                        : undefined
+
                       result[channelKey]![routeKey] = {
                         pikkuFuncName: handlerName,
+                        middleware: routeMiddleware,
                       }
                       continue
                     }
@@ -214,8 +231,17 @@ export function addMessagesRoutes(
                   // Look up in the registry
                   const fnMeta = state.functions.meta[handlerName]
                   if (fnMeta) {
+                    // Resolve middleware for this route
+                    const routeTags = ts.isObjectLiteralExpression(init)
+                      ? getPropertyTags(init, 'channel', channelKey, logger)
+                      : undefined
+                    const routeMiddleware = ts.isObjectLiteralExpression(init)
+                      ? resolveMiddleware(state, init, routeTags, checker)
+                      : undefined
+
                     result[channelKey]![routeKey] = {
                       pikkuFuncName: handlerName,
+                      middleware: routeMiddleware,
                     }
                     continue
                   }
@@ -249,8 +275,24 @@ export function addMessagesRoutes(
 
                         const fnMeta = state.functions.meta[handlerName]
                         if (fnMeta) {
+                          // Resolve middleware for this route
+                          const routeTags = ts.isObjectLiteralExpression(init)
+                            ? getPropertyTags(
+                                init,
+                                'channel',
+                                channelKey,
+                                logger
+                              )
+                            : undefined
+                          const routeMiddleware = ts.isObjectLiteralExpression(
+                            init
+                          )
+                            ? resolveMiddleware(state, init, routeTags, checker)
+                            : undefined
+
                           result[channelKey]![routeKey] = {
                             pikkuFuncName: handlerName,
+                            middleware: routeMiddleware,
                           }
                           continue
                         }
@@ -264,8 +306,24 @@ export function addMessagesRoutes(
 
                         const fnMeta = state.functions.meta[handlerName]
                         if (fnMeta) {
+                          // Resolve middleware for this route
+                          const routeTags = ts.isObjectLiteralExpression(init)
+                            ? getPropertyTags(
+                                init,
+                                'channel',
+                                channelKey,
+                                logger
+                              )
+                            : undefined
+                          const routeMiddleware = ts.isObjectLiteralExpression(
+                            init
+                          )
+                            ? resolveMiddleware(state, init, routeTags, checker)
+                            : undefined
+
                           result[channelKey]![routeKey] = {
                             pikkuFuncName: handlerName,
+                            middleware: routeMiddleware,
                           }
                           continue
                         }
@@ -336,8 +394,17 @@ export function addMessagesRoutes(
               const fnMeta = state.functions.meta[handlerName]
 
               if (fnMeta) {
+                // Resolve middleware for this route
+                const routeTags = ts.isObjectLiteralExpression(init)
+                  ? getPropertyTags(init, 'channel', channelKey, logger)
+                  : undefined
+                const routeMiddleware = ts.isObjectLiteralExpression(init)
+                  ? resolveMiddleware(state, init, routeTags, checker)
+                  : undefined
+
                 result[channelKey]![routeKey] = {
                   pikkuFuncName: handlerName,
+                  middleware: routeMiddleware,
                 }
                 continue // Skip the normal processing below
               }
@@ -368,8 +435,18 @@ export function addMessagesRoutes(
         continue
       }
 
+      // Resolve middleware and permissions for this route
+      // Check if the route config is an object literal with middleware/permissions
+      const routeTags = ts.isObjectLiteralExpression(init)
+        ? getPropertyTags(init, 'channel', channelKey, logger)
+        : undefined
+      const routeMiddleware = ts.isObjectLiteralExpression(init)
+        ? resolveMiddleware(state, init, routeTags, checker)
+        : undefined
+
       result[channelKey]![routeKey] = {
         pikkuFuncName: handlerName,
+        middleware: routeMiddleware,
       }
     }
   }
@@ -417,13 +494,13 @@ export const addChannel: AddWiring = (
   const connect = getPropertyAssignmentInitializer(
     obj,
     'onConnect',
-    false,
+    true,
     checker
   )
   const disconnect = getPropertyAssignmentInitializer(
     obj,
     'onDisconnect',
-    false,
+    true,
     checker
   )
 
@@ -432,28 +509,26 @@ export const addChannel: AddWiring = (
   const onMsgProp = getPropertyAssignmentInitializer(
     obj,
     'onMessage',
-    false,
+    true,
     checker
   )
 
   if (onMsgProp) {
-    const handlerName =
-      onMsgProp &&
-      getHandlerNameFromExpression(onMsgProp, checker, state.rootDir)
-    const fnMeta = handlerName && state.functions.meta[handlerName]
+    const { pikkuFuncName } = extractFunctionName(
+      onMsgProp,
+      checker,
+      state.rootDir
+    )
+    const fnMeta = state.functions.meta[pikkuFuncName]
     if (!fnMeta) {
-      console.error(
-        `No function metadata for onMessage handler '${handlerName}'`
+      logger.critical(
+        ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+        `No function metadata found for onMessage handler '${pikkuFuncName}'`
       )
-      throw new Error()
-    } else {
-      message = {
-        pikkuFuncName: extractFunctionName(
-          onMsgProp as any,
-          checker,
-          state.rootDir
-        ).pikkuFuncName,
-      }
+      return
+    }
+    message = {
+      pikkuFuncName,
     }
   }
 

@@ -15,22 +15,22 @@ export interface LogCommandInfoOptions {
 
 /**
  * Middleware to log command execution timing and status
- * Replaces the logCommandInfoAndTime wrapper function
+ * Uses debug level so it only shows with --verbose flag
  */
 export const logCommandInfoAndTime = ({
   commandStart,
   commandEnd,
 }: LogCommandInfoOptions): PikkuMiddleware => {
   return async ({ logger }, _interaction, next) => {
-    // Log start
+    // Log start (debug level - only shows with --verbose)
     const start = Date.now()
-    logger.info(`• ${commandStart}...`)
+    logger.debug(`• ${commandStart}...`)
 
     // Execute the function
     await next()
 
-    // Log completion
-    logger.info({
+    // Log completion (debug level - only shows with --verbose)
+    logger.debug({
       type: 'success',
       message: `✓ ${commandEnd} in ${Date.now() - start}ms.`,
     })

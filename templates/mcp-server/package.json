@@ -9,7 +9,8 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
-    "test": "bash run-tests.sh"
+    "test": "bash ../functions/run-tests.sh --mcp --ignore-server-ready-check",
+    "test:mcp": "npx tsx client/mcp.ts"
   },
   "devDependencies": {
     "@pikku/cli": "^0.10.0",

@@ -52,8 +52,8 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
         // Normalize entrypoint config to get type
         const entrypointType =
           typeof entrypointConfig === 'string'
-            ? 'cli'
-            : entrypointConfig.type || 'cli'
+            ? 'local'
+            : entrypointConfig.type || 'local'
 
         // Handle channel type entrypoint
         if (entrypointType === 'channel') {
@@ -152,11 +152,11 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
           continue
         }
 
-        // Handle CLI type entrypoint (default)
+        // Handle local CLI type entrypoint (default)
         const entrypointPath =
           typeof entrypointConfig === 'string'
             ? entrypointConfig
-            : entrypointConfig.type === 'cli'
+            : entrypointConfig.type === 'local'
               ? entrypointConfig.path
               : undefined
 

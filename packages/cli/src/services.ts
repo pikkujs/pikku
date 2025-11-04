@@ -20,6 +20,7 @@ import {
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
+  getInitialInspectorState,
 } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
@@ -30,7 +31,9 @@ import {
 } from './services/cli-logger-forwarder.service.js'
 import { readFile, writeFile } from 'fs/promises'
 
-const logger = new CLILogger({ logLogo: true, silent: false })
+// Logger instance will be configured with log level from CLI flags in createConfig
+// Logo will be displayed conditionally in createConfig based on --silent flag
+const logger = new CLILogger({ logLogo: false, silent: false })
 
 /**
  * Parse a comma-separated string or array into an array of trimmed, non-empty strings
@@ -116,10 +119,35 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,
   data
 ) => {
-  // Set log level if provided via CLI option
-  const logLevel = (data as any).logLevel
-  if (logLevel && LogLevel[logLevel] !== undefined) {
-    logger.setLevel(LogLevel[logLevel as keyof typeof LogLevel])
+  // Determine log level based on CLI flags with precedence:
+  // --silent > --loglevel > --verbose > --info > default (warn)
+  let logLevel: LogLevel = LogLevel.warn // default
+  let isSilent = false
+
+  if ((data as any).silent) {
+    logLevel = LogLevel.critical
+    isSilent = true
+  } else if ((data as any).loglevel) {
+    const levelStr = (data as any).loglevel
+    if (LogLevel[levelStr] !== undefined) {
+      logLevel = LogLevel[levelStr as keyof typeof LogLevel]
+    } else {
+      logger.warn(
+        `Invalid log level "${levelStr}". Valid levels: trace, debug, info, warn, error, critical. Using default (warn).`
+      )
+    }
+  } else if ((data as any).verbose) {
+    logLevel = LogLevel.debug
+  } else if ((data as any).info) {
+    logLevel = LogLevel.info
+  }
+
+  logger.setLevel(logLevel)
+  logger.setSilent(isSilent)
+
+  // Display logo unless in silent mode
+  if (!isSilent) {
+    logger.logLogo()
   }
 
   const cliConfig = await getPikkuCLIConfig(logger, data.configFile, [], true)
@@ -176,8 +204,46 @@ export const createSingletonServices: CreateSingletonServices<
 
   const getInspectorState = async (
     refresh: boolean = false,
-    setupOnly: boolean = false
+    setupOnly: boolean = false,
+    bootstrapMode: boolean = false
   ) => {
+    // In bootstrap mode, return a minimal "zero state" with core types
+    // This allows bootstrap to run immediately without inspecting the codebase
+    if (bootstrapMode) {
+      const corePackagePath = '@pikku/core'
+      const initialState = getInitialInspectorState(rootDir)
+
+      // Populate filesAndMethods with core types from @pikku/core
+      initialState.filesAndMethods = {
+        userSessionType: {
+          file: corePackagePath,
+          variable: 'CoreUserSession',
+          type: 'CoreUserSession',
+          typePath: corePackagePath,
+        },
+        sessionServicesType: {
+          file: corePackagePath,
+          variable: 'CoreServices',
+          type: 'CoreServices',
+          typePath: corePackagePath,
+        },
+        singletonServicesType: {
+          file: corePackagePath,
+          variable: 'CoreSingletonServices',
+          type: 'CoreSingletonServices',
+          typePath: corePackagePath,
+        },
+        pikkuConfigType: {
+          file: corePackagePath,
+          variable: 'CoreConfig',
+          type: 'CoreConfig',
+          typePath: corePackagePath,
+        },
+      }
+
+      return initialState
+    }
+
     // Get or refresh the unfiltered state
     if (!unfilteredState || refresh) {
       // Run inspector WITHOUT filters to get full state

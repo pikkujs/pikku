@@ -158,7 +158,7 @@ export class PikkuMCPServer {
           data: meta.length > 0 ? meta : undefined,
         })
       },
-      setLevel: function (level: LogLevel): void {
+      setLevel: function (_level: LogLevel): void {
         throw new Error('Function not implemented.')
       },
     }
@@ -169,22 +169,11 @@ export class PikkuMCPServer {
     }
   }
 
-  private setupTools(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      const tools = Object.values(this.mcpEndpointRegistry.getTools())
-      return {
-        tools: tools.map((tool) => ({
-          name: tool.name,
-          title: tool.title,
-          description: tool.description,
-          inputSchema: tool.inputSchema,
-        })),
-      } as ListToolsResult
-    })
-
+  private createMCPService(): PikkuMCP {
     const mcpEndpointRegistry = this.mcpEndpointRegistry
     const server = this.server
-    const mcp: PikkuMCP = {
+
+    return {
       sendResourceUpdated: async function (uri: string) {
         await server.sendResourceUpdated({ uri })
       },
@@ -209,14 +198,23 @@ export class PikkuMCPServer {
         }
         return changed
       },
-      // elicitInput: async function (message: string) {
-      //   // TODO: We need to implement a way to get a reference to the schema the user requested..
-      //   return await server.elicitInput({
-      //     message,
-      //     requestedSchema: '' as any
-      //   })
-      // }
     }
+  }
+
+  private setupTools(): void {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      const tools = Object.values(this.mcpEndpointRegistry.getTools())
+      return {
+        tools: tools.map((tool) => ({
+          name: tool.name,
+          title: tool.title,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+        })),
+      } as ListToolsResult
+    })
+
+    const mcp = this.createMCPService()
 
     // Handler for calling tools
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -292,6 +290,8 @@ export class PikkuMCPServer {
       } as ListResourcesResult
     })
 
+    const mcp = this.createMCPService()
+
     this.server.setRequestHandler(
       ReadResourceRequestSchema,
       async (request) => {
@@ -306,6 +306,7 @@ export class PikkuMCPServer {
             {
               singletonServices: this.singletonServices,
               createSessionServices: this.createSessionServices,
+              mcp,
             },
             uri
           )
@@ -346,6 +347,8 @@ export class PikkuMCPServer {
       } as ListPromptsResult
     })
 
+    const mcp = this.createMCPService()
+
     this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       const { name, arguments: args } = request.params
       const promptMeta = getMCPPromptsMeta()[name]
@@ -363,6 +366,7 @@ export class PikkuMCPServer {
         {
           singletonServices: this.singletonServices,
           createSessionServices: this.createSessionServices,
+          mcp,
         },
         name
       )

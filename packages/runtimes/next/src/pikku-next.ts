@@ -1,5 +1,6 @@
 import { compile } from 'path-to-regexp'
 import { EventEmitter } from 'eventemitter3'
+import { NextRequest } from 'next/server.js'
 
 import {
   CoreConfig,
@@ -7,7 +8,7 @@ import {
   CreateConfig,
   CreateSessionServices,
 } from '@pikku/core'
-import { HTTPMethod, fetchData } from '@pikku/core/http'
+import { HTTPMethod, fetchData, fetch } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 
@@ -98,6 +99,20 @@ export class PikkuNextJS {
       skipUserSession: true,
       bubbleErrors: true,
     })) as Out
+  }
+
+  /**
+   * Handles an API request from Next.js App Router route handler.
+   *
+   * @param req - The Next.js request object.
+   * @returns A promise that resolves to a Next.js Response object.
+   */
+  public async apiRequest(req: NextRequest): Promise<Response> {
+    const singletonServices = await this.getSingletonServices()
+    return fetch(req, {
+      singletonServices,
+      createSessionServices: this.createSessionServices,
+    })
   }
 
   /**

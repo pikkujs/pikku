@@ -96,6 +96,7 @@ export function replaceFunctionReferences(
       .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
       .replaceAll('../functions/types/', './types/')
       .replaceAll('.pikku', pikkuDir)
+      .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
     fs.writeFileSync(filePath, updatedContent)
   }
 
@@ -130,12 +131,35 @@ export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
 }
 
 /**
- * Cleans up the pikku.config.json file
+ * Cleans up the pikku.config.json file and removes config options for unsupported features
  */
-export function cleanPikkuConfig(targetPath: string): void {
+export function cleanPikkuConfig(
+  targetPath: string,
+  supportedFeatures: string[]
+): void {
   const pikkuConfigFile = path.join(targetPath, 'pikku.config.json')
   const pikkuConfig = JSON.parse(fs.readFileSync(pikkuConfigFile, 'utf-8'))
+
   delete pikkuConfig.extends
+
+  // Remove config options for unsupported features
+  if (!supportedFeatures.includes('http')) {
+    delete pikkuConfig.fetchFile
+    delete pikkuConfig.rpcWiringsFile
+  }
+
+  if (!supportedFeatures.includes('channel')) {
+    delete pikkuConfig.websocketFile
+  }
+
+  if (!supportedFeatures.includes('queue')) {
+    delete pikkuConfig.queueWiringsFile
+  }
+
+  if (!supportedFeatures.includes('mcp')) {
+    delete pikkuConfig.mcpJsonFile
+  }
+
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
 }
 
@@ -195,6 +219,7 @@ const FILE_FEATURE_MAPPING = {
   'queue-worker.': ['queue'],
   'rpc.': ['http'], // RPC is typically over HTTP
   'scheduled-task.': ['scheduled'],
+  'cli.': ['cli'],
 } as const
 
 /**
@@ -329,16 +354,12 @@ export function updatePackageJSONScripts(
 
   packageJson.scripts.postinstall = 'pikku all'
 
-  if (!stackblitz) {
-    packageJson.scripts.test = packageJson.scripts['test:template']
-    delete packageJson.scripts['test:template']
-  }
-
+  // Create test script based on supported features
   if (stackblitz) {
-    // For stackblitz, create test script based on supported features
+    // For stackblitz, run individual test commands
     const testCommands: string[] = []
     if (supportedFeatures.includes('http')) {
-      testCommands.push('npm run test:http')
+      testCommands.push('npm run test:http-fetch')
     }
     if (supportedFeatures.includes('channel')) {
       testCommands.push('npm run test:websocket')
@@ -347,9 +368,43 @@ export function updatePackageJSONScripts(
       testCommands.push('npm run test:rpc')
     }
     if (supportedFeatures.includes('sse')) {
-      testCommands.push('npm run test:sse')
+      testCommands.push('npm run test:http-sse')
+    }
+    if (supportedFeatures.includes('queue')) {
+      testCommands.push('npm run test:queue')
+    }
+    if (supportedFeatures.includes('mcp')) {
+      testCommands.push('npm run test:mcp')
     }
     packageJson.scripts.test = testCommands.join(' && ')
+  } else {
+    // For regular templates, construct run-tests.sh command with appropriate flags
+    const testFlags: string[] = []
+    if (supportedFeatures.includes('http')) {
+      testFlags.push('--http')
+    }
+    if (supportedFeatures.includes('channel')) {
+      testFlags.push('--websocket')
+    }
+    if (supportedFeatures.includes('rpc')) {
+      testFlags.push('--rpc')
+    }
+    if (supportedFeatures.includes('sse')) {
+      testFlags.push('--http-sse')
+    }
+    if (supportedFeatures.includes('queue')) {
+      testFlags.push('--queue')
+    }
+    if (supportedFeatures.includes('mcp')) {
+      testFlags.push('--mcp')
+    }
+    if (supportedFeatures.includes('cli')) {
+      testFlags.push('--cli')
+    }
+    // Only add test script if it doesn't already exist
+    if (!packageJson.scripts.test) {
+      packageJson.scripts.test = `bash run-tests.sh${testFlags.length > 0 ? ' ' + testFlags.join(' ') : ''}`
+    }
   }
 
   if (packageManager === 'yarn') {

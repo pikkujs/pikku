@@ -162,6 +162,8 @@ export interface SerializableInspectorState {
     usedFunctions: string[]
     usedMiddleware: string[]
     usedPermissions: string[]
+    allSingletonServices: string[]
+    allSessionServices: string[]
   }
 }
 
@@ -271,6 +273,8 @@ export function serializeInspectorState(
       usedFunctions: Array.from(state.serviceAggregation.usedFunctions),
       usedMiddleware: Array.from(state.serviceAggregation.usedMiddleware),
       usedPermissions: Array.from(state.serviceAggregation.usedPermissions),
+      allSingletonServices: state.serviceAggregation.allSingletonServices,
+      allSessionServices: state.serviceAggregation.allSessionServices,
     },
   }
 }
@@ -370,6 +374,8 @@ export function deserializeInspectorState(
       usedFunctions: new Set(data.serviceAggregation.usedFunctions),
       usedMiddleware: new Set(data.serviceAggregation.usedMiddleware),
       usedPermissions: new Set(data.serviceAggregation.usedPermissions),
+      allSingletonServices: data.serviceAggregation.allSingletonServices,
+      allSessionServices: data.serviceAggregation.allSessionServices,
     },
   }
 }

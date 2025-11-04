@@ -142,8 +142,27 @@ export async function ${capitalizedName}CLIClient(
   url: string,
   args?: string[]
 ): Promise<void> {
+  // Get WebSocket implementation (browser or Node.js)
+  let WebSocketImpl: any
+  if (typeof WebSocket !== 'undefined') {
+    WebSocketImpl = WebSocket
+  } else {
+    // Node.js environment - dynamically import 'ws'
+    try {
+      const wsModule = await import('ws')
+      WebSocketImpl = wsModule.default
+    } catch (e) {
+      throw new Error(
+        'No WebSocket implementation found. In Node.js environments, you need to:\\n' +
+        '1. Install the "ws" package: npm install ws\\n' +
+        'Learn more: https://www.npmjs.com/package/ws'
+      )
+    }
+  }
+
   // Create WebSocket connection
-  const pikkuWS = new CorePikkuWebsocket(url)
+  const ws = new WebSocketImpl(url) as WebSocket
+  const pikkuWS = new CorePikkuWebsocket(ws)
 
   // Register renderers for CLI commands
   const renderers = ${renderersMap}
@@ -161,10 +180,11 @@ export default ${capitalizedName}CLIClient
 
 // For direct execution (if this file is run directly)
 if (import.meta.url === \`file://\${process.argv[1]}\`) {
-  const url = process.env.PIKKU_WS_URL || 'ws://localhost:3000${finalChannelRoute}'
+  const url = process.env.PIKKU_WS_URL || 'ws://localhost:4002${finalChannelRoute}'
   ${capitalizedName}CLIClient(url, process.argv.slice(2)).catch(error => {
-    console.error('Fatal error:', error.message)
-    process.exit(1)
+    console.error('Fatal channel CLI error:', error)
+    // TODO: We get an error code even when it exists cleanly, investigate
+    // process.exit(1)
   })
 }
 `

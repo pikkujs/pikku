@@ -26,6 +26,20 @@ class PikkuWebSocketRoute<Channel extends keyof ChannelsMap, Route extends keyof
     }
 }
 
+/**
+ * Type-safe WebSocket wrapper for Pikku channels.
+ *
+ * @example
+ * // Browser usage
+ * const ws = new WebSocket('ws://localhost:3000')
+ * const pikkuWS = new PikkuWebSocket<'events'>(ws)
+ *
+ * @example
+ * // Node.js usage
+ * import WebSocket from 'ws'
+ * const ws = new WebSocket('ws://localhost:3000')
+ * const pikkuWS = new PikkuWebSocket<'events'>(ws)
+ */
 export class PikkuWebSocket<Channel extends keyof ChannelsMap, EventHubTopics extends Record<string, any> = {}> extends CorePikkuWebsocket {
     /**
      * Send a message to a specific route and method.

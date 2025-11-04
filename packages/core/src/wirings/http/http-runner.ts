@@ -327,8 +327,6 @@ const executeRoute = async (
   const interaction: PikkuInteraction = { http, channel }
 
   const getAllServices = async (session?: CoreUserSession) => {
-    let channel: PikkuChannel<unknown, unknown> | undefined
-
     // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
       { ...singletonServices, userSession, channel },

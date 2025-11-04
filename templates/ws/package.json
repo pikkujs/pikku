@@ -10,7 +10,7 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts",
-    "test:template": "bash run-tests.sh --websocket"
+    "test": "bash ../functions/run-tests.sh --websocket"
   },
   "dependencies": {
     "@pikku/core": "^0.10.1",

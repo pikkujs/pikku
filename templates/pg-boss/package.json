@@ -9,7 +9,8 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
-    "dev": "tsx --watch src/start.ts"
+    "dev": "tsx --watch src/start.ts",
+    "test": "bash ../functions/run-tests.sh --queue --ignore-server-ready-check"
   },
   "dependencies": {
     "@pikku/core": "^0.10.1",

@@ -3,5 +3,7 @@
   "srcDirectories": ["./src"],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
-  "supportsImportAttributes": true
+  "schema": {
+    "supportsImportAttributes": true
+  }
 }

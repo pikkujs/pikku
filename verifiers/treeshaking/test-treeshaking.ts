@@ -12,9 +12,12 @@ const INSPECTOR_STATE_FILE = join(
 )
 
 /**
- * Parse the pikku-services.gen.ts file to extract the list of services
+ * Parse the pikku-services.gen.ts file to extract singleton and session services
  */
-function parseGeneratedServices(): string[] {
+function parseGeneratedServices(): {
+  singletonServices: string[]
+  sessionServices: string[]
+} {
   try {
     const servicesFilePath = join(
       process.cwd(),
@@ -23,27 +26,49 @@ function parseGeneratedServices(): string[] {
     )
     const content = readFileSync(servicesFilePath, 'utf-8')
 
-    // Extract the singletonServices object
-    const match = content.match(
-      /export const singletonServices = \{([^}]+)\} as const/
+    // Filter out system services (config, schema, variables, jwt are framework services)
+    const systemServices = new Set(['config', 'schema', 'variables', 'jwt'])
+
+    const singletonServices: string[] = []
+    const sessionServices: string[] = []
+
+    // Extract requiredSingletonServices
+    const singletonMatch = content.match(
+      /export const requiredSingletonServices = \{([^}]+)\} as const/
     )
-    if (!match) {
-      return []
+    if (singletonMatch) {
+      const servicesBlock = singletonMatch[1]!
+      const serviceMatches = servicesBlock.matchAll(/'([^']+)':\s*true/g)
+      for (const serviceMatch of serviceMatches) {
+        const serviceName = serviceMatch[1]!
+        if (!systemServices.has(serviceName)) {
+          singletonServices.push(serviceName)
+        }
+      }
     }
 
-    // Parse the service names from the object
-    const servicesBlock = match[1]!
-    const serviceMatches = servicesBlock.matchAll(/'([^']+)':\s*true/g)
-
-    const services: string[] = []
-    for (const serviceMatch of serviceMatches) {
-      services.push(serviceMatch[1]!)
+    // Extract requiredSessionServices
+    const sessionMatch = content.match(
+      /export const requiredSessionServices = \{([^}]+)\} as const/
+    )
+    if (sessionMatch) {
+      const servicesBlock = sessionMatch[1]!
+      const serviceMatches = servicesBlock.matchAll(/'([^']+)':\s*true/g)
+      for (const serviceMatch of serviceMatches) {
+        const serviceName = serviceMatch[1]!
+        if (!systemServices.has(serviceName)) {
+          sessionServices.push(serviceName)
+        }
+      }
     }
 
-    return services.sort()
+    return {
+      singletonServices: singletonServices.sort(),
+      sessionServices: sessionServices.sort(),
+    }
   } catch (error) {
     console.error('Error parsing services file:', error)
-    return []
+    return { singletonServices: [], sessionServices: [] }
   }
 }
 
@@ -69,7 +94,10 @@ function createInspectorState(): void {
  * Run pikku all with the given filter using the cached state (filter-many pattern)
  * This loads the pre-generated inspector state and applies the filter
  */
-function runPikkuWithFilter(filter: string): string[] {
+function runPikkuWithFilter(filter: string): {
+  singletonServices: string[]
+  sessionServices: string[]
+} {
   try {
     // Run pikku all with the filter, loading from the cached state
     const command = filter
@@ -123,53 +151,104 @@ async function runTests() {
   let failed = 0
   const failures: Array<{
     scenario: string
-    expected: string[]
-    actual: string[]
-    missing: string[]
-    extra: string[]
+    expectedSingleton: string[]
+    actualSingleton: string[]
+    missingSingleton: string[]
+    extraSingleton: string[]
+    expectedSession: string[]
+    actualSession: string[]
+    missingSession: string[]
+    extraSession: string[]
   }> = []
 
   for (const scenario of scenarios) {
     await test(scenario.name, () => {
       console.log(`\n📋 ${scenario.name}`)
       console.log(`   Filter: ${scenario.filter || '(none)'}`)
-      console.log(`   Expected: [${scenario.expectedServices.join(', ')}]`)
-
-      const actualServices = runPikkuWithFilter(scenario.filter)
-      console.log(`   Actual:   [${actualServices.join(', ')}]`)
-
-      const comparison = compareServices(
-        actualServices,
-        scenario.expectedServices
+      console.log(
+        `   Expected Singleton: [${scenario.expectedSingletonServices.join(', ')}]`
+      )
+      console.log(
+        `   Expected Session:   [${scenario.expectedSessionServices.join(', ')}]`
       )
 
-      if (comparison.match) {
+      const actualServices = runPikkuWithFilter(scenario.filter)
+      console.log(
+        `   Actual Singleton:   [${actualServices.singletonServices.join(', ')}]`
+      )
+      console.log(
+        `   Actual Session:     [${actualServices.sessionServices.join(', ')}]`
+      )
+
+      const singletonComparison = compareServices(
+        actualServices.singletonServices,
+        scenario.expectedSingletonServices
+      )
+
+      const sessionComparison = compareServices(
+        actualServices.sessionServices,
+        scenario.expectedSessionServices
+      )
+
+      const bothMatch = singletonComparison.match && sessionComparison.match
+
+      if (bothMatch) {
         console.log(`   ✅ PASS`)
         passed++
       } else {
         console.log(`   ❌ FAIL`)
-        if (comparison.missing.length > 0) {
-          console.log(`   Missing: [${comparison.missing.join(', ')}]`)
+        if (!singletonComparison.match) {
+          if (singletonComparison.missing.length > 0) {
+            console.log(
+              `   Singleton Missing: [${singletonComparison.missing.join(', ')}]`
+            )
+          }
+          if (singletonComparison.extra.length > 0) {
+            console.log(
+              `   Singleton Extra:   [${singletonComparison.extra.join(', ')}]`
+            )
+          }
         }
-        if (comparison.extra.length > 0) {
-          console.log(`   Extra:   [${comparison.extra.join(', ')}]`)
+        if (!sessionComparison.match) {
+          if (sessionComparison.missing.length > 0) {
+            console.log(
+              `   Session Missing:   [${sessionComparison.missing.join(', ')}]`
+            )
+          }
+          if (sessionComparison.extra.length > 0) {
+            console.log(
+              `   Session Extra:     [${sessionComparison.extra.join(', ')}]`
+            )
+          }
         }
         failed++
         failures.push({
           scenario: scenario.name,
-          expected: scenario.expectedServices,
-          actual: actualServices,
-          missing: comparison.missing,
-          extra: comparison.extra,
+          expectedSingleton: scenario.expectedSingletonServices,
+          actualSingleton: actualServices.singletonServices,
+          missingSingleton: singletonComparison.missing,
+          extraSingleton: singletonComparison.extra,
+          expectedSession: scenario.expectedSessionServices,
+          actualSession: actualServices.sessionServices,
+          missingSession: sessionComparison.missing,
+          extraSession: sessionComparison.extra,
         })
       }
 
       assert.deepStrictEqual(
-        actualServices,
-        scenario.expectedServices,
-        `Services mismatch for scenario: ${scenario.name}\n` +
-          `Expected: [${scenario.expectedServices.join(', ')}]\n` +
-          `Actual:   [${actualServices.join(', ')}]`
+        actualServices.singletonServices,
+        scenario.expectedSingletonServices,
+        `Singleton services mismatch for scenario: ${scenario.name}\n` +
+          `Expected: [${scenario.expectedSingletonServices.join(', ')}]\n` +
+          `Actual:   [${actualServices.singletonServices.join(', ')}]`
+      )
+
+      assert.deepStrictEqual(
+        actualServices.sessionServices,
+        scenario.expectedSessionServices,
+        `Session services mismatch for scenario: ${scenario.name}\n` +
+          `Expected: [${scenario.expectedSessionServices.join(', ')}]\n` +
+          `Actual:   [${actualServices.sessionServices.join(', ')}]`
       )
     })
   }
@@ -185,13 +264,37 @@ async function runTests() {
     console.log('\n❌ Failed Scenarios:\n')
     failures.forEach((failure) => {
       console.log(`  • ${failure.scenario}`)
-      console.log(`    Expected: [${failure.expected.join(', ')}]`)
-      console.log(`    Actual:   [${failure.actual.join(', ')}]`)
-      if (failure.missing.length > 0) {
-        console.log(`    Missing:  [${failure.missing.join(', ')}]`)
+      console.log(
+        `    Expected Singleton: [${failure.expectedSingleton.join(', ')}]`
+      )
+      console.log(
+        `    Actual Singleton:   [${failure.actualSingleton.join(', ')}]`
+      )
+      if (failure.missingSingleton.length > 0) {
+        console.log(
+          `    Singleton Missing:  [${failure.missingSingleton.join(', ')}]`
+        )
       }
-      if (failure.extra.length > 0) {
-        console.log(`    Extra:    [${failure.extra.join(', ')}]`)
+      if (failure.extraSingleton.length > 0) {
+        console.log(
+          `    Singleton Extra:    [${failure.extraSingleton.join(', ')}]`
+        )
+      }
+      console.log(
+        `    Expected Session:   [${failure.expectedSession.join(', ')}]`
+      )
+      console.log(
+        `    Actual Session:     [${failure.actualSession.join(', ')}]`
+      )
+      if (failure.missingSession.length > 0) {
+        console.log(
+          `    Session Missing:    [${failure.missingSession.join(', ')}]`
+        )
+      }
+      if (failure.extraSession.length > 0) {
+        console.log(
+          `    Session Extra:      [${failure.extraSession.join(', ')}]`
+        )
       }
       console.log()
     })

@@ -33,6 +33,9 @@ export class PikkuLocalChannelHandler<
   }
 
   public close() {
+    if (this.getChannel().state === 'closed') {
+      return
+    }
     super.close()
     this.closeCallback?.()
   }

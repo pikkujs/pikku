@@ -10,11 +10,12 @@ export const serializeChannelTypes = (functionTypesImportPath: string) => {
 import { CoreChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { CorePikkuFunctionConfig } from '@pikku/core'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
-import type { PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
+import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 
 /**
  * Type definition for WebSocket channels with typed data exchange.
  * Supports connection, disconnection, and message handling.
+ * Accepts both session-based (PikkuFunction) and sessionless (PikkuFunctionSessionless) functions.
  *
  * @template ChannelData - Type of data exchanged through the channel
  * @template Channel - String literal type for the channel name
@@ -24,7 +25,7 @@ type ChannelWiring<ChannelData, Channel extends string> = CoreChannel<
   Channel,
   CorePikkuFunctionConfig<PikkuFunctionSessionless<void, any, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
   CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void, ChannelData>, PikkuPermission<void>, PikkuMiddleware>,
-  CorePikkuFunctionConfig<PikkuFunctionSessionless<any, any, ChannelData>, PikkuPermission<any>, PikkuMiddleware>,
+  CorePikkuFunctionConfig<PikkuFunctionSessionless<any, any, ChannelData> | PikkuFunction<any, any, ChannelData>, PikkuPermission<any>, PikkuMiddleware>,
   PikkuPermission,
   PikkuMiddleware
 >

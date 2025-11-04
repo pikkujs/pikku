@@ -83,23 +83,25 @@ export const calculate = pikkuMCPToolFunc<{
 })
 
 /**
- * A mock user information resource that returns user data
+ * A static resource that returns predefined data
  */
-export const getStaticResource = pikkuMCPResourceFunc(async ({ mcp }) => {
-  return [
-    {
-      uri: mcp.uri!,
-      text: JSON.stringify('Hello! This is a static resource.'),
-    },
-  ]
-})
+export const getStaticResource = pikkuMCPResourceFunc<unknown>(
+  async ({ mcp }) => {
+    return [
+      {
+        uri: mcp.uri!,
+        text: JSON.stringify('Hello! This is a static resource.'),
+      },
+    ]
+  }
+)
 
 /**
  * A mock user information resource that returns user data
  */
 export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
-  async (services, { userId }) => {
-    services.logger.info(`Getting user info for: ${userId}`)
+  async ({ mcp, logger }, { userId }) => {
+    logger.info(`Getting user info for: ${userId}`)
 
     // Mock user data - in a real app this would come from a database
     const mockUsers: Record<
@@ -127,7 +129,7 @@ export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
 
     return [
       {
-        uri: `getUserInfo/${userId}`,
+        uri: mcp.uri!,
         text: JSON.stringify(user),
       },
     ]

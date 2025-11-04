@@ -6,7 +6,11 @@ async function check() {
   try {
     console.log('🔄 Testing Server-Sent Events...')
 
-    const evtSource = new EventSource('http://localhost:4002/sse', {
+    const serverUrl =
+      process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+    console.log('Starting HTTP SSE test with url:', serverUrl)
+
+    const evtSource = new EventSource(`${serverUrl}/sse`, {
       withCredentials: true,
     })
 

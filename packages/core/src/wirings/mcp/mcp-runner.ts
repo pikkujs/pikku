@@ -62,7 +62,7 @@ export const wireMCPResource = <
   if (!mcpResourceMeta) {
     throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
   }
-  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource)
+  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource.func as any)
   const resources = pikkuState('mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
@@ -160,7 +160,9 @@ export async function runMCPResource(
     uri,
     endpoint,
     pikkuFuncName,
-    { ...params, mcp: { uri } } as RunMCPEndpointParams<keyof CoreMCPResource>
+    { ...params, mcp: { ...params.mcp, uri } } as RunMCPEndpointParams<
+      keyof CoreMCPResource
+    >
   )
 }
 
@@ -250,6 +252,7 @@ async function runMCPPikkuFunc(
         {
           ...singletonServices,
           ...sessionServices,
+          mcp: mcpInteraction,
         },
         interaction
       )
