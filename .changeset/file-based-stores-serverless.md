@@ -1,5 +1,5 @@
 ---
-'@pikku/core': minor
+'@pikku/core': patch
 ---
 
 Add file-based storage implementations for serverless environments
