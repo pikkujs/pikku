@@ -89,7 +89,8 @@ jobs:
       fail-fast: false
       matrix:
         version: [20, 24]
-        template: [
+        template:
+          [
             express,
             express-middleware,
             fastify,
@@ -211,7 +212,8 @@ jobs:
       fail-fast: false
       matrix:
         version: [24]
-        template: [
+        template:
+          [
             express,
             express-middleware,
             fastify,
@@ -226,8 +228,7 @@ jobs:
             mcp-server,
             cli,
             pg-boss,
-            bullmq,
-            cli
+            bullmq
           ]
     steps:
       - name: Check out repository code

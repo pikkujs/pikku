@@ -143,12 +143,28 @@ Generated on: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
 From commit: ${GITHUB_SHA:-unknown}"
 
     log_info "Pushing branch: $branch_name"
-    git push origin "$branch_name"
+    if ! git push origin "$branch_name"; then
+        log_error "Failed to push branch $branch_name"
+        cd /
+        rm -rf "$temp_dir"
+        return 1
+    fi
 
     if [ "$APPLY_CHANGES" = "true" ]; then
         log_info "Replacing remote 'main' branch with $branch_name"
-        git push origin "$branch_name:main" --force
-        git push origin --delete "$branch_name"
+        if ! git push origin "$branch_name:main" --force; then
+            log_error "Failed to force push to main branch"
+            cd /
+            rm -rf "$temp_dir"
+            return 1
+        fi
+
+        if ! git push origin --delete "$branch_name"; then
+            log_error "Failed to delete branch $branch_name"
+            cd /
+            rm -rf "$temp_dir"
+            return 1
+        fi
         log_success "Successfully replaced main branch for template: $template_name"
     else
         log_info "Dry run complete. New branch '$branch_name' created with updated content"
