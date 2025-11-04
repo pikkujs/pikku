@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cloudflare",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -19,7 +19,7 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.10.0"
+    "@pikku/core": "^0.10.2"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.9.14",

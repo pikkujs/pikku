@@ -1,5 +1,18 @@
 ## 0.8.0
 
+## 0.10.1
+
+### Patch Changes
+
+- e35722d: Fix request converter to avoid undefined httpMethod
+
+  Store httpMethod in a variable before using it to prevent potential undefined access issues in request body handling.
+
+- Updated dependencies [ea652dc]
+- Updated dependencies [4349ec5]
+- Updated dependencies [44d71a8]
+  - @pikku/core@0.10.2
+
 ## 0.10.0
 
 This release includes significant improvements across the framework including tree-shaking support, middleware/permission factories, enhanced CLI functionality, improved TypeScript type safety, and comprehensive test strategies.
