@@ -105,9 +105,17 @@ export const all: any = pikkuVoidFunc({
       await rpc.invoke('pikkuWorkflowMap', null)
       allImports.push(
         config.workflowsWiringMetaFile,
-        config.workflowsWiringFile,
-        config.workflowsWorkersFile
+        config.workflowsWiringFile
       )
+      // Note: workflow workers are generated in workflowWorkersDirectory and imported automatically
+
+      // Re-inspect to pick up generated workflow workers, then regenerate functions and queue metadata
+      logger.info(`• Re-inspecting to pick up workflow workers...`)
+      await getInspectorState(true)
+      await rpc.invoke('pikkuFunctions', null)
+      await rpc.invoke('pikkuQueue', null)
+      await rpc.invoke('pikkuQueueMap', null)
+      logger.info(`✓ Updated queue metadata with workflow workers`)
     }
 
     // Generate Channels

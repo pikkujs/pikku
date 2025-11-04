@@ -66,11 +66,9 @@ const _getPikkuCLIConfig = async (
         },
         ignoreFiles: config.ignoreFiles ??
           extendedConfig.ignoreFiles ?? [
-            '**/*.gen.ts',
             '**/*.test.ts',
             '**/*.spec.ts',
             '**/node_modules/**',
-            '**/.pikku/**',
             '**/dist/**',
           ],
         schema: {
@@ -89,11 +87,9 @@ const _getPikkuCLIConfig = async (
           ? resolve(configDir, config.rootDir)
           : configDir,
         ignoreFiles: config.ignoreFiles ?? [
-          '**/*.gen.ts',
           '**/*.test.ts',
           '**/*.spec.ts',
           '**/node_modules/**',
-          '**/.pikku/**',
           '**/dist/**',
         ],
         schema: {
@@ -282,6 +278,15 @@ const _getPikkuCLIConfig = async (
       result.workflowTypesFile = join(
         workflowDir,
         'pikku-workflow-types.gen.ts'
+      )
+    }
+
+    // Workflow workers directory (where generated workflow functions/queue runners are created)
+    if (!result.workflowWorkersDirectory) {
+      result.workflowWorkersDirectory = join(
+        result.rootDir,
+        result.srcDirectories[0],
+        'workflows'
       )
     }
 

@@ -21,7 +21,7 @@ import {
   CorePikkuPermission,
 } from './function/functions.types.js'
 import {
-  queueWorkersMeta,
+  QueueWorkersMeta,
   CoreQueueWorker,
 } from './wirings/queue/queue.types.js'
 import {
@@ -35,7 +35,7 @@ import {
 import { CLIMeta, CLIProgramState } from './wirings/cli/cli.types.js'
 import {
   CoreWorkflow,
-  workflowsMeta,
+  WorkflowsMeta,
 } from './wirings/workflow/workflow.types.js'
 
 interface PikkuState {
@@ -69,11 +69,11 @@ interface PikkuState {
   }
   queue: {
     registrations: Map<string, CoreQueueWorker>
-    meta: queueWorkersMeta
+    meta: QueueWorkersMeta
   }
   workflows: {
     registrations: Map<string, CoreWorkflow>
-    meta: workflowsMeta
+    meta: WorkflowsMeta
   }
   mcp: {
     resources: Map<string, CoreMCPResource>

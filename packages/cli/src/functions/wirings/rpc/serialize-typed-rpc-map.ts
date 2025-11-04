@@ -48,11 +48,18 @@ export type RPCInvoke = <Name extends keyof RPCMap>(
   }
 ) => Promise<RPCMap[Name]['output']>
 
+// Import WorkflowMap for workflow typing
+import type { WorkflowMap } from '../workflow/pikku-workflow-map.gen.js'
+
 export type TypedPikkuRPC = {
   depth: number;
   global: boolean;
   invoke: RPCInvoke;
-  invokeExposed: (name: string, data: any) => Promise<any> 
+  invokeExposed: (name: string, data: any) => Promise<any>;
+  startWorkflow: <Name extends keyof WorkflowMap>(
+    name: Name,
+    input: WorkflowMap[Name]['input']
+  ) => Promise<{ runId: string }>;
 }
   `
 }

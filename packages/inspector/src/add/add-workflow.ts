@@ -6,7 +6,10 @@ import {
 import { PikkuDocs } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import {
+  getPropertyAssignmentInitializer,
+  resolveFunctionDeclaration,
+} from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
@@ -20,153 +23,81 @@ import {
 } from '../utils/extract-node-value.js'
 
 /**
- * Extract workflow.do() calls from function body
+ * Scan for workflow.do() and workflow.sleep() calls to extract workflow steps
  */
-function extractWorkflowSteps(
-  funcNode: ts.Node,
+function getWorkflowInvocations(
+  node: ts.Node,
   checker: ts.TypeChecker,
-  logger: any,
-  sourceFile: ts.SourceFile
-): WorkflowStepMeta[] {
-  const steps: WorkflowStepMeta[] = []
+  steps: WorkflowStepMeta[]
+) {
+  // Look for property access expressions: workflow.do or workflow.sleep
+  if (ts.isPropertyAccessExpression(node)) {
+    const { name } = node
 
-  function visit(node: ts.Node) {
-    // Look for workflow.do() calls
-    if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === 'do'
-    ) {
-      // Check if it's called on 'workflow'
-      const object = node.expression.expression
-      if (ts.isIdentifier(object) && object.text === 'workflow') {
-        const args = node.arguments
+    // Check if this is accessing 'do' or 'sleep' property
+    if (name.text === 'do' || name.text === 'sleep') {
+      // Check if the parent is a call expression
+      const parent = node.parent
+      if (ts.isCallExpression(parent) && parent.expression === node) {
+        const args = parent.arguments
 
-        // Must have at least 2 arguments: workflow.do(stepName, rpcName|fn, ...)
-        if (args.length >= 2) {
+        if (name.text === 'do' && args.length >= 2) {
+          // workflow.do(stepName, rpcName|fn, data?, options?)
           const stepNameArg = args[0]
           const secondArg = args[1]
-          const optionsArg = args[2] // Optional 3rd or 4th argument
+          const optionsArg =
+            args.length >= 3 ? args[args.length - 1] : undefined
 
-          // Extract stepName
           const stepName = extractStringLiteral(stepNameArg, checker)
+          const description = extractDescription(optionsArg, checker)
 
           // Determine form by checking 2nd argument type
           if (isStringLike(secondArg, checker)) {
             // RPC form: workflow.do(stepName, rpcName, data, options?)
             const rpcName = extractStringLiteral(secondArg, checker)
-            const description = extractDescription(optionsArg, checker)
-
             steps.push({
               type: 'rpc',
               stepName: stepName || '<dynamic>',
               rpcName: rpcName || '<dynamic>',
               description: description || '<dynamic>',
             })
-
-            // Emit warning if stepName is dynamic without description
-            if (!stepName && !description) {
-              const { line, character } =
-                sourceFile.getLineAndCharacterOfPosition(stepNameArg.getStart())
-              logger.warning(
-                ErrorCode.DYNAMIC_STEP_NAME,
-                `Dynamic step name at ${sourceFile.fileName}:${line + 1}:${character + 1}\n\n` +
-                  `    await workflow.do(${stepNameArg.getText()}, ...)\n` +
-                  `                      ${'^'.repeat(stepNameArg.getText().length)}\n\n` +
-                  `    Step names are dynamic and will not appear in generated documentation.\n` +
-                  `    Consider adding a description for better observability:\n\n` +
-                  `    await workflow.do(${stepNameArg.getText()}, ..., {\n` +
-                  `      description: 'Describe what this step does'\n` +
-                  `    })`
-              )
-            }
           } else if (isFunctionLike(secondArg)) {
             // Inline form: workflow.do(stepName, fn, options?)
-            const description = extractDescription(optionsArg, checker)
-
             steps.push({
               type: 'inline',
               stepName: stepName || '<dynamic>',
               description: description || '<dynamic>',
             })
-
-            // Emit warning if stepName is dynamic without description
-            if (!stepName && !description) {
-              const { line, character } =
-                sourceFile.getLineAndCharacterOfPosition(stepNameArg.getStart())
-              logger.warning(
-                ErrorCode.DYNAMIC_STEP_NAME,
-                `Dynamic step name at ${sourceFile.fileName}:${line + 1}:${character + 1}\n\n` +
-                  `    await workflow.do(${stepNameArg.getText()}, ...)\n` +
-                  `                      ${'^'.repeat(stepNameArg.getText().length)}\n\n` +
-                  `    Step names are dynamic and will not appear in generated documentation.\n` +
-                  `    Consider adding a description for better observability:\n\n` +
-                  `    await workflow.do(${stepNameArg.getText()}, ..., {\n` +
-                  `      description: 'Describe what this step does'\n` +
-                  `    })`
-              )
-            }
-          } else {
-            // Variable reference - try to infer type
-            const type = checker.getTypeAtLocation(secondArg)
-            const typeString = checker.typeToString(type)
-
-            // If it's a string type, assume RPC form
-            if (typeString === 'string' || typeString.includes('string')) {
-              const rpcName = extractStringLiteral(secondArg, checker)
-              const description = extractDescription(optionsArg, checker)
-
-              steps.push({
-                type: 'rpc',
-                stepName: stepName || '<dynamic>',
-                rpcName: rpcName || '<dynamic>',
-                description: description || '<dynamic>',
-              })
-            } else {
-              // Otherwise assume inline form
-              const description = extractDescription(optionsArg, checker)
-
-              steps.push({
-                type: 'inline',
-                stepName: stepName || '<dynamic>',
-                description: description || '<dynamic>',
-              })
-            }
           }
-        }
-      }
-    }
+        } else if (name.text === 'sleep' && args.length >= 2) {
+          // workflow.sleep(stepName, duration)
+          const stepNameArg = args[0]
+          const durationArg = args[1]
 
-    // Also look for workflow.sleep() calls
-    if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === 'sleep'
-    ) {
-      const object = node.expression.expression
-      if (ts.isIdentifier(object) && object.text === 'workflow') {
-        const args = node.arguments
-        if (args.length >= 1) {
-          const durationArg = args[0]
-          const optionsArg = args[1]
-
+          const stepName = extractStringLiteral(stepNameArg, checker)
           const duration = extractDuration(durationArg, checker)
-          const description = extractDescription(optionsArg, checker)
 
           steps.push({
             type: 'sleep',
+            stepName: stepName || '<dynamic>',
             duration: duration || '<dynamic>',
-            description: description || '<dynamic>',
           })
         }
       }
     }
-
-    ts.forEachChild(node, visit)
   }
 
-  visit(funcNode)
-  return steps
+  // Don't recurse into nested functions - only look at top-level workflow calls
+  ts.forEachChild(node, (child) => {
+    if (
+      ts.isFunctionDeclaration(child) ||
+      ts.isFunctionExpression(child) ||
+      ts.isArrowFunction(child)
+    ) {
+      return
+    }
+    getWorkflowInvocations(child, checker, steps)
+  })
 }
 
 /**
@@ -278,13 +209,19 @@ export const addWorkflow: AddWiring = (
     state.workflows.files.add(node.getSourceFile().fileName)
 
     // Extract workflow steps from function body
-    const sourceFile = node.getSourceFile()
-    const steps = extractWorkflowSteps(
-      funcInitializer,
-      checker,
-      logger,
-      sourceFile
-    )
+    // Resolve the identifier to the actual function declaration
+    const resolvedFunc = resolveFunctionDeclaration(funcInitializer, checker)
+    const steps: WorkflowStepMeta[] = []
+    if (resolvedFunc) {
+      console.log(
+        `[DEBUG] Resolved function for ${workflowName}:`,
+        ts.SyntaxKind[resolvedFunc.kind]
+      )
+      getWorkflowInvocations(resolvedFunc, checker, steps)
+      console.log(`[DEBUG] Extracted ${steps.length} steps for ${workflowName}`)
+    } else {
+      console.log(`[DEBUG] Failed to resolve function for ${workflowName}`)
+    }
 
     state.workflows.meta[workflowName] = {
       pikkuFuncName,

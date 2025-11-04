@@ -12,7 +12,8 @@
       "packages/services/*",
       "packages/runtimes/*",
       "templates/*",
-      "verifiers/*"
+      "verifiers/*",
+      "test-workflow-app"
     ]
   },
   "scripts": {

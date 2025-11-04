@@ -1,6 +1,6 @@
 import { PikkuDocs, MiddlewareMetadata } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
-import { WorkflowMeta, WorkflowRun } from './workflow-state.types.js'
+import { WorkflowRun } from './workflow-state.types.js'
 
 /**
  * Core workflow definition
@@ -40,6 +40,33 @@ export interface WorkflowStepOptions {
 }
 
 /**
+ * Type signature for workflow.do() RPC form - used by inspector
+ */
+export type WorkflowInteractionDoRPC = <TOutput = any, TInput = any>(
+  stepName: string,
+  rpcName: string,
+  data: TInput,
+  options?: WorkflowStepOptions
+) => Promise<TOutput>
+
+/**
+ * Type signature for workflow.do() inline form - used by inspector
+ */
+export type WorkflowInteractionDoInline = <T>(
+  stepName: string,
+  fn: () => Promise<T> | T,
+  options?: WorkflowStepOptions
+) => Promise<T>
+
+/**
+ * Type signature for workflow.sleep() - used by inspector
+ */
+export type WorkflowInteractionSleep = (
+  stepName: string,
+  duration: string
+) => Promise<void>
+
+/**
  * Workflow step metadata (extracted by inspector)
  */
 export type WorkflowStepMeta =
@@ -66,14 +93,12 @@ export type WorkflowStepMeta =
       options?: WorkflowStepOptions
     }
   | {
-      /** Sleep step (Phase 2) */
+      /** Sleep step */
       type: 'sleep'
+      /** Cache key (stepName from workflow.sleep) */
+      stepName: string | '<dynamic>'
       /** Sleep duration */
       duration: string | number | '<dynamic>'
-      /** Display name */
-      description?: string | '<dynamic>'
-      /** Step options */
-      options?: WorkflowStepOptions
     }
 
 /**
@@ -88,40 +113,11 @@ export interface PikkuWorkflowInteraction {
   /** Get the current workflow run */
   getRun: () => Promise<WorkflowRun>
 
-  /**
-   * Execute a workflow step - RPC form
-   * Generates a dedicated queue worker for isolated execution with retries
-   * @param stepName - Cache key for step result (must be deterministic)
-   * @param rpcName - Name of the RPC function to invoke
-   * @param data - Input data for the RPC
-   * @param options - Step options (description, etc.)
-   */
-  do<TOutput = any, TInput = any>(
-    stepName: string,
-    rpcName: string,
-    data: TInput,
-    options?: WorkflowStepOptions
-  ): Promise<TOutput>
+  /** Execute a workflow step (overloaded - RPC or inline form) */
+  do: WorkflowInteractionDoRPC & WorkflowInteractionDoInline
 
-  /**
-   * Execute a workflow step - Inline form
-   * Executes locally in orchestrator, result is cached for replay
-   * @param stepName - Cache key for step result (must be deterministic)
-   * @param fn - Function to execute (must be deterministic)
-   * @param options - Step options (description, etc.)
-   */
-  do<T>(
-    stepName: string,
-    fn: () => Promise<T> | T,
-    options?: WorkflowStepOptions
-  ): Promise<T>
-
-  /**
-   * Sleep for a duration (Phase 2)
-   * @param duration - Sleep duration (ms or duration string)
-   * @param options - Step options
-   */
-  sleep(duration: string | number, options?: WorkflowStepOptions): Promise<void>
+  /** Sleep for a duration */
+  sleep: WorkflowInteractionSleep
 }
 
 /**
@@ -139,7 +135,7 @@ export interface PikkuWorkflow {
 /**
  * Workflows metadata for inspector/CLI
  */
-export type workflowsMeta = Record<
+export type WorkflowsMeta = Record<
   string,
   {
     pikkuFuncName: string
@@ -150,7 +146,6 @@ export type workflowsMeta = Record<
     docs?: PikkuDocs
     tags?: string[]
     middleware?: MiddlewareMetadata[]
-    meta: WorkflowMeta
   }
 >
 

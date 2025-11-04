@@ -1,5 +1,3 @@
-import { WorkflowStepMeta } from './workflow.types.js'
-
 /**
  * Workflow run status
  */
@@ -21,22 +19,6 @@ export interface SerializedError {
 }
 
 /**
- * Workflow metadata (frozen at run creation)
- */
-export interface WorkflowMeta {
-  /** Workflow name */
-  name: string
-  /** Description */
-  description?: string
-  /** Execution mode */
-  executionMode: 'inline' | 'remote'
-  /** Discovered steps from inspector */
-  steps: WorkflowStepMeta[]
-  /** Tags */
-  tags?: string[]
-}
-
-/**
  * Workflow run representation
  */
 export interface WorkflowRun {
@@ -46,8 +28,6 @@ export interface WorkflowRun {
   workflow: string
   /** Current status */
   status: WorkflowStatus
-  /** Frozen metadata from creation */
-  meta: WorkflowMeta
   /** Input data */
   input: any
   /** Output data (if completed) */
@@ -79,13 +59,19 @@ export interface StepState {
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
  */
 export abstract class WorkflowStateService {
+  protected queue?: any
+
+  constructor(queue?: any) {
+    this.queue = queue
+  }
+
   /**
    * Create a new workflow run
-   * @param meta - Workflow metadata (frozen at creation)
+   * @param name - Workflow name
    * @param input - Input data for the workflow
    * @returns Run ID
    */
-  abstract createRun(meta: WorkflowMeta, input: any): Promise<string>
+  abstract createRun(workflowName: string, input: any): Promise<string>
 
   /**
    * Get a workflow run by ID
@@ -157,4 +143,19 @@ export abstract class WorkflowStateService {
    * Close any open connections
    */
   abstract close(): Promise<void>
+
+  /**
+   * Add orchestrator job to queue for remote workflow execution
+   * @param workflowName - Workflow name
+   * @param runId - Run ID
+   */
+  async addToQueue(workflowName: string, runId: string): Promise<void> {
+    if (!this.queue) {
+      throw new Error(
+        'QueueService not configured. Remote workflows require a queue service.'
+      )
+    }
+
+    await this.queue.add(`workflow-${workflowName}-orchestrator`, { runId })
+  }
 }

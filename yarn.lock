@@ -3866,6 +3866,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/templates-workflows@workspace:templates/workflows":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-workflows@workspace:templates/workflows"
+  dependencies:
+    "@pikku/core": "npm:^0.10.0"
+    "@pikku/queue-bullmq": "npm:^0.10.0"
+    "@types/node": "npm:^24"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/templates-ws-server@workspace:templates/ws":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-ws-server@workspace:templates/ws"

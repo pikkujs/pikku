@@ -1,6 +1,6 @@
-import { workflowsMeta } from '@pikku/core/workflow'
+import { WorkflowsMeta } from '@pikku/core/workflow'
 
-export const serializeWorkflowMeta = (workflowsMeta: workflowsMeta) => {
+export const serializeWorkflowMeta = (workflowsMeta: WorkflowsMeta) => {
   const serializedOutput: string[] = []
   serializedOutput.push("import { pikkuState } from '@pikku/core'")
   serializedOutput.push(

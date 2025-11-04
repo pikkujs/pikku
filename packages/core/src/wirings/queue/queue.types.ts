@@ -148,7 +148,7 @@ export interface QueueWorkers {
 /**
  * Queue processor metadata
  */
-export type queueWorkersMeta = Record<
+export type QueueWorkersMeta = Record<
   string,
   {
     pikkuFuncName: string

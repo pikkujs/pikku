@@ -10,7 +10,7 @@ import type {
 } from './workflow-state.types.js'
 import { PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
-import { addFunction, invokeFunction } from '../../function/function-runner.js'
+import { runPikkuFuncDirectly } from '../../function/function-runner.js'
 import { WorkflowAsyncException } from './workflow.types.js'
 
 /**
@@ -54,26 +54,9 @@ export const wireWorkflow = <
     )
   }
 
-  // Register the function with pikku
-  addFunction(workflowMeta.pikkuFuncName, {
-    func: workflow.func.func,
-    auth: workflow.func.auth,
-    permissions: workflow.func.permissions,
-    middleware: workflow.func.middleware as any,
-    tags: workflow.func.tags,
-    docs: workflow.func.docs as any,
-  })
-
   // Store workflow definition in state
   const registrations = pikkuState('workflows', 'registrations')
   registrations.set(workflow.name, workflow)
-}
-
-/**
- * Get all registered workflows
- */
-export function getWorkflows(): Map<string, CoreWorkflow> {
-  return pikkuState('workflows', 'registrations')
 }
 
 /**
@@ -121,15 +104,7 @@ export async function startWorkflow<I>(
   }
 
   // If remote mode, enqueue orchestrator job
-  const queueService = (singletonServices as any).queue
-  if (!queueService) {
-    throw new Error(
-      'QueueService not configured. Remote workflows require a queue service.'
-    )
-  }
-
-  // Schedule orchestrator job
-  await queueService.add(`workflow-${name}-orchestrator`, { runId })
+  await workflowState.addToQueue(name, runId)
 
   return { runId }
 }
@@ -190,7 +165,7 @@ export async function runWorkflowJob(
           // RPC form: workflow.do(stepName, rpcName, data, options?)
           const rpcName = rpcNameOrFn
           const data = dataOrOptions
-          const stepOptions = options
+          // options parameter available but not used in MVP
 
           // Check step state
           const stepState = await workflowState.getStepState(runId, stepName)
@@ -236,7 +211,7 @@ export async function runWorkflowJob(
         } else {
           // Inline form: workflow.do(stepName, fn, options?)
           const fn = rpcNameOrFn
-          const stepOptions = dataOrOptions
+          // options parameter available in dataOrOptions but not used in MVP
 
           // Check step state
           const stepState = await workflowState.getStepState(runId, stepName)
@@ -259,12 +234,25 @@ export async function runWorkflowJob(
       },
 
       // Implement workflow.sleep()
-      sleep: async (duration: string | number, options?: any) => {
-        // TODO: Implement sleep functionality
-        // For now, just wait
-        const ms =
-          typeof duration === 'string' ? parseDuration(duration) : duration
-        await new Promise((resolve) => setTimeout(resolve, ms))
+      sleep: async (stepName: string, _duration: string) => {
+        // Check if stepName is string
+        if (typeof stepName !== 'string') {
+          throw new Error('Step name must be a string')
+        }
+
+        // Check step state
+        const stepState = await workflowState.getStepState(runId, stepName)
+
+        if (stepState.status === 'done') {
+          // Sleep already completed, return immediately
+          return
+        }
+
+        // For now, just use a 5 second timeout (duration parameter ignored)
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+
+        // Mark sleep as done
+        await workflowState.setStepResult(runId, stepName, null)
       },
     } as any
 
@@ -274,12 +262,17 @@ export async function runWorkflowJob(
 
     // Execute workflow function with workflow interaction
     try {
-      const result = await invokeFunction(
+      // Create services with workflow interaction
+      const allServices = {
+        ...singletonServices,
+        workflow: workflowInteraction,
+      } as any
+
+      const result = await runPikkuFuncDirectly(
         workflowMeta.pikkuFuncName,
+        allServices,
         run.input,
-        singletonServices,
-        null as any, // No session for workflows
-        { workflow: workflowInteraction } as any
+        undefined // No session for workflows
       )
 
       // Workflow completed successfully
@@ -300,77 +293,4 @@ export async function runWorkflowJob(
       throw error
     }
   })
-}
-
-/**
- * Parse duration string to milliseconds
- * Supports: '1s', '5m', '1h', '2d'
- */
-function parseDuration(duration: string): number {
-  const match = duration.match(/^(\d+)([smhd])$/)
-  if (!match) {
-    throw new Error(`Invalid duration format: ${duration}`)
-  }
-
-  const value = parseInt(match[1], 10)
-  const unit = match[2]
-
-  const multipliers: Record<string, number> = {
-    s: 1000,
-    m: 60 * 1000,
-    h: 60 * 60 * 1000,
-    d: 24 * 60 * 60 * 1000,
-  }
-
-  return value * multipliers[unit]
-}
-
-/**
- * Get a workflow run by ID
- */
-export async function getWorkflowRun(
-  runId: string,
-  singletonServices: CoreServices
-): Promise<WorkflowRun | null> {
-  const workflowState = (singletonServices as any)
-    .workflowState as WorkflowStateService
-  if (!workflowState) {
-    throw new WorkflowStateServiceNotConfiguredError()
-  }
-
-  return workflowState.getRun(runId)
-}
-
-/**
- * Cancel a running workflow
- */
-export async function cancelWorkflowRun(
-  runId: string,
-  singletonServices: CoreServices
-): Promise<void> {
-  const workflowState = (singletonServices as any)
-    .workflowState as WorkflowStateService
-  if (!workflowState) {
-    throw new WorkflowStateServiceNotConfiguredError()
-  }
-
-  // TODO: Implement cancellation logic
-  // For MVP, this is a placeholder
-  // Full implementation will:
-  // 1. Mark run as failed with cancelled status
-  // 2. Clean up any pending queue jobs
-}
-
-/**
- * Remove a workflow from the registry
- */
-export async function removeWorkflow(name: string): Promise<void> {
-  const registrations = pikkuState('workflows', 'registrations')
-  const registration = registrations.get(name)
-
-  if (!registration) {
-    throw new WorkflowNotFoundError(name)
-  }
-
-  registrations.delete(name)
 }

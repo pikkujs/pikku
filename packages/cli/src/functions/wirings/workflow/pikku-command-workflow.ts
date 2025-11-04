@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { ErrorCode } from '@pikku/inspector'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -7,6 +8,7 @@ import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { join } from 'path'
 
 export const pikkuWorkflow: any = pikkuSessionlessFunc<
   void,
@@ -17,13 +19,40 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const {
       workflowsWiringFile,
       workflowsWiringMetaFile,
-      workflowsWorkersFile,
+      workflowWorkersDirectory,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
       packageMappings,
     } = config
-    const { workflows, function: functionState, typesMap } = visitState
+    const { workflows, functions: functionState } = visitState
+    const { typesMap } = functionState
+
+    // Validate that workflowState service is configured if workflows are defined
+    const hasWorkflows = Object.keys(workflows.meta).length > 0
+    if (hasWorkflows) {
+      const hasWorkflowState =
+        visitState.serviceAggregation.allSingletonServices.includes(
+          'workflowState'
+        )
+      if (!hasWorkflowState) {
+        logger.critical(
+          ErrorCode.WORKFLOW_STATE_NOT_CONFIGURED,
+          'Workflows detected but workflowState service not configured. Please add workflowState to your singleton services:\n\n' +
+            "import { WorkflowStateService } from '@pikku/core/workflow'\n\n" +
+            'export const createSingletonServices = async (config) => {\n' +
+            "  const workflowState = new WorkflowStateService('.workflows')\n" +
+            '  return {\n' +
+            '    ...,\n' +
+            '    workflowState,\n' +
+            '  }\n' +
+            '}'
+        )
+        throw new Error(
+          'WorkflowState service not configured but workflows are defined'
+        )
+      }
+    }
 
     // Write workflow metadata
     await writeFileInDir(
@@ -70,15 +99,15 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     )
 
     // Write workflow workers (queue workers for RPC steps and orchestrators)
+    // Workers are written to the workflowWorkersDirectory so they're scanned by inspector
+    const workflowsWorkersFile = join(
+      workflowWorkersDirectory!,
+      'workflow.workers.gen.ts'
+    )
     await writeFileInDir(
       logger,
       workflowsWorkersFile,
-      serializeWorkflowWorkers(
-        workflowsWorkersFile,
-        workflowTypesFile,
-        packageMappings,
-        workflows.meta
-      )
+      serializeWorkflowWorkers(workflows.meta)
     )
 
     return true

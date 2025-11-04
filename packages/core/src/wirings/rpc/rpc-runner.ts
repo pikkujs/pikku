@@ -74,6 +74,15 @@ class ContextAwareRPCService {
       }
     )
   }
+
+  public async startWorkflow<In = any>(
+    workflowName: string,
+    input: In
+  ): Promise<{ runId: string }> {
+    // Import startWorkflow dynamically to avoid circular dependencies
+    const { startWorkflow } = await import('../workflow/workflow-runner.js')
+    return startWorkflow(workflowName, input, this.services)
+  }
 }
 
 // RPC Service class for the global interface
@@ -107,6 +116,7 @@ export class PikkuRPCService<
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
       invokeExposed: serviceRPC.rpc.bind(serviceRPC),
+      startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
     } as any
     return serviceCopy as Services & { rpc: TypedRPC }
   }

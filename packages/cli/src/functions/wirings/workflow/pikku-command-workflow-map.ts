@@ -6,7 +6,8 @@ export const pikkuWorkflowMap: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { workflowMapDeclarationFile, packageMappings } = config
-    const { workflows, function: functionState, typesMap } = visitState
+    const { workflows, functions: functionState } = visitState
+    const { typesMap } = functionState
 
     await writeFileInDir(
       logger,

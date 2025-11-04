@@ -1,14 +1,32 @@
-// Workflow types
-export * from './workflow.types.js'
-export * from './workflow-state.types.js'
+/**
+ * Workflow module exports
+ */
 
-// Workflow runner functions
-export {
-  wireWorkflow,
-  getWorkflows,
-  startWorkflow,
-  runWorkflowJob,
-  getWorkflowRun,
-  cancelWorkflowRun,
-  removeWorkflow,
-} from './workflow-runner.js'
+// Types
+export type {
+  CoreWorkflow,
+  WorkflowStepOptions,
+  WorkflowStepMeta,
+  PikkuWorkflowInteraction,
+  PikkuWorkflow,
+  WorkflowsMeta,
+} from './workflow.types.js'
+
+export type {
+  WorkflowStatus,
+  StepStatus,
+  SerializedError,
+  WorkflowRun,
+  StepState,
+} from './workflow-state.types.js'
+
+export { WorkflowStateService } from './workflow-state.types.js'
+
+// Functions
+export { wireWorkflow, runWorkflowJob } from './workflow-runner.js'
+
+// Exceptions
+export { WorkflowAsyncException } from './workflow.types.js'
+
+// Services
+export { FileWorkflowStateService } from '../../services/file-workflow-state.js'

@@ -2,7 +2,6 @@ import { promises as fs } from 'fs'
 import { join } from 'path'
 import {
   WorkflowStateService,
-  WorkflowMeta,
   WorkflowRun,
   WorkflowStatus,
   StepState,
@@ -17,8 +16,8 @@ import {
 export class FileWorkflowStateService extends WorkflowStateService {
   private storageDir: string
 
-  constructor(storageDir: string = '/tmp/pikku-workflows') {
-    super()
+  constructor(storageDir: string = '/tmp/pikku-workflows', queue?: any) {
+    super(queue)
     this.storageDir = storageDir
   }
 
@@ -49,7 +48,7 @@ export class FileWorkflowStateService extends WorkflowStateService {
   /**
    * Create a new workflow run
    */
-  async createRun(meta: WorkflowMeta, input: any): Promise<string> {
+  async createRun(workflow: string, input: any): Promise<string> {
     await this.ensureDir(join(this.storageDir, 'runs'))
     await this.ensureDir(join(this.storageDir, 'steps'))
 
@@ -58,9 +57,8 @@ export class FileWorkflowStateService extends WorkflowStateService {
 
     const run: WorkflowRun = {
       id: runId,
-      workflow: meta.name,
+      workflow,
       status: 'running',
-      meta,
       input,
       createdAt: now,
       updatedAt: now,
