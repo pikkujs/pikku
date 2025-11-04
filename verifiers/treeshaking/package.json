@@ -11,10 +11,10 @@
     "prebuild": "npm run generate:readme"
   },
   "dependencies": {
-    "@pikku/core": "^0.10.0"
+    "@pikku/core": "^0.10.1"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.10.0",
+    "@pikku/cli": "^0.10.1",
     "@types/node": "^24",
     "typescript": "^5.9"
   }
