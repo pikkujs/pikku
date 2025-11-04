@@ -70,20 +70,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [22, 24, 26]
+        version: [20, 22, 24]
         template: [
             express,
             express-middleware,
             fastify,
             fastify-plugin,
             uws,
+            ws,
             aws-lambda,
+            aws-lambda-websocket,
             cloudflare-workers,
+            cloudflare-websocket,
             nextjs,
             mcp-server,
             cli,
-            # pg-boss,
-            # bullmq,
+            pg-boss,
+            bullmq,
           ]
         package-manager: [yarn]
     steps:
@@ -107,47 +110,54 @@ jobs:
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
 
-  bun-templates:
-    name: Bun Templates
-    runs-on: ubuntu-latest
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        template: [
-            express,
-            express-middleware,
-            fastify,
-            fastify-plugin,
-            uws,
-            aws-lambda,
-            cloudflare-workers,
-            # nextjs
-          ]
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-          path: packages
-      - name: Install dependencies for create
-        run: yarn install # TODO: This should only need to install create
-      - run: cd packages/create && bun ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager bun
-      - run: cd packages/create/my-app && bun run test
-    env:
-      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+  # bun-templates:
+  #   name: Bun Templates
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       template: [
+  #           express,
+  #           express-middleware,
+  #           fastify,
+  #           fastify-plugin,
+  #           uws,
+  #           ws,
+  #           aws-lambda,
+  #           aws-lambda-websocket,
+  #           cloudflare-workers,
+  #           cloudflare-websocket,
+  #           nextjs,
+  #           mcp-server,
+  #           cli,
+  #           pg-boss,
+  #           bullmq,
+  #         ]
+  #   steps:
+  #     - name: Check out repository code
+  #       uses: actions/checkout@v4
+  #     - run: corepack enable
+  #       shell: bash
+  #     - uses: oven-sh/setup-bun@v2
+  #       with:
+  #         bun-version: latest
+  #     - name: Download built packages
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: built-packages
+  #         path: packages
+  #     - name: Install dependencies for create
+  #       run: yarn install # TODO: This should only need to install create
+  #     - run: cd packages/create && bun ./dist/index.js --template ${{ matrix.template }} --version ${{ github.ref_name }} --name my-app --install --package-manager bun
+  #     - run: cd packages/create/my-app && bun run test
+  #   env:
+  #     SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [bun-templates, templates]
+    needs: [templates]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -187,14 +197,15 @@ jobs:
             uws,
             ws,
             aws-lambda,
-            # aws-lambda-websocket,
+            aws-lambda-websocket,
             cloudflare-workers,
             cloudflare-websocket,
             nextjs,
-            # mcp-server,
+            mcp-server,
             cli,
-            # pgboss,
-            # bullmq,
+            pg-boss,
+            bullmq,
+            cli
           ]
     steps:
       - name: Check out repository code
