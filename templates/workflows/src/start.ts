@@ -2,10 +2,10 @@ import { BullQueueWorkers, BullQueueService } from '@pikku/queue-bullmq'
 import { FileWorkflowStateService } from '@pikku/core/workflow'
 import {
   createConfig,
-  createSingletonServices,
   createSessionServices,
-} from './services.js'
-import '../.pikku/pikku-bootstrap.gen.js'
+  createSingletonServices,
+} from '../../functions/src/services.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {
   try {
@@ -26,12 +26,14 @@ async function main(): Promise<void> {
       workflowState,
     })
 
+    workflowState.setServices(singletonServices, createSessionServices as any)
+
     singletonServices.logger.info('Starting workflow queue workers...')
 
     const bullQueueWorkers = new BullQueueWorkers(
       {},
       singletonServices,
-      createSessionServices
+      createSessionServices as any
     )
 
     singletonServices.logger.info('Registering workflow queue workers...')

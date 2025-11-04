@@ -75,6 +75,7 @@ export const visitSetup = (
   addRPCInvocations(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
+  addWorkflow(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitSetup(logger, checker, child, state, options)
@@ -92,7 +93,6 @@ export const visitRoutes = (
   addHTTPRoute(logger, node, checker, state, options)
   addSchedule(logger, node, checker, state, options)
   addQueueWorker(logger, node, checker, state, options)
-  addWorkflow(logger, node, checker, state, options)
   addChannel(logger, node, checker, state, options)
   addCLI(logger, node, checker, state, options)
   addCLIRenderers(logger, node, checker, state, options)

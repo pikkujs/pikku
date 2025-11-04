@@ -1,6 +1,55 @@
-import { PikkuDocs, MiddlewareMetadata } from '../../types/core.types.js'
+import {
+  PikkuDocs,
+  MiddlewareMetadata,
+  SerializedError,
+} from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
-import { WorkflowRun } from './workflow-state.types.js'
+
+/**
+ * Workflow run status
+ */
+export type WorkflowStatus = 'running' | 'completed' | 'failed'
+
+/**
+ * Workflow step status
+ */
+export type StepStatus = 'pending' | 'scheduled' | 'done' | 'error'
+
+/**
+ * Workflow run representation
+ */
+export interface WorkflowRun {
+  /** Unique run ID */
+  id: string
+  /** Workflow name */
+  workflow: string
+  /** Current status */
+  status: WorkflowStatus
+  /** Input data */
+  input: any
+  /** Output data (if completed) */
+  output?: any
+  /** Error (if failed) */
+  error?: SerializedError
+  /** Creation timestamp */
+  createdAt: number
+  /** Last update timestamp */
+  updatedAt: number
+}
+
+/**
+ * Step state representation
+ */
+export interface StepState {
+  /** Step status */
+  status: StepStatus
+  /** Step result (if done) */
+  result?: any
+  /** Step error (if error) */
+  error?: SerializedError
+  /** Last update timestamp */
+  updatedAt: number
+}
 
 /**
  * Core workflow definition
@@ -74,11 +123,11 @@ export type WorkflowStepMeta =
       /** RPC form - generates queue worker */
       type: 'rpc'
       /** Cache key (stepName from workflow.do) */
-      stepName: string | '<dynamic>'
+      stepName: string
       /** RPC to invoke */
-      rpcName: string | '<dynamic>'
+      rpcName: string
       /** Display name */
-      description?: string | '<dynamic>'
+      description?: string
       /** Step options */
       options?: WorkflowStepOptions
     }
@@ -86,9 +135,9 @@ export type WorkflowStepMeta =
       /** Inline form - local execution */
       type: 'inline'
       /** Cache key (stepName from workflow.do) */
-      stepName: string | '<dynamic>'
+      stepName: string
       /** Display name */
-      description?: string | '<dynamic>'
+      description?: string
       /** Step options */
       options?: WorkflowStepOptions
     }
@@ -96,9 +145,9 @@ export type WorkflowStepMeta =
       /** Sleep step */
       type: 'sleep'
       /** Cache key (stepName from workflow.sleep) */
-      stepName: string | '<dynamic>'
+      stepName: string
       /** Sleep duration */
-      duration: string | number | '<dynamic>'
+      duration: string | number
     }
 
 /**
@@ -149,16 +198,3 @@ export type WorkflowsMeta = Record<
     steps: WorkflowStepMeta[]
   }
 >
-
-/**
- * Exception thrown when workflow needs to pause for async step
- */
-export class WorkflowAsyncException extends Error {
-  constructor(
-    public readonly runId: string,
-    public readonly stepName: string
-  ) {
-    super(`Workflow paused at step: ${stepName}`)
-    this.name = 'WorkflowAsyncException'
-  }
-}

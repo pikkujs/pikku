@@ -34,8 +34,6 @@ export const serializeWorkflowMap = (
 ${serializedImportMap}
 ${serializedCustomTypes}
 
-import type { WorkflowRun } from '@pikku/core/workflow'
-
 interface WorkflowHandler<I, O> {
     input: I;
     output: O;
@@ -55,12 +53,12 @@ export type WorkflowClient<Name extends keyof WorkflowMap> = {
   /**
    * Get a workflow run by ID
    */
-  getRun: (runId: string) => Promise<WorkflowRun>;
+  getRun: <output extends keyof WorkflowMap[Name]>(runId: string) => Promise<WorkflowMap[Name][output]>;
 
   /**
    * Cancel a running workflow
    */
-  cancelRun: (runId: string) => Promise<void>;
+  cancelRun: (runId: string) => Promise<boolean>;
 }
 
 /**

@@ -1,12 +1,15 @@
 /**
  * Example client for starting workflows via RPC
  */
-import { createConfig, createSingletonServices } from '../src/services.js'
-import '../.pikku/pikku-bootstrap.gen.js'
-import { rpcService } from '@pikku/core/rpc'
-import type { TypedPikkuRPC } from '../.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
+import { PikkuRPCService } from '@pikku/core/rpc'
 import { FileWorkflowStateService } from '@pikku/core/workflow'
 import { BullQueueService } from '@pikku/queue-bullmq'
+import {
+  createConfig,
+  createSingletonServices,
+} from '../../functions/src/services.js'
+import { TypedPikkuRPC } from '../../functions/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {
   try {
@@ -25,13 +28,18 @@ async function main(): Promise<void> {
       queueService: bullQueueService,
       workflowState,
     })
+    const logger = singletonServices.logger
 
-    // Initialize RPC service with singleton services
+    // Inject RPC service with singleton services
+    const rpcService = new PikkuRPCService<
+      typeof singletonServices,
+      TypedPikkuRPC
+    >()
     const servicesWithRPC = rpcService.injectRPCService(
       singletonServices,
-      { type: 'cli' } as any,
+      {},
       false
-    ) as typeof singletonServices & { rpc: TypedPikkuRPC }
+    )
 
     // Start the onboarding workflow via RPC
     const { runId } = await servicesWithRPC.rpc.startWorkflow('onboarding', {
@@ -39,25 +47,25 @@ async function main(): Promise<void> {
       userId: 'user-123',
     })
 
-    singletonServices.logger.info(`Workflow started with run ID: ${runId}`)
+    logger.info(`Workflow started with run ID: ${runId}`)
 
     // Poll for workflow completion
-    let run = await singletonServices.workflowState!.getRun(runId)
+    let run = await workflowState.getRun(runId)
     while (run && run.status === 'running') {
-      singletonServices.logger.info('Workflow still running...')
+      logger.info('Workflow still running...')
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      run = await singletonServices.workflowState!.getRun(runId)
+      run = await workflowState.getRun(runId)
     }
 
     if (run?.status === 'completed') {
-      singletonServices.logger.info('Workflow completed successfully!')
-      singletonServices.logger.info('Result:', run.output)
+      logger.info('Workflow completed successfully!')
+      logger.info('Result:', run.output)
       process.exit(0)
     } else if (run?.status === 'failed') {
-      singletonServices.logger.error('Workflow failed:', run.error)
+      logger.error('Workflow failed:', run.error)
       process.exit(1)
     } else {
-      singletonServices.logger.error('Workflow not found')
+      logger.error('Workflow not found')
       process.exit(1)
     }
   } catch (e: any) {

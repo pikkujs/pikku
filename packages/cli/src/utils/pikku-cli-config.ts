@@ -281,15 +281,6 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Workflow workers directory (where generated workflow functions/queue runners are created)
-    if (!result.workflowWorkersDirectory) {
-      result.workflowWorkersDirectory = join(
-        result.rootDir,
-        result.srcDirectories[0],
-        'workflows'
-      )
-    }
-
     // Services
     if (!result.servicesFile) {
       result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')

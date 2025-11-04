@@ -12,21 +12,10 @@ export type {
   WorkflowsMeta,
 } from './workflow.types.js'
 
-export type {
-  WorkflowStatus,
-  StepStatus,
-  SerializedError,
-  WorkflowRun,
-  StepState,
-} from './workflow-state.types.js'
-
-export { WorkflowStateService } from './workflow-state.types.js'
+export { WorkflowStateService } from './workflow-state-service.js'
 
 // Functions
-export { wireWorkflow, runWorkflowJob } from './workflow-runner.js'
-
-// Exceptions
-export { WorkflowAsyncException } from './workflow.types.js'
+export { wireWorkflow } from './workflow-runner.js'
 
 // Services
 export { FileWorkflowStateService } from '../../services/file-workflow-state.js'

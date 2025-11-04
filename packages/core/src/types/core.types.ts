@@ -11,7 +11,7 @@ import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
 import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
 import { PikkuWorkflowInteraction } from '../wirings/workflow/workflow.types.js'
-import { WorkflowStateService } from '../wirings/workflow/workflow-state.types.js'
+import { WorkflowStateService } from '../wirings/workflow/workflow-state-service.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -351,4 +351,14 @@ export type PikkuDocs = {
   description?: string
   tags?: string[]
   errors?: string[]
+}
+
+/**
+ * Serialized error for storage
+ */
+export interface SerializedError {
+  message: string
+  stack?: string
+  code?: string
+  [key: string]: any
 }

@@ -19,7 +19,6 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const {
       workflowsWiringFile,
       workflowsWiringMetaFile,
-      workflowWorkersDirectory,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
@@ -98,17 +97,18 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       )
     )
 
-    // Write workflow workers (queue workers for RPC steps and orchestrators)
-    // Workers are written to the workflowWorkersDirectory so they're scanned by inspector
-    const workflowsWorkersFile = join(
-      workflowWorkersDirectory!,
-      'workflow.workers.gen.ts'
-    )
-    await writeFileInDir(
-      logger,
-      workflowsWorkersFile,
-      serializeWorkflowWorkers(workflows.meta)
-    )
+    if (config.workflows) {
+      if (config.workflows.singleQueue) {
+        const workflowPath = join(config.rootDir, config.workflows.path)
+        await writeFileInDir(logger, workflowPath, serializeWorkflowWorkers())
+      } else if (workflows.files.size > 0) {
+        logger.critical(
+          ErrorCode.WORKFLOW_MULTI_QUEUE_NOT_SUPPORTED,
+          'Multi-queue workflows are not supported when workflows.singleQueue is false. Please enable singleQueue in your configuration.'
+        )
+        return false
+      }
+    }
 
     return true
   },

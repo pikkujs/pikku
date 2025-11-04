@@ -1,12 +1,12 @@
 import { promises as fs } from 'fs'
 import { join } from 'path'
+import { WorkflowStateService } from '../wirings/workflow/workflow-state-service.js'
 import {
-  WorkflowStateService,
+  StepState,
   WorkflowRun,
   WorkflowStatus,
-  StepState,
-  SerializedError,
-} from '../wirings/workflow/workflow-state.types.js'
+} from '../wirings/workflow/workflow.types.js'
+import { SerializedError } from '../types/core.types.js'
 
 /**
  * File-based implementation of WorkflowStateService.

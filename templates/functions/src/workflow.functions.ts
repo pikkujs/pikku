@@ -35,21 +35,9 @@ export const sendEmail = pikkuSessionlessFunc<
   }
 })
 
-// Pikku function to record completion
-export const recordOnboardingComplete = pikkuSessionlessFunc<
-  void,
-  { completedAt: string; totalSteps: number }
->(async ({ logger }) => {
-  logger.info('Recording onboarding completion')
-  return {
-    completedAt: new Date().toISOString(),
-    totalSteps: 4,
-  }
-})
-
 export const onboardingWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string },
-  { success: boolean; userId: string; email: string; completedAt: string }
+  { userId: string; email: string }
 >(async ({ workflow }, data) => {
   // Step 1: Create user profile (RPC call - generates queue worker)
   const user = await workflow.do(
@@ -64,27 +52,18 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
     async () => generateWelcomeMessage(user.email)
   )
 
-  // Step 3: Send welcome email (RPC call - generates queue worker)
+  // Step 3: Sleep for 5 minutes
+  await workflow.sleep('Sleeping for 5 minutes', '5min')
+
+  // Step 4: Send welcome email (RPC call - generates queue worker)
   await workflow.do('Send welcome email to user', 'sendEmail', {
     to: data.email,
     subject: 'Welcome!',
     body: welcomeMessage,
   })
 
-  // Step 4: Sleep for 5 minutes before continuing
-  await workflow.sleep('waitForEmailDelivery', '5min')
-
-  // Step 5: Record completion stats (RPC call - generates queue worker)
-  const stats = await workflow.do(
-    'Record onboarding completion stats',
-    'recordOnboardingComplete',
-    null
-  )
-
   return {
-    success: true,
     userId: data.userId,
     email: data.email,
-    completedAt: stats.completedAt,
   }
 })

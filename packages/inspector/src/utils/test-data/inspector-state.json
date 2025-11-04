@@ -1260,6 +1260,10 @@
     },
     "files": ["src/queue-worker.wiring.ts"]
   },
+  "workflows": {
+    "meta": {},
+    "files": []
+  },
   "rpc": {
     "internalMeta": {
       "onConnect": "onConnect",

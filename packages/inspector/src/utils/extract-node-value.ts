@@ -1,35 +1,47 @@
 import * as ts from 'typescript'
 
 /**
- * Extract string literal value from a TypeScript node
- * Handles string literals, template literals, and constant variable references
+ * Extract string literal value from a TypeScript node.
+ * Handles string literals, template literals (including placeholders),
+ * and constant variable references.
  */
 export function extractStringLiteral(
   node: ts.Node,
   checker: ts.TypeChecker
-): string | null {
+): string {
   if (ts.isStringLiteral(node)) {
     return node.text
   }
+
   if (ts.isNoSubstitutionTemplateLiteral(node)) {
     return node.text
   }
-  // Try to evaluate constant expressions
+
+  if (ts.isTemplateExpression(node)) {
+    // reconstruct: `head + ${expr} + middle + ${expr} + tail`
+    let result = node.head.text
+    for (const span of node.templateSpans) {
+      const exprText = span.expression.getText()
+      result += '${' + exprText + '}' + span.literal.text
+    }
+    return result
+  }
+
+  // Try to evaluate constant identifiers
   if (ts.isIdentifier(node)) {
     const symbol = checker.getSymbolAtLocation(node)
-    if (symbol && symbol.valueDeclaration) {
-      if (
-        ts.isVariableDeclaration(symbol.valueDeclaration) &&
-        symbol.valueDeclaration.initializer
-      ) {
-        return extractStringLiteral(
-          symbol.valueDeclaration.initializer,
-          checker
-        )
+    if (
+      symbol?.valueDeclaration &&
+      ts.isVariableDeclaration(symbol.valueDeclaration)
+    ) {
+      const init = symbol.valueDeclaration.initializer
+      if (init) {
+        return extractStringLiteral(init, checker)
       }
     }
   }
-  return null
+
+  throw new Error('Unable to extract string literal from node')
 }
 
 /**

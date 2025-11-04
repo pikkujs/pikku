@@ -4,7 +4,7 @@ import {
   getPropertyTags,
 } from '../utils/get-property-value.js'
 import { PikkuDocs } from '@pikku/core'
-import { AddWiring } from '../types.js'
+import { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import {
   getPropertyAssignmentInitializer,
@@ -28,6 +28,8 @@ import {
 function getWorkflowInvocations(
   node: ts.Node,
   checker: ts.TypeChecker,
+  state: InspectorState,
+  workflowName: string,
   steps: WorkflowStepMeta[]
 ) {
   // Look for property access expressions: workflow.do or workflow.sleep
@@ -49,7 +51,8 @@ function getWorkflowInvocations(
             args.length >= 3 ? args[args.length - 1] : undefined
 
           const stepName = extractStringLiteral(stepNameArg, checker)
-          const description = extractDescription(optionsArg, checker)
+          const description =
+            extractDescription(optionsArg, checker) ?? undefined
 
           // Determine form by checking 2nd argument type
           if (isStringLike(secondArg, checker)) {
@@ -57,10 +60,11 @@ function getWorkflowInvocations(
             const rpcName = extractStringLiteral(secondArg, checker)
             steps.push({
               type: 'rpc',
-              stepName: stepName || '<dynamic>',
-              rpcName: rpcName || '<dynamic>',
-              description: description || '<dynamic>',
+              stepName,
+              rpcName,
+              description,
             })
+            state.rpc.invokedFunctions.add(rpcName)
           } else if (isFunctionLike(secondArg)) {
             // Inline form: workflow.do(stepName, fn, options?)
             steps.push({
@@ -96,7 +100,7 @@ function getWorkflowInvocations(
     ) {
       return
     }
-    getWorkflowInvocations(child, checker, steps)
+    getWorkflowInvocations(child, checker, state, workflowName, steps)
   })
 }
 
@@ -184,7 +188,6 @@ export const addWorkflow: AddWiring = (
       return
     }
 
-
     if (!funcInitializer) {
       logger.critical(
         ErrorCode.MISSING_FUNC,
@@ -215,7 +218,7 @@ export const addWorkflow: AddWiring = (
     const resolvedFunc = resolveFunctionDeclaration(funcInitializer, checker)
     const steps: WorkflowStepMeta[] = []
     if (resolvedFunc) {
-      getWorkflowInvocations(resolvedFunc, checker, steps)
+      getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
     }
 
     state.workflows.meta[workflowName] = {
@@ -226,7 +229,7 @@ export const addWorkflow: AddWiring = (
       docs,
       tags,
       middleware,
-      steps
+      steps,
     }
   }
 }

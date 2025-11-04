@@ -98,7 +98,6 @@ export type PikkuCLIInput = {
   rpcWiringsFile?: string
   queueWiringsFile?: string
   mcpJsonFile?: string
-  workflowWorkersDirectory?: string
 
   openAPI?: {
     outputFile: string
@@ -135,6 +134,20 @@ export type PikkuCLIInput = {
         >
     >
   }
+
+  workflows?:
+    | {
+        singleQueue: true
+        path: string
+        orchestratorQueue?: string
+        workerQueue?: string
+      }
+    | {
+        singleQueue: false
+        dir: string
+        orchestratorQueuePrefix?: string
+        workerQueuePrefix?: string
+      }
 
   forceRequiredServices?: string[]
 
@@ -174,7 +187,6 @@ export type PikkuCLIConfig = {
   rpcWiringsFile?: string
   queueWiringsFile?: string
   mcpJsonFile?: string
-  workflowWorkersDirectory?: string
 
   openAPI?: {
     outputFile: string
@@ -211,6 +223,20 @@ export type PikkuCLIConfig = {
         >
     >
   }
+
+  workflows?:
+    | {
+        singleQueue: true
+        path: string
+        orchestratorQueue?: string
+        workerQueue?: string
+      }
+    | {
+        singleQueue: false
+        dir: string
+        orchestratorQueuePrefix?: string
+        workerQueuePrefix?: string
+      }
 
   forceRequiredServices?: string[]
 
