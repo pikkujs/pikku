@@ -1,5 +1,43 @@
 # @pikku/core
 
+## 0.10.2
+
+### Patch Changes
+
+- ea652dc: Refactor channel middleware handling and add lifecycle middleware support
+
+  **Breaking Changes:**
+
+  - Improved middleware resolution for channel message handlers to properly combine channel-level and message-level middleware
+  - Fixed cache key collisions when multiple message handlers use the same function
+
+  **New Features:**
+
+  - Add `runChannelLifecycleWithMiddleware` helper in `channel-common.ts` for consistent lifecycle function execution
+  - Support middleware on `onConnect` and `onDisconnect` lifecycle functions
+  - Channel-level middleware now properly applies to all messages in the channel
+
+  **Bug Fixes:**
+
+  - Fix middleware ordering: channel middleware → message middleware → inherited middleware
+  - Fix cache key generation to include routing information (prevents cache collisions)
+  - Properly detect wrapper objects vs direct function configs for message handlers
+
+- 4349ec5: Add file-based storage implementations for serverless environments
+
+  **New Services:**
+
+  - Add `FileChannelStore` for file-based channel storage (suitable for AWS Lambda /tmp)
+  - Add `FileEventHubStore` for file-based event hub subscriptions
+  - Export new services in package.json for use in serverless runtimes
+
+  **Bug Fixes:**
+
+  - Fix serverless channel runner to handle disconnect gracefully when channel is already cleaned up
+  - Fix MCP runner to pass `mcp` service to functions and use correct function type
+
+- 44d71a8: fix: fixing inspector ensuring pikkuConfig is set
+
 ## 0.10.1
 
 ### Patch Changes

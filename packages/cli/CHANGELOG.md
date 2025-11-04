@@ -1,5 +1,54 @@
 # @pikku/cli
 
+## 0.10.2
+
+### Patch Changes
+
+- 1967172: Update code generation to support channel middleware enhancements
+
+  **Code Generation Updates:**
+
+  - Update channel type serialization to include middleware support
+  - Improve WebSocket wrapper generation for middleware handling
+  - Update CLI channel client generation with better type support
+  - Enhance services and schema generation for channel configurations
+
+  **Inspector Updates:**
+
+  - Improve channel metadata extraction for middleware
+  - Better type analysis for channel lifecycle functions
+  - Enhanced post-processing for channel configurations
+
+- 753481a: Add bootstrap command, performance optimizations, and CLI improvements
+
+  **New Features:**
+
+  - Add `pikku bootstrap` command for type-only generation (~13.5% faster than `pikku all`)
+  - Add configurable `ignoreFiles` option to pikku.config.json with sensible defaults (_.gen.ts, _.test.ts, \*.spec.ts)
+  - Export pikkuCLIRender helper from serialize-cli-types.ts with JSDoc documentation
+
+  **Performance Improvements:**
+
+  - Add aggressive TypeScript compiler options (skipDefaultLibCheck, types: []) - ~37% faster TypeScript setup
+  - Add detailed performance timing to inspector phases (--logLevel=debug)
+  - Optimize file inspection with ignore patterns - ~10-20% faster overall
+
+  **Enhancements:**
+
+  - Fix --logLevel flag to properly apply log level to logger
+  - Update middleware logging to use structured log format
+  - Improve CLI renderers to consistently use destructured logger service
+  - Fix middleware file generation when middleware groups exist
+
+- 44d71a8: fix: fixing inspector ensuring pikkuConfig is set
+- Updated dependencies [1967172]
+- Updated dependencies [753481a]
+- Updated dependencies [ea652dc]
+- Updated dependencies [4349ec5]
+- Updated dependencies [44d71a8]
+  - @pikku/inspector@0.10.2
+  - @pikku/core@0.10.2
+
 ## 0.10.1
 
 ### Patch Changes

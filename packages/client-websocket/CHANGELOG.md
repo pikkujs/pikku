@@ -1,5 +1,17 @@
 # @pikku/websocket
 
+## 0.10.1
+
+### Patch Changes
+
+- c6f9bb9: Update WebSocket client and create-pikku for channel middleware
+
+  **Updates:**
+
+  - Update WebSocket client to handle channel middleware properly
+  - Update create-pikku template generation for channel configurations
+  - Improve template utilities and tests
+
 ## 0.10.0
 
 This release includes significant improvements across the framework including tree-shaking support, middleware/permission factories, enhanced CLI functionality, improved TypeScript type safety, and comprehensive test strategies.
