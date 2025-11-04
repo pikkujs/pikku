@@ -18,7 +18,7 @@ jobs:
         shell: bash
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: yarn
       - run: yarn install
       - run: yarn build
@@ -53,7 +53,7 @@ jobs:
         shell: bash
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: yarn
       - name: Download built packages
         uses: actions/download-artifact@v4
@@ -88,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [20]
+        version: [24]
         template:
           [
             express,
@@ -104,7 +104,7 @@ jobs:
             nextjs,
             mcp-server,
             cli,
-            pgboss,
+            pg-boss,
             bullmq,
           ]
         package-manager: [yarn]
@@ -128,6 +128,8 @@ jobs:
       - run: cd ../test-app && yarn link -A ../pikku && yarn install && yarn run tsc && yarn run test
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
+      REDIS_URL: redis://localhost:6379
 
   # bun-templates:
   #   name: Bun Templates

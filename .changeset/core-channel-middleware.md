@@ -1,5 +1,5 @@
 ---
-'@pikku/core': minor
+'@pikku/core': patch
 ---
 
 Refactor channel middleware handling and add lifecycle middleware support

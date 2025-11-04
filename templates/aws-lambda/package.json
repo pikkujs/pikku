@@ -9,12 +9,12 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "test": "bash ../functions/run-tests.sh --url http://localhost:3000/production --http",
     "start": "npm run build && serverless offline",
-    "build": "rm -rf dist && esbuild ./src/main.ts --format=esm --minify --external:\"@aws-sdk/*\" --bundle --keep-names --sourcemap --platform=node --target=node20 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json",
+    "build": "rm -rf dist && esbuild ./src/main.ts --format=esm --minify --external:\"@aws-sdk/*\" --bundle --keep-names --sourcemap --platform=node --target=node24 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json",
     "deploy": "npm run build && serverless deploy"
   },
   "dependencies": {
     "@pikku/aws-services": "^0.10.0",
-    "@pikku/core": "^0.10.0",
+    "@pikku/core": "^0.10.1",
     "@pikku/jose": "^0.10.0",
     "@pikku/lambda": "^0.10.0",
     "@pikku/schema-cfworker": "^0.10.0",

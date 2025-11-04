@@ -23,7 +23,7 @@ const getPikkuFunctionName = (rpcName: string): string => {
 }
 
 // Context-aware RPC client for use within services
-class ContextAwareRPCService {
+export class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
     private interaction: PikkuInteraction,
