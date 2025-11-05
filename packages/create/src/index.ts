@@ -126,6 +126,16 @@ const templates = [
     description: 'A CLI application template',
     supports: ['cli'],
   },
+  {
+    template: 'workflows-redis',
+    description: 'A Redis-based workflow template',
+    supports: ['http', 'workflows'],
+  },
+  {
+    template: 'workflows-pg',
+    description: 'A PostgreSQL-based workflow template',
+    supports: ['http', 'workflows'],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]

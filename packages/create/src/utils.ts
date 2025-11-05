@@ -182,6 +182,11 @@ export function cleanPikkuConfig(
     delete pikkuConfig.mcpJsonFile
   }
 
+  // Workflows templates don't use RPC wirings
+  if (supportedFeatures.includes('workflows')) {
+    delete pikkuConfig.rpcWiringsFile
+  }
+
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
 }
 
