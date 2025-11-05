@@ -19,8 +19,8 @@ import {
   createConfig,
   createSingletonServices,
 } from '../../functions/src/services.js'
-import { FileChannelStore } from '@pikku/core/services/file-channel-store'
-import { FileEventHubStore } from '@pikku/core/services/file-eventhub-store'
+import { PgChannelStore, PgEventHubStore } from '@pikku/pg'
+import postgres from 'postgres'
 
 let state:
   | {
@@ -37,10 +37,19 @@ const getParams = async (event: APIGatewayEvent) => {
     const singletonServices = await createSingletonServices(config, {
       variables,
     })
-    // Note: This would run locally, but to deploy you would need to use
-    // a database that AWS Lambda can connect to, e.g. RDS or Aurora Serverless
-    const channelStore = new FileChannelStore()
-    const eventHubStore = new FileEventHubStore()
+    // Configure PostgreSQL connection from DATABASE_URL environment variable
+    const databaseUrl =
+      (await variables.get('DATABASE_URL')) ||
+      'postgresql://localhost:5432/pikku'
+    const dbSchema = (await variables.get('DB_SCHEMA')) || 'pikku'
+
+    const sql = postgres(databaseUrl)
+    const channelStore = new PgChannelStore(sql, dbSchema)
+    const eventHubStore = new PgEventHubStore(sql, dbSchema)
+
+    // Initialize stores (creates schema and tables if needed)
+    await channelStore.init()
+    await eventHubStore.init()
     singletonServices.eventHub = new LambdaEventHubService(
       singletonServices.logger,
       event,

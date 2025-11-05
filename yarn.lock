@@ -3548,6 +3548,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/pg@npm:^0.10.0, @pikku/pg@workspace:packages/services/pg":
+  version: 0.0.0-use.local
+  resolution: "@pikku/pg@workspace:packages/services/pg"
+  dependencies:
+    postgres: "npm:^3.4.5"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@pikku/core": ^0.10.0
+  languageName: unknown
+  linkType: soft
+
 "@pikku/pino@workspace:packages/services/pino":
   version: 0.0.0-use.local
   resolution: "@pikku/pino@workspace:packages/services/pino"
@@ -3576,6 +3587,17 @@ __metadata:
   resolution: "@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"
   dependencies:
     pg-boss: "npm:^11.1.1"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@pikku/core": ^0.10.0
+  languageName: unknown
+  linkType: soft
+
+"@pikku/redis@workspace:packages/services/redis":
+  version: 0.0.0-use.local
+  resolution: "@pikku/redis@workspace:packages/services/redis"
+  dependencies:
+    ioredis: "npm:^5.4.1"
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.10.0
@@ -3630,9 +3652,11 @@ __metadata:
     "@pikku/aws-services": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.2"
     "@pikku/lambda": "npm:^0.10.1"
+    "@pikku/pg": "npm:^0.10.0"
     "@types/aws-lambda": "npm:^8.10.156"
     "@types/node": "npm:^24"
     esbuild: "npm:^0.25.12"
+    postgres: "npm:^3.4.5"
     serverless: "npm:^4.21.1"
     serverless-esbuild: "npm:^1.55.1"
     serverless-offline: "npm:^14.4.0"
@@ -9919,7 +9943,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres@npm:^3.4.7":
+"postgres@npm:^3.4.5, postgres@npm:^3.4.7":
   version: 3.4.7
   resolution: "postgres@npm:3.4.7"
   checksum: 10/ef5b43b137412c13d907da0d37e7d4141653365fd371ffa000e124076119fe14ef95a27b1469f2ed6fb006f855746fc65087f326a124fe320a2b1f3bbec397f4
