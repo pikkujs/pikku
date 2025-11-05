@@ -6,6 +6,10 @@ import { BullQueueService } from '@pikku/queue-bullmq'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import { pikkuFetch } from './pikku-fetch.gen.js'
 
+// Configure server URL from environment or use default
+const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+pikkuFetch.setServerUrl(url)
+
 async function main(): Promise<void> {
   try {
     // Create queue service (required for workflows)

@@ -7,6 +7,10 @@ import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import postgres from 'postgres'
 import { pikkuFetch } from './pikku-fetch.gen.js'
 
+// Configure server URL from environment or use default
+const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+pikkuFetch.setServerUrl(url)
+
 // Use DATABASE_URL environment variable or provide a connection string
 const connectionString =
   process.env.DATABASE_URL ||
