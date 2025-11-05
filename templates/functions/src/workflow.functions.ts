@@ -67,3 +67,11 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
     email: data.email,
   }
 })
+
+// HTTP function to start a workflow
+export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
+  { email: string; userId: string },
+  { runId: string }
+>(async ({ rpc }, data) => {
+  return await rpc.startWorkflow('onboarding', data)
+})

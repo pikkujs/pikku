@@ -3,5 +3,6 @@
   "workflows": {
     "singleQueue": true,
     "path": "src/workflows/pikku.workflows.gen.ts"
-  }
+  },
+  "fetchFile": "client/pikku-fetch.gen.ts"
 }

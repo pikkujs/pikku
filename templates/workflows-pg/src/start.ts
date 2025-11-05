@@ -1,5 +1,6 @@
 import { PgBossQueueService, PgBossQueueWorkers } from '@pikku/queue-pg-boss'
 import { PgWorkflowStateService } from '@pikku/pg'
+import postgres from 'postgres'
 import {
   createConfig,
   createSessionServices,
@@ -7,16 +8,20 @@ import {
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
+// Use DATABASE_URL environment variable or provide a connection string
+const connectionString =
+  process.env.DATABASE_URL ||
+  'postgres://postgres:password@localhost:5432/pikku_queue'
+
 async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
     // Create queue service for workflows
-    const pgBossQueueService = new PgBossQueueService(undefined)
-
+    const pgBossQueueService = new PgBossQueueService(connectionString)
     // Create workflow state service with queue
     const workflowState = new PgWorkflowStateService(
-      undefined,
+      postgres(connectionString),
       pgBossQueueService
     )
 
