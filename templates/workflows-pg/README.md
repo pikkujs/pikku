@@ -1,6 +1,6 @@
-# Pikku Workflows Template
+# Pikku Workflows Template (PostgreSQL)
 
-This template demonstrates how to use Pikku workflows for orchestrating multi-step processes with deterministic replay and step caching.
+This template demonstrates how to use Pikku workflows for orchestrating multi-step processes with deterministic replay and step caching using PostgreSQL as the storage backend.
 
 ## Features
 
@@ -9,7 +9,8 @@ This template demonstrates how to use Pikku workflows for orchestrating multi-st
 - **RPC steps**: Steps that call other Pikku functions via queue workers
 - **Inline steps**: Steps that execute locally with caching
 - **Sleep steps**: Time-based delays between workflow steps
-- **Queue-based execution**: Remote execution mode using BullMQ
+- **Queue-based execution**: Remote execution mode using pg-boss (PostgreSQL-based queue)
+- **PostgreSQL storage**: Workflow state stored in PostgreSQL for durability and transactional consistency
 
 ## Getting Started
 
@@ -35,13 +36,13 @@ See `../functions/src/workflow.functions.ts` and `../functions/src/workflow.wiri
 
 1. Workflows are defined using `pikkuWorkflowFunc` with typed inputs/outputs
 2. Workflows are registered using `wireWorkflow` with execution mode configuration
-3. The workflow state service (`RedisWorkflowStateService`) stores run state and step results
-4. Queue workers (BullMQ) handle asynchronous step execution
+3. The workflow state service (`PgWorkflowStateService`) stores run state and step results
+4. Queue workers (pg-boss) handle asynchronous step execution
 5. The orchestrator worker replays the workflow after each step completes
 
 ## Workflow State Storage
 
-Workflow state is stored in `.workflows/` directory by default. Each workflow run gets a unique ID and tracks:
+Workflow state is stored in PostgreSQL. Each workflow run gets a unique ID and tracks:
 
 - Run status (running, completed, failed)
 - Step results (cached for replay)

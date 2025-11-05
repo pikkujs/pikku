@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "Node18",
+    "noEmit": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/", ".pikku/*", "client/start-workflow.ts"],
+  "files": []
+}

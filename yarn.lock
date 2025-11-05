@@ -3895,9 +3895,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-workflows@workspace:templates/workflows":
+"@pikku/templates-workflows-pg@workspace:templates/workflows-pg":
   version: 0.0.0-use.local
-  resolution: "@pikku/templates-workflows@workspace:templates/workflows"
+  resolution: "@pikku/templates-workflows-pg@workspace:templates/workflows-pg"
+  dependencies:
+    "@pikku/cli": "npm:^0.10.0"
+    "@pikku/core": "npm:^0.10.0"
+    "@pikku/pg": "npm:^0.10.0"
+    "@pikku/queue-pg-boss": "npm:^0.10.0"
+    "@types/node": "npm:^24"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-workflows-redis@workspace:templates/workflows-redis":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-workflows-redis@workspace:templates/workflows-redis"
   dependencies:
     "@pikku/cli": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.0"

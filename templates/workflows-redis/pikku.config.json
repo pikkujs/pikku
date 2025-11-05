@@ -1,0 +1,7 @@
+{
+  "extends": "../functions/pikku.config.json",
+  "workflows": {
+    "singleQueue": true,
+    "path": "src/workflows/pikku.workflows.gen.ts"
+  }
+}
