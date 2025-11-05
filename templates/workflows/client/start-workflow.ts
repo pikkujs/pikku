@@ -20,7 +20,7 @@ async function main(): Promise<void> {
 
     // Create workflow state service to check status
     const workflowState = new RedisWorkflowStateService(
-      '.workflows',
+      undefined,
       bullQueueService
     )
 

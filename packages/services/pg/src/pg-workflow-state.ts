@@ -1,4 +1,4 @@
-import type { SerializedError } from '@pikku/core'
+import type { QueueService, SerializedError } from '@pikku/core'
 import {
   WorkflowStateService,
   type WorkflowRun,
@@ -33,8 +33,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
    */
   constructor(
     connectionOrConfig: postgres.Sql | postgres.Options<{}>,
-    queue?: any,
-    schemaName = 'workflows'
+    queue?: QueueService,
+    schemaName = 'pikku'
   ) {
     super(queue)
     this.schemaName = schemaName

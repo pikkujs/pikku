@@ -90,13 +90,35 @@ export function replaceFunctionReferences(
 
   const replaceInFile = (filePath: string): void => {
     let content = fs.readFileSync(filePath, 'utf-8')
-    const updatedContent = content
-      .replaceAll('../../functions/src/', './')
-      .replaceAll('../functions/src/', './')
-      .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
-      .replaceAll('../functions/types/', './types/')
-      .replaceAll('.pikku', pikkuDir)
-      .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+
+    // Determine if this file is in a client directory
+    const isInClientDir =
+      filePath.includes(`${path.sep}client${path.sep}`) ||
+      filePath.includes(`${path.sep}src${path.sep}client${path.sep}`)
+
+    let updatedContent = content
+
+    if (isInClientDir) {
+      // For files in client/, keep the relative path to src/
+      updatedContent = updatedContent
+        .replaceAll('../../functions/src/', '../src/')
+        .replaceAll('../functions/src/', '../src/')
+        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/types/', '../types/')
+        .replaceAll('.pikku', pikkuDir)
+        .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+    } else {
+      // For files in src/ or root, flatten to ./
+      updatedContent = updatedContent
+        .replaceAll('../../functions/src/', './')
+        .replaceAll('../functions/src/', './')
+        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/types/', './types/')
+        .replaceAll('.pikku', pikkuDir)
+        .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+    }
+
     fs.writeFileSync(filePath, updatedContent)
   }
 

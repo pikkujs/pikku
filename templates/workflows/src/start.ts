@@ -16,7 +16,7 @@ async function main(): Promise<void> {
 
     // Create workflow state service with queue
     const workflowState = new RedisWorkflowStateService(
-      '.workflows',
+      undefined,
       bullQueueService
     )
 

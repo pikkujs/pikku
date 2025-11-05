@@ -1,4 +1,4 @@
-import type { SerializedError } from '@pikku/core'
+import type { QueueService, SerializedError } from '@pikku/core'
 import {
   WorkflowStateService,
   type WorkflowRun,
@@ -32,8 +32,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
    * @param keyPrefix - Redis key prefix (default: 'workflows')
    */
   constructor(
-    connectionOrConfig: Redis | RedisOptions | string,
-    queue?: any,
+    connectionOrConfig: Redis | RedisOptions | string | undefined,
+    queue?: QueueService,
     keyPrefix = 'workflows'
   ) {
     super(queue)
@@ -43,13 +43,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     if (connectionOrConfig instanceof Redis) {
       this.redis = connectionOrConfig
       this.ownsConnection = false
-    } else if (typeof connectionOrConfig === 'string') {
-      // It's a connection string
-      this.redis = new Redis(connectionOrConfig)
-      this.ownsConnection = true
     } else {
-      // It's a config object
-      this.redis = new Redis(connectionOrConfig)
+      this.redis = new Redis(connectionOrConfig as any)
       this.ownsConnection = true
     }
   }
