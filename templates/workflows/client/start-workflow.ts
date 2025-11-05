@@ -2,7 +2,7 @@
  * Example client for starting workflows via RPC
  */
 import { PikkuRPCService } from '@pikku/core/rpc'
-import { FileWorkflowStateService } from '@pikku/core/workflow'
+import { RedisWorkflowStateService } from '@pikku/redis'
 import { BullQueueService } from '@pikku/queue-bullmq'
 import {
   createConfig,
@@ -19,7 +19,7 @@ async function main(): Promise<void> {
     const bullQueueService = new BullQueueService(undefined)
 
     // Create workflow state service to check status
-    const workflowState = new FileWorkflowStateService(
+    const workflowState = new RedisWorkflowStateService(
       '.workflows',
       bullQueueService
     )

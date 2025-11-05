@@ -35,7 +35,7 @@ See `../functions/src/workflow.functions.ts` and `../functions/src/workflow.wiri
 
 1. Workflows are defined using `pikkuWorkflowFunc` with typed inputs/outputs
 2. Workflows are registered using `wireWorkflow` with execution mode configuration
-3. The workflow state service (`FileWorkflowStateService`) stores run state and step results
+3. The workflow state service (`RedisWorkflowStateService`) stores run state and step results
 4. Queue workers (BullMQ) handle asynchronous step execution
 5. The orchestrator worker replays the workflow after each step completes
 

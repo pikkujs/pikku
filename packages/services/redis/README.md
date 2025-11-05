@@ -33,7 +33,11 @@ const redis = new Redis({
 })
 
 // Create workflow state service
-const workflowState = new RedisWorkflowStateService(redis, queueService, 'workflows')
+const workflowState = new RedisWorkflowStateService(
+  redis,
+  queueService,
+  'workflows'
+)
 
 // Initialize (verifies connection)
 await workflowState.init()
@@ -43,7 +47,11 @@ await workflowState.init()
 
 ```typescript
 // Use a custom key prefix
-const workflowState = new RedisWorkflowStateService(redis, queueService, 'myapp_workflows')
+const workflowState = new RedisWorkflowStateService(
+  redis,
+  queueService,
+  'myapp_workflows'
+)
 await workflowState.init()
 ```
 
@@ -85,6 +93,7 @@ await workflowState.close() // Closes the connection
 The service uses the following Redis data structures:
 
 ### Workflow Runs
+
 - **Hash**: `{keyPrefix}:run:{runId}` - Stores workflow run data
   - `id`: Run ID
   - `workflow`: Workflow name
@@ -96,6 +105,7 @@ The service uses the following Redis data structures:
   - `updatedAt`: Timestamp
 
 ### Workflow Steps
+
 - **Hash**: `{keyPrefix}:step:{runId}:{stepName}` - Stores step execution data
   - `status`: Step status ('pending', 'scheduled', 'done', 'error')
   - `result`: JSON string of result (if done)
@@ -103,6 +113,7 @@ The service uses the following Redis data structures:
   - `updatedAt`: Timestamp
 
 ### Locking
+
 - **String**: `{keyPrefix}:lock:{runId}` - Distributed lock with TTL (30 seconds)
 
 ## API

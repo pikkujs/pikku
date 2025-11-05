@@ -46,7 +46,11 @@ await workflowState.init()
 
 ```typescript
 // Use a custom schema name
-const workflowState = new PgWorkflowStateService(sql, queueService, 'my_app_workflows')
+const workflowState = new PgWorkflowStateService(
+  sql,
+  queueService,
+  'my_app_workflows'
+)
 await workflowState.init() // Creates 'my_app_workflows' schema
 ```
 

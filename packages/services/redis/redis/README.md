@@ -90,6 +90,7 @@ const server = createExpressServer({
 The stores use the following Redis data structures:
 
 ### ChannelStore
+
 - **Hash**: `{keyPrefix}:channel:{channelId}` - Stores channel data
   - `channelId`: Channel ID
   - `channelName`: Channel name
@@ -98,6 +99,7 @@ The stores use the following Redis data structures:
   - `createdAt`: Timestamp
 
 ### EventHubStore
+
 - **Set**: `{keyPrefix}:topic:{topicName}` - Set of channelIds subscribed to topic
 - **Set**: `{keyPrefix}:subs:{channelId}` - Set of topics the channel is subscribed to
 
@@ -157,6 +159,7 @@ new RedisEventHubStore(
 The stores support two connection modes:
 
 **Shared Connection** (recommended for multiple stores):
+
 ```typescript
 const redis = new Redis('redis://localhost:6379')
 const channelStore = new RedisChannelStore(redis)
@@ -165,6 +168,7 @@ const eventHubStore = new RedisEventHubStore(redis)
 ```
 
 **Owned Connection** (creates its own connection):
+
 ```typescript
 const channelStore = new RedisChannelStore('redis://localhost:6379')
 await channelStore.init()

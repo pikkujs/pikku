@@ -1,5 +1,5 @@
 import { BullQueueWorkers, BullQueueService } from '@pikku/queue-bullmq'
-import { FileWorkflowStateService } from '@pikku/core/workflow'
+import { RedisWorkflowStateService } from '@pikku/redis'
 import {
   createConfig,
   createSessionServices,
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     const bullQueueService = new BullQueueService(undefined)
 
     // Create workflow state service with queue
-    const workflowState = new FileWorkflowStateService(
+    const workflowState = new RedisWorkflowStateService(
       '.workflows',
       bullQueueService
     )
