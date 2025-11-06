@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@pikku/core": "^0.10.0",
+    "@pikku/express": "^0.10.0",
     "@pikku/queue-bullmq": "^0.10.0",
     "@pikku/redis": "^0.10.0",
     "tslib": "^2.8.1",

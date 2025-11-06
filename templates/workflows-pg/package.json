@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@pikku/core": "^0.10.0",
+    "@pikku/express": "^0.10.0",
     "@pikku/pg": "^0.10.0",
     "@pikku/queue-pg-boss": "^0.10.0",
     "tslib": "^2.8.1",

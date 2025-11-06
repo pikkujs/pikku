@@ -1,3 +1,4 @@
+import { PikkuExpressServer } from '@pikku/express'
 import { PgBossQueueService, PgBossQueueWorkers } from '@pikku/queue-pg-boss'
 import { PgWorkflowStateService } from '@pikku/pg'
 import postgres from 'postgres'
@@ -19,11 +20,14 @@ async function main(): Promise<void> {
 
     // Create queue service for workflows
     const pgBossQueueService = new PgBossQueueService(connectionString)
+    await pgBossQueueService.init()
+
     // Create workflow state service with queue
     const workflowState = new PgWorkflowStateService(
       postgres(connectionString),
       pgBossQueueService
     )
+    await workflowState.init()
 
     // Create singleton services with queue and workflowState
     const singletonServices = await createSingletonServices(config, {
@@ -33,13 +37,24 @@ async function main(): Promise<void> {
 
     workflowState.setServices(singletonServices, createSessionServices as any)
 
+    // Start HTTP server for workflow triggers
+    const appServer = new PikkuExpressServer(
+      { ...config, port: 4002, hostname: 'localhost' },
+      singletonServices,
+      createSessionServices
+    )
+    appServer.enableExitOnSigInt()
+    await appServer.init()
+    await appServer.start()
+
     singletonServices.logger.info('Starting workflow queue workers...')
 
     const pgBossQueueWorkers = new PgBossQueueWorkers(
-      {},
+      connectionString,
       singletonServices,
       createSessionServices as any
     )
+    await pgBossQueueWorkers.init()
 
     singletonServices.logger.info('Registering workflow queue workers...')
     await pgBossQueueWorkers.registerQueues()

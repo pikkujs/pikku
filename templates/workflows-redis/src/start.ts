@@ -1,3 +1,4 @@
+import { PikkuExpressServer } from '@pikku/express'
 import { BullQueueWorkers, BullQueueService } from '@pikku/queue-bullmq'
 import { RedisWorkflowStateService } from '@pikku/redis'
 import {
@@ -27,6 +28,16 @@ async function main(): Promise<void> {
     })
 
     workflowState.setServices(singletonServices, createSessionServices as any)
+
+    // Start HTTP server for workflow triggers
+    const appServer = new PikkuExpressServer(
+      { ...config, port: 4002, hostname: 'localhost' },
+      singletonServices,
+      createSessionServices
+    )
+    appServer.enableExitOnSigInt()
+    await appServer.init()
+    await appServer.start()
 
     singletonServices.logger.info('Starting workflow queue workers...')
 

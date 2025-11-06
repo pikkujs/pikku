@@ -3586,7 +3586,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"
   dependencies:
-    pg-boss: "npm:^11.1.1"
+    pg-boss: "npm:^11.1.2"
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.10.0
@@ -3901,6 +3901,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.0"
+    "@pikku/express": "npm:^0.10.0"
     "@pikku/pg": "npm:^0.10.0"
     "@pikku/queue-pg-boss": "npm:^0.10.0"
     "@types/node": "npm:^24"
@@ -3916,6 +3917,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.0"
+    "@pikku/express": "npm:^0.10.0"
     "@pikku/queue-bullmq": "npm:^0.10.0"
     "@pikku/redis": "npm:^0.10.0"
     "@types/node": "npm:^24"
@@ -9682,14 +9684,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-boss@npm:^11.1.1":
-  version: 11.1.1
-  resolution: "pg-boss@npm:11.1.1"
+"pg-boss@npm:^11.1.2":
+  version: 11.1.2
+  resolution: "pg-boss@npm:11.1.2"
   dependencies:
     cron-parser: "npm:^5.4.0"
     pg: "npm:^8.16.3"
     serialize-error: "npm:^8.1.0"
-  checksum: 10/c3c4b0e18957fef86550c3c1c83ffcdde3eff80556878e119cf869618e25c1b778fcdcd2de64e34d768d7ec49d76e13ee6930ebf662ff51666659769a52c122f
+  checksum: 10/1ba10539e7f6ee66f75a61fbe7e26545ac04aa25766c6723863b557b9c81eef3865706e70083cd0e2256eba08d20186d531ff7aee61cd5197b5802dca7ba302e
   languageName: node
   linkType: hard
 

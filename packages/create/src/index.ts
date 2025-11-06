@@ -192,10 +192,16 @@ async function installDependencies(
     if (yarnLink) {
       if (packageManager === 'yarn') {
         console.log(chalk.blue('🔗 Linking to Pikku'))
-        spawnSync('yarn', ['link', '--all', '--private', yarnLink], {
-          cwd: targetPath,
-          stdio: 'inherit',
-        })
+        // Resolve to absolute path from current working directory
+        const absoluteYarnLinkPath = path.resolve(yarnLink)
+        spawnSync(
+          'yarn',
+          ['link', '--all', '--private', absoluteYarnLinkPath],
+          {
+            cwd: targetPath,
+            stdio: 'inherit',
+          }
+        )
       } else {
         console.log(
           chalk.red('⚠️ Yarn link is only supported with yarn package manager')
