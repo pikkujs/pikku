@@ -26,9 +26,10 @@ async function main(): Promise<void> {
     const workflowState = new PgWorkflowStateService(postgres(connectionString))
     await workflowState.init()
 
-    // Create singleton services with queue and workflowState
+    // Create singleton services with queue, scheduler, and workflowState
     const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
+      schedulerService: pgBossFactory.getSchedulerService(),
       workflowState,
     })
 

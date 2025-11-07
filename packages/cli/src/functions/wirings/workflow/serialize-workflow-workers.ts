@@ -45,7 +45,6 @@ export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<
   }
 })
 
-// This is registered via the scheduler to run
 export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
   { runId: string, stepId: string },
   void
@@ -61,7 +60,16 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
     // Trigger orchestrator to continue workflow
     await workflowState.addToQueue('pikku-workflow-orchestrator', runId)
   },
-  name: 'pikku-workflow-step-sleeper'
+})
+
+// Generic scheduled RPC worker that invokes any RPC
+export const pikkuScheduledRPC = pikkuSessionlessFunc<
+  { rpcName: string, data?: any },
+  void
+>({
+  func: async ({ rpc }, { rpcName, data }) => {
+    await (rpc.invoke as any)(rpcName, data)
+  },
 })
 
 wireQueueWorker({
@@ -72,6 +80,16 @@ wireQueueWorker({
 wireQueueWorker({
   queueName: 'pikku-workflow-orchestrator',
   func: pikkuWorkflowOrchestrator,
+})
+
+wireQueueWorker({
+  queueName: 'pikku-workflow-step-sleeper',
+  func: pikkuWorkflowSleeper,
+})
+
+wireQueueWorker({
+  queueName: 'pikku-scheduled-rpc',
+  func: pikkuScheduledRPC,
 })
 `
 }

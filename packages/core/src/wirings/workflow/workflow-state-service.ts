@@ -152,7 +152,8 @@ export abstract class WorkflowStateService {
     if (workflow.executionMode === 'inline') {
       await this.runWorkflowJob(runId, rpcInvoke)
     } else {
-      await this.addToQueue(name, runId)
+      // Queue orchestrator to start the workflow
+      await this.addToQueue('pikku-workflow-orchestrator', runId)
     }
 
     return { runId }

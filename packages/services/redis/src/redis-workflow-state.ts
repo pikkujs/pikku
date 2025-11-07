@@ -141,8 +141,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     const key = this.stepKey(runId, stepName)
     const data = await this.redis.hgetall(key)
 
-    // If no row exists or status is error, create a new pending row
-    if (!data.status || data.status === 'error') {
+    // If no row exists or status is failed, create a new pending row
+    if (!data.status || data.status === 'failed') {
       const now = Date.now()
       const stepId = `${runId}:${stepName}:${now}`
 
@@ -152,6 +152,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
         stepId,
         'status',
         'pending',
+        'attemptCount',
+        '1',
         'createdAt',
         now.toString(),
         'updatedAt',
@@ -161,6 +163,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       return {
         stepId,
         status: 'pending',
+        attemptCount: 1,
         createdAt: new Date(now),
         updatedAt: new Date(now),
       }
@@ -171,6 +174,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       status: data.status as any,
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
+      attemptCount: Number(data.attemptCount || 1),
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
@@ -206,7 +210,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     await this.redis.hmset(
       key,
       'status',
-      'done',
+      'succeeded',
       'result',
       JSON.stringify(result),
       'updatedAt',
@@ -235,7 +239,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     await this.redis.hmset(
       key,
       'status',
-      'error',
+      'failed',
       'error',
       JSON.stringify(serializedError),
       'updatedAt',
@@ -284,6 +288,46 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     throw new Error(
       `Failed to acquire lock for run ${id} after ${maxRetries} retries`
     )
+  }
+
+  async createRetryAttempt(stepId: string): Promise<StepState> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
+    const now = Date.now()
+    const key = this.stepKey(runId, stepName)
+
+    // Get current attempt count
+    const currentAttempt = Number(
+      (await this.redis.hget(key, 'attemptCount')) || 1
+    )
+    const newAttemptCount = currentAttempt + 1
+
+    // Reset step to pending for retry (keeps result/error for visibility)
+    await this.redis.hmset(
+      key,
+      'status',
+      'pending',
+      'attemptCount',
+      newAttemptCount.toString(),
+      'updatedAt',
+      now.toString()
+    )
+
+    // Get updated state
+    const data = await this.redis.hgetall(key)
+
+    return {
+      stepId: data.stepId!,
+      status: 'pending',
+      result: data.result ? JSON.parse(data.result) : undefined,
+      error: data.error ? JSON.parse(data.error) : undefined,
+      attemptCount: newAttemptCount,
+      createdAt: new Date(Number(data.createdAt!)),
+      updatedAt: new Date(now),
+    }
   }
 
   async close(): Promise<void> {
