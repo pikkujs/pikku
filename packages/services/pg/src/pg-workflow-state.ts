@@ -123,9 +123,9 @@ export class PgWorkflowStateService extends WorkflowStateService {
       id: row.id as string,
       workflow: row.workflow as string,
       status: row.status as WorkflowStatus,
-      input: row.input,
-      output: row.output,
-      error: row.error as SerializedError | undefined,
+      input: row.input ? JSON.parse(row.input as string) : undefined,
+      output: row.output ? JSON.parse(row.output as string) : undefined,
+      error: row.error ? JSON.parse(row.error as string) : undefined,
       createdAt: Number(row.created_at),
       updatedAt: Number(row.updated_at),
     }
@@ -172,8 +172,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
     const row = result[0]!
     return {
       status: row.status as any,
-      result: row.result,
-      error: row.error as SerializedError | undefined,
+      result: row.result ? JSON.parse(row.result as string) : undefined,
+      error: row.error ? JSON.parse(row.error as string) : undefined,
       updatedAt: Number(row.updated_at),
     }
   }
