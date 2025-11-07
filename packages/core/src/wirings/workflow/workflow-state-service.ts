@@ -77,11 +77,20 @@ export abstract class WorkflowStateService {
   abstract setStepResult(stepId: string, result: any): Promise<void>
 
   /**
-   * Store step error
+   * Store step error and mark as failed
    * @param stepId - Step ID
    * @param error - Error object
    */
   abstract setStepError(stepId: string, error: Error): Promise<void>
+
+  /**
+   * Create a new retry attempt for a failed step
+   * Inserts a new pending step record with incremented attempt count
+   * Copies all metadata (rpcName, data, etc.) from the failed attempt
+   * @param stepId - Failed step ID to copy from
+   * @returns New step state for the retry attempt
+   */
+  abstract createRetryAttempt(stepId: string): Promise<StepState>
 
   /**
    * Execute function within a run lock to prevent concurrent modifications
@@ -202,7 +211,7 @@ export abstract class WorkflowStateService {
             // Check step state
             const stepState = await this.getStepState(runId, stepName)
 
-            if (stepState.status === 'done') {
+            if (stepState.status === 'succeeded') {
               // Return cached result
               return stepState.result
             }
@@ -227,33 +236,43 @@ export abstract class WorkflowStateService {
                 }
               )
             } else {
-              // No queue service - execute locally with retry logic
+              // No queue service - execute locally
               const retries = stepOptions?.retries ?? 0
               const retryDelay = stepOptions?.retryDelay
+              const attemptCount = stepState.attemptCount
 
-              let lastError: any
-              for (let attempt = 0; attempt <= retries; attempt++) {
-                try {
-                  const result = await rpcInvoke(rpcName, data)
-                  await this.setStepResult(stepState.stepId, result)
-                  return result
-                } catch (error: any) {
-                  lastError = error
+              try {
+                const result = await rpcInvoke(rpcName, data)
+                await this.setStepResult(stepState.stepId, result)
+                return result
+              } catch (error: any) {
+                // Record the error (marks step as failed)
+                await this.setStepError(stepState.stepId, error)
 
-                  // If we have more attempts and a delay, wait before retrying
-                  if (attempt < retries && retryDelay) {
-                    const delayMs =
-                      typeof retryDelay === 'string'
-                        ? parseDurationString(retryDelay)
-                        : retryDelay
-                    await new Promise((resolve) => setTimeout(resolve, delayMs))
+                // Check if we should retry
+                if (attemptCount < retries) {
+                  // Create a new pending retry attempt (copies metadata from failed step)
+                  await this.createRetryAttempt(stepState.stepId)
+
+                  // Schedule orchestrator to retry after delay
+                  if (retryDelay && this.singletonServices!.schedulerService) {
+                    await this.singletonServices!.schedulerService.scheduleRPC(
+                      retryDelay,
+                      'pikku-workflow-orchestrator',
+                      { runId }
+                    )
+                  } else {
+                    // No scheduler or no delay - trigger orchestrator immediately
+                    await this.addToQueue('pikku-workflow-orchestrator', runId)
                   }
-                }
-              }
 
-              // All retries exhausted, record error
-              await this.setStepError(stepState.stepId, lastError)
-              throw lastError
+                  // Pause workflow - orchestrator will replay and pick up new attempt
+                  throw new WorkflowAsyncException(runId, stepName)
+                }
+
+                // No more retries, fail the workflow
+                throw error
+              }
             }
 
             // Pause workflow - step will callback when done
@@ -266,38 +285,48 @@ export abstract class WorkflowStateService {
             // Check step state
             const stepState = await this.getStepState(runId, stepName)
 
-            if (stepState.status === 'done') {
+            if (stepState.status === 'succeeded') {
               // Return cached result
               return stepState.result
             }
 
-            // Execute function with retry logic
+            // Execute inline function
             const retries = stepOptions?.retries ?? 0
             const retryDelay = stepOptions?.retryDelay
+            const attemptCount = stepState.attemptCount
 
-            let lastError: any
-            for (let attempt = 0; attempt <= retries; attempt++) {
-              try {
-                const result = await fn()
-                await this.setStepResult(stepState.stepId, result)
-                return result
-              } catch (error: any) {
-                lastError = error
+            try {
+              const result = await fn()
+              await this.setStepResult(stepState.stepId, result)
+              return result
+            } catch (error: any) {
+              // Record the error (marks step as failed)
+              await this.setStepError(stepState.stepId, error)
 
-                // If we have more attempts and a delay, wait before retrying
-                if (attempt < retries && retryDelay) {
-                  const delayMs =
-                    typeof retryDelay === 'string'
-                      ? parseDurationString(retryDelay)
-                      : retryDelay
-                  await new Promise((resolve) => setTimeout(resolve, delayMs))
+              // Check if we should retry
+              if (attemptCount < retries) {
+                // Create a new pending retry attempt (copies metadata from failed step)
+                await this.createRetryAttempt(stepState.stepId)
+
+                // Schedule orchestrator to retry after delay
+                if (retryDelay && this.singletonServices!.schedulerService) {
+                  await this.singletonServices!.schedulerService.scheduleRPC(
+                    retryDelay,
+                    'pikku-workflow-orchestrator',
+                    { runId }
+                  )
+                } else {
+                  // No scheduler or no delay - trigger orchestrator immediately
+                  await this.addToQueue('pikku-workflow-orchestrator', runId)
                 }
-              }
-            }
 
-            // All retries exhausted, record error
-            await this.setStepError(stepState.stepId, lastError)
-            throw lastError
+                // Pause workflow - orchestrator will replay and pick up new attempt
+                throw new WorkflowAsyncException(runId, stepName)
+              }
+
+              // No more retries, fail the workflow
+              throw error
+            }
           }
         },
 
@@ -311,7 +340,7 @@ export abstract class WorkflowStateService {
           // Check step state
           const stepState = await this.getStepState(runId, stepName)
 
-          if (stepState.status === 'done') {
+          if (stepState.status === 'succeeded') {
             // Sleep already completed, return immediately
             return
           }
@@ -418,9 +447,9 @@ export abstract class WorkflowStateService {
     data: any,
     rpcInvoke: Function
   ): Promise<void> {
-    // Idempotency check - skip if already done
+    // Idempotency check - skip if already succeeded
     const stepState = await this.getStepState(runId, stepName)
-    if (stepState.status === 'done') {
+    if (stepState.status === 'succeeded') {
       return
     }
 

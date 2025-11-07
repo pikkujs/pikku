@@ -13,7 +13,12 @@ export type WorkflowStatus = 'running' | 'completed' | 'failed'
 /**
  * Workflow step status
  */
-export type StepStatus = 'pending' | 'scheduled' | 'done' | 'error'
+export type StepStatus =
+  | 'pending'
+  | 'running'
+  | 'scheduled'
+  | 'succeeded'
+  | 'failed'
 
 /**
  * Workflow run representation
@@ -49,6 +54,8 @@ export interface StepState {
   result?: any
   /** Step error (if error) */
   error?: SerializedError
+  /** Number of attempts made (starts at 1) */
+  attemptCount: number
   /** Creation timestamp */
   createdAt: Date
   /** Last update timestamp */
