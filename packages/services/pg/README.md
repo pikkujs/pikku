@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS {schema_name}.workflow_runs (
   updated_at BIGINT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS {schema_name}.workflow_steps (
+CREATE TABLE IF NOT EXISTS {schema_name}.workflow_step (
   run_id TEXT NOT NULL,
   step_name TEXT NOT NULL,
   status TEXT NOT NULL,

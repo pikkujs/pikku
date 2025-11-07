@@ -32,23 +32,27 @@ export interface WorkflowRun {
   /** Error (if failed) */
   error?: SerializedError
   /** Creation timestamp */
-  createdAt: number
+  createdAt: Date
   /** Last update timestamp */
-  updatedAt: number
+  updatedAt: Date
 }
 
 /**
  * Step state representation
  */
 export interface StepState {
+  /** Unique step ID */
+  stepId: string
   /** Step status */
   status: StepStatus
   /** Step result (if done) */
   result?: any
   /** Step error (if error) */
   error?: SerializedError
+  /** Creation timestamp */
+  createdAt: Date
   /** Last update timestamp */
-  updatedAt: number
+  updatedAt: Date
 }
 
 /**

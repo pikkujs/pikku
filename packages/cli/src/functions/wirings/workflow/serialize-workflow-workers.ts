@@ -32,13 +32,13 @@ export const pikkuWorkflowWorker = pikkuSessionlessFunc({
       const result = await rpc.invoke(rpcName, data)
 
       // Store result
-      await workflowState.setStepResult(runId, stepName, result)
+      await workflowState.setStepResult(stepState.stepId, result)
 
       // Trigger orchestrator to continue workflow
       await workflowState.addToQueue('pikku-workflow-orchestrator', runId)
     } catch (error: any) {
       // Store error
-      await workflowState.setStepError(runId, stepName, error)
+      await workflowState.setStepError(stepState.stepId, error)
 
       // Mark workflow as failed
       await workflowState.updateRunStatus(runId, 'failed', undefined, {

@@ -67,34 +67,23 @@ export abstract class WorkflowStateService {
 
   /**
    * Mark step as scheduled (queued for execution)
-   * @param runId - Run ID
-   * @param stepName - Step cache key
+   * @param stepId - Step ID
    */
-  abstract setStepScheduled(runId: string, stepName: string): Promise<void>
+  abstract setStepScheduled(stepId: string): Promise<void>
 
   /**
    * Store step result
-   * @param runId - Run ID
-   * @param stepName - Step cache key
+   * @param stepId - Step ID
    * @param result - Step result
    */
-  abstract setStepResult(
-    runId: string,
-    stepName: string,
-    result: any
-  ): Promise<void>
+  abstract setStepResult(stepId: string, result: any): Promise<void>
 
   /**
    * Store step error
-   * @param runId - Run ID
-   * @param stepName - Step cache key
+   * @param stepId - Step ID
    * @param error - Error object
    */
-  abstract setStepError(
-    runId: string,
-    stepName: string,
-    error: Error
-  ): Promise<void>
+  abstract setStepError(stepId: string, error: Error): Promise<void>
 
   /**
    * Execute function within a run lock to prevent concurrent modifications
@@ -223,7 +212,7 @@ export abstract class WorkflowStateService {
             }
 
             // Step is pending - schedule it
-            await this.setStepScheduled(runId, stepName)
+            await this.setStepScheduled(stepState.stepId)
 
             // Enqueue step worker
             if (this.singletonServices!.queueService) {
@@ -241,10 +230,10 @@ export abstract class WorkflowStateService {
               // TODO: if its remote throw an error
               try {
                 const result = await rpcInvoke(rpcName, data)
-                await this.setStepResult(runId, stepName, result)
+                await this.setStepResult(stepState.stepId, result)
                 return result
               } catch (error: any) {
-                await this.setStepError(runId, stepName, error)
+                await this.setStepError(stepState.stepId, error)
                 throw error
               }
             }
@@ -267,10 +256,10 @@ export abstract class WorkflowStateService {
             // Execute function and cache result
             try {
               const result = await fn()
-              await this.setStepResult(runId, stepName, result)
+              await this.setStepResult(stepState.stepId, result)
               return result
             } catch (error: any) {
-              await this.setStepError(runId, stepName, error)
+              await this.setStepError(stepState.stepId, error)
               throw error
             }
           }
@@ -295,7 +284,7 @@ export abstract class WorkflowStateService {
           await new Promise((resolve) => setTimeout(resolve, 5000))
 
           // Mark sleep as done
-          await this.setStepResult(runId, stepName, null)
+          await this.setStepResult(stepState.stepId, null)
         },
       } as any
 

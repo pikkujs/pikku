@@ -6,7 +6,6 @@ import {
   type WorkflowStatus,
 } from '@pikku/core/workflow'
 import postgres from 'postgres'
-import { randomUUID } from 'crypto'
 
 /**
  * PostgreSQL-based implementation of WorkflowStateService
@@ -62,55 +61,67 @@ export class PgWorkflowStateService extends WorkflowStateService {
     await this.sql.unsafe(`
       CREATE SCHEMA IF NOT EXISTS ${this.schemaName};
 
+      DO $$ BEGIN
+        CREATE TYPE ${this.schemaName}.workflow_status_enum AS ENUM ('running', 'completed', 'failed');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      DO $$ BEGIN
+        CREATE TYPE ${this.schemaName}.step_status_enum AS ENUM ('pending', 'scheduled', 'done', 'error');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_runs (
-        id TEXT PRIMARY KEY,
+        workflow_run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         workflow TEXT NOT NULL,
-        status TEXT NOT NULL,
+        status ${this.schemaName}.workflow_status_enum NOT NULL,
         input JSONB NOT NULL,
         output JSONB,
         error JSONB,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
 
-      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_steps (
-        run_id TEXT NOT NULL,
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step (
+        workflow_step_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workflow_run_id UUID NOT NULL,
         step_name TEXT NOT NULL,
-        status TEXT NOT NULL,
+        status ${this.schemaName}.step_status_enum NOT NULL DEFAULT 'pending',
         result JSONB,
         error JSONB,
-        updated_at BIGINT NOT NULL,
-        PRIMARY KEY (run_id, step_name),
-        FOREIGN KEY (run_id) REFERENCES ${this.schemaName}.workflow_runs(id) ON DELETE CASCADE
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (workflow_run_id, step_name, created_at),
+        FOREIGN KEY (workflow_run_id) REFERENCES ${this.schemaName}.workflow_runs(workflow_run_id) ON DELETE CASCADE
       );
 
       CREATE INDEX IF NOT EXISTS idx_workflow_runs_status ON ${this.schemaName}.workflow_runs(status);
-      CREATE INDEX IF NOT EXISTS idx_workflow_steps_status ON ${this.schemaName}.workflow_steps(status);
+      CREATE INDEX IF NOT EXISTS idx_workflow_step_status ON ${this.schemaName}.workflow_step(status);
     `)
 
     this.initialized = true
   }
 
   async createRun(workflowName: string, input: any): Promise<string> {
-    const id = randomUUID()
-    const now = Date.now()
-
-    await this.sql.unsafe(
+    const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.workflow_runs
-        (id, workflow, status, input, created_at, updated_at)
+        (workflow, status, input)
       VALUES
-        ($1, $2, $3, $4, $5, $6)`,
-      [id, workflowName, 'running', JSON.stringify(input), now, now]
+        ($1, $2, $3)
+      RETURNING workflow_run_id`,
+      [workflowName, 'running', input]
     )
 
-    return id
+    return result[0]!.workflow_run_id
   }
 
   async getRun(id: string): Promise<WorkflowRun | null> {
     const result = await this.sql.unsafe(
-      `SELECT id, workflow, status, input, output, error, created_at, updated_at
+      `SELECT workflow_run_id, workflow, status, input, output, error, created_at, updated_at
       FROM ${this.schemaName}.workflow_runs
-      WHERE id = $1`,
+      WHERE workflow_run_id = $1`,
       [id]
     )
 
@@ -120,14 +131,14 @@ export class PgWorkflowStateService extends WorkflowStateService {
 
     const row = result[0]!
     return {
-      id: row.id as string,
+      id: row.workflow_run_id as string,
       workflow: row.workflow as string,
       status: row.status as WorkflowStatus,
-      input: row.input ? JSON.parse(row.input as string) : undefined,
-      output: row.output ? JSON.parse(row.output as string) : undefined,
-      error: row.error ? JSON.parse(row.error as string) : undefined,
-      createdAt: Number(row.created_at),
-      updatedAt: Number(row.updated_at),
+      input: row.input,
+      output: row.output,
+      error: row.error,
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
     }
   }
 
@@ -137,86 +148,75 @@ export class PgWorkflowStateService extends WorkflowStateService {
     output?: any,
     error?: SerializedError
   ): Promise<void> {
-    const now = Date.now()
-
     await this.sql.unsafe(
       `UPDATE ${this.schemaName}.workflow_runs
-      SET status = $1, output = $2, error = $3, updated_at = $4
-      WHERE id = $5`,
-      [
-        status,
-        output ? JSON.stringify(output) : null,
-        error ? JSON.stringify(error) : null,
-        now,
-        id,
-      ]
+      SET status = $1, output = $2, error = $3, updated_at = now()
+      WHERE workflow_run_id = $4`,
+      [status, output || null, error || null, id]
     )
   }
 
   async getStepState(runId: string, stepName: string): Promise<StepState> {
+    // Get the latest step state
     const result = await this.sql.unsafe(
-      `SELECT status, result, error, updated_at
-      FROM ${this.schemaName}.workflow_steps
-      WHERE run_id = $1 AND step_name = $2`,
+      `SELECT workflow_step_id, status, result, error, created_at, updated_at
+      FROM ${this.schemaName}.workflow_step
+      WHERE workflow_run_id = $1 AND step_name = $2
+      ORDER BY created_at DESC
+      LIMIT 1`,
       [runId, stepName]
     )
 
-    if (result.length === 0) {
-      // Step doesn't exist yet - return pending state
+    // If no row exists or status is error, create a new pending row
+    if (result.length === 0 || result[0]!.status === 'error') {
+      const newRow = await this.sql.unsafe(
+        `INSERT INTO ${this.schemaName}.workflow_step (workflow_run_id, step_name, status)
+        VALUES ($1, $2, 'pending')
+        RETURNING workflow_step_id, status, result, error, created_at, updated_at`,
+        [runId, stepName]
+      )
+
+      const row = newRow[0]!
       return {
-        status: 'pending',
-        updatedAt: Date.now(),
+        stepId: row.workflow_step_id as string,
+        status: row.status as any,
+        result: row.result,
+        error: row.error,
+        createdAt: new Date(row.created_at as string),
+        updatedAt: new Date(row.updated_at as string),
       }
     }
 
     const row = result[0]!
     return {
+      stepId: row.workflow_step_id as string,
       status: row.status as any,
-      result: row.result ? JSON.parse(row.result as string) : undefined,
-      error: row.error ? JSON.parse(row.error as string) : undefined,
-      updatedAt: Number(row.updated_at),
+      result: row.result,
+      error: row.error,
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
     }
   }
 
-  async setStepScheduled(runId: string, stepName: string): Promise<void> {
-    const now = Date.now()
-
+  async setStepScheduled(stepId: string): Promise<void> {
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_steps
-        (run_id, step_name, status, updated_at)
-      VALUES
-        ($1, $2, $3, $4)
-      ON CONFLICT (run_id, step_name)
-      DO UPDATE SET status = $3, updated_at = $4`,
-      [runId, stepName, 'scheduled', now]
+      `UPDATE ${this.schemaName}.workflow_step
+      SET status = 'scheduled', updated_at = now()
+      WHERE workflow_step_id = $1`,
+      [stepId]
     )
   }
 
-  async setStepResult(
-    runId: string,
-    stepName: string,
-    result: any
-  ): Promise<void> {
-    const now = Date.now()
-
+  async setStepResult(stepId: string, result: any): Promise<void> {
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_steps
-        (run_id, step_name, status, result, updated_at)
-      VALUES
-        ($1, $2, $3, $4, $5)
-      ON CONFLICT (run_id, step_name)
-      DO UPDATE SET status = $3, result = $4, error = NULL, updated_at = $5`,
-      [runId, stepName, 'done', JSON.stringify(result), now]
+      `UPDATE ${this.schemaName}.workflow_step
+      SET status = 'done', result = $1, error = NULL, updated_at = now()
+      WHERE workflow_step_id = $2`,
+      [result, stepId]
     )
   }
 
-  async setStepError(
-    runId: string,
-    stepName: string,
-    error: Error
-  ): Promise<void> {
-    const now = Date.now()
-
+  async setStepError(stepId: string, error: Error): Promise<void> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
@@ -224,13 +224,10 @@ export class PgWorkflowStateService extends WorkflowStateService {
     }
 
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_steps
-        (run_id, step_name, status, error, updated_at)
-      VALUES
-        ($1, $2, $3, $4, $5)
-      ON CONFLICT (run_id, step_name)
-      DO UPDATE SET status = $3, error = $4, result = NULL, updated_at = $5`,
-      [runId, stepName, 'error', JSON.stringify(serializedError), now]
+      `UPDATE ${this.schemaName}.workflow_step
+      SET status = 'error', error = $1, result = NULL, updated_at = now()
+      WHERE workflow_step_id = $2`,
+      [serializedError, stepId]
     )
   }
 

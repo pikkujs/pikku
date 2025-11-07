@@ -73,7 +73,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
         updated_at BIGINT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_steps (
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step (
         run_id TEXT NOT NULL,
         step_name TEXT NOT NULL,
         status TEXT NOT NULL,
@@ -85,7 +85,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
       );
 
       CREATE INDEX IF NOT EXISTS idx_workflow_runs_status ON ${this.schemaName}.workflow_runs(status);
-      CREATE INDEX IF NOT EXISTS idx_workflow_steps_status ON ${this.schemaName}.workflow_steps(status);
+      CREATE INDEX IF NOT EXISTS idx_workflow_step_status ON ${this.schemaName}.workflow_step(status);
     `)
 
     this.initialized = true
@@ -156,7 +156,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
   async getStepState(runId: string, stepName: string): Promise<StepState> {
     const result = await this.sql.unsafe(
       `SELECT status, result, error, updated_at
-      FROM ${this.schemaName}.workflow_steps
+      FROM ${this.schemaName}.workflow_step
       WHERE run_id = $1 AND step_name = $2`,
       [runId, stepName]
     )
@@ -182,7 +182,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
     const now = Date.now()
 
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_steps
+      `INSERT INTO ${this.schemaName}.workflow_step
         (run_id, step_name, status, updated_at)
       VALUES
         ($1, $2, $3, $4)
@@ -200,7 +200,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
     const now = Date.now()
 
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_steps
+      `INSERT INTO ${this.schemaName}.workflow_step
         (run_id, step_name, status, result, updated_at)
       VALUES
         ($1, $2, $3, $4, $5)
@@ -224,7 +224,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
     }
 
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_steps
+      `INSERT INTO ${this.schemaName}.workflow_step
         (run_id, step_name, status, error, updated_at)
       VALUES
         ($1, $2, $3, $4, $5)

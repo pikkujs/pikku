@@ -109,8 +109,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       input: JSON.parse(data.input!),
       output: data.output ? JSON.parse(data.output) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
-      createdAt: Number(data.createdAt!),
-      updatedAt: Number(data.updatedAt!),
+      createdAt: new Date(Number(data.createdAt!)),
+      updatedAt: new Date(Number(data.updatedAt!)),
     }
   }
 
@@ -143,23 +143,47 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     const key = this.stepKey(runId, stepName)
     const data = await this.redis.hgetall(key)
 
-    if (!data.status) {
-      // Step doesn't exist yet - return pending state
+    // If no row exists or status is error, create a new pending row
+    if (!data.status || data.status === 'error') {
+      const now = Date.now()
+      const stepId = `${runId}:${stepName}:${now}`
+
+      await this.redis.hmset(
+        key,
+        'stepId',
+        stepId,
+        'status',
+        'pending',
+        'createdAt',
+        now.toString(),
+        'updatedAt',
+        now.toString()
+      )
+
       return {
+        stepId,
         status: 'pending',
-        updatedAt: Date.now(),
+        createdAt: new Date(now),
+        updatedAt: new Date(now),
       }
     }
 
     return {
+      stepId: data.stepId!,
       status: data.status as any,
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
-      updatedAt: Number(data.updatedAt),
+      createdAt: new Date(Number(data.createdAt!)),
+      updatedAt: new Date(Number(data.updatedAt!)),
     }
   }
 
-  async setStepScheduled(runId: string, stepName: string): Promise<void> {
+  async setStepScheduled(stepId: string): Promise<void> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
     const now = Date.now()
     const key = this.stepKey(runId, stepName)
 
@@ -172,11 +196,12 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     )
   }
 
-  async setStepResult(
-    runId: string,
-    stepName: string,
-    result: any
-  ): Promise<void> {
+  async setStepResult(stepId: string, result: any): Promise<void> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
     const now = Date.now()
     const key = this.stepKey(runId, stepName)
 
@@ -194,11 +219,12 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     await this.redis.hdel(key, 'error')
   }
 
-  async setStepError(
-    runId: string,
-    stepName: string,
-    error: Error
-  ): Promise<void> {
+  async setStepError(stepId: string, error: Error): Promise<void> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
     const now = Date.now()
     const key = this.stepKey(runId, stepName)
 
