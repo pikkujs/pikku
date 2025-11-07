@@ -197,7 +197,7 @@ export abstract class WorkflowStateService {
             // RPC form: workflow.do(stepName, rpcName, data, options?)
             const rpcName = rpcNameOrFn
             const data = dataOrOptions
-            // options parameter available but not used in MVP
+            const stepOptions = options
 
             // Check step state
             const stepState = await this.getStepState(runId, stepName)
@@ -227,16 +227,33 @@ export abstract class WorkflowStateService {
                 }
               )
             } else {
-              // No queue service - execute inline (for inline workflow mode)
-              // TODO: if its remote throw an error
-              try {
-                const result = await rpcInvoke(rpcName, data)
-                await this.setStepResult(stepState.stepId, result)
-                return result
-              } catch (error: any) {
-                await this.setStepError(stepState.stepId, error)
-                throw error
+              // No queue service - execute locally with retry logic
+              const retries = stepOptions?.retries ?? 0
+              const retryDelay = stepOptions?.retryDelay
+
+              let lastError: any
+              for (let attempt = 0; attempt <= retries; attempt++) {
+                try {
+                  const result = await rpcInvoke(rpcName, data)
+                  await this.setStepResult(stepState.stepId, result)
+                  return result
+                } catch (error: any) {
+                  lastError = error
+
+                  // If we have more attempts and a delay, wait before retrying
+                  if (attempt < retries && retryDelay) {
+                    const delayMs =
+                      typeof retryDelay === 'string'
+                        ? parseDurationString(retryDelay)
+                        : retryDelay
+                    await new Promise((resolve) => setTimeout(resolve, delayMs))
+                  }
+                }
               }
+
+              // All retries exhausted, record error
+              await this.setStepError(stepState.stepId, lastError)
+              throw lastError
             }
 
             // Pause workflow - step will callback when done
@@ -244,7 +261,7 @@ export abstract class WorkflowStateService {
           } else {
             // Inline form: workflow.do(stepName, fn, options?)
             const fn = rpcNameOrFn
-            // options parameter available in dataOrOptions but not used in MVP
+            const stepOptions = dataOrOptions
 
             // Check step state
             const stepState = await this.getStepState(runId, stepName)
@@ -254,15 +271,33 @@ export abstract class WorkflowStateService {
               return stepState.result
             }
 
-            // Execute function and cache result
-            try {
-              const result = await fn()
-              await this.setStepResult(stepState.stepId, result)
-              return result
-            } catch (error: any) {
-              await this.setStepError(stepState.stepId, error)
-              throw error
+            // Execute function with retry logic
+            const retries = stepOptions?.retries ?? 0
+            const retryDelay = stepOptions?.retryDelay
+
+            let lastError: any
+            for (let attempt = 0; attempt <= retries; attempt++) {
+              try {
+                const result = await fn()
+                await this.setStepResult(stepState.stepId, result)
+                return result
+              } catch (error: any) {
+                lastError = error
+
+                // If we have more attempts and a delay, wait before retrying
+                if (attempt < retries && retryDelay) {
+                  const delayMs =
+                    typeof retryDelay === 'string'
+                      ? parseDurationString(retryDelay)
+                      : retryDelay
+                  await new Promise((resolve) => setTimeout(resolve, delayMs))
+                }
+              }
             }
+
+            // All retries exhausted, record error
+            await this.setStepError(stepState.stepId, lastError)
+            throw lastError
           }
         },
 

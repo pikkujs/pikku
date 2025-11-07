@@ -89,7 +89,11 @@ export type CoreWorkflow<
 export interface WorkflowStepOptions {
   /** Display name for logs/UI (optional, doesn't affect execution) */
   description?: string
-  // Future: retries, timeout, failFast, priority
+  /** Number of retry attempts for failed steps (only applies to local execution) */
+  retries?: number
+  /** Delay between retry attempts (e.g., '1s', '500ms', '2min') */
+  retryDelay?: string | number
+  // Future: timeout, failFast, priority
 }
 
 /**

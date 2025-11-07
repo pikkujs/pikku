@@ -45,6 +45,7 @@ export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<
   }
 })
 
+// This is registered via the scheduler to run
 export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
   { runId: string, stepId: string },
   void
@@ -71,11 +72,6 @@ wireQueueWorker({
 wireQueueWorker({
   queueName: 'pikku-workflow-orchestrator',
   func: pikkuWorkflowOrchestrator,
-})
-
-wireQueueWorker({
-  queueName: 'pikku-workflow-step-sleeper',
-  func: pikkuWorkflowSleeper,
 })
 `
 }
