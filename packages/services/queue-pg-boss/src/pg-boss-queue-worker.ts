@@ -11,7 +11,7 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import {
+import type {
   CoreServices,
   CoreSingletonServices,
   CreateSessionServices,
@@ -123,7 +123,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
   private activeWorkers = new Map<string, string>()
 
   constructor(
-    options: PgBoss.ConstructorOptions | string,
+    pgBoss: PgBoss,
     private singletonServices: CoreSingletonServices,
     private createSessionServices?: CreateSessionServices<
       CoreSingletonServices,
@@ -131,18 +131,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
       any
     >
   ) {
-    if (typeof options === 'string') {
-      // If a string is provided, treat it as the connection string
-      options = { connectionString: options }
-    }
-    this.pgBoss = new PgBoss(options)
-  }
-
-  /**
-   * Initialize pg-boss
-   */
-  async init(): Promise<void> {
-    await this.pgBoss.start()
+    this.pgBoss = pgBoss
   }
 
   /**
@@ -197,9 +186,9 @@ export class PgBossQueueWorkers implements QueueWorkers {
   }
 
   /**
-   * Close all workers and connections
+   * Close - no-op as pg-boss lifecycle is managed by factory
    */
   async close(): Promise<void> {
-    await this.pgBoss.stop()
+    // No-op - pg-boss lifecycle is managed by factory
   }
 }

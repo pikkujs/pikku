@@ -1,4 +1,4 @@
-import type { QueueService, SerializedError } from '@pikku/core'
+import type { SerializedError } from '@pikku/core'
 import {
   WorkflowStateService,
   type WorkflowRun,
@@ -28,15 +28,13 @@ export class RedisWorkflowStateService extends WorkflowStateService {
 
   /**
    * @param connectionOrConfig - ioredis Redis instance, RedisOptions config, or connection string
-   * @param queue - Optional queue service for remote workflow execution
    * @param keyPrefix - Redis key prefix (default: 'workflows')
    */
   constructor(
     connectionOrConfig: Redis | RedisOptions | string | undefined,
-    queue?: QueueService,
     keyPrefix = 'workflows'
   ) {
-    super(queue)
+    super()
     this.keyPrefix = keyPrefix
 
     // Check if it's a Redis instance or config options

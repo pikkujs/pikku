@@ -1,5 +1,6 @@
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
+import { parseDurationString } from '../../time-utils.js'
 import {
   CoreSingletonServices,
   CreateSessionServices,
@@ -22,13 +23,10 @@ import type {
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
  */
 export abstract class WorkflowStateService {
-  protected queue?: any
   private singletonServices: CoreSingletonServices | undefined
   private createSessionServices: CreateSessionServices | undefined
 
-  constructor(queue?: any) {
-    this.queue = queue
-  }
+  constructor() {}
 
   /**
    * Create a new workflow run
@@ -104,12 +102,15 @@ export abstract class WorkflowStateService {
    * @param runId - Run ID
    */
   async addToQueue(workflowName: string, runId: string): Promise<void> {
-    if (!this.queue) {
+    if (!this.singletonServices?.queueService) {
       throw new Error(
         'QueueService not configured. Remote workflows require a queue service.'
       )
     }
-    await this.queue.add('pikku-workflow-orchestrator', { runId })
+    await this.singletonServices.queueService.add(
+      'pikku-workflow-orchestrator',
+      { runId }
+    )
   }
 
   public setServices(
@@ -266,7 +267,7 @@ export abstract class WorkflowStateService {
         },
 
         // Implement workflow.sleep()
-        sleep: async (stepName: string, _duration: string) => {
+        sleep: async (stepName: string, duration: string | number) => {
           // Check if stepName is string
           if (typeof stepName !== 'string') {
             throw new Error('Step name must be a string')
@@ -280,11 +281,39 @@ export abstract class WorkflowStateService {
             return
           }
 
-          // For now, just use a 5 second timeout (duration parameter ignored)
-          await new Promise((resolve) => setTimeout(resolve, 5000))
+          if (stepState.status === 'scheduled') {
+            // Sleep is already scheduled, pause workflow
+            throw new WorkflowAsyncException(runId, stepName)
+          }
 
-          // Mark sleep as done
-          await this.setStepResult(stepState.stepId, null)
+          // Step is pending - schedule it
+          await this.setStepScheduled(stepState.stepId)
+
+          // Check if we have queue service (remote mode) or inline mode
+          if (this.singletonServices!.schedulerService) {
+            // Remote mode - enqueue sleep worker with delay
+            await this.singletonServices!.schedulerService.scheduleRPC(
+              duration,
+              'pikku-workflow-step-sleeper',
+              {
+                runId,
+                stepName,
+                stepId: stepState.stepId,
+              }
+            )
+          } else {
+            const durationMs =
+              typeof duration === 'string'
+                ? parseDurationString(duration)
+                : duration
+            // Inline mode - use setTimeout with actual duration
+            await new Promise((resolve) => setTimeout(resolve, durationMs))
+            await this.setStepResult(stepState.stepId, null)
+            return
+          }
+
+          // Pause workflow - sleep will callback when done
+          throw new WorkflowAsyncException(runId, stepName)
         },
       } as any
 
@@ -341,5 +370,75 @@ export abstract class WorkflowStateService {
         throw error
       }
     })
+  }
+
+  /**
+   * Execute a single workflow step (called by worker)
+   * Handles idempotency, RPC execution, result storage, and orchestrator triggering
+   */
+  public async executeWorkflowStep(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    rpcInvoke: Function
+  ): Promise<void> {
+    // Idempotency check - skip if already done
+    const stepState = await this.getStepState(runId, stepName)
+    if (stepState.status === 'done') {
+      return
+    }
+
+    try {
+      // Execute RPC
+      const result = await rpcInvoke(rpcName, data)
+
+      // Store result
+      await this.setStepResult(stepState.stepId, result)
+
+      // Trigger orchestrator to continue workflow
+      await this.addToQueue('pikku-workflow-orchestrator', runId)
+    } catch (error: any) {
+      // Store error
+      await this.setStepError(stepState.stepId, error)
+
+      // Mark workflow as failed
+      await this.updateRunStatus(runId, 'failed', undefined, {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+      })
+
+      throw error
+    }
+  }
+
+  /**
+   * Orchestrate workflow execution (called by orchestrator)
+   * Runs workflow job and handles async exceptions
+   */
+  public async orchestrateWorkflow(
+    runId: string,
+    rpcInvoke: Function
+  ): Promise<void> {
+    try {
+      // Run workflow job (replays with caching)
+      await this.runWorkflowJob(runId, rpcInvoke)
+    } catch (error: any) {
+      // WorkflowAsyncException is not an error - it means we scheduled a step
+      if (error.name === 'WorkflowAsyncException') {
+        // Workflow paused waiting for step completion
+        return
+      }
+
+      // Real error - mark workflow as failed
+      await this.updateRunStatus(runId, 'failed', undefined, {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+      })
+
+      throw error
+    }
   }
 }

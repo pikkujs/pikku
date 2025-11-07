@@ -12,6 +12,7 @@ import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
 import { PikkuWorkflowInteraction } from '../wirings/workflow/workflow.types.js'
 import { WorkflowStateService } from '../wirings/workflow/workflow-state-service.js'
+import { SchedulerService } from '../services/scheduler-service.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -165,6 +166,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   workflowState?: WorkflowStateService
   /** The queue service */
   queueService?: QueueService
+  /** The scheduler service */
+  schedulerService?: SchedulerService
 }
 
 /**

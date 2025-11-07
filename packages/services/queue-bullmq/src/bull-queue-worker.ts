@@ -16,7 +16,7 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import {
+import type {
   CoreServices,
   CoreSingletonServices,
   CreateSessionServices,
