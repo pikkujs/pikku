@@ -34,6 +34,11 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
 >(async ({ workflow }, data) => {
+  // If value is negative, cancel the workflow immediately
+  if (data.value < 0) {
+    await workflow.cancel(`Workflow cancelled: value ${data.value} is negative`)
+  }
+
   // This will fail after exhausting all retries
   const result = await workflow.do(
     'Step that always fails',
