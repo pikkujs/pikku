@@ -127,6 +127,17 @@ export abstract class WorkflowStateService
   }
 
   /**
+   * Execute a workflow sleep step completion
+   * Sets the step result to null and resumes the workflow
+   * @param runId - Run ID
+   * @param stepId - Step ID
+   */
+  async executeWorkflowSleep(runId: string, stepId: string): Promise<void> {
+    await this.setStepResult(stepId, null)
+    await this.resumeWorkflow(runId)
+  }
+
+  /**
    * Schedule orchestrator retry with delay
    * @param runId - Run ID
    * @param retryDelay - Delay in milliseconds (optional)

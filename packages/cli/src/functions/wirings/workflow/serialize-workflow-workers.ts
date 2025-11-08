@@ -13,10 +13,6 @@ export const pikkuWorkflowWorker = pikkuSessionlessFunc<
   void
 >({
   func: async ({ workflowState, rpc }, { runId, stepName, rpcName, data }) => {
-    if (!workflowState) {
-      throw new Error('WorkflowState service not available in step worker')
-    }
-
     await workflowState.executeWorkflowStep(
       runId,
       stepName,
@@ -33,10 +29,6 @@ export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<
   void
 >({
   func: async ({ workflowState, rpc }, { runId }) => {
-    if (!workflowState) {
-      throw new Error('WorkflowState service not available in orchestrator')
-    }
-
     await workflowState.orchestrateWorkflow(runId, rpc.invoke.bind(rpc))
   },
   internal: true,
@@ -47,15 +39,7 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
   void
 >({
   func: async ({ workflowState }, { runId, stepId }) => {
-    if (!workflowState) {
-      throw new Error('WorkflowState service not available in sleeper')
-    }
-
-    // Mark sleep as done
-    await workflowState.setStepResult(stepId, null)
-
-    // Trigger orchestrator to continue workflow
-    await workflowState.resumeWorkflow(runId)
+    await workflowState.executeWorkflowSleep(runId, stepId)
   },
   name: 'pikkuWorkflowStepSleeper',
   expose: true,
