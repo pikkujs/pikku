@@ -57,7 +57,16 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
 // RPC function to trigger the unhappy retry workflow and wait for completion
 export const unhappyRetry = pikkuSessionlessFunc<
   { value: number },
-  { error: string; attempts: number }
+  {
+    error: string
+    attempts: number
+    steps: Array<{
+      stepName: string
+      status: string
+      attemptCount: number
+      error?: { message: string }
+    }>
+  }
 >({
   func: async ({ rpc, workflowState, logger }, data) => {
     // Start the workflow
@@ -89,18 +98,33 @@ export const unhappyRetry = pikkuSessionlessFunc<
 
       if (run.status === 'failed') {
         logger.info(`[TEST] Workflow failed as expected: ${run.error?.message}`)
-        // Return the error information
+        // Get all steps to return for validation
+        const steps = await (workflowState as any).getRunSteps(runId)
         return {
           error: run.error?.message || 'Unknown error',
           attempts: 3, // All 3 attempts exhausted
+          steps: steps.map((s: any) => ({
+            stepName: s.stepName,
+            status: s.status,
+            attemptCount: s.attemptCount,
+            error: s.error ? { message: s.error.message } : undefined,
+          })),
         }
       }
 
       if (run.status === 'cancelled') {
         logger.info(`[TEST] Workflow was cancelled`)
+        // Get all steps to return for validation
+        const steps = await (workflowState as any).getRunSteps(runId)
         return {
           error: run.error?.message || 'Workflow cancelled',
           attempts: 0,
+          steps: steps.map((s: any) => ({
+            stepName: s.stepName,
+            status: s.status,
+            attemptCount: s.attemptCount,
+            error: s.error ? { message: s.error.message } : undefined,
+          })),
         }
       }
 

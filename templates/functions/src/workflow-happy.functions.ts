@@ -60,7 +60,17 @@ export const happyRetryWorkflow = pikkuWorkflowFunc<
 // RPC function to trigger the happy retry workflow and wait for completion
 export const happyRetry = pikkuSessionlessFunc<
   { value: number },
-  { result: number; finalAttempt: number; message: string }
+  {
+    result: number
+    finalAttempt: number
+    message: string
+    steps: Array<{
+      stepName: string
+      status: string
+      attemptCount: number
+      error?: { message: string }
+    }>
+  }
 >({
   func: async ({ rpc, workflowState, logger }, data) => {
     // Start the workflow
@@ -85,7 +95,17 @@ export const happyRetry = pikkuSessionlessFunc<
 
       if (run.status === 'completed') {
         logger.info(`[TEST] Workflow completed successfully`)
-        return run.output
+        // Get all steps to return for validation
+        const steps = await (workflowState as any).getRunSteps(runId)
+        return {
+          ...run.output,
+          steps: steps.map((s: any) => ({
+            stepName: s.stepName,
+            status: s.status,
+            attemptCount: s.attemptCount,
+            error: s.error ? { message: s.error.message } : undefined,
+          })),
+        }
       }
 
       if (run.status === 'failed') {
