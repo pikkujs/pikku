@@ -16,7 +16,7 @@ export const flakyHappyRPC = pikkuSessionlessFunc<
     logger.info(`   runId: ${workflowStep?.runId ?? 'N/A'}`)
     logger.info(`   stepId: ${workflowStep?.stepId ?? 'N/A'}`)
 
-    // Fail ONLY on first attempt
+    // Fail on first attempt (attemptCount=1)
     if (attempt === 1) {
       logger.error(`❌ [HAPPY] Attempt #1 - FAILING (will retry)`)
       throw new Error('[HAPPY] First attempt fails - will retry and succeed')

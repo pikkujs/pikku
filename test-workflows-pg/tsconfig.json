@@ -3,8 +3,14 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "module": "Node18",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "skipLibCheck": true
   },
-  "include": ["src/", ".pikku/*", "client/start-workflow.ts"]
+  "include": [
+    "src/",
+    ".pikku/*",
+    "client/start-workflow.ts"
+  ]
 }
