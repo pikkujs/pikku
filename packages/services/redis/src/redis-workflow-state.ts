@@ -180,6 +180,52 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     }
   }
 
+  async getRunSteps(
+    runId: string
+  ): Promise<Array<StepState & { stepName: string }>> {
+    const pattern = `${this.keyPrefix}:step:${runId}:*`
+    const keys: string[] = []
+
+    // Use SCAN to find all step keys for this run
+    let cursor = '0'
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = newCursor
+      keys.push(...foundKeys)
+    } while (cursor !== '0')
+
+    // Fetch all step data
+    const steps: Array<StepState & { stepName: string }> = []
+    for (const key of keys) {
+      const data = await this.redis.hgetall(key)
+      if (!data.stepId) continue
+
+      // Extract stepName from key (format: prefix:step:runId:stepName)
+      const keyParts = key.split(':')
+      const stepName = keyParts.slice(3).join(':')
+
+      steps.push({
+        stepId: data.stepId,
+        stepName,
+        status: data.status as any,
+        result: data.result ? JSON.parse(data.result) : undefined,
+        error: data.error ? JSON.parse(data.error) : undefined,
+        attemptCount: Number(data.attemptCount || 1),
+        createdAt: new Date(Number(data.createdAt!)),
+        updatedAt: new Date(Number(data.updatedAt!)),
+      })
+    }
+
+    // Sort by creation time
+    return steps.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+  }
+
   async setStepScheduled(stepId: string): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
