@@ -57,12 +57,51 @@ export const happyRetryWorkflow = pikkuWorkflowFunc<
   }
 })
 
-// RPC function to trigger the happy retry workflow
+// RPC function to trigger the happy retry workflow and wait for completion
 export const happyRetry = pikkuSessionlessFunc<
   { value: number },
-  { runId: string }
+  { result: number; finalAttempt: number; message: string }
 >({
-  func: async ({ rpc }, data) => {
-    return await rpc.startWorkflow('happyRetry', data)
+  func: async ({ rpc, workflowState, logger }, data) => {
+    // Start the workflow
+    const { runId } = await rpc.startWorkflow('happyRetry', data)
+
+    logger.info(`[TEST] Workflow started: ${runId}`)
+
+    // Poll for completion (with timeout)
+    const maxWaitMs = 30000 // 30 seconds
+    const pollIntervalMs = 100
+    const startTime = Date.now()
+
+    while (Date.now() - startTime < maxWaitMs) {
+      const run = await workflowState!.getRun(runId)
+
+      if (!run) {
+        logger.error(`[TEST] Workflow run not found: ${runId}`)
+        throw new Error(`Workflow run not found: ${runId}`)
+      }
+
+      logger.info(`[TEST] Workflow status: ${run.status}`)
+
+      if (run.status === 'completed') {
+        logger.info(`[TEST] Workflow completed successfully`)
+        return run.output
+      }
+
+      if (run.status === 'failed') {
+        logger.error(`[TEST] Workflow failed: ${run.error?.message}`)
+        throw new Error(`Workflow failed: ${run.error?.message}`)
+      }
+
+      if (run.status === 'cancelled') {
+        logger.error(`[TEST] Workflow cancelled: ${run.error?.message}`)
+        throw new Error(`Workflow cancelled: ${run.error?.message}`)
+      }
+
+      // Wait before polling again
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+    }
+
+    throw new Error(`Workflow timed out after ${maxWaitMs}ms`)
   },
 })

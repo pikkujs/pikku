@@ -1,14 +1,15 @@
 /**
- * Test script for UNHAPPY PATH workflow retry
+ * Test script for UNHAPPY PATH workflow retry (Redis backend)
  * Should fail after exhausting all retries
  */
 
-import { pikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
+import { PikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
 
-const API_URL = 'http://localhost:4002'
+const pikkuFetch = new PikkuFetch()
+pikkuFetch.setServerUrl('http://localhost:4003')
 
 async function main() {
-  console.log('🧪 Testing UNHAPPY PATH Workflow Retry\n')
+  console.log('🧪 Testing UNHAPPY PATH Workflow Retry (Redis)\n')
   console.log('='.repeat(70))
   console.log('\n📝 Expected behavior:')
   console.log('  1. Workflow starts')
@@ -23,37 +24,44 @@ async function main() {
   try {
     console.log('\n📤 Starting unhappyRetry workflow via RPC...\n')
 
-    const response = await pikkuFetch(API_URL).rpc('unhappyRetry', {
+    const response = await pikkuFetch.post('/workflow/test/unhappy-retry', {
       value: 10,
     })
 
     console.log('\n' + '='.repeat(70))
-    console.log('\n❌ UNEXPECTED: Workflow should have failed but succeeded')
+    console.log('\n✅ WORKFLOW FAILED AS EXPECTED!')
     console.log('\n📊 Response:')
     console.log(JSON.stringify(response, null, 2))
     console.log('\n' + '='.repeat(70))
-    process.exit(1)
-  } catch (error: any) {
-    console.log('\n' + '='.repeat(70))
-    console.log('\n✅ EXPECTED: Workflow failed after exhausting retries')
-    console.log('\n📊 Error details:')
-    console.log(`  Message: ${error.message}`)
 
-    // Check if error message indicates retry exhaustion
-    if (
-      error.message.includes('Attempt 3') ||
-      error.message.includes('UNHAPPY')
-    ) {
-      console.log('\n✅ PASS: Error indicates retries were exhausted')
+    // Verify the response structure
+    if (!response.error || !response.attempts) {
+      console.log('\n❌ FAIL: Missing expected fields in response')
+      console.log('Expected: { error, attempts }')
+      console.log('Got:', response)
+      process.exit(1)
+    }
+
+    // Verify attempts is 3 (all attempts exhausted)
+    if (response.attempts === 3) {
+      console.log('\n✅ PASS: All 3 attempts exhausted (as expected)')
+      console.log(`   Error: ${response.error}`)
       console.log(
-        '\n🎉 Test passed - workflow correctly failed after retries!\n'
+        '\n🎉 Test passed - workflow correctly failed after exhausting retries!\n'
       )
       process.exit(0)
     } else {
-      console.log('\n❌ FAIL: Error message unexpected')
-      console.log('Full error:', error)
+      console.log(`\n❌ FAIL: Expected 3 attempts, got ${response.attempts}`)
       process.exit(1)
     }
+  } catch (error: any) {
+    console.error('\n❌ Test FAILED:')
+    console.error(error.message)
+    if (error.stack) {
+      console.error('\nStack trace:')
+      console.error(error.stack)
+    }
+    process.exit(1)
   }
 }
 

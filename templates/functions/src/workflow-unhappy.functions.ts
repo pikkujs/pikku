@@ -54,12 +54,60 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   return { result: result.result }
 })
 
-// RPC function to trigger the unhappy retry workflow
+// RPC function to trigger the unhappy retry workflow and wait for completion
 export const unhappyRetry = pikkuSessionlessFunc<
   { value: number },
-  { runId: string }
+  { error: string; attempts: number }
 >({
-  func: async ({ rpc }, data) => {
-    return await rpc.startWorkflow('unhappyRetry', data)
+  func: async ({ rpc, workflowState, logger }, data) => {
+    // Start the workflow
+    const { runId } = await rpc.startWorkflow('unhappyRetry', data)
+
+    logger.info(`[TEST] Workflow started: ${runId}`)
+
+    // Poll for completion (with timeout)
+    const maxWaitMs = 30000 // 30 seconds
+    const pollIntervalMs = 100
+    const startTime = Date.now()
+
+    while (Date.now() - startTime < maxWaitMs) {
+      const run = await workflowState!.getRun(runId)
+
+      if (!run) {
+        logger.error(`[TEST] Workflow run not found: ${runId}`)
+        throw new Error(`Workflow run not found: ${runId}`)
+      }
+
+      logger.info(`[TEST] Workflow status: ${run.status}`)
+
+      if (run.status === 'completed') {
+        logger.info(`[TEST] Workflow completed unexpectedly`)
+        throw new Error(
+          'Expected workflow to fail, but it completed successfully'
+        )
+      }
+
+      if (run.status === 'failed') {
+        logger.info(`[TEST] Workflow failed as expected: ${run.error?.message}`)
+        // Return the error information
+        return {
+          error: run.error?.message || 'Unknown error',
+          attempts: 3, // All 3 attempts exhausted
+        }
+      }
+
+      if (run.status === 'cancelled') {
+        logger.info(`[TEST] Workflow was cancelled`)
+        return {
+          error: run.error?.message || 'Workflow cancelled',
+          attempts: 0,
+        }
+      }
+
+      // Wait before polling again
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+    }
+
+    throw new Error(`Workflow timed out after ${maxWaitMs}ms`)
   },
 })

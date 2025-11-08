@@ -3,7 +3,10 @@
  * Should cancel immediately when value is negative
  */
 
-const API_URL = 'http://localhost:4003'
+import { PikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
+
+const pikkuFetch = new PikkuFetch()
+pikkuFetch.setServerUrl('http://localhost:4003')
 
 async function main() {
   console.log('🧪 Testing Workflow Cancellation (Redis)\n')
@@ -18,18 +21,9 @@ async function main() {
   try {
     console.log('\n📤 Starting unhappyRetry workflow with negative value...\n')
 
-    const res = await fetch(`${API_URL}/workflow/test/unhappy-retry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: -5 }),
+    const response = await pikkuFetch.post('/workflow/test/unhappy-retry', {
+      value: -5,
     })
-
-    if (!res.ok) {
-      const errorText = await res.text()
-      throw new Error(`HTTP ${res.status}: ${errorText}`)
-    }
-
-    const response = await res.json()
 
     console.log('\n' + '='.repeat(70))
     console.log('\n❌ UNEXPECTED: Workflow should have been cancelled')

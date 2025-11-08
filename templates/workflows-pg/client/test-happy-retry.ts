@@ -3,7 +3,10 @@
  * Should succeed after one retry
  */
 
+import { pikkuFetch } from './pikku-fetch.gen.js'
+
 const API_URL = 'http://localhost:4002'
+pikkuFetch.setServerUrl(API_URL)
 
 async function main() {
   console.log('🧪 Testing HAPPY PATH Workflow Retry (PostgreSQL)\n')
@@ -19,17 +22,9 @@ async function main() {
   try {
     console.log('\n📤 Starting happyRetry workflow via RPC...\n')
 
-    const res = await fetch(`${API_URL}/workflow/test/happy-retry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value: 10 }),
+    const response = await pikkuFetch.post('/workflow/test/happy-retry', {
+      value: 10,
     })
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${await res.text()}`)
-    }
-
-    const response = await res.json()
 
     console.log('\n' + '='.repeat(70))
     console.log('\n✅ WORKFLOW COMPLETED SUCCESSFULLY!')
@@ -37,16 +32,27 @@ async function main() {
     console.log(JSON.stringify(response, null, 2))
     console.log('\n' + '='.repeat(70))
 
-    // Check if we got a runId (workflow started asynchronously)
-    if (response.runId) {
-      console.log('\n✅ PASS: Workflow started successfully')
-      console.log(`   Run ID: ${response.runId}`)
+    // Verify the response structure
+    if (!response.result || !response.finalAttempt || !response.message) {
+      console.log('\n❌ FAIL: Missing expected fields in response')
+      console.log('Expected: { result, finalAttempt, message }')
+      console.log('Got:', response)
+      process.exit(1)
+    }
+
+    // Verify the finalAttempt is 2 (failed on attempt 1, succeeded on attempt 2)
+    if (response.finalAttempt === 2) {
+      console.log('\n✅ PASS: Step succeeded on attempt 2 (after 1 retry)')
+      console.log(`   Result: ${response.result}`)
+      console.log(`   Message: ${response.message}`)
       console.log(
-        '\n📝 NOTE: Workflow is executing asynchronously. Check server logs for retry behavior.'
+        '\n🎉 Test passed - workflow correctly retried and succeeded!\n'
       )
-      console.log('\n🎉 Test passed!\n')
+      process.exit(0)
     } else {
-      console.log('\n❌ FAIL: Expected runId in response')
+      console.log(
+        `\n❌ FAIL: Expected finalAttempt to be 2, got ${response.finalAttempt}`
+      )
       process.exit(1)
     }
   } catch (error: any) {
