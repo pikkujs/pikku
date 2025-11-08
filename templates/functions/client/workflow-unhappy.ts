@@ -1,9 +1,4 @@
-/**
- * Test script for UNHAPPY PATH workflow retry (PostgreSQL backend)
- * Should fail after exhausting all retries
- */
-
-import { pikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '../.pikku/pikku-fetch.gen.js'
 
 const API_URL = 'http://localhost:4002'
 pikkuFetch.setServerUrl(API_URL)
