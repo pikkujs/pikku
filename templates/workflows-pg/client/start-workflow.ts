@@ -36,7 +36,15 @@ async function main(): Promise<void> {
     // Poll for workflow completion
     let run = await workflowState.getRun(runId)
     while (run && run.status === 'running') {
-      console.log('Workflow still running...')
+      const steps = await workflowState.getRunSteps(runId)
+      const lastStep = steps[steps.length - 1]
+      if (lastStep) {
+        console.log(
+          `Workflow still running... Last step: ${lastStep.stepName} (${lastStep.status})`
+        )
+      } else {
+        console.log('Workflow still running...')
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000))
       run = await workflowState.getRun(runId)
     }

@@ -214,6 +214,38 @@ export class PgWorkflowStateService extends WorkflowStateService {
     }
   }
 
+  async getRunSteps(
+    runId: string
+  ): Promise<Array<StepState & { stepName: string }>> {
+    const result = await this.sql.unsafe(
+      `SELECT
+        s.workflow_step_id,
+        s.step_name,
+        s.status,
+        s.result,
+        s.error,
+        s.created_at,
+        s.updated_at,
+        COALESCE((SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
+                  WHERE workflow_step_id = s.workflow_step_id), 0) + 1 as attempt_count
+      FROM ${this.schemaName}.workflow_step s
+      WHERE s.workflow_run_id = $1
+      ORDER BY s.created_at ASC`,
+      [runId]
+    )
+
+    return result.map((row) => ({
+      stepId: row.workflow_step_id as string,
+      stepName: row.step_name as string,
+      status: row.status as any,
+      result: row.result,
+      error: row.error,
+      attemptCount: Number(row.attempt_count),
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
+    }))
+  }
+
   async setStepScheduled(stepId: string): Promise<void> {
     await this.sql.unsafe(
       `UPDATE ${this.schemaName}.workflow_step
