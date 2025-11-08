@@ -10,7 +10,10 @@ import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
 import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
-import { PikkuWorkflowInteraction } from '../wirings/workflow/workflow.types.js'
+import {
+  PikkuWorkflowInteraction,
+  WorkflowStepInteraction,
+} from '../wirings/workflow/workflow.types.js'
 import { WorkflowStateService } from '../wirings/workflow/workflow-state-service.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 
@@ -183,6 +186,7 @@ export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
   queue: PikkuQueue
   cli: PikkuCLI
   workflow: PikkuWorkflowInteraction
+  workflowStep: WorkflowStepInteraction
 }>
 
 /**

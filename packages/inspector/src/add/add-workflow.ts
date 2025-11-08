@@ -166,9 +166,6 @@ export const addWorkflow: AddWiring = (
     const description = getPropertyValue(obj, 'description') as
       | string
       | undefined
-    const executionMode =
-      (getPropertyValue(obj, 'executionMode') as 'inline' | 'remote' | null) ||
-      'remote'
     const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
     const tags = getPropertyTags(obj, 'Workflow', workflowName, logger)
 
@@ -224,7 +221,6 @@ export const addWorkflow: AddWiring = (
     state.workflows.meta[workflowName] = {
       pikkuFuncName,
       workflowName,
-      executionMode,
       description,
       docs,
       tags,

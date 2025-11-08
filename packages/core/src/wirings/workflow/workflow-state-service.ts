@@ -179,7 +179,7 @@ export abstract class WorkflowStateService
   public async startWorkflow<I>(
     name: string,
     input: I,
-    rpcInvoke: Function
+    rpcService: any
   ): Promise<{ runId: string }> {
     const registrations = pikkuState('workflows', 'registrations')
     const workflow = registrations.get(name)
@@ -191,21 +191,20 @@ export abstract class WorkflowStateService
     // Create workflow run in state
     const runId = await this.createRun(name, input)
 
-    // If inline mode, execute directly via runWorkflowJob
-    if (workflow.executionMode === 'inline') {
-      await this.runWorkflowJob(runId, rpcInvoke)
-    } else {
+    // If queue service is available, use remote execution (queue-based)
+    // Otherwise, execute directly (inline/synchronous)
+    if (this.singletonServices?.queueService) {
       // Queue orchestrator to start the workflow
       await this.resumeWorkflow(runId)
+    } else {
+      // No queue service - execute directly via runWorkflowJob
+      await this.runWorkflowJob(runId, rpcService)
     }
 
     return { runId }
   }
 
-  public async runWorkflowJob(
-    runId: string,
-    rpcInvoke: Function
-  ): Promise<void> {
+  public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
     if (!this.singletonServices) {
       throw new Error('Singleton services not set in WorkflowStateService')
     }
@@ -285,16 +284,39 @@ export abstract class WorkflowStateService
               const retryDelay = stepOptions?.retryDelay
               const attemptCount = stepState.attemptCount
 
+              this.singletonServices?.logger.info(
+                `[WORKFLOW RETRY] Executing step inline: runId=${runId}, stepId=${stepState.stepId}, attemptCount=${attemptCount}/${retries}`
+              )
+
               try {
-                const result = await rpcInvoke(rpcName, data)
+                const result = await rpcService.rpcWithInteraction(
+                  rpcName,
+                  data,
+                  {
+                    runId,
+                    stepId: stepState.stepId,
+                    attemptCount: stepState.attemptCount,
+                  }
+                )
+                this.singletonServices?.logger.info(
+                  `[WORKFLOW RETRY] Step succeeded on attempt ${attemptCount}: runId=${runId}, stepId=${stepState.stepId}`
+                )
                 await this.setStepResult(stepState.stepId, result)
                 return result
               } catch (error: any) {
+                this.singletonServices?.logger.error(
+                  `[WORKFLOW RETRY] Step failed on attempt ${attemptCount}: runId=${runId}, stepId=${stepState.stepId}, error=${error.message}`
+                )
+
                 // Record the error (marks step as failed)
                 await this.setStepError(stepState.stepId, error)
 
                 // Check if we should retry
                 if (attemptCount < retries) {
+                  this.singletonServices?.logger.info(
+                    `[WORKFLOW RETRY] Scheduling retry ${attemptCount + 1}/${retries}: runId=${runId}, stepId=${stepState.stepId}, delay=${retryDelay}`
+                  )
+
                   // Create a new pending retry attempt (copies metadata from failed step)
                   await this.createRetryAttempt(stepState.stepId)
 
@@ -304,6 +326,10 @@ export abstract class WorkflowStateService
                   // Pause workflow - orchestrator will replay and pick up new attempt
                   throw new WorkflowAsyncException(runId, stepName)
                 }
+
+                this.singletonServices?.logger.error(
+                  `[WORKFLOW RETRY] Retries exhausted (${attemptCount}/${retries}): runId=${runId}, stepId=${stepState.stepId}`
+                )
 
                 // No more retries, fail the workflow
                 throw error
@@ -467,7 +493,7 @@ export abstract class WorkflowStateService
    */
   public async executeWorkflowStep(
     data: { runId: string; stepName: string; rpcName: string; data: any },
-    rpcInvoke: Function
+    rpcService: any
   ): Promise<void> {
     // Idempotency check - skip if already succeeded
     const stepState = await this.getStepState(data.runId, data.stepName)
@@ -476,8 +502,16 @@ export abstract class WorkflowStateService
     }
 
     try {
-      // Execute RPC
-      const result = await rpcInvoke(data.rpcName, data.data)
+      // Execute RPC with workflow step context
+      const result = await rpcService.rpcWithInteraction(
+        data.rpcName,
+        data.data,
+        {
+          runId: data.runId,
+          stepId: stepState.stepId,
+          attemptCount: stepState.attemptCount,
+        }
+      )
 
       // Store result
       await this.setStepResult(stepState.stepId, result)
@@ -505,11 +539,11 @@ export abstract class WorkflowStateService
    */
   public async orchestrateWorkflow(
     data: { runId: string },
-    rpcInvoke: Function
+    rpcService: any
   ): Promise<void> {
     try {
       // Run workflow job (replays with caching)
-      await this.runWorkflowJob(data.runId, rpcInvoke)
+      await this.runWorkflowJob(data.runId, rpcService)
     } catch (error: any) {
       // WorkflowAsyncException is not an error - it means we scheduled a step
       if (error.name === 'WorkflowAsyncException') {

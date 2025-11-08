@@ -78,8 +78,6 @@ export type CoreWorkflow<
   name: string
   /** Description of the workflow */
   description?: string
-  /** Execution mode: 'inline' (sync) or 'remote' (queue-based) */
-  executionMode?: 'inline' | 'remote' // default: 'remote'
   /** The workflow function */
   func: PikkuFunctionConfig
   /** Middleware chain for this workflow */
@@ -168,6 +166,19 @@ export type WorkflowStepMeta =
     }
 
 /**
+ * Workflow step interaction context for RPC functions
+ * Provides step-level metadata including retry attempt tracking
+ */
+export interface WorkflowStepInteraction {
+  /** The workflow run ID */
+  runId: string
+  /** The unique step ID */
+  stepId: string
+  /** Current attempt number (1-indexed, increments on retry) */
+  attemptCount: number
+}
+
+/**
  * Workflow interaction object for middleware
  * Provides workflow-specific capabilities to function execution
  */
@@ -206,7 +217,6 @@ export type WorkflowsMeta = Record<
   {
     pikkuFuncName: string
     workflowName: string
-    executionMode: 'inline' | 'remote'
     description?: string
     session?: undefined
     docs?: PikkuDocs
@@ -242,12 +252,12 @@ export interface WorkflowOrchestratorService {
   startWorkflow<I>(
     name: string,
     input: I,
-    rpcInvoke: Function
+    rpcService: any
   ): Promise<{ runId: string }>
-  runWorkflowJob(runId: string, rpcInvoke: Function): Promise<void>
+  runWorkflowJob(runId: string, rpcService: any): Promise<void>
   orchestrateWorkflow(
     data: WorkflowOrchestratorInput,
-    rpcInvoke: Function
+    rpcService: any
   ): Promise<void>
   executeWorkflowSleep(data: WorkflowSleeperInput): Promise<void>
 }
@@ -284,8 +294,5 @@ export interface WorkflowStepService {
   createRetryAttempt(stepId: string): Promise<StepState>
 
   // Step execution
-  executeWorkflowStep(
-    data: WorkflowStepInput,
-    rpcInvoke: Function
-  ): Promise<void>
+  executeWorkflowStep(data: WorkflowStepInput, rpcService: any): Promise<void>
 }

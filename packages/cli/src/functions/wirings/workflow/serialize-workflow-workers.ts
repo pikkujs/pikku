@@ -7,14 +7,32 @@ export const serializeWorkflowWorkers = (pathToPikkuTypes: string) => {
  * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuSessionlessFunc, wireQueueWorker } from '${pathToPikkuTypes}'
-import type { WorkflowStepInput, WorkflowOrchestratorInput, WorkflowSleeperInput } from '@pikku/core/workflow'
+
+/**
+ * Worker input types for generated queue workers
+ */
+export type WorkflowStepInput = {
+  runId: string
+  stepName: string
+  rpcName: string
+  data: any
+}
+
+export type WorkflowOrchestratorInput = {
+  runId: string
+}
+
+export type WorkflowSleeperInput = {
+  runId: string
+  stepId: string
+}
 
 export const pikkuWorkflowWorker = pikkuSessionlessFunc<
   WorkflowStepInput,
   void
 >({
   func: async ({ workflowState, rpc }, data) => {
-    await workflowState.executeWorkflowStep(data, rpc.invoke.bind(rpc))
+    await workflowState.executeWorkflowStep(data, rpc)
   },
   internal: true,
 })
@@ -24,7 +42,7 @@ export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<
   void
 >({
   func: async ({ workflowState, rpc }, data) => {
-    await workflowState.orchestrateWorkflow(data, rpc.invoke.bind(rpc))
+    await workflowState.orchestrateWorkflow(data, rpc)
   },
   internal: true,
 })

@@ -5,7 +5,7 @@ import { mapPgBossJobToQueueJob } from './utils.js'
 export const mapPikkuJobToPgBoss = (
   options?: JobOptions
 ): PgBoss.JobOptions => {
-  const pgBossOptions: PgBoss.JobOptions = {}
+  const pgBossOptions: any = {}
 
   if (options?.priority !== undefined) {
     pgBossOptions.priority = options.priority
@@ -19,7 +19,34 @@ export const mapPikkuJobToPgBoss = (
     pgBossOptions.singletonKey = options.jobId
   }
 
-  return pgBossOptions
+  // Map retry options
+  if (options?.attempts !== undefined) {
+    pgBossOptions.retryLimit = options.attempts
+  }
+
+  if (options?.backoff !== undefined) {
+    if (typeof options.backoff === 'string') {
+      // If backoff is a string, assume it's 'exponential' or 'fixed'
+      pgBossOptions.retryBackoff = options.backoff === 'exponential'
+    } else if (typeof options.backoff === 'object') {
+      pgBossOptions.retryBackoff = options.backoff.type === 'exponential'
+      if (options.backoff.delay !== undefined) {
+        // pg-boss uses seconds, we use milliseconds
+        pgBossOptions.retryDelay = Math.floor(options.backoff.delay / 1000)
+      }
+    }
+  }
+
+  if (options?.removeOnComplete !== undefined) {
+    pgBossOptions.onComplete = options.removeOnComplete === 0
+  }
+
+  if (options?.removeOnFail !== undefined) {
+    // pg-boss doesn't have a direct equivalent, but we can track this for consistency
+    // Note: pg-boss keeps failed jobs by default
+  }
+
+  return pgBossOptions as PgBoss.JobOptions
 }
 
 /**
