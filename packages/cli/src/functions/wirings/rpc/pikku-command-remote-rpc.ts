@@ -6,11 +6,7 @@ import { join } from 'path'
 
 export const pikkuRemoteRPC: any = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
-    // Only generate remote RPC workers if:
-    // 1. rpc.remoteRpcWorkersPath is configured
-    // 2. AND the config doesn't extend from another config
-    // This ensures only the base config generates the file, not extending configs
-    if (config.rpc?.remoteRpcWorkersPath && !config.extends) {
+    if (config.rpc?.remoteRpcWorkersPath) {
       const remoteRpcPath = join(
         config.rootDir,
         config.rpc.remoteRpcWorkersPath

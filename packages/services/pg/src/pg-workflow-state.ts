@@ -97,8 +97,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
         FOREIGN KEY (workflow_run_id) REFERENCES ${this.schemaName}.workflow_runs(workflow_run_id) ON DELETE CASCADE
       );
 
-      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step_audit (
-        audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step_history (
+        history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         workflow_step_id UUID NOT NULL,
         status ${this.schemaName}.step_status_enum NOT NULL,
         result JSONB,
@@ -164,7 +164,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
   }
 
   async getStepState(runId: string, stepName: string): Promise<StepState> {
-    // Get step with attempt count from audit table
+    // Get step with attempt count from history table
     const result = await this.sql.unsafe(
       `SELECT
         s.workflow_step_id,
@@ -173,7 +173,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
         s.error,
         s.created_at,
         s.updated_at,
-        COALESCE((SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_audit
+        COALESCE((SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
                   WHERE workflow_step_id = s.workflow_step_id), 0) + 1 as attempt_count
       FROM ${this.schemaName}.workflow_step s
       WHERE s.workflow_run_id = $1 AND s.step_name = $2`,
@@ -223,14 +223,14 @@ export class PgWorkflowStateService extends WorkflowStateService {
     )
   }
 
-  private async insertAuditRecord(
+  private async insertHistoryRecord(
     stepId: string,
     status: string,
     result?: any,
     error?: SerializedError
   ): Promise<void> {
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.workflow_step_audit
+      `INSERT INTO ${this.schemaName}.workflow_step_history
       (workflow_step_id, status, result, error)
       VALUES ($1, $2, $3, $4)`,
       [stepId, status, result || null, error || null]
@@ -248,8 +248,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
       )
     })
 
-    // Insert audit record (outside transaction for observability even if main update fails)
-    await this.insertAuditRecord(stepId, 'succeeded', result)
+    // Insert history record (outside transaction for observability even if main update fails)
+    await this.insertHistoryRecord(stepId, 'succeeded', result)
   }
 
   async setStepError(stepId: string, error: Error): Promise<void> {
@@ -269,8 +269,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
       )
     })
 
-    // Insert audit record (outside transaction for observability even if main update fails)
-    await this.insertAuditRecord(stepId, 'failed', undefined, serializedError)
+    // Insert history record (outside transaction for observability even if main update fails)
+    await this.insertHistoryRecord(stepId, 'failed', undefined, serializedError)
   }
 
   async createRetryAttempt(stepId: string): Promise<StepState> {
@@ -282,8 +282,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
       [stepId]
     )
 
-    // Insert audit record for retry
-    await this.insertAuditRecord(stepId, 'pending')
+    // Insert history record for retry
+    await this.insertHistoryRecord(stepId, 'pending')
 
     // Return updated state with new attempt count
     return await this.sql
@@ -295,7 +295,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
           error,
           created_at,
           updated_at,
-          (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_audit
+          (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
            WHERE workflow_step_id = $1) + 1 as attempt_count
         FROM ${this.schemaName}.workflow_step
         WHERE workflow_step_id = $1`,

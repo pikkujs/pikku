@@ -122,6 +122,32 @@ export abstract class WorkflowStateService {
     )
   }
 
+  /**
+   * Schedule orchestrator retry with delay
+   * @param runId - Run ID
+   * @param retryDelay - Delay in milliseconds (optional)
+   */
+  private async scheduleOrchestratorRetry(
+    runId: string,
+    retryDelay?: number
+  ): Promise<void> {
+    if (retryDelay && this.singletonServices!.schedulerService) {
+      // Use scheduler service for delay
+      await this.singletonServices!.schedulerService.scheduleRPC(
+        retryDelay,
+        'pikku-workflow-orchestrator',
+        { runId }
+      )
+    } else if (retryDelay) {
+      // No scheduler - use local delay
+      await new Promise((resolve) => setTimeout(resolve, retryDelay))
+      await this.addToQueue('pikku-workflow-orchestrator', runId)
+    } else {
+      // No delay - trigger orchestrator immediately
+      await this.addToQueue('pikku-workflow-orchestrator', runId)
+    }
+  }
+
   public setServices(
     singletonServices: CoreSingletonServices,
     createSessionServices: CreateSessionServices
@@ -256,16 +282,7 @@ export abstract class WorkflowStateService {
                   await this.createRetryAttempt(stepState.stepId)
 
                   // Schedule orchestrator to retry after delay
-                  if (retryDelay && this.singletonServices!.schedulerService) {
-                    await this.singletonServices!.schedulerService.scheduleRPC(
-                      retryDelay,
-                      'pikku-workflow-orchestrator',
-                      { runId }
-                    )
-                  } else {
-                    // No scheduler or no delay - trigger orchestrator immediately
-                    await this.addToQueue('pikku-workflow-orchestrator', runId)
-                  }
+                  await this.scheduleOrchestratorRetry(runId, retryDelay)
 
                   // Pause workflow - orchestrator will replay and pick up new attempt
                   throw new WorkflowAsyncException(runId, stepName)
@@ -310,16 +327,7 @@ export abstract class WorkflowStateService {
                 await this.createRetryAttempt(stepState.stepId)
 
                 // Schedule orchestrator to retry after delay
-                if (retryDelay && this.singletonServices!.schedulerService) {
-                  await this.singletonServices!.schedulerService.scheduleRPC(
-                    retryDelay,
-                    'pikku-workflow-orchestrator',
-                    { runId }
-                  )
-                } else {
-                  // No scheduler or no delay - trigger orchestrator immediately
-                  await this.addToQueue('pikku-workflow-orchestrator', runId)
-                }
+                await this.scheduleOrchestratorRetry(runId, retryDelay)
 
                 // Pause workflow - orchestrator will replay and pick up new attempt
                 throw new WorkflowAsyncException(runId, stepName)
