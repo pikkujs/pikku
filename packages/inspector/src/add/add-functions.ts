@@ -305,6 +305,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   let tags: string[] | undefined
   let expose: boolean | undefined
+  let internal: boolean | undefined
   let docs: PikkuDocs | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
 
@@ -318,6 +319,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     objectNode = handlerNode
     tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
     expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
+    internal = getPropertyValue(handlerNode, 'internal') as boolean | undefined
     docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
 
     const fnProp = getPropertyAssignmentInitializer(
@@ -454,6 +456,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
+    internal: internal || undefined,
     tags: tags || undefined,
     docs: docs || undefined,
     isDirectFunction,
@@ -481,6 +484,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
       return
     }
 
+    // Mark internal functions as invoked to force bundling
+    if (internal) {
+      state.rpc.invokedFunctions.add(pikkuFuncName)
+    }
+
     if (expose) {
       state.rpc.exposedMeta[name] = pikkuFuncName
       state.rpc.exposedFiles.set(name, {
@@ -496,7 +504,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
-    if (state.rpc.invokedFunctions.has(pikkuFuncName) || expose) {
+    if (state.rpc.invokedFunctions.has(pikkuFuncName) || expose || internal) {
       state.rpc.internalFiles.set(name, {
         path: node.getSourceFile().fileName,
         exportedName,

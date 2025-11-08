@@ -206,6 +206,17 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // RPC config defaults
+    if (!result.rpc) {
+      result.rpc = {}
+    }
+    if (!result.rpc.remoteRpcWorkersPath) {
+      result.rpc.remoteRpcWorkersPath = join(
+        rpcDir,
+        'pikku-remote-rpc-workers.gen.ts'
+      )
+    }
+
     // Scheduler
     if (!result.schedulersWiringFile) {
       result.schedulersWiringFile = join(

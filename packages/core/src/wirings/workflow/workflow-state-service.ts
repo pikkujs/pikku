@@ -359,10 +359,9 @@ export abstract class WorkflowStateService {
             // Remote mode - enqueue sleep worker with delay
             await this.singletonServices!.schedulerService.scheduleRPC(
               duration,
-              'pikku-workflow-step-sleeper',
+              'pikkuWorkflowStepSleeper',
               {
                 runId,
-                stepName,
                 stepId: stepState.stepId,
               }
             )

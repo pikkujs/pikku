@@ -77,6 +77,7 @@ export type FunctionRuntimeMeta = {
   inputSchemaName: string | null
   outputSchemaName: string | null
   expose?: boolean
+  internal?: boolean
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &

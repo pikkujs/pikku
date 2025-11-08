@@ -90,6 +90,28 @@ export const all: any = pikkuVoidFunc({
       )
     }
 
+    // Generate Workflows
+    const workflows = await rpc.invoke('pikkuWorkflow', null)
+    if (workflows) {
+      await rpc.invoke('pikkuWorkflowMap', null)
+      allImports.push(
+        config.workflowsWiringMetaFile,
+        config.workflowsWiringFile
+      )
+    }
+
+    // Generate Remote RPC Workers (must be before queue discovery so wireQueueWorker calls are picked up)
+    const remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
+    if (remoteRPC && config.rpc?.remoteRpcWorkersPath) {
+      // Only add to imports if we actually generated the file
+      allImports.push(config.rpc.remoteRpcWorkersPath)
+    }
+
+    // Reinspect to pick up generated workflow workers and remote RPC workers
+    if (workflows || remoteRPC) {
+      await getInspectorState(true)
+    }
+
     // Generate Queues
     const queues = await rpc.invoke('pikkuQueue', null)
     if (queues) {
@@ -98,16 +120,6 @@ export const all: any = pikkuVoidFunc({
       allImports.push(
         config.queueWorkersWiringMetaFile,
         config.queueWorkersWiringFile
-      )
-    }
-
-    // Generate Workflows
-    const workflows = await rpc.invoke('pikkuWorkflow', null)
-    if (workflows) {
-      await rpc.invoke('pikkuWorkflowMap', null)
-      allImports.push(
-        config.workflowsWiringMetaFile,
-        config.workflowsWiringFile
       )
     }
 

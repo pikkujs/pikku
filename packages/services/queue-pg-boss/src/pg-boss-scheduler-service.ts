@@ -53,10 +53,14 @@ export class PgBossSchedulerService extends SchedulerService {
     }
 
     // Use send() with startAfter for one-off delayed execution
-    const taskId = await this.pgBoss.send('pikku-scheduled-rpc', jobData, {
-      startAfter: new Date(Date.now() + delayMs),
-      singletonKey: `${rpcName}-${Date.now()}`, // Ensure uniqueness
-    })
+    const taskId = await this.pgBoss.send(
+      'pikku-remote-internal-rpc',
+      jobData,
+      {
+        startAfter: new Date(Date.now() + delayMs),
+        singletonKey: `${rpcName}-${Date.now()}`, // Ensure uniqueness
+      }
+    )
 
     if (!taskId) {
       throw new Error('Failed to schedule RPC')
@@ -69,7 +73,7 @@ export class PgBossSchedulerService extends SchedulerService {
    * Unschedule (cancel) a task by ID
    */
   async unschedule(taskId: string): Promise<boolean> {
-    await this.pgBoss.cancel('pikku-scheduled-rpc', taskId)
+    await this.pgBoss.cancel('pikku-remote-internal-rpc', taskId)
     return true
   }
 
@@ -77,7 +81,10 @@ export class PgBossSchedulerService extends SchedulerService {
    * Get a scheduled task by ID with full details
    */
   async getTask(taskId: string): Promise<ScheduledTaskInfo | null> {
-    const job = await this.pgBoss.getJobById('pikku-scheduled-rpc', taskId)
+    const job = await this.pgBoss.getJobById(
+      'pikku-remote-internal-rpc',
+      taskId
+    )
 
     if (!job) {
       return null
