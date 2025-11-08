@@ -96,7 +96,7 @@ export const happyRetry = pikkuSessionlessFunc<
       if (run.status === 'completed') {
         logger.info(`[TEST] Workflow completed successfully`)
         // Get all steps to return for validation
-        const steps = await (workflowState as any).getRunSteps(runId)
+        const steps = await workflowState!.getRunHistory(runId)
         return {
           ...run.output,
           steps: steps.map((s: any) => ({

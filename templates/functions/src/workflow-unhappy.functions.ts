@@ -99,7 +99,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
       if (run.status === 'failed') {
         logger.info(`[TEST] Workflow failed as expected: ${run.error?.message}`)
         // Get all steps to return for validation
-        const steps = await (workflowState as any).getRunSteps(runId)
+        const steps = await workflowState!.getRunHistory(runId)
         return {
           error: run.error?.message || 'Unknown error',
           attempts: 3, // All 3 attempts exhausted
@@ -115,7 +115,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
       if (run.status === 'cancelled') {
         logger.info(`[TEST] Workflow was cancelled`)
         // Get all steps to return for validation
-        const steps = await (workflowState as any).getRunSteps(runId)
+        const steps = await workflowState!.getRunHistory(runId)
         return {
           error: run.error?.message || 'Workflow cancelled',
           attempts: 0,
