@@ -9,6 +9,7 @@ import {
 } from '../../types/core.types.js'
 import {
   WorkflowAsyncException,
+  WorkflowCancelledException,
   WorkflowNotFoundError,
 } from './workflow-runner.js'
 import type {
@@ -430,6 +431,19 @@ export abstract class WorkflowStateService
           // Pause workflow - sleep will callback when done
           throw new WorkflowAsyncException(runId, stepName)
         },
+
+        // Implement workflow.cancel()
+        cancel: async (reason?: string): Promise<never> => {
+          // Update workflow run status to cancelled
+          await this.updateRunStatus(runId, 'cancelled', undefined, {
+            message: reason || 'Workflow cancelled by user',
+            stack: '',
+            code: 'WORKFLOW_CANCELLED',
+          })
+
+          // Throw cancellation exception to stop workflow execution
+          throw new WorkflowCancelledException(runId, reason)
+        },
       } as any
 
       // Get function metadata
@@ -472,6 +486,12 @@ export abstract class WorkflowStateService
         // Check if it's a WorkflowAsyncException
         if (error instanceof WorkflowAsyncException) {
           // Normal - workflow paused for step execution
+          throw error
+        }
+
+        // Check if it's a WorkflowCancelledException
+        if (error instanceof WorkflowCancelledException) {
+          // Workflow was cancelled - status already updated, just rethrow
           throw error
         }
 
@@ -548,6 +568,12 @@ export abstract class WorkflowStateService
       // WorkflowAsyncException is not an error - it means we scheduled a step
       if (error.name === 'WorkflowAsyncException') {
         // Workflow paused waiting for step completion
+        return
+      }
+
+      // WorkflowCancelledException is not an error - workflow was explicitly cancelled
+      if (error.name === 'WorkflowCancelledException') {
+        // Workflow cancelled - status already updated
         return
       }
 

@@ -18,6 +18,19 @@ export class WorkflowAsyncException extends Error {
 }
 
 /**
+ * Exception thrown when workflow is cancelled
+ */
+export class WorkflowCancelledException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly reason?: string
+  ) {
+    super(reason || 'Workflow cancelled')
+    this.name = 'WorkflowCancelledException'
+  }
+}
+
+/**
  * Error class for workflow not found
  */
 export class WorkflowNotFoundError extends PikkuError {

@@ -10,7 +10,7 @@ import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 /**
  * Workflow run status
  */
-export type WorkflowStatus = 'running' | 'completed' | 'failed'
+export type WorkflowStatus = 'running' | 'completed' | 'failed' | 'cancelled'
 
 /**
  * Workflow step status
@@ -195,6 +195,9 @@ export interface PikkuWorkflowInteraction {
 
   /** Sleep for a duration */
   sleep: WorkflowInteractionSleep
+
+  /** Cancel the current workflow run */
+  cancel: (reason?: string) => Promise<never>
 }
 
 /**
