@@ -26,21 +26,16 @@ async function main() {
     })
 
     console.log('\n' + '='.repeat(70))
-    console.log('\n❌ UNEXPECTED: Workflow should have been cancelled')
+    console.log('\n✅ EXPECTED: Workflow was cancelled')
     console.log('\n📊 Response:')
     console.log(JSON.stringify(response, null, 2))
     console.log('\n' + '='.repeat(70))
-    process.exit(1)
-  } catch (error: any) {
-    console.log('\n' + '='.repeat(70))
-    console.log('\n✅ EXPECTED: Workflow was cancelled')
-    console.log('\n📊 Error details:')
-    console.log(`  Message: ${error.message}`)
 
-    // Check if error message indicates cancellation
+    // Check if error field indicates cancellation
     if (
-      error.message.includes('cancelled') ||
-      error.message.includes('negative')
+      response.error &&
+      (response.error.includes('cancelled') ||
+        response.error.includes('negative'))
     ) {
       console.log('\n✅ PASS: Workflow was successfully cancelled')
       console.log(
@@ -48,10 +43,17 @@ async function main() {
       )
       process.exit(0)
     } else {
-      console.log('\n❌ FAIL: Error message unexpected')
-      console.log('Full error:', error)
+      console.log('\n❌ FAIL: Response does not indicate cancellation')
+      console.log('Expected error field with cancellation message')
       process.exit(1)
     }
+  } catch (error: any) {
+    console.log('\n' + '='.repeat(70))
+    console.log('\n❌ UNEXPECTED: Request failed with error')
+    console.log('\n📊 Error details:')
+    console.log(`  Message: ${error.message}`)
+    console.log('\n' + '='.repeat(70))
+    process.exit(1)
   }
 }
 
