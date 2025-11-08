@@ -83,7 +83,7 @@ export abstract class WorkflowStateService
   abstract insertStepState(
     runId: string,
     stepName: string,
-    rpcName: string,
+    rpcName: string | null,
     data: any,
     stepOptions?: { retries?: number; retryDelay?: string | number }
   ): Promise<StepState>
@@ -351,6 +351,10 @@ export abstract class WorkflowStateService
 
             // Enqueue step worker
             if (this.singletonServices!.queueService) {
+              // Map step retry options to queue job options
+              const retries = stepOptions?.retries ?? 0
+              const retryDelay = stepOptions?.retryDelay
+
               await this.singletonServices!.queueService.add(
                 'pikku-workflow-step-worker',
                 {
@@ -358,6 +362,17 @@ export abstract class WorkflowStateService
                   stepName,
                   rpcName,
                   data,
+                },
+                {
+                  // attempts includes initial attempt, retries doesn't
+                  attempts: retries + 1,
+                  // Map retry delay to backoff
+                  backoff:
+                    typeof retryDelay === 'number'
+                      ? { type: 'fixed', delay: retryDelay }
+                      : retryDelay === 'exponential'
+                        ? 'exponential'
+                        : { type: 'fixed', delay: 0 },
                 }
               )
             } else {
@@ -436,7 +451,7 @@ export abstract class WorkflowStateService
               stepState = await this.insertStepState(
                 runId,
                 stepName,
-                '', // No RPC for inline steps
+                null, // No RPC for inline steps
                 null, // No data for inline steps
                 stepOptions
               )
@@ -681,7 +696,6 @@ export abstract class WorkflowStateService
       // Store error and mark failed
       await this.setStepError(stepState.stepId, error)
 
-      // Check if retries exhausted
       const maxAttempts = (stepState.retries ?? 0) + 1
       const retriesExhausted = stepState.attemptCount >= maxAttempts
 
@@ -691,20 +705,15 @@ export abstract class WorkflowStateService
           `[WORKFLOW] Retries exhausted (${stepState.attemptCount}/${maxAttempts}): runId=${data.runId}, stepId=${stepState.stepId}`
         )
         await this.resumeWorkflow(data.runId)
-        throw error
       } else {
-        // Workflow will retry - reset step to pending for next attempt
+        // Queue will retry - the next execution will see 'failed' status and create retry attempt at start
         this.singletonServices?.logger.info(
-          `[WORKFLOW] Step failed, will retry (${stepState.attemptCount}/${maxAttempts}): runId=${data.runId}, stepId=${stepState.stepId}`
+          `[WORKFLOW] Step failed, queue will retry (${stepState.attemptCount}/${maxAttempts}): runId=${data.runId}, stepId=${stepState.stepId}`
         )
-        await this.createRetryAttempt(stepState.stepId)
-
-        // Schedule workflow resume after retry delay
-        const retryDelay = stepState.retryDelay
-        await this.scheduleOrchestratorRetry(data.runId, retryDelay)
-        // Don't throw - let job complete successfully so queue doesn't retry on its own
-        return
       }
+
+      // Always throw so queue knows the job failed and can retry if needed
+      throw error
     }
   }
 

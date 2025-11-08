@@ -21,7 +21,7 @@ export const mapPikkuJobToPgBoss = (
 
   // Map retry options
   if (options?.attempts !== undefined) {
-    pgBossOptions.retryLimit = options.attempts
+    pgBossOptions.retryLimit = options.attempts - 1
   }
 
   if (options?.backoff !== undefined) {
