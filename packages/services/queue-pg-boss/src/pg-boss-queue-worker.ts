@@ -123,7 +123,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
   private activeWorkers = new Map<string, string>()
 
   constructor(
-    connectionOptions: PgBoss.ConstructorOptions | string | PgBoss,
+    pgBoss: PgBoss,
     private singletonServices: CoreSingletonServices,
     private createSessionServices?: CreateSessionServices<
       CoreSingletonServices,
@@ -131,18 +131,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
       any
     >
   ) {
-    if (typeof connectionOptions === 'string') {
-      // If a string is provided, treat it as the connection string
-      connectionOptions = { connectionString: connectionOptions }
-    }
-    this.pgBoss = new PgBoss(connectionOptions)
-  }
-
-  /**
-   * Initialize pg-boss
-   */
-  async init(): Promise<void> {
-    await this.pgBoss.start()
+    this.pgBoss = pgBoss
   }
 
   /**
@@ -194,12 +183,5 @@ export class PgBossQueueWorkers implements QueueWorkers {
         this.activeWorkers.set(queueName, workerId)
       }
     )
-  }
-
-  /**
-   * Close all workers and connections
-   */
-  async close(): Promise<void> {
-    await this.pgBoss.stop()
   }
 }

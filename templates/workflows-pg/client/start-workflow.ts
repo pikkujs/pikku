@@ -1,7 +1,7 @@
 /**
  * Example client for starting workflows via HTTP
  */
-import { PgBossQueueService } from '@pikku/queue-pg-boss'
+import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowStateService } from '@pikku/pg'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import postgres from 'postgres'
@@ -18,12 +18,14 @@ const connectionString =
 
 async function main(): Promise<void> {
   try {
-    // Create queue service (required for workflows)
-    const pgBossQueueService = new PgBossQueueService(connectionString)
+    // Create pg-boss service factory
+    const pgBossFactory = new PgBossServiceFactory(connectionString)
+    await pgBossFactory.init()
+
     // Create workflow state service to check status
     const workflowState = new PgWorkflowStateService(
       postgres(connectionString),
-      pgBossQueueService
+      pgBossFactory.getQueueService()
     )
 
     // Start the onboarding workflow via HTTP

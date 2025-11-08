@@ -140,9 +140,6 @@ export interface QueueWorkers {
 
   /** Scan state and register all compatible processors */
   registerQueues(): Promise<Record<string, ConfigValidationResult[]>>
-
-  /** Close all queues and connections */
-  close(): Promise<void>
 }
 
 /**
