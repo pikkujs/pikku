@@ -14,6 +14,9 @@ export type {
   StepState,
   WorkflowStatus,
   StepStatus,
+  WorkflowStepInput,
+  WorkflowOrchestratorInput,
+  WorkflowSleeperInput,
 } from './workflow.types.js'
 
 export { WorkflowStateService } from './workflow-state-service.js'

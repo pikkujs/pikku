@@ -129,12 +129,14 @@ export abstract class WorkflowStateService
   /**
    * Execute a workflow sleep step completion
    * Sets the step result to null and resumes the workflow
-   * @param runId - Run ID
-   * @param stepId - Step ID
+   * @param data - Sleeper input data
    */
-  async executeWorkflowSleep(runId: string, stepId: string): Promise<void> {
-    await this.setStepResult(stepId, null)
-    await this.resumeWorkflow(runId)
+  async executeWorkflowSleep(data: {
+    runId: string
+    stepId: string
+  }): Promise<void> {
+    await this.setStepResult(data.stepId, null)
+    await this.resumeWorkflow(data.runId)
   }
 
   /**
@@ -464,33 +466,30 @@ export abstract class WorkflowStateService
    * Handles idempotency, RPC execution, result storage, and orchestrator triggering
    */
   public async executeWorkflowStep(
-    runId: string,
-    stepName: string,
-    rpcName: string,
-    data: any,
+    data: { runId: string; stepName: string; rpcName: string; data: any },
     rpcInvoke: Function
   ): Promise<void> {
     // Idempotency check - skip if already succeeded
-    const stepState = await this.getStepState(runId, stepName)
+    const stepState = await this.getStepState(data.runId, data.stepName)
     if (stepState.status === 'succeeded') {
       return
     }
 
     try {
       // Execute RPC
-      const result = await rpcInvoke(rpcName, data)
+      const result = await rpcInvoke(data.rpcName, data.data)
 
       // Store result
       await this.setStepResult(stepState.stepId, result)
 
       // Trigger orchestrator to continue workflow
-      await this.resumeWorkflow(runId)
+      await this.resumeWorkflow(data.runId)
     } catch (error: any) {
       // Store error
       await this.setStepError(stepState.stepId, error)
 
       // Mark workflow as failed
-      await this.updateRunStatus(runId, 'failed', undefined, {
+      await this.updateRunStatus(data.runId, 'failed', undefined, {
         message: error.message,
         stack: error.stack,
         code: error.code,
@@ -505,12 +504,12 @@ export abstract class WorkflowStateService
    * Runs workflow job and handles async exceptions
    */
   public async orchestrateWorkflow(
-    runId: string,
+    data: { runId: string },
     rpcInvoke: Function
   ): Promise<void> {
     try {
       // Run workflow job (replays with caching)
-      await this.runWorkflowJob(runId, rpcInvoke)
+      await this.runWorkflowJob(data.runId, rpcInvoke)
     } catch (error: any) {
       // WorkflowAsyncException is not an error - it means we scheduled a step
       if (error.name === 'WorkflowAsyncException') {
@@ -519,7 +518,7 @@ export abstract class WorkflowStateService
       }
 
       // Real error - mark workflow as failed
-      await this.updateRunStatus(runId, 'failed', undefined, {
+      await this.updateRunStatus(data.runId, 'failed', undefined, {
         message: error.message,
         stack: error.stack,
         code: error.code,

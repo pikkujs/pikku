@@ -245,7 +245,30 @@ export interface WorkflowOrchestratorService {
     rpcInvoke: Function
   ): Promise<{ runId: string }>
   runWorkflowJob(runId: string, rpcInvoke: Function): Promise<void>
-  orchestrateWorkflow(runId: string, rpcInvoke: Function): Promise<void>
+  orchestrateWorkflow(
+    data: WorkflowOrchestratorInput,
+    rpcInvoke: Function
+  ): Promise<void>
+  executeWorkflowSleep(data: WorkflowSleeperInput): Promise<void>
+}
+
+/**
+ * Worker input types for generated queue workers
+ */
+export type WorkflowStepInput = {
+  runId: string
+  stepName: string
+  rpcName: string
+  data: any
+}
+
+export type WorkflowOrchestratorInput = {
+  runId: string
+}
+
+export type WorkflowSleeperInput = {
+  runId: string
+  stepId: string
 }
 
 /**
@@ -262,10 +285,7 @@ export interface WorkflowStepService {
 
   // Step execution
   executeWorkflowStep(
-    runId: string,
-    stepName: string,
-    rpcName: string,
-    data: any,
+    data: WorkflowStepInput,
     rpcInvoke: Function
   ): Promise<void>
 }

@@ -22,6 +22,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
+      typesDeclarationFile,
       packageMappings,
     } = config
     const { workflows, functions: functionState } = visitState
@@ -100,7 +101,16 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     if (config.workflows) {
       if (config.workflows.singleQueue) {
         const workflowPath = join(config.rootDir, config.workflows.path)
-        await writeFileInDir(logger, workflowPath, serializeWorkflowWorkers())
+        const pathToPikkuTypes = getFileImportRelativePath(
+          workflowPath,
+          typesDeclarationFile,
+          packageMappings
+        )
+        await writeFileInDir(
+          logger,
+          workflowPath,
+          serializeWorkflowWorkers(pathToPikkuTypes)
+        )
       } else if (workflows.files.size > 0) {
         logger.critical(
           ErrorCode.WORKFLOW_MULTI_QUEUE_NOT_SUPPORTED,
