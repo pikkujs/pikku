@@ -127,13 +127,13 @@ const templates = [
     supports: ['cli'],
   },
   {
-    template: 'workflows-redis',
-    description: 'A Redis-based workflow template',
+    template: 'workflows-pg-boss',
+    description: 'A PostgreSQL pg-boss based workflow template',
     supports: ['http', 'workflows'],
   },
   {
-    template: 'workflows-pg',
-    description: 'A PostgreSQL-based workflow template',
+    template: 'workflows-bullmq',
+    description: 'A BullMQ Redis-based workflow template',
     supports: ['http', 'workflows'],
   },
 ] as const
