@@ -396,8 +396,20 @@ export abstract class WorkflowStateService
             const fn = rpcNameOrFn
             const stepOptions = dataOrOptions
 
-            // Check step state
-            const stepState = await this.getStepState(runId, stepName)
+            // Check if step already exists
+            let stepState: StepState
+            try {
+              stepState = await this.getStepState(runId, stepName)
+            } catch (error: any) {
+              // Step doesn't exist - create it (inline, no RPC)
+              stepState = await this.insertStepState(
+                runId,
+                stepName,
+                '', // No RPC for inline steps
+                null, // No data for inline steps
+                stepOptions
+              )
+            }
 
             if (stepState.status === 'succeeded') {
               // Return cached result
@@ -442,8 +454,20 @@ export abstract class WorkflowStateService
             throw new Error('Step name must be a string')
           }
 
-          // Check step state
-          const stepState = await this.getStepState(runId, stepName)
+          // Check if step already exists
+          let stepState: StepState
+          try {
+            stepState = await this.getStepState(runId, stepName)
+          } catch (error: any) {
+            // Step doesn't exist - create it (sleep step, no RPC)
+            stepState = await this.insertStepState(
+              runId,
+              stepName,
+              '', // No RPC for sleep steps
+              { duration }, // Store duration as data
+              undefined // No retry options for sleep
+            )
+          }
 
           if (stepState.status === 'succeeded') {
             // Sleep already completed, return immediately
