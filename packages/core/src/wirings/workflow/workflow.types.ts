@@ -2,6 +2,8 @@ import {
   PikkuDocs,
   MiddlewareMetadata,
   SerializedError,
+  CoreSingletonServices,
+  CreateSessionServices,
 } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 
@@ -213,3 +215,57 @@ export type WorkflowsMeta = Record<
     steps: WorkflowStepMeta[]
   }
 >
+
+/**
+ * Interface for workflow orchestration
+ * Handles workflow execution, replay, orchestration logic, and run-level state
+ */
+export interface WorkflowOrchestratorService {
+  // Run-level state operations
+  createRun(workflowName: string, input: any): Promise<string>
+  getRun(id: string): Promise<WorkflowRun | null>
+  updateRunStatus(
+    id: string,
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<void>
+  withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
+  close(): Promise<void>
+
+  // Orchestration operations
+  resumeWorkflow(runId: string): Promise<void>
+  setServices(
+    singletonServices: CoreSingletonServices,
+    createSessionServices: CreateSessionServices
+  ): void
+  startWorkflow<I>(
+    name: string,
+    input: I,
+    rpcInvoke: Function
+  ): Promise<{ runId: string }>
+  runWorkflowJob(runId: string, rpcInvoke: Function): Promise<void>
+  orchestrateWorkflow(runId: string, rpcInvoke: Function): Promise<void>
+}
+
+/**
+ * Interface for workflow step execution
+ * Handles individual step execution, step-level state, and retry logic
+ */
+export interface WorkflowStepService {
+  // Step-level state operations
+  getStepState(runId: string, stepName: string): Promise<StepState>
+  setStepScheduled(stepId: string): Promise<void>
+  setStepResult(stepId: string, result: any): Promise<void>
+  setStepError(stepId: string, error: Error): Promise<void>
+  createRetryAttempt(stepId: string): Promise<StepState>
+
+  // Step execution
+  executeWorkflowStep(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    rpcInvoke: Function
+  ): Promise<void>
+}

@@ -55,7 +55,7 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
     await workflowState.setStepResult(stepId, null)
 
     // Trigger orchestrator to continue workflow
-    await workflowState.addToQueue('pikku-workflow-orchestrator', runId)
+    await workflowState.resumeWorkflow(runId)
   },
   name: 'pikkuWorkflowStepSleeper',
   expose: true,

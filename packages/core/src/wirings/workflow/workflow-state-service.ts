@@ -16,13 +16,18 @@ import type {
   StepState,
   WorkflowRun,
   WorkflowStatus,
+  WorkflowOrchestratorService,
+  WorkflowStepService,
 } from './workflow.types.js'
 
 /**
  * Abstract workflow state service
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
+ * Combines orchestration and step execution
  */
-export abstract class WorkflowStateService {
+export abstract class WorkflowStateService
+  implements WorkflowOrchestratorService, WorkflowStepService
+{
   private singletonServices: CoreSingletonServices | undefined
   private createSessionServices: CreateSessionServices | undefined
 
@@ -106,11 +111,10 @@ export abstract class WorkflowStateService {
   abstract close(): Promise<void>
 
   /**
-   * Add orchestrator job to queue for remote workflow execution
-   * @param workflowName - Workflow name
+   * Resume a paused workflow by triggering the orchestrator
    * @param runId - Run ID
    */
-  async addToQueue(workflowName: string, runId: string): Promise<void> {
+  async resumeWorkflow(runId: string): Promise<void> {
     if (!this.singletonServices?.queueService) {
       throw new Error(
         'QueueService not configured. Remote workflows require a queue service.'
@@ -141,10 +145,10 @@ export abstract class WorkflowStateService {
     } else if (retryDelay) {
       // No scheduler - use local delay
       await new Promise((resolve) => setTimeout(resolve, retryDelay))
-      await this.addToQueue('pikku-workflow-orchestrator', runId)
+      await this.resumeWorkflow(runId)
     } else {
       // No delay - trigger orchestrator immediately
-      await this.addToQueue('pikku-workflow-orchestrator', runId)
+      await this.resumeWorkflow(runId)
     }
   }
 
@@ -179,7 +183,7 @@ export abstract class WorkflowStateService {
       await this.runWorkflowJob(runId, rpcInvoke)
     } else {
       // Queue orchestrator to start the workflow
-      await this.addToQueue('pikku-workflow-orchestrator', runId)
+      await this.resumeWorkflow(runId)
     }
 
     return { runId }
@@ -469,7 +473,7 @@ export abstract class WorkflowStateService {
       await this.setStepResult(stepState.stepId, result)
 
       // Trigger orchestrator to continue workflow
-      await this.addToQueue('pikku-workflow-orchestrator', runId)
+      await this.resumeWorkflow(runId)
     } catch (error: any) {
       // Store error
       await this.setStepError(stepState.stepId, error)
