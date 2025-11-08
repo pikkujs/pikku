@@ -33,24 +33,33 @@ export const getRelativeTimeOffsetFromNow = (
 
 /**
  * Parse a duration string to milliseconds
- * Supports formats like: '5s', '5sec', '5seconds', '5m', '5min', '5minutes', '1h', '1hour', '2d', '2day', '1w', '1week'
+ * Supports formats like: '2s', '5s', '5sec', '5seconds', '5m', '5min', '5minutes', '1h', '1hour', '2d', '2day', '1w', '1week'
  *
- * @param duration - Duration string (e.g., '5min', '2hours', '1day')
+ * @param duration - Duration string (e.g., '2s', '5min', '2hours', '1day')
  * @returns Duration in milliseconds
  */
 export const parseDurationString = (duration: string): number => {
   const match = duration.match(
-    /^(\d+)(s|sec|seconds?|m|min|minutes?|h|hour|hours?|d|day|days?|w|week|weeks?|y|year|years?)$/
+    /^(\d+)(ms|milliseconds?|s|sec|seconds?|m|min|minutes?|h|hour|hours?|d|day|days?|w|week|weeks?|y|year|years?)$/
   )
 
   if (!match) {
     throw new Error(
-      `Invalid duration format: ${duration}. Use formats like '5s', '5min', '1hour', '2days', '1week'`
+      `Invalid duration format: ${duration}. Use formats like '2s', '5s', '5min', '1hour', '2days', '1week'`
     )
   }
 
   const value = parseInt(match[1], 10)
   const unitStr = match[2]
+
+  // Handle milliseconds specially
+  if (
+    unitStr === 'ms' ||
+    unitStr === 'millisecond' ||
+    unitStr === 'milliseconds'
+  ) {
+    return value
+  }
 
   // Map string variations to TimeUnit
   let unit: TimeUnit

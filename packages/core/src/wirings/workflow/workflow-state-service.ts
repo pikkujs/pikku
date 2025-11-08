@@ -187,27 +187,36 @@ export abstract class WorkflowStateService
   /**
    * Schedule orchestrator retry with delay
    * @param runId - Run ID
-   * @param retryDelay - Delay in milliseconds (optional)
+   * @param retryDelay - Delay in milliseconds or duration string (optional)
    */
-  private async scheduleOrchestratorRetry(
+  protected async scheduleOrchestratorRetry(
     runId: string,
-    retryDelay?: number
+    retryDelay?: number | string
   ): Promise<void> {
-    if (retryDelay && this.singletonServices!.schedulerService) {
-      // Use scheduler service for delay
-      await this.singletonServices!.schedulerService.scheduleRPC(
-        retryDelay,
-        'pikku-workflow-orchestrator',
-        { runId }
+    if (!this.singletonServices?.queueService) {
+      throw new Error(
+        'QueueService not configured. Remote workflows require a queue service.'
       )
-    } else if (retryDelay) {
-      // No scheduler - use local delay
-      await new Promise((resolve) => setTimeout(resolve, retryDelay))
-      await this.resumeWorkflow(runId)
-    } else {
-      // No delay - trigger orchestrator immediately
-      await this.resumeWorkflow(runId)
     }
+
+    // Parse delay if it's a string
+    const delayMs =
+      typeof retryDelay === 'string'
+        ? parseDurationString(retryDelay)
+        : retryDelay
+
+    // Add orchestrator job with delay option
+    await this.singletonServices.queueService.add(
+      'pikku-workflow-orchestrator',
+      { runId },
+      delayMs ? { delay: delayMs } : undefined
+    )
+
+    this.singletonServices?.logger.info(
+      delayMs
+        ? `[WORKFLOW] Scheduled orchestrator retry with ${delayMs}ms delay: runId=${runId}`
+        : `[WORKFLOW] Enqueued orchestrator job: runId=${runId}`
+    )
   }
 
   public setServices(
@@ -682,16 +691,20 @@ export abstract class WorkflowStateService
           `[WORKFLOW] Retries exhausted (${stepState.attemptCount}/${maxAttempts}): runId=${data.runId}, stepId=${stepState.stepId}`
         )
         await this.resumeWorkflow(data.runId)
+        throw error
       } else {
-        // Queue will retry - reset step to pending for next attempt
+        // Workflow will retry - reset step to pending for next attempt
         this.singletonServices?.logger.info(
-          `[WORKFLOW] Step failed, queue will retry (${stepState.attemptCount}/${maxAttempts}): runId=${data.runId}, stepId=${stepState.stepId}`
+          `[WORKFLOW] Step failed, will retry (${stepState.attemptCount}/${maxAttempts}): runId=${data.runId}, stepId=${stepState.stepId}`
         )
         await this.createRetryAttempt(stepState.stepId)
-      }
 
-      // Throw error to signal queue that job failed (triggers retry if retries remain)
-      throw error
+        // Schedule workflow resume after retry delay
+        const retryDelay = stepState.retryDelay
+        await this.scheduleOrchestratorRetry(data.runId, retryDelay)
+        // Don't throw - let job complete successfully so queue doesn't retry on its own
+        return
+      }
     }
   }
 

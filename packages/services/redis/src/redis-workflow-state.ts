@@ -72,7 +72,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
   }
 
   /**
-   * Save a step history entry
+   * Save a step history entry (creates new entry)
    */
   private async saveStepHistory(
     stepId: string,
@@ -122,6 +122,80 @@ export class RedisWorkflowStateService extends WorkflowStateService {
 
     // Store in sorted set with attemptCount as score for ordering
     await this.redis.zadd(historyKey, attemptCount, JSON.stringify(entry))
+  }
+
+  /**
+   * Update the current history entry in-place (for state transitions within same attempt)
+   */
+  private async updateCurrentHistoryRecord(
+    stepId: string,
+    stepName: string,
+    attemptCount: number,
+    status: 'running' | 'scheduled' | 'succeeded' | 'failed',
+    result?: any,
+    error?: SerializedError,
+    retries?: number,
+    retryDelay?: string
+  ): Promise<void> {
+    const historyKey = this.stepHistoryKey(stepId)
+
+    // Get current history entry for this attempt
+    const historyEntries = await this.redis.zrangebyscore(
+      historyKey,
+      attemptCount,
+      attemptCount
+    )
+
+    if (historyEntries.length === 0) {
+      // No existing entry - this shouldn't happen, but create one if missing
+      await this.saveStepHistory(
+        stepId,
+        stepName,
+        attemptCount,
+        status,
+        result,
+        error,
+        retries,
+        retryDelay
+      )
+      return
+    }
+
+    // Parse existing entry
+    const existingEntry = JSON.parse(historyEntries[0]!)
+    const now = Date.now()
+
+    // Update the entry with new status and keep original createdAt
+    const updatedEntry: any = {
+      ...existingEntry,
+      status,
+      result: result !== undefined ? JSON.stringify(result) : undefined,
+      error: error !== undefined ? JSON.stringify(error) : undefined,
+    }
+
+    // Add status-specific timestamp
+    switch (status) {
+      case 'running':
+        updatedEntry.runningAt = now
+        break
+      case 'scheduled':
+        updatedEntry.scheduledAt = now
+        break
+      case 'succeeded':
+        updatedEntry.succeededAt = now
+        break
+      case 'failed':
+        updatedEntry.failedAt = now
+        break
+    }
+
+    // Remove old entry and add updated one (Redis sorted set will replace if score is same)
+    await this.redis.zremrangebyscore(historyKey, attemptCount, attemptCount)
+    await this.redis.zadd(
+      historyKey,
+      attemptCount,
+      JSON.stringify(updatedEntry)
+    )
   }
 
   async createRun(workflowName: string, input: any): Promise<string> {
@@ -349,12 +423,30 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     const now = Date.now()
     const key = this.stepKey(runId, stepName)
 
+    // Get current attempt count and retries config
+    const data = await this.redis.hgetall(key)
+    const attemptCount = Number(data.attemptCount || 1)
+    const retries = data.retries ? Number(data.retries) : undefined
+    const retryDelay = data.retryDelay
+
     await this.redis.hmset(
       key,
       'status',
       'running',
       'updatedAt',
       now.toString()
+    )
+
+    // Update current history record to running (update in-place)
+    await this.updateCurrentHistoryRecord(
+      stepId,
+      stepName,
+      attemptCount,
+      'running',
+      undefined,
+      undefined,
+      retries,
+      retryDelay
     )
   }
 
@@ -367,12 +459,30 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     const now = Date.now()
     const key = this.stepKey(runId, stepName)
 
+    // Get current attempt count and retries config
+    const data = await this.redis.hgetall(key)
+    const attemptCount = Number(data.attemptCount || 1)
+    const retries = data.retries ? Number(data.retries) : undefined
+    const retryDelay = data.retryDelay
+
     await this.redis.hmset(
       key,
       'status',
       'scheduled',
       'updatedAt',
       now.toString()
+    )
+
+    // Update current history record to scheduled (update in-place)
+    await this.updateCurrentHistoryRecord(
+      stepId,
+      stepName,
+      attemptCount,
+      'scheduled',
+      undefined,
+      undefined,
+      retries,
+      retryDelay
     )
   }
 
@@ -404,8 +514,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     // Remove error field if it exists
     await this.redis.hdel(key, 'error')
 
-    // Save to history
-    await this.saveStepHistory(
+    // Update current history record to succeeded (update in-place)
+    await this.updateCurrentHistoryRecord(
       stepId,
       stepName,
       attemptCount,
@@ -451,8 +561,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     // Remove result field if it exists
     await this.redis.hdel(key, 'result')
 
-    // Save to history
-    await this.saveStepHistory(
+    // Update current history record to failed (update in-place)
+    await this.updateCurrentHistoryRecord(
       stepId,
       stepName,
       attemptCount,
@@ -513,11 +623,12 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     const now = Date.now()
     const key = this.stepKey(runId, stepName)
 
-    // Get current attempt count
-    const currentAttempt = Number(
-      (await this.redis.hget(key, 'attemptCount')) || 1
-    )
+    // Get current attempt count and retries config
+    const data = await this.redis.hgetall(key)
+    const currentAttempt = Number(data.attemptCount || 1)
     const newAttemptCount = currentAttempt + 1
+    const retries = data.retries ? Number(data.retries) : undefined
+    const retryDelay = data.retryDelay
 
     // Reset step to pending for retry (keeps result/error for visibility)
     await this.redis.hmset(
@@ -530,8 +641,17 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       now.toString()
     )
 
-    // Get updated state
-    const data = await this.redis.hgetall(key)
+    // Insert NEW history record for retry attempt
+    await this.saveStepHistory(
+      stepId,
+      stepName,
+      newAttemptCount,
+      'pending',
+      undefined,
+      undefined,
+      retries,
+      retryDelay
+    )
 
     return {
       stepId: data.stepId!,
@@ -539,8 +659,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
       attemptCount: newAttemptCount,
-      retries: data.retries ? Number(data.retries) : undefined,
-      retryDelay: data.retryDelay,
+      retries: retries,
+      retryDelay: retryDelay,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(now),
     }

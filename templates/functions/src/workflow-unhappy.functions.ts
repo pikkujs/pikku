@@ -46,7 +46,7 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
     data,
     {
       retries: 2, // Allow 2 retries (3 total attempts), then fail
-      retryDelay: '500ms',
+      retryDelay: '1s',
     }
   )
 
