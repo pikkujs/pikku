@@ -3895,15 +3895,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-workflows-pg@workspace:templates/workflows-pg":
+"@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq":
   version: 0.0.0-use.local
-  resolution: "@pikku/templates-workflows-pg@workspace:templates/workflows-pg"
+  resolution: "@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"
   dependencies:
     "@pikku/cli": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.0"
     "@pikku/express": "npm:^0.10.0"
-    "@pikku/pg": "npm:^0.10.0"
-    "@pikku/queue-pg-boss": "npm:^0.10.0"
+    "@pikku/queue-bullmq": "npm:^0.10.0"
+    "@pikku/redis": "npm:^0.10.0"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.20.6"
@@ -3911,15 +3911,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-workflows-redis@workspace:templates/workflows-redis":
+"@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss":
   version: 0.0.0-use.local
-  resolution: "@pikku/templates-workflows-redis@workspace:templates/workflows-redis"
+  resolution: "@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"
   dependencies:
     "@pikku/cli": "npm:^0.10.0"
     "@pikku/core": "npm:^0.10.0"
     "@pikku/express": "npm:^0.10.0"
-    "@pikku/queue-bullmq": "npm:^0.10.0"
-    "@pikku/redis": "npm:^0.10.0"
+    "@pikku/pg": "npm:^0.10.0"
+    "@pikku/queue-pg-boss": "npm:^0.10.0"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.20.6"

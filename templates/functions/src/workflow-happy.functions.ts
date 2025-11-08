@@ -80,7 +80,7 @@ export const happyRetry = pikkuSessionlessFunc<
 
     // Poll for completion (with timeout)
     const maxWaitMs = 30000 // 30 seconds
-    const pollIntervalMs = 100
+    const pollIntervalMs = 2000 // 2 seconds
     const startTime = Date.now()
 
     while (Date.now() - startTime < maxWaitMs) {

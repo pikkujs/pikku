@@ -106,8 +106,8 @@ jobs:
             cli,
             pg-boss,
             bullmq,
-            workflows-redis,
-            workflows-pg,
+            workflows-bullmq,
+            workflows-pg-boss,
           ]
         package-manager: [yarn]
     steps:
