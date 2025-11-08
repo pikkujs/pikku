@@ -505,7 +505,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
     if (state.rpc.invokedFunctions.has(pikkuFuncName) || expose || internal) {
-      state.rpc.internalFiles.set(name, {
+      state.rpc.internalFiles.set(pikkuFuncName, {
         path: node.getSourceFile().fileName,
         exportedName,
       })
