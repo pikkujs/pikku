@@ -149,6 +149,10 @@ export type PikkuCLIInput = {
         workerQueuePrefix?: string
       }
 
+  rpc?: {
+    remoteRpcWorkersPath?: string
+  }
+
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
@@ -237,6 +241,10 @@ export type PikkuCLIConfig = {
         orchestratorQueuePrefix?: string
         workerQueuePrefix?: string
       }
+
+  rpc?: {
+    remoteRpcWorkersPath?: string
+  }
 
   forceRequiredServices?: string[]
 

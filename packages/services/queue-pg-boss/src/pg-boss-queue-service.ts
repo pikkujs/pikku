@@ -31,19 +31,8 @@ export class PgBossQueueService implements QueueService {
   readonly supportsResults = true
   protected pgBoss: PgBoss
 
-  constructor(optionsOrUrl: PgBoss.ConstructorOptions | string) {
-    if (typeof optionsOrUrl === 'string') {
-      // If a string is provided, treat it as the connection URL
-      optionsOrUrl = { connectionString: optionsOrUrl }
-    }
-    this.pgBoss = new PgBoss(optionsOrUrl)
-  }
-
-  /**
-   * Initialize the pg-boss instance
-   */
-  async init(): Promise<void> {
-    await this.pgBoss.start()
+  constructor(pgBoss: PgBoss) {
+    this.pgBoss = pgBoss
   }
 
   /**
@@ -78,12 +67,5 @@ export class PgBossQueueService implements QueueService {
       return null
     }
     return mapPgBossJobToQueueJob<T, R>(job, this.pgBoss)
-  }
-
-  /**
-   * Close the pg-boss connection
-   */
-  async close(): Promise<void> {
-    await this.pgBoss.stop()
   }
 }

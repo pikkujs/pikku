@@ -1,7 +1,7 @@
 /**
  * Example client for starting workflows via HTTP
  */
-import { PgBossQueueService } from '@pikku/queue-pg-boss'
+import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowStateService } from '@pikku/pg'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import postgres from 'postgres'
@@ -18,13 +18,12 @@ const connectionString =
 
 async function main(): Promise<void> {
   try {
-    // Create queue service (required for workflows)
-    const pgBossQueueService = new PgBossQueueService(connectionString)
+    // Create pg-boss service factory
+    const pgBossFactory = new PgBossServiceFactory(connectionString)
+    await pgBossFactory.init()
+
     // Create workflow state service to check status
-    const workflowState = new PgWorkflowStateService(
-      postgres(connectionString),
-      pgBossQueueService
-    )
+    const workflowState = new PgWorkflowStateService(postgres(connectionString))
 
     // Start the onboarding workflow via HTTP
     const { runId } = await pikkuFetch.post('/workflow/start', {
@@ -37,7 +36,15 @@ async function main(): Promise<void> {
     // Poll for workflow completion
     let run = await workflowState.getRun(runId)
     while (run && run.status === 'running') {
-      console.log('Workflow still running...')
+      const steps = await workflowState.getRunSteps(runId)
+      const lastStep = steps[steps.length - 1]
+      if (lastStep) {
+        console.log(
+          `Workflow still running... Last step: ${lastStep.stepName} (${lastStep.status})`
+        )
+      } else {
+        console.log('Workflow still running...')
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000))
       run = await workflowState.getRun(runId)
     }

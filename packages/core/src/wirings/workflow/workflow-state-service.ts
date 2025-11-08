@@ -1,5 +1,6 @@
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
+import { parseDurationString } from '../../time-utils.js'
 import {
   CoreSingletonServices,
   CreateSessionServices,
@@ -15,20 +16,22 @@ import type {
   StepState,
   WorkflowRun,
   WorkflowStatus,
+  WorkflowOrchestratorService,
+  WorkflowStepService,
 } from './workflow.types.js'
 
 /**
  * Abstract workflow state service
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
+ * Combines orchestration and step execution
  */
-export abstract class WorkflowStateService {
-  protected queue?: any
+export abstract class WorkflowStateService
+  implements WorkflowOrchestratorService, WorkflowStepService
+{
   private singletonServices: CoreSingletonServices | undefined
   private createSessionServices: CreateSessionServices | undefined
 
-  constructor(queue?: any) {
-    this.queue = queue
-  }
+  constructor() {}
 
   /**
    * Create a new workflow run
@@ -79,11 +82,20 @@ export abstract class WorkflowStateService {
   abstract setStepResult(stepId: string, result: any): Promise<void>
 
   /**
-   * Store step error
+   * Store step error and mark as failed
    * @param stepId - Step ID
    * @param error - Error object
    */
   abstract setStepError(stepId: string, error: Error): Promise<void>
+
+  /**
+   * Create a new retry attempt for a failed step
+   * Inserts a new pending step record with incremented attempt count
+   * Copies all metadata (rpcName, data, etc.) from the failed attempt
+   * @param stepId - Failed step ID to copy from
+   * @returns New step state for the retry attempt
+   */
+  abstract createRetryAttempt(stepId: string): Promise<StepState>
 
   /**
    * Execute function within a run lock to prevent concurrent modifications
@@ -99,17 +111,45 @@ export abstract class WorkflowStateService {
   abstract close(): Promise<void>
 
   /**
-   * Add orchestrator job to queue for remote workflow execution
-   * @param workflowName - Workflow name
+   * Resume a paused workflow by triggering the orchestrator
    * @param runId - Run ID
    */
-  async addToQueue(workflowName: string, runId: string): Promise<void> {
-    if (!this.queue) {
+  async resumeWorkflow(runId: string): Promise<void> {
+    if (!this.singletonServices?.queueService) {
       throw new Error(
         'QueueService not configured. Remote workflows require a queue service.'
       )
     }
-    await this.queue.add('pikku-workflow-orchestrator', { runId })
+    await this.singletonServices.queueService.add(
+      'pikku-workflow-orchestrator',
+      { runId }
+    )
+  }
+
+  /**
+   * Schedule orchestrator retry with delay
+   * @param runId - Run ID
+   * @param retryDelay - Delay in milliseconds (optional)
+   */
+  private async scheduleOrchestratorRetry(
+    runId: string,
+    retryDelay?: number
+  ): Promise<void> {
+    if (retryDelay && this.singletonServices!.schedulerService) {
+      // Use scheduler service for delay
+      await this.singletonServices!.schedulerService.scheduleRPC(
+        retryDelay,
+        'pikku-workflow-orchestrator',
+        { runId }
+      )
+    } else if (retryDelay) {
+      // No scheduler - use local delay
+      await new Promise((resolve) => setTimeout(resolve, retryDelay))
+      await this.resumeWorkflow(runId)
+    } else {
+      // No delay - trigger orchestrator immediately
+      await this.resumeWorkflow(runId)
+    }
   }
 
   public setServices(
@@ -142,7 +182,8 @@ export abstract class WorkflowStateService {
     if (workflow.executionMode === 'inline') {
       await this.runWorkflowJob(runId, rpcInvoke)
     } else {
-      await this.addToQueue(name, runId)
+      // Queue orchestrator to start the workflow
+      await this.resumeWorkflow(runId)
     }
 
     return { runId }
@@ -196,12 +237,12 @@ export abstract class WorkflowStateService {
             // RPC form: workflow.do(stepName, rpcName, data, options?)
             const rpcName = rpcNameOrFn
             const data = dataOrOptions
-            // options parameter available but not used in MVP
+            const stepOptions = options
 
             // Check step state
             const stepState = await this.getStepState(runId, stepName)
 
-            if (stepState.status === 'done') {
+            if (stepState.status === 'succeeded') {
               // Return cached result
               return stepState.result
             }
@@ -226,14 +267,32 @@ export abstract class WorkflowStateService {
                 }
               )
             } else {
-              // No queue service - execute inline (for inline workflow mode)
-              // TODO: if its remote throw an error
+              // No queue service - execute locally
+              const retries = stepOptions?.retries ?? 0
+              const retryDelay = stepOptions?.retryDelay
+              const attemptCount = stepState.attemptCount
+
               try {
                 const result = await rpcInvoke(rpcName, data)
                 await this.setStepResult(stepState.stepId, result)
                 return result
               } catch (error: any) {
+                // Record the error (marks step as failed)
                 await this.setStepError(stepState.stepId, error)
+
+                // Check if we should retry
+                if (attemptCount < retries) {
+                  // Create a new pending retry attempt (copies metadata from failed step)
+                  await this.createRetryAttempt(stepState.stepId)
+
+                  // Schedule orchestrator to retry after delay
+                  await this.scheduleOrchestratorRetry(runId, retryDelay)
+
+                  // Pause workflow - orchestrator will replay and pick up new attempt
+                  throw new WorkflowAsyncException(runId, stepName)
+                }
+
+                // No more retries, fail the workflow
                 throw error
               }
             }
@@ -243,30 +302,49 @@ export abstract class WorkflowStateService {
           } else {
             // Inline form: workflow.do(stepName, fn, options?)
             const fn = rpcNameOrFn
-            // options parameter available in dataOrOptions but not used in MVP
+            const stepOptions = dataOrOptions
 
             // Check step state
             const stepState = await this.getStepState(runId, stepName)
 
-            if (stepState.status === 'done') {
+            if (stepState.status === 'succeeded') {
               // Return cached result
               return stepState.result
             }
 
-            // Execute function and cache result
+            // Execute inline function
+            const retries = stepOptions?.retries ?? 0
+            const retryDelay = stepOptions?.retryDelay
+            const attemptCount = stepState.attemptCount
+
             try {
               const result = await fn()
               await this.setStepResult(stepState.stepId, result)
               return result
             } catch (error: any) {
+              // Record the error (marks step as failed)
               await this.setStepError(stepState.stepId, error)
+
+              // Check if we should retry
+              if (attemptCount < retries) {
+                // Create a new pending retry attempt (copies metadata from failed step)
+                await this.createRetryAttempt(stepState.stepId)
+
+                // Schedule orchestrator to retry after delay
+                await this.scheduleOrchestratorRetry(runId, retryDelay)
+
+                // Pause workflow - orchestrator will replay and pick up new attempt
+                throw new WorkflowAsyncException(runId, stepName)
+              }
+
+              // No more retries, fail the workflow
               throw error
             }
           }
         },
 
         // Implement workflow.sleep()
-        sleep: async (stepName: string, _duration: string) => {
+        sleep: async (stepName: string, duration: string | number) => {
           // Check if stepName is string
           if (typeof stepName !== 'string') {
             throw new Error('Step name must be a string')
@@ -275,16 +353,43 @@ export abstract class WorkflowStateService {
           // Check step state
           const stepState = await this.getStepState(runId, stepName)
 
-          if (stepState.status === 'done') {
+          if (stepState.status === 'succeeded') {
             // Sleep already completed, return immediately
             return
           }
 
-          // For now, just use a 5 second timeout (duration parameter ignored)
-          await new Promise((resolve) => setTimeout(resolve, 5000))
+          if (stepState.status === 'scheduled') {
+            // Sleep is already scheduled, pause workflow
+            throw new WorkflowAsyncException(runId, stepName)
+          }
 
-          // Mark sleep as done
-          await this.setStepResult(stepState.stepId, null)
+          // Step is pending - schedule it
+          await this.setStepScheduled(stepState.stepId)
+
+          // Check if we have queue service (remote mode) or inline mode
+          if (this.singletonServices!.schedulerService) {
+            // Remote mode - enqueue sleep worker with delay
+            await this.singletonServices!.schedulerService.scheduleRPC(
+              duration,
+              'pikkuWorkflowStepSleeper',
+              {
+                runId,
+                stepId: stepState.stepId,
+              }
+            )
+          } else {
+            const durationMs =
+              typeof duration === 'string'
+                ? parseDurationString(duration)
+                : duration
+            // Inline mode - use setTimeout with actual duration
+            await new Promise((resolve) => setTimeout(resolve, durationMs))
+            await this.setStepResult(stepState.stepId, null)
+            return
+          }
+
+          // Pause workflow - sleep will callback when done
+          throw new WorkflowAsyncException(runId, stepName)
         },
       } as any
 
@@ -341,5 +446,75 @@ export abstract class WorkflowStateService {
         throw error
       }
     })
+  }
+
+  /**
+   * Execute a single workflow step (called by worker)
+   * Handles idempotency, RPC execution, result storage, and orchestrator triggering
+   */
+  public async executeWorkflowStep(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    rpcInvoke: Function
+  ): Promise<void> {
+    // Idempotency check - skip if already succeeded
+    const stepState = await this.getStepState(runId, stepName)
+    if (stepState.status === 'succeeded') {
+      return
+    }
+
+    try {
+      // Execute RPC
+      const result = await rpcInvoke(rpcName, data)
+
+      // Store result
+      await this.setStepResult(stepState.stepId, result)
+
+      // Trigger orchestrator to continue workflow
+      await this.resumeWorkflow(runId)
+    } catch (error: any) {
+      // Store error
+      await this.setStepError(stepState.stepId, error)
+
+      // Mark workflow as failed
+      await this.updateRunStatus(runId, 'failed', undefined, {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+      })
+
+      throw error
+    }
+  }
+
+  /**
+   * Orchestrate workflow execution (called by orchestrator)
+   * Runs workflow job and handles async exceptions
+   */
+  public async orchestrateWorkflow(
+    runId: string,
+    rpcInvoke: Function
+  ): Promise<void> {
+    try {
+      // Run workflow job (replays with caching)
+      await this.runWorkflowJob(runId, rpcInvoke)
+    } catch (error: any) {
+      // WorkflowAsyncException is not an error - it means we scheduled a step
+      if (error.name === 'WorkflowAsyncException') {
+        // Workflow paused waiting for step completion
+        return
+      }
+
+      // Real error - mark workflow as failed
+      await this.updateRunStatus(runId, 'failed', undefined, {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+      })
+
+      throw error
+    }
   }
 }

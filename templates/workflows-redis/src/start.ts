@@ -1,5 +1,5 @@
 import { PikkuExpressServer } from '@pikku/express'
-import { BullQueueWorkers, BullQueueService } from '@pikku/queue-bullmq'
+import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisWorkflowStateService } from '@pikku/redis'
 import {
   createConfig,
@@ -12,18 +12,17 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
-    // Create queue service for workflows
-    const bullQueueService = new BullQueueService(undefined)
+    // Create BullMQ service factory
+    const bullFactory = new BullServiceFactory()
+    await bullFactory.init()
 
-    // Create workflow state service with queue
-    const workflowState = new RedisWorkflowStateService(
-      undefined,
-      bullQueueService
-    )
+    // Create workflow state service
+    const workflowState = new RedisWorkflowStateService(undefined)
 
     // Create singleton services with queue and workflowState
     const singletonServices = await createSingletonServices(config, {
-      queueService: bullQueueService,
+      queueService: bullFactory.getQueueService(),
+      schedulerService: bullFactory.getSchedulerService(),
       workflowState,
     })
 
@@ -41,8 +40,7 @@ async function main(): Promise<void> {
 
     singletonServices.logger.info('Starting workflow queue workers...')
 
-    const bullQueueWorkers = new BullQueueWorkers(
-      {},
+    const bullQueueWorkers = bullFactory.getQueueWorkers(
       singletonServices,
       createSessionServices as any
     )

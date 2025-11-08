@@ -2,7 +2,6 @@
  * Example client for starting workflows via HTTP
  */
 import { RedisWorkflowStateService } from '@pikku/redis'
-import { BullQueueService } from '@pikku/queue-bullmq'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import { pikkuFetch } from './pikku-fetch.gen.js'
 
@@ -12,14 +11,8 @@ pikkuFetch.setServerUrl(url)
 
 async function main(): Promise<void> {
   try {
-    // Create queue service (required for workflows)
-    const bullQueueService = new BullQueueService(undefined)
-
     // Create workflow state service to check status
-    const workflowState = new RedisWorkflowStateService(
-      undefined,
-      bullQueueService
-    )
+    const workflowState = new RedisWorkflowStateService(undefined)
 
     // Start the onboarding workflow via HTTP
     const { runId } = await pikkuFetch.post('/workflow/start', {
@@ -32,7 +25,15 @@ async function main(): Promise<void> {
     // Poll for workflow completion
     let run = await workflowState.getRun(runId)
     while (run && run.status === 'running') {
-      console.log('Workflow still running...')
+      const steps = await workflowState.getRunSteps(runId)
+      const lastStep = steps[steps.length - 1]
+      if (lastStep) {
+        console.log(
+          `Workflow still running... Last step: ${lastStep.stepName} (${lastStep.status})`
+        )
+      } else {
+        console.log('Workflow still running...')
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000))
       run = await workflowState.getRun(runId)
     }

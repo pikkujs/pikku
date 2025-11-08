@@ -1,4 +1,4 @@
-import { PgBossQueueWorkers } from '@pikku/queue-pg-boss'
+import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import {
   createConfig,
   createSingletonServices,
@@ -17,14 +17,14 @@ async function main(): Promise<void> {
       process.env.DATABASE_URL ||
       'postgres://postgres:password@localhost:5432/pikku_queue'
 
-    const pgBossQueueWorkers = new PgBossQueueWorkers(
-      connectionString,
+    // Create pg-boss service factory
+    const pgBossFactory = new PgBossServiceFactory(connectionString)
+    await pgBossFactory.init()
+
+    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
       singletonServices,
       createSessionServices
     )
-
-    // Initialize pg-boss
-    await pgBossQueueWorkers.init()
 
     // Register queue processors
     await pgBossQueueWorkers.registerQueues()
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
       singletonServices.logger.info(
         'Received SIGTERM, shutting down gracefully...'
       )
-      await pgBossQueueWorkers.close()
+      await pgBossFactory.close()
       process.exit(0)
     })
 
@@ -42,7 +42,7 @@ async function main(): Promise<void> {
       singletonServices.logger.info(
         'Received SIGINT, shutting down gracefully...'
       )
-      await pgBossQueueWorkers.close()
+      await pgBossFactory.close()
       process.exit(0)
     })
   } catch (e: any) {
