@@ -106,7 +106,7 @@ export function replaceFunctionReferences(
         .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/types/', '../types/')
-        .replaceAll('.pikku', pikkuDir)
+        .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
     } else {
       // For files in src/ or root, flatten to ./
@@ -115,7 +115,7 @@ export function replaceFunctionReferences(
         .replaceAll('../functions/src/', './')
         .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/types/', './types/')
-        .replaceAll('.pikku', pikkuDir)
+        .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
     }
 

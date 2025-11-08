@@ -52,8 +52,8 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
     async () => generateWelcomeMessage(user.email)
   )
 
-  // Step 3: Sleep for 5 seconds
-  await workflow.sleep('Sleeping for 5 seconds', '5s')
+  // Step 3: Sleep for 30 seconds
+  await workflow.sleep('Sleeping for 30 seconds', '30s')
 
   // Step 4: Send welcome email (RPC call - generates queue worker)
   await workflow.do('Send welcome email to user', 'sendEmail', {
