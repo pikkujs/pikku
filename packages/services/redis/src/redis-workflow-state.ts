@@ -87,7 +87,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     const historyKey = this.stepHistoryKey(stepId)
     const now = Date.now()
 
-    const entry = {
+    const entry: any = {
       stepId,
       stepName,
       attemptCount,
@@ -99,11 +99,25 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       createdAt: now,
     }
 
+    // Add status-specific timestamp
+    switch (status) {
+      case 'running':
+        entry.runningAt = now
+        break
+      case 'scheduled':
+        entry.scheduledAt = now
+        break
+      case 'succeeded':
+        entry.succeededAt = now
+        break
+      case 'failed':
+        entry.failedAt = now
+        break
+    }
+
     // Remove undefined fields
     Object.keys(entry).forEach(
-      (key) =>
-        entry[key as keyof typeof entry] === undefined &&
-        delete entry[key as keyof typeof entry]
+      (key) => entry[key] === undefined && delete entry[key]
     )
 
     // Store in sorted set with attemptCount as score for ordering
@@ -308,6 +322,14 @@ export class RedisWorkflowStateService extends WorkflowStateService {
           retryDelay: entry.retryDelay,
           createdAt: new Date(entry.createdAt),
           updatedAt: new Date(entry.createdAt), // Use createdAt for both
+          runningAt: entry.runningAt ? new Date(entry.runningAt) : undefined,
+          scheduledAt: entry.scheduledAt
+            ? new Date(entry.scheduledAt)
+            : undefined,
+          succeededAt: entry.succeededAt
+            ? new Date(entry.succeededAt)
+            : undefined,
+          failedAt: entry.failedAt ? new Date(entry.failedAt) : undefined,
         })
       }
     }

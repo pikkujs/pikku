@@ -1,66 +1,44 @@
 /**
  * Example client for starting workflows via HTTP
  */
-import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { PgWorkflowStateService } from '@pikku/pg'
-import postgres from 'postgres'
 import { pikkuFetch } from './pikku-fetch.gen.js'
 
-// Configure server URL from environment or use default
-const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
-pikkuFetch.setServerUrl(url)
+const API_URL = 'http://localhost:4002'
+pikkuFetch.setServerUrl(API_URL)
 
-// Use DATABASE_URL environment variable or provide a connection string
-const connectionString =
-  process.env.DATABASE_URL ||
-  'postgres://postgres:password@localhost:5432/pikku_queue'
+async function main() {
+  console.log('🧪 Testing Workflow Start (Onboarding)\n')
+  console.log('='.repeat(70))
+  console.log('\n📝 Expected behavior:')
+  console.log('  1. Workflow starts')
+  console.log('  2. Creates user profile')
+  console.log('  3. Sleeps for 5 seconds')
+  console.log('  4. Sends welcome email')
+  console.log('  5. Workflow completes successfully')
+  console.log('\n' + '='.repeat(70))
 
-async function main(): Promise<void> {
   try {
-    // Create pg-boss service factory
-    const pgBossFactory = new PgBossServiceFactory(connectionString)
-    await pgBossFactory.init()
+    console.log('\n📤 Starting onboarding workflow via HTTP...\n')
 
-    // Create workflow state service to check status
-    const workflowState = new PgWorkflowStateService(postgres(connectionString))
-
-    // Start the onboarding workflow via HTTP
-    const { runId } = await pikkuFetch.post('/workflow/start', {
+    const response = await pikkuFetch.post('/workflow/start', {
       email: 'user@example.com',
       userId: 'user-123',
     })
 
-    console.log(`Workflow started with run ID: ${runId}`)
+    console.log('\n' + '='.repeat(70))
+    console.log('\n✅ WORKFLOW COMPLETED SUCCESSFULLY!')
+    console.log('\n📊 Response:')
+    console.log(JSON.stringify(response, null, 2))
+    console.log('\n' + '='.repeat(70))
 
-    // Poll for workflow completion
-    let run = await workflowState.getRun(runId)
-    while (run && run.status === 'running') {
-      const steps = await workflowState.getRunHistory(runId)
-      const lastStep = steps[steps.length - 1]
-      if (lastStep) {
-        console.log(
-          `Workflow still running... Last step: ${lastStep.stepName} (${lastStep.status})`
-        )
-      } else {
-        console.log('Workflow still running...')
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      run = await workflowState.getRun(runId)
-    }
-
-    if (run?.status === 'completed') {
-      console.log('Workflow completed successfully!')
-      console.log('Result:', run.output)
-      process.exit(0)
-    } else if (run?.status === 'failed') {
-      console.error('Workflow failed:', run.error)
-      process.exit(1)
-    } else {
-      console.error('Workflow not found')
-      process.exit(1)
-    }
-  } catch (e: any) {
-    console.error('Failed to start workflow:', e.toString())
+    console.log('\n🎉 Test passed - workflow completed successfully!\n')
+    process.exit(0)
+  } catch (error: any) {
+    console.log('\n' + '='.repeat(70))
+    console.log('\n❌ UNEXPECTED: Request failed')
+    console.log('\n📊 Error details:')
+    console.log(`  Message: ${error.message}`)
+    console.log('\n' + '='.repeat(70))
     process.exit(1)
   }
 }

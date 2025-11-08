@@ -106,6 +106,10 @@ export class PgWorkflowStateService extends WorkflowStateService {
         result JSONB,
         error JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        running_at TIMESTAMPTZ,
+        scheduled_at TIMESTAMPTZ,
+        succeeded_at TIMESTAMPTZ,
+        failed_at TIMESTAMPTZ,
         FOREIGN KEY (workflow_step_id) REFERENCES ${this.schemaName}.workflow_step(workflow_step_id) ON DELETE CASCADE
       );
     `)
@@ -259,6 +263,10 @@ export class PgWorkflowStateService extends WorkflowStateService {
         h.result,
         h.error,
         h.created_at,
+        h.running_at,
+        h.scheduled_at,
+        h.succeeded_at,
+        h.failed_at,
         ROW_NUMBER() OVER (PARTITION BY s.workflow_step_id ORDER BY h.created_at ASC) as attempt_count
       FROM ${this.schemaName}.workflow_step s
       INNER JOIN ${this.schemaName}.workflow_step_history h
@@ -278,7 +286,17 @@ export class PgWorkflowStateService extends WorkflowStateService {
       retries: row.retries ? Number(row.retries) : undefined,
       retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
       createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.created_at as string), // History doesn't track updated_at
+      updatedAt: new Date(row.created_at as string),
+      runningAt: row.running_at
+        ? new Date(row.running_at as string)
+        : undefined,
+      scheduledAt: row.scheduled_at
+        ? new Date(row.scheduled_at as string)
+        : undefined,
+      succeededAt: row.succeeded_at
+        ? new Date(row.succeeded_at as string)
+        : undefined,
+      failedAt: row.failed_at ? new Date(row.failed_at as string) : undefined,
     }))
   }
 
@@ -321,12 +339,32 @@ export class PgWorkflowStateService extends WorkflowStateService {
     result?: any,
     error?: SerializedError
   ): Promise<void> {
+    const now = new Date()
+    const timestampField = this.getTimestampFieldForStatus(status)
+
     await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.workflow_step_history
-      (workflow_step_id, status, result, error)
-      VALUES ($1, $2, $3, $4)`,
-      [stepId, status, result || null, error || null]
+      (workflow_step_id, status, result, error, ${timestampField})
+      VALUES ($1, $2, $3, $4, $5)`,
+      [stepId, status, result || null, error || null, now]
     )
+  }
+
+  private getTimestampFieldForStatus(status: string): string {
+    switch (status) {
+      case 'running':
+        return 'running_at'
+      case 'scheduled':
+        return 'scheduled_at'
+      case 'succeeded':
+        return 'succeeded_at'
+      case 'failed':
+        return 'failed_at'
+      default:
+        // For 'pending' or unknown status, don't set a specific timestamp
+        // (created_at will be set by DEFAULT now())
+        return 'created_at'
+    }
   }
 
   async setStepResult(stepId: string, result: any): Promise<void> {

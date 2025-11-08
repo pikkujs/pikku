@@ -68,10 +68,48 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
   }
 })
 
-// HTTP function to start a workflow
+// HTTP function to start a workflow and poll until completion
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
-  { runId: string }
->(async ({ rpc }, data) => {
-  return await rpc.startWorkflow('onboarding', data)
+  any
+>(async ({ rpc, workflowState, logger }, data) => {
+  const { runId } = await rpc.startWorkflow('onboarding', data)
+  logger.info(`[TEST] Workflow started: ${runId}`)
+
+  // Poll for workflow completion
+  const maxAttempts = 30
+  const pollIntervalMs = 1000
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const run = await workflowState!.getRun(runId)
+    logger.info(`[TEST] Workflow status: ${run?.status}`)
+
+    if (!run) {
+      throw new Error(`Workflow not found: ${runId}`)
+    }
+
+    if (run.status === 'completed') {
+      logger.info(`[TEST] Workflow completed successfully`)
+      // Get all step attempts to return for validation
+      const steps = await workflowState!.getRunHistory(runId)
+      return {
+        ...run.output,
+        steps: steps.map((s: any) => ({
+          stepName: s.stepName,
+          status: s.status,
+          attemptCount: s.attemptCount,
+          error: s.error ? { message: s.error.message } : undefined,
+        })),
+      }
+    }
+
+    if (run.status === 'failed') {
+      throw new Error(run.error?.message || 'Workflow failed')
+    }
+
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+  }
+
+  throw new Error(`Workflow timeout after ${maxAttempts} attempts`)
 })

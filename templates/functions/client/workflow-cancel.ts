@@ -9,7 +9,7 @@ const API_URL = 'http://localhost:4002'
 pikkuFetch.setServerUrl(API_URL)
 
 async function main() {
-  console.log('🧪 Testing Workflow Cancellation (PostgreSQL)\n')
+  console.log('🧪 Testing Workflow Cancellation\n')
   console.log('='.repeat(70))
   console.log('\n📝 Expected behavior:')
   console.log('  1. Workflow starts')

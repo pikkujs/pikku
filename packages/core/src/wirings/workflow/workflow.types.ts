@@ -66,6 +66,14 @@ export interface StepState {
   createdAt: Date
   /** Last update timestamp */
   updatedAt: Date
+  /** Timestamp when step started running */
+  runningAt?: Date
+  /** Timestamp when step was scheduled */
+  scheduledAt?: Date
+  /** Timestamp when step succeeded */
+  succeededAt?: Date
+  /** Timestamp when step failed */
+  failedAt?: Date
 }
 
 /**
