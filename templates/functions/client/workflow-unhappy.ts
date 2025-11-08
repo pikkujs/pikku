@@ -35,7 +35,7 @@ async function main() {
     console.log('\n' + '='.repeat(70))
 
     // Verify the response structure
-    if (!response.error || !response.attempts || !response.steps) {
+    if (!response.error || response.attempts === undefined || !response.steps) {
       console.log('\n❌ FAIL: Missing expected fields in response')
       console.log('Expected: { error, attempts, steps }')
       console.log('Got:', response)

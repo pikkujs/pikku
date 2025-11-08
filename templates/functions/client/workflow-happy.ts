@@ -34,8 +34,8 @@ async function main() {
 
     // Verify the response structure
     if (
-      !response.result ||
-      !response.finalAttempt ||
+      response.result === undefined ||
+      response.finalAttempt === undefined ||
       !response.message ||
       !response.steps
     ) {
