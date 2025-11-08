@@ -23,10 +23,7 @@ async function main(): Promise<void> {
     await pgBossFactory.init()
 
     // Create workflow state service to check status
-    const workflowState = new PgWorkflowStateService(
-      postgres(connectionString),
-      pgBossFactory.getQueueService()
-    )
+    const workflowState = new PgWorkflowStateService(postgres(connectionString))
 
     // Start the onboarding workflow via HTTP
     const { runId } = await pikkuFetch.post('/workflow/start', {
