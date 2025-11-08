@@ -151,6 +151,7 @@ export type PikkuCLIInput = {
 
   rpc?: {
     remoteRpcWorkersPath?: string
+    publicRpcPath?: string
   }
 
   forceRequiredServices?: string[]
@@ -244,6 +245,7 @@ export type PikkuCLIConfig = {
 
   rpc?: {
     remoteRpcWorkersPath?: string
+    publicRpcPath?: string
   }
 
   forceRequiredServices?: string[]
