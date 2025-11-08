@@ -60,7 +60,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
       CREATE SCHEMA IF NOT EXISTS ${this.schemaName};
 
       DO $$ BEGIN
-        CREATE TYPE ${this.schemaName}.workflow_status_enum AS ENUM ('running', 'completed', 'failed');
+        CREATE TYPE ${this.schemaName}.workflow_status_enum AS ENUM ('running', 'completed', 'failed', 'cancelled');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
@@ -198,7 +198,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
       status: row.status as any,
       result: row.result,
       error: row.error,
-      attemptCount: 1, // First attempt
+      attemptCount: 1, // First attempt (1 history row)
       retries: row.retries ? Number(row.retries) : undefined,
       retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
       createdAt: new Date(row.created_at as string),
@@ -219,7 +219,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
         s.created_at,
         s.updated_at,
         (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
-         WHERE workflow_step_id = s.workflow_step_id) + 1 as attempt_count
+         WHERE workflow_step_id = s.workflow_step_id) as attempt_count
       FROM ${this.schemaName}.workflow_step s
       WHERE s.workflow_run_id = $1 AND s.step_name = $2`,
       [runId, stepName]
@@ -245,25 +245,26 @@ export class PgWorkflowStateService extends WorkflowStateService {
     }
   }
 
-  async getRunSteps(
+  async getRunHistory(
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {
+    // Query from history table to get all attempts for each step in chronological order
     const result = await this.sql.unsafe(
       `SELECT
         s.workflow_step_id,
         s.step_name,
-        s.status,
-        s.result,
-        s.error,
         s.retries,
         s.retry_delay,
-        s.created_at,
-        s.updated_at,
-        (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
-         WHERE workflow_step_id = s.workflow_step_id) + 1 as attempt_count
+        h.status,
+        h.result,
+        h.error,
+        h.created_at,
+        ROW_NUMBER() OVER (PARTITION BY s.workflow_step_id ORDER BY h.created_at ASC) as attempt_count
       FROM ${this.schemaName}.workflow_step s
+      INNER JOIN ${this.schemaName}.workflow_step_history h
+        ON s.workflow_step_id = h.workflow_step_id
       WHERE s.workflow_run_id = $1
-      ORDER BY s.created_at ASC`,
+      ORDER BY h.created_at ASC`,
       [runId]
     )
 
@@ -277,7 +278,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
       retries: row.retries ? Number(row.retries) : undefined,
       retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
       createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
+      updatedAt: new Date(row.created_at as string), // History doesn't track updated_at
     }))
   }
 
@@ -407,7 +408,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
           created_at,
           updated_at,
           (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
-           WHERE workflow_step_id = $1) + 1 as attempt_count
+           WHERE workflow_step_id = $1) as attempt_count
         FROM ${this.schemaName}.workflow_step
         WHERE workflow_step_id = $1`,
         [stepId]

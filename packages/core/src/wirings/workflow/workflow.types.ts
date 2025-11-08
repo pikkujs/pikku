@@ -241,6 +241,7 @@ export interface WorkflowOrchestratorService {
   // Run-level state operations
   createRun(workflowName: string, input: any): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
+  getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
   updateRunStatus(
     id: string,
     status: WorkflowStatus,

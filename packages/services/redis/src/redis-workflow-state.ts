@@ -205,9 +205,11 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     }
   }
 
-  async getRunSteps(
+  async getRunHistory(
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {
+    // Note: Redis implementation only stores current state, not full history
+    // For full attempt history, use PostgreSQL implementation
     const pattern = `${this.keyPrefix}:step:${runId}:*`
     const keys: string[] = []
 

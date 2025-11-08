@@ -50,6 +50,15 @@ export abstract class WorkflowStateService
   abstract getRun(id: string): Promise<WorkflowRun | null>
 
   /**
+   * Get workflow run history (all step attempts in chronological order)
+   * @param runId - Run ID
+   * @returns Array of step states with step names, ordered oldest to newest
+   */
+  abstract getRunHistory(
+    runId: string
+  ): Promise<Array<StepState & { stepName: string }>>
+
+  /**
    * Update workflow run status
    * @param id - Run ID
    * @param status - New status
@@ -145,6 +154,9 @@ export abstract class WorkflowStateService
    * @param runId - Run ID
    */
   async resumeWorkflow(runId: string): Promise<void> {
+    this.singletonServices?.logger.info(
+      `[WORKFLOW] Resuming workflow: runId=${runId}`
+    )
     if (!this.singletonServices?.queueService) {
       throw new Error(
         'QueueService not configured. Remote workflows require a queue service.'
@@ -153,6 +165,9 @@ export abstract class WorkflowStateService
     await this.singletonServices.queueService.add(
       'pikku-workflow-orchestrator',
       { runId }
+    )
+    this.singletonServices?.logger.info(
+      `[WORKFLOW] Enqueued orchestrator job: runId=${runId}`
     )
   }
 
@@ -302,12 +317,19 @@ export abstract class WorkflowStateService
             }
 
             if (stepState.status === 'failed') {
-              // TODO: Handle workflow failure when step retries are exhausted
-              this.singletonServices?.logger.error(
-                `[WORKFLOW] Step failed with retries exhausted: runId=${runId}, stepName=${stepName}, error=${stepState.error?.message}`
+              // Step failed with retries exhausted - throw error to fail the workflow
+              const error = new Error(
+                stepState.error?.message ||
+                  `Step '${stepName}' failed after exhausting all retries`
               )
-              // For now, just return to avoid workflow hanging
-              return
+              // Preserve original error properties if available
+              if (stepState.error) {
+                Object.assign(error, stepState.error)
+              }
+              this.singletonServices?.logger.error(
+                `[WORKFLOW] Step failed with retries exhausted: runId=${runId}, stepName=${stepName}, error=${error.message}`
+              )
+              throw error
             }
 
             if (stepState.status === 'scheduled') {
@@ -592,7 +614,7 @@ export abstract class WorkflowStateService
     rpcService: any
   ): Promise<void> {
     // Get step state
-    const stepState = await this.getStepState(data.runId, data.stepName)
+    let stepState = await this.getStepState(data.runId, data.stepName)
 
     // Idempotency - if already succeeded, resume orchestrator and return
     if (stepState.status === 'succeeded') {
@@ -606,6 +628,14 @@ export abstract class WorkflowStateService
         `[WORKFLOW] Step already running (race condition): runId=${data.runId}, stepId=${stepState.stepId}`
       )
       return
+    }
+
+    // If status is 'failed', this is a retry - create new attempt history
+    if (stepState.status === 'failed') {
+      this.singletonServices?.logger.info(
+        `[WORKFLOW] Creating retry attempt for step: runId=${data.runId}, stepId=${stepState.stepId}, attemptCount=${stepState.attemptCount}`
+      )
+      stepState = await this.createRetryAttempt(stepState.stepId)
     }
 
     // Mark step as running (pending or failed status)
@@ -629,7 +659,15 @@ export abstract class WorkflowStateService
       await this.setStepResult(stepState.stepId, result)
 
       // Resume orchestrator to continue workflow
-      await this.resumeWorkflow(data.runId)
+      try {
+        await this.resumeWorkflow(data.runId)
+      } catch (resumeError: any) {
+        this.singletonServices?.logger.error(
+          `[WORKFLOW] Failed to resume workflow after step success: ${resumeError.message}`,
+          resumeError
+        )
+        throw resumeError
+      }
     } catch (error: any) {
       // Store error and mark failed
       await this.setStepError(stepState.stepId, error)
