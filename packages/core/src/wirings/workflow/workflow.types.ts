@@ -58,6 +58,10 @@ export interface StepState {
   error?: SerializedError
   /** Number of attempts made (starts at 1) */
   attemptCount: number
+  /** Maximum retry attempts allowed */
+  retries?: number
+  /** Delay between retries */
+  retryDelay?: string | number
   /** Creation timestamp */
   createdAt: Date
   /** Last update timestamp */
@@ -290,7 +294,15 @@ export type WorkflowSleeperInput = {
  */
 export interface WorkflowStepService {
   // Step-level state operations
+  insertStepState(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    stepOptions?: { retries?: number; retryDelay?: string | number }
+  ): Promise<StepState>
   getStepState(runId: string, stepName: string): Promise<StepState>
+  setStepRunning(stepId: string): Promise<void>
   setStepScheduled(stepId: string): Promise<void>
   setStepResult(stepId: string, result: any): Promise<void>
   setStepError(stepId: string, error: Error): Promise<void>
