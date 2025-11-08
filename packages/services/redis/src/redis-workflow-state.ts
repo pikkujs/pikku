@@ -137,44 +137,69 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     await this.redis.hmset(key, fields)
   }
 
+  async insertStepState(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    stepOptions?: { retries?: number; retryDelay?: string | number }
+  ): Promise<StepState> {
+    const now = Date.now()
+    const stepId = `${runId}:${stepName}:${now}`
+    const key = this.stepKey(runId, stepName)
+
+    const fields: Record<string, string> = {
+      stepId,
+      rpcName,
+      data: JSON.stringify(data),
+      status: 'pending',
+      attemptCount: '1',
+      createdAt: now.toString(),
+      updatedAt: now.toString(),
+    }
+
+    if (stepOptions?.retries !== undefined) {
+      fields.retries = stepOptions.retries.toString()
+    }
+
+    if (stepOptions?.retryDelay !== undefined) {
+      fields.retryDelay = stepOptions.retryDelay.toString()
+    }
+
+    await this.redis.hmset(key, fields)
+
+    return {
+      stepId,
+      status: 'pending',
+      attemptCount: 1,
+      retries: stepOptions?.retries,
+      retryDelay:
+        stepOptions?.retryDelay !== undefined
+          ? stepOptions.retryDelay.toString()
+          : undefined,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    }
+  }
+
   async getStepState(runId: string, stepName: string): Promise<StepState> {
     const key = this.stepKey(runId, stepName)
     const data = await this.redis.hgetall(key)
 
-    // If no row exists or status is failed, create a new pending row
-    if (!data.status || data.status === 'failed') {
-      const now = Date.now()
-      const stepId = `${runId}:${stepName}:${now}`
-
-      await this.redis.hmset(
-        key,
-        'stepId',
-        stepId,
-        'status',
-        'pending',
-        'attemptCount',
-        '1',
-        'createdAt',
-        now.toString(),
-        'updatedAt',
-        now.toString()
+    if (!data.stepId) {
+      throw new Error(
+        `Step not found: runId=${runId}, stepName=${stepName}. Use insertStepState to create it.`
       )
-
-      return {
-        stepId,
-        status: 'pending',
-        attemptCount: 1,
-        createdAt: new Date(now),
-        updatedAt: new Date(now),
-      }
     }
 
     return {
-      stepId: data.stepId!,
+      stepId: data.stepId,
       status: data.status as any,
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
       attemptCount: Number(data.attemptCount || 1),
+      retries: data.retries ? Number(data.retries) : undefined,
+      retryDelay: data.retryDelay,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
@@ -217,6 +242,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
         result: data.result ? JSON.parse(data.result) : undefined,
         error: data.error ? JSON.parse(data.error) : undefined,
         attemptCount: Number(data.attemptCount || 1),
+        retries: data.retries ? Number(data.retries) : undefined,
+        retryDelay: data.retryDelay,
         createdAt: new Date(Number(data.createdAt!)),
         updatedAt: new Date(Number(data.updatedAt!)),
       })
@@ -224,6 +251,24 @@ export class RedisWorkflowStateService extends WorkflowStateService {
 
     // Sort by creation time
     return steps.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+  }
+
+  async setStepRunning(stepId: string): Promise<void> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
+    const now = Date.now()
+    const key = this.stepKey(runId, stepName)
+
+    await this.redis.hmset(
+      key,
+      'status',
+      'running',
+      'updatedAt',
+      now.toString()
+    )
   }
 
   async setStepScheduled(stepId: string): Promise<void> {
@@ -371,6 +416,8 @@ export class RedisWorkflowStateService extends WorkflowStateService {
       result: data.result ? JSON.parse(data.result) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
       attemptCount: newAttemptCount,
+      retries: data.retries ? Number(data.retries) : undefined,
+      retryDelay: data.retryDelay,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(now),
     }

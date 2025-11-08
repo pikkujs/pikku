@@ -174,7 +174,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
       status: row.status as any,
       result: row.result,
       error: row.error as SerializedError | undefined,
-      updatedAt: Number(row.updated_at),
+      updatedAt: row.updated_at,
     }
   }
 

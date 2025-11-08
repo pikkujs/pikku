@@ -91,6 +91,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
         status ${this.schemaName}.step_status_enum NOT NULL DEFAULT 'pending',
         result JSONB,
         error JSONB,
+        retries INTEGER,
+        retry_delay TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE (workflow_run_id, step_name),
@@ -163,6 +165,47 @@ export class PgWorkflowStateService extends WorkflowStateService {
     )
   }
 
+  async insertStepState(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    stepOptions?: { retries?: number; retryDelay?: string | number }
+  ): Promise<StepState> {
+    // Insert into workflow_step table
+    const result = await this.sql.unsafe(
+      `INSERT INTO ${this.schemaName}.workflow_step
+        (workflow_run_id, step_name, rpc_name, data, status, retries, retry_delay)
+      VALUES ($1, $2, $3, $4, 'pending', $5, $6)
+      RETURNING workflow_step_id, status, result, error, retries, retry_delay, created_at, updated_at`,
+      [
+        runId,
+        stepName,
+        rpcName,
+        data,
+        stepOptions?.retries ?? null,
+        stepOptions?.retryDelay?.toString() ?? null,
+      ]
+    )
+
+    const row = result[0]!
+
+    // Insert initial history record
+    await this.insertHistoryRecord(row.workflow_step_id as string, 'pending')
+
+    return {
+      stepId: row.workflow_step_id as string,
+      status: row.status as any,
+      result: row.result,
+      error: row.error,
+      attemptCount: 1, // First attempt
+      retries: row.retries ? Number(row.retries) : undefined,
+      retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
+    }
+  }
+
   async getStepState(runId: string, stepName: string): Promise<StepState> {
     // Get step with attempt count from history table
     const result = await this.sql.unsafe(
@@ -171,35 +214,21 @@ export class PgWorkflowStateService extends WorkflowStateService {
         s.status,
         s.result,
         s.error,
+        s.retries,
+        s.retry_delay,
         s.created_at,
         s.updated_at,
-        COALESCE((SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
-                  WHERE workflow_step_id = s.workflow_step_id), 0) + 1 as attempt_count
+        (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
+         WHERE workflow_step_id = s.workflow_step_id) + 1 as attempt_count
       FROM ${this.schemaName}.workflow_step s
       WHERE s.workflow_run_id = $1 AND s.step_name = $2`,
       [runId, stepName]
     )
 
-    // If no row exists, create a new pending step
     if (result.length === 0) {
-      const newRow = await this.sql.unsafe(
-        `INSERT INTO ${this.schemaName}.workflow_step (workflow_run_id, step_name, status)
-        VALUES ($1, $2, 'pending')
-        RETURNING workflow_step_id, status, result, error, created_at, updated_at,
-                  1 as attempt_count`,
-        [runId, stepName]
+      throw new Error(
+        `Step not found: runId=${runId}, stepName=${stepName}. Use insertStepState to create it.`
       )
-
-      const row = newRow[0]!
-      return {
-        stepId: row.workflow_step_id as string,
-        status: row.status as any,
-        result: row.result,
-        error: row.error,
-        attemptCount: 1,
-        createdAt: new Date(row.created_at as string),
-        updatedAt: new Date(row.updated_at as string),
-      }
     }
 
     const row = result[0]!
@@ -209,6 +238,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
       result: row.result,
       error: row.error,
       attemptCount: Number(row.attempt_count),
+      retries: row.retries ? Number(row.retries) : undefined,
+      retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }
@@ -224,10 +255,12 @@ export class PgWorkflowStateService extends WorkflowStateService {
         s.status,
         s.result,
         s.error,
+        s.retries,
+        s.retry_delay,
         s.created_at,
         s.updated_at,
-        COALESCE((SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
-                  WHERE workflow_step_id = s.workflow_step_id), 0) + 1 as attempt_count
+        (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
+         WHERE workflow_step_id = s.workflow_step_id) + 1 as attempt_count
       FROM ${this.schemaName}.workflow_step s
       WHERE s.workflow_run_id = $1
       ORDER BY s.created_at ASC`,
@@ -241,9 +274,35 @@ export class PgWorkflowStateService extends WorkflowStateService {
       result: row.result,
       error: row.error,
       attemptCount: Number(row.attempt_count),
+      retries: row.retries ? Number(row.retries) : undefined,
+      retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }))
+  }
+
+  async setStepRunning(stepId: string): Promise<void> {
+    // Update workflow_step to running
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step
+      SET status = 'running', updated_at = now()
+      WHERE workflow_step_id = $1`,
+      [stepId]
+    )
+
+    // Update current history record to running (update in-place)
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step_history
+      SET status = 'running'
+      WHERE history_id = (
+        SELECT history_id
+        FROM ${this.schemaName}.workflow_step_history
+        WHERE workflow_step_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+      )`,
+      [stepId]
+    )
   }
 
   async setStepScheduled(stepId: string): Promise<void> {
@@ -270,18 +329,27 @@ export class PgWorkflowStateService extends WorkflowStateService {
   }
 
   async setStepResult(stepId: string, result: any): Promise<void> {
-    await this.sql.begin(async (sql) => {
-      // Update step status
-      await sql.unsafe(
-        `UPDATE ${this.schemaName}.workflow_step
-        SET status = 'succeeded', result = $1, error = NULL, updated_at = now()
-        WHERE workflow_step_id = $2`,
-        [result, stepId]
-      )
-    })
+    // Update workflow_step to succeeded
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step
+      SET status = 'succeeded', result = $1, error = NULL, updated_at = now()
+      WHERE workflow_step_id = $2`,
+      [result, stepId]
+    )
 
-    // Insert history record (outside transaction for observability even if main update fails)
-    await this.insertHistoryRecord(stepId, 'succeeded', result)
+    // Update current history record to succeeded (update in-place)
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step_history
+      SET status = 'succeeded', result = $1
+      WHERE history_id = (
+        SELECT history_id
+        FROM ${this.schemaName}.workflow_step_history
+        WHERE workflow_step_id = $2
+        ORDER BY created_at DESC
+        LIMIT 1
+      )`,
+      [result, stepId]
+    )
   }
 
   async setStepError(stepId: string, error: Error): Promise<void> {
@@ -291,22 +359,31 @@ export class PgWorkflowStateService extends WorkflowStateService {
       code: (error as any).code,
     }
 
-    await this.sql.begin(async (sql) => {
-      // Update step status
-      await sql.unsafe(
-        `UPDATE ${this.schemaName}.workflow_step
-        SET status = 'failed', error = $1, result = NULL, updated_at = now()
-        WHERE workflow_step_id = $2`,
-        [serializedError, stepId]
-      )
-    })
+    // Update workflow_step to failed
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step
+      SET status = 'failed', error = $1, result = NULL, updated_at = now()
+      WHERE workflow_step_id = $2`,
+      [serializedError, stepId]
+    )
 
-    // Insert history record (outside transaction for observability even if main update fails)
-    await this.insertHistoryRecord(stepId, 'failed', undefined, serializedError)
+    // Update current history record to failed (update in-place)
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step_history
+      SET status = 'failed', error = $1
+      WHERE history_id = (
+        SELECT history_id
+        FROM ${this.schemaName}.workflow_step_history
+        WHERE workflow_step_id = $2
+        ORDER BY created_at DESC
+        LIMIT 1
+      )`,
+      [serializedError, stepId]
+    )
   }
 
   async createRetryAttempt(stepId: string): Promise<StepState> {
-    // Reset step to pending for retry (keeps all metadata: rpc_name, data)
+    // Reset step to pending for retry (keeps all metadata: rpc_name, data, retries, retry_delay)
     await this.sql.unsafe(
       `UPDATE ${this.schemaName}.workflow_step
       SET status = 'pending', result = NULL, error = NULL, updated_at = now()
@@ -314,7 +391,7 @@ export class PgWorkflowStateService extends WorkflowStateService {
       [stepId]
     )
 
-    // Insert history record for retry
+    // Insert NEW history record for retry attempt
     await this.insertHistoryRecord(stepId, 'pending')
 
     // Return updated state with new attempt count
@@ -325,6 +402,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
           status,
           result,
           error,
+          retries,
+          retry_delay,
           created_at,
           updated_at,
           (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history
@@ -341,6 +420,8 @@ export class PgWorkflowStateService extends WorkflowStateService {
           result: row.result,
           error: row.error,
           attemptCount: Number(row.attempt_count),
+          retries: row.retries ? Number(row.retries) : undefined,
+          retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
           createdAt: new Date(row.created_at as string),
           updatedAt: new Date(row.updated_at as string),
         }

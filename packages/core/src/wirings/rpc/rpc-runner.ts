@@ -7,7 +7,6 @@ import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuRPC } from './rpc-types.js'
-import type { WorkflowStepInteraction } from '../workflow/workflow.types.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
@@ -78,14 +77,17 @@ export class ContextAwareRPCService {
   public async rpcWithInteraction<In = any, Out = any>(
     funcName: string,
     data: In,
-    workflowStepInteraction: WorkflowStepInteraction
+    interaction: PikkuInteraction
   ): Promise<Out> {
     const rpcDepth = this.services.rpc?.depth || 0
-    const pikkuFuncName = getPikkuFunctionName(funcName)
+    const mergedInteraction = {
+      ...this.interaction,
+      ...interaction,
+    }
     return runPikkuFunc<In, Out>(
       PikkuWiringTypes.rpc,
-      pikkuFuncName,
-      pikkuFuncName,
+      funcName,
+      getPikkuFunctionName(funcName),
       {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
@@ -97,15 +99,15 @@ export class ContextAwareRPCService {
                 global: false,
               } as any)
             : undefined
-          return this.services
+          return {
+            ...this.services,
+            ...mergedInteraction,
+          }
         },
         data: () => data,
         userSession: this.services.userSession,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
-        interaction: {
-          ...this.interaction,
-          workflowStep: workflowStepInteraction,
-        },
+        interaction: mergedInteraction,
       }
     )
   }
