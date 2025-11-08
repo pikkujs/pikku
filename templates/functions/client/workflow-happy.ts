@@ -1,15 +1,15 @@
 /**
- * Test script for HAPPY PATH workflow retry
+ * Test script for HAPPY PATH workflow retry (PostgreSQL backend)
  * Should succeed after one retry
  */
 
-import { PikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
 
-const pikkuFetch = new PikkuFetch()
-pikkuFetch.setServerUrl('http://localhost:4002')
+const API_URL = 'http://localhost:4002'
+pikkuFetch.setServerUrl(API_URL)
 
 async function main() {
-  console.log('🧪 Testing HAPPY PATH Workflow Retry\n')
+  console.log('🧪 Testing HAPPY PATH Workflow Retry (PostgreSQL)\n')
   console.log('='.repeat(70))
   console.log('\n📝 Expected behavior:')
   console.log('  1. Workflow starts')

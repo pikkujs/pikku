@@ -5,7 +5,7 @@ import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowStateService } from '@pikku/pg'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import postgres from 'postgres'
-import { pikkuFetch } from './pikku-fetch.gen.js'
+import { pikkuFetch } from '../../functions/.pikku/pikku-fetch.gen.js'
 
 // Configure server URL from environment or use default
 const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'

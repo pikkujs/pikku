@@ -260,6 +260,10 @@ const CLIENT_FEATURE_MAPPING = {
   'rpc.ts': ['http'],
   'scheduled-task.ts': ['scheduled'],
   'websocket.ts': ['channel'],
+  'workflow-start.ts': ['workflows'],
+  'workflow-cancel.ts': ['workflows'],
+  'workflow-happy.ts': ['workflows'],
+  'workflow-unhappy.ts': ['workflows'],
 } as const
 
 /**
