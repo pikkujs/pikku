@@ -1,3 +1,10 @@
+## 0.11.0
+
+### Minor Changes
+
+- Workflow support
+
+
 # @pikku/uws
 
 ## 0.10.0

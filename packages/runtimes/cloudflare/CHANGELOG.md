@@ -1,3 +1,10 @@
+## 0.11.0
+
+### Minor Changes
+
+- Workflow support
+
+
 # @pikku/cloudflare
 
 ## 0.10.1

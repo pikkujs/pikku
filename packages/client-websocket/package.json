@@ -1,6 +1,6 @@
 {
   "name": "@pikku/websocket",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",

@@ -1,3 +1,10 @@
+## 0.11.0
+
+### Minor Changes
+
+- Workflow support
+
+
 ## 0.8.0
 
 ## 0.10.1

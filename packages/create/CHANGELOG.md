@@ -1,3 +1,10 @@
+## 0.11.0
+
+### Minor Changes
+
+- Add workflows-bullmq and workflows-pg-boss templates
+
+
 # create-pikku
 
 ## 0.10.1

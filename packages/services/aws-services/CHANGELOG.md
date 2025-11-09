@@ -1,3 +1,10 @@
+## 0.11.0
+
+### Minor Changes
+
+- Add SQS queue service implementation
+
+
 ## 0.8.0
 
 ## 0.10.0
