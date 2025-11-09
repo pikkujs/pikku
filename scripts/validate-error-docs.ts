@@ -17,7 +17,10 @@ const ERROR_CODES_FILE = join(
   __dirname,
   '../packages/inspector/src/error-codes.ts'
 )
-const WEBSITE_ERRORS_DIR = join(__dirname, '../../website/errors')
+const WEBSITE_ERRORS_DIR = join(
+  __dirname,
+  '../../website/docs/pikku-cli/errors'
+)
 
 function extractErrorCodes(fileContent: string): string[] {
   const errorCodes: string[] = []
@@ -83,7 +86,7 @@ function main(): void {
     console.log('❌ Missing documentation for the following error codes:\n')
     missingDocs.forEach((code) => {
       console.log(
-        `   - ${code} (create: website/errors/${code.toLowerCase()}.md)`
+        `   - ${code} (create: website/docs/pikku-cli/errors/${code.toLowerCase()}.md)`
       )
     })
     console.log()
@@ -94,7 +97,9 @@ function main(): void {
       '⚠️  Found documentation files without corresponding error codes:\n'
     )
     extraDocs.forEach((doc) => {
-      console.log(`   - ${doc} (website/errors/${doc.toLowerCase()}.md)`)
+      console.log(
+        `   - ${doc} (website/docs/pikku-cli/errors/${doc.toLowerCase()}.md)`
+      )
     })
     console.log()
   }
