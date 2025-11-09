@@ -1,5 +1,0 @@
-{
-  "tsconfig": "../functions/tsconfig.json",
-  "srcDirectories": ["../functions/src"],
-  "outDir": "../functions/.pikku"
-}

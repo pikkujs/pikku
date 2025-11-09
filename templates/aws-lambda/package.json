@@ -21,7 +21,6 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "^3.914.0",
     "@aws-sdk/client-s3": "^3.914.0",
     "@aws-sdk/client-secrets-manager": "^3.914.0",
     "@aws-sdk/client-sqs": "^3.914.0",
