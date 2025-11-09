@@ -281,11 +281,8 @@ export interface WorkflowService {
     rpcService: any
   ): Promise<{ runId: string }>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
-  orchestrateWorkflow(
-    data: WorkflowOrchestratorInput,
-    rpcService: any
-  ): Promise<void>
-  executeWorkflowSleep(data: WorkflowSleeperInput): Promise<void>
+  orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
+  executeWorkflowSleep(runId: string, stepId: string): Promise<void>
 
   // Step-level state operations
   insertStepState(
@@ -306,7 +303,13 @@ export interface WorkflowService {
   ): Promise<StepState>
 
   // Step execution
-  executeWorkflowStep(data: WorkflowStepInput, rpcService: any): Promise<void>
+  executeWorkflowStep(
+    runId: string,
+    stepName: string,
+    rpcName: string | null,
+    data: any,
+    rpcService: any
+  ): Promise<void>
 }
 
 /**

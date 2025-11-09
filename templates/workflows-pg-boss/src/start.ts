@@ -33,7 +33,11 @@ async function main(): Promise<void> {
       workflowService,
     })
 
-    workflowService.setServices(singletonServices, createSessionServices as any)
+    workflowService.setServices(
+      singletonServices,
+      createSessionServices as any,
+      config
+    )
 
     // Start HTTP server for workflow triggers
     const appServer = new PikkuExpressServer(

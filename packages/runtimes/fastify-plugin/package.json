@@ -18,8 +18,8 @@
   },
   "peerDependencies": {
     "@pikku/core": "^0.10.2",
-    "fastify": "^5.0.0",
-    "fastify-plugin": "^5.0.1"
+    "fastify": "^5.6.1",
+    "fastify-plugin": "^5.1.0"
   },
   "devDependencies": {
     "fastify": "^5.6.1",

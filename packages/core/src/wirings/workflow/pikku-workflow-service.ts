@@ -199,12 +199,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Sets the step result to null and resumes the workflow
    * @param data - Sleeper input data
    */
-  public async executeWorkflowSleep(data: {
-    runId: string
+  public async executeWorkflowSleep(
+    runId: string,
     stepId: string
-  }): Promise<void> {
-    await this.setStepResult(data.stepId, null)
-    await this.resumeWorkflow(data.runId)
+  ): Promise<void> {
+    await this.setStepResult(stepId, null)
+    await this.resumeWorkflow(runId)
   }
 
   /**
@@ -344,15 +344,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Handles idempotency, RPC execution, result storage, retry logic, and orchestrator triggering
    */
   public async executeWorkflowStep(
-    data: { runId: string; stepName: string; rpcName: string; data: any },
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
     rpcService: any
   ): Promise<void> {
     // Get step state
-    let stepState = await this.getStepState(data.runId, data.stepName)
+    let stepState = await this.getStepState(runId, stepName)
 
     // Idempotency - if already succeeded, resume orchestrator and return
     if (stepState.status === 'succeeded') {
-      await this.resumeWorkflow(data.runId)
+      await this.resumeWorkflow(runId)
       return
     }
 
@@ -373,24 +376,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     try {
       // Execute RPC with workflow step context
-      const result = await rpcService.rpcWithInteraction(
-        data.rpcName,
-        data.data,
-        {
-          workflowStep: {
-            runId: data.runId,
-            stepId: stepState.stepId,
-            attemptCount: stepState.attemptCount,
-          },
-        }
-      )
+      const result = await rpcService.rpcWithInteraction(rpcName, data, {
+        workflowStep: {
+          runId,
+          stepId: stepState.stepId,
+          attemptCount: stepState.attemptCount,
+        },
+      })
 
       // Store result and mark succeeded
       await this.setStepResult(stepState.stepId, result)
 
       // Resume orchestrator to continue workflow
       try {
-        await this.resumeWorkflow(data.runId)
+        await this.resumeWorkflow(runId)
       } catch (resumeError: any) {
         throw resumeError
       }
@@ -403,7 +402,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
       if (retriesExhausted) {
         // No more retries - resume orchestrator to mark workflow as failed
-        await this.resumeWorkflow(data.runId)
+        await this.resumeWorkflow(runId)
       }
 
       // Always throw so queue knows the job failed and can retry if needed
@@ -416,12 +415,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Runs workflow job and handles async exceptions
    */
   public async orchestrateWorkflow(
-    data: { runId: string },
+    runId: string,
     rpcService: any
   ): Promise<void> {
     try {
       // Run workflow job (replays with caching)
-      await this.runWorkflowJob(data.runId, rpcService)
+      await this.runWorkflowJob(runId, rpcService)
     } catch (error: any) {
       if (
         error.name === 'WorkflowAsyncException' ||
@@ -430,7 +429,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         return
       }
 
-      await this.updateRunStatus(data.runId, 'failed', undefined, {
+      await this.updateRunStatus(runId, 'failed', undefined, {
         message: error.message,
         stack: error.stack,
         code: error.code,

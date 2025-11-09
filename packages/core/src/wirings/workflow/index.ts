@@ -14,9 +14,6 @@ export type {
   StepState,
   WorkflowStatus,
   StepStatus,
-  WorkflowStepInput,
-  WorkflowOrchestratorInput,
-  WorkflowSleeperInput,
 } from './workflow.types.js'
 
 export { PikkuWorkflowService } from './pikku-workflow-service.js'

@@ -18,44 +18,32 @@ export type WorkflowStepInput = {
   data: any
 }
 
-export type WorkflowOrchestratorInput = {
-  runId: string
-}
-
-export type WorkflowSleeperInput = {
-  runId: string
-  stepId: string
-}
-
 export const pikkuWorkflowWorker = pikkuSessionlessFunc<
   WorkflowStepInput,
   void
 >({
-  func: async ({ workflowService, rpc }, data) => {
-    await workflowService!.executeWorkflowStep(data, rpc)
-  },
-  internal: true,
+  func: async ({ workflowService, rpc }, { runId, stepName, rpcName, data }) => {
+    await workflowService!.executeWorkflowStep(runId, stepName, rpcName, data, rpc)
+  }
 })
 
 export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<
-  WorkflowOrchestratorInput,
+  { runId: string },
   void
 >({
-  func: async ({ workflowService, rpc }, data) => {
-    await workflowService!.orchestrateWorkflow(data, rpc)
-  },
-  internal: true,
+  func: async ({ workflowService, rpc }, { runId }) => {
+    await workflowService!.orchestrateWorkflow(runId, rpc)
+  }
 })
 
 export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
-  WorkflowSleeperInput,
+  { runId: string, stepId: string },
   void
 >({
-  func: async ({ workflowService }, data) => {
-    await workflowService!.executeWorkflowSleep(data)
+  func: async ({ workflowService }, { runId, stepId }) => {
+    await workflowService!.executeWorkflowSleep(runId, stepId)
   },
   name: 'pikkuWorkflowStepSleeper',
-  expose: true,
   internal: true,
 })
 

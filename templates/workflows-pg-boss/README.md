@@ -5,11 +5,13 @@ This template demonstrates Pikku workflows with PostgreSQL state storage and pg-
 ## Quick Start
 
 1. Install dependencies:
+
    ```bash
    yarn install
    ```
 
 2. Start the workflow workers:
+
    ```bash
    yarn start
    ```
@@ -23,6 +25,7 @@ See `../functions/src/workflow.functions.ts` and `../functions/src/workflow.wiri
 ## Documentation
 
 For complete workflow documentation, see:
+
 - **[Workflows Guide](https://pikku.dev/docs/workflows)** - Overview and core concepts
 - **[Getting Started](https://pikku.dev/docs/workflows/getting-started)** - Setup and configuration
 - **[Step Types](https://pikku.dev/docs/workflows/steps)** - RPC, inline, sleep steps, and retry options

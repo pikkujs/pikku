@@ -10,9 +10,5 @@
   "websocketFile": ".pikku/pikku-websocket.gen.ts",
   "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
   "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
-  "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
-  "workflows": {
-    "singleQueue": true,
-    "path": "src/workflows/pikku.workflows.gen.ts"
-  }
+  "mcpJsonFile": ".pikku/mcp/mcp.gen.json"
 }
