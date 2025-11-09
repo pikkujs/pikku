@@ -30,6 +30,7 @@ import { rpcService } from '../rpc/rpc-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
+import { ErrorCode } from '@pikku/inspector'
 
 /**
  * CLI command execution error - thrown when CLI execution fails
@@ -449,7 +450,7 @@ export async function executeCLI({
       | undefined
     if (!allCLIMeta) {
       throw new Error(
-        '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/docs/pikku-cli/errors/pku342 for more information.'
+        `[${ErrorCode.CLI_METADATA_NOT_FOUND}] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/docs/pikku-cli/errors/pku342 for more information.`
       )
     }
     const programMeta = allCLIMeta.programs[programName]
