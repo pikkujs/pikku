@@ -21,17 +21,25 @@
     "./secrets": "./dist/aws-secrets.js"
   },
   "peerDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.732.0",
     "@aws-sdk/client-s3": "^3.732.0",
     "@aws-sdk/client-secrets-manager": "^3.714.0",
+    "@aws-sdk/client-sqs": "^3.732.0",
     "@aws-sdk/cloudfront-signer": "^3.723.0",
+    "@aws-sdk/lib-dynamodb": "^3.732.0",
     "@aws-sdk/s3-request-presigner": "^3.732.0",
     "@pikku/core": "^0.10.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.914.0",
     "@aws-sdk/client-s3": "^3.914.0",
     "@aws-sdk/client-secrets-manager": "^3.914.0",
+    "@aws-sdk/client-sqs": "^3.914.0",
     "@aws-sdk/cloudfront-signer": "^3.914.0",
+    "@aws-sdk/lib-dynamodb": "^3.914.0",
     "@aws-sdk/s3-request-presigner": "^3.914.0",
+    "@types/sinon": "^17.0.3",
+    "sinon": "^19.0.2",
     "typescript": "^5.9"
   },
   "engines": {

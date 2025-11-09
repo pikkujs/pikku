@@ -136,6 +136,11 @@ const templates = [
     description: 'A BullMQ Redis-based workflow template',
     supports: ['http', 'workflows'],
   },
+  {
+    template: 'workflows-aws-lambda',
+    description: 'An AWS Lambda DynamoDB-based workflow template',
+    supports: ['http', 'workflows'],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]
