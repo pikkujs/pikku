@@ -49,11 +49,10 @@ export class ContextAwareRPCService {
     data: In
   ): Promise<Out> {
     const rpcDepth = this.services.rpc?.depth || 0
-    const pikkuFuncName = getPikkuFunctionName(funcName)
     return runPikkuFunc<In, Out>(
       PikkuWiringTypes.rpc,
-      pikkuFuncName,
-      pikkuFuncName,
+      funcName,
+      getPikkuFunctionName(funcName),
       {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
@@ -72,6 +71,58 @@ export class ContextAwareRPCService {
         coerceDataFromSchema: this.options.coerceDataFromSchema,
         interaction: this.interaction,
       }
+    )
+  }
+
+  public async rpcWithInteraction<In = any, Out = any>(
+    funcName: string,
+    data: In,
+    interaction: PikkuInteraction
+  ): Promise<Out> {
+    const rpcDepth = this.services.rpc?.depth || 0
+    const mergedInteraction = {
+      ...this.interaction,
+      ...interaction,
+    }
+    return runPikkuFunc<In, Out>(
+      PikkuWiringTypes.rpc,
+      funcName,
+      getPikkuFunctionName(funcName),
+      {
+        auth: this.options.requiresAuth,
+        singletonServices: this.services,
+        getAllServices: () => {
+          this.services.rpc = this.services.rpc
+            ? ({
+                ...this.services.rpc,
+                depth: rpcDepth + 1,
+                global: false,
+              } as any)
+            : undefined
+          return {
+            ...this.services,
+            ...mergedInteraction,
+          }
+        },
+        data: () => data,
+        userSession: this.services.userSession,
+        coerceDataFromSchema: this.options.coerceDataFromSchema,
+        interaction: mergedInteraction,
+      }
+    )
+  }
+
+  public async startWorkflow<In = any>(
+    workflowName: string,
+    input: In
+  ): Promise<{ runId: string }> {
+    if (!this.services.workflowService) {
+      throw new Error('WorkflowService service not available')
+    }
+    return this.services.workflowService.startWorkflow(
+      workflowName,
+      input,
+      this
     )
   }
 }
@@ -107,6 +158,8 @@ export class PikkuRPCService<
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
       invokeExposed: serviceRPC.rpc.bind(serviceRPC),
+      startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
+      rpcWithInteraction: serviceRPC.rpcWithInteraction.bind(serviceRPC),
     } as any
     return serviceCopy as Services & { rpc: TypedRPC }
   }

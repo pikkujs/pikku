@@ -21,7 +21,7 @@ import {
   CorePikkuPermission,
 } from './function/functions.types.js'
 import {
-  queueWorkersMeta,
+  QueueWorkersMeta,
   CoreQueueWorker,
 } from './wirings/queue/queue.types.js'
 import {
@@ -33,6 +33,10 @@ import {
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
 import { CLIMeta, CLIProgramState } from './wirings/cli/cli.types.js'
+import {
+  CoreWorkflow,
+  WorkflowsMeta,
+} from './wirings/workflow/workflow.types.js'
 
 interface PikkuState {
   function: {
@@ -65,7 +69,11 @@ interface PikkuState {
   }
   queue: {
     registrations: Map<string, CoreQueueWorker>
-    meta: queueWorkersMeta
+    meta: QueueWorkersMeta
+  }
+  workflows: {
+    registrations: Map<string, CoreWorkflow>
+    meta: WorkflowsMeta
   }
   mcp: {
     resources: Map<string, CoreMCPResource>
@@ -163,6 +171,10 @@ export const resetPikkuState = () => {
       meta: [] as unknown as ScheduledTasksMeta,
     },
     queue: {
+      registrations: new Map(),
+      meta: {},
+    },
+    workflows: {
       registrations: new Map(),
       meta: {},
     },

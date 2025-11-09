@@ -28,6 +28,7 @@ export const all: any = pikkuVoidFunc({
     await rpc.invoke('pikkuChannelTypes', null)
     await rpc.invoke('pikkuSchedulerTypes', null)
     await rpc.invoke('pikkuQueueTypes', null)
+    await rpc.invoke('pikkuWorkflowTypes', null)
     await rpc.invoke('pikkuMCPTypes', null)
     await rpc.invoke('pikkuCLITypes', null)
 
@@ -87,6 +88,30 @@ export const all: any = pikkuVoidFunc({
         config.schedulersWiringMetaFile,
         config.schedulersWiringFile
       )
+    }
+
+    // Generate Workflows
+    const workflows = await rpc.invoke('pikkuWorkflow', null)
+
+    // Generate Remote RPC Workers (must be before queue discovery so wireQueueWorker calls are picked up)
+    const remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
+
+    // Reinspect to pick up generated workflow workers and remote RPC workers BEFORE generating maps
+    if (workflows || remoteRPC) {
+      await getInspectorState(true)
+    }
+
+    if (workflows) {
+      await rpc.invoke('pikkuWorkflowMap', null)
+      allImports.push(
+        config.workflowsWiringMetaFile,
+        config.workflowsWiringFile
+      )
+    }
+
+    if (remoteRPC && config.rpc?.remoteRpcWorkersPath) {
+      // Only add to imports if we actually generated the file
+      allImports.push(config.rpc.remoteRpcWorkersPath)
     }
 
     // Generate Queues
@@ -174,6 +199,9 @@ export const all: any = pikkuVoidFunc({
         0
       )
       if (totalCommands > 0) summary.set('cliCommands', totalCommands)
+    }
+    if (state.workflows?.meta) {
+      summary.set('workflows', Object.keys(state.workflows.meta).length)
     }
 
     // Display summary (unless in silent mode)

@@ -1,4 +1,4 @@
-import type { queueWorkersMeta } from '@pikku/core/queue'
+import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
@@ -9,7 +9,7 @@ export const serializeQueueMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  queueWorkersMeta: queueWorkersMeta
+  queueWorkersMeta: QueueWorkersMeta
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -69,7 +69,7 @@ export type TypedPikkuQueue = {
 }
 
 function generateQueues(
-  queueWorkersMeta: queueWorkersMeta,
+  queueWorkersMeta: QueueWorkersMeta,
   functionsMeta: FunctionsMeta,
   typesMap: TypesMap,
   requiredTypes: Set<string>

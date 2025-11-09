@@ -5,6 +5,7 @@ import type {
   CoreUserSession,
   EventHubService,
   JWTService,
+  QueueService,
   SecretService,
 } from '@pikku/core'
 import { EventHubTopics } from './eventhub-topics.js'
@@ -19,6 +20,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
   eventHub?: EventHubService<EventHubTopics>
   secrets?: SecretService
+  queueService?: QueueService
 }
 
 export interface Services

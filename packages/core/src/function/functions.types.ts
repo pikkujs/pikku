@@ -187,6 +187,7 @@ export type CorePikkuFunctionConfig<
 > = {
   name?: string
   expose?: boolean
+  internal?: boolean
   func: PikkuFunction
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>

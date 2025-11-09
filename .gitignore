@@ -11,6 +11,8 @@ meta.json
 .dist
 dist
 
+*.gen.ts
+
 my-app
 .pikku
 cli.schema.json

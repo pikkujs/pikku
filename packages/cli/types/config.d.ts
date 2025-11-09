@@ -46,6 +46,13 @@ export interface PikkuCLICoreOutputFiles {
   queueMapDeclarationFile: string
   queueTypesFile: string
 
+  // Workflows
+  workflowsWiringFile: string
+  workflowsWiringMetaFile: string
+  workflowsWorkersFile: string
+  workflowMapDeclarationFile: string
+  workflowTypesFile: string
+
   // MCP
   mcpWiringsFile: string
   mcpWiringsMetaFile: string
@@ -128,6 +135,25 @@ export type PikkuCLIInput = {
     >
   }
 
+  workflows?:
+    | {
+        singleQueue: true
+        path: string
+        orchestratorQueue?: string
+        workerQueue?: string
+      }
+    | {
+        singleQueue: false
+        dir: string
+        orchestratorQueuePrefix?: string
+        workerQueuePrefix?: string
+      }
+
+  rpc?: {
+    remoteRpcWorkersPath?: string
+    publicRpcPath?: string
+  }
+
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
@@ -201,6 +227,25 @@ export type PikkuCLIConfig = {
             }
         >
     >
+  }
+
+  workflows?:
+    | {
+        singleQueue: true
+        path: string
+        orchestratorQueue?: string
+        workerQueue?: string
+      }
+    | {
+        singleQueue: false
+        dir: string
+        orchestratorQueuePrefix?: string
+        workerQueuePrefix?: string
+      }
+
+  rpc?: {
+    remoteRpcWorkersPath?: string
+    publicRpcPath?: string
   }
 
   forceRequiredServices?: string[]

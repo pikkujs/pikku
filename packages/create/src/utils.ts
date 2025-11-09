@@ -90,13 +90,35 @@ export function replaceFunctionReferences(
 
   const replaceInFile = (filePath: string): void => {
     let content = fs.readFileSync(filePath, 'utf-8')
-    const updatedContent = content
-      .replaceAll('../../functions/src/', './')
-      .replaceAll('../functions/src/', './')
-      .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
-      .replaceAll('../functions/types/', './types/')
-      .replaceAll('.pikku', pikkuDir)
-      .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+
+    // Determine if this file is in a client directory
+    const isInClientDir =
+      filePath.includes(`${path.sep}client${path.sep}`) ||
+      filePath.includes(`${path.sep}src${path.sep}client${path.sep}`)
+
+    let updatedContent = content
+
+    if (isInClientDir) {
+      // For files in client/, keep the relative path to src/
+      updatedContent = updatedContent
+        .replaceAll('../../functions/src/', '../src/')
+        .replaceAll('../functions/src/', '../src/')
+        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/types/', '../types/')
+        .replaceAll('/.pikku', `/${pikkuDir}`)
+        .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+    } else {
+      // For files in src/ or root, flatten to ./
+      updatedContent = updatedContent
+        .replaceAll('../../functions/src/', './')
+        .replaceAll('../functions/src/', './')
+        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/types/', './types/')
+        .replaceAll('/.pikku', `/${pikkuDir}`)
+        .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+    }
+
     fs.writeFileSync(filePath, updatedContent)
   }
 
@@ -158,6 +180,11 @@ export function cleanPikkuConfig(
 
   if (!supportedFeatures.includes('mcp')) {
     delete pikkuConfig.mcpJsonFile
+  }
+
+  // Workflows templates don't use RPC wirings
+  if (supportedFeatures.includes('workflows')) {
+    delete pikkuConfig.rpcWiringsFile
   }
 
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
@@ -233,6 +260,10 @@ const CLIENT_FEATURE_MAPPING = {
   'rpc.ts': ['http'],
   'scheduled-task.ts': ['scheduled'],
   'websocket.ts': ['channel'],
+  'workflow-start.ts': ['workflows'],
+  'workflow-cancel.ts': ['workflows'],
+  'workflow-happy.ts': ['workflows'],
+  'workflow-unhappy.ts': ['workflows'],
 } as const
 
 /**

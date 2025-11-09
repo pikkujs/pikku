@@ -126,6 +126,16 @@ const templates = [
     description: 'A CLI application template',
     supports: ['cli'],
   },
+  {
+    template: 'workflows-pg-boss',
+    description: 'A PostgreSQL pg-boss based workflow template',
+    supports: ['http', 'workflows'],
+  },
+  {
+    template: 'workflows-bullmq',
+    description: 'A BullMQ Redis-based workflow template',
+    supports: ['http', 'workflows'],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]
@@ -182,10 +192,16 @@ async function installDependencies(
     if (yarnLink) {
       if (packageManager === 'yarn') {
         console.log(chalk.blue('🔗 Linking to Pikku'))
-        spawnSync('yarn', ['link', '--all', '--private', yarnLink], {
-          cwd: targetPath,
-          stdio: 'inherit',
-        })
+        // Resolve to absolute path from current working directory
+        const absoluteYarnLinkPath = path.resolve(yarnLink)
+        spawnSync(
+          'yarn',
+          ['link', '--all', '--private', absoluteYarnLinkPath],
+          {
+            cwd: targetPath,
+            stdio: 'inherit',
+          }
+        )
       } else {
         console.log(
           chalk.red('⚠️ Yarn link is only supported with yarn package manager')

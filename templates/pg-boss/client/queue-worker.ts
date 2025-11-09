@@ -1,5 +1,5 @@
 import { PikkuQueue } from '../../functions/.pikku/pikku-queue.gen.js'
-import { PgBossQueueService } from '@pikku/queue-pg-boss'
+import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 
 // Use DATABASE_URL environment variable or provide a connection string
 const connectionString =
@@ -8,9 +8,9 @@ const connectionString =
 
 async function main(): Promise<void> {
   try {
-    const pgBossQueueService = new PgBossQueueService(connectionString)
-    await pgBossQueueService.init()
-    const queueService = new PikkuQueue(pgBossQueueService)
+    const pgBossFactory = new PgBossServiceFactory(connectionString)
+    await pgBossFactory.init()
+    const queueService = new PikkuQueue(pgBossFactory.getQueueService())
 
     let returnCount = 0
     let successful = true
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
 
     // Handle graceful shutdown
     process.on('SIGTERM', async () => {
-      await pgBossQueueService.close()
+      await pgBossFactory.close()
       process.exit(0)
     })
   } catch (e: any) {

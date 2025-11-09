@@ -197,6 +197,7 @@ const combinedPermissionsCache: Record<
   [PikkuWiringTypes.scheduler]: {},
   [PikkuWiringTypes.mcp]: {},
   [PikkuWiringTypes.cli]: {},
+  [PikkuWiringTypes.workflow]: {},
 }
 
 /**

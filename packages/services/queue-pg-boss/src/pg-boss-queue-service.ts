@@ -5,7 +5,7 @@ import { mapPgBossJobToQueueJob } from './utils.js'
 export const mapPikkuJobToPgBoss = (
   options?: JobOptions
 ): PgBoss.JobOptions => {
-  const pgBossOptions: PgBoss.JobOptions = {}
+  const pgBossOptions: any = {}
 
   if (options?.priority !== undefined) {
     pgBossOptions.priority = options.priority
@@ -19,7 +19,34 @@ export const mapPikkuJobToPgBoss = (
     pgBossOptions.singletonKey = options.jobId
   }
 
-  return pgBossOptions
+  // Map retry options
+  if (options?.attempts !== undefined) {
+    pgBossOptions.retryLimit = options.attempts - 1
+  }
+
+  if (options?.backoff !== undefined) {
+    if (typeof options.backoff === 'string') {
+      // If backoff is a string, assume it's 'exponential' or 'fixed'
+      pgBossOptions.retryBackoff = options.backoff === 'exponential'
+    } else if (typeof options.backoff === 'object') {
+      pgBossOptions.retryBackoff = options.backoff.type === 'exponential'
+      if (options.backoff.delay !== undefined) {
+        // pg-boss uses seconds, we use milliseconds
+        pgBossOptions.retryDelay = Math.floor(options.backoff.delay / 1000)
+      }
+    }
+  }
+
+  if (options?.removeOnComplete !== undefined) {
+    pgBossOptions.onComplete = options.removeOnComplete === 0
+  }
+
+  if (options?.removeOnFail !== undefined) {
+    // pg-boss doesn't have a direct equivalent, but we can track this for consistency
+    // Note: pg-boss keeps failed jobs by default
+  }
+
+  return pgBossOptions as PgBoss.JobOptions
 }
 
 /**
@@ -31,19 +58,8 @@ export class PgBossQueueService implements QueueService {
   readonly supportsResults = true
   protected pgBoss: PgBoss
 
-  constructor(optionsOrUrl: PgBoss.ConstructorOptions | string) {
-    if (typeof optionsOrUrl === 'string') {
-      // If a string is provided, treat it as the connection URL
-      optionsOrUrl = { connectionString: optionsOrUrl }
-    }
-    this.pgBoss = new PgBoss(optionsOrUrl)
-  }
-
-  /**
-   * Initialize the pg-boss instance
-   */
-  async init(): Promise<void> {
-    await this.pgBoss.start()
+  constructor(pgBoss: PgBoss) {
+    this.pgBoss = pgBoss
   }
 
   /**
@@ -78,12 +94,5 @@ export class PgBossQueueService implements QueueService {
       return null
     }
     return mapPgBossJobToQueueJob<T, R>(job, this.pgBoss)
-  }
-
-  /**
-   * Close the pg-boss connection
-   */
-  async close(): Promise<void> {
-    await this.pgBoss.stop()
   }
 }
