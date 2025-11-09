@@ -28,25 +28,17 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
 
-    // Validate that workflowState service is configured if workflows are defined
+    // Validate that workflowService service is configured if workflows are defined
     const hasWorkflows = Object.keys(workflows.meta).length > 0
     if (hasWorkflows) {
       const hasWorkflowState =
         visitState.serviceAggregation.allSingletonServices.includes(
-          'workflowState'
+          'workflowService'
         )
       if (!hasWorkflowState) {
         logger.critical(
-          ErrorCode.WORKFLOW_STATE_NOT_CONFIGURED,
-          'Workflows detected but workflowState service not configured. Please add workflowState to your singleton services:\n\n' +
-            "import { WorkflowStateService } from '@pikku/core/workflow'\n\n" +
-            'export const createSingletonServices = async (config) => {\n' +
-            "  const workflowState = new WorkflowStateService('.workflows')\n" +
-            '  return {\n' +
-            '    ...,\n' +
-            '    workflowState,\n' +
-            '  }\n' +
-            '}'
+          ErrorCode.WORKFLOW_ORCHESTRATOR_NOT_CONFIGURED,
+          'Workflows detected but workflowService service not configured. Please add workflowService to your singleton services'
         )
         throw new Error(
           'WorkflowState service not configured but workflows are defined'

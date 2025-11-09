@@ -1,6 +1,6 @@
 import type { SerializedError } from '@pikku/core'
 import {
-  WorkflowStateService,
+  PikkuWorkflowService,
   type WorkflowRun,
   type StepState,
   type WorkflowStatus,
@@ -15,11 +15,11 @@ import postgres from 'postgres'
  * @example
  * ```typescript
  * const sql = postgres('postgresql://localhost:5432/pikku')
- * const workflowState = new PgWorkflowStateService(sql, queueService, 'workflows')
- * await workflowState.init()
+ * const workflowService = new PgWorkflowService(sql, 'pikku')
+ * await workflowService.init()
  * ```
  */
-export class PgWorkflowStateService extends WorkflowStateService {
+export class PgWorkflowService extends PikkuWorkflowService {
   private sql: postgres.Sql
   private schemaName: string
   private initialized = false
@@ -421,17 +421,22 @@ export class PgWorkflowStateService extends WorkflowStateService {
     )
   }
 
-  async createRetryAttempt(stepId: string): Promise<StepState> {
+  async createRetryAttempt(
+    stepId: string,
+    status: 'pending' | 'running'
+  ): Promise<StepState> {
+    // TODO: If status is 'running', we need to set the running_at timestamp in history
+
     // Reset step to pending for retry (keeps all metadata: rpc_name, data, retries, retry_delay)
     await this.sql.unsafe(
       `UPDATE ${this.schemaName}.workflow_step
-      SET status = 'pending', result = NULL, error = NULL, updated_at = now()
-      WHERE workflow_step_id = $1`,
-      [stepId]
+      SET status = $1, result = NULL, error = NULL, updated_at = now()
+      WHERE workflow_step_id = $2`,
+      [status, stepId]
     )
 
     // Insert NEW history record for retry attempt
-    await this.insertHistoryRecord(stepId, 'pending')
+    await this.insertHistoryRecord(stepId, status)
 
     // Return updated state with new attempt count
     return await this.sql

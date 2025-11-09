@@ -1,6 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { RedisWorkflowStateService } from '@pikku/redis'
+import { RedisWorkflowService } from '@pikku/redis'
 import {
   createConfig,
   createSessionServices,
@@ -17,16 +17,16 @@ async function main(): Promise<void> {
     await bullFactory.init()
 
     // Create workflow state service
-    const workflowState = new RedisWorkflowStateService(undefined)
+    const workflowService = new RedisWorkflowService(undefined)
 
-    // Create singleton services with queue and workflowState
+    // Create singleton services with queue and workflowService
     const singletonServices = await createSingletonServices(config, {
       queueService: bullFactory.getQueueService(),
       schedulerService: bullFactory.getSchedulerService(),
-      workflowState,
+      workflowService,
     })
 
-    workflowState.setServices(singletonServices, createSessionServices as any)
+    workflowService.setServices(singletonServices, createSessionServices as any)
 
     // Start HTTP server for workflow triggers
     const appServer = new PikkuExpressServer(

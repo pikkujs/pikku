@@ -1,27 +1,15 @@
 # Pikku Workflows Template (Redis)
 
-This template demonstrates how to use Pikku workflows for orchestrating multi-step processes with deterministic replay and step caching using Redis as the storage backend.
+This template demonstrates Pikku workflows with Redis state storage and BullMQ queue.
 
-## Features
-
-- **Workflow orchestration**: Multi-step processes with automatic replay from checkpoints
-- **Step caching**: Completed steps are cached and not re-executed on replay
-- **RPC steps**: Steps that call other Pikku functions via queue workers
-- **Inline steps**: Steps that execute locally with caching
-- **Sleep steps**: Time-based delays between workflow steps
-- **Queue-based execution**: Remote execution mode using BullMQ (Redis-based queue)
-- **Redis storage**: Workflow state stored in Redis for high performance
-
-## Getting Started
+## Quick Start
 
 1. Install dependencies:
-
    ```bash
    yarn install
    ```
 
 2. Start the workflow workers:
-
    ```bash
    yarn start
    ```
@@ -32,23 +20,17 @@ This template demonstrates how to use Pikku workflows for orchestrating multi-st
 
 See `../functions/src/workflow.functions.ts` and `../functions/src/workflow.wiring.ts` for example workflow definitions.
 
-## How It Works
+## Documentation
 
-1. Workflows are defined using `pikkuWorkflowFunc` with typed inputs/outputs
-2. Workflows are registered using `wireWorkflow` with execution mode configuration
-3. The workflow state service (`RedisWorkflowStateService`) stores run state and step results
-4. Queue workers (BullMQ) handle asynchronous step execution
-5. The orchestrator worker replays the workflow after each step completes
+For complete workflow documentation, see:
+- **[Workflows Guide](https://pikku.dev/docs/workflows)** - Overview and core concepts
+- **[Getting Started](https://pikku.dev/docs/workflows/getting-started)** - Setup and configuration
+- **[Step Types](https://pikku.dev/docs/workflows/steps)** - RPC, inline, sleep steps, and retry options
+- **[Configuration](https://pikku.dev/docs/workflows/configuration)** - State storage and execution modes
 
-## Workflow State Storage
+## Features
 
-Workflow state is stored in Redis. Each workflow run gets a unique ID and tracks:
-
-- Run status (running, completed, failed)
-- Step results (cached for replay)
-- Step errors (for debugging failed steps)
-
-## Execution Modes
-
-- **remote**: Steps execute via queue workers (asynchronous, distributed)
-- **inline**: Steps execute synchronously in the same process (simpler, single-process)
+- Multi-step workflow orchestration with deterministic replay
+- Step caching and retry logic
+- Redis state storage with BullMQ queue
+- Automatic execution mode detection (remote/inline)

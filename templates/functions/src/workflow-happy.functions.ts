@@ -72,7 +72,7 @@ export const happyRetry = pikkuSessionlessFunc<
     }>
   }
 >({
-  func: async ({ rpc, workflowState, logger }, data) => {
+  func: async ({ rpc, workflowService, logger }, data) => {
     // Start the workflow
     const { runId } = await rpc.startWorkflow('happyRetry', data)
 
@@ -84,7 +84,7 @@ export const happyRetry = pikkuSessionlessFunc<
     const startTime = Date.now()
 
     while (Date.now() - startTime < maxWaitMs) {
-      const run = await workflowState!.getRun(runId)
+      const run = await workflowService!.getRun(runId)
 
       if (!run) {
         logger.error(`[TEST] Workflow run not found: ${runId}`)
@@ -96,7 +96,7 @@ export const happyRetry = pikkuSessionlessFunc<
       if (run.status === 'completed') {
         logger.info(`[TEST] Workflow completed successfully`)
         // Get all steps to return for validation
-        const steps = await workflowState!.getRunHistory(runId)
+        const steps = await workflowService!.getRunHistory(runId)
         return {
           ...run.output,
           steps: steps.map((s: any) => ({

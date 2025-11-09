@@ -1,6 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { PgWorkflowStateService } from '@pikku/pg'
+import { PgWorkflowService } from '@pikku/pg'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -23,17 +23,17 @@ async function main(): Promise<void> {
     await pgBossFactory.init()
 
     // Create workflow state service
-    const workflowState = new PgWorkflowStateService(postgres(connectionString))
-    await workflowState.init()
+    const workflowService = new PgWorkflowService(postgres(connectionString))
+    await workflowService.init()
 
-    // Create singleton services with queue, scheduler, and workflowState
+    // Create singleton services with queue, scheduler, and workflowService
     const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
       schedulerService: pgBossFactory.getSchedulerService(),
-      workflowState,
+      workflowService,
     })
 
-    workflowState.setServices(singletonServices, createSessionServices as any)
+    workflowService.setServices(singletonServices, createSessionServices as any)
 
     // Start HTTP server for workflow triggers
     const appServer = new PikkuExpressServer(

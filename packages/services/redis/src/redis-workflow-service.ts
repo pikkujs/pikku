@@ -1,6 +1,6 @@
 import type { SerializedError } from '@pikku/core'
 import {
-  WorkflowStateService,
+  PikkuWorkflowService,
   type WorkflowRun,
   type StepState,
   type WorkflowStatus,
@@ -16,11 +16,10 @@ import { randomUUID } from 'crypto'
  * @example
  * ```typescript
  * const redis = new Redis('redis://localhost:6379')
- * const workflowState = new RedisWorkflowStateService(redis, queueService, 'workflows')
- * await workflowState.init()
+ * const workflowService = new RedisWorkflowService(redis, 'workflows')
  * ```
  */
-export class RedisWorkflowStateService extends WorkflowStateService {
+export class RedisWorkflowService extends PikkuWorkflowService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean
@@ -614,7 +613,12 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     )
   }
 
-  async createRetryAttempt(stepId: string): Promise<StepState> {
+  async createRetryAttempt(
+    stepId: string,
+    status: 'pending' | 'running'
+  ): Promise<StepState> {
+    // TODO: If status is 'running', we need to set the running_at timestamp in history
+
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
     const runId = parts[0]!
@@ -634,7 +638,7 @@ export class RedisWorkflowStateService extends WorkflowStateService {
     await this.redis.hmset(
       key,
       'status',
-      'pending',
+      status,
       'attemptCount',
       newAttemptCount.toString(),
       'updatedAt',

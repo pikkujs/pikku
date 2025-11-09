@@ -19,7 +19,7 @@ export type {
   WorkflowSleeperInput,
 } from './workflow.types.js'
 
-export { WorkflowStateService } from './workflow-state-service.js'
+export { PikkuWorkflowService } from './pikku-workflow-service.js'
 
 // Functions
 export { wireWorkflow } from './workflow-runner.js'

@@ -32,6 +32,20 @@ export const getRelativeTimeOffsetFromNow = (
 }
 
 /**
+ * Get duration in milliseconds from a string or number
+ * @param duration
+ * @returns
+ */
+export const getDurationInMilliseconds = (
+  duration: string | number
+): number => {
+  if (typeof duration === 'number') {
+    return duration
+  }
+  return parseDurationString(duration)
+}
+
+/**
  * Parse a duration string to milliseconds
  * Supports formats like: '2s', '5s', '5sec', '5seconds', '5m', '5min', '5minutes', '1h', '1hour', '2d', '2day', '1w', '1week'
  *

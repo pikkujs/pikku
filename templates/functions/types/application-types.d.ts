@@ -8,7 +8,6 @@ import type {
   QueueService,
   SecretService,
 } from '@pikku/core'
-import type { WorkflowStateService } from '@pikku/core/workflow'
 import { EventHubTopics } from './eventhub-topics.js'
 
 export interface Config extends CoreConfig {}
@@ -21,7 +20,6 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
   eventHub?: EventHubService<EventHubTopics>
   secrets?: SecretService
-  workflowState?: WorkflowStateService
   queueService?: QueueService
 }
 

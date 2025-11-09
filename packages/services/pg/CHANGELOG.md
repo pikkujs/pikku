@@ -5,7 +5,7 @@
 ### Major Changes
 
 - Initial release of @pikku-workflows/pg
-- PostgreSQL-based WorkflowStateService implementation
+- PostgreSQL-based PikkuWorkflowService implementation
 - Auto-initialization of schema and tables
 - Row-level locking with PostgreSQL advisory locks
 - Configurable schema names

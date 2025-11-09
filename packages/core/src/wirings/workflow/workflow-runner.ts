@@ -40,6 +40,15 @@ export class WorkflowNotFoundError extends PikkuError {
 }
 
 /**
+ * Error class for workflow not found
+ */
+export class WorkflowRunNotFound extends PikkuError {
+  constructor(runId: string) {
+    super(`Workflow run not found: ${runId}`)
+  }
+}
+
+/**
  * Register a workflow with the system
  */
 export const wireWorkflow = <

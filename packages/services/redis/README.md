@@ -4,7 +4,7 @@ Redis-based implementation of WorkflowStateService for Pikku Workflows.
 
 ## Features
 
-- **RedisWorkflowStateService**: Redis implementation of WorkflowStateService for persistent workflow execution state
+- **RedisWorkflowService**: Redis implementation of WorkflowStateService for persistent workflow execution state
 - **Fast in-memory storage**: Leverage Redis for high-performance workflow state management
 - **Configurable key prefix**: Use custom key prefixes for namespace isolation (default: 'workflows')
 - **Distributed locking**: Uses Redis SET NX with TTL for concurrent run safety
@@ -20,11 +20,12 @@ yarn add @pikku-workflows/redis ioredis
 
 ## Usage
 
-### Basic Setup
+### Basic Setup (Remote Mode)
 
 ```typescript
 import Redis from 'ioredis'
-import { RedisWorkflowStateService } from '@pikku-workflows/redis'
+import { RedisWorkflowService } from '@pikku-workflows/redis'
+import { BullQueueService } from '@pikku/queue-bullmq'
 
 // Create Redis connection
 const redis = new Redis({
@@ -32,38 +33,56 @@ const redis = new Redis({
   port: 6379,
 })
 
+// Create queue service for remote mode
+const queueService = new BullQueueService('redis://localhost:6379')
+
 // Create workflow state service
-const workflowState = new RedisWorkflowStateService(
+const workflowService = new RedisWorkflowService(
   redis,
   queueService,
   'workflows'
 )
 
 // Initialize (verifies connection)
-await workflowState.init()
+await workflowService.init()
+```
+
+### Inline Mode Setup (Testing)
+
+For testing, pass `undefined` as the queue service to enable inline mode:
+
+```typescript
+// Create workflow state service without queue = inline mode
+const workflowService = new RedisWorkflowService(
+  redis,
+  undefined, // No queue service = inline mode
+  'workflows'
+)
+
+await workflowService.init()
 ```
 
 ### Custom Key Prefix
 
 ```typescript
 // Use a custom key prefix
-const workflowState = new RedisWorkflowStateService(
+const workflowService = new RedisWorkflowService(
   redis,
   queueService,
   'myapp_workflows'
 )
-await workflowState.init()
+await workflowService.init()
 ```
 
 ### With Connection String
 
 ```typescript
 // Create service with Redis connection string
-const workflowState = new RedisWorkflowStateService(
+const workflowService = new RedisWorkflowService(
   'redis://localhost:6379',
   queueService
 )
-await workflowState.init()
+await workflowService.init()
 ```
 
 ### With Existing Connection
@@ -71,21 +90,21 @@ await workflowState.init()
 ```typescript
 // Share connection with other services
 const redis = new Redis('redis://localhost:6379')
-const workflowState = new RedisWorkflowStateService(redis, queueService)
-// Connection is shared, won't be closed by workflowState.close()
+const workflowService = new RedisWorkflowService(redis, queueService)
+// Connection is shared, won't be closed by workflowService.close()
 ```
 
 ### With Config (Owned Connection)
 
 ```typescript
 // Let service create its own connection
-const workflowState = new RedisWorkflowStateService(
+const workflowService = new RedisWorkflowService(
   { host, port, password },
   queueService
 )
-await workflowState.init()
+await workflowService.init()
 // Later...
-await workflowState.close() // Closes the connection
+await workflowService.close() // Closes the connection
 ```
 
 ## Redis Data Structure
@@ -97,7 +116,7 @@ The service uses the following Redis data structures:
 - **Hash**: `{keyPrefix}:run:{runId}` - Stores workflow run data
   - `id`: Run ID
   - `workflow`: Workflow name
-  - `status`: Current status ('running', 'completed', 'failed')
+  - `status`: Current status ('running', 'completed', 'failed', 'cancelled')
   - `input`: JSON string of input data
   - `output`: JSON string of output data (if completed)
   - `error`: JSON string of error (if failed)
@@ -107,10 +126,22 @@ The service uses the following Redis data structures:
 ### Workflow Steps
 
 - **Hash**: `{keyPrefix}:step:{runId}:{stepName}` - Stores step execution data
-  - `status`: Step status ('pending', 'scheduled', 'done', 'error')
-  - `result`: JSON string of result (if done)
-  - `error`: JSON string of error (if error)
+  - `stepId`: Unique step ID
+  - `status`: Step status ('pending', 'scheduled', 'succeeded', 'failed')
+  - `rpcName`: RPC function name (if RPC step)
+  - `data`: JSON string of step input data
+  - `result`: JSON string of result (if succeeded)
+  - `error`: JSON string of error (if failed)
+  - `retries`: Number of retry attempts allowed
+  - `retryDelay`: Delay between retries
+  - `attemptCount`: Current attempt number
+  - `createdAt`: Timestamp
   - `updatedAt`: Timestamp
+
+### Workflow Step History
+
+- **List**: `{keyPrefix}:history:{runId}` - Stores all step attempts in chronological order
+  - Each entry contains complete step state for that attempt
 
 ### Locking
 
@@ -118,14 +149,14 @@ The service uses the following Redis data structures:
 
 ## API
 
-### RedisWorkflowStateService
+### RedisWorkflowService
 
 Extends `WorkflowStateService` from `@pikku/core/workflow`.
 
 #### Constructor
 
 ```typescript
-new RedisWorkflowStateService(
+new RedisWorkflowService(
   connectionOrConfig: Redis | RedisOptions | string,
   queue?: any,
   keyPrefix?: string
@@ -141,13 +172,21 @@ new RedisWorkflowStateService(
 - `init()`: Initialize the service (verifies Redis connection)
 - `createRun(workflowName, input)`: Create a new workflow run
 - `getRun(id)`: Get workflow run by ID
+- `getRunHistory(runId)`: Get all step attempts in chronological order
 - `updateRunStatus(id, status, output?, error?)`: Update run status
-- `getStepState(runId, stepName)`: Get step state
-- `setStepScheduled(runId, stepName)`: Mark step as scheduled
-- `setStepResult(runId, stepName, result)`: Store step result
-- `setStepError(runId, stepName, error)`: Store step error
+- `insertStepState(runId, stepName, rpcName, data, stepOptions?)`: Insert initial step state
+- `getStepState(runId, stepName)`: Get step state with attempt count
+- `setStepScheduled(stepId)`: Mark step as scheduled
+- `setStepRunning(stepId)`: Mark step as running
+- `setStepResult(stepId, result)`: Store step result and mark as succeeded
+- `setStepError(stepId, error)`: Store step error and mark as failed
+- `createRetryAttempt(failedStepId)`: Create a new retry attempt for a failed step
 - `withRunLock(id, fn)`: Execute function with distributed lock
 - `close()`: Close Redis connection (if owned)
+
+## Documentation
+
+For complete workflow documentation, see [pikku.dev/docs/workflows](https://pikku.dev/docs/workflows)
 
 ## Locking Behavior
 

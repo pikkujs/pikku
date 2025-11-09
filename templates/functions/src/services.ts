@@ -61,7 +61,7 @@ export const createSingletonServices: CreateSingletonServices<
     variables,
     schema,
     jwt,
-    workflowState: existingServices?.workflowState,
+    workflowService: existingServices?.workflowService,
     queueService: existingServices?.queueService,
     schedulerService: existingServices?.schedulerService,
   } as any

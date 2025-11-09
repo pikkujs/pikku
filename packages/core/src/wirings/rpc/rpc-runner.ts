@@ -116,10 +116,14 @@ export class ContextAwareRPCService {
     workflowName: string,
     input: In
   ): Promise<{ runId: string }> {
-    if (!this.services.workflowState) {
-      throw new Error('WorkflowState service not available')
+    if (!this.services.workflowService) {
+      throw new Error('WorkflowService service not available')
     }
-    return this.services.workflowState.startWorkflow(workflowName, input, this)
+    return this.services.workflowService.startWorkflow(
+      workflowName,
+      input,
+      this
+    )
   }
 }
 

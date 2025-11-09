@@ -4,8 +4,17 @@ import {
   SerializedError,
   CoreSingletonServices,
   CreateSessionServices,
+  CoreConfig,
 } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+
+export interface WorkflowServiceConfig {
+  retries: number
+  retryDelay: number
+  orchestratorQueueName: string
+  stepWorkerQueueName: string
+  sleeperRPCName: string
+}
 
 /**
  * Workflow run status
@@ -209,7 +218,7 @@ export interface PikkuWorkflowInteraction {
   sleep: WorkflowInteractionSleep
 
   /** Cancel the current workflow run */
-  cancel: (reason?: string) => Promise<never>
+  cancel: (reason?: string) => Promise<void>
 }
 
 /**
@@ -245,7 +254,7 @@ export type WorkflowsMeta = Record<
  * Interface for workflow orchestration
  * Handles workflow execution, replay, orchestration logic, and run-level state
  */
-export interface WorkflowOrchestratorService {
+export interface WorkflowService {
   // Run-level state operations
   createRun(workflowName: string, input: any): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
@@ -263,7 +272,8 @@ export interface WorkflowOrchestratorService {
   resumeWorkflow(runId: string): Promise<void>
   setServices(
     singletonServices: CoreSingletonServices,
-    createSessionServices: CreateSessionServices
+    createSessionServices: CreateSessionServices,
+    config: CoreConfig
   ): void
   startWorkflow<I>(
     name: string,
@@ -276,6 +286,27 @@ export interface WorkflowOrchestratorService {
     rpcService: any
   ): Promise<void>
   executeWorkflowSleep(data: WorkflowSleeperInput): Promise<void>
+
+  // Step-level state operations
+  insertStepState(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any,
+    stepOptions?: { retries?: number; retryDelay?: string | number }
+  ): Promise<StepState>
+  getStepState(runId: string, stepName: string): Promise<StepState>
+  setStepRunning(stepId: string): Promise<void>
+  setStepScheduled(stepId: string): Promise<void>
+  setStepResult(stepId: string, result: any): Promise<void>
+  setStepError(stepId: string, error: Error): Promise<void>
+  createRetryAttempt(
+    stepId: string,
+    status: 'pending' | 'running'
+  ): Promise<StepState>
+
+  // Step execution
+  executeWorkflowStep(data: WorkflowStepInput, rpcService: any): Promise<void>
 }
 
 /**
@@ -295,28 +326,4 @@ export type WorkflowOrchestratorInput = {
 export type WorkflowSleeperInput = {
   runId: string
   stepId: string
-}
-
-/**
- * Interface for workflow step execution
- * Handles individual step execution, step-level state, and retry logic
- */
-export interface WorkflowStepService {
-  // Step-level state operations
-  insertStepState(
-    runId: string,
-    stepName: string,
-    rpcName: string,
-    data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number }
-  ): Promise<StepState>
-  getStepState(runId: string, stepName: string): Promise<StepState>
-  setStepRunning(stepId: string): Promise<void>
-  setStepScheduled(stepId: string): Promise<void>
-  setStepResult(stepId: string, result: any): Promise<void>
-  setStepError(stepId: string, error: Error): Promise<void>
-  createRetryAttempt(stepId: string): Promise<StepState>
-
-  // Step execution
-  executeWorkflowStep(data: WorkflowStepInput, rpcService: any): Promise<void>
 }

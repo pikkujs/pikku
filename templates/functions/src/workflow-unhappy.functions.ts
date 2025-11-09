@@ -68,7 +68,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
     }>
   }
 >({
-  func: async ({ rpc, workflowState, logger }, data) => {
+  func: async ({ rpc, workflowService, logger }, data) => {
     // Start the workflow
     const { runId } = await rpc.startWorkflow('unhappyRetry', data)
 
@@ -80,7 +80,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
     const startTime = Date.now()
 
     while (Date.now() - startTime < maxWaitMs) {
-      const run = await workflowState!.getRun(runId)
+      const run = await workflowService!.getRun(runId)
 
       if (!run) {
         logger.error(`[TEST] Workflow run not found: ${runId}`)
@@ -99,7 +99,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
       if (run.status === 'failed') {
         logger.info(`[TEST] Workflow failed as expected: ${run.error?.message}`)
         // Get all steps to return for validation
-        const steps = await workflowState!.getRunHistory(runId)
+        const steps = await workflowService!.getRunHistory(runId)
         return {
           error: run.error?.message || 'Unknown error',
           attempts: 3, // All 3 attempts exhausted
@@ -115,7 +115,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
       if (run.status === 'cancelled') {
         logger.info(`[TEST] Workflow was cancelled`)
         // Get all steps to return for validation
-        const steps = await workflowState!.getRunHistory(runId)
+        const steps = await workflowService!.getRunHistory(runId)
         return {
           error: run.error?.message || 'Workflow cancelled',
           attempts: 0,

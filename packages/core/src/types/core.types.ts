@@ -12,9 +12,10 @@ import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
 import {
   PikkuWorkflowInteraction,
+  WorkflowService,
+  WorkflowServiceConfig,
   WorkflowStepInteraction,
 } from '../wirings/workflow/workflow.types.js'
-import { WorkflowStateService } from '../wirings/workflow/workflow-state-service.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 
 export enum PikkuWiringTypes {
@@ -145,6 +146,8 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   logLevel?: LogLevel
   /** Secrets used by the application (optional). */
   secrets?: {}
+
+  workflow?: WorkflowServiceConfig
 } & Config
 
 /**
@@ -166,8 +169,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   /** The variable service to be used */
   variables: VariablesService
-  /** The workflow state service */
-  workflowState?: WorkflowStateService
+  /** The workflow orchestrator service */
+  workflowService?: WorkflowService
   /** The queue service */
   queueService?: QueueService
   /** The scheduler service */

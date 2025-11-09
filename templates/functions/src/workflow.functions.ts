@@ -72,7 +72,7 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any
->(async ({ rpc, workflowState, logger }, data) => {
+>(async ({ rpc, workflowService, logger }, data) => {
   const { runId } = await rpc.startWorkflow('onboarding', data)
   logger.info(`[TEST] Workflow started: ${runId}`)
 
@@ -81,7 +81,7 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   const pollIntervalMs = 1000
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const run = await workflowState!.getRun(runId)
+    const run = await workflowService!.getRun(runId)
     logger.info(`[TEST] Workflow status: ${run?.status}`)
 
     if (!run) {
@@ -91,7 +91,7 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
     if (run.status === 'completed') {
       logger.info(`[TEST] Workflow completed successfully`)
       // Get all step attempts to return for validation
-      const steps = await workflowState!.getRunHistory(runId)
+      const steps = await workflowService!.getRunHistory(runId)
       return {
         ...run.output,
         steps: steps.map((s: any) => ({
