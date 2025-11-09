@@ -1,6 +1,6 @@
 {
   "name": "@pikku/lambda",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.713.0",
-    "@pikku/core": "^0.10.2",
+    "@pikku/core": "^0.11.0",
     "@types/aws-lambda": "^8.10.146"
   },
   "devDependencies": {

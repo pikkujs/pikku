@@ -1,3 +1,10 @@
+## 0.11.0
+
+### Minor Changes
+
+- Workflow support
+
+
 # @pikku/mcp-server
 
 ## 0.10.1

@@ -1,3 +1,12 @@
+## 0.11.0
+
+### Minor Changes
+
+- Add workflow orchestration engine with step execution and retries
+- Add scheduler service abstraction
+- Remove file-based channel and eventhub stores
+
+
 # @pikku/core
 
 ## 0.10.2
