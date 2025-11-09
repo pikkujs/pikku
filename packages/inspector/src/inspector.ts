@@ -58,6 +58,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       meta: {},
       files: new Set(),
     },
+    workflows: {
+      meta: {},
+      files: new Set(),
+    },
     rpc: {
       internalMeta: {},
       internalFiles: new Map(),

@@ -66,11 +66,9 @@ const _getPikkuCLIConfig = async (
         },
         ignoreFiles: config.ignoreFiles ??
           extendedConfig.ignoreFiles ?? [
-            '**/*.gen.ts',
             '**/*.test.ts',
             '**/*.spec.ts',
             '**/node_modules/**',
-            '**/.pikku/**',
             '**/dist/**',
           ],
         schema: {
@@ -89,11 +87,9 @@ const _getPikkuCLIConfig = async (
           ? resolve(configDir, config.rootDir)
           : configDir,
         ignoreFiles: config.ignoreFiles ?? [
-          '**/*.gen.ts',
           '**/*.test.ts',
           '**/*.spec.ts',
           '**/node_modules/**',
-          '**/.pikku/**',
           '**/dist/**',
         ],
         schema: {
@@ -111,6 +107,7 @@ const _getPikkuCLIConfig = async (
     const rpcDir = join(result.outDir, 'rpc')
     const schedulerDir = join(result.outDir, 'scheduler')
     const queueDir = join(result.outDir, 'queue')
+    const workflowDir = join(result.outDir, 'workflow')
     const mcpDir = join(result.outDir, 'mcp')
     const cliDir = join(result.outDir, 'cli')
     const middlewareDir = join(result.outDir, 'middleware')
@@ -209,6 +206,17 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // RPC config defaults
+    if (!result.rpc) {
+      result.rpc = {}
+    }
+    if (!result.rpc.remoteRpcWorkersPath) {
+      result.rpc.remoteRpcWorkersPath = join(
+        rpcDir,
+        'pikku-remote-rpc-workers.gen.ts'
+      )
+    }
+
     // Scheduler
     if (!result.schedulersWiringFile) {
       result.schedulersWiringFile = join(
@@ -250,6 +258,38 @@ const _getPikkuCLIConfig = async (
     }
     if (!result.queueTypesFile) {
       result.queueTypesFile = join(queueDir, 'pikku-queue-types.gen.ts')
+    }
+
+    // Workflows
+    if (!result.workflowsWiringFile) {
+      result.workflowsWiringFile = join(
+        workflowDir,
+        'pikku-workflow-wirings.gen.ts'
+      )
+    }
+    if (!result.workflowsWiringMetaFile) {
+      result.workflowsWiringMetaFile = join(
+        workflowDir,
+        'pikku-workflow-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.workflowsWorkersFile) {
+      result.workflowsWorkersFile = join(
+        workflowDir,
+        'pikku-workflow-workers.gen.ts'
+      )
+    }
+    if (!result.workflowMapDeclarationFile) {
+      result.workflowMapDeclarationFile = join(
+        workflowDir,
+        'pikku-workflow-map.gen.d.ts'
+      )
+    }
+    if (!result.workflowTypesFile) {
+      result.workflowTypesFile = join(
+        workflowDir,
+        'pikku-workflow-types.gen.ts'
+      )
     }
 
     // Services

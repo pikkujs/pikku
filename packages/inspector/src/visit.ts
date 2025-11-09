@@ -4,6 +4,7 @@ import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
 import { addSchedule } from './add/add-schedule.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
+import { addWorkflow } from './add/add-workflow.js'
 import { addMCPResource } from './add/add-mcp-resource.js'
 import { addMCPTool } from './add/add-mcp-tool.js'
 import { addMCPPrompt } from './add/add-mcp-prompt.js'
@@ -74,6 +75,7 @@ export const visitSetup = (
   addRPCInvocations(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
+  addWorkflow(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitSetup(logger, checker, child, state, options)

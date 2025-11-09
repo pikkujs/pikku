@@ -53,13 +53,13 @@ export class PikkuRPC {
      * Invokes a remote procedure call on the server.
      * This is a generic method that routes to the appropriate server function
      * based on the function name and passes the provided data.
-     * 
+     *
      * @param name - The name of the server function to invoke
      * @param data - The data to pass to the server function
      * @returns A promise that resolves with the function's return value
      */
     invoke: RPCInvoke = async (name, data) => {
-       return await this.pikkuFetch.post('/rpc', { name, data })
+       return await this.pikkuFetch.post('/rpc' as any, { name, data }) as any
     }
 }
 

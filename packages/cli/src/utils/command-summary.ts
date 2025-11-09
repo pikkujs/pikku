@@ -8,6 +8,7 @@ export interface CommandSummaryStats {
   queueWorkers?: number
   mcpEndpoints?: number
   cliCommands?: number
+  workflows?: number
   [key: string]: number | undefined
 }
 
@@ -66,19 +67,20 @@ export class CommandSummary {
 
     // Stats
     const statLabels: Record<keyof CommandSummaryStats, string> = {
-      httpRoutes: 'HTTP routes',
-      channels: 'WebSocket channels',
-      functions: 'functions',
-      scheduledTasks: 'scheduled tasks',
-      queueWorkers: 'queue workers',
-      mcpEndpoints: 'MCP endpoints',
-      cliCommands: 'CLI commands',
+      httpRoutes: 'HTTP route',
+      channels: 'WebSocket channel',
+      functions: 'Function',
+      scheduledTasks: 'Scheduled task',
+      queueWorkers: 'Queue worker',
+      mcpEndpoints: 'MCP endpoint',
+      cliCommands: 'CLI command',
+      workflows: 'Workflow',
     }
 
     for (const [key, label] of Object.entries(statLabels)) {
       const value = this.stats[key]
       if (value !== undefined && value > 0) {
-        lines.push(chalk.gray(`  • ${value} ${label}`))
+        lines.push(chalk.gray(`  • ${value} ${label}${value > 1 ? 's' : ''}`))
       }
     }
 

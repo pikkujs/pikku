@@ -48,11 +48,18 @@ export type RPCInvoke = <Name extends keyof RPCMap>(
   }
 ) => Promise<RPCMap[Name]['output']>
 
+// Import WorkflowMap for workflow typing
+import type { WorkflowMap } from '../workflow/pikku-workflow-map.gen.js'
+
 export type TypedPikkuRPC = {
   depth: number;
   global: boolean;
   invoke: RPCInvoke;
-  invokeExposed: (name: string, data: any) => Promise<any> 
+  invokeExposed: (name: string, data: any) => Promise<any>;
+  startWorkflow: <Name extends keyof WorkflowMap>(
+    name: Name,
+    input: WorkflowMap[Name]['input']
+  ) => Promise<{ runId: string }>;
 }
   `
 }
@@ -79,8 +86,24 @@ function generateRPCs(
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Store the input and output types for RPCHandler
-    const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
-    const outputType = output ? typesMap.getTypeMeta(output).uniqueName : 'null'
+    // Use 'any' for types not in typesMap (e.g., inline types in generated workflow workers)
+    let inputType = 'null'
+    if (input) {
+      try {
+        inputType = typesMap.getTypeMeta(input).uniqueName
+      } catch {
+        inputType = 'any'
+      }
+    }
+
+    let outputType = 'null'
+    if (output) {
+      try {
+        outputType = typesMap.getTypeMeta(output).uniqueName
+      } catch {
+        outputType = 'any'
+      }
+    }
 
     requiredTypes.add(inputType)
     requiredTypes.add(outputType)

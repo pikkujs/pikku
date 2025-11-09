@@ -10,7 +10,6 @@ import {
 
 import { ChannelStore } from '@pikku/core/channel'
 import { LocalVariablesService } from '@pikku/core/services'
-
 import {
   Config,
   SingletonServices,
@@ -41,11 +40,10 @@ const getParams = async (event: APIGatewayEvent) => {
     const databaseUrl =
       (await variables.get('DATABASE_URL')) ||
       'postgresql://localhost:5432/pikku'
-    const dbSchema = (await variables.get('DB_SCHEMA')) || 'pikku'
 
     const sql = postgres(databaseUrl)
-    const channelStore = new PgChannelStore(sql, dbSchema)
-    const eventHubStore = new PgEventHubStore(sql, dbSchema)
+    const channelStore = new PgChannelStore(sql)
+    const eventHubStore = new PgEventHubStore(sql)
 
     // Initialize stores (creates schema and tables if needed)
     await channelStore.init()

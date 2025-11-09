@@ -106,6 +106,8 @@ jobs:
             cli,
             pg-boss,
             bullmq,
+            workflows-redis,
+            workflows-pg,
           ]
         package-manager: [yarn]
     steps:
@@ -228,7 +230,9 @@ jobs:
             mcp-server,
             cli,
             pg-boss,
-            bullmq
+            bullmq,
+            workflows-bullmq,
+            workflows-pg-boss,
           ]
     steps:
       - name: Check out repository code

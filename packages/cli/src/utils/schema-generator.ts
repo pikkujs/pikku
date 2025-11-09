@@ -19,9 +19,13 @@ export async function generateSchemas(
   for (const { inputs, outputs } of Object.values(functionMeta)) {
     const types = [...(inputs || []), ...(outputs || [])]
     for (const type of types) {
-      const uniqueName = typesMap.getUniqueName(type)
-      if (uniqueName) {
-        schemasSet.add(uniqueName)
+      try {
+        const uniqueName = typesMap.getUniqueName(type)
+        if (uniqueName) {
+          schemasSet.add(uniqueName)
+        }
+      } catch {
+        // Skip types not in typesMap (e.g., inline types in generated workflow workers)
       }
     }
   }
@@ -98,10 +102,24 @@ export async function saveSchemas(
 
   const desiredSchemas = new Set<string>([
     ...Object.values(functionsMeta)
-      .map(({ inputs, outputs }) => [
-        inputs?.[0] ? typesMap.getUniqueName(inputs[0]) : undefined,
-        outputs?.[0] ? typesMap.getUniqueName(outputs[0]) : undefined,
-      ])
+      .map(({ inputs, outputs }) => {
+        const types: (string | undefined)[] = []
+        if (inputs?.[0]) {
+          try {
+            types.push(typesMap.getUniqueName(inputs[0]))
+          } catch {
+            // Skip types not in typesMap (e.g., inline types in generated workflow workers)
+          }
+        }
+        if (outputs?.[0]) {
+          try {
+            types.push(typesMap.getUniqueName(outputs[0]))
+          } catch {
+            // Skip types not in typesMap (e.g., inline types in generated workflow workers)
+          }
+        }
+        return types
+      })
       .flat()
       .filter(
         (s): s is string =>

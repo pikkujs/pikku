@@ -140,15 +140,12 @@ export interface QueueWorkers {
 
   /** Scan state and register all compatible processors */
   registerQueues(): Promise<Record<string, ConfigValidationResult[]>>
-
-  /** Close all queues and connections */
-  close(): Promise<void>
 }
 
 /**
  * Queue processor metadata
  */
-export type queueWorkersMeta = Record<
+export type QueueWorkersMeta = Record<
   string,
   {
     pikkuFuncName: string

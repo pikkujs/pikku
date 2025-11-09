@@ -8,8 +8,15 @@ import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
-import { PikkuQueue } from '../wirings/queue/queue.types.js'
+import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
+import {
+  PikkuWorkflowInteraction,
+  WorkflowService,
+  WorkflowServiceConfig,
+  WorkflowStepInteraction,
+} from '../wirings/workflow/workflow.types.js'
+import { SchedulerService } from '../services/scheduler-service.js'
 
 export enum PikkuWiringTypes {
   http = 'http',
@@ -19,6 +26,7 @@ export enum PikkuWiringTypes {
   queue = 'queue',
   mcp = 'mcp',
   cli = 'cli',
+  workflow = 'workflow',
 }
 
 export interface FunctionServicesMeta {
@@ -73,6 +81,7 @@ export type FunctionRuntimeMeta = {
   inputSchemaName: string | null
   outputSchemaName: string | null
   expose?: boolean
+  internal?: boolean
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &
@@ -137,6 +146,8 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   logLevel?: LogLevel
   /** Secrets used by the application (optional). */
   secrets?: {}
+
+  workflow?: WorkflowServiceConfig
 } & Config
 
 /**
@@ -158,6 +169,12 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   /** The variable service to be used */
   variables: VariablesService
+  /** The workflow orchestrator service */
+  workflowService?: WorkflowService
+  /** The queue service */
+  queueService?: QueueService
+  /** The scheduler service */
+  schedulerService?: SchedulerService
 }
 
 /**
@@ -171,6 +188,8 @@ export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
   cli: PikkuCLI
+  workflow: PikkuWorkflowInteraction
+  workflowStep: WorkflowStepInteraction
 }>
 
 /**
@@ -343,4 +362,14 @@ export type PikkuDocs = {
   description?: string
   tags?: string[]
   errors?: string[]
+}
+
+/**
+ * Serialized error for storage
+ */
+export interface SerializedError {
+  message: string
+  stack?: string
+  code?: string
+  [key: string]: any
 }

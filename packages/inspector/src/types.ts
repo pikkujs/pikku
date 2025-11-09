@@ -2,7 +2,8 @@ import * as ts from 'typescript'
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import { queueWorkersMeta } from '@pikku/core/queue'
+import { QueueWorkersMeta } from '@pikku/core/queue'
+import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
 import { TypesMap } from './types-map.js'
@@ -205,7 +206,11 @@ export interface InspectorState {
     files: Set<string>
   }
   queueWorkers: {
-    meta: queueWorkersMeta
+    meta: QueueWorkersMeta
+    files: Set<string>
+  }
+  workflows: {
+    meta: WorkflowsMeta
     files: Set<string>
   }
   rpc: {

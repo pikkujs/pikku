@@ -16,6 +16,7 @@ export const bootstrap: any = pikkuVoidFunc({
     await rpc.invoke('pikkuChannelTypes', null)
     await rpc.invoke('pikkuSchedulerTypes', null)
     await rpc.invoke('pikkuQueueTypes', null)
+    await rpc.invoke('pikkuWorkflowTypes', null)
     await rpc.invoke('pikkuMCPTypes', null)
     await rpc.invoke('pikkuCLITypes', null)
 

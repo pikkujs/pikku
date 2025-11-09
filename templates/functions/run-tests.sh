@@ -31,6 +31,7 @@ RUN_HTTP_SSE_TESTS=false
 RUN_QUEUE_TESTS=false
 RUN_MCP_TESTS=false
 RUN_CLI_TESTS=false
+RUN_WORKFLOW_TESTS=false
 IGNORE_SERVER_READY_CHECK=false
 
 # -------- ARGUMENT PARSING --------
@@ -78,6 +79,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --cli)
             RUN_CLI_TESTS=true
+            shift
+            ;;
+        --workflow)
+            RUN_WORKFLOW_TESTS=true
             shift
             ;;
         *)
@@ -177,6 +182,12 @@ if $RUN_CLI_TESTS; then
     $PKG_MANAGER run test:cli:local
     # echo "Testing remote CLI..."
     # $PKG_MANAGER run test:cli:remote
+fi
+
+# -------- RUN WORKFLOWS TESTS IF REQUESTED --------
+if $RUN_WORKFLOW_TESTS; then
+    echo "Running Workflow tests..."
+    $PKG_MANAGER run test:workflows
 fi
 
 echo "✅ All tests completed successfully."
