@@ -238,6 +238,4 @@ jobs:
         run: npm create pikku@latest -- --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../test-app --install --package-manager npm --stackblitz
 
       - name: Sync template repository
-        run: ./scripts/sync-template-repos.sh ${{ matrix.template }} --apply --token ${{ env.SYNC_TOKEN_GITHUB }}
-        env:
-          SYNC_TOKEN_GITHUB: ${{ secrets.SYNC_TOKEN_GITHUB }}
+        run: ./scripts/sync-template-repos.sh ${{ matrix.template }} --apply --token ${{ secrets.SYNC_TOKEN_GITHUB }}
