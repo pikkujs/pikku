@@ -449,7 +449,7 @@ export async function executeCLI({
       | undefined
     if (!allCLIMeta) {
       throw new Error(
-        '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/errors/pku342 for more information.'
+        '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/docs/pikku-cli/errors/pku342 for more information.'
       )
     }
     const programMeta = allCLIMeta.programs[programName]

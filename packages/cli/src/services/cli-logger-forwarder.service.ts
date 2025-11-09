@@ -78,7 +78,7 @@ export class CLILoggerForwarder implements Logger {
   }
 
   critical(code: ErrorCode, message: string) {
-    const url = `https://pikku.dev/docs/cli-errors/${code.toLowerCase()}`
+    const url = `https://pikku.dev/docs/pikku-cli/errors/${code.toLowerCase()}`
     const formattedMessage = `[${code}] ${message}\n  → ${url}`
     this.error(formattedMessage)
   }
