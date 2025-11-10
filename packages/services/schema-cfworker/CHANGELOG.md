@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/cfworker-json-schema
 
 ## 0.10.0

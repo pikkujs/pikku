@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/azure-functions
 
 ## 0.10.0

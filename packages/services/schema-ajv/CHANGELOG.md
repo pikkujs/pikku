@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/schema-ajv
 
 ## 0.10.0

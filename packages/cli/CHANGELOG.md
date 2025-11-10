@@ -5,7 +5,6 @@
 - Add workflow code generation (types, maps, workers, metadata)
 - Add public RPC and remote RPC code generation
 
-
 # @pikku/cli
 
 ## 0.10.2

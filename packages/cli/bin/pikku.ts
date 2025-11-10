@@ -3,30 +3,30 @@ import { Command } from 'commander'
 import { createConfig, createSingletonServices } from '../src/services.js'
 import { PikkuRPCService } from '@pikku/core/rpc'
 import { LocalVariablesService } from '@pikku/core/services'
-// import { existsSync } from 'fs'
-// import { fileURLToPath } from 'url'
-// import { dirname, join } from 'path'
+import { existsSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 
-// const __filename = fileURLToPath(import.meta.url)
-// const __dirname = dirname(__filename)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 // Check if Pikku CLI is available
-// const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
+const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
 
-// if (existsSync(pikkuCliPath)) {
-//   try {
-//     // Use the generated Pikku CLI
-//     const { PikkuCLI } = await import('../.pikku/cli/pikku-cli.gen.js')
-//     await PikkuCLI(process.argv.slice(2))
-//     process.exit(0)
-//   } catch (error) {
-//     // If import fails, fall back to Commander.js
-//     console.warn(
-//       'Failed to load Pikku CLI, using fallback mode:',
-//       error.message
-//     )
-//   }
-// }
+if (existsSync(pikkuCliPath)) {
+  try {
+    // Use the generated Pikku CLI
+    const { PikkuCLI } = await import(pikkuCliPath)
+    await PikkuCLI(process.argv.slice(2))
+    process.exit(0)
+  } catch (error) {
+    // If import fails, fall back to Commander.js
+    console.warn(
+      'Failed to load Pikku CLI, using fallback mode:',
+      error.message
+    )
+  }
+}
 
 // Fallback to Commander.js for initial setup
 // Import bootstrap if it exists

@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/uws-handler
 
 ## 0.10.0

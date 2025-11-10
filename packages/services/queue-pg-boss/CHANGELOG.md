@@ -5,7 +5,6 @@
 - Add scheduler service implementation
 - Add service factory for queue and scheduler creation
 
-
 # @pikku/queue-pg-boss
 
 ## 0.10.0
