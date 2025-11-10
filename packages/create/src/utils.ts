@@ -247,6 +247,8 @@ const FILE_FEATURE_MAPPING = {
   'rpc.': ['http'], // RPC is typically over HTTP
   'scheduled-task.': ['scheduled'],
   'cli.': ['cli'],
+  'workflow.': ['workflows'],
+  'workflow-': ['workflows'],
 } as const
 
 /**
@@ -357,11 +359,11 @@ export function filterFilesByFeatures(
   // Remove filtered files
   filesToRemove.forEach((filePath) => {
     fs.unlinkSync(filePath)
-    console.log(
-      chalk.yellow(
-        `🗑️  Removed ${path.basename(filePath)} (not needed for this template)`
-      )
-    )
+    // console.log(
+    //   chalk.yellow(
+    //     `🗑️  Removed ${path.basename(filePath)} (not needed for this template)`
+    //   )
+    // )
   })
 }
 
@@ -446,7 +448,7 @@ export function updatePackageJSONScripts(
 
   if (stackblitz) {
     packageJson.scripts.stackblitz =
-      "concurrently 'pikku --watch --silent' 'npm run dev'"
+      "concurrently 'pikku watch --silent' 'npm run dev'"
     packageJson.stackblitz = {
       startCommand: 'npm run stackblitz',
     }

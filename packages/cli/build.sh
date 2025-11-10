@@ -16,7 +16,7 @@ rm -rf .pikku/cli
 # This relies on the published version being backwards compatible enough to generate
 # types that work with the current codebase.
 echo "Generating Pikku types using published @pikku/cli..."
-npx -y @pikku/cli@next
+npx -y @pikku/cli@latest
 
 # Step 3: Build the TypeScript source to dist
 # Now that we have the generated types (from the published version),
