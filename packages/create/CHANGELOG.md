@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- 1d064c5: feat: using pikku cli to drive the pikku cli
+
 ### Minor Changes
 
 - Add workflows-bullmq and workflows-pg-boss templates
