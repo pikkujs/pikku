@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/websocket
 
 ## 0.10.1

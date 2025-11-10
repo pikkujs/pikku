@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/schedule
 
 ## 0.10.0

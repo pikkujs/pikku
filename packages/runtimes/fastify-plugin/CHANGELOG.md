@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/fastify-plugin
 
 ## 0.10.1

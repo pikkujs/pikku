@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/fastify
 
 ## 0.10.0

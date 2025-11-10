@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/jose
 
 ## 0.10.0

@@ -17,6 +17,7 @@ export interface ForwardedLogMessage {
  */
 export class CLILoggerForwarder implements Logger {
   private level: LogLevel = LogLevel.info
+  private silent: boolean = false
 
   constructor(
     private logger: Logger,
@@ -27,13 +28,21 @@ export class CLILoggerForwarder implements Logger {
     this.level = level
   }
 
+  setSilent(silent: boolean): void {
+    this.silent = silent
+  }
+
+  isSilent(): boolean {
+    return this.silent
+  }
+
   private log(
     level: ForwardedLogMessage['level'],
     logLevel: LogLevel,
     messageOrObj: string | Record<string, any> | Error,
     type?: string
   ) {
-    if (this.level > logLevel) return
+    if (this.level > logLevel || this.silent) return
 
     let message: string
 

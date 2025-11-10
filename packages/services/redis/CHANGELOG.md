@@ -4,7 +4,6 @@
 
 - Initial release with Redis-backed channel, eventhub, and workflow stores
 
-
 # @pikku-workflows/redis
 
 ## 0.10.0

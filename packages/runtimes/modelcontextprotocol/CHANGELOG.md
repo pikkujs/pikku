@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/mcp-server
 
 ## 0.10.1
