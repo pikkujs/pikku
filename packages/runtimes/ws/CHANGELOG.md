@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/ws
 
 ## 0.10.0

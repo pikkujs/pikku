@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 ## 0.8.0
 
 ## 0.10.1

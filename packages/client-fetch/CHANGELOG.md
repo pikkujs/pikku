@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/fetch
 
 ## 0.10.0

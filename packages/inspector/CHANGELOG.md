@@ -5,7 +5,6 @@
 - Add workflow inspection and analysis
 - Add enhanced type extraction utilities
 
-
 # @pikku/inspector
 
 ## 0.10.2

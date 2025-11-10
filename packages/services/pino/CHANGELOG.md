@@ -4,7 +4,6 @@
 
 - Workflow support
 
-
 # @pikku/pino
 
 ## 0.10.0

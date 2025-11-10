@@ -5,7 +5,6 @@
 - Add scheduler service implementation
 - Add service factory for queue and scheduler creation
 
-
 # @pikku/queue-bullmq
 
 ## 0.10.0

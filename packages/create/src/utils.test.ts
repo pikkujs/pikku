@@ -386,4 +386,199 @@ describe('Functions Test Suite', () => {
       'HTTP functions should be removed'
     )
   })
+
+  test('filterFilesByFeatures: removes workflow files when workflows not supported', () => {
+    const testDir = path.join(tempRoot, 'filterWorkflowTest')
+    const srcDir = path.join(testDir, 'src')
+    const clientDir = path.join(testDir, 'client')
+    fs.mkdirSync(srcDir, { recursive: true })
+    fs.mkdirSync(clientDir, { recursive: true })
+
+    // Create workflow files in src directory
+    const srcFiles = [
+      'workflow.functions.ts',
+      'workflow.wiring.ts',
+      'workflow-happy.functions.ts',
+      'workflow-unhappy.functions.ts',
+      'http.functions.ts',
+      'services.ts',
+    ]
+
+    srcFiles.forEach((file) => {
+      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    })
+
+    // Create workflow files in client directory
+    const clientFiles = [
+      'workflow-start.ts',
+      'workflow-cancel.ts',
+      'workflow-happy.ts',
+      'workflow-unhappy.ts',
+      'http-fetch.ts',
+    ]
+
+    clientFiles.forEach((file) => {
+      fs.writeFileSync(path.join(clientDir, file), `// ${file} content`)
+    })
+
+    // Test filtering for HTTP-only template (no workflows support)
+    filterFilesByFeatures(testDir, ['http'])
+
+    // Check which files remain in src
+    const remainingSrcFiles = fs.readdirSync(srcDir)
+
+    // Should keep HTTP files and services.ts
+    assert.ok(
+      remainingSrcFiles.includes('http.functions.ts'),
+      'HTTP functions should remain'
+    )
+    assert.ok(
+      remainingSrcFiles.includes('services.ts'),
+      'Services should always remain'
+    )
+
+    // Should remove all workflow files from src
+    assert.ok(
+      !remainingSrcFiles.includes('workflow.functions.ts'),
+      'workflow.functions.ts should be removed'
+    )
+    assert.ok(
+      !remainingSrcFiles.includes('workflow.wiring.ts'),
+      'workflow.wiring.ts should be removed'
+    )
+    assert.ok(
+      !remainingSrcFiles.includes('workflow-happy.functions.ts'),
+      'workflow-happy.functions.ts should be removed'
+    )
+    assert.ok(
+      !remainingSrcFiles.includes('workflow-unhappy.functions.ts'),
+      'workflow-unhappy.functions.ts should be removed'
+    )
+
+    // Check which files remain in client
+    const remainingClientFiles = fs.readdirSync(clientDir)
+
+    // Should keep HTTP fetch
+    assert.ok(
+      remainingClientFiles.includes('http-fetch.ts'),
+      'HTTP fetch client should remain'
+    )
+
+    // Should remove all workflow client files
+    assert.ok(
+      !remainingClientFiles.includes('workflow-start.ts'),
+      'workflow-start.ts should be removed'
+    )
+    assert.ok(
+      !remainingClientFiles.includes('workflow-cancel.ts'),
+      'workflow-cancel.ts should be removed'
+    )
+    assert.ok(
+      !remainingClientFiles.includes('workflow-happy.ts'),
+      'workflow-happy.ts should be removed'
+    )
+    assert.ok(
+      !remainingClientFiles.includes('workflow-unhappy.ts'),
+      'workflow-unhappy.ts should be removed'
+    )
+  })
+
+  test('filterFilesByFeatures: keeps workflow files when workflows supported', () => {
+    const testDir = path.join(tempRoot, 'filterWorkflowKeepTest')
+    const srcDir = path.join(testDir, 'src')
+    const clientDir = path.join(testDir, 'client')
+    fs.mkdirSync(srcDir, { recursive: true })
+    fs.mkdirSync(clientDir, { recursive: true })
+
+    // Create workflow files in src directory
+    const srcFiles = [
+      'workflow.functions.ts',
+      'workflow.wiring.ts',
+      'workflow-happy.functions.ts',
+      'workflow-unhappy.functions.ts',
+      'http.functions.ts',
+      'channel.functions.ts',
+      'services.ts',
+    ]
+
+    srcFiles.forEach((file) => {
+      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    })
+
+    // Create workflow files in client directory
+    const clientFiles = [
+      'workflow-start.ts',
+      'workflow-cancel.ts',
+      'workflow-happy.ts',
+      'workflow-unhappy.ts',
+      'http-fetch.ts',
+    ]
+
+    clientFiles.forEach((file) => {
+      fs.writeFileSync(path.join(clientDir, file), `// ${file} content`)
+    })
+
+    // Test filtering for workflows template (http + workflows support)
+    filterFilesByFeatures(testDir, ['http', 'workflows'])
+
+    // Check which files remain in src
+    const remainingSrcFiles = fs.readdirSync(srcDir)
+
+    // Should keep HTTP and workflow files
+    assert.ok(
+      remainingSrcFiles.includes('http.functions.ts'),
+      'HTTP functions should remain'
+    )
+    assert.ok(
+      remainingSrcFiles.includes('workflow.functions.ts'),
+      'workflow.functions.ts should remain'
+    )
+    assert.ok(
+      remainingSrcFiles.includes('workflow.wiring.ts'),
+      'workflow.wiring.ts should remain'
+    )
+    assert.ok(
+      remainingSrcFiles.includes('workflow-happy.functions.ts'),
+      'workflow-happy.functions.ts should remain'
+    )
+    assert.ok(
+      remainingSrcFiles.includes('workflow-unhappy.functions.ts'),
+      'workflow-unhappy.functions.ts should remain'
+    )
+    assert.ok(
+      remainingSrcFiles.includes('services.ts'),
+      'Services should always remain'
+    )
+
+    // Should remove channel files
+    assert.ok(
+      !remainingSrcFiles.includes('channel.functions.ts'),
+      'Channel functions should be removed'
+    )
+
+    // Check which files remain in client
+    const remainingClientFiles = fs.readdirSync(clientDir)
+
+    // Should keep all workflow client files
+    assert.ok(
+      remainingClientFiles.includes('http-fetch.ts'),
+      'HTTP fetch client should remain'
+    )
+    assert.ok(
+      remainingClientFiles.includes('workflow-start.ts'),
+      'workflow-start.ts should remain'
+    )
+    assert.ok(
+      remainingClientFiles.includes('workflow-cancel.ts'),
+      'workflow-cancel.ts should remain'
+    )
+    assert.ok(
+      remainingClientFiles.includes('workflow-happy.ts'),
+      'workflow-happy.ts should remain'
+    )
+    assert.ok(
+      remainingClientFiles.includes('workflow-unhappy.ts'),
+      'workflow-unhappy.ts should remain'
+    )
+  })
 })

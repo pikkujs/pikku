@@ -6,7 +6,6 @@
 - Add scheduler service abstraction
 - Remove file-based channel and eventhub stores
 
-
 # @pikku/core
 
 ## 0.10.2

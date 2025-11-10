@@ -5,7 +5,6 @@
 - Remove Kysely-based channel and eventhub stores (use @pikku/pg instead)
 - Update to support shared connection instances
 
-
 # @pikku/kysely
 
 ## 0.10.0
