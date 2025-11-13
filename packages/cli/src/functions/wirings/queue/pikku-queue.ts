@@ -9,7 +9,7 @@ import {
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const visitState = await getInspectorState()
     const {
       queueWorkersWiringFile,

@@ -12,8 +12,7 @@
   "scripts": {
     "tsc": "tsc",
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
-    "build": "yarn build:esm",
-    "build:esm": "./build.sh",
+    "build": "./build.sh",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",

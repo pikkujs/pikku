@@ -4,7 +4,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeMCPJson } from './serialize-mcp-json.js'
 
 export const pikkuMCPJSON: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const { mcpEndpoints, functions } = await getInspectorState()
     const { mcpJsonFile, schemaDirectory } = config
 

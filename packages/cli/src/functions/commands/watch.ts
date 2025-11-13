@@ -1,8 +1,10 @@
 import { pikkuVoidFunc } from '../../../.pikku/pikku-types.gen.js'
 import chokidar from 'chokidar'
+import { all } from './all.js'
 
 export const watch: any = pikkuVoidFunc({
-  func: async ({ logger, config, rpc }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+    const services = { logger, config, getInspectorState }
     const configWatcher = chokidar.watch(config.srcDirectories, {
       ignoreInitial: true,
       ignored: /.*\.gen\.tsx?/,
@@ -25,7 +27,7 @@ export const watch: any = pikkuVoidFunc({
         const handle = async () => {
           try {
             const start = Date.now()
-            await rpc.invoke('all', null)
+            await all.func(services, interaction, null)
             logger.info({
               message: `✓ Generated in ${Date.now() - start}ms`,
               type: 'timing',

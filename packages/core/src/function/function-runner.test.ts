@@ -492,7 +492,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     const testSession = { userId: 'test-user' }
 
     addTestFunction('testFunc', {
-      func: async (services, data, session) => {
+      func: async (services, interaction, data, session) => {
         receivedServices = services
         receivedData = data
         receivedSession = session
@@ -523,7 +523,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     let servicesProvided: any
 
     addTestFunction('testFunc', {
-      func: async (services) => {
+      func: async (services, interaction) => {
         servicesProvided = services
         return 'success'
       },

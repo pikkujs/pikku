@@ -5,7 +5,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuFetch: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config }, interaction, data) => {
     const { fetchFile, httpMapDeclarationFile, packageMappings } = config
 
     // If fetchFile is not set, clean up any existing file and return

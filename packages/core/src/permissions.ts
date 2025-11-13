@@ -3,6 +3,7 @@ import {
   CoreUserSession,
   PikkuWiringTypes,
   PermissionMetadata,
+  PikkuInteraction,
 } from './types/core.types.js'
 import {
   CorePermissionGroup,
@@ -15,6 +16,7 @@ import { freezeDedupe } from './utils.js'
 /**
  * This function validates permissions by iterating over permission groups and executing the corresponding permission functions. If all functions in at least one group return true, the permission is considered valid.
  * @param services - The core services required for permission validation.
+ * @param interaction - The interaction object containing request/response context.
  * @param data - The data to be used in the permission validation functions.
  * @param session - An optional user session for permission validation.
  * @returns A promise that resolves to void.
@@ -22,6 +24,7 @@ import { freezeDedupe } from './utils.js'
 export const verifyPermissions = async (
   permissions: CorePermissionGroup,
   services: CoreServices,
+  interaction: PikkuInteraction,
   data: any,
   session?: CoreUserSession
 ): Promise<boolean> => {
@@ -38,13 +41,13 @@ export const verifyPermissions = async (
   for (const funcs of permissionGroups) {
     if (funcs instanceof Array) {
       const permissioned = await Promise.all(
-        funcs.map((func) => func(services, data, session))
+        funcs.map((func) => func(services, interaction, data, session))
       )
       if (permissioned.every((result) => result)) {
         valid = true
       }
     } else {
-      valid = await funcs(services, data, session)
+      valid = await funcs(services, interaction, data, session)
     }
     if (valid) {
       return true
@@ -336,6 +339,7 @@ export const runPermissions = async (
     funcInheritedPermissions,
     funcPermissions,
     allServices,
+    interaction,
     data,
     session,
   }: {
@@ -344,6 +348,7 @@ export const runPermissions = async (
     funcInheritedPermissions?: PermissionMetadata[]
     funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
     allServices: CoreServices
+    interaction: PikkuInteraction
     data: any
     session?: CoreUserSession
   }
@@ -363,6 +368,7 @@ export const runPermissions = async (
       const result = await verifyPermissions(
         typeof permission === 'function' ? { permission } : permission,
         allServices,
+        interaction,
         data,
         session
       )

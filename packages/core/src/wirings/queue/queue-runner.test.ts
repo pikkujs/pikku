@@ -43,7 +43,7 @@ describe('wireQueueWorker', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'test-queue',
       func: {
-        func: async (services: any, data: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           return { processed: true }
         },
         auth: false,
@@ -75,9 +75,7 @@ describe('wireQueueWorker', () => {
     assert.throws(
       () => wireQueueWorker(mockWorker),
       (error: any) => {
-        assert(
-          error.message.includes('Queue processor metadata not found')
-        )
+        assert(error.message.includes('Queue processor metadata not found'))
         assert(error.message.includes('missing-meta-queue'))
         return true
       }
@@ -190,7 +188,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'simple-queue',
       func: {
-        func: async (services: any, data: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           jobProcessed = true
           receivedData = data
           return { success: true }
@@ -229,7 +227,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'fail-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           await interaction.queue.fail('Processing failed')
         },
         auth: false,
@@ -266,7 +264,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'fail-no-reason-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           await interaction.queue.fail()
         },
         auth: false,
@@ -301,7 +299,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'discard-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           await interaction.queue.discard('Invalid data')
         },
         auth: false,
@@ -340,7 +338,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'progress-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           await interaction.queue.updateProgress(25)
           await interaction.queue.updateProgress('halfway')
           await interaction.queue.updateProgress({ stage: 'processing' })
@@ -367,18 +365,14 @@ describe('runQueueJob', () => {
       },
     })
 
-    assert.deepEqual(progressUpdates, [
-      25,
-      'halfway',
-      { stage: 'processing' },
-    ])
+    assert.deepEqual(progressUpdates, [25, 'halfway', { stage: 'processing' }])
   })
 
   test('should use default updateProgress when not provided', async () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'default-progress-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           await interaction.queue.updateProgress(50)
           return 'ok'
         },
@@ -411,7 +405,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'interaction-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, interaction: any, data: any) => {
           capturedInteraction = interaction
           return 'ok'
         },
@@ -477,9 +471,7 @@ describe('runQueueJob', () => {
         })
       },
       (error: any) => {
-        assert(
-          error.message.includes('Queue worker registration not found')
-        )
+        assert(error.message.includes('Queue worker registration not found'))
         assert(error.message.includes('no-registration-queue'))
         return true
       }
@@ -555,9 +547,7 @@ describe('runQueueJob', () => {
     const logs = mockLogger.getLogs()
     const errorLogs = logs.filter((l) => l.level === 'error')
     assert(errorLogs.length >= 1)
-    assert(
-      errorLogs[0].message.includes('Error processing job job-555')
-    )
+    assert(errorLogs[0].message.includes('Error processing job job-555'))
   })
 
   test('should execute job with middleware', async () => {

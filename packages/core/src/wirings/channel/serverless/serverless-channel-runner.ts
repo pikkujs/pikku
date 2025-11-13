@@ -121,7 +121,6 @@ export const runChannelConnect = async ({
         {
           ...singletonServices,
           ...sessionServices,
-          channel,
           userSession,
         },
         interaction,
@@ -203,7 +202,6 @@ export const runChannelDisconnect = async ({
       {
         ...singletonServices,
         ...sessionServices,
-        channel,
         userSession,
       },
       interaction,
@@ -263,7 +261,6 @@ export const runChannelMessage = async (
       {
         ...singletonServices,
         ...sessionServices,
-        channel,
         userSession,
       },
       interaction

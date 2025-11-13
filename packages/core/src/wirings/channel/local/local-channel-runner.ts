@@ -90,7 +90,6 @@ export const runLocalChannel = async ({
           {
             ...singletonServices,
             ...sessionServices,
-            channel,
             userSession,
           },
           interaction,

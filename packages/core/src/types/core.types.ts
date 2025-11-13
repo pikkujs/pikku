@@ -306,20 +306,19 @@ export const pikkuMiddlewareFactory = <In = any>(
 }
 
 /**
- * Represents the core services used by Pikku, including singleton services and the request/response interaction.
+ * Represents the core services used by Pikku, including singleton services.
  */
 export type CoreServices<
   SingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
-> = SingletonServices &
-  PikkuInteraction & {
-    userSession?: UserSessionService<UserSession>
-  }
+> = SingletonServices & {
+  userSession?: UserSessionService<UserSession>
+}
 
 export type SessionServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services = CoreServices<SingletonServices>,
-> = Omit<Services, keyof SingletonServices | keyof PikkuInteraction | 'session'>
+> = Omit<Services, keyof SingletonServices | 'session'>
 
 /**
  * Defines a function type for creating singleton services from the given configuration.

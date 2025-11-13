@@ -6,7 +6,7 @@ import { serializeCLITypes } from './serialize-cli-types.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 
 export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const { cliTypesFile, functionTypesFile, packageMappings } = config
     const visitState = await getInspectorState()
 

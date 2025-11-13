@@ -16,7 +16,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuInteraction } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { PikkuChannel } from '@pikku/core/channel'
 import { PikkuMCP } from '@pikku/core/mcp'
@@ -69,7 +69,7 @@ export type PikkuPermissionConfig<In = unknown, RequiredServices extends Service
  * @example
  * \`\`\`typescript
  * // Direct function syntax
- * const permission = pikkuPermission(({ logger }, data, session) => {
+ * const permission = pikkuPermission(({ logger }, interaction, data, session) => {
  *   return session?.role === 'admin'
  * })
  *
@@ -77,7 +77,7 @@ export type PikkuPermissionConfig<In = unknown, RequiredServices extends Service
  * const adminPermission = pikkuPermission({
  *   name: 'Admin Permission',
  *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, data, session) => {
+ *   func: async ({ logger }, interaction, data, session) => {
  *     return session?.role === 'admin'
  *   }
  * })
@@ -193,16 +193,22 @@ export type PikkuFunctionSessionless<
   Out = never,
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Omit<Services, 'rpc' | 'channel' | 'mcp'> &
-    { rpc: TypedPikkuRPC } & (
-    [ChannelData] extends [null]
-      ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
-      : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
-  ) & ([MCPData] extends [null]
-    ? { mcp?: PikkuMCP }  // Optional MCP
-    : { mcp: PikkuMCP }  // Required MCP
-  )
-> = CorePikkuFunctionSessionless<In, Out, ChannelData, RequiredServices, Session>
+  RequiredServices extends Services = Services
+> = CorePikkuFunctionSessionless<
+    In,
+    Out,
+    ChannelData,
+    RequiredServices,
+    PikkuInteraction<In, Out> & { rpc: TypedPikkuRPC } & (
+      [ChannelData] extends [null]
+        ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
+        : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
+    ) & ([MCPData] extends [null]
+      ? { mcp?: PikkuMCP }  // Optional MCP
+      : { mcp: PikkuMCP }  // Required MCP
+    ),
+    Session
+  >
 
 /**
  * A session-aware API function that requires user authentication.
@@ -219,16 +225,22 @@ export type PikkuFunction<
   Out = never,
   ChannelData = null,  // null means optional channel
   MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Omit<Services, 'rpc' | 'channel' | 'mcp'> &
-    { rpc: TypedPikkuRPC } & (
-    [ChannelData] extends [null]
-      ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
-      : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
-  ) & ([MCPData] extends [null]
-    ? { mcp?: PikkuMCP }  // Optional MCP
-    : { mcp: PikkuMCP }  // Required MCP
-  )
-> = CorePikkuFunction<In, Out, ChannelData, RequiredServices, Session>
+  RequiredServices extends Services = Services
+> = CorePikkuFunction<
+    In,
+    Out,
+    ChannelData,
+    RequiredServices,
+    PikkuInteraction<In, Out> & { rpc: TypedPikkuRPC } & (
+      [ChannelData] extends [null]
+        ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
+        : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
+    ) & ([MCPData] extends [null]
+      ? { mcp?: PikkuMCP }  // Optional MCP
+      : { mcp: PikkuMCP }  // Required MCP
+    ),
+    Session
+  >
 
 /**
  * Configuration object for Pikku functions with optional middleware, permissions, tags, and documentation.
@@ -260,7 +272,7 @@ export type PikkuFunctionConfig<
  * @example
  * \\\`\\\`\\\`typescript
  * const createUser = pikkuFunc<{name: string, email: string}, {id: number, message: string}>({
- *   func: async ({db, logger}, input) => {
+ *   func: async ({db, logger}, interaction, input, session) => {
  *     logger.info('Creating user', input.name)
  *     const user = await db.users.create(input)
  *     return {id: user.id, message: \\\`User \\\${input.name} created successfully\\\`}
@@ -289,7 +301,7 @@ export const pikkuFunc = <In, Out = unknown>(
  * @example
  * \\\`\\\`\\\`typescript
  * const healthCheck = pikkuSessionlessFunc<void, {status: string, timestamp: string}>({
- *   func: async ({logger}) => {
+ *   func: async ({logger}, interaction, input) => {
  *     logger.info('Health check requested')
  *     return {status: 'healthy', timestamp: new Date().toISOString()}
  *   },

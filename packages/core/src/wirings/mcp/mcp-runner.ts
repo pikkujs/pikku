@@ -252,7 +252,6 @@ async function runMCPPikkuFunc(
         {
           ...singletonServices,
           ...sessionServices,
-          mcp: mcpInteraction,
         },
         interaction
       )
