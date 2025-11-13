@@ -6,7 +6,7 @@ import { serializePublicRPC } from './serialize-public-rpc.js'
 import { join } from 'path'
 
 export const pikkuPublicRPC: any = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config }, interaction, data) => {
     if (config.rpc?.publicRpcPath) {
       const publicRpcPath = join(config.rootDir, config.rpc.publicRpcPath)
       const pathToPikkuTypes = getFileImportRelativePath(

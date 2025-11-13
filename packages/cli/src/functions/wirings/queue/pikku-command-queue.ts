@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeQueueMeta } from './serialize-queue-meta.js'
 
 export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean | undefined>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const visitState = await getInspectorState()
     const {
       queueWorkersWiringFile,

@@ -14,7 +14,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
   void,
   boolean | undefined
 >({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const visitState = await getInspectorState()
     const {
       workflowsWiringFile,

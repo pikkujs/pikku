@@ -129,7 +129,6 @@ export const processMessageHandlers = (
         singletonServices: services,
         getAllServices: () => ({
           ...services,
-          channel: channelHandler.getChannel(),
         }),
         data: () => data,
         userSession: services.userSession,

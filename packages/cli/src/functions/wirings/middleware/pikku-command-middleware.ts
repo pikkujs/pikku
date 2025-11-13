@@ -8,7 +8,7 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
   void,
   boolean | undefined
 >({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const state = await getInspectorState()
     const { middleware } = state
     const { middlewareFile, packageMappings } = config

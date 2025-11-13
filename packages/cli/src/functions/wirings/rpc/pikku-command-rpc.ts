@@ -3,7 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuRPC: any = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const { rpc } = await getInspectorState()
     const { rpcInternalWiringMetaFile } = config
 

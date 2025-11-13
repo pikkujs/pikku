@@ -354,7 +354,6 @@ export async function runCLICommand({
         ...singletonServices,
         ...sessionServices,
         userSession,
-        channel,
       },
       interaction,
       false

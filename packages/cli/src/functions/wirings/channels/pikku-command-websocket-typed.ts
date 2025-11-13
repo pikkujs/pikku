@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeWebsocketWrapper } from './serialize-websocket-wrapper.js'
 
 export const pikkuWebSocketTyped: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config }, interaction, data) => {
     const { websocketFile, channelsMapDeclarationFile, packageMappings } =
       config
 

@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuChannels: any = pikkuVoidFunc({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const visitState = await getInspectorState()
     const { channelsWiringFile, channelsWiringMetaFile, packageMappings } =
       config

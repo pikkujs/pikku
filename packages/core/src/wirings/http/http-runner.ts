@@ -329,7 +329,7 @@ const executeRoute = async (
   const getAllServices = async (session?: CoreUserSession) => {
     // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
-      { ...singletonServices, userSession, channel },
+      { ...singletonServices, userSession },
       { http },
       session
     )
@@ -338,9 +338,7 @@ const executeRoute = async (
       {
         ...singletonServices,
         ...sessionServices,
-        http,
         userSession,
-        channel,
       },
       interaction,
       route.auth

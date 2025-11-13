@@ -124,6 +124,7 @@ export async function runScheduledTask({
         {
           ...singletonServices,
           ...sessionServices,
+          userSession,
         },
         interaction
       )

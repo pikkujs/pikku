@@ -6,7 +6,7 @@ import { generateOpenAPISpec } from './openapi-spec-generator.js'
 import { stringify } from 'yaml'
 
 export const pikkuOpenAPI: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const { tsconfig, openAPI, schemasFromTypes } = config
 
     // If openAPI outputFile is not defined, clean up any existing file and return

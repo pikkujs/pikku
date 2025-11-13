@@ -30,6 +30,7 @@ export const addFunction = (
 export const runPikkuFuncDirectly = async <In, Out>(
   funcName: string,
   allServices: CoreServices,
+  interaction: PikkuInteraction,
   data: In,
   session?: CoreUserSession
 ) => {
@@ -37,7 +38,12 @@ export const runPikkuFuncDirectly = async <In, Out>(
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  return (await funcConfig.func(allServices, data, session!)) as Out
+  return (await funcConfig.func(
+    allServices,
+    interaction,
+    data,
+    session!
+  )) as Out
 }
 
 export const runPikkuFunc = async <In = any, Out = any>(
@@ -133,11 +139,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       allServices,
+      interaction,
       data: actualData,
       session,
     })
 
-    return await funcConfig.func(allServices, actualData, session!)
+    return await funcConfig.func(allServices, interaction, actualData, session!)
   }
 
   // Combine all middleware: inheritedMiddleware → wireMiddleware → funcMiddleware

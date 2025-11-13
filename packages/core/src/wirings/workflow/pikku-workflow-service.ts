@@ -297,7 +297,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           return {
             ...this.singletonServices,
             ...sessionServices,
-            ...interaction,
           } as CoreServices
         }
         const result = await runPikkuFunc(

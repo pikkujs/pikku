@@ -59,7 +59,7 @@ const generateArgumentsFromSchema = async (
 }
 
 export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, interaction, data) => {
     const { mcpEndpoints, functions } = await getInspectorState()
     const {
       mcpWiringsFile,
@@ -81,7 +81,7 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
 
     // Populate arguments for prompts meta before serializing
     const promptsMetaWithArguments = { ...mcpEndpoints.promptsMeta }
-    for (const promptMeta of Object.values(promptsMetaWithArguments)) {
+    for (const promptMeta of Object.values(promptsMetaWithArguments) as any[]) {
       const functionMeta = functions.meta[promptMeta.pikkuFuncName]
       if (functionMeta) {
         const inputType = functionMeta.inputs?.[0]
