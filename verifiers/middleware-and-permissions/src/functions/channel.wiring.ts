@@ -9,7 +9,7 @@ import {
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(
-  async ({ logger }, {}, _interaction, next) => {
+  async ({ logger }, _interaction, next) => {
     logger.info({ type: 'wire', name: 'channel-inline', phase: 'before' })
     const result = await next()
     logger.info({ type: 'wire', name: 'channel-inline', phase: 'after' })
@@ -19,7 +19,7 @@ const inlineWireMiddleware = pikkuMiddleware(
 
 // Message-level middleware test
 const messageMiddleware = pikkuMiddleware(
-  async ({ logger }, { channel }, _interaction, next) => {
+  async ({ logger }, { channel }, next) => {
     logger.info({
       type: 'message',
       name: 'message-middleware',
