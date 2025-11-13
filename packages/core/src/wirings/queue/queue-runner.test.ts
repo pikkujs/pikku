@@ -38,6 +38,16 @@ const createMockJob = (
   data,
 })
 
+const addTestQueueFunction = (pikkuFuncName: string) => {
+  pikkuState('function', 'meta')[pikkuFuncName] = {
+    pikkuFuncName,
+    inputSchemaName: null,
+    outputSchemaName: null,
+    middleware: undefined,
+    permissions: undefined,
+  }
+}
+
 describe('wireQueueWorker', () => {
   test('should successfully wire a queue worker', () => {
     const mockWorker: CoreQueueWorker = {
@@ -55,7 +65,7 @@ describe('wireQueueWorker', () => {
       pikkuFuncName: 'queue_test-queue',
       queueName: 'test-queue',
     }
-
+    addTestQueueFunction('queue_test-queue')
     wireQueueWorker(mockWorker)
 
     const registrations = pikkuState('queue', 'registrations')
@@ -103,7 +113,7 @@ describe('wireQueueWorker', () => {
       pikkuFuncName: 'queue_worker-with-middleware',
       queueName: 'worker-with-middleware',
     }
-
+    addTestQueueFunction('queue_worker-with-middleware')
     wireQueueWorker(mockWorker)
 
     const registrations = pikkuState('queue', 'registrations')
@@ -127,6 +137,7 @@ describe('getQueueWorkers', () => {
       pikkuFuncName: 'queue_test-queue',
       queueName: 'test-queue',
     }
+    addTestQueueFunction('queue_test-queue')
     wireQueueWorker(mockWorker)
 
     const workers = getQueueWorkers()
@@ -155,6 +166,7 @@ describe('removeQueueWorker', () => {
       pikkuFuncName: 'queue_removable-queue',
       queueName: 'removable-queue',
     }
+    addTestQueueFunction('queue_removable-queue')
     wireQueueWorker(mockWorker)
 
     const workersBefore = getQueueWorkers()
@@ -201,6 +213,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_simple-queue',
       queueName: 'simple-queue',
     }
+    addTestQueueFunction('queue_simple-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -238,6 +251,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_fail-queue',
       queueName: 'fail-queue',
     }
+    addTestQueueFunction('queue_fail-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -275,6 +289,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_fail-no-reason-queue',
       queueName: 'fail-no-reason-queue',
     }
+    addTestQueueFunction('queue_fail-no-reason-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -310,6 +325,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_discard-queue',
       queueName: 'discard-queue',
     }
+    addTestQueueFunction('queue_discard-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -352,6 +368,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_progress-queue',
       queueName: 'progress-queue',
     }
+    addTestQueueFunction('queue_progress-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -384,6 +401,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_default-progress-queue',
       queueName: 'default-progress-queue',
     }
+    addTestQueueFunction('queue_default-progress-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -417,6 +435,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_interaction-queue',
       queueName: 'interaction-queue',
     }
+    addTestQueueFunction('queue_interaction-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -494,6 +513,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_session-services-queue',
       queueName: 'session-services-queue',
     }
+    addTestQueueFunction('queue_session-services-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -526,6 +546,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_error-queue',
       queueName: 'error-queue',
     }
+    addTestQueueFunction('queue_error-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -574,6 +595,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_middleware-queue',
       queueName: 'middleware-queue',
     }
+    addTestQueueFunction('queue_middleware-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
@@ -600,6 +622,7 @@ describe('runQueueJob', () => {
       pikkuFuncName: 'queue_debug-queue',
       queueName: 'debug-queue',
     }
+    addTestQueueFunction('queue_debug-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
