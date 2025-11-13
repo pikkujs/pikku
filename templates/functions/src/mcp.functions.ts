@@ -9,7 +9,7 @@ import {
  * A simple hello world MCP tool that greets the user
  */
 export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
-  async (services, { name = 'World' }) => {
+  async (services, {}, { name = 'World' }) => {
     services.logger.info(`Saying hello to: ${name}`)
 
     return [
@@ -22,8 +22,8 @@ export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
 )
 
 export const disableTool = pikkuMCPToolFunc<{ name: string }>(
-  async (services, { name }) => {
-    const changed = await services.mcp.enableTools({ [name]: false })
+  async (services, { mcp }, { name }) => {
+    const changed = await mcp.enableTools({ [name]: false })
     if (changed) {
       return [
         {
@@ -49,7 +49,7 @@ export const calculate = pikkuMCPToolFunc<{
   operation: 'add' | 'subtract' | 'multiply' | 'divide'
   a: number
   b: number
-}>(async ({ logger }, { operation, a, b }) => {
+}>(async ({ logger }, {}, { operation, a, b }) => {
   logger.info(`Calculating: ${a} ${operation} ${b}`)
 
   let result: number
@@ -86,7 +86,7 @@ export const calculate = pikkuMCPToolFunc<{
  * A static resource that returns predefined data
  */
 export const getStaticResource = pikkuMCPResourceFunc<unknown>(
-  async ({ mcp }) => {
+  async ({}, { mcp }) => {
     return [
       {
         uri: mcp.uri!,
@@ -100,7 +100,7 @@ export const getStaticResource = pikkuMCPResourceFunc<unknown>(
  * A mock user information resource that returns user data
  */
 export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
-  async ({ mcp, logger }, { userId }) => {
+  async ({ logger }, { mcp }, { userId }) => {
     logger.info(`Getting user info for: ${userId}`)
 
     // Mock user data - in a real app this would come from a database
@@ -158,7 +158,7 @@ export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
   topic: string
   complexity: 'beginner' | 'intermediate' | 'advanced'
   includeExamples?: string
-}>(async (services, { topic, complexity, includeExamples = false }) => {
+}>(async (services, {}, { topic, complexity, includeExamples = false }) => {
   services.logger.info(
     `Generating progressive enhancement content for: ${topic} (${complexity})`
   )

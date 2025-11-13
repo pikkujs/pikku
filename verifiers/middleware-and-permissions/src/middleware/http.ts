@@ -1,7 +1,7 @@
 import { pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
 
 export const httpGlobalMiddleware = pikkuMiddleware(
-  async ({ logger }, _interaction, next) => {
+  async ({ logger }, {}, _interaction, next) => {
     logger.info({ type: 'http', name: 'global', phase: 'before' })
     const result = await next()
     logger.info({ type: 'http', name: 'global', phase: 'after' })
@@ -10,7 +10,7 @@ export const httpGlobalMiddleware = pikkuMiddleware(
 )
 
 export const httpRouteMiddleware = pikkuMiddleware(
-  async ({ logger }, _interaction, next) => {
+  async ({ logger }, {}, _interaction, next) => {
     logger.info({ type: 'route', name: '/api/*', phase: 'before' })
     const result = await next()
     logger.info({ type: 'route', name: '/api/*', phase: 'after' })
@@ -22,7 +22,7 @@ export const httpRouteMiddleware = pikkuMiddleware(
 export const httpRouteMiddlewareWithMetadata = pikkuMiddleware({
   name: 'HTTP Route Middleware',
   description: 'Logs and processes requests for /api/* routes',
-  func: async ({ logger }, _interaction, next) => {
+  func: async ({ logger }, {}, _interaction, next) => {
     logger.info({
       type: 'route-with-metadata',
       name: '/api/*',

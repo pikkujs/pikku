@@ -8,7 +8,7 @@ export const functionTagMiddleware = () =>
   addMiddleware('function', [tagMiddleware('function')])
 
 export const noOpFunction = pikkuVoidFunc({
-  func: async ({ logger }) => {
+  func: async ({ logger }, {}) => {
     logger.info({ type: 'function', name: 'noOp', phase: 'execute' })
   },
   middleware: [functionMiddleware('noOp')],

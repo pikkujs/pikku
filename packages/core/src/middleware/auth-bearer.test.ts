@@ -89,7 +89,10 @@ describe('authBearer middleware', () => {
   })
 
   test('should validate static token when token option is provided', async () => {
-    const mockUserSession: CoreUserSession = { userId: 'static-user', role: 'admin' }
+    const mockUserSession: CoreUserSession = {
+      userId: 'static-user',
+      role: 'admin',
+    }
     const userSessionService = new PikkuUserSessionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',

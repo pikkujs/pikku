@@ -16,7 +16,7 @@ wireMCPResource({
   title: 'User Resource',
   description: 'Get user by ID',
   func: pikkuMCPResourceFunc<{ userId: string }>(
-    async ({ mcp }, { userId }) => {
+    async ({ mcp }, {}, { userId }) => {
       return [{ uri: mcp.uri!, text: JSON.stringify({ userId }) }]
     }
   ),
@@ -27,7 +27,7 @@ wireMCPResource({
   uri: 'user/{userId}',
   title: 'User Resource',
   description: 'Get user by ID',
-  func: pikkuMCPResourceFunc<unknown>(async ({ mcp }) => {
+  func: pikkuMCPResourceFunc<unknown>(async ({ mcp }, {}) => {
     return [{ uri: mcp.uri!, text: 'data' }]
   }),
 })
@@ -37,7 +37,7 @@ wireMCPResource({
   uri: 'user/{userId}',
   title: 'User Resource',
   description: 'Get user by ID',
-  func: pikkuMCPResourceFunc<{ id: string }>(async ({ mcp }, { id }) => {
+  func: pikkuMCPResourceFunc<{ id: string }>(async ({ mcp }, {}, { id }) => {
     return [{ uri: mcp.uri!, text: JSON.stringify({ id }) }]
   }),
 })
@@ -48,7 +48,7 @@ wireMCPResource({
   title: 'User Post Resource',
   description: 'Get user post',
   func: pikkuMCPResourceFunc<{ userId: string; postId: string }>(
-    async ({ mcp }, { userId, postId }) => {
+    async ({ mcp }, {}, { userId, postId }) => {
       return [{ uri: mcp.uri!, text: JSON.stringify({ userId, postId }) }]
     }
   ),
@@ -60,7 +60,7 @@ wireMCPResource({
   title: 'User Post Resource',
   description: 'Get user post',
   func: pikkuMCPResourceFunc<{ userId: string }>(
-    async ({ mcp }, { userId }) => {
+    async ({ mcp }, {}, { userId }) => {
       return [{ uri: mcp.uri!, text: JSON.stringify({ userId }) }]
     }
   ),
@@ -71,7 +71,7 @@ wireMCPResource({
   uri: 'static-resource',
   title: 'Static Resource',
   description: 'Get static data',
-  func: pikkuMCPResourceFunc<unknown>(async ({ mcp }) => {
+  func: pikkuMCPResourceFunc<unknown>(async ({ mcp }, {}) => {
     return [{ uri: mcp.uri!, text: 'static data' }]
   }),
 })
@@ -102,7 +102,7 @@ wireMCPResource({
   title: 'User with Details',
   description: 'Get user with full details',
   func: pikkuMCPResourceFunc<{ userId: string }>(
-    async ({ mcp }, { userId }) => {
+    async ({ mcp }, {}, { userId }) => {
       const userData = { userId, name: 'John', email: 'john@example.com' }
       return [{ uri: mcp.uri!, text: JSON.stringify(userData) }]
     }

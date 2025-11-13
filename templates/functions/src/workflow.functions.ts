@@ -5,7 +5,7 @@ import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 export const createUserProfile = pikkuSessionlessFunc<
   { email: string; userId: string },
   { id: string; email: string; name: string; createdAt: string }
->(async ({ logger }, data) => {
+>(async ({ logger }, {}, data) => {
   logger.info(`Creating user profile for ${data.email}`)
   return {
     id: data.userId,
@@ -24,7 +24,7 @@ function generateWelcomeMessage(email: string): string {
 export const sendEmail = pikkuSessionlessFunc<
   { to: string; subject: string; body: string },
   { sent: boolean; messageId: string; to: string }
->(async ({ logger }, data) => {
+>(async ({ logger }, {}, data) => {
   logger.info(`Sending email to ${data.to}`)
   logger.info(`Subject: ${data.subject}`)
   logger.info(`Body: ${data.body}`)
@@ -38,7 +38,7 @@ export const sendEmail = pikkuSessionlessFunc<
 export const onboardingWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string },
   { userId: string; email: string }
->(async ({ workflow }, data) => {
+>(async ({}, { workflow }, data) => {
   // Step 1: Create user profile (RPC call - generates queue worker)
   const user = await workflow.do(
     `Create user profile in database for ${data.email}`,
@@ -72,7 +72,7 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any
->(async ({ rpc, workflowService, logger }, data) => {
+>(async ({ workflowService, logger }, { rpc }, data) => {
   const { runId } = await rpc.startWorkflow('onboarding', data)
   logger.info(`[TEST] Workflow started: ${runId}`)
 

@@ -11,7 +11,7 @@ import { wireHTTP, pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 wireHTTP({
   method: 'get',
   route: '/users/:id',
-  func: pikkuSessionlessFunc<{ id: string }, void>(async ({}, data) => {
+  func: pikkuSessionlessFunc<{ id: string }, void>(async ({}, {}, data) => {
     console.log(data.id)
   }),
 })
