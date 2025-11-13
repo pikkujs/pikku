@@ -57,7 +57,7 @@ export const apiRoutePermissions = () =>
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(
-  async ({ logger }, _interaction, next) => {
+  async ({ logger }, {}, _interaction, next) => {
     logger.info({ type: 'wire', name: 'inline', phase: 'before' })
     const result = await next()
     logger.info({ type: 'wire', name: 'inline', phase: 'after' })

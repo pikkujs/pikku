@@ -387,7 +387,10 @@ describe('authCookie middleware', () => {
     const logs = mockLogger.getLogs()
     assert.equal(logs.length, 1)
     assert.equal(logs[0].level, 'warn')
-    assert.equal(logs[0].message, 'No JWT service available, unable to set cookie')
+    assert.equal(
+      logs[0].message,
+      'No JWT service available, unable to set cookie'
+    )
 
     const setCookies = mockResponse.getCookies()
     assert.equal(setCookies.length, 0)
@@ -456,7 +459,9 @@ describe('authCookie middleware', () => {
       } as any,
       {
         http: {
-          request: createMockHTTPRequest({ my_custom_cookie: 'custom-cookie-value' }),
+          request: createMockHTTPRequest({
+            my_custom_cookie: 'custom-cookie-value',
+          }),
           response: mockResponse,
         },
       } as any,

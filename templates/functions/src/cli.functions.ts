@@ -5,7 +5,7 @@ export const greetUser = pikkuSessionlessFunc<
   { name: string; loud: boolean },
   { message: string; timestamp: string }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     const message = `Hello, ${data.name}!`
     return {
       message: data.loud ? message.toUpperCase() : message,
@@ -19,7 +19,7 @@ export const addNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     const result = data.a + data.b
     return {
       operation: 'add',
@@ -34,7 +34,7 @@ export const subtractNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     const result = data.a - data.b
     return {
       operation: 'subtract',
@@ -49,7 +49,7 @@ export const multiplyNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     const result = data.a * data.b
     return {
       operation: 'multiply',
@@ -64,7 +64,7 @@ export const divideNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     if (data.b === 0) {
       throw new Error('Division by zero is not allowed')
     }
@@ -89,7 +89,7 @@ export const createUser = pikkuFunc<
     created: string
   }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     services.logger.info(`Creating user: ${data.username}`)
 
     return {
@@ -106,7 +106,7 @@ export const listUsers = pikkuFunc<
   { limit?: number; admin?: boolean },
   { users: any[]; total: number; filtered: boolean }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     // Mock user data
     const allUsers = [
       { id: 1, username: 'alice', email: 'alice@example.com', admin: true },
@@ -150,7 +150,7 @@ export const processFile = pikkuFunc<
     size: number
   }
 >({
-  func: async (services, data) => {
+  func: async (services, {}, data) => {
     services.logger.info(
       `Processing file: ${data.path} with action: ${data.action}`
     )

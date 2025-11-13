@@ -18,7 +18,7 @@ wireCLI({
     greet: pikkuCLICommand({
       parameters: '<name>',
       func: pikkuSessionlessFunc<{ name: string; loud: boolean }, void>({
-        func: async ({}, data) => {
+        func: async ({}, {}, data) => {
           console.log(data.name, data.loud)
         },
       }),

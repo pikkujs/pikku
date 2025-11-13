@@ -16,7 +16,7 @@ import {
 const toolFunc = pikkuMCPToolFunc<unknown>(async () => [
   { type: 'text', text: 'result' },
 ])
-const resourceFunc = pikkuMCPResourceFunc<unknown>(async ({ mcp }) => [
+const resourceFunc = pikkuMCPResourceFunc<unknown>(async ({ mcp }, {}) => [
   { uri: mcp.uri!, text: 'data' },
 ])
 const promptFunc = pikkuMCPPromptFunc<unknown>(async () => [

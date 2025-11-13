@@ -14,7 +14,7 @@ import { pikkuMiddleware } from '../.pikku/pikku-types.gen.js'
  * - Scheduler: {} (empty object)
  */
 export const loggingMiddleware = pikkuMiddleware(
-  async (services, interaction, next) => {
+  async (services, interaction, _data, next) => {
     const start = Date.now()
 
     // Determine the interaction type for better logging
