@@ -78,7 +78,7 @@ describe('CLI Runner', () => {
 
     test('should execute command function with merged data', async () => {
       let receivedData: any
-      const testFunc = async (_services: any, data: any) => {
+      const testFunc = async (_services: any, _interaction: any, data: any) => {
         receivedData = data
         return { success: true }
       }
