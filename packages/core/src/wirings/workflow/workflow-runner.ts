@@ -76,7 +76,9 @@ export const wireWorkflow = <
     permissions: workflow.func.permissions,
     middleware: workflow.func.middleware as any,
     tags: workflow.func.tags,
-    docs: workflow.func.docs as any,
+    summary: workflow.summary,
+    description: workflow.description,
+    errors: workflow.errors,
   })
 
   // Store workflow definition in state

@@ -3,7 +3,7 @@ import { AddWiring } from '../types.js'
 import { TypesMap } from '../types-map.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
-import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
+import { FunctionServicesMeta } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 
@@ -306,7 +306,9 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let tags: string[] | undefined
   let expose: boolean | undefined
   let internal: boolean | undefined
-  let docs: PikkuDocs | undefined
+  let summary: string | undefined
+  let description: string | undefined
+  let errors: string[] | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
 
   // determine the actual handler expression:
@@ -320,7 +322,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
     expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
     internal = getPropertyValue(handlerNode, 'internal') as boolean | undefined
-    docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
+    summary = (getPropertyValue(handlerNode, 'summary') as string) || undefined
+    description =
+      (getPropertyValue(handlerNode, 'description') as string) || undefined
+    errors = (getPropertyValue(handlerNode, 'errors') as string[]) || undefined
 
     const fnProp = getPropertyAssignmentInitializer(
       handlerNode,
@@ -458,7 +463,9 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     expose: expose || undefined,
     internal: internal || undefined,
     tags: tags || undefined,
-    docs: docs || undefined,
+    summary: summary || undefined,
+    description: description || undefined,
+    errors: errors || undefined,
     middleware,
     isDirectFunction,
   }

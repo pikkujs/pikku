@@ -3,7 +3,6 @@ import {
   getPropertyValue,
   getPropertyTags,
 } from '../utils/get-property-value.js'
-import { PikkuDocs } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
@@ -39,7 +38,10 @@ export const addQueueWorker: AddWiring = (
     const obj = firstArg
 
     const queueName = getPropertyValue(obj, 'queueName') as string | null
-    const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
+    const summary = (getPropertyValue(obj, 'summary') as string) || undefined
+    const description =
+      (getPropertyValue(obj, 'description') as string) || undefined
+    const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
     const tags = getPropertyTags(obj, 'Queue worker', queueName, logger)
 
     // --- find the referenced function ---
@@ -84,7 +86,9 @@ export const addQueueWorker: AddWiring = (
     state.queueWorkers.meta[queueName] = {
       pikkuFuncName,
       queueName,
-      docs,
+      summary,
+      description,
+      errors,
       tags,
       middleware,
     }

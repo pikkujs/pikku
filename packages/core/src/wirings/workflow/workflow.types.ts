@@ -1,5 +1,4 @@
 import {
-  PikkuDocs,
   MiddlewareMetadata,
   SerializedError,
   CoreSingletonServices,
@@ -97,8 +96,12 @@ export type CoreWorkflow<
 > = {
   /** Unique workflow name */
   name: string
+  /** Summary of the workflow */
+  summary?: string
   /** Description of the workflow */
   description?: string
+  /** Errors that can be thrown */
+  errors?: string[]
   /** The workflow function */
   func: PikkuFunctionConfig
   /** Middleware chain for this workflow */
@@ -107,8 +110,6 @@ export type CoreWorkflow<
   permissions?: PikkuFunctionConfig['permissions']
   /** Tags for organization and filtering */
   tags?: string[]
-  /** Documentation metadata */
-  docs?: PikkuDocs
 }
 
 /**
@@ -241,9 +242,10 @@ export type WorkflowsMeta = Record<
   {
     pikkuFuncName: string
     workflowName: string
+    summary?: string
     description?: string
+    errors?: string[]
     session?: undefined
-    docs?: PikkuDocs
     tags?: string[]
     middleware?: MiddlewareMetadata[]
     steps: WorkflowStepMeta[]

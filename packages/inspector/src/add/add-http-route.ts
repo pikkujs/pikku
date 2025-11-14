@@ -5,7 +5,6 @@ import {
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { PikkuDocs } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { AddWiring } from '../types.js'
@@ -71,7 +70,10 @@ export const addHTTPRoute: AddWiring = (
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
-  const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
+  const summary = (getPropertyValue(obj, 'summary') as string) || undefined
+  const description =
+    (getPropertyValue(obj, 'description') as string) || undefined
+  const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
   const tags = getPropertyTags(obj, 'HTTP route', route, logger)
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
@@ -155,7 +157,9 @@ export const addHTTPRoute: AddWiring = (
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,
     inputTypes,
-    docs,
+    summary,
+    description,
+    errors,
     tags,
     middleware,
     permissions,

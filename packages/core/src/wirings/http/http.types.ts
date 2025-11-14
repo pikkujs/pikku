@@ -1,7 +1,5 @@
 import type { SerializeOptions } from 'cookie'
-import type { PikkuError } from '../../errors/error-handler.js'
 import type {
-  PikkuDocs,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
@@ -75,12 +73,9 @@ export type CoreHTTPFunction = {
   returnsJSON?: false
   timeout?: number
   tags?: string[]
-  docs?: Partial<{
-    description: string
-    response: string
-    errors: Array<typeof PikkuError>
-    tags: string[]
-  }>
+  summary?: string
+  description?: string
+  errors?: string[]
 }
 /**
  * Represents a http interaction within Pikku, including a request and response.
@@ -249,7 +244,9 @@ export type HTTPWiringMeta = {
   params?: string[]
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes
-  docs?: PikkuDocs
+  summary?: string
+  description?: string
+  errors?: string[]
   tags?: string[]
   sse?: true
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (global + route + tag + explicit)

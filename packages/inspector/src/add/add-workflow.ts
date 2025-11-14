@@ -3,7 +3,6 @@ import {
   getPropertyValue,
   getPropertyTags,
 } from '../utils/get-property-value.js'
-import { PikkuDocs } from '@pikku/core'
 import { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import {
@@ -163,10 +162,11 @@ export const addWorkflow: AddWiring = (
     const obj = firstArg
 
     const workflowName = getPropertyValue(obj, 'name') as string | null
+    const summary = (getPropertyValue(obj, 'summary') as string) || undefined
     const description = getPropertyValue(obj, 'description') as
       | string
       | undefined
-    const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
+    const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
     const tags = getPropertyTags(obj, 'Workflow', workflowName, logger)
 
     // --- find the referenced function ---
@@ -221,8 +221,9 @@ export const addWorkflow: AddWiring = (
     state.workflows.meta[workflowName] = {
       pikkuFuncName,
       workflowName,
+      summary,
       description,
-      docs,
+      errors,
       tags,
       middleware,
       steps,

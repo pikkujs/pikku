@@ -71,7 +71,9 @@ export const wireQueueWorker = <
     permissions: queueWorker.func.permissions,
     middleware: queueWorker.func.middleware as any,
     tags: queueWorker.func.tags,
-    docs: queueWorker.func.docs as any,
+    summary: queueWorker.summary,
+    description: queueWorker.description,
+    errors: queueWorker.errors,
   })
 
   // Store processor definition in state - runtime adapters will pick this up

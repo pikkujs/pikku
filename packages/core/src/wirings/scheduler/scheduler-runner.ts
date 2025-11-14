@@ -47,7 +47,9 @@ export const wireScheduler = <
     permissions: scheduledTask.func.permissions,
     middleware: scheduledTask.func.middleware as any,
     tags: scheduledTask.func.tags,
-    docs: scheduledTask.func.docs as any,
+    summary: scheduledTask.summary,
+    description: scheduledTask.description,
+    errors: scheduledTask.errors,
   })
 
   const tasks = pikkuState('scheduler', 'tasks')

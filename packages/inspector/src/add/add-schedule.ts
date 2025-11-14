@@ -3,7 +3,6 @@ import {
   getPropertyValue,
   getPropertyTags,
 } from '../utils/get-property-value.js'
-import { PikkuDocs } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
@@ -40,7 +39,10 @@ export const addSchedule: AddWiring = (
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const scheduleValue = getPropertyValue(obj, 'schedule') as string | null
-    const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
+    const summary = (getPropertyValue(obj, 'summary') as string) || undefined
+    const description =
+      (getPropertyValue(obj, 'description') as string) || undefined
+    const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
     const tags = getPropertyTags(obj, 'Scheduler', nameValue, logger)
 
     const funcInitializer = getPropertyAssignmentInitializer(
@@ -81,7 +83,9 @@ export const addSchedule: AddWiring = (
       pikkuFuncName,
       name: nameValue,
       schedule: scheduleValue,
-      docs,
+      summary,
+      description,
+      errors,
       tags,
       middleware,
     }

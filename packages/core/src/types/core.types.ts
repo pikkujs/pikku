@@ -44,15 +44,24 @@ export type MiddlewareMetadata =
   | {
       type: 'http'
       route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
+      summary?: string
+      description?: string
+      errors?: string[]
     }
   | {
       type: 'tag'
       tag: string // Tag name
+      summary?: string
+      description?: string
+      errors?: string[]
     }
   | {
       type: 'wire'
       name: string
       inline?: boolean // true if inline middleware
+      summary?: string
+      description?: string
+      errors?: string[]
     }
 
 /**
@@ -65,15 +74,24 @@ export type PermissionMetadata =
   | {
       type: 'http'
       route: string // Route pattern (e.g., '*' for all, '/api/*' for specific)
+      summary?: string
+      description?: string
+      errors?: string[]
     }
   | {
       type: 'tag'
       tag: string // Tag name
+      summary?: string
+      description?: string
+      errors?: string[]
     }
   | {
       type: 'wire'
       name: string
       inline?: boolean // true if inline permission
+      summary?: string
+      description?: string
+      errors?: string[]
     }
 
 export type FunctionRuntimeMeta = {
@@ -82,6 +100,9 @@ export type FunctionRuntimeMeta = {
   outputSchemaName: string | null
   expose?: boolean
   internal?: boolean
+  summary?: string
+  description?: string
+  errors?: string[]
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &
@@ -91,7 +112,6 @@ export type FunctionMeta = FunctionRuntimeMeta &
     inputs: string[] | null
     outputs: string[] | null
     tags: string[]
-    docs: PikkuDocs
     middleware: MiddlewareMetadata[]
     permissions: PermissionMetadata[]
     isDirectFunction: boolean
@@ -353,16 +373,6 @@ export type CreateConfig<
   Config extends CoreConfig,
   RemainingArgs extends any[] = unknown[],
 > = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
-
-/**
- * Represents the documentation for a route, including summary, description, tags, and errors.
- */
-export type PikkuDocs = {
-  summary?: string
-  description?: string
-  tags?: string[]
-  errors?: string[]
-}
 
 /**
  * Serialized error for storage

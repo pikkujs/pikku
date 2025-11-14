@@ -5,7 +5,6 @@ import {
   getPropertyTags,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { PikkuDocs } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
@@ -487,7 +486,10 @@ export const addChannel: AddWiring = (
         .map((k) => k.name)
     : []
 
-  const docs = getPropertyValue(obj, 'docs') as PikkuDocs | undefined
+  const summary = (getPropertyValue(obj, 'summary') as string) || undefined
+  const description =
+    (getPropertyValue(obj, 'description') as string) || undefined
+  const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
   const tags = getPropertyTags(obj, 'Channel', route, logger)
   const query = getPropertyValue(obj, 'query') as string[] | []
 
@@ -602,7 +604,9 @@ export const addChannel: AddWiring = (
       : null,
     message,
     messageWirings,
-    docs: docs ?? undefined,
+    summary: summary ?? undefined,
+    description: description ?? undefined,
+    errors: errors ?? undefined,
     tags: tags ?? undefined,
     middleware,
   }
