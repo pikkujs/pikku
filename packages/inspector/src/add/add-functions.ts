@@ -459,8 +459,8 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     internal: internal || undefined,
     tags: tags || undefined,
     docs: docs || undefined,
-    isDirectFunction,
     middleware,
+    isDirectFunction,
   }
 
   // Store the input type for later use

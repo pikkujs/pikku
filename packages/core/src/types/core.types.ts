@@ -92,9 +92,9 @@ export type FunctionMeta = FunctionRuntimeMeta &
     outputs: string[] | null
     tags: string[]
     docs: PikkuDocs
-    isDirectFunction: boolean // true if it's pikkuFunc(fn), false if it's pikkuFunc({ func: fn })
     middleware: MiddlewareMetadata[] // Function-level middleware
     permissions: PermissionMetadata[] // Function-level permissions
+    isDirectFunction: boolean // True if function name matches exported name
   }>
 
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>

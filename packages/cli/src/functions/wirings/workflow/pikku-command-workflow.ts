@@ -3,7 +3,10 @@ import { ErrorCode } from '@pikku/inspector'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
+import {
+  serializeWorkflowMeta,
+  serializeWorkflowMetaTS,
+} from './serialize-workflow-meta.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
@@ -19,11 +22,13 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const {
       workflowsWiringFile,
       workflowsWiringMetaFile,
+      workflowsWiringMetaJsonFile,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
       typesDeclarationFile,
       packageMappings,
+      schema,
     } = config
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
@@ -46,11 +51,29 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
-    // Write workflow metadata
+    // Write workflow metadata JSON file
+    await writeFileInDir(
+      logger,
+      workflowsWiringMetaJsonFile,
+      JSON.stringify(serializeWorkflowMeta(workflows.meta), null, 2)
+    )
+
+    // Calculate relative path from TS file to JSON file
+    const jsonImportPath = getFileImportRelativePath(
+      workflowsWiringMetaFile,
+      workflowsWiringMetaJsonFile,
+      packageMappings
+    )
+
+    // Write workflow metadata TypeScript file that imports JSON
     await writeFileInDir(
       logger,
       workflowsWiringMetaFile,
-      serializeWorkflowMeta(workflows.meta)
+      serializeWorkflowMetaTS(
+        workflows.meta,
+        jsonImportPath,
+        schema?.supportsImportAttributes ?? false
+      )
     )
 
     // Write workflow wirings (imports)

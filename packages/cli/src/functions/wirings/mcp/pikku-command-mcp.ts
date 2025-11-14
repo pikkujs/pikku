@@ -4,6 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 // Helper function to generate arguments from schema
 const generateArgumentsFromSchema = async (
@@ -66,6 +67,7 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       mcpWiringsMetaFile,
       packageMappings,
       schemaDirectory,
+      schema,
     } = config
 
     await writeFileInDir(
@@ -94,13 +96,38 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       }
     }
 
+    // Write JSON file
+    const metaData = {
+      resourcesMeta: mcpEndpoints.resourcesMeta,
+      toolsMeta: mcpEndpoints.toolsMeta,
+      promptsMeta: promptsMetaWithArguments,
+    }
+    await writeFileInDir(
+      logger,
+      config.mcpWiringsMetaJsonFile,
+      JSON.stringify(metaData, null, 2)
+    )
+
+    // Calculate relative path from TS file to JSON file
+    const jsonImportPath = getFileImportRelativePath(
+      mcpWiringsMetaFile,
+      config.mcpWiringsMetaJsonFile,
+      packageMappings
+    )
+
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const importStatement = supportsImportAttributes
+      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${jsonImportPath}'`
+
     await writeFileInDir(
       logger,
       mcpWiringsMetaFile,
       `import { pikkuState } from '@pikku/core'
-pikkuState('mcp', 'resourcesMeta', ${JSON.stringify(mcpEndpoints.resourcesMeta, null, 2)})
-pikkuState('mcp', 'toolsMeta', ${JSON.stringify(mcpEndpoints.toolsMeta, null, 2)})
-pikkuState('mcp', 'promptsMeta', ${JSON.stringify(promptsMetaWithArguments, null, 2)})`
+${importStatement}
+pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta)
+pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
+pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
     )
 
     return true

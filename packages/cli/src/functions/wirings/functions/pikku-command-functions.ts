@@ -5,6 +5,7 @@ import {
   generateRuntimeMeta,
   serializeFunctionImports,
 } from './serialize-function-imports.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuFunctions: any = pikkuSessionlessFunc<
   void,
@@ -14,24 +15,60 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     const { functions, rpc } = await getInspectorState()
     const {
       functionsMetaFile,
+      functionsMetaJsonFile,
       functionsMetaMinFile,
+      functionsMetaMinJsonFile,
       functionsFile,
       packageMappings,
+      schema,
     } = config
 
     // Generate full metadata
     await writeFileInDir(
       logger,
+      functionsMetaJsonFile,
+      JSON.stringify(functions.meta, null, 2)
+    )
+
+    const fullJsonImportPath = getFileImportRelativePath(
       functionsMetaFile,
-      `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(functions.meta, null, 2)})`
+      functionsMetaJsonFile,
+      packageMappings
+    )
+
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const fullImportStatement = supportsImportAttributes
+      ? `import metaData from '${fullJsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${fullJsonImportPath}'`
+
+    await writeFileInDir(
+      logger,
+      functionsMetaFile,
+      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${fullImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
     )
 
     // Generate minimal metadata (runtime)
     const runtimeMeta = generateRuntimeMeta(functions.meta)
     await writeFileInDir(
       logger,
+      functionsMetaMinJsonFile,
+      JSON.stringify(runtimeMeta, null, 2)
+    )
+
+    const minJsonImportPath = getFileImportRelativePath(
       functionsMetaMinFile,
-      `import { pikkuState } from '@pikku/core'\npikkuState('function', 'meta', ${JSON.stringify(runtimeMeta, null, 2)})`
+      functionsMetaMinJsonFile,
+      packageMappings
+    )
+
+    const minImportStatement = supportsImportAttributes
+      ? `import metaData from '${minJsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${minJsonImportPath}'`
+
+    await writeFileInDir(
+      logger,
+      functionsMetaMinFile,
+      `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${minImportStatement}\npikkuState('function', 'meta', metaData as FunctionsRuntimeMeta)`
     )
 
     const hasRPCs = rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0

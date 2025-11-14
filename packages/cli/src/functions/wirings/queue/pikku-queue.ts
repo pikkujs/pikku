@@ -2,7 +2,11 @@ import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeQueueMeta } from './serialize-queue-meta.js'
+import {
+  serializeQueueMeta,
+  serializeQueueMetaTS,
+} from './serialize-queue-meta.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -10,7 +14,9 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
     const {
       queueWorkersWiringFile,
       queueWorkersWiringMetaFile,
+      queueWorkersWiringMetaJsonFile,
       packageMappings,
+      schema,
     } = config
     const { queueWorkers } = visitState
 
@@ -23,11 +29,30 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
       }
     }
 
+    // Write JSON file
+    await writeFileInDir(
+      logger,
+      queueWorkersWiringMetaJsonFile,
+      JSON.stringify(serializeQueueMeta(queueMeta), null, 2)
+    )
+
+    // Calculate relative path from TS file to JSON file
+    const jsonImportPath = getFileImportRelativePath(
+      queueWorkersWiringMetaFile,
+      queueWorkersWiringMetaJsonFile,
+      packageMappings
+    )
+
+    // Write TypeScript file that imports JSON
     await writeFileInDir(
       logger,
       queueWorkersWiringMetaFile,
-      serializeQueueMeta(queueMeta)
+      serializeQueueMetaTS(
+        jsonImportPath,
+        schema?.supportsImportAttributes ?? false
+      )
     )
+
     await writeFileInDir(
       logger,
       queueWorkersWiringFile,

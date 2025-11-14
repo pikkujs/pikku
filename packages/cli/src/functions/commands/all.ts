@@ -109,11 +109,6 @@ export const all: any = pikkuVoidFunc({
       )
     }
 
-    if (remoteRPC && config.rpc?.remoteRpcWorkersPath) {
-      // Only add to imports if we actually generated the file
-      allImports.push(config.rpc.remoteRpcWorkersPath)
-    }
-
     // Generate Queues
     const queues = await rpc.invoke('pikkuQueue', null)
     if (queues) {
