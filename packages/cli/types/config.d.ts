@@ -13,23 +13,28 @@ export interface PikkuCLICoreOutputFiles {
   // Function definitions
   functionsFile: string
   functionsMetaFile: string
+  functionsMetaJsonFile: string
   functionsMetaMinFile: string
+  functionsMetaMinJsonFile: string
   functionTypesFile: string
 
   // HTTP
   httpWiringsFile: string
   httpWiringMetaFile: string
+  httpWiringMetaJsonFile: string
   httpMapDeclarationFile: string
   httpTypesFile: string
 
   // Channels
   channelsWiringFile: string
   channelsWiringMetaFile: string
+  channelsWiringMetaJsonFile: string
   channelsMapDeclarationFile: string
   channelsTypesFile: string
 
   // RPC Internal
   rpcInternalWiringMetaFile: string
+  rpcInternalWiringMetaJsonFile: string
   rpcInternalMapDeclarationFile: string
 
   // RPC Exposed
@@ -38,17 +43,20 @@ export interface PikkuCLICoreOutputFiles {
   // Schedulers
   schedulersWiringFile: string
   schedulersWiringMetaFile: string
+  schedulersWiringMetaJsonFile: string
   schedulersTypesFile: string
 
   // Queue processors
   queueWorkersWiringFile: string
   queueWorkersWiringMetaFile: string
+  queueWorkersWiringMetaJsonFile: string
   queueMapDeclarationFile: string
   queueTypesFile: string
 
   // Workflows
   workflowsWiringFile: string
   workflowsWiringMetaFile: string
+  workflowsWiringMetaJsonFile: string
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
@@ -56,11 +64,13 @@ export interface PikkuCLICoreOutputFiles {
   // MCP
   mcpWiringsFile: string
   mcpWiringsMetaFile: string
+  mcpWiringsMetaJsonFile: string
   mcpTypesFile: string
 
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string
+  cliWiringMetaJsonFile: string
   cliBootstrapFile: string
   cliTypesFile: string
 
@@ -70,6 +80,7 @@ export interface PikkuCLICoreOutputFiles {
   // Middleware
   middlewareFile: string
   middlewareGroupsMetaFile: string
+  middlewareGroupsMetaJsonFile: string
 
   // Permissions
   permissionsFile: string

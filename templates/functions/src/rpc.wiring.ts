@@ -7,7 +7,11 @@
  *
  * This endpoint allows exposed RPC functions to be called over HTTP.
  */
-import { pikkuSessionlessFunc, wireHTTP } from '../.pikku/pikku-types.gen.js'
+import {
+  pikkuSessionlessFunc,
+  pikkuVoidFunc,
+  wireHTTP,
+} from '../.pikku/pikku-types.gen.js'
 
 /**
  * Public RPC endpoint that invokes any exposed RPC by name
@@ -17,9 +21,18 @@ export const rpcCaller = pikkuSessionlessFunc<
   { name: string; data?: any },
   any
 >({
+  auth: false,
   func: async ({ rpc }, { name, data }) => {
+    console.log('invoking rpc', name, data)
     return await (rpc.invokeExposed as any)(name, data)
   },
+})
+
+wireHTTP({
+  route: '/rpc',
+  method: 'options',
+  auth: false,
+  func: pikkuVoidFunc(async () => void 0),
 })
 
 wireHTTP({

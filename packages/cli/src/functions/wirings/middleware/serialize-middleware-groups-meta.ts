@@ -1,14 +1,12 @@
 import type { InspectorState } from '@pikku/inspector'
 
 /**
- * Generates the middleware groups metadata file that stores metadata about
+ * Generates the middleware groups metadata that stores metadata about
  * tag-based and HTTP middleware groups for visualization and inspection.
  *
  * This includes services, middleware count, factory status, etc.
  */
 export const serializeMiddlewareGroupsMeta = (state: InspectorState) => {
-  const lines: string[] = [`import { pikkuState } from '@pikku/core'`, ``]
-
   // Serialize HTTP middleware groups metadata
   const httpGroups: Record<string, any> = {}
   for (const [pattern, meta] of state.http.routeMiddleware.entries()) {
@@ -20,14 +18,6 @@ export const serializeMiddlewareGroupsMeta = (state: InspectorState) => {
       middlewareCount: meta.middlewareCount,
       isFactory: meta.isFactory,
     }
-  }
-
-  if (Object.keys(httpGroups).length > 0) {
-    lines.push(`// HTTP middleware groups metadata`)
-    lines.push(
-      `pikkuState('middleware', 'httpGroupMeta', ${JSON.stringify(httpGroups, null, 2)})`
-    )
-    lines.push(``)
   }
 
   // Serialize tag middleware groups metadata
@@ -43,13 +33,8 @@ export const serializeMiddlewareGroupsMeta = (state: InspectorState) => {
     }
   }
 
-  if (Object.keys(tagGroups).length > 0) {
-    lines.push(`// Tag middleware groups metadata`)
-    lines.push(
-      `pikkuState('middleware', 'tagGroupMeta', ${JSON.stringify(tagGroups, null, 2)})`
-    )
-    lines.push(``)
+  return {
+    httpGroups,
+    tagGroups,
   }
-
-  return lines.join('\n')
 }

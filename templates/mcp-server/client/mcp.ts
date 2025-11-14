@@ -25,11 +25,7 @@ export class PikkuMCPTestClient {
         version: '1.0.0',
       },
       {
-        capabilities: {
-          tools: {},
-          resources: {},
-          prompts: {},
-        },
+        capabilities: {},
       }
     )
   }

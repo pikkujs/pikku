@@ -128,10 +128,22 @@ const _getPikkuCLIConfig = async (
         'pikku-functions-meta.gen.ts'
       )
     }
+    if (!result.functionsMetaJsonFile) {
+      result.functionsMetaJsonFile = join(
+        functionDir,
+        'pikku-functions-meta.gen.json'
+      )
+    }
     if (!result.functionsMetaMinFile) {
       result.functionsMetaMinFile = join(
         functionDir,
         'pikku-functions-meta.min.gen.ts'
+      )
+    }
+    if (!result.functionsMetaMinJsonFile) {
+      result.functionsMetaMinJsonFile = join(
+        functionDir,
+        'pikku-functions-meta.min.gen.json'
       )
     }
     if (!result.functionTypesFile) {
@@ -154,6 +166,12 @@ const _getPikkuCLIConfig = async (
         'pikku-http-wirings-meta.gen.ts'
       )
     }
+    if (!result.httpWiringMetaJsonFile) {
+      result.httpWiringMetaJsonFile = join(
+        httpDir,
+        'pikku-http-wirings-meta.gen.json'
+      )
+    }
     if (!result.httpMapDeclarationFile) {
       result.httpMapDeclarationFile = join(
         httpDir,
@@ -174,6 +192,12 @@ const _getPikkuCLIConfig = async (
         'pikku-channels-meta.gen.ts'
       )
     }
+    if (!result.channelsWiringMetaJsonFile) {
+      result.channelsWiringMetaJsonFile = join(
+        channelDir,
+        'pikku-channels-meta.gen.json'
+      )
+    }
     if (!result.channelsMapDeclarationFile) {
       result.channelsMapDeclarationFile = join(
         channelDir,
@@ -189,6 +213,13 @@ const _getPikkuCLIConfig = async (
       result.rpcInternalWiringMetaFile = join(
         rpcDir,
         'pikku-rpc-wirings-meta.internal.gen.ts'
+      )
+    }
+
+    if (!result.rpcInternalWiringMetaJsonFile) {
+      result.rpcInternalWiringMetaJsonFile = join(
+        rpcDir,
+        'pikku-rpc-wirings-meta.internal.gen.json'
       )
     }
 
@@ -230,6 +261,12 @@ const _getPikkuCLIConfig = async (
         'pikku-schedulers-wirings-meta.gen.ts'
       )
     }
+    if (!result.schedulersWiringMetaJsonFile) {
+      result.schedulersWiringMetaJsonFile = join(
+        schedulerDir,
+        'pikku-schedulers-wirings-meta.gen.json'
+      )
+    }
     if (!result.schedulersTypesFile) {
       result.schedulersTypesFile = join(
         schedulerDir,
@@ -248,6 +285,12 @@ const _getPikkuCLIConfig = async (
       result.queueWorkersWiringMetaFile = join(
         queueDir,
         'pikku-queue-workers-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.queueWorkersWiringMetaJsonFile) {
+      result.queueWorkersWiringMetaJsonFile = join(
+        queueDir,
+        'pikku-queue-workers-wirings-meta.gen.json'
       )
     }
     if (!result.queueMapDeclarationFile) {
@@ -271,6 +314,12 @@ const _getPikkuCLIConfig = async (
       result.workflowsWiringMetaFile = join(
         workflowDir,
         'pikku-workflow-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.workflowsWiringMetaJsonFile) {
+      result.workflowsWiringMetaJsonFile = join(
+        workflowDir,
+        'pikku-workflow-wirings-meta.gen.json'
       )
     }
     if (!result.workflowsWorkersFile) {
@@ -307,6 +356,12 @@ const _getPikkuCLIConfig = async (
         'pikku-middleware-groups-meta.gen.ts'
       )
     }
+    if (!result.middlewareGroupsMetaJsonFile) {
+      result.middlewareGroupsMetaJsonFile = join(
+        middlewareDir,
+        'pikku-middleware-groups-meta.gen.json'
+      )
+    }
 
     // Permissions
     const permissionsDir = join(result.outDir, 'permissions')
@@ -322,6 +377,12 @@ const _getPikkuCLIConfig = async (
     // MCP
     if (!result.mcpWiringsMetaFile) {
       result.mcpWiringsMetaFile = join(mcpDir, 'pikku-mcp-wirings-meta.gen.ts')
+    }
+    if (!result.mcpWiringsMetaJsonFile) {
+      result.mcpWiringsMetaJsonFile = join(
+        mcpDir,
+        'pikku-mcp-wirings-meta.gen.json'
+      )
     }
     if (!result.mcpWiringsFile) {
       result.mcpWiringsFile = join(mcpDir, 'pikku-mcp-wirings.gen.ts')
@@ -339,6 +400,12 @@ const _getPikkuCLIConfig = async (
     }
     if (!result.cliWiringMetaFile) {
       result.cliWiringMetaFile = join(cliDir, 'pikku-cli-wirings-meta.gen.ts')
+    }
+    if (!result.cliWiringMetaJsonFile) {
+      result.cliWiringMetaJsonFile = join(
+        cliDir,
+        'pikku-cli-wirings-meta.gen.json'
+      )
     }
     if (!result.cliBootstrapFile) {
       result.cliBootstrapFile = join(cliDir, 'pikku-cli-bootstrap.gen.ts')
