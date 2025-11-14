@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- b85bb94: fix: fixing mcp version since it introduced lots of breaking changes
+
 ### Minor Changes
 
 - Workflow support

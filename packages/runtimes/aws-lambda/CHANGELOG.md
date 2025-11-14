@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- b85bb94: chore: updating aws types
+
 ### Minor Changes
 
 - Workflow support
