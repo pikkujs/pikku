@@ -14,14 +14,12 @@ export const pikkuRPC: any = pikkuSessionlessFunc<void, boolean>({
     } = config
 
     if (rpc.internalFiles.size > 0) {
-      // Write JSON file
       await writeFileInDir(
         logger,
         rpcInternalWiringMetaJsonFile,
         JSON.stringify(rpc.internalMeta, null, 2)
       )
 
-      // Calculate relative path from TS file to JSON file
       const jsonImportPath = getFileImportRelativePath(
         rpcInternalWiringMetaFile,
         rpcInternalWiringMetaJsonFile,

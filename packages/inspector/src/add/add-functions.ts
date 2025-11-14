@@ -312,10 +312,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   // determine the actual handler expression:
   // either the `func` prop or the first argument directly
   let handlerNode: ts.Expression = args[0]!
-  let isDirectFunction = true // Default to direct function format
+  let isDirectFunction = true
 
   if (ts.isObjectLiteralExpression(handlerNode)) {
-    isDirectFunction = false // This is object format with func property
+    isDirectFunction = false
     objectNode = handlerNode
     tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
     expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined

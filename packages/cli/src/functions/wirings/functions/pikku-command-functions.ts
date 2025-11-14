@@ -23,7 +23,6 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       schema,
     } = config
 
-    // Generate full metadata
     await writeFileInDir(
       logger,
       functionsMetaJsonFile,
@@ -47,7 +46,6 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${fullImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
     )
 
-    // Generate minimal metadata (runtime)
     const runtimeMeta = generateRuntimeMeta(functions.meta)
     await writeFileInDir(
       logger,

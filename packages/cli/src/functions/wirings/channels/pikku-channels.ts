@@ -27,14 +27,12 @@ export const pikkuChannels: any = pikkuVoidFunc({
       )
     )
 
-    // Write JSON file
     await writeFileInDir(
       logger,
       channelsWiringMetaJsonFile,
       JSON.stringify(channels.meta, null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(
       channelsWiringMetaFile,
       channelsWiringMetaJsonFile,

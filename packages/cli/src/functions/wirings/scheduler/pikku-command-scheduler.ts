@@ -23,21 +23,18 @@ export const pikkuScheduler: any = pikkuSessionlessFunc<
     } = config
     const { scheduledTasks } = visitState
 
-    // Write JSON file
     await writeFileInDir(
       logger,
       schedulersWiringMetaJsonFile,
       JSON.stringify(serializeSchedulerMeta(scheduledTasks.meta), null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(
       schedulersWiringMetaFile,
       schedulersWiringMetaJsonFile,
       packageMappings
     )
 
-    // Write TypeScript file that imports JSON
     await writeFileInDir(
       logger,
       schedulersWiringMetaFile,

@@ -27,14 +27,12 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean>({
       )
     )
 
-    // Write JSON file
     await writeFileInDir(
       logger,
       httpWiringMetaJsonFile,
       JSON.stringify(http.meta, null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(
       httpWiringMetaFile,
       httpWiringMetaJsonFile,

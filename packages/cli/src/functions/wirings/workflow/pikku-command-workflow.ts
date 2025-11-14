@@ -51,14 +51,12 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
-    // Write workflow metadata JSON file
     await writeFileInDir(
       logger,
       workflowsWiringMetaJsonFile,
       JSON.stringify(serializeWorkflowMeta(workflows.meta), null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(
       workflowsWiringMetaFile,
       workflowsWiringMetaJsonFile,

@@ -28,14 +28,12 @@ export const pikkuCLI: any = pikkuSessionlessFunc<void, boolean | undefined>({
       )
     )
 
-    // Write JSON file
     await writeFileInDir(
       logger,
       cliWiringMetaJsonFile,
       JSON.stringify(cli.meta, null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(
       cliWiringMetaFile,
       cliWiringMetaJsonFile,
@@ -47,7 +45,6 @@ export const pikkuCLI: any = pikkuSessionlessFunc<void, boolean | undefined>({
       ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
       : `import metaData from '${jsonImportPath}'`
 
-    // Generate CLI metadata file
     await writeFileInDir(
       logger,
       cliWiringMetaFile,

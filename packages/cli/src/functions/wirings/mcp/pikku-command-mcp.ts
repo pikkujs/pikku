@@ -96,7 +96,6 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       }
     }
 
-    // Write JSON file
     const metaData = {
       resourcesMeta: mcpEndpoints.resourcesMeta,
       toolsMeta: mcpEndpoints.toolsMeta,
@@ -108,7 +107,6 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       JSON.stringify(metaData, null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(
       mcpWiringsMetaFile,
       config.mcpWiringsMetaJsonFile,
