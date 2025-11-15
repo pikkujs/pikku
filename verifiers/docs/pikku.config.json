@@ -1,0 +1,4 @@
+{
+  "extends": "../../templates/functions/pikku.config.json",
+  "tsconfig": "./tsconfig.json"
+}

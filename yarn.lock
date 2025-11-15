@@ -3917,6 +3917,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-docs@workspace:verifiers/docs":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-docs@workspace:verifiers/docs"
+  dependencies:
+    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/core": "npm:^0.11.0"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-types@workspace:verifiers/types":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
