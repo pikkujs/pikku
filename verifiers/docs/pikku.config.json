@@ -1,5 +1,13 @@
 {
   "extends": "../../templates/functions/pikku.config.json",
   "tsconfig": "./tsconfig.json",
-  "verboseMeta": true
+  "verboseMeta": true,
+  "openAPI": {
+    "outputFile": ".pikku/openapi.json",
+    "additionalInfo": {
+      "title": "Pikku Functions API",
+      "version": "1.0.0",
+      "description": "API documentation for Pikku template functions"
+    }
+  }
 }

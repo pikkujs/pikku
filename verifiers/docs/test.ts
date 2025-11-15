@@ -2,24 +2,69 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 import type { FunctionsMeta } from '@pikku/core'
 
+interface OpenAPISpec {
+  openapi: string
+  paths: Record<
+    string,
+    Record<string, { description?: string; summary?: string }>
+  >
+  components?: {
+    schemas?: Record<string, unknown>
+  }
+}
+
 async function loadJSON<T>(path: string): Promise<T> {
   const content = await readFile(join(process.cwd(), path), 'utf-8')
   return JSON.parse(content) as T
 }
 
 async function main(): Promise<void> {
-  console.log('\nJSDoc Metadata Extraction Verification')
-  console.log('======================================\n')
+  console.log('\nPikku Documentation Verification')
+  console.log('==================================\n')
 
   // Load metadata files in parallel (from templates/functions since we extend that config)
-  const [functionsMeta] = await Promise.all([
+  const [functionsMeta, openAPISpec] = await Promise.all([
     loadJSON<FunctionsMeta>(
       '../../templates/functions/.pikku/function/pikku-functions-meta.verbose.gen.json'
     ),
+    loadJSON<OpenAPISpec>('.pikku/openapi.json'),
   ])
 
-  // Define test assertions: function name -> [actual, expected]
+  // Define test assertions: category -> [actual, expected, description]
   const assertions: Record<string, Array<[any, any, string]>> = {
+    'OpenAPI Specification': [
+      [openAPISpec.openapi, '3.1.0', 'OpenAPI version is 3.1.0'],
+      [
+        Object.keys(openAPISpec.paths).includes('/'),
+        true,
+        'OpenAPI includes root route /',
+      ],
+      [
+        Object.keys(openAPISpec.paths).includes('/hello-world'),
+        true,
+        'OpenAPI includes /hello-world route',
+      ],
+      [
+        openAPISpec.paths['/']?.get !== undefined,
+        true,
+        'Root route has GET method',
+      ],
+      [
+        openAPISpec.paths['/hello-world']?.get !== undefined,
+        true,
+        '/hello-world route has GET method',
+      ],
+      [
+        openAPISpec.components?.schemas !== undefined,
+        true,
+        'OpenAPI has components.schemas',
+      ],
+      [
+        typeof openAPISpec.paths['/']?.get?.description === 'string',
+        true,
+        'Root route has description',
+      ],
+    ],
     'Channel Functions': [
       [
         functionsMeta.onConnect?.summary,
@@ -169,7 +214,7 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  console.log('✓ All JSDoc metadata extraction tests passed!\n')
+  console.log('✓ All documentation tests passed!\n')
 }
 
 main().catch((error) => {
