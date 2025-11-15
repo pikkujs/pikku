@@ -256,6 +256,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
+    this.singletonServices?.logger?.debug(
+      `[WORKFLOW JOB] Running workflow job`,
+      { runId }
+    )
     // Get the run
     const run = await this.getRun(runId)
     if (!run) {
@@ -271,6 +275,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     // Use lock to prevent concurrent execution
     await this.withRunLock(runId, async () => {
+      this.singletonServices?.logger?.debug(
+        `[WORKFLOW JOB] Acquired lock, executing workflow function`,
+        { runId, workflowName: run.workflow }
+      )
       // Create workflow interaction object
       const workflowInteraction = this.createWorkflowInteraction(
         run.workflow,
@@ -350,22 +358,38 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: any
   ): Promise<void> {
+    this.singletonServices?.logger?.debug(
+      `[STEP WORKER] Executing step: ${stepName}`,
+      { runId, rpcName }
+    )
     // Get step state
     let stepState = await this.getStepState(runId, stepName)
 
     // Idempotency - if already succeeded, resume orchestrator and return
     if (stepState.status === 'succeeded') {
+      this.singletonServices?.logger?.debug(
+        `[STEP WORKER] Step already succeeded, resuming orchestrator`,
+        { runId, stepName }
+      )
       await this.resumeWorkflow(runId)
       return
     }
 
     // Log warning if already running (race condition)
     if (stepState.status === 'running') {
+      this.singletonServices?.logger?.debug(
+        `[STEP WORKER] Step already running, skipping`,
+        { runId, stepName }
+      )
       return
     }
 
     // If status is 'failed', this is a retry - create new attempt history
     if (stepState.status === 'failed') {
+      this.singletonServices?.logger?.debug(
+        `[STEP WORKER] Retrying failed step`,
+        { runId, stepName, attemptCount: stepState.attemptCount }
+      )
       stepState = await this.createRetryAttempt(stepState.stepId, 'running')
     }
 
@@ -386,6 +410,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
       // Store result and mark succeeded
       await this.setStepResult(stepState.stepId, result)
+      this.singletonServices?.logger?.debug(
+        `[STEP WORKER] Step succeeded, resuming orchestrator`,
+        { runId, stepName }
+      )
 
       // Resume orchestrator to continue workflow
       try {
@@ -401,8 +429,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const retriesExhausted = stepState.attemptCount >= maxAttempts
 
       if (retriesExhausted) {
+        this.singletonServices?.logger?.debug(
+          `[STEP WORKER] Step failed, retries exhausted, resuming orchestrator`,
+          { runId, stepName, error: error.message }
+        )
         // No more retries - resume orchestrator to mark workflow as failed
         await this.resumeWorkflow(runId)
+      } else {
+        this.singletonServices?.logger?.debug(
+          `[STEP WORKER] Step failed, will retry`,
+          { runId, stepName, attemptCount: stepState.attemptCount, maxAttempts }
+        )
       }
 
       // Always throw so queue knows the job failed and can retry if needed
@@ -418,17 +455,33 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     rpcService: any
   ): Promise<void> {
+    this.singletonServices?.logger?.debug(
+      `[ORCHESTRATOR] Starting orchestration`,
+      { runId }
+    )
     try {
       // Run workflow job (replays with caching)
       await this.runWorkflowJob(runId, rpcService)
+      this.singletonServices?.logger?.debug(
+        `[ORCHESTRATOR] Workflow completed successfully`,
+        { runId }
+      )
     } catch (error: any) {
       if (
         error.name === 'WorkflowAsyncException' ||
         error.name === 'WorkflowCancelledException'
       ) {
+        this.singletonServices?.logger?.debug(
+          `[ORCHESTRATOR] Workflow paused (async operation)`,
+          { runId }
+        )
         return
       }
 
+      this.singletonServices?.logger?.debug(
+        `[ORCHESTRATOR] Workflow failed: ${error.message}`,
+        { runId }
+      )
       await this.updateRunStatus(runId, 'failed', undefined, {
         message: error.message,
         stack: error.stack,
@@ -457,12 +510,25 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: any,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
+    this.singletonServices?.logger?.debug(
+      `[RPC STEP] Executing RPC step: ${stepName}`,
+      { runId, rpcName }
+    )
     // Check if step already exists
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
+      this.singletonServices?.logger?.debug(`[RPC STEP] Step state retrieved`, {
+        runId,
+        stepName,
+        status: stepState.status,
+      })
     } catch (error: any) {
       // Step doesn't exist - create it
+      this.singletonServices?.logger?.debug(
+        `[RPC STEP] Step doesn't exist, creating`,
+        { runId, stepName }
+      )
       stepState = await this.insertStepState(
         runId,
         stepName,
@@ -473,11 +539,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     if (stepState.status === 'succeeded') {
+      this.singletonServices?.logger?.debug(
+        `[RPC STEP] Returning cached result`,
+        { runId, stepName }
+      )
       // Return cached result
       return stepState.result
     }
 
     if (stepState.status === 'failed') {
+      this.singletonServices?.logger?.debug(
+        `[RPC STEP] Step failed (retries exhausted)`,
+        { runId, stepName }
+      )
       // Step failed with retries exhausted - throw error to fail the workflow
       const error = new Error(
         stepState.error?.message ||
@@ -491,11 +565,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     if (stepState.status === 'scheduled') {
+      this.singletonServices?.logger?.debug(
+        `[RPC STEP] Step already scheduled, pausing workflow`,
+        { runId, stepName }
+      )
       // Step is already scheduled, pause workflow
       throw new WorkflowAsyncException(runId, stepName)
     }
 
     // Step is pending - schedule it
+    this.singletonServices?.logger?.debug(`[RPC STEP] Scheduling step worker`, {
+      runId,
+      stepName,
+      rpcName,
+    })
     await this.setStepScheduled(stepState.stepId)
 
     // Enqueue step worker

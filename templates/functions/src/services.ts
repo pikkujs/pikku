@@ -8,6 +8,7 @@ import {
   CreateConfig,
   CreateSessionServices,
   CreateSingletonServices,
+  LogLevel,
 } from '@pikku/core'
 import {
   ConsoleLogger,
@@ -37,6 +38,7 @@ export const createSingletonServices: CreateSingletonServices<
 ): Promise<RequiredSingletonServices> => {
   const variables = existingServices?.variables || new LocalVariablesService()
   const logger = new ConsoleLogger()
+  logger.setLevel(LogLevel.debug)
 
   const schema = new CFWorkerSchemaService(logger)
 
