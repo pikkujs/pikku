@@ -1,11 +1,5 @@
 ## 0.11.0
 
-## 0.11.2
-
-### Patch Changes
-
-- b85bb94: feat: serialize json files seperate to pikku meta state calls
-
 ## 0.11.1
 
 ### Patch Changes
