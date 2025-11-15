@@ -155,11 +155,11 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       mcpWiringsMetaFile,
-      `import { pikkuState } from '@pikku/core'
+      `import { pikkuState, MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 ${runtimeImportStatement}
-pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta)
-pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
-pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
+pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)
+pikkuState('mcp', 'toolsMeta', metaData.toolsMeta as MCPToolMeta)
+pikkuState('mcp', 'promptsMeta', metaData.promptsMeta as MCPPromptMeta)`
     )
 
     if (config.verboseMeta) {
@@ -178,11 +178,11 @@ pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
       await writeFileInDir(
         logger,
         mcpWiringsMetaVerboseFile,
-        `import { pikkuState } from '@pikku/core'
+        `import { pikkuState, MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core'
 ${verboseImportStatement}
-pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta)
-pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
-pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
+pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)
+pikkuState('mcp', 'toolsMeta', metaData.toolsMeta as MCPToolMeta)
+pikkuState('mcp', 'promptsMeta', metaData.promptsMeta as MCPPromptMeta)`
       )
     }
 

@@ -112,7 +112,7 @@ export const pikkuChannels: any = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('channel', 'meta', metaData)`
+      `import { pikkuState, ChannelsMeta } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('channel', 'meta', metaData as ChannelsMeta)`
     )
 
     if (config.verboseMeta) {
@@ -129,7 +129,7 @@ export const pikkuChannels: any = pikkuSessionlessFunc<
       await writeFileInDir(
         logger,
         channelsWiringMetaVerboseFile,
-        `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('channel', 'meta', metaData)`
+        `import { pikkuState, ChannelsMeta } from '@pikku/core'\n${verboseImportStatement}\npikkuState('channel', 'meta', metaData as ChannelsMeta)`
       )
     }
 

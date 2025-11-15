@@ -59,7 +59,7 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       httpWiringMetaFile,
-      `import { pikkuState } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('http', 'meta', metaData)`
+      `import { pikkuState, HTTPWiringsMeta } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('http', 'meta', metaData as HTTPWiringsMeta)`
     )
 
     if (config.verboseMeta) {
@@ -76,7 +76,7 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       await writeFileInDir(
         logger,
         httpWiringMetaVerboseFile,
-        `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('http', 'meta', metaData)`
+        `import { pikkuState, HTTPWiringsMeta } from '@pikku/core'\n${verboseImportStatement}\npikkuState('http', 'meta', metaData as HTTPWiringsMeta)`
       )
     }
 
