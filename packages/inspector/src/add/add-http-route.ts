@@ -13,6 +13,7 @@ import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { ErrorCode } from '../error-codes.js'
+import { extractJSDocMeta } from '../utils/extract-jsdoc.js'
 
 /**
  * Populate metaInputTypes for a given route based on method, input type,
@@ -70,10 +71,10 @@ export const addHTTPRoute: AddWiring = (
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
-  const summary = (getPropertyValue(obj, 'summary') as string) || undefined
-  const description =
+  let summary = (getPropertyValue(obj, 'summary') as string) || undefined
+  let description =
     (getPropertyValue(obj, 'description') as string) || undefined
-  const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
+  let errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
   const tags = getPropertyTags(obj, 'HTTP route', route, logger)
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
@@ -90,6 +91,15 @@ export const addHTTPRoute: AddWiring = (
       `No valid 'func' property for route '${route}'.`
     )
     return
+  }
+
+  // Extract JSDoc metadata from the function as fallback
+  // Config object properties take precedence over JSDoc
+  const jsDocMeta = extractJSDocMeta(funcInitializer)
+  if (jsDocMeta) {
+    summary = summary || jsDocMeta.summary
+    description = description || jsDocMeta.description
+    errors = errors || jsDocMeta.errors
   }
 
   const funcName = extractFunctionName(

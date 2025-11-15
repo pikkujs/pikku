@@ -8,6 +8,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { extractJSDocMeta } from '../utils/extract-jsdoc.js'
 import { ErrorCode } from '../error-codes.js'
 
 export const addQueueWorker: AddWiring = (
@@ -38,10 +39,10 @@ export const addQueueWorker: AddWiring = (
     const obj = firstArg
 
     const queueName = getPropertyValue(obj, 'queueName') as string | null
-    const summary = (getPropertyValue(obj, 'summary') as string) || undefined
-    const description =
+    let summary = (getPropertyValue(obj, 'summary') as string) || undefined
+    let description =
       (getPropertyValue(obj, 'description') as string) || undefined
-    const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
+    let errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
     const tags = getPropertyTags(obj, 'Queue worker', queueName, logger)
 
     // --- find the referenced function ---
@@ -57,6 +58,15 @@ export const addQueueWorker: AddWiring = (
         `No valid 'func' property for queue processor '${queueName}'.`
       )
       return
+    }
+
+    // Extract JSDoc metadata from the function as fallback
+    // Config object properties take precedence over JSDoc
+    const jsDocMeta = extractJSDocMeta(funcInitializer)
+    if (jsDocMeta) {
+      summary = summary || jsDocMeta.summary
+      description = description || jsDocMeta.description
+      errors = errors || jsDocMeta.errors
     }
 
     const pikkuFuncName = extractFunctionName(

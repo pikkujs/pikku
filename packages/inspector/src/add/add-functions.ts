@@ -6,6 +6,7 @@ import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { FunctionServicesMeta } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { extractJSDocMeta } from '../utils/extract-jsdoc.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -352,6 +353,23 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
       return
     }
     handlerNode = fnProp
+  }
+
+  // Extract JSDoc metadata from the function handler as fallback
+  // Config object properties take precedence over JSDoc
+  // Try the handler node first, then the parent variable declaration
+  let jsDocMeta = extractJSDocMeta(handlerNode)
+  if (!jsDocMeta && node.parent && ts.isVariableDeclaration(node.parent)) {
+    // Check the variable declaration's parent statement
+    const varStatement = node.parent.parent?.parent
+    if (varStatement) {
+      jsDocMeta = extractJSDocMeta(varStatement)
+    }
+  }
+  if (jsDocMeta) {
+    summary = summary || jsDocMeta.summary
+    description = description || jsDocMeta.description
+    errors = errors || jsDocMeta.errors
   }
 
   if (

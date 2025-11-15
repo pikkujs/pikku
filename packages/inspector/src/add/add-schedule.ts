@@ -8,6 +8,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { extractJSDocMeta } from '../utils/extract-jsdoc.js'
 
 import { ErrorCode } from '../error-codes.js'
 export const addSchedule: AddWiring = (
@@ -39,10 +40,10 @@ export const addSchedule: AddWiring = (
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const scheduleValue = getPropertyValue(obj, 'schedule') as string | null
-    const summary = (getPropertyValue(obj, 'summary') as string) || undefined
-    const description =
+    let summary = (getPropertyValue(obj, 'summary') as string) || undefined
+    let description =
       (getPropertyValue(obj, 'description') as string) || undefined
-    const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
+    let errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
     const tags = getPropertyTags(obj, 'Scheduler', nameValue, logger)
 
     const funcInitializer = getPropertyAssignmentInitializer(
@@ -57,6 +58,15 @@ export const addSchedule: AddWiring = (
         `No valid 'func' property for scheduled task '${nameValue}'.`
       )
       return
+    }
+
+    // Extract JSDoc metadata from the function as fallback
+    // Config object properties take precedence over JSDoc
+    const jsDocMeta = extractJSDocMeta(funcInitializer)
+    if (jsDocMeta) {
+      summary = summary || jsDocMeta.summary
+      description = description || jsDocMeta.description
+      errors = errors || jsDocMeta.errors
     }
 
     const pikkuFuncName = extractFunctionName(

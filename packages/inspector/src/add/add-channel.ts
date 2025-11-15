@@ -11,6 +11,7 @@ import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { extractJSDocMeta } from '../utils/extract-jsdoc.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -486,10 +487,10 @@ export const addChannel: AddWiring = (
         .map((k) => k.name)
     : []
 
-  const summary = (getPropertyValue(obj, 'summary') as string) || undefined
-  const description =
+  let summary = (getPropertyValue(obj, 'summary') as string) || undefined
+  let description =
     (getPropertyValue(obj, 'description') as string) || undefined
-  const errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
+  let errors = (getPropertyValue(obj, 'errors') as string[]) || undefined
   const tags = getPropertyTags(obj, 'Channel', route, logger)
   const query = getPropertyValue(obj, 'query') as string[] | []
 
@@ -516,6 +517,15 @@ export const addChannel: AddWiring = (
   )
 
   if (onMsgProp) {
+    // Extract JSDoc metadata from the function as fallback
+    // Config object properties take precedence over JSDoc
+    const jsDocMeta = extractJSDocMeta(onMsgProp)
+    if (jsDocMeta) {
+      summary = summary || jsDocMeta.summary
+      description = description || jsDocMeta.description
+      errors = errors || jsDocMeta.errors
+    }
+
     const { pikkuFuncName } = extractFunctionName(
       onMsgProp,
       checker,

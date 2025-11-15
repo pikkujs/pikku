@@ -10,6 +10,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { extractJSDocMeta } from '../utils/extract-jsdoc.js'
 import { ErrorCode } from '../error-codes.js'
 
 export const addMCPTool: AddWiring = (
@@ -40,10 +41,8 @@ export const addMCPTool: AddWiring = (
     const obj = firstArg
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
-    const titleValue = getPropertyValue(obj, 'title') as string | null
-    const descriptionValue = getPropertyValue(obj, 'description') as
-      | string
-      | null
+    let titleValue = getPropertyValue(obj, 'title') as string | null
+    let descriptionValue = getPropertyValue(obj, 'description') as string | null
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
     const tags = getPropertyTags(obj, 'MCP tool', nameValue, logger)
 
@@ -65,6 +64,14 @@ export const addMCPTool: AddWiring = (
         `No valid 'func' property for MCP tool '${nameValue}'.`
       )
       return
+    }
+
+    // Extract JSDoc metadata from the function as fallback
+    // Config object properties take precedence over JSDoc
+    const jsDocMeta = extractJSDocMeta(funcInitializer)
+    if (jsDocMeta) {
+      titleValue = titleValue || jsDocMeta.summary || null
+      descriptionValue = descriptionValue || jsDocMeta.description || null
     }
 
     const pikkuFuncName = extractFunctionName(
