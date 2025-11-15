@@ -14,6 +14,8 @@ export interface PikkuCLICoreOutputFiles {
   functionsFile: string
   functionsMetaFile: string
   functionsMetaJsonFile: string
+  functionsMetaVerboseFile: string
+  functionsMetaVerboseJsonFile: string
   functionsMetaMinFile: string
   functionsMetaMinJsonFile: string
   functionTypesFile: string
@@ -22,6 +24,8 @@ export interface PikkuCLICoreOutputFiles {
   httpWiringsFile: string
   httpWiringMetaFile: string
   httpWiringMetaJsonFile: string
+  httpWiringMetaVerboseFile: string
+  httpWiringMetaVerboseJsonFile: string
   httpMapDeclarationFile: string
   httpTypesFile: string
 
@@ -29,6 +33,8 @@ export interface PikkuCLICoreOutputFiles {
   channelsWiringFile: string
   channelsWiringMetaFile: string
   channelsWiringMetaJsonFile: string
+  channelsWiringMetaVerboseFile: string
+  channelsWiringMetaVerboseJsonFile: string
   channelsMapDeclarationFile: string
   channelsTypesFile: string
 
@@ -44,12 +50,16 @@ export interface PikkuCLICoreOutputFiles {
   schedulersWiringFile: string
   schedulersWiringMetaFile: string
   schedulersWiringMetaJsonFile: string
+  schedulersWiringMetaVerboseFile: string
+  schedulersWiringMetaVerboseJsonFile: string
   schedulersTypesFile: string
 
   // Queue processors
   queueWorkersWiringFile: string
   queueWorkersWiringMetaFile: string
   queueWorkersWiringMetaJsonFile: string
+  queueWorkersWiringMetaVerboseFile: string
+  queueWorkersWiringMetaVerboseJsonFile: string
   queueMapDeclarationFile: string
   queueTypesFile: string
 
@@ -57,6 +67,8 @@ export interface PikkuCLICoreOutputFiles {
   workflowsWiringFile: string
   workflowsWiringMetaFile: string
   workflowsWiringMetaJsonFile: string
+  workflowsWiringMetaVerboseFile: string
+  workflowsWiringMetaVerboseJsonFile: string
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
@@ -65,12 +77,16 @@ export interface PikkuCLICoreOutputFiles {
   mcpWiringsFile: string
   mcpWiringsMetaFile: string
   mcpWiringsMetaJsonFile: string
+  mcpWiringsMetaVerboseFile: string
+  mcpWiringsMetaVerboseJsonFile: string
   mcpTypesFile: string
 
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string
   cliWiringMetaJsonFile: string
+  cliWiringMetaVerboseFile: string
+  cliWiringMetaVerboseJsonFile: string
   cliBootstrapFile: string
   cliTypesFile: string
 

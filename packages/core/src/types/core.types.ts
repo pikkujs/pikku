@@ -100,6 +100,9 @@ export type FunctionRuntimeMeta = {
   outputSchemaName: string | null
   expose?: boolean
   internal?: boolean
+  middleware?: MiddlewareMetadata[]
+  permissions?: PermissionMetadata[]
+  tags?: string[]
   summary?: string
   description?: string
   errors?: string[]
@@ -111,9 +114,6 @@ export type FunctionMeta = FunctionRuntimeMeta &
     services: FunctionServicesMeta
     inputs: string[] | null
     outputs: string[] | null
-    tags: string[]
-    middleware: MiddlewareMetadata[]
-    permissions: PermissionMetadata[]
     isDirectFunction: boolean
   }>
 

@@ -4,7 +4,39 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+
+const generateMCPRuntimeMeta = (metaData: any) => {
+  const runtimeMeta: any = {
+    resourcesMeta: {},
+    toolsMeta: {},
+    promptsMeta: {},
+  }
+
+  // Process resources
+  // Note: MCP requires 'description' field, so we only strip summary and errors
+  for (const [resourceName, resourceMeta] of Object.entries(
+    metaData.resourcesMeta
+  )) {
+    const { summary, errors, ...runtime } = resourceMeta as any
+    runtimeMeta.resourcesMeta[resourceName] = runtime
+  }
+
+  // Process tools
+  // Note: MCP requires 'description' field, so we only strip summary and errors
+  for (const [toolName, toolMeta] of Object.entries(metaData.toolsMeta)) {
+    const { summary, errors, ...runtime } = toolMeta as any
+    runtimeMeta.toolsMeta[toolName] = runtime
+  }
+
+  // Process prompts
+  // Note: MCP requires 'description' field, so we only strip summary and errors
+  for (const [promptName, promptMeta] of Object.entries(metaData.promptsMeta)) {
+    const { summary, errors, ...runtime } = promptMeta as any
+    runtimeMeta.promptsMeta[promptName] = runtime
+  }
+
+  return runtimeMeta
+}
 
 // Helper function to generate arguments from schema
 const generateArgumentsFromSchema = async (
@@ -65,6 +97,9 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
     const {
       mcpWiringsFile,
       mcpWiringsMetaFile,
+      mcpWiringsMetaJsonFile,
+      mcpWiringsMetaVerboseFile,
+      mcpWiringsMetaVerboseJsonFile,
       packageMappings,
       schemaDirectory,
       schema,
@@ -101,28 +136,49 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       toolsMeta: mcpEndpoints.toolsMeta,
       promptsMeta: promptsMetaWithArguments,
     }
-    await writeFileInDir(
-      logger,
-      config.mcpWiringsMetaJsonFile,
-      JSON.stringify(metaData, null, 2)
-    )
-
-    const jsonImportPath = getFileImportRelativePath(
-      mcpWiringsMetaFile,
-      config.mcpWiringsMetaJsonFile,
-      packageMappings
-    )
 
     const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
+    const runtimeMeta = generateMCPRuntimeMeta(metaData)
+
+    // Write runtime JSON
+    await writeFileInDir(
+      logger,
+      mcpWiringsMetaJsonFile,
+      JSON.stringify(runtimeMeta, null, 2)
+    )
+
+    // Write runtime TS
+    const runtimeImportStatement = supportsImportAttributes
+      ? `import metaData from './pikku-mcp-wirings-meta.gen.json' with { type: 'json' }`
+      : `import metaData from './pikku-mcp-wirings-meta.gen.json'`
 
     await writeFileInDir(
       logger,
       mcpWiringsMetaFile,
       `import { pikkuState } from '@pikku/core'
-${importStatement}
+${runtimeImportStatement}
+pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta)
+pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
+pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
+    )
+
+    // Write verbose JSON
+    await writeFileInDir(
+      logger,
+      mcpWiringsMetaVerboseJsonFile,
+      JSON.stringify(metaData, null, 2)
+    )
+
+    // Write verbose TS
+    const verboseImportStatement = supportsImportAttributes
+      ? `import metaData from './pikku-mcp-wirings-meta.verbose.gen.json' with { type: 'json' }`
+      : `import metaData from './pikku-mcp-wirings-meta.verbose.gen.json'`
+
+    await writeFileInDir(
+      logger,
+      mcpWiringsMetaVerboseFile,
+      `import { pikkuState } from '@pikku/core'
+${verboseImportStatement}
 pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta)
 pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
 pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`

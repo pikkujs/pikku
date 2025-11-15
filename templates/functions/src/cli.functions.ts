@@ -1,6 +1,9 @@
 import { pikkuFunc, pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-// Simple greeting function
+/**
+ * @summary Greet user by name
+ * @description Generates a personalized greeting message with optional uppercase formatting and timestamp
+ */
 export const greetUser = pikkuSessionlessFunc<
   { name: string; loud: boolean },
   { message: string; timestamp: string }
@@ -14,7 +17,10 @@ export const greetUser = pikkuSessionlessFunc<
   },
 })
 
-// Individual calculation functions for CLI
+/**
+ * @summary Add two numbers
+ * @description Performs addition operation on two numbers and returns the result with a formatted expression
+ */
 export const addNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -30,6 +36,10 @@ export const addNumbers = pikkuFunc<
   },
 })
 
+/**
+ * @summary Subtract two numbers
+ * @description Performs subtraction operation on two numbers and returns the result with a formatted expression
+ */
 export const subtractNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -45,6 +55,10 @@ export const subtractNumbers = pikkuFunc<
   },
 })
 
+/**
+ * @summary Multiply two numbers
+ * @description Performs multiplication operation on two numbers and returns the result with a formatted expression
+ */
 export const multiplyNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -60,6 +74,10 @@ export const multiplyNumbers = pikkuFunc<
   },
 })
 
+/**
+ * @summary Divide two numbers
+ * @description Performs division operation on two numbers with zero-division protection and returns the result with a formatted expression
+ */
 export const divideNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -78,7 +96,10 @@ export const divideNumbers = pikkuFunc<
   },
 })
 
-// User management functions
+/**
+ * @summary Create new user account
+ * @description Creates a new user with username, email, and optional admin privileges, returning user details with generated ID
+ */
 export const createUser = pikkuFunc<
   { username: string; email: string; admin?: boolean },
   {
@@ -102,12 +123,15 @@ export const createUser = pikkuFunc<
   },
 })
 
+/**
+ * @summary List all users with filtering
+ * @description Retrieves user list with optional filtering by admin status and limit on results count
+ */
 export const listUsers = pikkuFunc<
   { limit?: number; admin?: boolean },
   { users: any[]; total: number; filtered: boolean }
 >({
   func: async (services, data) => {
-    // Mock user data
     const allUsers = [
       { id: 1, username: 'alice', email: 'alice@example.com', admin: true },
       { id: 2, username: 'bob', email: 'bob@example.com', admin: false },
@@ -138,7 +162,10 @@ export const listUsers = pikkuFunc<
   },
 })
 
-// File operations
+/**
+ * @summary Process file with specified action
+ * @description Performs read, info, or delete operations on a file with optional backup creation
+ */
 export const processFile = pikkuFunc<
   { path: string; action: 'read' | 'info' | 'delete'; backup?: boolean },
   {
@@ -155,14 +182,13 @@ export const processFile = pikkuFunc<
       `Processing file: ${data.path} with action: ${data.action}`
     )
 
-    // Mock file processing
     return {
       path: data.path,
       action: data.action,
       backup: data.backup || false,
       processed: true,
       timestamp: new Date().toISOString(),
-      size: Math.floor(Math.random() * 100000), // Mock file size
+      size: Math.floor(Math.random() * 100000),
     }
   },
 })

@@ -3,10 +3,33 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
+const generateHTTPRuntimeMeta = (meta: any) => {
+  const runtimeMeta: any = {}
+
+  for (const [method, routes] of Object.entries(meta)) {
+    runtimeMeta[method] = {}
+    for (const [route, routeMeta] of Object.entries(routes as any)) {
+      const { summary, description, errors, inputTypes, ...runtime } =
+        routeMeta as any
+      runtimeMeta[method][route] = runtime
+    }
+  }
+
+  return runtimeMeta
+}
+
 export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
-    const { httpWiringsFile, httpWiringMetaFile, packageMappings } = config
+    const {
+      httpWiringsFile,
+      httpWiringMetaFile,
+      httpWiringMetaJsonFile,
+      httpWiringMetaVerboseFile,
+      httpWiringMetaVerboseJsonFile,
+      packageMappings,
+      schema,
+    } = config
     const { http } = visitState
 
     await writeFileInDir(
@@ -19,10 +42,40 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
         packageMappings
       )
     )
+
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const runtimeMeta = generateHTTPRuntimeMeta(http.meta)
+
+    await writeFileInDir(
+      logger,
+      httpWiringMetaJsonFile,
+      JSON.stringify(runtimeMeta, null, 2)
+    )
+
+    const runtimeImportStatement = supportsImportAttributes
+      ? `import metaData from './pikku-http-wirings-meta.gen.json' with { type: 'json' }`
+      : `import metaData from './pikku-http-wirings-meta.gen.json'`
+
     await writeFileInDir(
       logger,
       httpWiringMetaFile,
-      `import { pikkuState } from '@pikku/core'\npikkuState('http', 'meta', ${JSON.stringify(http.meta, null, 2)})`
+      `import { pikkuState } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('http', 'meta', metaData)`
+    )
+
+    await writeFileInDir(
+      logger,
+      httpWiringMetaVerboseJsonFile,
+      JSON.stringify(http.meta, null, 2)
+    )
+
+    const verboseImportStatement = supportsImportAttributes
+      ? `import metaData from './pikku-http-wirings-meta.verbose.gen.json' with { type: 'json' }`
+      : `import metaData from './pikku-http-wirings-meta.verbose.gen.json'`
+
+    await writeFileInDir(
+      logger,
+      httpWiringMetaVerboseFile,
+      `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('http', 'meta', metaData)`
     )
 
     return true

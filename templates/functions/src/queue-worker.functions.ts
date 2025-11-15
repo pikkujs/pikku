@@ -1,6 +1,10 @@
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 import { loggingMiddleware } from './middleware.js'
 
+/**
+ * @summary Process queue job with optional failure
+ * @description Asynchronous queue worker that processes messages with a 1-second delay and can simulate failures for testing error handling
+ */
 export const queueWorker = pikkuSessionlessFunc<
   { message: string; fail: boolean },
   { result: string }
@@ -12,7 +16,10 @@ export const queueWorker = pikkuSessionlessFunc<
   return { result: `echo: ${data.message}` }
 })
 
-// Example of queue worker with middleware
+/**
+ * @summary Process queue job with middleware
+ * @description Queue worker demonstrating middleware integration for cross-cutting concerns like logging and validation
+ */
 export const queueWorkerWithMiddleware = pikkuSessionlessFunc<
   { message: string },
   { result: string }

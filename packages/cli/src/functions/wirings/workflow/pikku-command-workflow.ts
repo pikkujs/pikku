@@ -4,8 +4,8 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
-  serializeWorkflowMeta,
   serializeWorkflowMetaTS,
+  generateWorkflowRuntimeMeta,
 } from './serialize-workflow-meta.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
@@ -23,6 +23,8 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       workflowsWiringFile,
       workflowsWiringMetaFile,
       workflowsWiringMetaJsonFile,
+      workflowsWiringMetaVerboseFile,
+      workflowsWiringMetaVerboseJsonFile,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
@@ -51,27 +53,52 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const runtimeMeta = generateWorkflowRuntimeMeta(workflows.meta)
+
+    // Write runtime JSON
     await writeFileInDir(
       logger,
       workflowsWiringMetaJsonFile,
-      JSON.stringify(serializeWorkflowMeta(workflows.meta), null, 2)
+      JSON.stringify(runtimeMeta, null, 2)
     )
 
-    const jsonImportPath = getFileImportRelativePath(
-      workflowsWiringMetaFile,
-      workflowsWiringMetaJsonFile,
-      packageMappings
-    )
-
-    // Write workflow metadata TypeScript file that imports JSON
+    // Write runtime TS
     await writeFileInDir(
       logger,
       workflowsWiringMetaFile,
       serializeWorkflowMetaTS(
         workflows.meta,
-        jsonImportPath,
-        schema?.supportsImportAttributes ?? false
+        './pikku-workflow-wirings-meta.gen.json',
+        supportsImportAttributes
       )
+    )
+
+    // Write verbose JSON
+    await writeFileInDir(
+      logger,
+      workflowsWiringMetaVerboseJsonFile,
+      JSON.stringify(workflows.meta, null, 2)
+    )
+
+    // Write verbose TS
+    const verboseImportStatement = supportsImportAttributes
+      ? `import metaData from './pikku-workflow-wirings-meta.verbose.gen.json' with { type: 'json' }`
+      : `import metaData from './pikku-workflow-wirings-meta.verbose.gen.json'`
+
+    const verboseOutput: string[] = []
+    verboseOutput.push("import { pikkuState } from '@pikku/core'")
+    verboseOutput.push("import { WorkflowsMeta } from '@pikku/core/workflow'")
+    verboseOutput.push(verboseImportStatement)
+    verboseOutput.push('')
+    verboseOutput.push(
+      "pikkuState('workflows', 'meta', metaData as WorkflowsMeta)"
+    )
+
+    await writeFileInDir(
+      logger,
+      workflowsWiringMetaVerboseFile,
+      verboseOutput.join('\n')
     )
 
     // Write workflow wirings (imports)

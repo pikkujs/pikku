@@ -3,18 +3,19 @@ import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
-  serializeQueueMeta,
   serializeQueueMetaTS,
+  generateQueueRuntimeMeta,
 } from './serialize-queue-meta.js'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
-export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
+export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {
       queueWorkersWiringFile,
       queueWorkersWiringMetaFile,
       queueWorkersWiringMetaJsonFile,
+      queueWorkersWiringMetaVerboseFile,
+      queueWorkersWiringMetaVerboseJsonFile,
       packageMappings,
       schema,
     } = config
@@ -29,28 +30,51 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
       }
     }
 
-    // Write JSON file
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const runtimeMeta = generateQueueRuntimeMeta(queueMeta)
+
+    // Write runtime JSON file
     await writeFileInDir(
       logger,
       queueWorkersWiringMetaJsonFile,
-      JSON.stringify(serializeQueueMeta(queueMeta), null, 2)
+      JSON.stringify(runtimeMeta, null, 2)
     )
 
-    // Calculate relative path from TS file to JSON file
-    const jsonImportPath = getFileImportRelativePath(
-      queueWorkersWiringMetaFile,
-      queueWorkersWiringMetaJsonFile,
-      packageMappings
-    )
-
-    // Write TypeScript file that imports JSON
+    // Write runtime TypeScript file that imports JSON
     await writeFileInDir(
       logger,
       queueWorkersWiringMetaFile,
       serializeQueueMetaTS(
-        jsonImportPath,
-        schema?.supportsImportAttributes ?? false
+        './pikku-queue-workers-wirings-meta.gen.json',
+        supportsImportAttributes
       )
+    )
+
+    // Write verbose JSON file
+    await writeFileInDir(
+      logger,
+      queueWorkersWiringMetaVerboseJsonFile,
+      JSON.stringify(queueMeta, null, 2)
+    )
+
+    // Write verbose TypeScript file that imports JSON
+    const verboseImportStatement = supportsImportAttributes
+      ? `import metaData from './pikku-queue-workers-wirings-meta.verbose.gen.json' with { type: 'json' }`
+      : `import metaData from './pikku-queue-workers-wirings-meta.verbose.gen.json'`
+
+    const verboseOutput: string[] = []
+    verboseOutput.push("import { pikkuState } from '@pikku/core'")
+    verboseOutput.push("import { QueueWorkersMeta } from '@pikku/core/queue'")
+    verboseOutput.push(verboseImportStatement)
+    verboseOutput.push('')
+    verboseOutput.push(
+      "pikkuState('queue', 'meta', metaData as QueueWorkersMeta)"
+    )
+
+    await writeFileInDir(
+      logger,
+      queueWorkersWiringMetaVerboseFile,
+      verboseOutput.join('\n')
     )
 
     await writeFileInDir(

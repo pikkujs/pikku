@@ -4,6 +4,17 @@ export const serializeWorkflowMeta = (workflowsMeta: WorkflowsMeta) => {
   return workflowsMeta
 }
 
+export const generateWorkflowRuntimeMeta = (workflowsMeta: WorkflowsMeta) => {
+  const runtimeMeta: any = {}
+
+  for (const [workflowName, workflowMeta] of Object.entries(workflowsMeta)) {
+    const { summary, description, errors, ...runtime } = workflowMeta as any
+    runtimeMeta[workflowName] = runtime
+  }
+
+  return runtimeMeta
+}
+
 export const serializeWorkflowMetaTS = (
   workflowsMeta: WorkflowsMeta,
   jsonImportPath: string,

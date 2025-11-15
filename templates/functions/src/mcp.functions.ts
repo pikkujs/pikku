@@ -6,7 +6,8 @@ import {
 } from '../.pikku/pikku-types.gen.js'
 
 /**
- * A simple hello world MCP tool that greets the user
+ * @summary Greet user via MCP
+ * @description Simple hello world MCP tool that returns a personalized greeting message
  */
 export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
   async (services, { name = 'World' }) => {
@@ -21,6 +22,10 @@ export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
   }
 )
 
+/**
+ * @summary Disable MCP tool by name
+ * @description Dynamically disables a specific MCP tool at runtime and reports the result
+ */
 export const disableTool = pikkuMCPToolFunc<{ name: string }>(
   async (services, { name }) => {
     const changed = await services.mcp.enableTools({ [name]: false })
@@ -43,7 +48,8 @@ export const disableTool = pikkuMCPToolFunc<{ name: string }>(
 )
 
 /**
- * A simple calculator MCP tool that performs basic math operations
+ * @summary Perform mathematical calculation
+ * @description MCP calculator tool supporting addition, subtraction, multiplication, and division with zero-division protection
  */
 export const calculate = pikkuMCPToolFunc<{
   operation: 'add' | 'subtract' | 'multiply' | 'divide'
@@ -83,7 +89,8 @@ export const calculate = pikkuMCPToolFunc<{
 })
 
 /**
- * A static resource that returns predefined data
+ * @summary Get static resource data
+ * @description MCP resource that returns predefined static content for demonstration purposes
  */
 export const getStaticResource = pikkuMCPResourceFunc<unknown>(
   async ({ mcp }) => {
@@ -97,13 +104,13 @@ export const getStaticResource = pikkuMCPResourceFunc<unknown>(
 )
 
 /**
- * A mock user information resource that returns user data
+ * @summary Retrieve user information
+ * @description MCP resource that fetches user data by ID from a mock database with error handling for missing users
  */
 export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
   async ({ mcp, logger }, { userId }) => {
     logger.info(`Getting user info for: ${userId}`)
 
-    // Mock user data - in a real app this would come from a database
     const mockUsers: Record<
       string,
       { userId: string; name: string; email: string; lastLogin: string }
@@ -137,7 +144,8 @@ export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
 )
 
 /**
- * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
+ * @summary Generate static prompt
+ * @description MCP prompt that returns a predefined message without requiring any arguments
  */
 export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
   return [
@@ -152,7 +160,8 @@ export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
 })
 
 /**
- * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
+ * @summary Generate dynamic prompt by topic
+ * @description MCP prompt generator that creates customized progressive enhancement content based on topic and complexity level with optional examples
  */
 export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
   topic: string

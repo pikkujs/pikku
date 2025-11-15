@@ -1,5 +1,9 @@
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
+/**
+ * @summary Server-sent events counter
+ * @description Streams incrementing counter every second for 5 seconds via SSE channel, then closes connection
+ */
 export const timeSinceOpened = pikkuSessionlessFunc<
   void,
   { count: number } | void

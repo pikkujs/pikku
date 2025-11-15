@@ -4,6 +4,19 @@ export const serializeQueueMeta = (queueWorkersMeta: QueueWorkersMeta) => {
   return queueWorkersMeta
 }
 
+export const generateQueueRuntimeMeta = (
+  queueWorkersMeta: QueueWorkersMeta
+) => {
+  const runtimeMeta: any = {}
+
+  for (const [workerName, workerMeta] of Object.entries(queueWorkersMeta)) {
+    const { summary, description, errors, ...runtime } = workerMeta as any
+    runtimeMeta[workerName] = runtime
+  }
+
+  return runtimeMeta
+}
+
 export const serializeQueueMetaTS = (
   jsonImportPath: string,
   supportsImportAttributes: boolean = false

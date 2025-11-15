@@ -16,6 +16,8 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     const {
       functionsMetaFile,
       functionsMetaJsonFile,
+      functionsMetaVerboseFile,
+      functionsMetaVerboseJsonFile,
       functionsMetaMinFile,
       functionsMetaMinJsonFile,
       functionsFile,
@@ -23,30 +25,53 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       schema,
     } = config
 
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const runtimeMeta = generateRuntimeMeta(functions.meta)
+
     await writeFileInDir(
       logger,
       functionsMetaJsonFile,
-      JSON.stringify(functions.meta, null, 2)
+      JSON.stringify(runtimeMeta, null, 2)
     )
 
-    const fullJsonImportPath = getFileImportRelativePath(
+    const runtimeJsonImportPath = getFileImportRelativePath(
       functionsMetaFile,
       functionsMetaJsonFile,
       packageMappings
     )
 
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const fullImportStatement = supportsImportAttributes
-      ? `import metaData from '${fullJsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${fullJsonImportPath}'`
+    const runtimeImportStatement = supportsImportAttributes
+      ? `import metaData from '${runtimeJsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${runtimeJsonImportPath}'`
 
     await writeFileInDir(
       logger,
       functionsMetaFile,
-      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${fullImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
+      `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('function', 'meta', metaData as FunctionsRuntimeMeta)`
     )
 
-    const runtimeMeta = generateRuntimeMeta(functions.meta)
+    await writeFileInDir(
+      logger,
+      functionsMetaVerboseJsonFile,
+      JSON.stringify(functions.meta, null, 2)
+    )
+
+    const verboseJsonImportPath = getFileImportRelativePath(
+      functionsMetaVerboseFile,
+      functionsMetaVerboseJsonFile,
+      packageMappings
+    )
+
+    const verboseImportStatement = supportsImportAttributes
+      ? `import metaData from '${verboseJsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${verboseJsonImportPath}'`
+
+    await writeFileInDir(
+      logger,
+      functionsMetaVerboseFile,
+      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${verboseImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
+    )
+
     await writeFileInDir(
       logger,
       functionsMetaMinJsonFile,

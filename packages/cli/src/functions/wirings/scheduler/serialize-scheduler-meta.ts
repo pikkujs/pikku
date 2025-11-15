@@ -6,6 +6,19 @@ export const serializeSchedulerMeta = (
   return scheduledTasksMeta
 }
 
+export const generateSchedulerRuntimeMeta = (
+  scheduledTasksMeta: ScheduledTasksMeta
+) => {
+  const runtimeMeta: any = {}
+
+  for (const [taskName, taskMeta] of Object.entries(scheduledTasksMeta)) {
+    const { summary, description, errors, ...runtime } = taskMeta as any
+    runtimeMeta[taskName] = runtime
+  }
+
+  return runtimeMeta
+}
+
 export const serializeSchedulerMetaTS = (
   scheduledTasksMeta: ScheduledTasksMeta,
   jsonImportPath: string,

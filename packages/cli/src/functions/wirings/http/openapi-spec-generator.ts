@@ -120,8 +120,16 @@ export async function generateOpenAPISpec(
 
   for (const routeMeta of Object.values(httpMeta)) {
     for (const meta of Object.values(routeMeta)) {
-      const { route, method, inputTypes, pikkuFuncName, params, query, docs } =
-        meta
+      const {
+        route,
+        method,
+        inputTypes,
+        pikkuFuncName,
+        params,
+        query,
+        errors,
+        description,
+      } = meta
       const functionMeta = functionsMeta[pikkuFuncName]
       if (!functionMeta) {
         logger.error(
@@ -139,7 +147,7 @@ export async function generateOpenAPISpec(
       }
 
       const responses = {}
-      docs?.errors?.forEach((error) => {
+      errors?.forEach((error) => {
         const errorResponse = getErrorResponseForConstructorName(error)
         if (errorResponse) {
           responses[errorResponse.status] = {
@@ -150,9 +158,9 @@ export async function generateOpenAPISpec(
 
       const operation: any = {
         description:
-          docs?.description ||
+          description ||
           `This endpoint handles the ${method.toUpperCase()} request for the route ${route}.`,
-        tags: docs?.tags || [route.split('/')[1] || 'default'],
+        tags: meta.tags || [route.split('/')[1] || 'default'],
         parameters: [],
         responses: {
           ...responses,

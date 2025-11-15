@@ -2,8 +2,8 @@ import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.j
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 /**
- * RPC function that fails on first attempt, succeeds on retry
- * This tests the HAPPY PATH - retries work and workflow succeeds
+ * @summary Flaky RPC for retry testing (happy path)
+ * @description Test function that fails on first attempt but succeeds on retry, demonstrating successful retry behavior
  */
 export const flakyHappyRPC = pikkuSessionlessFunc<
   { value: number },
@@ -16,7 +16,6 @@ export const flakyHappyRPC = pikkuSessionlessFunc<
     logger.info(`   runId: ${workflowStep?.runId ?? 'N/A'}`)
     logger.info(`   stepId: ${workflowStep?.stepId ?? 'N/A'}`)
 
-    // Fail on first attempt (attemptCount=1)
     if (attempt === 1) {
       logger.error(`❌ [HAPPY] Attempt #1 - FAILING (will retry)`)
       throw new Error('[HAPPY] First attempt fails - will retry and succeed')
@@ -31,10 +30,8 @@ export const flakyHappyRPC = pikkuSessionlessFunc<
 })
 
 /**
- * Workflow that tests HAPPY PATH retry logic
- * - Step fails on first attempt (attemptCount=1)
- * - Step succeeds on second attempt (attemptCount=2)
- * - Workflow completes successfully
+ * @summary Happy path retry workflow
+ * @description Workflow demonstrating successful retry behavior where a step fails initially but succeeds on retry
  */
 export const happyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
@@ -45,7 +42,7 @@ export const happyRetryWorkflow = pikkuWorkflowFunc<
     'flakyHappyRPC',
     data,
     {
-      retries: 2, // Allow up to 2 retries (3 total attempts)
+      retries: 2,
       retryDelay: '1s',
     }
   )
@@ -57,7 +54,10 @@ export const happyRetryWorkflow = pikkuWorkflowFunc<
   }
 })
 
-// RPC function to trigger the happy retry workflow and wait for completion
+/**
+ * @summary Trigger happy path retry test
+ * @description Starts happy retry workflow and polls for completion, returning step history including retry attempts
+ */
 export const happyRetry = pikkuSessionlessFunc<
   { value: number },
   {
@@ -73,7 +73,6 @@ export const happyRetry = pikkuSessionlessFunc<
   }
 >({
   func: async ({ rpc, workflowService, logger }, data) => {
-    // Start the workflow
     const { runId } = await rpc.startWorkflow('happyRetry', data)
 
     logger.info(`[TEST] Workflow started: ${runId}`)

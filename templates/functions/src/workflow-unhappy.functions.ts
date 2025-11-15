@@ -2,8 +2,8 @@ import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.j
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 /**
- * RPC function that ALWAYS fails
- * This tests the UNHAPPY PATH - retries exhausted, workflow fails
+ * @summary Always-failing RPC for retry testing (unhappy path)
+ * @description Test function that always fails on every attempt, demonstrating retry exhaustion and workflow failure
  */
 export const alwaysFailsRPC = pikkuSessionlessFunc<
   { value: number },
@@ -24,37 +24,34 @@ export const alwaysFailsRPC = pikkuSessionlessFunc<
 })
 
 /**
- * Workflow that tests UNHAPPY PATH retry logic
- * - Step fails on attempt 1
- * - Step fails on attempt 2 (retry #1)
- * - Step fails on attempt 3 (retry #2)
- * - Retries exhausted → workflow fails
+ * @summary Unhappy path retry workflow
+ * @description Workflow demonstrating retry exhaustion where all retry attempts fail, causing workflow failure
  */
 export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
 >(async ({ workflow }, data) => {
-  // If value is negative, cancel the workflow immediately
   if (data.value < 0) {
     await workflow.cancel(`Workflow cancelled: value ${data.value} is negative`)
   }
 
-  // This will fail after exhausting all retries
   const result = await workflow.do(
     'Step that always fails',
     'alwaysFailsRPC',
     data,
     {
-      retries: 2, // Allow 2 retries (3 total attempts), then fail
+      retries: 2,
       retryDelay: '1s',
     }
   )
 
-  // This code should never be reached
   return { result: result.result }
 })
 
-// RPC function to trigger the unhappy retry workflow and wait for completion
+/**
+ * @summary Trigger unhappy path retry test
+ * @description Starts unhappy retry workflow and polls for expected failure, returning step history including all failed attempts
+ */
 export const unhappyRetry = pikkuSessionlessFunc<
   { value: number },
   {
@@ -69,7 +66,6 @@ export const unhappyRetry = pikkuSessionlessFunc<
   }
 >({
   func: async ({ rpc, workflowService, logger }, data) => {
-    // Start the workflow
     const { runId } = await rpc.startWorkflow('unhappyRetry', data)
 
     logger.info(`[TEST] Workflow started: ${runId}`)

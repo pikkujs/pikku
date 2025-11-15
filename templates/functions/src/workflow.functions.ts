@@ -1,7 +1,10 @@
 import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-// Pikku function to create a user profile
+/**
+ * @summary Create user profile
+ * @description Creates a new user profile with email-derived name and timestamp, used as a workflow step
+ */
 export const createUserProfile = pikkuSessionlessFunc<
   { email: string; userId: string },
   { id: string; email: string; name: string; createdAt: string }
@@ -15,12 +18,14 @@ export const createUserProfile = pikkuSessionlessFunc<
   }
 })
 
-// Helper function to generate welcome message (used inline in workflow)
 function generateWelcomeMessage(email: string): string {
   return `Welcome ${email}! Your onboarding is in progress.`
 }
 
-// Pikku function to send email (simulated)
+/**
+ * @summary Send email notification
+ * @description Simulates sending an email with subject and body, used as a workflow step
+ */
 export const sendEmail = pikkuSessionlessFunc<
   { to: string; subject: string; body: string },
   { sent: boolean; messageId: string; to: string }
@@ -35,27 +40,27 @@ export const sendEmail = pikkuSessionlessFunc<
   }
 })
 
+/**
+ * @summary User onboarding workflow
+ * @description Multi-step workflow that creates user profile, generates welcome message, waits, and sends welcome email
+ */
 export const onboardingWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string },
   { userId: string; email: string }
 >(async ({ workflow }, data) => {
-  // Step 1: Create user profile (RPC call - generates queue worker)
   const user = await workflow.do(
     `Create user profile in database for ${data.email}`,
     'createUserProfile',
     data
   )
 
-  // Step 2: Generate welcome message (inline - executes immediately with caching)
   const welcomeMessage = await workflow.do(
     'Generate personalized welcome message',
     async () => generateWelcomeMessage(user.email)
   )
 
-  // Step 3: Sleep for 5 seconds
   await workflow.sleep('Sleeping for 5 seconds', '5s')
 
-  // Step 4: Send welcome email (RPC call - generates queue worker)
   await workflow.do('Send welcome email to user', 'sendEmail', {
     to: data.email,
     subject: 'Welcome!',
@@ -68,7 +73,10 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
   }
 })
 
-// HTTP function to start a workflow and poll until completion
+/**
+ * @summary Trigger and monitor onboarding
+ * @description Starts onboarding workflow and polls for completion, returning full step history upon success
+ */
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any
@@ -76,7 +84,6 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   const { runId } = await rpc.startWorkflow('onboarding', data)
   logger.info(`[TEST] Workflow started: ${runId}`)
 
-  // Poll for workflow completion
   const maxAttempts = 30
   const pollIntervalMs = 1000
 
@@ -90,7 +97,6 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
 
     if (run.status === 'completed') {
       logger.info(`[TEST] Workflow completed successfully`)
-      // Get all step attempts to return for validation
       const steps = await workflowService!.getRunHistory(runId)
       return {
         ...run.output,
@@ -107,7 +113,6 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
       throw new Error(run.error?.message || 'Workflow failed')
     }
 
-    // Wait before polling again
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
   }
 
