@@ -16,7 +16,7 @@
     "@pikku/aws-services": "^0.11.0",
     "@pikku/core": "^0.11.0",
     "@pikku/jose": "^0.11.0",
-    "@pikku/lambda": "^0.11.0",
+    "@pikku/lambda": "^0.11.1",
     "@pikku/schema-cfworker": "^0.11.0",
     "tslib": "^2.8.1"
   },
