@@ -115,21 +115,23 @@ export const pikkuChannels: any = pikkuSessionlessFunc<
       `import { pikkuState } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('channel', 'meta', metaData)`
     )
 
-    await writeFileInDir(
-      logger,
-      channelsWiringMetaVerboseJsonFile,
-      JSON.stringify(channels.meta, null, 2)
-    )
+    if (config.verboseMeta) {
+      await writeFileInDir(
+        logger,
+        channelsWiringMetaVerboseJsonFile,
+        JSON.stringify(channels.meta, null, 2)
+      )
 
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from './pikku-channels-meta.verbose.gen.json' with { type: 'json' }`
-      : `import metaData from './pikku-channels-meta.verbose.gen.json'`
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from './pikku-channels-meta.verbose.gen.json' with { type: 'json' }`
+        : `import metaData from './pikku-channels-meta.verbose.gen.json'`
 
-    await writeFileInDir(
-      logger,
-      channelsWiringMetaVerboseFile,
-      `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('channel', 'meta', metaData)`
-    )
+      await writeFileInDir(
+        logger,
+        channelsWiringMetaVerboseFile,
+        `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('channel', 'meta', metaData)`
+      )
+    }
 
     return true
   },

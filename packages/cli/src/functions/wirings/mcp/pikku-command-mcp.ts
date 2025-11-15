@@ -162,27 +162,29 @@ pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
 pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
     )
 
-    // Write verbose JSON
-    await writeFileInDir(
-      logger,
-      mcpWiringsMetaVerboseJsonFile,
-      JSON.stringify(metaData, null, 2)
-    )
+    if (config.verboseMeta) {
+      // Write verbose JSON
+      await writeFileInDir(
+        logger,
+        mcpWiringsMetaVerboseJsonFile,
+        JSON.stringify(metaData, null, 2)
+      )
 
-    // Write verbose TS
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from './pikku-mcp-wirings-meta.verbose.gen.json' with { type: 'json' }`
-      : `import metaData from './pikku-mcp-wirings-meta.verbose.gen.json'`
+      // Write verbose TS
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from './pikku-mcp-wirings-meta.verbose.gen.json' with { type: 'json' }`
+        : `import metaData from './pikku-mcp-wirings-meta.verbose.gen.json'`
 
-    await writeFileInDir(
-      logger,
-      mcpWiringsMetaVerboseFile,
-      `import { pikkuState } from '@pikku/core'
+      await writeFileInDir(
+        logger,
+        mcpWiringsMetaVerboseFile,
+        `import { pikkuState } from '@pikku/core'
 ${verboseImportStatement}
 pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta)
 pikkuState('mcp', 'toolsMeta', metaData.toolsMeta)
 pikkuState('mcp', 'promptsMeta', metaData.promptsMeta)`
-    )
+      )
+    }
 
     return true
   },

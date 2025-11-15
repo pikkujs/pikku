@@ -87,23 +87,25 @@ export const pikkuCLI: any = pikkuSessionlessFunc<void, boolean | undefined>({
       `import { pikkuState } from '@pikku/core'\nimport { CLIMeta } from '@pikku/core/cli'\n${runtimeImportStatement}\npikkuState('cli', 'meta', metaData as CLIMeta)`
     )
 
-    // Write verbose JSON
-    await writeFileInDir(
-      logger,
-      cliWiringMetaVerboseJsonFile,
-      JSON.stringify(cli.meta, null, 2)
-    )
+    if (config.verboseMeta) {
+      // Write verbose JSON
+      await writeFileInDir(
+        logger,
+        cliWiringMetaVerboseJsonFile,
+        JSON.stringify(cli.meta, null, 2)
+      )
 
-    // Write verbose TS
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from './pikku-cli-wirings-meta.verbose.gen.json' with { type: 'json' }`
-      : `import metaData from './pikku-cli-wirings-meta.verbose.gen.json'`
+      // Write verbose TS
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from './pikku-cli-wirings-meta.verbose.gen.json' with { type: 'json' }`
+        : `import metaData from './pikku-cli-wirings-meta.verbose.gen.json'`
 
-    await writeFileInDir(
-      logger,
-      cliWiringMetaVerboseFile,
-      `import { pikkuState } from '@pikku/core'\nimport { CLIMeta } from '@pikku/core/cli'\n${verboseImportStatement}\npikkuState('cli', 'meta', metaData as CLIMeta)`
-    )
+      await writeFileInDir(
+        logger,
+        cliWiringMetaVerboseFile,
+        `import { pikkuState } from '@pikku/core'\nimport { CLIMeta } from '@pikku/core/cli'\n${verboseImportStatement}\npikkuState('cli', 'meta', metaData as CLIMeta)`
+      )
+    }
 
     return true
   },

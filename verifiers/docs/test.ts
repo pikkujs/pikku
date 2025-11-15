@@ -11,10 +11,10 @@ async function main(): Promise<void> {
   console.log('\nJSDoc Metadata Extraction Verification')
   console.log('======================================\n')
 
-  // Load metadata files in parallel
+  // Load metadata files in parallel (from templates/functions since we extend that config)
   const [functionsMeta] = await Promise.all([
     loadJSON<FunctionsMeta>(
-      '.pikku/function/pikku-functions-meta.verbose.gen.json'
+      '../../templates/functions/.pikku/function/pikku-functions-meta.verbose.gen.json'
     ),
   ])
 

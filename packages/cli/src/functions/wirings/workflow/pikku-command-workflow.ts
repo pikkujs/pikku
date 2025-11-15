@@ -74,32 +74,34 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       )
     )
 
-    // Write verbose JSON
-    await writeFileInDir(
-      logger,
-      workflowsWiringMetaVerboseJsonFile,
-      JSON.stringify(workflows.meta, null, 2)
-    )
+    if (config.verboseMeta) {
+      // Write verbose JSON
+      await writeFileInDir(
+        logger,
+        workflowsWiringMetaVerboseJsonFile,
+        JSON.stringify(workflows.meta, null, 2)
+      )
 
-    // Write verbose TS
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from './pikku-workflow-wirings-meta.verbose.gen.json' with { type: 'json' }`
-      : `import metaData from './pikku-workflow-wirings-meta.verbose.gen.json'`
+      // Write verbose TS
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from './pikku-workflow-wirings-meta.verbose.gen.json' with { type: 'json' }`
+        : `import metaData from './pikku-workflow-wirings-meta.verbose.gen.json'`
 
-    const verboseOutput: string[] = []
-    verboseOutput.push("import { pikkuState } from '@pikku/core'")
-    verboseOutput.push("import { WorkflowsMeta } from '@pikku/core/workflow'")
-    verboseOutput.push(verboseImportStatement)
-    verboseOutput.push('')
-    verboseOutput.push(
-      "pikkuState('workflows', 'meta', metaData as WorkflowsMeta)"
-    )
+      const verboseOutput: string[] = []
+      verboseOutput.push("import { pikkuState } from '@pikku/core'")
+      verboseOutput.push("import { WorkflowsMeta } from '@pikku/core/workflow'")
+      verboseOutput.push(verboseImportStatement)
+      verboseOutput.push('')
+      verboseOutput.push(
+        "pikkuState('workflows', 'meta', metaData as WorkflowsMeta)"
+      )
 
-    await writeFileInDir(
-      logger,
-      workflowsWiringMetaVerboseFile,
-      verboseOutput.join('\n')
-    )
+      await writeFileInDir(
+        logger,
+        workflowsWiringMetaVerboseFile,
+        verboseOutput.join('\n')
+      )
+    }
 
     // Write workflow wirings (imports)
     await writeFileInDir(

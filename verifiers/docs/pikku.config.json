@@ -1,4 +1,5 @@
 {
   "extends": "../../templates/functions/pikku.config.json",
-  "tsconfig": "./tsconfig.json"
+  "tsconfig": "./tsconfig.json",
+  "verboseMeta": true
 }

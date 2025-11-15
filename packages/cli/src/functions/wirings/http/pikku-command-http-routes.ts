@@ -62,21 +62,23 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       `import { pikkuState } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('http', 'meta', metaData)`
     )
 
-    await writeFileInDir(
-      logger,
-      httpWiringMetaVerboseJsonFile,
-      JSON.stringify(http.meta, null, 2)
-    )
+    if (config.verboseMeta) {
+      await writeFileInDir(
+        logger,
+        httpWiringMetaVerboseJsonFile,
+        JSON.stringify(http.meta, null, 2)
+      )
 
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from './pikku-http-wirings-meta.verbose.gen.json' with { type: 'json' }`
-      : `import metaData from './pikku-http-wirings-meta.verbose.gen.json'`
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from './pikku-http-wirings-meta.verbose.gen.json' with { type: 'json' }`
+        : `import metaData from './pikku-http-wirings-meta.verbose.gen.json'`
 
-    await writeFileInDir(
-      logger,
-      httpWiringMetaVerboseFile,
-      `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('http', 'meta', metaData)`
-    )
+      await writeFileInDir(
+        logger,
+        httpWiringMetaVerboseFile,
+        `import { pikkuState } from '@pikku/core'\n${verboseImportStatement}\npikkuState('http', 'meta', metaData)`
+      )
+    }
 
     return true
   },

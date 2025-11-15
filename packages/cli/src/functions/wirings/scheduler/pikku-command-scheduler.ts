@@ -45,34 +45,36 @@ export const pikkuScheduler: any = pikkuSessionlessFunc<
       )
     )
 
-    // Write verbose JSON
-    await writeFileInDir(
-      logger,
-      schedulersWiringMetaVerboseJsonFile,
-      JSON.stringify(scheduledTasks.meta, null, 2)
-    )
+    if (config.verboseMeta) {
+      // Write verbose JSON
+      await writeFileInDir(
+        logger,
+        schedulersWiringMetaVerboseJsonFile,
+        JSON.stringify(scheduledTasks.meta, null, 2)
+      )
 
-    // Write verbose TS
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from './pikku-schedulers-wirings-meta.verbose.gen.json' with { type: 'json' }`
-      : `import metaData from './pikku-schedulers-wirings-meta.verbose.gen.json'`
+      // Write verbose TS
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from './pikku-schedulers-wirings-meta.verbose.gen.json' with { type: 'json' }`
+        : `import metaData from './pikku-schedulers-wirings-meta.verbose.gen.json'`
 
-    const verboseOutput: string[] = []
-    verboseOutput.push("import { pikkuState } from '@pikku/core'")
-    verboseOutput.push(
-      "import { ScheduledTasksMeta } from '@pikku/core/scheduler'"
-    )
-    verboseOutput.push(verboseImportStatement)
-    verboseOutput.push('')
-    verboseOutput.push(
-      "pikkuState('scheduler', 'meta', metaData as ScheduledTasksMeta)"
-    )
+      const verboseOutput: string[] = []
+      verboseOutput.push("import { pikkuState } from '@pikku/core'")
+      verboseOutput.push(
+        "import { ScheduledTasksMeta } from '@pikku/core/scheduler'"
+      )
+      verboseOutput.push(verboseImportStatement)
+      verboseOutput.push('')
+      verboseOutput.push(
+        "pikkuState('scheduler', 'meta', metaData as ScheduledTasksMeta)"
+      )
 
-    await writeFileInDir(
-      logger,
-      schedulersWiringMetaVerboseFile,
-      verboseOutput.join('\n')
-    )
+      await writeFileInDir(
+        logger,
+        schedulersWiringMetaVerboseFile,
+        verboseOutput.join('\n')
+      )
+    }
 
     await writeFileInDir(
       logger,

@@ -50,27 +50,29 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${runtimeImportStatement}\npikkuState('function', 'meta', metaData as FunctionsRuntimeMeta)`
     )
 
-    await writeFileInDir(
-      logger,
-      functionsMetaVerboseJsonFile,
-      JSON.stringify(functions.meta, null, 2)
-    )
+    if (config.verboseMeta) {
+      await writeFileInDir(
+        logger,
+        functionsMetaVerboseJsonFile,
+        JSON.stringify(functions.meta, null, 2)
+      )
 
-    const verboseJsonImportPath = getFileImportRelativePath(
-      functionsMetaVerboseFile,
-      functionsMetaVerboseJsonFile,
-      packageMappings
-    )
+      const verboseJsonImportPath = getFileImportRelativePath(
+        functionsMetaVerboseFile,
+        functionsMetaVerboseJsonFile,
+        packageMappings
+      )
 
-    const verboseImportStatement = supportsImportAttributes
-      ? `import metaData from '${verboseJsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${verboseJsonImportPath}'`
+      const verboseImportStatement = supportsImportAttributes
+        ? `import metaData from '${verboseJsonImportPath}' with { type: 'json' }`
+        : `import metaData from '${verboseJsonImportPath}'`
 
-    await writeFileInDir(
-      logger,
-      functionsMetaVerboseFile,
-      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${verboseImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
-    )
+      await writeFileInDir(
+        logger,
+        functionsMetaVerboseFile,
+        `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${verboseImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
+      )
+    }
 
     await writeFileInDir(
       logger,

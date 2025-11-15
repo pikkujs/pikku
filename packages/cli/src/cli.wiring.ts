@@ -42,6 +42,10 @@ wireCLI({
     stateInput: {
       description: 'Load inspector state from JSON file (skips inspection)',
     },
+    verboseMeta: {
+      description:
+        'Generate verbose metadata files with docs (summary/description)',
+    },
   },
   commands: {
     all: pikkuCLICommand({

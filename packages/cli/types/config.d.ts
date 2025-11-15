@@ -188,6 +188,8 @@ export type PikkuCLIInput = {
   stateOutput?: string
   stateInput?: string
 
+  verboseMeta?: boolean
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -204,6 +206,7 @@ export type PikkuCLIConfig = {
   configFile?: string
   tags?: string[]
   types?: string[]
+  verboseMeta?: boolean
 
   userSessionType?: string
   singletonServicesFactoryType?: string
