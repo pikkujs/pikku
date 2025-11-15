@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- ec6401b: chore: updating aws types
+
 ### Minor Changes
 
 - Workflow support

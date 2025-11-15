@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.2
+
+### Patch Changes
+
+- ec6401b: feat: serialize json files seperate to pikku meta state calls
+
 ## 0.11.1
 
 ### Patch Changes
