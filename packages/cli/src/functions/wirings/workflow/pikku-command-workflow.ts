@@ -11,6 +11,7 @@ import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { join } from 'path'
 
 export const pikkuWorkflow: any = pikkuSessionlessFunc<
@@ -29,9 +30,26 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       typesDeclarationFile,
       packageMappings,
       schema,
+      rpcInternalMapDeclarationFile,
     } = config
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
+
+    // Check for required types
+    checkRequiredTypes(visitState.filesAndMethodsErrors, {
+      userSessionType: true,
+      sessionServiceType: true,
+      singletonServicesType: true,
+      singletonServicesFactory: false,
+      sessionServicesFactory: false,
+    })
+
+    const { userSessionType, singletonServicesType } =
+      visitState.filesAndMethods
+
+    if (!userSessionType || !singletonServicesType) {
+      throw new Error('Required types not found')
+    }
 
     // Validate that workflowService service is configured if workflows are defined
     const hasWorkflows = Object.keys(workflows.meta).length > 0
@@ -92,10 +110,36 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       functionTypesFile,
       packageMappings
     )
+
+    const userSessionImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      userSessionType.typePath,
+      packageMappings
+    )
+
+    const singletonServicesImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      singletonServicesType.typePath,
+      packageMappings
+    )
+
+    const rpcMapImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      rpcInternalMapDeclarationFile,
+      packageMappings
+    )
+
     await writeFileInDir(
       logger,
       workflowTypesFile,
-      serializeWorkflowTypes(functionTypesImportPath)
+      serializeWorkflowTypes(
+        functionTypesImportPath,
+        userSessionImportPath,
+        userSessionType.type,
+        singletonServicesImportPath,
+        singletonServicesType.type,
+        rpcMapImportPath
+      )
     )
 
     // Write workflow map (type-safe client API)

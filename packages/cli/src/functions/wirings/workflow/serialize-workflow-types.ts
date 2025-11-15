@@ -1,7 +1,31 @@
 /**
  * Generates type definitions for workflow wirings
  */
-export const serializeWorkflowTypes = (functionTypesImportPath: string) => {
+export const serializeWorkflowTypes = (
+  functionTypesImportPath: string,
+  userSessionImportPath: string,
+  userSessionType: string,
+  singletonServicesImportPath: string,
+  singletonServicesType: string,
+  rpcMapImportPath: string
+) => {
+  // Optimize imports by combining types from the same file
+  const typeImports: string[] = []
+
+  // Group UserSession and SingletonServices if they're from the same file
+  if (userSessionImportPath === singletonServicesImportPath) {
+    typeImports.push(
+      `import type { ${userSessionType}, ${singletonServicesType} } from '${userSessionImportPath}'`
+    )
+  } else {
+    typeImports.push(
+      `import type { ${userSessionType} } from '${userSessionImportPath}'`
+    )
+    typeImports.push(
+      `import type { ${singletonServicesType} } from '${singletonServicesImportPath}'`
+    )
+  }
+
   return `/**
  * Workflow-specific type definitions for tree-shaking optimization
  */
@@ -9,8 +33,8 @@ export const serializeWorkflowTypes = (functionTypesImportPath: string) => {
 import { CoreWorkflow, wireWorkflow as wireWorkflowCore, PikkuWorkflowInteraction, WorkflowStepOptions } from '@pikku/core/workflow'
 import { CorePikkuFunctionConfig, CorePikkuFunctionSessionless } from '@pikku/core'
 import type { PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
-import type { UserSession, SingletonServices } from '../../types/application-types.d.js'
-import type { TypedPikkuRPC, RPCMap } from '../rpc/pikku-rpc-wirings-map.internal.gen.d.js'
+${typeImports.join('\n')}
+import type { TypedPikkuRPC, RPCMap } from '${rpcMapImportPath}'
 
 /**
  * Type definition for workflows that orchestrate multi-step processes.
