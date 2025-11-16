@@ -68,7 +68,7 @@ export class ContextAwareRPCService {
         singletonServices: this.services,
         getAllServices: () => this.services,
         data: () => data,
-        userSession: this.services.userSession,
+        userSession: this.interaction.session,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
         interaction: updatedInteraction,
       }
@@ -101,7 +101,7 @@ export class ContextAwareRPCService {
         singletonServices: this.services,
         getAllServices: () => this.services,
         data: () => data,
-        userSession: this.services.userSession,
+        userSession: this.interaction.session,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
         interaction: mergedInteraction,
       }

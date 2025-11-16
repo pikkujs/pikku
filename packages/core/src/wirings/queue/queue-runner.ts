@@ -150,13 +150,14 @@ export async function runQueueJob({
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
-    const interaction: PikkuInteraction = { queue }
+    const interaction: PikkuInteraction = {
+      queue,
+    }
     // Use provided singleton services
     const getAllServices = async () => {
       const sessionServices = await createSessionServices?.(
         singletonServices,
-        { queue },
-        undefined
+        interaction
       )
 
       const services = rpcService.injectRPCService(

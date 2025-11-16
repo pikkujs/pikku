@@ -286,12 +286,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       try {
         const getAllServices = () => {
           let sessionServices = {}
-          const interaction = { workflow: workflowInteraction }
           if (this.createSessionServices) {
             sessionServices = this.createSessionServices(
               this.singletonServices!,
-              interaction,
-              undefined
+              { workflow: workflowInteraction }
             )
           }
           return {

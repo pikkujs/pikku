@@ -23,5 +23,4 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   queueService?: QueueService
 }
 
-export interface Services
-  extends CoreServices<SingletonServices, UserSession> {}
+export interface Services extends CoreServices<SingletonServices> {}

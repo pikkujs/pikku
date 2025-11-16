@@ -210,7 +210,10 @@ export type ExtractFunctionOutput<Func> =
  */
 export type CoreCLICommandConfig<
   FuncConfig,
-  PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
   PikkuCLIRender extends CorePikkuCLIRender<any, any, any> = CorePikkuCLIRender<
     any,
     any

@@ -40,11 +40,11 @@ export const authCookie = pikkuMiddlewareFactory<{
 }>(({ name, options, expiresIn }) =>
   pikkuMiddleware(
     async (
-      { userSession: userSessionService, jwt: jwtService, logger },
-      { http },
+      { jwt: jwtService, logger },
+      { http, session: userSessionService },
       next
     ) => {
-      if (!http?.request || userSessionService.get()) {
+      if (!http?.request || !userSessionService || userSessionService.get()) {
         return next()
       }
 

@@ -69,7 +69,8 @@ export type PikkuPermissionConfig<In = unknown, RequiredServices extends Service
  * @example
  * \`\`\`typescript
  * // Direct function syntax
- * const permission = pikkuPermission(({ logger }, interaction, data, session) => {
+ * const permission = pikkuPermission(async ({ logger }, data, { session }) => {
+ *   const session = await session?.get()
  *   return session?.role === 'admin'
  * })
  *
@@ -77,7 +78,8 @@ export type PikkuPermissionConfig<In = unknown, RequiredServices extends Service
  * const adminPermission = pikkuPermission({
  *   name: 'Admin Permission',
  *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, interaction, data, session) => {
+ *   func: async ({ logger }, data, { session }) => {
+ *     const session = await session?.get()
  *     return session?.role === 'admin'
  *   }
  * })
@@ -140,7 +142,7 @@ export const pikkuMiddleware = <RequiredServices extends SingletonServices = Sin
  *   message,
  *   level = 'info'
  * }) => {
- *   return pikkuMiddleware(async ({ logger }, _interaction, next) => {
+ *   return pikkuMiddleware(async ({ logger }, next) => {
  *     logger[level](message)
  *     await next()
  *   })
@@ -162,7 +164,8 @@ export const pikkuMiddlewareFactory = <In = any>(
  * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
  *   role
  * }) => {
- *   return pikkuPermission(async ({ logger }, data, session) => {
+ *   return pikkuPermission(async ({ logger }, data, interaction) => {
+ *     const session = await interaction.session?.get()
  *     if (!session || session.role !== role) {
  *       logger.warn(\`Permission denied: required role '\${role}'\`)
  *       return false
@@ -272,7 +275,8 @@ export type PikkuFunctionConfig<
  * @example
  * \\\`\\\`\\\`typescript
  * const createUser = pikkuFunc<{name: string, email: string}, {id: number, message: string}>({
- *   func: async ({db, logger}, interaction, input, session) => {
+ *   func: async ({db, logger}, input, interaction) => {
+ *     const session = await interaction.session.get()
  *     logger.info('Creating user', input.name)
  *     const user = await db.users.create(input)
  *     return {id: user.id, message: \\\`User \\\${input.name} created successfully\\\`}
@@ -301,7 +305,7 @@ export const pikkuFunc = <In, Out = unknown>(
  * @example
  * \\\`\\\`\\\`typescript
  * const healthCheck = pikkuSessionlessFunc<void, {status: string, timestamp: string}>({
- *   func: async ({logger}, interaction, input) => {
+ *   func: async ({logger}, input) => {
  *     logger.info('Health check requested')
  *     return {status: 'healthy', timestamp: new Date().toISOString()}
  *   },
@@ -393,7 +397,8 @@ export const pikkuServices = (
  *
  * @example
  * \`\`\`typescript
- * export const createSessionServices = pikkuSessionServices(async (services, interaction, session) => {
+ * export const createSessionServices = pikkuSessionServices(async (services, interaction) => {
+ *   const session = await interaction.session?.get()
  *   return {
  *     userCache: new UserCache(session?.userId)
  *   }
@@ -403,8 +408,7 @@ export const pikkuServices = (
 export const pikkuSessionServices = (
   func: (
     services: SingletonServices,
-    interaction: any,
-    session: Session | undefined
+    interaction: any
   ) => Promise<RequiredSessionServices>
 ) => func
 

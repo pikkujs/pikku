@@ -324,23 +324,27 @@ const executeRoute = async (
     }
   }
 
-  const interaction: PikkuInteraction = { http, channel }
+  const interaction: PikkuInteraction = { http, channel, session: userSession }
 
   const getAllServices = async (session?: CoreUserSession) => {
+    // Create interaction with session for session services
+    const interactionWithSession = {
+      ...interaction,
+      session: userSession,
+    }
+
     // Create session-specific services for handling the request
     sessionServices = await createSessionServices(
-      { ...singletonServices, userSession },
-      { http },
-      session
+      singletonServices,
+      interactionWithSession
     )
 
     return rpcService.injectRPCService(
       {
         ...singletonServices,
         ...sessionServices,
-        userSession,
       },
-      interaction,
+      interactionWithSession,
       route.auth
     )
   }

@@ -56,14 +56,12 @@ export const apiRoutePermissions = () =>
   addHTTPPermission('/api/*', { route: httpRoutePermission })
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
-const inlineWireMiddleware = pikkuMiddleware(
-  async ({ logger }, _interaction, next) => {
-    logger.info({ type: 'wire', name: 'inline', phase: 'before' })
-    const result = await next()
-    logger.info({ type: 'wire', name: 'inline', phase: 'after' })
-    return result
-  }
-)
+const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, next) => {
+  logger.info({ type: 'wire', name: 'inline', phase: 'before' })
+  const result = await next()
+  logger.info({ type: 'wire', name: 'inline', phase: 'after' })
+  return result
+})
 
 // Wire-level inline permission (not exported, won't be in pikku-permissions.gen.ts)
 const inlineWirePermission = pikkuPermission(

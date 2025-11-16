@@ -22,14 +22,11 @@ export const logCommandInfoAndTime = ({
   commandEnd,
 }: LogCommandInfoOptions): PikkuMiddleware => {
   return async ({ logger }, _interaction, next) => {
-    // Log start (debug level - only shows with --verbose)
     const start = Date.now()
     logger.debug(`• ${commandStart}...`)
 
-    // Execute the function
     await next()
 
-    // Log completion (debug level - only shows with --verbose)
     logger.debug({
       type: 'success',
       message: `✓ ${commandEnd} in ${Date.now() - start}ms.`,

@@ -107,21 +107,21 @@ export const runChannelConnect = async ({
       channelHandlerFactory,
       channelName: channelConfig.name,
     })
+
+    const interaction: PikkuInteraction = { channel, session: userSession }
+
     if (createSessionServices) {
       sessionServices = await createSessionServices(
         singletonServices,
-        { http },
-        await userSession.get()
+        interaction
       )
     }
 
-    const interaction: PikkuInteraction = { channel }
     const getAllServices = (requiresAuth?: boolean) =>
       rpcService.injectRPCService(
         {
           ...singletonServices,
           ...sessionServices,
-          userSession,
         },
         interaction,
         requiresAuth
@@ -188,21 +188,21 @@ export const runChannelDisconnect = async ({
     params.channelStore,
     params.channelId
   )
+  userSession.setInitial(session)
+  const interaction: PikkuInteraction = { channel, session: userSession }
+
   if (!sessionServices && params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
-      { channel },
-      session
+      interaction
     )
   }
 
-  const interaction: PikkuInteraction = { channel }
   const getAllServices = (requiresAuth?: boolean) =>
     rpcService.injectRPCService(
       {
         ...singletonServices,
         ...sessionServices,
-        userSession,
       },
       interaction,
       requiresAuth
@@ -247,21 +247,21 @@ export const runChannelMessage = async (
     params.channelStore,
     params.channelId
   )
+  userSession.setInitial(session)
+  const interaction: PikkuInteraction = { channel, session: userSession }
+
   if (params.createSessionServices) {
     sessionServices = await params.createSessionServices(
       singletonServices,
-      { channel },
-      session
+      interaction
     )
   }
 
-  const interaction: PikkuInteraction = { channel }
   const getAllServices = () =>
     rpcService.injectRPCService(
       {
         ...singletonServices,
         ...sessionServices,
-        userSession,
       },
       interaction
     )
@@ -271,7 +271,8 @@ export const runChannelMessage = async (
     const onMessage = processMessageHandlers(
       getAllServices(),
       channelConfig,
-      channelHandler
+      channelHandler,
+      userSession
     )
     response = await onMessage(data)
   } catch (e: any) {

@@ -22,11 +22,11 @@ export const authAPIKey = pikkuMiddlewareFactory<{
 }>(({ source }) =>
   pikkuMiddleware(
     async (
-      { userSession: userSessionService, jwt: jwtService },
-      { http },
+      { jwt: jwtService },
+      { http, session: userSessionService },
       next
     ) => {
-      if (!http?.request || userSessionService.get()) {
+      if (!http?.request || !userSessionService || userSessionService.get()) {
         return next()
       }
 

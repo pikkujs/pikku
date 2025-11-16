@@ -106,6 +106,7 @@ export async function runScheduledTask({
         throw new ScheduledTaskSkippedError(name, reason)
       },
     },
+    session: userSession,
   }
 
   try {
@@ -116,8 +117,7 @@ export async function runScheduledTask({
     const getAllServices = async () => {
       sessionServices = await createSessionServices?.(
         singletonServices,
-        interaction,
-        session
+        interaction
       )
 
       return rpcService.injectRPCService(

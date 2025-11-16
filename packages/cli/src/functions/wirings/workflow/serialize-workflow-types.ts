@@ -7,7 +7,7 @@ export const serializeWorkflowTypes = (functionTypesImportPath: string) => {
  */
 
 import { PikkuWorkflowInteraction, WorkflowStepOptions } from '@pikku/core/workflow'
-import { CorePikkuFunctionConfig, CorePikkuFunctionSessionless } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuFunctionSessionless, PikkuInteraction } from '@pikku/core'
 import type { PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 import type { UserSession, SingletonServices } from '../../types/application-types.d.js'
 import type { TypedPikkuRPC, RPCMap } from '../rpc/pikku-rpc-wirings-map.internal.gen.d.js'
@@ -50,11 +50,11 @@ export type PikkuFunctionWorkflow<
   In,
   Out,
   null,
-  SingletonServices & {
+  SingletonServices,
+  PikkuInteraction<In, Out, UserSession> & {
     rpc: TypedPikkuRPC
     workflow: TypedWorkflow
-  },
-  UserSession
+  }
 >
 
 /**

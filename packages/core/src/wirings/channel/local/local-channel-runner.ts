@@ -76,12 +76,12 @@ export const runLocalChannel = async ({
         openingData
       )
       const channel = channelHandler.getChannel()
-      const session = await userSession.get()
+      const interaction: PikkuInteraction = { channel, session: userSession }
+
       if (createSessionServices) {
         sessionServices = await createSessionServices(
           singletonServices,
-          { http, channel },
-          session
+          interaction
         )
       }
 
@@ -90,13 +90,10 @@ export const runLocalChannel = async ({
           {
             ...singletonServices,
             ...sessionServices,
-            userSession,
           },
           interaction,
           requiresAuth
         )
-
-      const interaction: PikkuInteraction = { channel }
 
       channelHandler.registerOnOpen(async () => {
         if (channelConfig.onConnect && meta.connect) {
@@ -145,7 +142,8 @@ export const runLocalChannel = async ({
       const onMessage = processMessageHandlers(
         getAllServices(channel),
         channelConfig as any,
-        channelHandler
+        channelHandler,
+        userSession
       )
       channelHandler.registerOnMessage(async (data) => {
         try {

@@ -42,7 +42,7 @@ export const createSessionServices: CreateSessionServices<
   SingletonServices,
   Services,
   UserSession
-> = async ({ email, logger }, _interaction) => {
+> = async ({ email, logger }) => {
   // Destructure services to test session service aggregation
   logger.info('Creating session services with email')
   return {

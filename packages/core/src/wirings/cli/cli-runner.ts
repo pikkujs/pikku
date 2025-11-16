@@ -339,21 +339,20 @@ export async function runCLICommand({
       data: pluckedData,
       channel,
     },
+    session: userSession,
   }
 
   const getAllServices = async (session?: CoreUserSession) => {
     // Create session-specific services for handling the command
     sessionServices = await createSessionServices?.(
       singletonServices,
-      interaction,
-      session
+      interaction
     )
 
     return rpcService.injectRPCService(
       {
         ...singletonServices,
         ...sessionServices,
-        userSession,
       },
       interaction,
       false

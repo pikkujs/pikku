@@ -9,7 +9,7 @@ export const flakyHappyRPC = pikkuSessionlessFunc<
   { value: number },
   { result: number; attempt: number }
 >({
-  func: async ({ logger, workflowStep }, data) => {
+  func: async ({ logger }, data, { workflowStep }) => {
     const attempt = workflowStep?.attemptCount ?? 0
 
     logger.info(`🔄 [HAPPY] flakyHappyRPC - Attempt #${attempt}`)
@@ -37,7 +37,7 @@ export const happyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number; finalAttempt: number; message: string }
 >({
-  func: async ({ workflow }, data) => {
+  func: async ({}, data, { workflow }) => {
     const result = await workflow.do(
       'Step that fails once then succeeds',
       'flakyHappyRPC',
@@ -72,7 +72,7 @@ export const happyRetry = pikkuSessionlessFunc<
     }>
   }
 >({
-  func: async ({ rpc, workflowService, logger }, data) => {
+  func: async ({ workflowService, logger }, data, { rpc }) => {
     // Start the workflow
     const { runId } = await rpc.startWorkflow('happyRetryWorkflow', data)
 

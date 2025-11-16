@@ -9,7 +9,7 @@ export const alwaysFailsRPC = pikkuSessionlessFunc<
   { value: number },
   { result: number }
 >({
-  func: async ({ logger, workflowStep }, data) => {
+  func: async ({ logger }, data, { workflowStep }) => {
     const attempt = workflowStep?.attemptCount ?? 0
 
     logger.error(`🔄 [UNHAPPY] alwaysFailsRPC - Attempt #${attempt}`)
@@ -30,7 +30,7 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
 >({
-  func: async ({ workflow }, data) => {
+  func: async ({}, data, { workflow }) => {
     // If value is negative, cancel the workflow immediately
     if (data.value < 0) {
       await workflow.cancel(
@@ -69,7 +69,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
     }>
   }
 >({
-  func: async ({ rpc, workflowService, logger }, data) => {
+  func: async ({ workflowService, logger }, data, { rpc }) => {
     // Start the workflow
     const { runId } = await rpc.startWorkflow('unhappyRetryWorkflow', data)
 

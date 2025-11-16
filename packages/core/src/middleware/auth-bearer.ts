@@ -40,44 +40,38 @@ export const authBearer = pikkuMiddlewareFactory<{
     userSession: CoreUserSession
   }
 }>(({ token } = {}) =>
-  pikkuMiddleware(
-    async (
-      { userSession: userSessionService, jwt: jwtService },
-      { http },
-      next
-    ) => {
-      // Skip if session already exists.
-      if (!http?.request || userSessionService.get()) {
-        return next()
-      }
-
-      const authHeader =
-        http.request.header('authorization') ||
-        http.request.header('Authorization')
-
-      if (authHeader) {
-        const [scheme, bearerToken] = authHeader.split(' ')
-        if (scheme !== 'Bearer' || !bearerToken) {
-          throw new InvalidSessionError()
-        }
-
-        let userSession: CoreUserSession | null = null
-
-        // If static token provided, validate against it
-        if (token && bearerToken === token.value) {
-          userSession = token.userSession
-        }
-        // Otherwise, default to JWT decoding
-        else if (jwtService && !token) {
-          userSession = await jwtService.decode(bearerToken)
-        }
-
-        if (userSession) {
-          userSessionService.setInitial(userSession)
-        }
-      }
-
+  pikkuMiddleware(async ({ jwt: jwtService }, { http, session }, next) => {
+    // Skip if session already exists.
+    if (!http?.request || !session || session.get()) {
       return next()
     }
-  )
+
+    const authHeader =
+      http.request.header('authorization') ||
+      http.request.header('Authorization')
+
+    if (authHeader) {
+      const [scheme, bearerToken] = authHeader.split(' ')
+      if (scheme !== 'Bearer' || !bearerToken) {
+        throw new InvalidSessionError()
+      }
+
+      let userSession: CoreUserSession | null = null
+
+      // If static token provided, validate against it
+      if (token && bearerToken === token.value) {
+        userSession = token.userSession
+      }
+      // Otherwise, default to JWT decoding
+      else if (jwtService && !token) {
+        userSession = await jwtService.decode(bearerToken)
+      }
+
+      if (userSession) {
+        session.setInitial(userSession)
+      }
+    }
+
+    return next()
+  })
 )

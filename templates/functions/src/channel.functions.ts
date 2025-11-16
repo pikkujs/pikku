@@ -6,7 +6,7 @@ import {
 } from '../.pikku/pikku-types.gen.js'
 
 export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
-  async ({ logger }, { channel }) => {
+  async ({ logger }, _, { channel }) => {
     logger.info(
       `Connected to event channel with opening data ${JSON.stringify(channel.openingData)}`
     )
@@ -15,7 +15,7 @@ export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
 )
 
 export const onDisconnect = pikkuChannelDisconnectionFunc(
-  async ({ logger }, { channel }) => {
+  async ({ logger }, _, { channel }) => {
     logger.info(
       `Disconnected from event channel with data ${JSON.stringify(channel.openingData)}`
     )
@@ -25,53 +25,53 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
 export const authenticate = pikkuSessionlessFunc<
   { token: string; userId: string },
   { authResult: boolean }
->(async ({ userSession }, {}, data) => {
-  const authResult = data.token === 'valid'
+>(async (_services, { token, userId }, { session }) => {
+  const authResult = token === 'valid'
   if (authResult) {
-    await userSession?.set({ userId: data.userId })
+    await session?.set({ userId })
   }
   return { authResult }
 })
 
 export const logout = pikkuSessionlessFunc<void, void>({
-  func: async ({ userSession }, {}) => {
-    await userSession?.clear()
+  func: async (_services, _data, { session }) => {
+    await session?.clear()
   },
 })
 
 export const subscribe = pikkuChannelFunc<{ name: string }, void>(
-  async ({ eventHub }, { channel }, data) => {
-    await eventHub?.subscribe(data.name, channel.channelId)
+  async ({ eventHub }, { name }, { channel }) => {
+    await eventHub?.subscribe(name, channel.channelId)
   }
 )
 
 export const unsubscribe = pikkuChannelFunc<{ name: string }, 'valid'>(
-  async ({ eventHub }, { channel }, data) => {
+  async ({ eventHub }, { name }, { channel }) => {
     // @ts-expect-error - We should only be able to send data that is in the output type
     channel.send('invalid')
 
     channel.send('valid')
 
-    await eventHub?.unsubscribe(data.name, channel.channelId)
+    await eventHub?.unsubscribe(name, channel.channelId)
   }
 )
 
 export const emitMessage = pikkuChannelFunc<
   { name: string },
   { timestamp: string; from: string } | { message: string }
->(async ({ userSession, eventHub }, { channel }, data) => {
-  const session = await userSession?.get()
+>(async ({ eventHub }, { name }, { channel, session }) => {
+  const sessionData = await session?.get()
 
   eventHub?.publish('bob', null, {})
 
-  await eventHub?.publish(data.name, channel.channelId, {
+  await eventHub?.publish(name, channel.channelId, {
     timestamp: new Date().toISOString(),
-    from: session ?? 'anonymous',
+    from: sessionData ?? 'anonymous',
   })
 })
 
 export const onMessage = pikkuChannelFunc<'hello', 'hey'>(
-  async ({ logger }, { channel }) => {
+  async ({ logger }, _data, { channel }) => {
     logger.info(
       `Got a generic hello message with data ${JSON.stringify(channel.openingData)}`
     )

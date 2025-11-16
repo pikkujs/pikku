@@ -7,6 +7,7 @@ import type {
   CorePikkuMiddleware,
   PikkuInteraction,
 } from '../types/core.types.js'
+import { UserSessionService } from '../services/user-session-service.js'
 
 /**
  * Represents a core API function that performs an operation using core services and a user session.
@@ -34,9 +35,8 @@ export type CorePikkuFunction<
   Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
-  interaction: Interaction,
   data: In,
-  session: Session
+  interaction: Interaction & { session: UserSessionService<Session> }
 ) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
 /**
@@ -65,9 +65,8 @@ export type CorePikkuFunctionSessionless<
   Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
-  interaction: Interaction,
   data: In,
-  session?: Session
+  interaction: Interaction & { session?: UserSessionService<Session> }
 ) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
 
 /**
@@ -83,9 +82,10 @@ export type CorePikkuPermission<
   Session extends CoreUserSession = CoreUserSession,
 > = (
   services: Services,
-  interaction: PikkuInteraction<In, any>,
   data: In,
-  session?: Session
+  interaction: PikkuInteraction<In, any, Session> & {
+    session?: UserSessionService<Session>
+  }
 ) => Promise<boolean>
 
 /**
@@ -195,7 +195,10 @@ export type CorePikkuFunctionConfig<
     any,
     any
   > = CorePikkuPermission<any>,
-  PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
 > = {
   name?: string
   expose?: boolean

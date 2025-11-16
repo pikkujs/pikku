@@ -32,17 +32,21 @@ export const runPikkuFuncDirectly = async <In, Out>(
   allServices: CoreServices,
   interaction: PikkuInteraction,
   data: In,
-  session?: CoreUserSession
+  userSession?: UserSessionService<CoreUserSession>
 ) => {
   const funcConfig = pikkuState('function', 'functions').get(funcName)
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
+  // Inject session into interaction
+  const interactionWithSession = {
+    ...interaction,
+    session: userSession,
+  }
   return (await funcConfig.func(
     allServices,
-    interaction,
     data,
-    session!
+    interactionWithSession
   )) as Out
 }
 
@@ -132,6 +136,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     const allServices = await getAllServices(session)
 
+    // Inject session into interaction
+    const interactionWithSession = {
+      ...interaction,
+      session: userSession,
+    }
+
     // Run permissions check with combined permissions: inheritedPermissions (including tags) → wirePermissions → funcPermissions
     await runPermissions(wireType, wireId, {
       wireInheritedPermissions: mergedInheritedPermissions,
@@ -139,12 +149,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       allServices,
-      interaction,
+      interaction: interactionWithSession,
       data: actualData,
-      session,
     })
 
-    return await funcConfig.func(allServices, interaction, actualData, session!)
+    return await funcConfig.func(
+      allServices,
+      actualData,
+      interactionWithSession
+    )
   }
 
   // Combine all middleware: inheritedMiddleware → wireMiddleware → funcMiddleware
@@ -156,12 +169,14 @@ export const runPikkuFunc = async <In = any, Out = any>(
   })
 
   if (allMiddleware.length > 0) {
+    // Inject session into interaction for middleware
+    const interactionWithSession = {
+      ...interaction,
+      session: userSession,
+    }
     return (await runMiddleware<CorePikkuMiddleware>(
-      {
-        ...singletonServices,
-        userSession,
-      },
-      interaction,
+      singletonServices,
+      interactionWithSession,
       allMiddleware,
       executeFunction
     )) as Out

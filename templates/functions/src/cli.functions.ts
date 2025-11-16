@@ -5,10 +5,10 @@ export const greetUser = pikkuSessionlessFunc<
   { name: string; loud: boolean },
   { message: string; timestamp: string }
 >({
-  func: async (services, {}, data) => {
-    const message = `Hello, ${data.name}!`
+  func: async (_services, { name, loud }) => {
+    const message = `Hello, ${name}!`
     return {
-      message: data.loud ? message.toUpperCase() : message,
+      message: loud ? message.toUpperCase() : message,
       timestamp: new Date().toISOString(),
     }
   },
@@ -19,13 +19,13 @@ export const addNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, {}, data) => {
-    const result = data.a + data.b
+  func: async (_services, { a, b }) => {
+    const result = a + b
     return {
       operation: 'add',
-      operands: [data.a, data.b],
+      operands: [a, b],
       result,
-      expression: `${data.a} + ${data.b} = ${result}`,
+      expression: `${a} + ${b} = ${result}`,
     }
   },
 })
@@ -34,13 +34,13 @@ export const subtractNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, {}, data) => {
-    const result = data.a - data.b
+  func: async (_services, { a, b }) => {
+    const result = a - b
     return {
       operation: 'subtract',
-      operands: [data.a, data.b],
+      operands: [a, b],
       result,
-      expression: `${data.a} - ${data.b} = ${result}`,
+      expression: `${a} - ${b} = ${result}`,
     }
   },
 })
@@ -49,13 +49,13 @@ export const multiplyNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, {}, data) => {
-    const result = data.a * data.b
+  func: async (_services, { a, b }) => {
+    const result = a * b
     return {
       operation: 'multiply',
-      operands: [data.a, data.b],
+      operands: [a, b],
       result,
-      expression: `${data.a} * ${data.b} = ${result}`,
+      expression: `${a} * ${b} = ${result}`,
     }
   },
 })
@@ -64,16 +64,16 @@ export const divideNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
 >({
-  func: async (services, {}, data) => {
-    if (data.b === 0) {
+  func: async (_services, { a, b }) => {
+    if (b === 0) {
       throw new Error('Division by zero is not allowed')
     }
-    const result = data.a / data.b
+    const result = a / b
     return {
       operation: 'divide',
-      operands: [data.a, data.b],
+      operands: [a, b],
       result,
-      expression: `${data.a} / ${data.b} = ${result}`,
+      expression: `${a} / ${b} = ${result}`,
     }
   },
 })
@@ -89,14 +89,14 @@ export const createUser = pikkuFunc<
     created: string
   }
 >({
-  func: async (services, {}, data) => {
-    services.logger.info(`Creating user: ${data.username}`)
+  func: async (services, { username, email, admin }) => {
+    services.logger.info(`Creating user: ${username}`)
 
     return {
       id: Math.floor(Math.random() * 10000),
-      username: data.username,
-      email: data.email,
-      admin: data.admin || false,
+      username,
+      email,
+      admin: admin || false,
       created: new Date().toISOString(),
     }
   },
@@ -106,7 +106,7 @@ export const listUsers = pikkuFunc<
   { limit?: number; admin?: boolean },
   { users: any[]; total: number; filtered: boolean }
 >({
-  func: async (services, {}, data) => {
+  func: async (_services, { limit, admin }) => {
     // Mock user data
     const allUsers = [
       { id: 1, username: 'alice', email: 'alice@example.com', admin: true },
@@ -122,18 +122,18 @@ export const listUsers = pikkuFunc<
 
     let users = allUsers
 
-    if (data.admin !== undefined) {
-      users = users.filter((user) => user.admin === data.admin)
+    if (admin !== undefined) {
+      users = users.filter((user) => user.admin === admin)
     }
 
-    if (data.limit) {
-      users = users.slice(0, data.limit)
+    if (limit) {
+      users = users.slice(0, limit)
     }
 
     return {
       users,
       total: users.length,
-      filtered: data.admin !== undefined || data.limit !== undefined,
+      filtered: admin !== undefined || limit !== undefined,
     }
   },
 })
@@ -150,16 +150,14 @@ export const processFile = pikkuFunc<
     size: number
   }
 >({
-  func: async (services, {}, data) => {
-    services.logger.info(
-      `Processing file: ${data.path} with action: ${data.action}`
-    )
+  func: async (services, { path, action, backup }) => {
+    services.logger.info(`Processing file: ${path} with action: ${action}`)
 
     // Mock file processing
     return {
-      path: data.path,
-      action: data.action,
-      backup: data.backup || false,
+      path,
+      action,
+      backup: backup || false,
       processed: true,
       timestamp: new Date().toISOString(),
       size: Math.floor(Math.random() * 100000), // Mock file size

@@ -25,6 +25,7 @@ import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -239,13 +240,15 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    const interaction: PikkuInteraction = { mcp: mcpInteraction }
+    const interaction: PikkuInteraction = {
+      mcp: mcpInteraction,
+      session: new PikkuUserSessionService(),
+    }
 
     const getAllServices = async () => {
       sessionServices = await createSessionServices?.(
         singletonServices,
-        interaction,
-        undefined
+        interaction
       )
 
       return rpcService.injectRPCService(

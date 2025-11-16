@@ -180,7 +180,11 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 /**
  * Represents different forms of interaction within Pikku and the outside world.
  */
-export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
+export type PikkuInteraction<
+  In = unknown,
+  Out = unknown,
+  UserSession extends CoreUserSession = CoreUserSession,
+> = Partial<{
   http: PikkuHTTP<In>
   mcp: PikkuMCP
   rpc: PikkuRPC
@@ -190,6 +194,7 @@ export type PikkuInteraction<In = unknown, Out = unknown> = Partial<{
   cli: PikkuCLI
   workflow: PikkuWorkflowInteraction
   workflowStep: WorkflowStepInteraction
+  session: UserSessionService<UserSession>
 }>
 
 /**
@@ -199,10 +204,8 @@ export type CorePikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
-  services: SingletonServices & {
-    userSession: UserSessionService<UserSession>
-  },
-  interactions: PikkuInteraction,
+  services: SingletonServices,
+  interactions: PikkuInteraction<unknown, unknown, UserSession>,
   next: () => Promise<void>
 ) => Promise<void>
 
@@ -254,7 +257,7 @@ export type CorePikkuMiddlewareGroup<
  * ```typescript
  * // Direct function syntax
  * export const logMiddleware = pikkuMiddleware(
- *   async ({ logger }, _interaction, next) => {
+ *   async ({ logger }, next) => {
  *     logger.info('Request started')
  *     await next()
  *   }
@@ -264,7 +267,7 @@ export type CorePikkuMiddlewareGroup<
  * export const logMiddleware = pikkuMiddleware({
  *   name: 'Request Logger',
  *   description: 'Logs request information',
- *   func: async ({ logger }, _interaction, next) => {
+ *   func: async ({ logger }, next) => {
  *     logger.info('Request started')
  *     await next()
  *   }
@@ -292,7 +295,7 @@ export const pikkuMiddleware = <
  *   message,
  *   level = 'info'
  * }) => {
- *   return pikkuMiddleware(async ({ logger }, _interaction, next) => {
+ *   return pikkuMiddleware(async ({ logger }, next) => {
  *     logger[level](message)
  *     await next()
  *   })
@@ -308,12 +311,8 @@ export const pikkuMiddlewareFactory = <In = any>(
 /**
  * Represents the core services used by Pikku, including singleton services.
  */
-export type CoreServices<
-  SingletonServices = CoreSingletonServices,
-  UserSession extends CoreUserSession = CoreUserSession,
-> = SingletonServices & {
-  userSession?: UserSessionService<UserSession>
-}
+export type CoreServices<SingletonServices = CoreSingletonServices> =
+  SingletonServices
 
 export type SessionServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
@@ -341,8 +340,7 @@ export type CreateSessionServices<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  interaction: PikkuInteraction,
-  session: UserSession | undefined
+  interaction: PikkuInteraction<unknown, unknown, UserSession>
 ) => Promise<SessionServices<Services, SingletonServices>>
 
 /**

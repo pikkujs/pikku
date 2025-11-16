@@ -11,6 +11,7 @@ import {
 } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
+import { UserSessionService } from '../../services/user-session-service.js'
 
 const getRouteMeta = (
   channelName: string,
@@ -62,7 +63,8 @@ const validateAuth = (
 export const processMessageHandlers = (
   services: CoreServices,
   channelConfig: CoreChannel<any, any>,
-  channelHandler: PikkuChannelHandler
+  channelHandler: PikkuChannelHandler,
+  userSession?: UserSessionService<CoreUserSession>
 ) => {
   const logger = services.logger
   const requiresSession = channelConfig.auth !== false
@@ -131,7 +133,7 @@ export const processMessageHandlers = (
           ...services,
         }),
         data: () => data,
-        userSession: services.userSession,
+        userSession,
         inheritedMiddleware,
         wireMiddleware,
         inheritedPermissions,
