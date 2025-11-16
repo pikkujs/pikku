@@ -21,6 +21,38 @@ import {
   isStringLike,
   isFunctionLike,
 } from '../utils/extract-node-value.js'
+import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
+
+/**
+ * Detect which wrapper function is being used (pikkuWorkflowFunc or pikkuSimpleWorkflowFunc)
+ */
+function detectWrapperType(funcInitializer: ts.Node): 'simple' | 'regular' {
+  // Check if the function is wrapped in pikkuSimpleWorkflowFunc
+  let current: ts.Node | undefined = funcInitializer
+
+  while (current) {
+    if (ts.isCallExpression(current)) {
+      const expr = current.expression
+      if (ts.isIdentifier(expr)) {
+        if (expr.text === 'pikkuSimpleWorkflowFunc') {
+          return 'simple'
+        }
+        if (expr.text === 'pikkuWorkflowFunc') {
+          return 'regular'
+        }
+      }
+    }
+
+    // Check parent
+    if (current.parent) {
+      current = current.parent
+    } else {
+      break
+    }
+  }
+
+  return 'regular'
+}
 
 /**
  * Scan for workflow.do() and workflow.sleep() calls to extract workflow steps
@@ -210,11 +242,45 @@ export const addWorkflow: AddWiring = (
 
     state.workflows.files.add(node.getSourceFile().fileName)
 
-    // Extract workflow steps from function body
-    // Resolve the identifier to the actual function declaration
+    // Detect wrapper type
+    const wrapperType = detectWrapperType(funcInitializer)
     const resolvedFunc = resolveFunctionDeclaration(funcInitializer, checker)
-    const steps: WorkflowStepMeta[] = []
-    if (resolvedFunc) {
+
+    let steps: WorkflowStepMeta[] = []
+    let simple: boolean | undefined = undefined
+
+    // Try simple workflow extraction first if using pikkuSimpleWorkflowFunc or pikkuWorkflowFunc
+    if (resolvedFunc && (wrapperType === 'simple' || wrapperType === 'regular')) {
+      const result = extractSimpleWorkflow(
+        funcInitializer,
+        checker,
+        workflowName
+      )
+
+      if (result.status === 'ok' && result.steps) {
+        // Simple extraction succeeded
+        steps = result.steps
+        simple = true
+      } else {
+        // Simple extraction failed
+        if (wrapperType === 'simple') {
+          // For pikkuSimpleWorkflowFunc, this is a critical error
+          logger.critical(
+            ErrorCode.INVALID_SIMPLE_WORKFLOW,
+            `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
+          )
+          return
+        } else {
+          // For pikkuWorkflowFunc, fall back to basic extraction
+          logger.warn(
+            `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+          )
+          simple = false
+          getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+        }
+      }
+    } else if (resolvedFunc) {
+      // Fallback to basic extraction
       getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
     }
 
@@ -226,6 +292,7 @@ export const addWorkflow: AddWiring = (
       tags,
       middleware,
       steps,
+      simple,
     }
   }
 }

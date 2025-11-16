@@ -152,39 +152,147 @@ export type WorkflowInteractionSleep = (
 ) => Promise<void>
 
 /**
+ * Input source for step arguments in simple workflows
+ */
+export type InputSource =
+  | { from: 'input'; path: string }
+  | { from: 'outputVar'; name: string; path?: string }
+  | { from: 'item'; path: string }
+  | { from: 'literal'; value: unknown }
+
+/**
+ * Output binding for return statements in simple workflows
+ */
+export interface OutputBinding {
+  from: 'outputVar' | 'input'
+  name?: string
+  path?: string
+}
+
+/**
+ * RPC step metadata (base form)
+ */
+export interface RpcStepMeta {
+  /** RPC form - generates queue worker */
+  type: 'rpc'
+  /** Unique step identifier */
+  id: string
+  /** Cache key (stepName from workflow.do) */
+  stepName: string
+  /** RPC to invoke */
+  rpcName: string
+  /** Output variable name (if assigned) */
+  outputVar?: string
+  /** Input source mappings */
+  inputs?: Record<string, InputSource>
+  /** Display name */
+  description?: string
+  /** Step options */
+  options?: WorkflowStepOptions
+}
+
+/**
+ * Branch step metadata (if/else control flow)
+ */
+export interface BranchStepMeta {
+  type: 'branch'
+  /** Unique step identifier */
+  id: string
+  /** Step name for this branch */
+  stepName: string
+  /** Condition expression (as source string) */
+  condition: string
+  /** Branch paths */
+  branches: {
+    then: WorkflowStepMeta[]
+    else?: WorkflowStepMeta[]
+  }
+}
+
+/**
+ * Parallel group step metadata (Promise.all with multiple steps)
+ */
+export interface ParallelGroupStepMeta {
+  type: 'parallel'
+  /** Unique step identifier */
+  id: string
+  /** Step name for this parallel group */
+  stepName: string
+  /** Child steps to execute in parallel */
+  children: RpcStepMeta[]
+}
+
+/**
+ * Fanout step metadata (parallel or sequential iteration)
+ */
+export interface FanoutStepMeta {
+  type: 'fanout'
+  /** Unique step identifier */
+  id: string
+  /** Step name for this fanout */
+  stepName: string
+  /** Source array variable name */
+  sourceVar: string
+  /** Iterator variable name */
+  itemVar: string
+  /** Execution mode */
+  mode: 'parallel' | 'sequential'
+  /** Child step to execute per iteration */
+  child: RpcStepMeta
+  /** Time between iterations (sequential mode only) */
+  timeBetween?: string
+}
+
+/**
+ * Return step metadata (workflow output)
+ */
+export interface ReturnStepMeta {
+  type: 'return'
+  /** Unique step identifier */
+  id: string
+  /** Step name */
+  stepName: string
+  /** Output bindings */
+  outputs: Record<string, OutputBinding>
+}
+
+/**
+ * Inline step metadata (legacy support)
+ */
+export interface InlineStepMeta {
+  /** Inline form - local execution */
+  type: 'inline'
+  /** Cache key (stepName from workflow.do) */
+  stepName: string
+  /** Display name */
+  description?: string
+  /** Step options */
+  options?: WorkflowStepOptions
+}
+
+/**
+ * Sleep step metadata
+ */
+export interface SleepStepMeta {
+  /** Sleep step */
+  type: 'sleep'
+  /** Cache key (stepName from workflow.sleep) */
+  stepName: string
+  /** Sleep duration */
+  duration: string | number
+}
+
+/**
  * Workflow step metadata (extracted by inspector)
  */
 export type WorkflowStepMeta =
-  | {
-      /** RPC form - generates queue worker */
-      type: 'rpc'
-      /** Cache key (stepName from workflow.do) */
-      stepName: string
-      /** RPC to invoke */
-      rpcName: string
-      /** Display name */
-      description?: string
-      /** Step options */
-      options?: WorkflowStepOptions
-    }
-  | {
-      /** Inline form - local execution */
-      type: 'inline'
-      /** Cache key (stepName from workflow.do) */
-      stepName: string
-      /** Display name */
-      description?: string
-      /** Step options */
-      options?: WorkflowStepOptions
-    }
-  | {
-      /** Sleep step */
-      type: 'sleep'
-      /** Cache key (stepName from workflow.sleep) */
-      stepName: string
-      /** Sleep duration */
-      duration: string | number
-    }
+  | RpcStepMeta
+  | BranchStepMeta
+  | ParallelGroupStepMeta
+  | FanoutStepMeta
+  | ReturnStepMeta
+  | InlineStepMeta
+  | SleepStepMeta
 
 /**
  * Workflow step interaction context for RPC functions
@@ -247,6 +355,8 @@ export type WorkflowsMeta = Record<
     tags?: string[]
     middleware?: MiddlewareMetadata[]
     steps: WorkflowStepMeta[]
+    /** Whether this workflow conforms to simple workflow DSL */
+    simple?: boolean
   }
 >
 
