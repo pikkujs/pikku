@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.11.0",
+    "@pikku/core": "^0.11.1",
     "@pikku/express-middleware": "^0.11.0",
     "@pikku/jose": "^0.11.0",
     "@pikku/schedule": "^0.11.0",
@@ -12,7 +12,7 @@
     "express": "^5"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.11.1",
+    "@pikku/cli": "^0.11.2",
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.3",
     "@types/express-serve-static-core": "^5.1.0",

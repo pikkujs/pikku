@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- bb223d5: feat: adding in pikkuSimpleWorkflowFunc
+
 ### Minor Changes
 
 - Add workflow orchestration engine with step execution and retries
