@@ -4,7 +4,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeTypedHTTPWiringsMap } from './serialize-typed-http-map.js'
 
 export const pikkuHTTPMap: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { http, functions } = await getInspectorState()
     const { httpMapDeclarationFile, packageMappings } = config
 

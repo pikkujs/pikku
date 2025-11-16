@@ -22,7 +22,7 @@ export const pikkuWorkflowWorker = pikkuSessionlessFunc<
   WorkflowStepInput,
   void
 >({
-  func: async ({ workflowService, rpc }, interaction, { runId, stepName, rpcName, data }) => {
+  func: async ({ workflowService }, { runId, stepName, rpcName, data }, { rpc }) => {
     await workflowService!.executeWorkflowStep(runId, stepName, rpcName, data, rpc)
   }
 })
@@ -31,7 +31,7 @@ export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<
   { runId: string },
   void
 >({
-  func: async ({ workflowService, rpc }, interaction, { runId }) => {
+  func: async ({ workflowService }, { runId }, { rpc }) => {
     await workflowService!.orchestrateWorkflow(runId, rpc)
   }
 })
@@ -40,7 +40,7 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
   { runId: string, stepId: string },
   void
 >({
-  func: async ({ workflowService }, interaction, { runId, stepId }) => {
+  func: async ({ workflowService }, { runId, stepId }) => {
     await workflowService!.executeWorkflowSleep(runId, stepId)
   },
   name: 'pikkuWorkflowStepSleeper',

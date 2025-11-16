@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuCLI: any = pikkuSessionlessFunc<void, boolean | undefined>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {
       cliWiringsFile,

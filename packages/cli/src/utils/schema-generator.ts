@@ -91,8 +91,8 @@ export async function saveSchemas(
   schemas: Record<string, JSONValue>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  additionalTypes?: string[],
-  supportsImportAttributes: boolean = false
+  supportsImportAttributes: boolean,
+  additionalTypes?: string[]
 ) {
   await writeFileInDir(
     logger,

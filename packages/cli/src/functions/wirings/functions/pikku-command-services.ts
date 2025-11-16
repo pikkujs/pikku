@@ -100,7 +100,7 @@ export const serializeServicesMap = (
 }
 
 export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
     // Check for required types

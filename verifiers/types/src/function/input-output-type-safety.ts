@@ -9,7 +9,7 @@ import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
 
 // Valid: Correct input and output types
 const validFunc = pikkuFunc<{ name: string }, { greeting: string }>(
-  async ({}, {}, data) => {
+  async ({}, data) => {
     return { greeting: `Hello ${data.name}` }
   }
 )
@@ -20,7 +20,7 @@ const voidInputFunc = pikkuFunc<void, { timestamp: number }>(async () => {
 })
 
 // Valid: Void output type
-const voidOutputFunc = pikkuFunc<{ id: string }, void>(async ({}, {}, data) => {
+const voidOutputFunc = pikkuFunc<{ id: string }, void>(async ({}, data) => {
   console.log(data.id)
 })
 

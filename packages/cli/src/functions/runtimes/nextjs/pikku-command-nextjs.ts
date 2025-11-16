@@ -7,7 +7,7 @@ import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from './
 import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from './serialize-nextjs-http-wrapper.js'
 
 export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const {
       nextBackendFile,
       nextHTTPFile,

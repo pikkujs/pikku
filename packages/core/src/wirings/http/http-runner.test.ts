@@ -11,8 +11,12 @@ import {
 import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
-const sessionMiddleware: CorePikkuMiddleware = async (services, _, next) => {
-  services.userSession.set({ userId: 'test' } as any)
+const sessionMiddleware: CorePikkuMiddleware = async (
+  services,
+  interaction,
+  next
+) => {
+  interaction.session?.set({ userId: 'test' } as any)
   await next()
 }
 

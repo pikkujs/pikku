@@ -8,7 +8,7 @@ import {
 } from '../../.pikku/pikku-types.gen.js'
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
-const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, next) => {
+const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {
   logger.info({ type: 'wire', name: 'channel-inline', phase: 'before' })
   const result = await next()
   logger.info({ type: 'wire', name: 'channel-inline', phase: 'after' })

@@ -56,7 +56,7 @@ export const apiRoutePermissions = () =>
   addHTTPPermission('/api/*', { route: httpRoutePermission })
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
-const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, next) => {
+const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {
   logger.info({ type: 'wire', name: 'inline', phase: 'before' })
   const result = await next()
   logger.info({ type: 'wire', name: 'inline', phase: 'after' })
@@ -91,7 +91,7 @@ wireHTTP({
     wire: [wirePermission, inlineWirePermission],
   },
   func: noOpFunction,
-  auth: false, // Session set by sessionTagMiddleware, then checked by permissions
+  auth: true, // Session set by sessionTagMiddleware, then checked by permissions
 })
 
 // HTTP endpoint with admin tag permissions

@@ -17,10 +17,9 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   sms: SMSService
   payment: PaymentService
   analytics: AnalyticsService
-}
-
-export interface Services extends CoreServices<SingletonServices, UserSession> {
   storage: StorageService
 }
+
+export interface Services extends CoreServices<SingletonServices> {}
 
 export interface UserSession extends CoreUserSession {}

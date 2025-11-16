@@ -3,7 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 
 export const pikkuWorkflowMap: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { workflowMapDeclarationFile, packageMappings } = config
     const { workflows, functions: functionState } = visitState

@@ -18,7 +18,7 @@ wireCLI({
     greet: pikkuCLICommand({
       parameters: '<name>',
       func: pikkuSessionlessFunc<{ name: string }, void>({
-        func: async ({}, {}, data) => {
+        func: async ({}, data) => {
           console.log(data.name)
         },
       }),
@@ -62,7 +62,7 @@ wireCLI({
     add: pikkuCLICommand({
       parameters: '<a> <b>',
       func: pikkuSessionlessFunc<{ a: number; b: number }, { result: number }>({
-        func: async ({}, {}, data) => ({ result: data.a + data.b }),
+        func: async ({}, data) => ({ result: data.a + data.b }),
       }),
       description: 'Add two numbers',
     }),
@@ -76,7 +76,7 @@ wireCLI({
       // @ts-expect-error - Parameter name mismatch
       parameters: '<a> <b>',
       func: pikkuSessionlessFunc<{ x: number; y: number }, { result: number }>({
-        func: async ({}, {}, data) => ({ result: data.x + data.y }),
+        func: async ({}, data) => ({ result: data.x + data.y }),
       }),
       description: 'Add two numbers',
     }),

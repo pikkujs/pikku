@@ -57,7 +57,7 @@ export { sessionTagMiddleware } from '../middleware/fake-session.js'
 
 // MCP-specific function that returns MCPToolResponse
 const mcpToolFunction = pikkuFunc<void, MCPToolResponse>({
-  func: async ({ logger }, {}) => {
+  func: async ({ logger }) => {
     logger.info({ type: 'function', name: 'mcpTool', phase: 'execute' })
     return [{ type: 'text', text: 'MCP tool executed successfully' }]
   },
@@ -80,7 +80,7 @@ wireMCPTool({
 
 // MCP-specific resource function
 const mcpResourceFunction = pikkuFunc<void, MCPResourceResponse>({
-  func: async ({ logger }, { mcp }) => {
+  func: async ({ logger }, _, { mcp }) => {
     logger.info({ type: 'function', name: 'mcpResource', phase: 'execute' })
     return [{ uri: mcp!.uri!, text: 'MCP resource executed successfully' }]
   },
@@ -104,7 +104,7 @@ wireMCPResource({
 
 // MCP-specific prompt function
 const mcpPromptFunction = pikkuFunc<void, MCPPromptResponse>({
-  func: async ({ logger }, {}) => {
+  func: async ({ logger }) => {
     logger.info({ type: 'function', name: 'mcpPrompt', phase: 'execute' })
     return [
       {

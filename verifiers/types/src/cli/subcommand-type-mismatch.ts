@@ -38,7 +38,7 @@ wireCLI({
         delete: pikkuCLICommand({
           parameters: '<id>',
           func: pikkuFunc<{ id: number }, void>({
-            func: async ({}, {}, data) => {
+            func: async ({}, data) => {
               console.log(data.id)
             },
           }),
@@ -141,7 +141,7 @@ wireCLI({
             },
             void
           >({
-            func: async ({}, {}, data) => {
+            func: async ({}, data) => {
               console.log(data.source, data.dest, data.force, data.recursive)
             },
           }),

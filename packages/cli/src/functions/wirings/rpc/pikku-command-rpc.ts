@@ -4,7 +4,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuRPC: any = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { rpc } = await getInspectorState()
     const {
       rpcInternalWiringMetaFile,

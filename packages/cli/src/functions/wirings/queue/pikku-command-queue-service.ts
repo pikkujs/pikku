@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeQueueWrapper } from './serialize-queue-wrapper.js'
 
 export const pikkuQueueService: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }, interaction, data) => {
+  func: async ({ logger, config }) => {
     const { queueWiringsFile, queueMapDeclarationFile, packageMappings } =
       config
 

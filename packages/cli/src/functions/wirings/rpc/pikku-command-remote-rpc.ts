@@ -6,7 +6,7 @@ import { serializeRemoteRPC } from './serialize-remote-rpc.js'
 import { join } from 'path'
 
 export const pikkuRemoteRPC: any = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config }, interaction, data) => {
+  func: async ({ logger, config }) => {
     if (config.rpc?.remoteRpcWorkersPath) {
       const remoteRpcPath = join(
         config.rootDir,

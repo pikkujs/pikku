@@ -73,7 +73,7 @@ const _getPikkuCLIConfig = async (
           ],
         schema: {
           additionalProperties: false,
-          supportsImportAttributes: false,
+          supportsImportAttributes: true,
           ...extendedConfig.schema,
           ...config.schema,
         },
@@ -94,7 +94,7 @@ const _getPikkuCLIConfig = async (
         ],
         schema: {
           additionalProperties: false,
-          supportsImportAttributes: false,
+          supportsImportAttributes: true,
           ...config.schema,
         },
       }

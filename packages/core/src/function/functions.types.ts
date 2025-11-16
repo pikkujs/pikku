@@ -116,7 +116,7 @@ export type CorePikkuPermissionConfig<
  * ```typescript
  * // Direct function syntax
  * export const adminPermission = pikkuPermission(
- *   async ({ logger }, interaction, data, session) => {
+ *   async ({ logger }, session) => {
  *     return session?.role === 'admin'
  *   }
  * )
@@ -125,7 +125,7 @@ export type CorePikkuPermissionConfig<
  * export const adminPermission = pikkuPermission({
  *   name: 'Admin Permission',
  *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, interaction, data, session) => {
+ *   func: async ({ logger }, session) => {
  *     return session?.role === 'admin'
  *   }
  * })

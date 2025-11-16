@@ -12,7 +12,7 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
   void,
   boolean | undefined
 >({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
     const schemas = await generateSchemas(
@@ -31,8 +31,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       schemas,
       visitState.functions.typesMap,
       visitState.functions.meta,
-      config.schemasFromTypes,
-      config.schema?.supportsImportAttributes
+      config.schema?.supportsImportAttributes || true,
+      config.schemasFromTypes
     )
 
     return true

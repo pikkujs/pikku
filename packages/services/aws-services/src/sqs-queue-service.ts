@@ -63,7 +63,6 @@ export class SQSQueueService implements QueueService {
   ): Promise<string> {
     const queueUrl = this.getQueueUrl(queueName)
 
-    console.log({ queueUrl })
     // Convert delay from milliseconds to seconds (SQS constraint)
     // SQS max delay is 900 seconds (15 minutes)
     let delaySeconds: number | undefined

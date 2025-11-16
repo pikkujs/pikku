@@ -186,7 +186,7 @@ describe('runScheduledTask', () => {
       name: 'task-with-session',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, interaction: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           receivedSession = services.userSession.get()
           return 'ok'
         },
@@ -269,7 +269,7 @@ describe('runScheduledTask', () => {
       name: 'skipped-task',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, interaction: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           interaction.scheduledTask.skip('Not ready yet')
         },
         auth: false,
@@ -312,7 +312,7 @@ describe('runScheduledTask', () => {
       name: 'skipped-task-no-reason',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, interaction: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           interaction.scheduledTask.skip()
         },
         auth: false,
@@ -358,7 +358,7 @@ describe('runScheduledTask', () => {
       name: 'interaction-task',
       schedule: '*/5 * * * *',
       func: {
-        func: async (services: any, interaction: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           capturedInteraction = interaction
           return 'ok'
         },
@@ -523,7 +523,7 @@ describe('runScheduledTask', () => {
       name: 'error-task',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, interaction: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           interaction.scheduledTask.skip('Test skip')
         },
         auth: false,

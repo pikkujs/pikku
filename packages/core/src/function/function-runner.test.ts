@@ -486,16 +486,15 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should pass correct parameters to function', async () => {
     let receivedServices: any
     let receivedData: any
-    let receivedSession: any
+    let receivedInteraction: any
 
     const testData = { test: 'data' }
-    const testSession = { userId: 'test-user' }
 
     addTestFunction('testFunc', {
-      func: async (services, interaction, data, session) => {
+      func: async (services, data, interaction) => {
         receivedServices = services
         receivedData = data
-        receivedSession = session
+        receivedInteraction = interaction
         return 'success'
       },
     })
@@ -508,22 +507,21 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => testData,
-        userSession: { get: () => testSession, set: () => {} } as any,
         auth: false,
-        interaction: {},
+        interaction: { rpc: {} },
       }
     )
 
     assert.equal(receivedServices, mockServices)
     assert.equal(receivedData, testData)
-    assert.equal(receivedSession, testSession)
+    assert.deepEqual(receivedInteraction, { rpc: {}, session: undefined })
   })
 
   test('should handle async getAllServices function', async () => {
     let servicesProvided: any
 
     addTestFunction('testFunc', {
-      func: async (services, interaction) => {
+      func: async (services, data, interaction) => {
         servicesProvided = services
         return 'success'
       },

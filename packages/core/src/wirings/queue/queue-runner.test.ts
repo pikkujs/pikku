@@ -53,7 +53,7 @@ describe('wireQueueWorker', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'test-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           return { processed: true }
         },
         auth: false,
@@ -200,7 +200,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'simple-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           jobProcessed = true
           receivedData = data
           return { success: true }
@@ -240,7 +240,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'fail-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           await interaction.queue.fail('Processing failed')
         },
         auth: false,
@@ -278,7 +278,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'fail-no-reason-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           await interaction.queue.fail()
         },
         auth: false,
@@ -314,7 +314,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'discard-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           await interaction.queue.discard('Invalid data')
         },
         auth: false,
@@ -354,7 +354,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'progress-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           await interaction.queue.updateProgress(25)
           await interaction.queue.updateProgress('halfway')
           await interaction.queue.updateProgress({ stage: 'processing' })
@@ -389,7 +389,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'default-progress-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           await interaction.queue.updateProgress(50)
           return 'ok'
         },
@@ -423,7 +423,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'interaction-queue',
       func: {
-        func: async (services: any, interaction: any, data: any) => {
+        func: async (services: any, data: any, interaction: any) => {
           capturedInteraction = interaction
           return 'ok'
         },

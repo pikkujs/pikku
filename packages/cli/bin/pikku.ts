@@ -15,13 +15,11 @@ try {
 const action = async (command: string, cliConfig: any) => {
   const config = await createConfig(new LocalVariablesService(), cliConfig)
   const services = await createSingletonServices(config)
-  const interaction = {}
-  const data = null
 
   if (command === 'watch') {
-    await watchCommand.func(services, interaction, data)
+    await watchCommand.func(services)
   } else {
-    await allCommand.func(services, interaction, data)
+    await allCommand.func(services)
   }
 }
 

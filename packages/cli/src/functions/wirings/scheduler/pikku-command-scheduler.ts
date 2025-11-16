@@ -12,7 +12,7 @@ export const pikkuScheduler: any = pikkuSessionlessFunc<
   void,
   boolean | undefined
 >({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {
       schedulersWiringFile,

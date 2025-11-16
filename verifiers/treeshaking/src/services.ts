@@ -35,6 +35,7 @@ export const createSingletonServices: CreateSingletonServices<
     sms: new SMSService(),
     payment: new PaymentService(),
     analytics: new AnalyticsService(),
+    storage: new StorageService(),
   }
 }
 
@@ -45,7 +46,5 @@ export const createSessionServices: CreateSessionServices<
 > = async ({ email, logger }) => {
   // Destructure services to test session service aggregation
   logger.info('Creating session services with email')
-  return {
-    storage: new StorageService(),
-  }
+  return {}
 }

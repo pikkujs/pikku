@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const { httpWiringsFile, httpWiringMetaFile, packageMappings } = config
     const { http } = visitState

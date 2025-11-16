@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
 
 export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }, interaction, data) => {
+  func: async ({ logger, config }) => {
     const {
       typesDeclarationFile: typesFile,
       packageMappings,

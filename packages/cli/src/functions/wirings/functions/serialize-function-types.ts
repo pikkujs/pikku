@@ -48,7 +48,7 @@ export type PikkuPermission<In = unknown, RequiredServices extends Services = Se
  *
  * @template RequiredServices - The services required for this middleware
  */
-export type PikkuMiddleware<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuMiddleware<RequiredServices, Session>
+export type PikkuMiddleware<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuMiddleware<RequiredServices>
 
 /**
  * Configuration object for creating a permission with metadata

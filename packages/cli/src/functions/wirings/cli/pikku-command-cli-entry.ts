@@ -14,7 +14,7 @@ import { rm } from 'fs/promises'
 import { ErrorCode } from '@pikku/inspector'
 
 export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 
     // Check if CLI entrypoints are configured

@@ -3,7 +3,7 @@ import chokidar from 'chokidar'
 import { all } from './all.js'
 
 export const watch: any = pikkuVoidFunc({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const services = { logger, config, getInspectorState }
     const configWatcher = chokidar.watch(config.srcDirectories, {
       ignoreInitial: true,
@@ -27,7 +27,7 @@ export const watch: any = pikkuVoidFunc({
         const handle = async () => {
           try {
             const start = Date.now()
-            await all.func(services, interaction, null)
+            await all.func(services, null, {})
             logger.info({
               message: `✓ Generated in ${Date.now() - start}ms`,
               type: 'timing',

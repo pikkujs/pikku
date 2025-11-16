@@ -62,11 +62,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({ session: 'cookie-jwt-value' }),
           response: mockResponse,
@@ -103,11 +103,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -147,11 +147,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({ session: 'existing-jwt' }),
           response: mockResponse,
@@ -188,11 +188,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -226,11 +226,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({ session: 'invalid-jwt' }),
           response: mockResponse,
@@ -270,11 +270,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -306,11 +306,10 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
-      {} as any,
+      { session: userSessionService } as any,
       async () => {
         nextCalled = true
       }
@@ -334,11 +333,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: undefined,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -368,11 +367,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: undefined,
         logger: mockLogger,
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -412,11 +411,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({}),
           response: undefined,
@@ -453,11 +452,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({
             my_custom_cookie: 'custom-cookie-value',
@@ -495,11 +494,11 @@ describe('authCookie middleware', () => {
 
     await middleware(
       {
-        userSession: userSessionService,
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
       {
+        session: userSessionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,

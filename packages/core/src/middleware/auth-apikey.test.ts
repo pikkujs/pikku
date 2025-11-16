@@ -37,12 +37,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({ 'x-api-key': 'my-api-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -68,12 +69,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({}, { apiKey: 'query-api-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -100,7 +102,7 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest(
@@ -109,6 +111,7 @@ describe('authAPIKey middleware', () => {
           ),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -134,12 +137,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({}, { apiKey: 'query-fallback' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -161,12 +165,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({}),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -188,12 +193,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({ 'x-api-key': 'invalid-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -222,12 +228,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -250,8 +257,8 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
-      {} as any,
+      { jwt: jwtService } as any,
+      { session: userSessionService } as any,
       async () => {
         nextCalled = true
       }
@@ -268,12 +275,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: undefined } as any,
+      { jwt: undefined } as any,
       {
         http: {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -299,12 +307,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({}, { apiKey: 'query-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true
@@ -331,12 +340,13 @@ describe('authAPIKey middleware', () => {
     let nextCalled = false
 
     await middleware(
-      { userSession: userSessionService, jwt: jwtService } as any,
+      { jwt: jwtService } as any,
       {
         http: {
           request: createMockHTTPRequest({ 'x-api-key': 'header-key' }),
           response: createMockHTTPResponse(),
         },
+        session: userSessionService,
       } as any,
       async () => {
         nextCalled = true

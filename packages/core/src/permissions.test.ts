@@ -403,23 +403,20 @@ describe('runPermissions', () => {
     let receivedServices: any
     let receivedInteraction: any
     let receivedData: any
-    let receivedSession: any
 
     const testPermission = async (
       services: any,
-      interaction: any,
       data: any,
-      session: any
+      interaction: any
     ) => {
       receivedServices = services
-      receivedInteraction = interaction
       receivedData = data
-      receivedSession = session
+      receivedInteraction = interaction
       return true
     }
 
     const testData = { test: 'data' }
-    const testInteraction = { test: 'interaction' }
+    const testInteraction = { test: 'interaction', session: mockSession }
 
     addPermission('paramTestTag', [testPermission])
 
@@ -432,8 +429,7 @@ describe('runPermissions', () => {
     })
 
     assert.equal(receivedServices, mockServices)
-    assert.equal(receivedInteraction, testInteraction)
     assert.equal(receivedData, testData)
-    assert.equal(receivedSession, mockSession)
+    assert.equal(receivedInteraction, testInteraction)
   })
 })

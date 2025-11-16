@@ -11,7 +11,7 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
   void,
   boolean | undefined
 >({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const { functions, rpc } = await getInspectorState()
     const {
       functionsMetaFile,

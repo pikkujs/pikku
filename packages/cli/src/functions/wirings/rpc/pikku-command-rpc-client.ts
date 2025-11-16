@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeRPCWrapper } from './serialize-rpc-wrapper.js'
 
 export const pikkuRPCClient: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }, interaction, data) => {
+  func: async ({ logger, config }) => {
     const { rpcWiringsFile, rpcMapDeclarationFile, packageMappings } = config
 
     // If rpcWiringsFile is not set, clean up any existing file and return

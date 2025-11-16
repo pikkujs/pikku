@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeSchedulerTypes } from './serialize-scheduler-types.js'
 
 export const pikkuSchedulerTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }, interaction, data) => {
+  func: async ({ logger, config }) => {
     const { schedulersTypesFile, functionTypesFile, packageMappings } = config
 
     const functionTypesImportPath = getFileImportRelativePath(

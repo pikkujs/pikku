@@ -6,7 +6,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeFunctionTypes } from './serialize-function-types.js'
 
 export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }, interaction, data) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {
       functionTypesFile,

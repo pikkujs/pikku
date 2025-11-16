@@ -6,6 +6,7 @@ import {
   CoreServices,
   CoreSingletonServices,
   CreateSessionServices,
+  PikkuInteraction,
   PikkuWiringTypes,
   SerializedError,
 } from '../../types/core.types.js'
@@ -277,6 +278,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         runId,
         rpcService
       )
+      const interaction: PikkuInteraction = { workflow: workflowInteraction }
 
       // Get function metadata
       const meta = pikkuState('workflows', 'meta')
@@ -289,7 +291,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           if (this.createSessionServices) {
             sessionServices = this.createSessionServices(
               this.singletonServices!,
-              { workflow: workflowInteraction }
+              interaction
             )
           }
           return {
@@ -303,7 +305,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           workflowMeta.pikkuFuncName,
           {
             singletonServices: this.singletonServices!,
-            interaction: { workflow: workflowInteraction },
+            interaction,
             getAllServices,
             data: () => run.input,
           }

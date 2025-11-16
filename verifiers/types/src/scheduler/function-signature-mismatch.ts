@@ -15,7 +15,7 @@ import {
 wireScheduler({
   name: 'validTask',
   schedule: '*/5 * * * *',
-  func: pikkuSessionlessFunc<void, void>(async ({ logger }, {}) => {
+  func: pikkuSessionlessFunc<void, void>(async ({ logger }) => {
     logger.info('Task running')
   }),
 })
@@ -49,7 +49,7 @@ wireScheduler({
 wireScheduler({
   name: 'dailyCleanup',
   schedule: '0 0 * * *',
-  func: pikkuSessionlessFunc<void, void>(async ({ logger }, {}) => {
+  func: pikkuSessionlessFunc<void, void>(async ({ logger }) => {
     logger.info('Daily cleanup')
   }),
 })
@@ -67,7 +67,7 @@ wireScheduler({
   name: 'sessionTask',
   schedule: '*/10 * * * *',
   func: pikkuFunc<void, void>({
-    func: async ({ logger }, {}) => {
+    func: async ({ logger }) => {
       logger.info('Session-based task')
     },
   }),

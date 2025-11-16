@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeChannelTypes } from './serialize-channel-types.js'
 
 export const pikkuChannelTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }, interaction, data) => {
+  func: async ({ logger, config }) => {
     const { channelsTypesFile, functionTypesFile, packageMappings } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
