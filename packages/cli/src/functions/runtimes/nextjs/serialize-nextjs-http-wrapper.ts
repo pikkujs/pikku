@@ -1,5 +1,6 @@
 export const serializeNextJsHTTPWrapper = (
   routesMapPath: string,
+  rpcMapPath: string,
   pikkuFetchImport: string
 ) => {
   return `'server-only'
@@ -9,7 +10,8 @@ export const serializeNextJsHTTPWrapper = (
  * It ensures type safety for route handling methods when integrating with the @pikku/core framework.
  */
 import { CorePikkuFetchOptions } from '@pikku/fetch'
-import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod, RPCMap } from '${routesMapPath}'
+import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '${routesMapPath}'
+import type { RPCMap } from '${rpcMapPath}'
 import { PikkuFetch } from '${pikkuFetchImport}'
 
 let _pikku: PikkuFetch | undefined

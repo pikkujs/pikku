@@ -1,6 +1,7 @@
 export const serializeNextJsBackendWrapper = (
   bootstrapPath: string,
   routesMapPath: string,
+  rpcMapPath: string,
   configImport: string,
   singleServicesFactoryImport: string,
   sessionServicesImport: string
@@ -13,7 +14,8 @@ export const serializeNextJsBackendWrapper = (
  */
 import { PikkuNextJS } from '@pikku/next'
 import { NextRequest } from 'next/server.js'
-import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod, RPCMap } from '${routesMapPath}'
+import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '${routesMapPath}'
+import type { RPCMap } from '${rpcMapPath}'
 
 type RouteContext = { params: Promise<Record<string, string | string[]>> }
 

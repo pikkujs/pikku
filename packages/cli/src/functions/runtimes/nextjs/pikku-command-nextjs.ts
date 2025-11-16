@@ -12,6 +12,7 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       nextBackendFile,
       nextHTTPFile,
       httpMapDeclarationFile,
+      rpcMapDeclarationFile,
       packageMappings,
       fetchFile,
     } = config
@@ -72,9 +73,16 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
         packageMappings
       )
 
+      const rpcMapDeclarationPath = getFileImportRelativePath(
+        nextBackendFile,
+        rpcMapDeclarationFile,
+        packageMappings
+      )
+
       const content = serializeNextBackendWrapper(
         bootstrapPath,
         routesMapDeclarationPath,
+        rpcMapDeclarationPath,
         pikkuConfigImport,
         singletonServicesImport,
         sessionServicesImport
@@ -89,6 +97,12 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
         packageMappings
       )
 
+      const rpcMapDeclarationPath = getFileImportRelativePath(
+        nextHTTPFile,
+        rpcMapDeclarationFile,
+        packageMappings
+      )
+
       const fetchPath = getFileImportRelativePath(
         nextHTTPFile,
         fetchFile,
@@ -97,6 +111,7 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
 
       const content = serializeNextHTTPWrapper(
         routesMapDeclarationPath,
+        rpcMapDeclarationPath,
         fetchPath
       )
       await writeFileInDir(logger, nextHTTPFile, content)
