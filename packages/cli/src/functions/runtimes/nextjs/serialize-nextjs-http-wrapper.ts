@@ -169,8 +169,8 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
    * @param data - The input data for the RPC request.
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const rpc: RPCInvoke = async (name, data) => {
-    return await _pikku!.post('/rpc' as any, { name, data }) as any
+  const rpc: RPCInvoke = async (rpcName, data) => {
+    return dynamicActionRequest(\`/rpc/\${rpcName}\` as any, 'POST', { data }) as any
   }
 
   /**
@@ -182,19 +182,19 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
    * @param data - The input data for the RPC request.
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const rpcStatic: RPCInvoke = async (name, data) => {
-    return await _pikku!.post('/rpc' as any, { name, data }) as any
+  const staticRPC: RPCInvoke = async (rpcName, data) => {
+    return staticActionRequest(\`/rpc/\${rpcName}\` as any, 'POST', { data }) as any
   }
 
   return {
+    rpc,
     get: dynamicGet,
     post: dynamicPost,
     patch: dynamicPatch,
     del: dynamicDel,
     staticGet,
     staticPost,
-    rpc,
-    rpcStatic
+    staticRPC
   }
 }
 `

@@ -194,7 +194,6 @@ export const pikku = (_options?: any) => {
 
   /**
    * Makes a dynamic RPC request.
-   * Dynamic RPC requests may access headers and cookies.
    *
    * @template Name - The RPC function name from the RPCMap.
    * @param name - The RPC function identifier.
@@ -202,31 +201,31 @@ export const pikku = (_options?: any) => {
    * @returns A promise that resolves to the output of the RPC handler.
    */
   const rpc: RPCInvoke = async (name, data) => {
-    return await _pikku!.rpc(name as any, data) as any
+    return dynamicActionRequest(\`/rpc/\${name}\` as any, 'POST', { data }) as any
   }
 
   /**
-   * Makes a static RPC request without user session.
-   * Static RPC requests do not depend on headers or cookies.
+   * Makes a static RPC request.
+   * Note: In HTTP wrapper context, both rpc and staticRPC behave the same way.
    *
    * @template Name - The RPC function name from the RPCMap.
    * @param name - The RPC function identifier.
    * @param data - The input data for the RPC request.
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const rpcStatic: RPCInvoke = async (name, data) => {
-    return await _pikku!.rpcStatic(name as any, data) as any
+  const staticRPC: RPCInvoke = async (name, data) => {
+    return staticActionRequest(\`/rpc/\${name}\` as any, 'POST', { data }) as any
   }
 
   return {
+    rpc,
     get: dynamicGet,
     post: dynamicPost,
     patch: dynamicPatch,
     del: dynamicDel,
     staticGet,
     staticPost,
-    rpc,
-    rpcStatic,
+    staticRPC,
   }
 }
 
