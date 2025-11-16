@@ -9,17 +9,9 @@ export const invalidUnawaitedWorkflow = pikkuSimpleWorkflowFunc<
   { result: string }
 >(async ({ workflow }, data) => {
   // This should fail - workflow.do must be awaited
-  workflow.do(
-    "Send email",
-    "sendEmail",
-    { to: data.email }
-  )
+  workflow.do('Send email', 'sendEmail', { to: data.email })
 
-  const result = await workflow.do(
-    "Get result",
-    "getResult",
-    {}
-  )
+  const result = await workflow.do('Get result', 'getResult', {})
 
   return { result }
 })

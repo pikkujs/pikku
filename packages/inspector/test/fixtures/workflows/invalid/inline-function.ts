@@ -9,12 +9,9 @@ export const invalidInlineWorkflow = pikkuSimpleWorkflowFunc<
   { result: string }
 >(async ({ workflow }, data) => {
   // This should fail - inline functions not allowed
-  const result = await workflow.do(
-    "Process data",
-    () => {
-      return data.email.toUpperCase()
-    }
-  )
+  const result = await workflow.do('Process data', () => {
+    return data.email.toUpperCase()
+  })
 
   return { result }
 })

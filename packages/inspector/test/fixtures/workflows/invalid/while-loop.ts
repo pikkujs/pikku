@@ -12,11 +12,7 @@ export const invalidWhileWorkflow = pikkuSimpleWorkflowFunc<
 
   // This should fail - while loops not allowed
   while (retries < data.maxRetries) {
-    await workflow.do(
-      "Try operation",
-      "tryOperation",
-      { attempt: retries }
-    )
+    await workflow.do('Try operation', 'tryOperation', { attempt: retries })
     retries++
   }
 

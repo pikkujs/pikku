@@ -78,49 +78,42 @@ export const sendWelcomeEmail = pikkuSessionlessFunc<
  * - Typed inputs and outputs
  */
 export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
-  { email: string; plan: string; memberEmails: string[] },
+  { email: string; name: string; plan: string; memberEmails: string[] },
   { orgId: string; ownerId?: string }
 >(async ({ workflow }, data) => {
   // Step 1: Create organization
-  const org = await workflow.do(
-    "Create organization",
-    "createOrg",
-    { name: data.email.split('@')[1] }
-  )
+  const org = await workflow.do('Create organization', 'createOrg', {
+    name: data.name,
+  })
 
   // Step 2: Conditional owner creation for enterprise plans
   let owner: { id: string; orgId: string; email: string } | undefined
-  if (data.plan === "enterprise") {
+  if (data.plan === 'enterprise') {
     owner = await workflow.do(
-      "Create owner",
-      "createOwner",
+      'Create owner',
+      'createOwner',
       { orgId: org.id, email: data.email },
-      { retries: 3, retryDelay: "5s" }
+      { retries: 3, retryDelay: '5s' }
     )
   }
 
   // Step 3: Parallel member invitations
   await Promise.all(
-    data.memberEmails.map(email =>
-      workflow.do(
-        "Invite member",
-        "inviteMember",
-        { orgId: org.id, email }
-      )
+    data.memberEmails.map((email) =>
+      workflow.do('Invite member', 'inviteMember', { orgId: org.id, email })
     )
   )
 
   // Step 4: Send welcome email
-  await workflow.do(
-    "Send welcome email",
-    "sendWelcomeEmail",
-    { to: data.email, orgId: org.id }
-  )
+  await workflow.do('Send welcome email', 'sendWelcomeEmail', {
+    to: data.email,
+    orgId: org.id,
+  })
 
   // Return typed output
   return {
     orgId: org.id,
-    ownerId: owner?.id
+    ownerId: owner?.id,
   }
 })
 
@@ -137,21 +130,17 @@ export const sequentialInviteSimpleWorkflow = pikkuSimpleWorkflowFunc<
 >(async ({ workflow }, data) => {
   // Process members sequentially with optional delay
   for (const email of data.memberEmails) {
-    await workflow.do(
-      "Invite member",
-      "inviteMember",
-      { orgId: data.orgId, email }
-    )
+    await workflow.do('Invite member', 'inviteMember', {
+      orgId: data.orgId,
+      email,
+    })
 
     if (data.delayMs > 0) {
-      await workflow.sleep(
-        "Wait between invitations",
-        `${data.delayMs}ms`
-      )
+      await workflow.sleep('Wait between invitations', `${data.delayMs}ms`)
     }
   }
 
   return {
-    invitedCount: data.memberEmails.length
+    invitedCount: data.memberEmails.length,
   }
 })

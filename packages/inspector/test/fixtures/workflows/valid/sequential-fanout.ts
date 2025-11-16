@@ -21,21 +21,19 @@ export const sequentialInviteWorkflow = pikkuSimpleWorkflowFunc<
   const invitedMembers: InvitedMember[] = []
 
   for (const member of data.members) {
-    const invited = await workflow.do(
-      "Invite member",
-      "inviteMember",
-      { id: member.id }
-    )
+    const invited = await workflow.do('Invite member', 'inviteMember', {
+      id: member.id,
+    })
 
     if (data.delayBetweenMs > 0) {
       await workflow.sleep(
-        "Wait between invitations",
+        'Wait between invitations',
         `${data.delayBetweenMs}ms`
       )
     }
   }
 
   return {
-    invitedCount: invitedMembers.length
+    invitedCount: invitedMembers.length,
   }
 })
