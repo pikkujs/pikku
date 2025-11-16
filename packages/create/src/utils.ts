@@ -266,6 +266,8 @@ const CLIENT_FEATURE_MAPPING = {
   'workflow-cancel.ts': ['workflows'],
   'workflow-happy.ts': ['workflows'],
   'workflow-unhappy.ts': ['workflows'],
+  'workflow-org-onboarding-simple.ts': ['workflows'],
+  'workflow-sequential-update.ts': ['workflows'],
 } as const
 
 /**
@@ -340,15 +342,6 @@ export function filterFilesByFeatures(
           }
         }
 
-        // Keep files that don't match any known client pattern
-        const hasKnownClientPattern = Object.keys(
-          CLIENT_FEATURE_MAPPING
-        ).includes(file)
-
-        if (!hasKnownClientPattern) {
-          shouldKeepFile = true
-        }
-
         if (!shouldKeepFile) {
           filesToRemove.push(filePath)
         }
@@ -359,11 +352,11 @@ export function filterFilesByFeatures(
   // Remove filtered files
   filesToRemove.forEach((filePath) => {
     fs.unlinkSync(filePath)
-    // console.log(
-    //   chalk.yellow(
-    //     `🗑️  Removed ${path.basename(filePath)} (not needed for this template)`
-    //   )
-    // )
+    console.log(
+      chalk.yellow(
+        `🗑️  Removed ${path.basename(filePath)} (not needed for this template)`
+      )
+    )
   })
 }
 

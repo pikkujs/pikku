@@ -211,7 +211,7 @@ export interface InspectorState {
   }
   workflows: {
     meta: WorkflowsMeta
-    files: Set<string>
+    files: Map<string, { path: string; exportedName: string }>
   }
   rpc: {
     internalMeta: Record<string, string>

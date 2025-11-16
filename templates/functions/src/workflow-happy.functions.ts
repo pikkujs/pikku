@@ -2,13 +2,8 @@ import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.j
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 /**
- * Flaky RPC for happy path testing
- *
- * @summary RPC function that fails on first attempt, then succeeds on retry
- * @description This function tests the happy path of workflow retry logic. It intentionally
- * fails on the first attempt (attemptCount=1) and succeeds on subsequent attempts. Used to
- * verify that workflows correctly retry failed steps and eventually complete successfully.
- * Tracks and logs attempt count and step metadata for debugging.
+ * RPC function that fails on first attempt, succeeds on retry
+ * This tests the HAPPY PATH - retries work and workflow succeeds
  */
 export const flakyHappyRPC = pikkuSessionlessFunc<
   { value: number },
@@ -36,44 +31,33 @@ export const flakyHappyRPC = pikkuSessionlessFunc<
 })
 
 /**
- * Happy path retry workflow
- *
- * @summary Workflow that tests successful retry behavior
- * @description This workflow demonstrates the happy path for retry logic in Pikku workflows.
- * It invokes a flaky RPC that fails on the first attempt but succeeds on retry. The workflow
- * is configured to allow 2 retries with 1-second delay between attempts. Tests that workflows
- * can recover from transient failures and complete successfully.
+ * HAPPY PATH: Workflow that fails once then succeeds on retry
  */
 export const happyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number; finalAttempt: number; message: string }
->(async ({ workflow }, data) => {
-  const result = await workflow.do(
-    'Step that fails once then succeeds',
-    'flakyHappyRPC',
-    data,
-    {
-      retries: 2, // Allow up to 2 retries (3 total attempts)
-      retryDelay: '1s',
-    }
-  )
+>({
+  func: async ({ workflow }, data) => {
+    const result = await workflow.do(
+      'Step that fails once then succeeds',
+      'flakyHappyRPC',
+      data,
+      {
+        retries: 2, // Allow up to 2 retries (3 total attempts)
+        retryDelay: '1s',
+      }
+    )
 
-  return {
-    result: result.result,
-    finalAttempt: result.attempt,
-    message: `Workflow succeeded after ${result.attempt} attempts`,
-  }
+    return {
+      result: result.result,
+      finalAttempt: result.attempt,
+      message: `Workflow succeeded after ${result.attempt} attempts`,
+    }
+  },
+  tags: ['test', 'retry', 'happy'],
 })
 
-/**
- * Trigger happy retry workflow
- *
- * @summary HTTP endpoint that starts the happy retry workflow and polls for completion
- * @description This function triggers the happy path retry workflow and polls the workflow
- * service until it completes. Returns the workflow result including all step details and
- * attempt counts. Demonstrates the pattern for testing workflow retry behavior end-to-end,
- * with timeout protection and comprehensive result reporting.
- */
+// RPC function to trigger the happy retry workflow and wait for completion
 export const happyRetry = pikkuSessionlessFunc<
   { value: number },
   {
@@ -90,7 +74,7 @@ export const happyRetry = pikkuSessionlessFunc<
 >({
   func: async ({ rpc, workflowService, logger }, data) => {
     // Start the workflow
-    const { runId } = await rpc.startWorkflow('happyRetry', data)
+    const { runId } = await rpc.startWorkflow('happyRetryWorkflow', data)
 
     logger.info(`[TEST] Workflow started: ${runId}`)
 
