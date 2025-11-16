@@ -47,7 +47,7 @@ export class CLILoggerForwarder implements Logger {
     let message: string
 
     if (messageOrObj instanceof Error) {
-      this.logger.error(messageOrObj)
+      this.logger.error(messageOrObj.toString())
       message = messageOrObj.message
     } else if (typeof messageOrObj === 'object') {
       if (

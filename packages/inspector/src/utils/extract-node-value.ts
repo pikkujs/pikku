@@ -99,3 +99,34 @@ export function extractPropertyString(
   }
   return null
 }
+
+/**
+ * Extract description from options object
+ */
+export function extractDescription(
+  optionsNode: ts.Node | undefined,
+  checker: ts.TypeChecker
+): string | null {
+  if (!optionsNode || !ts.isObjectLiteralExpression(optionsNode)) {
+    return null
+  }
+  return extractPropertyString(optionsNode, 'description', checker)
+}
+
+/**
+ * Extract duration value (number or string)
+ */
+export function extractDuration(
+  node: ts.Node,
+  checker: ts.TypeChecker
+): string | number | null {
+  const numValue = extractNumberLiteral(node)
+  if (numValue !== null) {
+    return numValue
+  }
+  try {
+    return extractStringLiteral(node, checker)
+  } catch {
+    return null
+  }
+}

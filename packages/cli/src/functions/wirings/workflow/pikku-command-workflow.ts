@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { ErrorCode } from '@pikku/inspector'
-import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
@@ -10,6 +9,7 @@ import {
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
+import { serializeWorkflowWirings } from './serialize-workflow-wirings.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { join } from 'path'
 
@@ -74,12 +74,11 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       )
     )
 
-    // Write workflow wirings (imports)
+    // Write workflow wirings (imports and addWorkflow calls)
     await writeFileInDir(
       logger,
       workflowsWiringFile,
-      serializeFileImports(
-        'wireWorkflow',
+      serializeWorkflowWirings(
         workflowsWiringFile,
         workflows.files,
         packageMappings

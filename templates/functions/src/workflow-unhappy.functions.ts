@@ -24,34 +24,35 @@ export const alwaysFailsRPC = pikkuSessionlessFunc<
 })
 
 /**
- * Workflow that tests UNHAPPY PATH retry logic
- * - Step fails on attempt 1
- * - Step fails on attempt 2 (retry #1)
- * - Step fails on attempt 3 (retry #2)
- * - Retries exhausted → workflow fails
+ * UNHAPPY PATH: Workflow that exhausts retries and fails
  */
 export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number }
->(async ({ workflow }, data) => {
-  // If value is negative, cancel the workflow immediately
-  if (data.value < 0) {
-    await workflow.cancel(`Workflow cancelled: value ${data.value} is negative`)
-  }
-
-  // This will fail after exhausting all retries
-  const result = await workflow.do(
-    'Step that always fails',
-    'alwaysFailsRPC',
-    data,
-    {
-      retries: 2, // Allow 2 retries (3 total attempts), then fail
-      retryDelay: '1s',
+>({
+  func: async ({ workflow }, data) => {
+    // If value is negative, cancel the workflow immediately
+    if (data.value < 0) {
+      await workflow.cancel(
+        `Workflow cancelled: value ${data.value} is negative`
+      )
     }
-  )
 
-  // This code should never be reached
-  return { result: result.result }
+    // This will fail after exhausting all retries
+    const result = await workflow.do(
+      'Step that always fails',
+      'alwaysFailsRPC',
+      data,
+      {
+        retries: 2, // Allow 2 retries (3 total attempts), then fail
+        retryDelay: '1s',
+      }
+    )
+
+    // This code should never be reached
+    return { result: result.result }
+  },
+  tags: ['test', 'retry', 'unhappy'],
 })
 
 // RPC function to trigger the unhappy retry workflow and wait for completion
@@ -70,7 +71,7 @@ export const unhappyRetry = pikkuSessionlessFunc<
 >({
   func: async ({ rpc, workflowService, logger }, data) => {
     // Start the workflow
-    const { runId } = await rpc.startWorkflow('unhappyRetry', data)
+    const { runId } = await rpc.startWorkflow('unhappyRetryWorkflow', data)
 
     logger.info(`[TEST] Workflow started: ${runId}`)
 

@@ -6,19 +6,11 @@ export const serializeWorkflowTypes = (functionTypesImportPath: string) => {
  * Workflow-specific type definitions for tree-shaking optimization
  */
 
-import { CoreWorkflow, wireWorkflow as wireWorkflowCore, PikkuWorkflowInteraction, WorkflowStepOptions } from '@pikku/core/workflow'
+import { PikkuWorkflowInteraction, WorkflowStepOptions } from '@pikku/core/workflow'
 import { CorePikkuFunctionConfig, CorePikkuFunctionSessionless } from '@pikku/core'
 import type { PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 import type { UserSession, SingletonServices } from '../../types/application-types.d.js'
 import type { TypedPikkuRPC, RPCMap } from '../rpc/pikku-rpc-wirings-map.internal.gen.d.js'
-
-/**
- * Type definition for workflows that orchestrate multi-step processes.
- * Workflows support both inline and remote execution modes with step caching.
- */
-type WorkflowWiring = CoreWorkflow<
-  CorePikkuFunctionConfig<PikkuFunctionWorkflow<any, any>, PikkuPermission<any>, PikkuMiddleware>
->
 
 /**
  * Typed workflow interaction with RPC awareness
@@ -69,6 +61,9 @@ export type PikkuFunctionWorkflow<
  * Creates a workflow function with typed input and output.
  * Workflow functions have access to the workflow interaction object for step execution.
  *
+ * This is the permissive mode - workflows that don't conform to simple DSL will fall back
+ * to basic extraction with a warning.
+ *
  * @template In - Input type for the workflow
  * @template Out - Output type for the workflow
  * @param func - Function definition, either direct function or configuration object
@@ -83,13 +78,30 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 }
 
 /**
- * Registers a workflow with the Pikku framework.
- * Workflows can run in 'inline' (synchronous) or 'remote' (queue-based) execution modes.
+ * Creates a simple workflow function with typed input and output.
+ * Simple workflows must conform to the restricted DSL for static analysis.
  *
- * @param workflow - Workflow definition with name, execution mode, and handler function
+ * This is the strict mode - workflows that don't conform to simple DSL will cause
+ * a critical error during inspection.
+ *
+ * Constraints:
+ * - Must use only workflow.do() with RPC form (no inline functions)
+ * - Only if/else, for..of, and Promise.all(array.map()) control flow allowed
+ * - Step names must be unique (except across mutually exclusive branches)
+ * - All workflow calls must be awaited
+ *
+ * @template In - Input type for the workflow
+ * @template Out - Output type for the workflow
+ * @param func - Function definition, either direct function or configuration object
+ * @returns The normalized configuration object
  */
-export const wireWorkflow = (workflow: WorkflowWiring) => {
-  wireWorkflowCore(workflow as any)
+export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
+  func:
+    | PikkuFunctionWorkflow<In, Out>
+    | CorePikkuFunctionConfig<PikkuFunctionWorkflow<In, Out>, PikkuPermission<In>, PikkuMiddleware>
+) => {
+  return typeof func === 'function' ? { func } : func
 }
+
 `
 }

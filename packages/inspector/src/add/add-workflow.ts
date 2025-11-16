@@ -1,29 +1,20 @@
 import * as ts from 'typescript'
-import {
-  getPropertyValue,
-  getPropertyTags,
-} from '../utils/get-property-value.js'
-import { PikkuDocs } from '@pikku/core'
 import { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
-import {
-  getPropertyAssignmentInitializer,
-  resolveFunctionDeclaration,
-} from '../utils/type-utils.js'
-import { resolveMiddleware } from '../utils/middleware.js'
-import { extractWireNames } from '../utils/post-process.js'
+import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { ErrorCode } from '../error-codes.js'
 import { WorkflowStepMeta } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
-  extractNumberLiteral,
-  extractPropertyString,
   isStringLike,
   isFunctionLike,
+  extractDescription,
+  extractDuration,
 } from '../utils/extract-node-value.js'
+import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
 
 /**
- * Scan for workflow.do() and workflow.sleep() calls to extract workflow steps
+ * Scan for workflow.do(), workflow.sleep(), and workflow.cancel() calls to extract workflow steps
  */
 function getWorkflowInvocations(
   node: ts.Node,
@@ -37,7 +28,7 @@ function getWorkflowInvocations(
     const { name } = node
 
     // Check if this is accessing 'do' or 'sleep' property
-    if (name.text === 'do' || name.text === 'sleep') {
+    if (name.text === 'do' || name.text === 'sleep' || name.text === 'cancel') {
       // Check if the parent is a call expression
       const parent = node.parent
       if (ts.isCallExpression(parent) && parent.expression === node) {
@@ -86,6 +77,11 @@ function getWorkflowInvocations(
             stepName: stepName || '<dynamic>',
             duration: duration || '<dynamic>',
           })
+        } else if (name.text === 'cancel') {
+          // workflow.cancel(reason?)
+          steps.push({
+            type: 'cancel',
+          })
         }
       }
     }
@@ -105,43 +101,10 @@ function getWorkflowInvocations(
 }
 
 /**
- * Extract description from options object
- */
-function extractDescription(
-  optionsNode: ts.Node | undefined,
-  checker: ts.TypeChecker
-): string | null {
-  if (!optionsNode || !ts.isObjectLiteralExpression(optionsNode)) {
-    return null
-  }
-  return extractPropertyString(optionsNode, 'description', checker)
-}
-
-/**
- * Extract duration value (number or string)
- */
-function extractDuration(
-  node: ts.Node,
-  checker: ts.TypeChecker
-): string | number | null {
-  const numValue = extractNumberLiteral(node)
-  if (numValue !== null) {
-    return numValue
-  }
-  return extractStringLiteral(node, checker)
-}
-
-/**
- * Inspector for wireWorkflow() calls
+ * Inspector for pikkuWorkflow() and pikkuSimpleWorkflow() calls
  * Detects workflow registration and extracts metadata
  */
-export const addWorkflow: AddWiring = (
-  logger,
-  node,
-  checker,
-  state,
-  options
-) => {
+export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
     return
   }
@@ -150,8 +113,16 @@ export const addWorkflow: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to wireWorkflow
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireWorkflow') {
+  if (!ts.isIdentifier(expression)) {
+    return
+  }
+
+  let wrapperType: 'simple' | 'regular' | null = null
+  if (expression.text === 'pikkuWorkflowFunc') {
+    wrapperType = 'regular'
+  } else if (expression.text === 'pikkuSimpleWorkflowFunc') {
+    wrapperType = 'simple'
+  } else {
     return
   }
 
@@ -159,73 +130,89 @@ export const addWorkflow: AddWiring = (
     return
   }
 
-  if (ts.isObjectLiteralExpression(firstArg)) {
-    const obj = firstArg
+  // Extract workflow name and metadata using same logic as add-functions
+  const { pikkuFuncName, name, exportedName } = extractFunctionName(
+    node,
+    checker,
+    state.rootDir
+  )
 
-    const workflowName = getPropertyValue(obj, 'name') as string | null
-    const description = getPropertyValue(obj, 'description') as
-      | string
-      | undefined
-    const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-    const tags = getPropertyTags(obj, 'Workflow', workflowName, logger)
+  const workflowName = exportedName || name
 
-    // --- find the referenced function ---
-    const funcInitializer = getPropertyAssignmentInitializer(
-      obj,
-      'func',
-      true,
-      checker
+  if (!workflowName) {
+    logger.critical(
+      ErrorCode.MISSING_NAME,
+      `Could not determine workflow name from export.`
     )
+    return
+  }
 
-    if (!workflowName) {
+  // Extract the function node (either direct function or from config.func)
+  const { funcNode, resolvedFunc } = extractFunctionNode(firstArg, checker)
+
+  // Validate that we got a valid function
+  if (
+    ts.isObjectLiteralExpression(firstArg) &&
+    (!funcNode || funcNode === firstArg)
+  ) {
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      `No valid 'func' property for workflow '${workflowName}'.`
+    )
+    return
+  }
+
+  if (!resolvedFunc) {
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      `Could not resolve workflow function for '${workflowName}'.`
+    )
+    return
+  }
+
+  // Track workflow file for wiring generation
+  if (exportedName) {
+    state.workflows.files.set(pikkuFuncName, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
+  }
+
+  let steps: WorkflowStepMeta[] = []
+  let simple: boolean | undefined = undefined
+
+  // Try simple workflow extraction first
+  // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
+  const result = extractSimpleWorkflow(node, checker)
+
+  if (result.status === 'ok' && result.steps) {
+    // Simple extraction succeeded
+    steps = result.steps
+    simple = true
+  } else {
+    // Simple extraction failed
+    if (wrapperType === 'simple') {
+      // For pikkuSimpleWorkflowFunc, this is a critical error
       logger.critical(
-        ErrorCode.MISSING_NAME,
-        `Wasn't able to determine 'name' property for workflow wiring.`
+        ErrorCode.INVALID_SIMPLE_WORKFLOW,
+        `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
       )
       return
-    }
-
-    if (!funcInitializer) {
-      logger.critical(
-        ErrorCode.MISSING_FUNC,
-        `No valid 'func' property for workflow '${workflowName}'.`
+    } else {
+      // For pikkuWorkflowFunc, fall back to basic extraction
+      logger.debug(
+        `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
       )
-      return
+      simple = false
     }
+  }
 
-    const pikkuFuncName = extractFunctionName(
-      funcInitializer,
-      checker,
-      state.rootDir
-    ).pikkuFuncName
+  getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
 
-    // --- resolve middleware ---
-    const middleware = resolveMiddleware(state, obj, tags, checker)
-
-    // --- track used functions/middleware for service aggregation ---
-    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
-    extractWireNames(middleware).forEach((name) =>
-      state.serviceAggregation.usedMiddleware.add(name)
-    )
-
-    state.workflows.files.add(node.getSourceFile().fileName)
-
-    // Extract workflow steps from function body
-    // Resolve the identifier to the actual function declaration
-    const resolvedFunc = resolveFunctionDeclaration(funcInitializer, checker)
-    const steps: WorkflowStepMeta[] = []
-    if (resolvedFunc) {
-      getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
-    }
-
-    state.workflows.meta[workflowName] = {
-      pikkuFuncName,
-      workflowName,
-      description,
-      docs,
-      tags,
-      middleware,
-      steps,
-    }
+  state.workflows.meta[workflowName] = {
+    pikkuFuncName,
+    workflowName,
+    steps,
+    simple,
   }
 }

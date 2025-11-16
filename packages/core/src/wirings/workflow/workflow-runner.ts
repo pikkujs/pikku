@@ -1,5 +1,3 @@
-import type { CoreWorkflow } from './workflow.types.js'
-import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError } from '../../errors/error-handler.js'
 import { addFunction } from '../../function/function-runner.js'
@@ -49,37 +47,26 @@ export class WorkflowRunNotFound extends PikkuError {
 }
 
 /**
- * Register a workflow with the system
+ * Add a workflow to the system
+ * This is called by the generated workflow wirings
  */
-export const wireWorkflow = <
-  PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    any,
-    any,
-    any
-  > = CorePikkuFunctionConfig<any, any, any>,
->(
-  workflow: CoreWorkflow<PikkuFunctionConfig>
-) => {
+export const addWorkflow = (workflowName: string, workflowFunc: any) => {
   // Get workflow metadata from inspector
   const meta = pikkuState('workflows', 'meta')
-  const workflowMeta = meta[workflow.name]
+  const workflowMeta = meta[workflowName]
   if (!workflowMeta) {
     throw new Error(
-      `Workflow metadata not found for '${workflow.name}'. Make sure to run the CLI to generate metadata.`
+      `Workflow metadata not found for '${workflowName}'. Make sure to run the CLI to generate metadata.`
     )
   }
 
-  // Register the function with pikku
-  addFunction(workflowMeta.pikkuFuncName, {
-    func: workflow.func.func,
-    auth: workflow.func.auth,
-    permissions: workflow.func.permissions,
-    middleware: workflow.func.middleware as any,
-    tags: workflow.func.tags,
-    docs: workflow.func.docs as any,
-  })
-
   // Store workflow definition in state
   const registrations = pikkuState('workflows', 'registrations')
-  registrations.set(workflow.name, workflow)
+  registrations.set(workflowName, {
+    name: workflowName,
+    func: workflowFunc,
+  })
+
+  // Register the function with pikku
+  addFunction(workflowMeta.pikkuFuncName, workflowFunc)
 }

@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { AddWiring } from '../types.js'
 import { TypesMap } from '../types-map.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
@@ -309,51 +309,33 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let docs: PikkuDocs | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
 
-  // determine the actual handler expression:
-  // either the `func` prop or the first argument directly
-  let handlerNode: ts.Expression = args[0]!
-  let isDirectFunction = true
+  // Extract the function node using shared utility
+  const firstArg = args[0]!
+  const {
+    funcNode: handlerNode,
+    resolvedFunc,
+    isDirectFunction,
+  } = extractFunctionNode(firstArg, checker)
 
-  if (ts.isObjectLiteralExpression(handlerNode)) {
-    isDirectFunction = false
-    objectNode = handlerNode
-    tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
-    expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
-    internal = getPropertyValue(handlerNode, 'internal') as boolean | undefined
-    docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
-
-    const fnProp = getPropertyAssignmentInitializer(
-      handlerNode,
-      'func',
-      true,
-      checker
-    )
-    if (
-      !fnProp ||
-      (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
-    ) {
-      logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
-      // Create stub metadata to prevent "function not found" errors in wirings
-      state.functions.meta[pikkuFuncName] = {
-        pikkuFuncName,
-        name,
-        services: { optimized: false, services: [] },
-        inputSchemaName: null,
-        outputSchemaName: null,
-        inputs: [],
-        outputs: [],
-        middleware: undefined,
-      }
-      return
-    }
-    handlerNode = fnProp
+  // Extract config properties if using object form
+  if (ts.isObjectLiteralExpression(firstArg)) {
+    objectNode = firstArg
+    tags = (getPropertyValue(firstArg, 'tags') as string[]) || undefined
+    expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
+    internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+    docs = getPropertyValue(firstArg, 'docs') as PikkuDocs | undefined
   }
 
-  if (
-    !ts.isArrowFunction(handlerNode) &&
-    !ts.isFunctionExpression(handlerNode)
-  ) {
-    logger.error(`• Handler for ${name} is not a function.`)
+  // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
+  const handler =
+    resolvedFunc &&
+    (ts.isArrowFunction(resolvedFunc) || ts.isFunctionExpression(resolvedFunc))
+      ? resolvedFunc
+      : handlerNode
+
+  // Validate that we got a valid function
+  if (!ts.isArrowFunction(handler) && !ts.isFunctionExpression(handler)) {
+    logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
     // Create stub metadata to prevent "function not found" errors in wirings
     state.functions.meta[pikkuFuncName] = {
       pikkuFuncName,
@@ -373,7 +355,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     services: [],
   }
 
-  const firstParam = handlerNode.parameters[0]
+  const firstParam = handler.parameters[0]
   if (firstParam) {
     if (ts.isObjectBindingPattern(firstParam.name)) {
       for (const elem of firstParam.name.elements) {
@@ -422,7 +404,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
       genericTypes[1]
     ).names
   } else {
-    const sig = checker.getSignatureFromDeclaration(handlerNode)
+    const sig = checker.getSignatureFromDeclaration(handler)
     if (sig) {
       const rawRet = checker.getReturnTypeOfSignature(sig)
       const unwrapped = unwrapPromise(checker, rawRet)
@@ -440,6 +422,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     logger.warn(
       'More than one input type detected, only the first one will be used as a schema.'
     )
+  }
+
+  // Store the input type for later use
+  if (inputTypes.length > 0) {
+    state.typesLookup.set(pikkuFuncName, inputTypes)
   }
 
   // --- resolve middleware ---
@@ -463,17 +450,18 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   }
 
-  // Store the input type for later use
-  if (inputTypes.length > 0) {
-    state.typesLookup.set(pikkuFuncName, inputTypes)
-  }
-
   // Store function file location for wiring generation
   if (exportedName) {
     state.functions.files.set(pikkuFuncName, {
       path: node.getSourceFile().fileName,
       exportedName,
     })
+  }
+
+  // Workflow functions don't get registered as RPC functions,
+  // they are their own type handled by add-workdflow
+  if (expression.text.includes('Workflow')) {
+    return
   }
 
   if (exportedName || explicitName) {
