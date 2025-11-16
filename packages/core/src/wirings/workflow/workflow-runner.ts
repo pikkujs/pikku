@@ -1,5 +1,6 @@
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError } from '../../errors/error-handler.js'
+import { addFunction } from '../../function/function-runner.js'
 
 /**
  * Exception thrown when workflow needs to pause for async step
@@ -65,4 +66,7 @@ export const addWorkflow = (workflowName: string, workflowFunc: any) => {
     name: workflowName,
     func: workflowFunc,
   })
+
+  // Register the function with pikku
+  addFunction(workflowMeta.pikkuFuncName, workflowFunc)
 }

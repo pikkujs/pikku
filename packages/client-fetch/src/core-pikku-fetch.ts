@@ -154,7 +154,7 @@ export class CorePikkuFetch {
    */
   public async fetch(
     uri: string,
-    method: HTTPMethod,
+    method: any, // HTTPMethod, TODO: the generated file is a subset of HTTPMethod
     data: any,
     options?: RequestInit
   ) {
