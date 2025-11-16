@@ -325,14 +325,41 @@ function extractExpressionStatement(
   statement: ts.ExpressionStatement,
   context: ExtractionContext
 ): WorkflowStepMeta | null {
-  const expr = statement.expression
+  let expr = statement.expression
+
+  // Handle assignment: owner = await workflow.do(...)
+  let outputVar: string | undefined
+  if (
+    ts.isBinaryExpression(expr) &&
+    expr.operatorToken.kind === ts.SyntaxKind.EqualsToken
+  ) {
+    // Extract variable name from left side
+    if (ts.isIdentifier(expr.left)) {
+      outputVar = expr.left.text
+    }
+    // Use right side as the expression to extract from
+    expr = expr.right
+  }
 
   // await workflow.do(...)
   if (ts.isAwaitExpression(expr) && ts.isCallExpression(expr.expression)) {
     const call = expr.expression
 
     if (isWorkflowDoCall(call, context.checker)) {
-      return extractRpcStep(call, context)
+      const step = extractRpcStep(call, context, outputVar)
+
+      // Track output variable if this is an assignment
+      if (outputVar && step) {
+        const type = context.checker.getTypeAtLocation(expr)
+        context.outputVars.set(outputVar, { type, node: expr })
+
+        // Check if it's an array type
+        if (isArrayType(type, context.checker)) {
+          context.arrayVars.add(outputVar)
+        }
+      }
+
+      return step
     }
 
     if (isWorkflowSleepCall(call, context.checker)) {
@@ -491,9 +518,15 @@ function extractBranch(
 ): BranchStepMeta | null {
   const condition = getSourceText(statement.expression)
 
-  const thenSteps = extractSteps(statement.thenStatement, context)
+  // Handle both block statements and single statements
+  const thenSteps = ts.isBlock(statement.thenStatement)
+    ? extractSteps(statement.thenStatement, context)
+    : extractStepsFromStatement(statement.thenStatement, context)
+
   const elseSteps = statement.elseStatement
-    ? extractSteps(statement.elseStatement, context)
+    ? ts.isBlock(statement.elseStatement)
+      ? extractSteps(statement.elseStatement, context)
+      : extractStepsFromStatement(statement.elseStatement, context)
     : undefined
 
   return {
@@ -504,6 +537,17 @@ function extractBranch(
       else: elseSteps,
     },
   }
+}
+
+/**
+ * Extract steps from a single statement (non-block)
+ */
+function extractStepsFromStatement(
+  statement: ts.Statement,
+  context: ExtractionContext
+): WorkflowStepMeta[] {
+  const step = extractStep(statement, context)
+  return step ? [step] : []
 }
 
 /**
@@ -558,6 +602,11 @@ function extractParallelFanout(
 
   if (ts.isCallExpression(mapFn.body)) {
     doCall = mapFn.body
+  } else if (ts.isAwaitExpression(mapFn.body)) {
+    // Handle: async (email) => await workflow.do(...)
+    if (ts.isCallExpression(mapFn.body.expression)) {
+      doCall = mapFn.body.expression
+    }
   } else if (ts.isBlock(mapFn.body)) {
     // Look for workflow.do in block
     for (const stmt of mapFn.body.statements) {
@@ -565,6 +614,12 @@ function extractParallelFanout(
         if (ts.isCallExpression(stmt.expression)) {
           doCall = stmt.expression
           break
+        } else if (ts.isAwaitExpression(stmt.expression)) {
+          // Handle: return await workflow.do(...)
+          if (ts.isCallExpression(stmt.expression.expression)) {
+            doCall = stmt.expression.expression
+            break
+          }
         }
       }
     }
