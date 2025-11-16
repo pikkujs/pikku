@@ -2,6 +2,10 @@ import { wireHTTP } from '../.pikku/pikku-types.gen.js'
 import { triggerOnboardingWorkflow } from './workflow.functions.js'
 import { happyRetry } from './workflow-happy.functions.js'
 import { unhappyRetry } from './workflow-unhappy.functions.js'
+import {
+  triggerOrgOnboardingSimple,
+  triggerSequentialInviteSimple,
+} from './workflow-simple.functions.js'
 
 wireHTTP({
   auth: false,
@@ -26,4 +30,21 @@ wireHTTP({
   route: '/workflow/test/unhappy-retry',
   func: unhappyRetry,
   tags: ['workflow', 'test'],
+})
+
+// Wire HTTP endpoints for simple workflow examples
+wireHTTP({
+  auth: false,
+  method: 'post',
+  route: '/workflow/simple/org-onboarding',
+  func: triggerOrgOnboardingSimple,
+  tags: ['workflow', 'simple'],
+})
+
+wireHTTP({
+  auth: false,
+  method: 'post',
+  route: '/workflow/simple/sequential-invite',
+  func: triggerSequentialInviteSimple,
+  tags: ['workflow', 'simple'],
 })

@@ -94,7 +94,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   await Promise.all(
     data.memberEmails.map(
       async (email) =>
-        await workflow.do('Invite member', 'inviteMember', {
+        await workflow.do(`Invite member ${email}`, 'inviteMember', {
           orgId: org.id,
           email,
         })
@@ -123,17 +123,123 @@ export const sequentialInviteSimpleWorkflow = pikkuSimpleWorkflowFunc<
 >(async ({ workflow }, data) => {
   // Process members sequentially with optional delay
   for (const email of data.memberEmails) {
-    await workflow.do('Invite member', 'inviteMember', {
+    await workflow.do(`Invite member ${email}`, 'inviteMember', {
       orgId: data.orgId,
       email,
     })
 
     if (data.delayMs > 0) {
-      await workflow.sleep('Wait between invitations', `${data.delayMs}ms`)
+      await workflow.sleep(
+        `Wait after invitation for member ${email}`,
+        `${data.delayMs}ms`
+      )
     }
   }
 
   return {
     invitedCount: data.memberEmails.length,
   }
+})
+
+// RPC function to trigger organization onboarding simple workflow
+export const triggerOrgOnboardingSimple = pikkuSessionlessFunc<
+  { email: string; name: string; plan: string; memberEmails: string[] },
+  { orgId: string; ownerId?: string; runId: string }
+>(async ({ rpc, workflowService, logger }, data) => {
+  // Start the workflow
+  const { runId } = await rpc.startWorkflow('orgOnboardingSimpleWorkflow', data)
+
+  logger.info(`[SIMPLE] Organization onboarding workflow started: ${runId}`)
+
+  // Poll for completion (with timeout)
+  const maxWaitMs = 30000 // 30 seconds
+  const pollIntervalMs = 2000 // 2 seconds
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < maxWaitMs) {
+    const run = await workflowService!.getRun(runId)
+
+    if (!run) {
+      logger.error(`[SIMPLE] Workflow run not found: ${runId}`)
+      throw new Error(`Workflow run not found: ${runId}`)
+    }
+
+    logger.info(`[SIMPLE] Workflow status: ${run.status}`)
+
+    if (run.status === 'completed') {
+      logger.info(`[SIMPLE] Workflow completed successfully`)
+      return {
+        ...run.output,
+        runId,
+      }
+    }
+
+    if (run.status === 'failed') {
+      logger.error(`[SIMPLE] Workflow failed: ${run.error?.message}`)
+      throw new Error(`Workflow failed: ${run.error?.message}`)
+    }
+
+    if (run.status === 'cancelled') {
+      logger.error(`[SIMPLE] Workflow cancelled: ${run.error?.message}`)
+      throw new Error(`Workflow cancelled: ${run.error?.message}`)
+    }
+
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+  }
+
+  throw new Error(`Workflow timed out after ${maxWaitMs}ms`)
+})
+
+// RPC function to trigger sequential invite simple workflow
+export const triggerSequentialInviteSimple = pikkuSessionlessFunc<
+  { orgId: string; memberEmails: string[]; delayMs: number },
+  { invitedCount: number; runId: string }
+>(async ({ rpc, workflowService, logger }, data) => {
+  // Start the workflow
+  const { runId } = await rpc.startWorkflow(
+    'sequentialInviteSimpleWorkflow',
+    data
+  )
+
+  logger.info(`[SIMPLE] Sequential invite workflow started: ${runId}`)
+
+  // Poll for completion (with timeout)
+  const maxWaitMs = 60000 // 60 seconds (longer timeout for sequential processing)
+  const pollIntervalMs = 2000 // 2 seconds
+  const startTime = Date.now()
+
+  while (Date.now() - startTime < maxWaitMs) {
+    const run = await workflowService!.getRun(runId)
+
+    if (!run) {
+      logger.error(`[SIMPLE] Workflow run not found: ${runId}`)
+      throw new Error(`Workflow run not found: ${runId}`)
+    }
+
+    logger.info(`[SIMPLE] Workflow status: ${run.status}`)
+
+    if (run.status === 'completed') {
+      logger.info(`[SIMPLE] Workflow completed successfully`)
+      return {
+        ...run.output,
+        runId,
+      }
+    }
+
+    if (run.status === 'failed') {
+      logger.error(`[SIMPLE] Workflow failed: ${run.error?.message}`)
+      throw new Error(`Workflow failed: ${run.error?.message}`)
+    }
+
+    if (run.status === 'cancelled') {
+      logger.error(`[SIMPLE] Workflow cancelled: ${run.error?.message}`)
+      throw new Error(`Workflow cancelled: ${run.error?.message}`)
+    }
+
+    // Wait before polling again
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+  }
+
+  throw new Error(`Workflow timed out after ${maxWaitMs}ms`)
 })
