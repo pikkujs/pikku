@@ -31,30 +31,30 @@ export const flakyHappyRPC = pikkuSessionlessFunc<
 })
 
 /**
- * Workflow that tests HAPPY PATH retry logic
- * - Step fails on first attempt (attemptCount=1)
- * - Step succeeds on second attempt (attemptCount=2)
- * - Workflow completes successfully
+ * HAPPY PATH: Workflow that fails once then succeeds on retry
  */
 export const happyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
   { result: number; finalAttempt: number; message: string }
->(async ({ workflow }, data) => {
-  const result = await workflow.do(
-    'Step that fails once then succeeds',
-    'flakyHappyRPC',
-    data,
-    {
-      retries: 2, // Allow up to 2 retries (3 total attempts)
-      retryDelay: '1s',
-    }
-  )
+>({
+  func: async ({ workflow }, data) => {
+    const result = await workflow.do(
+      'Step that fails once then succeeds',
+      'flakyHappyRPC',
+      data,
+      {
+        retries: 2, // Allow up to 2 retries (3 total attempts)
+        retryDelay: '1s',
+      }
+    )
 
-  return {
-    result: result.result,
-    finalAttempt: result.attempt,
-    message: `Workflow succeeded after ${result.attempt} attempts`,
-  }
+    return {
+      result: result.result,
+      finalAttempt: result.attempt,
+      message: `Workflow succeeded after ${result.attempt} attempts`,
+    }
+  },
+  tags: ['test', 'retry', 'happy'],
 })
 
 // RPC function to trigger the happy retry workflow and wait for completion
@@ -74,7 +74,7 @@ export const happyRetry = pikkuSessionlessFunc<
 >({
   func: async ({ rpc, workflowService, logger }, data) => {
     // Start the workflow
-    const { runId } = await rpc.startWorkflow('happyRetry', data)
+    const { runId } = await rpc.startWorkflow('happyRetryWorkflow', data)
 
     logger.info(`[TEST] Workflow started: ${runId}`)
 

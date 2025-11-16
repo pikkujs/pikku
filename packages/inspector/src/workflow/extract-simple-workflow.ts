@@ -140,11 +140,25 @@ export function extractSimpleWorkflow(
  * Find the workflow function (async arrow function)
  */
 function findWorkflowFunction(node: ts.Node): ts.ArrowFunction | null {
-  // Handle pikkuSimpleWorkflowFunc(async () => {})
+  // Handle pikkuSimpleWorkflowFunc(async () => {}) or pikkuWorkflowFunc(async () => {})
   if (ts.isCallExpression(node)) {
     const arg = node.arguments[0]
     if (arg && ts.isArrowFunction(arg)) {
       return arg
+    }
+    // Also check if first argument is an object with func property
+    if (arg && ts.isObjectLiteralExpression(arg)) {
+      for (const prop of arg.properties) {
+        if (
+          ts.isPropertyAssignment(prop) &&
+          ts.isIdentifier(prop.name) &&
+          prop.name.text === 'func'
+        ) {
+          if (ts.isArrowFunction(prop.initializer)) {
+            return prop.initializer
+          }
+        }
+      }
     }
   }
 

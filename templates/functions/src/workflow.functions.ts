@@ -35,37 +35,43 @@ export const sendEmail = pikkuSessionlessFunc<
   }
 })
 
+/**
+ * User onboarding workflow with email and profile setup
+ */
 export const onboardingWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string },
   { userId: string; email: string }
->(async ({ workflow }, data) => {
-  // Step 1: Create user profile (RPC call - generates queue worker)
-  const user = await workflow.do(
-    `Create user profile in database for ${data.email}`,
-    'createUserProfile',
-    data
-  )
+>({
+  func: async ({ workflow }, data) => {
+    // Step 1: Create user profile (RPC call - generates queue worker)
+    const user = await workflow.do(
+      `Create user profile in database for ${data.email}`,
+      'createUserProfile',
+      data
+    )
 
-  // Step 2: Generate welcome message (inline - executes immediately with caching)
-  const welcomeMessage = await workflow.do(
-    'Generate personalized welcome message',
-    async () => generateWelcomeMessage(user.email)
-  )
+    // Step 2: Generate welcome message (inline - executes immediately with caching)
+    const welcomeMessage = await workflow.do(
+      'Generate personalized welcome message',
+      async () => generateWelcomeMessage(user.email)
+    )
 
-  // Step 3: Sleep for 5 seconds
-  await workflow.sleep('Sleeping for 5 seconds', '5s')
+    // Step 3: Sleep for 5 seconds
+    await workflow.sleep('Sleeping for 5 seconds', '5s')
 
-  // Step 4: Send welcome email (RPC call - generates queue worker)
-  await workflow.do('Send welcome email to user', 'sendEmail', {
-    to: data.email,
-    subject: 'Welcome!',
-    body: welcomeMessage,
-  })
+    // Step 4: Send welcome email (RPC call - generates queue worker)
+    await workflow.do('Send welcome email to user', 'sendEmail', {
+      to: data.email,
+      subject: 'Welcome!',
+      body: welcomeMessage,
+    })
 
-  return {
-    userId: data.userId,
-    email: data.email,
-  }
+    return {
+      userId: data.userId,
+      email: data.email,
+    }
+  },
+  tags: ['onboarding', 'users'],
 })
 
 // HTTP function to start a workflow and poll until completion
@@ -73,7 +79,7 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any
 >(async ({ rpc, workflowService, logger }, data) => {
-  const { runId } = await rpc.startWorkflow('onboarding', data)
+  const { runId } = await rpc.startWorkflow('onboardingWorkflow', data)
   logger.info(`[TEST] Workflow started: ${runId}`)
 
   // Poll for workflow completion

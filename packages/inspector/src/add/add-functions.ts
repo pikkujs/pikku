@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { AddWiring } from '../types.js'
 import { TypesMap } from '../types-map.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
@@ -309,51 +309,28 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let docs: PikkuDocs | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
 
-  // determine the actual handler expression:
-  // either the `func` prop or the first argument directly
-  let handlerNode: ts.Expression = args[0]!
-  let isDirectFunction = true
+  // Extract the function node using shared utility
+  const firstArg = args[0]!
+  const { funcNode: handlerNode, isDirectFunction } = extractFunctionNode(
+    firstArg,
+    checker
+  )
 
-  if (ts.isObjectLiteralExpression(handlerNode)) {
-    isDirectFunction = false
-    objectNode = handlerNode
-    tags = (getPropertyValue(handlerNode, 'tags') as string[]) || undefined
-    expose = getPropertyValue(handlerNode, 'expose') as boolean | undefined
-    internal = getPropertyValue(handlerNode, 'internal') as boolean | undefined
-    docs = getPropertyValue(handlerNode, 'docs') as PikkuDocs | undefined
-
-    const fnProp = getPropertyAssignmentInitializer(
-      handlerNode,
-      'func',
-      true,
-      checker
-    )
-    if (
-      !fnProp ||
-      (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
-    ) {
-      logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
-      // Create stub metadata to prevent "function not found" errors in wirings
-      state.functions.meta[pikkuFuncName] = {
-        pikkuFuncName,
-        name,
-        services: { optimized: false, services: [] },
-        inputSchemaName: null,
-        outputSchemaName: null,
-        inputs: [],
-        outputs: [],
-        middleware: undefined,
-      }
-      return
-    }
-    handlerNode = fnProp
+  // Extract config properties if using object form
+  if (ts.isObjectLiteralExpression(firstArg)) {
+    objectNode = firstArg
+    tags = (getPropertyValue(firstArg, 'tags') as string[]) || undefined
+    expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
+    internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+    docs = getPropertyValue(firstArg, 'docs') as PikkuDocs | undefined
   }
 
+  // Validate that we got a valid function
   if (
     !ts.isArrowFunction(handlerNode) &&
     !ts.isFunctionExpression(handlerNode)
   ) {
-    logger.error(`• Handler for ${name} is not a function.`)
+    logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
     // Create stub metadata to prevent "function not found" errors in wirings
     state.functions.meta[pikkuFuncName] = {
       pikkuFuncName,
@@ -442,6 +419,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     )
   }
 
+  // Store the input type for later use
+  if (inputTypes.length > 0) {
+    state.typesLookup.set(pikkuFuncName, inputTypes)
+  }
+
   // --- resolve middleware ---
   const middleware = objectNode
     ? resolveMiddleware(state, objectNode, tags, checker)
@@ -463,17 +445,18 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   }
 
-  // Store the input type for later use
-  if (inputTypes.length > 0) {
-    state.typesLookup.set(pikkuFuncName, inputTypes)
-  }
-
   // Store function file location for wiring generation
   if (exportedName) {
     state.functions.files.set(pikkuFuncName, {
       path: node.getSourceFile().fileName,
       exportedName,
     })
+  }
+
+  // Workflow functions don't get registered as RPC functions,
+  // they are their own type handled by add-workdflow
+  if (expression.text.includes('Workflow')) {
+    return
   }
 
   if (exportedName || explicitName) {

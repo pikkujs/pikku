@@ -68,14 +68,7 @@ export const sendWelcomeEmail = pikkuSessionlessFunc<
 })
 
 /**
- * Simple workflow for organization onboarding
- *
- * This workflow demonstrates:
- * - Sequential steps with output variables
- * - Conditional branching (if/else)
- * - Parallel fanout (Promise.all + map)
- * - Step options (retries, retryDelay)
- * - Typed inputs and outputs
+ * Organization onboarding workflow (simple DSL)
  */
 export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   { email: string; name: string; plan: string; memberEmails: string[] },
@@ -99,8 +92,12 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
 
   // Step 3: Parallel member invitations
   await Promise.all(
-    data.memberEmails.map((email) =>
-      workflow.do('Invite member', 'inviteMember', { orgId: org.id, email })
+    data.memberEmails.map(
+      async (email) =>
+        await workflow.do('Invite member', 'inviteMember', {
+          orgId: org.id,
+          email,
+        })
     )
   )
 
@@ -118,11 +115,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
 })
 
 /**
- * Example of sequential fanout with delays
- *
- * This demonstrates:
- * - for..of loops for sequential processing
- * - Conditional sleep between iterations
+ * Sequential member invitation with delays (simple DSL)
  */
 export const sequentialInviteSimpleWorkflow = pikkuSimpleWorkflowFunc<
   { orgId: string; memberEmails: string[]; delayMs: number },

@@ -1,58 +1,17 @@
 import * as ts from 'typescript'
-import {
-  getPropertyValue,
-  getPropertyTags,
-} from '../utils/get-property-value.js'
-import { PikkuDocs } from '@pikku/core'
 import { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
-import {
-  getPropertyAssignmentInitializer,
-  resolveFunctionDeclaration,
-} from '../utils/type-utils.js'
-import { resolveMiddleware } from '../utils/middleware.js'
-import { extractWireNames } from '../utils/post-process.js'
+import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { ErrorCode } from '../error-codes.js'
 import { WorkflowStepMeta } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
-  extractNumberLiteral,
-  extractPropertyString,
   isStringLike,
   isFunctionLike,
+  extractDescription,
+  extractDuration,
 } from '../utils/extract-node-value.js'
 import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
-
-/**
- * Detect which wrapper function is being used (pikkuWorkflowFunc or pikkuSimpleWorkflowFunc)
- */
-function detectWrapperType(funcInitializer: ts.Node): 'simple' | 'regular' {
-  // Check if the function is wrapped in pikkuSimpleWorkflowFunc
-  let current: ts.Node | undefined = funcInitializer
-
-  while (current) {
-    if (ts.isCallExpression(current)) {
-      const expr = current.expression
-      if (ts.isIdentifier(expr)) {
-        if (expr.text === 'pikkuSimpleWorkflowFunc') {
-          return 'simple'
-        }
-        if (expr.text === 'pikkuWorkflowFunc') {
-          return 'regular'
-        }
-      }
-    }
-
-    // Check parent
-    if (current.parent) {
-      current = current.parent
-    } else {
-      break
-    }
-  }
-
-  return 'regular'
-}
 
 /**
  * Scan for workflow.do() and workflow.sleep() calls to extract workflow steps
@@ -137,43 +96,10 @@ function getWorkflowInvocations(
 }
 
 /**
- * Extract description from options object
- */
-function extractDescription(
-  optionsNode: ts.Node | undefined,
-  checker: ts.TypeChecker
-): string | null {
-  if (!optionsNode || !ts.isObjectLiteralExpression(optionsNode)) {
-    return null
-  }
-  return extractPropertyString(optionsNode, 'description', checker)
-}
-
-/**
- * Extract duration value (number or string)
- */
-function extractDuration(
-  node: ts.Node,
-  checker: ts.TypeChecker
-): string | number | null {
-  const numValue = extractNumberLiteral(node)
-  if (numValue !== null) {
-    return numValue
-  }
-  return extractStringLiteral(node, checker)
-}
-
-/**
- * Inspector for wireWorkflow() calls
+ * Inspector for pikkuWorkflow() and pikkuSimpleWorkflow() calls
  * Detects workflow registration and extracts metadata
  */
-export const addWorkflow: AddWiring = (
-  logger,
-  node,
-  checker,
-  state,
-  options
-) => {
+export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
     return
   }
@@ -182,8 +108,16 @@ export const addWorkflow: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to wireWorkflow
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireWorkflow') {
+  if (!ts.isIdentifier(expression)) {
+    return
+  }
+
+  let wrapperType: 'simple' | 'regular' | null = null
+  if (expression.text === 'pikkuWorkflowFunc') {
+    wrapperType = 'regular'
+  } else if (expression.text === 'pikkuSimpleWorkflowFunc') {
+    wrapperType = 'simple'
+  } else {
     return
   }
 
@@ -191,113 +125,91 @@ export const addWorkflow: AddWiring = (
     return
   }
 
-  if (ts.isObjectLiteralExpression(firstArg)) {
-    const obj = firstArg
+  // Extract workflow name and metadata using same logic as add-functions
+  const { pikkuFuncName, name, exportedName } = extractFunctionName(
+    node,
+    checker,
+    state.rootDir
+  )
 
-    const workflowName = getPropertyValue(obj, 'name') as string | null
-    const description = getPropertyValue(obj, 'description') as
-      | string
-      | undefined
-    const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-    const tags = getPropertyTags(obj, 'Workflow', workflowName, logger)
+  const workflowName = exportedName || name
 
-    // --- find the referenced function ---
-    const funcInitializer = getPropertyAssignmentInitializer(
-      obj,
-      'func',
-      true,
-      checker
+  if (!workflowName) {
+    logger.critical(
+      ErrorCode.MISSING_NAME,
+      `Could not determine workflow name from export.`
     )
+    return
+  }
 
-    if (!workflowName) {
-      logger.critical(
-        ErrorCode.MISSING_NAME,
-        `Wasn't able to determine 'name' property for workflow wiring.`
-      )
-      return
-    }
+  // Extract the function node (either direct function or from config.func)
+  const { funcNode, resolvedFunc } = extractFunctionNode(firstArg, checker)
 
-    if (!funcInitializer) {
-      logger.critical(
-        ErrorCode.MISSING_FUNC,
-        `No valid 'func' property for workflow '${workflowName}'.`
-      )
-      return
-    }
-
-    const pikkuFuncName = extractFunctionName(
-      funcInitializer,
-      checker,
-      state.rootDir
-    ).pikkuFuncName
-
-    // --- resolve middleware ---
-    const middleware = resolveMiddleware(state, obj, tags, checker)
-
-    // --- track used functions/middleware for service aggregation ---
-    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
-    extractWireNames(middleware).forEach((name) =>
-      state.serviceAggregation.usedMiddleware.add(name)
+  // Validate that we got a valid function
+  if (
+    ts.isObjectLiteralExpression(firstArg) &&
+    (!funcNode || funcNode === firstArg)
+  ) {
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      `No valid 'func' property for workflow '${workflowName}'.`
     )
+    return
+  }
 
-    state.workflows.files.add(node.getSourceFile().fileName)
+  // Track workflow file for wiring generation
+  if (exportedName) {
+    state.workflows.files.set(pikkuFuncName, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
+  }
 
-    // Detect wrapper type
-    const wrapperType = detectWrapperType(funcInitializer)
-    const resolvedFunc = resolveFunctionDeclaration(funcInitializer, checker)
+  let steps: WorkflowStepMeta[] = []
+  let simple: boolean | undefined = undefined
 
-    let steps: WorkflowStepMeta[] = []
-    let simple: boolean | undefined = undefined
+  // Try simple workflow extraction first
+  // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
+  if (resolvedFunc) {
+    const result = extractSimpleWorkflow(node, checker)
 
-    // Try simple workflow extraction first if using pikkuSimpleWorkflowFunc or pikkuWorkflowFunc
-    if (
-      resolvedFunc &&
-      (wrapperType === 'simple' || wrapperType === 'regular')
-    ) {
-      const result = extractSimpleWorkflow(funcInitializer, checker)
-
-      if (result.status === 'ok' && result.steps) {
-        // Simple extraction succeeded
-        steps = result.steps
-        simple = true
+    if (result.status === 'ok' && result.steps) {
+      // Simple extraction succeeded
+      steps = result.steps
+      simple = true
+    } else {
+      // Simple extraction failed
+      if (wrapperType === 'simple') {
+        // For pikkuSimpleWorkflowFunc, this is a critical error
+        logger.critical(
+          ErrorCode.INVALID_SIMPLE_WORKFLOW,
+          `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
+        )
+        return
       } else {
-        // Simple extraction failed
-        if (wrapperType === 'simple') {
-          // For pikkuSimpleWorkflowFunc, this is a critical error
-          logger.critical(
-            ErrorCode.INVALID_SIMPLE_WORKFLOW,
-            `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
-          )
-          return
-        } else {
-          // For pikkuWorkflowFunc, fall back to basic extraction
-          logger.warn(
-            `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
-          )
-          simple = false
-          getWorkflowInvocations(
-            resolvedFunc,
-            checker,
-            state,
-            workflowName,
-            steps
-          )
-        }
+        // For pikkuWorkflowFunc, fall back to basic extraction
+        logger.debug(
+          `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+        )
+        simple = false
+        getWorkflowInvocations(
+          resolvedFunc,
+          checker,
+          state,
+          workflowName,
+          steps
+        )
       }
-    } else if (resolvedFunc) {
-      // Fallback to basic extraction
-      getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
     }
+  } else if (resolvedFunc) {
+    // Fallback to basic extraction
+    getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+  }
 
-    state.workflows.meta[workflowName] = {
-      pikkuFuncName,
-      workflowName,
-      description,
-      docs,
-      tags,
-      middleware,
-      steps,
-      simple,
-    }
+  state.workflows.meta[workflowName] = {
+    pikkuFuncName,
+    workflowName,
+    steps,
+    simple,
   }
 }
