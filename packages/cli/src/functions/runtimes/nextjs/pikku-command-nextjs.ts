@@ -35,6 +35,12 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       )
     }
 
+    if ((nextBackendFile || nextHTTPFile) && !rpcMapDeclarationFile) {
+      throw new Error(
+        'rpcMapDeclarationFile is required in pikku config in order for nextJS wrapper to work'
+      )
+    }
+
     if (nextBackendFile) {
       // Check for required types
       checkRequiredTypes(visitState.filesAndMethodsErrors, {

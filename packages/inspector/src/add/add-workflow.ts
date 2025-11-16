@@ -14,7 +14,7 @@ import {
 import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
 
 /**
- * Scan for workflow.do() and workflow.sleep() calls to extract workflow steps
+ * Scan for workflow.do(), workflow.sleep(), and workflow.cancel() calls to extract workflow steps
  */
 function getWorkflowInvocations(
   node: ts.Node,
@@ -28,7 +28,7 @@ function getWorkflowInvocations(
     const { name } = node
 
     // Check if this is accessing 'do' or 'sleep' property
-    if (name.text === 'do' || name.text === 'sleep') {
+    if (name.text === 'do' || name.text === 'sleep' || name.text === 'cancel') {
       // Check if the parent is a call expression
       const parent = node.parent
       if (ts.isCallExpression(parent) && parent.expression === node) {
@@ -76,6 +76,11 @@ function getWorkflowInvocations(
             type: 'sleep',
             stepName: stepName || '<dynamic>',
             duration: duration || '<dynamic>',
+          })
+        } else if (name.text === 'cancel') {
+          // workflow.cancel(reason?)
+          steps.push({
+            type: 'cancel',
           })
         }
       }

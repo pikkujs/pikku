@@ -112,7 +112,7 @@ export class PikkuNextJS {
     const singletonServices = await this.getSingletonServices()
     const request = new PikkuActionNextRequest(
       '/rpc',
-      'POST' as HTTPMethod,
+      'post' as HTTPMethod,
       { name, data },
       true
     )
@@ -139,7 +139,7 @@ export class PikkuNextJS {
     const singletonServices = await this.getSingletonServices()
     const request = new PikkuActionNextRequest(
       '/rpc',
-      'POST' as HTTPMethod,
+      'post' as HTTPMethod,
       { name, data },
       false
     )

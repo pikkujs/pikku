@@ -311,10 +311,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   // Extract the function node using shared utility
   const firstArg = args[0]!
-  const { funcNode: handlerNode, isDirectFunction } = extractFunctionNode(
-    firstArg,
-    checker
-  )
+  const {
+    funcNode: handlerNode,
+    resolvedFunc,
+    isDirectFunction,
+  } = extractFunctionNode(firstArg, checker)
 
   // Extract config properties if using object form
   if (ts.isObjectLiteralExpression(firstArg)) {
@@ -325,11 +326,15 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     docs = getPropertyValue(firstArg, 'docs') as PikkuDocs | undefined
   }
 
+  // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
+  const handler =
+    resolvedFunc &&
+    (ts.isArrowFunction(resolvedFunc) || ts.isFunctionExpression(resolvedFunc))
+      ? resolvedFunc
+      : handlerNode
+
   // Validate that we got a valid function
-  if (
-    !ts.isArrowFunction(handlerNode) &&
-    !ts.isFunctionExpression(handlerNode)
-  ) {
+  if (!ts.isArrowFunction(handler) && !ts.isFunctionExpression(handler)) {
     logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
     // Create stub metadata to prevent "function not found" errors in wirings
     state.functions.meta[pikkuFuncName] = {
@@ -350,7 +355,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     services: [],
   }
 
-  const firstParam = handlerNode.parameters[0]
+  const firstParam = handler.parameters[0]
   if (firstParam) {
     if (ts.isObjectBindingPattern(firstParam.name)) {
       for (const elem of firstParam.name.elements) {
@@ -399,7 +404,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
       genericTypes[1]
     ).names
   } else {
-    const sig = checker.getSignatureFromDeclaration(handlerNode)
+    const sig = checker.getSignatureFromDeclaration(handler)
     if (sig) {
       const rawRet = checker.getReturnTypeOfSignature(sig)
       const unwrapped = unwrapPromise(checker, rawRet)

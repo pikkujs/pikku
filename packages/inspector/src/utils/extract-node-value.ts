@@ -124,5 +124,9 @@ export function extractDuration(
   if (numValue !== null) {
     return numValue
   }
-  return extractStringLiteral(node, checker)
+  try {
+    return extractStringLiteral(node, checker)
+  } catch {
+    return null
+  }
 }

@@ -14,6 +14,7 @@ export type {
   ReturnStepMeta,
   InlineStepMeta,
   SleepStepMeta,
+  CancelStepMeta,
   InputSource,
   OutputBinding,
   PikkuWorkflowInteraction,

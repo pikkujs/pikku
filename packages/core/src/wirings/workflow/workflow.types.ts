@@ -267,6 +267,14 @@ export interface SleepStepMeta {
 }
 
 /**
+ * Cancel step metadata
+ */
+export interface CancelStepMeta {
+  /** Cancel step */
+  type: 'cancel'
+}
+
+/**
  * Workflow step metadata (extracted by inspector)
  */
 export type WorkflowStepMeta =
@@ -277,6 +285,7 @@ export type WorkflowStepMeta =
   | ReturnStepMeta
   | InlineStepMeta
   | SleepStepMeta
+  | CancelStepMeta
 
 /**
  * Workflow step interaction context for RPC functions

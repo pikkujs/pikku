@@ -180,13 +180,3 @@ export function isArrayType(type: ts.Type, checker: ts.TypeChecker): boolean {
 export function getSourceText(node: ts.Node): string {
   return node.getText().trim()
 }
-
-/**
- * Generate a unique ID from a step name (kebab-case)
- */
-export function generateStepId(stepName: string): string {
-  return stepName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-}

@@ -473,19 +473,15 @@ export class PgWorkflowService extends PikkuWorkflowService {
   }
 
   async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    // Use PostgreSQL advisory lock based on run ID hash
-    // Convert UUID to a numeric hash for advisory lock
     const lockId = this.hashStringToInt(id)
-
+    const reservedConnection = await this.sql.reserve()
     try {
       // Acquire advisory lock (blocks until available)
-      await this.sql.unsafe('SELECT pg_advisory_lock($1)', [lockId])
-
-      // Execute function
+      await reservedConnection.unsafe('SELECT pg_advisory_lock($1)', [lockId])
       return await fn()
     } finally {
-      // Release advisory lock
-      await this.sql.unsafe('SELECT pg_advisory_unlock($1)', [lockId])
+      await reservedConnection.unsafe('SELECT pg_advisory_unlock($1)', [lockId])
+      await reservedConnection.release()
     }
   }
 
