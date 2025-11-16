@@ -250,12 +250,11 @@ export const addWorkflow: AddWiring = (
     let simple: boolean | undefined = undefined
 
     // Try simple workflow extraction first if using pikkuSimpleWorkflowFunc or pikkuWorkflowFunc
-    if (resolvedFunc && (wrapperType === 'simple' || wrapperType === 'regular')) {
-      const result = extractSimpleWorkflow(
-        funcInitializer,
-        checker,
-        workflowName
-      )
+    if (
+      resolvedFunc &&
+      (wrapperType === 'simple' || wrapperType === 'regular')
+    ) {
+      const result = extractSimpleWorkflow(funcInitializer, checker)
 
       if (result.status === 'ok' && result.steps) {
         // Simple extraction succeeded
@@ -276,7 +275,13 @@ export const addWorkflow: AddWiring = (
             `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
           )
           simple = false
-          getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+          getWorkflowInvocations(
+            resolvedFunc,
+            checker,
+            state,
+            workflowName,
+            steps
+          )
         }
       }
     } else if (resolvedFunc) {

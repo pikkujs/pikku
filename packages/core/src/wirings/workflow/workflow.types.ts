@@ -175,8 +175,6 @@ export interface OutputBinding {
 export interface RpcStepMeta {
   /** RPC form - generates queue worker */
   type: 'rpc'
-  /** Unique step identifier */
-  id: string
   /** Cache key (stepName from workflow.do) */
   stepName: string
   /** RPC to invoke */
@@ -196,10 +194,6 @@ export interface RpcStepMeta {
  */
 export interface BranchStepMeta {
   type: 'branch'
-  /** Unique step identifier */
-  id: string
-  /** Step name for this branch */
-  stepName: string
   /** Condition expression (as source string) */
   condition: string
   /** Branch paths */
@@ -214,10 +208,6 @@ export interface BranchStepMeta {
  */
 export interface ParallelGroupStepMeta {
   type: 'parallel'
-  /** Unique step identifier */
-  id: string
-  /** Step name for this parallel group */
-  stepName: string
   /** Child steps to execute in parallel */
   children: RpcStepMeta[]
 }
@@ -227,8 +217,6 @@ export interface ParallelGroupStepMeta {
  */
 export interface FanoutStepMeta {
   type: 'fanout'
-  /** Unique step identifier */
-  id: string
   /** Step name for this fanout */
   stepName: string
   /** Source array variable name */
@@ -248,10 +236,6 @@ export interface FanoutStepMeta {
  */
 export interface ReturnStepMeta {
   type: 'return'
-  /** Unique step identifier */
-  id: string
-  /** Step name */
-  stepName: string
   /** Output bindings */
   outputs: Record<string, OutputBinding>
 }

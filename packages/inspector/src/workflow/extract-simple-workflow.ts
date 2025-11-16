@@ -9,7 +9,10 @@ import {
   InputSource,
   OutputBinding,
 } from '@pikku/core/workflow'
-import { extractStringLiteral, extractNumberLiteral } from '../utils/extract-node-value.js'
+import {
+  extractStringLiteral,
+  extractNumberLiteral,
+} from '../utils/extract-node-value.js'
 import {
   isWorkflowDoCall,
   isWorkflowSleepCall,
@@ -19,10 +22,8 @@ import {
   extractForOfVariable,
   isArrayType,
   getSourceText,
-  generateStepId,
 } from './patterns.js'
 import {
-  validateStepNameUniqueness,
   validateNoDisallowedPatterns,
   validateAwaitedCalls,
   formatValidationErrors,
@@ -56,8 +57,7 @@ export interface ExtractionResult {
  */
 export function extractSimpleWorkflow(
   funcNode: ts.Node,
-  checker: ts.TypeChecker,
-  workflowName: string
+  checker: ts.TypeChecker
 ): ExtractionResult {
   try {
     // Find the async arrow function
@@ -112,16 +112,6 @@ export function extractSimpleWorkflow(
 
     // Extract steps from function body
     const steps = extractSteps(arrowFunc.body, context)
-
-    // Validate step name uniqueness
-    const uniquenessErrors = validateStepNameUniqueness(steps)
-    if (uniquenessErrors.length > 0) {
-      return {
-        status: 'error',
-        reason: formatValidationErrors(uniquenessErrors),
-        simple: false,
-      }
-    }
 
     // Check for any accumulated errors
     if (context.errors.length > 0) {
@@ -378,7 +368,6 @@ function extractRpcStep(
 
     return {
       type: 'rpc',
-      id: generateStepId(stepName),
       stepName,
       rpcName,
       outputVar,
@@ -487,7 +476,6 @@ function extractBranch(
   context: ExtractionContext
 ): BranchStepMeta | null {
   const condition = getSourceText(statement.expression)
-  const stepName = `Branch: ${condition.substring(0, 30)}${condition.length > 30 ? '...' : ''}`
 
   const thenSteps = extractSteps(statement.thenStatement, context)
   const elseSteps = statement.elseStatement
@@ -496,8 +484,6 @@ function extractBranch(
 
   return {
     type: 'branch',
-    id: generateStepId(stepName),
-    stepName,
     condition,
     branches: {
       then: thenSteps,
@@ -587,7 +573,6 @@ function extractParallelFanout(
 
   return {
     type: 'fanout',
-    id: generateStepId(childStep.stepName),
     stepName: childStep.stepName,
     sourceVar,
     itemVar,
@@ -623,12 +608,8 @@ function extractParallelGroup(
     return null
   }
 
-  const stepName = `Parallel: ${children.map((c) => c.stepName).join(', ')}`
-
   return {
     type: 'parallel',
-    id: generateStepId(stepName),
-    stepName,
     children,
   }
 }
@@ -737,7 +718,6 @@ function extractSequentialFanout(
 
   return {
     type: 'fanout',
-    id: generateStepId(childStep.stepName),
     stepName: childStep.stepName,
     sourceVar,
     itemVar,
@@ -765,7 +745,10 @@ function extractReturn(
   const outputs: Record<string, OutputBinding> = {}
 
   for (const prop of statement.expression.properties) {
-    if (ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)) {
+    if (
+      ts.isPropertyAssignment(prop) ||
+      ts.isShorthandPropertyAssignment(prop)
+    ) {
       const propName = ts.isIdentifier(prop.name) ? prop.name.text : null
       if (!propName) {
         continue
@@ -830,8 +813,6 @@ function extractReturn(
 
   return {
     type: 'return',
-    id: 'return-result',
-    stepName: 'Return result',
     outputs,
   }
 }
@@ -850,7 +831,10 @@ function extractInputSources(
   const inputs: Record<string, InputSource> = {}
 
   for (const prop of node.properties) {
-    if (ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)) {
+    if (
+      ts.isPropertyAssignment(prop) ||
+      ts.isShorthandPropertyAssignment(prop)
+    ) {
       const propName = ts.isIdentifier(prop.name) ? prop.name.text : null
       if (!propName) {
         continue

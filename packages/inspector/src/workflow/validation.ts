@@ -1,5 +1,4 @@
 import * as ts from 'typescript'
-import { WorkflowStepMeta } from '@pikku/core/workflow'
 
 /**
  * Validation rules for simple workflows
@@ -11,67 +10,43 @@ export interface ValidationError {
 }
 
 /**
- * Validate step name uniqueness within a workflow
- * Exception: duplicate names across mutually exclusive branches are allowed but warned
- */
-export function validateStepNameUniqueness(
-  steps: WorkflowStepMeta[],
-  path: string[] = []
-): ValidationError[] {
-  const errors: ValidationError[] = []
-  const stepNames = new Map<string, string>()
-
-  function collectStepNames(
-    steps: WorkflowStepMeta[],
-    currentPath: string[]
-  ): void {
-    for (const step of steps) {
-      const pathKey = currentPath.join('.')
-
-      if (step.type === 'branch') {
-        // Collect step names in then branch
-        collectStepNames(step.branches.then, [...currentPath, 'then'])
-
-        // Collect step names in else branch
-        if (step.branches.else) {
-          collectStepNames(step.branches.else, [...currentPath, 'else'])
-        }
-      } else {
-        const stepName = step.stepName
-
-        // Check for duplicates on the same path
-        const existingPath = stepNames.get(stepName)
-        if (existingPath !== undefined) {
-          // Check if it's in mutually exclusive branches
-          const isMutuallyExclusive =
-            (existingPath.includes('.then') && pathKey.includes('.else')) ||
-            (existingPath.includes('.else') && pathKey.includes('.then'))
-
-          if (!isMutuallyExclusive) {
-            errors.push({
-              message: `Duplicate step name "${stepName}" found on path ${pathKey} (previously on ${existingPath})`,
-              node: {} as ts.Node, // Will be filled by caller
-            })
-          }
-        } else {
-          stepNames.set(stepName, pathKey)
-        }
-      }
-    }
-  }
-
-  collectStepNames(steps, path)
-  return errors
-}
-
-/**
- * Check if a node contains disallowed patterns
+ * Check if a node contains only allowed patterns
+ *
+ * Allowed patterns:
+ * - VariableStatement (const/let declarations)
+ * - ExpressionStatement (await workflow.do, await workflow.sleep, await Promise.all)
+ * - IfStatement (branches)
+ * - ForOfStatement (sequential fanout)
+ * - ReturnStatement
+ * - Block (containers)
  */
 export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
   const errors: ValidationError[] = []
 
-  function visit(node: ts.Node) {
-    // Check for while loops
+  function visitBlock(block: ts.Block) {
+    for (const statement of block.statements) {
+      if (
+        ts.isVariableStatement(statement) ||
+        ts.isExpressionStatement(statement) ||
+        ts.isIfStatement(statement) ||
+        ts.isForOfStatement(statement) ||
+        ts.isReturnStatement(statement)
+      ) {
+        // Allowed statement type - recurse into it
+        visitNode(statement)
+      } else {
+        // Unknown/disallowed statement type
+        const nodeType = ts.SyntaxKind[statement.kind]
+        errors.push({
+          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, for..of, return, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
+          node: statement,
+        })
+      }
+    }
+  }
+
+  function visitNode(node: ts.Node) {
+    // Disallow while and do-while
     if (ts.isWhileStatement(node) || ts.isDoStatement(node)) {
       errors.push({
         message: 'while and do-while loops are not allowed in simple workflows',
@@ -80,11 +55,8 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
       return
     }
 
-    // Check for for-in loops
-    if (
-      ts.isForInStatement(node) ||
-      (ts.isForStatement(node) && !ts.isForOfStatement(node))
-    ) {
+    // Disallow for and for-in loops
+    if (ts.isForInStatement(node) || ts.isForStatement(node)) {
       errors.push({
         message:
           'for and for-in loops are not allowed in simple workflows. Use for-of instead.',
@@ -102,7 +74,6 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
           ts.isIdentifier(propAccess.expression) &&
           propAccess.expression.text === 'workflow'
         ) {
-          // Check if second argument is a function
           const secondArg = node.arguments[1]
           if (
             secondArg &&
@@ -120,10 +91,15 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
       }
     }
 
-    ts.forEachChild(node, visit)
+    // Recurse into blocks
+    if (ts.isBlock(node)) {
+      visitBlock(node)
+    } else {
+      ts.forEachChild(node, visitNode)
+    }
   }
 
-  visit(node)
+  visitNode(node)
   return errors
 }
 
