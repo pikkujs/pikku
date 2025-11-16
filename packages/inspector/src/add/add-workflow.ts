@@ -157,6 +157,14 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
+  if (!resolvedFunc) {
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      `Could not resolve workflow function for '${workflowName}'.`
+    )
+    return
+  }
+
   // Track workflow file for wiring generation
   if (exportedName) {
     state.workflows.files.set(pikkuFuncName, {
@@ -170,41 +178,31 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   // Try simple workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
-  if (resolvedFunc) {
-    const result = extractSimpleWorkflow(node, checker)
+  const result = extractSimpleWorkflow(node, checker)
 
-    if (result.status === 'ok' && result.steps) {
-      // Simple extraction succeeded
-      steps = result.steps
-      simple = true
+  if (result.status === 'ok' && result.steps) {
+    // Simple extraction succeeded
+    steps = result.steps
+    simple = true
+  } else {
+    // Simple extraction failed
+    if (wrapperType === 'simple') {
+      // For pikkuSimpleWorkflowFunc, this is a critical error
+      logger.critical(
+        ErrorCode.INVALID_SIMPLE_WORKFLOW,
+        `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
+      )
+      return
     } else {
-      // Simple extraction failed
-      if (wrapperType === 'simple') {
-        // For pikkuSimpleWorkflowFunc, this is a critical error
-        logger.critical(
-          ErrorCode.INVALID_SIMPLE_WORKFLOW,
-          `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
-        )
-        return
-      } else {
-        // For pikkuWorkflowFunc, fall back to basic extraction
-        logger.debug(
-          `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
-        )
-        simple = false
-        getWorkflowInvocations(
-          resolvedFunc,
-          checker,
-          state,
-          workflowName,
-          steps
-        )
-      }
+      // For pikkuWorkflowFunc, fall back to basic extraction
+      logger.debug(
+        `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+      )
+      simple = false
     }
-  } else if (resolvedFunc) {
-    // Fallback to basic extraction
-    getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
   }
+
+  getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
 
   state.workflows.meta[workflowName] = {
     pikkuFuncName,

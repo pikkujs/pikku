@@ -13,7 +13,7 @@ export const serializeNextJsBackendWrapper = (
  */
 import { PikkuNextJS } from '@pikku/next'
 import { NextRequest } from 'next/server.js'
-import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '${routesMapPath}'
+import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod, RPCMap } from '${routesMapPath}'
 
 type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
@@ -180,6 +180,42 @@ export const pikku = (_options?: any) => {
     return staticActionRequest(route, 'GET', data)
   }
 
+  // RPC Requests
+
+  /**
+   * Type definition for RPC invocation with dynamic context.
+   */
+  type RPCInvoke = <Name extends keyof RPCMap>(
+    name: Name,
+    data: RPCMap[Name]['input']
+  ) => Promise<RPCMap[Name]['output']>
+
+  /**
+   * Makes a dynamic RPC request.
+   * Dynamic RPC requests may access headers and cookies.
+   *
+   * @template Name - The RPC function name from the RPCMap.
+   * @param name - The RPC function identifier.
+   * @param data - The input data for the RPC request.
+   * @returns A promise that resolves to the output of the RPC handler.
+   */
+  const rpc: RPCInvoke = async (name, data) => {
+    return await _pikku!.rpc(name as any, data) as any
+  }
+
+  /**
+   * Makes a static RPC request without user session.
+   * Static RPC requests do not depend on headers or cookies.
+   *
+   * @template Name - The RPC function name from the RPCMap.
+   * @param name - The RPC function identifier.
+   * @param data - The input data for the RPC request.
+   * @returns A promise that resolves to the output of the RPC handler.
+   */
+  const rpcStatic: RPCInvoke = async (name, data) => {
+    return await _pikku!.rpcStatic(name as any, data) as any
+  }
+
   return {
     get: dynamicGet,
     post: dynamicPost,
@@ -187,6 +223,8 @@ export const pikku = (_options?: any) => {
     del: dynamicDel,
     staticGet,
     staticPost,
+    rpc,
+    rpcStatic,
   }
 }
 

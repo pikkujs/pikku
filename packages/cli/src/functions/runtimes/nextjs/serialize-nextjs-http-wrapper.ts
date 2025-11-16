@@ -9,7 +9,7 @@ export const serializeNextJsHTTPWrapper = (
  * It ensures type safety for route handling methods when integrating with the @pikku/core framework.
  */
 import { CorePikkuFetchOptions } from '@pikku/fetch'
-import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '${routesMapPath}'
+import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod, RPCMap } from '${routesMapPath}'
 import { PikkuFetch } from '${pikkuFetchImport}'
 
 let _pikku: PikkuFetch | undefined
@@ -149,13 +149,50 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     return staticActionRequest(route, 'GET', data)
   }
 
+  // RPC Requests
+
+  /**
+   * Type definition for RPC invocation.
+   */
+  type RPCInvoke = <Name extends keyof RPCMap>(
+    name: Name,
+    data: RPCMap[Name]['input']
+  ) => Promise<RPCMap[Name]['output']>
+
+  /**
+   * Makes a dynamic RPC request.
+   *
+   * @template Name - The RPC function name from the RPCMap.
+   * @param name - The RPC function identifier.
+   * @param data - The input data for the RPC request.
+   * @returns A promise that resolves to the output of the RPC handler.
+   */
+  const rpc: RPCInvoke = async (name, data) => {
+    return await _pikku!.post('/rpc' as any, { name, data }) as any
+  }
+
+  /**
+   * Makes a static RPC request.
+   * Note: In HTTP wrapper context, both rpc and rpcStatic behave the same way.
+   *
+   * @template Name - The RPC function name from the RPCMap.
+   * @param name - The RPC function identifier.
+   * @param data - The input data for the RPC request.
+   * @returns A promise that resolves to the output of the RPC handler.
+   */
+  const rpcStatic: RPCInvoke = async (name, data) => {
+    return await _pikku!.post('/rpc' as any, { name, data }) as any
+  }
+
   return {
     get: dynamicGet,
     post: dynamicPost,
     patch: dynamicPatch,
     del: dynamicDel,
     staticGet,
-    staticPost
+    staticPost,
+    rpc,
+    rpcStatic
   }
 }
 `

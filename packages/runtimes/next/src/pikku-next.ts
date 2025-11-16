@@ -102,6 +102,57 @@ export class PikkuNextJS {
   }
 
   /**
+   * Handles an RPC request with dynamic context (including user session).
+   *
+   * @param name - The RPC function name to invoke.
+   * @param data - The data to be sent with the RPC request.
+   * @returns A promise that resolves to the RPC response data.
+   */
+  public async rpc<Out>(name: string, data: any): Promise<Out> {
+    const singletonServices = await this.getSingletonServices()
+    const request = new PikkuActionNextRequest(
+      '/rpc',
+      'POST' as HTTPMethod,
+      { name, data },
+      true
+    )
+    await request.init()
+
+    const response = new PikkuActionNextResponse(true)
+    await response.init()
+
+    return (await fetchData<any, Out>(request, response, {
+      singletonServices,
+      createSessionServices: this.createSessionServices,
+      bubbleErrors: true,
+    })) as Out
+  }
+
+  /**
+   * Handles a static RPC request without user session.
+   *
+   * @param name - The RPC function name to invoke.
+   * @param data - The data to be sent with the RPC request.
+   * @returns A promise that resolves to the RPC response data.
+   */
+  public async rpcStatic<Out>(name: string, data: any): Promise<Out> {
+    const singletonServices = await this.getSingletonServices()
+    const request = new PikkuActionNextRequest(
+      '/rpc',
+      'POST' as HTTPMethod,
+      { name, data },
+      false
+    )
+    const response = new PikkuActionNextResponse(false)
+    return (await fetchData<any, Out>(request, response, {
+      singletonServices,
+      createSessionServices: this.createSessionServices,
+      skipUserSession: true,
+      bubbleErrors: true,
+    })) as Out
+  }
+
+  /**
    * Handles an API request from Next.js App Router route handler.
    *
    * @param req - The Next.js request object.
