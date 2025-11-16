@@ -1,7 +1,14 @@
 import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-// Pikku function to create a user profile
+/**
+ * Create user profile
+ *
+ * @summary Creates a new user profile from email and userId
+ * @description This function is used as a workflow step to create user profiles. It extracts
+ * the username from the email address and generates a profile with timestamp. Demonstrates
+ * how regular Pikku functions can be used as workflow steps when exposed as RPCs.
+ */
 export const createUserProfile = pikkuSessionlessFunc<
   { email: string; userId: string },
   { id: string; email: string; name: string; createdAt: string }
@@ -20,7 +27,14 @@ function generateWelcomeMessage(email: string): string {
   return `Welcome ${email}! Your onboarding is in progress.`
 }
 
-// Pikku function to send email (simulated)
+/**
+ * Send email notification
+ *
+ * @summary Simulates sending an email with subject and body
+ * @description This function simulates email sending functionality for workflow demonstrations.
+ * It logs the email details and returns a success response with a mock message ID. Used as
+ * a workflow step to demonstrate asynchronous communication tasks.
+ */
 export const sendEmail = pikkuSessionlessFunc<
   { to: string; subject: string; body: string },
   { sent: boolean; messageId: string; to: string }
@@ -35,6 +49,15 @@ export const sendEmail = pikkuSessionlessFunc<
   }
 })
 
+/**
+ * User onboarding workflow
+ *
+ * @summary Orchestrates a multi-step user onboarding process
+ * @description This workflow demonstrates Pikku's workflow capabilities by orchestrating multiple
+ * steps: creating a user profile, generating a welcome message, waiting, and sending an email.
+ * It shows both RPC-based steps (durable, queue-backed) and inline steps (immediate execution
+ * with caching). Includes a sleep step to demonstrate time-based workflow control.
+ */
 export const onboardingWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string },
   { userId: string; email: string }
@@ -68,7 +91,15 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
   }
 })
 
-// HTTP function to start a workflow and poll until completion
+/**
+ * Trigger and monitor onboarding workflow
+ *
+ * @summary HTTP endpoint that starts the onboarding workflow and polls for completion
+ * @description This function demonstrates how to trigger workflows from HTTP endpoints and
+ * monitor their progress. It starts the workflow via RPC, then polls the workflow service
+ * to check status until completion or timeout. Returns the workflow result including all
+ * step details. Shows the pattern for synchronous-like workflow invocation from HTTP requests.
+ */
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any

@@ -2,8 +2,13 @@ import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.j
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 /**
- * RPC function that ALWAYS fails
- * This tests the UNHAPPY PATH - retries exhausted, workflow fails
+ * Always-failing RPC for unhappy path testing
+ *
+ * @summary RPC function that always fails to test retry exhaustion
+ * @description This function tests the unhappy path of workflow retry logic. It intentionally
+ * fails on every attempt, regardless of retry count. Used to verify that workflows correctly
+ * handle retry exhaustion and transition to failed status when all retry attempts are depleted.
+ * Logs attempt count and step metadata for debugging.
  */
 export const alwaysFailsRPC = pikkuSessionlessFunc<
   { value: number },
@@ -24,11 +29,13 @@ export const alwaysFailsRPC = pikkuSessionlessFunc<
 })
 
 /**
- * Workflow that tests UNHAPPY PATH retry logic
- * - Step fails on attempt 1
- * - Step fails on attempt 2 (retry #1)
- * - Step fails on attempt 3 (retry #2)
- * - Retries exhausted → workflow fails
+ * Unhappy path retry workflow
+ *
+ * @summary Workflow that tests retry exhaustion and failure behavior
+ * @description This workflow demonstrates the unhappy path for retry logic in Pikku workflows.
+ * It invokes an RPC that always fails, exhausting all retry attempts (3 total: initial + 2 retries).
+ * Also demonstrates workflow cancellation when input value is negative. Tests that workflows
+ * correctly fail after retries are exhausted and that cancellation works as expected.
  */
 export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   { value: number },
@@ -54,7 +61,15 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   return { result: result.result }
 })
 
-// RPC function to trigger the unhappy retry workflow and wait for completion
+/**
+ * Trigger unhappy retry workflow
+ *
+ * @summary HTTP endpoint that starts the unhappy retry workflow and polls for failure
+ * @description This function triggers the unhappy path retry workflow and polls the workflow
+ * service until it fails or is cancelled. Returns error details, attempt counts, and all step
+ * information. Demonstrates the pattern for testing workflow failure scenarios end-to-end,
+ * including proper error handling and result reporting for failed workflows.
+ */
 export const unhappyRetry = pikkuSessionlessFunc<
   { value: number },
   {

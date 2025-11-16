@@ -6,7 +6,12 @@ import {
 } from '../.pikku/pikku-types.gen.js'
 
 /**
- * A simple hello world MCP tool that greets the user
+ * Hello World MCP tool
+ *
+ * @summary Simple MCP tool that greets the user by name
+ * @description This MCP tool demonstrates basic tool functionality in the Model Context Protocol.
+ * It accepts an optional name parameter and returns a personalized greeting. If no name is provided,
+ * it defaults to 'World'. This shows how to create simple, stateless MCP tools in Pikku.
  */
 export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
   async (services, { name = 'World' }) => {
@@ -21,9 +26,17 @@ export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
   }
 )
 
+/**
+ * Dynamic tool disabling
+ *
+ * @summary MCP tool that can disable other tools at runtime
+ * @description This demonstrates dynamic MCP tool management in Pikku. It allows disabling
+ * other tools by name during runtime, which can be useful for access control or feature toggling.
+ * Returns a confirmation message indicating whether the tool was successfully disabled.
+ */
 export const disableTool = pikkuMCPToolFunc<{ name: string }>(
-  async (services, { name }) => {
-    const changed = await services.mcp.enableTools({ [name]: false })
+  async ({ mcp }, { name }) => {
+    const changed = await mcp.enableTools({ [name]: false })
     if (changed) {
       return [
         {
@@ -43,7 +56,12 @@ export const disableTool = pikkuMCPToolFunc<{ name: string }>(
 )
 
 /**
- * A simple calculator MCP tool that performs basic math operations
+ * Calculator MCP tool
+ *
+ * @summary Performs basic arithmetic operations (add, subtract, multiply, divide)
+ * @description This MCP tool demonstrates parameter validation and error handling. It accepts
+ * an operation type and two numbers, performs the calculation, and returns a formatted result.
+ * Includes division-by-zero protection and handles unknown operations gracefully.
  */
 export const calculate = pikkuMCPToolFunc<{
   operation: 'add' | 'subtract' | 'multiply' | 'divide'
@@ -83,7 +101,12 @@ export const calculate = pikkuMCPToolFunc<{
 })
 
 /**
- * A static resource that returns predefined data
+ * Static MCP resource
+ *
+ * @summary Returns a predefined static resource
+ * @description This MCP resource demonstrates how to expose static data through the Model Context
+ * Protocol. Resources are different from tools - they provide data rather than performing actions.
+ * This example returns a simple JSON string at the resource URI.
  */
 export const getStaticResource = pikkuMCPResourceFunc<unknown>(
   async ({ mcp }) => {
@@ -97,7 +120,12 @@ export const getStaticResource = pikkuMCPResourceFunc<unknown>(
 )
 
 /**
- * A mock user information resource that returns user data
+ * User information MCP resource
+ *
+ * @summary Retrieves mock user data by user ID
+ * @description This MCP resource demonstrates dynamic resource fetching with parameters.
+ * It accepts a userId and returns corresponding user information from a mock database.
+ * Shows error handling for resource not found scenarios using Pikku's NotFoundError.
  */
 export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
   async ({ mcp, logger }, { userId }) => {
@@ -137,7 +165,12 @@ export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
 )
 
 /**
- * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
+ * Static prompt generator
+ *
+ * @summary MCP prompt that returns a predefined message
+ * @description This demonstrates creating static MCP prompts that don't require parameters.
+ * Prompts in MCP are pre-formatted messages that can be used to guide AI interactions.
+ * This example shows the simplest form of a prompt function.
  */
 export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
   return [
@@ -152,14 +185,20 @@ export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(async () => {
 })
 
 /**
- * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
+ * Dynamic prompt generator
+ *
+ * @summary Creates customized prompts based on topic, complexity, and example preferences
+ * @description This MCP prompt demonstrates parameterized prompt generation. It creates
+ * educational content tailored to the specified topic and complexity level (beginner, intermediate,
+ * or advanced). Optionally includes practical examples. Shows how to build flexible, reusable
+ * prompt templates in Pikku.
  */
 export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
   topic: string
   complexity: 'beginner' | 'intermediate' | 'advanced'
   includeExamples?: string
-}>(async (services, { topic, complexity, includeExamples = false }) => {
-  services.logger.info(
+}>(async ({ logger }, { topic, complexity, includeExamples = false }) => {
+  logger.info(
     `Generating progressive enhancement content for: ${topic} (${complexity})`
   )
 

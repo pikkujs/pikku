@@ -1,6 +1,13 @@
 import { pikkuFunc, pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-// Simple greeting function
+/**
+ * Greeting CLI command
+ *
+ * @summary Greets a user with optional uppercase formatting
+ * @description This CLI function generates a personalized greeting message with a timestamp.
+ * The 'loud' parameter controls whether the message is returned in uppercase. Demonstrates
+ * basic CLI command structure in Pikku with parameter handling.
+ */
 export const greetUser = pikkuSessionlessFunc<
   { name: string; loud: boolean },
   { message: string; timestamp: string }
@@ -14,7 +21,14 @@ export const greetUser = pikkuSessionlessFunc<
   },
 })
 
-// Individual calculation functions for CLI
+/**
+ * Add two numbers
+ *
+ * @summary CLI calculator function for addition
+ * @description Performs addition of two numbers and returns a detailed result including
+ * the operation type, operands, result, and a formatted expression string. Part of a
+ * calculator CLI tool demonstrating arithmetic operations in Pikku.
+ */
 export const addNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -30,6 +44,13 @@ export const addNumbers = pikkuFunc<
   },
 })
 
+/**
+ * Subtract two numbers
+ *
+ * @summary CLI calculator function for subtraction
+ * @description Performs subtraction of two numbers and returns a detailed result including
+ * the operation type, operands, result, and a formatted expression string.
+ */
 export const subtractNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -45,6 +66,13 @@ export const subtractNumbers = pikkuFunc<
   },
 })
 
+/**
+ * Multiply two numbers
+ *
+ * @summary CLI calculator function for multiplication
+ * @description Performs multiplication of two numbers and returns a detailed result including
+ * the operation type, operands, result, and a formatted expression string.
+ */
 export const multiplyNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -60,6 +88,14 @@ export const multiplyNumbers = pikkuFunc<
   },
 })
 
+/**
+ * Divide two numbers with zero-division protection
+ *
+ * @summary CLI calculator function for division
+ * @description Performs division of two numbers with validation to prevent division by zero.
+ * Returns a detailed result including the operation type, operands, result, and a formatted
+ * expression string. Throws an error if the divisor is zero.
+ */
 export const divideNumbers = pikkuFunc<
   { a: number; b: number },
   { operation: string; operands: number[]; result: number; expression: string }
@@ -78,7 +114,14 @@ export const divideNumbers = pikkuFunc<
   },
 })
 
-// User management functions
+/**
+ * Create a new user
+ *
+ * @summary CLI command for creating a user account
+ * @description Creates a new user with the provided username, email, and optional admin flag.
+ * Generates a random user ID and timestamp. Demonstrates basic CRUD operations in a CLI context
+ * with logging support.
+ */
 export const createUser = pikkuFunc<
   { username: string; email: string; admin?: boolean },
   {
@@ -102,6 +145,14 @@ export const createUser = pikkuFunc<
   },
 })
 
+/**
+ * List users with optional filtering
+ *
+ * @summary CLI command for listing and filtering users
+ * @description Returns a list of users from mock data with optional filtering by admin status
+ * and limit on the number of results. Demonstrates data filtering and pagination patterns
+ * in CLI applications.
+ */
 export const listUsers = pikkuFunc<
   { limit?: number; admin?: boolean },
   { users: any[]; total: number; filtered: boolean }
@@ -138,7 +189,15 @@ export const listUsers = pikkuFunc<
   },
 })
 
-// File operations
+/**
+ * Process file operations
+ *
+ * @summary CLI command for file operations (read, info, delete)
+ * @description Simulates file processing operations with support for different actions
+ * (read, info, delete) and an optional backup flag. Returns processing details including
+ * timestamp and mock file size. Demonstrates CLI commands with enum-based parameters
+ * and optional flags.
+ */
 export const processFile = pikkuFunc<
   { path: string; action: 'read' | 'info' | 'delete'; backup?: boolean },
   {
