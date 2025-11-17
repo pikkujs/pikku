@@ -177,6 +177,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   abstract withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
 
   /**
+   * Execute function within a step lock to prevent concurrent step execution
+   * @param runId - Run ID
+   * @param stepName - Step name
+   * @param fn - Function to execute
+   * @returns Function result
+   */
+  abstract withStepLock<T>(
+    runId: string,
+    stepName: string,
+    fn: () => Promise<T>
+  ): Promise<T>
+
+  /**
    * Close any open connections
    */
   abstract close(): Promise<void>
@@ -325,64 +338,67 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: any
   ): Promise<void> {
-    // Get step state
-    let stepState = await this.getStepState(runId, stepName)
+    // Use step-level lock to prevent concurrent execution of same step
+    await this.withStepLock(runId, stepName, async () => {
+      // Get step state
+      let stepState = await this.getStepState(runId, stepName)
 
-    // Idempotency - if already succeeded, resume orchestrator and return
-    if (stepState.status === 'succeeded') {
-      await this.resumeWorkflow(runId)
-      return
-    }
+      // Idempotency - if already succeeded, resume orchestrator and return
+      if (stepState.status === 'succeeded') {
+        await this.resumeWorkflow(runId)
+        return
+      }
 
-    // Log warning if already running (race condition)
-    if (stepState.status === 'running') {
-      return
-    }
+      // Log warning if already running (race condition)
+      if (stepState.status === 'running') {
+        return
+      }
 
-    // If status is 'failed', this is a retry - create new attempt history
-    if (stepState.status === 'failed') {
-      stepState = await this.createRetryAttempt(stepState.stepId, 'running')
-    }
+      // If status is 'failed', this is a retry - create new attempt history
+      if (stepState.status === 'failed') {
+        stepState = await this.createRetryAttempt(stepState.stepId, 'running')
+      }
 
-    if (stepState.status !== 'pending') {
-      // Mark step as running (pending or failed status)
-      await this.setStepRunning(stepState.stepId)
-    }
+      if (stepState.status !== 'pending') {
+        // Mark step as running (pending or failed status)
+        await this.setStepRunning(stepState.stepId)
+      }
 
-    try {
-      // Execute RPC with workflow step context
-      const result = await rpcService.rpcWithWire(rpcName, data, {
-        workflowStep: {
-          runId,
-          stepId: stepState.stepId,
-          attemptCount: stepState.attemptCount,
-        },
-      })
-
-      // Store result and mark succeeded
-      await this.setStepResult(stepState.stepId, result)
-
-      // Resume orchestrator to continue workflow
       try {
-        await this.resumeWorkflow(runId)
-      } catch (resumeError: any) {
-        throw resumeError
+        // Execute RPC with workflow step context
+        const result = await rpcService.rpcWithWire(rpcName, data, {
+          workflowStep: {
+            runId,
+            stepId: stepState.stepId,
+            attemptCount: stepState.attemptCount,
+          },
+        })
+
+        // Store result and mark succeeded
+        await this.setStepResult(stepState.stepId, result)
+
+        // Resume orchestrator to continue workflow
+        try {
+          await this.resumeWorkflow(runId)
+        } catch (resumeError: any) {
+          throw resumeError
+        }
+      } catch (error: any) {
+        // Store error and mark failed
+        await this.setStepError(stepState.stepId, error)
+
+        const maxAttempts = (stepState.retries ?? 0) + 1
+        const retriesExhausted = stepState.attemptCount >= maxAttempts
+
+        if (retriesExhausted) {
+          // No more retries - resume orchestrator to mark workflow as failed
+          await this.resumeWorkflow(runId)
+        }
+
+        // Always throw so queue knows the job failed and can retry if needed
+        throw error
       }
-    } catch (error: any) {
-      // Store error and mark failed
-      await this.setStepError(stepState.stepId, error)
-
-      const maxAttempts = (stepState.retries ?? 0) + 1
-      const retriesExhausted = stepState.attemptCount >= maxAttempts
-
-      if (retriesExhausted) {
-        // No more retries - resume orchestrator to mark workflow as failed
-        await this.resumeWorkflow(runId)
-      }
-
-      // Always throw so queue knows the job failed and can retry if needed
-      throw error
-    }
+    })
   }
 
   /**
