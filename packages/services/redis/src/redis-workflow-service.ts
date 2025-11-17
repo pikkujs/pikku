@@ -70,6 +70,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return `${this.keyPrefix}:lock:${runId}`
   }
 
+  private stepLockKey(runId: string, stepName: string): string {
+    return `${this.keyPrefix}:step-lock:${runId}:${stepName}`
+  }
+
   /**
    * Save a step history entry (creates new entry)
    */
@@ -573,8 +577,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    const lockKey = this.lockKey(id)
+  private async withLock<T>(
+    lockKey: string,
+    errorMessage: string,
+    fn: () => Promise<T>
+  ): Promise<T> {
     const lockValue = randomUUID()
     const maxRetries = 10
     const retryDelay = 100 // ms
@@ -608,8 +615,26 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       await new Promise((resolve) => setTimeout(resolve, retryDelay))
     }
 
-    throw new Error(
-      `Failed to acquire lock for run ${id} after ${maxRetries} retries`
+    throw new Error(`${errorMessage} after ${maxRetries} retries`)
+  }
+
+  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    return this.withLock(
+      this.lockKey(id),
+      `Failed to acquire lock for run ${id}`,
+      fn
+    )
+  }
+
+  async withStepLock<T>(
+    runId: string,
+    stepName: string,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    return this.withLock(
+      this.stepLockKey(runId, stepName),
+      `Failed to acquire step lock for run ${runId}, step ${stepName}`,
+      fn
     )
   }
 

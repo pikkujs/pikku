@@ -472,8 +472,8 @@ export class PgWorkflowService extends PikkuWorkflowService {
       })
   }
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    const lockId = this.hashStringToInt(id)
+  private async withLock<T>(lockKey: string, fn: () => Promise<T>): Promise<T> {
+    const lockId = this.hashStringToInt(lockKey)
     const reservedConnection = await this.sql.reserve()
     try {
       // Acquire advisory lock (blocks until available)
@@ -483,6 +483,18 @@ export class PgWorkflowService extends PikkuWorkflowService {
       await reservedConnection.unsafe('SELECT pg_advisory_unlock($1)', [lockId])
       await reservedConnection.release()
     }
+  }
+
+  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    return this.withLock(`run:${id}`, fn)
+  }
+
+  async withStepLock<T>(
+    runId: string,
+    stepName: string,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    return this.withLock(`step:${runId}:${stepName}`, fn)
   }
 
   /**
