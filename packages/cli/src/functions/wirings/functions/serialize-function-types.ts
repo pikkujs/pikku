@@ -190,8 +190,8 @@ export const pikkuPermissionFactory = <In = any>(
 export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
-  RequiredServices extends Services = Services,
-  RequiredInteractions extends keyof PikkuInteraction = never
+  RequiredInteractions extends keyof PikkuInteraction = never,
+  RequiredServices extends Services = Services
 > = CorePikkuFunctionSessionless<
     In,
     Out,
@@ -210,8 +210,8 @@ export type PikkuFunctionSessionless<
 export type PikkuFunction<
   In = unknown,
   Out = never,
-  RequiredServices extends Services = Services,
-  RequiredInteractions extends keyof PikkuInteraction = 'session'
+  RequiredInteractions extends keyof PikkuInteraction = 'session',
+  RequiredServices extends Services = Services
 > = CorePikkuFunction<
     In,
     Out,
@@ -230,7 +230,8 @@ export type PikkuFunction<
 export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
-  PikkuFunc extends PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out> = PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out>
+  RequiredInteractions extends keyof PikkuInteraction = never,
+  PikkuFunc extends PikkuFunction<In, Out, RequiredInteractions> | PikkuFunctionSessionless<In, Out, RequiredInteractions> = PikkuFunction<In, Out, RequiredInteractions> | PikkuFunctionSessionless<In, Out, RequiredInteractions>
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
 
 /**
@@ -257,8 +258,8 @@ export type PikkuFunctionConfig<
  */
 export const pikkuFunc = <In, Out = unknown>(
   func:
-    | PikkuFunction<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunction<In, Out>, PikkuPermission<In>, PikkuMiddleware>
+    | PikkuFunction<In, Out, 'session' | 'rpc'>
+    | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 ) => {
   return typeof func === 'function' ? { func } : func
 }
@@ -285,8 +286,8 @@ export const pikkuFunc = <In, Out = unknown>(
  */
 export const pikkuSessionlessFunc = <In, Out = unknown>(
   func:
-    | PikkuFunctionSessionless<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
+    | PikkuFunctionSessionless<In, Out, 'session' | 'rpc'>
+    | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 ) => {
   return typeof func === 'function' ? { func } : func
 }
@@ -309,8 +310,8 @@ export const pikkuSessionlessFunc = <In, Out = unknown>(
  */
 export const pikkuVoidFunc = (
   func:
-    | PikkuFunctionSessionless<void, void>
-    | CorePikkuFunctionConfig<PikkuFunctionSessionless<void, void>, PikkuPermission<void>>
+    | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
+    | PikkuFunctionConfig<void, void, 'session' | 'rpc'>
 ) => {
   return typeof func === 'function' ? { func } : func
 }

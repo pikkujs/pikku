@@ -27,21 +27,21 @@ import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTy
  * @template In - Input type for the resource request
  * @template URI - URI template string type for compile-time parameter validation
  */
-type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse>> & { uri: URI }
+type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse, 'rpc' | 'session' | 'mcp'>> & { uri: URI }
 
 /**
  * Type definition for MCP tools that AI models can invoke.
  *
  * @template In - Input type for the tool invocation
  */
-type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionConfig<In, MCPToolResponse>>
+type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionConfig<In, MCPToolResponse, 'rpc' | 'session' | 'mcp'>>
 
 /**
  * Type definition for MCP prompts that provide templates to AI models.
  *
  * @template In - Input type for the prompt parameters
  */
-type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptResponse>>
+type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptResponse, 'rpc' | 'session' | 'mcp'>>
 
 /**
  * Registers an MCP resource with the Pikku framework.
@@ -93,12 +93,12 @@ export const wireMCPPrompt = <In>(
  */
 export const pikkuMCPPromptFunc = <In>(
   func:
-    | PikkuFunctionSessionless<In, MCPPromptResponse>
+    | PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp'>
     | {
-        func: PikkuFunctionSessionless<In, MCPPromptResponse>
+        func: PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp'>
         name?: string
       }
-): PikkuFunctionConfig<In, MCPPromptResponse> => {
+): PikkuFunctionConfig<In, MCPPromptResponse, 'mcp'> => {
   return typeof func === 'function' ? { func } : func
 }
 
@@ -112,12 +112,12 @@ export const pikkuMCPPromptFunc = <In>(
  */
 export const pikkuMCPToolFunc = <In>(
   func:
-    | PikkuFunctionSessionless<In, MCPToolResponse>
+    | PikkuFunctionSessionless<In, MCPToolResponse, 'mcp'>
     | {
-      func: PikkuFunctionSessionless<In, MCPToolResponse>
+      func: PikkuFunctionSessionless<In, MCPToolResponse, 'mcp'>
       name?: string
     }
-): PikkuFunctionConfig<In, MCPToolResponse> => {
+): PikkuFunctionConfig<In, MCPToolResponse, 'mcp'> => {
   return typeof func === 'function' ? { func } : func
 }
 
@@ -131,12 +131,12 @@ export const pikkuMCPToolFunc = <In>(
  */
 export const pikkuMCPResourceFunc = <In>(
   func:
-    | PikkuFunctionSessionless<In, MCPResourceResponse>
+    | PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp'>
     | {
-      func: PikkuFunctionSessionless<In, MCPResourceResponse>
+      func: PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp'>
       name?: string
     }
-): PikkuFunctionConfig<In, MCPResourceResponse> => {
+): PikkuFunctionConfig<In, MCPResourceResponse, 'mcp'> => {
   return typeof func === 'function' ? { func } : func
 }
 `

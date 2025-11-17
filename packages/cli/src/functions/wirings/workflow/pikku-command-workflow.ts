@@ -91,10 +91,18 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       functionTypesFile,
       packageMappings
     )
+
+    // Get RPC map import path
+    const rpcMapImportPath = getFileImportRelativePath(
+      workflowTypesFile,
+      config.rpcInternalMapDeclarationFile,
+      packageMappings
+    )
+
     await writeFileInDir(
       logger,
       workflowTypesFile,
-      serializeWorkflowTypes(functionTypesImportPath)
+      serializeWorkflowTypes(functionTypesImportPath, rpcMapImportPath)
     )
 
     // Write workflow map (type-safe client API)

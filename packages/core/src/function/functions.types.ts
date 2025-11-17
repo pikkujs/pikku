@@ -29,7 +29,7 @@ export type CorePikkuFunction<
 > = (
   services: Services,
   data: In,
-  interaction: PickRequired<Interaction, 'session' | 'rpc'>
+  interaction: Interaction
 ) => Interaction['channel'] extends null
   ? Promise<Out>
   : Promise<Out> | Promise<void>
@@ -57,7 +57,7 @@ export type CorePikkuFunctionSessionless<
 > = (
   services: Services,
   data: In,
-  interaction: PickRequired<Interaction, 'session' | 'rpc'>
+  interaction: Interaction
 ) => Interaction['channel'] extends null
   ? Promise<Out>
   : Promise<Out> | Promise<void>
