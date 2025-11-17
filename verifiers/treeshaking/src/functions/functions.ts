@@ -4,7 +4,7 @@ export const sendEmail = pikkuFunc<
   { to: string; subject: string; body: string },
   void
 >({
-  func: async ({ email }, data) => {
+  func: async ({ email, userContext }, data) => {
     await email.send(data.to, data.subject, data.body)
   },
 })
@@ -19,7 +19,7 @@ export const processPayment = pikkuFunc<
   { amount: number; currency: string },
   { transactionId: string }
 >({
-  func: async ({ payment, analytics }, data) => {
+  func: async ({ payment, analytics, userPreferences }, data) => {
     const transactionId = await payment.charge(data.amount, data.currency)
     await analytics.track('payment_processed', {
       amount: data.amount,
@@ -30,7 +30,7 @@ export const processPayment = pikkuFunc<
 })
 
 export const saveData = pikkuFunc<{ key: string; value: any }, void>({
-  func: async ({ storage }, data) => {
+  func: async ({ storage, userContext, userPreferences }, data) => {
     await storage.save(data.key, data.value)
   },
 })
