@@ -3,7 +3,6 @@ import {
   PikkuWiringTypes,
   PermissionMetadata,
   PikkuInteraction,
-  PickRequired,
 } from './types/core.types.js'
 import {
   CorePermissionGroup,
@@ -24,10 +23,7 @@ export const verifyPermissions = async <Out = any>(
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
-  interaction: PickRequired<
-    PikkuInteraction<any, never, any, never, never, never>,
-    'session'
-  >
+  interaction: PikkuInteraction<any, never, any, never, never, never>
 ): Promise<boolean> => {
   if (!permissions) {
     return true
@@ -339,7 +335,7 @@ export const runPermissions = async (
     wirePermissions,
     funcInheritedPermissions,
     funcPermissions,
-    allServices,
+    services,
     interaction,
     data,
   }: {
@@ -347,11 +343,8 @@ export const runPermissions = async (
     wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     funcInheritedPermissions?: PermissionMetadata[]
     funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
-    allServices: CoreServices
-    interaction: PickRequired<
-      PikkuInteraction<any, never, any, never, never, never>,
-      'session'
-    >
+    services: CoreServices
+    interaction: PikkuInteraction<any, never, any, never, never, never>
     data: any
   }
 ) => {
@@ -369,7 +362,7 @@ export const runPermissions = async (
     for (const permission of allPermissions) {
       const result = await verifyPermissions(
         typeof permission === 'function' ? { permission } : permission,
-        allServices,
+        services,
         data,
         interaction
       )
@@ -379,7 +372,7 @@ export const runPermissions = async (
       }
     }
     if (!permissioned) {
-      allServices.logger.debug('Permission denied - combined permissions')
+      services.logger.debug('Permission denied - combined permissions')
       throw new ForbiddenError('Permission denied')
     }
   }

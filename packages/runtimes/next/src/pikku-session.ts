@@ -22,9 +22,10 @@ export const getSession = async <UserSession extends CoreUserSession>(
   const request = new PikkuFetchHTTPRequest(nextRequest)
   const userSession = new PikkuUserSessionService<UserSession>()
   await runMiddleware(
-    { ...singletonServices, userSession },
+    singletonServices,
     {
       http: { request },
+      session: userSession,
     },
     middleware as any
   )

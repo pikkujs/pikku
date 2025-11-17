@@ -16,7 +16,6 @@ import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
-import { rpcService } from '../../rpc/rpc-runner.js'
 
 export interface RunServerlessChannelParams<ChannelData>
   extends RunChannelParams<ChannelData> {
@@ -117,15 +116,10 @@ export const runChannelConnect = async ({
       )
     }
 
-    const getAllServices = (requiresAuth?: boolean) =>
-      rpcService.injectRPCService(
-        {
-          ...singletonServices,
-          ...sessionServices,
-        },
-        interaction,
-        requiresAuth
-      )
+    const services = {
+      ...singletonServices,
+      ...sessionServices,
+    }
 
     if (channelConfig.onConnect && meta.connect) {
       await runChannelLifecycleWithMiddleware({
@@ -133,7 +127,7 @@ export const runChannelConnect = async ({
         meta: meta.connect,
         lifecycleConfig: channelConfig.onConnect,
         lifecycleType: 'connect',
-        services: getAllServices(false),
+        services,
         channel,
         data: openingData,
       })
@@ -198,15 +192,10 @@ export const runChannelDisconnect = async ({
     )
   }
 
-  const getAllServices = (requiresAuth?: boolean) =>
-    rpcService.injectRPCService(
-      {
-        ...singletonServices,
-        ...sessionServices,
-      },
-      interaction,
-      requiresAuth
-    )
+  const services = {
+    ...singletonServices,
+    ...sessionServices,
+  }
 
   if (channelConfig.onDisconnect && meta.disconnect) {
     try {
@@ -215,7 +204,7 @@ export const runChannelDisconnect = async ({
         meta: meta.disconnect,
         lifecycleConfig: channelConfig.onDisconnect,
         lifecycleType: 'disconnect',
-        services: getAllServices(false),
+        services,
         channel,
       })
     } catch (e: any) {
@@ -257,19 +246,15 @@ export const runChannelMessage = async (
     )
   }
 
-  const getAllServices = () =>
-    rpcService.injectRPCService(
-      {
-        ...singletonServices,
-        ...sessionServices,
-      },
-      interaction
-    )
+  const services = {
+    ...singletonServices,
+    ...sessionServices,
+  }
 
   let response: unknown
   try {
     const onMessage = processMessageHandlers(
-      getAllServices(),
+      services,
       channelConfig,
       channelHandler,
       userSession

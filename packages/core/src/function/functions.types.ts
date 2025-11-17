@@ -80,11 +80,7 @@ export type CorePikkuPermission<
     never,
     never
   > = PikkuInteraction<In, never, CoreUserSession, never, never, never>,
-> = (
-  services: Services,
-  data: In,
-  interaction: PickRequired<Interaction, 'session'>
-) => Promise<boolean>
+> = (services: Services, data: In, interaction: Interaction) => Promise<boolean>
 
 /**
  * Configuration object for creating a permission with metadata

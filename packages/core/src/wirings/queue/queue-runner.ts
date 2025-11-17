@@ -11,7 +11,6 @@ import {
   CreateSessionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { rpcService } from '../rpc/rpc-runner.js'
 
 /**
  * Error class for queue processor not found
@@ -153,23 +152,6 @@ export async function runQueueJob({
     const interaction: PikkuInteraction = {
       queue,
     }
-    // Use provided singleton services
-    const getAllServices = async () => {
-      const sessionServices = await createSessionServices?.(
-        singletonServices,
-        interaction
-      )
-      const services = rpcService.injectRPCService(
-        {
-          ...singletonServices,
-          ...sessionServices,
-        },
-        interaction,
-        false
-      )
-
-      return services
-    }
 
     // Execute the pikku function with the job data
     const result = await runPikkuFunc(
@@ -178,7 +160,7 @@ export async function runQueueJob({
       processorMeta.pikkuFuncName,
       {
         singletonServices,
-        getAllServices,
+        createSessionServices,
         auth: false,
         data: () => job.data,
         inheritedMiddleware: processorMeta.middleware,

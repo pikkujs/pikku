@@ -1,4 +1,3 @@
-import { UserSessionService } from './services/user-session-service.js'
 import {
   CoreSingletonServices,
   PikkuInteraction,
@@ -28,9 +27,7 @@ import { freezeDedupe } from './utils.js'
  * );
  */
 export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
-  services: CoreSingletonServices & {
-    userSession?: UserSessionService<any>
-  },
+  services: CoreSingletonServices,
   interaction: PikkuInteraction,
   middlewares: readonly Middleware[],
   main?: () => Promise<unknown>

@@ -129,17 +129,16 @@ export const processMessageHandlers = (
       pikkuFuncName,
       {
         singletonServices: services,
-        getAllServices: () => ({
-          ...services,
-        }),
         data: () => data,
-        userSession,
         inheritedMiddleware,
         wireMiddleware,
         inheritedPermissions,
         wirePermissions,
         tags: channelConfig.tags,
-        interaction: { channel: channelHandler.getChannel() },
+        interaction: {
+          channel: channelHandler.getChannel(),
+          session: userSession,
+        },
       }
     )
   }
