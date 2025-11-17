@@ -57,8 +57,8 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### Single Tag Filters
 
-| Filter                 | Expected Services                          | Rationale                                                                                                         |
-| ---------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Filter                 | Expected Services                          | Rationale                                                                                                      |
+| ---------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | `--tags=notifications` | email, logger, sms                         | Email, sms, logger (middleware), and wire services should be included                                          |
 | `--tags=email`         | email, logger                              | Email (function + permissions), logger (middleware), and wire services                                         |
 | `--tags=sms`           | email, logger, sms                         | SMS (function), logger (middleware), and wire services (email, logger)                                         |
@@ -67,51 +67,51 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### Multiple Tag Filters (OR logic)
 
-| Filter                          | Expected Services                               | Rationale                                                  |
-| ------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| Filter                          | Expected Services                               | Rationale                                               |
+| ------------------------------- | ----------------------------------------------- | ------------------------------------------------------- |
 | `--tags=notifications,payments` | analytics, email, logger, payment, sms, storage | All notification routes + payment route + wire services |
 | `--tags=email,sms`              | email, logger, sms                              | Both email and SMS routes + wire services               |
 | `--tags=notifications,storage`  | email, logger, sms, storage                     | All notification + storage routes + wire services       |
 
 ### Type Filters
 
-| Filter         | Expected Services                               | Rationale                                                                 |
-| -------------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
+| Filter         | Expected Services                               | Rationale                                                              |
+| -------------- | ----------------------------------------------- | ---------------------------------------------------------------------- |
 | `--types=http` | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are HTTP) + wire services |
 
 ### HTTP Method Filters
 
-| Filter               | Expected Services                               | Rationale                                                                |
-| -------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
+| Filter               | Expected Services                               | Rationale                                                             |
+| -------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
 | `--httpMethods=POST` | analytics, email, logger, payment, sms, storage | All services should be included (all routes are POST) + wire services |
 | `--httpMethods=GET`  | email, logger                                   | No GET routes exist, only wire services                               |
 
 ### HTTP Route Filters
 
-| Filter                              | Expected Services                          | Rationale                                   |
-| ----------------------------------- | ------------------------------------------ | ------------------------------------------- |
+| Filter                              | Expected Services                          | Rationale                                |
+| ----------------------------------- | ------------------------------------------ | ---------------------------------------- |
 | `--httpRoutes=/api/notifications/*` | email, logger, sms                         | Only notification routes + wire services |
 | `--httpRoutes=/api/payments/*`      | analytics, email, logger, payment, storage | Only payment routes + wire services      |
 | `--httpRoutes=/api/storage/*`       | email, logger, storage                     | Only storage routes + wire services      |
 
 ### Directory Filters
 
-| Filter                          | Expected Services                               | Rationale                                                                             |
-| ------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Filter                          | Expected Services                               | Rationale                                                                          |
+| ------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `--directories=src/functions`   | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are in src/functions) + wire services |
 | `--directories=src/nonexistent` | email, logger                                   | No wirings in nonexistent directory, only wire services                            |
 
 ### Combination Filters
 
-| Filter                                    | Expected Services                          | Rationale                                            |
-| ----------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| Filter                                    | Expected Services                          | Rationale                                         |
+| ----------------------------------------- | ------------------------------------------ | ------------------------------------------------- |
 | `--tags=notifications --httpMethods=POST` | email, logger, sms                         | Notification routes that are POST + wire services |
 | `--tags=payments --types=http`            | analytics, email, logger, payment, storage | Payment HTTP routes + wire services               |
 
 ### Wildcard Name Filters
 
-| Filter             | Expected Services                          | Rationale                                                                    |
-| ------------------ | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| Filter             | Expected Services                          | Rationale                                                                 |
+| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------- |
 | `--names=send*`    | email, logger, sms                         | Routes using sendEmail and sendSMS functions + middleware + wire services |
 | `--names=process*` | analytics, email, logger, payment, storage | Routes using processPayment function + middleware + wire services         |
 | `--names=*Payment` | analytics, email, logger, payment, storage | Routes using functions ending with "Payment" + middleware + wire services |

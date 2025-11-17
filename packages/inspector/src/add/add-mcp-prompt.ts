@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
-  getPropertyTags,
+  getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
@@ -40,10 +40,12 @@ export const addMCPPrompt: AddWiring = (
     const obj = firstArg
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
-    const descriptionValue = getPropertyValue(obj, 'description') as
-      | string
-      | null
-    const tags = getPropertyTags(obj, 'MCP prompt', nameValue, logger)
+    const { tags, summary, description, errors } = getCommonWireMetaData(
+      obj,
+      'MCP prompt',
+      nameValue,
+      logger
+    )
 
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,
@@ -76,7 +78,7 @@ export const addMCPPrompt: AddWiring = (
       return
     }
 
-    if (!descriptionValue) {
+    if (!description) {
       logger.critical(
         ErrorCode.MISSING_DESCRIPTION,
         `MCP prompt '${nameValue}' is missing a description.`
@@ -116,7 +118,9 @@ export const addMCPPrompt: AddWiring = (
     state.mcpEndpoints.promptsMeta[nameValue] = {
       pikkuFuncName,
       name: nameValue,
-      description: descriptionValue,
+      description,
+      summary,
+      errors,
       tags,
       inputSchema,
       outputSchema,

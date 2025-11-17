@@ -2,7 +2,6 @@ import {
   CorePikkuMiddleware,
   CoreSingletonServices,
   CoreUserSession,
-  PikkuDocs,
   CoreServices,
   MiddlewareMetadata,
   PermissionMetadata,
@@ -74,8 +73,9 @@ export interface CLICommandMeta {
   positionals: CLIPositional[]
   options: Record<string, CLIOption>
   renderName?: string
+  summary?: string
   description?: string
-  docs?: PikkuDocs
+  errors?: string[]
   tags?: string[]
   subcommands?: Record<string, CLICommandMeta>
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
@@ -267,7 +267,9 @@ export interface CoreCLICommand<
   middleware?: PikkuMiddleware[]
   permissions?: Record<string, PikkuPermission | PikkuPermission[]>
   auth?: boolean
-  docs?: PikkuDocs
+  summary?: string
+  errors?: string[]
+  tags?: string[]
   subcommands?: Subcommands
   isDefault?: boolean
 }
@@ -328,7 +330,8 @@ export interface CoreCLI<
   options?: CLIOptions<Options>
   middleware?: PikkuMiddleware[]
   render?: PikkuCLIRender
-  docs?: PikkuDocs
+  summary?: string
+  errors?: string[]
   tags?: string[]
 }
 

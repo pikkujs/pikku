@@ -1,14 +1,12 @@
 import type { SerializeOptions } from 'cookie'
 import type { PikkuError } from '../../errors/error-handler.js'
 import type {
-  PikkuDocs,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
   CreateWireServices,
   CorePikkuMiddleware,
-  MiddlewareMetadata,
-  PermissionMetadata,
+  CommonWireMeta,
 } from '../../types/core.types.js'
 import type {
   CorePikkuFunction,
@@ -240,18 +238,13 @@ export type HTTPFunctionMetaInputTypes = {
 /**
  * Represents metadata for a set of HTTP wirings, including HTTP wiring details, methods, input/output types, and documentation.
  */
-export type HTTPWiringMeta = {
-  pikkuFuncName: string
+export type HTTPWiringMeta = CommonWireMeta & {
   route: string
   method: HTTPMethod
   params?: string[]
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes
-  docs?: PikkuDocs
-  tags?: string[]
   sse?: true
-  middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (global + route + tag + explicit)
-  permissions?: PermissionMetadata[] // Pre-resolved permission chain (global + route + tag + explicit)
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 

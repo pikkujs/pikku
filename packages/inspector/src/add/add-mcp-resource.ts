@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
-  getPropertyTags,
+  getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
@@ -41,11 +41,13 @@ export const addMCPResource: AddWiring = (
 
     const uriValue = getPropertyValue(obj, 'uri') as string | null
     const titleValue = getPropertyValue(obj, 'title') as string | null
-    const descriptionValue = getPropertyValue(obj, 'description') as
-      | string
-      | null
+    const { tags, summary, description, errors } = getCommonWireMetaData(
+      obj,
+      'MCP resource',
+      uriValue,
+      logger
+    )
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
-    const tags = getPropertyTags(obj, 'MCP resource', uriValue, logger)
 
     if (streamingValue === true) {
       logger.warn(
@@ -92,7 +94,7 @@ export const addMCPResource: AddWiring = (
       return
     }
 
-    if (!descriptionValue) {
+    if (!description) {
       logger.critical(
         ErrorCode.MISSING_DESCRIPTION,
         `MCP resource '${uriValue}' is missing a description.`
@@ -133,7 +135,9 @@ export const addMCPResource: AddWiring = (
       pikkuFuncName,
       uri: uriValue,
       title: titleValue,
-      description: descriptionValue,
+      description,
+      summary,
+      errors,
       ...(streamingValue !== null && { streaming: streamingValue }),
       tags,
       inputSchema,

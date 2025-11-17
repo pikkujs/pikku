@@ -2,7 +2,6 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  PikkuDocs,
   CorePikkuMiddleware,
   PikkuWire,
   PickRequired,
@@ -198,12 +197,11 @@ export type CorePikkuFunctionConfig<
   >,
 > = {
   name?: string
+  tags?: string[]
   expose?: boolean
   internal?: boolean
   func: PikkuFunction
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
-  tags?: string[]
-  docs?: PikkuDocs
 }

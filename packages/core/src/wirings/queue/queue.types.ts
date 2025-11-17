@@ -1,4 +1,4 @@
-import { PikkuDocs, MiddlewareMetadata } from '../../types/core.types.js'
+import { CommonWireMeta } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { QueueConfigMapping } from './validate-worker-config.js'
 
@@ -147,15 +147,9 @@ export interface QueueWorkers {
  */
 export type QueueWorkersMeta = Record<
   string,
-  {
-    pikkuFuncName: string
-    schemaName?: string
+  CommonWireMeta & {
     queueName: string
-    session?: undefined
-    docs?: PikkuDocs
-    tags?: string[]
     config?: PikkuWorkerConfig
-    middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   }
 >
 
@@ -172,8 +166,7 @@ export type CoreQueueWorker<
   queueName: string
   func: PikkuFunctionConfig
   config?: PikkuWorkerConfig
-  docs?: PikkuDocs
-  session?: undefined
+  errors?: string[]
   tags?: string[]
   middleware?: PikkuFunctionConfig['middleware']
 }

@@ -1,10 +1,9 @@
 import {
-  PikkuDocs,
-  MiddlewareMetadata,
   SerializedError,
   CoreSingletonServices,
   CreateWireServices,
   CoreConfig,
+  CommonWireMeta,
 } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 
@@ -97,8 +96,6 @@ export type CoreWorkflow<
 > = {
   /** Unique workflow name */
   name: string
-  /** Description of the workflow */
-  description?: string
   /** The workflow function */
   func: PikkuFunctionConfig
   /** Middleware chain for this workflow */
@@ -107,8 +104,6 @@ export type CoreWorkflow<
   permissions?: PikkuFunctionConfig['permissions']
   /** Tags for organization and filtering */
   tags?: string[]
-  /** Documentation metadata */
-  docs?: PikkuDocs
 }
 
 /**
@@ -183,8 +178,6 @@ export interface RpcStepMeta {
   outputVar?: string
   /** Input source mappings */
   inputs?: Record<string, InputSource>
-  /** Display name */
-  description?: string
   /** Step options */
   options?: WorkflowStepOptions
 }
@@ -339,14 +332,8 @@ export interface PikkuWorkflow {
  */
 export type WorkflowsMeta = Record<
   string,
-  {
-    pikkuFuncName: string
+  CommonWireMeta & {
     workflowName: string
-    description?: string
-    session?: undefined
-    docs?: PikkuDocs
-    tags?: string[]
-    middleware?: MiddlewareMetadata[]
     steps: WorkflowStepMeta[]
     /** Whether this workflow conforms to simple workflow DSL */
     simple?: boolean

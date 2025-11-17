@@ -104,6 +104,8 @@ export type CoreMCPResource<
   uri: string
   title: string
   description: string
+  summary?: string
+  errors?: string[]
   mimeType?: string
   size?: number
   streaming?: boolean
@@ -126,6 +128,8 @@ export type CoreMCPTool<
   name: string
   title?: string
   description: string
+  summary?: string
+  errors?: string[]
   func: PikkuFunctionConfig
   tags?: string[]
   streaming?: boolean
@@ -145,6 +149,8 @@ export type CoreMCPPrompt<
 > = {
   name: string
   description: string
+  summary?: string
+  errors?: string[]
   func: PikkuFunctionConfig
   tags?: string[]
   middleware?: PikkuMiddleware[]
