@@ -187,7 +187,7 @@ describe('runScheduledTask', () => {
       schedule: '0 0 * * *',
       func: {
         func: async (services: any, data: any, interaction: any) => {
-          receivedSession = services.userSession.get()
+          receivedSession = await interaction.session.get()
           return 'ok'
         },
         auth: false,

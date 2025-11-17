@@ -10,7 +10,7 @@ fi
 echo "Fetching workflow runs for $username/$reponame (excluding main branch)..."
 
 # Fetch workflow runs and filter out main branch runs
-runs=$(gh api /repos/"$username"/"$reponame"/actions/runs --paginate | jq -r '.workflow_runs[] | select(.head_branch != "main" and .head_branch != "master") | .id')
+runs=$(gh api /repos/"$username"/"$reponame"/actions/runs --paginate | jq -r '.workflow_runs[] | select(.head_branch != "main") | .id')
 
 if [[ -z "$runs" ]]; then
     echo "No workflow runs found (excluding main branch)."

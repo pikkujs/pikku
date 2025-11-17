@@ -214,6 +214,7 @@ jobs:
     name: Sync Templates
     runs-on: ubuntu-latest
     needs: release
+    environment: sync-templates-approval
     strategy:
       fail-fast: false
       matrix:

@@ -165,10 +165,9 @@ describe('runPermissions', () => {
   test('should pass when no permissions are defined', async () => {
     // Should not throw
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
   })
 
@@ -183,10 +182,9 @@ describe('runPermissions', () => {
 
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
 
     assert.deepEqual(executionOrder, ['wiringTag'])
@@ -230,10 +228,9 @@ describe('runPermissions', () => {
       wirePermissions,
       funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
       funcPermissions,
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
 
     // Order: wireInheritedPermissions (wiringTag) → wirePermissions → funcInheritedPermissions (funcTag) → funcPermissions
@@ -254,10 +251,9 @@ describe('runPermissions', () => {
     // Should not throw because at least one permission passes
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'atLeastOneTestTag' }],
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
   })
 
@@ -270,9 +266,9 @@ describe('runPermissions', () => {
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wireInheritedPermissions: [{ type: 'tag', tag: 'allFailTestTag' }],
-        allServices: mockServices,
+        services: mockServices,
+        interaction: {},
         data: {},
-        session: mockSession,
       }),
       {
         message: 'Permission denied',
@@ -288,9 +284,9 @@ describe('runPermissions', () => {
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wirePermissions,
-        allServices: mockServices,
+        services: mockServices,
+        interaction: {},
         data: {},
-        session: mockSession,
       }),
       {
         message: 'Permission denied',
@@ -306,9 +302,9 @@ describe('runPermissions', () => {
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
-        allServices: mockServices,
+        services: mockServices,
+        interaction: {},
         data: {},
-        session: mockSession,
       }),
       {
         message: 'Permission denied',
@@ -324,9 +320,9 @@ describe('runPermissions', () => {
     await assert.rejects(
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         funcPermissions,
-        allServices: mockServices,
+        services: mockServices,
+        interaction: {},
         data: {},
-        session: mockSession,
       }),
       {
         message: 'Permission denied',
@@ -357,10 +353,9 @@ describe('runPermissions', () => {
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'failingWiringTag' }],
       wirePermissions,
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
 
     // Both permissions should be evaluated
@@ -375,10 +370,9 @@ describe('runPermissions', () => {
     // Should not throw because verifyPermissions handles array properly
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'arrayTestTag' }],
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
   })
 
@@ -392,10 +386,9 @@ describe('runPermissions', () => {
     // Should not throw because verifyPermissions handles objects properly
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'objectTestTag' }],
-      allServices: mockServices,
+      services: mockServices,
       interaction: {},
       data: {},
-      session: mockSession,
     })
   })
 
@@ -416,20 +409,18 @@ describe('runPermissions', () => {
     }
 
     const testData = { test: 'data' }
-    const testInteraction = { test: 'interaction', session: mockSession }
 
     addPermission('paramTestTag', [testPermission])
 
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'paramTestTag' }],
-      allServices: mockServices,
-      interaction: testInteraction,
+      services: mockServices,
+      interaction: {},
       data: testData,
-      session: mockSession,
     })
 
     assert.equal(receivedServices, mockServices)
     assert.equal(receivedData, testData)
-    assert.equal(receivedInteraction, testInteraction)
+    assert.deepEqual(receivedInteraction, {})
   })
 })
