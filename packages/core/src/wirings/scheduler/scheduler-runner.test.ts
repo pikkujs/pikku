@@ -145,7 +145,6 @@ describe('runScheduledTask', () => {
       func: {
         func: async () => {
           taskExecuted = true
-          return 'success'
         },
         auth: false,
       },
@@ -165,13 +164,12 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
-    const result = await runScheduledTask({
+    await runScheduledTask({
       name: 'simple-task',
       singletonServices: { logger: mockLogger } as any,
     })
 
     assert.equal(taskExecuted, true)
-    assert.equal(result, 'success')
 
     const logs = mockLogger.getLogs()
     assert.equal(logs.length, 1)
@@ -188,7 +186,6 @@ describe('runScheduledTask', () => {
       func: {
         func: async (services: any, data: any, wire: any) => {
           receivedSession = await wire.session.get()
-          return 'ok'
         },
         auth: false,
       },
@@ -360,7 +357,6 @@ describe('runScheduledTask', () => {
       func: {
         func: async (services: any, data: any, wire: any) => {
           capturedWire = wire
-          return 'ok'
         },
         auth: false,
       },
@@ -399,7 +395,7 @@ describe('runScheduledTask', () => {
       name: 'session-services-task',
       schedule: '0 0 * * *',
       func: {
-        func: async () => 'ok',
+        func: async () => undefined,
         auth: false,
       },
     }
@@ -444,7 +440,7 @@ describe('runScheduledTask', () => {
       name: 'cleanup-task',
       schedule: '0 0 * * *',
       func: {
-        func: async () => 'ok',
+        func: async () => undefined,
         auth: false,
       },
     }
@@ -571,7 +567,6 @@ describe('runScheduledTask', () => {
       func: {
         func: async () => {
           executionOrder.push('task')
-          return 'ok'
         },
         auth: false,
       },

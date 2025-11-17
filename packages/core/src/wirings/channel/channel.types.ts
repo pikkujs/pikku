@@ -5,7 +5,6 @@ import {
   PikkuHTTPResponse,
 } from '../http/http.types.js'
 import {
-  PikkuDocs,
   CoreSingletonServices,
   CreateWireServices,
   CorePikkuMiddleware,
@@ -38,7 +37,10 @@ export type RunChannelParams<ChannelData> = {
 
 export interface ChannelMessageMeta {
   pikkuFuncName: string
-  docs?: PikkuDocs
+  summary?: string
+  description?: string
+  errors?: string[]
+  tags?: string[]
   middleware?: MiddlewareMetadata[]
   permissions?: PermissionMetadata[]
 }
@@ -54,7 +56,9 @@ export interface ChannelMeta {
   disconnect: ChannelMessageMeta | null
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
-  docs?: PikkuDocs
+  summary?: string
+  description?: string
+  errors?: string[]
   tags?: string[]
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)

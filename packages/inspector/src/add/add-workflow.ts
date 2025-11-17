@@ -12,6 +12,7 @@ import {
   extractDuration,
 } from '../utils/extract-node-value.js'
 import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
+import { getCommonWireMetaData } from '../utils/get-property-value.js'
 
 /**
  * Scan for workflow.do(), workflow.sleep(), and workflow.cancel() calls to extract workflow steps
@@ -53,7 +54,6 @@ function getWorkflowInvocations(
               type: 'rpc',
               stepName,
               rpcName,
-              description,
             })
             state.rpc.invokedFunctions.add(rpcName)
           } else if (isFunctionLike(secondArg)) {
@@ -150,6 +150,25 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   // Extract the function node (either direct function or from config.func)
   const { funcNode, resolvedFunc } = extractFunctionNode(firstArg, checker)
 
+  // Extract metadata if using object form
+  let tags: string[] | undefined
+  let summary: string | undefined
+  let description: string | undefined
+  let errors: string[] | undefined
+
+  if (ts.isObjectLiteralExpression(firstArg)) {
+    const metadata = getCommonWireMetaData(
+      firstArg,
+      'Workflow',
+      workflowName,
+      logger
+    )
+    tags = metadata.tags
+    summary = metadata.summary
+    description = metadata.description
+    errors = metadata.errors
+  }
+
   // Validate that we got a valid function
   if (
     ts.isObjectLiteralExpression(firstArg) &&
@@ -214,5 +233,9 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     workflowName,
     steps,
     simple,
+    summary,
+    description,
+    errors,
+    tags,
   }
 }

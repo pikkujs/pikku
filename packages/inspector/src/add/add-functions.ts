@@ -3,8 +3,11 @@ import { AddWiring } from '../types.js'
 import { TypesMap } from '../types-map.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
-import { FunctionServicesMeta, PikkuDocs } from '@pikku/core'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import { FunctionServicesMeta } from '@pikku/core'
+import {
+  getPropertyValue,
+  getCommonWireMetaData,
+} from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 
 const isValidVariableName = (name: string) => {
@@ -304,9 +307,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     extractFunctionName(node, checker, state.rootDir)
 
   let tags: string[] | undefined
+  let summary: string | undefined
+  let description: string | undefined
+  let errors: string[] | undefined
   let expose: boolean | undefined
   let internal: boolean | undefined
-  let docs: PikkuDocs | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
 
   // Extract the function node using shared utility
@@ -320,10 +325,13 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   // Extract config properties if using object form
   if (ts.isObjectLiteralExpression(firstArg)) {
     objectNode = firstArg
-    tags = (getPropertyValue(firstArg, 'tags') as string[]) || undefined
+    const metadata = getCommonWireMetaData(firstArg, 'Function', name, logger)
+    tags = metadata.tags
+    summary = metadata.summary
+    description = metadata.description
+    errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
-    docs = getPropertyValue(firstArg, 'docs') as PikkuDocs | undefined
   }
 
   // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
@@ -463,7 +471,9 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     expose: expose || undefined,
     internal: internal || undefined,
     tags: tags || undefined,
-    docs: docs || undefined,
+    summary,
+    description,
+    errors,
     middleware,
     isDirectFunction,
   }

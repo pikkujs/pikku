@@ -2,10 +2,9 @@ import * as ts from 'typescript'
 import { ErrorCode } from '../error-codes.js'
 import {
   getPropertyValue,
-  getPropertyTags,
+  getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { PikkuDocs } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
@@ -206,7 +205,12 @@ export function addMessagesRoutes(
                     if (fnMeta) {
                       // Resolve middleware for this route
                       const routeTags = ts.isObjectLiteralExpression(init)
-                        ? getPropertyTags(init, 'channel', channelKey, logger)
+                        ? getCommonWireMetaData(
+                            init,
+                            'Channel message',
+                            routeKey,
+                            logger
+                          ).tags
                         : undefined
                       const routeMiddleware = ts.isObjectLiteralExpression(init)
                         ? resolveMiddleware(state, init, routeTags, checker)
@@ -233,7 +237,12 @@ export function addMessagesRoutes(
                   if (fnMeta) {
                     // Resolve middleware for this route
                     const routeTags = ts.isObjectLiteralExpression(init)
-                      ? getPropertyTags(init, 'channel', channelKey, logger)
+                      ? getCommonWireMetaData(
+                          init,
+                          'Channel message',
+                          routeKey,
+                          logger
+                        ).tags
                       : undefined
                     const routeMiddleware = ts.isObjectLiteralExpression(init)
                       ? resolveMiddleware(state, init, routeTags, checker)
@@ -277,12 +286,12 @@ export function addMessagesRoutes(
                         if (fnMeta) {
                           // Resolve middleware for this route
                           const routeTags = ts.isObjectLiteralExpression(init)
-                            ? getPropertyTags(
+                            ? getCommonWireMetaData(
                                 init,
-                                'channel',
-                                channelKey,
+                                'Channel message',
+                                routeKey,
                                 logger
-                              )
+                              ).tags
                             : undefined
                           const routeMiddleware = ts.isObjectLiteralExpression(
                             init
@@ -308,12 +317,12 @@ export function addMessagesRoutes(
                         if (fnMeta) {
                           // Resolve middleware for this route
                           const routeTags = ts.isObjectLiteralExpression(init)
-                            ? getPropertyTags(
+                            ? getCommonWireMetaData(
                                 init,
-                                'channel',
-                                channelKey,
+                                'Channel message',
+                                routeKey,
                                 logger
-                              )
+                              ).tags
                             : undefined
                           const routeMiddleware = ts.isObjectLiteralExpression(
                             init
@@ -396,7 +405,12 @@ export function addMessagesRoutes(
               if (fnMeta) {
                 // Resolve middleware for this route
                 const routeTags = ts.isObjectLiteralExpression(init)
-                  ? getPropertyTags(init, 'channel', channelKey, logger)
+                  ? getCommonWireMetaData(
+                      init,
+                      'Channel message',
+                      routeKey,
+                      logger
+                    ).tags
                   : undefined
                 const routeMiddleware = ts.isObjectLiteralExpression(init)
                   ? resolveMiddleware(state, init, routeTags, checker)
@@ -438,7 +452,7 @@ export function addMessagesRoutes(
       // Resolve middleware and permissions for this route
       // Check if the route config is an object literal with middleware/permissions
       const routeTags = ts.isObjectLiteralExpression(init)
-        ? getPropertyTags(init, 'channel', channelKey, logger)
+        ? getCommonWireMetaData(init, 'Channel message', routeKey, logger).tags
         : undefined
       const routeMiddleware = ts.isObjectLiteralExpression(init)
         ? resolveMiddleware(state, init, routeTags, checker)
@@ -487,8 +501,12 @@ export const addChannel: AddWiring = (
         .map((k) => k.name)
     : []
 
-  const docs = getPropertyValue(obj, 'docs') as PikkuDocs | undefined
-  const tags = getPropertyTags(obj, 'Channel', route, logger)
+  const { tags, summary, description, errors } = getCommonWireMetaData(
+    obj,
+    'Channel',
+    name,
+    logger
+  )
   const query = getPropertyValue(obj, 'query') as string[] | []
 
   const connect = getPropertyAssignmentInitializer(
@@ -602,7 +620,9 @@ export const addChannel: AddWiring = (
       : null,
     message,
     messageWirings,
-    docs: docs ?? undefined,
+    summary,
+    description,
+    errors,
     tags: tags ?? undefined,
     middleware,
   }

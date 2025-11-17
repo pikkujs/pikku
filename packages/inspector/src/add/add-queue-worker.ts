@@ -1,9 +1,8 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
-  getPropertyTags,
+  getCommonWireMetaData,
 } from '../utils/get-property-value.js'
-import { PikkuDocs } from '@pikku/core'
 import { AddWiring } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
@@ -11,13 +10,7 @@ import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
 
-export const addQueueWorker: AddWiring = (
-  logger,
-  node,
-  checker,
-  state,
-  options
-) => {
+export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
     return
   }
@@ -39,8 +32,12 @@ export const addQueueWorker: AddWiring = (
     const obj = firstArg
 
     const queueName = getPropertyValue(obj, 'queueName') as string | null
-    const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-    const tags = getPropertyTags(obj, 'Queue worker', queueName, logger)
+    const { tags, summary, description, errors } = getCommonWireMetaData(
+      obj,
+      'Queue worker',
+      queueName,
+      logger
+    )
 
     // --- find the referenced function ---
     const funcInitializer = getPropertyAssignmentInitializer(
@@ -84,7 +81,9 @@ export const addQueueWorker: AddWiring = (
     state.queueWorkers.meta[queueName] = {
       pikkuFuncName,
       queueName,
-      docs,
+      summary,
+      description,
+      errors,
       tags,
       middleware,
     }

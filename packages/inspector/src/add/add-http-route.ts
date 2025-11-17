@@ -1,11 +1,10 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
-  getPropertyTags,
+  getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { PikkuDocs } from '@pikku/core'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { AddWiring } from '../types.js'
@@ -71,8 +70,12 @@ export const addHTTPRoute: AddWiring = (
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
-  const docs = (getPropertyValue(obj, 'docs') as PikkuDocs) || undefined
-  const tags = getPropertyTags(obj, 'HTTP route', route, logger)
+  const { tags, summary, description, errors } = getCommonWireMetaData(
+    obj,
+    'HTTP route',
+    route,
+    logger
+  )
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
   // --- find the referenced function name first for filtering ---
@@ -155,7 +158,9 @@ export const addHTTPRoute: AddWiring = (
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,
     inputTypes,
-    docs,
+    summary,
+    description,
+    errors,
     tags,
     middleware,
     permissions,

@@ -44,9 +44,8 @@ export const wireScheduler = <
     func: scheduledTask.func.func,
     auth: scheduledTask.func.auth,
     permissions: scheduledTask.func.permissions,
-    middleware: scheduledTask.func.middleware as any,
+    middleware: scheduledTask.func.middleware,
     tags: scheduledTask.func.tags,
-    docs: scheduledTask.func.docs as any,
   })
 
   const tasks = pikkuState('scheduler', 'tasks')
@@ -113,7 +112,7 @@ export async function runScheduledTask({
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    const result = await runPikkuFunc(
+    await runPikkuFunc(
       PikkuWiringTypes.scheduler,
       meta.name,
       meta.pikkuFuncName,
@@ -128,8 +127,6 @@ export async function runScheduledTask({
         wire,
       }
     )
-
-    return result
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
     if (errorResponse != null) {

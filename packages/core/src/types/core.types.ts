@@ -85,18 +85,18 @@ export type FunctionRuntimeMeta = {
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &
-  Partial<{
-    name: string
-    services: FunctionServicesMeta
-    usedWires: string[]
-    inputs: string[] | null
-    outputs: string[] | null
-    tags: string[]
-    docs: PikkuDocs
-    middleware: MiddlewareMetadata[]
-    permissions: PermissionMetadata[]
-    isDirectFunction: boolean
-  }>
+  Partial<
+    {
+      name: string
+      services: FunctionServicesMeta
+      usedWires: string[]
+      inputs: string[] | null
+      outputs: string[] | null
+      middleware: MiddlewareMetadata[]
+      permissions: PermissionMetadata[]
+      isDirectFunction: boolean
+    } & CommonWireMeta
+  >
 
 export type FunctionsRuntimeMeta = Record<string, FunctionRuntimeMeta>
 export type FunctionsMeta = Record<string, FunctionMeta>
@@ -361,11 +361,16 @@ export type CreateConfig<
 /**
  * Represents the documentation for a route, including summary, description, tags, and errors.
  */
-export type PikkuDocs = {
+export type CommonWireMeta = {
+  pikkuFuncName: string
+
+  tags?: string[]
   summary?: string
   description?: string
-  tags?: string[]
   errors?: string[]
+
+  middleware?: MiddlewareMetadata[]
+  permissions?: PermissionMetadata[]
 }
 
 /**

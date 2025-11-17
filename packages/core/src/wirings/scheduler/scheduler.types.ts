@@ -1,8 +1,7 @@
 import {
-  PikkuDocs,
   CoreUserSession,
   CorePikkuMiddleware,
-  MiddlewareMetadata,
+  CommonWireMeta,
 } from '../../types/core.types.js'
 import {
   CorePikkuFunctionConfig,
@@ -15,14 +14,10 @@ import {
 export type ScheduledTasksMeta<UserSession extends CoreUserSession = any> =
   Record<
     string,
-    {
-      pikkuFuncName: string
+    CommonWireMeta & {
       name: string
       schedule: string
       session?: UserSession
-      docs?: PikkuDocs
-      tags?: string[]
-      middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
     }
   >
 
@@ -38,7 +33,6 @@ export type CoreScheduledTask<
   name: string
   schedule: string
   func: PikkuFunctionConfig
-  docs?: PikkuDocs
   tags?: string[]
   middleware?: PikkuMiddleware[]
 }
