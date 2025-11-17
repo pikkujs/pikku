@@ -27,21 +27,21 @@ import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTy
  * @template In - Input type for the resource request
  * @template URI - URI template string type for compile-time parameter validation
  */
-type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse, null, true>> & { uri: URI }
+type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse>> & { uri: URI }
 
 /**
  * Type definition for MCP tools that AI models can invoke.
  *
  * @template In - Input type for the tool invocation
  */
-type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionConfig<In, MCPToolResponse, null, true>>
+type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionConfig<In, MCPToolResponse>>
 
 /**
  * Type definition for MCP prompts that provide templates to AI models.
  *
  * @template In - Input type for the prompt parameters
  */
-type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptResponse, null, true>>
+type MCPPromptWiring<In> = CoreMCPPrompt<PikkuFunctionConfig<In, MCPPromptResponse>>
 
 /**
  * Registers an MCP resource with the Pikku framework.
@@ -112,9 +112,9 @@ export const pikkuMCPPromptFunc = <In>(
  */
 export const pikkuMCPToolFunc = <In>(
   func:
-    | PikkuFunctionSessionless<In, MCPToolResponse, null, unknown>
+    | PikkuFunctionSessionless<In, MCPToolResponse>
     | {
-      func: PikkuFunctionSessionless<In, MCPToolResponse, null, unknown>
+      func: PikkuFunctionSessionless<In, MCPToolResponse>
       name?: string
     }
 ): PikkuFunctionConfig<In, MCPToolResponse> => {
@@ -131,9 +131,9 @@ export const pikkuMCPToolFunc = <In>(
  */
 export const pikkuMCPResourceFunc = <In>(
   func:
-    | PikkuFunctionSessionless<In, MCPResourceResponse, null, unknown>
+    | PikkuFunctionSessionless<In, MCPResourceResponse>
     | {
-      func: PikkuFunctionSessionless<In, MCPResourceResponse, null, unknown>
+      func: PikkuFunctionSessionless<In, MCPResourceResponse>
       name?: string
     }
 ): PikkuFunctionConfig<In, MCPResourceResponse> => {

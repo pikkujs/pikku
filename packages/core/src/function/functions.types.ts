@@ -1,4 +1,3 @@
-import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import type {
   CoreServices,
   CoreSingletonServices,
@@ -6,68 +5,62 @@ import type {
   PikkuDocs,
   CorePikkuMiddleware,
   PikkuInteraction,
+  PickRequired,
 } from '../types/core.types.js'
-import { UserSessionService } from '../services/user-session-service.js'
+import { Session } from 'inspector'
 
 /**
  * Represents a core API function that performs an operation using core services and a user session.
  *
  * @template In - The input type.
  * @template Out - The output type.
- * @template ChannelData - The channel data type.
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Interaction - The interaction type, defaults to `PikkuInteraction<In, Out>`.
- * @template Session - The session type, defaults to `CoreUserSession`.
  */
 export type CorePikkuFunction<
   In,
   Out,
-  ChannelData extends unknown | null = null,
   Services extends CoreSingletonServices = CoreServices,
-  Interaction extends PikkuInteraction<In, Out> = PikkuInteraction<In, Out> &
-    (ChannelData extends null
-      ? {
-          channel?: PikkuChannel<unknown, Out> | undefined
-        }
-      : {
-          channel: PikkuChannel<ChannelData, Out>
-        }),
-  Session extends CoreUserSession = CoreUserSession,
+  Interaction extends PikkuInteraction<In, Out> = PikkuInteraction<
+    In,
+    Out,
+    Session
+  >,
 > = (
   services: Services,
   data: In,
-  interaction: Interaction & { session: UserSessionService<Session> }
-) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
+  interaction: PickRequired<Interaction, 'session' | 'rpc'>
+) => Interaction['channel'] extends null
+  ? Promise<Out>
+  : Promise<Out> | Promise<void>
 
 /**
  * Represents a core API function that can be used without a session.
  *
  * @template In - The input type.
  * @template Out - The output type.
- * @template ChannelData - The channel data type.
  * @template Services - The services type, defaults to `CoreServices`.
  * @template Interaction - The interaction type, defaults to `PikkuInteraction<In, Out>`.
- * @template Session - The session type, defaults to `CoreUserSession`.
  */
 export type CorePikkuFunctionSessionless<
   In,
   Out,
-  ChannelData extends unknown | null = null,
   Services extends CoreSingletonServices = CoreServices,
-  Interaction extends PikkuInteraction<In, Out> = PikkuInteraction<In, Out> &
-    (ChannelData extends null
-      ? {
-          channel?: PikkuChannel<unknown, Out> | undefined
-        }
-      : {
-          channel: PikkuChannel<ChannelData, Out>
-        }),
-  Session extends CoreUserSession = CoreUserSession,
+  Interaction extends PikkuInteraction<
+    In,
+    Out,
+    CoreUserSession,
+    any,
+    any,
+    any
+  > = PikkuInteraction<In, Out, CoreUserSession, any, any, any>,
 > = (
   services: Services,
   data: In,
-  interaction: Interaction & { session?: UserSessionService<Session> }
-) => ChannelData extends null ? Promise<Out> : Promise<Out> | Promise<void>
+  interaction: PickRequired<Interaction, 'session' | 'rpc'>
+) => Interaction['channel'] extends null
+  ? Promise<Out>
+  : Promise<Out> | Promise<void>
 
 /**
  * Represents a function that checks permissions for a given operation.
@@ -79,13 +72,18 @@ export type CorePikkuFunctionSessionless<
 export type CorePikkuPermission<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
+  Interaction extends PikkuInteraction<
+    In,
+    never,
+    CoreUserSession,
+    any,
+    never,
+    never
+  > = PikkuInteraction<In, never, CoreUserSession, never, never, never>,
 > = (
   services: Services,
   data: In,
-  interaction: PikkuInteraction<In, any, Session> & {
-    session?: UserSessionService<Session>
-  }
+  interaction: PickRequired<Interaction, 'session'>
 ) => Promise<boolean>
 
 /**
@@ -98,10 +96,14 @@ export type CorePikkuPermission<
 export type CorePikkuPermissionConfig<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
+  Interaction extends PikkuInteraction<
+    In,
+    never,
+    CoreUserSession
+  > = PikkuInteraction<In, never, CoreUserSession>,
 > = {
   /** The permission function */
-  func: CorePikkuPermission<In, Services, Session>
+  func: CorePikkuPermission<In, Services, Interaction>
   /** Optional human-readable name for the permission */
   name?: string
   /** Optional description of what the permission checks */
@@ -134,12 +136,15 @@ export type CorePikkuPermissionConfig<
 export const pikkuPermission = <
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
+  Interaction extends PickRequired<
+    PikkuInteraction<In, never, CoreUserSession>,
+    'session'
+  > = PickRequired<PikkuInteraction<In, never, CoreUserSession>, 'session'>,
 >(
   permission:
-    | CorePikkuPermission<In, Services, Session>
-    | CorePikkuPermissionConfig<In, Services, Session>
-): CorePikkuPermission<In, Services, Session> => {
+    | CorePikkuPermission<In, Services, Interaction>
+    | CorePikkuPermissionConfig<In, Services, Interaction>
+): CorePikkuPermission<In, Services, Interaction> => {
   return typeof permission === 'function' ? permission : permission.func
 }
 
@@ -154,8 +159,12 @@ export const pikkuPermission = <
 export type CorePikkuPermissionFactory<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Session extends CoreUserSession = CoreUserSession,
-> = (input: In) => CorePikkuPermission<any, Services, Session>
+  Interaction extends PikkuInteraction<
+    In,
+    never,
+    CoreUserSession
+  > = PikkuInteraction<In, never, CoreUserSession>,
+> = (input: In) => CorePikkuPermission<any, Services, Interaction>
 
 /**
  * Factory function for creating permission factories
@@ -188,8 +197,8 @@ export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
 
 export type CorePikkuFunctionConfig<
   PikkuFunction extends
-    | CorePikkuFunction<any, any, any, any, any>
-    | CorePikkuFunctionSessionless<any, any, any, any, any>,
+    | CorePikkuFunction<any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any>,
   PikkuPermission extends CorePikkuPermission<
     any,
     any,

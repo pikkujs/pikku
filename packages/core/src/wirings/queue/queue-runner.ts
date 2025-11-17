@@ -159,7 +159,6 @@ export async function runQueueJob({
         singletonServices,
         interaction
       )
-
       const services = rpcService.injectRPCService(
         {
           ...singletonServices,

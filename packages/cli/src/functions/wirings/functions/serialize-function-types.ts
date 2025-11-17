@@ -16,10 +16,8 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuInteraction } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuInteraction, PickRequired } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
-import { PikkuChannel } from '@pikku/core/channel'
-import { PikkuMCP } from '@pikku/core/mcp'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -40,7 +38,7 @@ ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, Session>
+export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, PikkuInteraction<In, never, Session>>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
@@ -187,30 +185,18 @@ export const pikkuPermissionFactory = <In = any>(
  *
  * @template In - The input type
  * @template Out - The output type that the function returns
- * @template ChannelData - Channel data type (null = optional channel)
- * @template MCPData - MCP data type (null = optional MCP)
  * @template RequiredServices - Services required by this function
  */
 export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
-  ChannelData = null,  // null means optional channel
-  MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services
+  RequiredServices extends Services = Services,
+  RequiredInteractions extends keyof PikkuInteraction = never
 > = CorePikkuFunctionSessionless<
     In,
     Out,
-    ChannelData,
     RequiredServices,
-    PikkuInteraction<In, Out> & { rpc: TypedPikkuRPC } & (
-      [ChannelData] extends [null]
-        ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
-        : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
-    ) & ([MCPData] extends [null]
-      ? { mcp?: PikkuMCP }  // Optional MCP
-      : { mcp: PikkuMCP }  // Required MCP
-    ),
-    Session
+    PickRequired<PikkuInteraction<In, Out, Session, TypedPikkuRPC, null, any>, RequiredInteractions>
   >
 
 /**
@@ -219,30 +205,18 @@ export type PikkuFunctionSessionless<
  *
  * @template In - The input type
  * @template Out - The output type that the function returns
- * @template ChannelData - Channel data type (null = optional channel)
- * @template MCPData - MCP data type (null = optional MCP)
  * @template RequiredServices - Services required by this function
  */
 export type PikkuFunction<
   In = unknown,
   Out = never,
-  ChannelData = null,  // null means optional channel
-  MCPData = null, // null means optional MCP
-  RequiredServices extends Services = Services
+  RequiredServices extends Services = Services,
+  RequiredInteractions extends keyof PikkuInteraction = 'session'
 > = CorePikkuFunction<
     In,
     Out,
-    ChannelData,
     RequiredServices,
-    PikkuInteraction<In, Out> & { rpc: TypedPikkuRPC } & (
-      [ChannelData] extends [null]
-        ? { channel?: PikkuChannel<unknown, Out> }  // Optional channel
-        : { channel: PikkuChannel<ChannelData, Out> }  // Required channel with any data type
-    ) & ([MCPData] extends [null]
-      ? { mcp?: PikkuMCP }  // Optional MCP
-      : { mcp: PikkuMCP }  // Required MCP
-    ),
-    Session
+    PickRequired<PikkuInteraction<In, Out, Session, TypedPikkuRPC, null, any>, RequiredInteractions>
   >
 
 /**
@@ -251,16 +225,12 @@ export type PikkuFunction<
  *
  * @template In - The input type
  * @template Out - The output type
- * @template ChannelData - Channel data type
- * @template MCPData - MCP data type
  * @template PikkuFunc - The function type (can be narrowed to PikkuFunction or PikkuFunctionSessionless)
  */
 export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
-  ChannelData = unknown,
-  MCPData = unknown,
-  PikkuFunc extends PikkuFunction<In, Out, ChannelData, MCPData> | PikkuFunctionSessionless<In, Out, ChannelData, MCPData> = PikkuFunction<In, Out, ChannelData, MCPData> | PikkuFunctionSessionless<In, Out, ChannelData, MCPData>
+  PikkuFunc extends PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out> = PikkuFunction<In, Out> | PikkuFunctionSessionless<In, Out>
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
 
 /**

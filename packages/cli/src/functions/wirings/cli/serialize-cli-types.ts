@@ -90,7 +90,7 @@ export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any
  * @returns CLI command configuration with inferred types
  */
 export const pikkuCLICommand = <
-  FuncConfig extends PikkuFunctionConfig<any, any, any, any>,
+  FuncConfig extends PikkuFunctionConfig<any, any, any>,
   Params extends string
 >(
   config: CLICommandConfig<FuncConfig, any, any, Params>

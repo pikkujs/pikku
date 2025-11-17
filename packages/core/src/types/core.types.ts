@@ -184,15 +184,23 @@ export type PikkuInteraction<
   In = unknown,
   Out = unknown,
   UserSession extends CoreUserSession = CoreUserSession,
+  TypedRPC extends PikkuRPC = PikkuRPC,
+  IsChannel extends true | null = null,
+  MCPTools extends string | never = never,
+  TypedWorkflow extends
+    | PikkuWorkflowInteraction
+    | never = PikkuWorkflowInteraction,
 > = Partial<{
   http: PikkuHTTP<In>
-  mcp: PikkuMCP
-  rpc: PikkuRPC
-  channel: PikkuChannel<unknown, Out>
+  mcp: PikkuMCP<MCPTools>
+  rpc: TypedRPC
+  channel: [IsChannel] extends [null]
+    ? PikkuChannel<unknown, Out>
+    : PikkuChannel<unknown, Out> | undefined
   scheduledTask: PikkuScheduledTask
   queue: PikkuQueue
   cli: PikkuCLI
-  workflow: PikkuWorkflowInteraction
+  workflow: TypedWorkflow
   workflowStep: WorkflowStepInteraction
   session: UserSessionService<UserSession>
 }>

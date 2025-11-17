@@ -149,7 +149,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       allServices,
-      interaction: interactionWithSession,
+      interaction: interactionWithSession as any, // Permissions shouldn't know about interaction types
       data: actualData,
     })
 

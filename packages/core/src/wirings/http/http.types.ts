@@ -123,13 +123,11 @@ export type CoreHTTPFunctionWiring<
     In,
     Out,
     any,
-    any,
     any
   > = CorePikkuFunction<In, Out>,
   PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
     In,
     Out,
-    any,
     any,
     any
   > = CorePikkuFunctionSessionless<In, Out>,

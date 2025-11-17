@@ -13,7 +13,7 @@ import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImport
  * Type definition for scheduled tasks that run at specified intervals.
  * These are sessionless functions that execute based on cron expressions.
  */
-type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void, null, null>, PikkuMiddleware>
+type SchedulerWiring = CoreScheduledTask<PikkuFunctionConfig<void, void>, PikkuMiddleware>
 
 /**
  * Registers a scheduled task with the Pikku framework.

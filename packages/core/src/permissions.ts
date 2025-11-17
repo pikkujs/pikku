@@ -3,6 +3,7 @@ import {
   PikkuWiringTypes,
   PermissionMetadata,
   PikkuInteraction,
+  PickRequired,
 } from './types/core.types.js'
 import {
   CorePermissionGroup,
@@ -19,11 +20,14 @@ import { freezeDedupe } from './utils.js'
  * @param interaction - The interaction object containing request/response context and session.
  * @returns A promise that resolves to void.
  */
-export const verifyPermissions = async (
+export const verifyPermissions = async <Out = any>(
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
-  interaction: PikkuInteraction
+  interaction: PickRequired<
+    PikkuInteraction<any, never, any, never, never, never>,
+    'session'
+  >
 ): Promise<boolean> => {
   if (!permissions) {
     return true
@@ -44,7 +48,7 @@ export const verifyPermissions = async (
         valid = true
       }
     } else {
-      valid = await funcs(services, data, interaction)
+      valid = await funcs(services, data, interaction as any)
     }
     if (valid) {
       return true
@@ -344,7 +348,10 @@ export const runPermissions = async (
     funcInheritedPermissions?: PermissionMetadata[]
     funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
     allServices: CoreServices
-    interaction: PikkuInteraction
+    interaction: PickRequired<
+      PikkuInteraction<any, never, any, never, never, never>,
+      'session'
+    >
     data: any
   }
 ) => {
