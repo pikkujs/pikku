@@ -27,7 +27,7 @@ export type CorePikkuFetchOptions = {
 
 /**
  * The `CorePikkuFetch` class provides a utility for making HTTP requests, including handling authorization,
- * transforming dates in responses, and managing server URLs. This class is designed to simplify API interactions
+ * transforming dates in responses, and managing server URLs. This class is designed to simplify API wires
  * with configurable options and support for JWT and API key-based authentication.
  */
 export class CorePikkuFetch {

@@ -51,7 +51,7 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should execute middleware in correct order: wiringTags → wiringMiddleware → funcTags → funcMiddleware', async () => {
     const executionOrder: string[] = []
     const createMiddleware = (name: string): CorePikkuMiddleware => {
-      return async (services, interaction, next) => {
+      return async (services, wire, next) => {
         executionOrder.push(name)
         await next()
       }
@@ -81,7 +81,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         wireMiddleware: [createMiddleware('wiringMiddleware')],
         inheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -151,7 +151,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         wirePermissions: wiringPermissions,
         tags: ['wiringTag'],
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -182,7 +182,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: () => ({}),
         tags: ['wiringTag'],
         auth: false,
-        interaction: {},
+        wire: {},
       }),
       {
         message: 'Permission denied',
@@ -206,7 +206,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         data: () => ({}),
         wirePermissions: wiringPermissions,
         auth: false,
-        interaction: {},
+        wire: {},
       }),
       {
         message: 'Permission denied',
@@ -230,7 +230,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }),
       {
         message: 'Permission denied',
@@ -254,7 +254,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }),
       {
         message: 'Permission denied',
@@ -267,7 +267,7 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     const duplicatedMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       executionCount++
@@ -292,7 +292,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -344,7 +344,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -372,7 +372,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -384,7 +384,7 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     const wiringMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       executionOrder.push('wiringMiddleware')
@@ -418,7 +418,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         wireMiddleware: [wiringMiddleware],
         wirePermissions: wiringPermissions,
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -436,7 +436,7 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     const funcMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       executionOrder.push('funcMiddleware')
@@ -470,7 +470,7 @@ describe('runPikkuFunc - Integration Tests', () => {
         getAllServices: () => mockServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
@@ -486,15 +486,15 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should pass correct parameters to function', async () => {
     let receivedServices: any
     let receivedData: any
-    let receivedInteraction: any
+    let receivedWire: any
 
     const testData = { test: 'data' }
 
     addTestFunction('testFunc', {
-      func: async (services, data, interaction) => {
+      func: async (services, data, wire) => {
         receivedServices = services
         receivedData = data
-        receivedInteraction = interaction
+        receivedWire = wire
         return 'success'
       },
     })
@@ -507,32 +507,32 @@ describe('runPikkuFunc - Integration Tests', () => {
         singletonServices: mockServices,
         data: () => testData,
         auth: false,
-        interaction: { rpc: {} },
+        wire: { rpc: {} },
       }
     )
 
     assert.deepEqual(receivedServices, mockServices)
     assert.equal(receivedData, testData)
-    // Check that interaction has rpc service and session
-    assert.ok(receivedInteraction.rpc)
-    assert.equal(receivedInteraction.session, undefined)
+    // Check that wire has rpc service and session
+    assert.ok(receivedWire.rpc)
+    assert.equal(receivedWire.session, undefined)
   })
 
-  test('should handle async createInteractionServices function', async () => {
+  test('should handle async createWireServices function', async () => {
     let servicesProvided: any
-    const interactionServices = { customService: 'value' }
+    const wireServices = { customService: 'value' }
 
     addTestFunction('testFunc', {
-      func: async (services, data, interaction) => {
+      func: async (services, data, wire) => {
         servicesProvided = services
         return 'success'
       },
     })
 
-    const asyncCreateInteractionServices = async () => {
+    const asyncCreateWireServices = async () => {
       // Simulate async service creation
       await new Promise((resolve) => setTimeout(resolve, 1))
-      return interactionServices
+      return wireServices
     }
 
     const result = await runPikkuFunc(
@@ -541,17 +541,17 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        createInteractionServices: asyncCreateInteractionServices,
+        createWireServices: asyncCreateWireServices,
         data: () => ({}),
         auth: false,
-        interaction: {},
+        wire: {},
       }
     )
 
     assert.equal(result, 'success')
     assert.deepEqual(servicesProvided, {
       ...mockSingletonServices,
-      ...interactionServices,
+      ...wireServices,
     })
   })
 })

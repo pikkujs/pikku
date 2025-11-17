@@ -3,7 +3,7 @@ import { VariablesService } from '../services/variables-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
-import { UserInteractionService } from '../services/user-session-service.js'
+import { UserWireService } from '../services/user-session-service.js'
 import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
@@ -11,10 +11,10 @@ import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
 import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
 import { PikkuCLI } from '../wirings/cli/cli.types.js'
 import {
-  PikkuWorkflowInteraction,
+  PikkuWorkflowWire,
   WorkflowService,
   WorkflowServiceConfig,
-  WorkflowStepInteraction,
+  WorkflowStepWire,
 } from '../wirings/workflow/workflow.types.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 
@@ -88,7 +88,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
   Partial<{
     name: string
     services: FunctionServicesMeta
-    usedInteractions: string[]
+    usedWires: string[]
     inputs: string[] | null
     outputs: string[] | null
     tags: string[]
@@ -179,18 +179,16 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 }
 
 /**
- * Represents different forms of interaction within Pikku and the outside world.
+ * Represents different forms of wire within Pikku and the outside world.
  */
-export type PikkuInteraction<
+export type PikkuWire<
   In = unknown,
   Out = unknown,
   UserSession extends CoreUserSession = CoreUserSession,
   TypedRPC extends PikkuRPC = PikkuRPC,
   IsChannel extends true | null = null,
   MCPTools extends string | never = never,
-  TypedWorkflow extends
-    | PikkuWorkflowInteraction
-    | never = PikkuWorkflowInteraction,
+  TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
 > = Partial<{
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
@@ -202,19 +200,19 @@ export type PikkuInteraction<
   queue: PikkuQueue
   cli: PikkuCLI
   workflow: TypedWorkflow
-  workflowStep: WorkflowStepInteraction
-  session: UserInteractionService<UserSession>
+  workflowStep: WorkflowStepWire
+  session: UserWireService<UserSession>
 }>
 
 /**
- * A function that can wrap an interaction and be called before or after
+ * A function that can wrap an wire and be called before or after
  */
 export type CorePikkuMiddleware<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  interactions: PikkuInteraction<unknown, unknown, UserSession>,
+  wires: PikkuWire<unknown, unknown, UserSession>,
   next: () => Promise<void>
 ) => Promise<void>
 
@@ -323,7 +321,7 @@ export const pikkuMiddlewareFactory = <In = any>(
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
 
-export type InteractionServices<
+export type WireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services = CoreServices<SingletonServices>,
 > = Omit<Services, keyof SingletonServices | 'session'>
@@ -342,15 +340,15 @@ export type CreateSingletonServices<
 /**
  * Defines a function type for creating session-specific services.
  */
-export type CreateInteractionServices<
+export type CreateWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services extends
     CoreServices<SingletonServices> = CoreServices<SingletonServices>,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  interaction: PikkuInteraction<unknown, unknown, UserSession>
-) => Promise<InteractionServices<Services, SingletonServices>>
+  wire: PikkuWire<unknown, unknown, UserSession>
+) => Promise<WireServices<Services, SingletonServices>>
 
 /**
  * Defines a function type for creating config.

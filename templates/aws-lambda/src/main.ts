@@ -3,18 +3,14 @@ import { runScheduledTask } from '@pikku/core/scheduler'
 import { APIGatewayProxyEvent } from 'aws-lambda'
 import { runFetch } from '@pikku/lambda/http'
 import { runSQSQueueWorker } from '@pikku/lambda/queue'
-import { createInteractionServices } from '../../functions/src/services.js'
+import { createWireServices } from '../../functions/src/services.js'
 import { coldStart } from './cold-start.js'
 
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 export const httpRoute = async (event: APIGatewayProxyEvent) => {
   const singletonServices = await coldStart()
-  const result = await runFetch(
-    singletonServices,
-    createInteractionServices,
-    event
-  )
+  const result = await runFetch(singletonServices, createWireServices, event)
   return result
 }
 
@@ -28,5 +24,5 @@ export const myScheduledTask: ScheduledHandler = async () => {
 
 export const mySQSWorker: SQSHandler = async (event) => {
   const singletonServices = await coldStart()
-  await runSQSQueueWorker(singletonServices, createInteractionServices, event)
+  await runSQSQueueWorker(singletonServices, createWireServices, event)
 }

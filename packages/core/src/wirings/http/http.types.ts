@@ -5,7 +5,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  CreateInteractionServices,
+  CreateWireServices,
   CorePikkuMiddleware,
   MiddlewareMetadata,
   PermissionMetadata,
@@ -46,7 +46,7 @@ export type RunHTTPWiringOptions = Partial<{
 
 export type RunHTTPWiringParams = {
   singletonServices: CoreSingletonServices
-  createInteractionServices: CreateInteractionServices<
+  createWireServices: CreateWireServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession
@@ -83,7 +83,7 @@ export type CoreHTTPFunction = {
   }>
 }
 /**
- * Represents a http interaction within Pikku, including a request and response.
+ * Represents a http wire within Pikku, including a request and response.
  */
 export interface PikkuHTTP<In = unknown> {
   request?: PikkuHTTPRequest<In>

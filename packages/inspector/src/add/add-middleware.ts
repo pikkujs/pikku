@@ -125,7 +125,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       }
     } else {
       // No pikkuMiddleware wrapper found - extract from factory's return value directly
-      // Factory pattern: (config) => (services, interaction, next) => { ... }
+      // Factory pattern: (config) => (services, wire, next) => { ... }
       if (
         ts.isArrowFunction(factoryNode) ||
         ts.isFunctionExpression(factoryNode)

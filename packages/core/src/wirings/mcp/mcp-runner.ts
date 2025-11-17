@@ -1,10 +1,10 @@
 import {
-  PikkuInteraction,
+  PikkuWire,
   PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
-  type CreateInteractionServices,
+  type CreateWireServices,
 } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
@@ -20,11 +20,11 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
-import { closeInteractionServices } from '../../utils.js'
+import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
-import { PikkuUserInteractionService } from '../../services/user-session-service.js'
+import { PikkuUserWireService } from '../../services/user-session-service.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -37,7 +37,7 @@ export class MCPError extends Error {
 export type RunMCPEndpointParams<Tools extends string = any> = {
   singletonServices: CoreSingletonServices
   mcp?: PikkuMCP<Tools>
-  createInteractionServices?: CreateInteractionServices<
+  createWireServices?: CreateWireServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession
@@ -209,13 +209,9 @@ async function runMCPPikkuFunc(
   name: string,
   mcp: CoreMCPResource | CoreMCPTool | CoreMCPPrompt | undefined,
   pikkuFuncName: string | undefined,
-  {
-    singletonServices,
-    createInteractionServices,
-    mcp: mcpInteraction,
-  }: RunMCPEndpointParams
+  { singletonServices, createWireServices, mcp: mcpWire }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
-  let interactionServices: any
+  let wireServices: any
 
   try {
     // Validate JSON-RPC request structure
@@ -239,9 +235,9 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    const interaction: PikkuInteraction = {
-      mcp: mcpInteraction,
-      session: new PikkuUserInteractionService(),
+    const wire: PikkuWire = {
+      mcp: mcpWire,
+      session: new PikkuUserWireService(),
     }
 
     // Get metadata for the MCP endpoint to access pre-resolved middleware
@@ -260,14 +256,14 @@ async function runMCPPikkuFunc(
       pikkuFuncName,
       {
         singletonServices,
-        createInteractionServices,
+        createWireServices,
         data: () => request.params,
         inheritedMiddleware: meta?.middleware,
         wireMiddleware: mcp.middleware,
         inheritedPermissions: meta?.permissions,
         wirePermissions: mcp.permissions,
         tags: mcp.tags,
-        interaction,
+        wire,
       }
     )
 
@@ -301,11 +297,8 @@ async function runMCPPikkuFunc(
       })
     }
   } finally {
-    if (interactionServices) {
-      await closeInteractionServices(
-        singletonServices.logger,
-        interactionServices
-      )
+    if (wireServices) {
+      await closeWireServices(singletonServices.logger, wireServices)
     }
   }
 }

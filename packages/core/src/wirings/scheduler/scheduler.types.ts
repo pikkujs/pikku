@@ -44,7 +44,7 @@ export type CoreScheduledTask<
 }
 
 /**
- * Represents a scheduled task interaction object for middleware
+ * Represents a scheduled task wire object for middleware
  * Provides information about the current scheduled task execution
  */
 export interface PikkuScheduledTask {

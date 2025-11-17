@@ -7,21 +7,21 @@ import {
   CoreUserSession,
   CorePikkuMiddleware,
   PikkuWiringTypes,
-  PikkuInteraction,
+  PikkuWire,
   MiddlewareMetadata,
   PermissionMetadata,
   CoreSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
   CorePikkuPermission,
 } from './functions.types.js'
-import { UserInteractionService } from '../services/user-session-service.js'
+import { UserWireService } from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
-import { closeInteractionServices } from '../utils.js'
+import { closeWireServices } from '../utils.js'
 
 export const addFunction = (
   funcName: string,
@@ -33,24 +33,20 @@ export const addFunction = (
 export const runPikkuFuncDirectly = async <In, Out>(
   funcName: string,
   allServices: CoreServices,
-  interaction: PikkuInteraction,
+  wire: PikkuWire,
   data: In,
-  userSession?: UserInteractionService<CoreUserSession>
+  userSession?: UserWireService<CoreUserSession>
 ) => {
   const funcConfig = pikkuState('function', 'functions').get(funcName)
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  // Inject session into interaction
-  const interactionWithSession = {
-    ...interaction,
+  // Inject session into wire
+  const wireWithSession = {
+    ...wire,
     session: userSession,
   }
-  return (await funcConfig.func(
-    allServices,
-    data,
-    interactionWithSession
-  )) as Out
+  return (await funcConfig.func(allServices, data, wireWithSession)) as Out
 }
 
 export const runPikkuFunc = async <In = any, Out = any>(
@@ -59,7 +55,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   funcName: string,
   {
     singletonServices,
-    createInteractionServices,
+    createWireServices,
     data,
     auth: wiringAuth,
     inheritedMiddleware,
@@ -68,10 +64,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wirePermissions,
     coerceDataFromSchema,
     tags = [],
-    interaction,
+    wire,
   }: {
     singletonServices: CoreSingletonServices
-    createInteractionServices?: CreateInteractionServices
+    createWireServices?: CreateWireServices
     data: () => Promise<In> | In
     auth?: boolean
     inheritedMiddleware?: MiddlewareMetadata[]
@@ -80,7 +76,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     coerceDataFromSchema?: boolean
     tags?: string[]
-    interaction: PikkuInteraction
+    wire: PikkuWire
   }
 ): Promise<Out> => {
   const funcConfig = pikkuState('function', 'functions').get(funcName)
@@ -100,7 +96,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
-    const session = await interaction.session?.get()
+    const session = await wire.session?.get()
     if (wiringAuth === true || funcConfig.auth === true) {
       // This means it was explicitly enabled in either wiring or function and has to be respected
       if (!session) {
@@ -133,7 +129,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
-    const rpcLessInteraction = { ...interaction, rpc: undefined }
+    const rpcLessWire = { ...wire, rpc: undefined }
 
     // Run permissions check with combined permissions: inheritedPermissions (including tags) → wirePermissions → funcPermissions
     await runPermissions(wireType, wireId, {
@@ -142,27 +138,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       services: singletonServices,
-      interaction: rpcLessInteraction as any,
+      wire: rpcLessWire as any,
       data: actualData,
     })
 
-    const interactionServices = await createInteractionServices?.(
-      singletonServices,
-      interaction
-    )
+    const wireServices = await createWireServices?.(singletonServices, wire)
     try {
-      const services = { ...singletonServices, ...interactionServices }
-      const rpc = rpcService.getContextRPCService(services, interaction)
+      const services = { ...singletonServices, ...wireServices }
+      const rpc = rpcService.getContextRPCService(services, wire)
       return await funcConfig.func(services, actualData, {
-        ...interaction,
+        ...wire,
         rpc,
       })
     } finally {
-      if (interactionServices) {
-        await closeInteractionServices(
-          singletonServices.logger,
-          interactionServices
-        )
+      if (wireServices) {
+        await closeWireServices(singletonServices.logger, wireServices)
       }
     }
   }
@@ -178,7 +168,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   if (allMiddleware.length > 0) {
     return (await runMiddleware<CorePikkuMiddleware>(
       singletonServices,
-      interaction,
+      wire,
       allMiddleware,
       executeFunction
     )) as Out

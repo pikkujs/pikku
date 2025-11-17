@@ -12,7 +12,7 @@
       ]
     ]
   ],
-  "interactionServicesTypeImportMap": [
+  "wireServicesTypeImportMap": [
     [
       "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
       [
@@ -60,19 +60,19 @@
       ]
     ]
   ],
-  "interactionServicesFactories": [
+  "wireServicesFactories": [
     [
       "src/services.ts",
       [
         {
-          "variable": "createInteractionServices",
-          "type": "CreateInteractionServices",
+          "variable": "createWireServices",
+          "type": "CreateWireServices",
           "typePath": "src/services.ts"
         }
       ]
     ]
   ],
-  "interactionServicesMeta": [["createInteractionServices", []]],
+  "wireServicesMeta": [["createWireServices", []]],
   "configFactories": [
     [
       "src/services.ts",
@@ -98,7 +98,7 @@
       "variable": "SingletonServices",
       "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
     },
-    "interactionServicesType": {
+    "wireServicesType": {
       "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
       "type": "Services",
       "variable": "Services",
@@ -122,10 +122,10 @@
       "variable": "createSingletonServices",
       "typePath": "src/services.ts"
     },
-    "interactionServicesFactory": {
+    "wireServicesFactory": {
       "file": "src/services.ts",
-      "type": "CreateInteractionServices",
-      "variable": "createInteractionServices",
+      "type": "CreateWireServices",
+      "variable": "createWireServices",
       "typePath": "src/services.ts"
     }
   },

@@ -7,7 +7,7 @@ import { pikkuMiddleware, addMiddleware } from '../../.pikku/pikku-types.gen.js'
  * available to permissions and subsequent middleware/functions.
  *
  * Note: userSession is only available in HTTP/Channel contexts.
- * For queue/scheduler/CLI/MCP, sessions come from the createInteractionServices factory.
+ * For queue/scheduler/CLI/MCP, sessions come from the createWireServices factory.
  */
 export const fakeSessionMiddleware = pikkuMiddleware(
   async ({ logger }, { session }, next) => {

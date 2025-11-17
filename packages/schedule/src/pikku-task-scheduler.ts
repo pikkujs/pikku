@@ -3,7 +3,7 @@ import {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '@pikku/core'
 import {
   runScheduledTask,
@@ -16,7 +16,7 @@ export class PikkuTaskScheduler<TaskName extends string> {
 
   constructor(
     private singletonServices: CoreSingletonServices,
-    private createInteractionServices?: CreateInteractionServices<
+    private createWireServices?: CreateWireServices<
       CoreSingletonServices,
       CoreServices,
       CoreUserSession
@@ -62,7 +62,7 @@ export class PikkuTaskScheduler<TaskName extends string> {
         )
         await runScheduledTask({
           singletonServices: this.singletonServices,
-          createInteractionServices: this.createInteractionServices as any,
+          createWireServices: this.createWireServices as any,
           name: task.name,
         })
         this.singletonServices.logger.debug(

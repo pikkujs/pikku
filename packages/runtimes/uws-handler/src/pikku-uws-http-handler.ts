@@ -1,6 +1,6 @@
 import * as uWS from 'uWebSockets.js'
 
-import { CoreSingletonServices, CreateInteractionServices } from '@pikku/core'
+import { CoreSingletonServices, CreateWireServices } from '@pikku/core'
 import { fetch } from '@pikku/core/http'
 
 import { uwsToRequest } from './uws-request-convertor.js'
@@ -16,14 +16,14 @@ import { compileAllSchemas } from '@pikku/core/schema'
  *
  * @typedef {Object} PikkuuWSHandlerOptions
  * @property {CoreSingletonServices} singletonServices - The singleton services used by the handler.
- * @property {CreateInteractionServices<any, any, any>} createInteractionServices - A function to create interaction services.
+ * @property {CreateWireServices<any, any, any>} createWireServices - A function to create wire services.
  * @property {boolean} [logRoutes] - Whether to log the routes.
  * @property {boolean} [loadSchemas] - Whether to load all schemas.
  * @property {RunHTTPWiringOptions} - Additional options for running the route.
  */
 export type PikkuuWSHandlerOptions = {
   singletonServices: CoreSingletonServices
-  createInteractionServices: CreateInteractionServices<any, any, any>
+  createWireServices: CreateWireServices<any, any, any>
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions
@@ -37,7 +37,7 @@ export type PikkuuWSHandlerOptions = {
 export const pikkuHTTPHandler = ({
   logRoutes,
   singletonServices,
-  createInteractionServices,
+  createWireServices,
   loadSchemas,
 }: PikkuuWSHandlerOptions) => {
   if (logRoutes) {
@@ -51,7 +51,7 @@ export const pikkuHTTPHandler = ({
     const request = await uwsToRequest(req, res)
     const response = await fetch(request, {
       singletonServices,
-      createInteractionServices,
+      createWireServices,
     })
     await sendPikkuResponseToUWS(response, res)
   }

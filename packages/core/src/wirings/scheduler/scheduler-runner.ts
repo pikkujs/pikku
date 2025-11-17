@@ -1,17 +1,17 @@
 import {
-  PikkuInteraction,
+  PikkuWire,
   PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
-  type CreateInteractionServices,
+  type CreateWireServices,
 } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
-import { closeInteractionServices } from '../../utils.js'
+import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { PikkuUserInteractionService } from '../../services/user-session-service.js'
+import { PikkuUserWireService } from '../../services/user-session-service.js'
 import {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
@@ -21,7 +21,7 @@ export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
   singletonServices: CoreSingletonServices
-  createInteractionServices?: CreateInteractionServices<
+  createWireServices?: CreateWireServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession
@@ -75,13 +75,13 @@ export async function runScheduledTask({
   name,
   session,
   singletonServices,
-  createInteractionServices,
+  createWireServices,
 }: RunScheduledTasksParams): Promise<void> {
-  let interactionServices: any
+  let wireServices: any
   const task = pikkuState('scheduler', 'tasks').get(name)
   const meta = pikkuState('scheduler', 'meta')[name]
 
-  const userSession = new PikkuUserInteractionService()
+  const userSession = new PikkuUserWireService()
   if (session) {
     userSession.set(session)
   }
@@ -95,8 +95,8 @@ export async function runScheduledTask({
     )
   }
 
-  // Create the scheduled task interaction object
-  const interaction: PikkuInteraction = {
+  // Create the scheduled task wire object
+  const wire: PikkuWire = {
     scheduledTask: {
       name,
       schedule: task.schedule,
@@ -119,13 +119,13 @@ export async function runScheduledTask({
       meta.pikkuFuncName,
       {
         singletonServices,
-        createInteractionServices,
+        createWireServices,
         auth: false,
         data: () => undefined,
         inheritedMiddleware: meta.middleware,
         wireMiddleware: task.middleware,
         tags: task.tags,
-        interaction,
+        wire,
       }
     )
 
@@ -137,11 +137,8 @@ export async function runScheduledTask({
     }
     throw e
   } finally {
-    if (interactionServices) {
-      await closeInteractionServices(
-        singletonServices.logger,
-        interactionServices
-      )
+    if (wireServices) {
+      await closeWireServices(singletonServices.logger, wireServices)
     }
   }
 }

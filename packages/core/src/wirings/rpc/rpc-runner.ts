@@ -1,6 +1,6 @@
 import {
   CoreServices,
-  PikkuInteraction,
+  PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
@@ -26,7 +26,7 @@ const getPikkuFunctionName = (rpcName: string): string => {
 export class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
-    private interaction: PikkuInteraction,
+    private wire: PikkuWire,
     private options: {
       coerceDataFromSchema?: boolean
       requiresAuth?: boolean
@@ -48,12 +48,12 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const rpcDepth = this.interaction.rpc?.depth || 0
-    const updatedInteraction: PikkuInteraction = {
-      ...this.interaction,
-      rpc: this.interaction.rpc
+    const rpcDepth = this.wire.rpc?.depth || 0
+    const updatedWire: PikkuWire = {
+      ...this.wire,
+      rpc: this.wire.rpc
         ? {
-            ...this.interaction.rpc,
+            ...this.wire.rpc,
             depth: rpcDepth + 1,
             global: false,
           }
@@ -66,27 +66,27 @@ export class ContextAwareRPCService {
       {
         auth: this.options.requiresAuth,
         // TODO: this is a hack since services have already been created
-        // but is valid since we don't want to keep creating new interaction services
+        // but is valid since we don't want to keep creating new wire services
         singletonServices: this.services,
         data: () => data,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
-        interaction: updatedInteraction,
+        wire: updatedWire,
       }
     )
   }
 
-  public async rpcWithInteraction<In = any, Out = any>(
-    funcName: string,
+  public async rpcWithWire<In = any, Out = any>(
+    rpcName: string,
     data: In,
-    interaction: PikkuInteraction
+    wire: PikkuWire
   ): Promise<Out> {
-    const rpcDepth = this.interaction.rpc?.depth || 0
-    const mergedInteraction: PikkuInteraction = {
-      ...this.interaction,
-      ...interaction,
-      rpc: this.interaction.rpc
+    const rpcDepth = this.wire.rpc?.depth || 0
+    const mergedWire: PikkuWire = {
+      ...this.wire,
+      ...wire,
+      rpc: this.wire.rpc
         ? {
-            ...this.interaction.rpc,
+            ...this.wire.rpc,
             depth: rpcDepth + 1,
             global: false,
           }
@@ -94,14 +94,14 @@ export class ContextAwareRPCService {
     }
     return runPikkuFunc<In, Out>(
       PikkuWiringTypes.rpc,
-      funcName,
-      getPikkuFunctionName(funcName),
+      rpcName,
+      getPikkuFunctionName(rpcName),
       {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
         data: () => data,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
-        interaction: mergedInteraction,
+        wire: mergedWire,
       }
     )
   }
@@ -136,11 +136,11 @@ export class PikkuRPCService<
   // Convenience function for initializing
   getContextRPCService(
     services: Services,
-    interaction: PikkuInteraction,
+    wire: PikkuWire,
     requiresAuth?: boolean | undefined,
     depth: number = 0
   ): TypedRPC {
-    const serviceRPC = new ContextAwareRPCService(services, interaction, {
+    const serviceRPC = new ContextAwareRPCService(services, wire, {
       coerceDataFromSchema: this.config?.coerceDataFromSchema,
       requiresAuth,
     })
@@ -150,7 +150,7 @@ export class PikkuRPCService<
       invoke: serviceRPC.rpc.bind(serviceRPC),
       invokeExposed: serviceRPC.rpc.bind(serviceRPC),
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
-      rpcWithInteraction: serviceRPC.rpcWithInteraction.bind(serviceRPC),
+      rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
     } as any
   }
 }

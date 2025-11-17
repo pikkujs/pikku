@@ -2,11 +2,11 @@ import { FilesAndMethodsErrors } from '@pikku/inspector'
 
 export type RequiredTypes = Partial<{
   config: boolean
-  interactionServiceType: boolean
+  wireServiceType: boolean
   singletonServicesType: boolean
   userSessionType: boolean
   singletonServicesFactory: boolean
-  interactionServicesFactory: boolean
+  wireServicesFactory: boolean
 }>
 
 export const checkRequiredTypes = (
@@ -31,7 +31,7 @@ export const checkRequiredTypes = (
       return false
     }
     if (requires.config && message.includes('CoreConfig')) return true
-    if (requires.interactionServiceType && message.includes('CoreServices'))
+    if (requires.wireServiceType && message.includes('CoreServices'))
       return true
     if (
       requires.singletonServicesType &&
@@ -45,10 +45,7 @@ export const checkRequiredTypes = (
       message.includes('CreateSingletonServices')
     )
       return true
-    if (
-      requires.interactionServicesFactory &&
-      message.includes('CreateInteractionServices')
-    )
+    if (requires.wireServicesFactory && message.includes('CreateWireServices'))
       return true
     return false
   })

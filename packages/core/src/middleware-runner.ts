@@ -1,6 +1,6 @@
 import {
   CoreSingletonServices,
-  PikkuInteraction,
+  PikkuWire,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
   PikkuWiringTypes,
@@ -13,7 +13,7 @@ import { freezeDedupe } from './utils.js'
  * Runs a chain of middleware functions in sequence before executing the main function.
  *
  * @param services - An object containing services (e.g., singletonServices, userSession, etc.)
- * @param interaction - The interaction context, e.g., { http }.
+ * @param wire - The wire context, e.g., { http }.
  * @param middlewares - An array of middleware functions to run.
  * @param main - The main function to execute after all middleware have run.
  * @returns A promise resolving to the result of the main function.
@@ -28,7 +28,7 @@ import { freezeDedupe } from './utils.js'
  */
 export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   services: CoreSingletonServices,
-  interaction: PikkuInteraction,
+  wire: PikkuWire,
   middlewares: readonly Middleware[],
   main?: () => Promise<unknown>
 ): Promise<unknown> => {
@@ -36,7 +36,7 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   let result: any
   const dispatch = async (index: number): Promise<any> => {
     if (middlewares && index < middlewares.length) {
-      return await middlewares[index]!(services as any, interaction, () =>
+      return await middlewares[index]!(services as any, wire, () =>
         dispatch(index + 1)
       )
     } else if (main) {

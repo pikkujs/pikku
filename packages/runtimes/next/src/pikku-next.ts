@@ -6,7 +6,7 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CreateConfig,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '@pikku/core'
 import { HTTPMethod, fetchData, fetch } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
@@ -30,18 +30,14 @@ export class PikkuNextJS {
    *
    * @param createConfig - A function that creates/gets the config used in pikku for the application.
    * @param createSingletonServices - A function that creates singleton services for the application.
-   * @param createInteractionServices - A function that creates session-specific services for each request.
+   * @param createWireServices - A function that creates session-specific services for each request.
    */
   constructor(
     private readonly createConfig: CreateConfig<CoreConfig>,
     private readonly createSingletonServices: (
       config: CoreConfig
     ) => Promise<CoreSingletonServices>,
-    private readonly createInteractionServices: CreateInteractionServices<
-      any,
-      any,
-      any
-    >
+    private readonly createWireServices: CreateWireServices<any, any, any>
   ) {}
 
   /**
@@ -71,7 +67,7 @@ export class PikkuNextJS {
 
     return (await fetchData<In, Out>(request, response, {
       singletonServices,
-      createInteractionServices: this.createInteractionServices,
+      createWireServices: this.createWireServices,
       bubbleErrors: true,
     })) as Out
   }
@@ -99,7 +95,7 @@ export class PikkuNextJS {
     const response = new PikkuActionNextResponse(false)
     return (await fetchData<In, Out>(request, response, {
       singletonServices,
-      createInteractionServices: this.createInteractionServices,
+      createWireServices: this.createWireServices,
       skipUserSession: true,
       bubbleErrors: true,
     })) as Out
@@ -127,7 +123,7 @@ export class PikkuNextJS {
 
     return (await fetchData<any, Out>(request, response, {
       singletonServices,
-      createInteractionServices: this.createInteractionServices,
+      createWireServices: this.createWireServices,
       bubbleErrors: true,
     })) as Out
   }
@@ -150,7 +146,7 @@ export class PikkuNextJS {
     const response = new PikkuActionNextResponse(false)
     return (await fetchData<any, Out>(request, response, {
       singletonServices,
-      createInteractionServices: this.createInteractionServices,
+      createWireServices: this.createWireServices,
       skipUserSession: true,
       bubbleErrors: true,
     })) as Out
@@ -166,7 +162,7 @@ export class PikkuNextJS {
     const singletonServices = await this.getSingletonServices()
     return fetch(req, {
       singletonServices,
-      createInteractionServices: this.createInteractionServices,
+      createWireServices: this.createWireServices,
     })
   }
 

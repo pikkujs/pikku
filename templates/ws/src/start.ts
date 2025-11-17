@@ -4,7 +4,7 @@ import { Server } from 'http'
 import { WebSocketServer } from 'ws'
 import {
   createConfig,
-  createInteractionServices,
+  createWireServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
 
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
       server,
       wss,
       singletonServices,
-      createInteractionServices,
+      createWireServices,
     })
 
     // Add /health-check endpoint

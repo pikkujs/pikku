@@ -13,7 +13,7 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  interactionServicesTypeImportMap: Array<
+  wireServicesTypeImportMap: Array<
     [
       string,
       { variable: string; type: string | null; typePath: string | null }[],
@@ -37,13 +37,13 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  interactionServicesFactories: Array<
+  wireServicesFactories: Array<
     [
       string,
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  interactionServicesMeta: Array<[string, string[]]>
+  wireServicesMeta: Array<[string, string[]]>
   configFactories: Array<
     [
       string,
@@ -167,7 +167,7 @@ export interface SerializableInspectorState {
     usedMiddleware: string[]
     usedPermissions: string[]
     allSingletonServices: string[]
-    allInteractionServices: string[]
+    allWireServices: string[]
   }
 }
 
@@ -204,8 +204,8 @@ export function serializeInspectorState(
     singletonServicesTypeImportMap: Array.from(
       state.singletonServicesTypeImportMap.entries()
     ),
-    interactionServicesTypeImportMap: Array.from(
-      state.interactionServicesTypeImportMap.entries()
+    wireServicesTypeImportMap: Array.from(
+      state.wireServicesTypeImportMap.entries()
     ),
     userSessionTypeImportMap: Array.from(
       state.userSessionTypeImportMap.entries()
@@ -214,12 +214,8 @@ export function serializeInspectorState(
     singletonServicesFactories: Array.from(
       state.singletonServicesFactories.entries()
     ),
-    interactionServicesFactories: Array.from(
-      state.interactionServicesFactories.entries()
-    ),
-    interactionServicesMeta: Array.from(
-      state.interactionServicesMeta.entries()
-    ),
+    wireServicesFactories: Array.from(state.wireServicesFactories.entries()),
+    wireServicesMeta: Array.from(state.wireServicesMeta.entries()),
     configFactories: Array.from(state.configFactories.entries()),
     filesAndMethods: state.filesAndMethods,
     filesAndMethodsErrors: Array.from(
@@ -284,7 +280,7 @@ export function serializeInspectorState(
       usedMiddleware: Array.from(state.serviceAggregation.usedMiddleware),
       usedPermissions: Array.from(state.serviceAggregation.usedPermissions),
       allSingletonServices: state.serviceAggregation.allSingletonServices,
-      allInteractionServices: state.serviceAggregation.allInteractionServices,
+      allWireServices: state.serviceAggregation.allWireServices,
     },
   }
 }
@@ -316,14 +312,12 @@ export function deserializeInspectorState(
     singletonServicesTypeImportMap: new Map(
       data.singletonServicesTypeImportMap
     ),
-    interactionServicesTypeImportMap: new Map(
-      data.interactionServicesTypeImportMap
-    ),
+    wireServicesTypeImportMap: new Map(data.wireServicesTypeImportMap),
     userSessionTypeImportMap: new Map(data.userSessionTypeImportMap),
     configTypeImportMap: new Map(data.configTypeImportMap),
     singletonServicesFactories: new Map(data.singletonServicesFactories),
-    interactionServicesFactories: new Map(data.interactionServicesFactories),
-    interactionServicesMeta: new Map(data.interactionServicesMeta),
+    wireServicesFactories: new Map(data.wireServicesFactories),
+    wireServicesMeta: new Map(data.wireServicesMeta),
     configFactories: new Map(data.configFactories),
     filesAndMethods: data.filesAndMethods,
     filesAndMethodsErrors: new Map(
@@ -391,7 +385,7 @@ export function deserializeInspectorState(
       usedMiddleware: new Set(data.serviceAggregation.usedMiddleware),
       usedPermissions: new Set(data.serviceAggregation.usedPermissions),
       allSingletonServices: data.serviceAggregation.allSingletonServices,
-      allInteractionServices: data.serviceAggregation.allInteractionServices,
+      allWireServices: data.serviceAggregation.allWireServices,
     },
   }
 }

@@ -7,7 +7,7 @@ import {
 import {
   PikkuDocs,
   CoreSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
   CorePikkuMiddleware,
   MiddlewareMetadata,
   PermissionMetadata,
@@ -33,7 +33,7 @@ export type RunChannelParams<ChannelData> = {
   singletonServices: CoreSingletonServices
   request?: PikkuHTTPRequest<ChannelData>
   response?: PikkuHTTPResponse
-  createInteractionServices?: CreateInteractionServices
+  createWireServices?: CreateWireServices
 }
 
 export interface ChannelMessageMeta {

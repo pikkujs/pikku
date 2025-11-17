@@ -1,7 +1,7 @@
 import Fastify from 'fastify'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
-  createInteractionServices,
+  createWireServices,
   createSingletonServices,
   createConfig,
 } from '../../functions/src/services.js'
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   app.register(pikkuFastifyPlugin, {
     pikku: {
       singletonServices,
-      createInteractionServices,
+      createWireServices,
     },
   })
 

@@ -4,8 +4,8 @@ import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   CoreConfig,
   CoreSingletonServices,
-  CreateInteractionServices,
-  PikkuInteraction,
+  CreateWireServices,
+  PikkuWire,
   PikkuWiringTypes,
   SerializedError,
 } from '../../types/core.types.js'
@@ -17,7 +17,7 @@ import {
   WorkflowRunNotFound,
 } from './workflow-runner.js'
 import type {
-  PikkuWorkflowInteraction,
+  PikkuWorkflowWire,
   StepState,
   WorkflowRun,
   WorkflowStatus,
@@ -41,17 +41,17 @@ export class WorkflowStepNameNotString extends Error {
 export abstract class PikkuWorkflowService implements WorkflowService {
   private config: WorkflowServiceConfig | undefined
   private singletonServices: CoreSingletonServices | undefined
-  private createInteractionServices: CreateInteractionServices | undefined
+  private createWireServices: CreateWireServices | undefined
 
   constructor() {}
 
   public setServices(
     singletonServices: CoreSingletonServices,
-    createInteractionServices: CreateInteractionServices,
+    createWireServices: CreateWireServices,
     { workflow }: CoreConfig
   ) {
     this.singletonServices = singletonServices
-    this.createInteractionServices = createInteractionServices
+    this.createWireServices = createWireServices
     this.config = {
       retries: workflow?.retries ?? 0,
       retryDelay: workflow?.retryDelay ?? 0,
@@ -271,12 +271,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const meta = pikkuState('workflows', 'meta')
       const workflowMeta = meta[run.workflow]
 
-      const workflowInteraction = this.createWorkflowInteraction(
+      const workflowWire = this.createWorkflowWire(
         run.workflow,
         runId,
         rpcService
       )
-      const interaction: PikkuInteraction = { workflow: workflowInteraction }
+      const wire: PikkuWire = { workflow: workflowWire }
       try {
         const result = await runPikkuFunc(
           PikkuWiringTypes.workflow,
@@ -284,8 +284,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           workflowMeta.pikkuFuncName,
           {
             singletonServices: this.singletonServices!,
-            interaction,
-            createInteractionServices: this.createInteractionServices,
+            wire,
+            createWireServices: this.createWireServices,
             data: () => run.input,
           }
         )
@@ -351,7 +351,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     try {
       // Execute RPC with workflow step context
-      const result = await rpcService.rpcWithInteraction(rpcName, data, {
+      const result = await rpcService.rpcWithWire(rpcName, data, {
         workflowStep: {
           runId,
           stepId: stepState.stepId,
@@ -506,7 +506,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const attemptCount = stepState.attemptCount
 
       try {
-        const result = await rpcService.rpcWithInteraction(rpcName, data, {
+        const result = await rpcService.rpcWithWire(rpcName, data, {
           workflowStep: {
             runId,
             stepId: stepState.stepId,
@@ -661,12 +661,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     throw new WorkflowCancelledException(runId, reason)
   }
 
-  private createWorkflowInteraction(
+  private createWorkflowWire(
     workflowName: string,
     runId: string,
     rpcService: any
-  ): PikkuWorkflowInteraction {
-    const workflowInteraction: PikkuWorkflowInteraction = {
+  ): PikkuWorkflowWire {
+    const workflowWire: PikkuWorkflowWire = {
       workflowName,
       runId,
       getRun: async () => (await this.getRun(runId)) as WorkflowRun,
@@ -713,7 +713,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         await this.cancelWorkflow(runId, reason)
       },
     }
-    return workflowInteraction
+    return workflowWire
   }
 
   private verifyStepName(stepName: string) {

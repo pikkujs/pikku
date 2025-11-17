@@ -6,7 +6,7 @@ import type {
 } from '../types/application-types.d.js'
 import {
   CreateConfig,
-  CreateInteractionServices,
+  CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
 import {
@@ -68,10 +68,10 @@ export const createSingletonServices: CreateSingletonServices<
 }
 
 /**
- * This function creates the interaction services on each request.
- * It's important to use the type CreateInteractionServices here, as the pikku CLI uses them to improve the development experience!
+ * This function creates the wire services on each request.
+ * It's important to use the type CreateWireServices here, as the pikku CLI uses them to improve the development experience!
  */
-export const createInteractionServices: CreateInteractionServices<
+export const createWireServices: CreateWireServices<
   SingletonServices,
   Services,
   UserSession

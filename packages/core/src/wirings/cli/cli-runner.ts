@@ -18,13 +18,13 @@ import {
 import type {
   CoreSingletonServices,
   CoreServices,
-  CreateInteractionServices,
-  PikkuInteraction,
+  CreateWireServices,
+  PikkuWire,
   CreateConfig,
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { PikkuUserInteractionService } from '../../services/user-session-service.js'
+import { PikkuUserWireService } from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
@@ -244,13 +244,13 @@ export async function runCLICommand({
   commandPath,
   data,
   singletonServices,
-  createInteractionServices,
+  createWireServices,
 }: {
   program: string
   commandPath: string[]
   data: Record<string, any>
   singletonServices: CoreSingletonServices
-  createInteractionServices?: CreateInteractionServices
+  createWireServices?: CreateWireServices
 }): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState('cli', 'meta')
@@ -326,9 +326,9 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  const userSession = new PikkuUserInteractionService<CoreUserSession>()
+  const userSession = new PikkuUserWireService<CoreUserSession>()
 
-  const interaction: PikkuInteraction = {
+  const wire: PikkuWire = {
     cli: {
       program,
       command: commandPath,
@@ -345,7 +345,7 @@ export async function runCLICommand({
       funcName,
       {
         singletonServices,
-        createInteractionServices,
+        createWireServices,
         data: pluckedData,
         auth: false,
         inheritedMiddleware: currentCommand.middleware,
@@ -353,7 +353,7 @@ export async function runCLICommand({
         inheritedPermissions: currentCommand.permissions,
         wirePermissions: undefined,
         tags: programData?.tags,
-        interaction,
+        wire,
       }
     )
 
@@ -399,13 +399,13 @@ export async function executeCLI({
   args,
   createConfig,
   createSingletonServices,
-  createInteractionServices,
+  createWireServices,
 }: {
   programName: string
   args?: string[]
   createConfig: CreateConfig<any, any>
   createSingletonServices: CreateSingletonServices<any, any>
-  createInteractionServices?: CreateInteractionServices<any, any, any>
+  createWireServices?: CreateWireServices<any, any, any>
 }): Promise<void> {
   if (!args) {
     throw new Error(
@@ -489,7 +489,7 @@ export async function executeCLI({
       commandPath: parsed.commandPath,
       data,
       singletonServices,
-      createInteractionServices,
+      createWireServices,
     })
   } catch (error: any) {
     // Re-throw CLIError as-is

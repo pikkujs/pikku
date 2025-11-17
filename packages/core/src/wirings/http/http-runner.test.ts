@@ -11,12 +11,8 @@ import {
 import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
-const sessionMiddleware: CorePikkuMiddleware = async (
-  services,
-  interaction,
-  next
-) => {
-  interaction.session?.set({ userId: 'test' } as any)
+const sessionMiddleware: CorePikkuMiddleware = async (services, wire, next) => {
+  wire.session?.set({ userId: 'test' } as any)
   await next()
 }
 
@@ -47,7 +43,7 @@ const setHTTPFunctionMap = (func: any) => {
 
 describe('fetch', () => {
   let singletonServices: any
-  let createInteractionServices: any
+  let createWireServices: any
   let request: any
   let response: any
 
@@ -63,7 +59,7 @@ describe('fetch', () => {
       },
     }
 
-    createInteractionServices = async () => ({})
+    createWireServices = async () => ({})
     request = new PikkuMockRequest('/test', 'get')
     response = new PikkuMockResponse()
 
@@ -81,7 +77,7 @@ describe('fetch', () => {
       async () =>
         fetch(request, {
           singletonServices,
-          createInteractionServices,
+          createWireServices,
           bubbleErrors: true,
         }),
       NotFoundError
@@ -103,7 +99,7 @@ describe('fetch', () => {
 
     const result = await fetch(request, {
       singletonServices,
-      createInteractionServices,
+      createWireServices,
     })
 
     assert.deepStrictEqual(await result.json(), { success: true })
@@ -126,7 +122,7 @@ describe('fetch', () => {
 
     await fetch(request, {
       singletonServices,
-      createInteractionServices,
+      createWireServices,
     })
 
     assert.strictEqual(await permissions.test(), true)
@@ -147,7 +143,7 @@ describe('fetch', () => {
       async () =>
         fetch(request, {
           singletonServices,
-          createInteractionServices,
+          createWireServices,
           bubbleErrors: true,
         }),
       error

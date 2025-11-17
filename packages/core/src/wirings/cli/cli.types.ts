@@ -44,7 +44,7 @@ export interface CLIPositional {
 }
 
 /**
- * CLI interaction context
+ * CLI wire context
  */
 export type PikkuCLI = {
   program: string

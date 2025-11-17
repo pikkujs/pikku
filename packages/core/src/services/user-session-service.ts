@@ -1,7 +1,7 @@
 import { ChannelStore } from '../wirings/channel/channel-store.js'
 import { CoreUserSession } from '../types/core.types.js'
 
-export interface UserInteractionService<UserSession extends CoreUserSession> {
+export interface UserWireService<UserSession extends CoreUserSession> {
   sessionChanged: boolean
   setInitial(session: UserSession): void
   set(session: UserSession): Promise<void> | void
@@ -9,8 +9,8 @@ export interface UserInteractionService<UserSession extends CoreUserSession> {
   get(): Promise<UserSession | undefined> | UserSession | undefined
 }
 
-export class PikkuUserInteractionService<UserSession extends CoreUserSession>
-  implements UserInteractionService<UserSession>
+export class PikkuUserWireService<UserSession extends CoreUserSession>
+  implements UserWireService<UserSession>
 {
   public sessionChanged = false
   private session: UserSession | undefined

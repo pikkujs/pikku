@@ -6,7 +6,7 @@ import type {
 } from '../types/application-types.js'
 import {
   CreateConfig,
-  CreateInteractionServices,
+  CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
 import { pikkuCLIRender } from '@pikku/core/cli'
@@ -221,7 +221,7 @@ export const createSingletonServices: CreateSingletonServices<
           type: 'CoreUserSession',
           typePath: corePackagePath,
         },
-        interactionServicesType: {
+        wireServicesType: {
           file: corePackagePath,
           variable: 'CoreServices',
           type: 'CoreServices',
@@ -262,7 +262,7 @@ export const createSingletonServices: CreateSingletonServices<
           configFileType: config.configFile,
           userSessionType: config.userSessionType,
           singletonServicesFactoryType: config.singletonServicesFactoryType,
-          interactionServicesFactoryType: config.interactionServicesFactoryType,
+          wireServicesFactoryType: config.wireServicesFactoryType,
         },
       })
 
@@ -300,7 +300,7 @@ export const createSingletonServices: CreateSingletonServices<
   }
 }
 
-export const createInteractionServices: CreateInteractionServices<
+export const createWireServices: CreateWireServices<
   SingletonServices,
   Services,
   UserSession

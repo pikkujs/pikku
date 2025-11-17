@@ -1,6 +1,6 @@
 import { openChannel } from '../channel-runner.js'
-import { createHTTPInteraction } from '../../http/http-runner.js'
-import { closeInteractionServices } from '../../../utils.js'
+import { createHTTPWire } from '../../http/http-runner.js'
+import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import {
   CoreChannel,
@@ -8,12 +8,9 @@ import {
   RunChannelParams,
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import {
-  PikkuInteraction,
-  InteractionServices,
-} from '../../../types/core.types.js'
+import { PikkuWire, WireServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { PikkuUserInteractionService } from '../../../services/user-session-service.js'
+import { PikkuUserWireService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
@@ -23,7 +20,7 @@ export const runLocalChannel = async ({
   request,
   response,
   route,
-  createInteractionServices,
+  createWireServices,
   skipUserSession = false,
   respondWith404 = true,
   coerceDataFromSchema = true,
@@ -32,16 +29,14 @@ export const runLocalChannel = async ({
 }: Partial<Pick<CoreChannel<unknown, any>, 'route'>> &
   RunChannelOptions &
   RunChannelParams<unknown>): Promise<PikkuLocalChannelHandler | void> => {
-  let interactionServices:
-    | InteractionServices<typeof singletonServices>
-    | undefined
+  let wireServices: WireServices<typeof singletonServices> | undefined
 
   let channelHandler: PikkuLocalChannelHandler | undefined
-  const userSession = new PikkuUserInteractionService()
+  const userSession = new PikkuUserWireService()
 
   let http: PikkuHTTP | undefined
   if (request) {
-    http = createHTTPInteraction(request, response)
+    http = createHTTPWire(request, response)
     route = http?.request?.path()
   }
 
@@ -49,7 +44,7 @@ export const runLocalChannel = async ({
   try {
     ;({ openingData, channelConfig, meta } = await openChannel({
       channelId,
-      createInteractionServices,
+      createWireServices,
       respondWith404,
       request,
       response,
@@ -80,16 +75,13 @@ export const runLocalChannel = async ({
         openingData
       )
       const channel = channelHandler.getChannel()
-      const interaction: PikkuInteraction = { channel, session: userSession }
+      const wire: PikkuWire = { channel, session: userSession }
 
-      if (createInteractionServices) {
-        interactionServices = await createInteractionServices(
-          singletonServices,
-          interaction
-        )
+      if (createWireServices) {
+        wireServices = await createWireServices(singletonServices, wire)
       }
 
-      const services = { ...singletonServices, ...interactionServices }
+      const services = { ...singletonServices, ...wireServices }
 
       channelHandler.registerOnOpen(async () => {
         if (channelConfig.onConnect && meta.connect) {
@@ -130,11 +122,8 @@ export const runLocalChannel = async ({
           }
         }
 
-        if (interactionServices) {
-          await closeInteractionServices(
-            singletonServices.logger,
-            interactionServices
-          )
+        if (wireServices) {
+          await closeWireServices(singletonServices.logger, wireServices)
         }
       })
 
@@ -164,11 +153,8 @@ export const runLocalChannel = async ({
         bubbleErrors
       )
     } finally {
-      if (interactionServices) {
-        await closeInteractionServices(
-          singletonServices.logger,
-          interactionServices
-        )
+      if (wireServices) {
+        await closeWireServices(singletonServices.logger, wireServices)
       }
     }
   }

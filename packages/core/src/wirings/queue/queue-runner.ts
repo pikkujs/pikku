@@ -1,4 +1,4 @@
-import type { CoreServices, PikkuInteraction } from '../../types/core.types.js'
+import type { CoreServices, PikkuWire } from '../../types/core.types.js'
 import type { CoreQueueWorker, QueueJob, PikkuQueue } from './queue.types.js'
 import type {
   CorePikkuFunctionConfig,
@@ -7,10 +7,7 @@ import type {
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import {
-  CreateInteractionServices,
-  PikkuWiringTypes,
-} from '../../types/core.types.js'
+import { CreateWireServices, PikkuWiringTypes } from '../../types/core.types.js'
 
 /**
  * Error class for queue processor not found
@@ -104,12 +101,12 @@ export async function removeQueueWorker(name: string): Promise<void> {
  */
 export async function runQueueJob({
   singletonServices,
-  createInteractionServices,
+  createWireServices,
   job,
   updateProgress,
 }: {
   singletonServices: CoreServices
-  createInteractionServices?: CreateInteractionServices
+  createWireServices?: CreateWireServices
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
 }): Promise<void> {
@@ -128,7 +125,7 @@ export async function runQueueJob({
     throw new Error(`Queue worker registration not found for: ${job.queueName}`)
   }
 
-  // Create the queue interaction object
+  // Create the queue wire object
   const queue: PikkuQueue = {
     queueName: job.queueName,
     jobId: job.id,
@@ -149,7 +146,7 @@ export async function runQueueJob({
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
-    const interaction: PikkuInteraction = {
+    const wire: PikkuWire = {
       queue,
     }
 
@@ -160,13 +157,13 @@ export async function runQueueJob({
       processorMeta.pikkuFuncName,
       {
         singletonServices,
-        createInteractionServices,
+        createWireServices,
         auth: false,
         data: () => job.data,
         inheritedMiddleware: processorMeta.middleware,
         wireMiddleware: queueWorker.middleware,
         tags: queueWorker.tags,
-        interaction,
+        wire,
       }
     )
 

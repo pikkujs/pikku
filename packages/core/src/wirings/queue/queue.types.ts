@@ -179,7 +179,7 @@ export type CoreQueueWorker<
 }
 
 /**
- * Represents a queue interaction object for middleware
+ * Represents a queue wire object for middleware
  * Provides information and actions for the current queue job execution
  */
 export interface PikkuQueue {

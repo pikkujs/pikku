@@ -3,7 +3,7 @@ import { PikkuUWSServer } from '@pikku/uws'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
-  createInteractionServices,
+  createWireServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
 
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
     const appServer = new PikkuUWSServer(
       { ...config, hostname: 'localhost', port: 4002 },
       singletonServices,
-      createInteractionServices
+      createWireServices
     )
     appServer.enableExitOnSigInt()
     await appServer.init()

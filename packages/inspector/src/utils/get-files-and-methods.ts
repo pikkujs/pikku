@@ -13,12 +13,12 @@ interface Meta {
 
 export type FilesAndMethods = {
   userSessionType: Meta
-  interactionServicesType: Meta
+  wireServicesType: Meta
   singletonServicesType: Meta
   pikkuConfigType: Meta
   pikkuConfigFactory: Meta
   singletonServicesFactory: Meta
-  interactionServicesFactory: Meta
+  wireServicesFactory: Meta
 }
 
 export type FilesAndMethodsErrors = Map<string, PathToNameAndType>
@@ -86,10 +86,10 @@ const getMetaTypes = (
 export const getFilesAndMethods = (
   {
     singletonServicesTypeImportMap,
-    interactionServicesTypeImportMap,
+    wireServicesTypeImportMap,
     userSessionTypeImportMap,
     configTypeImportMap,
-    interactionServicesFactories,
+    wireServicesFactories,
     singletonServicesFactories,
     configFactories,
   }: InspectorState,
@@ -97,7 +97,7 @@ export const getFilesAndMethods = (
     configFileType,
     userSessionType,
     singletonServicesFactoryType,
-    interactionServicesFactoryType,
+    wireServicesFactoryType,
   }: InspectorOptions['types'] = {}
 ): { result: Partial<FilesAndMethods>; errors: FilesAndMethodsErrors } => {
   const errors: FilesAndMethodsErrors = new Map()
@@ -115,9 +115,9 @@ export const getFilesAndMethods = (
       undefined,
       errors
     ),
-    interactionServicesType: getMetaTypes(
+    wireServicesType: getMetaTypes(
       'CoreServices',
-      interactionServicesTypeImportMap,
+      wireServicesTypeImportMap,
       undefined,
       errors
     ),
@@ -139,10 +139,10 @@ export const getFilesAndMethods = (
       singletonServicesFactoryType,
       errors
     ),
-    interactionServicesFactory: getMetaTypes(
-      'CreateInteractionServices',
-      interactionServicesFactories,
-      interactionServicesFactoryType,
+    wireServicesFactory: getMetaTypes(
+      'CreateWireServices',
+      wireServicesFactories,
+      wireServicesFactoryType,
       errors
     ),
   }

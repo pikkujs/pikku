@@ -45,11 +45,11 @@ import { pikkuCLI } from '../wirings/cli/pikku-command-cli.js'
 import { pikkuCLIEntry } from '../wirings/cli/pikku-command-cli-entry.js'
 import { pikkuNext } from '../runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../wirings/http/pikku-command-openapi.js'
-import { PikkuInteraction } from '@pikku/core'
+import { PikkuWire } from '@pikku/core'
 
 export const all: any = pikkuVoidFunc({
   func: async ({ logger, config, getInspectorState }) => {
-    const interaction: PikkuInteraction = {}
+    const wire: PikkuWire = {}
     const services = { logger, config, getInspectorState }
     const summary = new CommandSummary('all')
     const allImports: string[] = []
@@ -59,7 +59,7 @@ export const all: any = pikkuVoidFunc({
       typesDeclarationFileExists = false
     }
 
-    await pikkuFunctionTypes.func(services, null, interaction)
+    await pikkuFunctionTypes.func(services, null, wire)
 
     // This is needed since the wireHTTP function will add the routes to the visitState
     if (!typesDeclarationFileExists) {
@@ -68,30 +68,30 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Generate wiring-specific type files for tree-shaking
-    await pikkuFunctionTypesSplit.func(services, null, interaction)
-    await pikkuHTTPTypes.func(services, null, interaction)
-    await pikkuChannelTypes.func(services, null, interaction)
-    await pikkuSchedulerTypes.func(services, null, interaction)
-    await pikkuQueueTypes.func(services, null, interaction)
-    await pikkuWorkflowTypes.func(services, null, interaction)
-    await pikkuMCPTypes.func(services, null, interaction)
-    await pikkuCLITypes.func(services, null, interaction)
+    await pikkuFunctionTypesSplit.func(services, null, wire)
+    await pikkuHTTPTypes.func(services, null, wire)
+    await pikkuChannelTypes.func(services, null, wire)
+    await pikkuSchedulerTypes.func(services, null, wire)
+    await pikkuQueueTypes.func(services, null, wire)
+    await pikkuWorkflowTypes.func(services, null, wire)
+    await pikkuMCPTypes.func(services, null, wire)
+    await pikkuCLITypes.func(services, null, wire)
 
     const hasFunctionRegistrations = await pikkuFunctions.func(
       services,
-      interaction,
+      wire,
       null
     )
 
     // Generate and register middleware
-    const middleware = await pikkuMiddleware.func(services, null, interaction)
+    const middleware = await pikkuMiddleware.func(services, null, wire)
     // Middleware must be imported before functions meta to ensure registration happens first
     if (middleware) {
       allImports.push(config.middlewareFile)
     }
 
     // Generate and register permissions
-    const permissions = await pikkuPermissions.func(services, null, interaction)
+    const permissions = await pikkuPermissions.func(services, null, wire)
     // Permissions must be imported before functions meta to ensure registration happens first
     if (permissions) {
       allImports.push(config.permissionsFile)
@@ -106,33 +106,33 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Generate services map
-    await pikkuServices.func(services, null, interaction)
+    await pikkuServices.func(services, null, wire)
 
-    const hasInternalRPCs = await pikkuRPC.func(services, null, interaction)
-    await pikkuRPCInternalMap.func(services, null, interaction)
-    await pikkuRPCExposedMap.func(services, null, interaction)
-    await pikkuPublicRPC.func(services, null, interaction)
-    await pikkuRPCClient.func(services, null, interaction)
+    const hasInternalRPCs = await pikkuRPC.func(services, null, wire)
+    await pikkuRPCInternalMap.func(services, null, wire)
+    await pikkuRPCExposedMap.func(services, null, wire)
+    await pikkuPublicRPC.func(services, null, wire)
+    await pikkuRPCClient.func(services, null, wire)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)
     }
 
-    const schemas = await pikkuSchemas.func(services, null, interaction)
+    const schemas = await pikkuSchemas.func(services, null, wire)
     if (schemas) {
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
     // Generate HTTP
-    const http = await pikkuHTTP.func(services, null, interaction)
+    const http = await pikkuHTTP.func(services, null, wire)
     if (http) {
-      await pikkuHTTPMap.func(services, null, interaction)
-      await pikkuFetch.func(services, null, interaction)
+      await pikkuHTTPMap.func(services, null, wire)
+      await pikkuFetch.func(services, null, wire)
       allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
     }
 
     // Generate Scheduler
-    const scheduler = await pikkuScheduler.func(services, null, interaction)
+    const scheduler = await pikkuScheduler.func(services, null, wire)
     if (scheduler) {
       allImports.push(
         config.schedulersWiringMetaFile,
@@ -141,10 +141,10 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Generate Workflows
-    const workflows = await pikkuWorkflow.func(services, null, interaction)
+    const workflows = await pikkuWorkflow.func(services, null, wire)
 
     // Generate Remote RPC Workers (must be before queue discovery so wireQueueWorker calls are picked up)
-    const remoteRPC = await pikkuRemoteRPC.func(services, null, interaction)
+    const remoteRPC = await pikkuRemoteRPC.func(services, null, wire)
 
     // Reinspect to pick up generated workflow workers and remote RPC workers BEFORE generating maps
     if (workflows || remoteRPC) {
@@ -152,7 +152,7 @@ export const all: any = pikkuVoidFunc({
     }
 
     if (workflows) {
-      await pikkuWorkflowMap.func(services, null, interaction)
+      await pikkuWorkflowMap.func(services, null, wire)
       allImports.push(
         config.workflowsWiringMetaFile,
         config.workflowsWiringFile
@@ -160,10 +160,10 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Generate Queues
-    const queues = await pikkuQueue.func(services, null, interaction)
+    const queues = await pikkuQueue.func(services, null, wire)
     if (queues) {
-      await pikkuQueueMap.func(services, null, interaction)
-      await pikkuQueueService.func(services, null, interaction)
+      await pikkuQueueMap.func(services, null, wire)
+      await pikkuQueueService.func(services, null, wire)
       allImports.push(
         config.queueWorkersWiringMetaFile,
         config.queueWorkersWiringFile
@@ -171,29 +171,29 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Generate Channels
-    const channels = await pikkuChannels.func(services, null, interaction)
+    const channels = await pikkuChannels.func(services, null, wire)
     if (channels) {
-      await pikkuChannelsMap.func(services, null, interaction)
-      await pikkuWebSocketTyped.func(services, null, interaction)
+      await pikkuChannelsMap.func(services, null, wire)
+      await pikkuWebSocketTyped.func(services, null, wire)
       allImports.push(config.channelsWiringMetaFile, config.channelsWiringFile)
     }
 
     // Generate MCP
-    const mcp = await pikkuMCP.func(services, null, interaction)
+    const mcp = await pikkuMCP.func(services, null, wire)
     if (mcp) {
-      await pikkuMCPJSON.func(services, null, interaction)
+      await pikkuMCPJSON.func(services, null, wire)
       allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
     }
 
     // Generate CLI
-    const cli = await pikkuCLI.func(services, null, interaction)
+    const cli = await pikkuCLI.func(services, null, wire)
     if (cli) {
-      await pikkuCLIEntry.func(services, null, interaction)
+      await pikkuCLIEntry.func(services, null, wire)
       allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
     }
 
     if (config.nextBackendFile || config.nextHTTPFile) {
-      await pikkuNext.func(services, null, interaction)
+      await pikkuNext.func(services, null, wire)
     }
 
     if (config.openAPI) {
@@ -201,7 +201,7 @@ export const all: any = pikkuVoidFunc({
         `• OpenAPI requires a reinspection to pickup new generated types..`
       )
       await getInspectorState(true)
-      await pikkuOpenAPI.func(services, null, interaction)
+      await pikkuOpenAPI.func(services, null, wire)
     }
 
     // Generate main bootstrap file (pass all imports directly since this is the main file)

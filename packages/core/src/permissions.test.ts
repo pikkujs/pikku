@@ -166,7 +166,7 @@ describe('runPermissions', () => {
     // Should not throw
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
   })
@@ -183,7 +183,7 @@ describe('runPermissions', () => {
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
 
@@ -229,7 +229,7 @@ describe('runPermissions', () => {
       funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
       funcPermissions,
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
 
@@ -252,7 +252,7 @@ describe('runPermissions', () => {
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'atLeastOneTestTag' }],
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
   })
@@ -267,7 +267,7 @@ describe('runPermissions', () => {
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wireInheritedPermissions: [{ type: 'tag', tag: 'allFailTestTag' }],
         services: mockServices,
-        interaction: {},
+        wire: {},
         data: {},
       }),
       {
@@ -285,7 +285,7 @@ describe('runPermissions', () => {
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         wirePermissions,
         services: mockServices,
-        interaction: {},
+        wire: {},
         data: {},
       }),
       {
@@ -303,7 +303,7 @@ describe('runPermissions', () => {
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         funcInheritedPermissions: [{ type: 'tag', tag: 'funcTag' }],
         services: mockServices,
-        interaction: {},
+        wire: {},
         data: {},
       }),
       {
@@ -321,7 +321,7 @@ describe('runPermissions', () => {
       runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
         funcPermissions,
         services: mockServices,
-        interaction: {},
+        wire: {},
         data: {},
       }),
       {
@@ -354,7 +354,7 @@ describe('runPermissions', () => {
       wireInheritedPermissions: [{ type: 'tag', tag: 'failingWiringTag' }],
       wirePermissions,
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
 
@@ -371,7 +371,7 @@ describe('runPermissions', () => {
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'arrayTestTag' }],
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
   })
@@ -387,24 +387,20 @@ describe('runPermissions', () => {
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'objectTestTag' }],
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: {},
     })
   })
 
   test('should pass correct parameters to permission functions', async () => {
     let receivedServices: any
-    let receivedInteraction: any
+    let receivedWire: any
     let receivedData: any
 
-    const testPermission = async (
-      services: any,
-      data: any,
-      interaction: any
-    ) => {
+    const testPermission = async (services: any, data: any, wire: any) => {
       receivedServices = services
       receivedData = data
-      receivedInteraction = interaction
+      receivedWire = wire
       return true
     }
 
@@ -415,12 +411,12 @@ describe('runPermissions', () => {
     await runPermissions(PikkuWiringTypes.rpc, Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'paramTestTag' }],
       services: mockServices,
-      interaction: {},
+      wire: {},
       data: testData,
     })
 
     assert.equal(receivedServices, mockServices)
     assert.equal(receivedData, testData)
-    assert.deepEqual(receivedInteraction, {})
+    assert.deepEqual(receivedWire, {})
   })
 })

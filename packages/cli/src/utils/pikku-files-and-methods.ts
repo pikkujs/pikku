@@ -14,11 +14,11 @@ interface Meta {
 
 export type FilesAndMethods = {
   userSessionType: Meta
-  interactionServicesType: Meta
+  wireServicesType: Meta
   singletonServicesType: Meta
   pikkuConfigFactory: Meta
   singletonServicesFactory: Meta
-  interactionServicesFactory: Meta
+  wireServicesFactory: Meta
 }
 
 const getMetaTypes = (
@@ -85,9 +85,9 @@ export const getPikkuFilesAndMethods = async (
 ): Promise<FilesAndMethods> => {
   const {
     singletonServicesTypeImportMap,
-    interactionServicesTypeImportMap,
+    wireServicesTypeImportMap,
     userSessionTypeImportMap,
-    interactionServicesFactories,
+    wireServicesFactories,
     singletonServicesFactories,
     configFactories,
   } = state
@@ -96,7 +96,7 @@ export const getPikkuFilesAndMethods = async (
     configFileType,
     userSessionType,
     singletonServicesFactoryType,
-    interactionServicesFactoryType,
+    wireServicesFactoryType,
   } = options
   let errors = new Map<string, PathToNameAndType>()
 
@@ -110,10 +110,7 @@ export const getPikkuFilesAndMethods = async (
       'CoreSingletonServices',
       singletonServicesTypeImportMap
     ),
-    interactionServicesType: getMetaTypes(
-      'CoreServices',
-      interactionServicesTypeImportMap
-    ),
+    wireServicesType: getMetaTypes('CoreServices', wireServicesTypeImportMap),
     pikkuConfigFactory: getMetaTypes(
       'CoreConfig',
       configFactories,
@@ -124,10 +121,10 @@ export const getPikkuFilesAndMethods = async (
       singletonServicesFactories,
       singletonServicesFactoryType
     ),
-    interactionServicesFactory: getMetaTypes(
-      'CreateInteractionServices',
-      interactionServicesFactories,
-      interactionServicesFactoryType
+    wireServicesFactory: getMetaTypes(
+      'CreateWireServices',
+      wireServicesFactories,
+      wireServicesFactoryType
     ),
   }
 

@@ -82,9 +82,9 @@ function extractAllServices(
   const servicesTypes = state.typesLookup.get('Services')
   if (servicesTypes && servicesTypes.length > 0) {
     const allServiceNames = extractTypeKeys(servicesTypes[0])
-    // Interaction services are those in Services but not in SingletonServices
+    // Wire services are those in Services but not in SingletonServices
     const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
-    state.serviceAggregation.allInteractionServices = allServiceNames
+    state.serviceAggregation.allWireServices = allServiceNames
       .filter((name) => !singletonSet.has(name))
       .sort()
   }
@@ -206,7 +206,7 @@ export function aggregateRequiredServices(
   }
 
   // 5. Services from session service factories
-  for (const singletonServices of state.interactionServicesMeta.values()) {
+  for (const singletonServices of state.wireServicesMeta.values()) {
     singletonServices.forEach((service) => {
       if (!internalServices.has(service)) {
         requiredServices.add(service)

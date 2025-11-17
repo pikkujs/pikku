@@ -34,7 +34,7 @@ export const visitSetup = (
   addFileExtendsCoreType(
     node,
     checker,
-    state.interactionServicesTypeImportMap,
+    state.wireServicesTypeImportMap,
     'CoreServices',
     state
   )
@@ -65,8 +65,8 @@ export const visitSetup = (
   addFileWithFactory(
     node,
     checker,
-    state.interactionServicesFactories,
-    'CreateInteractionServices',
+    state.wireServicesFactories,
+    'CreateWireServices',
     state
   )
 

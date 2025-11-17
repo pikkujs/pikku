@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { authBearer } from './auth-bearer.js'
 import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
-import { PikkuUserInteractionService } from '../services/user-session-service.js'
+import { PikkuUserWireService } from '../services/user-session-service.js'
 import { InvalidSessionError } from '../errors/errors.js'
 
 beforeEach(() => {
@@ -24,8 +24,7 @@ const createMockHTTPResponse = () => ({
 describe('authBearer middleware', () => {
   test('should extract and decode JWT bearer token from Authorization header', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user123' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
@@ -40,7 +39,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer jwt-token',
@@ -54,13 +53,12 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should handle case-insensitive Authorization header', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user456' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
@@ -75,7 +73,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             Authorization: 'Bearer jwt-token-2',
@@ -89,7 +87,7 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should validate static token when token option is provided', async () => {
@@ -97,8 +95,7 @@ describe('authBearer middleware', () => {
       userId: 'static-user',
       role: 'admin',
     }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => {
@@ -119,7 +116,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer my-static-token',
@@ -133,12 +130,11 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should throw InvalidSessionError when scheme is not Bearer', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => ({ userId: 'test' }),
@@ -151,7 +147,7 @@ describe('authBearer middleware', () => {
         await middleware(
           { jwt: jwtService } as any,
           {
-            session: userInteractionService,
+            session: userWireService,
             http: {
               request: createMockHTTPRequest({
                 authorization: 'Basic some-token',
@@ -170,8 +166,7 @@ describe('authBearer middleware', () => {
   })
 
   test('should throw InvalidSessionError when bearer token is missing', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => ({ userId: 'test' }),
@@ -184,7 +179,7 @@ describe('authBearer middleware', () => {
         await middleware(
           { jwt: jwtService } as any,
           {
-            session: userInteractionService,
+            session: userWireService,
             http: {
               request: createMockHTTPRequest({
                 authorization: 'Bearer',
@@ -203,8 +198,7 @@ describe('authBearer middleware', () => {
   })
 
   test('should throw InvalidSessionError when authorization header has no space', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => ({ userId: 'test' }),
@@ -217,7 +211,7 @@ describe('authBearer middleware', () => {
         await middleware(
           { jwt: jwtService } as any,
           {
-            session: userInteractionService,
+            session: userWireService,
             http: {
               request: createMockHTTPRequest({
                 authorization: 'BearerToken',
@@ -236,8 +230,7 @@ describe('authBearer middleware', () => {
   })
 
   test('should not set session when JWT decode returns null', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => null,
@@ -249,7 +242,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer invalid-token',
@@ -263,13 +256,12 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should not set session when static token does not match', async () => {
     const mockUserSession: CoreUserSession = { userId: 'static-user' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => {
@@ -290,7 +282,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer wrong-token',
@@ -304,14 +296,13 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should skip middleware when session already exists', async () => {
     const existingSession: CoreUserSession = { userId: 'existing' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
-    userInteractionService.setInitial(existingSession)
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
+    userWireService.setInitial(existingSession)
 
     let decodeCalled = false
     const jwtService = {
@@ -328,7 +319,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer some-token',
@@ -343,12 +334,11 @@ describe('authBearer middleware', () => {
 
     assert.equal(nextCalled, true)
     assert.equal(decodeCalled, false)
-    assert.deepEqual(userInteractionService.get(), existingSession)
+    assert.deepEqual(userWireService.get(), existingSession)
   })
 
   test('should skip middleware when http.request is not available', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => ({ userId: 'test' }),
@@ -359,19 +349,18 @@ describe('authBearer middleware', () => {
 
     await middleware(
       { jwt: jwtService } as any,
-      { session: userInteractionService } as any,
+      { session: userWireService } as any,
       async () => {
         nextCalled = true
       }
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should continue without session when authorization header is missing', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => ({ userId: 'test' }),
@@ -383,7 +372,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({}),
           response: createMockHTTPResponse(),
@@ -395,12 +384,11 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should not decode when jwtService is not available in JWT mode', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
 
     const middleware = authBearer()
     let nextCalled = false
@@ -408,7 +396,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: undefined } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer some-token',
@@ -422,13 +410,12 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should work in static token mode even when jwtService is not available', async () => {
     const mockUserSession: CoreUserSession = { userId: 'static-user' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
 
     const middleware = authBearer({
       token: {
@@ -441,7 +428,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: undefined } as any,
       {
-        session: userInteractionService,
+        session: userWireService,
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer static-token',
@@ -455,6 +442,6 @@ describe('authBearer middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 })

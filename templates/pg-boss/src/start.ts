@@ -2,7 +2,7 @@ import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import {
   createConfig,
   createSingletonServices,
-  createInteractionServices,
+  createWireServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
 
     const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
       singletonServices,
-      createInteractionServices
+      createWireServices
     )
 
     // Register queue processors

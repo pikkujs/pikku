@@ -19,7 +19,7 @@ export const connectWebsocket = async <
   event: APIGatewayEvent,
   {
     singletonServices,
-    createInteractionServices,
+    createWireServices,
     channelStore,
   }: WebsocketParams<SingletonServices, Services, UserSession>
 ): Promise<APIGatewayProxyResult> => {
@@ -35,7 +35,7 @@ export const connectWebsocket = async <
     request,
     response,
     singletonServices: singletonServices as any,
-    createInteractionServices: createInteractionServices as any,
+    createWireServices: createWireServices as any,
     route: event.path || '/',
   })
   return responseToLambdaResult(response.toResponse())

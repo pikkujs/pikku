@@ -3,7 +3,7 @@ import { PikkuTaskScheduler } from '@pikku/schedule'
 import {
   createConfig,
   createSingletonServices,
-  createInteractionServices,
+  createWireServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
       singletonServices,
-      createInteractionServices
+      createWireServices
     )
     appServer.enableExitOnSigInt()
     await appServer.init()

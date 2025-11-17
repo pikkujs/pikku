@@ -17,12 +17,12 @@ test('pikkuPermission factory function', async () => {
 })
 
 test('pikkuMiddleware factory function', async () => {
-  const middleware = pikkuMiddleware(async ({ logger }, interactions, next) => {
+  const middleware = pikkuMiddleware(async ({ logger }, wires, next) => {
     await next()
   })
 
   assert.strictEqual(typeof middleware, 'function')
-  assert.strictEqual(middleware.length, 3) // services, interactions, next
+  assert.strictEqual(middleware.length, 3) // services, wires, next
 })
 
 test('pikkuPermission returns the same function', async () => {
@@ -33,7 +33,7 @@ test('pikkuPermission returns the same function', async () => {
 })
 
 test('pikkuMiddleware returns the same function', async () => {
-  const originalFn = async ({ logger }, interactions, next) => {
+  const originalFn = async ({ logger }, wires, next) => {
     await next()
   }
   const wrappedFn = pikkuMiddleware(originalFn)
@@ -59,7 +59,7 @@ test('pikkuPermissionFactory creates a factory function', async () => {
 
 test('pikkuMiddlewareFactory creates a factory function', async () => {
   const factory = pikkuMiddlewareFactory<{ message: string }>(({ message }) => {
-    return pikkuMiddleware(async ({ logger }, interactions, next) => {
+    return pikkuMiddleware(async ({ logger }, wires, next) => {
       logger.info(message)
       await next()
     })
@@ -71,7 +71,7 @@ test('pikkuMiddlewareFactory creates a factory function', async () => {
   // Call the factory to get middleware
   const middleware = factory({ message: 'test' })
   assert.strictEqual(typeof middleware, 'function')
-  assert.strictEqual(middleware.length, 3) // services, interactions, next
+  assert.strictEqual(middleware.length, 3) // services, wires, next
 })
 
 test('pikkuPermissionFactory returns the same factory', async () => {
@@ -86,7 +86,7 @@ test('pikkuPermissionFactory returns the same factory', async () => {
 
 test('pikkuMiddlewareFactory returns the same factory', async () => {
   const originalFactory = ({ message }) =>
-    pikkuMiddleware(async ({ logger }, interactions, next) => {
+    pikkuMiddleware(async ({ logger }, wires, next) => {
       logger.info(message)
       await next()
     })

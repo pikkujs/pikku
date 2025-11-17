@@ -18,4 +18,4 @@
 '@pikku/cli': patch
 ---
 
-breaking: change session services to interaction services
+breaking: change session services to wire services

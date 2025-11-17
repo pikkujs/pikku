@@ -4,7 +4,7 @@ import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
 import {
   createSingletonServices,
   createConfig,
-  createInteractionServices,
+  createWireServices,
 } from '../../functions/src/services.js'
 
 import mcpJSON from '../../functions/.pikku/mcp/mcp.gen.json' with { type: 'json' }
@@ -29,7 +29,7 @@ async function main() {
         },
       },
       singletonServices,
-      createInteractionServices
+      createWireServices
     )
 
     await server.init()

@@ -120,7 +120,7 @@ export type InspectorOptions = Partial<{
     configFileType: string
     userSessionType: string
     singletonServicesFactoryType: string
-    interactionServicesFactoryType: string
+    wireServicesFactoryType: string
   }>
 }>
 
@@ -147,7 +147,7 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
-  interactionServicesType?: {
+  wireServicesType?: {
     file: string
     variable: string
     type: string
@@ -177,7 +177,7 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
-  interactionServicesFactory?: {
+  wireServicesFactory?: {
     file: string
     variable: string
     type: string
@@ -188,12 +188,12 @@ export interface InspectorFilesAndMethods {
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
-  interactionServicesTypeImportMap: PathToNameAndType
+  wireServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType
   configTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType
-  interactionServicesFactories: PathToNameAndType
-  interactionServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
+  wireServicesFactories: PathToNameAndType
+  wireServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
   configFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
@@ -238,6 +238,6 @@ export interface InspectorState {
     usedMiddleware: Set<string> // Middleware names used by wired functions
     usedPermissions: Set<string> // Permission names used by wired functions
     allSingletonServices: string[] // All services available in SingletonServices type
-    allInteractionServices: string[] // All services available in Services type (excluding SingletonServices)
+    allWireServices: string[] // All services available in Services type (excluding SingletonServices)
   }
 }

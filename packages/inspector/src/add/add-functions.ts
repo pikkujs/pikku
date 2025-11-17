@@ -374,8 +374,8 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     }
   }
 
-  // --- Extract used interactions from third parameter ---
-  const usedInteractions: string[] = []
+  // --- Extract used wires from third parameter ---
+  const usedWires: string[] = []
   const thirdParam = handler.parameters[2]
   if (thirdParam && ts.isObjectBindingPattern(thirdParam.name)) {
     for (const elem of thirdParam.name.elements) {
@@ -386,7 +386,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
             ? elem.name.text
             : undefined
       if (propertyName) {
-        usedInteractions.push(propertyName)
+        usedWires.push(propertyName)
       }
     }
   }
@@ -455,7 +455,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     pikkuFuncName,
     name,
     services,
-    usedInteractions: usedInteractions.length > 0 ? usedInteractions : undefined,
+    usedWires: usedWires.length > 0 ? usedWires : undefined,
     inputSchemaName: inputNames[0] ?? null,
     outputSchemaName: outputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { authAPIKey } from './auth-apikey.js'
 import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
-import { PikkuUserInteractionService } from '../services/user-session-service.js'
+import { PikkuUserWireService } from '../services/user-session-service.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -24,8 +24,7 @@ const createMockHTTPResponse = () => ({
 describe('authAPIKey middleware', () => {
   test('should extract API key from x-api-key header when source is "header"', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user123' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
@@ -44,7 +43,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'my-api-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -52,13 +51,12 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should extract API key from query parameter when source is "query"', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user456' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
@@ -77,7 +75,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-api-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -85,13 +83,12 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should prefer header over query when source is "all" and both are present', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user789' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
@@ -114,7 +111,7 @@ describe('authAPIKey middleware', () => {
           ),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -122,13 +119,12 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should fallback to query when header is missing and source is "all"', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user999' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async (token: string) => {
@@ -147,7 +143,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-fallback' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -155,12 +151,11 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userInteractionService.get(), mockUserSession)
+    assert.deepEqual(userWireService.get(), mockUserSession)
   })
 
   test('should not set session when API key is not found', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => null,
@@ -176,7 +171,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -184,12 +179,11 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should not set session when JWT decode returns null', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => null,
@@ -205,7 +199,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'invalid-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -213,14 +207,13 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should skip middleware when session already exists', async () => {
     const existingSession: CoreUserSession = { userId: 'existing' }
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
-    userInteractionService.setInitial(existingSession)
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
+    userWireService.setInitial(existingSession)
 
     let decodeCalled = false
     const jwtService = {
@@ -241,7 +234,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -250,12 +243,11 @@ describe('authAPIKey middleware', () => {
 
     assert.equal(nextCalled, true)
     assert.equal(decodeCalled, false)
-    assert.deepEqual(userInteractionService.get(), existingSession)
+    assert.deepEqual(userWireService.get(), existingSession)
   })
 
   test('should skip middleware when http.request is not available', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'token',
       decode: async () => ({ userId: 'test' }),
@@ -266,19 +258,18 @@ describe('authAPIKey middleware', () => {
 
     await middleware(
       { jwt: jwtService } as any,
-      { session: userInteractionService } as any,
+      { session: userWireService } as any,
       async () => {
         nextCalled = true
       }
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should not decode when jwtService is not available', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
 
     const middleware = authAPIKey({ source: 'header' })
     let nextCalled = false
@@ -290,7 +281,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -298,12 +289,11 @@ describe('authAPIKey middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should not look in query when source is "header" even if header is missing', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     let decodeCalled = false
     const jwtService = {
       encode: async () => 'token',
@@ -323,7 +313,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -332,12 +322,11 @@ describe('authAPIKey middleware', () => {
 
     assert.equal(nextCalled, true)
     assert.equal(decodeCalled, false)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 
   test('should not look in header when source is "query" even if query is missing', async () => {
-    const userInteractionService =
-      new PikkuUserInteractionService<CoreUserSession>()
+    const userWireService = new PikkuUserWireService<CoreUserSession>()
     let decodeCalled = false
     const jwtService = {
       encode: async () => 'token',
@@ -357,7 +346,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'header-key' }),
           response: createMockHTTPResponse(),
         },
-        session: userInteractionService,
+        session: userWireService,
       } as any,
       async () => {
         nextCalled = true
@@ -366,6 +355,6 @@ describe('authAPIKey middleware', () => {
 
     assert.equal(nextCalled, true)
     assert.equal(decodeCalled, false)
-    assert.equal(userInteractionService.get(), undefined)
+    assert.equal(userWireService.get(), undefined)
   })
 })
