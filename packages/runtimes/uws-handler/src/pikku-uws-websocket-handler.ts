@@ -34,7 +34,7 @@ const isSerializable = (data: any): boolean => {
  */
 export const pikkuWebsocketHandler = ({
   singletonServices,
-  createSessionServices,
+  createInteractionServices,
   loadSchemas,
   logRoutes,
 }: PikkuuWSHandlerOptions) => {
@@ -77,7 +77,7 @@ export const pikkuWebsocketHandler = ({
           request,
           response,
           singletonServices: singletonServicesWithEventHub,
-          createSessionServices,
+          createInteractionServices,
           route: req.getUrl() as string,
         })
 

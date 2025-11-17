@@ -18,7 +18,7 @@ import {
 import {
   CoreConfig,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
   LogLevel,
   Logger,
 } from '@pikku/core'
@@ -54,8 +54,8 @@ export class PikkuMCPServer {
   constructor(
     private config: MCPServerConfig,
     private singletonServices: CoreSingletonServices,
-    private createSessionServices:
-      | CreateSessionServices<any, any, any>
+    private createInteractionServices:
+      | CreateInteractionServices<any, any, any>
       | undefined = undefined
   ) {
     this.server = new Server(
@@ -228,7 +228,7 @@ export class PikkuMCPServer {
           },
           {
             singletonServices: this.singletonServices,
-            createSessionServices: this.createSessionServices,
+            createInteractionServices: this.createInteractionServices,
             mcp,
           },
           name
@@ -305,7 +305,7 @@ export class PikkuMCPServer {
             },
             {
               singletonServices: this.singletonServices,
-              createSessionServices: this.createSessionServices,
+              createInteractionServices: this.createInteractionServices,
               mcp,
             },
             uri
@@ -365,7 +365,7 @@ export class PikkuMCPServer {
         },
         {
           singletonServices: this.singletonServices,
-          createSessionServices: this.createSessionServices,
+          createInteractionServices: this.createInteractionServices,
           mcp,
         },
         name

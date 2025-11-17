@@ -5,7 +5,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  CreateSessionServices,
+  CreateInteractionServices,
   CorePikkuMiddleware,
   MiddlewareMetadata,
   PermissionMetadata,
@@ -46,7 +46,7 @@ export type RunHTTPWiringOptions = Partial<{
 
 export type RunHTTPWiringParams = {
   singletonServices: CoreSingletonServices
-  createSessionServices: CreateSessionServices<
+  createInteractionServices: CreateInteractionServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession

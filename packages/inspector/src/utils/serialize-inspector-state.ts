@@ -13,7 +13,7 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  sessionServicesTypeImportMap: Array<
+  interactionServicesTypeImportMap: Array<
     [
       string,
       { variable: string; type: string | null; typePath: string | null }[],
@@ -37,13 +37,13 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  sessionServicesFactories: Array<
+  interactionServicesFactories: Array<
     [
       string,
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  sessionServicesMeta: Array<[string, string[]]>
+  interactionServicesMeta: Array<[string, string[]]>
   configFactories: Array<
     [
       string,
@@ -167,7 +167,7 @@ export interface SerializableInspectorState {
     usedMiddleware: string[]
     usedPermissions: string[]
     allSingletonServices: string[]
-    allSessionServices: string[]
+    allInteractionServices: string[]
   }
 }
 
@@ -204,8 +204,8 @@ export function serializeInspectorState(
     singletonServicesTypeImportMap: Array.from(
       state.singletonServicesTypeImportMap.entries()
     ),
-    sessionServicesTypeImportMap: Array.from(
-      state.sessionServicesTypeImportMap.entries()
+    interactionServicesTypeImportMap: Array.from(
+      state.interactionServicesTypeImportMap.entries()
     ),
     userSessionTypeImportMap: Array.from(
       state.userSessionTypeImportMap.entries()
@@ -214,10 +214,12 @@ export function serializeInspectorState(
     singletonServicesFactories: Array.from(
       state.singletonServicesFactories.entries()
     ),
-    sessionServicesFactories: Array.from(
-      state.sessionServicesFactories.entries()
+    interactionServicesFactories: Array.from(
+      state.interactionServicesFactories.entries()
     ),
-    sessionServicesMeta: Array.from(state.sessionServicesMeta.entries()),
+    interactionServicesMeta: Array.from(
+      state.interactionServicesMeta.entries()
+    ),
     configFactories: Array.from(state.configFactories.entries()),
     filesAndMethods: state.filesAndMethods,
     filesAndMethodsErrors: Array.from(
@@ -282,7 +284,7 @@ export function serializeInspectorState(
       usedMiddleware: Array.from(state.serviceAggregation.usedMiddleware),
       usedPermissions: Array.from(state.serviceAggregation.usedPermissions),
       allSingletonServices: state.serviceAggregation.allSingletonServices,
-      allSessionServices: state.serviceAggregation.allSessionServices,
+      allInteractionServices: state.serviceAggregation.allInteractionServices,
     },
   }
 }
@@ -314,12 +316,14 @@ export function deserializeInspectorState(
     singletonServicesTypeImportMap: new Map(
       data.singletonServicesTypeImportMap
     ),
-    sessionServicesTypeImportMap: new Map(data.sessionServicesTypeImportMap),
+    interactionServicesTypeImportMap: new Map(
+      data.interactionServicesTypeImportMap
+    ),
     userSessionTypeImportMap: new Map(data.userSessionTypeImportMap),
     configTypeImportMap: new Map(data.configTypeImportMap),
     singletonServicesFactories: new Map(data.singletonServicesFactories),
-    sessionServicesFactories: new Map(data.sessionServicesFactories),
-    sessionServicesMeta: new Map(data.sessionServicesMeta),
+    interactionServicesFactories: new Map(data.interactionServicesFactories),
+    interactionServicesMeta: new Map(data.interactionServicesMeta),
     configFactories: new Map(data.configFactories),
     filesAndMethods: data.filesAndMethods,
     filesAndMethodsErrors: new Map(
@@ -387,7 +391,7 @@ export function deserializeInspectorState(
       usedMiddleware: new Set(data.serviceAggregation.usedMiddleware),
       usedPermissions: new Set(data.serviceAggregation.usedPermissions),
       allSingletonServices: data.serviceAggregation.allSingletonServices,
-      allSessionServices: data.serviceAggregation.allSessionServices,
+      allInteractionServices: data.serviceAggregation.allInteractionServices,
     },
   }
 }

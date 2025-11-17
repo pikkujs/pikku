@@ -5,7 +5,7 @@ import '../.pikku/pikku-bootstrap.gen.js'
 // Import services from functions template
 import {
   createConfig,
-  createSessionServices,
+  createInteractionServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
 
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
     const appServer = new PikkuUWSServer(
       { ...config, hostname: 'localhost', port: 4002 },
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
     appServer.enableExitOnSigInt()
     await appServer.init()

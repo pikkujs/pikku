@@ -18,7 +18,7 @@ export const processWebsocketMessage = async <
   event: APIGatewayProxyEvent,
   {
     singletonServices,
-    createSessionServices,
+    createInteractionServices,
     channelStore,
   }: WebsocketParams<SingletonServices, Services, UserSession>
 ): Promise<APIGatewayProxyResult> => {
@@ -33,7 +33,7 @@ export const processWebsocketMessage = async <
       {
         ...runnerParams,
         singletonServices: singletonServices as any,
-        createSessionServices: createSessionServices as any,
+        createInteractionServices: createInteractionServices as any,
       },
       event.body
     )

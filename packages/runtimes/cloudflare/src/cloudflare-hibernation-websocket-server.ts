@@ -117,6 +117,6 @@ export abstract class CloudflareWebSocketHibernationServer<
 
   protected abstract getParams(): Promise<{
     singletonServices: SingletonServices
-    createSessionServices?: any
+    createInteractionServices?: any
   }>
 }

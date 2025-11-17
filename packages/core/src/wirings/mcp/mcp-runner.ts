@@ -4,7 +4,7 @@ import {
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
-  type CreateSessionServices,
+  type CreateInteractionServices,
 } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
@@ -20,11 +20,11 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
-import { closeSessionServices } from '../../utils.js'
+import { closeInteractionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
-import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../../services/user-session-service.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -37,7 +37,7 @@ export class MCPError extends Error {
 export type RunMCPEndpointParams<Tools extends string = any> = {
   singletonServices: CoreSingletonServices
   mcp?: PikkuMCP<Tools>
-  createSessionServices?: CreateSessionServices<
+  createInteractionServices?: CreateInteractionServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession
@@ -211,11 +211,11 @@ async function runMCPPikkuFunc(
   pikkuFuncName: string | undefined,
   {
     singletonServices,
-    createSessionServices,
+    createInteractionServices,
     mcp: mcpInteraction,
   }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
-  let sessionServices: any
+  let interactionServices: any
 
   try {
     // Validate JSON-RPC request structure
@@ -241,7 +241,7 @@ async function runMCPPikkuFunc(
 
     const interaction: PikkuInteraction = {
       mcp: mcpInteraction,
-      session: new PikkuUserSessionService(),
+      session: new PikkuUserInteractionService(),
     }
 
     // Get metadata for the MCP endpoint to access pre-resolved middleware
@@ -260,7 +260,7 @@ async function runMCPPikkuFunc(
       pikkuFuncName,
       {
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         data: () => request.params,
         inheritedMiddleware: meta?.middleware,
         wireMiddleware: mcp.middleware,
@@ -301,8 +301,11 @@ async function runMCPPikkuFunc(
       })
     }
   } finally {
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
+    if (interactionServices) {
+      await closeInteractionServices(
+        singletonServices.logger,
+        interactionServices
+      )
     }
   }
 }

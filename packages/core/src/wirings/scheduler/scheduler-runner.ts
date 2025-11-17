@@ -4,14 +4,14 @@ import {
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
-  type CreateSessionServices,
+  type CreateInteractionServices,
 } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
-import { closeSessionServices } from '../../utils.js'
+import { closeInteractionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../../services/user-session-service.js'
 import {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
@@ -21,7 +21,7 @@ export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
   singletonServices: CoreSingletonServices
-  createSessionServices?: CreateSessionServices<
+  createInteractionServices?: CreateInteractionServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession
@@ -75,13 +75,13 @@ export async function runScheduledTask({
   name,
   session,
   singletonServices,
-  createSessionServices,
+  createInteractionServices,
 }: RunScheduledTasksParams): Promise<void> {
-  let sessionServices: any
+  let interactionServices: any
   const task = pikkuState('scheduler', 'tasks').get(name)
   const meta = pikkuState('scheduler', 'meta')[name]
 
-  const userSession = new PikkuUserSessionService()
+  const userSession = new PikkuUserInteractionService()
   if (session) {
     userSession.set(session)
   }
@@ -119,7 +119,7 @@ export async function runScheduledTask({
       meta.pikkuFuncName,
       {
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         auth: false,
         data: () => undefined,
         inheritedMiddleware: meta.middleware,
@@ -137,8 +137,11 @@ export async function runScheduledTask({
     }
     throw e
   } finally {
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
+    if (interactionServices) {
+      await closeInteractionServices(
+        singletonServices.logger,
+        interactionServices
+      )
     }
   }
 }

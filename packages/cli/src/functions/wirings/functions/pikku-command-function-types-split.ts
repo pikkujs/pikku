@@ -18,18 +18,22 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
     // Check for required types
     checkRequiredTypes(visitState.filesAndMethodsErrors, {
       userSessionType: true,
-      sessionServiceType: true,
+      interactionServiceType: true,
       singletonServicesType: true,
     })
 
     const {
       userSessionType,
-      sessionServicesType,
+      interactionServicesType,
       singletonServicesType,
       pikkuConfigType,
     } = visitState.filesAndMethods
 
-    if (!userSessionType || !sessionServicesType || !singletonServicesType) {
+    if (
+      !userSessionType ||
+      !interactionServicesType ||
+      !singletonServicesType
+    ) {
       throw new Error('Required types not found')
     }
 
@@ -42,10 +46,10 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
       userSessionType.type,
       `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, singletonServicesType.typePath, packageMappings)}'`,
       singletonServicesType.type,
-      `import type { ${sessionServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, sessionServicesType.typePath, packageMappings)}'`,
-      sessionServicesType.type,
+      `import type { ${interactionServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, interactionServicesType.typePath, packageMappings)}'`,
+      interactionServicesType.type,
       `import type { TypedPikkuRPC } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
-      `import type { RequiredSingletonServices, RequiredSessionServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
+      `import type { RequiredSingletonServices, RequiredInteractionServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
       configTypeImport
     )
 

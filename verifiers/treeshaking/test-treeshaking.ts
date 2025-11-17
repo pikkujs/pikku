@@ -12,11 +12,11 @@ const INSPECTOR_STATE_FILE = join(
 )
 
 /**
- * Parse the pikku-services.gen.ts file to extract singleton and session services
+ * Parse the pikku-services.gen.ts file to extract singleton and interaction services
  */
 function parseGeneratedServices(): {
   singletonServices: string[]
-  sessionServices: string[]
+  interactionServices: string[]
 } {
   try {
     const servicesFilePath = join(
@@ -30,7 +30,7 @@ function parseGeneratedServices(): {
     const systemServices = new Set(['config', 'schema', 'variables', 'jwt'])
 
     const singletonServices: string[] = []
-    const sessionServices: string[] = []
+    const interactionServices: string[] = []
 
     // Extract requiredSingletonServices
     const singletonMatch = content.match(
@@ -47,9 +47,9 @@ function parseGeneratedServices(): {
       }
     }
 
-    // Extract requiredSessionServices
+    // Extract requiredInteractionServices
     const sessionMatch = content.match(
-      /export const requiredSessionServices = \{([^}]+)\} as const/
+      /export const requiredInteractionServices = \{([^}]+)\} as const/
     )
     if (sessionMatch) {
       const servicesBlock = sessionMatch[1]!
@@ -57,18 +57,18 @@ function parseGeneratedServices(): {
       for (const serviceMatch of serviceMatches) {
         const serviceName = serviceMatch[1]!
         if (!systemServices.has(serviceName)) {
-          sessionServices.push(serviceName)
+          interactionServices.push(serviceName)
         }
       }
     }
 
     return {
       singletonServices: singletonServices.sort(),
-      sessionServices: sessionServices.sort(),
+      interactionServices: interactionServices.sort(),
     }
   } catch (error) {
     console.error('Error parsing services file:', error)
-    return { singletonServices: [], sessionServices: [] }
+    return { singletonServices: [], interactionServices: [] }
   }
 }
 
@@ -96,7 +96,7 @@ function createInspectorState(): void {
  */
 function runPikkuWithFilter(filter: string): {
   singletonServices: string[]
-  sessionServices: string[]
+  interactionServices: string[]
 } {
   try {
     // Run pikku all with the filter, loading from the cached state
@@ -169,7 +169,7 @@ async function runTests() {
         `   Expected Singleton: [${scenario.expectedSingletonServices.join(', ')}]`
       )
       console.log(
-        `   Expected Session:   [${scenario.expectedSessionServices.join(', ')}]`
+        `   Expected Session:   [${scenario.expectedInteractionServices.join(', ')}]`
       )
 
       const actualServices = runPikkuWithFilter(scenario.filter)
@@ -177,7 +177,7 @@ async function runTests() {
         `   Actual Singleton:   [${actualServices.singletonServices.join(', ')}]`
       )
       console.log(
-        `   Actual Session:     [${actualServices.sessionServices.join(', ')}]`
+        `   Actual Session:     [${actualServices.interactionServices.join(', ')}]`
       )
 
       const singletonComparison = compareServices(
@@ -186,8 +186,8 @@ async function runTests() {
       )
 
       const sessionComparison = compareServices(
-        actualServices.sessionServices,
-        scenario.expectedSessionServices
+        actualServices.interactionServices,
+        scenario.expectedInteractionServices
       )
 
       const bothMatch = singletonComparison.match && sessionComparison.match
@@ -228,8 +228,8 @@ async function runTests() {
           actualSingleton: actualServices.singletonServices,
           missingSingleton: singletonComparison.missing,
           extraSingleton: singletonComparison.extra,
-          expectedSession: scenario.expectedSessionServices,
-          actualSession: actualServices.sessionServices,
+          expectedSession: scenario.expectedInteractionServices,
+          actualSession: actualServices.interactionServices,
           missingSession: sessionComparison.missing,
           extraSession: sessionComparison.extra,
         })
@@ -244,11 +244,11 @@ async function runTests() {
       )
 
       assert.deepStrictEqual(
-        actualServices.sessionServices,
-        scenario.expectedSessionServices,
-        `Session services mismatch for scenario: ${scenario.name}\n` +
-          `Expected: [${scenario.expectedSessionServices.join(', ')}]\n` +
-          `Actual:   [${actualServices.sessionServices.join(', ')}]`
+        actualServices.interactionServices,
+        scenario.expectedInteractionServices,
+        `Interaction services mismatch for scenario: ${scenario.name}\n` +
+          `Expected: [${scenario.expectedInteractionServices.join(', ')}]\n` +
+          `Actual:   [${actualServices.interactionServices.join(', ')}]`
       )
     })
   }

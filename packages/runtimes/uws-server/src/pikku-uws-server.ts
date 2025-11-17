@@ -3,7 +3,7 @@ import * as uWS from 'uWebSockets.js'
 import type {
   CoreConfig,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
 } from '@pikku/core'
 
 import { pikkuHTTPHandler, pikkuWebsocketHandler } from '@pikku/uws-handler'
@@ -33,12 +33,16 @@ export class PikkuUWSServer {
    *
    * @param config - The configuration for the server.
    * @param singletonServices - The singleton services used by the server.
-   * @param createSessionServices - Function to create session services for each request.
+   * @param createInteractionServices - Function to create interaction services for each request.
    */
   constructor(
     private readonly config: UWSCoreConfig,
     private readonly singletonServices: CoreSingletonServices,
-    private readonly createSessionServices: CreateSessionServices<any, any, any>
+    private readonly createInteractionServices: CreateInteractionServices<
+      any,
+      any,
+      any
+    >
   ) {}
 
   /**
@@ -57,7 +61,7 @@ export class PikkuUWSServer {
       pikkuHTTPHandler({
         logRoutes: true,
         singletonServices: this.singletonServices,
-        createSessionServices: this.createSessionServices,
+        createInteractionServices: this.createInteractionServices,
       })
     )
 
@@ -66,7 +70,7 @@ export class PikkuUWSServer {
       pikkuWebsocketHandler({
         logRoutes: true,
         singletonServices: this.singletonServices,
-        createSessionServices: this.createSessionServices,
+        createInteractionServices: this.createInteractionServices,
       })
     )
   }

@@ -17,7 +17,7 @@ export const disconnectWebsocket = async <
   event: APIGatewayProxyEvent,
   {
     singletonServices,
-    createSessionServices,
+    createInteractionServices,
     channelStore,
   }: WebsocketParams<SingletonServices, Services, UserSession>
 ): Promise<APIGatewayProxyResult> => {
@@ -29,7 +29,7 @@ export const disconnectWebsocket = async <
   await runChannelDisconnect({
     ...runnerParams,
     singletonServices: singletonServices as any,
-    createSessionServices: createSessionServices as any,
+    createInteractionServices: createInteractionServices as any,
   })
   return { statusCode: 200, body: '' }
 }

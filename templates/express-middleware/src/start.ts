@@ -1,6 +1,6 @@
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
-  createSessionServices,
+  createInteractionServices,
   createSingletonServices,
   createConfig,
 } from '../../functions/src/services.js'
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   app.use(express.json())
 
   app.use(
-    pikkuExpressMiddleware(singletonServices, createSessionServices, {
+    pikkuExpressMiddleware(singletonServices, createInteractionServices, {
       logRoutes: true,
     })
   )

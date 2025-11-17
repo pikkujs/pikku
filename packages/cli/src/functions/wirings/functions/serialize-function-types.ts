@@ -6,8 +6,8 @@ export const serializeFunctionTypes = (
   userSessionTypeName: string,
   singletonServicesTypeImport: string,
   singletonServicesTypeName: string,
-  sessionServicesTypeImport: string,
-  sessionServicesTypeName: string,
+  interactionServicesTypeImport: string,
+  interactionServicesTypeName: string,
   rpcMapTypeImport: string,
   requiredServicesTypeImport: string,
   configTypeImport: string
@@ -21,13 +21,13 @@ import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/fun
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
-${sessionServicesTypeImport}
+${interactionServicesTypeImport}
 ${configTypeImport}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
-${sessionServicesTypeName !== 'Services' ? `type Services = ${sessionServicesTypeName}` : ''}
+${interactionServicesTypeName !== 'Services' ? `type Services = ${interactionServicesTypeName}` : ''}
 ${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : ''}
 ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
 
@@ -360,15 +360,15 @@ export const pikkuServices = (
 ) => func
 
 /**
- * Creates a Pikku session services factory.
+ * Creates a Pikku interaction services factory.
  * Use this to define services that are created per-request/session.
  *
- * @param func - Session services factory function
- * @returns The session services factory function
+ * @param func - Interaction services factory function
+ * @returns The interaction services factory function
  *
  * @example
  * \`\`\`typescript
- * export const createSessionServices = pikkuSessionServices(async (services, interaction) => {
+ * export const createInteractionServices = pikkuInteractionServices(async (services, interaction) => {
  *   const session = await interaction.session?.get()
  *   return {
  *     userCache: new UserCache(session?.userId)
@@ -376,11 +376,11 @@ export const pikkuServices = (
  * })
  * \`\`\`
  */
-export const pikkuSessionServices = (
+export const pikkuInteractionServices = (
   func: (
     services: SingletonServices,
     interaction: any
-  ) => Promise<RequiredSessionServices>
+  ) => Promise<RequiredInteractionServices>
 ) => func
 
 /**

@@ -173,19 +173,19 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
         checkRequiredTypes(visitState.filesAndMethodsErrors, {
           config: true,
           singletonServicesFactory: true,
-          sessionServicesFactory: true,
+          interactionServicesFactory: true,
         })
 
         const {
           pikkuConfigFactory,
           singletonServicesFactory,
-          sessionServicesFactory,
+          interactionServicesFactory,
         } = visitState.filesAndMethods
 
         if (
           !pikkuConfigFactory ||
           !singletonServicesFactory ||
-          !sessionServicesFactory
+          !interactionServicesFactory
         ) {
           throw new Error('Required types not found')
         }
@@ -197,7 +197,7 @@ export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
           config,
           pikkuConfigFactory,
           singletonServicesFactory,
-          sessionServicesFactory
+          interactionServicesFactory
         )
 
         await writeFileInDir(logger, bootstrapFile, bootstrapCode)

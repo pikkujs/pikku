@@ -2,7 +2,7 @@ export interface TestScenario {
   name: string
   filter: string
   expectedSingletonServices: string[]
-  expectedSessionServices: string[]
+  expectedInteractionServices: string[]
   description: string
 }
 
@@ -19,7 +19,7 @@ export const scenarios: TestScenario[] = [
       'sms',
       'storage',
     ],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'All services should be included when no filters are applied',
   },
 
@@ -28,21 +28,21 @@ export const scenarios: TestScenario[] = [
     name: 'Tag: notifications',
     filter: '--tags=notifications',
     expectedSingletonServices: ['email', 'logger', 'sms'],
-    expectedSessionServices: ['userContext'],
+    expectedInteractionServices: ['userContext'],
     description: 'Email, sms, logger (middleware) from notification routes',
   },
   {
     name: 'Tag: email',
     filter: '--tags=email',
     expectedSingletonServices: ['email', 'logger'],
-    expectedSessionServices: ['userContext'],
+    expectedInteractionServices: ['userContext'],
     description: 'Email (function + permissions), logger (middleware)',
   },
   {
     name: 'Tag: sms',
     filter: '--tags=sms',
     expectedSingletonServices: ['email', 'logger', 'sms'],
-    expectedSessionServices: [],
+    expectedInteractionServices: [],
     description:
       'SMS (function), logger (middleware), email/logger from session creation',
   },
@@ -56,7 +56,7 @@ export const scenarios: TestScenario[] = [
       'payment',
       'storage',
     ],
-    expectedSessionServices: ['userPreferences'],
+    expectedInteractionServices: ['userPreferences'],
     description:
       'Payment route uses payment + analytics (function + middleware) + logger + storage (rateLimiter middleware)',
   },
@@ -64,7 +64,7 @@ export const scenarios: TestScenario[] = [
     name: 'Tag: storage',
     filter: '--tags=storage',
     expectedSingletonServices: ['email', 'logger', 'storage'],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description:
       'Storage (session service) with email/logger from session creation',
   },
@@ -81,21 +81,21 @@ export const scenarios: TestScenario[] = [
       'sms',
       'storage',
     ],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'All notification routes + payment route',
   },
   {
     name: 'Tags: email,sms',
     filter: '--tags=email,sms',
     expectedSingletonServices: ['email', 'logger', 'sms'],
-    expectedSessionServices: ['userContext'],
+    expectedInteractionServices: ['userContext'],
     description: 'Both email and SMS routes',
   },
   {
     name: 'Tags: notifications,storage',
     filter: '--tags=notifications,storage',
     expectedSingletonServices: ['email', 'logger', 'sms', 'storage'],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'All notification + storage routes',
   },
 
@@ -111,7 +111,7 @@ export const scenarios: TestScenario[] = [
       'sms',
       'storage',
     ],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'All services should be included (all wirings are HTTP)',
   },
 
@@ -127,14 +127,14 @@ export const scenarios: TestScenario[] = [
       'sms',
       'storage',
     ],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'All services should be included (all routes are POST)',
   },
   {
     name: 'HTTP Method: GET',
     filter: '--httpMethods=GET',
     expectedSingletonServices: ['email', 'logger'],
-    expectedSessionServices: [],
+    expectedInteractionServices: [],
     description: 'No GET routes exist, only email/logger from session creation',
   },
 
@@ -143,7 +143,7 @@ export const scenarios: TestScenario[] = [
     name: 'HTTP Route: /api/notifications/*',
     filter: '--httpRoutes=/api/notifications/*',
     expectedSingletonServices: ['email', 'logger', 'sms'],
-    expectedSessionServices: ['userContext'],
+    expectedInteractionServices: ['userContext'],
     description: 'Only notification routes',
   },
   {
@@ -156,14 +156,14 @@ export const scenarios: TestScenario[] = [
       'payment',
       'storage',
     ],
-    expectedSessionServices: ['userPreferences'],
+    expectedInteractionServices: ['userPreferences'],
     description: 'Only payment routes',
   },
   {
     name: 'HTTP Route: /api/storage/*',
     filter: '--httpRoutes=/api/storage/*',
     expectedSingletonServices: ['email', 'logger', 'storage'],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'Only storage routes',
   },
 
@@ -179,7 +179,7 @@ export const scenarios: TestScenario[] = [
       'sms',
       'storage',
     ],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description:
       'All services should be included (all wirings are in src/functions)',
   },
@@ -187,7 +187,7 @@ export const scenarios: TestScenario[] = [
     name: 'Directory: src/nonexistent',
     filter: '--directories=src/nonexistent',
     expectedSingletonServices: ['email', 'logger'],
-    expectedSessionServices: [],
+    expectedInteractionServices: [],
     description:
       'No wirings in nonexistent directory, only email/logger from session creation',
   },
@@ -197,7 +197,7 @@ export const scenarios: TestScenario[] = [
     name: 'Combo: notifications + POST',
     filter: '--tags=notifications --httpMethods=POST',
     expectedSingletonServices: ['email', 'logger', 'sms'],
-    expectedSessionServices: ['userContext'],
+    expectedInteractionServices: ['userContext'],
     description: 'Notification routes that are POST',
   },
   {
@@ -210,7 +210,7 @@ export const scenarios: TestScenario[] = [
       'payment',
       'storage',
     ],
-    expectedSessionServices: ['userPreferences'],
+    expectedInteractionServices: ['userPreferences'],
     description: 'Payment HTTP routes',
   },
 
@@ -219,7 +219,7 @@ export const scenarios: TestScenario[] = [
     name: 'Name: send*',
     filter: '--names=send*',
     expectedSingletonServices: ['email', 'logger', 'sms'],
-    expectedSessionServices: ['userContext'],
+    expectedInteractionServices: ['userContext'],
     description: 'Routes using sendEmail and sendSMS functions + middleware',
   },
   {
@@ -232,7 +232,7 @@ export const scenarios: TestScenario[] = [
       'payment',
       'storage',
     ],
-    expectedSessionServices: ['userPreferences'],
+    expectedInteractionServices: ['userPreferences'],
     description: 'Routes using processPayment function + middleware',
   },
   {
@@ -245,14 +245,14 @@ export const scenarios: TestScenario[] = [
       'payment',
       'storage',
     ],
-    expectedSessionServices: ['userPreferences'],
+    expectedInteractionServices: ['userPreferences'],
     description: 'Routes using functions ending with "Payment" + middleware',
   },
   {
     name: 'Name: saveData',
     filter: '--names=saveData',
     expectedSingletonServices: ['email', 'logger', 'storage'],
-    expectedSessionServices: ['userContext', 'userPreferences'],
+    expectedInteractionServices: ['userContext', 'userPreferences'],
     description: 'Routes using saveData function',
   },
 ]

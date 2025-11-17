@@ -191,7 +191,7 @@ export type PikkuCLIConfig = {
 
   userSessionType?: string
   singletonServicesFactoryType?: string
-  sessionServicesFactoryType?: string
+  interactionServicesFactoryType?: string
 
   configDir: string
   tsconfig: string

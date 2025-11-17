@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express'
 
-import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
+import { CoreSingletonServices, CreateInteractionServices } from '@pikku/core'
 import { fetch, RunHTTPWiringOptions } from '@pikku/core/http'
 import { logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
@@ -26,13 +26,13 @@ type PikkuMiddlewareArgs = RunHTTPWiringOptions & {
  * Creates Express middleware for handling requests using the Pikku framework.
  *
  * @param {CoreSingletonServices} singletonServices - The singleton services used by the middleware.
- * @param {CreateSessionServices<any, any, any>} createSessionServices - A function to create session services for each request.
+ * @param {CreateInteractionServices<any, any, any>} createInteractionServices - A function to create interaction services for each request.
  * @param {PikkuMiddlewareArgs} options - The configuration options for the middleware.
  * @returns {RequestHandler} - The Express middleware function.
  */
 export const pikkuExpressMiddleware = (
   singletonServices: CoreSingletonServices,
-  createSessionServices: CreateSessionServices<any, any, any>,
+  createInteractionServices: CreateInteractionServices<any, any, any>,
   {
     respondWith404,
     logRoutes,
@@ -51,7 +51,7 @@ export const pikkuExpressMiddleware = (
     const request = await expressToRequest(req)
     const response = await fetch(request, {
       singletonServices,
-      createSessionServices,
+      createInteractionServices,
       respondWith404,
       coerceDataFromSchema,
     })

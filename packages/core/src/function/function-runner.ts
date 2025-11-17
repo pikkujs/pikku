@@ -11,17 +11,17 @@ import {
   MiddlewareMetadata,
   PermissionMetadata,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
   CorePikkuPermission,
 } from './functions.types.js'
-import { UserSessionService } from '../services/user-session-service.js'
+import { UserInteractionService } from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
-import { closeSessionServices } from '../utils.js'
+import { closeInteractionServices } from '../utils.js'
 
 export const addFunction = (
   funcName: string,
@@ -35,7 +35,7 @@ export const runPikkuFuncDirectly = async <In, Out>(
   allServices: CoreServices,
   interaction: PikkuInteraction,
   data: In,
-  userSession?: UserSessionService<CoreUserSession>
+  userSession?: UserInteractionService<CoreUserSession>
 ) => {
   const funcConfig = pikkuState('function', 'functions').get(funcName)
   if (!funcConfig) {
@@ -59,7 +59,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   funcName: string,
   {
     singletonServices,
-    createSessionServices,
+    createInteractionServices,
     data,
     auth: wiringAuth,
     inheritedMiddleware,
@@ -71,7 +71,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     interaction,
   }: {
     singletonServices: CoreSingletonServices
-    createSessionServices?: CreateSessionServices
+    createInteractionServices?: CreateInteractionServices
     data: () => Promise<In> | In
     auth?: boolean
     inheritedMiddleware?: MiddlewareMetadata[]
@@ -146,20 +146,23 @@ export const runPikkuFunc = async <In = any, Out = any>(
       data: actualData,
     })
 
-    const sessionServices = await createSessionServices?.(
+    const interactionServices = await createInteractionServices?.(
       singletonServices,
       interaction
     )
     try {
-      const services = { ...singletonServices, ...sessionServices }
+      const services = { ...singletonServices, ...interactionServices }
       const rpc = rpcService.getContextRPCService(services, interaction)
       return await funcConfig.func(services, actualData, {
         ...interaction,
         rpc,
       })
     } finally {
-      if (sessionServices) {
-        await closeSessionServices(singletonServices.logger, sessionServices)
+      if (interactionServices) {
+        await closeInteractionServices(
+          singletonServices.logger,
+          interactionServices
+        )
       }
     }
   }

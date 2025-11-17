@@ -19,7 +19,7 @@ import {
 import type {
   CoreServices,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
 } from '@pikku/core'
 import { mapBullJobToQueueJob } from './utils.js'
 
@@ -145,7 +145,7 @@ export class BullQueueWorkers implements QueueWorkers {
   constructor(
     private redisConnectionOptions: ConnectionOptions,
     private singletonServices: CoreSingletonServices,
-    private createSessionServices?: CreateSessionServices<
+    private createInteractionServices?: CreateInteractionServices<
       CoreSingletonServices,
       CoreServices,
       any
@@ -166,7 +166,7 @@ export class BullQueueWorkers implements QueueWorkers {
             try {
               return await runQueueJob({
                 singletonServices: this.singletonServices,
-                createSessionServices: this.createSessionServices,
+                createInteractionServices: this.createInteractionServices,
                 job: await mapBullJobToQueueJob(
                   job,
                   this.redisConnectionOptions,

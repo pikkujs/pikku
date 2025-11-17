@@ -518,9 +518,9 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.equal(receivedInteraction.session, undefined)
   })
 
-  test('should handle async createSessionServices function', async () => {
+  test('should handle async createInteractionServices function', async () => {
     let servicesProvided: any
-    const sessionServices = { customService: 'value' }
+    const interactionServices = { customService: 'value' }
 
     addTestFunction('testFunc', {
       func: async (services, data, interaction) => {
@@ -529,10 +529,10 @@ describe('runPikkuFunc - Integration Tests', () => {
       },
     })
 
-    const asyncCreateSessionServices = async () => {
+    const asyncCreateInteractionServices = async () => {
       // Simulate async service creation
       await new Promise((resolve) => setTimeout(resolve, 1))
-      return sessionServices
+      return interactionServices
     }
 
     const result = await runPikkuFunc(
@@ -541,7 +541,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        createSessionServices: asyncCreateSessionServices,
+        createInteractionServices: asyncCreateInteractionServices,
         data: () => ({}),
         auth: false,
         interaction: {},
@@ -551,7 +551,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.equal(result, 'success')
     assert.deepEqual(servicesProvided, {
       ...mockSingletonServices,
-      ...sessionServices,
+      ...interactionServices,
     })
   })
 })

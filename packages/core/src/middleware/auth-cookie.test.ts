@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { authCookie } from './auth-cookie.js'
 import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
-import { PikkuUserSessionService } from '../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../services/user-session-service.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -42,7 +42,8 @@ const createMockLogger = () => {
 describe('authCookie middleware', () => {
   test('should decode session from cookie on request', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user123' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'encoded-jwt',
       decode: async (token: string) => {
@@ -66,7 +67,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({ session: 'cookie-jwt-value' }),
           response: mockResponse,
@@ -78,12 +79,13 @@ describe('authCookie middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.deepEqual(userSessionService.get(), mockUserSession)
+    assert.deepEqual(userInteractionService.get(), mockUserSession)
   })
 
   test('should set cookie in response when session changes', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user456' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async (expiresIn: any, payload: any) => {
         assert.deepEqual(expiresIn, { value: 7, unit: 'day' })
@@ -107,7 +109,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -115,7 +117,7 @@ describe('authCookie middleware', () => {
       } as any,
       async () => {
         // Simulate session change
-        userSessionService.set(mockUserSession)
+        userInteractionService.set(mockUserSession)
       }
     )
 
@@ -131,7 +133,8 @@ describe('authCookie middleware', () => {
 
   test('should not set cookie when session does not change', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user789' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'encoded-jwt',
       decode: async () => mockUserSession,
@@ -151,7 +154,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({ session: 'existing-jwt' }),
           response: mockResponse,
@@ -167,7 +170,8 @@ describe('authCookie middleware', () => {
   })
 
   test('should not decode cookie when cookie is missing', async () => {
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     let decodeCalled = false
     const jwtService = {
       encode: async () => 'encoded-jwt',
@@ -192,7 +196,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -205,11 +209,12 @@ describe('authCookie middleware', () => {
 
     assert.equal(nextCalled, true)
     assert.equal(decodeCalled, false)
-    assert.equal(userSessionService.get(), undefined)
+    assert.equal(userInteractionService.get(), undefined)
   })
 
   test('should not set session when JWT decode returns null', async () => {
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'encoded-jwt',
       decode: async () => null,
@@ -230,7 +235,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({ session: 'invalid-jwt' }),
           response: mockResponse,
@@ -242,13 +247,14 @@ describe('authCookie middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userSessionService.get(), undefined)
+    assert.equal(userInteractionService.get(), undefined)
   })
 
   test('should skip middleware when session already exists', async () => {
     const existingSession: CoreUserSession = { userId: 'existing' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
-    userSessionService.setInitial(existingSession)
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
+    userInteractionService.setInitial(existingSession)
 
     let decodeCalled = false
     const jwtService = {
@@ -274,7 +280,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -287,11 +293,12 @@ describe('authCookie middleware', () => {
 
     assert.equal(nextCalled, true)
     assert.equal(decodeCalled, false)
-    assert.deepEqual(userSessionService.get(), existingSession)
+    assert.deepEqual(userInteractionService.get(), existingSession)
   })
 
   test('should skip middleware when http.request is not available', async () => {
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'encoded-jwt',
       decode: async () => ({ userId: 'test' }),
@@ -309,18 +316,19 @@ describe('authCookie middleware', () => {
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
-      { session: userSessionService } as any,
+      { session: userInteractionService } as any,
       async () => {
         nextCalled = true
       }
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userSessionService.get(), undefined)
+    assert.equal(userInteractionService.get(), undefined)
   })
 
   test('should not decode when jwtService is not available on request', async () => {
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
 
     const middleware = authCookie({
       name: 'session',
@@ -337,7 +345,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -349,12 +357,13 @@ describe('authCookie middleware', () => {
     )
 
     assert.equal(nextCalled, true)
-    assert.equal(userSessionService.get(), undefined)
+    assert.equal(userInteractionService.get(), undefined)
   })
 
   test('should warn when jwtService is not available on response and session changed', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user999' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const mockLogger = createMockLogger()
 
     const middleware = authCookie({
@@ -371,7 +380,7 @@ describe('authCookie middleware', () => {
         logger: mockLogger,
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -379,7 +388,7 @@ describe('authCookie middleware', () => {
       } as any,
       async () => {
         // Simulate session change
-        userSessionService.set(mockUserSession)
+        userInteractionService.set(mockUserSession)
       }
     )
 
@@ -397,7 +406,8 @@ describe('authCookie middleware', () => {
 
   test('should not set cookie when http.response is not available', async () => {
     const mockUserSession: CoreUserSession = { userId: 'user888' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'encoded-jwt',
       decode: async () => null,
@@ -415,7 +425,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({}),
           response: undefined,
@@ -423,17 +433,18 @@ describe('authCookie middleware', () => {
       } as any,
       async () => {
         // Simulate session change
-        userSessionService.set(mockUserSession)
+        userInteractionService.set(mockUserSession)
       }
     )
 
     // Should complete without errors even though response is not available
-    assert.equal(userSessionService.get(), mockUserSession)
+    assert.equal(userInteractionService.get(), mockUserSession)
   })
 
   test('should handle custom cookie name', async () => {
     const mockUserSession: CoreUserSession = { userId: 'custom-user' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'custom-encoded-jwt',
       decode: async (token: string) => {
@@ -456,7 +467,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({
             my_custom_cookie: 'custom-cookie-value',
@@ -466,7 +477,7 @@ describe('authCookie middleware', () => {
       } as any,
       async () => {
         // Modify session to trigger cookie setting
-        userSessionService.set({ ...mockUserSession, extra: 'data' })
+        userInteractionService.set({ ...mockUserSession, extra: 'data' })
       }
     )
 
@@ -477,7 +488,8 @@ describe('authCookie middleware', () => {
 
   test('should properly set expiration time in cookie options', async () => {
     const mockUserSession: CoreUserSession = { userId: 'expiry-test' }
-    const userSessionService = new PikkuUserSessionService<CoreUserSession>()
+    const userInteractionService =
+      new PikkuUserInteractionService<CoreUserSession>()
     const jwtService = {
       encode: async () => 'encoded-jwt',
       decode: async () => null,
@@ -498,14 +510,14 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: userSessionService,
+        session: userInteractionService,
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
         },
       } as any,
       async () => {
-        userSessionService.set(mockUserSession)
+        userInteractionService.set(mockUserSession)
       }
     )
 

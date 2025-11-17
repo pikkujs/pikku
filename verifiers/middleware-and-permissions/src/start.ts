@@ -1,7 +1,7 @@
 import {
   createConfig,
   createSingletonServices,
-  createSessionServices,
+  createInteractionServices,
 } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     const httpTest2Passed = await testHTTPWiring(
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Scheduler
@@ -99,7 +99,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Queue
@@ -114,7 +114,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test CLI
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices as any
+      createInteractionServices as any
     )
 
     // Test MCP Tool
@@ -155,7 +155,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test MCP Resource
@@ -171,7 +171,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test MCP Prompt
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Channel (Local Runner)
@@ -207,7 +207,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Channel - with message middleware
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Channel - with wire middleware
@@ -243,7 +243,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Channel - with both types of middleware
@@ -262,7 +262,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     // Test Channel (Serverless Runner)
@@ -280,7 +280,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     const channelServerlessTest2Passed = await testChannelWiringServerless(
@@ -297,7 +297,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     const channelServerlessTest3Passed = await testChannelWiringServerless(
@@ -314,7 +314,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     const channelServerlessTest4Passed = await testChannelWiringServerless(
@@ -332,7 +332,7 @@ async function main(): Promise<void> {
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
 
     const allPassed =

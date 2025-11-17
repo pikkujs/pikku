@@ -1,11 +1,11 @@
 import { ScheduledController } from '@cloudflare/workers-types'
-import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
+import { CoreSingletonServices, CreateInteractionServices } from '@pikku/core'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 export const runScheduled = async (
   controller: ScheduledController,
   singletonServices: CoreSingletonServices,
-  createSessionServices?: CreateSessionServices
+  createInteractionServices?: CreateInteractionServices
 ) => {
   const scheduledTasks = getScheduledTasks()
   for (const [name, task] of scheduledTasks) {
@@ -13,7 +13,7 @@ export const runScheduled = async (
       return await runScheduledTask({
         name,
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
       })
     }
   }

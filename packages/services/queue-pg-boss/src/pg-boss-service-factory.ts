@@ -5,7 +5,7 @@ import { PgBossSchedulerService } from './pg-boss-scheduler-service.js'
 import type {
   CoreServices,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
 } from '@pikku/core'
 
 /**
@@ -56,7 +56,7 @@ export class PgBossServiceFactory {
    */
   getQueueWorkers(
     singletonServices: CoreSingletonServices,
-    createSessionServices?: CreateSessionServices<
+    createInteractionServices?: CreateInteractionServices<
       CoreSingletonServices,
       CoreServices,
       any
@@ -66,7 +66,7 @@ export class PgBossServiceFactory {
       this.queueWorkers = new PgBossQueueWorkers(
         this.pgBoss,
         singletonServices,
-        createSessionServices
+        createInteractionServices
       )
     }
     return this.queueWorkers

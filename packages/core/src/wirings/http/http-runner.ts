@@ -18,17 +18,17 @@ import {
   CoreUserSession,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
-  SessionServices,
+  InteractionServices,
   PikkuWiringTypes,
   PikkuInteraction,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import {
-  closeSessionServices,
+  closeInteractionServices,
   createWeakUID,
   isSerializable,
 } from '../../utils.js'
-import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -247,13 +247,13 @@ export const createHTTPInteraction = (
  * @param {Object} matchedRoute - Contains route details, URL parameters, and optional schema.
  * @param {PikkuHTTP | undefined} http - The HTTP interaction object.
  * @param {Object} options - Options for route execution (e.g., whether to coerce query strings to arrays).
- * @returns {Promise<any>} An object containing the route handler result and session services (if any).
+ * @returns {Promise<any>} An object containing the route handler result and interaction services (if any).
  * @throws Throws errors like MissingSessionError or ForbiddenError on validation failures.
  */
 const executeRoute = async (
   services: {
     singletonServices: any
-    createSessionServices?: any
+    createInteractionServices?: any
     skipUserSession: boolean
     requestId: string
   },
@@ -268,17 +268,17 @@ const executeRoute = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const userSession = new PikkuUserSessionService<CoreUserSession>()
+  const userSession = new PikkuUserInteractionService<CoreUserSession>()
   const { params, route, meta } = matchedRoute
   const {
     singletonServices,
-    createSessionServices,
+    createInteractionServices,
     skipUserSession,
     requestId,
   } = services
 
   const requiresSession = route.auth !== false
-  let sessionServices: any
+  let interactionServices: any
   let result: any
 
   // Attach URL parameters to the request object
@@ -331,7 +331,7 @@ const executeRoute = async (
     meta.pikkuFuncName,
     {
       singletonServices,
-      createSessionServices,
+      createInteractionServices,
       auth: route.auth !== false,
       data,
       inheritedMiddleware: meta.middleware,
@@ -355,7 +355,7 @@ const executeRoute = async (
   // TODO: Evaluate if the response stream should be explicitly ended.
   // http?.response?.end()
 
-  return sessionServices ? { result, sessionServices } : { result }
+  return interactionServices ? { result, interactionServices } : { result }
 }
 
 /**
@@ -412,7 +412,7 @@ export const pikkuFetch = async <In, Out>(
  *  - Determines the correct route based on HTTP method and path.
  *  - Executes middleware and the route handler.
  *  - Catches and handles errors, optionally bubbling them if configured.
- *  - Cleans up any session services created during processing.
+ *  - Cleans up any interaction services created during processing.
  *
  * @template In Expected input data type.
  * @template Out Expected output data type.
@@ -426,7 +426,7 @@ export const fetchData = async <In, Out>(
   response: PikkuHTTPResponse,
   {
     singletonServices,
-    createSessionServices,
+    createInteractionServices,
     skipUserSession = false,
     respondWith404 = true,
     logWarningsForStatusCodes = [],
@@ -439,7 +439,9 @@ export const fetchData = async <In, Out>(
     (request as any).getHeader?.('x-request-id') ||
     generateRequestId?.() ||
     createWeakUID()
-  let sessionServices: SessionServices<typeof singletonServices> | undefined
+  let interactionServices:
+    | InteractionServices<typeof singletonServices>
+    | undefined
   let result: Out
 
   // Combine the request and response into one interaction object
@@ -464,10 +466,10 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ;({ result, sessionServices } = await executeRoute(
+    ;({ result, interactionServices } = await executeRoute(
       {
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         skipUserSession,
         requestId,
       },
@@ -490,8 +492,11 @@ export const fetchData = async <In, Out>(
     )
   } finally {
     // Clean up any session-specific services created during processing
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
+    if (interactionServices) {
+      await closeInteractionServices(
+        singletonServices.logger,
+        interactionServices
+      )
     }
   }
 }

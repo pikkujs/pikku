@@ -2,7 +2,7 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
-  CreateSessionServices,
+  CreateInteractionServices,
 } from '@pikku/core'
 import { ChannelStore } from '@pikku/core/channel'
 
@@ -13,7 +13,7 @@ export type WebsocketParams<
 > = {
   channelStore: ChannelStore
   singletonServices: SingletonServices
-  createSessionServices?: CreateSessionServices<
+  createInteractionServices?: CreateInteractionServices<
     SingletonServices,
     Services,
     UserSession

@@ -8,7 +8,7 @@ import type { ExpectedEvent } from '../assert-combined.js'
 export async function testMCPToolWiring(
   expected: ExpectedEvent[],
   singletonServices: any,
-  createSessionServices: any
+  createInteractionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run MCP Tool')
   console.log('─────────────────────────')
@@ -24,7 +24,7 @@ export async function testMCPToolWiring(
         },
         {
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
         },
         'test-tool'
       )
@@ -47,7 +47,7 @@ export async function testMCPToolWiring(
 export async function testMCPResourceWiring(
   expected: ExpectedEvent[],
   singletonServices: any,
-  createSessionServices: any
+  createInteractionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run MCP Resource')
   console.log('─────────────────────────')
@@ -63,7 +63,7 @@ export async function testMCPResourceWiring(
         },
         {
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
           mcp: {
             uri: 'test-resource',
             sendResourceUpdated: async () => {},
@@ -95,7 +95,7 @@ export async function testMCPResourceWiring(
 export async function testMCPPromptWiring(
   expected: ExpectedEvent[],
   singletonServices: any,
-  createSessionServices: any
+  createInteractionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run MCP Prompt')
   console.log('─────────────────────────')
@@ -111,7 +111,7 @@ export async function testMCPPromptWiring(
         },
         {
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
         },
         'test-prompt'
       )

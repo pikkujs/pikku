@@ -33,8 +33,8 @@ wireCLI({
     singletonServicesFactoryType: {
       description: 'Specify which singleton services factory to use',
     },
-    sessionServicesFactoryType: {
-      description: 'Specify which session services factory to use',
+    interactionServicesFactoryType: {
+      description: 'Specify which interaction services factory to use',
     },
     stateOutput: {
       description: 'Save inspector state to JSON file for reuse',

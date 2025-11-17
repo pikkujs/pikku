@@ -1,7 +1,7 @@
 import { runFetch, runScheduled } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
 import { ExportedHandler, Response } from '@cloudflare/workers-types'
-import { createSessionServices } from '../../functions/src/services.js'
+import { createInteractionServices } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 export default {
@@ -15,7 +15,7 @@ export default {
     return await runFetch(
       request as unknown as Request,
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
   },
 } satisfies ExportedHandler<Record<string, string>>

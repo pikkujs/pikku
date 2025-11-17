@@ -1,6 +1,6 @@
 import { openChannel } from '../channel-runner.js'
 import { createHTTPInteraction } from '../../http/http-runner.js'
-import { closeSessionServices } from '../../../utils.js'
+import { closeInteractionServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import {
   CoreChannel,
@@ -8,9 +8,12 @@ import {
   RunChannelParams,
 } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import { PikkuInteraction, SessionServices } from '../../../types/core.types.js'
+import {
+  PikkuInteraction,
+  InteractionServices,
+} from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { PikkuUserSessionService } from '../../../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
@@ -20,7 +23,7 @@ export const runLocalChannel = async ({
   request,
   response,
   route,
-  createSessionServices,
+  createInteractionServices,
   skipUserSession = false,
   respondWith404 = true,
   coerceDataFromSchema = true,
@@ -29,10 +32,12 @@ export const runLocalChannel = async ({
 }: Partial<Pick<CoreChannel<unknown, any>, 'route'>> &
   RunChannelOptions &
   RunChannelParams<unknown>): Promise<PikkuLocalChannelHandler | void> => {
-  let sessionServices: SessionServices<typeof singletonServices> | undefined
+  let interactionServices:
+    | InteractionServices<typeof singletonServices>
+    | undefined
 
   let channelHandler: PikkuLocalChannelHandler | undefined
-  const userSession = new PikkuUserSessionService()
+  const userSession = new PikkuUserInteractionService()
 
   let http: PikkuHTTP | undefined
   if (request) {
@@ -44,7 +49,7 @@ export const runLocalChannel = async ({
   try {
     ;({ openingData, channelConfig, meta } = await openChannel({
       channelId,
-      createSessionServices,
+      createInteractionServices,
       respondWith404,
       request,
       response,
@@ -77,14 +82,14 @@ export const runLocalChannel = async ({
       const channel = channelHandler.getChannel()
       const interaction: PikkuInteraction = { channel, session: userSession }
 
-      if (createSessionServices) {
-        sessionServices = await createSessionServices(
+      if (createInteractionServices) {
+        interactionServices = await createInteractionServices(
           singletonServices,
           interaction
         )
       }
 
-      const services = { ...singletonServices, ...sessionServices }
+      const services = { ...singletonServices, ...interactionServices }
 
       channelHandler.registerOnOpen(async () => {
         if (channelConfig.onConnect && meta.connect) {
@@ -125,8 +130,11 @@ export const runLocalChannel = async ({
           }
         }
 
-        if (sessionServices) {
-          await closeSessionServices(singletonServices.logger, sessionServices)
+        if (interactionServices) {
+          await closeInteractionServices(
+            singletonServices.logger,
+            interactionServices
+          )
         }
       })
 
@@ -156,8 +164,11 @@ export const runLocalChannel = async ({
         bubbleErrors
       )
     } finally {
-      if (sessionServices) {
-        await closeSessionServices(singletonServices.logger, sessionServices)
+      if (interactionServices) {
+        await closeInteractionServices(
+          singletonServices.logger,
+          interactionServices
+        )
       }
     }
   }
