@@ -23,7 +23,6 @@ import {
   httpRoutePermission,
 } from '../permissions/http.js'
 import { permissionTagFactory, readTagPermission } from '../permissions/tag.js'
-import { sessionTagMiddleware } from '../middleware/fake-session.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
 export const apiTagMiddleware = () =>

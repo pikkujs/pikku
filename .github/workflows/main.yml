@@ -46,6 +46,10 @@ jobs:
     name: Verifiers
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        verifier: [middleware-and-permissions, treeshaking, types]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -61,7 +65,7 @@ jobs:
           name: built-packages
           path: packages
       - run: yarn install
-      - run: yarn test:verifiers
+      - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
     name: Templates
