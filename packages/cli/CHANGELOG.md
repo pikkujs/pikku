@@ -1,5 +1,20 @@
 ## 0.11.0
 
+## 0.11.2
+
+### Patch Changes
+
+- ce902b1: feat: serialize json files seperate to pikku meta state calls
+- ce902b1: feat: adding rpcName to rpc url so its nicer in network tabs
+- 4579434: breaking: changing the signature of functions
+- ce902b1: feat: adding in pikkuSimpleWorkflowFunc
+- 06e1a31: breaking: change session services to interaction services
+- Updated dependencies [4579434]
+- Updated dependencies [ce902b1]
+- Updated dependencies [06e1a31]
+  - @pikku/core@0.11.1
+  - @pikku/inspector@0.11.1
+
 ## 0.11.1
 
 ### Patch Changes

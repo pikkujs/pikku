@@ -1,5 +1,13 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- 4579434: breaking: changing the signature of functions
+- ce902b1: feat: adding in pikkuSimpleWorkflowFunc
+- 06e1a31: breaking: change session services to interaction services
+
 ### Minor Changes
 
 - Add workflow orchestration engine with step execution and retries
