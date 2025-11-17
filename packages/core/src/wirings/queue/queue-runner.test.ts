@@ -53,7 +53,7 @@ describe('wireQueueWorker', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'test-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, data: any, wire: any) => {
           return { processed: true }
         },
         auth: false,
@@ -93,7 +93,7 @@ describe('wireQueueWorker', () => {
   })
 
   test('should wire worker with middleware and tags', () => {
-    const middleware = async (services: any, interaction: any, next: any) => {
+    const middleware = async (services: any, wire: any, next: any) => {
       await next()
     }
 
@@ -200,7 +200,7 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'simple-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
+        func: async (services: any, data: any, wire: any) => {
           jobProcessed = true
           receivedData = data
           return { success: true }
@@ -240,8 +240,8 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'fail-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          await interaction.queue.fail('Processing failed')
+        func: async (services: any, data: any, wire: any) => {
+          await wire.queue.fail('Processing failed')
         },
         auth: false,
       },
@@ -278,8 +278,8 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'fail-no-reason-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          await interaction.queue.fail()
+        func: async (services: any, data: any, wire: any) => {
+          await wire.queue.fail()
         },
         auth: false,
       },
@@ -314,8 +314,8 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'discard-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          await interaction.queue.discard('Invalid data')
+        func: async (services: any, data: any, wire: any) => {
+          await wire.queue.discard('Invalid data')
         },
         auth: false,
       },
@@ -354,10 +354,10 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'progress-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          await interaction.queue.updateProgress(25)
-          await interaction.queue.updateProgress('halfway')
-          await interaction.queue.updateProgress({ stage: 'processing' })
+        func: async (services: any, data: any, wire: any) => {
+          await wire.queue.updateProgress(25)
+          await wire.queue.updateProgress('halfway')
+          await wire.queue.updateProgress({ stage: 'processing' })
           return 'done'
         },
         auth: false,
@@ -389,8 +389,8 @@ describe('runQueueJob', () => {
     const mockWorker: CoreQueueWorker = {
       queueName: 'default-progress-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          await interaction.queue.updateProgress(50)
+        func: async (services: any, data: any, wire: any) => {
+          await wire.queue.updateProgress(50)
           return 'ok'
         },
         auth: false,
@@ -417,40 +417,40 @@ describe('runQueueJob', () => {
     assert(progressLog !== undefined)
   })
 
-  test('should provide correct interaction object to job', async () => {
-    let capturedInteraction: any
+  test('should provide correct wire object to job', async () => {
+    let capturedWire: any
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'interaction-queue',
+      queueName: 'wire-queue',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          capturedInteraction = interaction
+        func: async (services: any, data: any, wire: any) => {
+          capturedWire = wire
           return 'ok'
         },
         auth: false,
       },
     }
 
-    pikkuState('queue', 'meta')['interaction-queue'] = {
-      pikkuFuncName: 'queue_interaction-queue',
-      queueName: 'interaction-queue',
+    pikkuState('queue', 'meta')['wire-queue'] = {
+      pikkuFuncName: 'queue_wire-queue',
+      queueName: 'wire-queue',
     }
-    addTestQueueFunction('queue_interaction-queue')
+    addTestQueueFunction('queue_wire-queue')
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
-    const job = createMockJob('interaction-queue', 'job-int-123')
+    const job = createMockJob('wire-queue', 'job-int-123')
 
     await runQueueJob({
       singletonServices: { logger: mockLogger } as any,
       job,
     })
 
-    assert.equal(capturedInteraction.queue.queueName, 'interaction-queue')
-    assert.equal(capturedInteraction.queue.jobId, 'job-int-123')
-    assert.equal(typeof capturedInteraction.queue.updateProgress, 'function')
-    assert.equal(typeof capturedInteraction.queue.fail, 'function')
-    assert.equal(typeof capturedInteraction.queue.discard, 'function')
+    assert.equal(capturedWire.queue.queueName, 'wire-queue')
+    assert.equal(capturedWire.queue.jobId, 'job-int-123')
+    assert.equal(typeof capturedWire.queue.updateProgress, 'function')
+    assert.equal(typeof capturedWire.queue.fail, 'function')
+    assert.equal(typeof capturedWire.queue.discard, 'function')
   })
 
   test('should throw error when processor metadata not found', async () => {
@@ -497,9 +497,9 @@ describe('runQueueJob', () => {
     )
   })
 
-  test('should call createInteractionServices when provided', async () => {
-    let createInteractionServicesCalled = false
-    const mockInteractionService = { custom: 'service' }
+  test('should call createWireServices when provided', async () => {
+    let createWireServicesCalled = false
+    const mockWireService = { custom: 'service' }
 
     const mockWorker: CoreQueueWorker = {
       queueName: 'session-services-queue',
@@ -522,13 +522,13 @@ describe('runQueueJob', () => {
     await runQueueJob({
       singletonServices: { logger: mockLogger } as any,
       job,
-      createInteractionServices: async () => {
-        createInteractionServicesCalled = true
-        return mockInteractionService as any
+      createWireServices: async () => {
+        createWireServicesCalled = true
+        return mockWireService as any
       },
     })
 
-    assert.equal(createInteractionServicesCalled, true)
+    assert.equal(createWireServicesCalled, true)
   })
 
   test('should log errors when job processing fails', async () => {
@@ -574,7 +574,7 @@ describe('runQueueJob', () => {
   test('should execute job with middleware', async () => {
     const executionOrder: string[] = []
 
-    const middleware = async (services: any, interaction: any, next: any) => {
+    const middleware = async (services: any, wire: any, next: any) => {
       executionOrder.push('middleware')
       await next()
     }

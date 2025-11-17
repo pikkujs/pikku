@@ -1,14 +1,14 @@
 import { Logger } from './services/logger.js'
 
-// TODO: InteractionServices probably needs it's own type
+// TODO: WireServices probably needs it's own type
 // but is an issue for the future and will be tackled
 // with dependency injection
-export const closeInteractionServices = async (
+export const closeWireServices = async (
   logger: Logger,
-  interactionServices: Record<string, any>
+  wireServices: Record<string, any>
 ) => {
   await Promise.all(
-    Object.values(interactionServices).map(async (service) => {
+    Object.values(wireServices).map(async (service) => {
       if (service?.close) {
         try {
           await service.close()

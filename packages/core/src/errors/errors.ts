@@ -3,10 +3,10 @@
  */
 import { addError, PikkuError } from './error-handler.js'
 
-export class InvalidMiddlewareInteractionError extends PikkuError {}
-addError(InvalidMiddlewareInteractionError, {
+export class InvalidMiddlewareWireError extends PikkuError {}
+addError(InvalidMiddlewareWireError, {
   status: 500,
-  message: 'The middleware interaction is invalid for the current wiring type.',
+  message: 'The middleware wire is invalid for the current wiring type.',
 })
 
 /**

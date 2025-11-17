@@ -103,7 +103,7 @@ describe('wireScheduler', () => {
   })
 
   test('should wire task with middleware and tags', () => {
-    const middleware = async (services: any, interaction: any, next: any) => {
+    const middleware = async (services: any, wire: any, next: any) => {
       await next()
     }
 
@@ -186,8 +186,8 @@ describe('runScheduledTask', () => {
       name: 'task-with-session',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          receivedSession = await interaction.session.get()
+        func: async (services: any, data: any, wire: any) => {
+          receivedSession = await wire.session.get()
           return 'ok'
         },
         auth: false,
@@ -269,8 +269,8 @@ describe('runScheduledTask', () => {
       name: 'skipped-task',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          interaction.scheduledTask.skip('Not ready yet')
+        func: async (services: any, data: any, wire: any) => {
+          wire.scheduledTask.skip('Not ready yet')
         },
         auth: false,
       },
@@ -312,8 +312,8 @@ describe('runScheduledTask', () => {
       name: 'skipped-task-no-reason',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          interaction.scheduledTask.skip()
+        func: async (services: any, data: any, wire: any) => {
+          wire.scheduledTask.skip()
         },
         auth: false,
       },
@@ -351,28 +351,28 @@ describe('runScheduledTask', () => {
     )
   })
 
-  test('should provide correct interaction object to task', async () => {
-    let capturedInteraction: any
+  test('should provide correct wire object to task', async () => {
+    let capturedWire: any
 
     const mockTask: CoreScheduledTask = {
-      name: 'interaction-task',
+      name: 'wire-task',
       schedule: '*/5 * * * *',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          capturedInteraction = interaction
+        func: async (services: any, data: any, wire: any) => {
+          capturedWire = wire
           return 'ok'
         },
         auth: false,
       },
     }
 
-    pikkuState('scheduler', 'meta')['interaction-task'] = {
-      pikkuFuncName: 'scheduler_interaction-task',
-      name: 'interaction-task',
+    pikkuState('scheduler', 'meta')['wire-task'] = {
+      pikkuFuncName: 'scheduler_wire-task',
+      name: 'wire-task',
       schedule: '*/5 * * * *',
     }
-    pikkuState('function', 'meta')['scheduler_interaction-task'] = {
-      pikkuFuncName: 'scheduler_interaction-task',
+    pikkuState('function', 'meta')['scheduler_wire-task'] = {
+      pikkuFuncName: 'scheduler_wire-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -381,19 +381,19 @@ describe('runScheduledTask', () => {
     const mockLogger = createMockLogger()
 
     await runScheduledTask({
-      name: 'interaction-task',
+      name: 'wire-task',
       singletonServices: { logger: mockLogger } as any,
     })
 
-    assert.equal(capturedInteraction.scheduledTask.name, 'interaction-task')
-    assert.equal(capturedInteraction.scheduledTask.schedule, '*/5 * * * *')
-    assert(capturedInteraction.scheduledTask.executionTime instanceof Date)
-    assert.equal(typeof capturedInteraction.scheduledTask.skip, 'function')
+    assert.equal(capturedWire.scheduledTask.name, 'wire-task')
+    assert.equal(capturedWire.scheduledTask.schedule, '*/5 * * * *')
+    assert(capturedWire.scheduledTask.executionTime instanceof Date)
+    assert.equal(typeof capturedWire.scheduledTask.skip, 'function')
   })
 
-  test('should call createInteractionServices when provided', async () => {
-    let createInteractionServicesCalled = false
-    const mockInteractionService = { custom: 'service' }
+  test('should call createWireServices when provided', async () => {
+    let createWireServicesCalled = false
+    const mockWireService = { custom: 'service' }
 
     const mockTask: CoreScheduledTask = {
       name: 'session-services-task',
@@ -421,18 +421,18 @@ describe('runScheduledTask', () => {
     await runScheduledTask({
       name: 'session-services-task',
       singletonServices: { logger: mockLogger } as any,
-      createInteractionServices: async () => {
-        createInteractionServicesCalled = true
-        return mockInteractionService as any
+      createWireServices: async () => {
+        createWireServicesCalled = true
+        return mockWireService as any
       },
     })
 
-    assert.equal(createInteractionServicesCalled, true)
+    assert.equal(createWireServicesCalled, true)
   })
 
-  test('should clean up interaction services in finally block', async () => {
+  test('should clean up wire services in finally block', async () => {
     let closeCalled = false
-    const mockInteractionService = {
+    const mockWireService = {
       custom: {
         close: async () => {
           closeCalled = true
@@ -466,15 +466,15 @@ describe('runScheduledTask', () => {
     await runScheduledTask({
       name: 'cleanup-task',
       singletonServices: { logger: mockLogger } as any,
-      createInteractionServices: async () => mockInteractionService as any,
+      createWireServices: async () => mockWireService as any,
     })
 
     assert.equal(closeCalled, true)
   })
 
-  test('should clean up interaction services even when task throws error', async () => {
+  test('should clean up wire services even when task throws error', async () => {
     let closeCalled = false
-    const mockInteractionService = {
+    const mockWireService = {
       custom: {
         close: async () => {
           closeCalled = true
@@ -511,7 +511,7 @@ describe('runScheduledTask', () => {
       await runScheduledTask({
         name: 'error-cleanup-task',
         singletonServices: { logger: mockLogger } as any,
-        createInteractionServices: async () => mockInteractionService as any,
+        createWireServices: async () => mockWireService as any,
       })
     })
 
@@ -523,8 +523,8 @@ describe('runScheduledTask', () => {
       name: 'error-task',
       schedule: '0 0 * * *',
       func: {
-        func: async (services: any, data: any, interaction: any) => {
-          interaction.scheduledTask.skip('Test skip')
+        func: async (services: any, data: any, wire: any) => {
+          wire.scheduledTask.skip('Test skip')
         },
         auth: false,
       },
@@ -560,7 +560,7 @@ describe('runScheduledTask', () => {
   test('should execute task with middleware', async () => {
     const executionOrder: string[] = []
 
-    const middleware = async (services: any, interaction: any, next: any) => {
+    const middleware = async (services: any, wire: any, next: any) => {
       executionOrder.push('middleware')
       await next()
     }

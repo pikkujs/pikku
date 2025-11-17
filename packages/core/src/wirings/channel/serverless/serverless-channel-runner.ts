@@ -1,8 +1,5 @@
-import {
-  PikkuInteraction,
-  InteractionServices,
-} from '../../../types/core.types.js'
-import { closeInteractionServices } from '../../../utils.js'
+import { PikkuWire, WireServices } from '../../../types/core.types.js'
+import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
 import type {
@@ -11,10 +8,10 @@ import type {
   RunChannelParams,
   PikkuChannelHandlerFactory,
 } from '../channel.types.js'
-import { createHTTPInteraction } from '../../http/http-runner.js'
+import { createHTTPWire } from '../../http/http-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { PikkuUserInteractionService } from '../../../services/user-session-service.js'
+import { PikkuUserWireService } from '../../../services/user-session-service.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
@@ -68,7 +65,7 @@ export const runChannelConnect = async ({
   request,
   response,
   route,
-  createInteractionServices,
+  createWireServices,
   channelStore,
   channelHandlerFactory,
   coerceDataFromSchema = true,
@@ -78,18 +75,18 @@ export const runChannelConnect = async ({
 }: Pick<CoreChannel<unknown, any>, 'route'> &
   RunChannelOptions &
   RunServerlessChannelParams<unknown>) => {
-  let interactionServices: InteractionServices | undefined
+  let wireServices: WireServices | undefined
 
   let http: PikkuHTTP | undefined
   if (request instanceof Request) {
-    http = createHTTPInteraction(new PikkuFetchHTTPRequest(request), response)
+    http = createHTTPWire(new PikkuFetchHTTPRequest(request), response)
   }
 
-  const userSession = new PikkuUserInteractionService(channelStore, channelId)
+  const userSession = new PikkuUserWireService(channelStore, channelId)
 
   const { channelConfig, openingData, meta } = await openChannel({
     channelId,
-    createInteractionServices,
+    createWireServices,
     request,
     route,
     singletonServices,
@@ -110,18 +107,15 @@ export const runChannelConnect = async ({
       channelName: channelConfig.name,
     })
 
-    const interaction: PikkuInteraction = { channel, session: userSession }
+    const wire: PikkuWire = { channel, session: userSession }
 
-    if (createInteractionServices) {
-      interactionServices = await createInteractionServices(
-        singletonServices,
-        interaction
-      )
+    if (createWireServices) {
+      wireServices = await createWireServices(singletonServices, wire)
     }
 
     const services = {
       ...singletonServices,
-      ...interactionServices,
+      ...wireServices,
     }
 
     if (channelConfig.onConnect && meta.connect) {
@@ -147,11 +141,8 @@ export const runChannelConnect = async ({
       bubbleErrors
     )
   } finally {
-    if (interactionServices) {
-      await closeInteractionServices(
-        singletonServices.logger,
-        interactionServices
-      )
+    if (wireServices) {
+      await closeWireServices(singletonServices.logger, wireServices)
     }
   }
 }
@@ -160,7 +151,7 @@ export const runChannelDisconnect = async ({
   singletonServices,
   ...params
 }: RunServerlessChannelParams<unknown>): Promise<void> => {
-  let interactionServices: InteractionServices | undefined
+  let wireServices: WireServices | undefined
 
   // Try to get channel from store. In serverless environments (especially with
   // serverless-offline or worker threads), disconnect can be called multiple times
@@ -184,23 +175,20 @@ export const runChannelDisconnect = async ({
     openingData,
     channelName,
   })
-  const userSession = new PikkuUserInteractionService(
+  const userSession = new PikkuUserWireService(
     params.channelStore,
     params.channelId
   )
   userSession.setInitial(session)
-  const interaction: PikkuInteraction = { channel, session: userSession }
+  const wire: PikkuWire = { channel, session: userSession }
 
-  if (!interactionServices && params.createInteractionServices) {
-    interactionServices = await params.createInteractionServices(
-      singletonServices,
-      interaction
-    )
+  if (!wireServices && params.createWireServices) {
+    wireServices = await params.createWireServices(singletonServices, wire)
   }
 
   const services = {
     ...singletonServices,
-    ...interactionServices,
+    ...wireServices,
   }
 
   if (channelConfig.onDisconnect && meta.disconnect) {
@@ -220,11 +208,8 @@ export const runChannelDisconnect = async ({
     }
   }
   await params.channelStore.removeChannels([channel.channelId])
-  if (interactionServices) {
-    await closeInteractionServices(
-      singletonServices.logger,
-      interactionServices
-    )
+  if (wireServices) {
+    await closeWireServices(singletonServices.logger, wireServices)
   }
 }
 
@@ -232,7 +217,7 @@ export const runChannelMessage = async (
   { singletonServices, ...params }: RunServerlessChannelParams<unknown>,
   data: unknown
 ): Promise<unknown> => {
-  let interactionServices: InteractionServices | undefined
+  let wireServices: WireServices | undefined
   const { openingData, channelName, session } =
     await params.channelStore.getChannelAndSession(params.channelId)
 
@@ -241,23 +226,20 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
-  const userSession = new PikkuUserInteractionService(
+  const userSession = new PikkuUserWireService(
     params.channelStore,
     params.channelId
   )
   userSession.setInitial(session)
-  const interaction: PikkuInteraction = { channel, session: userSession }
+  const wire: PikkuWire = { channel, session: userSession }
 
-  if (params.createInteractionServices) {
-    interactionServices = await params.createInteractionServices(
-      singletonServices,
-      interaction
-    )
+  if (params.createWireServices) {
+    wireServices = await params.createWireServices(singletonServices, wire)
   }
 
   const services = {
     ...singletonServices,
-    ...interactionServices,
+    ...wireServices,
   }
 
   let response: unknown
@@ -275,11 +257,8 @@ export const runChannelMessage = async (
     )
     return { error: e.message || 'Unknown error' }
   } finally {
-    if (interactionServices) {
-      await closeInteractionServices(
-        singletonServices.logger,
-        interactionServices
-      )
+    if (wireServices) {
+      await closeWireServices(singletonServices.logger, wireServices)
     }
   }
   return response

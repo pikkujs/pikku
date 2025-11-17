@@ -18,7 +18,7 @@ type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
 import { createConfig as createConfig } from '../functions/src/services.js'
 import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'
-import { createInteractionServices as createInteractionServices } from '../functions/src/services.js'
+import { createWireServices as createWireServices } from '../functions/src/services.js'
 
 import '../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -39,7 +39,7 @@ export const pikku = (_options?: any) => {
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      createInteractionServices
+      createWireServices
     )
   }
 
@@ -246,7 +246,7 @@ export const pikkuAPIRequest = (
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      createInteractionServices
+      createWireServices
     )
   }
   if (_removeAPIPrefix) {

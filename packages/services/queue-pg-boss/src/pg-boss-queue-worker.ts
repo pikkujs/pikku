@@ -14,7 +14,7 @@ import {
 import {
   CoreServices,
   CoreSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '@pikku/core'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
@@ -125,7 +125,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
   constructor(
     pgBoss: PgBoss,
     private singletonServices: CoreSingletonServices,
-    private createInteractionServices?: CreateInteractionServices<
+    private createWireServices?: CreateWireServices<
       CoreSingletonServices,
       CoreServices,
       any
@@ -162,7 +162,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
             try {
               await runQueueJob({
                 singletonServices: this.singletonServices,
-                createInteractionServices: this.createInteractionServices,
+                createWireServices: this.createWireServices,
                 job: mapPgBossJobToQueueJob(job, this.pgBoss),
               })
             } catch (error: unknown) {

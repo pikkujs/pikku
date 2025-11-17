@@ -9,7 +9,7 @@ export async function testCLIWiring(
   expectedCommand: ExpectedEvent[],
   expectedSubcommand: ExpectedEvent[],
   singletonServices: any,
-  createInteractionServices: any
+  createWireServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run CLI Command')
   console.log('─────────────────────────')
@@ -22,7 +22,7 @@ export async function testCLIWiring(
         commandPath: ['command'],
         data: {},
         singletonServices,
-        createInteractionServices,
+        createWireServices,
       })
     },
     singletonServices.logger
@@ -36,7 +36,7 @@ export async function testCLIWiring(
         commandPath: ['command', 'subcommand'],
         data: {},
         singletonServices,
-        createInteractionServices,
+        createWireServices,
       })
     },
     singletonServices.logger

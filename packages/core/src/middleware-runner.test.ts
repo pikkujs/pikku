@@ -38,14 +38,14 @@ describe('combineMiddleware', () => {
   test('should combine wiring middleware only', () => {
     const mockMiddleware1: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
     }
     const mockMiddleware2: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
@@ -67,14 +67,14 @@ describe('combineMiddleware', () => {
   test('should combine function middleware only', () => {
     const mockMiddleware1: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
     }
     const mockMiddleware2: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
@@ -97,14 +97,14 @@ describe('combineMiddleware', () => {
     // Setup tagged middleware
     const wiringTagMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
     }
     const funcTagMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
@@ -115,14 +115,14 @@ describe('combineMiddleware', () => {
 
     const wiringMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
     }
     const funcMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
@@ -150,7 +150,7 @@ describe('combineMiddleware', () => {
   test('should handle wiring tags only', () => {
     const taggedMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
@@ -173,7 +173,7 @@ describe('combineMiddleware', () => {
   test('should handle function tags only', () => {
     const taggedMiddleware: CorePikkuMiddleware = async (
       services,
-      interaction,
+      wire,
       next
     ) => {
       await next()
@@ -194,18 +194,10 @@ describe('combineMiddleware', () => {
   })
 
   test('should handle multiple tags', () => {
-    const middleware1: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware1: CorePikkuMiddleware = async (services, wire, next) => {
       await next()
     }
-    const middleware2: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware2: CorePikkuMiddleware = async (services, wire, next) => {
       await next()
     }
 
@@ -229,11 +221,7 @@ describe('combineMiddleware', () => {
   })
 
   test('should ignore non-existent tags', () => {
-    const middleware: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware: CorePikkuMiddleware = async (services, wire, next) => {
       await next()
     }
 
@@ -262,20 +250,12 @@ describe('runMiddleware', () => {
   test('should deduplicate middleware using Set', async () => {
     const executionOrder: string[] = []
 
-    const middleware1: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware1: CorePikkuMiddleware = async (services, wire, next) => {
       executionOrder.push('middleware1')
       await next()
     }
 
-    const middleware2: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware2: CorePikkuMiddleware = async (services, wire, next) => {
       executionOrder.push('middleware2')
       await next()
     }
@@ -298,21 +278,13 @@ describe('runMiddleware', () => {
   test('should execute middleware in correct order', async () => {
     const executionOrder: string[] = []
 
-    const middleware1: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware1: CorePikkuMiddleware = async (services, wire, next) => {
       executionOrder.push('start1')
       await next()
       executionOrder.push('end1')
     }
 
-    const middleware2: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware2: CorePikkuMiddleware = async (services, wire, next) => {
       executionOrder.push('start2')
       await next()
       executionOrder.push('end2')
@@ -349,11 +321,7 @@ describe('runMiddleware', () => {
   test('should work without main function', async () => {
     const executionOrder: string[] = []
 
-    const middleware: CorePikkuMiddleware = async (
-      services,
-      interaction,
-      next
-    ) => {
+    const middleware: CorePikkuMiddleware = async (services, wire, next) => {
       executionOrder.push('middleware')
       await next()
     }

@@ -3,7 +3,7 @@ import {
   MiddlewareMetadata,
   SerializedError,
   CoreSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
   CoreConfig,
 } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
@@ -127,7 +127,7 @@ export interface WorkflowStepOptions {
 /**
  * Type signature for workflow.do() RPC form - used by inspector
  */
-export type WorkflowInteractionDoRPC = <TOutput = any, TInput = any>(
+export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
   stepName: string,
   rpcName: string,
   data: TInput,
@@ -137,7 +137,7 @@ export type WorkflowInteractionDoRPC = <TOutput = any, TInput = any>(
 /**
  * Type signature for workflow.do() inline form - used by inspector
  */
-export type WorkflowInteractionDoInline = <T>(
+export type WorkflowWireDoInline = <T>(
   stepName: string,
   fn: () => Promise<T> | T,
   options?: WorkflowStepOptions
@@ -146,7 +146,7 @@ export type WorkflowInteractionDoInline = <T>(
 /**
  * Type signature for workflow.sleep() - used by inspector
  */
-export type WorkflowInteractionSleep = (
+export type WorkflowWireSleep = (
   stepName: string,
   duration: string
 ) => Promise<void>
@@ -288,10 +288,10 @@ export type WorkflowStepMeta =
   | CancelStepMeta
 
 /**
- * Workflow step interaction context for RPC functions
+ * Workflow step wire context for RPC functions
  * Provides step-level metadata including retry attempt tracking
  */
-export interface WorkflowStepInteraction {
+export interface WorkflowStepWire {
   /** The workflow run ID */
   runId: string
   /** The unique step ID */
@@ -301,10 +301,10 @@ export interface WorkflowStepInteraction {
 }
 
 /**
- * Workflow interaction object for middleware
+ * Workflow wire object for middleware
  * Provides workflow-specific capabilities to function execution
  */
-export interface PikkuWorkflowInteraction {
+export interface PikkuWorkflowWire {
   /** The workflow name */
   workflowName: string
   /** The current run ID */
@@ -313,10 +313,10 @@ export interface PikkuWorkflowInteraction {
   getRun: () => Promise<WorkflowRun>
 
   /** Execute a workflow step (overloaded - RPC or inline form) */
-  do: WorkflowInteractionDoRPC & WorkflowInteractionDoInline
+  do: WorkflowWireDoRPC & WorkflowWireDoInline
 
   /** Sleep for a duration */
-  sleep: WorkflowInteractionSleep
+  sleep: WorkflowWireSleep
 
   /** Cancel the current workflow run */
   cancel: (reason?: string) => Promise<void>
@@ -375,7 +375,7 @@ export interface WorkflowService {
   resumeWorkflow(runId: string): Promise<void>
   setServices(
     singletonServices: CoreSingletonServices,
-    createInteractionServices: CreateInteractionServices,
+    createWireServices: CreateWireServices,
     config: CoreConfig
   ): void
   startWorkflow<I>(

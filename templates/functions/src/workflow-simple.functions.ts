@@ -20,7 +20,7 @@ import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 export const createOrg = pikkuSessionlessFunc<
   { name: string },
   { id: string; name: string; createdAt: string }
->(async ({ logger }, data, interaction) => {
+>(async ({ logger }, data, wire) => {
   logger.info(`Creating organization: ${data.name}`)
   return {
     id: `org-${Date.now()}`,
@@ -33,7 +33,7 @@ export const createOrg = pikkuSessionlessFunc<
 export const createOwner = pikkuSessionlessFunc<
   { orgId: string; email: string },
   { id: string; orgId: string; email: string }
->(async ({ logger }, data, interaction) => {
+>(async ({ logger }, data, wire) => {
   logger.info(`Creating owner for org ${data.orgId}`)
   return {
     id: `owner-${Date.now()}`,

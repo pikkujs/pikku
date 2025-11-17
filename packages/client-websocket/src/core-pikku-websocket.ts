@@ -3,7 +3,7 @@ import { CorePikkuRouteHandler } from './core-pikku-route-handler.js'
 /**
  * The `CorePikkuWebsocket` class provides a utility for managing websocket connections,
  * handling routes, and managing subscriptions. This class is designed to simplify
- * WebSocket interactions with configurable options.
+ * WebSocket wires with configurable options.
  */
 export class CorePikkuWebsocket {
   private routes = new Map<string, CorePikkuRouteHandler>()

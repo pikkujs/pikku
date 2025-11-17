@@ -2,7 +2,7 @@ import {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '@pikku/core'
 import { fetch } from '@pikku/core/http'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
@@ -14,7 +14,7 @@ export const runFetch = async <
 >(
   request: Request,
   singletonServices: SingletonServices,
-  createInteractionServices: CreateInteractionServices<
+  createWireServices: CreateWireServices<
     SingletonServices,
     Services,
     UserSession
@@ -38,7 +38,7 @@ export const runFetch = async <
 
   const response = await fetch(request, {
     singletonServices,
-    createInteractionServices: createInteractionServices as any,
+    createWireServices: createWireServices as any,
   })
   return response
 }

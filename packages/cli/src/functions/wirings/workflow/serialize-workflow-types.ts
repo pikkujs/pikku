@@ -9,15 +9,15 @@ export const serializeWorkflowTypes = (
  * Workflow-specific type definitions for tree-shaking optimization
  */
 
-import { PikkuWorkflowInteraction, WorkflowStepOptions } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap } from '${rpcMapImportPath}'
 
 /**
- * Typed workflow interaction with RPC awareness
+ * Typed workflow wire with RPC awareness
  * Provides type-safe workflow.do() for RPC steps
  */
-export interface TypedWorkflow extends PikkuWorkflowInteraction {
+export interface TypedWorkflow extends PikkuWorkflowWire {
   /**
    * Execute a workflow step with RPC invocation (typed based on available RPCs)
    * @template K - RPC name from the RPC map
@@ -42,7 +42,7 @@ export interface TypedWorkflow extends PikkuWorkflowInteraction {
 
 /**
  * Workflow function type with typed workflow service
- * Includes the workflow interaction object with typed RPC methods
+ * Includes the workflow wire object with typed RPC methods
  */
 export type PikkuFunctionWorkflow<
   In = unknown,
@@ -55,7 +55,7 @@ export type PikkuFunctionWorkflow<
 
 /**
  * Creates a workflow function with typed input and output.
- * Workflow functions have access to the workflow interaction object for step execution.
+ * Workflow functions have access to the workflow wire object for step execution.
  *
  * This is the permissive mode - workflows that don't conform to simple DSL will fall back
  * to basic extraction with a warning.

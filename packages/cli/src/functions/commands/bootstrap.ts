@@ -10,11 +10,11 @@ import { pikkuQueueTypes } from '../wirings/queue/pikku-command-queue-types.js'
 import { pikkuWorkflowTypes } from '../wirings/workflow/pikku-command-workflow-types.js'
 import { pikkuMCPTypes } from '../wirings/mcp/pikku-command-mcp-types.js'
 import { pikkuCLITypes } from '../wirings/cli/pikku-command-cli-types.js'
-import { PikkuInteraction } from '@pikku/core'
+import { PikkuWire } from '@pikku/core'
 
 export const bootstrap: any = pikkuVoidFunc({
   func: async ({ logger, config, getInspectorState }) => {
-    const interaction: PikkuInteraction = {}
+    const wire: PikkuWire = {}
     const services = { logger, config, getInspectorState }
 
     // Initialize inspector state in bootstrap mode with core types only
@@ -22,18 +22,18 @@ export const bootstrap: any = pikkuVoidFunc({
     // All subsequent RPC commands will use this cached state
     await getInspectorState(false, false, true)
 
-    await pikkuFunctionTypes.func(services, null, interaction)
+    await pikkuFunctionTypes.func(services, null, wire)
 
     // Generate wiring-specific type files for tree-shaking
     // These use the bootstrap mode state with core types
-    await pikkuFunctionTypesSplit.func(services, null, interaction)
-    await pikkuHTTPTypes.func(services, null, interaction)
-    await pikkuChannelTypes.func(services, null, interaction)
-    await pikkuSchedulerTypes.func(services, null, interaction)
-    await pikkuQueueTypes.func(services, null, interaction)
-    await pikkuWorkflowTypes.func(services, null, interaction)
-    await pikkuMCPTypes.func(services, null, interaction)
-    await pikkuCLITypes.func(services, null, interaction)
+    await pikkuFunctionTypesSplit.func(services, null, wire)
+    await pikkuHTTPTypes.func(services, null, wire)
+    await pikkuChannelTypes.func(services, null, wire)
+    await pikkuSchedulerTypes.func(services, null, wire)
+    await pikkuQueueTypes.func(services, null, wire)
+    await pikkuWorkflowTypes.func(services, null, wire)
+    await pikkuMCPTypes.func(services, null, wire)
+    await pikkuCLITypes.func(services, null, wire)
 
     // Check for critical errors and exit if any were logged
     if (logger.hasCriticalErrors()) {

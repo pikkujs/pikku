@@ -3,7 +3,7 @@ import Fastify from 'fastify'
 import {
   CoreConfig,
   CoreSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '@pikku/core'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
 
@@ -19,7 +19,7 @@ export type FastifyCoreConfig = CoreConfig & {
 /**
  * The `PikkuFastifyServer` class provides a Fastify server integrated with the Pikku framework.
  * This class helps in quickly setting up a Fastify server with Pikku's core features, including health checks,
- * route handling, and integration with singleton and interaction services.
+ * route handling, and integration with singleton and wire services.
  */
 export class PikkuFastifyServer {
   /** The Fastify app instance */
@@ -30,16 +30,12 @@ export class PikkuFastifyServer {
    *
    * @param config - The configuration for the server.
    * @param singletonServices - The singleton services used by the server.
-   * @param createInteractionServices - Function to create interaction services for each request.
+   * @param createWireServices - Function to create wire services for each request.
    */
   constructor(
     private readonly config: FastifyCoreConfig,
     private readonly singletonServices: CoreSingletonServices,
-    private readonly createInteractionServices: CreateInteractionServices<
-      any,
-      any,
-      any
-    >
+    private readonly createWireServices: CreateWireServices<any, any, any>
   ) {}
 
   /**
@@ -63,7 +59,7 @@ export class PikkuFastifyServer {
     this.app.register(pikkuFastifyPlugin, {
       pikku: {
         singletonServices: this.singletonServices,
-        createInteractionServices: this.createInteractionServices,
+        createWireServices: this.createWireServices,
         logRoutes: true,
         loadSchemas: true,
       },

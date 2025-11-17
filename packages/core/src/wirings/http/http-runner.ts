@@ -18,17 +18,17 @@ import {
   CoreUserSession,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
-  InteractionServices,
+  WireServices,
   PikkuWiringTypes,
-  PikkuInteraction,
+  PikkuWire,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import {
-  closeInteractionServices,
+  closeWireServices,
   createWeakUID,
   isSerializable,
 } from '../../utils.js'
-import { PikkuUserInteractionService } from '../../services/user-session-service.js'
+import { PikkuUserWireService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -202,16 +202,16 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
 }
 
 /**
- * Combines the request and response objects into a single HTTP interaction object.
+ * Combines the request and response objects into a single HTTP wire object.
  *
  * This utility function creates an object that holds both the HTTP request and response,
  * which simplifies passing these around through middleware and route execution.
  *
  * @param {PikkuHTTPRequest | undefined} request - The HTTP request object.
  * @param {PikkuHTTPResponse | undefined} response - The HTTP response object.
- * @returns {PikkuHTTP | undefined} The combined HTTP interaction object or undefined if none provided.
+ * @returns {PikkuHTTP | undefined} The combined HTTP wire object or undefined if none provided.
  */
-export const createHTTPInteraction = (
+export const createHTTPWire = (
   request: PikkuHTTPRequest | undefined,
   response: PikkuHTTPResponse | undefined
 ): PikkuHTTP | undefined => {
@@ -245,15 +245,15 @@ export const createHTTPInteraction = (
  *
  * @param {Object} services - A collection of shared services and utilities.
  * @param {Object} matchedRoute - Contains route details, URL parameters, and optional schema.
- * @param {PikkuHTTP | undefined} http - The HTTP interaction object.
+ * @param {PikkuHTTP | undefined} http - The HTTP wire object.
  * @param {Object} options - Options for route execution (e.g., whether to coerce query strings to arrays).
- * @returns {Promise<any>} An object containing the route handler result and interaction services (if any).
+ * @returns {Promise<any>} An object containing the route handler result and wire services (if any).
  * @throws Throws errors like MissingSessionError or ForbiddenError on validation failures.
  */
 const executeRoute = async (
   services: {
     singletonServices: any
-    createInteractionServices?: any
+    createWireServices?: any
     skipUserSession: boolean
     requestId: string
   },
@@ -268,17 +268,13 @@ const executeRoute = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const userSession = new PikkuUserInteractionService<CoreUserSession>()
+  const userSession = new PikkuUserWireService<CoreUserSession>()
   const { params, route, meta } = matchedRoute
-  const {
-    singletonServices,
-    createInteractionServices,
-    skipUserSession,
-    requestId,
-  } = services
+  const { singletonServices, createWireServices, skipUserSession, requestId } =
+    services
 
   const requiresSession = route.auth !== false
-  let interactionServices: any
+  let wireServices: any
   let result: any
 
   // Attach URL parameters to the request object
@@ -323,7 +319,7 @@ const executeRoute = async (
     }
   }
 
-  const interaction: PikkuInteraction = { http, channel, session: userSession }
+  const wire: PikkuWire = { http, channel, session: userSession }
 
   result = await runPikkuFunc(
     PikkuWiringTypes.http,
@@ -331,7 +327,7 @@ const executeRoute = async (
     meta.pikkuFuncName,
     {
       singletonServices,
-      createInteractionServices,
+      createWireServices,
       auth: route.auth !== false,
       data,
       inheritedMiddleware: meta.middleware,
@@ -340,7 +336,7 @@ const executeRoute = async (
       wirePermissions: route.permissions,
       coerceDataFromSchema: options.coerceDataFromSchema,
       tags: route.tags,
-      interaction,
+      wire,
     }
   )
 
@@ -355,7 +351,7 @@ const executeRoute = async (
   // TODO: Evaluate if the response stream should be explicitly ended.
   // http?.response?.end()
 
-  return interactionServices ? { result, interactionServices } : { result }
+  return wireServices ? { result, wireServices } : { result }
 }
 
 /**
@@ -408,11 +404,11 @@ export const pikkuFetch = async <In, Out>(
  * middleware execution, error handling, and session service cleanup.
  *
  * This function does the following:
- *  - Wraps the incoming request and response into an HTTP interaction object.
+ *  - Wraps the incoming request and response into an HTTP wire object.
  *  - Determines the correct route based on HTTP method and path.
  *  - Executes middleware and the route handler.
  *  - Catches and handles errors, optionally bubbling them if configured.
- *  - Cleans up any interaction services created during processing.
+ *  - Cleans up any wire services created during processing.
  *
  * @template In Expected input data type.
  * @template Out Expected output data type.
@@ -426,7 +422,7 @@ export const fetchData = async <In, Out>(
   response: PikkuHTTPResponse,
   {
     singletonServices,
-    createInteractionServices,
+    createWireServices,
     skipUserSession = false,
     respondWith404 = true,
     logWarningsForStatusCodes = [],
@@ -439,13 +435,11 @@ export const fetchData = async <In, Out>(
     (request as any).getHeader?.('x-request-id') ||
     generateRequestId?.() ||
     createWeakUID()
-  let interactionServices:
-    | InteractionServices<typeof singletonServices>
-    | undefined
+  let wireServices: WireServices<typeof singletonServices> | undefined
   let result: Out
 
-  // Combine the request and response into one interaction object
-  const http = createHTTPInteraction(
+  // Combine the request and response into one wire object
+  const http = createHTTPWire(
     request instanceof Request ? new PikkuFetchHTTPRequest(request) : request,
     response
   )
@@ -466,10 +460,10 @@ export const fetchData = async <In, Out>(
     }
 
     // Execute the matched route along with its middleware and session management
-    ;({ result, interactionServices } = await executeRoute(
+    ;({ result, wireServices } = await executeRoute(
       {
         singletonServices,
-        createInteractionServices,
+        createWireServices,
         skipUserSession,
         requestId,
       },
@@ -492,11 +486,8 @@ export const fetchData = async <In, Out>(
     )
   } finally {
     // Clean up any session-specific services created during processing
-    if (interactionServices) {
-      await closeInteractionServices(
-        singletonServices.logger,
-        interactionServices
-      )
+    if (wireServices) {
+      await closeWireServices(singletonServices.logger, wireServices)
     }
   }
 }

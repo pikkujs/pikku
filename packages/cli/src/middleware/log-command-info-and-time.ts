@@ -1,10 +1,10 @@
 import type { Services } from '../../types/application-types.js'
-import type { PikkuInteraction } from '@pikku/core'
+import type { PikkuWire } from '@pikku/core'
 
 // Middleware type for CLI
 type PikkuMiddleware = (
   services: Services,
-  interaction: PikkuInteraction,
+  wire: PikkuWire,
   next: () => Promise<void>
 ) => Promise<void>
 
@@ -21,7 +21,7 @@ export const logCommandInfoAndTime = ({
   commandStart,
   commandEnd,
 }: LogCommandInfoOptions): PikkuMiddleware => {
-  return async ({ logger }, _interaction, next) => {
+  return async ({ logger }, _wire, next) => {
     const start = Date.now()
     logger.debug(`• ${commandStart}...`)
 

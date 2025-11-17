@@ -41,14 +41,10 @@ export const authCookie = pikkuMiddlewareFactory<{
   pikkuMiddleware(
     async (
       { jwt: jwtService, logger },
-      { http, session: userInteractionService },
+      { http, session: userWireService },
       next
     ) => {
-      if (
-        !http?.request ||
-        !userInteractionService ||
-        userInteractionService.get()
-      ) {
+      if (!http?.request || !userWireService || userWireService.get()) {
         return next()
       }
 
@@ -57,7 +53,7 @@ export const authCookie = pikkuMiddlewareFactory<{
       if (cookieValue && jwtService) {
         const userSession = await jwtService.decode(cookieValue)
         if (userSession) {
-          userInteractionService.setInitial(userSession)
+          userWireService.setInitial(userSession)
         }
       }
 
@@ -68,8 +64,8 @@ export const authCookie = pikkuMiddlewareFactory<{
         return
       }
 
-      if (userInteractionService.sessionChanged) {
-        const session = userInteractionService.get()
+      if (userWireService.sessionChanged) {
+        const session = userWireService.get()
         if (jwtService) {
           http.response.cookie(
             name,

@@ -1,7 +1,7 @@
 import {
   pikkuConfig,
   pikkuServices,
-  pikkuInteractionServices,
+  pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
 import { LocalVariablesService } from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
@@ -20,7 +20,7 @@ export const createSingletonServices = pikkuServices(async (config) => {
   }
 })
 
-export const createInteractionServices = pikkuInteractionServices(
+export const createWireServices = pikkuWireServices(
   async (_services, _session) => {
     return {} as any
   }

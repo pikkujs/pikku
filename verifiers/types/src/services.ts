@@ -6,7 +6,7 @@ import type {
 } from '../types/application-types.js'
 import {
   CreateConfig,
-  CreateInteractionServices,
+  CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
@@ -30,7 +30,7 @@ export const createSingletonServices: CreateSingletonServices<
   }
 }
 
-export const createInteractionServices: CreateInteractionServices<
+export const createWireServices: CreateWireServices<
   SingletonServices,
   Services,
   UserSession

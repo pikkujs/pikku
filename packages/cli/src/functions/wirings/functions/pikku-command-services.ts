@@ -6,11 +6,11 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
-  allInteractionServices: string[],
+  allWireServices: string[],
   requiredServices: Set<string>,
   forceRequiredServices: string[] = [],
   servicesImport: string,
-  interactionServicesImport: string
+  wireServicesImport: string
 ): string => {
   // Use pre-aggregated services from inspector state
   // This includes services from:
@@ -20,7 +20,7 @@ export const serializeServicesMap = (
   // - Session factories
   const usedServices = new Set(requiredServices)
 
-  // Internal services that are created internally by the framework (PikkuInteraction)
+  // Internal services that are created internally by the framework (PikkuWire)
   // These should not appear in the services maps
   const internalServices = new Set([
     'rpc',
@@ -50,12 +50,12 @@ export const serializeServicesMap = (
     singletonServicesMap[service] = usedServices.has(service)
   })
 
-  // Create interaction services map: all interaction services with true/false based on usage
-  // Exclude internal framework services (PikkuInteraction)
-  const interactionServicesMap: Record<string, boolean> = {}
-  allInteractionServices.forEach((service) => {
+  // Create wire services map: all wire services with true/false based on usage
+  // Exclude internal framework services (PikkuWire)
+  const wireServicesMap: Record<string, boolean> = {}
+  allWireServices.forEach((service) => {
     if (!internalServices.has(service)) {
-      interactionServicesMap[service] = usedServices.has(service)
+      wireServicesMap[service] = usedServices.has(service)
     }
   })
 
@@ -63,13 +63,13 @@ export const serializeServicesMap = (
   const requiredSingletonServiceNames = Object.keys(singletonServicesMap)
     .filter((key) => singletonServicesMap[key])
     .sort()
-  const requiredInteractionServiceNames = Object.keys(interactionServicesMap)
-    .filter((key) => interactionServicesMap[key])
+  const requiredWireServiceNames = Object.keys(wireServicesMap)
+    .filter((key) => wireServicesMap[key])
     .sort()
 
   const code = [
     servicesImport,
-    interactionServicesImport,
+    wireServicesImport,
     '',
     '// Singleton services map: true if required, false if available but unused',
     'export const requiredSingletonServices = {',
@@ -78,11 +78,11 @@ export const serializeServicesMap = (
       .map((service) => `  '${service}': ${singletonServicesMap[service]},`),
     '} as const',
     '',
-    '// Interaction services map: true if required, false if available but unused',
-    'export const requiredInteractionServices = {',
-    ...Object.keys(interactionServicesMap)
+    '// Wire services map: true if required, false if available but unused',
+    'export const requiredWireServices = {',
+    ...Object.keys(wireServicesMap)
       .sort()
-      .map((service) => `  '${service}': ${interactionServicesMap[service]},`),
+      .map((service) => `  '${service}': ${wireServicesMap[service]},`),
     '} as const',
     '',
     '// Type exports',
@@ -90,9 +90,9 @@ export const serializeServicesMap = (
       ? `export type RequiredSingletonServices = Pick<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
       : 'export type RequiredSingletonServices = Partial<SingletonServices>',
     '',
-    requiredInteractionServiceNames.length > 0
-      ? `export type RequiredInteractionServices = Pick<Services, ${requiredInteractionServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<Services, ${requiredInteractionServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
-      : 'export type RequiredInteractionServices = Partial<Services>',
+    requiredWireServiceNames.length > 0
+      ? `export type RequiredWireServices = Pick<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
+      : 'export type RequiredWireServices = Partial<Services>',
     '',
   ].join('\n')
 
@@ -105,29 +105,29 @@ export const pikkuServices: any = pikkuSessionlessFunc<void, void>({
 
     // Check for required types
     checkRequiredTypes(visitState.filesAndMethodsErrors, {
-      interactionServiceType: true,
+      wireServiceType: true,
       singletonServicesType: true,
     })
 
-    const { interactionServicesType, singletonServicesType } =
+    const { wireServicesType, singletonServicesType } =
       visitState.filesAndMethods
 
-    if (!interactionServicesType || !singletonServicesType) {
+    if (!wireServicesType || !singletonServicesType) {
       throw new Error(
-        'Required types not found: interactionServicesType or singletonServicesType'
+        'Required types not found: wireServicesType or singletonServicesType'
       )
     }
 
     const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, singletonServicesType.typePath, config.packageMappings)}'`
-    const interactionServicesImport = `import type { ${interactionServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, interactionServicesType.typePath, config.packageMappings)}'`
+    const wireServicesImport = `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(config.typesDeclarationFile, wireServicesType.typePath, config.packageMappings)}'`
 
     const servicesCode = serializeServicesMap(
       visitState.serviceAggregation.allSingletonServices,
-      visitState.serviceAggregation.allInteractionServices,
+      visitState.serviceAggregation.allWireServices,
       visitState.serviceAggregation.requiredServices,
       config.forceRequiredServices,
       servicesImport,
-      interactionServicesImport
+      wireServicesImport
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
   },

@@ -5,7 +5,7 @@ import { BullSchedulerService } from './bull-scheduler-service.js'
 import type {
   CoreServices,
   CoreSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '@pikku/core'
 
 /**
@@ -41,7 +41,7 @@ export class BullServiceFactory {
    */
   getQueueWorkers(
     singletonServices: CoreSingletonServices,
-    createInteractionServices?: CreateInteractionServices<
+    createWireServices?: CreateWireServices<
       CoreSingletonServices,
       CoreServices,
       any
@@ -51,7 +51,7 @@ export class BullServiceFactory {
       this.queueWorkers = new BullQueueWorkers(
         this.redisConnectionOptions,
         singletonServices,
-        createInteractionServices
+        createWireServices
       )
     }
     return this.queueWorkers

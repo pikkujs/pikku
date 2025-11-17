@@ -3,7 +3,7 @@ import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
 export const timeout = () =>
   pikkuMiddlewareFactory<{ timeout: number }>(({ timeout }) =>
-    pikkuMiddleware(async (_services, _interaction, next) => {
+    pikkuMiddleware(async (_services, _wire, next) => {
       const timeoutId = setTimeout(() => {
         throw new RequestTimeoutError()
       }, timeout)

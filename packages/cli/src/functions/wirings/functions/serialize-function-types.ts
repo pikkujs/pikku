@@ -6,8 +6,8 @@ export const serializeFunctionTypes = (
   userSessionTypeName: string,
   singletonServicesTypeImport: string,
   singletonServicesTypeName: string,
-  interactionServicesTypeImport: string,
-  interactionServicesTypeName: string,
+  wireServicesTypeImport: string,
+  wireServicesTypeName: string,
   rpcMapTypeImport: string,
   requiredServicesTypeImport: string,
   configTypeImport: string
@@ -16,18 +16,18 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuInteraction, PickRequired } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
-${interactionServicesTypeImport}
+${wireServicesTypeImport}
 ${configTypeImport}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
-${interactionServicesTypeName !== 'Services' ? `type Services = ${interactionServicesTypeName}` : ''}
+${wireServicesTypeName !== 'Services' ? `type Services = ${wireServicesTypeName}` : ''}
 ${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : ''}
 ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
 
@@ -38,7 +38,7 @@ ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, PikkuInteraction<In, never, Session>>
+export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, Session>>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
@@ -108,7 +108,7 @@ export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = S
  * @example
  * \`\`\`typescript
  * // Direct function syntax
- * const middleware = pikkuMiddleware(({ logger }, interactions, next) => {
+ * const middleware = pikkuMiddleware(({ logger }, wires, next) => {
  *   logger.info('Middleware executed')
  *   await next()
  * })
@@ -117,7 +117,7 @@ export type PikkuMiddlewareConfig<RequiredServices extends SingletonServices = S
  * const logMiddleware = pikkuMiddleware({
  *   name: 'Request Logger',
  *   description: 'Logs all incoming requests',
- *   func: async ({ logger }, interactions, next) => {
+ *   func: async ({ logger }, wires, next) => {
  *     logger.info('Request started')
  *     await next()
  *   }
@@ -162,8 +162,8 @@ export const pikkuMiddlewareFactory = <In = any>(
  * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
  *   role
  * }) => {
- *   return pikkuPermission(async ({ logger }, data, interaction) => {
- *     const session = await interaction.session?.get()
+ *   return pikkuPermission(async ({ logger }, data, wire) => {
+ *     const session = await wire.session?.get()
  *     if (!session || session.role !== role) {
  *       logger.warn(\`Permission denied: required role '\${role}'\`)
  *       return false
@@ -190,13 +190,13 @@ export const pikkuPermissionFactory = <In = any>(
 export type PikkuFunctionSessionless<
   In = unknown,
   Out = never,
-  RequiredInteractions extends keyof PikkuInteraction = never,
+  RequiredWires extends keyof PikkuWire = never,
   RequiredServices extends Services = Services
 > = CorePikkuFunctionSessionless<
     In,
     Out,
     RequiredServices,
-    PickRequired<PikkuInteraction<In, Out, Session, TypedPikkuRPC, null, any>, RequiredInteractions>
+    PickRequired<PikkuWire<In, Out, Session, TypedPikkuRPC, null, any>, RequiredWires>
   >
 
 /**
@@ -210,13 +210,13 @@ export type PikkuFunctionSessionless<
 export type PikkuFunction<
   In = unknown,
   Out = never,
-  RequiredInteractions extends keyof PikkuInteraction = 'session',
+  RequiredWires extends keyof PikkuWire = 'session',
   RequiredServices extends Services = Services
 > = CorePikkuFunction<
     In,
     Out,
     RequiredServices,
-    PickRequired<PikkuInteraction<In, Out, Session, TypedPikkuRPC, null, any>, RequiredInteractions>
+    PickRequired<PikkuWire<In, Out, Session, TypedPikkuRPC, null, any>, RequiredWires>
   >
 
 /**
@@ -230,8 +230,8 @@ export type PikkuFunction<
 export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
-  RequiredInteractions extends keyof PikkuInteraction = never,
-  PikkuFunc extends PikkuFunction<In, Out, RequiredInteractions> | PikkuFunctionSessionless<In, Out, RequiredInteractions> = PikkuFunction<In, Out, RequiredInteractions> | PikkuFunctionSessionless<In, Out, RequiredInteractions>
+  RequiredWires extends keyof PikkuWire = never,
+  PikkuFunc extends PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
 
 /**
@@ -246,8 +246,8 @@ export type PikkuFunctionConfig<
  * @example
  * \\\`\\\`\\\`typescript
  * const createUser = pikkuFunc<{name: string, email: string}, {id: number, message: string}>({
- *   func: async ({db, logger}, input, interaction) => {
- *     const session = await interaction.session.get()
+ *   func: async ({db, logger}, input, wire) => {
+ *     const session = await wire.session.get()
  *     logger.info('Creating user', input.name)
  *     const user = await db.users.create(input)
  *     return {id: user.id, message: \\\`User \\\${input.name} created successfully\\\`}
@@ -360,27 +360,27 @@ export const pikkuServices = (
 ) => func
 
 /**
- * Creates a Pikku interaction services factory.
+ * Creates a Pikku wire services factory.
  * Use this to define services that are created per-request/session.
  *
- * @param func - Interaction services factory function
- * @returns The interaction services factory function
+ * @param func - Wire services factory function
+ * @returns The wire services factory function
  *
  * @example
  * \`\`\`typescript
- * export const createInteractionServices = pikkuInteractionServices(async (services, interaction) => {
- *   const session = await interaction.session?.get()
+ * export const createWireServices = pikkuWireServices(async (services, wire) => {
+ *   const session = await wire.session?.get()
  *   return {
  *     userCache: new UserCache(session?.userId)
  *   }
  * })
  * \`\`\`
  */
-export const pikkuInteractionServices = (
+export const pikkuWireServices = (
   func: (
     services: SingletonServices,
-    interaction: any
-  ) => Promise<RequiredInteractionServices>
+    wire: any
+  ) => Promise<RequiredWireServices>
 ) => func
 
 /**

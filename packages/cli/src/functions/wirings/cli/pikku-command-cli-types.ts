@@ -19,7 +19,7 @@ export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
     // Check for required types
     checkRequiredTypes(visitState.filesAndMethodsErrors, {
       userSessionType: true,
-      interactionServiceType: true,
+      wireServiceType: true,
       singletonServicesType: true,
     })
 

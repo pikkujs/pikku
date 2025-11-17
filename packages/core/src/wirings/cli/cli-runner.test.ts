@@ -8,7 +8,7 @@ import { addFunction } from '../../function/function-runner.js'
 
 describe('CLI Runner', () => {
   let singletonServices: any
-  let createInteractionServices: any
+  let createWireServices: any
 
   beforeEach(() => {
     resetPikkuState()
@@ -21,7 +21,7 @@ describe('CLI Runner', () => {
       },
     }
 
-    createInteractionServices = async () => ({})
+    createWireServices = async () => ({})
   })
 
   afterEach(() => {
@@ -78,7 +78,7 @@ describe('CLI Runner', () => {
 
     test('should execute command function with merged data', async () => {
       let receivedData: any
-      const testFunc = async (_services: any, data: any, _interaction: any) => {
+      const testFunc = async (_services: any, data: any, _wire: any) => {
         receivedData = data
         return { success: true }
       }
@@ -136,7 +136,7 @@ describe('CLI Runner', () => {
 
       const testMiddleware: CorePikkuMiddleware = async (
         _services,
-        _interaction,
+        _wire,
         next
       ) => {
         executionOrder.push('middleware')
@@ -199,10 +199,10 @@ describe('CLI Runner', () => {
 
       const testMiddleware: CorePikkuMiddleware = async (
         _services,
-        interaction,
+        wire,
         next
       ) => {
-        cliContext = interaction.cli
+        cliContext = wire.cli
         await next()
       }
 
@@ -295,7 +295,7 @@ describe('CLI Runner', () => {
             commandPath: ['secure'],
             data: {},
             singletonServices,
-            createInteractionServices,
+            createWireServices,
           }),
         /Authentication required/
       )

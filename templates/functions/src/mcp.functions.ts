@@ -49,7 +49,7 @@ export const calculate = pikkuMCPToolFunc<{
   operation: 'add' | 'subtract' | 'multiply' | 'divide'
   a: number
   b: number
-}>(async ({ logger }, { operation, a, b }, interaction) => {
+}>(async ({ logger }, { operation, a, b }, wire) => {
   logger.info(`Calculating: ${a} ${operation} ${b}`)
 
   let result: number
@@ -140,7 +140,7 @@ export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
  * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
  */
 export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(
-  async (services, data, interaction) => {
+  async (services, data, wire) => {
     return [
       {
         role: 'user',
@@ -160,49 +160,43 @@ export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
   topic: string
   complexity: 'beginner' | 'intermediate' | 'advanced'
   includeExamples?: string
-}>(
-  async (
-    services,
-    { topic, complexity, includeExamples = false },
-    interaction
-  ) => {
-    services.logger.info(
-      `Generating progressive enhancement content for: ${topic} (${complexity})`
-    )
+}>(async (services, { topic, complexity, includeExamples = false }, wire) => {
+  services.logger.info(
+    `Generating progressive enhancement content for: ${topic} (${complexity})`
+  )
 
-    let content = `# Progressive Enhancement for ${topic}\n\n`
+  let content = `# Progressive Enhancement for ${topic}\n\n`
 
-    switch (complexity) {
-      case 'beginner':
-        content += `This is a beginner-friendly introduction to ${topic}.\n\n`
-        content += `Start with the basics and build up your understanding gradually.\n`
-        break
-      case 'intermediate':
-        content += `This is an intermediate guide to ${topic}.\n\n`
-        content += `Assumes some familiarity with related concepts.\n`
-        break
-      case 'advanced':
-        content += `This is an advanced discussion of ${topic}.\n\n`
-        content += `Deep dive into complex scenarios and edge cases.\n`
-        break
-    }
-
-    if (includeExamples) {
-      content += `\n## Examples\n\n`
-      content += `Here are some practical examples for ${topic}:\n`
-      content += `- Example 1: Basic implementation\n`
-      content += `- Example 2: Advanced use case\n`
-      content += `- Example 3: Common pitfalls to avoid\n`
-    }
-
-    return [
-      {
-        role: 'user' as const,
-        content: {
-          type: 'text' as const,
-          text: content,
-        },
-      },
-    ]
+  switch (complexity) {
+    case 'beginner':
+      content += `This is a beginner-friendly introduction to ${topic}.\n\n`
+      content += `Start with the basics and build up your understanding gradually.\n`
+      break
+    case 'intermediate':
+      content += `This is an intermediate guide to ${topic}.\n\n`
+      content += `Assumes some familiarity with related concepts.\n`
+      break
+    case 'advanced':
+      content += `This is an advanced discussion of ${topic}.\n\n`
+      content += `Deep dive into complex scenarios and edge cases.\n`
+      break
   }
-)
+
+  if (includeExamples) {
+    content += `\n## Examples\n\n`
+    content += `Here are some practical examples for ${topic}:\n`
+    content += `- Example 1: Basic implementation\n`
+    content += `- Example 2: Advanced use case\n`
+    content += `- Example 3: Common pitfalls to avoid\n`
+  }
+
+  return [
+    {
+      role: 'user' as const,
+      content: {
+        type: 'text' as const,
+        text: content,
+      },
+    },
+  ]
+})

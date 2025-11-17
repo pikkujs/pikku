@@ -6,7 +6,7 @@ import type {
 } from './types/application-types.d.js'
 import {
   CreateConfig,
-  CreateInteractionServices,
+  CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
@@ -41,13 +41,13 @@ export const createSingletonServices: CreateSingletonServices<
   }
 }
 
-export const createInteractionServices: CreateInteractionServices<
+export const createWireServices: CreateWireServices<
   SingletonServices,
   Services,
   UserSession
 > = async ({ email, logger }) => {
   // Destructure services to test session service aggregation
-  logger.info('Creating interaction services with email')
+  logger.info('Creating wire services with email')
   return {
     userContext: new UserContextService(),
     userPreferences: new UserPreferencesService(),

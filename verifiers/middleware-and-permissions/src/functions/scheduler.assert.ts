@@ -8,7 +8,7 @@ import type { ExpectedEvent } from '../assert-combined.js'
 export async function testSchedulerWiring(
   expected: ExpectedEvent[],
   singletonServices: any,
-  createInteractionServices: any
+  createWireServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run Scheduled Task')
   console.log('─────────────────────────')
@@ -19,7 +19,7 @@ export async function testSchedulerWiring(
       await runScheduledTask({
         name: 'testScheduledTask',
         singletonServices,
-        createInteractionServices,
+        createWireServices,
       })
     },
     singletonServices.logger

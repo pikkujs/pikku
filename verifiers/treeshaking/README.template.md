@@ -6,12 +6,12 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### Services (6 total)
 
-- **email** - Used by `sendEmail` function, `canSendEmail` permission, `hasEmailQuota` permission factory, `createInteractionServices`
+- **email** - Used by `sendEmail` function, `canSendEmail` permission, `hasEmailQuota` permission factory, `createWireServices`
 - **sms** - Used by `sendSMS` function
 - **payment** - Used by `processPayment` function, `canProcessPayment` permission
 - **analytics** - Used by `processPayment` function, `trackAnalytics` middleware
 - **storage** - Used by `saveData` function, `rateLimiter` middleware factory
-- **logger** - Used by `logRequest` middleware, `createInteractionServices`
+- **logger** - Used by `logRequest` middleware, `createWireServices`
 
 ### Functions
 
@@ -32,9 +32,9 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 - `canProcessPayment` - Uses: payment
 - `hasEmailQuota(quota)` - Factory - Uses: email
 
-### Interaction Services
+### Wire Services
 
-- `createInteractionServices` - Uses: email, logger (always included)
+- `createWireServices` - Uses: email, logger (always included)
 
 ### HTTP Wirings
 
@@ -45,7 +45,7 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 | POST /api/payments/charge     | payments             | processPayment (payment, analytics) | logRequest (logger), trackAnalytics (analytics), rateLimiter (storage) | canProcessPayment (payment)                 | analytics, email, logger, payment, storage |
 | POST /api/storage/save        | storage              | saveData (storage)                  | -                                                                      | -                                           | email, logger, storage                     |
 
-**Note**: `email` and `logger` are always included because `createInteractionServices` destructures them.
+**Note**: `email` and `logger` are always included because `createWireServices` destructures them.
 
 <!-- TEST_MATRIX -->
 

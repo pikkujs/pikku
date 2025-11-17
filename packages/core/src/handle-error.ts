@@ -7,7 +7,7 @@ import { PikkuHTTP } from './wirings/http/http.types.js'
  * Handle errors that occur during route processing
  *
  * @param {any} e - The error that occurred
- * @param {PikkuHTTP | undefined} http - HTTP interaction object
+ * @param {PikkuHTTP | undefined} http - HTTP wire object
  * @param {string} trackerId - Unique ID for tracking this error
  * @param {Logger} logger - Logger service
  * @param {number[]} logWarningsForStatusCodes - HTTP status codes to log as warnings

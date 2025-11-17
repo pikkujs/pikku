@@ -47,7 +47,7 @@ export async function initializeSchema(
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       opening_data JSONB NOT NULL DEFAULT '{}',
       user_session JSONB,
-      last_interaction TIMESTAMPTZ NOT NULL DEFAULT now()
+      last_wire TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
     CREATE TABLE IF NOT EXISTS ${schemaName}.channel_subscriptions (

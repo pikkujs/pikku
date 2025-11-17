@@ -16,12 +16,12 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
   return {
     rootDir,
     singletonServicesTypeImportMap: new Map(),
-    interactionServicesTypeImportMap: new Map(),
+    wireServicesTypeImportMap: new Map(),
     userSessionTypeImportMap: new Map(),
     configTypeImportMap: new Map(),
     singletonServicesFactories: new Map(),
-    interactionServicesFactories: new Map(),
-    interactionServicesMeta: new Map(),
+    wireServicesFactories: new Map(),
+    wireServicesMeta: new Map(),
     configFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),
@@ -96,7 +96,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       usedMiddleware: new Set(),
       usedPermissions: new Set(),
       allSingletonServices: [],
-      allInteractionServices: [],
+      allWireServices: [],
     },
   }
 }

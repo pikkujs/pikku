@@ -65,7 +65,7 @@ Services are initialized at server startup and available to all functions. Pikku
 ```ts
 import {
   CreateSingletonServices,
-  CreateInteractionServices,
+  CreateWireServices,
 } from '../pikku-types.gen.js'
 import { ConsoleLogger, JWTService } from '@pikku/core/services'
 
@@ -80,8 +80,8 @@ export const createSingletonServices: CreateSingletonServices = async (
   return { logger, db, jwt }
 }
 
-// Interaction services - created per request
-export const createInteractionServices: CreateInteractionServices = async (
+// Wire services - created per request
+export const createWireServices: CreateWireServices = async (
   services,
   interaction,
   session

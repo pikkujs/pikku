@@ -256,12 +256,12 @@ function createMockObjectLiteral(): any {
 function createMockState(): InspectorState {
   return {
     singletonServicesTypeImportMap: new Map(),
-    interactionServicesTypeImportMap: new Map(),
+    wireServicesTypeImportMap: new Map(),
     userSessionTypeImportMap: new Map(),
     configTypeImportMap: new Map(),
     singletonServicesFactories: new Map(),
-    interactionServicesFactories: new Map(),
-    interactionServicesMeta: new Map(),
+    wireServicesFactories: new Map(),
+    wireServicesMeta: new Map(),
     configFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),

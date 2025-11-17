@@ -2,7 +2,7 @@ import {
   CoreServices,
   PikkuWiringTypes,
   PermissionMetadata,
-  PikkuInteraction,
+  PikkuWire,
 } from './types/core.types.js'
 import {
   CorePermissionGroup,
@@ -16,14 +16,14 @@ import { freezeDedupe } from './utils.js'
  * This function validates permissions by iterating over permission groups and executing the corresponding permission functions. If all functions in at least one group return true, the permission is considered valid.
  * @param services - The core services required for permission validation.
  * @param data - The data to be used in the permission validation functions.
- * @param interaction - The interaction object containing request/response context and session.
+ * @param wire - The wire object containing request/response context and session.
  * @returns A promise that resolves to void.
  */
 export const verifyPermissions = async <Out = any>(
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
-  interaction: PikkuInteraction<any, never, any, never, never, never>
+  wire: PikkuWire<any, never, any, never, never, never>
 ): Promise<boolean> => {
   if (!permissions) {
     return true
@@ -38,13 +38,13 @@ export const verifyPermissions = async <Out = any>(
   for (const funcs of permissionGroups) {
     if (funcs instanceof Array) {
       const permissioned = await Promise.all(
-        funcs.map((func) => func(services, data, interaction))
+        funcs.map((func) => func(services, data, wire))
       )
       if (permissioned.every((result) => result)) {
         valid = true
       }
     } else {
-      valid = await funcs(services, data, interaction as any)
+      valid = await funcs(services, data, wire as any)
     }
     if (valid) {
       return true
@@ -336,7 +336,7 @@ export const runPermissions = async (
     funcInheritedPermissions,
     funcPermissions,
     services,
-    interaction,
+    wire,
     data,
   }: {
     wireInheritedPermissions?: PermissionMetadata[]
@@ -344,7 +344,7 @@ export const runPermissions = async (
     funcInheritedPermissions?: PermissionMetadata[]
     funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
     services: CoreServices
-    interaction: PikkuInteraction<any, never, any, never, never, never>
+    wire: PikkuWire<any, never, any, never, never, never>
     data: any
   }
 ) => {
@@ -364,7 +364,7 @@ export const runPermissions = async (
         typeof permission === 'function' ? { permission } : permission,
         services,
         data,
-        interaction
+        wire
       )
       if (result) {
         permissioned = true
