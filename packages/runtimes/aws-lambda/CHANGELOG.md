@@ -1,13 +1,5 @@
 ## 0.11.0
 
-## 0.11.1
-
-### Patch Changes
-
-- ec6401b: chore: updating aws types
-- Updated dependencies [bb223d5]
-  - @pikku/core@0.11.1
-
 ### Minor Changes
 
 - Workflow support

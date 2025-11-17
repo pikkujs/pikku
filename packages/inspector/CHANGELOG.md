@@ -1,13 +1,5 @@
 ## 0.11.0
 
-## 0.11.1
-
-### Patch Changes
-
-- bb223d5: feat: adding in pikkuSimpleWorkflowFunc
-- Updated dependencies [bb223d5]
-  - @pikku/core@0.11.1
-
 ### Minor Changes
 
 - Add workflow inspection and analysis

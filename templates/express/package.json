@@ -12,7 +12,7 @@
     "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid"
   },
   "dependencies": {
-    "@pikku/core": "^0.11.1",
+    "@pikku/core": "^0.11.0",
     "@pikku/express": "^0.11.0",
     "@pikku/schedule": "^0.11.0",
     "pino-pretty": "^13.1.2",

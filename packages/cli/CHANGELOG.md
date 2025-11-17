@@ -1,16 +1,5 @@
 ## 0.11.0
 
-## 0.11.2
-
-### Patch Changes
-
-- ec6401b: feat: serialize json files seperate to pikku meta state calls
-- faaf4fe: feat: adding rpcName to rpc url so its nicer in network tabs
-- bb223d5: feat: adding in pikkuSimpleWorkflowFunc
-- Updated dependencies [bb223d5]
-  - @pikku/inspector@0.11.1
-  - @pikku/core@0.11.1
-
 ## 0.11.1
 
 ### Patch Changes

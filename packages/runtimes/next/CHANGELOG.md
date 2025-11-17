@@ -1,13 +1,5 @@
 ## 0.11.0
 
-## 0.11.1
-
-### Patch Changes
-
-- bb223d5: feat: exposing rpc and staticRPC to nextJS wrapper
-- Updated dependencies [bb223d5]
-  - @pikku/core@0.11.1
-
 ### Minor Changes
 
 - Workflow support

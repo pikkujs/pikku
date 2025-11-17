@@ -1,13 +1,5 @@
 ## 0.11.0
 
-## 0.11.1
-
-### Patch Changes
-
-- ec6401b: fix: fixing mcp version since it introduced lots of breaking changes
-- Updated dependencies [bb223d5]
-  - @pikku/core@0.11.1
-
 ### Minor Changes
 
 - Workflow support
