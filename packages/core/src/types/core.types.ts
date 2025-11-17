@@ -88,6 +88,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
   Partial<{
     name: string
     services: FunctionServicesMeta
+    usedInteractions: string[]
     inputs: string[] | null
     outputs: string[] | null
     tags: string[]
