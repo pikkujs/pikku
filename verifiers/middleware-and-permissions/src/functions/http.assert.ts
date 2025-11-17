@@ -9,7 +9,7 @@ export async function testHTTPWiring(
   url: string,
   expected: ExpectedEvent[],
   singletonServices: any,
-  createSessionServices: any
+  createInteractionServices: any
 ): Promise<boolean> {
   console.log(`\n\nTest: ${url}`)
   console.log('─────────────────────────')
@@ -19,7 +19,7 @@ export async function testHTTPWiring(
     async () => {
       await fetch(new Request(`http://localhost${url}`), {
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
       })
     },
     singletonServices.logger

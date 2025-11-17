@@ -11,7 +11,7 @@ export function serializeLocalCLIBootstrap(
   config: Config,
   pikkuConfigFactory: { file: string; variable: string },
   singletonServicesFactory: { file: string; variable: string },
-  sessionServicesFactory: { file: string; variable: string }
+  interactionServicesFactory: { file: string; variable: string }
 ): string {
   const capitalizedName =
     programName.charAt(0).toUpperCase() + programName.slice(1).replace(/-/g, '')
@@ -27,9 +27,9 @@ export function serializeLocalCLIBootstrap(
     singletonServicesFactory.file,
     config.packageMappings
   )
-  const sessionServicesPath = getFileImportRelativePath(
+  const interactionServicesPath = getFileImportRelativePath(
     bootstrapFile,
-    sessionServicesFactory.file,
+    interactionServicesFactory.file,
     config.packageMappings
   )
   const cliBootstrapPath = getFileImportRelativePath(
@@ -42,7 +42,7 @@ export function serializeLocalCLIBootstrap(
 import { executeCLI, CLIError } from '@pikku/core/cli'
 import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'
 import { ${singletonServicesFactory.variable} as createSingletonServices } from '${singletonServicesPath}'
-import { ${sessionServicesFactory.variable} as createSessionServices } from '${sessionServicesPath}'
+import { ${interactionServicesFactory.variable} as createInteractionServices } from '${interactionServicesPath}'
 import '${cliBootstrapPath}'
 
 /**
@@ -56,7 +56,7 @@ export async function ${capitalizedName}CLI(args: string[]): Promise<void> {
       args: args || process.argv.slice(2),
       createConfig,
       createSingletonServices,
-      createSessionServices,
+      createInteractionServices,
     })
   } catch (error) {
     if (error instanceof CLIError) {

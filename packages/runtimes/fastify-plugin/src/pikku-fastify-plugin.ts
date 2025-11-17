@@ -1,4 +1,4 @@
-import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
+import { CoreSingletonServices, CreateInteractionServices } from '@pikku/core'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { fetch, RunHTTPWiringOptions } from '@pikku/core/http'
 import { FastifyPluginAsync } from 'fastify'
@@ -14,7 +14,7 @@ import { sendResponseToFastify } from './fastify-response-convertor.js'
  * @typedef {Object} PikkuFastifyPluginOptions - Options for configuring the plugin.
  * @property {Object} pikku - Pikku-related configuration options.
  * @property {CoreSingletonServices} pikku.singletonServices - The singleton services used by the handler.
- * @property {CreateSessionServices<any, any, any>} pikku.createSessionServices - A function to create session services for each request.
+ * @property {CreateInteractionServices<any, any, any>} pikku.createInteractionServices - A function to create interaction services for each request.
  * @property {boolean} [pikku.logRoutes] - Whether to log the routes.
  * @property {boolean} [pikku.loadSchemas] - Whether to load all schemas.
  * @property {boolean} [pikku.skipUserSession] - Whether to skip user session creation for this route.
@@ -23,7 +23,7 @@ import { sendResponseToFastify } from './fastify-response-convertor.js'
 export type PikkuFastifyPluginOptions = {
   pikku: {
     singletonServices: CoreSingletonServices
-    createSessionServices: CreateSessionServices<any, any, any>
+    createInteractionServices: CreateInteractionServices<any, any, any>
     logRoutes?: boolean
     loadSchemas?: boolean
   } & RunHTTPWiringOptions
@@ -55,7 +55,7 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
   fastify.all('/*', async (req, res) => {
     const response = await fetch(fastifyToRequest(req), {
       singletonServices: pikku.singletonServices,
-      createSessionServices: pikku.createSessionServices,
+      createInteractionServices: pikku.createInteractionServices,
       respondWith404: pikku.respondWith404,
     })
     await sendResponseToFastify(res, response)

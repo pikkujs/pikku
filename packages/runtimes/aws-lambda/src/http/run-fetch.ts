@@ -1,7 +1,7 @@
 import {
   CoreSingletonServices,
   CoreServices,
-  CreateSessionServices,
+  CreateInteractionServices,
   CoreUserSession,
 } from '@pikku/core'
 import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
@@ -15,7 +15,7 @@ export const runFetch = async <
   UserSession extends CoreUserSession,
 >(
   singletonServices: SingletonServices,
-  createSessionServices: CreateSessionServices<
+  createInteractionServices: CreateInteractionServices<
     SingletonServices,
     Services,
     UserSession
@@ -41,7 +41,7 @@ export const runFetch = async <
   try {
     await fetchData(request, response, {
       singletonServices,
-      createSessionServices: createSessionServices as any,
+      createInteractionServices: createInteractionServices as any,
     })
   } catch {
     // Error should have already been handled by fetch

@@ -6,12 +6,12 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### Services (6 total)
 
-- **email** - Used by `sendEmail` function, `canSendEmail` permission, `hasEmailQuota` permission factory, `createSessionServices`
+- **email** - Used by `sendEmail` function, `canSendEmail` permission, `hasEmailQuota` permission factory, `createInteractionServices`
 - **sms** - Used by `sendSMS` function
 - **payment** - Used by `processPayment` function, `canProcessPayment` permission
 - **analytics** - Used by `processPayment` function, `trackAnalytics` middleware
 - **storage** - Used by `saveData` function, `rateLimiter` middleware factory
-- **logger** - Used by `logRequest` middleware, `createSessionServices`
+- **logger** - Used by `logRequest` middleware, `createInteractionServices`
 
 ### Functions
 
@@ -32,9 +32,9 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 - `canProcessPayment` - Uses: payment
 - `hasEmailQuota(quota)` - Factory - Uses: email
 
-### Session Services
+### Interaction Services
 
-- `createSessionServices` - Uses: email, logger (always included)
+- `createInteractionServices` - Uses: email, logger (always included)
 
 ### HTTP Wirings
 
@@ -45,7 +45,7 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 | POST /api/payments/charge     | payments             | processPayment (payment, analytics) | logRequest (logger), trackAnalytics (analytics), rateLimiter (storage) | canProcessPayment (payment)                 | analytics, email, logger, payment, storage |
 | POST /api/storage/save        | storage              | saveData (storage)                  | -                                                                      | -                                           | email, logger, storage                     |
 
-**Note**: `email` and `logger` are always included because `createSessionServices` destructures them.
+**Note**: `email` and `logger` are always included because `createInteractionServices` destructures them.
 
 ## Test Matrix
 
@@ -59,63 +59,63 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 | Filter                 | Expected Services                          | Rationale                                                                                                         |
 | ---------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `--tags=notifications` | email, logger, sms                         | Email, sms, logger (middleware), and session services should be included                                          |
-| `--tags=email`         | email, logger                              | Email (function + permissions), logger (middleware), and session services                                         |
-| `--tags=sms`           | email, logger, sms                         | SMS (function), logger (middleware), and session services (email, logger)                                         |
-| `--tags=payments`      | analytics, email, logger, payment, storage | Payment route uses payment + analytics (function + middleware) + logger + storage (middleware) + session services |
-| `--tags=storage`       | email, logger, storage                     | Storage (function) and session services (email, logger)                                                           |
+| `--tags=notifications` | email, logger, sms                         | Email, sms, logger (middleware), and interaction services should be included                                          |
+| `--tags=email`         | email, logger                              | Email (function + permissions), logger (middleware), and interaction services                                         |
+| `--tags=sms`           | email, logger, sms                         | SMS (function), logger (middleware), and interaction services (email, logger)                                         |
+| `--tags=payments`      | analytics, email, logger, payment, storage | Payment route uses payment + analytics (function + middleware) + logger + storage (middleware) + interaction services |
+| `--tags=storage`       | email, logger, storage                     | Storage (function) and interaction services (email, logger)                                                           |
 
 ### Multiple Tag Filters (OR logic)
 
 | Filter                          | Expected Services                               | Rationale                                                  |
 | ------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
-| `--tags=notifications,payments` | analytics, email, logger, payment, sms, storage | All notification routes + payment route + session services |
-| `--tags=email,sms`              | email, logger, sms                              | Both email and SMS routes + session services               |
-| `--tags=notifications,storage`  | email, logger, sms, storage                     | All notification + storage routes + session services       |
+| `--tags=notifications,payments` | analytics, email, logger, payment, sms, storage | All notification routes + payment route + interaction services |
+| `--tags=email,sms`              | email, logger, sms                              | Both email and SMS routes + interaction services               |
+| `--tags=notifications,storage`  | email, logger, sms, storage                     | All notification + storage routes + interaction services       |
 
 ### Type Filters
 
 | Filter         | Expected Services                               | Rationale                                                                 |
 | -------------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
-| `--types=http` | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are HTTP) + session services |
+| `--types=http` | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are HTTP) + interaction services |
 
 ### HTTP Method Filters
 
 | Filter               | Expected Services                               | Rationale                                                                |
 | -------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
-| `--httpMethods=POST` | analytics, email, logger, payment, sms, storage | All services should be included (all routes are POST) + session services |
-| `--httpMethods=GET`  | email, logger                                   | No GET routes exist, only session services                               |
+| `--httpMethods=POST` | analytics, email, logger, payment, sms, storage | All services should be included (all routes are POST) + interaction services |
+| `--httpMethods=GET`  | email, logger                                   | No GET routes exist, only interaction services                               |
 
 ### HTTP Route Filters
 
 | Filter                              | Expected Services                          | Rationale                                   |
 | ----------------------------------- | ------------------------------------------ | ------------------------------------------- |
-| `--httpRoutes=/api/notifications/*` | email, logger, sms                         | Only notification routes + session services |
-| `--httpRoutes=/api/payments/*`      | analytics, email, logger, payment, storage | Only payment routes + session services      |
-| `--httpRoutes=/api/storage/*`       | email, logger, storage                     | Only storage routes + session services      |
+| `--httpRoutes=/api/notifications/*` | email, logger, sms                         | Only notification routes + interaction services |
+| `--httpRoutes=/api/payments/*`      | analytics, email, logger, payment, storage | Only payment routes + interaction services      |
+| `--httpRoutes=/api/storage/*`       | email, logger, storage                     | Only storage routes + interaction services      |
 
 ### Directory Filters
 
 | Filter                          | Expected Services                               | Rationale                                                                             |
 | ------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `--directories=src/functions`   | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are in src/functions) + session services |
-| `--directories=src/nonexistent` | email, logger                                   | No wirings in nonexistent directory, only session services                            |
+| `--directories=src/functions`   | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are in src/functions) + interaction services |
+| `--directories=src/nonexistent` | email, logger                                   | No wirings in nonexistent directory, only interaction services                            |
 
 ### Combination Filters
 
 | Filter                                    | Expected Services                          | Rationale                                            |
 | ----------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
-| `--tags=notifications --httpMethods=POST` | email, logger, sms                         | Notification routes that are POST + session services |
-| `--tags=payments --types=http`            | analytics, email, logger, payment, storage | Payment HTTP routes + session services               |
+| `--tags=notifications --httpMethods=POST` | email, logger, sms                         | Notification routes that are POST + interaction services |
+| `--tags=payments --types=http`            | analytics, email, logger, payment, storage | Payment HTTP routes + interaction services               |
 
 ### Wildcard Name Filters
 
 | Filter             | Expected Services                          | Rationale                                                                    |
 | ------------------ | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| `--names=send*`    | email, logger, sms                         | Routes using sendEmail and sendSMS functions + middleware + session services |
-| `--names=process*` | analytics, email, logger, payment, storage | Routes using processPayment function + middleware + session services         |
-| `--names=*Payment` | analytics, email, logger, payment, storage | Routes using functions ending with "Payment" + middleware + session services |
-| `--names=saveData` | email, logger, storage                     | Routes using saveData function + session services                            |
+| `--names=send*`    | email, logger, sms                         | Routes using sendEmail and sendSMS functions + middleware + interaction services |
+| `--names=process*` | analytics, email, logger, payment, storage | Routes using processPayment function + middleware + interaction services         |
+| `--names=*Payment` | analytics, email, logger, payment, storage | Routes using functions ending with "Payment" + middleware + interaction services |
+| `--names=saveData` | email, logger, storage                     | Routes using saveData function + interaction services                            |
 
 ## Expected Service Counts by Filter
 

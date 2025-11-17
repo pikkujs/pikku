@@ -3,7 +3,7 @@ import { VariablesService } from '../services/variables-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
-import { UserSessionService } from '../services/user-session-service.js'
+import { UserInteractionService } from '../services/user-session-service.js'
 import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
@@ -202,7 +202,7 @@ export type PikkuInteraction<
   cli: PikkuCLI
   workflow: TypedWorkflow
   workflowStep: WorkflowStepInteraction
-  session: UserSessionService<UserSession>
+  session: UserInteractionService<UserSession>
 }>
 
 /**
@@ -322,7 +322,7 @@ export const pikkuMiddlewareFactory = <In = any>(
 export type CoreServices<SingletonServices = CoreSingletonServices> =
   SingletonServices
 
-export type SessionServices<
+export type InteractionServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services = CoreServices<SingletonServices>,
 > = Omit<Services, keyof SingletonServices | 'session'>
@@ -341,7 +341,7 @@ export type CreateSingletonServices<
 /**
  * Defines a function type for creating session-specific services.
  */
-export type CreateSessionServices<
+export type CreateInteractionServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services extends
     CoreServices<SingletonServices> = CoreServices<SingletonServices>,
@@ -349,7 +349,7 @@ export type CreateSessionServices<
 > = (
   services: SingletonServices,
   interaction: PikkuInteraction<unknown, unknown, UserSession>
-) => Promise<SessionServices<Services, SingletonServices>>
+) => Promise<InteractionServices<Services, SingletonServices>>
 
 /**
  * Defines a function type for creating config.

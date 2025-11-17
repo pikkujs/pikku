@@ -8,7 +8,7 @@ import type { ExpectedEvent } from '../assert-combined.js'
 export async function testQueueWiring(
   expected: ExpectedEvent[],
   singletonServices: any,
-  createSessionServices: any
+  createInteractionServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run Queue Job')
   console.log('─────────────────────────')
@@ -18,7 +18,7 @@ export async function testQueueWiring(
     async () => {
       await runQueueJob({
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         job: {
           id: 'test-job-1',
           queueName: 'test-queue',

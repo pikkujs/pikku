@@ -4,7 +4,10 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import type { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
+import type {
+  CoreSingletonServices,
+  CreateInteractionServices,
+} from '@pikku/core'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 
 /**
@@ -58,7 +61,9 @@ export function mapSQSRecordToQueueJob(
  */
 export const runSQSQueueWorker = async (
   singletonServices: CoreSingletonServices,
-  createSessionServices: CreateSessionServices<any, any, any> | undefined,
+  createInteractionServices:
+    | CreateInteractionServices<any, any, any>
+    | undefined,
   event: SQSEvent
 ): Promise<SQSBatchResponse> => {
   console.log(JSON.stringify(event, null, 2))
@@ -70,7 +75,7 @@ export const runSQSQueueWorker = async (
       try {
         return await runQueueJob({
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
           job,
         })
       } catch (error: unknown) {

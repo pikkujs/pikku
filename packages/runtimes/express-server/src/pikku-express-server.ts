@@ -10,7 +10,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import {
   CoreConfig,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
 } from '@pikku/core'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import { LocalContentConfig } from '@pikku/core/services/local-content'
@@ -38,7 +38,11 @@ export class PikkuExpressServer {
   constructor(
     private readonly config: ExpressCoreConfig,
     private readonly singletonServices: CoreSingletonServices,
-    private readonly createSessionServices: CreateSessionServices<any, any, any>
+    private readonly createInteractionServices: CreateInteractionServices<
+      any,
+      any,
+      any
+    >
   ) {
     this.app.get(
       this.config.healthCheckPath || '/health-check',
@@ -114,7 +118,7 @@ export class PikkuExpressServer {
     this.app.use(
       pikkuExpressMiddleware(
         this.singletonServices,
-        this.createSessionServices,
+        this.createInteractionServices,
         {
           logRoutes: true,
           loadSchemas: true,

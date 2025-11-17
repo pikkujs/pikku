@@ -4,7 +4,7 @@ export const serializeNextJsBackendWrapper = (
   rpcMapPath: string,
   configImport: string,
   singleServicesFactoryImport: string,
-  sessionServicesImport: string
+  interactionServicesImport: string
 ) => {
   return `'server-only'
 
@@ -21,7 +21,7 @@ type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
 ${configImport}
 ${singleServicesFactoryImport}
-${sessionServicesImport}
+${interactionServicesImport}
 
 import '${bootstrapPath}'
 
@@ -42,7 +42,7 @@ export const pikku = (_options?: any) => {
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      createSessionServices
+      createInteractionServices
     )
   }
 
@@ -249,7 +249,7 @@ export const pikkuAPIRequest = (
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      createSessionServices
+      createInteractionServices
     )
   }
   if (_removeAPIPrefix) {

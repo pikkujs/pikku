@@ -51,7 +51,7 @@ export async function testChannelWiringServerless(
   data: any,
   expected: ExpectedEvent[],
   singletonServices: any,
-  createSessionServices: any
+  createInteractionServices: any
 ): Promise<boolean> {
   console.log(`\n\nTest (Serverless): ${route} - command: ${command}`)
   console.log('─────────────────────────')
@@ -110,7 +110,7 @@ export async function testChannelWiringServerless(
         request,
         response,
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         channelStore,
         channelHandlerFactory,
       })
@@ -120,7 +120,7 @@ export async function testChannelWiringServerless(
         {
           channelId,
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
           channelStore,
           channelHandlerFactory,
         },
@@ -134,7 +134,7 @@ export async function testChannelWiringServerless(
       await runChannelDisconnect({
         channelId,
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         channelStore,
         channelHandlerFactory,
       })

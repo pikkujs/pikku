@@ -2,7 +2,7 @@ import { BullQueueWorkers } from '@pikku/queue-bullmq'
 import {
   createConfig,
   createSingletonServices,
-  createSessionServices,
+  createInteractionServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
     const bullQueueWorkers = new BullQueueWorkers(
       {},
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
     await bullQueueWorkers.registerQueues()
   } catch (e: any) {

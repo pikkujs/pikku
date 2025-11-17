@@ -47,7 +47,7 @@ const singletonServices = await createSingletonServices(config)
 const server = new PikkuMCPServer(
   config,
   singletonServices,
-  createSessionServices // optional
+  createInteractionServices // optional
 )
 
 await server.init()

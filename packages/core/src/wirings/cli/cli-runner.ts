@@ -18,13 +18,13 @@ import {
 import type {
   CoreSingletonServices,
   CoreServices,
-  CreateSessionServices,
+  CreateInteractionServices,
   PikkuInteraction,
   CreateConfig,
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { PikkuUserSessionService } from '../../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
@@ -244,13 +244,13 @@ export async function runCLICommand({
   commandPath,
   data,
   singletonServices,
-  createSessionServices,
+  createInteractionServices,
 }: {
   program: string
   commandPath: string[]
   data: Record<string, any>
   singletonServices: CoreSingletonServices
-  createSessionServices?: CreateSessionServices
+  createInteractionServices?: CreateInteractionServices
 }): Promise<any> {
   // Get the command metadata to find the function name
   const cliMeta = pikkuState('cli', 'meta')
@@ -326,7 +326,7 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  const userSession = new PikkuUserSessionService<CoreUserSession>()
+  const userSession = new PikkuUserInteractionService<CoreUserSession>()
 
   const interaction: PikkuInteraction = {
     cli: {
@@ -345,7 +345,7 @@ export async function runCLICommand({
       funcName,
       {
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         data: pluckedData,
         auth: false,
         inheritedMiddleware: currentCommand.middleware,
@@ -399,13 +399,13 @@ export async function executeCLI({
   args,
   createConfig,
   createSingletonServices,
-  createSessionServices,
+  createInteractionServices,
 }: {
   programName: string
   args?: string[]
   createConfig: CreateConfig<any, any>
   createSingletonServices: CreateSingletonServices<any, any>
-  createSessionServices?: CreateSessionServices<any, any, any>
+  createInteractionServices?: CreateInteractionServices<any, any, any>
 }): Promise<void> {
   if (!args) {
     throw new Error(
@@ -489,7 +489,7 @@ export async function executeCLI({
       commandPath: parsed.commandPath,
       data,
       singletonServices,
-      createSessionServices,
+      createInteractionServices,
     })
   } catch (error: any) {
     // Re-throw CLIError as-is

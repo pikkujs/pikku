@@ -12,7 +12,7 @@
       ]
     ]
   ],
-  "sessionServicesTypeImportMap": [
+  "interactionServicesTypeImportMap": [
     [
       "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
       [
@@ -60,19 +60,19 @@
       ]
     ]
   ],
-  "sessionServicesFactories": [
+  "interactionServicesFactories": [
     [
       "src/services.ts",
       [
         {
-          "variable": "createSessionServices",
-          "type": "CreateSessionServices",
+          "variable": "createInteractionServices",
+          "type": "CreateInteractionServices",
           "typePath": "src/services.ts"
         }
       ]
     ]
   ],
-  "sessionServicesMeta": [["createSessionServices", []]],
+  "interactionServicesMeta": [["createInteractionServices", []]],
   "configFactories": [
     [
       "src/services.ts",
@@ -98,7 +98,7 @@
       "variable": "SingletonServices",
       "typePath": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts"
     },
-    "sessionServicesType": {
+    "interactionServicesType": {
       "file": "/Users/yasser/git/pikku/pikku/templates/functions/types/application-types.d.ts",
       "type": "Services",
       "variable": "Services",
@@ -122,10 +122,10 @@
       "variable": "createSingletonServices",
       "typePath": "src/services.ts"
     },
-    "sessionServicesFactory": {
+    "interactionServicesFactory": {
       "file": "src/services.ts",
-      "type": "CreateSessionServices",
-      "variable": "createSessionServices",
+      "type": "CreateInteractionServices",
+      "variable": "createInteractionServices",
       "typePath": "src/services.ts"
     }
   },

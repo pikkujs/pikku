@@ -6,7 +6,7 @@ import { extractServicesFromFunction } from '../utils/extract-services.js'
 const wrapperFunctionMap: Record<string, string> = {
   pikkuConfig: 'CreateConfig',
   pikkuServices: 'CreateSingletonServices',
-  pikkuSessionServices: 'CreateSessionServices',
+  pikkuInteractionServices: 'CreateInteractionServices',
 }
 
 export const addFileWithFactory = (
@@ -54,9 +54,9 @@ export const addFileWithFactory = (
           })
           methods.set(fileName, variables)
 
-          // Extract singleton services for CreateSessionServices factories
+          // Extract singleton services for CreateInteractionServices factories
           if (
-            expectedTypeName === 'CreateSessionServices' &&
+            expectedTypeName === 'CreateInteractionServices' &&
             state &&
             callExpression.arguments.length > 0
           ) {
@@ -74,7 +74,10 @@ export const addFileWithFactory = (
 
             if (functionNode) {
               const servicesMeta = extractServicesFromFunction(functionNode)
-              state.sessionServicesMeta.set(variableName, servicesMeta.services)
+              state.interactionServicesMeta.set(
+                variableName,
+                servicesMeta.services
+              )
             }
           }
 
@@ -109,9 +112,9 @@ export const addFileWithFactory = (
         })
         methods.set(fileName, variables)
 
-        // Extract singleton services for CreateSessionServices factories
+        // Extract singleton services for CreateInteractionServices factories
         if (
-          expectedTypeName === 'CreateSessionServices' &&
+          expectedTypeName === 'CreateInteractionServices' &&
           state &&
           node.initializer
         ) {
@@ -124,7 +127,10 @@ export const addFileWithFactory = (
 
           if (functionNode) {
             const servicesMeta = extractServicesFromFunction(functionNode)
-            state.sessionServicesMeta.set(variableName, servicesMeta.services)
+            state.interactionServicesMeta.set(
+              variableName,
+              servicesMeta.services
+            )
           }
         }
       }
@@ -149,9 +155,9 @@ export const addFileWithFactory = (
           })
           methods.set(fileName, variables)
 
-          // Extract singleton services for CreateSessionServices factories
+          // Extract singleton services for CreateInteractionServices factories
           if (
-            expectedTypeName === 'CreateSessionServices' &&
+            expectedTypeName === 'CreateInteractionServices' &&
             state &&
             node.initializer
           ) {
@@ -167,7 +173,10 @@ export const addFileWithFactory = (
 
             if (functionNode) {
               const servicesMeta = extractServicesFromFunction(functionNode)
-              state.sessionServicesMeta.set(variableName, servicesMeta.services)
+              state.interactionServicesMeta.set(
+                variableName,
+                servicesMeta.services
+              )
             }
           }
         }

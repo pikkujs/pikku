@@ -3,7 +3,7 @@ import {
   MiddlewareMetadata,
   SerializedError,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
   CoreConfig,
 } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
@@ -375,7 +375,7 @@ export interface WorkflowService {
   resumeWorkflow(runId: string): Promise<void>
   setServices(
     singletonServices: CoreSingletonServices,
-    createSessionServices: CreateSessionServices,
+    createInteractionServices: CreateInteractionServices,
     config: CoreConfig
   ): void
   startWorkflow<I>(

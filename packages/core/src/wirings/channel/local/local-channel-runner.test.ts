@@ -95,7 +95,9 @@ export class PikkuMockResponse implements PikkuHTTPResponse {
   }
 }
 
-const mockCreateSessionServices = async () => ({ sessionServiceMock: true })
+const mockCreateInteractionServices = async () => ({
+  interactionServiceMock: true,
+})
 
 beforeEach(() => {
   resetPikkuState()
@@ -113,7 +115,7 @@ test('runChannel should return undefined and 404 if no matching channel is found
     channelId: 'test-channel-id',
     request: new PikkuMockRequest('/non-existent-channel', 'get'),
     response: mockResponse,
-    createSessionServices: mockCreateSessionServices,
+    createInteractionServices: mockCreateInteractionServices,
   })
 
   assert.equal(
@@ -149,7 +151,7 @@ test('runChannel should return a channel handler if channel matches and no auth 
     request: new PikkuMockRequest('/test-channel', 'get'),
     response: new PikkuMockResponse(),
     route: '/test-channel',
-    createSessionServices: mockCreateSessionServices,
+    createInteractionServices: mockCreateInteractionServices,
   })
 
   assert.ok(result, 'Should return a PikkuChannelHandler instance')

@@ -66,7 +66,7 @@ export class ContextAwareRPCService {
       {
         auth: this.options.requiresAuth,
         // TODO: this is a hack since services have already been created
-        // but is valid since we don't want to keep creating new session services
+        // but is valid since we don't want to keep creating new interaction services
         singletonServices: this.services,
         data: () => data,
         coerceDataFromSchema: this.options.coerceDataFromSchema,

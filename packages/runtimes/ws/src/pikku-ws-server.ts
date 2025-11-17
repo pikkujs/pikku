@@ -8,7 +8,7 @@ import {
 } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { PikkuFetchHTTPRequest, RunHTTPWiringOptions } from '@pikku/core/http'
-import { CoreSingletonServices, CreateSessionServices } from '@pikku/core'
+import { CoreSingletonServices, CreateInteractionServices } from '@pikku/core'
 
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
 import crypto from 'crypto'
@@ -19,7 +19,7 @@ import { incomingMessageToRequestConvertor } from './incoming-message-to-request
  *
  * @typedef {Object} PikkuuWSHandlerOptions
  * @property {CoreSingletonServices} singletonServices - The singleton services used by the handler.
- * @property {CreateSessionServices<any, any, any>} createSessionServices - A function to create session services.
+ * @property {CreateInteractionServices<any, any, any>} createInteractionServices - A function to create interaction services.
  * @property {boolean} [logRoutes] - Whether to log the routes.
  * @property {boolean} [loadSchemas] - Whether to load all schemas.
  * @property {RunHTTPWiringOptions} - Additional options for running the route.
@@ -28,7 +28,7 @@ export type PikkuWSHandlerOptions = {
   server: Server
   wss: WebSocketServer
   singletonServices: CoreSingletonServices
-  createSessionServices?: CreateSessionServices<any, any, any>
+  createInteractionServices?: CreateInteractionServices<any, any, any>
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions
@@ -67,7 +67,7 @@ export const pikkuWebsocketHandler = ({
   server,
   wss,
   singletonServices,
-  createSessionServices,
+  createInteractionServices,
   loadSchemas,
   logRoutes,
 }: PikkuWSHandlerOptions) => {
@@ -132,7 +132,7 @@ export const pikkuWebsocketHandler = ({
       request,
       response,
       singletonServices: singletonServicesWithEventHub,
-      createSessionServices: createSessionServices as any,
+      createInteractionServices: createInteractionServices as any,
     })
 
     if (!channelHandler) {

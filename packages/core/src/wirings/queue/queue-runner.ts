@@ -8,7 +8,7 @@ import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import {
-  CreateSessionServices,
+  CreateInteractionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
 
@@ -104,12 +104,12 @@ export async function removeQueueWorker(name: string): Promise<void> {
  */
 export async function runQueueJob({
   singletonServices,
-  createSessionServices,
+  createInteractionServices,
   job,
   updateProgress,
 }: {
   singletonServices: CoreServices
-  createSessionServices?: CreateSessionServices
+  createInteractionServices?: CreateInteractionServices
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
 }): Promise<void> {
@@ -160,7 +160,7 @@ export async function runQueueJob({
       processorMeta.pikkuFuncName,
       {
         singletonServices,
-        createSessionServices,
+        createInteractionServices,
         auth: false,
         data: () => job.data,
         inheritedMiddleware: processorMeta.middleware,

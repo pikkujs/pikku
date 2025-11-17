@@ -2,7 +2,7 @@ import { CloudflareWebSocketHibernationServer } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
 import { CloudflareEventHubService } from '@pikku/cloudflare'
 import { SingletonServices } from '../../functions/types/application-types.d.js'
-import { createSessionServices } from '../../functions/src/services.js'
+import { createInteractionServices } from '../../functions/src/services.js'
 
 export class WebSocketHibernationServer extends CloudflareWebSocketHibernationServer {
   private singletonServices: SingletonServices | undefined
@@ -17,7 +17,7 @@ export class WebSocketHibernationServer extends CloudflareWebSocketHibernationSe
     }
     return {
       singletonServices: this.singletonServices,
-      createSessionServices,
+      createInteractionServices,
     }
   }
 }

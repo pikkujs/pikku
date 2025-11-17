@@ -1,5 +1,8 @@
-import { PikkuInteraction, SessionServices } from '../../../types/core.types.js'
-import { closeSessionServices } from '../../../utils.js'
+import {
+  PikkuInteraction,
+  InteractionServices,
+} from '../../../types/core.types.js'
+import { closeInteractionServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
 import type {
@@ -11,7 +14,7 @@ import type {
 import { createHTTPInteraction } from '../../http/http-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { PikkuUserSessionService } from '../../../services/user-session-service.js'
+import { PikkuUserInteractionService } from '../../../services/user-session-service.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
@@ -65,7 +68,7 @@ export const runChannelConnect = async ({
   request,
   response,
   route,
-  createSessionServices,
+  createInteractionServices,
   channelStore,
   channelHandlerFactory,
   coerceDataFromSchema = true,
@@ -75,18 +78,18 @@ export const runChannelConnect = async ({
 }: Pick<CoreChannel<unknown, any>, 'route'> &
   RunChannelOptions &
   RunServerlessChannelParams<unknown>) => {
-  let sessionServices: SessionServices | undefined
+  let interactionServices: InteractionServices | undefined
 
   let http: PikkuHTTP | undefined
   if (request instanceof Request) {
     http = createHTTPInteraction(new PikkuFetchHTTPRequest(request), response)
   }
 
-  const userSession = new PikkuUserSessionService(channelStore, channelId)
+  const userSession = new PikkuUserInteractionService(channelStore, channelId)
 
   const { channelConfig, openingData, meta } = await openChannel({
     channelId,
-    createSessionServices,
+    createInteractionServices,
     request,
     route,
     singletonServices,
@@ -109,8 +112,8 @@ export const runChannelConnect = async ({
 
     const interaction: PikkuInteraction = { channel, session: userSession }
 
-    if (createSessionServices) {
-      sessionServices = await createSessionServices(
+    if (createInteractionServices) {
+      interactionServices = await createInteractionServices(
         singletonServices,
         interaction
       )
@@ -118,7 +121,7 @@ export const runChannelConnect = async ({
 
     const services = {
       ...singletonServices,
-      ...sessionServices,
+      ...interactionServices,
     }
 
     if (channelConfig.onConnect && meta.connect) {
@@ -144,8 +147,11 @@ export const runChannelConnect = async ({
       bubbleErrors
     )
   } finally {
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
+    if (interactionServices) {
+      await closeInteractionServices(
+        singletonServices.logger,
+        interactionServices
+      )
     }
   }
 }
@@ -154,7 +160,7 @@ export const runChannelDisconnect = async ({
   singletonServices,
   ...params
 }: RunServerlessChannelParams<unknown>): Promise<void> => {
-  let sessionServices: SessionServices | undefined
+  let interactionServices: InteractionServices | undefined
 
   // Try to get channel from store. In serverless environments (especially with
   // serverless-offline or worker threads), disconnect can be called multiple times
@@ -178,15 +184,15 @@ export const runChannelDisconnect = async ({
     openingData,
     channelName,
   })
-  const userSession = new PikkuUserSessionService(
+  const userSession = new PikkuUserInteractionService(
     params.channelStore,
     params.channelId
   )
   userSession.setInitial(session)
   const interaction: PikkuInteraction = { channel, session: userSession }
 
-  if (!sessionServices && params.createSessionServices) {
-    sessionServices = await params.createSessionServices(
+  if (!interactionServices && params.createInteractionServices) {
+    interactionServices = await params.createInteractionServices(
       singletonServices,
       interaction
     )
@@ -194,7 +200,7 @@ export const runChannelDisconnect = async ({
 
   const services = {
     ...singletonServices,
-    ...sessionServices,
+    ...interactionServices,
   }
 
   if (channelConfig.onDisconnect && meta.disconnect) {
@@ -214,8 +220,11 @@ export const runChannelDisconnect = async ({
     }
   }
   await params.channelStore.removeChannels([channel.channelId])
-  if (sessionServices) {
-    await closeSessionServices(singletonServices.logger, sessionServices)
+  if (interactionServices) {
+    await closeInteractionServices(
+      singletonServices.logger,
+      interactionServices
+    )
   }
 }
 
@@ -223,7 +232,7 @@ export const runChannelMessage = async (
   { singletonServices, ...params }: RunServerlessChannelParams<unknown>,
   data: unknown
 ): Promise<unknown> => {
-  let sessionServices: SessionServices | undefined
+  let interactionServices: InteractionServices | undefined
   const { openingData, channelName, session } =
     await params.channelStore.getChannelAndSession(params.channelId)
 
@@ -232,15 +241,15 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
-  const userSession = new PikkuUserSessionService(
+  const userSession = new PikkuUserInteractionService(
     params.channelStore,
     params.channelId
   )
   userSession.setInitial(session)
   const interaction: PikkuInteraction = { channel, session: userSession }
 
-  if (params.createSessionServices) {
-    sessionServices = await params.createSessionServices(
+  if (params.createInteractionServices) {
+    interactionServices = await params.createInteractionServices(
       singletonServices,
       interaction
     )
@@ -248,7 +257,7 @@ export const runChannelMessage = async (
 
   const services = {
     ...singletonServices,
-    ...sessionServices,
+    ...interactionServices,
   }
 
   let response: unknown
@@ -266,8 +275,11 @@ export const runChannelMessage = async (
     )
     return { error: e.message || 'Unknown error' }
   } finally {
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
+    if (interactionServices) {
+      await closeInteractionServices(
+        singletonServices.logger,
+        interactionServices
+      )
     }
   }
   return response

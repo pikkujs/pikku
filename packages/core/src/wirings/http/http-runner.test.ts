@@ -47,7 +47,7 @@ const setHTTPFunctionMap = (func: any) => {
 
 describe('fetch', () => {
   let singletonServices: any
-  let createSessionServices: any
+  let createInteractionServices: any
   let request: any
   let response: any
 
@@ -63,7 +63,7 @@ describe('fetch', () => {
       },
     }
 
-    createSessionServices = async () => ({})
+    createInteractionServices = async () => ({})
     request = new PikkuMockRequest('/test', 'get')
     response = new PikkuMockResponse()
 
@@ -81,7 +81,7 @@ describe('fetch', () => {
       async () =>
         fetch(request, {
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
           bubbleErrors: true,
         }),
       NotFoundError
@@ -103,7 +103,7 @@ describe('fetch', () => {
 
     const result = await fetch(request, {
       singletonServices,
-      createSessionServices,
+      createInteractionServices,
     })
 
     assert.deepStrictEqual(await result.json(), { success: true })
@@ -126,7 +126,7 @@ describe('fetch', () => {
 
     await fetch(request, {
       singletonServices,
-      createSessionServices,
+      createInteractionServices,
     })
 
     assert.strictEqual(await permissions.test(), true)
@@ -147,7 +147,7 @@ describe('fetch', () => {
       async () =>
         fetch(request, {
           singletonServices,
-          createSessionServices,
+          createInteractionServices,
           bubbleErrors: true,
         }),
       error

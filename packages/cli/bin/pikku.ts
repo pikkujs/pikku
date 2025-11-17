@@ -34,7 +34,7 @@ const all = (program, name, description) => {
     )
     .option(
       '--session-services-factory-type',
-      'The type of your session services factory'
+      'The type of your interaction services factory'
     )
     .option('-c, --config <string>', 'The path to pikku cli config file')
     .option('-t, --tags <tags...>', 'Which tags to filter by')

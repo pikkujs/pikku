@@ -391,9 +391,9 @@ describe('runScheduledTask', () => {
     assert.equal(typeof capturedInteraction.scheduledTask.skip, 'function')
   })
 
-  test('should call createSessionServices when provided', async () => {
-    let createSessionServicesCalled = false
-    const mockSessionService = { custom: 'service' }
+  test('should call createInteractionServices when provided', async () => {
+    let createInteractionServicesCalled = false
+    const mockInteractionService = { custom: 'service' }
 
     const mockTask: CoreScheduledTask = {
       name: 'session-services-task',
@@ -421,18 +421,18 @@ describe('runScheduledTask', () => {
     await runScheduledTask({
       name: 'session-services-task',
       singletonServices: { logger: mockLogger } as any,
-      createSessionServices: async () => {
-        createSessionServicesCalled = true
-        return mockSessionService as any
+      createInteractionServices: async () => {
+        createInteractionServicesCalled = true
+        return mockInteractionService as any
       },
     })
 
-    assert.equal(createSessionServicesCalled, true)
+    assert.equal(createInteractionServicesCalled, true)
   })
 
-  test('should clean up session services in finally block', async () => {
+  test('should clean up interaction services in finally block', async () => {
     let closeCalled = false
-    const mockSessionService = {
+    const mockInteractionService = {
       custom: {
         close: async () => {
           closeCalled = true
@@ -466,15 +466,15 @@ describe('runScheduledTask', () => {
     await runScheduledTask({
       name: 'cleanup-task',
       singletonServices: { logger: mockLogger } as any,
-      createSessionServices: async () => mockSessionService as any,
+      createInteractionServices: async () => mockInteractionService as any,
     })
 
     assert.equal(closeCalled, true)
   })
 
-  test('should clean up session services even when task throws error', async () => {
+  test('should clean up interaction services even when task throws error', async () => {
     let closeCalled = false
-    const mockSessionService = {
+    const mockInteractionService = {
       custom: {
         close: async () => {
           closeCalled = true
@@ -511,7 +511,7 @@ describe('runScheduledTask', () => {
       await runScheduledTask({
         name: 'error-cleanup-task',
         singletonServices: { logger: mockLogger } as any,
-        createSessionServices: async () => mockSessionService as any,
+        createInteractionServices: async () => mockInteractionService as any,
       })
     })
 

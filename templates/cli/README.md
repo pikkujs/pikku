@@ -318,7 +318,7 @@ import '../.pikku/cli-channel.gen.js' // Import channel wiring
 const app = createPikkuExpressApp({
   createConfig,
   createSingletonServices,
-  createSessionServices,
+  createInteractionServices,
 })
 
 app.listen(3000)

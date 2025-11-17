@@ -120,7 +120,7 @@ export type InspectorOptions = Partial<{
     configFileType: string
     userSessionType: string
     singletonServicesFactoryType: string
-    sessionServicesFactoryType: string
+    interactionServicesFactoryType: string
   }>
 }>
 
@@ -147,7 +147,7 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
-  sessionServicesType?: {
+  interactionServicesType?: {
     file: string
     variable: string
     type: string
@@ -177,7 +177,7 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
-  sessionServicesFactory?: {
+  interactionServicesFactory?: {
     file: string
     variable: string
     type: string
@@ -188,12 +188,12 @@ export interface InspectorFilesAndMethods {
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
-  sessionServicesTypeImportMap: PathToNameAndType
+  interactionServicesTypeImportMap: PathToNameAndType
   userSessionTypeImportMap: PathToNameAndType
   configTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType
-  sessionServicesFactories: PathToNameAndType
-  sessionServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
+  interactionServicesFactories: PathToNameAndType
+  interactionServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
   configFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
@@ -238,6 +238,6 @@ export interface InspectorState {
     usedMiddleware: Set<string> // Middleware names used by wired functions
     usedPermissions: Set<string> // Permission names used by wired functions
     allSingletonServices: string[] // All services available in SingletonServices type
-    allSessionServices: string[] // All services available in Services type (excluding SingletonServices)
+    allInteractionServices: string[] // All services available in Services type (excluding SingletonServices)
   }
 }

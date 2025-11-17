@@ -3,7 +3,7 @@ import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisWorkflowService } from '@pikku/redis'
 import {
   createConfig,
-  createSessionServices,
+  createInteractionServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
 
     workflowService.setServices(
       singletonServices,
-      createSessionServices as any,
+      createInteractionServices as any,
       config
     )
 
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
       singletonServices,
-      createSessionServices
+      createInteractionServices
     )
     appServer.enableExitOnSigInt()
     await appServer.init()
@@ -46,7 +46,7 @@ async function main(): Promise<void> {
 
     const bullQueueWorkers = bullFactory.getQueueWorkers(
       singletonServices,
-      createSessionServices as any
+      createInteractionServices as any
     )
 
     singletonServices.logger.info('Registering workflow queue workers...')

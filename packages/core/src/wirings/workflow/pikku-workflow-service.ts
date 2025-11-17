@@ -4,7 +4,7 @@ import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   CoreConfig,
   CoreSingletonServices,
-  CreateSessionServices,
+  CreateInteractionServices,
   PikkuInteraction,
   PikkuWiringTypes,
   SerializedError,
@@ -41,17 +41,17 @@ export class WorkflowStepNameNotString extends Error {
 export abstract class PikkuWorkflowService implements WorkflowService {
   private config: WorkflowServiceConfig | undefined
   private singletonServices: CoreSingletonServices | undefined
-  private createSessionServices: CreateSessionServices | undefined
+  private createInteractionServices: CreateInteractionServices | undefined
 
   constructor() {}
 
   public setServices(
     singletonServices: CoreSingletonServices,
-    createSessionServices: CreateSessionServices,
+    createInteractionServices: CreateInteractionServices,
     { workflow }: CoreConfig
   ) {
     this.singletonServices = singletonServices
-    this.createSessionServices = createSessionServices
+    this.createInteractionServices = createInteractionServices
     this.config = {
       retries: workflow?.retries ?? 0,
       retryDelay: workflow?.retryDelay ?? 0,
@@ -285,7 +285,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           {
             singletonServices: this.singletonServices!,
             interaction,
-            createSessionServices: this.createSessionServices,
+            createInteractionServices: this.createInteractionServices,
             data: () => run.input,
           }
         )

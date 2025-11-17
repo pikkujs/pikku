@@ -46,26 +46,26 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
       checkRequiredTypes(visitState.filesAndMethodsErrors, {
         config: true,
         singletonServicesFactory: true,
-        sessionServicesFactory: true,
+        interactionServicesFactory: true,
       })
 
       const {
         pikkuConfigFactory,
         singletonServicesFactory,
-        sessionServicesFactory,
+        interactionServicesFactory,
       } = visitState.filesAndMethods
 
       if (
         !pikkuConfigFactory ||
         !singletonServicesFactory ||
-        !sessionServicesFactory
+        !interactionServicesFactory
       ) {
         throw new Error('Required types not found')
       }
 
       const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
       const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
-      const sessionServicesImport = `import { ${sessionServicesFactory.variable} as createSessionServices } from '${getFileImportRelativePath(nextBackendFile, sessionServicesFactory.file, packageMappings)}'`
+      const interactionServicesImport = `import { ${interactionServicesFactory.variable} as createInteractionServices } from '${getFileImportRelativePath(nextBackendFile, interactionServicesFactory.file, packageMappings)}'`
 
       const bootstrapPath = getFileImportRelativePath(
         nextBackendFile,
@@ -91,7 +91,7 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
         rpcMapDeclarationPath,
         pikkuConfigImport,
         singletonServicesImport,
-        sessionServicesImport
+        interactionServicesImport
       )
       await writeFileInDir(logger, nextBackendFile, content)
     }

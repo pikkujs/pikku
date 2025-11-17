@@ -497,9 +497,9 @@ describe('runQueueJob', () => {
     )
   })
 
-  test('should call createSessionServices when provided', async () => {
-    let createSessionServicesCalled = false
-    const mockSessionService = { custom: 'service' }
+  test('should call createInteractionServices when provided', async () => {
+    let createInteractionServicesCalled = false
+    const mockInteractionService = { custom: 'service' }
 
     const mockWorker: CoreQueueWorker = {
       queueName: 'session-services-queue',
@@ -522,13 +522,13 @@ describe('runQueueJob', () => {
     await runQueueJob({
       singletonServices: { logger: mockLogger } as any,
       job,
-      createSessionServices: async () => {
-        createSessionServicesCalled = true
-        return mockSessionService as any
+      createInteractionServices: async () => {
+        createInteractionServicesCalled = true
+        return mockInteractionService as any
       },
     })
 
-    assert.equal(createSessionServicesCalled, true)
+    assert.equal(createInteractionServicesCalled, true)
   })
 
   test('should log errors when job processing fails', async () => {

@@ -8,7 +8,7 @@ import { addFunction } from '../../function/function-runner.js'
 
 describe('CLI Runner', () => {
   let singletonServices: any
-  let createSessionServices: any
+  let createInteractionServices: any
 
   beforeEach(() => {
     resetPikkuState()
@@ -21,7 +21,7 @@ describe('CLI Runner', () => {
       },
     }
 
-    createSessionServices = async () => ({})
+    createInteractionServices = async () => ({})
   })
 
   afterEach(() => {
@@ -295,7 +295,7 @@ describe('CLI Runner', () => {
             commandPath: ['secure'],
             data: {},
             singletonServices,
-            createSessionServices,
+            createInteractionServices,
           }),
         /Authentication required/
       )
