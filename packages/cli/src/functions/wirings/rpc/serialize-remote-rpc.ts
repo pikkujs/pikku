@@ -16,7 +16,7 @@ export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<
   { rpcName: string, data?: any },
   any
 >({
-  func: async ({ rpc }, { rpcName, data }) => {
+  func: async (_services, { rpcName, data }, { rpc }) => {
     return await (rpc.invoke as any)(rpcName, data)
   },
   internal: true,

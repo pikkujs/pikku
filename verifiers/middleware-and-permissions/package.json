@@ -7,7 +7,7 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test": "pikku && npx tsx src/start.ts"
+    "test": "pikku && tsc && npx tsx src/start.ts"
   },
   "dependencies": {
     "@pikku/core": "^0.11.0"

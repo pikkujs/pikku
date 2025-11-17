@@ -56,7 +56,7 @@ export const pikkuCLIRender = <Data, RequiredServices extends SingletonServices 
  * CLI command configuration with project-specific types.
  * Uses CoreCLICommandConfig from @pikku/core with local middleware and render types.
  */
-type CLICommandConfig<Func extends PikkuFunctionConfig<In, Out>, In = any, Out = any, Params extends string = string> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>, Params>
+type CLICommandConfig<Func extends PikkuFunctionConfig<In, Out, 'cli' | 'rpc' | 'session'>, In = any, Out = any, Params extends string = string> = CoreCLICommandConfig<Func, PikkuMiddleware, PikkuCLIRender<any>, Params>
 
 /**
  * Type definition for CLI applications with commands and global options.
@@ -90,7 +90,7 @@ export const wireCLI = <Commands extends Record<string, CoreCLICommandConfig<any
  * @returns CLI command configuration with inferred types
  */
 export const pikkuCLICommand = <
-  FuncConfig extends PikkuFunctionConfig<any, any>,
+  FuncConfig extends PikkuFunctionConfig<any, any, 'cli' | 'rpc' | 'session'>,
   Params extends string
 >(
   config: CLICommandConfig<FuncConfig, any, any, Params>

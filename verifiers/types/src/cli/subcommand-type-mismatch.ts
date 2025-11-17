@@ -24,7 +24,7 @@ wireCLI({
             { username: string; email: string; admin: boolean },
             { id: number }
           >({
-            func: async ({}, data) => ({ id: 123 }),
+            func: async ({}, {}, data) => ({ id: 123 }),
           }),
           description: 'Create user',
           options: {

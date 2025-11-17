@@ -18,7 +18,7 @@ import type { CoreHTTPFunctionWiring } from '@pikku/core/http'
  * @template Out - Output type for the HTTP wiring
  * @template Route - String literal type for the HTTP path (e.g., "/users/:id")
  */
-type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction<In, Out>, PikkuFunctionSessionless<In, Out>, PikkuPermission<In>, PikkuMiddleware>
+type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction<In, Out, 'rpc' | 'session'>, PikkuFunctionSessionless<In, Out, 'rpc' | 'session'>, PikkuPermission<In>, PikkuMiddleware>
 
 /**
  * Registers an HTTP wiring with the Pikku framework.

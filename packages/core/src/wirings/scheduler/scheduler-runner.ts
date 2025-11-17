@@ -11,7 +11,6 @@ import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { rpcService } from '../rpc/rpc-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import {
   CorePikkuFunctionConfig,
@@ -106,6 +105,7 @@ export async function runScheduledTask({
         throw new ScheduledTaskSkippedError(name, reason)
       },
     },
+    session: userSession,
   }
 
   try {
@@ -113,30 +113,13 @@ export async function runScheduledTask({
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    const getAllServices = async () => {
-      sessionServices = await createSessionServices?.(
-        singletonServices,
-        interaction,
-        session
-      )
-
-      return rpcService.injectRPCService(
-        {
-          ...singletonServices,
-          ...sessionServices,
-        },
-        interaction
-      )
-    }
-
     const result = await runPikkuFunc(
       PikkuWiringTypes.scheduler,
       meta.name,
       meta.pikkuFuncName,
       {
         singletonServices,
-        getAllServices,
-        userSession,
+        createSessionServices,
         auth: false,
         data: () => undefined,
         inheritedMiddleware: meta.middleware,

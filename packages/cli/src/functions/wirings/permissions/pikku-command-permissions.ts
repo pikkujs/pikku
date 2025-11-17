@@ -17,10 +17,10 @@ export const pikkuPermissions: any = pikkuSessionlessFunc<
     // Check if there are any permission group factories
     const hasHTTPFactories = Array.from(
       state.http.routePermissions.values()
-    ).some((meta) => meta.exportName && meta.isFactory)
+    ).some((meta: any) => meta.exportName && meta.isFactory)
     const hasTagFactories = Array.from(
       state.permissions.tagPermissions.values()
-    ).some((meta) => meta.exportName && meta.isFactory)
+    ).some((meta: any) => meta.exportName && meta.isFactory)
     const hasFactories = hasHTTPFactories || hasTagFactories
 
     // Generate permissions imports file if there are factories

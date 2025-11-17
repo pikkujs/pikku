@@ -486,16 +486,15 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should pass correct parameters to function', async () => {
     let receivedServices: any
     let receivedData: any
-    let receivedSession: any
+    let receivedInteraction: any
 
     const testData = { test: 'data' }
-    const testSession = { userId: 'test-user' }
 
     addTestFunction('testFunc', {
-      func: async (services, data, session) => {
+      func: async (services, data, interaction) => {
         receivedServices = services
         receivedData = data
-        receivedSession = session
+        receivedInteraction = interaction
         return 'success'
       },
     })
@@ -505,34 +504,35 @@ describe('runPikkuFunc - Integration Tests', () => {
       Math.random().toString(),
       'testFunc',
       {
-        singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+        singletonServices: mockServices,
         data: () => testData,
-        userSession: { get: () => testSession, set: () => {} } as any,
         auth: false,
-        interaction: {},
+        interaction: { rpc: {} },
       }
     )
 
-    assert.equal(receivedServices, mockServices)
+    assert.deepEqual(receivedServices, mockServices)
     assert.equal(receivedData, testData)
-    assert.equal(receivedSession, testSession)
+    // Check that interaction has rpc service and session
+    assert.ok(receivedInteraction.rpc)
+    assert.equal(receivedInteraction.session, undefined)
   })
 
-  test('should handle async getAllServices function', async () => {
+  test('should handle async createSessionServices function', async () => {
     let servicesProvided: any
+    const sessionServices = { customService: 'value' }
 
     addTestFunction('testFunc', {
-      func: async (services) => {
+      func: async (services, data, interaction) => {
         servicesProvided = services
         return 'success'
       },
     })
 
-    const asyncGetServices = async () => {
+    const asyncCreateSessionServices = async () => {
       // Simulate async service creation
       await new Promise((resolve) => setTimeout(resolve, 1))
-      return mockServices
+      return sessionServices
     }
 
     const result = await runPikkuFunc(
@@ -541,7 +541,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: asyncGetServices,
+        createSessionServices: asyncCreateSessionServices,
         data: () => ({}),
         auth: false,
         interaction: {},
@@ -549,6 +549,9 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'success')
-    assert.equal(servicesProvided, mockServices)
+    assert.deepEqual(servicesProvided, {
+      ...mockSingletonServices,
+      ...sessionServices,
+    })
   })
 })

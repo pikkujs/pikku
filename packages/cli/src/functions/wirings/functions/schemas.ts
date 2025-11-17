@@ -31,8 +31,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       schemas,
       visitState.functions.typesMap,
       visitState.functions.meta,
-      config.schemasFromTypes,
-      config.schema?.supportsImportAttributes
+      config.schema?.supportsImportAttributes || true,
+      config.schemasFromTypes
     )
 
     return true

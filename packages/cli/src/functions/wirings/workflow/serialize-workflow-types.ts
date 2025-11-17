@@ -1,16 +1,17 @@
 /**
  * Generates type definitions for workflow wirings
  */
-export const serializeWorkflowTypes = (functionTypesImportPath: string) => {
+export const serializeWorkflowTypes = (
+  functionTypesImportPath: string,
+  rpcMapImportPath: string
+) => {
   return `/**
  * Workflow-specific type definitions for tree-shaking optimization
  */
 
 import { PikkuWorkflowInteraction, WorkflowStepOptions } from '@pikku/core/workflow'
-import { CorePikkuFunctionConfig, CorePikkuFunctionSessionless } from '@pikku/core'
-import type { PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
-import type { UserSession, SingletonServices } from '../../types/application-types.d.js'
-import type { TypedPikkuRPC, RPCMap } from '../rpc/pikku-rpc-wirings-map.internal.gen.d.js'
+import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { RPCMap } from '${rpcMapImportPath}'
 
 /**
  * Typed workflow interaction with RPC awareness
@@ -46,15 +47,10 @@ export interface TypedWorkflow extends PikkuWorkflowInteraction {
 export type PikkuFunctionWorkflow<
   In = unknown,
   Out = never
-> = CorePikkuFunctionSessionless<
+> = PikkuFunctionSessionless<
   In,
   Out,
-  null,
-  SingletonServices & {
-    rpc: TypedPikkuRPC
-    workflow: TypedWorkflow
-  },
-  UserSession
+  'workflow'
 >
 
 /**
@@ -72,7 +68,7 @@ export type PikkuFunctionWorkflow<
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunctionWorkflow<In, Out>, PikkuPermission<In>, PikkuMiddleware>
+    | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
 ) => {
   return typeof func === 'function' ? { func } : func
 }
@@ -98,7 +94,7 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
-    | CorePikkuFunctionConfig<PikkuFunctionWorkflow<In, Out>, PikkuPermission<In>, PikkuMiddleware>
+    | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
 ) => {
   return typeof func === 'function' ? { func } : func
 }

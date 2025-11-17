@@ -89,7 +89,7 @@ import { pikkuMiddleware } from '${functionTypesPath}'
 ${imports}
 
 // Middleware to close the channel after CLI command completes
-const cliCloseOnComplete = pikkuMiddleware(async (services, { channel }, next) => {
+const cliCloseOnComplete = pikkuMiddleware(async (_services, { channel }, next) => {
   const closeChannel = () => {
     setTimeout(async () => {
       try {

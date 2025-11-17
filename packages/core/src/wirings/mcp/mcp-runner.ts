@@ -23,8 +23,8 @@ import { getErrorResponse } from '../../errors/error-handler.js'
 import { closeSessionServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { rpcService } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
+import { PikkuUserSessionService } from '../../services/user-session-service.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -239,23 +239,9 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    const interaction: PikkuInteraction = { mcp: mcpInteraction }
-
-    const getAllServices = async () => {
-      sessionServices = await createSessionServices?.(
-        singletonServices,
-        interaction,
-        undefined
-      )
-
-      return rpcService.injectRPCService(
-        {
-          ...singletonServices,
-          ...sessionServices,
-          mcp: mcpInteraction,
-        },
-        interaction
-      )
+    const interaction: PikkuInteraction = {
+      mcp: mcpInteraction,
+      session: new PikkuUserSessionService(),
     }
 
     // Get metadata for the MCP endpoint to access pre-resolved middleware
@@ -274,8 +260,7 @@ async function runMCPPikkuFunc(
       pikkuFuncName,
       {
         singletonServices,
-        getAllServices,
-        userSession: undefined, // TODO
+        createSessionServices,
         data: () => request.params,
         inheritedMiddleware: meta?.middleware,
         wireMiddleware: mcp.middleware,

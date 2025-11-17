@@ -35,7 +35,6 @@ import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { rpcService } from '../rpc/rpc-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
 /**
@@ -254,7 +253,7 @@ export const createHTTPInteraction = (
 const executeRoute = async (
   services: {
     singletonServices: any
-    createSessionServices: Function
+    createSessionServices?: any
     skipUserSession: boolean
     requestId: string
   },
@@ -324,28 +323,7 @@ const executeRoute = async (
     }
   }
 
-  const interaction: PikkuInteraction = { http, channel }
-
-  const getAllServices = async (session?: CoreUserSession) => {
-    // Create session-specific services for handling the request
-    sessionServices = await createSessionServices(
-      { ...singletonServices, userSession, channel },
-      { http },
-      session
-    )
-
-    return rpcService.injectRPCService(
-      {
-        ...singletonServices,
-        ...sessionServices,
-        http,
-        userSession,
-        channel,
-      },
-      interaction,
-      route.auth
-    )
-  }
+  const interaction: PikkuInteraction = { http, channel, session: userSession }
 
   result = await runPikkuFunc(
     PikkuWiringTypes.http,
@@ -353,9 +331,8 @@ const executeRoute = async (
     meta.pikkuFuncName,
     {
       singletonServices,
-      getAllServices,
+      createSessionServices,
       auth: route.auth !== false,
-      userSession,
       data,
       inheritedMiddleware: meta.middleware,
       wireMiddleware: route.middleware,

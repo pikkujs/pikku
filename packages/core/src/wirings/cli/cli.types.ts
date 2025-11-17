@@ -131,8 +131,8 @@ export type CorePikkuCLIRender<
 export type ExtractFunctionInput<Func> =
   Func extends CorePikkuFunctionConfig<infer FuncType, any, any>
     ? FuncType extends
-        | CorePikkuFunction<infer Input, any, any, any, any>
-        | CorePikkuFunctionSessionless<infer Input, any, any, any, any>
+        | CorePikkuFunction<infer Input, any, any, any>
+        | CorePikkuFunctionSessionless<infer Input, any, any, any>
       ? Input
       : never
     : never
@@ -198,8 +198,8 @@ export type ValidateParameters<Params extends string, Input> =
 export type ExtractFunctionOutput<Func> =
   Func extends CorePikkuFunctionConfig<infer FuncType, any, any>
     ? FuncType extends
-        | CorePikkuFunction<any, infer Output, any, any, any>
-        | CorePikkuFunctionSessionless<any, infer Output, any, any, any>
+        | CorePikkuFunction<any, infer Output, any, any>
+        | CorePikkuFunctionSessionless<any, infer Output, any, any>
       ? Output
       : never
     : never
@@ -210,7 +210,10 @@ export type ExtractFunctionOutput<Func> =
  */
 export type CoreCLICommandConfig<
   FuncConfig,
-  PikkuMiddleware extends CorePikkuMiddleware<any> = CorePikkuMiddleware<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
   PikkuCLIRender extends CorePikkuCLIRender<any, any, any> = CorePikkuCLIRender<
     any,
     any
@@ -245,8 +248,8 @@ export interface CoreCLICommand<
   In,
   Out,
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>
+    | CorePikkuFunction<In, Out, any, any>
+    | CorePikkuFunctionSessionless<In, Out, any, any>
   >,
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
@@ -276,8 +279,8 @@ export type CLICommandShorthand<
   In,
   Out,
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>
+    | CorePikkuFunction<In, Out, any, any>
+    | CorePikkuFunctionSessionless<In, Out, any, any>
   >,
 > = PikkuFunctionConfig
 
@@ -288,8 +291,8 @@ export type CLICommandDefinition<
   In,
   Out,
   PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    | CorePikkuFunction<In, Out, any, any, any>
-    | CorePikkuFunctionSessionless<In, Out, any, any, any>
+    | CorePikkuFunction<In, Out, any, any>
+    | CorePikkuFunctionSessionless<In, Out, any, any>
   >,
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,

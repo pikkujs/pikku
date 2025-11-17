@@ -1,34 +1,10 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
 import { createConfig, createSingletonServices } from '../src/services.js'
-import { PikkuRPCService } from '@pikku/core/rpc'
 import { LocalVariablesService } from '@pikku/core/services'
-import { existsSync } from 'fs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { all as allCommand } from '../src/functions/commands/all.js'
+import { watch as watchCommand } from '../src/functions/commands/watch.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-// Check if Pikku CLI is available
-const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
-
-if (existsSync(pikkuCliPath)) {
-  try {
-    // Use the generated Pikku CLI
-    const { PikkuCLI } = await import(pikkuCliPath)
-    await PikkuCLI(process.argv.slice(2))
-    process.exit(0)
-  } catch (error) {
-    // If import fails, fall back to Commander.js
-    console.warn(
-      'Failed to load Pikku CLI, using fallback mode:',
-      error.message
-    )
-  }
-}
-
-// Fallback to Commander.js for initial setup
 // Import bootstrap if it exists
 try {
   await import('../.pikku/pikku-bootstrap.gen.js')
@@ -36,16 +12,14 @@ try {
   // Bootstrap doesn't exist yet, continue anyway
 }
 
-const action = async (command, cliConfig) => {
+const action = async (command: string, cliConfig: any) => {
   const config = await createConfig(new LocalVariablesService(), cliConfig)
   const services = await createSingletonServices(config)
-  const rpcWrapper = new PikkuRPCService()
-  const { rpc } = await rpcWrapper.injectRPCService(services, {}, false)
 
   if (command === 'watch') {
-    await rpc.invoke('watch', null)
+    await watchCommand.func(services)
   } else {
-    await rpc.invoke('all', null)
+    await allCommand.func(services)
   }
 }
 

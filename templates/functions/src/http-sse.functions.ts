@@ -3,7 +3,7 @@ import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 export const timeSinceOpened = pikkuSessionlessFunc<
   void,
   { count: number } | void
->(async ({ channel }) => {
+>(async ({}, _, { channel }) => {
   if (!channel) {
     throw new Error('This function requires a stream.')
   }

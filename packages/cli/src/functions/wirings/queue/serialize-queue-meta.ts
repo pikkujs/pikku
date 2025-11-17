@@ -6,7 +6,7 @@ export const serializeQueueMeta = (queueWorkersMeta: QueueWorkersMeta) => {
 
 export const serializeQueueMetaTS = (
   jsonImportPath: string,
-  supportsImportAttributes: boolean = false
+  supportsImportAttributes: boolean
 ) => {
   const importStatement = supportsImportAttributes
     ? `import metaData from '${jsonImportPath}' with { type: 'json' }`

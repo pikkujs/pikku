@@ -48,28 +48,29 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const rpcDepth = this.services.rpc?.depth || 0
+    const rpcDepth = this.interaction.rpc?.depth || 0
+    const updatedInteraction: PikkuInteraction = {
+      ...this.interaction,
+      rpc: this.interaction.rpc
+        ? {
+            ...this.interaction.rpc,
+            depth: rpcDepth + 1,
+            global: false,
+          }
+        : undefined,
+    }
     return runPikkuFunc<In, Out>(
       PikkuWiringTypes.rpc,
       funcName,
       getPikkuFunctionName(funcName),
       {
         auth: this.options.requiresAuth,
+        // TODO: this is a hack since services have already been created
+        // but is valid since we don't want to keep creating new session services
         singletonServices: this.services,
-        getAllServices: () => {
-          this.services.rpc = this.services.rpc
-            ? ({
-                ...this.services.rpc,
-                depth: rpcDepth + 1,
-                global: false,
-              } as any)
-            : undefined
-          return this.services
-        },
         data: () => data,
-        userSession: this.services.userSession,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
-        interaction: this.interaction,
+        interaction: updatedInteraction,
       }
     )
   }
@@ -79,10 +80,17 @@ export class ContextAwareRPCService {
     data: In,
     interaction: PikkuInteraction
   ): Promise<Out> {
-    const rpcDepth = this.services.rpc?.depth || 0
-    const mergedInteraction = {
+    const rpcDepth = this.interaction.rpc?.depth || 0
+    const mergedInteraction: PikkuInteraction = {
       ...this.interaction,
       ...interaction,
+      rpc: this.interaction.rpc
+        ? {
+            ...this.interaction.rpc,
+            depth: rpcDepth + 1,
+            global: false,
+          }
+        : undefined,
     }
     return runPikkuFunc<In, Out>(
       PikkuWiringTypes.rpc,
@@ -91,21 +99,7 @@ export class ContextAwareRPCService {
       {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
-        getAllServices: () => {
-          this.services.rpc = this.services.rpc
-            ? ({
-                ...this.services.rpc,
-                depth: rpcDepth + 1,
-                global: false,
-              } as any)
-            : undefined
-          return {
-            ...this.services,
-            ...mergedInteraction,
-          }
-        },
         data: () => data,
-        userSession: this.services.userSession,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
         interaction: mergedInteraction,
       }
@@ -140,20 +134,17 @@ export class PikkuRPCService<
   }
 
   // Convenience function for initializing
-  injectRPCService(
+  getContextRPCService(
     services: Services,
     interaction: PikkuInteraction,
     requiresAuth?: boolean | undefined,
     depth: number = 0
-  ): Services & { rpc: TypedRPC } {
-    const serviceCopy = {
-      ...services,
-    }
-    const serviceRPC = new ContextAwareRPCService(serviceCopy, interaction, {
+  ): TypedRPC {
+    const serviceRPC = new ContextAwareRPCService(services, interaction, {
       coerceDataFromSchema: this.config?.coerceDataFromSchema,
       requiresAuth,
     })
-    serviceCopy.rpc = {
+    return {
       depth,
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
@@ -161,7 +152,6 @@ export class PikkuRPCService<
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
       rpcWithInteraction: serviceRPC.rpcWithInteraction.bind(serviceRPC),
     } as any
-    return serviceCopy as Services & { rpc: TypedRPC }
   }
 }
 

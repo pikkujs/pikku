@@ -4,10 +4,8 @@ import { pikkuState } from '../../pikku-state.js'
 import {
   CorePikkuMiddleware,
   CoreUserSession,
-  SessionServices,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { closeSessionServices } from '../../utils.js'
 import {
   CoreCLI,
   CLICommandMeta,
@@ -26,7 +24,6 @@ import type {
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { rpcService } from '../rpc/rpc-runner.js'
 import { PikkuUserSessionService } from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
@@ -330,7 +327,6 @@ export async function runCLICommand({
   }
 
   const userSession = new PikkuUserSessionService<CoreUserSession>()
-  let sessionServices: SessionServices | undefined
 
   const interaction: PikkuInteraction = {
     cli: {
@@ -339,26 +335,7 @@ export async function runCLICommand({
       data: pluckedData,
       channel,
     },
-  }
-
-  const getAllServices = async (session?: CoreUserSession) => {
-    // Create session-specific services for handling the command
-    sessionServices = await createSessionServices?.(
-      singletonServices,
-      interaction,
-      session
-    )
-
-    return rpcService.injectRPCService(
-      {
-        ...singletonServices,
-        ...sessionServices,
-        userSession,
-        channel,
-      },
-      interaction,
-      false
-    )
+    session: userSession,
   }
 
   try {
@@ -368,10 +345,9 @@ export async function runCLICommand({
       funcName,
       {
         singletonServices,
-        getAllServices,
+        createSessionServices,
         data: pluckedData,
         auth: false,
-        userSession,
         inheritedMiddleware: currentCommand.middleware,
         wireMiddleware: allWireMiddleware,
         inheritedPermissions: currentCommand.permissions,
@@ -392,11 +368,6 @@ export async function runCLICommand({
   } finally {
     // Close the channel
     channel.close()
-
-    // Clean up session services
-    if (sessionServices) {
-      await closeSessionServices(singletonServices.logger, sessionServices)
-    }
   }
 }
 

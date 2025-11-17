@@ -10,7 +10,7 @@ import { wireMCPTool, pikkuMCPToolFunc } from '../../.pikku/pikku-types.gen.js'
 wireMCPTool({
   name: 'greet',
   description: 'Greet a user',
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }) => {
+  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }, {}) => {
     return [{ type: 'text', text: `Hello, ${name}!` }]
   }),
 })
@@ -20,7 +20,7 @@ wireMCPTool({
   name: 'greetOptional',
   description: 'Greet a user with optional greeting',
   func: pikkuMCPToolFunc<{ name: string; greeting?: string }>(
-    async ({}, data) => {
+    async ({}, data, {}) => {
       return [
         { type: 'text', text: `${data.greeting || 'Hello'}, ${data.name}!` },
       ]
@@ -36,7 +36,7 @@ wireMCPTool({
     operation: 'add' | 'subtract' | 'multiply' | 'divide'
     a: number
     b: number
-  }>(async ({}, { operation, a, b }) => {
+  }>(async ({}, { operation, a, b }, {}) => {
     const result = operation === 'add' ? a + b : a - b
     return [{ type: 'text', text: `Result: ${result}` }]
   }),
@@ -45,7 +45,7 @@ wireMCPTool({
 wireMCPTool({
   name: 'invalidAccess',
   description: 'Invalid property access',
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, data) => {
+  func: pikkuMCPToolFunc<{ name: string }>(async ({}, data, {}) => {
     // @ts-expect-error - Accessing property that doesn't exist in input type
     return [{ type: 'text', text: `Age: ${data.age}` }]
   }),
@@ -64,7 +64,7 @@ wireMCPTool({
   name: 'invalidReturn',
   description: 'Invalid return type',
   // @ts-expect-error - Return type must be array of content items
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }) => {
+  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }, {}) => {
     return `Hello, ${name}!`
   }),
 })
@@ -73,7 +73,7 @@ wireMCPTool({
   name: 'invalidContent',
   description: 'Invalid content format',
   // @ts-expect-error - Content items must have type and text properties
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }) => {
+  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }, {}) => {
     return [{ message: `Hello, ${name}!` }]
   }),
 })
@@ -82,7 +82,7 @@ wireMCPTool({
 wireMCPTool({
   name: 'multiContent',
   description: 'Return multiple content items',
-  func: pikkuMCPToolFunc<{ count: number }>(async ({}, { count }) => {
+  func: pikkuMCPToolFunc<{ count: number }>(async ({}, { count }, {}) => {
     return Array.from({ length: count }, (_, i) => ({
       type: 'text',
       text: `Item ${i + 1}`,

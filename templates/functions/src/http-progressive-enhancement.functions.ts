@@ -3,13 +3,13 @@ import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 export const progressiveEnhancementExample = pikkuSessionlessFunc<
   void,
   { state: 'initial' | 'pending' | 'done' }
->(async (services) => {
-  if (services?.channel) {
+>(async ({}, _, { channel }) => {
+  if (channel) {
     setTimeout(() => {
-      services.channel?.send({ state: 'pending' })
+      channel?.send({ state: 'pending' })
     }, 2500)
     setTimeout(() => {
-      services.channel?.send({ state: 'done' })
+      channel?.send({ state: 'done' })
     }, 5000)
   }
   return { state: 'initial' }

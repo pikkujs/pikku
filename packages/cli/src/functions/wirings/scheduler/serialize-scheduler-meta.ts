@@ -9,7 +9,7 @@ export const serializeSchedulerMeta = (
 export const serializeSchedulerMetaTS = (
   scheduledTasksMeta: ScheduledTasksMeta,
   jsonImportPath: string,
-  supportsImportAttributes: boolean = false
+  supportsImportAttributes
 ) => {
   const importStatement = supportsImportAttributes
     ? `import metaData from '${jsonImportPath}' with { type: 'json' }`

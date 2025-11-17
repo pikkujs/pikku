@@ -20,7 +20,7 @@ import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 export const createOrg = pikkuSessionlessFunc<
   { name: string },
   { id: string; name: string; createdAt: string }
->(async ({ logger }, data) => {
+>(async ({ logger }, data, interaction) => {
   logger.info(`Creating organization: ${data.name}`)
   return {
     id: `org-${Date.now()}`,
@@ -33,7 +33,7 @@ export const createOrg = pikkuSessionlessFunc<
 export const createOwner = pikkuSessionlessFunc<
   { orgId: string; email: string },
   { id: string; orgId: string; email: string }
->(async ({ logger }, data) => {
+>(async ({ logger }, data, interaction) => {
   logger.info(`Creating owner for org ${data.orgId}`)
   return {
     id: `owner-${Date.now()}`,
@@ -73,7 +73,7 @@ export const sendWelcomeEmail = pikkuSessionlessFunc<
 export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   { email: string; name: string; plan: string; memberEmails: string[] },
   { orgId: string; ownerId?: string }
->(async ({ workflow }, data) => {
+>(async ({}, data, { workflow }) => {
   // Step 1: Create organization
   const org = await workflow.do('Create organization', 'createOrg', {
     name: data.name,
@@ -120,7 +120,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
 export const sequentialInviteSimpleWorkflow = pikkuSimpleWorkflowFunc<
   { orgId: string; memberEmails: string[]; delayMs: number },
   { invitedCount: number }
->(async ({ workflow }, data) => {
+>(async ({}, data, { workflow }) => {
   // Process members sequentially with optional delay
   for (const email of data.memberEmails) {
     await workflow.do(`Invite member ${email}`, 'inviteMember', {
@@ -145,7 +145,7 @@ export const sequentialInviteSimpleWorkflow = pikkuSimpleWorkflowFunc<
 export const triggerOrgOnboardingSimple = pikkuSessionlessFunc<
   { email: string; name: string; plan: string; memberEmails: string[] },
   { orgId: string; ownerId?: string; runId: string }
->(async ({ rpc, workflowService, logger }, data) => {
+>(async ({ logger, workflowService }, data, { rpc }) => {
   // Start the workflow
   const { runId } = await rpc.startWorkflow('orgOnboardingSimpleWorkflow', data)
 
@@ -195,7 +195,7 @@ export const triggerOrgOnboardingSimple = pikkuSessionlessFunc<
 export const triggerSequentialInviteSimple = pikkuSessionlessFunc<
   { orgId: string; memberEmails: string[]; delayMs: number },
   { invitedCount: number; runId: string }
->(async ({ rpc, workflowService, logger }, data) => {
+>(async ({ workflowService, logger }, data, { rpc }) => {
   // Start the workflow
   const { runId } = await rpc.startWorkflow(
     'sequentialInviteSimpleWorkflow',

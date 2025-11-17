@@ -12,7 +12,6 @@ import { PikkuInteraction, SessionServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import { PikkuUserSessionService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
-import { rpcService } from '../../rpc/rpc-runner.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
 export const runLocalChannel = async ({
@@ -76,28 +75,16 @@ export const runLocalChannel = async ({
         openingData
       )
       const channel = channelHandler.getChannel()
-      const session = await userSession.get()
+      const interaction: PikkuInteraction = { channel, session: userSession }
+
       if (createSessionServices) {
         sessionServices = await createSessionServices(
           singletonServices,
-          { http, channel },
-          session
+          interaction
         )
       }
 
-      const getAllServices = (channel: any, requiresAuth?: boolean) =>
-        rpcService.injectRPCService(
-          {
-            ...singletonServices,
-            ...sessionServices,
-            channel,
-            userSession,
-          },
-          interaction,
-          requiresAuth
-        )
-
-      const interaction: PikkuInteraction = { channel }
+      const services = { ...singletonServices, ...sessionServices }
 
       channelHandler.registerOnOpen(async () => {
         if (channelConfig.onConnect && meta.connect) {
@@ -107,7 +94,7 @@ export const runLocalChannel = async ({
               meta: meta.connect,
               lifecycleConfig: channelConfig.onConnect,
               lifecycleType: 'connect',
-              services: getAllServices(channel, false),
+              services,
               channel,
               data: openingData,
             })
@@ -129,7 +116,7 @@ export const runLocalChannel = async ({
               meta: meta.disconnect,
               lifecycleConfig: channelConfig.onDisconnect,
               lifecycleType: 'disconnect',
-              services: getAllServices(channel, false),
+              services,
               channel,
             })
           } catch (e) {
@@ -144,9 +131,10 @@ export const runLocalChannel = async ({
       })
 
       const onMessage = processMessageHandlers(
-        getAllServices(channel),
+        services,
         channelConfig as any,
-        channelHandler
+        channelHandler,
+        userSession
       )
       channelHandler.registerOnMessage(async (data) => {
         try {

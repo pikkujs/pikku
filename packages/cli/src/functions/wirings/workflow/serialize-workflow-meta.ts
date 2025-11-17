@@ -7,7 +7,7 @@ export const serializeWorkflowMeta = (workflowsMeta: WorkflowsMeta) => {
 export const serializeWorkflowMetaTS = (
   workflowsMeta: WorkflowsMeta,
   jsonImportPath: string,
-  supportsImportAttributes: boolean = false
+  supportsImportAttributes: boolean
 ) => {
   const importStatement = supportsImportAttributes
     ? `import metaData from '${jsonImportPath}' with { type: 'json' }`

@@ -6,7 +6,7 @@
     "tsc": "tsc --noEmit",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
-    "test": "pikku && npx tsx test-treeshaking.ts",
+    "test": "pikku && tsc && npx tsx test-treeshaking.ts",
     "generate:readme": "npx tsx scripts/generate-readme.ts",
     "prebuild": "npm run generate:readme"
   },

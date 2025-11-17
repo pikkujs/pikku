@@ -22,6 +22,6 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   ) => Promise<InspectorState>
 }
 
-export interface Services extends CoreServices<SingletonServices, {}> {}
+export interface Services extends CoreServices<SingletonServices> {}
 
 export interface UserSession extends CoreUserSession {}

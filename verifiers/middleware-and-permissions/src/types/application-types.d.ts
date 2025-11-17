@@ -12,7 +12,6 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   logger: CustomLogger
 }
 
-export interface Services
-  extends CoreServices<SingletonServices, UserSession> {}
+export interface Services extends CoreServices<SingletonServices> {}
 
 export interface UserSession extends CoreUserSession {}

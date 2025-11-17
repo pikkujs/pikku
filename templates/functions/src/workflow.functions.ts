@@ -42,7 +42,7 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string },
   { userId: string; email: string }
 >({
-  func: async ({ workflow }, data) => {
+  func: async ({}, data, { workflow }) => {
     // Step 1: Create user profile (RPC call - generates queue worker)
     const user = await workflow.do(
       `Create user profile in database for ${data.email}`,
@@ -78,7 +78,7 @@ export const onboardingWorkflow = pikkuWorkflowFunc<
 export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   { email: string; userId: string },
   any
->(async ({ rpc, workflowService, logger }, data) => {
+>(async ({ workflowService, logger }, data, { rpc }) => {
   const { runId } = await rpc.startWorkflow('onboardingWorkflow', data)
   logger.info(`[TEST] Workflow started: ${runId}`)
 

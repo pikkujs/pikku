@@ -31,7 +31,7 @@ wireMCPPrompt({
   name: 'dynamicPrompt',
   description: 'A dynamic prompt',
   func: pikkuMCPPromptFunc<{ topic: string; level: string }>(
-    async ({}, { topic, level }) => {
+    async ({}, { topic, level }, {}) => {
       return [
         {
           role: 'user',
@@ -134,7 +134,7 @@ wireMCPPrompt({
     topic: string
     complexity: 'beginner' | 'intermediate' | 'advanced'
     includeExamples?: boolean
-  }>(async ({}, { topic, complexity, includeExamples }) => {
+  }>(async ({}, { topic, complexity, includeExamples }, {}) => {
     let text = `Learn ${topic} - ${complexity} level`
     if (includeExamples) {
       text += '\nWith examples included'
@@ -154,7 +154,7 @@ wireMCPPrompt({
 wireMCPPrompt({
   name: 'invalidInputAccess',
   description: 'Invalid input property access',
-  func: pikkuMCPPromptFunc<{ topic: string }>(async ({}, data) => {
+  func: pikkuMCPPromptFunc<{ topic: string }>(async ({}, data, {}) => {
     return [
       {
         role: 'user',

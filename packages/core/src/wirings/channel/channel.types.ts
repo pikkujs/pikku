@@ -66,20 +66,19 @@ export type CoreChannel<
   ChannelData,
   Channel extends string,
   ChannelConnect = CorePikkuFunctionConfig<
-    | CorePikkuFunction<void, unknown, ChannelData>
-    | CorePikkuFunctionSessionless<void, unknown, ChannelData>,
+    | CorePikkuFunction<void, unknown>
+    | CorePikkuFunctionSessionless<void, unknown>,
     CorePikkuPermission<void>,
     CorePikkuMiddleware
   >,
   ChannelDisconnect = CorePikkuFunctionConfig<
-    | CorePikkuFunction<void, void, ChannelData>
-    | CorePikkuFunctionSessionless<void, void, ChannelData>,
+    CorePikkuFunction<void, void> | CorePikkuFunctionSessionless<void, void>,
     CorePikkuPermission<void>,
     CorePikkuMiddleware
   >,
   ChannelFunctionMessage = CorePikkuFunctionConfig<
-    | CorePikkuFunction<unknown, unknown, ChannelData>
-    | CorePikkuFunctionSessionless<unknown, unknown, ChannelData>,
+    | CorePikkuFunction<unknown, unknown>
+    | CorePikkuFunctionSessionless<unknown, unknown>,
     CorePikkuPermission<unknown>,
     CorePikkuMiddleware
   >,

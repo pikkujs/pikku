@@ -15,6 +15,8 @@ import { SMSService } from './services/sms.service.js'
 import { PaymentService } from './services/payment.service.js'
 import { AnalyticsService } from './services/analytics.service.js'
 import { StorageService } from './services/storage.service.js'
+import { UserContextService } from './services/user-context.service.js'
+import { UserPreferencesService } from './services/user-preferences.service.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {} as Config
@@ -35,6 +37,7 @@ export const createSingletonServices: CreateSingletonServices<
     sms: new SMSService(),
     payment: new PaymentService(),
     analytics: new AnalyticsService(),
+    storage: new StorageService(),
   }
 }
 
@@ -42,10 +45,11 @@ export const createSessionServices: CreateSessionServices<
   SingletonServices,
   Services,
   UserSession
-> = async ({ email, logger }, _interaction) => {
+> = async ({ email, logger }) => {
   // Destructure services to test session service aggregation
   logger.info('Creating session services with email')
   return {
-    storage: new StorageService(),
+    userContext: new UserContextService(),
+    userPreferences: new UserPreferencesService(),
   }
 }

@@ -80,7 +80,7 @@ wireMCPTool({
 
 // MCP-specific resource function
 const mcpResourceFunction = pikkuFunc<void, MCPResourceResponse>({
-  func: async ({ logger, mcp }) => {
+  func: async ({ logger }, _, { mcp }) => {
     logger.info({ type: 'function', name: 'mcpResource', phase: 'execute' })
     return [{ uri: mcp!.uri!, text: 'MCP resource executed successfully' }]
   },

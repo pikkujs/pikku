@@ -3,9 +3,9 @@ import { pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   CoreConfig,
-  CoreServices,
   CoreSingletonServices,
   CreateSessionServices,
+  PikkuInteraction,
   PikkuWiringTypes,
   SerializedError,
 } from '../../types/core.types.js'
@@ -256,66 +256,42 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
-    // Get the run
     const run = await this.getRun(runId)
     if (!run) {
       throw new WorkflowRunNotFound(runId)
     }
 
-    // Get workflow registration
     const registrations = pikkuState('workflows', 'registrations')
     const workflow = registrations.get(run.workflow)
     if (!workflow) {
       throw new WorkflowNotFoundError(run.workflow)
     }
 
-    // Use lock to prevent concurrent execution
     await this.withRunLock(runId, async () => {
-      // Create workflow interaction object
+      const meta = pikkuState('workflows', 'meta')
+      const workflowMeta = meta[run.workflow]
+
       const workflowInteraction = this.createWorkflowInteraction(
         run.workflow,
         runId,
         rpcService
       )
-
-      // Get function metadata
-      const meta = pikkuState('workflows', 'meta')
-      const workflowMeta = meta[run.workflow]
-
-      // Execute workflow function with workflow interaction
+      const interaction: PikkuInteraction = { workflow: workflowInteraction }
       try {
-        const getAllServices = () => {
-          let sessionServices = {}
-          const interaction = { workflow: workflowInteraction }
-          if (this.createSessionServices) {
-            sessionServices = this.createSessionServices(
-              this.singletonServices!,
-              interaction,
-              undefined
-            )
-          }
-          return {
-            ...this.singletonServices,
-            ...sessionServices,
-            ...interaction,
-          } as CoreServices
-        }
         const result = await runPikkuFunc(
           PikkuWiringTypes.workflow,
           workflowMeta.workflowName,
           workflowMeta.pikkuFuncName,
           {
             singletonServices: this.singletonServices!,
-            interaction: { workflow: workflowInteraction },
-            getAllServices,
+            interaction,
+            createSessionServices: this.createSessionServices,
             data: () => run.input,
           }
         )
 
-        // Workflow completed successfully
         await this.updateRunStatus(runId, 'completed', result)
       } catch (error: any) {
-        // Check if it's a WorkflowAsyncException
         if (error instanceof WorkflowAsyncException) {
           // Normal - workflow paused for step execution
           throw error
@@ -327,7 +303,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw error
         }
 
-        // Real error - mark as failed
         await this.updateRunStatus(runId, 'failed', undefined, {
           message: error.message,
           stack: error.stack,
