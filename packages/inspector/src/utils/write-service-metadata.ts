@@ -11,12 +11,10 @@ export function writeServiceMetadata(
 ): void {
   const servicesDir = path.join(outDir, 'services')
 
-  // Create services directory if it doesn't exist
   if (!fs.existsSync(servicesDir)) {
     fs.mkdirSync(servicesDir, { recursive: true })
   }
 
-  // Write service metadata to JSON file
   const fileName = `${serviceMeta.name}.gen.json`
   const filePath = path.join(servicesDir, fileName)
 

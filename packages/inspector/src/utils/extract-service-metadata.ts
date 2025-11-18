@@ -16,17 +16,13 @@ export interface ServiceMetadata {
 /**
  * Extract JSDoc comment information from a TypeScript node
  */
-function extractJSDoc(
-  node: ts.Node,
-  sourceFile: ts.SourceFile
-): { summary: string; description: string } {
+function extractJSDoc(node: ts.Node): { summary: string; description: string } {
   const jsDocTags = ts.getJSDocTags(node)
   const jsDocComments = ts.getJSDocCommentsAndTags(node)
 
   let summary = ''
   let description = ''
 
-  // Extract @summary tag
   const summaryTag = jsDocTags.find((tag) => tag.tagName.text === 'summary')
   if (summaryTag && summaryTag.comment) {
     summary =
@@ -35,7 +31,6 @@ function extractJSDoc(
         : summaryTag.comment.map((c) => c.text).join('')
   }
 
-  // Extract description from JSDoc body (not @description tag, just the body)
   for (const comment of jsDocComments) {
     if (ts.isJSDoc(comment) && comment.comment) {
       const commentText =
@@ -43,7 +38,6 @@ function extractJSDoc(
           ? comment.comment
           : comment.comment.map((c) => c.text).join('')
 
-      // If we don't have a summary yet, use the first line as summary
       if (!summary && commentText) {
         const lines = commentText
           .split('\n')
@@ -58,7 +52,7 @@ function extractJSDoc(
       } else {
         description = commentText
       }
-      break // Only use the first JSDoc comment
+      break
     }
   }
 
@@ -73,20 +67,16 @@ function serializeTypeToString(
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker
 ): string {
-  // Get the actual source file where the node is located (might be different from the passed sourceFile)
   const nodeSourceFile = node.getSourceFile()
 
-  // For interfaces and type aliases, get the exact source text from the correct source file
   if (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) {
     return node.getText(nodeSourceFile)
   }
 
-  // If it's a class, extract public members only
   if (ts.isClassDeclaration(node)) {
     return serializePublicClassMembers(node, nodeSourceFile, checker)
   }
 
-  // Fallback: try to get the type and serialize it using the type checker
   const type = checker.getTypeAtLocation(node)
   return checker.typeToString(type, node, ts.TypeFormatFlags.NoTruncation)
 }
@@ -103,7 +93,6 @@ function serializePublicClassMembers(
   const publicMembers: string[] = []
 
   for (const member of classNode.members) {
-    // Check if the member is public (no private/protected modifiers)
     const modifiers = ts.canHaveModifiers(member)
       ? ts.getModifiers(member)
       : undefined
@@ -115,13 +104,11 @@ function serializePublicClassMembers(
 
     if (!isPublic) continue
 
-    // Only include methods, properties, and constructors
     if (
       ts.isMethodDeclaration(member) ||
       ts.isPropertyDeclaration(member) ||
       ts.isConstructorDeclaration(member)
     ) {
-      // Get the member signature without implementation
       const memberSignature = getMemberSignature(member, sourceFile, checker)
       if (memberSignature) {
         publicMembers.push(memberSignature)
@@ -129,7 +116,6 @@ function serializePublicClassMembers(
     }
   }
 
-  // Construct a class-like interface showing public API
   return `class ${className} {\n  ${publicMembers.join('\n  ')}\n}`
 }
 
@@ -142,7 +128,6 @@ function getMemberSignature(
   checker: ts.TypeChecker
 ): string | null {
   if (ts.isPropertyDeclaration(member)) {
-    // For properties, get the name and type
     const name = member.name.getText(sourceFile)
     const type = member.type ? member.type.getText(sourceFile) : 'any'
     const optional = member.questionToken ? '?' : ''
@@ -150,7 +135,6 @@ function getMemberSignature(
   }
 
   if (ts.isMethodDeclaration(member)) {
-    // For methods, get the full signature without body
     const name = member.name.getText(sourceFile)
     const typeParams = member.typeParameters
       ? `<${member.typeParameters.map((tp) => tp.getText(sourceFile)).join(', ')}>`
@@ -164,7 +148,6 @@ function getMemberSignature(
   }
 
   if (ts.isConstructorDeclaration(member)) {
-    // For constructors, get the parameter list
     const params = member.parameters
       .map((p) => p.getText(sourceFile))
       .join(', ')
@@ -218,13 +201,11 @@ function expandInterfaceProperties(
 ): Record<string, string> {
   const result: Record<string, string> = {}
 
-  // Prevent infinite recursion
   if (visited.has(type) || currentDepth >= maxDepth) {
     return result
   }
   visited.add(type)
 
-  // Get all properties (including inherited ones)
   const properties = type.getProperties()
 
   for (const prop of properties) {
@@ -234,13 +215,9 @@ function expandInterfaceProperties(
     if (!propDecl) continue
 
     try {
-      // Get the type of this property
       const propType = checker.getTypeOfSymbolAtLocation(prop, propDecl)
-
-      // Check if property is optional
       const isOptional = !!(prop.flags & ts.SymbolFlags.Optional)
 
-      // Serialize the type to string
       let typeString = checker.typeToString(
         propType,
         propDecl,
@@ -248,14 +225,12 @@ function expandInterfaceProperties(
           ts.TypeFormatFlags.UseFullyQualifiedType
       )
 
-      // Add undefined suffix for optional properties
       if (isOptional && !typeString.includes('undefined')) {
         typeString = `${typeString} | undefined`
       }
 
       result[propName] = typeString
     } catch (err) {
-      // If we can't get the type for some reason, use 'any'
       result[propName] = 'any'
     }
   }
@@ -272,13 +247,11 @@ export function extractServiceMetadata(
   checker: ts.TypeChecker,
   rootDir: string
 ): ServiceMetadata | null {
-  // Get the symbol for the service property
   const property = type.getProperty(serviceName)
   if (!property) {
     return null
   }
 
-  // Get the declaration of the service
   const declaration = property.valueDeclaration || property.declarations?.[0]
   if (!declaration) {
     return null
@@ -287,10 +260,7 @@ export function extractServiceMetadata(
   const sourceFile = declaration.getSourceFile()
   const filePath = sourceFile.fileName
 
-  // Get the type of the service
   const serviceType = checker.getTypeOfSymbolAtLocation(property, declaration)
-
-  // Try to find the actual type declaration (interface/class/type)
   let typeDeclaration: ts.Node | null = null
 
   if (serviceType.symbol) {
@@ -307,25 +277,22 @@ export function extractServiceMetadata(
     }
   }
 
-  // Extract JSDoc
   let summary = ''
   let description = ''
 
   if (typeDeclaration) {
-    const jsDoc = extractJSDoc(typeDeclaration, sourceFile)
+    const jsDoc = extractJSDoc(typeDeclaration)
     summary = jsDoc.summary
     description = jsDoc.description
   } else if (
     ts.isPropertySignature(declaration) ||
     ts.isPropertyDeclaration(declaration)
   ) {
-    // Extract JSDoc from the property itself if we couldn't find the type declaration
-    const jsDoc = extractJSDoc(declaration, sourceFile)
+    const jsDoc = extractJSDoc(declaration)
     summary = jsDoc.summary
     description = jsDoc.description
   }
 
-  // Serialize the type
   let interfaceString = ''
   if (typeDeclaration) {
     interfaceString = serializeTypeToString(
@@ -334,7 +301,6 @@ export function extractServiceMetadata(
       checker
     )
   } else {
-    // Fallback: use the type checker to serialize
     interfaceString = checker.typeToString(
       serviceType,
       declaration,
@@ -342,13 +308,8 @@ export function extractServiceMetadata(
     )
   }
 
-  // Get package info
   const { packageName, version } = getPackageInfo(filePath)
-
-  // Make path relative to rootDir
   const relativePath = path.relative(rootDir, filePath)
-
-  // Expand the service type to show all properties including inherited ones
   const expandedProperties = expandInterfaceProperties(serviceType, checker)
 
   return {

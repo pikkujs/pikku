@@ -182,7 +182,6 @@ export const inspect = (
       `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
     )
 
-    // Extract service interface metadata for AI consumption
     const startServiceMeta = performance.now()
     extractServiceInterfaceMetadata(state, checker)
     logger.debug(

@@ -231,14 +231,12 @@ export function extractServiceInterfaceMetadata(
   state: InspectorState | Omit<InspectorState, 'typesLookup'>,
   checker: ts.TypeChecker
 ): void {
-  // Skip if typesLookup is not available (e.g., deserialized state)
   if (!('typesLookup' in state)) {
     return
   }
 
   const allMetadata: ServiceMetadata[] = []
 
-  // Extract metadata for singleton services
   const singletonServicesTypes = state.typesLookup.get('SingletonServices')
   if (singletonServicesTypes && singletonServicesTypes.length > 0) {
     const singletonMeta = extractAllServiceMetadata(
@@ -249,7 +247,6 @@ export function extractServiceInterfaceMetadata(
     allMetadata.push(...singletonMeta)
   }
 
-  // Extract metadata for wire services
   const servicesTypes = state.typesLookup.get('Services')
   if (servicesTypes && servicesTypes.length > 0) {
     const wireServicesMeta = extractAllServiceMetadata(
@@ -258,7 +255,6 @@ export function extractServiceInterfaceMetadata(
       state.rootDir
     )
 
-    // Filter out services that are already in singleton services to avoid duplicates
     const singletonNames = new Set(
       state.serviceAggregation.allSingletonServices
     )
@@ -269,6 +265,5 @@ export function extractServiceInterfaceMetadata(
     allMetadata.push(...uniqueWireServices)
   }
 
-  // Store the metadata in the state
   state.serviceMetadata = allMetadata
 }

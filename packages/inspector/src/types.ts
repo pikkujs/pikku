@@ -249,5 +249,5 @@ export interface InspectorState {
     version: string
     interface: string
     expandedProperties: Record<string, string>
-  }> // Metadata for all services (for AI consumption)
+  }>
 }
