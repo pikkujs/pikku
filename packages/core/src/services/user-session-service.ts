@@ -1,18 +1,21 @@
 import { ChannelStore } from '../wirings/channel/channel-store.js'
 import { CoreUserSession } from '../types/core.types.js'
 
-export interface UserWireService<UserSession extends CoreUserSession> {
+export interface SessionService<UserSession extends CoreUserSession> {
   sessionChanged: boolean
+  initial: UserSession | undefined
   setInitial(session: UserSession): void
+  freezeInitial(): UserSession | undefined
   set(session: UserSession): Promise<void> | void
   clear(): Promise<void> | void
-  get(): Promise<UserSession | undefined> | UserSession | undefined
+  get(): Promise<UserSession> | UserSession | undefined
 }
 
-export class PikkuUserWireService<UserSession extends CoreUserSession>
-  implements UserWireService<UserSession>
+export class PikkuSessionService<UserSession extends CoreUserSession>
+  implements SessionService<UserSession>
 {
   public sessionChanged = false
+  public initial: UserSession | undefined
   private session: UserSession | undefined
   constructor(
     private channelStore?: ChannelStore<unknown, unknown, UserSession>,
@@ -25,6 +28,13 @@ export class PikkuUserWireService<UserSession extends CoreUserSession>
 
   public setInitial(session: UserSession) {
     this.session = session
+  }
+
+  public freezeInitial() {
+    if (this.initial === undefined) {
+      this.initial = this.session
+    }
+    return this.initial
   }
 
   public set(session: UserSession) {

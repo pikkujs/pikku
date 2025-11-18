@@ -28,7 +28,7 @@ import {
   createWeakUID,
   isSerializable,
 } from '../../utils.js'
-import { PikkuUserWireService } from '../../services/user-session-service.js'
+import { PikkuSessionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -268,7 +268,7 @@ const executeRoute = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const userSession = new PikkuUserWireService<CoreUserSession>()
+  const userSession = new PikkuSessionService<CoreUserSession>()
   const { params, route, meta } = matchedRoute
   const { singletonServices, createWireServices, skipUserSession, requestId } =
     services

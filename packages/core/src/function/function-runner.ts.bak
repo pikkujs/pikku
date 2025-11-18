@@ -94,25 +94,24 @@ export const runPikkuFunc = async <In = any, Out = any>(
     ...(tags?.map((tag) => ({ type: 'tag' as const, tag })) || []),
   ]
 
+  // Populate initialSession from session.initial
+  const wireWithInitialSession = {
+    ...wire,
+    initialSession: wire.session?.initial,
+  }
+
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
-    const initialSession = wire.session?.freezeInitial()
-
-    const wireWithInitialSession: PikkuWire = {
-      ...wire,
-      initialSession,
-    }
-
+    const session = wireWithInitialSession.initialSession
     if (wiringAuth === true || funcConfig.auth === true) {
       // This means it was explicitly enabled in either wiring or function and has to be respected
-      if (!initialSession) {
+      if (!session) {
         throw new ForbiddenError('Authentication required')
       }
     }
     if (wiringAuth === undefined && funcConfig.auth === undefined) {
       // We always default to requiring auth unless explicitly disabled
-      if (!initialSession) {
-        // TODO: Critical, we need to figure out how to make this work with different wirings
+      if (!session) {
         // throw new ForbiddenError('Authentication required')
       }
     }
@@ -136,13 +135,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
+    const rpcLessWire = { ...wireWithInitialSession, rpc: undefined }
+
     await runPermissions(wireType, wireId, {
       wireInheritedPermissions: mergedInheritedPermissions,
       wirePermissions: wirePermissions,
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       services: singletonServices,
-      wire: { ...wireWithInitialSession, rpc: undefined } as any,
+      wire: rpcLessWire as any,
       data: actualData,
     })
 

@@ -3,7 +3,7 @@ import { VariablesService } from '../services/variables-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
-import { UserWireService } from '../services/user-session-service.js'
+import { SessionService } from '../services/user-session-service.js'
 import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
@@ -184,6 +184,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
 export type PikkuWire<
   In = unknown,
   Out = unknown,
+  HasInitialSession extends boolean = false,
   UserSession extends CoreUserSession = CoreUserSession,
   TypedRPC extends PikkuRPC = PikkuRPC,
   IsChannel extends true | null = null,
@@ -201,7 +202,10 @@ export type PikkuWire<
   cli: PikkuCLI
   workflow: TypedWorkflow
   workflowStep: WorkflowStepWire
-  session: UserWireService<UserSession>
+  initialSession: HasInitialSession extends true
+    ? UserSession
+    : UserSession | undefined
+  session: SessionService<UserSession>
 }>
 
 /**
@@ -212,7 +216,7 @@ export type CorePikkuMiddleware<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  wires: PikkuWire<unknown, unknown, UserSession>,
+  wires: PikkuWire<unknown, unknown, false, UserSession>,
   next: () => Promise<void>
 ) => Promise<void>
 
@@ -347,7 +351,7 @@ export type CreateWireServices<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  wire: PikkuWire<unknown, unknown, UserSession>
+  wire: PikkuWire<unknown, unknown, false, UserSession>
 ) => Promise<WireServices<Services, SingletonServices>>
 
 /**

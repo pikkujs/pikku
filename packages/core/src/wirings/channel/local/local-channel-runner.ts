@@ -10,7 +10,7 @@ import {
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { PikkuWire, WireServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { PikkuUserWireService } from '../../../services/user-session-service.js'
+import { PikkuSessionService } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
@@ -32,7 +32,7 @@ export const runLocalChannel = async ({
   let wireServices: WireServices<typeof singletonServices> | undefined
 
   let channelHandler: PikkuLocalChannelHandler | undefined
-  const userSession = new PikkuUserWireService()
+  const userSession = new PikkuSessionService()
 
   let http: PikkuHTTP | undefined
   if (request) {

@@ -20,7 +20,7 @@ export type CorePikkuFunction<
   In,
   Out,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, Out> = PikkuWire<In, Out, Session>,
+  Wire extends PikkuWire<In, Out> = PikkuWire<In, Out, true, Session>,
 > = (
   services: Services,
   data: In,
@@ -39,14 +39,15 @@ export type CorePikkuFunctionSessionless<
   In,
   Out,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, Out, CoreUserSession, any, any, any> = PikkuWire<
+  Wire extends PikkuWire<
     In,
     Out,
+    false,
     CoreUserSession,
     any,
     any,
     any
-  >,
+  > = PikkuWire<In, Out, false, CoreUserSession, any, any, any>,
 > = (
   services: Services,
   data: In,
@@ -66,11 +67,12 @@ export type CorePikkuPermission<
   Wire extends PikkuWire<
     In,
     never,
+    false,
     CoreUserSession,
     any,
     never,
     never
-  > = PikkuWire<In, never, CoreUserSession, never, never, never>,
+  > = PikkuWire<In, never, false, CoreUserSession, never, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
 
 /**
@@ -83,9 +85,10 @@ export type CorePikkuPermission<
 export type CorePikkuPermissionConfig<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, CoreUserSession> = PikkuWire<
+  Wire extends PikkuWire<In, never, false, CoreUserSession> = PikkuWire<
     In,
     never,
+    false,
     CoreUserSession
   >,
 > = {
@@ -126,9 +129,9 @@ export const pikkuPermission = <
   In = any,
   Services extends CoreSingletonServices = CoreServices,
   Wire extends PickRequired<
-    PikkuWire<In, never, CoreUserSession>,
+    PikkuWire<In, never, false, CoreUserSession>,
     'session'
-  > = PickRequired<PikkuWire<In, never, CoreUserSession>, 'session'>,
+  > = PickRequired<PikkuWire<In, never, false, CoreUserSession>, 'session'>,
 >(
   permission:
     | CorePikkuPermission<In, Services, Wire>
@@ -148,9 +151,10 @@ export const pikkuPermission = <
 export type CorePikkuPermissionFactory<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, CoreUserSession> = PikkuWire<
+  Wire extends PikkuWire<In, never, false, CoreUserSession> = PikkuWire<
     In,
     never,
+    false,
     CoreUserSession
   >,
 > = (input: In) => CorePikkuPermission<any, Services, Wire>

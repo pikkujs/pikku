@@ -11,7 +11,7 @@ import type {
 import { createHTTPWire } from '../../http/http-runner.js'
 import { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
-import { PikkuUserWireService } from '../../../services/user-session-service.js'
+import { PikkuSessionService } from '../../../services/user-session-service.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import { PikkuHTTP } from '../../http/http.types.js'
@@ -82,7 +82,7 @@ export const runChannelConnect = async ({
     http = createHTTPWire(new PikkuFetchHTTPRequest(request), response)
   }
 
-  const userSession = new PikkuUserWireService(channelStore, channelId)
+  const userSession = new PikkuSessionService(channelStore, channelId)
 
   const { channelConfig, openingData, meta } = await openChannel({
     channelId,
@@ -175,7 +175,7 @@ export const runChannelDisconnect = async ({
     openingData,
     channelName,
   })
-  const userSession = new PikkuUserWireService(
+  const userSession = new PikkuSessionService(
     params.channelStore,
     params.channelId
   )
@@ -226,7 +226,7 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
-  const userSession = new PikkuUserWireService(
+  const userSession = new PikkuSessionService(
     params.channelStore,
     params.channelId
   )
