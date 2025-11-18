@@ -43,8 +43,9 @@ const addGithubStar = pikkuFunc<
   { repo: string },
   { success: boolean; repo: string }
 >({
-  func: async ({ githubService }, { repo }, session) => {
-    await githubService.addStar(repo, session.userId)
+  func: async ({ githubService }, { repo }, { session }) => {
+    const currentSession = await session?.get()
+    await githubService.addStar(repo, currentSession.userId)
     return { success: true, repo }
   },
   auth: true, // Whether a session is needed for function to be invoked

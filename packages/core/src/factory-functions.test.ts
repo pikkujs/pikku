@@ -8,7 +8,7 @@ import {
 } from './index.js'
 
 test('pikkuPermission factory function', async () => {
-  const permission = pikkuPermission(async ({ logger }, data, session) => {
+  const permission = pikkuPermission(async ({ logger }, data) => {
     return true
   })
 

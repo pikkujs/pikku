@@ -15,11 +15,12 @@ export const queueTagMiddleware = () =>
 // Tag permissions for queue
 export const queueTagPermissions = () =>
   addPermission('queue', {
-    queuePermission: pikkuPermission(async ({ logger }, _data, session) => {
+    queuePermission: pikkuPermission(async ({ logger }, _data, { session }) => {
+      const currentSession = await session.get()
       logger.info({
         type: 'tag-permission',
         name: 'queue',
-        sessionExists: !!session,
+        sessionExists: !!currentSession,
       })
       // Return false to ensure all permissions run
       return false

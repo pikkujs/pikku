@@ -15,15 +15,18 @@ export const schedulerTagMiddleware = () =>
 // Tag permissions for scheduler
 export const schedulerTagPermissions = () =>
   addPermission('scheduler', {
-    schedulerPermission: pikkuPermission(async ({ logger }, _data, session) => {
-      logger.info({
-        type: 'tag-permission',
-        name: 'scheduler',
-        sessionExists: !!session,
-      })
-      // Return false to ensure all permissions run
-      return false
-    }),
+    schedulerPermission: pikkuPermission(
+      async ({ logger }, _data, { session }) => {
+        const currentSession = await session.get()
+        logger.info({
+          type: 'tag-permission',
+          name: 'scheduler',
+          sessionExists: !!currentSession,
+        })
+        // Return false to ensure all permissions run
+        return false
+      }
+    ),
   })
 
 // Session tag middleware - re-export from shared location

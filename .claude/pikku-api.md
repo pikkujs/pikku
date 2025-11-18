@@ -37,12 +37,12 @@ pikkuSessionlessFunc<{ name: string }, { success: boolean }>(
 ```typescript
 // Direct function:
 pikkuFunc<InputType, OutputType>(
-  async (services, data, session) => { ... }
+  async (services, data, wire) => { ... }
 )
 
 // With config:
 pikkuFunc<InputType, OutputType>({
-  func: async (services, data, session) => { ... },
+  func: async (services, data, wire) => { ... },
   auth: boolean,
   expose: boolean,
   middleware: PikkuMiddleware[],
