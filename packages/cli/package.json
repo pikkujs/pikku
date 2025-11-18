@@ -2,7 +2,7 @@
   "name": "@pikku/cli",
   "version": "0.11.1",
   "author": "yasser.fadl@gmail.com",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "bin": {
     "pikku": "dist/bin/pikku.js"
   },
