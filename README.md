@@ -209,7 +209,14 @@ Thanks to [all contributors](https://github.com/yourusername/pikku/graphs/contri
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+Pikku uses a dual licensing approach:
+
+- **Core packages** (`@pikku/core`, `@pikku/*` runtimes, services, etc.) - MIT License
+- **Inspector and CLI** (`@pikku/inspector`, `@pikku/cli`) - Business Source License 1.1 (converts to MIT after 4 years)
+
+See [LICENSE](LICENSE) for full details. The BSL restriction only prohibits offering commercial visual development tools for Pikku. Free and open source alternatives are welcome!
+
+Contributors: By submitting a pull request, you agree to our [CLA](CLA.md).
 
 ---
 

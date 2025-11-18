@@ -64,6 +64,10 @@ Pikku uses [Yarn](https://yarnpkg.com/) as its package manager for this monorepo
    yarn tsc
    ```
 
+## Contributor License Agreement
+
+By submitting a pull request, you agree to the terms of our [Contributor License Agreement](../CLA.md). This allows the project to accept your contributions while maintaining licensing flexibility.
+
 ## Pull Request Guidelines
 
 Before submitting a PR, please ensure:
