@@ -18,6 +18,7 @@ import { pikkuFunctions } from '../wirings/functions/pikku-command-functions.js'
 import { pikkuMiddleware } from '../wirings/middleware/pikku-command-middleware.js'
 import { pikkuPermissions } from '../wirings/permissions/pikku-command-permissions.js'
 import { pikkuServices } from '../wirings/functions/pikku-command-services.js'
+import { pikkuServiceMetadata } from '../wirings/services/pikku-command-service-metadata.js'
 import { pikkuRPC } from '../wirings/rpc/pikku-command-rpc.js'
 import {
   pikkuRPCExposedMap,
@@ -107,6 +108,9 @@ export const all: any = pikkuVoidFunc({
 
     // Generate services map
     await pikkuServices.func(services, null, wire)
+
+    // Generate service metadata JSON files for AI consumption
+    await pikkuServiceMetadata.func(services, null, wire)
 
     const hasInternalRPCs = await pikkuRPC.func(services, null, wire)
     await pikkuRPCInternalMap.func(services, null, wire)

@@ -5,7 +5,10 @@ import { TypesMap } from './types-map.js'
 import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
-import { aggregateRequiredServices } from './utils/post-process.js'
+import {
+  aggregateRequiredServices,
+  extractServiceInterfaceMetadata,
+} from './utils/post-process.js'
 
 /**
  * Creates an initial/empty inspector state with all required properties initialized
@@ -98,6 +101,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       allSingletonServices: [],
       allWireServices: [],
     },
+    serviceMetadata: [],
   }
 }
 
@@ -176,6 +180,13 @@ export const inspect = (
     aggregateRequiredServices(state)
     logger.debug(
       `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
+    )
+
+    // Extract service interface metadata for AI consumption
+    const startServiceMeta = performance.now()
+    extractServiceInterfaceMetadata(state, checker)
+    logger.debug(
+      `Extract service metadata completed in ${(performance.now() - startServiceMeta).toFixed(2)}ms`
     )
   }
 
