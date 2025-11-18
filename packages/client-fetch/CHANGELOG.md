@@ -1,11 +1,5 @@
 ## 0.11.0
 
-## 0.11.1
-
-### Patch Changes
-
-- ce902b1: fix: method in core pikku fetch should be any to avoid typescript issues
-
 ### Minor Changes
 
 - Workflow support

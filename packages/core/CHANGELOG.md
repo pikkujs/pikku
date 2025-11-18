@@ -1,14 +1,5 @@
 ## 0.11.0
 
-## 0.11.1
-
-### Patch Changes
-
-- 4579434: breaking: changing the signature of functions
-- 28aeb7f: breaking: extract docs in the wiring meta
-- ce902b1: feat: adding in pikkuSimpleWorkflowFunc
-- 06e1a31: breaking: change session services to wire services
-
 ### Minor Changes
 
 - Add workflow orchestration engine with step execution and retries

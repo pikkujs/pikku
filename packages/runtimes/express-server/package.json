@@ -1,6 +1,6 @@
 {
   "name": "@pikku/express",
-  "version": "0.11.1",
+  "version": "0.11.0",
   "description": "An example pikku express server",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -17,10 +17,10 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.11.1"
+    "@pikku/core": "^0.11.0"
   },
   "dependencies": {
-    "@pikku/express-middleware": "^0.11.1",
+    "@pikku/express-middleware": "^0.11.0",
     "@types/content-type": "^1.1.9",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",

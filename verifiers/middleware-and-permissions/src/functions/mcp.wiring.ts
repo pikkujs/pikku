@@ -37,12 +37,11 @@ export const mcpTagPermissions = () =>
 
 // MCP wire-level permission (exported to be tree-shakeable)
 export const mcpWirePermission = pikkuPermission(
-  async ({ logger }, _data, { session }) => {
-    const currentSession = await session.get()
+  async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'wire-permission',
       name: 'mcp-wire',
-      sessionExists: !!currentSession,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false

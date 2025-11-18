@@ -4,12 +4,11 @@ import {
 } from '../../.pikku/pikku-types.gen.js'
 
 export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
-  pikkuPermission(async ({ logger }, _data, { session }) => {
-    const currentSession = await session.get()
+  pikkuPermission(async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'tag-permission',
       name,
-      sessionExists: !!currentSession,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false
@@ -17,12 +16,11 @@ export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
 )
 
 export const readTagPermission = pikkuPermission(
-  async ({ logger }, _data, { session }) => {
-    const currentSession = await session.get()
+  async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'tag-permission',
       name: 'read',
-      sessionExists: !!currentSession,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false
