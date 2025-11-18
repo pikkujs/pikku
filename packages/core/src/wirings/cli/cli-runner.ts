@@ -24,7 +24,7 @@ import type {
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { PikkuUserWireService } from '../../services/user-session-service.js'
+import { PikkuSessionService } from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
@@ -326,7 +326,7 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  const userSession = new PikkuUserWireService<CoreUserSession>()
+  const userSession = new PikkuSessionService<CoreUserSession>()
 
   const wire: PikkuWire = {
     cli: {

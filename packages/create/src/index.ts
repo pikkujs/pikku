@@ -21,6 +21,7 @@ import {
   lazymkdir,
   mergeDirectories,
   mergeJsonFiles,
+  preparePackageJsonForYarnLink,
   replaceFunctionReferences,
   serverlessChanges,
   updatePackageJSONScripts,
@@ -177,6 +178,9 @@ async function installDependencies(
           'nodeLinker: node-modules',
         ].join('\n')
       )
+      // Remove version constraints from @pikku/* packages to prevent yarn
+      // from trying to fetch unreleased versions from npm
+      preparePackageJsonForYarnLink(targetPath)
     }
 
     console.log(chalk.blue('📦 Installing dependencies...'))

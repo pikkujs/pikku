@@ -125,7 +125,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     } else {
       // No pikkuPermission wrapper found - extract from factory's return value directly
-      // Factory pattern: (config) => (services, data, session) => { ... }
+      // Factory pattern: (config) => (services, data, wire) => { ... }
       if (
         ts.isArrowFunction(factoryNode) ||
         ts.isFunctionExpression(factoryNode)

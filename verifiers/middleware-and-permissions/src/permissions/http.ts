@@ -1,11 +1,11 @@
 import { pikkuPermission } from '../../.pikku/pikku-types.gen.js'
 
 export const httpGlobalPermission = pikkuPermission(
-  async ({ logger }, _data, session) => {
+  async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'http-permission',
       name: 'global',
-      sessionExists: !!session,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false
@@ -13,11 +13,11 @@ export const httpGlobalPermission = pikkuPermission(
 )
 
 export const httpRoutePermission = pikkuPermission(
-  async ({ logger }, _data, session) => {
+  async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'http-permission',
       name: '/api/*',
-      sessionExists: !!session,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false
@@ -28,11 +28,11 @@ export const httpRoutePermission = pikkuPermission(
 export const httpRoutePermissionWithMetadata = pikkuPermission({
   name: 'HTTP Route Permission',
   description: 'Validates permissions for all /api/* routes',
-  func: async ({ logger }, _data, session) => {
+  func: async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'http-permission-with-metadata',
       name: '/api/*',
-      sessionExists: !!session,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false

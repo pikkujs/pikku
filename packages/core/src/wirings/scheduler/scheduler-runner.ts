@@ -11,7 +11,7 @@ import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { PikkuUserWireService } from '../../services/user-session-service.js'
+import { PikkuSessionService } from '../../services/user-session-service.js'
 import {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
@@ -80,7 +80,7 @@ export async function runScheduledTask({
   const task = pikkuState('scheduler', 'tasks').get(name)
   const meta = pikkuState('scheduler', 'meta')[name]
 
-  const userSession = new PikkuUserWireService()
+  const userSession = new PikkuSessionService()
   if (session) {
     userSession.set(session)
   }

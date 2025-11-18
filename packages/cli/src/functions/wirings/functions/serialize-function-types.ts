@@ -38,7 +38,7 @@ ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
  * @template In - The input type that the permission check will receive
  * @template RequiredServices - The services required for this permission check
  */
-export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, Session>>
+export type PikkuPermission<In = unknown, RequiredServices extends Services = Services> = CorePikkuPermission<In, RequiredServices, PikkuWire<In, never, false, Session>>
 
 /**
  * Type-safe middleware definition that can access your application's services and session.
@@ -162,9 +162,8 @@ export const pikkuMiddlewareFactory = <In = any>(
  * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
  *   role
  * }) => {
- *   return pikkuPermission(async ({ logger }, data, wire) => {
- *     const session = await wire.session?.get()
- *     if (!session || session.role !== role) {
+ *   return pikkuPermission(async ({ logger }, data, { initialSession }) => {
+ *     if (!initialSession || initialSession.role !== role) {
  *       logger.warn(\`Permission denied: required role '\${role}'\`)
  *       return false
  *     }
@@ -196,7 +195,7 @@ export type PikkuFunctionSessionless<
     In,
     Out,
     RequiredServices,
-    PickRequired<PikkuWire<In, Out, Session, TypedPikkuRPC, null, any>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any>, RequiredWires>
   >
 
 /**
@@ -216,7 +215,7 @@ export type PikkuFunction<
     In,
     Out,
     RequiredServices,
-    PickRequired<PikkuWire<In, Out, Session, TypedPikkuRPC, null, any>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any>, RequiredWires>
   >
 
 /**

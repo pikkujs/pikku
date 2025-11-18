@@ -24,7 +24,7 @@ export const mcpTagMiddleware = () =>
 // Tag permissions for MCP
 export const mcpTagPermissions = () =>
   addPermission('mcp', {
-    mcpPermission: pikkuPermission(async ({ logger }, _data, session) => {
+    mcpPermission: pikkuPermission(async ({ logger }, _data, { session }) => {
       logger.info({
         type: 'tag-permission',
         name: 'mcp',
@@ -37,11 +37,11 @@ export const mcpTagPermissions = () =>
 
 // MCP wire-level permission (exported to be tree-shakeable)
 export const mcpWirePermission = pikkuPermission(
-  async ({ logger }, _data, session) => {
+  async ({ logger }, _data, { initialSession }) => {
     logger.info({
       type: 'wire-permission',
       name: 'mcp-wire',
-      sessionExists: !!session,
+      sessionExists: !!initialSession,
     })
     // Return false to ensure all permissions run
     return false

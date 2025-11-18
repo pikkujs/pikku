@@ -3,7 +3,7 @@ import { addFunction } from '../../function/function-runner.js'
 import { CorePikkuPermission } from '../../function/functions.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
-import { UserWireService } from '../../services/user-session-service.js'
+import { SessionService } from '../../services/user-session-service.js'
 import { CorePikkuMiddleware } from '../../types/core.types.js'
 import { httpRouter } from '../http/routers/http-router.js'
 import {
@@ -128,7 +128,7 @@ export const openChannel = async ({
   request,
 }: Pick<CoreChannel<unknown, string>, 'route'> &
   RunChannelParams<unknown> & {
-    userSession: UserWireService<any>
+    userSession: SessionService<any>
   } & RunChannelOptions): Promise<{
   openingData: unknown
   channelConfig: CoreChannel<unknown, any>

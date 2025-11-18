@@ -24,7 +24,7 @@ import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
-import { PikkuUserWireService } from '../../services/user-session-service.js'
+import { PikkuSessionService } from '../../services/user-session-service.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -237,7 +237,7 @@ async function runMCPPikkuFunc(
 
     const wire: PikkuWire = {
       mcp: mcpWire,
-      session: new PikkuUserWireService(),
+      session: new PikkuSessionService(),
     }
 
     // Get metadata for the MCP endpoint to access pre-resolved middleware
