@@ -1,6 +1,6 @@
 {
   "name": "@pikku/aws-services",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "author": "yasser.fadl@gmail.com",
   "license": "UNLICENSED",
   "module": "dist/index.js",
@@ -26,7 +26,7 @@
     "@aws-sdk/client-sqs": "^3.732.0",
     "@aws-sdk/cloudfront-signer": "^3.723.0",
     "@aws-sdk/s3-request-presigner": "^3.732.0",
-    "@pikku/core": "^0.11.0"
+    "@pikku/core": "^0.11.1"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.914.0",
