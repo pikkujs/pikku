@@ -3441,12 +3441,12 @@ __metadata:
   resolution: "@pikku/lambda@workspace:packages/runtimes/aws-lambda"
   dependencies:
     "@aws-sdk/client-apigatewaymanagementapi": "npm:^3.914.0"
-    "@types/aws-lambda": "npm:^8.10.158"
+    "@types/aws-lambda": "npm:^8.10.159"
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@aws-sdk/client-apigatewaymanagementapi": ^3.713.0
     "@pikku/core": ^0.11.0
-    "@types/aws-lambda": ^8.10.158
+    "@types/aws-lambda": ^8.10.159
   languageName: unknown
   linkType: soft
 
@@ -3599,7 +3599,7 @@ __metadata:
     "@pikku/core": "npm:^0.11.0"
     "@pikku/lambda": "npm:^0.11.0"
     "@pikku/pg": "npm:^0.11.0"
-    "@types/aws-lambda": "npm:^8.10.158"
+    "@types/aws-lambda": "npm:^8.10.159"
     "@types/node": "npm:^24"
     esbuild: "npm:^0.25.12"
     postgres: "npm:^3.4.5"
@@ -3626,7 +3626,7 @@ __metadata:
     "@pikku/jose": "npm:^0.11.0"
     "@pikku/lambda": "npm:^0.11.0"
     "@pikku/schema-cfworker": "npm:^0.11.0"
-    "@types/aws-lambda": "npm:^8.10.158"
+    "@types/aws-lambda": "npm:^8.10.159"
     "@types/node": "npm:^24"
     esbuild: "npm:0.25.12"
     serverless: "npm:^4.21.1"
@@ -4870,9 +4870,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/aws-lambda@npm:^8.10.158":
-  version: 8.10.158
-  resolution: "@types/aws-lambda@npm:8.10.158"
+"@types/aws-lambda@npm:^8.10.159":
+  version: 8.10.159
+  resolution: "@types/aws-lambda@npm:8.10.159"
   checksum: 10/efcd90d681227bd616efd4236526add8f8640970a70110fd27d5b313b9d365ccc5f39b428a0f314849ba668af785d8c12f0bb87f2f314fc35ab0b01408c73f10
   languageName: node
   linkType: hard
