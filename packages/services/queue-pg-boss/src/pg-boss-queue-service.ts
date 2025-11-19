@@ -1,10 +1,10 @@
-import PgBoss from 'pg-boss'
+import { PgBoss, Request as PgBossRequest } from 'pg-boss'
 import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuJobToPgBoss = (
   options?: JobOptions
-): PgBoss.JobOptions => {
+): PgBossRequest['options'] => {
   const pgBossOptions: any = {}
 
   if (options?.priority !== undefined) {
@@ -46,7 +46,7 @@ export const mapPikkuJobToPgBoss = (
     // Note: pg-boss keeps failed jobs by default
   }
 
-  return pgBossOptions as PgBoss.JobOptions
+  return pgBossOptions as PgBossRequest['options']
 }
 
 /**

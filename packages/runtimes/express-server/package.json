@@ -22,7 +22,7 @@
   "dependencies": {
     "@pikku/express-middleware": "^0.11.0",
     "@types/content-type": "^1.1.9",
-    "@types/cookie-parser": "^1.4.9",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5",
     "@types/express-serve-static-core": "^5.1.0",

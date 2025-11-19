@@ -1,4 +1,4 @@
-import PgBoss from 'pg-boss'
+import { PgBoss, type ConstructorOptions } from 'pg-boss'
 import { PgBossQueueService } from './pg-boss-queue-service.js'
 import { PgBossQueueWorkers } from './pg-boss-queue-worker.js'
 import { PgBossSchedulerService } from './pg-boss-scheduler-service.js'
@@ -19,7 +19,7 @@ export class PgBossServiceFactory {
   private schedulerService?: PgBossSchedulerService
   private initialized = false
 
-  constructor(optionsOrInstance: PgBoss.ConstructorOptions | string | PgBoss) {
+  constructor(optionsOrInstance: ConstructorOptions | string | PgBoss) {
     if (optionsOrInstance instanceof PgBoss) {
       this.pgBoss = optionsOrInstance
     } else {

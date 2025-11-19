@@ -1,4 +1,4 @@
-import PgBoss from 'pg-boss'
+import { PgBoss, type WorkOptions } from 'pg-boss'
 import type {
   QueueWorkers,
   PikkuWorkerConfig,
@@ -20,8 +20,8 @@ import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToPgBoss = (
   workerConfig?: PikkuWorkerConfig
-): PgBoss.WorkOptions => {
-  const workerOptions: PgBoss.WorkOptions = {}
+): WorkOptions => {
+  const workerOptions: WorkOptions = {}
 
   if (workerConfig?.batchSize !== undefined) {
     workerOptions.batchSize = workerConfig.batchSize
