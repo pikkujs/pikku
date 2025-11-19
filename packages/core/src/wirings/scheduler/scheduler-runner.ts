@@ -1,6 +1,5 @@
 import {
   PikkuWire,
-  PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
@@ -112,21 +111,16 @@ export async function runScheduledTask({
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    await runPikkuFunc(
-      PikkuWiringTypes.scheduler,
-      meta.name,
-      meta.pikkuFuncName,
-      {
-        singletonServices,
-        createWireServices,
-        auth: false,
-        data: () => undefined,
-        inheritedMiddleware: meta.middleware,
-        wireMiddleware: task.middleware,
-        tags: task.tags,
-        wire,
-      }
-    )
+    await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncName, {
+      singletonServices,
+      createWireServices,
+      auth: false,
+      data: () => undefined,
+      inheritedMiddleware: meta.middleware,
+      wireMiddleware: task.middleware,
+      tags: task.tags,
+      wire,
+    })
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
     if (errorResponse != null) {

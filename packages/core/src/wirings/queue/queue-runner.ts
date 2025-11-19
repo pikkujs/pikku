@@ -7,7 +7,7 @@ import type {
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { CreateWireServices, PikkuWiringTypes } from '../../types/core.types.js'
+import { CreateWireServices } from '../../types/core.types.js'
 
 /**
  * Error class for queue processor not found
@@ -151,7 +151,7 @@ export async function runQueueJob({
 
     // Execute the pikku function with the job data
     const result = await runPikkuFunc(
-      PikkuWiringTypes.queue,
+      'queue',
       job.queueName,
       processorMeta.pikkuFuncName,
       {

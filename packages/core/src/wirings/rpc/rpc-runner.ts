@@ -1,8 +1,4 @@
-import {
-  CoreServices,
-  PikkuWire,
-  PikkuWiringTypes,
-} from '../../types/core.types.js'
+import { CoreServices, PikkuWire } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
@@ -60,7 +56,7 @@ export class ContextAwareRPCService {
         : undefined,
     }
     return runPikkuFunc<In, Out>(
-      PikkuWiringTypes.rpc,
+      'rpc',
       funcName,
       getPikkuFunctionName(funcName),
       {
@@ -93,7 +89,7 @@ export class ContextAwareRPCService {
         : undefined,
     }
     return runPikkuFunc<In, Out>(
-      PikkuWiringTypes.rpc,
+      'rpc',
       rpcName,
       getPikkuFunctionName(rpcName),
       {

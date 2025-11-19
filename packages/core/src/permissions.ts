@@ -190,14 +190,14 @@ const combinedPermissionsCache: Record<
   PikkuWiringTypes,
   Record<string, readonly (CorePermissionGroup | CorePikkuPermission)[]>
 > = {
-  [PikkuWiringTypes.http]: {},
-  [PikkuWiringTypes.rpc]: {},
-  [PikkuWiringTypes.channel]: {},
-  [PikkuWiringTypes.queue]: {},
-  [PikkuWiringTypes.scheduler]: {},
-  [PikkuWiringTypes.mcp]: {},
-  [PikkuWiringTypes.cli]: {},
-  [PikkuWiringTypes.workflow]: {},
+  http: {},
+  rpc: {},
+  channel: {},
+  queue: {},
+  scheduler: {},
+  mcp: {},
+  cli: {},
+  workflow: {},
 }
 
 /**

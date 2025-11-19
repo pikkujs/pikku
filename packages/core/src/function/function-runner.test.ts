@@ -3,11 +3,7 @@ import * as assert from 'node:assert'
 import { addFunction, runPikkuFunc } from './function-runner.js'
 import { addMiddleware, addPermission } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
-import {
-  CoreServices,
-  CorePikkuMiddleware,
-  PikkuWiringTypes,
-} from '../types/core.types.js'
+import { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import { CorePermissionGroup } from './functions.types.js'
 
 beforeEach(() => {
@@ -71,7 +67,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'testFunc',
       {
@@ -141,7 +137,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'testFunc',
       {
@@ -176,7 +172,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     await assert.rejects(
-      runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+      runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
@@ -200,7 +196,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     await assert.rejects(
-      runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+      runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
@@ -225,7 +221,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     await assert.rejects(
-      runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+      runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
@@ -249,7 +245,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     await assert.rejects(
-      runPikkuFunc(PikkuWiringTypes.rpc, Math.random().toString(), 'testFunc', {
+      runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
         getAllServices: () => mockServices,
         data: () => ({}),
@@ -283,18 +279,13 @@ describe('runPikkuFunc - Integration Tests', () => {
       tags: ['testTag'], // Same middleware via tag
     })
 
-    await runPikkuFunc(
-      PikkuWiringTypes.rpc,
-      Math.random().toString(),
-      'testFunc',
-      {
-        singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
-        data: () => ({}),
-        auth: false,
-        wire: {},
-      }
-    )
+    await runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
+      singletonServices: mockSingletonServices,
+      getAllServices: () => mockServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
 
     // Should only execute once due to deduplication
     assert.equal(executionCount, 1)
@@ -336,7 +327,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'testFunc',
       {
@@ -364,7 +355,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'simpleFunc',
       {
@@ -408,7 +399,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'testFunc',
       {
@@ -462,7 +453,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'testFunc',
       {
@@ -499,17 +490,12 @@ describe('runPikkuFunc - Integration Tests', () => {
       },
     })
 
-    await runPikkuFunc(
-      PikkuWiringTypes.rpc,
-      Math.random().toString(),
-      'testFunc',
-      {
-        singletonServices: mockServices,
-        data: () => testData,
-        auth: false,
-        wire: { rpc: {} },
-      }
-    )
+    await runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
+      singletonServices: mockServices,
+      data: () => testData,
+      auth: false,
+      wire: { rpc: {} },
+    })
 
     assert.deepEqual(receivedServices, mockServices)
     assert.equal(receivedData, testData)
@@ -536,7 +522,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     }
 
     const result = await runPikkuFunc(
-      PikkuWiringTypes.rpc,
+      'rpc',
       Math.random().toString(),
       'testFunc',
       {

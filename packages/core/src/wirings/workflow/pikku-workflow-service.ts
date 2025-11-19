@@ -6,7 +6,6 @@ import {
   CoreSingletonServices,
   CreateWireServices,
   PikkuWire,
-  PikkuWiringTypes,
   SerializedError,
 } from '../../types/core.types.js'
 import { QueueService } from '../queue/queue.types.js'
@@ -292,7 +291,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const wire: PikkuWire = { workflow: workflowWire }
       try {
         const result = await runPikkuFunc(
-          PikkuWiringTypes.workflow,
+          'workflow',
           workflowMeta.workflowName,
           workflowMeta.pikkuFuncName,
           {

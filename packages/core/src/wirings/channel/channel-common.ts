@@ -1,8 +1,4 @@
-import {
-  CoreServices,
-  PikkuWiringTypes,
-  CorePikkuMiddleware,
-} from '../../types/core.types.js'
+import { CoreServices, CorePikkuMiddleware } from '../../types/core.types.js'
 import { CoreChannel, ChannelMessageMeta } from './channel.types.js'
 import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 import { runPikkuFuncDirectly } from '../../function/function-runner.js'
@@ -49,7 +45,7 @@ export const runChannelLifecycleWithMiddleware = async ({
 
   // Use combineMiddleware to properly resolve metadata + inline middleware
   const allMiddleware = combineMiddleware(
-    PikkuWiringTypes.channel,
+    'channel',
     `${channelConfig.name}:${lifecycleType}`,
     {
       wireInheritedMiddleware: meta.middleware,
