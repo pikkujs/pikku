@@ -452,14 +452,14 @@ export function updatePackageJSONScripts(
 }
 
 /**
- * Removes version constraints from @pikku/* packages when using yarn link.
- * This prevents yarn from trying to fetch unreleased versions from npm.
+ * Removes version constraints from @pikku/* and @types/* packages when using yarn link.
+ * This prevents yarn from trying to fetch unreleased versions from npm and avoids
+ * type library version conflicts with linked packages.
  */
 export function preparePackageJsonForYarnLink(targetPath: string): void {
   const packageFilePath = path.join(targetPath, 'package.json')
   const packageJson = JSON.parse(fs.readFileSync(packageFilePath, 'utf-8'))
 
-  // Remove version constraints from all @pikku/* packages
   const deps = ['dependencies', 'devDependencies', 'peerDependencies'] as const
   for (const depType of deps) {
     if (packageJson[depType]) {
@@ -467,7 +467,8 @@ export function preparePackageJsonForYarnLink(targetPath: string): void {
         if (
           pkg.startsWith('@pikku/') ||
           pkg === 'pikku' ||
-          pkg === 'create-pikku'
+          pkg === 'create-pikku' ||
+          pkg.startsWith('@types/')
         ) {
           packageJson[depType][pkg] = '*'
         }
