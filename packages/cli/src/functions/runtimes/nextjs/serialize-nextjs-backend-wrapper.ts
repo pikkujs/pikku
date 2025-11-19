@@ -200,8 +200,8 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the RPC request.
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const rpc: RPCInvoke = async (name, data) => {
-    return dynamicActionRequest(\`/rpc/\${name}\` as any, 'POST', { data }) as any
+  const rpc: RPCInvoke = async (rpcName, data) => {
+    return dynamicActionRequest('/rpc/:rpcName', 'POST', { rpcName, data })
   }
 
   /**
@@ -213,8 +213,8 @@ export const pikku = (_options?: any) => {
    * @param data - The input data for the RPC request.
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const staticRPC: RPCInvoke = async (name, data) => {
-    return staticActionRequest(\`/rpc/\${name}\` as any, 'POST', { data }) as any
+  const staticRPC: RPCInvoke = async (rpcName, data) => {
+    return staticActionRequest('/rpc/:rpcName', 'POST', { rpcName, data })
   }
 
   return {
