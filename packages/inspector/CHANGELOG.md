@@ -1,5 +1,21 @@
 ## 0.11.0
 
+## 0.11.1
+
+### Patch Changes
+
+- 4b811db: chore: updating all dependencies
+- 28aeb7f: breaking: extract docs in the wiring meta
+- ce902b1: feat: adding in pikkuSimpleWorkflowFunc
+- 06e1a31: breaking: change session services to wire services
+- Updated dependencies [4b811db]
+- Updated dependencies [e12a00c]
+- Updated dependencies [4579434]
+- Updated dependencies [28aeb7f]
+- Updated dependencies [ce902b1]
+- Updated dependencies [06e1a31]
+  - @pikku/core@0.11.1
+
 ### Minor Changes
 
 - Add workflow inspection and analysis
