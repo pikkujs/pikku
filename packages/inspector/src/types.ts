@@ -240,4 +240,14 @@ export interface InspectorState {
     allSingletonServices: string[] // All services available in SingletonServices type
     allWireServices: string[] // All services available in Services type (excluding SingletonServices)
   }
+  serviceMetadata: Array<{
+    name: string
+    summary: string
+    description: string
+    package: string
+    path: string
+    version: string
+    interface: string
+    expandedProperties: Record<string, string>
+  }>
 }
