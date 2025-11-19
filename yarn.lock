@@ -6416,7 +6416,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"commander@npm:^14, commander@npm:^14.0.1":
+"commander@npm:^14, commander@npm:^14.0.1, commander@npm:^14.0.2":
   version: 14.0.2
   resolution: "commander@npm:14.0.2"
   checksum: 10/2d202db5e5f9bb770112a3c1579b893d17ac6f6d932183077308bdd96d0f87f0bbe6a68b5b9ed2cf3b2514be6bb7de637480703c0e2db9741ee1b383237deb26
@@ -6585,7 +6585,7 @@ __metadata:
     "@inquirer/prompts": "npm:^7.3.2"
     "@types/node": "npm:^22.13.1"
     chalk: "npm:^5.4.1"
-    commander: "npm:^13.1.0"
+    commander: "npm:^14.0.2"
     giget: "npm:^1.2.4"
     nanospinner: "npm:^1.2.2"
     tsx: "npm:^4.19.2"
