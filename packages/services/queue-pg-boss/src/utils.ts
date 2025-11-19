@@ -1,5 +1,5 @@
 import { QueueJob, QueueJobStatus } from '@pikku/core/queue'
-import PgBoss from 'pg-boss'
+import { PgBoss, type JobWithMetadata } from 'pg-boss'
 
 /**
  * Map pg-boss job state to our queue job status
@@ -26,7 +26,7 @@ const mapPgBossStateToStatus = (state: string): QueueJobStatus => {
  * Map pg-boss job to QueueJob interface
  */
 export const mapPgBossJobToQueueJob = <In, Out>(
-  pgBossJob: PgBoss.JobWithMetadata<In>,
+  pgBossJob: JobWithMetadata<In>,
   pgBossInstance: PgBoss
 ): QueueJob<In, Out> => {
   return {

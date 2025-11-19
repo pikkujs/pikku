@@ -20,7 +20,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@openapi-contrib/json-schema-to-openapi-schema": "^4.2.0",
+    "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.0",
     "@pikku/core": "^0.11.0",
     "@pikku/inspector": "^0.11.0",
     "@types/cookie": "^1.0.0",
@@ -36,7 +36,7 @@
     "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@types/node": "^24.9.1"
+    "@types/node": "^24.10.1"
   },
   "engines": {
     "node": ">=18"
