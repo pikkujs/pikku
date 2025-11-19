@@ -16,6 +16,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@apidevtools/json-schema-ref-parser@npm:^15.0.0":
+  version: 15.1.2
+  resolution: "@apidevtools/json-schema-ref-parser@npm:15.1.2"
+  dependencies:
+    js-yaml: "npm:^4.1.1"
+  peerDependencies:
+    "@types/json-schema": ^7.0.15
+  checksum: 10/e40a963217b9dfc75e252c9ecc370b159703e71611323b41c0085d18f61ba9e9dbe8a8135f25a44a92766b6fa8b967bc34193b7289bf7b95562bc50b80a71fe2
+  languageName: node
+  linkType: hard
+
 "@aws-crypto/crc32@npm:5.2.0":
   version: 5.2.0
   resolution: "@aws-crypto/crc32@npm:5.2.0"
@@ -3079,18 +3090,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openapi-contrib/json-schema-to-openapi-schema@npm:^4.2.0":
-  version: 4.2.0
-  resolution: "@openapi-contrib/json-schema-to-openapi-schema@npm:4.2.0"
+"@openapi-contrib/json-schema-to-openapi-schema@npm:^4.3.0":
+  version: 4.3.0
+  resolution: "@openapi-contrib/json-schema-to-openapi-schema@npm:4.3.0"
   dependencies:
-    "@apidevtools/json-schema-ref-parser": "npm:^14.1.1"
+    "@apidevtools/json-schema-ref-parser": "npm:^15.0.0"
     json-schema-walker: "npm:^3.1.0"
     yargs: "npm:^18.0.0"
   peerDependencies:
     openapi-types: "*"
   bin:
     json-schema-to-openapi-schema: bin/json-schema-to-openapi-schema.js
-  checksum: 10/7d35d6830492dcd1d11a2de448c02987fa287b290af4d180e202b40732ef481dc2d53ffb42601283a1d136e211c666a11daac7fcfdb3c997b169a33cbb6ea546
+  checksum: 10/4c457e5b8d767a4ffdcdbf18ad8871ab38c52e5a65d7b05d3e61c0f8faf9c6025f0320529667e6a9eae0a13e82c8f4636352911fecd993d35f5a2f6547090751
   languageName: node
   linkType: hard
 
@@ -3275,7 +3286,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
-    "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.2.0"
+    "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.0"
     "@pikku/core": "npm:^0.11.0"
     "@pikku/inspector": "npm:^0.11.0"
     "@types/cookie": "npm:^1.0.0"
@@ -8225,6 +8236,17 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10/c138a34a3fd0d08ebaf71273ad4465569a483b8a639e0b118ff65698d257c2791d3199e3f303631f2cb98213fa7b5f5d6a4621fd0fff819421b990d30d967140
+  languageName: node
+  linkType: hard
+
+"js-yaml@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "js-yaml@npm:4.1.1"
+  dependencies:
+    argparse: "npm:^2.0.1"
+  bin:
+    js-yaml: bin/js-yaml.js
+  checksum: 10/a52d0519f0f4ef5b4adc1cde466cb54c50d56e2b4a983b9d5c9c0f2f99462047007a6274d7e95617a21d3c91fde3ee6115536ed70991cd645ba8521058b78f77
   languageName: node
   linkType: hard
 
