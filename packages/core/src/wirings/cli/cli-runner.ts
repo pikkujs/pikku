@@ -1,11 +1,7 @@
 import { NotFoundError } from '../../errors/errors.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
-import {
-  CorePikkuMiddleware,
-  CoreUserSession,
-  PikkuWiringTypes,
-} from '../../types/core.types.js'
+import { CorePikkuMiddleware, CoreUserSession } from '../../types/core.types.js'
 import {
   CoreCLI,
   CLICommandMeta,
@@ -339,23 +335,18 @@ export async function runCLICommand({
   }
 
   try {
-    const result = await runPikkuFunc(
-      PikkuWiringTypes.cli,
-      commandId,
-      funcName,
-      {
-        singletonServices,
-        createWireServices,
-        data: pluckedData,
-        auth: false,
-        inheritedMiddleware: currentCommand.middleware,
-        wireMiddleware: allWireMiddleware,
-        inheritedPermissions: currentCommand.permissions,
-        wirePermissions: undefined,
-        tags: programData?.tags,
-        wire,
-      }
-    )
+    const result = await runPikkuFunc('cli', commandId, funcName, {
+      singletonServices,
+      createWireServices,
+      data: pluckedData,
+      auth: false,
+      inheritedMiddleware: currentCommand.middleware,
+      wireMiddleware: allWireMiddleware,
+      inheritedPermissions: currentCommand.permissions,
+      wirePermissions: undefined,
+      tags: programData?.tags,
+      wire,
+    })
 
     // Apply renderer one final time with the final output (if renderer exists)
     if (renderer) {

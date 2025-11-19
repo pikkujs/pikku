@@ -112,14 +112,14 @@ const middlewareCache: Record<
   PikkuWiringTypes,
   Record<string, readonly CorePikkuMiddleware[]>
 > = {
-  [PikkuWiringTypes.http]: {},
-  [PikkuWiringTypes.rpc]: {},
-  [PikkuWiringTypes.channel]: {},
-  [PikkuWiringTypes.queue]: {},
-  [PikkuWiringTypes.scheduler]: {},
-  [PikkuWiringTypes.mcp]: {},
-  [PikkuWiringTypes.cli]: {},
-  [PikkuWiringTypes.workflow]: {},
+  http: {},
+  rpc: {},
+  channel: {},
+  queue: {},
+  scheduler: {},
+  mcp: {},
+  cli: {},
+  workflow: {},
 }
 
 /**

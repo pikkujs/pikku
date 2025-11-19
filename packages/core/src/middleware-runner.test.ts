@@ -6,7 +6,7 @@ import {
   runMiddleware,
 } from './middleware-runner.js'
 import { resetPikkuState } from './pikku-state.js'
-import { CorePikkuMiddleware, PikkuWiringTypes } from './types/core.types.js'
+import { CorePikkuMiddleware } from './types/core.types.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -14,24 +14,17 @@ beforeEach(() => {
 
 describe('combineMiddleware', () => {
   test('should return empty array when no parameters provided', () => {
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString()
-    )
+    const result = combineMiddleware('http', Math.random().toString())
     assert.deepEqual(result, [])
   })
 
   test('should return empty array when all parameters are undefined', () => {
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        wiringMiddleware: undefined,
-        wiringTags: undefined,
-        funcMiddleware: undefined,
-        funcTags: undefined,
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wiringMiddleware: undefined,
+      wiringTags: undefined,
+      funcMiddleware: undefined,
+      funcTags: undefined,
+    })
     assert.deepEqual(result, [])
   })
 
@@ -51,13 +44,9 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        wireMiddleware: [mockMiddleware1, mockMiddleware2],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireMiddleware: [mockMiddleware1, mockMiddleware2],
+    })
 
     assert.equal(result.length, 2)
     assert.equal(result[0], mockMiddleware1)
@@ -80,13 +69,9 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        funcMiddleware: [mockMiddleware1, mockMiddleware2],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      funcMiddleware: [mockMiddleware1, mockMiddleware2],
+    })
 
     assert.equal(result.length, 2)
     assert.equal(result[0], mockMiddleware1)
@@ -128,16 +113,12 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        wireInheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
-        wireMiddleware: [wiringMiddleware],
-        funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTag' }],
-        funcMiddleware: [funcMiddleware],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
+      wireMiddleware: [wiringMiddleware],
+      funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTag' }],
+      funcMiddleware: [funcMiddleware],
+    })
 
     assert.equal(result.length, 4)
     // Order: wireInheritedMiddleware (tags), wireMiddleware, funcInheritedMiddleware (tags), funcMiddleware
@@ -158,13 +139,9 @@ describe('combineMiddleware', () => {
 
     addMiddleware('testTag', [taggedMiddleware])
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        wireInheritedMiddleware: [{ type: 'tag', tag: 'testTag' }],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'tag', tag: 'testTag' }],
+    })
 
     assert.equal(result.length, 1)
     assert.equal(result[0], taggedMiddleware)
@@ -181,13 +158,9 @@ describe('combineMiddleware', () => {
 
     addMiddleware('funcTestTag', [taggedMiddleware])
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTestTag' }],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTestTag' }],
+    })
 
     assert.equal(result.length, 1)
     assert.equal(result[0], taggedMiddleware)
@@ -204,16 +177,12 @@ describe('combineMiddleware', () => {
     addMiddleware('tag1', [middleware1])
     addMiddleware('tag2', [middleware2])
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        wireInheritedMiddleware: [
-          { type: 'tag', tag: 'tag1' },
-          { type: 'tag', tag: 'tag2' },
-        ],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [
+        { type: 'tag', tag: 'tag1' },
+        { type: 'tag', tag: 'tag2' },
+      ],
+    })
 
     assert.equal(result.length, 2)
     assert.equal(result[0], middleware1)
@@ -227,19 +196,13 @@ describe('combineMiddleware', () => {
 
     addMiddleware('existingTag', [middleware])
 
-    const result = combineMiddleware(
-      PikkuWiringTypes.http,
-      Math.random().toString(),
-      {
-        wireInheritedMiddleware: [
-          { type: 'tag', tag: 'existingTag' },
-          { type: 'tag', tag: 'nonExistentTag' },
-        ],
-        funcInheritedMiddleware: [
-          { type: 'tag', tag: 'anotherNonExistentTag' },
-        ],
-      }
-    )
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [
+        { type: 'tag', tag: 'existingTag' },
+        { type: 'tag', tag: 'nonExistentTag' },
+      ],
+      funcInheritedMiddleware: [{ type: 'tag', tag: 'anotherNonExistentTag' }],
+    })
 
     assert.equal(result.length, 1)
     assert.equal(result[0], middleware)
@@ -263,7 +226,7 @@ describe('runMiddleware', () => {
     await runMiddleware(
       {} as any,
       {} as any,
-      combineMiddleware(PikkuWiringTypes.rpc, Math.random().toString(), {
+      combineMiddleware('rpc', Math.random().toString(), {
         wireMiddleware: [middleware1, middleware2, middleware1, middleware2],
       }),
       async () => {

@@ -19,8 +19,8 @@ import {
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
   WireServices,
-  PikkuWiringTypes,
   PikkuWire,
+  PikkuWiringTypes,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import {
@@ -322,7 +322,7 @@ const executeRoute = async (
   const wire: PikkuWire = { http, channel, session: userSession }
 
   result = await runPikkuFunc(
-    PikkuWiringTypes.http,
+    'http',
     `${meta.method}:${meta.route}`,
     meta.pikkuFuncName,
     {

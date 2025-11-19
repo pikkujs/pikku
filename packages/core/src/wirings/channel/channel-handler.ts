@@ -2,7 +2,6 @@ import {
   CoreServices,
   JSONValue,
   CoreUserSession,
-  PikkuWiringTypes,
 } from '../../types/core.types.js'
 import {
   ChannelMessageMeta,
@@ -123,24 +122,19 @@ export const processMessageHandlers = (
       ? `${channelConfig.name}:${routingProperty}:${routerValue}`
       : `${channelConfig.name}:default`
 
-    return await runPikkuFunc(
-      PikkuWiringTypes.channel,
-      cacheKey,
-      pikkuFuncName,
-      {
-        singletonServices: services,
-        data: () => data,
-        inheritedMiddleware,
-        wireMiddleware,
-        inheritedPermissions,
-        wirePermissions,
-        tags: channelConfig.tags,
-        wire: {
-          channel: channelHandler.getChannel(),
-          session: userSession,
-        },
-      }
-    )
+    return await runPikkuFunc('channel', cacheKey, pikkuFuncName, {
+      singletonServices: services,
+      data: () => data,
+      inheritedMiddleware,
+      wireMiddleware,
+      inheritedPermissions,
+      wirePermissions,
+      tags: channelConfig.tags,
+      wire: {
+        channel: channelHandler.getChannel(),
+        session: userSession,
+      },
+    })
   }
 
   return async (rawData): Promise<unknown> => {

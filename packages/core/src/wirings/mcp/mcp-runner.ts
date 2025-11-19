@@ -1,6 +1,5 @@
 import {
   PikkuWire,
-  PikkuWiringTypes,
   type CoreServices,
   type CoreSingletonServices,
   type CoreUserSession,
@@ -250,22 +249,17 @@ async function runMCPPikkuFunc(
       meta = pikkuState('mcp', 'promptsMeta')[name]
     }
 
-    const result = await runPikkuFunc(
-      PikkuWiringTypes.mcp,
-      `${type}:${name}`,
-      pikkuFuncName,
-      {
-        singletonServices,
-        createWireServices,
-        data: () => request.params,
-        inheritedMiddleware: meta?.middleware,
-        wireMiddleware: mcp.middleware,
-        inheritedPermissions: meta?.permissions,
-        wirePermissions: mcp.permissions,
-        tags: mcp.tags,
-        wire,
-      }
-    )
+    const result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncName, {
+      singletonServices,
+      createWireServices,
+      data: () => request.params,
+      inheritedMiddleware: meta?.middleware,
+      wireMiddleware: mcp.middleware,
+      inheritedPermissions: meta?.permissions,
+      wirePermissions: mcp.permissions,
+      tags: mcp.tags,
+      wire,
+    })
 
     return {
       id: request.id,

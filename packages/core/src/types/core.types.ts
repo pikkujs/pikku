@@ -18,16 +18,15 @@ import {
 } from '../wirings/workflow/workflow.types.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 
-export enum PikkuWiringTypes {
-  http = 'http',
-  scheduler = 'scheduler',
-  channel = 'channel',
-  rpc = 'rpc',
-  queue = 'queue',
-  mcp = 'mcp',
-  cli = 'cli',
-  workflow = 'workflow',
-}
+export type PikkuWiringTypes =
+  | 'http'
+  | 'scheduler'
+  | 'channel'
+  | 'rpc'
+  | 'queue'
+  | 'mcp'
+  | 'cli'
+  | 'workflow'
 
 export interface FunctionServicesMeta {
   optimized: boolean
