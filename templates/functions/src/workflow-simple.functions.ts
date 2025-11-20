@@ -124,9 +124,11 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
 
   // Step 4: Filter, some, and every examples
   const validEmails = data.memberEmails.filter((email) => email.includes('@'))
+  // @ts-ignore - example variable
   const hasGmailUser = data.memberEmails.some((email) =>
     email.endsWith('@gmail.com')
   )
+  // @ts-ignore - example variable
   const allFromSameDomain = data.memberEmails.every((email) =>
     email.endsWith('@example.com')
   )
@@ -145,11 +147,20 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   // Wait to avoid email rate limits
   await workflow.sleep('Wait before welcome email', '3s')
 
-  // Step 6: Send welcome email
-  await workflow.do('Send welcome email', 'sendWelcomeEmail', {
-    to: data.email,
-    orgId: org.id,
-  })
+  // Step 6: Parallel group - send welcome email and create org (for demo)
+  await Promise.all([
+    workflow.do('Send welcome email', 'sendWelcomeEmail', {
+      to: data.email,
+      orgId: org.id,
+    }),
+    workflow.do('Log org creation', 'createOrg', {
+      name: `${data.name} - Log Entry`,
+    }),
+    workflow.do('Send notification email', 'sendWelcomeEmail', {
+      to: 'admin@example.com',
+      orgId: org.id,
+    }),
+  ])
 
   // Return typed output
   return {
@@ -191,7 +202,10 @@ export const triggerOrgOnboardingSimple = pikkuSessionlessFunc<
   { orgId: string; ownerId?: string; runId: string }
 >(async ({ logger, workflowService }, data, { rpc }) => {
   // Start the workflow
-  const { runId } = await rpc.startWorkflow('orgOnboardingSimpleWorkflow', data)
+  const { runId } = await rpc.startWorkflow(
+    'orgOnboardingSimpleWorkflow' as any,
+    data
+  )
 
   logger.info(`[SIMPLE] Organization onboarding workflow started: ${runId}`)
 
