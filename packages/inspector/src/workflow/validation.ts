@@ -16,6 +16,7 @@ export interface ValidationError {
  * - VariableStatement (const/let declarations)
  * - ExpressionStatement (await workflow.do, await workflow.sleep, await Promise.all)
  * - IfStatement (branches)
+ * - SwitchStatement (switch/case)
  * - ForOfStatement (sequential fanout)
  * - ReturnStatement
  * - Block (containers)
@@ -29,6 +30,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         ts.isVariableStatement(statement) ||
         ts.isExpressionStatement(statement) ||
         ts.isIfStatement(statement) ||
+        ts.isSwitchStatement(statement) ||
         ts.isForOfStatement(statement) ||
         ts.isReturnStatement(statement)
       ) {
@@ -38,7 +40,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         // Unknown/disallowed statement type
         const nodeType = ts.SyntaxKind[statement.kind]
         errors.push({
-          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, for..of, return, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
+          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, switch/case, for..of, return, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
           node: statement,
         })
       }

@@ -7,6 +7,8 @@ import {
   FanoutStepMeta,
   ReturnStepMeta,
   CancelStepMeta,
+  SwitchStepMeta,
+  SwitchCaseMeta,
   InputSource,
   OutputBinding,
   Condition,
@@ -242,6 +244,11 @@ function extractStep(
   // If statement (branch)
   if (ts.isIfStatement(statement)) {
     return extractBranch(statement, context)
+  }
+
+  // Switch statement
+  if (ts.isSwitchStatement(statement)) {
+    return extractSwitch(statement, context)
   }
 
   // For-of statement (sequential fanout)
@@ -602,6 +609,89 @@ function extractStepsFromStatement(
 ): WorkflowStepMeta[] {
   const step = extractStep(statement, context)
   return step ? [step] : []
+}
+
+/**
+ * Extract switch statement
+ */
+function extractSwitch(
+  statement: ts.SwitchStatement,
+  context: ExtractionContext
+): SwitchStepMeta | null {
+  const expression = getSourceText(statement.expression)
+  const cases: SwitchCaseMeta[] = []
+  let defaultSteps: WorkflowStepMeta[] | undefined
+
+  for (const clause of statement.caseBlock.clauses) {
+    if (ts.isCaseClause(clause)) {
+      const caseValue = extractCaseValue(clause.expression)
+      const steps = extractCaseSteps(clause.statements, context)
+
+      cases.push({
+        value: caseValue.value,
+        expression: caseValue.expression,
+        steps,
+      })
+    } else if (ts.isDefaultClause(clause)) {
+      defaultSteps = extractCaseSteps(clause.statements, context)
+    }
+  }
+
+  return {
+    type: 'switch',
+    expression,
+    cases,
+    defaultSteps,
+  }
+}
+
+/**
+ * Extract case value from expression
+ */
+function extractCaseValue(expr: ts.Expression): {
+  value?: string | number | boolean | null
+  expression?: string
+} {
+  if (ts.isStringLiteral(expr)) {
+    return { value: expr.text }
+  }
+  if (ts.isNumericLiteral(expr)) {
+    return { value: Number(expr.text) }
+  }
+  if (expr.kind === ts.SyntaxKind.TrueKeyword) {
+    return { value: true }
+  }
+  if (expr.kind === ts.SyntaxKind.FalseKeyword) {
+    return { value: false }
+  }
+  if (expr.kind === ts.SyntaxKind.NullKeyword) {
+    return { value: null }
+  }
+
+  return { expression: getSourceText(expr) }
+}
+
+/**
+ * Extract steps from case statements, stopping at break
+ */
+function extractCaseSteps(
+  statements: ts.NodeArray<ts.Statement>,
+  context: ExtractionContext
+): WorkflowStepMeta[] {
+  const steps: WorkflowStepMeta[] = []
+
+  for (const statement of statements) {
+    if (ts.isBreakStatement(statement)) {
+      break
+    }
+
+    const step = extractStep(statement, context)
+    if (step) {
+      steps.push(step)
+    }
+  }
+
+  return steps
 }
 
 /**

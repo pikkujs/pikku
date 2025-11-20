@@ -89,7 +89,20 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
     await workflow.cancel('No members to invite')
   }
 
-  // Step 2: Conditional owner creation for enterprise/premium plans with complex conditions
+  // Step 2: Plan-based setup using switch statement
+  switch (data.plan) {
+    case 'enterprise':
+      await workflow.sleep('Enterprise plan setup delay', '1s')
+      break
+    case 'premium':
+      await workflow.sleep('Premium plan setup delay', '500ms')
+      break
+    default:
+      await workflow.sleep('Standard plan setup delay', '100ms')
+      break
+  }
+
+  // Step 3: Conditional owner creation for enterprise/premium plans with complex conditions
   // Create owner if:
   // - (Enterprise plan AND has more than 5 members) OR
   // - (Premium plan AND organization name includes 'Corp')
@@ -109,7 +122,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
     await workflow.sleep('Wait after owner setup', '1s')
   }
 
-  // Step 3: Parallel member invitations
+  // Step 4: Parallel member invitations
   await Promise.all(
     data.memberEmails.map(
       async (email) =>
@@ -123,7 +136,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   // Wait to avoid email rate limits
   await workflow.sleep('Wait before welcome email', '3s')
 
-  // Step 4: Send welcome email
+  // Step 5: Send welcome email
   await workflow.do('Send welcome email', 'sendWelcomeEmail', {
     to: data.email,
     orgId: org.id,

@@ -15,6 +15,8 @@ export type {
   InlineStepMeta,
   SleepStepMeta,
   CancelStepMeta,
+  SwitchStepMeta,
+  SwitchCaseMeta,
   InputSource,
   OutputBinding,
   Condition,

@@ -283,6 +283,31 @@ export interface CancelStepMeta {
 }
 
 /**
+ * Switch case metadata
+ */
+export interface SwitchCaseMeta {
+  /** Case value (literal) or expression */
+  value?: string | number | boolean | null
+  /** Case expression (for complex cases) */
+  expression?: string
+  /** Steps to execute for this case */
+  steps: WorkflowStepMeta[]
+}
+
+/**
+ * Switch step metadata (switch/case control flow)
+ */
+export interface SwitchStepMeta {
+  type: 'switch'
+  /** Expression being switched on */
+  expression: string
+  /** Case branches */
+  cases: SwitchCaseMeta[]
+  /** Default case steps (optional) */
+  defaultSteps?: WorkflowStepMeta[]
+}
+
+/**
  * Workflow step metadata (extracted by inspector)
  */
 export type WorkflowStepMeta =
@@ -294,6 +319,7 @@ export type WorkflowStepMeta =
   | InlineStepMeta
   | SleepStepMeta
   | CancelStepMeta
+  | SwitchStepMeta
 
 /**
  * Workflow step wire context for RPC functions
