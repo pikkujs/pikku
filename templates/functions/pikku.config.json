@@ -6,6 +6,9 @@
   "schema": {
     "supportsImportAttributes": true
   },
+  "forge": {
+    "verboseMeta": true
+  },
   "fetchFile": ".pikku/pikku-fetch.gen.ts",
   "websocketFile": ".pikku/pikku-websocket.gen.ts",
   "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",

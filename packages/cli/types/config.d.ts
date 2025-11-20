@@ -57,6 +57,7 @@ export interface PikkuCLICoreOutputFiles {
   workflowsWiringFile: string
   workflowsWiringMetaFile: string
   workflowsWiringMetaJsonFile: string
+  workflowsWiringMetaVerboseJsonFile: string
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
@@ -172,6 +173,10 @@ export type PikkuCLIInput = {
   stateOutput?: string
   stateInput?: string
 
+  forge?: {
+    verboseMeta?: boolean
+  }
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -265,6 +270,10 @@ export type PikkuCLIConfig = {
 
   stateOutput?: string
   stateInput?: string
+
+  forge?: {
+    verboseMeta?: boolean
+  }
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

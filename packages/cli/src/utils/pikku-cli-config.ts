@@ -322,6 +322,12 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-wirings-meta.gen.json'
       )
     }
+    if (!result.workflowsWiringMetaVerboseJsonFile) {
+      result.workflowsWiringMetaVerboseJsonFile = join(
+        workflowDir,
+        'pikku-workflow-wirings-meta-verbose.gen.json'
+      )
+    }
     if (!result.workflowsWorkersFile) {
       result.workflowsWorkersFile = join(
         workflowDir,
