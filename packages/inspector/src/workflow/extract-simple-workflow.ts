@@ -6,6 +6,7 @@ import {
   ParallelGroupStepMeta,
   FanoutStepMeta,
   ReturnStepMeta,
+  CancelStepMeta,
   InputSource,
   OutputBinding,
   Condition,
@@ -17,6 +18,7 @@ import {
 import {
   isWorkflowDoCall,
   isWorkflowSleepCall,
+  isWorkflowCancelCall,
   isParallelFanout,
   isParallelGroup,
   isSequentialFanout,
@@ -367,6 +369,10 @@ function extractExpressionStatement(
       return extractSleepStep(call, context)
     }
 
+    if (isWorkflowCancelCall(call, context.checker)) {
+      return extractCancelStep(call, context)
+    }
+
     // Check for parallel group or fanout
     if (isParallelFanout(call)) {
       return extractParallelFanout(call, context)
@@ -507,6 +513,18 @@ function extractSleepStep(
       node: call,
     })
     return null
+  }
+}
+
+/**
+ * Extract cancel step from workflow.cancel() call
+ */
+function extractCancelStep(
+  call: ts.CallExpression,
+  context: ExtractionContext
+): CancelStepMeta | null {
+  return {
+    type: 'cancel',
   }
 }
 

@@ -43,6 +43,25 @@ export function isWorkflowSleepCall(
 }
 
 /**
+ * Check if a call expression is workflow.cancel()
+ */
+export function isWorkflowCancelCall(
+  node: ts.CallExpression,
+  checker: ts.TypeChecker
+): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  const propAccess = node.expression
+  return (
+    propAccess.name.text === 'cancel' &&
+    ts.isIdentifier(propAccess.expression) &&
+    propAccess.expression.text === 'workflow'
+  )
+}
+
+/**
  * Check if an expression is Promise.all(array.map(...))
  */
 export function isParallelFanout(node: ts.CallExpression): boolean {

@@ -82,6 +82,13 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   // Wait for org setup to complete
   await workflow.sleep('Wait for org initialization', '2s')
 
+  /**
+   * Cancel if no members to invite
+   */
+  if (data.memberEmails.length === 0) {
+    await workflow.cancel('No members to invite')
+  }
+
   // Step 2: Conditional owner creation for enterprise/premium plans with complex conditions
   // Create owner if:
   // - (Enterprise plan AND has more than 5 members) OR
