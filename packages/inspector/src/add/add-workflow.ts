@@ -226,7 +226,13 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     }
   }
 
-  getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+  /**
+   * Only do basic extraction for non-simple workflows.
+   * Simple workflows already have properly extracted steps.
+   */
+  if (!simple) {
+    getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+  }
 
   state.workflows.meta[workflowName] = {
     pikkuFuncName,
