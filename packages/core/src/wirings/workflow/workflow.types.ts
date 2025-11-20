@@ -183,17 +183,32 @@ export interface RpcStepMeta {
 }
 
 /**
+ * Simple condition expression (leaf node)
+ */
+export interface SimpleCondition {
+  type: 'simple'
+  expression: string
+}
+
+/**
+ * Nested condition structure supporting AND/OR operations
+ */
+export type Condition =
+  | SimpleCondition
+  | { type: 'and'; conditions: Condition[] }
+  | { type: 'or'; conditions: Condition[] }
+
+/**
  * Branch step metadata (if/else control flow)
  */
 export interface BranchStepMeta {
   type: 'branch'
-  /** Condition expression (as source string) */
-  condition: string
-  /** Branch paths */
-  branches: {
-    then: WorkflowStepMeta[]
-    else?: WorkflowStepMeta[]
-  }
+  /** Nested condition structure */
+  conditions: Condition
+  /** Then branch steps */
+  thenSteps: WorkflowStepMeta[]
+  /** Else branch steps (optional) */
+  elseSteps?: WorkflowStepMeta[]
 }
 
 /**

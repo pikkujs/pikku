@@ -17,6 +17,8 @@ export type {
   CancelStepMeta,
   InputSource,
   OutputBinding,
+  Condition,
+  SimpleCondition,
   PikkuWorkflowWire,
   PikkuWorkflow,
   WorkflowsMeta,

@@ -8,6 +8,7 @@ import {
   ReturnStepMeta,
   InputSource,
   OutputBinding,
+  Condition,
 } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
@@ -510,13 +511,50 @@ function extractSleepStep(
 }
 
 /**
+ * Parse a condition expression into a Condition structure
+ */
+function parseCondition(expr: ts.Expression): Condition {
+  // Handle binary expressions (&&, ||)
+  if (ts.isBinaryExpression(expr)) {
+    const operator = expr.operatorToken.kind
+
+    // AND operator (&&)
+    if (operator === ts.SyntaxKind.AmpersandAmpersandToken) {
+      return {
+        type: 'and',
+        conditions: [parseCondition(expr.left), parseCondition(expr.right)],
+      }
+    }
+
+    // OR operator (||)
+    if (operator === ts.SyntaxKind.BarBarToken) {
+      return {
+        type: 'or',
+        conditions: [parseCondition(expr.left), parseCondition(expr.right)],
+      }
+    }
+  }
+
+  // Handle parenthesized expressions - unwrap and parse inner
+  if (ts.isParenthesizedExpression(expr)) {
+    return parseCondition(expr.expression)
+  }
+
+  // Simple condition (comparison, function call, variable, etc.)
+  return {
+    type: 'simple',
+    expression: getSourceText(expr),
+  }
+}
+
+/**
  * Extract branch step from if statement
  */
 function extractBranch(
   statement: ts.IfStatement,
   context: ExtractionContext
 ): BranchStepMeta | null {
-  const condition = getSourceText(statement.expression)
+  const conditions = parseCondition(statement.expression)
 
   // Handle both block statements and single statements
   const thenSteps = ts.isBlock(statement.thenStatement)
@@ -531,11 +569,9 @@ function extractBranch(
 
   return {
     type: 'branch',
-    condition,
-    branches: {
-      then: thenSteps,
-      else: elseSteps,
-    },
+    conditions,
+    thenSteps,
+    elseSteps,
   }
 }
 

@@ -79,9 +79,15 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
     name: data.name,
   })
 
-  // Step 2: Conditional owner creation for enterprise plans
+  // Step 2: Conditional owner creation for enterprise/premium plans with complex conditions
+  // Create owner if:
+  // - (Enterprise plan AND has more than 5 members) OR
+  // - (Premium plan AND organization name includes 'Corp')
   let owner: { id: string; orgId: string; email: string } | undefined
-  if (data.plan === 'enterprise') {
+  if (
+    (data.plan === 'enterprise' && data.memberEmails.length > 5) ||
+    (data.plan === 'premium' && data.name.includes('Corp'))
+  ) {
     owner = await workflow.do(
       'Create owner',
       'createOwner',
