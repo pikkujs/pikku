@@ -157,10 +157,8 @@ export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
     }
 
     if (ts.isAwaitExpression(node)) {
-      // Mark child as awaited
-      ts.forEachChild(node.expression, (child) =>
-        visit(child, true, insidePromiseAll)
-      )
+      // Visit the expression itself with parentIsAwait=true
+      visit(node.expression, true, insidePromiseAll)
     } else {
       ts.forEachChild(node, (child) => visit(child, false, insidePromiseAll))
     }
