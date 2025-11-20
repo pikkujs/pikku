@@ -9,6 +9,8 @@ import {
   CancelStepMeta,
   SwitchStepMeta,
   SwitchCaseMeta,
+  FilterStepMeta,
+  ArrayPredicateStepMeta,
   InputSource,
   OutputBinding,
   Condition,
@@ -24,6 +26,9 @@ import {
   isParallelFanout,
   isParallelGroup,
   isSequentialFanout,
+  isArrayFilter,
+  isArraySome,
+  isArrayEvery,
   extractForOfVariable,
   isArrayType,
   getSourceText,
@@ -321,6 +326,30 @@ function extractVariableDeclaration(
         }
 
         return step
+      }
+    }
+  }
+
+  // Check for array.filter(...)
+  if (ts.isCallExpression(init)) {
+    if (isArrayFilter(init)) {
+      const filterStep = extractArrayFilter(init, context, varName)
+      if (filterStep) {
+        const type = context.checker.getTypeAtLocation(decl)
+        context.outputVars.set(varName, { type, node: decl })
+        if (isArrayType(type, context.checker)) {
+          context.arrayVars.add(varName)
+        }
+        return filterStep
+      }
+    }
+
+    if (isArraySome(init) || isArrayEvery(init)) {
+      const predicateStep = extractArrayPredicate(init, context, varName)
+      if (predicateStep) {
+        const type = context.checker.getTypeAtLocation(decl)
+        context.outputVars.set(varName, { type, node: decl })
+        return predicateStep
       }
     }
   }
@@ -692,6 +721,120 @@ function extractCaseSteps(
   }
 
   return steps
+}
+
+/**
+ * Extract array filter operation
+ */
+function extractArrayFilter(
+  call: ts.CallExpression,
+  context: ExtractionContext,
+  outputVar?: string
+): FilterStepMeta | null {
+  if (!ts.isPropertyAccessExpression(call.expression)) {
+    return null
+  }
+
+  const sourceExpr = call.expression.expression
+  let sourceVar: string | null = null
+
+  if (ts.isIdentifier(sourceExpr)) {
+    sourceVar = sourceExpr.text
+  } else if (
+    ts.isPropertyAccessExpression(sourceExpr) &&
+    ts.isIdentifier(sourceExpr.expression)
+  ) {
+    sourceVar = sourceExpr.expression.text
+  }
+
+  if (!sourceVar) {
+    return null
+  }
+
+  const filterFn = call.arguments[0]
+  if (!filterFn || !ts.isArrowFunction(filterFn)) {
+    return null
+  }
+
+  const itemParam = filterFn.parameters[0]
+  if (!itemParam || !ts.isIdentifier(itemParam.name)) {
+    return null
+  }
+
+  const itemVar = itemParam.name.text
+
+  let condition: Condition
+  if (ts.isBlock(filterFn.body)) {
+    return null
+  } else {
+    condition = parseCondition(filterFn.body)
+  }
+
+  return {
+    type: 'filter',
+    sourceVar,
+    itemVar,
+    condition,
+    outputVar,
+  }
+}
+
+/**
+ * Extract array predicate operation (some/every)
+ */
+function extractArrayPredicate(
+  call: ts.CallExpression,
+  context: ExtractionContext,
+  outputVar?: string
+): ArrayPredicateStepMeta | null {
+  if (!ts.isPropertyAccessExpression(call.expression)) {
+    return null
+  }
+
+  const mode = call.expression.name.text as 'some' | 'every'
+  const sourceExpr = call.expression.expression
+  let sourceVar: string | null = null
+
+  if (ts.isIdentifier(sourceExpr)) {
+    sourceVar = sourceExpr.text
+  } else if (
+    ts.isPropertyAccessExpression(sourceExpr) &&
+    ts.isIdentifier(sourceExpr.expression)
+  ) {
+    sourceVar = sourceExpr.expression.text
+  }
+
+  if (!sourceVar) {
+    return null
+  }
+
+  const predicateFn = call.arguments[0]
+  if (!predicateFn || !ts.isArrowFunction(predicateFn)) {
+    return null
+  }
+
+  const itemParam = predicateFn.parameters[0]
+  if (!itemParam || !ts.isIdentifier(itemParam.name)) {
+    return null
+  }
+
+  const itemVar = itemParam.name.text
+
+  let condition: Condition
+  if (ts.isBlock(predicateFn.body)) {
+    return null
+  } else {
+    condition = parseCondition(predicateFn.body)
+  }
+
+  return {
+    type: 'arrayPredicate',
+    mode,
+    sourceVar,
+    itemVar,
+    condition,
+    outputVar,
+  }
 }
 
 /**

@@ -17,6 +17,8 @@ export type {
   CancelStepMeta,
   SwitchStepMeta,
   SwitchCaseMeta,
+  FilterStepMeta,
+  ArrayPredicateStepMeta,
   InputSource,
   OutputBinding,
   Condition,

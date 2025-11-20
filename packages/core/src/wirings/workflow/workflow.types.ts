@@ -308,6 +308,38 @@ export interface SwitchStepMeta {
 }
 
 /**
+ * Filter step metadata (array.filter)
+ */
+export interface FilterStepMeta {
+  type: 'filter'
+  /** Source array variable name */
+  sourceVar: string
+  /** Iterator variable name */
+  itemVar: string
+  /** Filter condition */
+  condition: Condition
+  /** Output variable name (if assigned) */
+  outputVar?: string
+}
+
+/**
+ * Array predicate step metadata (array.some, array.every)
+ */
+export interface ArrayPredicateStepMeta {
+  type: 'arrayPredicate'
+  /** Predicate mode */
+  mode: 'some' | 'every'
+  /** Source array variable name */
+  sourceVar: string
+  /** Iterator variable name */
+  itemVar: string
+  /** Predicate condition */
+  condition: Condition
+  /** Output variable name (if assigned) */
+  outputVar?: string
+}
+
+/**
  * Workflow step metadata (extracted by inspector)
  */
 export type WorkflowStepMeta =
@@ -320,6 +352,8 @@ export type WorkflowStepMeta =
   | SleepStepMeta
   | CancelStepMeta
   | SwitchStepMeta
+  | FilterStepMeta
+  | ArrayPredicateStepMeta
 
 /**
  * Workflow step wire context for RPC functions

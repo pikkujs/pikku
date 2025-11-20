@@ -122,9 +122,18 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
     await workflow.sleep('Wait after owner setup', '1s')
   }
 
-  // Step 4: Parallel member invitations
+  // Step 4: Filter, some, and every examples
+  const validEmails = data.memberEmails.filter((email) => email.includes('@'))
+  const hasGmailUser = data.memberEmails.some((email) =>
+    email.endsWith('@gmail.com')
+  )
+  const allFromSameDomain = data.memberEmails.every((email) =>
+    email.endsWith('@example.com')
+  )
+
+  // Step 5: Parallel member invitations (using filtered emails)
   await Promise.all(
-    data.memberEmails.map(
+    validEmails.map(
       async (email) =>
         await workflow.do(`Invite member ${email}`, 'inviteMember', {
           orgId: org.id,
@@ -136,7 +145,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   // Wait to avoid email rate limits
   await workflow.sleep('Wait before welcome email', '3s')
 
-  // Step 5: Send welcome email
+  // Step 6: Send welcome email
   await workflow.do('Send welcome email', 'sendWelcomeEmail', {
     to: data.email,
     orgId: org.id,

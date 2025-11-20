@@ -62,6 +62,39 @@ export function isWorkflowCancelCall(
 }
 
 /**
+ * Check if a call expression is array.filter()
+ */
+export function isArrayFilter(node: ts.CallExpression): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  return node.expression.name.text === 'filter'
+}
+
+/**
+ * Check if a call expression is array.some()
+ */
+export function isArraySome(node: ts.CallExpression): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  return node.expression.name.text === 'some'
+}
+
+/**
+ * Check if a call expression is array.every()
+ */
+export function isArrayEvery(node: ts.CallExpression): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  return node.expression.name.text === 'every'
+}
+
+/**
  * Check if an expression is Promise.all(array.map(...))
  */
 export function isParallelFanout(node: ts.CallExpression): boolean {
