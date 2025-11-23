@@ -50,10 +50,7 @@ Standard npm package.json with proper exports:
     "./.pikku/pikku-bootstrap.gen.js": "./.pikku/pikku-bootstrap.gen.js",
     "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json"
   },
-  "files": [
-    "dist",
-    ".pikku"
-  ],
+  "files": ["dist", ".pikku"],
   "peerDependencies": {
     "@pikku/core": "^1.0.0"
   }
@@ -72,10 +69,13 @@ export interface StripeConfig extends PackageConfig {
   stripeWebhookSecret?: string
 }
 
-export const createConfig: CreatePackageConfig<StripeConfig> = (parentConfig) => {
+export const createConfig: CreatePackageConfig<StripeConfig> = (
+  parentConfig
+) => {
   return {
     stripeApiKey: parentConfig.STRIPE_API_KEY || process.env.STRIPE_API_KEY,
-    stripeWebhookSecret: parentConfig.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET,
+    stripeWebhookSecret:
+      parentConfig.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET,
   }
 }
 ```
@@ -229,7 +229,10 @@ Auto-generated bootstrap file that registers the package:
 ```typescript
 import { packageLoader } from '@pikku/core'
 import { createConfig } from '../dist/config.js'
-import { createSingletonServices, createWireServices } from '../dist/services.js'
+import {
+  createSingletonServices,
+  createWireServices,
+} from '../dist/services.js'
 import metadata from './pikku-metadata.gen.json' assert { type: 'json' }
 
 // Self-register on import

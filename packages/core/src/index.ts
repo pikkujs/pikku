@@ -37,6 +37,7 @@ export {
 export { addPermission } from './permissions.js'
 export { NamespaceResolver } from './packages/namespace-resolver.js'
 export type { ResolvedFunction } from './packages/namespace-resolver.js'
+export { PackageLoader, packageLoader } from './packages/package-loader.js'
 export type {
   PackageConfig,
   CreatePackageConfig,

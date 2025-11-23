@@ -1,13 +1,23 @@
-import { CoreServices, PikkuWire } from '../../types/core.types.js'
+import {
+  CoreServices,
+  PikkuWire,
+  CoreSingletonServices,
+} from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuRPC } from './rpc-types.js'
+import { packageLoader } from '../../packages/package-loader.js'
+import { NamespaceResolver } from '../../packages/namespace-resolver.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
   coerceDataFromSchema: boolean
+  externalPackages?: Record<string, string>
 }
+
+// Global namespace resolver instance
+let namespaceResolver: NamespaceResolver = new NamespaceResolver({})
 
 const getPikkuFunctionName = (rpcName: string): string => {
   const rpc = pikkuState('', 'rpc', 'meta')
@@ -55,6 +65,17 @@ export class ContextAwareRPCService {
           }
         : undefined,
     }
+
+    // Check if it's a namespaced function call (e.g., 'stripe:createCharge')
+    if (funcName.includes(':')) {
+      return this.invokeExternalPackageFunction<In, Out>(
+        funcName,
+        data,
+        updatedWire
+      )
+    }
+
+    // Main package function
     return runPikkuFunc<In, Out>(
       'rpc',
       funcName,
@@ -69,6 +90,87 @@ export class ContextAwareRPCService {
         wire: updatedWire,
       }
     )
+  }
+
+  /**
+   * Invoke a function from an external package
+   * @private
+   */
+  private async invokeExternalPackageFunction<In = any, Out = any>(
+    namespacedFunction: string,
+    data: In,
+    wire: PikkuWire
+  ): Promise<Out> {
+    // Resolve namespace to package name
+    const resolved = namespaceResolver.resolve(namespacedFunction)
+    if (!resolved) {
+      throw new Error(
+        `Unknown namespace in function reference: ${namespacedFunction}. ` +
+          `Make sure the package is registered in externalPackages config.`
+      )
+    }
+
+    // Get the loaded package
+    const pkg = packageLoader.getLoadedPackage(resolved.package)
+    if (!pkg) {
+      throw new Error(
+        `Package not loaded: ${resolved.package}. ` +
+          `Make sure the package is loaded during initialization.`
+      )
+    }
+
+    // Lazy-initialize package services if needed
+    if (!pkg.singletons) {
+      const parentServices = this.services as CoreSingletonServices
+      await packageLoader.ensureServicesInitialized(
+        resolved.package,
+        parentServices
+      )
+    }
+
+    // Get the function from package state
+    const funcConfig = packageLoader.getFunction(
+      resolved.package,
+      resolved.function
+    )
+    if (!funcConfig) {
+      throw new Error(
+        `Function not found: ${resolved.function} in package ${resolved.package}`
+      )
+    }
+
+    // Get function metadata
+    const funcMeta = pikkuState(resolved.package, 'function', 'meta')[
+      resolved.function
+    ]
+    if (!funcMeta) {
+      throw new Error(
+        `Function metadata not found: ${resolved.function} in package ${resolved.package}`
+      )
+    }
+
+    // Create wire services for this package
+    const packageWireServices = await pkg.registration.createWireServices(
+      pkg.singletons!
+    )
+
+    // Create combined services (package singletons + wire services)
+    const packageServices = {
+      ...pkg.singletons,
+      ...packageWireServices,
+    }
+
+    // Execute the function directly with package services
+    const wireWithSession = {
+      ...wire,
+      session: this.wire.session,
+    }
+
+    return (await funcConfig.func(
+      packageServices,
+      data,
+      wireWithSession
+    )) as Out
   }
 
   public async rpcWithWire<In = any, Out = any>(
@@ -127,6 +229,11 @@ export class PikkuRPCService<
   // Initialize the RPC service with configuration
   initialize(config: RPCServiceConfig) {
     this.config = config
+
+    // Initialize namespace resolver with external packages
+    if (config.externalPackages) {
+      namespaceResolver = new NamespaceResolver(config.externalPackages)
+    }
   }
 
   // Convenience function for initializing
