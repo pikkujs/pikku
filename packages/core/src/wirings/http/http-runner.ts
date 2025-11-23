@@ -70,7 +70,7 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   pattern: string,
   middleware: CorePikkuMiddlewareGroup
 ): CorePikkuMiddlewareGroup => {
-  const httpGroups = pikkuState('middleware', 'httpGroup')
+  const httpGroups = pikkuState('', 'middleware', 'httpGroup')
   httpGroups[pattern] = middleware
   return middleware
 }
@@ -108,7 +108,7 @@ export const addHTTPPermission = <PikkuPermission extends CorePikkuPermission>(
   pattern: string,
   permissions: CorePermissionGroup | CorePikkuPermission[]
 ): CorePermissionGroup | CorePikkuPermission[] => {
-  const httpGroups = pikkuState('permissions', 'httpGroup')
+  const httpGroups = pikkuState('', 'permissions', 'httpGroup')
   httpGroups[pattern] = permissions
   return permissions
 }
@@ -151,17 +151,17 @@ export const wireHTTP = <
     PikkuMiddleware
   >
 ) => {
-  const httpMeta = pikkuState('http', 'meta')
+  const httpMeta = pikkuState('', 'http', 'meta')
   const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
   addFunction(routeMeta.pikkuFuncName, httpWiring.func)
-  const routes = pikkuState('http', 'routes')
+  const routes = pikkuState('', 'http', 'routes')
   if (!routes.has(httpWiring.method)) {
     routes.set(httpWiring.method, new Map())
   }
-  pikkuState('http', 'routes')
+  pikkuState('', 'http', 'routes')
     .get(httpWiring.method)
     ?.set(httpWiring.route, httpWiring as any)
 }
@@ -184,10 +184,10 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
   )
 
   if (matchedPath) {
-    const route = pikkuState('http', 'routes')
+    const route = pikkuState('', 'http', 'routes')
       .get(requestType.toLowerCase() as HTTPMethod)!
       .get(matchedPath.route)!
-    const meta = pikkuState('http', 'meta')[
+    const meta = pikkuState('', 'http', 'meta')[
       requestType.toLowerCase() as PikkuWiringTypes
     ][route.route]
 

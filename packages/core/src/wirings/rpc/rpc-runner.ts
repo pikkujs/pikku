@@ -10,7 +10,7 @@ type RPCServiceConfig = {
 }
 
 const getPikkuFunctionName = (rpcName: string): string => {
-  const rpc = pikkuState('rpc', 'meta')
+  const rpc = pikkuState('', 'rpc', 'meta')
   const rpcMeta = rpc[rpcName]
   if (!rpcMeta) {
     throw new Error(`RPC function not found: ${rpcName}`)
@@ -30,7 +30,7 @@ export class ContextAwareRPCService {
   ) {}
 
   public async rpcExposed(funcName: string, data: any): Promise<any> {
-    const functionMeta = pikkuState('function', 'meta')[funcName]
+    const functionMeta = pikkuState('', 'function', 'meta')[funcName]
     if (!functionMeta) {
       throw new Error(`Function not found: ${funcName}`)
     }

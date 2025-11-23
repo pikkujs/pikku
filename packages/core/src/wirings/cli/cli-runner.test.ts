@@ -30,7 +30,7 @@ describe('CLI Runner', () => {
 
   describe('runCLICommand', () => {
     test('should throw NotFoundError when program not found', async () => {
-      pikkuState('cli', 'meta', { programs: {}, renderers: {} })
+      pikkuState('', 'cli', 'meta', { programs: {}, renderers: {} })
 
       await assert.rejects(
         async () =>
@@ -45,7 +45,7 @@ describe('CLI Runner', () => {
     })
 
     test('should throw NotFoundError when command not found', async () => {
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'test-cli': {
             program: 'test-cli',
@@ -56,7 +56,7 @@ describe('CLI Runner', () => {
         renderers: {},
       })
 
-      pikkuState('cli', 'programs', {
+      pikkuState('', 'cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
           middleware: [],
@@ -84,7 +84,7 @@ describe('CLI Runner', () => {
       }
 
       // Setup metadata
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'test-cli': {
             program: 'test-cli',
@@ -102,7 +102,7 @@ describe('CLI Runner', () => {
         renderers: {},
       })
 
-      pikkuState('cli', 'programs', {
+      pikkuState('', 'cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
           middleware: [],
@@ -110,7 +110,7 @@ describe('CLI Runner', () => {
         },
       })
 
-      pikkuState('function', 'meta', {
+      pikkuState('', 'function', 'meta', {
         greetFunc: {
           pikkuFuncName: 'greetFunc',
           inputSchemaName: null,
@@ -148,7 +148,7 @@ describe('CLI Runner', () => {
         return { success: true }
       }
 
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'test-cli': {
             program: 'test-cli',
@@ -166,7 +166,7 @@ describe('CLI Runner', () => {
         renderers: {},
       })
 
-      pikkuState('cli', 'programs', {
+      pikkuState('', 'cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
           middleware: [testMiddleware],
@@ -174,7 +174,7 @@ describe('CLI Runner', () => {
         },
       })
 
-      pikkuState('function', 'meta', {
+      pikkuState('', 'function', 'meta', {
         testFunc: {
           pikkuFuncName: 'testFunc',
           inputSchemaName: null,
@@ -208,7 +208,7 @@ describe('CLI Runner', () => {
 
       const testFunc = async () => ({ success: true })
 
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'test-cli': {
             program: 'test-cli',
@@ -226,7 +226,7 @@ describe('CLI Runner', () => {
         renderers: {},
       })
 
-      pikkuState('cli', 'programs', {
+      pikkuState('', 'cli', 'programs', {
         'test-cli': {
           defaultRenderer: undefined,
           middleware: [testMiddleware],
@@ -234,7 +234,7 @@ describe('CLI Runner', () => {
         },
       })
 
-      pikkuState('function', 'meta', {
+      pikkuState('', 'function', 'meta', {
         greetFunc: {
           pikkuFuncName: 'greetFunc',
           inputSchemaName: null,
@@ -260,7 +260,7 @@ describe('CLI Runner', () => {
     test('should throw error when auth required but no session', async () => {
       const testFunc = async () => ({ success: true })
 
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'test-cli': {
             program: 'test-cli',
@@ -278,7 +278,7 @@ describe('CLI Runner', () => {
         renderers: {},
       })
 
-      pikkuState('function', 'meta', {
+      pikkuState('', 'function', 'meta', {
         secureFunc: {
           pikkuFuncName: 'secureFunc',
           inputSchemaName: null,
@@ -306,7 +306,7 @@ describe('CLI Runner', () => {
     test('should register CLI program and commands', () => {
       const greetFunc = async () => 'Hello'
 
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'my-cli': {
             program: 'my-cli',
@@ -337,7 +337,7 @@ describe('CLI Runner', () => {
         },
       })
 
-      const programs = pikkuState('cli', 'programs')
+      const programs = pikkuState('', 'cli', 'programs')
       assert.ok(programs['my-cli'])
       assert.strictEqual(programs['my-cli'].middleware.length, 0)
     })
@@ -347,7 +347,7 @@ describe('CLI Runner', () => {
         await next()
       }
 
-      pikkuState('cli', 'meta', {
+      pikkuState('', 'cli', 'meta', {
         programs: {
           'my-cli': {
             program: 'my-cli',
@@ -364,13 +364,13 @@ describe('CLI Runner', () => {
         middleware: [middleware],
       })
 
-      const programs = pikkuState('cli', 'programs')
+      const programs = pikkuState('', 'cli', 'programs')
       assert.strictEqual(programs['my-cli'].middleware.length, 1)
       assert.strictEqual(programs['my-cli'].middleware[0], middleware)
     })
 
     test('should throw error when CLI metadata not found', () => {
-      pikkuState('cli', 'meta', { programs: {}, renderers: {} })
+      pikkuState('', 'cli', 'meta', { programs: {}, renderers: {} })
 
       assert.throws(() => {
         wireCLI({

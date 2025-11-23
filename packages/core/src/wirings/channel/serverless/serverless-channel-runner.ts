@@ -35,9 +35,9 @@ const getVariablesForChannel = ({
   channelHandlerFactory: PikkuChannelHandlerFactory
   openingData?: unknown
 }) => {
-  const channels = pikkuState('channel', 'channels')
+  const channels = pikkuState('', 'channel', 'channels')
   const channelConfig = channels.get(channelName)
-  const channelsMeta = pikkuState('channel', 'meta')
+  const channelsMeta = pikkuState('', 'channel', 'meta')
   const meta = channelsMeta[channelName]
   if (!channelConfig) {
     throw new Error(`Channel not found: ${channelName}`)

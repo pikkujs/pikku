@@ -17,7 +17,7 @@ const getRouteMeta = (
   routingProperty?: string,
   routerValue?: string
 ): ChannelMessageMeta => {
-  const channelMeta = pikkuState('channel', 'meta')[channelName]
+  const channelMeta = pikkuState('', 'channel', 'meta')[channelName]
   if (!channelMeta) {
     throw new Error(`Channel ${channelName} not found`)
   }

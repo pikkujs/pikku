@@ -23,7 +23,7 @@ export const serializeSchedulerMetaTS = (
   serializedOutput.push(importStatement)
   serializedOutput.push('')
   serializedOutput.push(
-    "pikkuState('scheduler', 'meta', metaData as ScheduledTasksMeta)"
+    "pikkuState('', 'scheduler', 'meta', metaData as ScheduledTasksMeta)"
   )
   serializedOutput.push('')
 

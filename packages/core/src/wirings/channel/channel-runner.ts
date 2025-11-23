@@ -33,13 +33,13 @@ export const wireChannel = <
   >
 ) => {
   // Get the channel metadata
-  const channelsMeta = pikkuState('channel', 'meta')
+  const channelsMeta = pikkuState('', 'channel', 'meta')
   const channelMeta = channelsMeta[channel.name]
   if (!channelMeta) {
     throw new Error(`Channel metadata not found for channel: ${channel.name}`)
   }
 
-  pikkuState('channel', 'channels').set(channel.name, channel as any)
+  pikkuState('', 'channel', 'channels').set(channel.name, channel as any)
 
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {
@@ -89,7 +89,7 @@ export const wireChannel = <
   }
 
   // Store the channel configuration
-  pikkuState('channel', 'channels').set(channel.name, channel as any)
+  pikkuState('', 'channel', 'channels').set(channel.name, channel as any)
 }
 
 const getMatchingChannelConfig = (path: string) => {
@@ -98,7 +98,7 @@ const getMatchingChannelConfig = (path: string) => {
     return null
   }
 
-  const meta = pikkuState('channel', 'meta')
+  const meta = pikkuState('', 'channel', 'meta')
   const channelMeta = Object.values(meta).find(
     (channelConfig) => channelConfig.route === matchedPath.route
   )
@@ -106,7 +106,7 @@ const getMatchingChannelConfig = (path: string) => {
     return null
   }
 
-  const channels = pikkuState('channel', 'channels')
+  const channels = pikkuState('', 'channel', 'channels')
   const channelConfig = channels.get(channelMeta.name)
   if (!channelConfig) {
     return null

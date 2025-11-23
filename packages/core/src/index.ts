@@ -23,10 +23,29 @@ export * from './errors/index.js'
 export * from './middleware/index.js'
 export * from './utils.js'
 export * from './time-utils.js'
-export { pikkuState } from './pikku-state.js'
+export {
+  pikkuState,
+  initializePackageState,
+  resetPikkuState,
+} from './pikku-state.js'
+export type { PackagePikkuState, PikkuState } from './pikku-state.js'
 export {
   runMiddleware,
   addMiddleware,
   getMiddlewareByName,
 } from './middleware-runner.js'
 export { addPermission } from './permissions.js'
+export { NamespaceResolver } from './packages/namespace-resolver.js'
+export type { ResolvedFunction } from './packages/namespace-resolver.js'
+export type {
+  PackageConfig,
+  CreatePackageConfig,
+  PackageSingletonServices,
+  CreatePackageSingletonServices,
+  PackageWireServices,
+  CreatePackageWireServices,
+  PackageMetadata,
+  PackageRegistration,
+  LoadedPackage,
+  ServiceHydrationOptions,
+} from './packages/package-loader.types.js'

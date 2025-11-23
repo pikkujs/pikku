@@ -25,8 +25,8 @@ export class PathToRegexRouter implements Router {
   }
 
   public initialize() {
-    const routes = pikkuState('http', 'routes')
-    const channelRoutes = pikkuState('channel', 'channels')
+    const routes = pikkuState('', 'http', 'routes')
+    const channelRoutes = pikkuState('', 'channel', 'channels')
 
     // Helper function to compile routes for a given method
     const compileRoutesForMethod = (

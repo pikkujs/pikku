@@ -17,13 +17,13 @@ const sessionMiddleware: CorePikkuMiddleware = async (services, wire, next) => {
 }
 
 const setHTTPFunctionMap = (func: any) => {
-  pikkuState('function', 'meta', {
+  pikkuState('', 'function', 'meta', {
     pikku_func_name: {
       pikkuFuncName: 'pikku_func_name',
       services: ['userSession'],
     },
   } as any)
-  pikkuState('http', 'meta', {
+  pikkuState('', 'http', 'meta', {
     get: {
       test: {
         pikkuFuncName: 'pikku_func_name',

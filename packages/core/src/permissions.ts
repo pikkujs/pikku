@@ -74,7 +74,7 @@ export const registerPermission = (
   name: string,
   permission: CorePikkuPermission<any>
 ) => {
-  const permissionStore = pikkuState('misc', 'permissions')
+  const permissionStore = pikkuState('', 'misc', 'permissions')
   permissionStore[name] = [permission]
 }
 
@@ -92,7 +92,7 @@ export const registerPermission = (
 export const getPermissionByName = (
   name: string
 ): CorePikkuPermission | undefined => {
-  const permissionStore = pikkuState('misc', 'permissions')
+  const permissionStore = pikkuState('', 'misc', 'permissions')
   const permission = permissionStore[name]
   if (Array.isArray(permission) && permission.length === 1) {
     return permission[0]
@@ -132,7 +132,7 @@ export const addPermission = (
   tag: string,
   permissions: CorePermissionGroup | CorePikkuPermission[]
 ): CorePermissionGroup | CorePikkuPermission[] => {
-  const tagGroups = pikkuState('permissions', 'tagGroup')
+  const tagGroups = pikkuState('', 'permissions', 'tagGroup')
   if (tagGroups[tag]) {
     throw new Error(
       `Permissions for tag '${tag}' already exist. Use a different tag or remove the existing permissions first.`
@@ -166,7 +166,7 @@ export const getPermissionsForTags = (
     return EMPTY
   }
 
-  const permissionsStore = pikkuState('permissions', 'tagGroup')
+  const permissionsStore = pikkuState('', 'permissions', 'tagGroup')
   const applicablePermissions: Array<
     CorePermissionGroup | CorePikkuPermission
   > = []
@@ -250,7 +250,7 @@ export const combinePermissions = (
     for (const meta of wireInheritedPermissions) {
       if (meta.type === 'http') {
         // Look up HTTP permission group from pikkuState
-        const group = pikkuState('permissions', 'httpGroup')[meta.route]
+        const group = pikkuState('', 'permissions', 'httpGroup')[meta.route]
         if (group) {
           if (Array.isArray(group)) {
             resolved.push(...group)
@@ -260,7 +260,7 @@ export const combinePermissions = (
         }
       } else if (meta.type === 'tag') {
         // Look up tag permission group from pikkuState
-        const group = pikkuState('permissions', 'tagGroup')[meta.tag]
+        const group = pikkuState('', 'permissions', 'tagGroup')[meta.tag]
         if (group) {
           if (Array.isArray(group)) {
             resolved.push(...group)
@@ -292,7 +292,7 @@ export const combinePermissions = (
     for (const meta of funcInheritedPermissions) {
       if (meta.type === 'tag') {
         // Look up tag permission group from pikkuState
-        const group = pikkuState('permissions', 'tagGroup')[meta.tag]
+        const group = pikkuState('', 'permissions', 'tagGroup')[meta.tag]
         if (group) {
           if (Array.isArray(group)) {
             resolved.push(...group)

@@ -39,7 +39,7 @@ const createMockJob = (
 })
 
 const addTestQueueFunction = (pikkuFuncName: string) => {
-  pikkuState('function', 'meta')[pikkuFuncName] = {
+  pikkuState('', 'function', 'meta')[pikkuFuncName] = {
     pikkuFuncName,
     inputSchemaName: null,
     outputSchemaName: null,
@@ -61,14 +61,14 @@ describe('wireQueueWorker', () => {
     }
 
     // Set up metadata first
-    pikkuState('queue', 'meta')['test-queue'] = {
+    pikkuState('', 'queue', 'meta')['test-queue'] = {
       pikkuFuncName: 'queue_test-queue',
       queueName: 'test-queue',
     }
     addTestQueueFunction('queue_test-queue')
     wireQueueWorker(mockWorker)
 
-    const registrations = pikkuState('queue', 'registrations')
+    const registrations = pikkuState('', 'queue', 'registrations')
     assert.equal(registrations.has('test-queue'), true)
     assert.equal(registrations.get('test-queue'), mockWorker)
   })
@@ -109,14 +109,14 @@ describe('wireQueueWorker', () => {
       tags: ['queue'],
     }
 
-    pikkuState('queue', 'meta')['worker-with-middleware'] = {
+    pikkuState('', 'queue', 'meta')['worker-with-middleware'] = {
       pikkuFuncName: 'queue_worker-with-middleware',
       queueName: 'worker-with-middleware',
     }
     addTestQueueFunction('queue_worker-with-middleware')
     wireQueueWorker(mockWorker)
 
-    const registrations = pikkuState('queue', 'registrations')
+    const registrations = pikkuState('', 'queue', 'registrations')
     const worker = registrations.get('worker-with-middleware')
     assert.equal(worker?.middleware?.length, 1)
     assert.deepEqual(worker?.tags, ['queue'])
@@ -133,7 +133,7 @@ describe('getQueueWorkers', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['test-queue'] = {
+    pikkuState('', 'queue', 'meta')['test-queue'] = {
       pikkuFuncName: 'queue_test-queue',
       queueName: 'test-queue',
     }
@@ -162,7 +162,7 @@ describe('removeQueueWorker', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['removable-queue'] = {
+    pikkuState('', 'queue', 'meta')['removable-queue'] = {
       pikkuFuncName: 'queue_removable-queue',
       queueName: 'removable-queue',
     }
@@ -209,7 +209,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['simple-queue'] = {
+    pikkuState('', 'queue', 'meta')['simple-queue'] = {
       pikkuFuncName: 'queue_simple-queue',
       queueName: 'simple-queue',
     }
@@ -247,7 +247,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['fail-queue'] = {
+    pikkuState('', 'queue', 'meta')['fail-queue'] = {
       pikkuFuncName: 'queue_fail-queue',
       queueName: 'fail-queue',
     }
@@ -285,7 +285,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['fail-no-reason-queue'] = {
+    pikkuState('', 'queue', 'meta')['fail-no-reason-queue'] = {
       pikkuFuncName: 'queue_fail-no-reason-queue',
       queueName: 'fail-no-reason-queue',
     }
@@ -321,7 +321,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['discard-queue'] = {
+    pikkuState('', 'queue', 'meta')['discard-queue'] = {
       pikkuFuncName: 'queue_discard-queue',
       queueName: 'discard-queue',
     }
@@ -364,7 +364,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['progress-queue'] = {
+    pikkuState('', 'queue', 'meta')['progress-queue'] = {
       pikkuFuncName: 'queue_progress-queue',
       queueName: 'progress-queue',
     }
@@ -397,7 +397,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['default-progress-queue'] = {
+    pikkuState('', 'queue', 'meta')['default-progress-queue'] = {
       pikkuFuncName: 'queue_default-progress-queue',
       queueName: 'default-progress-queue',
     }
@@ -431,7 +431,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['wire-queue'] = {
+    pikkuState('', 'queue', 'meta')['wire-queue'] = {
       pikkuFuncName: 'queue_wire-queue',
       queueName: 'wire-queue',
     }
@@ -474,7 +474,7 @@ describe('runQueueJob', () => {
 
   test('should throw error when queue worker registration not found', async () => {
     // Add metadata but not registration
-    pikkuState('queue', 'meta')['no-registration-queue'] = {
+    pikkuState('', 'queue', 'meta')['no-registration-queue'] = {
       pikkuFuncName: 'queue_no-registration-queue',
       queueName: 'no-registration-queue',
     }
@@ -509,7 +509,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['session-services-queue'] = {
+    pikkuState('', 'queue', 'meta')['session-services-queue'] = {
       pikkuFuncName: 'queue_session-services-queue',
       queueName: 'session-services-queue',
     }
@@ -542,7 +542,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['error-queue'] = {
+    pikkuState('', 'queue', 'meta')['error-queue'] = {
       pikkuFuncName: 'queue_error-queue',
       queueName: 'error-queue',
     }
@@ -591,7 +591,7 @@ describe('runQueueJob', () => {
       middleware: [middleware],
     }
 
-    pikkuState('queue', 'meta')['middleware-queue'] = {
+    pikkuState('', 'queue', 'meta')['middleware-queue'] = {
       pikkuFuncName: 'queue_middleware-queue',
       queueName: 'middleware-queue',
     }
@@ -618,7 +618,7 @@ describe('runQueueJob', () => {
       },
     }
 
-    pikkuState('queue', 'meta')['debug-queue'] = {
+    pikkuState('', 'queue', 'meta')['debug-queue'] = {
       pikkuFuncName: 'queue_debug-queue',
       queueName: 'debug-queue',
     }

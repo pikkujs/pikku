@@ -27,7 +27,7 @@ export const addFunction = (
   funcName: string,
   funcConfig: CorePikkuFunctionConfig<any, any>
 ) => {
-  pikkuState('function', 'functions').set(funcName, funcConfig)
+  pikkuState('', 'function', 'functions').set(funcName, funcConfig)
 }
 
 export const runPikkuFuncDirectly = async <In, Out>(
@@ -37,7 +37,7 @@ export const runPikkuFuncDirectly = async <In, Out>(
   data: In,
   userSession?: SessionService<CoreUserSession>
 ) => {
-  const funcConfig = pikkuState('function', 'functions').get(funcName)
+  const funcConfig = pikkuState('', 'function', 'functions').get(funcName)
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
@@ -79,11 +79,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wire: PikkuWire
   }
 ): Promise<Out> => {
-  const funcConfig = pikkuState('function', 'functions').get(funcName)
+  const funcConfig = pikkuState('', 'function', 'functions').get(funcName)
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  const funcMeta = pikkuState('function', 'meta')[funcName]
+  const funcMeta = pikkuState('', 'function', 'meta')[funcName]
   if (!funcMeta) {
     throw new Error(`Function meta not found: ${funcName}`)
   }

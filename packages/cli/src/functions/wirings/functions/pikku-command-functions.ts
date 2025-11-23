@@ -43,7 +43,7 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       functionsMetaFile,
-      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${fullImportStatement}\npikkuState('function', 'meta', metaData as FunctionsMeta)`
+      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${fullImportStatement}\npikkuState('', 'function', 'meta', metaData as FunctionsMeta)`
     )
 
     const runtimeMeta = generateRuntimeMeta(functions.meta)
@@ -66,7 +66,7 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       functionsMetaMinFile,
-      `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${minImportStatement}\npikkuState('function', 'meta', metaData as FunctionsRuntimeMeta)`
+      `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${minImportStatement}\npikkuState('', 'function', 'meta', metaData as FunctionsRuntimeMeta)`
     )
 
     const hasRPCs = rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0

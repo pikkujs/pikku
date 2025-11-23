@@ -22,7 +22,7 @@ export const pikkuHTTP: any = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       httpWiringMetaFile,
-      `import { pikkuState } from '@pikku/core'\npikkuState('http', 'meta', ${JSON.stringify(http.meta, null, 2)})`
+      `import { pikkuState } from '@pikku/core'\npikkuState('', 'http', 'meta', ${JSON.stringify(http.meta, null, 2)})`
     )
 
     return true

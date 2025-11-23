@@ -10,7 +10,7 @@ import { pikkuState } from './pikku-state.js'
  * @ignore
  */
 export const addSchema = (name: string, value: any) => {
-  pikkuState('misc', 'schemas').set(name, value)
+  pikkuState('', 'misc', 'schemas').set(name, value)
 }
 
 /**
@@ -22,7 +22,7 @@ export const addSchema = (name: string, value: any) => {
 export const getSchema = (
   name: string
 ): Record<string, unknown> | undefined => {
-  return pikkuState('misc', 'schemas').get(name)
+  return pikkuState('', 'misc', 'schemas').get(name)
 }
 
 /**
@@ -36,7 +36,7 @@ export const compileAllSchemas = (
   if (!schemaService) {
     throw new Error('SchemaService needs to be defined to load schemas')
   }
-  const schemas = pikkuState('misc', 'schemas')
+  const schemas = pikkuState('', 'misc', 'schemas')
   for (const [name, schema] of schemas) {
     schemaService.compileSchema(name, schema)
   }
@@ -47,14 +47,15 @@ const validateAllSchemasLoaded = (
   logger: Logger,
   schemaService: SchemaService
 ) => {
-  const routesMeta = pikkuState('http', 'meta')
+  const routesMeta = pikkuState('', 'http', 'meta')
   const validators = schemaService.getSchemaNames()
 
   const missingSchemas: string[] = []
 
   for (const routePaths of Object.values(routesMeta)) {
     for (const meta of Object.values(routePaths)) {
-      const inputs = pikkuState('function', 'meta')[meta.pikkuFuncName]?.inputs
+      const inputs = pikkuState('', 'function', 'meta')[meta.pikkuFuncName]
+        ?.inputs
       const input = inputs?.[0]
       if (!input || validators.has(input)) {
         continue
@@ -75,7 +76,7 @@ const validateAllSchemasLoaded = (
 }
 
 export const coerceTopLevelDataFromSchema = (schemaName: string, data: any) => {
-  const schema = pikkuState('misc', 'schemas').get(schemaName)
+  const schema = pikkuState('', 'misc', 'schemas').get(schemaName)
   for (const key in schema.properties) {
     const property = schema.properties[key]
     if (typeof property === 'boolean') {
@@ -108,7 +109,7 @@ export const validateSchema = async (
         return
       }
     }
-    const schema = pikkuState('misc', 'schemas').get(schemaName)
+    const schema = pikkuState('', 'misc', 'schemas').get(schemaName)
     await schemaService.compileSchema(schemaName, schema)
     await schemaService.validateSchema(schemaName, data)
   }

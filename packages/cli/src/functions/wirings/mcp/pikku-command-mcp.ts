@@ -124,9 +124,9 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       `import { pikkuState } from '@pikku/core'
 import type { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 ${importStatement}
-pikkuState('mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)
-pikkuState('mcp', 'toolsMeta', metaData.toolsMeta as MCPToolMeta)
-pikkuState('mcp', 'promptsMeta', metaData.promptsMeta as MCPPromptMeta)`
+pikkuState('', 'mcp', 'resourcesMeta', metaData.resourcesMeta as MCPResourceMeta)
+pikkuState('', 'mcp', 'toolsMeta', metaData.toolsMeta as MCPToolMeta)
+pikkuState('', 'mcp', 'promptsMeta', metaData.promptsMeta as MCPPromptMeta)`
     )
 
     return true
