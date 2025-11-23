@@ -128,49 +128,16 @@ export class ContextAwareRPCService {
       )
     }
 
-    // Get the function from package state
-    const funcConfig = packageLoader.getFunction(
-      resolved.package,
-      resolved.function
-    )
-    if (!funcConfig) {
-      throw new Error(
-        `Function not found: ${resolved.function} in package ${resolved.package}`
-      )
-    }
-
-    // Get function metadata
-    const funcMeta = pikkuState(resolved.package, 'function', 'meta')[
-      resolved.function
-    ]
-    if (!funcMeta) {
-      throw new Error(
-        `Function metadata not found: ${resolved.function} in package ${resolved.package}`
-      )
-    }
-
-    // Create wire services for this package
-    const packageWireServices = await pkg.registration.createWireServices(
-      pkg.singletons!
-    )
-
-    // Create combined services (package singletons + wire services)
-    const packageServices = {
-      ...pkg.singletons,
-      ...packageWireServices,
-    }
-
-    // Execute the function directly with package services
-    const wireWithSession = {
-      ...wire,
-      session: this.wire.session,
-    }
-
-    return (await funcConfig.func(
-      packageServices,
-      data,
-      wireWithSession
-    )) as Out
+    // Execute the function using runPikkuFunc to get auth/middleware/permissions
+    return runPikkuFunc<In, Out>('rpc', namespacedFunction, resolved.function, {
+      auth: this.options.requiresAuth,
+      singletonServices: pkg.singletons as any,
+      createWireServices: pkg.registration.createWireServices as any,
+      data: () => data,
+      coerceDataFromSchema: this.options.coerceDataFromSchema,
+      wire,
+      packageName: resolved.package,
+    })
   }
 
   public async rpcWithWire<In = any, Out = any>(

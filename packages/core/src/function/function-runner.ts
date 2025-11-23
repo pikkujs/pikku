@@ -65,6 +65,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     coerceDataFromSchema,
     tags = [],
     wire,
+    packageName = '',
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
@@ -77,13 +78,16 @@ export const runPikkuFunc = async <In = any, Out = any>(
     coerceDataFromSchema?: boolean
     tags?: string[]
     wire: PikkuWire
+    packageName?: string
   }
 ): Promise<Out> => {
-  const funcConfig = pikkuState('', 'function', 'functions').get(funcName)
+  const funcConfig = pikkuState(packageName, 'function', 'functions').get(
+    funcName
+  )
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  const funcMeta = pikkuState('', 'function', 'meta')[funcName]
+  const funcMeta = pikkuState(packageName, 'function', 'meta')[funcName]
   if (!funcMeta) {
     throw new Error(`Function meta not found: ${funcName}`)
   }
