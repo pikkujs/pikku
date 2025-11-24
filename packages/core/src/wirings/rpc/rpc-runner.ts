@@ -97,7 +97,7 @@ export class ContextAwareRPCService {
         // but is valid since we don't want to keep creating new wire services
         singletonServices: this.services,
         data: () => data,
-                wire: updatedWire,
+        wire: updatedWire,
       }
     )
   }
@@ -124,7 +124,11 @@ export class ContextAwareRPCService {
 
     // Get the function meta from the external package
     // External packages use function meta, not RPC meta
-    const externalFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
+    const externalFunctionMeta = pikkuState(
+      resolved.package,
+      'function',
+      'meta'
+    )
     const funcMeta = externalFunctionMeta[resolved.function]
     if (!funcMeta) {
       throw new Error(
@@ -140,7 +144,7 @@ export class ContextAwareRPCService {
       auth: this.options.requiresAuth,
       singletonServices: this.services,
       data: () => data,
-            wire,
+      wire,
       packageName: resolved.package,
     })
   }
@@ -170,7 +174,7 @@ export class ContextAwareRPCService {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
         data: () => data,
-                wire: mergedWire,
+        wire: mergedWire,
       }
     )
   }
