@@ -44,19 +44,13 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
       )
     )
 
-    // Include remote RPC workers file if it exists
-    const allQueueWorkerFiles = new Set<string>(queueWorkers.files)
-    if (config.rpc?.remoteRpcWorkersPath) {
-      allQueueWorkerFiles.add(config.rpc.remoteRpcWorkersPath)
-    }
-
     await writeFileInDir(
       logger,
       queueWorkersWiringFile,
       serializeFileImports(
         'addQueueWorkers',
         queueWorkersWiringFile,
-        allQueueWorkerFiles,
+        queueWorkers.files,
         packageMappings
       )
     )

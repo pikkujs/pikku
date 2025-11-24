@@ -50,6 +50,9 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
 /**
  * Generic remote RPC worker that invokes any internal RPC by name
  * This is used for executing internal RPCs via a queue (e.g., delayed workflow sleep steps)
+ *
+ * TODO: Security risk - this allows any RPC to be invoked by name. Should validate
+ * that rpcName is in an allowlist of permitted internal RPCs to prevent unauthorized access.
  */
 export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<
   { rpcName: string, data?: any },
