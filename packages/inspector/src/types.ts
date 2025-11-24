@@ -116,6 +116,8 @@ export type InspectorFilters = {
 
 export type InspectorOptions = Partial<{
   setupOnly: boolean
+  /** Project root directory - used to filter out external package files */
+  rootDir: string
   types: Partial<{
     configFileType: string
     userSessionType: string
