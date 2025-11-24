@@ -225,6 +225,7 @@ export const all: any = pikkuVoidFunc({
     }
 
     const stateBeforeBootstrap = await getInspectorState()
+    const externalPackageBootstraps: string[] = []
     if (
       config.externalPackages &&
       stateBeforeBootstrap.rpc?.usedExternalPackages?.size > 0
@@ -233,7 +234,7 @@ export const all: any = pikkuVoidFunc({
         const packageName = config.externalPackages[namespace]
         if (packageName) {
           const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
-          allImports.push(packageBootstrap)
+          externalPackageBootstraps.push(packageBootstrap)
           logger.debug(
             `• External package detected: ${namespace} (${packageName})`
           )
@@ -242,17 +243,19 @@ export const all: any = pikkuVoidFunc({
     }
 
     // Generate main bootstrap file (pass all imports directly since this is the main file)
-    await writeFileInDir(
-      logger,
-      config.bootstrapFile,
-      allImports
-        .map(
-          (to) =>
-            `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
-        )
-        .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
-        .join('\n')
+    const localImports = allImports.map(
+      (to) =>
+        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
     )
+    // External package imports should use package names directly, not relative paths
+    const externalImports = externalPackageBootstraps.map(
+      (packagePath) => `import '${packagePath}'`
+    )
+    const allBootstrapImports = [...localImports, ...externalImports]
+      .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
+      .join('\n')
+
+    await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
 
     // Get final inspector state and collect stats for summary
     const state = await getInspectorState()
