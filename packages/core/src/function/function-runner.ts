@@ -88,7 +88,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  const funcMeta = pikkuState(packageName, 'function', 'meta')[funcName]
+  const allMeta = pikkuState(packageName, 'function', 'meta')
+  const funcMeta = allMeta[funcName]
   if (!funcMeta) {
     throw new Error(`Function meta not found: ${funcName}`)
   }
