@@ -226,6 +226,7 @@ export const all: any = pikkuVoidFunc({
 
     const stateBeforeBootstrap = await getInspectorState()
     const externalPackageBootstraps: string[] = []
+    const usedExternalPackages: Record<string, string> = {}
     if (
       config.externalPackages &&
       stateBeforeBootstrap.rpc?.usedExternalPackages?.size > 0
@@ -235,6 +236,7 @@ export const all: any = pikkuVoidFunc({
         if (packageName) {
           const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
           externalPackageBootstraps.push(packageBootstrap)
+          usedExternalPackages[namespace] = packageName
           logger.debug(
             `• External package detected: ${namespace} (${packageName})`
           )
@@ -251,15 +253,30 @@ export const all: any = pikkuVoidFunc({
     const externalImports = externalPackageBootstraps.map(
       (packagePath) => `import '${packagePath}'`
     )
-    const allBootstrapImports = [...localImports, ...externalImports]
-      .sort((a, b) => {
-        const aMeta = a.includes('meta')
-        const bMeta = b.includes('meta')
-        if (aMeta && !bMeta) return -1
-        if (!aMeta && bMeta) return 1
-        return 0
-      }) // Ensure meta files are at the top
-      .join('\n')
+
+    // Generate code to register external packages in pikkuState
+    let externalPackagesRegistration = ''
+    if (Object.keys(usedExternalPackages).length > 0) {
+      externalPackagesRegistration = `
+// Register external package mappings
+import { pikkuState } from '@pikku/core'
+const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
+${Object.entries(usedExternalPackages)
+  .map(([ns, pkg]) => `externalPackages.set('${ns}', '${pkg}')`)
+  .join('\n')}
+`
+    }
+
+    const allBootstrapImports =
+      [...localImports, ...externalImports]
+        .sort((a, b) => {
+          const aMeta = a.includes('meta')
+          const bMeta = b.includes('meta')
+          if (aMeta && !bMeta) return -1
+          if (!aMeta && bMeta) return 1
+          return 0
+        }) // Ensure meta files are at the top
+        .join('\n') + externalPackagesRegistration
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
 

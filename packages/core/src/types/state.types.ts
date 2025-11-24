@@ -55,6 +55,8 @@ export interface PikkuPackageState {
         path: string
       }
     >
+    /** Maps namespace aliases to package names (e.g., 'ext' -> '@pikku/templates-function-external') */
+    externalPackages: Map<string, string>
   }
   http: {
     middleware: Map<string, CorePikkuMiddleware<any, any>[]>

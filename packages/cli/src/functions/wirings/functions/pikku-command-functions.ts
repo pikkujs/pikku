@@ -73,21 +73,36 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
       `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${minImportStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsRuntimeMeta)`
     )
 
+    // For external packages, register ALL functions (they'll be invoked by consumers)
+    // For main packages, only register functions that are invoked via internal RPCs
+    const isExternalPackage = !!config.externalPackageName
     const hasRPCs = rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0
-    if (hasRPCs) {
+    const hasFunctions = functions.files.size > 0
+
+    const shouldGenerateFunctionsFile = isExternalPackage
+      ? hasFunctions
+      : hasRPCs
+
+    if (shouldGenerateFunctionsFile) {
+      // For external packages, use all function files; for main packages, use internal RPC files
+      const filesToRegister = isExternalPackage
+        ? functions.files
+        : rpc.internalFiles
+
       await writeFileInDir(
         logger,
         functionsFile,
         serializeFunctionImports(
           functionsFile,
-          rpc.internalFiles,
+          filesToRegister,
           functions.meta,
-          packageMappings
+          packageMappings,
+          config.externalPackageName
         )
       )
     }
 
-    return hasRPCs
+    return shouldGenerateFunctionsFile
   },
   middleware: [
     logCommandInfoAndTime({

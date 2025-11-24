@@ -1,25 +1,12 @@
-import {
-  CoreServices,
-  PikkuWire,
-  CoreSingletonServices,
-} from '../../types/core.types.js'
+import { CoreServices, PikkuWire } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
-import { packageLoader } from '../../packages/package-loader.js'
-
-// Type for the RPC service configuration
-type RPCServiceConfig = {
-  coerceDataFromSchema: boolean
-  externalPackages?: Record<string, string>
-}
-
-// Global namespace alias mapping
-let aliasToPackage: Map<string, string> = new Map()
 
 /**
  * Resolve a namespaced function reference to package and function names
+ * Uses pikkuState to look up the namespace -> package mapping
  */
 const resolveNamespace = (
   namespacedFunction: string
@@ -32,7 +19,8 @@ const resolveNamespace = (
   const namespace = namespacedFunction.substring(0, colonIndex)
   const functionName = namespacedFunction.substring(colonIndex + 1)
 
-  const packageName = aliasToPackage.get(namespace)
+  const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
+  const packageName = externalPackages.get(namespace)
   if (!packageName) {
     return null
   }
@@ -58,7 +46,6 @@ export class ContextAwareRPCService {
     private services: CoreServices,
     private wire: PikkuWire,
     private options: {
-      coerceDataFromSchema?: boolean
       requiresAuth?: boolean
     }
   ) {}
@@ -110,14 +97,15 @@ export class ContextAwareRPCService {
         // but is valid since we don't want to keep creating new wire services
         singletonServices: this.services,
         data: () => data,
-        coerceDataFromSchema: this.options.coerceDataFromSchema,
-        wire: updatedWire,
+                wire: updatedWire,
       }
     )
   }
 
   /**
    * Invoke a function from an external package
+   * External packages register their functions in pikkuState under their package name.
+   * The function is executed using the parent services (shared singleton services).
    * @private
    */
   private async invokeExternalPackageFunction<In = any, Out = any>(
@@ -134,32 +122,25 @@ export class ContextAwareRPCService {
       )
     }
 
-    // Get the loaded package
-    const pkg = packageLoader.getLoadedPackage(resolved.package)
-    if (!pkg) {
+    // Get the function meta from the external package
+    // External packages use function meta, not RPC meta
+    const externalFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
+    const funcMeta = externalFunctionMeta[resolved.function]
+    if (!funcMeta) {
       throw new Error(
-        `Package not loaded: ${resolved.package}. ` +
-          `Make sure the package is loaded during initialization.`
+        `Function '${resolved.function}' not found in package '${resolved.package}'. ` +
+          `Available functions: ${Object.keys(externalFunctionMeta).join(', ') || '(none)'}`
       )
     }
+    const funcName = funcMeta.pikkuFuncName || resolved.function
 
-    // Lazy-initialize package services if needed
-    if (!pkg.singletons) {
-      const parentServices = this.services as CoreSingletonServices
-      await packageLoader.ensureServicesInitialized(
-        resolved.package,
-        parentServices
-      )
-    }
-
-    // Execute the function using runPikkuFunc to get auth/middleware/permissions
-    return runPikkuFunc<In, Out>('rpc', namespacedFunction, resolved.function, {
+    // Execute the function using runPikkuFunc with the external package's state
+    // We use the parent services (this.services) since external packages share services
+    return runPikkuFunc<In, Out>('rpc', namespacedFunction, funcName, {
       auth: this.options.requiresAuth,
-      singletonServices: pkg.singletons as any,
-      createWireServices: pkg.registration.createWireServices as any,
+      singletonServices: this.services,
       data: () => data,
-      coerceDataFromSchema: this.options.coerceDataFromSchema,
-      wire,
+            wire,
       packageName: resolved.package,
     })
   }
@@ -189,8 +170,7 @@ export class ContextAwareRPCService {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
         data: () => data,
-        coerceDataFromSchema: this.options.coerceDataFromSchema,
-        wire: mergedWire,
+                wire: mergedWire,
       }
     )
   }
@@ -215,18 +195,6 @@ export class PikkuRPCService<
   Services extends CoreServices,
   TypedRPC = PikkuRPC,
 > {
-  private config?: RPCServiceConfig
-
-  // Initialize the RPC service with configuration
-  initialize(config: RPCServiceConfig) {
-    this.config = config
-
-    // Initialize namespace alias mapping with external packages
-    if (config.externalPackages) {
-      aliasToPackage = new Map(Object.entries(config.externalPackages))
-    }
-  }
-
   // Convenience function for initializing
   getContextRPCService(
     services: Services,
@@ -235,7 +203,6 @@ export class PikkuRPCService<
     depth: number = 0
   ): TypedRPC {
     const serviceRPC = new ContextAwareRPCService(services, wire, {
-      coerceDataFromSchema: this.config?.coerceDataFromSchema,
       requiresAuth,
     })
     return {
@@ -251,8 +218,3 @@ export class PikkuRPCService<
 
 // Create a singleton instance
 export const rpcService = new PikkuRPCService()
-
-// Convenience function for initializing
-export const initialize = (config: RPCServiceConfig) => {
-  rpcService.initialize(config)
-}
