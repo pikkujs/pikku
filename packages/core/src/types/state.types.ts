@@ -41,7 +41,7 @@ import {
 /**
  * State structure for an individual package
  */
-export interface PackagePikkuState {
+export interface PikkuPackageState {
   function: {
     meta: FunctionsMeta
     functions: Map<string, CorePikkuFunctionConfig<any, any>>
@@ -149,8 +149,3 @@ export interface PackagePikkuState {
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
 }
-
-/**
- * Alias for backward compatibility - refers to individual package state
- */
-export type PikkuState = PackagePikkuState

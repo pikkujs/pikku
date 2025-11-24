@@ -25,18 +25,16 @@ export * from './utils.js'
 export * from './time-utils.js'
 export {
   pikkuState,
-  initializePackageState,
+  initializePikkuState,
   resetPikkuState,
 } from './pikku-state.js'
-export type { PikkuState, PackagePikkuState } from './types/state.types.js'
+export type { PikkuPackageState } from './types/state.types.js'
 export {
   runMiddleware,
   addMiddleware,
   getMiddlewareByName,
 } from './middleware-runner.js'
 export { addPermission } from './permissions.js'
-export { NamespaceResolver } from './packages/namespace-resolver.js'
-export type { ResolvedFunction } from './packages/namespace-resolver.js'
 export { PackageLoader, packageLoader } from './packages/package-loader.js'
 export {
   hydrateServices,

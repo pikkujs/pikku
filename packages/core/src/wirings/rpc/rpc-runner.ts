@@ -6,9 +6,8 @@ import {
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
-import { PikkuRPC } from './rpc-types.js'
+import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { packageLoader } from '../../packages/package-loader.js'
-import { NamespaceResolver } from '../../packages/namespace-resolver.js'
 
 // Type for the RPC service configuration
 type RPCServiceConfig = {
@@ -16,8 +15,31 @@ type RPCServiceConfig = {
   externalPackages?: Record<string, string>
 }
 
-// Global namespace resolver instance
-let namespaceResolver: NamespaceResolver = new NamespaceResolver({})
+// Global namespace alias mapping
+let aliasToPackage: Map<string, string> = new Map()
+
+/**
+ * Resolve a namespaced function reference to package and function names
+ */
+const resolveNamespace = (namespacedFunction: string): ResolvedFunction | null => {
+  const colonIndex = namespacedFunction.indexOf(':')
+  if (colonIndex === -1) {
+    return null
+  }
+
+  const namespace = namespacedFunction.substring(0, colonIndex)
+  const functionName = namespacedFunction.substring(colonIndex + 1)
+
+  const packageName = aliasToPackage.get(namespace)
+  if (!packageName) {
+    return null
+  }
+
+  return {
+    package: packageName,
+    function: functionName,
+  }
+}
 
 const getPikkuFunctionName = (rpcName: string): string => {
   const rpc = pikkuState(null, 'rpc', 'meta')
@@ -102,7 +124,7 @@ export class ContextAwareRPCService {
     wire: PikkuWire
   ): Promise<Out> {
     // Resolve namespace to package name
-    const resolved = namespaceResolver.resolve(namespacedFunction)
+    const resolved = resolveNamespace(namespacedFunction)
     if (!resolved) {
       throw new Error(
         `Unknown namespace in function reference: ${namespacedFunction}. ` +
@@ -197,9 +219,9 @@ export class PikkuRPCService<
   initialize(config: RPCServiceConfig) {
     this.config = config
 
-    // Initialize namespace resolver with external packages
+    // Initialize namespace alias mapping with external packages
     if (config.externalPackages) {
-      namespaceResolver = new NamespaceResolver(config.externalPackages)
+      aliasToPackage = new Map(Object.entries(config.externalPackages))
     }
   }
 

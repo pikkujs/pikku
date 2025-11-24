@@ -13,8 +13,8 @@ export const createSingletonServices: CreateSingletonServices<
   existingServices?: Partial<SingletonServices>
 ): Promise<RequiredSingletonServices> => {
   const variables = existingServices?.variables || new LocalVariablesService()
-  const logger = new ConsoleLogger()
-  const schema = new CFWorkerSchemaService(logger)
+  const logger = existingServices?.logger || new ConsoleLogger()
+  const schema = existingServices?.schema || new CFWorkerSchemaService(logger)
 
   return {
     config,

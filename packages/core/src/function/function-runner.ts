@@ -36,9 +36,10 @@ export const runPikkuFuncDirectly = async <In, Out>(
   allServices: CoreServices,
   wire: PikkuWire,
   data: In,
-  userSession?: SessionService<CoreUserSession>
+  userSession?: SessionService<CoreUserSession>,
+  packageName: string | null = null
 ) => {
-  const funcConfig = pikkuState(null, 'function', 'functions').get(funcName)
+  const funcConfig = pikkuState(packageName, 'function', 'functions').get(funcName)
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }

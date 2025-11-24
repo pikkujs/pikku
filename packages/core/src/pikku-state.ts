@@ -1,4 +1,4 @@
-import { PikkuState } from './index.js'
+import { PikkuPackageState } from './index.js'
 import { HTTPWiringsMeta } from './wirings/http/http.types.js'
 import {
   MCPResourceMeta,
@@ -9,7 +9,7 @@ import { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 
 declare global {
   // eslint-disable-next-line no-var
-  var pikkuState: Map<string, PikkuState> | undefined
+  var pikkuState: Map<string, PikkuPackageState> | undefined
 }
 
 /**
@@ -29,14 +29,14 @@ declare global {
  * pikkuState('@acme/stripe-functions', 'rpc', 'meta')
  */
 export const pikkuState = <
-  Type extends keyof PikkuState,
-  Content extends keyof PikkuState[Type],
+  Type extends keyof PikkuPackageState,
+  Content extends keyof PikkuPackageState[Type],
 >(
   packageName: string | null,
   type: Type,
   content: Content,
-  value?: PikkuState[Type][Content]
-): PikkuState[Type][Content] => {
+  value?: PikkuPackageState[Type][Content]
+): PikkuPackageState[Type][Content] => {
   const resolvedPackageName = packageName ?? '__main__'
 
   // Initialize package state if it doesn't exist
@@ -44,7 +44,7 @@ export const pikkuState = <
     !globalThis.pikkuState ||
     !globalThis.pikkuState.has(resolvedPackageName)
   ) {
-    initializePackageState(resolvedPackageName)
+    initializePikkuState(resolvedPackageName)
   }
 
   const packageState = globalThis.pikkuState!.get(resolvedPackageName)!
@@ -56,7 +56,7 @@ export const pikkuState = <
   return packageState[type][content]
 }
 
-const createEmptyPackageState = (): PikkuState => ({
+const createEmptyPackageState = (): PikkuPackageState => ({
   function: {
     meta: {},
     functions: new Map(),
@@ -130,7 +130,7 @@ const createEmptyPackageState = (): PikkuState => ({
 /**
  * Initialize state for a new package
  */
-export const initializePackageState = (packageName: string): void => {
+export const initializePikkuState = (packageName: string): void => {
   if (!globalThis.pikkuState) {
     globalThis.pikkuState = new Map()
   }
@@ -144,7 +144,7 @@ export const resetPikkuState = () => {
   const existingErrors = globalThis.pikkuState?.get('__main__')?.misc.errors
 
   globalThis.pikkuState = new Map()
-  initializePackageState('__main__')
+  initializePikkuState('__main__')
 
   // Restore the errors map if it existed
   if (existingErrors) {

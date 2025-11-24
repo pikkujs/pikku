@@ -1,12 +1,7 @@
 /**
  * Generates type definitions for HTTP wirings
  */
-export const serializeHTTPTypes = (
-  functionTypesImportPath: string,
-  packageName?: string
-) => {
-  const packageNameValue = packageName ? `'${packageName}'` : 'undefined'
-
+export const serializeHTTPTypes = (functionTypesImportPath: string) => {
   return `/**
  * HTTP-specific type definitions for tree-shaking optimization
  */
@@ -36,7 +31,7 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
 export const wireHTTP = <In, Out, Route extends string>(
   httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
 ) => {
-  wireHTTPCore({ ...httpWiring, packageName: ${packageNameValue} } as any)
+  wireHTTPCore(httpWiring as any)
 }
 
 /**
@@ -62,7 +57,7 @@ export const addHTTPMiddleware = (
   routeOrMiddleware: PikkuMiddleware[] | string,
   middleware?: PikkuMiddleware[]
 ) => {
-  addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any, ${packageNameValue})
+  addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any)
 }
 
 /**
@@ -88,7 +83,7 @@ export const addHTTPPermission = <In = unknown>(
   pattern: string,
   permissions: Record<string, PikkuPermission<In>> | PikkuPermission<In>[]
 ) => {
-  addHTTPPermissionCore(pattern, permissions as any, ${packageNameValue})
+  addHTTPPermissionCore(pattern, permissions as any)
 }
 `
 }

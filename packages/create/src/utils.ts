@@ -451,6 +451,13 @@ export function updatePackageJSONScripts(
     }
   }
 
+  // Remove external package dependency unless 'external' is supported
+  if (!supportedFeatures.includes('external')) {
+    if (packageJson.dependencies?.['@pikku/templates-function-external']) {
+      delete packageJson.dependencies['@pikku/templates-function-external']
+    }
+  }
+
   packageJson.name = appName
   fs.writeFileSync(packageFilePath, JSON.stringify(packageJson, null, 2))
 }

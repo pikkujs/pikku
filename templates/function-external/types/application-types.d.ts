@@ -7,8 +7,6 @@ import type {
 import type { NoopService } from '../src/services/noop-service.js'
 
 export interface Config extends CoreConfig {
-  customPrefix: string
-  enableLogging: boolean
 }
 
 export interface UserSession extends CoreUserSession {}
