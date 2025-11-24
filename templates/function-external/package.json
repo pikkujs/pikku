@@ -1,0 +1,33 @@
+{
+  "name": "@pikku/templates-function-external",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./.pikku/pikku-bootstrap.gen.js": "./.pikku/pikku-bootstrap.gen.js",
+    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json"
+  },
+  "files": [
+    "dist",
+    ".pikku"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "pikku": "pikku all"
+  },
+  "peerDependencies": {
+    "@pikku/core": "*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "*",
+    "@pikku/core": "*",
+    "typescript": "^5.7.2"
+  }
+}

@@ -3571,7 +3571,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:^0.11.2, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.11.2, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -3610,7 +3610,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:^0.11.0, @pikku/core@npm:^0.11.1, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:*, @pikku/core@npm:^0.11.0, @pikku/core@npm:^0.11.1, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -4055,6 +4055,18 @@ __metadata:
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-function-external@workspace:templates/function-external":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-function-external@workspace:templates/function-external"
+  dependencies:
+    "@pikku/cli": "npm:*"
+    "@pikku/core": "npm:*"
+    typescript: "npm:^5.7.2"
+  peerDependencies:
+    "@pikku/core": "*"
   languageName: unknown
   linkType: soft
 
@@ -11958,7 +11970,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5, typescript@npm:^5.7.3, typescript@npm:^5.8.2, typescript@npm:^5.9, typescript@npm:^5.9.3":
+"typescript@npm:^5, typescript@npm:^5.7.2, typescript@npm:^5.7.3, typescript@npm:^5.8.2, typescript@npm:^5.9, typescript@npm:^5.9.3":
   version: 5.9.3
   resolution: "typescript@npm:5.9.3"
   bin:
@@ -11978,7 +11990,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.8.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.8.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9.3#optional!builtin<compat/typescript>":
   version: 5.9.3
   resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"
   bin:

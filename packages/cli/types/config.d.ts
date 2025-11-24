@@ -100,6 +100,7 @@ export type PikkuCLIInput = {
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
   externalPackages?: Record<string, string> // namespace -> package name
+  externalPackage?: boolean
 
   configDir: string
   tsconfig: string

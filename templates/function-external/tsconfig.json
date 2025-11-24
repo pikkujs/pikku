@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "#pikku": ["./.pikku/pikku-types.gen.ts"]
+    }
+  },
+  "include": ["src/**/*", "types/**/*", ".pikku/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
