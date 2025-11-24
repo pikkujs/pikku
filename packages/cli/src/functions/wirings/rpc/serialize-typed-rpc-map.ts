@@ -85,6 +85,7 @@ function generateExternalPackageImports(
   let imports = '\n// External package RPC maps\n'
   for (const [namespace, packageName] of Object.entries(externalPackages)) {
     // Import the RPCMap from each external package's internal RPC map
+    // Use .js extension - package.json exports will resolve to .d.ts for types
     imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${packageName}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
   }
   return imports

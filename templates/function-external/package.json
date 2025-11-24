@@ -12,7 +12,10 @@
       "import": "./dist/types.js"
     },
     "./.pikku/pikku-bootstrap.gen.js": "./.pikku/pikku-bootstrap.gen.js",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json"
+    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
+      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
   },
   "files": [
     "dist",

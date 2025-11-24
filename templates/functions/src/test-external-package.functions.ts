@@ -28,26 +28,3 @@ export const testExternalEcho = pikkuSessionlessFunc<EchoInput, EchoOutput>({
     return await rpc.invoke('ext:echo', data)
   },
 })
-
-export const testExternalAll = pikkuSessionlessFunc<
-  Record<string, never>,
-  { hello: HelloOutput; goodbye: GoodbyeOutput; echo: EchoOutput }
->({
-  func: async ({}, _data, { rpc }) => {
-    const hello = await rpc.invoke('ext:hello', {
-      name: 'World',
-    })
-
-    const goodbye = await rpc.invoke('ext:goodbye', {
-      name: 'Friend',
-      farewell: 'See you later',
-    })
-
-    const echo = await rpc.invoke('ext:echo', {
-      text: 'Testing external package',
-      repeat: 3,
-    })
-
-    return { hello, goodbye, echo }
-  },
-})
