@@ -65,6 +65,7 @@ jobs:
           name: built-packages
           path: packages
       - run: yarn install
+      - run: cd templates/function-external && yarn pikku
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
