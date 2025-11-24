@@ -3,6 +3,7 @@ import { InspectorState, InspectorLogger } from '../types.js'
 
 /**
  * Scan for rpc.invoke() calls to track which functions are actually being invoked
+ * Also detects external package usage via namespaced calls: rpc.invoke('namespace:function')
  */
 export function addRPCInvocations(
   node: ts.Node,
@@ -20,14 +21,22 @@ export function addRPCInvocations(
         // This is rpc.invoke - now we need to find the parent call expression
         const parent = node.parent
         if (ts.isCallExpression(parent) && parent.expression === node) {
-          // This is rpc.invoke('function-name')
+          // This is rpc.invoke('function-name') or rpc.invoke('namespace:function')
           const [firstArg] = parent.arguments
           if (firstArg) {
             // Extract the function name from string literal
             if (ts.isStringLiteral(firstArg)) {
-              const functionName = firstArg.text
-              logger.debug(`• Found RPC invocation: ${functionName}`)
-              state.rpc.invokedFunctions.add(functionName)
+              const functionRef = firstArg.text
+              logger.debug(`• Found RPC invocation: ${functionRef}`)
+              state.rpc.invokedFunctions.add(functionRef)
+
+              // Check if this is a namespaced call (external package)
+              const colonIndex = functionRef.indexOf(':')
+              if (colonIndex !== -1) {
+                const namespace = functionRef.substring(0, colonIndex)
+                logger.debug(`  → External package detected: ${namespace}`)
+                state.rpc.usedExternalPackages.add(namespace)
+              }
             }
             // Handle template literals like `function-${name}`
             else if (

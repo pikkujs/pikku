@@ -71,6 +71,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       exposedMeta: {},
       exposedFiles: new Map(),
       invokedFunctions: new Set(),
+      usedExternalPackages: new Set(),
     },
     mcpEndpoints: {
       resourcesMeta: {},

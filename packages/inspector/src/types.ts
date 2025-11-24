@@ -218,7 +218,8 @@ export interface InspectorState {
     internalFiles: Map<string, { path: string; exportedName: string }>
     exposedMeta: Record<string, string>
     exposedFiles: Map<string, { path: string; exportedName: string }>
-    invokedFunctions: Set<string> // Track functions called via rpc.invoke()
+    invokedFunctions: Set<string>
+    usedExternalPackages: Set<string>
   }
   mcpEndpoints: {
     resourcesMeta: MCPResourceMeta
