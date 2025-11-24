@@ -4,12 +4,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
     },
     "./types": {
-      "types": "./dist/types.d.ts",
-      "import": "./dist/types.js"
+      "types": "./dist/src/types.d.ts",
+      "import": "./dist/src/types.js"
     },
     "./.pikku/*": "./.pikku/*",
     "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
@@ -22,7 +22,8 @@
     ".pikku"
   ],
   "scripts": {
-    "build": "tsc",
+    "prebuild": "pikku all",
+    "build": "tsc && cp -r .pikku dist/",
     "pikku": "pikku all"
   },
   "peerDependencies": {
