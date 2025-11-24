@@ -147,14 +147,11 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
   // Wait to avoid email rate limits
   await workflow.sleep('Wait before welcome email', '3s')
 
-  // Step 6: Parallel group - send welcome email and create org (for demo)
+  // Step 6: Parallel group - send welcome email and notification
   await Promise.all([
     workflow.do('Send welcome email', 'sendWelcomeEmail', {
       to: data.email,
       orgId: org.id,
-    }),
-    workflow.do('Log org creation', 'createOrg', {
-      name: `${data.name} - Log Entry`,
     }),
     workflow.do('Send notification email', 'sendWelcomeEmail', {
       to: 'admin@example.com',

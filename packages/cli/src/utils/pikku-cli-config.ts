@@ -452,10 +452,21 @@ const _getPikkuCLIConfig = async (
       try {
         const packageJsonContent = await readFile(packageJsonPath, 'utf-8')
         const packageJson = JSON.parse(packageJsonContent)
+
+        if (
+          !packageJson.name ||
+          typeof packageJson.name !== 'string' ||
+          packageJson.name.trim() === ''
+        ) {
+          throw new Error(
+            `package.json at ${packageJsonPath} is missing a valid "name" field`
+          )
+        }
+
         result.externalPackageName = packageJson.name
-      } catch (e) {
+      } catch (e: any) {
         throw new Error(
-          `externalPackage is true but could not read package.json at ${packageJsonPath}`
+          `externalPackage is true but could not read or parse package.json at ${packageJsonPath}: ${e.message}`
         )
       }
     }

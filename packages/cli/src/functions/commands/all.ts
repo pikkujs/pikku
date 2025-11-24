@@ -252,7 +252,13 @@ export const all: any = pikkuVoidFunc({
       (packagePath) => `import '${packagePath}'`
     )
     const allBootstrapImports = [...localImports, ...externalImports]
-      .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
+      .sort((a, b) => {
+        const aMeta = a.includes('meta')
+        const bMeta = b.includes('meta')
+        if (aMeta && !bMeta) return -1
+        if (!aMeta && bMeta) return 1
+        return 0
+      }) // Ensure meta files are at the top
       .join('\n')
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)

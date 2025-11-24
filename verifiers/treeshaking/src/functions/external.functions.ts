@@ -11,7 +11,7 @@ export const testExternal = pikkuSessionlessFunc<
   TestExternalInput,
   TestExternalOutput
 >({
-  func: async ({}, data, { rpc }) => {
+  func: async (_, data, { rpc }) => {
     const hello = await rpc.invoke('ext:hello', { name: data.value })
     return { result: hello.message }
   },

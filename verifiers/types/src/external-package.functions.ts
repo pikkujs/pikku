@@ -19,7 +19,7 @@ export const testExternalHello = pikkuSessionlessFunc<
   TestExternalHelloInput,
   TestExternalHelloOutput
 >({
-  func: async ({}, data, { rpc }) => {
+  func: async (_, data, { rpc }) => {
     // Call external package function via RPC namespace
     return await rpc.invoke('ext:hello', data)
   },
@@ -30,7 +30,7 @@ export const testExternalHello = pikkuSessionlessFunc<
  * Test function that calls external package's hello function via RPC
  */
 export const testBrokenRPCCall = pikkuSessionlessFunc<void, void>({
-  func: async ({}, data, { rpc }) => {
+  func: async (_, data, { rpc }) => {
     // @ts-expect-error Testing broken RPC call
     await rpc.invoke('notexisint:hello', data)
   },
