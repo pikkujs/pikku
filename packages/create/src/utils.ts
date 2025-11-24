@@ -243,11 +243,12 @@ export function serverlessChanges(targetPath: string, appName: string): void {
 const FILE_FEATURE_MAPPING = {
   'channel.': ['channel'],
   'http.': ['http'],
+  'http-external.': ['external'],
   'http-progressive-enhancement.': ['channel', 'sse'],
   'http-sse.': ['sse'],
   'mcp.': ['mcp'],
   'queue-worker.': ['queue'],
-  'rpc.': ['http'], // RPC is typically over HTTP
+  'rpc.': ['http'],
   'scheduled-task.': ['scheduled'],
   'cli.': ['cli'],
   'workflow.': ['workflows'],
