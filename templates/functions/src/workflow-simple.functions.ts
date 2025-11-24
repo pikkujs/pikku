@@ -207,7 +207,8 @@ export const triggerOrgOnboardingSimple = pikkuSessionlessFunc<
   logger.info(`[SIMPLE] Organization onboarding workflow started: ${runId}`)
 
   // Poll for completion (with timeout)
-  const maxWaitMs = 30000 // 30 seconds
+  // Note: pg-boss has slower polling (~2s default) so we use a longer timeout
+  const maxWaitMs = 60000 // 60 seconds
   const pollIntervalMs = 2000 // 2 seconds
   const startTime = Date.now()
 

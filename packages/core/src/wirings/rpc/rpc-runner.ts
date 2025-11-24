@@ -21,7 +21,9 @@ let aliasToPackage: Map<string, string> = new Map()
 /**
  * Resolve a namespaced function reference to package and function names
  */
-const resolveNamespace = (namespacedFunction: string): ResolvedFunction | null => {
+const resolveNamespace = (
+  namespacedFunction: string
+): ResolvedFunction | null => {
   const colonIndex = namespacedFunction.indexOf(':')
   if (colonIndex === -1) {
     return null

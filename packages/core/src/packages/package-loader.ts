@@ -6,9 +6,7 @@
  */
 
 import type { CoreSingletonServices } from '../types/core.types.js'
-import type {
-  LoadedPackage,
-} from './package-loader.types.js'
+import type { LoadedPackage } from './package-loader.types.js'
 
 export class PackageLoader {
   private loaded = new Map<string, LoadedPackage<any, any, any>>()

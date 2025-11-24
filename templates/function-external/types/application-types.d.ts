@@ -6,8 +6,7 @@ import type {
 } from '@pikku/core'
 import type { NoopService } from '../src/services/noop-service.js'
 
-export interface Config extends CoreConfig {
-}
+export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {}
 

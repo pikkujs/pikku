@@ -21,7 +21,10 @@ import { mapPgBossJobToQueueJob } from './utils.js'
 export const mapPikkuWorkerToPgBoss = (
   workerConfig?: PikkuWorkerConfig
 ): WorkOptions => {
-  const workerOptions: WorkOptions = {}
+  const workerOptions: WorkOptions = {
+    // Fetch multiple jobs at once to enable parallel processing
+    batchSize: 10,
+  }
 
   if (workerConfig?.batchSize !== undefined) {
     workerOptions.batchSize = workerConfig.batchSize
@@ -53,7 +56,8 @@ export class PgBossQueueWorkers implements QueueWorkers {
     supported: {
       batchSize: {
         queueProperty: 'batchSize',
-        description: 'Number of jobs to process in a single batch',
+        description:
+          'Number of jobs to fetch and process concurrently in parallel',
       },
       pollInterval: {
         queueProperty: 'pollingIntervalSeconds',
@@ -149,35 +153,49 @@ export class PgBossQueueWorkers implements QueueWorkers {
             ...mapPikkuWorkerToPgBoss(processor.config),
             includeMetadata: true,
           },
-          async ([job]) => {
+          async (jobs) => {
             if (!this.singletonServices) {
               throw new Error('Singleton services not available')
             }
-            if (!job) {
+            if (!jobs || jobs.length === 0) {
               this.singletonServices.logger.warn(
-                `No job received for queue ${queueName}`
+                `No jobs received for queue ${queueName}`
               )
               return
             }
-            try {
-              await runQueueJob({
-                singletonServices: this.singletonServices,
-                createWireServices: this.createWireServices,
-                job: mapPgBossJobToQueueJob(job, this.pgBoss),
+            // Process all jobs in parallel
+            await Promise.all(
+              jobs.map(async (job) => {
+                try {
+                  await runQueueJob({
+                    singletonServices: this.singletonServices,
+                    createWireServices: this.createWireServices,
+                    job: mapPgBossJobToQueueJob(job, this.pgBoss),
+                  })
+                } catch (error: unknown) {
+                  if (error instanceof QueueJobFailedError) {
+                    // Mark this specific job as failed
+                    await this.pgBoss.fail(queueName, job.id, {
+                      message: error.message,
+                    })
+                  } else if (error instanceof QueueJobDiscardedError) {
+                    // For pg-boss, complete the job successfully to discard it
+                    this.singletonServices.logger.info(
+                      `PgBoss job ${job.id} discarded: ${error.message}`
+                    )
+                    await this.pgBoss.complete(queueName, job.id)
+                  } else {
+                    // For other errors, fail the job
+                    await this.pgBoss.fail(queueName, job.id, {
+                      message:
+                        error instanceof Error
+                          ? error.message
+                          : 'Unknown error',
+                    })
+                  }
+                }
               })
-            } catch (error: unknown) {
-              if (error instanceof QueueJobFailedError) {
-                // Let pg-boss handle this as a failed job
-                throw new Error(error.message)
-              } else if (error instanceof QueueJobDiscardedError) {
-                // For pg-boss, complete the job successfully to discard it
-                this.singletonServices.logger.info(
-                  `PgBoss job ${job.id} discarded: ${error.message}`
-                )
-                return // Successfully "completed" by discarding
-              }
-              throw error
-            }
+            )
           }
         )
         this.activeWorkers.set(queueName, workerId)
