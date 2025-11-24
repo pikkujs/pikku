@@ -2,5 +2,8 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src"],
   "outDir": ".pikku",
-  "entrypoint": "src/index.ts"
+  "entrypoint": "src/index.ts",
+  "externalPackages": {
+    "ext": "@pikku/templates-function-external"
+  }
 }

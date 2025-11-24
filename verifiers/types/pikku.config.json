@@ -5,5 +5,8 @@
   "tsconfig": "./tsconfig.json",
   "schema": {
     "supportsImportAttributes": true
+  },
+  "externalPackages": {
+    "ext": "@pikku/templates-function-external"
   }
 }

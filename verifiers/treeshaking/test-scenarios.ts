@@ -3,6 +3,7 @@ export interface TestScenario {
   filter: string
   expectedSingletonServices: string[]
   expectedWireServices: string[]
+  expectedExternalBootstrap?: boolean
   description: string
 }
 
@@ -254,5 +255,25 @@ export const scenarios: TestScenario[] = [
     expectedSingletonServices: ['email', 'logger', 'storage'],
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'Routes using saveData function',
+  },
+
+  // External package tests
+  {
+    name: 'External Package: testExternal included',
+    filter: '--names=testExternal',
+    expectedSingletonServices: ['email', 'logger', 'noop'],
+    expectedWireServices: [],
+    expectedExternalBootstrap: true,
+    description:
+      'When external package function is called, external bootstrap and services (noop) should be bundled',
+  },
+  {
+    name: 'External Package: not called - excluded',
+    filter: '--names=sendEmail',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedWireServices: ['userContext'],
+    expectedExternalBootstrap: false,
+    description:
+      'When external package function is NOT called, external bootstrap and services (noop) should NOT be bundled',
   },
 ]
