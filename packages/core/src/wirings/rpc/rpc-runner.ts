@@ -110,7 +110,6 @@ export class ContextAwareRPCService {
         data: () => data,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
         wire: updatedWire,
-        packageName: null,
       }
     )
   }
@@ -190,7 +189,6 @@ export class ContextAwareRPCService {
         data: () => data,
         coerceDataFromSchema: this.options.coerceDataFromSchema,
         wire: mergedWire,
-        packageName: null,
       }
     )
   }
