@@ -99,19 +99,56 @@ export const addHTTPRoute: AddWiring = (
     state.rootDir
   ).pikkuFuncName
 
-  // Ensure function metadata exists (creates stub for inline functions)
-  ensureFunctionMetadata(state, funcName, route)
+  // Detect if this function is imported from an external package
+  let pikkuFuncPackage: string | undefined = undefined
+  if (ts.isIdentifier(funcInitializer)) {
+    const symbol = checker.getSymbolAtLocation(funcInitializer)
+    if (symbol) {
+      const declarations = symbol.declarations || []
+      for (const decl of declarations) {
+        if (ts.isImportSpecifier(decl) || ts.isImportClause(decl)) {
+          // Navigate up to the import declaration
+          const importDecl = decl.parent.parent.parent as ts.ImportDeclaration
+          if (ts.isImportDeclaration(importDecl)) {
+            const moduleSpecifier = importDecl.moduleSpecifier
+            if (ts.isStringLiteral(moduleSpecifier)) {
+              const importPath = moduleSpecifier.text
 
-  // lookup existing function metadata
-  const fnMeta = state.functions.meta[funcName]
-  if (!fnMeta) {
-    logger.critical(
-      ErrorCode.FUNCTION_METADATA_NOT_FOUND,
-      `No function metadata found for '${funcName}'.`
-    )
-    return
+              // Check if this is an external npm package (not a relative import)
+              // External packages start with @ (scoped) or don't start with . or /
+              if (
+                importPath.startsWith('@') ||
+                (!importPath.startsWith('.') && !importPath.startsWith('/'))
+              ) {
+                pikkuFuncPackage = importPath
+                logger.debug(
+                  `  → External package function detected: ${importPath}`
+                )
+              }
+            }
+          }
+        }
+      }
+    }
   }
-  const input = fnMeta.inputs?.[0] || null
+
+  // For external package functions, skip function metadata lookup
+  let input: string | null = null
+  if (!pikkuFuncPackage) {
+    // Ensure function metadata exists (creates stub for inline functions)
+    ensureFunctionMetadata(state, funcName, route)
+
+    // lookup existing function metadata
+    const fnMeta = state.functions.meta[funcName]
+    if (!fnMeta) {
+      logger.critical(
+        ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+        `No function metadata found for '${funcName}'.`
+      )
+      return
+    }
+    input = fnMeta.inputs?.[0] || null
+  }
 
   // --- compute inputTypes (body/query/params) ---
   const inputTypes = getInputTypes(
@@ -141,7 +178,10 @@ export const addHTTPRoute: AddWiring = (
   )
 
   // --- track used functions/middleware/permissions for service aggregation ---
-  state.serviceAggregation.usedFunctions.add(funcName)
+  // Skip tracking external package functions
+  if (!pikkuFuncPackage) {
+    state.serviceAggregation.usedFunctions.add(funcName)
+  }
   extractWireNames(middleware).forEach((name) =>
     state.serviceAggregation.usedMiddleware.add(name)
   )
@@ -153,6 +193,7 @@ export const addHTTPRoute: AddWiring = (
   state.http.files.add(node.getSourceFile().fileName)
   state.http.meta[method][route] = {
     pikkuFuncName: funcName,
+    pikkuFuncPackage,
     route,
     method: method as HTTPMethod,
     params: params.length > 0 ? params : undefined,

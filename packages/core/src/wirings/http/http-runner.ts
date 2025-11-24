@@ -156,7 +156,11 @@ export const wireHTTP = <
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
-  addFunction(routeMeta.pikkuFuncName, httpWiring.func)
+  addFunction(
+    routeMeta.pikkuFuncName,
+    httpWiring.func,
+    routeMeta.pikkuFuncPackage
+  )
   const routes = pikkuState('', 'http', 'routes')
   if (!routes.has(httpWiring.method)) {
     routes.set(httpWiring.method, new Map())
@@ -321,13 +325,35 @@ const executeRoute = async (
 
   const wire: PikkuWire = { http, channel, session: userSession }
 
+  // If this is an external package function, load its services
+  let executionServices = singletonServices
+  let wireServicesFactory = createWireServices
+  if (meta.pikkuFuncPackage) {
+    const { packageLoader } = await import('../../packages/package-loader.js')
+    const pkg = packageLoader.getLoadedPackage(meta.pikkuFuncPackage)
+    if (!pkg) {
+      throw new Error(`External package not loaded: ${meta.pikkuFuncPackage}`)
+    }
+
+    // Ensure package services are initialized
+    if (!pkg.singletons) {
+      await packageLoader.ensureServicesInitialized(
+        meta.pikkuFuncPackage,
+        singletonServices
+      )
+    }
+
+    executionServices = pkg.singletons
+    wireServicesFactory = pkg.registration.createWireServices
+  }
+
   result = await runPikkuFunc(
     'http',
     `${meta.method}:${meta.route}`,
     meta.pikkuFuncName,
     {
-      singletonServices,
-      createWireServices,
+      singletonServices: executionServices,
+      createWireServices: wireServicesFactory,
       auth: route.auth !== false,
       data,
       inheritedMiddleware: meta.middleware,
@@ -336,6 +362,7 @@ const executeRoute = async (
       wirePermissions: route.permissions,
       coerceDataFromSchema: options.coerceDataFromSchema,
       tags: route.tags,
+      packageName: meta.pikkuFuncPackage,
       wire,
     }
   )

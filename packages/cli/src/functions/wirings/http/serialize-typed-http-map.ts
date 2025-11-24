@@ -69,7 +69,13 @@ function generateHTTPWirings(
 
   for (const methods of Object.values(routesMeta)) {
     for (const meta of Object.values(methods)) {
-      const { route, method, pikkuFuncName } = meta
+      const { route, method, pikkuFuncName, pikkuFuncPackage } = meta
+
+      // Skip external package functions - they don't have local metadata
+      if (pikkuFuncPackage) {
+        continue
+      }
+
       const functionMeta = functionsMeta[pikkuFuncName]
       if (!functionMeta) {
         throw new Error(

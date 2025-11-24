@@ -25,9 +25,10 @@ import { closeWireServices } from '../utils.js'
 
 export const addFunction = (
   funcName: string,
-  funcConfig: CorePikkuFunctionConfig<any, any>
+  funcConfig: CorePikkuFunctionConfig<any, any>,
+  packageName?: string
 ) => {
-  pikkuState('', 'function', 'functions').set(funcName, funcConfig)
+  pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 
 export const runPikkuFuncDirectly = async <In, Out>(
