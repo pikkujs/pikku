@@ -32,7 +32,7 @@ export const testExternalHello = pikkuSessionlessFunc<
 export const testBrokenRPCCall = pikkuSessionlessFunc<void, void>({
   func: async ({}, data, { rpc }) => {
     // @ts-expect-error Testing broken RPC call
-    return await rpc.invoke('notexisint:hello', data)
+    await rpc.invoke('notexisint:hello', data)
   },
   internal: true,
 })
