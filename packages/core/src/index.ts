@@ -28,7 +28,7 @@ export {
   initializePackageState,
   resetPikkuState,
 } from './pikku-state.js'
-export type { PackagePikkuState, PikkuState } from './pikku-state.js'
+export type { PikkuState, PackagePikkuState } from './types/state.types.js'
 export {
   runMiddleware,
   addMiddleware,

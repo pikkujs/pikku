@@ -13,7 +13,10 @@ export const pikkuHTTPTypes: any = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       packageMappings
     )
-    const content = serializeHTTPTypes(functionTypesImportPath)
+    const content = serializeHTTPTypes(
+      functionTypesImportPath,
+      config.externalPackageName
+    )
     await writeFileInDir(logger, httpTypesFile, content)
   },
   middleware: [

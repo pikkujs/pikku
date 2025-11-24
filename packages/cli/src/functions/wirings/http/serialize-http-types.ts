@@ -1,7 +1,12 @@
 /**
  * Generates type definitions for HTTP wirings
  */
-export const serializeHTTPTypes = (functionTypesImportPath: string) => {
+export const serializeHTTPTypes = (
+  functionTypesImportPath: string,
+  packageName?: string
+) => {
+  const packageNameValue = packageName ? `'${packageName}'` : 'undefined'
+
   return `/**
  * HTTP-specific type definitions for tree-shaking optimization
  */
@@ -31,7 +36,7 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
 export const wireHTTP = <In, Out, Route extends string>(
   httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
 ) => {
-  wireHTTPCore(httpWiring as any)
+  wireHTTPCore({ ...httpWiring, packageName: ${packageNameValue} } as any)
 }
 
 /**

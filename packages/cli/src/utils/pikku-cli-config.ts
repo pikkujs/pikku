@@ -447,6 +447,19 @@ const _getPikkuCLIConfig = async (
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
 
+    if (result.externalPackage) {
+      const packageJsonPath = join(result.rootDir, 'package.json')
+      try {
+        const packageJsonContent = await readFile(packageJsonPath, 'utf-8')
+        const packageJson = JSON.parse(packageJsonContent)
+        result.externalPackageName = packageJson.name
+      } catch (e) {
+        throw new Error(
+          `externalPackage is true but could not read package.json at ${packageJsonPath}`
+        )
+      }
+    }
+
     return result
   } catch (e: any) {
     logger.error(e)
