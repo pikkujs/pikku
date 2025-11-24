@@ -47,6 +47,20 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<
   internal: true,
 })
 
+/**
+ * Generic remote RPC worker that invokes any internal RPC by name
+ * This is used for executing internal RPCs via a queue (e.g., delayed workflow sleep steps)
+ */
+export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<
+  { rpcName: string, data?: any },
+  any
+>({
+  func: async (_services, { rpcName, data }, { rpc }) => {
+    return await (rpc.invoke as any)(rpcName, data)
+  },
+  internal: true,
+})
+
 wireQueueWorker({
   queueName: 'pikku-workflow-step-worker',
   func: pikkuWorkflowWorker,
@@ -55,6 +69,11 @@ wireQueueWorker({
 wireQueueWorker({
   queueName: 'pikku-workflow-orchestrator',
   func: pikkuWorkflowOrchestrator,
+})
+
+wireQueueWorker({
+  queueName: 'pikku-remote-internal-rpc',
+  func: pikkuRemoteInternalRPC,
 })
 `
 }

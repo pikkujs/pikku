@@ -15,6 +15,32 @@ import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
 import { getCommonWireMetaData } from '../utils/get-property-value.js'
 
 /**
+ * Recursively collect all RPC names from workflow steps
+ */
+function collectInvokedRPCs(
+  steps: WorkflowStepMeta[],
+  rpcs: Set<string>
+): void {
+  for (const step of steps) {
+    if (step.type === 'rpc' && step.rpcName) {
+      rpcs.add(step.rpcName)
+    } else if (step.type === 'branch') {
+      if (step.thenSteps) collectInvokedRPCs(step.thenSteps, rpcs)
+      if (step.elseSteps) collectInvokedRPCs(step.elseSteps, rpcs)
+    } else if (step.type === 'switch' && step.cases) {
+      for (const c of step.cases) {
+        if (c.steps) collectInvokedRPCs(c.steps, rpcs)
+      }
+      if (step.defaultSteps) collectInvokedRPCs(step.defaultSteps, rpcs)
+    } else if (step.type === 'fanout' && step.child) {
+      collectInvokedRPCs([step.child], rpcs)
+    } else if (step.type === 'parallel' && step.children) {
+      collectInvokedRPCs(step.children, rpcs)
+    }
+  }
+}
+
+/**
  * Scan for workflow.do(), workflow.sleep(), and workflow.cancel() calls to extract workflow steps
  */
 function getWorkflowInvocations(
@@ -208,6 +234,12 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     // Simple extraction succeeded
     steps = result.steps
     simple = true
+    // Collect all invoked RPCs from simple workflow steps
+    const rpcs = new Set<string>()
+    collectInvokedRPCs(steps, rpcs)
+    for (const rpc of rpcs) {
+      state.rpc.invokedFunctions.add(rpc)
+    }
   } else {
     // Simple extraction failed
     if (wrapperType === 'simple') {
