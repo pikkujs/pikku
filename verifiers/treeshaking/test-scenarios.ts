@@ -261,11 +261,11 @@ export const scenarios: TestScenario[] = [
   {
     name: 'External Package: testExternal included',
     filter: '--names=testExternal',
-    expectedSingletonServices: ['email', 'logger', 'noop'],
+    expectedSingletonServices: ['email', 'logger'],
     expectedWireServices: [],
     expectedExternalBootstrap: true,
     description:
-      'When external package function is called, external bootstrap and services (noop) should be bundled',
+      'When external package function is called via RPC, external bootstrap should be bundled but NOT external services (noop is internal to external package)',
   },
   {
     name: 'External Package: not called - excluded',
