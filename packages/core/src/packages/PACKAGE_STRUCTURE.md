@@ -311,10 +311,50 @@ export const processPayment = pikkuSessionlessFunc<
 3. **Build**: Compile TypeScript to `dist/`
 4. **Publish**: Publish package with both `dist/` and `.pikku/` directories
 
+## Type Safety
+
+External packages provide full type safety with zero runtime overhead through `import type` statements.
+
+### Type-Only Imports
+
+TypeScript's `import type` ensures that type information is available during development but is completely eliminated from the runtime bundle:
+
+```typescript
+import type {
+  CreateChargeInput,
+  CreateChargeOutput,
+} from '@acme/stripe-functions/types'
+```
+
+This import:
+
+- Provides full TypeScript autocomplete and type checking
+- Is completely removed by the TypeScript compiler
+- Adds zero bytes to your bundle
+- Works even if the package is not installed (for type checking only)
+
+### Generic Type Parameters
+
+Use generic type parameters with `rpc.invoke` for type-safe calls:
+
+```typescript
+const result = await rpc.invoke<CreateChargeInput, CreateChargeOutput>(
+  'stripe:createCharge',
+  { amount: 100, currency: 'usd' }
+)
+```
+
+TypeScript will:
+
+- Validate the input data matches `CreateChargeInput`
+- Infer the return type as `CreateChargeOutput`
+- Catch type mismatches at compile time
+
 ## Tree Shaking
 
 - **Package-level**: Unused packages are not imported in the generated bootstrap
 - **Inspector detection**: Scans for `rpc.invoke('namespace:...')` calls
+- **Conditional imports**: Only detected packages are added to bootstrap file
 - **Type-only imports**: Use `import type` for zero runtime overhead
 
 ## Service Hydration

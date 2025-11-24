@@ -208,6 +208,23 @@ export const all: any = pikkuVoidFunc({
       await pikkuOpenAPI.func(services, null, wire)
     }
 
+    const stateBeforeBootstrap = await getInspectorState()
+    if (
+      config.externalPackages &&
+      stateBeforeBootstrap.rpc?.usedExternalPackages?.size > 0
+    ) {
+      for (const namespace of stateBeforeBootstrap.rpc.usedExternalPackages) {
+        const packageName = config.externalPackages[namespace]
+        if (packageName) {
+          const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
+          allImports.push(packageBootstrap)
+          logger.debug(
+            `• External package detected: ${namespace} (${packageName})`
+          )
+        }
+      }
+    }
+
     // Generate main bootstrap file (pass all imports directly since this is the main file)
     await writeFileInDir(
       logger,
