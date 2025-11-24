@@ -82,9 +82,10 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
  */
 export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   tag: string,
-  middleware: CorePikkuMiddlewareGroup
+  middleware: CorePikkuMiddlewareGroup,
+  packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
-  const tagGroups = pikkuState(null, 'middleware', 'tagGroup')
+  const tagGroups = pikkuState(packageName, 'middleware', 'tagGroup')
   tagGroups[tag] = middleware
   return middleware
 }

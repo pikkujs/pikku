@@ -130,9 +130,10 @@ export const getPermissionByName = (
  */
 export const addPermission = (
   tag: string,
-  permissions: CorePermissionGroup | CorePikkuPermission[]
+  permissions: CorePermissionGroup | CorePikkuPermission[],
+  packageName: string | null = null
 ): CorePermissionGroup | CorePikkuPermission[] => {
-  const tagGroups = pikkuState(null, 'permissions', 'tagGroup')
+  const tagGroups = pikkuState(packageName, 'permissions', 'tagGroup')
   if (tagGroups[tag]) {
     throw new Error(
       `Permissions for tag '${tag}' already exist. Use a different tag or remove the existing permissions first.`

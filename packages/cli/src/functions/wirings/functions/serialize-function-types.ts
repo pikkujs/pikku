@@ -10,8 +10,10 @@ export const serializeFunctionTypes = (
   wireServicesTypeName: string,
   rpcMapTypeImport: string,
   requiredServicesTypeImport: string,
-  configTypeImport: string
+  configTypeImport: string,
+  packageName?: string
 ) => {
+  const packageNameValue = packageName ? `'${packageName}'` : 'null'
   return `/**
  * Core function, middleware, and permission types for all wirings
  */
@@ -406,7 +408,7 @@ export const pikkuWireServices = (
  * \`\`\`
  */
 export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
-  addMiddlewareCore(tag, middleware as any)
+  addMiddlewareCore(tag, middleware as any, ${packageNameValue})
 }
 
 /**
@@ -433,7 +435,7 @@ export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
  * \`\`\`
  */
 export const addPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
-  addPermissionCore(tag, permissions as any)
+  addPermissionCore(tag, permissions as any, ${packageNameValue})
 }
 `
 }

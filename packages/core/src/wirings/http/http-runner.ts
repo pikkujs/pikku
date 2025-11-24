@@ -68,9 +68,10 @@ import { httpRouter } from './routers/http-router.js'
  */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   pattern: string,
-  middleware: CorePikkuMiddlewareGroup
+  middleware: CorePikkuMiddlewareGroup,
+  packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
-  const httpGroups = pikkuState(null, 'middleware', 'httpGroup')
+  const httpGroups = pikkuState(packageName, 'middleware', 'httpGroup')
   httpGroups[pattern] = middleware
   return middleware
 }
@@ -106,9 +107,10 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
  */
 export const addHTTPPermission = <PikkuPermission extends CorePikkuPermission>(
   pattern: string,
-  permissions: CorePermissionGroup | CorePikkuPermission[]
+  permissions: CorePermissionGroup | CorePikkuPermission[],
+  packageName: string | null = null
 ): CorePermissionGroup | CorePikkuPermission[] => {
-  const httpGroups = pikkuState(null, 'permissions', 'httpGroup')
+  const httpGroups = pikkuState(packageName, 'permissions', 'httpGroup')
   httpGroups[pattern] = permissions
   return permissions
 }

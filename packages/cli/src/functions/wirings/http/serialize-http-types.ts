@@ -62,7 +62,7 @@ export const addHTTPMiddleware = (
   routeOrMiddleware: PikkuMiddleware[] | string,
   middleware?: PikkuMiddleware[]
 ) => {
-  addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any)
+  addHTTPMiddlewareCore(routeOrMiddleware as any, middleware as any, ${packageNameValue})
 }
 
 /**
@@ -88,7 +88,7 @@ export const addHTTPPermission = <In = unknown>(
   pattern: string,
   permissions: Record<string, PikkuPermission<In>> | PikkuPermission<In>[]
 ) => {
-  addHTTPPermissionCore(pattern, permissions as any)
+  addHTTPPermissionCore(pattern, permissions as any, ${packageNameValue})
 }
 `
 }

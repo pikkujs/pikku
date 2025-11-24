@@ -66,7 +66,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     coerceDataFromSchema,
     tags = [],
     wire,
-    packageName = '',
+    packageName = null,
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
