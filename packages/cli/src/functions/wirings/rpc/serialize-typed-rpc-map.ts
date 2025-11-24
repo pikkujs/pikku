@@ -8,7 +8,8 @@ export const serializeTypedRPCMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  rpcMeta: Record<string, string>
+  rpcMeta: Record<string, string>,
+  externalPackages?: Record<string, string>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -26,10 +27,17 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
+  const externalPackageImports = generateExternalPackageImports(
+    externalPackages,
+    relativeToPath
+  )
+
+  const mergedRPCMap = generateMergedRPCMap(externalPackages)
+
   return `/**
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
-    
+
 ${serializedImportMap}
 ${serializedCustomTypes}
 
@@ -39,14 +47,16 @@ interface RPCHandler<I, O> {
 }
 
 ${serializedRPCs}
+${externalPackageImports}
+${mergedRPCMap}
 
-export type RPCInvoke = <Name extends keyof RPCMap>(
+export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
   name: Name,
-  data: RPCMap[Name]['input'],
+  data: FlattenedRPCMap[Name]['input'],
   options?: {
     location?: 'local' | 'remote' | 'auto'
   }
-) => Promise<RPCMap[Name]['output']>
+) => Promise<FlattenedRPCMap[Name]['output']>
 
 // Import WorkflowMap for workflow typing
 import type { WorkflowMap } from '../workflow/pikku-workflow-map.gen.js'
@@ -62,6 +72,59 @@ export type TypedPikkuRPC = {
   ) => Promise<{ runId: string }>;
 }
   `
+}
+
+function generateExternalPackageImports(
+  externalPackages: Record<string, string> | undefined,
+  relativeToPath: string
+): string {
+  if (!externalPackages || Object.keys(externalPackages).length === 0) {
+    return ''
+  }
+
+  let imports = '\n// External package RPC maps\n'
+  for (const [namespace, packageName] of Object.entries(externalPackages)) {
+    // Import the RPCMap from each external package's internal RPC map
+    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${packageName}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
+  }
+  return imports
+}
+
+function generateMergedRPCMap(
+  externalPackages: Record<string, string> | undefined
+): string {
+  if (!externalPackages || Object.keys(externalPackages).length === 0) {
+    return `
+// No external packages, use RPCMap directly
+export type FlattenedRPCMap = RPCMap
+`
+  }
+
+  // TypeScript utility to flatten namespaced RPC maps
+  const utilityTypes = `
+// Utility type to prefix keys with namespace
+type PrefixKeys<T, Prefix extends string> = {
+  [K in keyof T as \`\${Prefix}:\${string & K}\`]: T[K]
+}
+
+// Merge all RPC maps with namespace prefixes
+export type FlattenedRPCMap =
+  RPCMap${Object.keys(externalPackages)
+    .map(
+      (namespace) =>
+        ` & PrefixKeys<${toPascalCase(namespace)}RPCMap, '${namespace}'>`
+    )
+    .join('')}
+`
+
+  return utilityTypes
+}
+
+function toPascalCase(str: string): string {
+  return str
+    .split(/[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('')
 }
 
 function generateRPCs(

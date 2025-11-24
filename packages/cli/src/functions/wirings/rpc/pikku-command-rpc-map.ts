@@ -6,14 +6,16 @@ import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { functions, rpc } = await getInspectorState()
-    const { rpcInternalMapDeclarationFile, packageMappings } = config
+    const { rpcInternalMapDeclarationFile, packageMappings, externalPackages } =
+      config
 
     const content = serializeTypedRPCMap(
       rpcInternalMapDeclarationFile,
       packageMappings,
       functions.typesMap,
       functions.meta,
-      rpc.internalMeta
+      rpc.internalMeta,
+      externalPackages
     )
     await writeFileInDir(logger, rpcInternalMapDeclarationFile, content)
   },
@@ -28,14 +30,15 @@ export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
 export const pikkuRPCExposedMap: any = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { functions, rpc } = await getInspectorState()
-    const { rpcMapDeclarationFile, packageMappings } = config
+    const { rpcMapDeclarationFile, packageMappings, externalPackages } = config
 
     const content = serializeTypedRPCMap(
       rpcMapDeclarationFile,
       packageMappings,
       functions.typesMap,
       functions.meta,
-      rpc.exposedMeta
+      rpc.exposedMeta,
+      externalPackages
     )
     await writeFileInDir(logger, rpcMapDeclarationFile, content)
   },
