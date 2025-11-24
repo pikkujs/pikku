@@ -154,8 +154,11 @@ export const all: any = pikkuVoidFunc({
     // Generate Workflows
     const workflows = await pikkuWorkflow.func(services, null, wire)
 
-    // Generate Remote RPC Workers (must be before queue discovery so wireQueueWorker calls are picked up)
-    const remoteRPC = await pikkuRemoteRPC.func(services, null, wire)
+    // Generate Remote RPC Workers (infrastructure - skip for external packages)
+    let remoteRPC = false
+    if (!config.externalPackage) {
+      remoteRPC = await pikkuRemoteRPC.func(services, null, wire)
+    }
 
     // Reinspect to pick up generated workflow workers and remote RPC workers BEFORE generating maps
     if (workflows || remoteRPC) {

@@ -18,18 +18,19 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
       cliTypesFile,
     } = config
 
+    const getImportPath = (file: string) =>
+      config.externalPackage
+        ? null
+        : getFileImportRelativePath(typesFile, file, packageMappings)
+
     const content = serializePikkuTypesHub(
       getFileImportRelativePath(typesFile, functionTypesFile, packageMappings),
-      getFileImportRelativePath(typesFile, httpTypesFile, packageMappings),
-      getFileImportRelativePath(typesFile, channelsTypesFile, packageMappings),
-      getFileImportRelativePath(
-        typesFile,
-        schedulersTypesFile,
-        packageMappings
-      ),
-      getFileImportRelativePath(typesFile, queueTypesFile, packageMappings),
-      getFileImportRelativePath(typesFile, mcpTypesFile, packageMappings),
-      getFileImportRelativePath(typesFile, cliTypesFile, packageMappings)
+      getImportPath(httpTypesFile),
+      getImportPath(channelsTypesFile),
+      getImportPath(schedulersTypesFile),
+      getImportPath(queueTypesFile),
+      getImportPath(mcpTypesFile),
+      getImportPath(cliTypesFile)
     )
 
     await writeFileInDir(logger, typesFile, content)
