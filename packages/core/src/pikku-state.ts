@@ -140,8 +140,17 @@ export const initializePackageState = (packageName: string): void => {
 }
 
 export const resetPikkuState = () => {
+  // Preserve the errors map before resetting
+  const existingErrors = globalThis.pikkuState?.get('__main__')?.misc.errors
+
   globalThis.pikkuState = new Map()
   initializePackageState('__main__')
+
+  // Restore the errors map if it existed
+  if (existingErrors) {
+    const mainState = globalThis.pikkuState.get('__main__')!
+    mainState.misc.errors = existingErrors
+  }
 }
 
 if (!globalThis.pikkuState) {
