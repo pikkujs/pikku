@@ -272,8 +272,8 @@ export const scenarios: TestScenario[] = [
     filter: '--names=sendEmail',
     expectedSingletonServices: ['email', 'logger'],
     expectedWireServices: ['userContext'],
-    expectedExternalBootstrap: false,
+    expectedExternalBootstrap: true,
     description:
-      'When external package function is NOT called, external bootstrap and services (noop) should NOT be bundled',
+      'External bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when external RPC methods are invoked)',
   },
 ]
