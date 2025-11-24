@@ -15,7 +15,7 @@ declare global {
 /**
  * Get or set package-scoped pikku state
  *
- * @param packageName - Package name (empty string '' for main package, '@scope/package' for external packages)
+ * @param packageName - Package name (null for main package, '@scope/package' for external packages)
  * @param type - State category (function, rpc, http, etc.)
  * @param content - Content key within the category
  * @param value - Optional value to set
@@ -23,7 +23,7 @@ declare global {
  *
  * @example
  * // Main package
- * pikkuState(undefined, 'function', 'functions').get(funcName)
+ * pikkuState(null, 'function', 'functions').get(funcName)
  *
  * // External package
  * pikkuState('@acme/stripe-functions', 'rpc', 'meta')
@@ -32,12 +32,12 @@ export const pikkuState = <
   Type extends keyof PikkuState,
   Content extends keyof PikkuState[Type],
 >(
-  packageName: string | undefined,
+  packageName: string | null,
   type: Type,
   content: Content,
   value?: PikkuState[Type][Content]
 ): PikkuState[Type][Content] => {
-  const resolvedPackageName = packageName || '__main__'
+  const resolvedPackageName = packageName ?? '__main__'
 
   // Initialize package state if it doesn't exist
   if (

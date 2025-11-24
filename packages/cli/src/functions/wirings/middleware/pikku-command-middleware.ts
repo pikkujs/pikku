@@ -48,12 +48,12 @@ ${importStatement}
 
 // HTTP middleware groups metadata
 if (metaData.httpGroups && Object.keys(metaData.httpGroups).length > 0) {
-  pikkuState('', 'middleware', 'httpGroupMeta', metaData.httpGroups)
+  pikkuState(null, 'middleware', 'httpGroupMeta', metaData.httpGroups)
 }
 
 // Tag middleware groups metadata
 if (metaData.tagGroups && Object.keys(metaData.tagGroups).length > 0) {
-  pikkuState('', 'middleware', 'tagGroupMeta', metaData.tagGroups)
+  pikkuState(null, 'middleware', 'tagGroupMeta', metaData.tagGroups)
 }
 `
 

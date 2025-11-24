@@ -244,7 +244,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     input: I,
     rpcService: any
   ): Promise<{ runId: string }> {
-    const registrations = pikkuState('', 'workflows', 'registrations')
+    const registrations = pikkuState(null, 'workflows', 'registrations')
     const workflow = registrations.get(name)
 
     if (!workflow) {
@@ -273,14 +273,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowRunNotFound(runId)
     }
 
-    const registrations = pikkuState('', 'workflows', 'registrations')
+    const registrations = pikkuState(null, 'workflows', 'registrations')
     const workflow = registrations.get(run.workflow)
     if (!workflow) {
       throw new WorkflowNotFoundError(run.workflow)
     }
 
     await this.withRunLock(runId, async () => {
-      const meta = pikkuState('', 'workflows', 'meta')
+      const meta = pikkuState(null, 'workflows', 'meta')
       const workflowMeta = meta[run.workflow]
 
       const workflowWire = this.createWorkflowWire(

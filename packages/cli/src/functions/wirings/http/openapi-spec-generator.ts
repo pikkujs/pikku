@@ -68,7 +68,7 @@ export interface OpenAPISpecInfo {
 }
 
 const getErrorResponseForConstructorName = (constructorName: string) => {
-  const errors = Array.from(pikkuState('', 'misc', 'errors').entries())
+  const errors = Array.from(pikkuState(null, 'misc', 'errors').entries())
   const foundError = errors.find(([e]) => e.name === constructorName)
   if (foundError) {
     return foundError[1]

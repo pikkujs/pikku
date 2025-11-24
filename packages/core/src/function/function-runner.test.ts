@@ -21,7 +21,7 @@ const addTestFunction = (funcName: string, funcConfig: any) => {
   const permissions = funcConfig.tags
     ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
     : undefined
-  pikkuState('', 'function', 'meta')[funcName] = {
+  pikkuState(null, 'function', 'meta')[funcName] = {
     pikkuFuncName: funcName,
     inputSchemaName: null,
     outputSchemaName: null,

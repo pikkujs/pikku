@@ -26,7 +26,7 @@ import { closeWireServices } from '../utils.js'
 export const addFunction = (
   funcName: string,
   funcConfig: CorePikkuFunctionConfig<any, any>,
-  packageName?: string
+  packageName: string | null = null
 ) => {
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
@@ -38,7 +38,7 @@ export const runPikkuFuncDirectly = async <In, Out>(
   data: In,
   userSession?: SessionService<CoreUserSession>
 ) => {
-  const funcConfig = pikkuState('', 'function', 'functions').get(funcName)
+  const funcConfig = pikkuState(null, 'function', 'functions').get(funcName)
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
@@ -79,7 +79,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     coerceDataFromSchema?: boolean
     tags?: string[]
     wire: PikkuWire
-    packageName?: string
+    packageName?: string | null
   }
 ): Promise<Out> => {
   const funcConfig = pikkuState(packageName, 'function', 'functions').get(

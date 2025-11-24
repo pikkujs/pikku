@@ -47,7 +47,7 @@ export const pikkuChannels: any = pikkuVoidFunc({
     await writeFileInDir(
       logger,
       channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core'\nimport { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState('', 'channel', 'meta', metaData as ChannelsMeta)`
+      `import { pikkuState } from '@pikku/core'\nimport { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
     )
   },
   middleware: [

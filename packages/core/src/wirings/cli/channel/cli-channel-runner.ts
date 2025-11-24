@@ -27,7 +27,7 @@ export async function executeCLIViaChannel({
   defaultRenderer?: CorePikkuCLIRender<any>
 }): Promise<void> {
   // Get CLI metadata from state
-  const allCLIMeta = pikkuState('', 'cli', 'meta') as unknown as
+  const allCLIMeta = pikkuState(null, 'cli', 'meta') as unknown as
     | CLIMeta
     | undefined
   if (!allCLIMeta) {

@@ -26,7 +26,7 @@ export const pikkuChannels: any = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core'\npikkuState('', 'channel', 'meta', ${JSON.stringify(channels.meta, null, 2)})`
+      `import { pikkuState } from '@pikku/core'\npikkuState(null, 'channel', 'meta', ${JSON.stringify(channels.meta, null, 2)})`
     )
 
     return true

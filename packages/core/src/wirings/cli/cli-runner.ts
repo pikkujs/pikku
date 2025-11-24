@@ -57,7 +57,7 @@ export const wireCLI = <
   cli: CoreCLI<Commands, GlobalOptions, PikkuMiddleware, GlobalOutput>
 ) => {
   // Get the existing metadata that was generated during inspection
-  const cliMeta = pikkuState('', 'cli', 'meta') || {}
+  const cliMeta = pikkuState(null, 'cli', 'meta') || {}
 
   if (!cliMeta.programs?.[cli.program]) {
     throw new Error(
@@ -67,7 +67,7 @@ export const wireCLI = <
 
   // Get existing programs state and add this program
   const programs: Record<string, CLIProgramState> =
-    pikkuState('', 'cli', 'programs') || {}
+    pikkuState(null, 'cli', 'programs') || {}
   programs[cli.program] = {
     defaultRenderer: (cli.render ||
       defaultJSONRenderer) as CorePikkuCLIRender<any>,
@@ -75,7 +75,7 @@ export const wireCLI = <
     renderers: {},
     tags: cli.tags,
   }
-  pikkuState('', 'cli', 'programs', programs)
+  pikkuState(null, 'cli', 'programs', programs)
 
   // Register all command functions recursively
   registerCLICommands(
@@ -130,7 +130,7 @@ function registerCLICommands(
   program: string
 ) {
   // Get the CLI metadata to find actual function names
-  const cliMeta = pikkuState('', 'cli', 'meta').programs[program]
+  const cliMeta = pikkuState(null, 'cli', 'meta').programs[program]
 
   for (const [name, command] of Object.entries(commands)) {
     const fullPath = [...path, name]
@@ -209,10 +209,10 @@ function pluckCLIData(
   funcName: string,
   availableOptions: Record<string, CLIOption>
 ): Record<string, any> {
-  const funcMeta = pikkuState('', 'function', 'meta')[funcName]
+  const funcMeta = pikkuState(null, 'function', 'meta')[funcName]
   const schemaName = funcMeta?.inputSchemaName
   const schema = schemaName
-    ? pikkuState('', 'misc', 'schemas').get(schemaName)
+    ? pikkuState(null, 'misc', 'schemas').get(schemaName)
     : null
 
   if (schema && schema.properties) {
@@ -250,7 +250,7 @@ export async function runCLICommand({
   createWireServices?: CreateWireServices
 }): Promise<any> {
   // Get the command metadata to find the function name
-  const cliMeta = pikkuState('', 'cli', 'meta')
+  const cliMeta = pikkuState(null, 'cli', 'meta')
   const programMeta = cliMeta.programs?.[program]
   if (!programMeta) {
     throw new NotFoundError(`Program not found: ${program}`)
@@ -276,7 +276,7 @@ export async function runCLICommand({
 
   // Get program-specific data
   const programs: Record<string, CLIProgramState> =
-    pikkuState('', 'cli', 'programs') || {}
+    pikkuState(null, 'cli', 'programs') || {}
   const programData = programs[program]
 
   // Combine program middleware + command middleware from the hierarchy
@@ -407,7 +407,7 @@ export async function executeCLI({
 
   try {
     // Get CLI metadata from state
-    const allCLIMeta = pikkuState('', 'cli', 'meta') as unknown as
+    const allCLIMeta = pikkuState(null, 'cli', 'meta') as unknown as
       | CLIMeta
       | undefined
     if (!allCLIMeta) {

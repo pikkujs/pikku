@@ -56,13 +56,13 @@ export const wireMCPResource = <
 >(
   mcpResource: CoreMCPResource<PikkuFunctionConfig>
 ) => {
-  const resourcesMeta = pikkuState('', 'mcp', 'resourcesMeta')
+  const resourcesMeta = pikkuState(null, 'mcp', 'resourcesMeta')
   const mcpResourceMeta = resourcesMeta[mcpResource.uri]
   if (!mcpResourceMeta) {
     throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
   }
   addFunction(mcpResourceMeta.pikkuFuncName, mcpResource.func as any)
-  const resources = pikkuState('', 'mcp', 'resources')
+  const resources = pikkuState(null, 'mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
   }
@@ -76,13 +76,13 @@ export const wireMCPTool = <
 >(
   mcpTool: CoreMCPTool<PikkuFunctionConfig>
 ) => {
-  const toolsMeta = pikkuState('', 'mcp', 'toolsMeta')
+  const toolsMeta = pikkuState(null, 'mcp', 'toolsMeta')
   const mcpToolMeta = toolsMeta[mcpTool.name]
   if (!mcpToolMeta) {
     throw new Error(`MCP tool metadata not found for '${mcpTool.name}'`)
   }
   addFunction(mcpToolMeta.pikkuFuncName, mcpTool.func as any)
-  const tools = pikkuState('', 'mcp', 'tools')
+  const tools = pikkuState(null, 'mcp', 'tools')
   if (tools.has(mcpTool.name)) {
     throw new Error(`MCP tool already exists: ${mcpTool.name}`)
   }
@@ -96,13 +96,13 @@ export const wireMCPPrompt = <
 >(
   mcpPrompt: CoreMCPPrompt<PikkuFunctionConfig>
 ) => {
-  const promptsMeta = pikkuState('', 'mcp', 'promptsMeta')
+  const promptsMeta = pikkuState(null, 'mcp', 'promptsMeta')
   const mcpPromptMeta = promptsMeta[mcpPrompt.name]
   if (!mcpPromptMeta) {
     throw new Error(`MCP prompt metadata not found for '${mcpPrompt.name}'`)
   }
   addFunction(mcpPromptMeta.pikkuFuncName, mcpPrompt.func as any)
-  const prompts = pikkuState('', 'mcp', 'prompts')
+  const prompts = pikkuState(null, 'mcp', 'prompts')
   if (prompts.has(mcpPrompt.name)) {
     throw new Error(`MCP prompt already exists: ${mcpPrompt.name}`)
   }
@@ -118,8 +118,8 @@ export async function runMCPResource(
   let pikkuFuncName: string | undefined
   let extractedParams: Record<string, string> = {}
 
-  const metas = pikkuState('', 'mcp', 'resourcesMeta')
-  const endpoints = pikkuState('', 'mcp', 'resources')
+  const metas = pikkuState(null, 'mcp', 'resourcesMeta')
+  const endpoints = pikkuState(null, 'mcp', 'resources')
 
   if (endpoints.has(uri)) {
     endpoint = endpoints.get(uri)
@@ -170,8 +170,8 @@ export async function runMCPTool(
   params: RunMCPEndpointParams,
   name: string
 ) {
-  const endpoint = pikkuState('', 'mcp', 'tools').get(name)
-  const meta = pikkuState('', 'mcp', 'toolsMeta')[name]
+  const endpoint = pikkuState(null, 'mcp', 'tools').get(name)
+  const meta = pikkuState(null, 'mcp', 'toolsMeta')[name]
   return await runMCPPikkuFunc(
     request,
     'tool',
@@ -187,8 +187,8 @@ export async function runMCPPrompt(
   params: RunMCPEndpointParams,
   name: string
 ) {
-  const endpoint = pikkuState('', 'mcp', 'prompts').get(name)
-  const meta = pikkuState('', 'mcp', 'promptsMeta')[name]
+  const endpoint = pikkuState(null, 'mcp', 'prompts').get(name)
+  const meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
   return await runMCPPikkuFunc(
     request,
     'prompt',
@@ -242,11 +242,11 @@ async function runMCPPikkuFunc(
     // Get metadata for the MCP endpoint to access pre-resolved middleware
     let meta: any
     if (type === 'resource') {
-      meta = pikkuState('', 'mcp', 'resourcesMeta')[name]
+      meta = pikkuState(null, 'mcp', 'resourcesMeta')[name]
     } else if (type === 'tool') {
-      meta = pikkuState('', 'mcp', 'toolsMeta')[name]
+      meta = pikkuState(null, 'mcp', 'toolsMeta')[name]
     } else if (type === 'prompt') {
-      meta = pikkuState('', 'mcp', 'promptsMeta')[name]
+      meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
     }
 
     const result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncName, {
@@ -298,25 +298,25 @@ async function runMCPPikkuFunc(
 }
 
 export const getMCPTools = () => {
-  return pikkuState('', 'mcp', 'tools')
+  return pikkuState(null, 'mcp', 'tools')
 }
 
 export const getMCPResources = () => {
-  return pikkuState('', 'mcp', 'resources')
+  return pikkuState(null, 'mcp', 'resources')
 }
 
 export const getMCPResourcesMeta = () => {
-  return pikkuState('', 'mcp', 'resourcesMeta')
+  return pikkuState(null, 'mcp', 'resourcesMeta')
 }
 
 export const getMCPToolsMeta = () => {
-  return pikkuState('', 'mcp', 'toolsMeta')
+  return pikkuState(null, 'mcp', 'toolsMeta')
 }
 
 export const getMCPPrompts = () => {
-  return pikkuState('', 'mcp', 'prompts')
+  return pikkuState(null, 'mcp', 'prompts')
 }
 
 export const getMCPPromptsMeta = () => {
-  return pikkuState('', 'mcp', 'promptsMeta')
+  return pikkuState(null, 'mcp', 'promptsMeta')
 }

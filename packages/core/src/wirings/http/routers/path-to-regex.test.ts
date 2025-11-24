@@ -37,8 +37,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -73,8 +73,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -119,8 +119,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -155,8 +155,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -184,8 +184,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -206,8 +206,8 @@ describe('PathToRegexRouter', () => {
 
   describe('Channel Routes Integration', () => {
     test('should handle channel routes as GET routes', () => {
-      pikkuState('', 'http', 'routes', new Map())
-      pikkuState('', 'http', 'middleware', new Map())
+      pikkuState(null, 'http', 'routes', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
       pikkuState(
         '',
         'channel',
@@ -253,7 +253,7 @@ describe('PathToRegexRouter', () => {
           ['/api/test', routeMiddleware],
         ])
       )
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -273,8 +273,8 @@ describe('PathToRegexRouter', () => {
         'routes',
         new Map([['get', new Map([['/existing', mockRoute('/existing')]])]])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -289,8 +289,8 @@ describe('PathToRegexRouter', () => {
         'routes',
         new Map([['get', new Map([['/test', mockRoute('/test')]])]])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -307,8 +307,8 @@ describe('PathToRegexRouter', () => {
         'routes',
         new Map([['get', new Map([['/test', mockRoute('/test')]])]])
       )
-      pikkuState('', 'http', 'middleware', new Map())
-      pikkuState('', 'channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       // Don't call initialize manually
       const result = router.match('get', '/test')

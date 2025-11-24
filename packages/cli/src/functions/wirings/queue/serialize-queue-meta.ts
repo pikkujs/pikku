@@ -18,7 +18,7 @@ export const serializeQueueMetaTS = (
   serializedOutput.push(importStatement)
   serializedOutput.push('')
   serializedOutput.push(
-    "pikkuState('', 'queue', 'meta', metaData as QueueWorkersMeta)"
+    "pikkuState(null, 'queue', 'meta', metaData as QueueWorkersMeta)"
   )
   return serializedOutput.join('\n')
 }

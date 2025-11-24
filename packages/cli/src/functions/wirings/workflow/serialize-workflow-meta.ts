@@ -19,7 +19,7 @@ export const serializeWorkflowMetaTS = (
   serializedOutput.push(importStatement)
   serializedOutput.push('')
   serializedOutput.push(
-    "pikkuState('', 'workflows', 'meta', metaData as WorkflowsMeta)"
+    "pikkuState(null, 'workflows', 'meta', metaData as WorkflowsMeta)"
   )
   serializedOutput.push('')
 
