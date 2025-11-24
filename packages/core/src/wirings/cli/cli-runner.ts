@@ -166,7 +166,7 @@ function registerCLICommands(
 
     // Store the options and middleware in program state for use during execution
     const programs: Record<string, CLIProgramState> = pikkuState(
-      '',
+      null,
       'cli',
       'programs'
     )

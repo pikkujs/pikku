@@ -187,6 +187,9 @@ export function cleanPikkuConfig(
     delete pikkuConfig.rpcWiringsFile
   }
 
+  // We remove external packages as we can't yet test them
+  delete pikkuConfig.externalPackages
+
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
 }
 
