@@ -70,13 +70,17 @@ export const all: any = pikkuVoidFunc({
 
     // Generate wiring-specific type files for tree-shaking
     await pikkuFunctionTypesSplit.func(services, null, wire)
-    await pikkuHTTPTypes.func(services, null, wire)
-    await pikkuChannelTypes.func(services, null, wire)
-    await pikkuSchedulerTypes.func(services, null, wire)
-    await pikkuQueueTypes.func(services, null, wire)
     await pikkuWorkflowTypes.func(services, null, wire)
-    await pikkuMCPTypes.func(services, null, wire)
-    await pikkuCLITypes.func(services, null, wire)
+
+    // Skip infrastructure wirings for external packages (only keep functions, RPC, services, workflows)
+    if (!config.externalPackage) {
+      await pikkuHTTPTypes.func(services, null, wire)
+      await pikkuChannelTypes.func(services, null, wire)
+      await pikkuSchedulerTypes.func(services, null, wire)
+      await pikkuQueueTypes.func(services, null, wire)
+      await pikkuMCPTypes.func(services, null, wire)
+      await pikkuCLITypes.func(services, null, wire)
+    }
 
     const hasFunctionRegistrations = await pikkuFunctions.func(
       services,
@@ -127,21 +131,24 @@ export const all: any = pikkuVoidFunc({
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
-    // Generate HTTP
-    const http = await pikkuHTTP.func(services, null, wire)
-    if (http) {
-      await pikkuHTTPMap.func(services, null, wire)
-      await pikkuFetch.func(services, null, wire)
-      allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
-    }
+    // Skip infrastructure wirings for external packages
+    if (!config.externalPackage) {
+      // Generate HTTP
+      const http = await pikkuHTTP.func(services, null, wire)
+      if (http) {
+        await pikkuHTTPMap.func(services, null, wire)
+        await pikkuFetch.func(services, null, wire)
+        allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
+      }
 
-    // Generate Scheduler
-    const scheduler = await pikkuScheduler.func(services, null, wire)
-    if (scheduler) {
-      allImports.push(
-        config.schedulersWiringMetaFile,
-        config.schedulersWiringFile
-      )
+      // Generate Scheduler
+      const scheduler = await pikkuScheduler.func(services, null, wire)
+      if (scheduler) {
+        allImports.push(
+          config.schedulersWiringMetaFile,
+          config.schedulersWiringFile
+        )
+      }
     }
 
     // Generate Workflows
@@ -163,37 +170,43 @@ export const all: any = pikkuVoidFunc({
       )
     }
 
-    // Generate Queues
-    const queues = await pikkuQueue.func(services, null, wire)
-    if (queues) {
-      await pikkuQueueMap.func(services, null, wire)
-      await pikkuQueueService.func(services, null, wire)
-      allImports.push(
-        config.queueWorkersWiringMetaFile,
-        config.queueWorkersWiringFile
-      )
-    }
+    // Skip infrastructure wirings for external packages
+    if (!config.externalPackage) {
+      // Generate Queues
+      const queues = await pikkuQueue.func(services, null, wire)
+      if (queues) {
+        await pikkuQueueMap.func(services, null, wire)
+        await pikkuQueueService.func(services, null, wire)
+        allImports.push(
+          config.queueWorkersWiringMetaFile,
+          config.queueWorkersWiringFile
+        )
+      }
 
-    // Generate Channels
-    const channels = await pikkuChannels.func(services, null, wire)
-    if (channels) {
-      await pikkuChannelsMap.func(services, null, wire)
-      await pikkuWebSocketTyped.func(services, null, wire)
-      allImports.push(config.channelsWiringMetaFile, config.channelsWiringFile)
-    }
+      // Generate Channels
+      const channels = await pikkuChannels.func(services, null, wire)
+      if (channels) {
+        await pikkuChannelsMap.func(services, null, wire)
+        await pikkuWebSocketTyped.func(services, null, wire)
+        allImports.push(
+          config.channelsWiringMetaFile,
+          config.channelsWiringFile
+        )
+      }
 
-    // Generate MCP
-    const mcp = await pikkuMCP.func(services, null, wire)
-    if (mcp) {
-      await pikkuMCPJSON.func(services, null, wire)
-      allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
-    }
+      // Generate MCP
+      const mcp = await pikkuMCP.func(services, null, wire)
+      if (mcp) {
+        await pikkuMCPJSON.func(services, null, wire)
+        allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
+      }
 
-    // Generate CLI
-    const cli = await pikkuCLI.func(services, null, wire)
-    if (cli) {
-      await pikkuCLIEntry.func(services, null, wire)
-      allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
+      // Generate CLI
+      const cli = await pikkuCLI.func(services, null, wire)
+      if (cli) {
+        await pikkuCLIEntry.func(services, null, wire)
+        allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
+      }
     }
 
     if (config.nextBackendFile || config.nextHTTPFile) {
