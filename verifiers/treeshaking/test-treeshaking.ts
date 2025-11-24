@@ -24,8 +24,9 @@ function hasExternalPackageBootstrap(): boolean {
     const content = readFileSync(bootstrapFilePath, 'utf-8')
 
     // Check if the external package bootstrap import exists
+    // External packages are imported using package names, not relative paths
     return content.includes(
-      '../@pikku/templates-function-external/.pikku/pikku-bootstrap.gen.js'
+      '@pikku/templates-function-external/.pikku/pikku-bootstrap.gen.js'
     )
   } catch (error) {
     console.error('Error checking bootstrap file:', error)
