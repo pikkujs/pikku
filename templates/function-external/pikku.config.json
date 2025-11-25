@@ -3,5 +3,12 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
-  "externalPackage": true
+  "externalPackage": true,
+  "forge": {
+    "node": {
+      "displayName": "External Functions",
+      "description": "Example external package functions for Forge",
+      "categories": ["Communication", "Utility"]
+    }
+  }
 }

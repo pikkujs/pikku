@@ -47,6 +47,7 @@ import { pikkuCLIEntry } from '../wirings/cli/pikku-command-cli-entry.js'
 import { pikkuNext } from '../runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../wirings/http/pikku-command-openapi.js'
 import { pikkuPackage } from '../wirings/package/pikku-command-package.js'
+import { pikkuForgeNodes } from '../wirings/forge/pikku-command-forge-nodes.js'
 import { PikkuWire } from '@pikku/core'
 
 export const all: any = pikkuVoidFunc({
@@ -219,6 +220,10 @@ export const all: any = pikkuVoidFunc({
       }
     }
 
+    // Generate Forge nodes metadata (JSON only, no runtime)
+    // This runs for both main apps and external packages
+    await pikkuForgeNodes.func(services, null, wire)
+
     if (config.nextBackendFile || config.nextHTTPFile) {
       await pikkuNext.func(services, null, wire)
     }
@@ -317,6 +322,10 @@ ${Object.entries(usedExternalPackages)
     }
     if (state.workflows?.meta) {
       summary.set('workflows', Object.keys(state.workflows.meta).length)
+    }
+    if (state.forgeNodes?.meta) {
+      const forgeNodesCount = Object.keys(state.forgeNodes.meta).length
+      if (forgeNodesCount > 0) summary.set('forgeNodes', forgeNodesCount)
     }
 
     // Display summary (unless in silent mode)

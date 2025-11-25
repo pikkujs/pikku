@@ -86,6 +86,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       },
       files: new Set(),
     },
+    forgeNodes: {
+      meta: {},
+      files: new Set(),
+    },
     middleware: {
       meta: {},
       tagMiddleware: new Map(),

@@ -30,6 +30,7 @@
     "./mcp": "./dist/wirings/mcp/index.js",
     "./cli": "./dist/wirings/cli/index.js",
     "./cli/channel": "./dist/wirings/cli/channel/index.js",
+    "./forge-node": "./dist/wirings/forge-node/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
     "./services/local-content": "./dist/services/local-content.js",

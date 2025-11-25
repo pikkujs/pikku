@@ -181,7 +181,16 @@ export type PikkuCLIInput = {
 
   forge?: {
     verboseMeta?: boolean
+    node?: {
+      categories?: string[]
+      iconsDir?: string
+      icon?: string
+      displayName?: string
+      description?: string
+    }
   }
+
+  forgeNodesMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
@@ -282,7 +291,16 @@ export type PikkuCLIConfig = {
 
   forge?: {
     verboseMeta?: boolean
+    node?: {
+      categories?: string[]
+      iconsDir?: string
+      icon?: string
+      displayName?: string
+      description?: string
+    }
   }
+
+  forgeNodesMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

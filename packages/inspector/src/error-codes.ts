@@ -11,6 +11,7 @@ export enum ErrorCode {
   // Validation errors
   MISSING_NAME = 'PKU111',
   MISSING_DESCRIPTION = 'PKU123',
+  INVALID_VALUE = 'PKU124',
   MISSING_URI = 'PKU220',
   MISSING_FUNC = 'PKU236',
   INVALID_TAGS_TYPE = 'PKU247',

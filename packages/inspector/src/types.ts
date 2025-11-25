@@ -6,6 +6,7 @@ import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
+import { ForgeNodesMeta } from '@pikku/core/forge-node'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -231,6 +232,10 @@ export interface InspectorState {
   }
   cli: {
     meta: CLIMeta
+    files: Set<string>
+  }
+  forgeNodes: {
+    meta: ForgeNodesMeta
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

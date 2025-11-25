@@ -15,6 +15,7 @@ import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
+import { addForgeNode } from './add/add-forge-node.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -99,6 +100,7 @@ export const visitRoutes = (
   addMCPResource(logger, node, checker, state, options)
   addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)
+  addForgeNode(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, options)

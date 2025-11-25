@@ -134,6 +134,10 @@ export interface SerializableInspectorState {
     meta: InspectorState['cli']['meta']
     files: string[]
   }
+  forgeNodes: {
+    meta: InspectorState['forgeNodes']['meta']
+    files: string[]
+  }
   middleware: {
     meta: InspectorState['middleware']['meta']
     tagMiddleware: Array<
@@ -278,6 +282,10 @@ export function serializeInspectorState(
       meta: state.cli.meta,
       files: Array.from(state.cli.files),
     },
+    forgeNodes: {
+      meta: state.forgeNodes.meta,
+      files: Array.from(state.forgeNodes.files),
+    },
     middleware: {
       meta: state.middleware.meta,
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
@@ -384,6 +392,10 @@ export function deserializeInspectorState(
     cli: {
       meta: data.cli.meta,
       files: new Set(data.cli.files),
+    },
+    forgeNodes: {
+      meta: data.forgeNodes?.meta || {},
+      files: new Set(data.forgeNodes?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,
