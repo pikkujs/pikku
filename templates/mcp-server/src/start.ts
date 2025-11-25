@@ -39,7 +39,7 @@ async function main() {
       await server.connect(transport)
       server.wrapLogger()
       process.on('SIGINT', async () => {
-        await transport?.close()
+        await server.stop()
         process.exit(0)
       })
     } catch (error) {

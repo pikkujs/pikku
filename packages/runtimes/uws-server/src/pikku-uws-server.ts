@@ -1,9 +1,10 @@
 import * as uWS from 'uWebSockets.js'
 
-import type {
+import {
   CoreConfig,
   CoreSingletonServices,
   CreateWireServices,
+  stopSingletonServices,
 } from '@pikku/core'
 
 import { pikkuHTTPHandler, pikkuWebsocketHandler } from '@pikku/uws-handler'
@@ -113,6 +114,7 @@ export class PikkuUWSServer {
   public async enableExitOnSigInt() {
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
       this.singletonServices.logger.info('Stopping server...')
+      await stopSingletonServices(this.singletonServices)
       await this.stop()
       this.singletonServices.logger.info('Server stopped')
       process.exit(0)

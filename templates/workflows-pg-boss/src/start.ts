@@ -27,7 +27,9 @@ async function main(): Promise<void> {
     await workflowService.init()
 
     // Create singleton services with queue, scheduler, and workflowService
+    // pgBossFactory is included so stopSingletonServices will call pgBossFactory.stop()
     const singletonServices = await createSingletonServices(config, {
+      pgBossFactory,
       queueService: pgBossFactory.getQueueService(),
       schedulerService: pgBossFactory.getSchedulerService(),
       workflowService,

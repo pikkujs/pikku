@@ -91,4 +91,11 @@ export class PgBossServiceFactory {
       this.initialized = false
     }
   }
+
+  /**
+   * Alias for close() - used by stopSingletonServices
+   */
+  async stop(): Promise<void> {
+    await this.close()
+  }
 }

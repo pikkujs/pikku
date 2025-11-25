@@ -4231,6 +4231,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-external@workspace:verifiers/external":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-external@workspace:verifiers/external"
+  dependencies:
+    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/core": "npm:^0.11.1"
+    "@pikku/templates-function-external": "workspace:*"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-types@workspace:verifiers/types":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"

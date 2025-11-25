@@ -1,4 +1,5 @@
 import { pikkuWebsocketHandler } from '@pikku/ws'
+import { stopSingletonServices } from '@pikku/core'
 
 import { Server } from 'http'
 import { WebSocketServer } from 'ws'
@@ -33,6 +34,15 @@ async function main(): Promise<void> {
     const hostname = 'localhost'
     server.listen(port, hostname, () => {
       console.log(`Server running at http://${hostname}:${port}/`)
+    })
+
+    process.removeAllListeners('SIGINT').on('SIGINT', async () => {
+      console.log('Stopping server...')
+      await stopSingletonServices(singletonServices)
+      wss.close()
+      server.close()
+      console.log('Server stopped')
+      process.exit(0)
     })
   } catch (e: any) {
     console.error(e.toString())

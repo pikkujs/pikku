@@ -11,6 +11,7 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CreateWireServices,
+  stopSingletonServices,
 } from '@pikku/core'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import { LocalContentConfig } from '@pikku/core/services/local-content'
@@ -148,15 +149,7 @@ export class PikkuExpressServer {
   public async enableExitOnSigInt() {
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
       this.singletonServices.logger.info('Stopping server...')
-      for (const [name, service] of Object.entries(this.singletonServices)) {
-        const stop = (service as any).stop
-        if (stop) {
-          this.singletonServices.logger.info(
-            `Stopping singleton service ${name}`
-          )
-          await stop()
-        }
-      }
+      await stopSingletonServices(this.singletonServices)
       await this.stop()
       this.singletonServices.logger.info('Server stopped')
       process.exit(0)
