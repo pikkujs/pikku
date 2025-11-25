@@ -1,4 +1,6 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { externalMiddleware } from '../middleware/external.js'
+import { externalPermission } from '../permissions/external.js'
 
 export const hello = pikkuSessionlessFunc<
   { name: string; greeting?: string },
@@ -18,4 +20,9 @@ export const hello = pikkuSessionlessFunc<
       noopCalls: noopResult.callCount,
     }
   },
+  middleware: [externalMiddleware('hello')],
+  permissions: {
+    functionLevel: externalPermission,
+  },
+  tags: ['external'],
 })

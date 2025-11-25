@@ -16,6 +16,7 @@ import { testQueueWiring } from './functions/queue.assert.js'
 import { testCLIWiring } from './functions/cli.assert.js'
 import { testChannelWiring } from './functions/channel-local.assert.js'
 import { testChannelWiringServerless } from './functions/channel-serverless.assert.js'
+import { testInternalRPCWiring } from './functions/rpc.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -335,6 +336,23 @@ async function main(): Promise<void> {
       createWireServices
     )
 
+    // Test Internal RPC with external package call
+    // Note: testExternalWithAuth only has 'function' tag (no 'session' tag)
+    // When calling ext:hello, the external package's middleware and permissions also execute
+    const rpcPassed = await testInternalRPCWiring(
+      [
+        // Main package function middleware/permissions
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'testExternal', type: 'function', phase: 'before' },
+        { name: 'function', type: 'function-permission' },
+        // External package function middleware/permissions (when ext:hello is called)
+        { name: 'hello', type: 'external-function', phase: 'before' },
+        { name: 'external', type: 'external-function-permission' },
+      ],
+      singletonServices,
+      createWireServices
+    )
+
     const allPassed =
       httpTest1Passed &&
       httpTest2Passed &&
@@ -351,7 +369,8 @@ async function main(): Promise<void> {
       channelServerlessTest1Passed &&
       channelServerlessTest2Passed &&
       channelServerlessTest3Passed &&
-      channelServerlessTest4Passed
+      channelServerlessTest4Passed &&
+      rpcPassed
 
     if (allPassed) {
       console.log('\n\n✓ All wiring types tested successfully!')
