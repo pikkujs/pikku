@@ -88,6 +88,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Application bootstrap
   bootstrapFile: string
+
+  // Package service factories (for external packages)
+  packageFile: string
 }
 
 export type PikkuCLIInput = {

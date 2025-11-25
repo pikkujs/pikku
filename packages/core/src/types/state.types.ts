@@ -36,6 +36,13 @@ import {
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
   FunctionServicesMeta,
+  CreateConfig,
+  CreateSingletonServices,
+  CreateWireServices,
+  CoreConfig,
+  CoreSingletonServices,
+  CoreServices,
+  CoreUserSession,
 } from './core.types.js'
 
 /**
@@ -149,5 +156,22 @@ export interface PikkuPackageState {
     schemas: Map<string, any>
     middleware: Record<string, CorePikkuMiddleware[]>
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
+  }
+  package: {
+    /** Service factory functions for external packages */
+    factories: {
+      createConfig?: CreateConfig<CoreConfig>
+      createSingletonServices?: CreateSingletonServices<
+        CoreConfig,
+        CoreSingletonServices
+      >
+      createWireServices?: CreateWireServices<
+        CoreSingletonServices,
+        CoreServices,
+        CoreUserSession
+      >
+    } | null
+    /** Cached singleton services for this package */
+    singletonServices: CoreSingletonServices | null
   }
 }

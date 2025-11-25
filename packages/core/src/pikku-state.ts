@@ -126,6 +126,10 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     middleware: {},
     permissions: {},
   },
+  package: {
+    factories: null,
+    singletonServices: null,
+  },
 })
 
 /**
@@ -156,4 +160,18 @@ export const resetPikkuState = () => {
 
 if (!globalThis.pikkuState) {
   resetPikkuState()
+}
+
+/**
+ * Register service factories for an external package.
+ * These factories are used to create services when the package's functions are invoked.
+ *
+ * @param packageName - The package name (e.g., '@pikku/templates-function-external')
+ * @param factories - The service factory functions
+ */
+export const addPackageServiceFactories = (
+  packageName: string,
+  factories: NonNullable<PikkuPackageState['package']['factories']>
+): void => {
+  pikkuState(packageName, 'package', 'factories', factories)
 }

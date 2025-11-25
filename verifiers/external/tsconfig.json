@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": false,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["src/*", ".pikku/**/*", "src/function/external.functions.ts"]
+}

@@ -46,6 +46,7 @@ import { pikkuCLI } from '../wirings/cli/pikku-command-cli.js'
 import { pikkuCLIEntry } from '../wirings/cli/pikku-command-cli-entry.js'
 import { pikkuNext } from '../runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../wirings/http/pikku-command-openapi.js'
+import { pikkuPackage } from '../wirings/package/pikku-command-package.js'
 import { PikkuWire } from '@pikku/core'
 
 export const all: any = pikkuVoidFunc({
@@ -115,6 +116,12 @@ export const all: any = pikkuVoidFunc({
 
     // Generate service metadata JSON files for AI consumption
     await pikkuServiceMetadata.func(services, null, wire)
+
+    // Generate package service factories for external packages
+    const hasPackageFactories = await pikkuPackage.func(services, null, wire)
+    if (hasPackageFactories) {
+      allImports.push(config.packageFile)
+    }
 
     const hasInternalRPCs = await pikkuRPC.func(services, null, wire)
     await pikkuRPCInternalMap.func(services, null, wire)

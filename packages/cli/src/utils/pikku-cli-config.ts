@@ -385,6 +385,11 @@ const _getPikkuCLIConfig = async (
       result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')
     }
 
+    // Package service factories (for external packages)
+    if (!result.packageFile) {
+      result.packageFile = join(result.outDir, 'pikku-package.gen.ts')
+    }
+
     // MCP
     if (!result.mcpWiringsMetaFile) {
       result.mcpWiringsMetaFile = join(mcpDir, 'pikku-mcp-wirings-meta.gen.ts')

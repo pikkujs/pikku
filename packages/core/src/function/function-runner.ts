@@ -12,6 +12,7 @@ import {
   PermissionMetadata,
   CoreSingletonServices,
   CreateWireServices,
+  CoreConfig,
 } from '../types/core.types.js'
 import {
   CorePermissionGroup,
@@ -22,6 +23,49 @@ import { SessionService } from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
+
+/**
+ * Get or create singleton services for an external package.
+ * Services are cached in pikkuState to avoid recreation on each call.
+ *
+ * @param packageName - The external package name
+ * @param parentServices - The parent/caller's singleton services (used as base)
+ * @returns The package's singleton services
+ */
+const getOrCreatePackageSingletonServices = async (
+  packageName: string,
+  parentServices: CoreSingletonServices
+): Promise<CoreSingletonServices> => {
+  // Check if we already have cached singleton services for this package
+  const cachedServices = pikkuState(packageName, 'package', 'singletonServices')
+  if (cachedServices) {
+    return cachedServices
+  }
+
+  // Get the package's service factories
+  const factories = pikkuState(packageName, 'package', 'factories')
+  if (!factories || !factories.createSingletonServices) {
+    // No factories registered, use parent services
+    return parentServices
+  }
+
+  // Create config for the package (use parent config if no factory)
+  let config: CoreConfig = parentServices.config
+  if (factories.createConfig) {
+    config = await factories.createConfig(parentServices.variables)
+  }
+
+  // Create singleton services for the package, passing parent services as existing
+  const packageServices = await factories.createSingletonServices(
+    config,
+    parentServices
+  )
+
+  // Cache the services
+  pikkuState(packageName, 'package', 'singletonServices', packageServices)
+
+  return packageServices
+}
 
 export const addFunction = (
   funcName: string,
@@ -97,6 +141,20 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
 
+  // For external packages, get or create their singleton services
+  const resolvedSingletonServices = packageName
+    ? await getOrCreatePackageSingletonServices(packageName, singletonServices)
+    : singletonServices
+
+  // Get the package's createWireServices if available
+  let resolvedCreateWireServices = createWireServices
+  if (packageName) {
+    const factories = pikkuState(packageName, 'package', 'factories')
+    if (factories?.createWireServices) {
+      resolvedCreateWireServices = factories.createWireServices
+    }
+  }
+
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
   const mergedInheritedPermissions: PermissionMetadata[] = [
     ...(inheritedPermissions || []),
@@ -134,8 +192,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     if (inputSchemaName) {
       // Validate request data against the defined schema, if any
       await validateSchema(
-        singletonServices.logger,
-        singletonServices.schema,
+        resolvedSingletonServices.logger,
+        resolvedSingletonServices.schema,
         inputSchemaName,
         actualData
       )
@@ -150,18 +208,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
       wirePermissions: wirePermissions,
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
-      services: singletonServices,
+      services: resolvedSingletonServices,
       wire: { ...wireWithInitialSession, rpc: undefined } as any,
       data: actualData,
       packageName,
     })
 
-    const wireServices = await createWireServices?.(
-      singletonServices,
+    const wireServices = await resolvedCreateWireServices?.(
+      resolvedSingletonServices,
       wireWithInitialSession
     )
     try {
-      const services = { ...singletonServices, ...wireServices }
+      const services = { ...resolvedSingletonServices, ...wireServices }
       const rpc = rpcService.getContextRPCService(
         services,
         wireWithInitialSession
@@ -172,7 +230,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       })
     } finally {
       if (wireServices) {
-        await closeWireServices(singletonServices.logger, wireServices)
+        await closeWireServices(resolvedSingletonServices.logger, wireServices)
       }
     }
   }
@@ -187,7 +245,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   if (allMiddleware.length > 0) {
     return (await runMiddleware<CorePikkuMiddleware>(
-      singletonServices,
+      resolvedSingletonServices,
       wire,
       allMiddleware,
       executeFunction
