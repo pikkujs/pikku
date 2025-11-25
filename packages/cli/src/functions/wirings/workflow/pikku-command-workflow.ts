@@ -81,7 +81,8 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       serializeWorkflowMetaTS(
         workflows.meta,
         jsonImportPath,
-        schema?.supportsImportAttributes ?? false
+        schema?.supportsImportAttributes ?? false,
+        config.externalPackageName
       )
     )
 

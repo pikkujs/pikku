@@ -7,11 +7,14 @@ export const serializeWorkflowMeta = (workflowsMeta: WorkflowsMeta) => {
 export const serializeWorkflowMetaTS = (
   workflowsMeta: WorkflowsMeta,
   jsonImportPath: string,
-  supportsImportAttributes: boolean
+  supportsImportAttributes: boolean,
+  packageName?: string
 ) => {
   const importStatement = supportsImportAttributes
     ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
     : `import metaData from '${jsonImportPath}'`
+
+  const packageNameValue = packageName ? `'${packageName}'` : 'null'
 
   const serializedOutput: string[] = []
   serializedOutput.push("import { pikkuState } from '@pikku/core'")
@@ -19,7 +22,7 @@ export const serializeWorkflowMetaTS = (
   serializedOutput.push(importStatement)
   serializedOutput.push('')
   serializedOutput.push(
-    "pikkuState(null, 'workflows', 'meta', metaData as WorkflowsMeta)"
+    `pikkuState(${packageNameValue}, 'workflows', 'meta', metaData as WorkflowsMeta)`
   )
   serializedOutput.push('')
 
