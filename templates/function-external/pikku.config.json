@@ -8,7 +8,9 @@
     "node": {
       "displayName": "External Functions",
       "description": "Example external package functions for Forge",
-      "categories": ["Communication", "Utility"]
+      "categories": ["Communication", "Utility"],
+      "iconsDir": "./src/icons",
+      "icon": "package.svg"
     }
   }
 }
