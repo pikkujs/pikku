@@ -20,9 +20,7 @@ async function main(): Promise<void> {
     const workflowService = new RedisWorkflowService(undefined)
 
     // Create singleton services with queue and workflowService
-    // bullFactory is included so stopSingletonServices will call bullFactory.stop()
     const singletonServices = await createSingletonServices(config, {
-      bullFactory,
       queueService: bullFactory.getQueueService(),
       schedulerService: bullFactory.getSchedulerService(),
       workflowService,
