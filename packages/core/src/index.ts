@@ -29,9 +29,5 @@ export {
   resetPikkuState,
 } from './pikku-state.js'
 export type { PikkuPackageState } from './types/state.types.js'
-export {
-  runMiddleware,
-  addMiddleware,
-  getMiddlewareByName,
-} from './middleware-runner.js'
+export { runMiddleware, addMiddleware } from './middleware-runner.js'
 export { addPermission } from './permissions.js'

@@ -153,6 +153,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       services: singletonServices,
       wire: { ...wireWithInitialSession, rpc: undefined } as any,
       data: actualData,
+      packageName,
     })
 
     const wireServices = await createWireServices?.(
@@ -181,6 +182,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wireMiddleware,
     funcInheritedMiddleware: funcMeta.middleware,
     funcMiddleware: funcConfig.middleware,
+    packageName,
   })
 
   if (allMiddleware.length > 0) {

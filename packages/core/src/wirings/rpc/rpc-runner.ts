@@ -140,12 +140,14 @@ export class ContextAwareRPCService {
 
     // Execute the function using runPikkuFunc with the external package's state
     // We use the parent services (this.services) since external packages share services
+    // Pass the function's tags so tag-based middleware/permissions are applied
     return runPikkuFunc<In, Out>('rpc', namespacedFunction, funcName, {
       auth: this.options.requiresAuth,
       singletonServices: this.services,
       data: () => data,
       wire,
       packageName: resolved.package,
+      tags: funcMeta.tags,
     })
   }
 

@@ -346,7 +346,10 @@ async function main(): Promise<void> {
         { name: 'testExternal', type: 'function', phase: 'before' },
         { name: 'function', type: 'function-permission' },
         // External package function middleware/permissions (when ext:hello is called)
+        // External package's 'external' tag middleware and permission
+        { name: 'external', type: 'external-tag', phase: 'before' },
         { name: 'hello', type: 'external-function', phase: 'before' },
+        { name: 'external', type: 'external-tag-permission' },
         { name: 'external', type: 'external-function-permission' },
       ],
       singletonServices,
