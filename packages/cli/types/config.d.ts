@@ -183,7 +183,6 @@ export type PikkuCLIInput = {
     verboseMeta?: boolean
     node?: {
       categories?: string[]
-      iconsDir?: string
       icon?: string
       displayName?: string
       description?: string
@@ -293,7 +292,6 @@ export type PikkuCLIConfig = {
     verboseMeta?: boolean
     node?: {
       categories?: string[]
-      iconsDir?: string
       icon?: string
       displayName?: string
       description?: string

@@ -18,7 +18,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, ZodLike } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
 ${userSessionTypeImport}
@@ -221,6 +221,11 @@ export type PikkuFunction<
   >
 
 /**
+ * Helper type to infer the output type from a Zod schema
+ */
+export type InferZodOutput<T> = T extends ZodLike<infer U> ? U : never
+
+/**
  * Configuration object for Pikku functions with optional middleware, permissions, tags, and documentation.
  * This type wraps CorePikkuFunctionConfig with the user's custom types.
  *
@@ -232,64 +237,172 @@ export type PikkuFunctionConfig<
   In = unknown,
   Out = unknown,
   RequiredWires extends keyof PikkuWire = never,
-  PikkuFunc extends PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>
-> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware>
+  PikkuFunc extends PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
+  InputSchema extends ZodLike | undefined = undefined,
+  OutputSchema extends ZodLike | undefined = undefined
+> = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>
+
+/**
+ * Configuration object for Pikku functions with Zod schema validation.
+ * Use this when you want to define input/output schemas using Zod.
+ * Types are automatically inferred from the schemas.
+ *
+ * @template InputSchema - Zod schema for input validation
+ * @template OutputSchema - Zod schema for output validation
+ */
+export type PikkuFunctionConfigWithSchema<
+  InputSchema extends ZodLike,
+  OutputSchema extends ZodLike | undefined = undefined,
+  RequiredWires extends keyof PikkuWire = never
+> = {
+  name?: string
+  tags?: string[]
+  expose?: boolean
+  internal?: boolean
+  func: PikkuFunction<
+    InferZodOutput<InputSchema>,
+    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    RequiredWires
+  > | PikkuFunctionSessionless<
+    InferZodOutput<InputSchema>,
+    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    RequiredWires
+  >
+  auth?: boolean
+  permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
+  middleware?: PikkuMiddleware[]
+  /** Zod schema for input validation. Types are inferred automatically. */
+  input: InputSchema
+  /** Optional Zod schema for output validation. Types are inferred automatically. */
+  output?: OutputSchema
+}
 
 /**
  * Creates a Pikku function that can be either session-aware or sessionless.
  * This is the main function wrapper for creating API endpoints.
  *
- * @template In - Input type for the function
- * @template Out - Output type for the function
+ * Supports two patterns:
+ * 1. Generic types: \`pikkuFunc<Input, Output>({ func: ... })\`
+ * 2. Zod schemas: \`pikkuFunc({ input: z.object(...), output: z.object(...), func: ... })\`
+ *
+ * @template In - Input type for the function (inferred from schema if provided)
+ * @template Out - Output type for the function (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
  * @example
  * \\\`\\\`\\\`typescript
- * const createUser = pikkuFunc<{name: string, email: string}, {id: number, message: string}>({
- *   func: async ({db, logger}, input, wire) => {
- *     const session = await wire.session.get()
- *     logger.info('Creating user', input.name)
+ * // Pattern 1: Using generic types
+ * const createUser = pikkuFunc<{name: string, email: string}, {id: number}>({
+ *   func: async ({db}, input) => {
  *     const user = await db.users.create(input)
- *     return {id: user.id, message: \\\`User \\\${input.name} created successfully\\\`}
- *   },
- *   auth: true
+ *     return { id: user.id }
+ *   }
+ * })
+ *
+ * // Pattern 2: Using Zod schemas (types inferred automatically)
+ * const createUserInput = z.object({ name: z.string(), email: z.string() })
+ * const createUserOutput = z.object({ id: z.number() })
+ *
+ * const createUser = pikkuFunc({
+ *   input: createUserInput,
+ *   output: createUserOutput,
+ *   func: async ({db}, input) => {
+ *     // input is typed as { name: string, email: string }
+ *     const user = await db.users.create(input)
+ *     return { id: user.id } // must match output schema
+ *   }
  * })
  * \\\`\\\`\\\`
  */
-export const pikkuFunc = <In, Out = unknown>(
+export function pikkuFunc<
+  InputSchema extends ZodLike,
+  OutputSchema extends ZodLike | undefined = undefined
+>(
+  config: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+export function pikkuFunc<In, Out = unknown>(
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
     | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
-) => {
+): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
+}
+
+/**
+ * Configuration object for sessionless Pikku functions with Zod schema validation.
+ */
+export type PikkuFunctionSessionlessConfigWithSchema<
+  InputSchema extends ZodLike,
+  OutputSchema extends ZodLike | undefined = undefined,
+  RequiredWires extends keyof PikkuWire = never
+> = {
+  name?: string
+  tags?: string[]
+  expose?: boolean
+  internal?: boolean
+  func: PikkuFunctionSessionless<
+    InferZodOutput<InputSchema>,
+    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    RequiredWires
+  >
+  auth?: boolean
+  permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
+  middleware?: PikkuMiddleware[]
+  /** Zod schema for input validation. Types are inferred automatically. */
+  input: InputSchema
+  /** Optional Zod schema for output validation. Types are inferred automatically. */
+  output?: OutputSchema
 }
 
 /**
  * Creates a sessionless Pikku function that doesn't require user authentication.
  * Use this for public endpoints, webhooks, or background tasks.
  *
- * @template In - Input type for the function
- * @template Out - Output type for the function
+ * Supports two patterns:
+ * 1. Generic types: \`pikkuSessionlessFunc<Input, Output>({ func: ... })\`
+ * 2. Zod schemas: \`pikkuSessionlessFunc({ input: z.object(...), func: ... })\`
+ *
+ * @template In - Input type for the function (inferred from schema if provided)
+ * @template Out - Output type for the function (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  *
  * @example
  * \\\`\\\`\\\`typescript
- * const healthCheck = pikkuSessionlessFunc<void, {status: string, timestamp: string}>({
- *   func: async ({logger}, input) => {
- *     logger.info('Health check requested')
- *     return {status: 'healthy', timestamp: new Date().toISOString()}
- *   },
- *   name: 'healthCheck'
+ * // Pattern 1: Using generic types
+ * const healthCheck = pikkuSessionlessFunc<void, {status: string}>({
+ *   func: async ({logger}) => {
+ *     return { status: 'healthy' }
+ *   }
+ * })
+ *
+ * // Pattern 2: Using Zod schemas
+ * const greetInput = z.object({ name: z.string() })
+ * const greetOutput = z.object({ message: z.string() })
+ *
+ * const greet = pikkuSessionlessFunc({
+ *   input: greetInput,
+ *   output: greetOutput,
+ *   func: async (_services, { name }) => {
+ *     return { message: \\\`Hello, \\\${name}!\\\` }
+ *   }
  * })
  * \\\`\\\`\\\`
  */
-export const pikkuSessionlessFunc = <In, Out = unknown>(
+export function pikkuSessionlessFunc<
+  InputSchema extends ZodLike,
+  OutputSchema extends ZodLike | undefined = undefined
+>(
+  config: PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+export function pikkuSessionlessFunc<In, Out = unknown>(
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc'>
     | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
-) => {
+): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+export function pikkuSessionlessFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 

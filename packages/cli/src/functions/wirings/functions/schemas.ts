@@ -2,11 +2,12 @@ import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import {
   saveSchemas,
   generateSchemas,
+  generateZodSchemas,
 } from '../../../utils/schema-generator.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 /**
- * Generate JSON schemas from TypeScript types
+ * Generate JSON schemas from TypeScript types and Zod schemas
  */
 export const pikkuSchemas: any = pikkuSessionlessFunc<
   void,
@@ -25,6 +26,15 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       config.schema?.additionalProperties
     )
 
+    // Generate JSON schemas from Zod schemas
+    const zodSchemas = await generateZodSchemas(
+      logger,
+      visitState.functions.zodSchemas
+    )
+
+    // Merge zod schemas into the main schemas object
+    Object.assign(schemas, zodSchemas)
+
     await saveSchemas(
       logger,
       config.schemaDirectory,
@@ -32,7 +42,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       visitState.functions.typesMap,
       visitState.functions.meta,
       config.schema?.supportsImportAttributes || true,
-      config.schemasFromTypes
+      config.schemasFromTypes,
+      visitState.functions.zodSchemas
     )
 
     return true

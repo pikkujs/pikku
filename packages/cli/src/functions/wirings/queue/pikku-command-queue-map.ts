@@ -13,7 +13,8 @@ export const pikkuQueueMap: any = pikkuSessionlessFunc<void, void>({
       packageMappings,
       functions.typesMap,
       functions.meta,
-      queueWorkers.meta
+      queueWorkers.meta,
+      functions.zodSchemas
     )
     await writeFileInDir(logger, queueMapDeclarationFile, content)
   },

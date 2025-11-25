@@ -46,7 +46,6 @@ export const addForgeNode: AddWiring = (
     const categoryValue = getPropertyValue(obj, 'category') as string | null
     const typeValue = getPropertyValue(obj, 'type') as ForgeNodeType | null
     const rpcValue = getPropertyValue(obj, 'rpc') as string | null
-    const iconValue = getPropertyValue(obj, 'icon') as string | null
     const errorOutputValue = getPropertyValue(obj, 'errorOutput') as
       | boolean
       | null
@@ -124,7 +123,6 @@ export const addForgeNode: AddWiring = (
       type: typeValue,
       rpc: rpcValue,
       description,
-      icon: iconValue || undefined,
       errorOutput: errorOutputValue ?? false,
       inputSchemaName,
       outputSchemaName,

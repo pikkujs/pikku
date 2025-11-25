@@ -14,7 +14,8 @@ export const pikkuHTTPMap: any = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       functions.meta,
       http.meta,
-      http.metaInputTypes
+      http.metaInputTypes,
+      functions.zodSchemas
     )
     await writeFileInDir(logger, httpMapDeclarationFile, content)
   },

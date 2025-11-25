@@ -5,10 +5,17 @@ export const serializeImportMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
-  requiredTypes: Set<string>
+  requiredTypes: Set<string>,
+  /** Types that should be skipped from import (e.g., zod-derived types) */
+  skipTypes?: Set<string>
 ) => {
   const paths = new Map<string, string[]>()
   Array.from(requiredTypes).forEach((requiredType) => {
+    // Skip types that are handled separately (e.g., zod-derived types)
+    if (skipTypes?.has(requiredType)) {
+      return
+    }
+
     let originalName, uniqueName, path
 
     try {

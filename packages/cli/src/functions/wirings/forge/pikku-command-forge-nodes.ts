@@ -4,6 +4,87 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join, isAbsolute } from 'path'
+import { pathToFileURL } from 'url'
+import type { ForgeCredentialMeta } from '@pikku/core/forge-node'
+
+/**
+ * Convert Zod schema to JSON Schema.
+ * Dynamically imports the source file to get the actual Zod schema,
+ * then converts it using zod-to-json-schema.
+ */
+const convertCredentialSchema = async (
+  meta: ForgeCredentialMeta & {
+    schema: { _schemaVariableName?: string; _sourceFile?: string }
+  },
+  logger: any
+): Promise<ForgeCredentialMeta> => {
+  const { schema } = meta
+  const schemaVariableName = schema._schemaVariableName
+  const sourceFile = schema._sourceFile
+
+  if (!schemaVariableName || !sourceFile) {
+    logger.warn(
+      `Credential '${meta.name}' has invalid schema reference, skipping JSON Schema conversion`
+    )
+    return {
+      ...meta,
+      schema: {},
+    }
+  }
+
+  try {
+    // Dynamically import zod-to-json-schema (optional dependency)
+    const { zodToJsonSchema } = await import('zod-to-json-schema')
+
+    // Convert source file path to a compiled JS path
+    // TypeScript typically compiles src/ to dist/src/ (preserving structure)
+    // Source: /path/to/src/functions/file.ts
+    // Compiled: /path/to/dist/src/functions/file.js
+    const compiledPath = sourceFile
+      .replace(/\/src\//, '/dist/src/')
+      .replace(/\.ts$/, '.js')
+
+    // Import the compiled module to get the Zod schema
+    const fileUrl = pathToFileURL(compiledPath).href
+    const module = await import(fileUrl)
+
+    const zodSchema = module[schemaVariableName]
+    if (!zodSchema) {
+      logger.warn(
+        `Could not find exported schema '${schemaVariableName}' in ${compiledPath}`
+      )
+      return {
+        ...meta,
+        schema: {},
+      }
+    }
+
+    // Convert Zod schema to JSON Schema
+    const jsonSchema = zodToJsonSchema(zodSchema, {
+      $refStrategy: 'none',
+      target: 'jsonSchema7',
+    })
+
+    // Remove $schema key from output
+    const { $schema, ...schemaWithoutMeta } = jsonSchema as Record<
+      string,
+      unknown
+    >
+
+    return {
+      ...meta,
+      schema: schemaWithoutMeta,
+    }
+  } catch (e) {
+    logger.warn(
+      `Could not convert schema for credential '${meta.name}': ${e instanceof Error ? e.message : e}`
+    )
+    return {
+      ...meta,
+      schema: {},
+    }
+  }
+}
 
 /**
  * Load and sanitize an SVG icon file.
@@ -11,24 +92,13 @@ import { join, isAbsolute } from 'path'
  */
 const loadIcon = async (
   iconPath: string | undefined,
-  iconsDir: string | undefined,
   rootDir: string,
   logger: any
 ): Promise<string | undefined> => {
   if (!iconPath) return undefined
 
-  // Determine the full path to the icon
-  let fullPath: string
-  if (isAbsolute(iconPath)) {
-    fullPath = iconPath
-  } else if (iconsDir) {
-    const resolvedIconsDir = isAbsolute(iconsDir)
-      ? iconsDir
-      : join(rootDir, iconsDir)
-    fullPath = join(resolvedIconsDir, iconPath)
-  } else {
-    fullPath = join(rootDir, iconPath)
-  }
+  // Resolve the full path to the icon
+  const fullPath = isAbsolute(iconPath) ? iconPath : join(rootDir, iconPath)
 
   try {
     const content = await readFile(fullPath, 'utf-8')
@@ -53,15 +123,16 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
   boolean | undefined
 >({
   func: async ({ logger, config, getInspectorState }) => {
-    const { forgeNodes } = await getInspectorState()
+    const { forgeNodes, forgeCredentials } = await getInspectorState()
     const { forgeNodesMetaJsonFile, forge, rootDir } = config
 
-    // Only generate if there are forge nodes
-    if (Object.keys(forgeNodes.meta).length === 0) {
+    const hasNodes = Object.keys(forgeNodes.meta).length > 0
+    const hasCredentials = Object.keys(forgeCredentials.meta).length > 0
+
+    // Only generate if there are forge nodes or credentials
+    if (!hasNodes && !hasCredentials) {
       return undefined
     }
-
-    const iconsDir = forge?.node?.iconsDir
 
     // Validate categories if configured
     const allowedCategories = forge?.node?.categories
@@ -80,34 +151,32 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
       }
     }
 
-    // Build the output metadata with package-level defaults and loaded icons
+    // Build the output metadata - remove per-node icon field
     const outputMeta: Record<string, any> = {}
     for (const [name, meta] of Object.entries(forgeNodes.meta) as [
       string,
       any,
     ][]) {
-      // Determine icon path (node-level or package-level default)
-      const iconPath = meta.icon || forge?.node?.icon
-
-      // Load and inline the SVG content
-      const iconContent = await loadIcon(iconPath, iconsDir, rootDir, logger)
-
-      outputMeta[name] = {
-        ...meta,
-        icon: iconContent,
-      }
+      // Remove icon from node meta - only package-level icon is used
+      const { icon: _icon, ...nodeMetaWithoutIcon } = meta
+      outputMeta[name] = nodeMetaWithoutIcon
     }
 
-    // Load package-level icon if specified
-    const packageIcon = await loadIcon(
-      forge?.node?.icon,
-      iconsDir,
-      rootDir,
-      logger
-    )
+    // Load package-level icon
+    const packageIcon = await loadIcon(forge?.node?.icon, rootDir, logger)
+
+    // Process credentials - convert Zod schemas to JSON Schema
+    const outputCredentials: Record<string, ForgeCredentialMeta> = {}
+    for (const [name, meta] of Object.entries(forgeCredentials.meta) as [
+      string,
+      any,
+    ][]) {
+      outputCredentials[name] = await convertCredentialSchema(meta, logger)
+    }
 
     const metaData = {
       nodes: outputMeta,
+      credentials: outputCredentials,
       package: {
         displayName: forge?.node?.displayName,
         description: forge?.node?.description,

@@ -6,7 +6,7 @@ import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
-import { ForgeNodesMeta } from '@pikku/core/forge-node'
+import { ForgeNodesMeta, ForgeCredentialsMeta } from '@pikku/core/forge-node'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -57,10 +57,20 @@ export interface InspectorHTTPState {
   routePermissions: Map<string, PermissionGroupMeta>
 }
 
+/**
+ * Zod schema reference for deferred conversion to JSON Schema at build time
+ */
+export interface ZodSchemaRef {
+  variableName: string
+  sourceFile: string
+}
+
 export interface InspectorFunctionState {
   typesMap: TypesMap
   meta: FunctionsMeta
   files: Map<string, { path: string; exportedName: string }>
+  /** Map of schema name -> zod schema reference for deferred JSON Schema conversion */
+  zodSchemas: Map<string, ZodSchemaRef>
 }
 
 export interface InspectorChannelState {
@@ -236,6 +246,10 @@ export interface InspectorState {
   }
   forgeNodes: {
     meta: ForgeNodesMeta
+    files: Set<string>
+  }
+  forgeCredentials: {
+    meta: ForgeCredentialsMeta
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

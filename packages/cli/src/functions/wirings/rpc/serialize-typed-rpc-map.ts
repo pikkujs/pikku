@@ -1,7 +1,10 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap } from '@pikku/inspector'
+import { TypesMap, ZodSchemaRef } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
-import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
+import {
+  generateCustomTypes,
+  generateZodTypes,
+} from '../../../utils/custom-types-generator.js'
 
 export const serializeTypedRPCMap = (
   relativeToPath: string,
@@ -9,7 +12,8 @@ export const serializeTypedRPCMap = (
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   rpcMeta: Record<string, string>,
-  externalPackages?: Record<string, string>
+  externalPackages?: Record<string, string>,
+  zodSchemas?: Map<string, ZodSchemaRef>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -20,12 +24,21 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
+  // Get zod schema names to skip from import map
+  const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
+
   const serializedImportMap = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
-    requiredTypes
+    requiredTypes,
+    zodSchemaNames
   )
+
+  // Generate zod type declarations
+  const zodTypes = zodSchemas
+    ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
+    : { imports: '', types: '' }
 
   const externalPackageImports = generateExternalPackageImports(
     externalPackages,
@@ -39,7 +52,9 @@ export const serializeTypedRPCMap = (
  */
 
 ${serializedImportMap}
+${zodTypes.imports}
 ${serializedCustomTypes}
+${zodTypes.types}
 
 interface RPCHandler<I, O> {
     input: I;
@@ -150,13 +165,14 @@ function generateRPCs(
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Store the input and output types for RPCHandler
-    // Use 'any' for types not in typesMap (e.g., inline types in generated workflow workers)
+    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
     let inputType = 'null'
     if (input) {
       try {
         inputType = typesMap.getTypeMeta(input).uniqueName
       } catch {
-        inputType = 'any'
+        // Type not in typesMap - use the name directly (e.g., zod-derived types)
+        inputType = input
       }
     }
 
@@ -165,7 +181,8 @@ function generateRPCs(
       try {
         outputType = typesMap.getTypeMeta(output).uniqueName
       } catch {
-        outputType = 'any'
+        // Type not in typesMap - use the name directly (e.g., zod-derived types)
+        outputType = output
       }
     }
 

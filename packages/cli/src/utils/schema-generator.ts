@@ -3,8 +3,9 @@ import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'
-import { TypesMap, ErrorCode } from '@pikku/inspector'
+import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
+import { pathToFileURL } from 'url'
 
 export async function generateSchemas(
   logger: CLILogger,
@@ -85,6 +86,76 @@ export async function generateSchemas(
   return schemas
 }
 
+/**
+ * Generate JSON schemas from Zod schema references.
+ * Dynamically imports the source files to get the actual Zod schemas,
+ * then converts them using zod-to-json-schema.
+ */
+export async function generateZodSchemas(
+  logger: CLILogger,
+  zodSchemas: Map<string, ZodSchemaRef>
+): Promise<Record<string, JSONValue>> {
+  const schemas: Record<string, JSONValue> = {}
+
+  if (zodSchemas.size === 0) {
+    return schemas
+  }
+
+  // Dynamically import zod-to-json-schema (optional dependency)
+  let zodToJsonSchema: any
+  try {
+    const module = await import('zod-to-json-schema')
+    zodToJsonSchema = module.zodToJsonSchema
+  } catch {
+    logger.warn(
+      'zod-to-json-schema is not installed. Skipping Zod schema conversion. Install it with: npm install zod-to-json-schema'
+    )
+    return schemas
+  }
+
+  for (const [schemaName, ref] of zodSchemas.entries()) {
+    try {
+      // Convert source file path to a compiled JS path
+      const compiledPath = ref.sourceFile
+        .replace(/\/src\//, '/dist/src/')
+        .replace(/\.ts$/, '.js')
+
+      // Import the compiled module to get the Zod schema
+      const fileUrl = pathToFileURL(compiledPath).href
+      const module = await import(fileUrl)
+
+      const zodSchema = module[ref.variableName]
+      if (!zodSchema) {
+        logger.warn(
+          `Could not find exported schema '${ref.variableName}' in ${compiledPath} for ${schemaName}`
+        )
+        continue
+      }
+
+      // Convert Zod schema to JSON Schema
+      const jsonSchema = zodToJsonSchema(zodSchema, {
+        $refStrategy: 'none',
+        target: 'jsonSchema7',
+      })
+
+      // Remove $schema key from output
+      const { $schema, ...schemaWithoutMeta } = jsonSchema as Record<
+        string,
+        unknown
+      >
+
+      schemas[schemaName] = schemaWithoutMeta as JSONValue
+      logger.info(`• Generated JSON schema from Zod: ${schemaName}`)
+    } catch (e) {
+      logger.warn(
+        `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
+      )
+    }
+  }
+
+  return schemas
+}
+
 export async function saveSchemas(
   logger: CLILogger,
   schemaParentDir: string,
@@ -92,7 +163,8 @@ export async function saveSchemas(
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean,
-  additionalTypes?: string[]
+  additionalTypes?: string[],
+  zodSchemas?: Map<string, ZodSchemaRef>
 ) {
   await writeFileInDir(
     logger,
@@ -108,14 +180,16 @@ export async function saveSchemas(
           try {
             types.push(typesMap.getUniqueName(inputs[0]))
           } catch {
-            // Skip types not in typesMap (e.g., inline types in generated workflow workers)
+            // Skip types not in typesMap - might be a zod schema name
+            types.push(inputs[0])
           }
         }
         if (outputs?.[0]) {
           try {
             types.push(typesMap.getUniqueName(outputs[0]))
           } catch {
-            // Skip types not in typesMap (e.g., inline types in generated workflow workers)
+            // Skip types not in typesMap - might be a zod schema name
+            types.push(outputs[0])
           }
         }
         return types
@@ -128,6 +202,8 @@ export async function saveSchemas(
       ),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
+    // Add all zod schema names
+    ...(zodSchemas ? Array.from(zodSchemas.keys()) : []),
   ])
 
   if (desiredSchemas.size === 0) {

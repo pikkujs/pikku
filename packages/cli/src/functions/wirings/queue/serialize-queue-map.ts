@@ -1,15 +1,19 @@
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap } from '@pikku/inspector'
+import { TypesMap, ZodSchemaRef } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
-import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
+import {
+  generateCustomTypes,
+  generateZodTypes,
+} from '../../../utils/custom-types-generator.js'
 
 export const serializeQueueMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  queueWorkersMeta: QueueWorkersMeta
+  queueWorkersMeta: QueueWorkersMeta,
+  zodSchemas?: Map<string, ZodSchemaRef>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -20,19 +24,30 @@ export const serializeQueueMap = (
     requiredTypes
   )
 
+  // Get zod schema names to skip from import map
+  const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
+
   const serializedImportMap = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
-    requiredTypes
+    requiredTypes,
+    zodSchemaNames
   )
+
+  // Generate zod type declarations
+  const zodTypes = zodSchemas
+    ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
+    : { imports: '', types: '' }
 
   return `/**
  * This provides the structure needed for typescript to be aware of Queue workers and their input/output types
  */
-    
+
 ${serializedImportMap}
+${zodTypes.imports}
 ${serializedCustomTypes}
+${zodTypes.types}
 
 import type { QueueJob } from '@pikku/core/queue'
 
@@ -93,8 +108,23 @@ function generateQueues(
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Store the input and output types for QueueHandler
-    const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
-    const outputType = output ? typesMap.getTypeMeta(output).uniqueName : 'null'
+    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
+    let inputType = 'null'
+    if (input) {
+      try {
+        inputType = typesMap.getTypeMeta(input).uniqueName
+      } catch {
+        inputType = input
+      }
+    }
+    let outputType = 'null'
+    if (output) {
+      try {
+        outputType = typesMap.getTypeMeta(output).uniqueName
+      } catch {
+        outputType = output
+      }
+    }
 
     requiredTypes.add(inputType)
     requiredTypes.add(outputType)

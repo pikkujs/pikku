@@ -16,6 +16,7 @@ import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
 import { addForgeNode } from './add/add-forge-node.js'
+import { addForgeCredential } from './add/add-forge-credential.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -101,6 +102,7 @@ export const visitRoutes = (
   addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)
   addForgeNode(logger, node, checker, state, options)
+  addForgeCredential(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, options)

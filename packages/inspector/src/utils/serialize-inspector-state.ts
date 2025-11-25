@@ -69,6 +69,7 @@ export interface SerializableInspectorState {
     }
     meta: InspectorState['functions']['meta']
     files: Array<[string, { path: string; exportedName: string }]>
+    zodSchemas: Array<[string, { variableName: string; sourceFile: string }]>
   }
   http: {
     metaInputTypes: Array<
@@ -136,6 +137,10 @@ export interface SerializableInspectorState {
   }
   forgeNodes: {
     meta: InspectorState['forgeNodes']['meta']
+    files: string[]
+  }
+  forgeCredentials: {
+    meta: InspectorState['forgeCredentials']['meta']
     files: string[]
   }
   middleware: {
@@ -240,6 +245,7 @@ export function serializeInspectorState(
       typesMap: serializeTypesMap(state.functions.typesMap),
       meta: state.functions.meta,
       files: Array.from(state.functions.files.entries()),
+      zodSchemas: Array.from(state.functions.zodSchemas.entries()),
     },
     http: {
       metaInputTypes: Array.from(state.http.metaInputTypes.entries()),
@@ -285,6 +291,10 @@ export function serializeInspectorState(
     forgeNodes: {
       meta: state.forgeNodes.meta,
       files: Array.from(state.forgeNodes.files),
+    },
+    forgeCredentials: {
+      meta: state.forgeCredentials.meta,
+      files: Array.from(state.forgeCredentials.files),
     },
     middleware: {
       meta: state.middleware.meta,
@@ -351,6 +361,7 @@ export function deserializeInspectorState(
       typesMap: deserializeTypesMap(data.functions.typesMap),
       meta: data.functions.meta,
       files: new Map(data.functions.files),
+      zodSchemas: new Map(data.functions.zodSchemas || []),
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),
@@ -396,6 +407,10 @@ export function deserializeInspectorState(
     forgeNodes: {
       meta: data.forgeNodes?.meta || {},
       files: new Set(data.forgeNodes?.files || []),
+    },
+    forgeCredentials: {
+      meta: data.forgeCredentials?.meta || {},
+      files: new Set(data.forgeCredentials?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,

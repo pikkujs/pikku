@@ -13,7 +13,8 @@ export const pikkuChannelsMap: any = pikkuSessionlessFunc<void, void>({
       packageMappings,
       state.functions.typesMap,
       state.functions.meta,
-      state.channels.meta
+      state.channels.meta,
+      state.functions.zodSchemas
     )
     await writeFileInDir(logger, channelsMapDeclarationFile, content)
   },

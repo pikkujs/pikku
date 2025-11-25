@@ -15,7 +15,8 @@ export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       functions.meta,
       rpc.internalMeta,
-      externalPackages
+      externalPackages,
+      functions.zodSchemas
     )
     await writeFileInDir(logger, rpcInternalMapDeclarationFile, content)
   },
@@ -38,7 +39,8 @@ export const pikkuRPCExposedMap: any = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       functions.meta,
       rpc.exposedMeta,
-      externalPackages
+      externalPackages,
+      functions.zodSchemas
     )
     await writeFileInDir(logger, rpcMapDeclarationFile, content)
   },

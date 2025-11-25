@@ -189,6 +189,15 @@ export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined
 
+/**
+ * Zod schema type - matches z.ZodType shape for type inference
+ * This avoids requiring zod as a dependency while allowing schema inference
+ */
+export type ZodLike<T = any> = {
+  _input: T
+  _output: T
+}
+
 export type CorePikkuFunctionConfig<
   PikkuFunction extends
     | CorePikkuFunction<any, any, any, any>
@@ -202,6 +211,8 @@ export type CorePikkuFunctionConfig<
     any,
     any
   >,
+  InputSchema extends ZodLike | undefined = undefined,
+  OutputSchema extends ZodLike | undefined = undefined,
 > = {
   name?: string
   tags?: string[]
@@ -211,4 +222,8 @@ export type CorePikkuFunctionConfig<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
+  /** Optional Zod schema for input validation. When provided, types are inferred automatically. */
+  input?: InputSchema
+  /** Optional Zod schema for output validation. When provided, types are inferred automatically. */
+  output?: OutputSchema
 }

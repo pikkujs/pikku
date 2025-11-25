@@ -33,7 +33,16 @@
     "tinyglobby": "^0.2.12",
     "ts-json-schema-generator": "^2.4.0",
     "typescript": "^5.9",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "zod-to-json-schema": "^3.24.0"
+  },
+  "peerDependencies": {
+    "zod": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^24.10.1"

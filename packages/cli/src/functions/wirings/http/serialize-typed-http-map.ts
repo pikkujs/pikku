@@ -1,8 +1,11 @@
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { MetaInputTypes, TypesMap } from '@pikku/inspector'
+import { MetaInputTypes, TypesMap, ZodSchemaRef } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
-import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
+import {
+  generateCustomTypes,
+  generateZodTypes,
+} from '../../../utils/custom-types-generator.js'
 
 export const serializeTypedHTTPWiringsMap = (
   relativeToPath: string,
@@ -10,7 +13,8 @@ export const serializeTypedHTTPWiringsMap = (
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   wiringsMeta: HTTPWiringsMeta,
-  metaTypes: MetaInputTypes
+  metaTypes: MetaInputTypes,
+  zodSchemas?: Map<string, ZodSchemaRef>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -22,19 +26,30 @@ export const serializeTypedHTTPWiringsMap = (
     requiredTypes
   )
 
+  // Get zod schema names to skip from import map
+  const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
+
   const serializedImportMap = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
-    requiredTypes
+    requiredTypes,
+    zodSchemaNames
   )
+
+  // Generate zod type declarations
+  const zodTypes = zodSchemas
+    ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
+    : { imports: '', types: '' }
 
   return `/**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
-    
+
 ${serializedImportMap}
+${zodTypes.imports}
 ${serializedCustomTypes}
+${zodTypes.types}
 ${serializedMetaTypes}
 
 interface HTTPWiringHandler<I, O> {
@@ -85,10 +100,25 @@ function generateHTTPWirings(
       }
 
       // Store the input and output types separately for RouteHandler
-      const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
-      const outputType = output
-        ? typesMap.getTypeMeta(output).uniqueName
-        : 'null'
+      // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
+      let inputType = 'null'
+      if (input) {
+        try {
+          inputType = typesMap.getTypeMeta(input).uniqueName
+        } catch {
+          // Zod-derived schema - use the schema name directly
+          inputType = input
+        }
+      }
+      let outputType = 'null'
+      if (output) {
+        try {
+          outputType = typesMap.getTypeMeta(output).uniqueName
+        } catch {
+          // Zod-derived schema - use the schema name directly
+          outputType = output
+        }
+      }
 
       requiredTypes.add(inputType)
       requiredTypes.add(outputType)
@@ -121,7 +151,13 @@ const generateMetaTypes = (metaTypes: MetaInputTypes, typesMap: TypesMap) => {
   const nameToTypeMap = Array.from(metaTypes.entries()).reduce<
     Map<string, string>
   >((result, [_name, { query, body, params }]) => {
-    const { uniqueName } = typesMap.getTypeMeta(_name)
+    let uniqueName: string
+    try {
+      uniqueName = typesMap.getTypeMeta(_name).uniqueName
+    } catch {
+      // Zod-derived schema - use the name directly
+      uniqueName = _name
+    }
     const queryType =
       query && query.length > 0
         ? `Pick<${uniqueName}, '${query?.join("' | '")}'>`

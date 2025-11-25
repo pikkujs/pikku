@@ -33,6 +33,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       typesMap: new TypesMap(),
       meta: {},
       files: new Map(),
+      zodSchemas: new Map(),
     },
     http: {
       metaInputTypes: new Map(),
@@ -87,6 +88,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     forgeNodes: {
+      meta: {},
+      files: new Set(),
+    },
+    forgeCredentials: {
       meta: {},
       files: new Set(),
     },

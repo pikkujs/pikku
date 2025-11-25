@@ -1,6 +1,27 @@
-import { wireForgeNode } from '@pikku/core'
+import { wireForgeNode, wireForgeCredential } from '@pikku/core'
+import { z } from 'zod'
 
-// Forge node for the hello function - overrides package icon
+// Example credential declaration for this package
+// The schema defines the structure of the secret stored in SecretService
+export const exampleCredentialsSchema = z.object({
+  apiKey: z.string().describe('API key for external service'),
+  apiSecret: z.string().describe('API secret for authentication'),
+  endpoint: z
+    .string()
+    .url()
+    .optional()
+    .describe('Optional custom endpoint URL'),
+})
+
+wireForgeCredential({
+  name: 'example-api',
+  displayName: 'Example API Credentials',
+  description: 'Credentials for the example external API',
+  secretId: 'EXAMPLE_API_CREDENTIALS',
+  schema: exampleCredentialsSchema,
+})
+
+// Forge node for the hello function
 wireForgeNode({
   name: 'hello',
   displayName: 'Say Hello',
@@ -8,11 +29,10 @@ wireForgeNode({
   type: 'action',
   rpc: 'hello',
   description: 'Sends a friendly greeting message',
-  icon: 'hello.svg',
   tags: ['external'],
 })
 
-// Forge node for the goodbye function - inherits package icon
+// Forge node for the goodbye function
 wireForgeNode({
   name: 'goodbye',
   displayName: 'Say Goodbye',
