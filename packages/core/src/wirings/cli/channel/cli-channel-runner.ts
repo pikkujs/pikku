@@ -1,5 +1,5 @@
 import { pikkuState } from '../../../pikku-state.js'
-import { CorePikkuCLIRender, CLIMeta } from '../cli.types.js'
+import { CorePikkuCLIRender, type CLIMeta } from '../cli.types.js'
 import { generateCommandHelp, parseCLIArguments } from '../command-parser.js'
 
 /**
@@ -27,12 +27,13 @@ export async function executeCLIViaChannel({
   defaultRenderer?: CorePikkuCLIRender<any>
 }): Promise<void> {
   // Get CLI metadata from state
-  const allCLIMeta = pikkuState('cli', 'meta') as unknown as CLIMeta | undefined
-  if (!allCLIMeta) {
+  const cliMeta = pikkuState(null, 'cli', 'meta')
+  if (!cliMeta || !('programs' in cliMeta)) {
     throw new Error(
       '[PKU342] CLI metadata not found. No CLI wirings were registered. See https://pikku.dev/docs/pikku-cli/errors/pku342 for more information.'
     )
   }
+  const allCLIMeta = cliMeta as CLIMeta
   const programMeta = allCLIMeta.programs[programName]
 
   if (!programMeta) {

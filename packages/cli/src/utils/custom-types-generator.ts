@@ -8,6 +8,14 @@ export function generateCustomTypes(
 // Custom types are those that are defined directly within generics
 // or are broken into simpler types
 ${Array.from(typesMap.customTypes.entries())
+  .filter(([name, { type }]) => {
+    // Skip types that reference undefined generic parameters (like Name, In, Out)
+    // These come from helper functions with generic indexed access types that can't be statically analyzed
+    // Example: FlattenedRPCMap[Name] where Name is a generic parameter
+    const hasUndefinedGeneric =
+      /\b(Name|In|Out|Key)\b/.test(type) && /\[.*\]/.test(type)
+    return !hasUndefinedGeneric
+  })
   .map(([name, { type, references }]) => {
     references.forEach((refName) => {
       // Skip __object types (including those with suffixes like __object_abc123)

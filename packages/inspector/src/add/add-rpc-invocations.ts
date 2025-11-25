@@ -2,46 +2,76 @@ import * as ts from 'typescript'
 import { InspectorState, InspectorLogger } from '../types.js'
 
 /**
+ * Helper to extract namespace from a namespaced function reference like 'ext:hello'
+ */
+function extractNamespace(functionRef: string): string | null {
+  const colonIndex = functionRef.indexOf(':')
+  if (colonIndex !== -1) {
+    return functionRef.substring(0, colonIndex)
+  }
+  return null
+}
+
+/**
  * Scan for rpc.invoke() calls to track which functions are actually being invoked
+ * Also detects external package usage via:
+ * - Namespaced calls: rpc.invoke('namespace:function')
+ * - External helper: external('namespace:function')
  */
 export function addRPCInvocations(
   node: ts.Node,
   state: InspectorState,
   logger: InspectorLogger
 ) {
-  // Look for property access expressions: rpc.invoke
-  if (ts.isPropertyAccessExpression(node)) {
-    const { expression, name } = node
+  // Look for call expressions: external('ext:hello') or rpc.invoke('...')
+  if (ts.isCallExpression(node)) {
+    const { expression, arguments: args } = node
 
-    // Check if this is accessing 'invoke' property
-    if (name.text === 'invoke') {
-      // Check if the object is 'rpc' (or a variable containing rpc)
-      if (ts.isIdentifier(expression) && expression.text === 'rpc') {
-        // This is rpc.invoke - now we need to find the parent call expression
-        const parent = node.parent
-        if (ts.isCallExpression(parent) && parent.expression === node) {
-          // This is rpc.invoke('function-name')
-          const [firstArg] = parent.arguments
-          if (firstArg) {
-            // Extract the function name from string literal
-            if (ts.isStringLiteral(firstArg)) {
-              const functionName = firstArg.text
-              logger.debug(`• Found RPC invocation: ${functionName}`)
-              state.rpc.invokedFunctions.add(functionName)
-            }
-            // Handle template literals like `function-${name}`
-            else if (
-              ts.isTemplateExpression(firstArg) ||
-              ts.isNoSubstitutionTemplateLiteral(firstArg)
-            ) {
-              logger.warn(
-                `• Found dynamic RPC invocation: ${firstArg.getText()}`
-              )
-              logger.warn(
-                `\tYou can only use string literals for RPC function names, with ' or " and not \``
-              )
-            }
+    // Check for external('namespace:function') calls
+    if (ts.isIdentifier(expression) && expression.text === 'external') {
+      const [firstArg] = args
+      if (firstArg && ts.isStringLiteral(firstArg)) {
+        const functionRef = firstArg.text
+        logger.debug(`• Found external() call: ${functionRef}`)
+        state.rpc.invokedFunctions.add(functionRef)
+
+        const namespace = extractNamespace(functionRef)
+        if (namespace) {
+          logger.debug(`  → External package detected: ${namespace}`)
+          state.rpc.usedExternalPackages.add(namespace)
+        }
+      }
+    }
+
+    // Check for rpc.invoke('...') calls
+    if (
+      ts.isPropertyAccessExpression(expression) &&
+      expression.name.text === 'invoke' &&
+      ts.isIdentifier(expression.expression) &&
+      expression.expression.text === 'rpc'
+    ) {
+      const [firstArg] = args
+      if (firstArg) {
+        if (ts.isStringLiteral(firstArg)) {
+          const functionRef = firstArg.text
+          logger.debug(`• Found RPC invocation: ${functionRef}`)
+          state.rpc.invokedFunctions.add(functionRef)
+
+          const namespace = extractNamespace(functionRef)
+          if (namespace) {
+            logger.debug(`  → External package detected: ${namespace}`)
+            state.rpc.usedExternalPackages.add(namespace)
           }
+        }
+        // Handle template literals like `function-${name}`
+        else if (
+          ts.isTemplateExpression(firstArg) ||
+          ts.isNoSubstitutionTemplateLiteral(firstArg)
+        ) {
+          logger.warn(`• Found dynamic RPC invocation: ${firstArg.getText()}`)
+          logger.warn(
+            `\tYou can only use string literals for RPC function names, with ' or " and not \``
+          )
         }
       }
     }

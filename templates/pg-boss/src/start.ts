@@ -1,4 +1,5 @@
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
+import { stopSingletonServices } from '@pikku/core'
 import {
   createConfig,
   createSingletonServices,
@@ -30,21 +31,17 @@ async function main(): Promise<void> {
     await pgBossQueueWorkers.registerQueues()
 
     // Handle graceful shutdown
-    process.on('SIGTERM', async () => {
+    const shutdown = async (signal: string) => {
       singletonServices.logger.info(
-        'Received SIGTERM, shutting down gracefully...'
+        `Received ${signal}, shutting down gracefully...`
       )
       await pgBossFactory.close()
+      await stopSingletonServices(singletonServices)
       process.exit(0)
-    })
+    }
 
-    process.on('SIGINT', async () => {
-      singletonServices.logger.info(
-        'Received SIGINT, shutting down gracefully...'
-      )
-      await pgBossFactory.close()
-      process.exit(0)
-    })
+    process.on('SIGTERM', () => shutdown('SIGTERM'))
+    process.on('SIGINT', () => shutdown('SIGINT'))
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)

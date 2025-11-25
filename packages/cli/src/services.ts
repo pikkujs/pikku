@@ -252,12 +252,14 @@ export const createSingletonServices: CreateSingletonServices<
           srcDirectories.map((dir) =>
             glob(`${path.join(rootDir, dir)}/**/*.ts`, {
               ignore: config.ignoreFiles || [],
+              absolute: true,
             })
           )
         )
       ).flat()
       unfilteredState = inspect(logger, wiringFiles, {
         setupOnly,
+        rootDir,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,

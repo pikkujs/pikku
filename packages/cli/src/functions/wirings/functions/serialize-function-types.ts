@@ -10,8 +10,10 @@ export const serializeFunctionTypes = (
   wireServicesTypeName: string,
   rpcMapTypeImport: string,
   requiredServicesTypeImport: string,
-  configTypeImport: string
+  configTypeImport: string,
+  packageName?: string
 ) => {
+  const packageNameValue = packageName ? `'${packageName}'` : 'null'
   return `/**
  * Core function, middleware, and permission types for all wirings
  */
@@ -316,6 +318,45 @@ export const pikkuVoidFunc = (
 }
 
 /**
+ * Creates a wrapper function for external package functions that are exposed via RPC.
+ * This allows you to wire external functions to any wiring type (HTTP, queue, etc.)
+ * without type compatibility issues.
+ *
+ * @template Name - The RPC method name (must be a key in FlattenedRPCMap)
+ * @param rpcName - The name of the RPC method to invoke
+ * @returns A Pikku function that proxies calls to the external RPC method
+ *
+ * @example
+ * \\\`\\\`\\\`typescript
+ * // Wire an external function via HTTP
+ * wireHTTP({
+ *   auth: false,
+ *   method: 'get',
+ *   route: '/external/hello',
+ *   func: external('ext:hello'),
+ *   tags: ['external'],
+ * })
+ * \\\`\\\`\\\`
+ */
+export const external = <Name extends keyof FlattenedRPCMap>(
+  rpcName: Name
+): PikkuFunctionConfig<
+  FlattenedRPCMap[Name]['input'],
+  FlattenedRPCMap[Name]['output'],
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (_services: any, data: any, { rpc }: any) => {
+      return rpc.invoke(rpcName, data)
+    }) as any
+  } as PikkuFunctionConfig<
+    FlattenedRPCMap[Name]['input'],
+    FlattenedRPCMap[Name]['output'],
+    'session' | 'rpc'
+  >
+}
+
+/**
  * Creates a Pikku config factory.
  * Use this to define your application's configuration factory.
  *
@@ -406,7 +447,7 @@ export const pikkuWireServices = (
  * \`\`\`
  */
 export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
-  addMiddlewareCore(tag, middleware as any)
+  addMiddlewareCore(tag, middleware as any, ${packageNameValue})
 }
 
 /**
@@ -433,7 +474,7 @@ export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
  * \`\`\`
  */
 export const addPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
-  addPermissionCore(tag, permissions as any)
+  addPermissionCore(tag, permissions as any, ${packageNameValue})
 }
 `
 }

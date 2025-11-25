@@ -30,7 +30,7 @@ export interface ErrorDetails {
  * @param details - The details of the error.
  */
 export const addError = (error: any, { status, message }: ErrorDetails) => {
-  pikkuState('misc', 'errors').set(error, { status, message })
+  pikkuState(null, 'misc', 'errors').set(error, { status, message })
 }
 
 /**
@@ -53,10 +53,10 @@ export const addErrors = (
 export const getErrorResponse = (
   error: Error
 ): { status: number; message: string; mcpCode?: number } | undefined => {
-  const errors = Array.from(pikkuState('misc', 'errors').entries())
+  const errors = Array.from(pikkuState(null, 'misc', 'errors').entries())
   const foundError = errors.find(([e]) => e.name === error.constructor.name)
   if (foundError) {
     return foundError[1]
   }
-  return pikkuState('misc', 'errors').get(error)
+  return pikkuState(null, 'misc', 'errors').get(error)
 }

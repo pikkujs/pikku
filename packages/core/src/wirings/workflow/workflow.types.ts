@@ -183,17 +183,32 @@ export interface RpcStepMeta {
 }
 
 /**
+ * Simple condition expression (leaf node)
+ */
+export interface SimpleCondition {
+  type: 'simple'
+  expression: string
+}
+
+/**
+ * Nested condition structure supporting AND/OR operations
+ */
+export type Condition =
+  | SimpleCondition
+  | { type: 'and'; conditions: Condition[] }
+  | { type: 'or'; conditions: Condition[] }
+
+/**
  * Branch step metadata (if/else control flow)
  */
 export interface BranchStepMeta {
   type: 'branch'
-  /** Condition expression (as source string) */
-  condition: string
-  /** Branch paths */
-  branches: {
-    then: WorkflowStepMeta[]
-    else?: WorkflowStepMeta[]
-  }
+  /** Nested condition structure */
+  conditions: Condition
+  /** Then branch steps */
+  thenSteps: WorkflowStepMeta[]
+  /** Else branch steps (optional) */
+  elseSteps?: WorkflowStepMeta[]
 }
 
 /**
@@ -268,6 +283,63 @@ export interface CancelStepMeta {
 }
 
 /**
+ * Switch case metadata
+ */
+export interface SwitchCaseMeta {
+  /** Case value (literal) or expression */
+  value?: string | number | boolean | null
+  /** Case expression (for complex cases) */
+  expression?: string
+  /** Steps to execute for this case */
+  steps: WorkflowStepMeta[]
+}
+
+/**
+ * Switch step metadata (switch/case control flow)
+ */
+export interface SwitchStepMeta {
+  type: 'switch'
+  /** Expression being switched on */
+  expression: string
+  /** Case branches */
+  cases: SwitchCaseMeta[]
+  /** Default case steps (optional) */
+  defaultSteps?: WorkflowStepMeta[]
+}
+
+/**
+ * Filter step metadata (array.filter)
+ */
+export interface FilterStepMeta {
+  type: 'filter'
+  /** Source array variable name */
+  sourceVar: string
+  /** Iterator variable name */
+  itemVar: string
+  /** Filter condition */
+  condition: Condition
+  /** Output variable name (if assigned) */
+  outputVar?: string
+}
+
+/**
+ * Array predicate step metadata (array.some, array.every)
+ */
+export interface ArrayPredicateStepMeta {
+  type: 'arrayPredicate'
+  /** Predicate mode */
+  mode: 'some' | 'every'
+  /** Source array variable name */
+  sourceVar: string
+  /** Iterator variable name */
+  itemVar: string
+  /** Predicate condition */
+  condition: Condition
+  /** Output variable name (if assigned) */
+  outputVar?: string
+}
+
+/**
  * Workflow step metadata (extracted by inspector)
  */
 export type WorkflowStepMeta =
@@ -279,6 +351,9 @@ export type WorkflowStepMeta =
   | InlineStepMeta
   | SleepStepMeta
   | CancelStepMeta
+  | SwitchStepMeta
+  | FilterStepMeta
+  | ArrayPredicateStepMeta
 
 /**
  * Workflow step wire context for RPC functions

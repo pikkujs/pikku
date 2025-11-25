@@ -4,6 +4,7 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CreateWireServices,
+  stopSingletonServices,
 } from '@pikku/core'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
 
@@ -93,6 +94,7 @@ export class PikkuFastifyServer {
    */
   public async enableExitOnSigInt() {
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
+      await stopSingletonServices(this.singletonServices)
       await this.stop()
       process.exit(0)
     })

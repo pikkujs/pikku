@@ -1,2 +1,4 @@
+set -e
+yarn build
 yarn test
 yarn test:verifiers

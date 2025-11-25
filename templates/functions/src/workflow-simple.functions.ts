@@ -79,20 +79,63 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
     name: data.name,
   })
 
-  // Step 2: Conditional owner creation for enterprise plans
+  // Wait for org setup to complete
+  await workflow.sleep('Wait for org initialization', '2s')
+
+  /**
+   * Cancel if no members to invite
+   */
+  if (data.memberEmails.length === 0) {
+    await workflow.cancel('No members to invite')
+  }
+
+  // Step 2: Plan-based setup using switch statement
+  switch (data.plan) {
+    case 'enterprise':
+      await workflow.sleep('Enterprise plan setup delay', '1s')
+      break
+    case 'premium':
+      await workflow.sleep('Premium plan setup delay', '500ms')
+      break
+    default:
+      await workflow.sleep('Standard plan setup delay', '100ms')
+      break
+  }
+
+  // Step 3: Conditional owner creation for enterprise/premium plans with complex conditions
+  // Create owner if:
+  // - (Enterprise plan AND has more than 5 members) OR
+  // - (Premium plan AND organization name includes 'Corp')
   let owner: { id: string; orgId: string; email: string } | undefined
-  if (data.plan === 'enterprise') {
+  if (
+    (data.plan === 'enterprise' && data.memberEmails.length > 5) ||
+    (data.plan === 'premium' && data.name.includes('Corp'))
+  ) {
     owner = await workflow.do(
       'Create owner',
       'createOwner',
       { orgId: org.id, email: data.email },
       { retries: 3, retryDelay: '5s' }
     )
+
+    // Wait after owner creation
+    await workflow.sleep('Wait after owner setup', '1s')
   }
 
-  // Step 3: Parallel member invitations
+  // Step 4: Filter, some, and every examples
+  const validEmails = data.memberEmails.filter((email) => email.includes('@'))
+  // @ts-ignore - example variable
+  const hasGmailUser = data.memberEmails.some((email) =>
+    email.endsWith('@gmail.com')
+  )
+  // @ts-ignore - example variable
+  const allFromSameDomain = data.memberEmails.every((email) =>
+    email.endsWith('@example.com')
+  )
+
+  // Step 5: Parallel member invitations (using filtered emails)
   await Promise.all(
-    data.memberEmails.map(
+    validEmails.map(
       async (email) =>
         await workflow.do(`Invite member ${email}`, 'inviteMember', {
           orgId: org.id,
@@ -101,11 +144,20 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
     )
   )
 
-  // Step 4: Send welcome email
-  await workflow.do('Send welcome email', 'sendWelcomeEmail', {
-    to: data.email,
-    orgId: org.id,
-  })
+  // Wait to avoid email rate limits
+  await workflow.sleep('Wait before welcome email', '3s')
+
+  // Step 6: Parallel group - send welcome email and notification
+  await Promise.all([
+    workflow.do('Send welcome email', 'sendWelcomeEmail', {
+      to: data.email,
+      orgId: org.id,
+    }),
+    workflow.do('Send notification email', 'sendWelcomeEmail', {
+      to: 'admin@example.com',
+      orgId: org.id,
+    }),
+  ])
 
   // Return typed output
   return {
@@ -147,12 +199,16 @@ export const triggerOrgOnboardingSimple = pikkuSessionlessFunc<
   { orgId: string; ownerId?: string; runId: string }
 >(async ({ logger, workflowService }, data, { rpc }) => {
   // Start the workflow
-  const { runId } = await rpc.startWorkflow('orgOnboardingSimpleWorkflow', data)
+  const { runId } = await rpc.startWorkflow(
+    'orgOnboardingSimpleWorkflow' as any,
+    data
+  )
 
   logger.info(`[SIMPLE] Organization onboarding workflow started: ${runId}`)
 
   // Poll for completion (with timeout)
-  const maxWaitMs = 30000 // 30 seconds
+  // Note: pg-boss has slower polling (~2s default) so we use a longer timeout
+  const maxWaitMs = 60000 // 60 seconds
   const pollIntervalMs = 2000 // 2 seconds
   const startTime = Date.now()
 

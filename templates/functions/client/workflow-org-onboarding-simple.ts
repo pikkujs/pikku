@@ -31,6 +31,9 @@ async function main() {
         'alice@company.com',
         'bob@company.com',
         'charlie@company.com',
+        'david@company.com',
+        'eve@company.com',
+        'frank@company.com',
       ],
     })
 

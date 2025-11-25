@@ -187,6 +187,9 @@ export function cleanPikkuConfig(
     delete pikkuConfig.rpcWiringsFile
   }
 
+  // We remove external packages as we can't yet test them
+  delete pikkuConfig.externalPackages
+
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
 }
 
@@ -240,11 +243,12 @@ export function serverlessChanges(targetPath: string, appName: string): void {
 const FILE_FEATURE_MAPPING = {
   'channel.': ['channel'],
   'http.': ['http'],
+  'http-external.': ['external'],
   'http-progressive-enhancement.': ['channel', 'sse'],
   'http-sse.': ['sse'],
   'mcp.': ['mcp'],
   'queue-worker.': ['queue'],
-  'rpc.': ['http'], // RPC is typically over HTTP
+  'rpc.': ['http'],
   'scheduled-task.': ['scheduled'],
   'cli.': ['cli'],
   'workflow.': ['workflows'],
@@ -444,6 +448,13 @@ export function updatePackageJSONScripts(
       "concurrently 'pikku watch --silent' 'npm run dev'"
     packageJson.stackblitz = {
       startCommand: 'npm run stackblitz',
+    }
+  }
+
+  // Remove external package dependency unless 'external' is supported
+  if (!supportedFeatures.includes('external')) {
+    if (packageJson.dependencies?.['@pikku/templates-function-external']) {
+      delete packageJson.dependencies['@pikku/templates-function-external']
     }
   }
 

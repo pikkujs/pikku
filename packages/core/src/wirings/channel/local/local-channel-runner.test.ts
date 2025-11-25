@@ -101,10 +101,12 @@ const mockCreateWireServices = async () => ({
 
 beforeEach(() => {
   resetPikkuState()
+  httpRouter.reset()
 })
 
 afterEach(() => {
   resetPikkuState()
+  httpRouter.reset()
 })
 
 test('runChannel should return undefined and 404 if no matching channel is found', async () => {
@@ -130,7 +132,7 @@ test('runChannel should return undefined and 404 if no matching channel is found
 test('runChannel should return a channel handler if channel matches and no auth required', async () => {
   resetPikkuState()
 
-  pikkuState('channel', 'meta', {
+  pikkuState(null, 'channel', 'meta', {
     test: {
       name: 'test',
       route: '/test-channel',

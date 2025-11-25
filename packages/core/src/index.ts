@@ -23,10 +23,12 @@ export * from './errors/index.js'
 export * from './middleware/index.js'
 export * from './utils.js'
 export * from './time-utils.js'
-export { pikkuState } from './pikku-state.js'
 export {
-  runMiddleware,
-  addMiddleware,
-  getMiddlewareByName,
-} from './middleware-runner.js'
+  pikkuState,
+  initializePikkuState,
+  resetPikkuState,
+  addPackageServiceFactories,
+} from './pikku-state.js'
+export type { PikkuPackageState } from './types/state.types.js'
+export { runMiddleware, addMiddleware } from './middleware-runner.js'
 export { addPermission } from './permissions.js'

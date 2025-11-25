@@ -3,36 +3,35 @@
  */
 export const serializePikkuTypesHub = (
   functionTypesImportPath: string,
-  httpTypesImportPath: string,
-  channelTypesImportPath: string,
-  schedulerTypesImportPath: string,
-  queueTypesImportPath: string,
-  mcpTypesImportPath: string,
-  cliTypesImportPath: string
+  httpTypesImportPath: string | null,
+  channelTypesImportPath: string | null,
+  schedulerTypesImportPath: string | null,
+  queueTypesImportPath: string | null,
+  mcpTypesImportPath: string | null,
+  cliTypesImportPath: string | null
 ) => {
+  const exports = [
+    {
+      comment: 'Core function, middleware, and permission types',
+      path: functionTypesImportPath,
+    },
+    { comment: 'HTTP wiring types', path: httpTypesImportPath },
+    { comment: 'Channel wiring types', path: channelTypesImportPath },
+    { comment: 'Scheduler wiring types', path: schedulerTypesImportPath },
+    { comment: 'Queue wiring types', path: queueTypesImportPath },
+    { comment: 'MCP wiring types', path: mcpTypesImportPath },
+    { comment: 'CLI wiring types', path: cliTypesImportPath },
+  ]
+
+  const exportStatements = exports
+    .filter((e) => e.path)
+    .map((e) => `// ${e.comment}\nexport * from '${e.path}'`)
+    .join('\n\n')
+
   return `/**
  * Main type export hub - re-exports all wiring-specific types
  */
 
-// Core function, middleware, and permission types
-export * from '${functionTypesImportPath}'
-
-// HTTP wiring types
-export * from '${httpTypesImportPath}'
-
-// Channel wiring types
-export * from '${channelTypesImportPath}'
-
-// Scheduler wiring types
-export * from '${schedulerTypesImportPath}'
-
-// Queue wiring types
-export * from '${queueTypesImportPath}'
-
-// MCP wiring types
-export * from '${mcpTypesImportPath}'
-
-// CLI wiring types
-export * from '${cliTypesImportPath}'
+${exportStatements}
 `
 }

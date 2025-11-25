@@ -20,20 +20,11 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
     } = config
     const { queueWorkers } = visitState
 
-    // Add remote RPC worker to queue metadata if it exists
-    const queueMeta = { ...queueWorkers.meta }
-    if (config.rpc?.remoteRpcWorkersPath) {
-      queueMeta['pikku-remote-internal-rpc'] = {
-        pikkuFuncName: 'pikkuRemoteInternalRPC',
-        queueName: 'pikku-remote-internal-rpc',
-      }
-    }
-
     // Write JSON file
     await writeFileInDir(
       logger,
       queueWorkersWiringMetaJsonFile,
-      JSON.stringify(serializeQueueMeta(queueMeta), null, 2)
+      JSON.stringify(serializeQueueMeta(queueWorkers.meta), null, 2)
     )
 
     // Calculate relative path from TS file to JSON file

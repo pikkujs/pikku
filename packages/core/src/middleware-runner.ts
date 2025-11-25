@@ -82,9 +82,10 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
  */
 export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   tag: string,
-  middleware: CorePikkuMiddlewareGroup
+  middleware: CorePikkuMiddlewareGroup,
+  packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
-  const tagGroups = pikkuState('middleware', 'tagGroup')
+  const tagGroups = pikkuState(packageName, 'middleware', 'tagGroup')
   tagGroups[tag] = middleware
   return middleware
 }
@@ -100,10 +101,8 @@ export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
  *
  * @internal
  */
-export const getMiddlewareByName = (
-  name: string
-): CorePikkuMiddleware | undefined => {
-  const middlewareStore = pikkuState('misc', 'middleware')
+const getMiddlewareByName = (name: string): CorePikkuMiddleware | undefined => {
+  const middlewareStore = pikkuState(null, 'misc', 'middleware')
   const middleware = middlewareStore[name]
   return middleware?.[0]
 }
@@ -152,11 +151,13 @@ export const combineMiddleware = (
     wireMiddleware,
     funcInheritedMiddleware,
     funcMiddleware,
+    packageName = null,
   }: {
     wireInheritedMiddleware?: MiddlewareMetadata[]
     wireMiddleware?: CorePikkuMiddleware[]
     funcInheritedMiddleware?: MiddlewareMetadata[]
     funcMiddleware?: CorePikkuMiddleware[]
+    packageName?: string | null
   } = {}
 ): readonly CorePikkuMiddleware[] => {
   if (middlewareCache[wireType][uid]) {
@@ -170,14 +171,18 @@ export const combineMiddleware = (
     for (const meta of wireInheritedMiddleware) {
       if (meta.type === 'http') {
         // Look up HTTP middleware group from pikkuState
-        const group = pikkuState('middleware', 'httpGroup')[meta.route]
+        const group = pikkuState(packageName, 'middleware', 'httpGroup')[
+          meta.route
+        ]
         if (group) {
           // At runtime, all factories should be resolved to middleware
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       } else if (meta.type === 'tag') {
         // Look up tag middleware group from pikkuState
-        const group = pikkuState('middleware', 'tagGroup')[meta.tag]
+        const group = pikkuState(packageName, 'middleware', 'tagGroup')[
+          meta.tag
+        ]
         if (group) {
           // At runtime, all factories should be resolved to middleware
           resolved.push(...(group as CorePikkuMiddleware[]))
@@ -202,7 +207,9 @@ export const combineMiddleware = (
     for (const meta of funcInheritedMiddleware) {
       if (meta.type === 'tag') {
         // Look up tag middleware group from pikkuState
-        const group = pikkuState('middleware', 'tagGroup')[meta.tag]
+        const group = pikkuState(packageName, 'middleware', 'tagGroup')[
+          meta.tag
+        ]
         if (group) {
           // At runtime, all factories should be resolved to middleware
           resolved.push(...(group as CorePikkuMiddleware[]))

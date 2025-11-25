@@ -23,6 +23,7 @@ describe('PathToRegexRouter', () => {
     test('should correctly identify static routes', () => {
       // Setup test routes
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([
@@ -36,8 +37,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -56,6 +57,7 @@ describe('PathToRegexRouter', () => {
     test('should handle dynamic routes with parameters', () => {
       // Setup test routes with parameters
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([
@@ -71,8 +73,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -98,6 +100,7 @@ describe('PathToRegexRouter', () => {
     test('should handle multi-parameter routes', () => {
       // Setup routes with multiple parameters
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([
@@ -116,8 +119,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -139,6 +142,7 @@ describe('PathToRegexRouter', () => {
     test('should prioritize static routes over dynamic routes for performance', () => {
       // Setup mixed routes where static could conflict with dynamic
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([
@@ -151,8 +155,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -167,6 +171,7 @@ describe('PathToRegexRouter', () => {
   describe('Path Normalization', () => {
     test('should normalize paths without leading slash', () => {
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([
@@ -179,8 +184,8 @@ describe('PathToRegexRouter', () => {
           ],
         ])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -201,9 +206,10 @@ describe('PathToRegexRouter', () => {
 
   describe('Channel Routes Integration', () => {
     test('should handle channel routes as GET routes', () => {
-      pikkuState('http', 'routes', new Map())
-      pikkuState('http', 'middleware', new Map())
+      pikkuState(null, 'http', 'routes', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
       pikkuState(
+        null,
         'channel',
         'channels',
         new Map([
@@ -233,11 +239,13 @@ describe('PathToRegexRouter', () => {
       const routeMiddleware = [async () => {}]
 
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([['get', new Map([['/api/test', mockRoute('/api/test')]])]])
       )
       pikkuState(
+        null,
         'http',
         'middleware',
         new Map([
@@ -245,7 +253,7 @@ describe('PathToRegexRouter', () => {
           ['/api/test', routeMiddleware],
         ])
       )
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -260,12 +268,13 @@ describe('PathToRegexRouter', () => {
   describe('No Match Scenarios', () => {
     test('should return null for non-existent routes', () => {
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([['get', new Map([['/existing', mockRoute('/existing')]])]])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -275,12 +284,13 @@ describe('PathToRegexRouter', () => {
 
     test('should return null for unsupported HTTP methods', () => {
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([['get', new Map([['/test', mockRoute('/test')]])]])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       router.initialize()
 
@@ -292,12 +302,13 @@ describe('PathToRegexRouter', () => {
   describe('Lazy Initialization', () => {
     test('should initialize automatically on first match call', () => {
       pikkuState(
+        null,
         'http',
         'routes',
         new Map([['get', new Map([['/test', mockRoute('/test')]])]])
       )
-      pikkuState('http', 'middleware', new Map())
-      pikkuState('channel', 'channels', new Map())
+      pikkuState(null, 'http', 'middleware', new Map())
+      pikkuState(null, 'channel', 'channels', new Map())
 
       // Don't call initialize manually
       const result = router.match('get', '/test')

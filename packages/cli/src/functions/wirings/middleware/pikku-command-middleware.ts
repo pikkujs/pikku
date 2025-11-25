@@ -43,17 +43,21 @@ export const pikkuMiddleware: any = pikkuSessionlessFunc<
         ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
         : `import metaData from '${jsonImportPath}'`
 
+      const packageNameValue = config.externalPackageName
+        ? `'${config.externalPackageName}'`
+        : 'null'
+
       const tsContent = `import { pikkuState } from '@pikku/core'
 ${importStatement}
 
 // HTTP middleware groups metadata
 if (metaData.httpGroups && Object.keys(metaData.httpGroups).length > 0) {
-  pikkuState('middleware', 'httpGroupMeta', metaData.httpGroups)
+  pikkuState(${packageNameValue}, 'middleware', 'httpGroupMeta', metaData.httpGroups)
 }
 
 // Tag middleware groups metadata
 if (metaData.tagGroups && Object.keys(metaData.tagGroups).length > 0) {
-  pikkuState('middleware', 'tagGroupMeta', metaData.tagGroups)
+  pikkuState(${packageNameValue}, 'middleware', 'tagGroupMeta', metaData.tagGroups)
 }
 `
 

@@ -71,6 +71,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       exposedMeta: {},
       exposedFiles: new Map(),
       invokedFunctions: new Set(),
+      usedExternalPackages: new Set(),
     },
     mcpEndpoints: {
       resourcesMeta: {},
@@ -131,14 +132,18 @@ export const inspect = (
     `Got type checker in ${(performance.now() - startChecker).toFixed(2)}ms`
   )
 
+  // Use provided rootDir or infer from source files
+  const rootDir = options.rootDir || findCommonAncestor(routeFiles)
+
   const startSourceFiles = performance.now()
-  const sourceFiles = program.getSourceFiles()
+  // Filter source files to only include files within the project rootDir
+  // This prevents picking up types from external packages (including workspace symlinks)
+  const sourceFiles = program
+    .getSourceFiles()
+    .filter((sf) => sf.fileName.startsWith(rootDir))
   logger.debug(
     `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
   )
-
-  // Infer root directory from source files
-  const rootDir = findCommonAncestor(routeFiles)
 
   const state = getInitialInspectorState(rootDir)
 

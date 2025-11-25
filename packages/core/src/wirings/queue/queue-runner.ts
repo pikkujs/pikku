@@ -52,7 +52,7 @@ export const wireQueueWorker = <
   queueWorker: CoreQueueWorker<PikkuFunctionConfig>
 ) => {
   // Get processor metadata
-  const meta = pikkuState('queue', 'meta')
+  const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[queueWorker.queueName]
   if (!processorMeta) {
     throw new Error(
@@ -70,7 +70,7 @@ export const wireQueueWorker = <
   })
 
   // Store processor definition in state - runtime adapters will pick this up
-  const registrations = pikkuState('queue', 'registrations')
+  const registrations = pikkuState(null, 'queue', 'registrations')
   registrations.set(queueWorker.queueName, queueWorker)
 }
 
@@ -78,14 +78,14 @@ export const wireQueueWorker = <
  * Get all registered queue processors
  */
 export function getQueueWorkers(): Map<string, CoreQueueWorker> {
-  return pikkuState('queue', 'registrations')
+  return pikkuState(null, 'queue', 'registrations')
 }
 
 /**
  * Stop and remove a queue processor
  */
 export async function removeQueueWorker(name: string): Promise<void> {
-  const registrations = pikkuState('queue', 'registrations')
+  const registrations = pikkuState(null, 'queue', 'registrations')
   const registration = registrations.get(name)
 
   if (!registration) {
@@ -111,14 +111,14 @@ export async function runQueueJob({
 }): Promise<void> {
   const logger = singletonServices.logger
 
-  const meta = pikkuState('queue', 'meta')
+  const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
   if (!processorMeta) {
     throw new Error(`Processor metadata not found for: ${job.queueName}`)
   }
 
   // Get the queue worker registration to access middleware
-  const registrations = pikkuState('queue', 'registrations')
+  const registrations = pikkuState(null, 'queue', 'registrations')
   const queueWorker = registrations.get(job.queueName)
   if (!queueWorker) {
     throw new Error(`Queue worker registration not found for: ${job.queueName}`)

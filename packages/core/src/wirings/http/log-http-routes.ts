@@ -6,7 +6,7 @@ import { Logger } from '../../services/index.js'
  * @param logger - A logger for logging information.
  */
 export const logRoutes = (logger: Logger) => {
-  const routesByType = pikkuState('http', 'routes')
+  const routesByType = pikkuState(null, 'http', 'routes')
   if (routesByType.size === 0) {
     logger.info('No routes added')
     return

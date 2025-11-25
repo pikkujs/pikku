@@ -1,17 +1,38 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
-import {
-  addPermission,
-  getPermissionsForTags,
-  runPermissions,
-} from './permissions.js'
-import { resetPikkuState } from './pikku-state.js'
+import { addPermission, runPermissions } from './permissions.js'
+import { pikkuState, resetPikkuState } from './pikku-state.js'
 import { CoreServices, CoreUserSession } from './types/core.types.js'
-import { CorePermissionGroup } from './function/functions.types.js'
+import {
+  CorePermissionGroup,
+  CorePikkuPermission,
+} from './function/functions.types.js'
 
 beforeEach(() => {
   resetPikkuState()
 })
+
+// Test helper to get permissions for tags (not exported from core to keep it lean)
+const getPermissionsForTags = (
+  tags?: string[]
+): (CorePermissionGroup | CorePikkuPermission)[] => {
+  if (!tags || tags.length === 0) {
+    return []
+  }
+  const permissionsStore = pikkuState(null, 'permissions', 'tagGroup')
+  const result: (CorePermissionGroup | CorePikkuPermission)[] = []
+  for (const tag of new Set(tags)) {
+    const tagPermissions = permissionsStore[tag]
+    if (tagPermissions) {
+      if (Array.isArray(tagPermissions)) {
+        result.push(...tagPermissions)
+      } else {
+        result.push(tagPermissions)
+      }
+    }
+  }
+  return result
+}
 
 const mockServices: CoreServices = {
   logger: {
@@ -75,85 +96,6 @@ describe('addPermission', () => {
           "Permissions for tag 'duplicateTag' already exist. Use a different tag or remove the existing permissions first.",
       }
     )
-  })
-})
-
-describe('getPermissionsForTags', () => {
-  test('should return empty array when no tags provided', () => {
-    const permissions = getPermissionsForTags([])
-    assert.deepEqual(permissions, [])
-  })
-
-  test('should return empty array when tags is undefined', () => {
-    const permissions = getPermissionsForTags(undefined)
-    assert.deepEqual(permissions, [])
-  })
-
-  test('should return permissions for single tag', () => {
-    const mockPermission = async () => true
-    addPermission('singleTestTag', [mockPermission])
-
-    const permissions = getPermissionsForTags(['singleTestTag'])
-    assert.equal(permissions.length, 1)
-    assert.equal(permissions[0], mockPermission)
-  })
-
-  test('should return permissions for multiple tags', () => {
-    const mockPermission1 = async () => true
-    const mockPermission2 = async () => false
-
-    addPermission('tag1', [mockPermission1])
-    addPermission('tag2', [mockPermission2])
-
-    const permissions = getPermissionsForTags(['tag1', 'tag2'])
-    assert.equal(permissions.length, 2)
-    assert.equal(permissions[0], mockPermission1)
-    assert.equal(permissions[1], mockPermission2)
-  })
-
-  test('should handle array permissions correctly', () => {
-    const mockPermission1 = async () => true
-    const mockPermission2 = async () => false
-
-    addPermission('arrayHandleTestTag', [mockPermission1, mockPermission2])
-
-    const permissions = getPermissionsForTags(['arrayHandleTestTag'])
-    assert.equal(permissions.length, 2)
-    assert.equal(permissions[0], mockPermission1)
-    assert.equal(permissions[1], mockPermission2)
-  })
-
-  test('should handle non-array permissions correctly', () => {
-    const mockPermissionGroup: CorePermissionGroup = {
-      permissions: [async () => true],
-    }
-
-    addPermission('objectHandleTestTag', mockPermissionGroup)
-
-    const permissions = getPermissionsForTags(['objectHandleTestTag'])
-    assert.equal(permissions.length, 1)
-    assert.equal(permissions[0], mockPermissionGroup)
-  })
-
-  test('should deduplicate tags', () => {
-    const mockPermission = async () => true
-    addPermission('dedupeTestTag', [mockPermission])
-
-    const permissions = getPermissionsForTags([
-      'dedupeTestTag',
-      'dedupeTestTag',
-    ])
-    assert.equal(permissions.length, 1)
-    assert.equal(permissions[0], mockPermission)
-  })
-
-  test('should ignore non-existent tags', () => {
-    const mockPermission = async () => true
-    addPermission('existingTag', [mockPermission])
-
-    const permissions = getPermissionsForTags(['existingTag', 'nonExistentTag'])
-    assert.equal(permissions.length, 1)
-    assert.equal(permissions[0], mockPermission)
   })
 })
 

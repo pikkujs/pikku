@@ -116,6 +116,8 @@ export type InspectorFilters = {
 
 export type InspectorOptions = Partial<{
   setupOnly: boolean
+  /** Project root directory - used to filter out external package files */
+  rootDir: string
   types: Partial<{
     configFileType: string
     userSessionType: string
@@ -218,7 +220,8 @@ export interface InspectorState {
     internalFiles: Map<string, { path: string; exportedName: string }>
     exposedMeta: Record<string, string>
     exposedFiles: Map<string, { path: string; exportedName: string }>
-    invokedFunctions: Set<string> // Track functions called via rpc.invoke()
+    invokedFunctions: Set<string>
+    usedExternalPackages: Set<string>
   }
   mcpEndpoints: {
     resourcesMeta: MCPResourceMeta

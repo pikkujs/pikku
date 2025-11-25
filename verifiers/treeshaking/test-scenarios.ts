@@ -3,6 +3,7 @@ export interface TestScenario {
   filter: string
   expectedSingletonServices: string[]
   expectedWireServices: string[]
+  expectedExternalBootstrap?: boolean
   description: string
 }
 
@@ -254,5 +255,25 @@ export const scenarios: TestScenario[] = [
     expectedSingletonServices: ['email', 'logger', 'storage'],
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'Routes using saveData function',
+  },
+
+  // External package tests
+  {
+    name: 'External Package: testExternal included',
+    filter: '--names=testExternal',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedWireServices: [],
+    expectedExternalBootstrap: true,
+    description:
+      'When external package function is called via RPC, external bootstrap should be bundled but NOT external services (noop is internal to external package)',
+  },
+  {
+    name: 'External Package: not called - excluded',
+    filter: '--names=sendEmail',
+    expectedSingletonServices: ['email', 'logger'],
+    expectedWireServices: ['userContext'],
+    expectedExternalBootstrap: true,
+    description:
+      'External bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when external RPC methods are invoked)',
   },
 ]

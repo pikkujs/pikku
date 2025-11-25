@@ -6,7 +6,7 @@ import { Logger } from '../../services/index.js'
  * @param logger - A logger for logging information.
  */
 export const logSchedulers = (logger: Logger) => {
-  const scheduledTasks = pikkuState('scheduler', 'tasks')
+  const scheduledTasks = pikkuState(null, 'scheduler', 'tasks')
   if (scheduledTasks.size === 0) {
     logger.info('No scheduled tasks added')
     return

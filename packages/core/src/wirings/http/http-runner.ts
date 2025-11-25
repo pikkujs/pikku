@@ -68,9 +68,10 @@ import { httpRouter } from './routers/http-router.js'
  */
 export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   pattern: string,
-  middleware: CorePikkuMiddlewareGroup
+  middleware: CorePikkuMiddlewareGroup,
+  packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
-  const httpGroups = pikkuState('middleware', 'httpGroup')
+  const httpGroups = pikkuState(packageName, 'middleware', 'httpGroup')
   httpGroups[pattern] = middleware
   return middleware
 }
@@ -106,9 +107,10 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
  */
 export const addHTTPPermission = <PikkuPermission extends CorePikkuPermission>(
   pattern: string,
-  permissions: CorePermissionGroup | CorePikkuPermission[]
+  permissions: CorePermissionGroup | CorePikkuPermission[],
+  packageName: string | null = null
 ): CorePermissionGroup | CorePikkuPermission[] => {
-  const httpGroups = pikkuState('permissions', 'httpGroup')
+  const httpGroups = pikkuState(packageName, 'permissions', 'httpGroup')
   httpGroups[pattern] = permissions
   return permissions
 }
@@ -151,17 +153,17 @@ export const wireHTTP = <
     PikkuMiddleware
   >
 ) => {
-  const httpMeta = pikkuState('http', 'meta')
+  const httpMeta = pikkuState(null, 'http', 'meta')
   const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
   addFunction(routeMeta.pikkuFuncName, httpWiring.func)
-  const routes = pikkuState('http', 'routes')
+  const routes = pikkuState(null, 'http', 'routes')
   if (!routes.has(httpWiring.method)) {
     routes.set(httpWiring.method, new Map())
   }
-  pikkuState('http', 'routes')
+  pikkuState(null, 'http', 'routes')
     .get(httpWiring.method)
     ?.set(httpWiring.route, httpWiring as any)
 }
@@ -184,10 +186,10 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
   )
 
   if (matchedPath) {
-    const route = pikkuState('http', 'routes')
+    const route = pikkuState(null, 'http', 'routes')
       .get(requestType.toLowerCase() as HTTPMethod)!
       .get(matchedPath.route)!
-    const meta = pikkuState('http', 'meta')[
+    const meta = pikkuState(null, 'http', 'meta')[
       requestType.toLowerCase() as PikkuWiringTypes
     ][route.route]
 

@@ -57,6 +57,7 @@ export interface PikkuCLICoreOutputFiles {
   workflowsWiringFile: string
   workflowsWiringMetaFile: string
   workflowsWiringMetaJsonFile: string
+  workflowsWiringMetaVerboseJsonFile: string
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
@@ -87,6 +88,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Application bootstrap
   bootstrapFile: string
+
+  // Package service factories (for external packages)
+  packageFile: string
 }
 
 export type PikkuCLIInput = {
@@ -98,6 +102,9 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
+  externalPackages?: Record<string, string> // namespace -> package name
+  externalPackage?: boolean
+  externalPackageName?: string
 
   configDir: string
   tsconfig: string
@@ -172,6 +179,10 @@ export type PikkuCLIInput = {
   stateOutput?: string
   stateInput?: string
 
+  forge?: {
+    verboseMeta?: boolean
+  }
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -184,6 +195,9 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
+  externalPackages?: Record<string, string> // namespace -> package name
+  externalPackage?: boolean
+  externalPackageName?: string
 
   configFile?: string
   tags?: string[]
@@ -265,6 +279,10 @@ export type PikkuCLIConfig = {
 
   stateOutput?: string
   stateInput?: string
+
+  forge?: {
+    verboseMeta?: boolean
+  }
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

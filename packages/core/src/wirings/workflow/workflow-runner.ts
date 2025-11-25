@@ -52,7 +52,7 @@ export class WorkflowRunNotFound extends PikkuError {
  */
 export const addWorkflow = (workflowName: string, workflowFunc: any) => {
   // Get workflow metadata from inspector
-  const meta = pikkuState('workflows', 'meta')
+  const meta = pikkuState(null, 'workflows', 'meta')
   const workflowMeta = meta[workflowName]
   if (!workflowMeta) {
     throw new Error(
@@ -61,7 +61,7 @@ export const addWorkflow = (workflowName: string, workflowFunc: any) => {
   }
 
   // Store workflow definition in state
-  const registrations = pikkuState('workflows', 'registrations')
+  const registrations = pikkuState(null, 'workflows', 'registrations')
   registrations.set(workflowName, {
     name: workflowName,
     func: workflowFunc,

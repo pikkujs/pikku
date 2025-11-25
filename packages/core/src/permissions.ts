@@ -19,7 +19,7 @@ import { freezeDedupe } from './utils.js'
  * @param wire - The wire object containing request/response context and session.
  * @returns A promise that resolves to void.
  */
-export const verifyPermissions = async <Out = any>(
+const verifyPermissions = async <Out = any>(
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
@@ -54,31 +54,6 @@ export const verifyPermissions = async <Out = any>(
 }
 
 /**
- * Registers a single permission function by name in the global permission store.
- *
- * This function is used by CLI-generated code to register permission functions
- * that can be referenced by name in metadata. It stores permissions in a special
- * namespace to avoid conflicts with tag-based permissions.
- *
- * @param {string} name - The unique name (pikkuFuncName) of the permission function.
- * @param {CorePikkuPermission} permission - The permission function to register.
- *
- * @example
- * ```typescript
- * // Called by CLI-generated pikku-permissions.gen.ts
- * registerPermission('adminPermission_src_permissions_ts_10_5', adminPermission)
- * registerPermission('readPermission_src_permissions_ts_20_10', readPermission)
- * ```
- */
-export const registerPermission = (
-  name: string,
-  permission: CorePikkuPermission<any>
-) => {
-  const permissionStore = pikkuState('misc', 'permissions')
-  permissionStore[name] = [permission]
-}
-
-/**
  * Retrieves a registered permission function by its name.
  *
  * This function looks up permissions that was registered with registerPermission.
@@ -89,10 +64,8 @@ export const registerPermission = (
  *
  * @internal
  */
-export const getPermissionByName = (
-  name: string
-): CorePikkuPermission | undefined => {
-  const permissionStore = pikkuState('misc', 'permissions')
+const getPermissionByName = (name: string): CorePikkuPermission | undefined => {
+  const permissionStore = pikkuState(null, 'misc', 'permissions')
   const permission = permissionStore[name]
   if (Array.isArray(permission) && permission.length === 1) {
     return permission[0]
@@ -130,9 +103,10 @@ export const getPermissionByName = (
  */
 export const addPermission = (
   tag: string,
-  permissions: CorePermissionGroup | CorePikkuPermission[]
+  permissions: CorePermissionGroup | CorePikkuPermission[],
+  packageName: string | null = null
 ): CorePermissionGroup | CorePikkuPermission[] => {
-  const tagGroups = pikkuState('permissions', 'tagGroup')
+  const tagGroups = pikkuState(packageName, 'permissions', 'tagGroup')
   if (tagGroups[tag]) {
     throw new Error(
       `Permissions for tag '${tag}' already exist. Use a different tag or remove the existing permissions first.`
@@ -140,50 +114,6 @@ export const addPermission = (
   }
   tagGroups[tag] = permissions
   return permissions
-}
-
-const EMPTY: readonly (CorePermissionGroup | CorePikkuPermission)[] = []
-
-/**
- * Retrieves permissions for a given set of tags.
- *
- * This function looks up all permissions registered for any of the provided tags
- * and returns them as a flattened array.
- *
- * @param {string[]} tags - Array of tags to look up permissions for.
- * @returns {any[]} Array of permission functions that apply to the given tags.
- *
- * @example
- * ```typescript
- * // Get all permissions for tags 'api' and 'auth'
- * const permissions = getPermissionsForTags(['api', 'auth'])
- * ```
- */
-export const getPermissionsForTags = (
-  tags?: string[]
-): readonly (CorePermissionGroup | CorePikkuPermission)[] => {
-  if (!tags || tags.length === 0) {
-    return EMPTY
-  }
-
-  const permissionsStore = pikkuState('permissions', 'tagGroup')
-  const applicablePermissions: Array<
-    CorePermissionGroup | CorePikkuPermission
-  > = []
-
-  // Collect permissions for all matching tags
-  for (const tag of new Set(tags)) {
-    const tagPermissions = permissionsStore[tag]
-    if (tagPermissions) {
-      if (Array.isArray(tagPermissions)) {
-        applicablePermissions.push(...tagPermissions)
-      } else {
-        applicablePermissions.push(tagPermissions)
-      }
-    }
-  }
-
-  return applicablePermissions
 }
 
 const combinedPermissionsCache: Record<
@@ -224,7 +154,7 @@ const combinedPermissionsCache: Record<
  * })
  * ```
  */
-export const combinePermissions = (
+const combinePermissions = (
   wireType: PikkuWiringTypes,
   uid: string,
   {
@@ -232,11 +162,13 @@ export const combinePermissions = (
     wirePermissions,
     funcInheritedPermissions,
     funcPermissions,
+    packageName = null,
   }: {
     wireInheritedPermissions?: PermissionMetadata[]
     wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     funcInheritedPermissions?: PermissionMetadata[]
     funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
+    packageName?: string | null
   } = {}
 ): readonly (CorePermissionGroup | CorePikkuPermission)[] => {
   if (combinedPermissionsCache[wireType][uid]) {
@@ -250,7 +182,9 @@ export const combinePermissions = (
     for (const meta of wireInheritedPermissions) {
       if (meta.type === 'http') {
         // Look up HTTP permission group from pikkuState
-        const group = pikkuState('permissions', 'httpGroup')[meta.route]
+        const group = pikkuState(packageName, 'permissions', 'httpGroup')[
+          meta.route
+        ]
         if (group) {
           if (Array.isArray(group)) {
             resolved.push(...group)
@@ -260,7 +194,9 @@ export const combinePermissions = (
         }
       } else if (meta.type === 'tag') {
         // Look up tag permission group from pikkuState
-        const group = pikkuState('permissions', 'tagGroup')[meta.tag]
+        const group = pikkuState(packageName, 'permissions', 'tagGroup')[
+          meta.tag
+        ]
         if (group) {
           if (Array.isArray(group)) {
             resolved.push(...group)
@@ -292,7 +228,9 @@ export const combinePermissions = (
     for (const meta of funcInheritedPermissions) {
       if (meta.type === 'tag') {
         // Look up tag permission group from pikkuState
-        const group = pikkuState('permissions', 'tagGroup')[meta.tag]
+        const group = pikkuState(packageName, 'permissions', 'tagGroup')[
+          meta.tag
+        ]
         if (group) {
           if (Array.isArray(group)) {
             resolved.push(...group)
@@ -338,6 +276,7 @@ export const runPermissions = async (
     services,
     wire,
     data,
+    packageName = null,
   }: {
     wireInheritedPermissions?: PermissionMetadata[]
     wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
@@ -346,6 +285,7 @@ export const runPermissions = async (
     services: CoreServices
     wire: PikkuWire<any, never, any, never, never, never>
     data: any
+    packageName?: string | null
   }
 ) => {
   // Combine all permissions: wireInheritedPermissions → wirePermissions → funcInheritedPermissions → funcPermissions
@@ -354,6 +294,7 @@ export const runPermissions = async (
     wirePermissions,
     funcInheritedPermissions,
     funcPermissions,
+    packageName,
   })
 
   // Check all combined permissions - at least one must pass if any exist

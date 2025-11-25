@@ -16,6 +16,7 @@ export interface ValidationError {
  * - VariableStatement (const/let declarations)
  * - ExpressionStatement (await workflow.do, await workflow.sleep, await Promise.all)
  * - IfStatement (branches)
+ * - SwitchStatement (switch/case)
  * - ForOfStatement (sequential fanout)
  * - ReturnStatement
  * - Block (containers)
@@ -29,6 +30,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         ts.isVariableStatement(statement) ||
         ts.isExpressionStatement(statement) ||
         ts.isIfStatement(statement) ||
+        ts.isSwitchStatement(statement) ||
         ts.isForOfStatement(statement) ||
         ts.isReturnStatement(statement)
       ) {
@@ -38,7 +40,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         // Unknown/disallowed statement type
         const nodeType = ts.SyntaxKind[statement.kind]
         errors.push({
-          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, for..of, return, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
+          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, switch/case, for..of, return, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
           node: statement,
         })
       }
@@ -109,16 +111,41 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
 export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
   const errors: ValidationError[] = []
 
-  function visit(node: ts.Node, parentIsAwait: boolean = false) {
+  function visit(
+    node: ts.Node,
+    parentIsAwait: boolean = false,
+    insidePromiseAll: boolean = false
+  ) {
+    // Check if this is Promise.all(...) first, before checking for workflow calls
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
+      const propAccess = node.expression
+      if (
+        propAccess.name.text === 'all' &&
+        ts.isIdentifier(propAccess.expression) &&
+        propAccess.expression.text === 'Promise'
+      ) {
+        // console.log('[DEBUG] Found Promise.all, setting insidePromiseAll=true')
+        // Visit children with insidePromiseAll = true
+        ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
+        return
+      }
+    }
+
+    // Now check for workflow calls
     if (ts.isCallExpression(node)) {
       if (ts.isPropertyAccessExpression(node.expression)) {
         const propAccess = node.expression
         if (
-          (propAccess.name.text === 'do' || propAccess.name.text === 'sleep') &&
+          (propAccess.name.text === 'do' ||
+            propAccess.name.text === 'sleep' ||
+            propAccess.name.text === 'cancel') &&
           ts.isIdentifier(propAccess.expression) &&
           propAccess.expression.text === 'workflow'
         ) {
-          if (!parentIsAwait) {
+          if (!parentIsAwait && !insidePromiseAll) {
             errors.push({
               message: `workflow.${propAccess.name.text}() must be awaited`,
               node,
@@ -130,10 +157,10 @@ export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
     }
 
     if (ts.isAwaitExpression(node)) {
-      // Mark child as awaited
-      ts.forEachChild(node.expression, (child) => visit(child, true))
+      // Visit the expression itself with parentIsAwait=true
+      visit(node.expression, true, insidePromiseAll)
     } else {
-      ts.forEachChild(node, (child) => visit(child, false))
+      ts.forEachChild(node, (child) => visit(child, false, insidePromiseAll))
     }
   }
 

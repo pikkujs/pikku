@@ -64,6 +64,10 @@ const _getPikkuCLIConfig = async (
           ...extendedConfig.packageMappings,
           ...config.packageMappings,
         },
+        externalPackages: {
+          ...extendedConfig.externalPackages,
+          ...config.externalPackages,
+        },
         ignoreFiles: config.ignoreFiles ??
           extendedConfig.ignoreFiles ?? [
             '**/*.test.ts',
@@ -83,6 +87,7 @@ const _getPikkuCLIConfig = async (
         ...config,
         configDir,
         packageMappings: config.packageMappings || {},
+        externalPackages: config.externalPackages || {},
         rootDir: config.rootDir
           ? resolve(configDir, config.rootDir)
           : configDir,
@@ -322,6 +327,12 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-wirings-meta.gen.json'
       )
     }
+    if (!result.workflowsWiringMetaVerboseJsonFile) {
+      result.workflowsWiringMetaVerboseJsonFile = join(
+        workflowDir,
+        'pikku-workflow-wirings-meta-verbose.gen.json'
+      )
+    }
     if (!result.workflowsWorkersFile) {
       result.workflowsWorkersFile = join(
         workflowDir,
@@ -372,6 +383,11 @@ const _getPikkuCLIConfig = async (
     // Bootstrap files
     if (!result.bootstrapFile) {
       result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')
+    }
+
+    // Package service factories (for external packages)
+    if (!result.packageFile) {
+      result.packageFile = join(result.outDir, 'pikku-package.gen.ts')
     }
 
     // MCP
@@ -434,6 +450,30 @@ const _getPikkuCLIConfig = async (
 
     if (!isAbsolute(result.tsconfig)) {
       result.tsconfig = join(result.rootDir, result.tsconfig)
+    }
+
+    if (result.externalPackage) {
+      const packageJsonPath = join(result.rootDir, 'package.json')
+      try {
+        const packageJsonContent = await readFile(packageJsonPath, 'utf-8')
+        const packageJson = JSON.parse(packageJsonContent)
+
+        if (
+          !packageJson.name ||
+          typeof packageJson.name !== 'string' ||
+          packageJson.name.trim() === ''
+        ) {
+          throw new Error(
+            `package.json at ${packageJsonPath} is missing a valid "name" field`
+          )
+        }
+
+        result.externalPackageName = packageJson.name
+      } catch (e: any) {
+        throw new Error(
+          `externalPackage is true but could not read or parse package.json at ${packageJsonPath}: ${e.message}`
+        )
+      }
     }
 
     return result

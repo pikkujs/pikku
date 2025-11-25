@@ -89,4 +89,11 @@ export class BullServiceFactory {
 
     await Promise.all(closePromises)
   }
+
+  /**
+   * Alias for close() - used by stopSingletonServices
+   */
+  async stop(): Promise<void> {
+    await this.close()
+  }
 }

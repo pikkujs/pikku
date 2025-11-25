@@ -21,6 +21,7 @@ import {
   CreateWireServices,
   LogLevel,
   Logger,
+  stopSingletonServices,
 } from '@pikku/core'
 
 import {
@@ -102,6 +103,7 @@ export class PikkuMCPServer {
   }
 
   public async stop(): Promise<void> {
+    await stopSingletonServices(this.singletonServices)
     await this.server.close()
   }
 

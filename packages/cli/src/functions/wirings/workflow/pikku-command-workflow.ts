@@ -23,12 +23,14 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       workflowsWiringFile,
       workflowsWiringMetaFile,
       workflowsWiringMetaJsonFile,
+      workflowsWiringMetaVerboseJsonFile,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
       typesDeclarationFile,
       packageMappings,
       schema,
+      forge,
     } = config
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
@@ -57,6 +59,15 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       JSON.stringify(serializeWorkflowMeta(workflows.meta), null, 2)
     )
 
+    // Write verbose metadata if forge.verboseMeta is enabled
+    if (forge?.verboseMeta) {
+      await writeFileInDir(
+        logger,
+        workflowsWiringMetaVerboseJsonFile,
+        JSON.stringify(workflows.meta, null, 2)
+      )
+    }
+
     const jsonImportPath = getFileImportRelativePath(
       workflowsWiringMetaFile,
       workflowsWiringMetaJsonFile,
@@ -70,7 +81,8 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       serializeWorkflowMetaTS(
         workflows.meta,
         jsonImportPath,
-        schema?.supportsImportAttributes ?? false
+        schema?.supportsImportAttributes ?? false,
+        config.externalPackageName
       )
     )
 

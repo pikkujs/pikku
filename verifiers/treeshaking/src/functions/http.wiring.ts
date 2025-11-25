@@ -1,5 +1,11 @@
 import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
-import { sendEmail, sendSMS, processPayment, saveData } from './functions.js'
+import {
+  sendEmail,
+  sendSMS,
+  processPayment,
+  saveData,
+} from './internal.functions.js'
+import { testExternal } from './external.functions.js'
 import { logRequest, trackAnalytics, rateLimiter } from './middleware.js'
 import {
   canSendEmail,
@@ -41,4 +47,12 @@ wireHTTP({
   route: '/api/storage/save',
   tags: ['storage'],
   func: saveData,
+})
+
+// External package test
+wireHTTP({
+  method: 'post',
+  route: '/api/external/test',
+  tags: ['external'],
+  func: testExternal,
 })

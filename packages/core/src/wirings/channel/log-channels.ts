@@ -6,7 +6,7 @@ import { Logger } from '../../services/index.js'
  * @param logger - A logger for logging information.
  */
 export const logChannels = (logger: Logger) => {
-  const channels = pikkuState('channel', 'channels')
+  const channels = pikkuState(null, 'channel', 'channels')
   if (channels.size === 0) {
     logger.info('No channels added')
     return

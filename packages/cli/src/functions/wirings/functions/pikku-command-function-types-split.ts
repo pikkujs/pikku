@@ -44,9 +44,10 @@ export const pikkuFunctionTypesSplit: any = pikkuSessionlessFunc<void, void>({
       singletonServicesType.type,
       `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, wireServicesType.typePath, packageMappings)}'`,
       wireServicesType.type,
-      `import type { TypedPikkuRPC } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
+      `import type { TypedPikkuRPC, FlattenedRPCMap } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
       `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
-      configTypeImport
+      configTypeImport,
+      config.externalPackageName
     )
 
     await writeFileInDir(logger, functionTypesFile, content)

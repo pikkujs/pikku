@@ -6,8 +6,14 @@ import {
   ParallelGroupStepMeta,
   FanoutStepMeta,
   ReturnStepMeta,
+  CancelStepMeta,
+  SwitchStepMeta,
+  SwitchCaseMeta,
+  FilterStepMeta,
+  ArrayPredicateStepMeta,
   InputSource,
   OutputBinding,
+  Condition,
 } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
@@ -16,9 +22,13 @@ import {
 import {
   isWorkflowDoCall,
   isWorkflowSleepCall,
+  isWorkflowCancelCall,
   isParallelFanout,
   isParallelGroup,
   isSequentialFanout,
+  isArrayFilter,
+  isArraySome,
+  isArrayEvery,
   extractForOfVariable,
   isArrayType,
   getSourceText,
@@ -241,6 +251,11 @@ function extractStep(
     return extractBranch(statement, context)
   }
 
+  // Switch statement
+  if (ts.isSwitchStatement(statement)) {
+    return extractSwitch(statement, context)
+  }
+
   // For-of statement (sequential fanout)
   if (ts.isForOfStatement(statement)) {
     return extractSequentialFanout(statement, context)
@@ -315,6 +330,30 @@ function extractVariableDeclaration(
     }
   }
 
+  // Check for array.filter(...)
+  if (ts.isCallExpression(init)) {
+    if (isArrayFilter(init)) {
+      const filterStep = extractArrayFilter(init, context, varName)
+      if (filterStep) {
+        const type = context.checker.getTypeAtLocation(decl)
+        context.outputVars.set(varName, { type, node: decl })
+        if (isArrayType(type, context.checker)) {
+          context.arrayVars.add(varName)
+        }
+        return filterStep
+      }
+    }
+
+    if (isArraySome(init) || isArrayEvery(init)) {
+      const predicateStep = extractArrayPredicate(init, context, varName)
+      if (predicateStep) {
+        const type = context.checker.getTypeAtLocation(decl)
+        context.outputVars.set(varName, { type, node: decl })
+        return predicateStep
+      }
+    }
+  }
+
   return null
 }
 
@@ -364,6 +403,10 @@ function extractExpressionStatement(
 
     if (isWorkflowSleepCall(call, context.checker)) {
       return extractSleepStep(call, context)
+    }
+
+    if (isWorkflowCancelCall(call, context.checker)) {
+      return extractCancelStep(call, context)
     }
 
     // Check for parallel group or fanout
@@ -510,13 +553,62 @@ function extractSleepStep(
 }
 
 /**
+ * Extract cancel step from workflow.cancel() call
+ */
+function extractCancelStep(
+  call: ts.CallExpression,
+  context: ExtractionContext
+): CancelStepMeta | null {
+  return {
+    type: 'cancel',
+  }
+}
+
+/**
+ * Parse a condition expression into a Condition structure
+ */
+function parseCondition(expr: ts.Expression): Condition {
+  // Handle binary expressions (&&, ||)
+  if (ts.isBinaryExpression(expr)) {
+    const operator = expr.operatorToken.kind
+
+    // AND operator (&&)
+    if (operator === ts.SyntaxKind.AmpersandAmpersandToken) {
+      return {
+        type: 'and',
+        conditions: [parseCondition(expr.left), parseCondition(expr.right)],
+      }
+    }
+
+    // OR operator (||)
+    if (operator === ts.SyntaxKind.BarBarToken) {
+      return {
+        type: 'or',
+        conditions: [parseCondition(expr.left), parseCondition(expr.right)],
+      }
+    }
+  }
+
+  // Handle parenthesized expressions - unwrap and parse inner
+  if (ts.isParenthesizedExpression(expr)) {
+    return parseCondition(expr.expression)
+  }
+
+  // Simple condition (comparison, function call, variable, etc.)
+  return {
+    type: 'simple',
+    expression: getSourceText(expr),
+  }
+}
+
+/**
  * Extract branch step from if statement
  */
 function extractBranch(
   statement: ts.IfStatement,
   context: ExtractionContext
 ): BranchStepMeta | null {
-  const condition = getSourceText(statement.expression)
+  const conditions = parseCondition(statement.expression)
 
   // Handle both block statements and single statements
   const thenSteps = ts.isBlock(statement.thenStatement)
@@ -531,11 +623,9 @@ function extractBranch(
 
   return {
     type: 'branch',
-    condition,
-    branches: {
-      then: thenSteps,
-      else: elseSteps,
-    },
+    conditions,
+    thenSteps,
+    elseSteps,
   }
 }
 
@@ -548,6 +638,203 @@ function extractStepsFromStatement(
 ): WorkflowStepMeta[] {
   const step = extractStep(statement, context)
   return step ? [step] : []
+}
+
+/**
+ * Extract switch statement
+ */
+function extractSwitch(
+  statement: ts.SwitchStatement,
+  context: ExtractionContext
+): SwitchStepMeta | null {
+  const expression = getSourceText(statement.expression)
+  const cases: SwitchCaseMeta[] = []
+  let defaultSteps: WorkflowStepMeta[] | undefined
+
+  for (const clause of statement.caseBlock.clauses) {
+    if (ts.isCaseClause(clause)) {
+      const caseValue = extractCaseValue(clause.expression)
+      const steps = extractCaseSteps(clause.statements, context)
+
+      cases.push({
+        value: caseValue.value,
+        expression: caseValue.expression,
+        steps,
+      })
+    } else if (ts.isDefaultClause(clause)) {
+      defaultSteps = extractCaseSteps(clause.statements, context)
+    }
+  }
+
+  return {
+    type: 'switch',
+    expression,
+    cases,
+    defaultSteps,
+  }
+}
+
+/**
+ * Extract case value from expression
+ */
+function extractCaseValue(expr: ts.Expression): {
+  value?: string | number | boolean | null
+  expression?: string
+} {
+  if (ts.isStringLiteral(expr)) {
+    return { value: expr.text }
+  }
+  if (ts.isNumericLiteral(expr)) {
+    return { value: Number(expr.text) }
+  }
+  if (expr.kind === ts.SyntaxKind.TrueKeyword) {
+    return { value: true }
+  }
+  if (expr.kind === ts.SyntaxKind.FalseKeyword) {
+    return { value: false }
+  }
+  if (expr.kind === ts.SyntaxKind.NullKeyword) {
+    return { value: null }
+  }
+
+  return { expression: getSourceText(expr) }
+}
+
+/**
+ * Extract steps from case statements, stopping at break
+ */
+function extractCaseSteps(
+  statements: ts.NodeArray<ts.Statement>,
+  context: ExtractionContext
+): WorkflowStepMeta[] {
+  const steps: WorkflowStepMeta[] = []
+
+  for (const statement of statements) {
+    if (ts.isBreakStatement(statement)) {
+      break
+    }
+
+    const step = extractStep(statement, context)
+    if (step) {
+      steps.push(step)
+    }
+  }
+
+  return steps
+}
+
+/**
+ * Extract array filter operation
+ */
+function extractArrayFilter(
+  call: ts.CallExpression,
+  context: ExtractionContext,
+  outputVar?: string
+): FilterStepMeta | null {
+  if (!ts.isPropertyAccessExpression(call.expression)) {
+    return null
+  }
+
+  const sourceExpr = call.expression.expression
+  let sourceVar: string | null = null
+
+  if (ts.isIdentifier(sourceExpr)) {
+    sourceVar = sourceExpr.text
+  } else if (
+    ts.isPropertyAccessExpression(sourceExpr) &&
+    ts.isIdentifier(sourceExpr.expression)
+  ) {
+    sourceVar = sourceExpr.expression.text
+  }
+
+  if (!sourceVar) {
+    return null
+  }
+
+  const filterFn = call.arguments[0]
+  if (!filterFn || !ts.isArrowFunction(filterFn)) {
+    return null
+  }
+
+  const itemParam = filterFn.parameters[0]
+  if (!itemParam || !ts.isIdentifier(itemParam.name)) {
+    return null
+  }
+
+  const itemVar = itemParam.name.text
+
+  let condition: Condition
+  if (ts.isBlock(filterFn.body)) {
+    return null
+  } else {
+    condition = parseCondition(filterFn.body)
+  }
+
+  return {
+    type: 'filter',
+    sourceVar,
+    itemVar,
+    condition,
+    outputVar,
+  }
+}
+
+/**
+ * Extract array predicate operation (some/every)
+ */
+function extractArrayPredicate(
+  call: ts.CallExpression,
+  context: ExtractionContext,
+  outputVar?: string
+): ArrayPredicateStepMeta | null {
+  if (!ts.isPropertyAccessExpression(call.expression)) {
+    return null
+  }
+
+  const mode = call.expression.name.text as 'some' | 'every'
+  const sourceExpr = call.expression.expression
+  let sourceVar: string | null = null
+
+  if (ts.isIdentifier(sourceExpr)) {
+    sourceVar = sourceExpr.text
+  } else if (
+    ts.isPropertyAccessExpression(sourceExpr) &&
+    ts.isIdentifier(sourceExpr.expression)
+  ) {
+    sourceVar = sourceExpr.expression.text
+  }
+
+  if (!sourceVar) {
+    return null
+  }
+
+  const predicateFn = call.arguments[0]
+  if (!predicateFn || !ts.isArrowFunction(predicateFn)) {
+    return null
+  }
+
+  const itemParam = predicateFn.parameters[0]
+  if (!itemParam || !ts.isIdentifier(itemParam.name)) {
+    return null
+  }
+
+  const itemVar = itemParam.name.text
+
+  let condition: Condition
+  if (ts.isBlock(predicateFn.body)) {
+    return null
+  } else {
+    condition = parseCondition(predicateFn.body)
+  }
+
+  return {
+    type: 'arrayPredicate',
+    mode,
+    sourceVar,
+    itemVar,
+    condition,
+    outputVar,
+  }
 }
 
 /**

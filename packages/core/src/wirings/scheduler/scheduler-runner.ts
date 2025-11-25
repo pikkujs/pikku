@@ -34,7 +34,7 @@ export const wireScheduler = <
 >(
   scheduledTask: CoreScheduledTask<PikkuFunctionConfig>
 ) => {
-  const meta = pikkuState('scheduler', 'meta')
+  const meta = pikkuState(null, 'scheduler', 'meta')
   const taskMeta = meta[scheduledTask.name]
   if (!taskMeta) {
     throw new Error('Task metadata not found')
@@ -47,7 +47,7 @@ export const wireScheduler = <
     tags: scheduledTask.func.tags,
   })
 
-  const tasks = pikkuState('scheduler', 'tasks')
+  const tasks = pikkuState(null, 'scheduler', 'tasks')
   if (tasks.has(scheduledTask.name)) {
     throw new Error(`Scheduled task already exists: ${scheduledTask.name}`)
   }
@@ -76,8 +76,8 @@ export async function runScheduledTask({
   createWireServices,
 }: RunScheduledTasksParams): Promise<void> {
   let wireServices: any
-  const task = pikkuState('scheduler', 'tasks').get(name)
-  const meta = pikkuState('scheduler', 'meta')[name]
+  const task = pikkuState(null, 'scheduler', 'tasks').get(name)
+  const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
   const userSession = new PikkuSessionService()
   if (session) {
@@ -135,5 +135,5 @@ export async function runScheduledTask({
 }
 
 export const getScheduledTasks = () => {
-  return pikkuState('scheduler', 'tasks')
+  return pikkuState(null, 'scheduler', 'tasks')
 }

@@ -12,11 +12,35 @@ const INSPECTOR_STATE_FILE = join(
 )
 
 /**
+ * Check if external package bootstrap is imported
+ */
+function hasExternalPackageBootstrap(): boolean {
+  try {
+    const bootstrapFilePath = join(
+      process.cwd(),
+      '.pikku',
+      'pikku-bootstrap.gen.ts'
+    )
+    const content = readFileSync(bootstrapFilePath, 'utf-8')
+
+    // Check if the external package bootstrap import exists
+    // External packages are imported using package names, not relative paths
+    return content.includes(
+      '@pikku/templates-function-external/.pikku/pikku-bootstrap.gen.js'
+    )
+  } catch (error) {
+    console.error('Error checking bootstrap file:', error)
+    return false
+  }
+}
+
+/**
  * Parse the pikku-services.gen.ts file to extract singleton and wire services
  */
 function parseGeneratedServices(): {
   singletonServices: string[]
   wireServices: string[]
+  hasExternalBootstrap: boolean
 } {
   try {
     const servicesFilePath = join(
@@ -65,10 +89,15 @@ function parseGeneratedServices(): {
     return {
       singletonServices: singletonServices.sort(),
       wireServices: wireServices.sort(),
+      hasExternalBootstrap: hasExternalPackageBootstrap(),
     }
   } catch (error) {
     console.error('Error parsing services file:', error)
-    return { singletonServices: [], wireServices: [] }
+    return {
+      singletonServices: [],
+      wireServices: [],
+      hasExternalBootstrap: false,
+    }
   }
 }
 
@@ -97,6 +126,7 @@ function createInspectorState(): void {
 function runPikkuWithFilter(filter: string): {
   singletonServices: string[]
   wireServices: string[]
+  hasExternalBootstrap: boolean
 } {
   try {
     // Run pikku all with the filter, loading from the cached state
@@ -171,6 +201,11 @@ async function runTests() {
       console.log(
         `   Expected Session:   [${scenario.expectedWireServices.join(', ')}]`
       )
+      if (scenario.expectedExternalBootstrap !== undefined) {
+        console.log(
+          `   Expected External:  ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}`
+        )
+      }
 
       const actualServices = runPikkuWithFilter(scenario.filter)
       console.log(
@@ -179,6 +214,11 @@ async function runTests() {
       console.log(
         `   Actual Session:     [${actualServices.wireServices.join(', ')}]`
       )
+      if (scenario.expectedExternalBootstrap !== undefined) {
+        console.log(
+          `   Actual External:    ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
+        )
+      }
 
       const singletonComparison = compareServices(
         actualServices.singletonServices,
@@ -190,9 +230,17 @@ async function runTests() {
         scenario.expectedWireServices
       )
 
-      const bothMatch = singletonComparison.match && sessionComparison.match
+      const externalBootstrapMatch =
+        scenario.expectedExternalBootstrap === undefined ||
+        actualServices.hasExternalBootstrap ===
+          scenario.expectedExternalBootstrap
 
-      if (bothMatch) {
+      const allMatch =
+        singletonComparison.match &&
+        sessionComparison.match &&
+        externalBootstrapMatch
+
+      if (allMatch) {
         console.log(`   ✅ PASS`)
         passed++
       } else {
@@ -220,6 +268,11 @@ async function runTests() {
               `   Session Extra:     [${sessionComparison.extra.join(', ')}]`
             )
           }
+        }
+        if (!externalBootstrapMatch) {
+          console.log(
+            `   External Bootstrap: Expected ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}, got ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
+          )
         }
         failed++
         failures.push({
@@ -250,6 +303,16 @@ async function runTests() {
           `Expected: [${scenario.expectedWireServices.join(', ')}]\n` +
           `Actual:   [${actualServices.wireServices.join(', ')}]`
       )
+
+      if (scenario.expectedExternalBootstrap !== undefined) {
+        assert.strictEqual(
+          actualServices.hasExternalBootstrap,
+          scenario.expectedExternalBootstrap,
+          `External bootstrap mismatch for scenario: ${scenario.name}\n` +
+            `Expected: ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}\n` +
+            `Actual:   ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
+        )
+      }
     })
   }
 

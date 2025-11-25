@@ -38,7 +38,9 @@
     "prettier": "npx --yes prettier . --write",
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
     "changeset": "npx changeset",
-    "pikku": "cd templates/functions && yarn pikku"
+    "pikku:functions": "cd templates/functions && yarn pikku",
+    "pikku:functions:external": "cd templates/function-external && yarn pikku",
+    "pikku": "yarn run pikku:functions:external && yarn run pikku:functions"
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {
