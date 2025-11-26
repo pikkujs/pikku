@@ -79,19 +79,16 @@ function generateHTTPWirings(
       const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
       const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
-      // Initialize the route entry if it doesn't exist
       if (!routesObj[route]) {
         routesObj[route] = {}
       }
 
-      // Store the input and output types separately for RouteHandler
       // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
       let inputType = 'null'
       if (input) {
         try {
           inputType = typesMap.getTypeMeta(input).uniqueName
         } catch {
-          // Zod-derived schema - use the schema name directly
           inputType = input
         }
       }

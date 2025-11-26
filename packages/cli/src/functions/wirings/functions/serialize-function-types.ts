@@ -286,7 +286,7 @@ export type PikkuFunctionConfigWithSchema<
  * @returns The normalized configuration object
  *
  * @example
- * \\\`\\\`\\\`typescript
+ * \`\`\`typescript
  * // Pattern 1: Using generic types
  * const createUser = pikkuFunc<{name: string, email: string}, {id: number}>({
  *   func: async ({db}, input) => {
@@ -308,7 +308,7 @@ export type PikkuFunctionConfigWithSchema<
  *     return { id: user.id } // must match output schema
  *   }
  * })
- * \\\`\\\`\\\`
+ * \`\`\`
  */
 export function pikkuFunc<
   InputSchema extends ZodLike,
@@ -363,7 +363,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
  * @returns The normalized configuration object
  *
  * @example
- * \\\`\\\`\\\`typescript
+ * \`\`\`typescript
  * // Pattern 1: Using generic types
  * const healthCheck = pikkuSessionlessFunc<void, {status: string}>({
  *   func: async ({logger}) => {
@@ -379,10 +379,10 @@ export type PikkuFunctionSessionlessConfigWithSchema<
  *   input: greetInput,
  *   output: greetOutput,
  *   func: async (_services, { name }) => {
- *     return { message: \\\`Hello, \\\${name}!\\\` }
+ *     return { message: \`Hello, \${name}!\` }
  *   }
  * })
- * \\\`\\\`\\\`
+ * \`\`\`
  */
 export function pikkuSessionlessFunc<
   InputSchema extends ZodLike,
@@ -407,13 +407,13 @@ export function pikkuSessionlessFunc(func: any) {
  * @returns The normalized configuration object
  *
  * @example
- * \\\`\\\`\\\`typescript
+ * \`\`\`typescript
  * const cleanupTempFiles = pikkuVoidFunc(async ({fileSystem, logger}) => {
  *     logger.info('Starting cleanup of temporary files')
  *     await fileSystem.deleteDirectory('/tmp/uploads')
  *     logger.info('Cleanup completed')
  * })
- * \\\`\\\`\\\`
+ * \`\`\`
  */
 export const pikkuVoidFunc = (
   func:
@@ -433,7 +433,7 @@ export const pikkuVoidFunc = (
  * @returns A Pikku function that proxies calls to the external RPC method
  *
  * @example
- * \\\`\\\`\\\`typescript
+ * \`\`\`typescript
  * // Wire an external function via HTTP
  * wireHTTP({
  *   auth: false,
@@ -442,7 +442,7 @@ export const pikkuVoidFunc = (
  *   func: external('ext:hello'),
  *   tags: ['external'],
  * })
- * \\\`\\\`\\\`
+ * \`\`\`
  */
 export const external = <Name extends keyof FlattenedRPCMap>(
   rpcName: Name

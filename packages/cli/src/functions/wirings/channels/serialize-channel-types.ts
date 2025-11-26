@@ -103,7 +103,7 @@ type PikkuChannelFuncConfigWithSchema<
  * @returns The normalized configuration object
  *
  * @example
- * \\\`\\\`\\\`typescript
+ * \`\`\`typescript
  * // Pattern 1: Using generic types
  * const handleMessage = pikkuChannelFunc<{text: string}, {received: boolean}>({
  *   func: async (_services, { text }) => ({ received: true })
@@ -118,7 +118,7 @@ type PikkuChannelFuncConfigWithSchema<
  *   output: messageOutput,
  *   func: async (_services, { text }) => ({ received: true })
  * })
- * \\\`\\\`\\\`
+ * \`\`\`
  */
 export function pikkuChannelFunc<
   InputSchema extends ZodLike,
