@@ -1,25 +1,11 @@
-/**
- * Example functions using Zod schemas for input/output validation.
- * Types are automatically inferred from the Zod schemas - no need to specify generics!
- */
 import { z } from 'zod'
 import { pikkuFunc, pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
-// ============================================================================
-// Define Zod schemas - these will be converted to JSON Schema at build time
-// ============================================================================
-
-/**
- * Input schema for the greet function
- */
 export const greetInputSchema = z.object({
   name: z.string().min(1).describe('The name to greet'),
   formal: z.boolean().optional().describe('Whether to use formal greeting'),
 })
 
-/**
- * Output schema for the greet function
- */
 export const greetOutputSchema = z.object({
   message: z.string().describe('The greeting message'),
   timestamp: z
@@ -27,9 +13,6 @@ export const greetOutputSchema = z.object({
     .describe('Unix timestamp of when greeting was generated'),
 })
 
-/**
- * Input schema for the calculate function
- */
 export const calculateInputSchema = z.object({
   a: z.number().describe('First operand'),
   b: z.number().describe('Second operand'),
@@ -38,34 +21,21 @@ export const calculateInputSchema = z.object({
     .describe('The operation to perform'),
 })
 
-/**
- * Output schema for the calculate function
- */
 export const calculateOutputSchema = z.object({
   result: z.number().describe('The calculation result'),
   expression: z.string().describe('Human-readable expression'),
 })
 
-// ============================================================================
-// Define functions using Zod schemas - types are inferred automatically!
-// ============================================================================
-
-/**
- * A simple greeting function using Zod schemas.
- * Notice we don't need to specify <Input, Output> generics - they're inferred!
- */
 export const greetWithZod = pikkuSessionlessFunc({
   input: greetInputSchema,
   output: greetOutputSchema,
   func: async ({ logger }, data) => {
-    // `data` is automatically typed as: { name: string; formal?: boolean }
     const greeting = data.formal
       ? `Good day, ${data.name}.`
       : `Hey ${data.name}!`
 
     logger.info(`Generated greeting for ${data.name}`)
 
-    // Return type is checked against the output schema
     return {
       message: greeting,
       timestamp: Date.now(),
@@ -73,14 +43,10 @@ export const greetWithZod = pikkuSessionlessFunc({
   },
 })
 
-/**
- * A calculator function demonstrating enum validation with Zod.
- */
 export const calculateWithZod = pikkuSessionlessFunc({
   input: calculateInputSchema,
   output: calculateOutputSchema,
   func: async ({ logger }, data) => {
-    // `data.operation` is typed as: 'add' | 'subtract' | 'multiply' | 'divide'
     let result: number
     let symbol: string
 
@@ -115,13 +81,6 @@ export const calculateWithZod = pikkuSessionlessFunc({
   },
 })
 
-// ============================================================================
-// You can also use session-aware functions with Zod schemas
-// ============================================================================
-
-/**
- * Input schema for a user profile update
- */
 export const updateProfileInputSchema = z.object({
   displayName: z
     .string()
@@ -139,9 +98,6 @@ export const updateProfileInputSchema = z.object({
     .describe('User settings'),
 })
 
-/**
- * Output schema for profile update result
- */
 export const updateProfileOutputSchema = z.object({
   success: z.boolean(),
   updatedFields: z
@@ -149,10 +105,6 @@ export const updateProfileOutputSchema = z.object({
     .describe('List of fields that were updated'),
 })
 
-/**
- * A session-aware function using Zod schemas.
- * This function requires authentication (uses pikkuFunc instead of pikkuSessionlessFunc).
- */
 export const updateProfileWithZod = pikkuFunc({
   input: updateProfileInputSchema,
   output: updateProfileOutputSchema,
