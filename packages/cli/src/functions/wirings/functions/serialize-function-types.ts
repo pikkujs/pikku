@@ -424,6 +424,85 @@ export const pikkuVoidFunc = (
 }
 
 /**
+ * A graph workflow function that can control branching via graph.branch().
+ * Use this for flow control nodes in workflow graphs (ifCondition, switchCase, etc.).
+ *
+ * @template In - The input type
+ * @template Out - The output type that the function returns
+ * @template Branches - Union type of valid branch names (e.g., 'true' | 'false')
+ * @template RequiredServices - Services required by this function
+ */
+export type PikkuGraphFunction<
+  In = unknown,
+  Out = void,
+  Branches extends string = never,
+  RequiredServices extends Services = Services
+> = (
+  services: RequiredServices,
+  data: In,
+  wire: PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, any, Branches>, 'graph' | 'rpc'>
+) => Promise<Out>
+
+/**
+ * Configuration object for graph workflow functions.
+ */
+export type PikkuGraphFunctionConfig<
+  In = unknown,
+  Out = void,
+  Branches extends string = never
+> = {
+  name?: string
+  tags?: string[]
+  expose?: boolean
+  internal?: boolean
+  func: PikkuGraphFunction<In, Out, Branches>
+  auth?: boolean
+  permissions?: CorePermissionGroup<PikkuPermission<In>>
+  middleware?: PikkuMiddleware[]
+}
+
+/**
+ * Creates a graph workflow function for flow control in workflow graphs.
+ * These functions can call graph.branch() to select which path to take.
+ *
+ * @template In - Input type for the function
+ * @template Out - Output type for the function (usually void for flow nodes)
+ * @template Branches - Union type of valid branch names
+ * @param config - Function configuration
+ * @returns The normalized configuration object
+ *
+ * @example
+ * \`\`\`typescript
+ * // Boolean branching (ifCondition)
+ * const ifCondition = pikkuGraphFunc<
+ *   { condition: boolean },
+ *   void,
+ *   'true' | 'false'
+ * >({
+ *   func: async (services, { condition }, { graph }) => {
+ *     graph.branch(condition ? 'true' : 'false')
+ *   }
+ * })
+ *
+ * // Multi-way branching (switchCase)
+ * const switchCase = pikkuGraphFunc<
+ *   { value: string; cases: string[] },
+ *   void,
+ *   string
+ * >({
+ *   func: async (services, { value, cases }, { graph }) => {
+ *     graph.branch(cases.includes(value) ? value : 'default')
+ *   }
+ * })
+ * \`\`\`
+ */
+export function pikkuGraphFunc<In, Out = void, Branches extends string = never>(
+  config: PikkuGraphFunctionConfig<In, Out, Branches>
+): PikkuGraphFunctionConfig<In, Out, Branches> {
+  return config
+}
+
+/**
  * Creates a wrapper function for external package functions that are exposed via RPC.
  * This allows you to wire external functions to any wiring type (HTTP, queue, etc.)
  * without type compatibility issues.

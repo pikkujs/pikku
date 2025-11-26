@@ -24,6 +24,12 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
+import type {
+  WorkflowGraph,
+  WorkflowGraphRunState,
+  WorkflowGraphExecutionOptions,
+} from './workflow-graph.types.js'
+import { executeWorkflowGraph } from './workflow-graph-scheduler.js'
 
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
@@ -427,6 +433,97 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
       throw error
     }
+  }
+
+  // ============================================================================
+  // WorkflowGraph Execution
+  // ============================================================================
+
+  /**
+   * Execute a workflow graph
+   *
+   * @param graph - The workflow graph definition
+   * @param input - Input data for the workflow
+   * @param rpcService - RPC service for executing nodes
+   * @param options - Execution options
+   * @returns The workflow graph run state
+   */
+  public async executeGraph(
+    graph: WorkflowGraph,
+    input: unknown,
+    rpcService: any,
+    options?: WorkflowGraphExecutionOptions
+  ): Promise<WorkflowGraphRunState> {
+    // Create a unique run ID for tracking
+    const runId = `graph-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+
+    try {
+      const result = await executeWorkflowGraph(
+        graph,
+        runId,
+        input,
+        rpcService,
+        options
+      )
+      return result
+    } catch (error: any) {
+      // Return failed state
+      return {
+        runId,
+        graph,
+        iterations: new Map(),
+        completed: new Map(),
+        executing: new Set(),
+        status: 'failed',
+        input,
+        error: error instanceof Error ? error : new Error(String(error)),
+      }
+    }
+  }
+
+  /**
+   * Start a workflow graph run (creates a run record for tracking)
+   *
+   * @param name - Name for this workflow graph run
+   * @param graph - The workflow graph definition
+   * @param input - Input data for the workflow
+   * @param rpcService - RPC service for executing nodes
+   * @param options - Execution options
+   * @returns Run ID and execution promise
+   */
+  public async startGraphWorkflow(
+    name: string,
+    graph: WorkflowGraph,
+    input: unknown,
+    rpcService: any,
+    options?: WorkflowGraphExecutionOptions
+  ): Promise<{ runId: string; result: Promise<WorkflowGraphRunState> }> {
+    // Create workflow run in state
+    const runId = await this.createRun(name, { graph, input })
+
+    // Execute the graph
+    const resultPromise = this.executeGraph(graph, input, rpcService, options)
+      .then(async (result) => {
+        // Update run status on completion
+        if (result.status === 'completed') {
+          await this.updateRunStatus(runId, 'completed', result.output)
+        } else if (result.status === 'failed') {
+          await this.updateRunStatus(runId, 'failed', undefined, {
+            message: result.error?.message || 'Graph execution failed',
+            stack: result.error?.stack,
+          })
+        }
+        return result
+      })
+      .catch(async (error) => {
+        await this.updateRunStatus(runId, 'failed', undefined, {
+          message: error.message,
+          stack: error.stack,
+        })
+        throw error
+      })
+
+    return { runId, result: resultPromise }
   }
 
   private verifyQueueService(): QueueService {

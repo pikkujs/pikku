@@ -16,3 +16,9 @@ export type { SerializableInspectorState } from './utils/serialize-inspector-sta
 export { filterInspectorState } from './utils/filter-inspector-state.js'
 export { writeAllServiceMetadata } from './utils/write-service-metadata.js'
 export type { ServiceMetadata } from './utils/extract-service-metadata.js'
+
+// WorkflowGraph validation
+export {
+  validateWorkflowGraph,
+  quickValidateWorkflowGraph,
+} from './workflow/workflow-graph-validator.js'
