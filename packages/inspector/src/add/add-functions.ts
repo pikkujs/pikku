@@ -295,7 +295,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   }
 
   // Match identifiers that contain both "pikku" and "func" (case insensitive)
-  const pikkuFuncPattern = /pikku.*func/i
+  const pikkuFuncPattern = /pikku.*func|pikkuWorkflow|pikkuWorkflowDAG/i
   if (!pikkuFuncPattern.test(expression.text)) {
     return
   }

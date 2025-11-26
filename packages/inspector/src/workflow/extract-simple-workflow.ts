@@ -150,7 +150,7 @@ export function extractSimpleWorkflow(
  * Find the workflow function (async arrow function)
  */
 function findWorkflowFunction(node: ts.Node): ts.ArrowFunction | null {
-  // Handle pikkuSimpleWorkflowFunc(async () => {}) or pikkuWorkflowFunc(async () => {})
+  // Handle pikkuWorkflowDAG(async () => {}) or pikkuWorkflow(async () => {})
   if (ts.isCallExpression(node)) {
     const arg = node.arguments[0]
     if (arg && ts.isArrowFunction(arg)) {
@@ -172,7 +172,7 @@ function findWorkflowFunction(node: ts.Node): ts.ArrowFunction | null {
     }
   }
 
-  // Handle pikkuSimpleWorkflowFunc({ func: async () => {} })
+  // Handle pikkuWorkflowDAG({ func: async () => {} })
   if (ts.isObjectLiteralExpression(node)) {
     for (const prop of node.properties) {
       if (

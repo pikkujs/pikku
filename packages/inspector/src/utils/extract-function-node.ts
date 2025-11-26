@@ -5,7 +5,7 @@ import {
 } from './type-utils.js'
 
 /**
- * Extracts the actual function node from a pikkuFunc/pikkuWorkflowFunc call
+ * Extracts the actual function node from a pikkuFunc/pikkuWorkflow call
  * Handles both direct function form and config object form { func: ... }
  */
 export function extractFunctionNode(

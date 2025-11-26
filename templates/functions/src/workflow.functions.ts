@@ -1,4 +1,4 @@
-import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflow } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 // Pikku function to create a user profile
@@ -38,7 +38,7 @@ export const sendEmail = pikkuSessionlessFunc<
 /**
  * User onboarding workflow with email and profile setup
  */
-export const onboardingWorkflow = pikkuWorkflowFunc<
+export const onboardingWorkflow = pikkuWorkflow<
   { email: string; userId: string },
   { userId: string; email: string }
 >({

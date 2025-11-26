@@ -20,7 +20,7 @@ export function resolveFunctionDeclaration(
     return node
   }
 
-  // If it's a call expression (e.g., pikkuWorkflowFunc(...)), get its first argument
+  // If it's a call expression (e.g., pikkuWorkflow(...)), get its first argument
   if (ts.isCallExpression(node) && node.arguments.length > 0) {
     const firstArg = node.arguments[0]
     if (ts.isFunctionExpression(firstArg) || ts.isArrowFunction(firstArg)) {

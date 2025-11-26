@@ -1,4 +1,4 @@
-import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflow } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 /**
@@ -26,7 +26,7 @@ export const alwaysFailsRPC = pikkuSessionlessFunc<
 /**
  * UNHAPPY PATH: Workflow that exhausts retries and fails
  */
-export const unhappyRetryWorkflow = pikkuWorkflowFunc<
+export const unhappyRetryWorkflow = pikkuWorkflow<
   { value: number },
   { result: number }
 >({

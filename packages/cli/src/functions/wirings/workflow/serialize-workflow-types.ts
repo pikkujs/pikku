@@ -65,7 +65,7 @@ export type PikkuFunctionWorkflow<
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  */
-export const pikkuWorkflowFunc = <In, Out = unknown>(
+export const pikkuWorkflow = <In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
@@ -91,7 +91,7 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
  * @param func - Function definition, either direct function or configuration object
  * @returns The normalized configuration object
  */
-export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
+export const pikkuWorkflowDAG = <In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
