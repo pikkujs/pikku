@@ -7,6 +7,14 @@ import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
 import { tsImport } from 'tsx/esm/api'
 import * as z from 'zod'
+import { zodToTs, createAuxiliaryTypeStore } from 'zod-to-ts'
+import {
+  createPrinter,
+  createSourceFile,
+  EmitHint,
+  ScriptKind,
+  ScriptTarget,
+} from 'typescript'
 
 /**
  * Convert a name to a valid JavaScript identifier.
@@ -20,97 +28,6 @@ function toValidIdentifier(name: string): string {
     result = '_' + result
   }
   return result
-}
-
-/**
- * Convert a JSON Schema to a TypeScript type string.
- * Handles common JSON Schema constructs.
- */
-function jsonSchemaToTypeString(schema: Record<string, unknown>): string {
-  if (!schema || typeof schema !== 'object') {
-    return 'unknown'
-  }
-
-  const type = schema.type as string | string[] | undefined
-
-  // Handle enums
-  if (schema.enum) {
-    const enumValues = schema.enum as unknown[]
-    return enumValues
-      .map((v) => (typeof v === 'string' ? `"${v}"` : String(v)))
-      .join(' | ')
-  }
-
-  // Handle const
-  if ('const' in schema) {
-    const constValue = schema.const
-    return typeof constValue === 'string'
-      ? `"${constValue}"`
-      : String(constValue)
-  }
-
-  // Handle anyOf/oneOf
-  if (schema.anyOf || schema.oneOf) {
-    const variants = (schema.anyOf || schema.oneOf) as Record<string, unknown>[]
-    return variants.map((v) => jsonSchemaToTypeString(v)).join(' | ')
-  }
-
-  // Handle allOf (intersection)
-  if (schema.allOf) {
-    const variants = schema.allOf as Record<string, unknown>[]
-    return variants.map((v) => jsonSchemaToTypeString(v)).join(' & ')
-  }
-
-  // Handle arrays
-  if (type === 'array') {
-    const items = schema.items as Record<string, unknown> | undefined
-    const itemType = items ? jsonSchemaToTypeString(items) : 'unknown'
-    return `${itemType}[]`
-  }
-
-  // Handle objects
-  if (type === 'object') {
-    const properties = schema.properties as
-      | Record<string, Record<string, unknown>>
-      | undefined
-    const required = (schema.required as string[]) || []
-    const additionalProperties = schema.additionalProperties
-
-    if (!properties && additionalProperties === false) {
-      return '{}'
-    }
-
-    if (!properties) {
-      if (additionalProperties === true || additionalProperties === undefined) {
-        return 'Record<string, unknown>'
-      }
-      if (typeof additionalProperties === 'object') {
-        return `Record<string, ${jsonSchemaToTypeString(additionalProperties as Record<string, unknown>)}>`
-      }
-      return 'Record<string, unknown>'
-    }
-
-    const props = Object.entries(properties).map(([key, propSchema]) => {
-      const isRequired = required.includes(key)
-      const propType = jsonSchemaToTypeString(propSchema)
-      return `${key}${isRequired ? '' : '?'}: ${propType}`
-    })
-
-    return `{ ${props.join('; ')} }`
-  }
-
-  // Handle primitive types
-  if (type === 'string') return 'string'
-  if (type === 'number' || type === 'integer') return 'number'
-  if (type === 'boolean') return 'boolean'
-  if (type === 'null') return 'null'
-
-  // Handle union types
-  if (Array.isArray(type)) {
-    return type.map((t) => jsonSchemaToTypeString({ type: t })).join(' | ')
-  }
-
-  return 'unknown'
 }
 
 export async function generateSchemas(
@@ -198,16 +115,19 @@ export async function generateZodSchemas(
   typesMap: TypesMap
 ): Promise<Record<string, JSONValue>> {
   const schemas: Record<string, JSONValue> = {}
-
-  if (zodLookup.size === 0) {
-    return schemas
-  }
+  const auxiliaryTypeStore = createAuxiliaryTypeStore()
+  const printer = createPrinter()
+  const fakeSourceFile = createSourceFile(
+    'zod-types.ts',
+    '',
+    ScriptTarget.ESNext,
+    false,
+    ScriptKind.TS
+  )
 
   for (const [schemaName, ref] of zodLookup.entries()) {
     try {
-      // Import the TypeScript file directly using tsx loader
       const module = await tsImport(ref.sourceFile, import.meta.url)
-
       const zodSchema = module[ref.variableName]
       if (!zodSchema) {
         logger.warn(
@@ -216,18 +136,17 @@ export async function generateZodSchemas(
         continue
       }
 
-      const { $schema, ...schemaWithoutMeta } = z.toJSONSchema(
-        zodSchema
-      ) as Record<string, unknown>
+      const schema = z.toJSONSchema(zodSchema) as any
+      schemas[schemaName] = schema
+      const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
 
-      schemas[schemaName] = schemaWithoutMeta as JSONValue
-
-      // Generate TypeScript type from JSON Schema
-      const tsType = jsonSchemaToTypeString(
-        schemaWithoutMeta as Record<string, unknown>
+      const typeText = printer.printNode(
+        EmitHint.Unspecified,
+        tsType,
+        fakeSourceFile
       )
-      typesMap.addCustomType(schemaName, tsType, [])
 
+      typesMap.addCustomType(schemaName, typeText, [])
       logger.info(`• Generated schema from Zod: ${schemaName}`)
     } catch (e) {
       logger.warn(
@@ -285,7 +204,6 @@ export async function saveSchemas(
       ),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
-    // Add all zod schema names
     ...(zodLookup ? Array.from(zodLookup.keys()) : []),
   ])
 

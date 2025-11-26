@@ -3624,7 +3624,7 @@ __metadata:
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
   peerDependencies:
-    zod: ^3.0.0
+    zod: ^4.0.0
   peerDependenciesMeta:
     zod:
       optional: true
@@ -4073,10 +4073,10 @@ __metadata:
     "@pikku/cli": "npm:*"
     "@pikku/core": "npm:*"
     typescript: "npm:^5.7.2"
-    zod: "npm:^3.24.0"
+    zod: "npm:^4"
   peerDependencies:
     "@pikku/core": "*"
-    zod: ^3.0.0
+    zod: ^4
   languageName: unknown
   linkType: soft
 
@@ -12710,7 +12710,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.22.3, zod@npm:^3.23.8, zod@npm:^3.24.0":
+"zod@npm:^3.22.3, zod@npm:^3.23.8":
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10/f0c963ec40cd96858451d1690404d603d36507c1fc9682f2dae59ab38b578687d542708a7fdbf645f77926f78c9ed558f57c3d3aa226c285f798df0c4da16995
