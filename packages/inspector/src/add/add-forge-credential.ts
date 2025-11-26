@@ -100,19 +100,20 @@ export const addForgeCredential: AddWiring = (
 
     state.forgeCredentials.files.add(sourceFile)
 
-    // Store metadata with schema variable name
-    // The CLI will import the actual schema and convert to JSON Schema at build time
+    // Register the zod schema in the central zodLookup for deferred conversion
+    const schemaLookupName = `ForgeCredential_${nameValue}`
+    state.zodLookup.set(schemaLookupName, {
+      variableName: schemaVariableName,
+      sourceFile,
+    })
+
+    // Store metadata - schema conversion happens later in schema-generator
     state.forgeCredentials.meta[nameValue] = {
       name: nameValue,
       displayName: displayNameValue,
       description: descriptionValue || undefined,
       secretId: secretIdValue,
-      // Store schema variable name for CLI to import and convert
-      // The CLI will replace this with actual JSON Schema
-      schema: {
-        _schemaVariableName: schemaVariableName,
-        _sourceFile: sourceFile,
-      },
+      schema: schemaLookupName,
     }
   }
 }

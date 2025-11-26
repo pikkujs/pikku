@@ -29,11 +29,11 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),
     typesLookup: new Map(),
+    zodLookup: new Map(),
     functions: {
       typesMap: new TypesMap(),
       meta: {},
       files: new Map(),
-      zodSchemas: new Map(),
     },
     http: {
       metaInputTypes: new Map(),

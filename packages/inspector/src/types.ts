@@ -69,8 +69,6 @@ export interface InspectorFunctionState {
   typesMap: TypesMap
   meta: FunctionsMeta
   files: Map<string, { path: string; exportedName: string }>
-  /** Map of schema name -> zod schema reference for deferred JSON Schema conversion */
-  zodSchemas: Map<string, ZodSchemaRef>
 }
 
 export interface InspectorChannelState {
@@ -211,6 +209,7 @@ export interface InspectorState {
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
+  zodLookup: Map<string, ZodSchemaRef> // Lookup for Zod schemas by name for deferred JSON Schema conversion
   http: InspectorHTTPState
   functions: InspectorFunctionState
   channels: InspectorChannelState

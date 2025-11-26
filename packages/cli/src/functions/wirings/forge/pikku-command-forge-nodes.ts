@@ -4,83 +4,6 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join, isAbsolute } from 'path'
-import { pathToFileURL } from 'url'
-import type { ForgeCredentialMeta } from '@pikku/core/forge-node'
-import { zodToJsonSchema } from 'zod-to-json-schema'
-
-/**
- * Convert Zod schema to JSON Schema.
- */
-const convertCredentialSchema = async (
-  meta: ForgeCredentialMeta & {
-    schema: { _schemaVariableName?: string; _sourceFile?: string }
-  },
-  logger: any
-): Promise<ForgeCredentialMeta> => {
-  const { schema } = meta
-  const schemaVariableName = schema._schemaVariableName
-  const sourceFile = schema._sourceFile
-
-  if (!schemaVariableName || !sourceFile) {
-    logger.warn(
-      `Credential '${meta.name}' has invalid schema reference, skipping JSON Schema conversion`
-    )
-    return {
-      ...meta,
-      schema: {},
-    }
-  }
-
-  try {
-    // Convert source file path to a compiled JS path
-    // TypeScript typically compiles src/ to dist/src/ (preserving structure)
-    // Source: /path/to/src/functions/file.ts
-    // Compiled: /path/to/dist/src/functions/file.js
-    const compiledPath = sourceFile
-      .replace(/\/src\//, '/dist/src/')
-      .replace(/\.ts$/, '.js')
-
-    // Import the compiled module to get the Zod schema
-    const fileUrl = pathToFileURL(compiledPath).href
-    const module = await import(fileUrl)
-
-    const zodSchema = module[schemaVariableName]
-    if (!zodSchema) {
-      logger.warn(
-        `Could not find exported schema '${schemaVariableName}' in ${compiledPath}`
-      )
-      return {
-        ...meta,
-        schema: {},
-      }
-    }
-
-    // Convert Zod schema to JSON Schema
-    const jsonSchema = zodToJsonSchema(zodSchema, {
-      $refStrategy: 'none',
-      target: 'jsonSchema7',
-    })
-
-    // Remove $schema key from output
-    const { $schema, ...schemaWithoutMeta } = jsonSchema as Record<
-      string,
-      unknown
-    >
-
-    return {
-      ...meta,
-      schema: schemaWithoutMeta,
-    }
-  } catch (e) {
-    logger.warn(
-      `Could not convert schema for credential '${meta.name}': ${e instanceof Error ? e.message : e}`
-    )
-    return {
-      ...meta,
-      schema: {},
-    }
-  }
-}
 
 /**
  * Load and sanitize an SVG icon file.
@@ -161,18 +84,9 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
     // Load package-level icon
     const packageIcon = await loadIcon(forge?.node?.icon, rootDir, logger)
 
-    // Process credentials - convert Zod schemas to JSON Schema
-    const outputCredentials: Record<string, ForgeCredentialMeta> = {}
-    for (const [name, meta] of Object.entries(forgeCredentials.meta) as [
-      string,
-      any,
-    ][]) {
-      outputCredentials[name] = await convertCredentialSchema(meta, logger)
-    }
-
     const metaData = {
       nodes: outputMeta,
-      credentials: outputCredentials,
+      credentials: forgeCredentials.meta,
       package: {
         displayName: forge?.node?.displayName,
         description: forge?.node?.description,

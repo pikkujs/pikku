@@ -1,19 +1,15 @@
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap, ZodSchemaRef } from '@pikku/inspector'
+import { TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
-import {
-  generateCustomTypes,
-  generateZodTypes,
-} from '../../../utils/custom-types-generator.js'
+import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
 export const serializeWorkflowMap = (
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  workflowsMeta: WorkflowsMeta,
-  zodSchemas?: Map<string, ZodSchemaRef>
+  workflowsMeta: WorkflowsMeta
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -24,28 +20,19 @@ export const serializeWorkflowMap = (
     requiredTypes
   )
 
-  const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
-
   const serializedImportMap = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
-    requiredTypes,
-    zodSchemaNames
+    requiredTypes
   )
-
-  const zodTypes = zodSchemas
-    ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
-    : { imports: '', types: '' }
 
   return `/**
  * This provides the structure needed for TypeScript to be aware of workflows and their input/output types
  */
 
 ${serializedImportMap}
-${zodTypes.imports}
 ${serializedCustomTypes}
-${zodTypes.types}
 
 interface WorkflowHandler<I, O> {
     input: I;

@@ -5,8 +5,113 @@ import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
-import { pathToFileURL } from 'url'
 import { zodToJsonSchema } from 'zod-to-json-schema'
+import { tsImport } from 'tsx/esm/api'
+
+/**
+ * Convert a name to a valid JavaScript identifier.
+ * Replaces hyphens and other invalid characters with underscores.
+ */
+function toValidIdentifier(name: string): string {
+  // Replace hyphens and dots with underscores
+  let result = name.replace(/[-./]/g, '_')
+  // If starts with a number, prefix with underscore
+  if (/^\d/.test(result)) {
+    result = '_' + result
+  }
+  return result
+}
+
+/**
+ * Convert a JSON Schema to a TypeScript type string.
+ * Handles common JSON Schema constructs.
+ */
+function jsonSchemaToTypeString(schema: Record<string, unknown>): string {
+  if (!schema || typeof schema !== 'object') {
+    return 'unknown'
+  }
+
+  const type = schema.type as string | string[] | undefined
+
+  // Handle enums
+  if (schema.enum) {
+    const enumValues = schema.enum as unknown[]
+    return enumValues
+      .map((v) => (typeof v === 'string' ? `"${v}"` : String(v)))
+      .join(' | ')
+  }
+
+  // Handle const
+  if ('const' in schema) {
+    const constValue = schema.const
+    return typeof constValue === 'string'
+      ? `"${constValue}"`
+      : String(constValue)
+  }
+
+  // Handle anyOf/oneOf
+  if (schema.anyOf || schema.oneOf) {
+    const variants = (schema.anyOf || schema.oneOf) as Record<string, unknown>[]
+    return variants.map((v) => jsonSchemaToTypeString(v)).join(' | ')
+  }
+
+  // Handle allOf (intersection)
+  if (schema.allOf) {
+    const variants = schema.allOf as Record<string, unknown>[]
+    return variants.map((v) => jsonSchemaToTypeString(v)).join(' & ')
+  }
+
+  // Handle arrays
+  if (type === 'array') {
+    const items = schema.items as Record<string, unknown> | undefined
+    const itemType = items ? jsonSchemaToTypeString(items) : 'unknown'
+    return `${itemType}[]`
+  }
+
+  // Handle objects
+  if (type === 'object') {
+    const properties = schema.properties as
+      | Record<string, Record<string, unknown>>
+      | undefined
+    const required = (schema.required as string[]) || []
+    const additionalProperties = schema.additionalProperties
+
+    if (!properties && additionalProperties === false) {
+      return '{}'
+    }
+
+    if (!properties) {
+      if (additionalProperties === true || additionalProperties === undefined) {
+        return 'Record<string, unknown>'
+      }
+      if (typeof additionalProperties === 'object') {
+        return `Record<string, ${jsonSchemaToTypeString(additionalProperties as Record<string, unknown>)}>`
+      }
+      return 'Record<string, unknown>'
+    }
+
+    const props = Object.entries(properties).map(([key, propSchema]) => {
+      const isRequired = required.includes(key)
+      const propType = jsonSchemaToTypeString(propSchema)
+      return `${key}${isRequired ? '' : '?'}: ${propType}`
+    })
+
+    return `{ ${props.join('; ')} }`
+  }
+
+  // Handle primitive types
+  if (type === 'string') return 'string'
+  if (type === 'number' || type === 'integer') return 'number'
+  if (type === 'boolean') return 'boolean'
+  if (type === 'null') return 'null'
+
+  // Handle union types
+  if (Array.isArray(type)) {
+    return type.map((t) => jsonSchemaToTypeString({ type: t })).join(' | ')
+  }
+
+  return 'unknown'
+}
 
 export async function generateSchemas(
   logger: CLILogger,
@@ -87,52 +192,59 @@ export async function generateSchemas(
   return schemas
 }
 
-/**
- * Generate JSON schemas from Zod schema references.
- */
 export async function generateZodSchemas(
   logger: CLILogger,
-  zodSchemas: Map<string, ZodSchemaRef>
+  zodLookup: Map<string, ZodSchemaRef>,
+  typesMap: TypesMap
 ): Promise<Record<string, JSONValue>> {
   const schemas: Record<string, JSONValue> = {}
 
-  if (zodSchemas.size === 0) {
+  if (zodLookup.size === 0) {
     return schemas
   }
 
-  for (const [schemaName, ref] of zodSchemas.entries()) {
-    try {
-      // Convert source file path to a compiled JS path
-      const compiledPath = ref.sourceFile
-        .replace(/\/src\//, '/dist/src/')
-        .replace(/\.ts$/, '.js')
+  // Import zod-to-json-schema from the user's project to match their zod version
+  let userZodToJsonSchema: typeof zodToJsonSchema
+  try {
+    const userModule = await tsImport('zod-to-json-schema', import.meta.url)
+    userZodToJsonSchema = userModule.zodToJsonSchema as typeof zodToJsonSchema
+  } catch {
+    // Fall back to CLI's version
+    userZodToJsonSchema = zodToJsonSchema
+  }
 
-      // Import the compiled module to get the Zod schema
-      const fileUrl = pathToFileURL(compiledPath).href
-      const module = await import(fileUrl)
+  for (const [schemaName, ref] of zodLookup.entries()) {
+    try {
+      // Import the TypeScript file directly using tsx loader
+      const module = await tsImport(ref.sourceFile, import.meta.url)
 
       const zodSchema = module[ref.variableName]
       if (!zodSchema) {
         logger.warn(
-          `Could not find exported schema '${ref.variableName}' in ${compiledPath} for ${schemaName}`
+          `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
         )
         continue
       }
 
-      // Convert Zod schema to JSON Schema
-      const jsonSchema = zodToJsonSchema(zodSchema, {
+      const jsonSchema = userZodToJsonSchema(zodSchema, {
         $refStrategy: 'none',
         target: 'jsonSchema7',
       })
 
-      // Remove $schema key from output
       const { $schema, ...schemaWithoutMeta } = jsonSchema as Record<
         string,
         unknown
       >
 
       schemas[schemaName] = schemaWithoutMeta as JSONValue
-      logger.info(`• Generated JSON schema from Zod: ${schemaName}`)
+
+      // Generate TypeScript type from JSON Schema
+      const tsType = jsonSchemaToTypeString(
+        schemaWithoutMeta as Record<string, unknown>
+      )
+      typesMap.addCustomType(schemaName, tsType, [])
+
+      logger.info(`• Generated schema from Zod: ${schemaName}`)
     } catch (e) {
       logger.warn(
         `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
@@ -151,7 +263,7 @@ export async function saveSchemas(
   functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean,
   additionalTypes?: string[],
-  zodSchemas?: Map<string, ZodSchemaRef>
+  zodLookup?: Map<string, ZodSchemaRef>
 ) {
   await writeFileInDir(
     logger,
@@ -190,7 +302,7 @@ export async function saveSchemas(
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
     // Add all zod schema names
-    ...(zodSchemas ? Array.from(zodSchemas.keys()) : []),
+    ...(zodLookup ? Array.from(zodLookup.keys()) : []),
   ])
 
   if (desiredSchemas.size === 0) {
@@ -217,12 +329,13 @@ export async function saveSchemas(
   )
 
   const schemaImports = availableSchemas
-    .map(
-      (schema) => `
-import * as ${schema} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
-addSchema('${schema}', ${schema})
+    .map((schema) => {
+      const identifier = toValidIdentifier(schema)
+      return `
+import * as ${identifier} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
+addSchema('${schema}', ${identifier})
 `
-    )
+    })
     .join('\n')
 
   await writeFileInDir(

@@ -17,8 +17,7 @@ export const pikkuWorkflowMap: any = pikkuSessionlessFunc<void, void>({
         packageMappings,
         typesMap,
         functionState.meta,
-        workflows.meta,
-        functionState.zodSchemas
+        workflows.meta
       )
     )
   },

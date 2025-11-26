@@ -1,10 +1,7 @@
 import { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap, ZodSchemaRef } from '@pikku/inspector'
-import {
-  generateCustomTypes,
-  generateZodTypes,
-} from '../../../utils/custom-types-generator.js'
+import { TypesMap } from '@pikku/inspector'
+import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 import { FunctionsMeta } from '@pikku/core'
 
 export const serializeTypedChannelsMap = (
@@ -12,8 +9,7 @@ export const serializeTypedChannelsMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  channelsMeta: ChannelsMeta,
-  zodSchemas?: Map<string, ZodSchemaRef>
+  channelsMeta: ChannelsMeta
 ): string => {
   const { channels, requiredTypes } = generateChannels(
     functionsMeta,
@@ -21,36 +17,26 @@ export const serializeTypedChannelsMap = (
   )
   typesMap.customTypes.forEach(({ references }) => {
     for (const reference of references) {
-      // Skip __object types (placeholder types for invalid/broken functions)
       if (reference !== '__object' && !reference.startsWith('__object_')) {
         requiredTypes.add(reference)
       }
     }
   })
 
-  const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
-
   const imports = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
-    requiredTypes,
-    zodSchemaNames
+    requiredTypes
   )
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
-
-  const zodTypes = zodSchemas
-    ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
-    : { imports: '', types: '' }
 
   return `/**
  * This provides the structure needed for TypeScript to be aware of channels
  */
 
 ${imports}
-${zodTypes.imports}
 ${serializedCustomTypes}
-${zodTypes.types}
 
 interface ChannelHandler<I, O> {
     input: I;

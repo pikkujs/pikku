@@ -1,11 +1,8 @@
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { MetaInputTypes, TypesMap, ZodSchemaRef } from '@pikku/inspector'
+import { MetaInputTypes, TypesMap } from '@pikku/inspector'
 import { FunctionsMeta } from '@pikku/core'
-import {
-  generateCustomTypes,
-  generateZodTypes,
-} from '../../../utils/custom-types-generator.js'
+import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
 export const serializeTypedHTTPWiringsMap = (
   relativeToPath: string,
@@ -13,8 +10,7 @@ export const serializeTypedHTTPWiringsMap = (
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   wiringsMeta: HTTPWiringsMeta,
-  metaTypes: MetaInputTypes,
-  zodSchemas?: Map<string, ZodSchemaRef>
+  metaTypes: MetaInputTypes
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -26,28 +22,19 @@ export const serializeTypedHTTPWiringsMap = (
     requiredTypes
   )
 
-  const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
-
   const serializedImportMap = serializeImportMap(
     relativeToPath,
     packageMappings,
     typesMap,
-    requiredTypes,
-    zodSchemaNames
+    requiredTypes
   )
-
-  const zodTypes = zodSchemas
-    ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
-    : { imports: '', types: '' }
 
   return `/**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
 
 ${serializedImportMap}
-${zodTypes.imports}
 ${serializedCustomTypes}
-${zodTypes.types}
 ${serializedMetaTypes}
 
 interface HTTPWiringHandler<I, O> {

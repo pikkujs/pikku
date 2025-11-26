@@ -433,15 +433,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let inputNames: string[] = []
   let inputTypes: ts.Type[] = []
 
-  // If zod schema is provided via `input` property, use that
   if (inputZodSchemaVar) {
     const schemaName = `${capitalizedName}Input`
     inputNames = [schemaName]
-    // Store the zod schema reference for later JSON Schema conversion
-    state.functions.zodSchemas.set(schemaName, {
+    state.zodLookup.set(schemaName, {
       variableName: inputZodSchemaVar,
       sourceFile,
     })
+    state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
   } else {
     // Fall back to extracting from generic type arguments
     const result = getNamesAndTypes(
@@ -458,15 +457,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   // --- Output Extraction ---
   let outputNames: string[] = []
 
-  // If zod schema is provided via `output` property, use that
   if (outputZodSchemaVar) {
     const schemaName = `${capitalizedName}Output`
     outputNames = [schemaName]
-    // Store the zod schema reference for later JSON Schema conversion
-    state.functions.zodSchemas.set(schemaName, {
+    state.zodLookup.set(schemaName, {
       variableName: outputZodSchemaVar,
       sourceFile,
     })
+    state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
   } else if (genericTypes.length >= 2) {
     outputNames = getNamesAndTypes(
       checker,

@@ -97,8 +97,8 @@ export type ForgeCredentialMeta = {
   displayName: string
   description?: string
   secretId: string
-  /** JSON Schema (converted from Zod at build time) */
-  schema: Record<string, unknown>
+  /** JSON Schema (converted from Zod at build time) or zodLookup reference name */
+  schema: Record<string, unknown> | string
 }
 
 /**
