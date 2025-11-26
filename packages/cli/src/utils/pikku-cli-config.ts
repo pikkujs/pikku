@@ -438,6 +438,9 @@ const _getPikkuCLIConfig = async (
         'pikku-forge-nodes-meta.gen.json'
       )
     }
+    if (!result.forgeTypesFile) {
+      result.forgeTypesFile = join(forgeDir, 'pikku-forge-types.gen.ts')
+    }
 
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)

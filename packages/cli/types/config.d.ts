@@ -91,6 +91,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Package service factories (for external packages)
   packageFile: string
+
+  // Forge
+  forgeTypesFile: string
 }
 
 export type PikkuCLIInput = {

@@ -8,7 +8,8 @@ export const serializePikkuTypesHub = (
   schedulerTypesImportPath: string | null,
   queueTypesImportPath: string | null,
   mcpTypesImportPath: string | null,
-  cliTypesImportPath: string | null
+  cliTypesImportPath: string | null,
+  forgeTypesImportPath: string | null
 ) => {
   const exports = [
     {
@@ -21,6 +22,7 @@ export const serializePikkuTypesHub = (
     { comment: 'Queue wiring types', path: queueTypesImportPath },
     { comment: 'MCP wiring types', path: mcpTypesImportPath },
     { comment: 'CLI wiring types', path: cliTypesImportPath },
+    { comment: 'Forge wiring types', path: forgeTypesImportPath },
   ]
 
   const exportStatements = exports

@@ -1,6 +1,9 @@
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
-import { externalMiddleware } from '../middleware/external.js'
-import { externalPermission } from '../permissions/external.js'
+import {
+  pikkuSessionlessFunc,
+  wireForgeNode,
+} from '../../.pikku/pikku-types.gen.js'
+import { externalMiddleware } from '../middleware.js'
+import { externalPermission } from '../permission.js'
 
 export const hello = pikkuSessionlessFunc<
   { name: string; greeting?: string },
@@ -24,5 +27,15 @@ export const hello = pikkuSessionlessFunc<
   permissions: {
     functionLevel: externalPermission,
   },
+  tags: ['external'],
+})
+
+wireForgeNode({
+  name: 'hello',
+  displayName: 'Say Hello',
+  category: 'Communication',
+  type: 'action',
+  rpc: 'hello',
+  description: 'Sends a friendly greeting message',
   tags: ['external'],
 })
