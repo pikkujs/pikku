@@ -6,11 +6,10 @@ import { readFile } from 'fs/promises'
 import { join, isAbsolute } from 'path'
 import { pathToFileURL } from 'url'
 import type { ForgeCredentialMeta } from '@pikku/core/forge-node'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 
 /**
  * Convert Zod schema to JSON Schema.
- * Dynamically imports the source file to get the actual Zod schema,
- * then converts it using zod-to-json-schema.
  */
 const convertCredentialSchema = async (
   meta: ForgeCredentialMeta & {
@@ -33,9 +32,6 @@ const convertCredentialSchema = async (
   }
 
   try {
-    // Dynamically import zod-to-json-schema (optional dependency)
-    const { zodToJsonSchema } = await import('zod-to-json-schema')
-
     // Convert source file path to a compiled JS path
     // TypeScript typically compiles src/ to dist/src/ (preserving structure)
     // Source: /path/to/src/functions/file.ts

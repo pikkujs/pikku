@@ -246,9 +246,6 @@ export type PikkuFunctionConfig<
  * Configuration object for Pikku functions with Zod schema validation.
  * Use this when you want to define input/output schemas using Zod.
  * Types are automatically inferred from the schemas.
- *
- * @template InputSchema - Zod schema for input validation
- * @template OutputSchema - Zod schema for output validation
  */
 export type PikkuFunctionConfigWithSchema<
   InputSchema extends ZodLike,
@@ -271,9 +268,7 @@ export type PikkuFunctionConfigWithSchema<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
   middleware?: PikkuMiddleware[]
-  /** Zod schema for input validation. Types are inferred automatically. */
   input: InputSchema
-  /** Optional Zod schema for output validation. Types are inferred automatically. */
   output?: OutputSchema
 }
 
@@ -350,9 +345,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
   middleware?: PikkuMiddleware[]
-  /** Zod schema for input validation. Types are inferred automatically. */
   input: InputSchema
-  /** Optional Zod schema for output validation. Types are inferred automatically. */
   output?: OutputSchema
 }
 

@@ -24,7 +24,6 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
-  // Get zod schema names to skip from import map
   const zodSchemaNames = zodSchemas ? new Set(zodSchemas.keys()) : undefined
 
   const serializedImportMap = serializeImportMap(
@@ -35,7 +34,6 @@ export const serializeTypedRPCMap = (
     zodSchemaNames
   )
 
-  // Generate zod type declarations
   const zodTypes = zodSchemas
     ? generateZodTypes(relativeToPath, packageMappings, zodSchemas)
     : { imports: '', types: '' }

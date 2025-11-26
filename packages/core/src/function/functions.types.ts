@@ -222,8 +222,6 @@ export type CorePikkuFunctionConfig<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
   middleware?: PikkuMiddleware[]
-  /** Optional Zod schema for input validation. When provided, types are inferred automatically. */
   input?: InputSchema
-  /** Optional Zod schema for output validation. When provided, types are inferred automatically. */
   output?: OutputSchema
 }

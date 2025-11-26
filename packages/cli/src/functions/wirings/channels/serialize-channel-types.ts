@@ -85,9 +85,7 @@ type PikkuChannelFuncConfigWithSchema<
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
   middleware?: PikkuMiddleware[]
-  /** Zod schema for input validation. Types are inferred automatically. */
   input: InputSchema
-  /** Optional Zod schema for output validation. Types are inferred automatically. */
   output?: OutputSchema
 }
 

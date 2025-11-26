@@ -6,6 +6,7 @@ import { HTTPWiringsMeta } from '@pikku/core/http'
 import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
 import { pathToFileURL } from 'url'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 
 export async function generateSchemas(
   logger: CLILogger,
@@ -88,8 +89,6 @@ export async function generateSchemas(
 
 /**
  * Generate JSON schemas from Zod schema references.
- * Dynamically imports the source files to get the actual Zod schemas,
- * then converts them using zod-to-json-schema.
  */
 export async function generateZodSchemas(
   logger: CLILogger,
@@ -98,18 +97,6 @@ export async function generateZodSchemas(
   const schemas: Record<string, JSONValue> = {}
 
   if (zodSchemas.size === 0) {
-    return schemas
-  }
-
-  // Dynamically import zod-to-json-schema (optional dependency)
-  let zodToJsonSchema: any
-  try {
-    const module = await import('zod-to-json-schema')
-    zodToJsonSchema = module.zodToJsonSchema
-  } catch {
-    logger.warn(
-      'zod-to-json-schema is not installed. Skipping Zod schema conversion. Install it with: npm install zod-to-json-schema'
-    )
     return schemas
   }
 
