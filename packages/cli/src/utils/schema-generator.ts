@@ -3,8 +3,32 @@ import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'
-import { TypesMap, ErrorCode } from '@pikku/inspector'
+import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
+import { tsImport } from 'tsx/esm/api'
+import * as z from 'zod'
+import { zodToTs, createAuxiliaryTypeStore } from 'zod-to-ts'
+import {
+  createPrinter,
+  createSourceFile,
+  EmitHint,
+  ScriptKind,
+  ScriptTarget,
+} from 'typescript'
+
+/**
+ * Convert a name to a valid JavaScript identifier.
+ * Replaces hyphens and other invalid characters with underscores.
+ */
+function toValidIdentifier(name: string): string {
+  // Replace hyphens and dots with underscores
+  let result = name.replace(/[-./]/g, '_')
+  // If starts with a number, prefix with underscore
+  if (/^\d/.test(result)) {
+    result = '_' + result
+  }
+  return result
+}
 
 export async function generateSchemas(
   logger: CLILogger,
@@ -85,6 +109,55 @@ export async function generateSchemas(
   return schemas
 }
 
+export async function generateZodSchemas(
+  logger: CLILogger,
+  zodLookup: Map<string, ZodSchemaRef>,
+  typesMap: TypesMap
+): Promise<Record<string, JSONValue>> {
+  const schemas: Record<string, JSONValue> = {}
+  const auxiliaryTypeStore = createAuxiliaryTypeStore()
+  const printer = createPrinter()
+  const fakeSourceFile = createSourceFile(
+    'zod-types.ts',
+    '',
+    ScriptTarget.ESNext,
+    false,
+    ScriptKind.TS
+  )
+
+  for (const [schemaName, ref] of zodLookup.entries()) {
+    try {
+      const module = await tsImport(ref.sourceFile, import.meta.url)
+      const zodSchema = module[ref.variableName]
+      if (!zodSchema) {
+        logger.warn(
+          `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
+        )
+        continue
+      }
+
+      const schema = z.toJSONSchema(zodSchema) as any
+      schemas[schemaName] = schema
+      const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
+
+      const typeText = printer.printNode(
+        EmitHint.Unspecified,
+        tsType,
+        fakeSourceFile
+      )
+
+      typesMap.addCustomType(schemaName, typeText, [])
+      logger.info(`• Generated schema from Zod: ${schemaName}`)
+    } catch (e) {
+      logger.warn(
+        `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
+      )
+    }
+  }
+
+  return schemas
+}
+
 export async function saveSchemas(
   logger: CLILogger,
   schemaParentDir: string,
@@ -92,7 +165,8 @@ export async function saveSchemas(
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean,
-  additionalTypes?: string[]
+  additionalTypes?: string[],
+  zodLookup?: Map<string, ZodSchemaRef>
 ) {
   await writeFileInDir(
     logger,
@@ -108,14 +182,16 @@ export async function saveSchemas(
           try {
             types.push(typesMap.getUniqueName(inputs[0]))
           } catch {
-            // Skip types not in typesMap (e.g., inline types in generated workflow workers)
+            // Skip types not in typesMap - might be a zod schema name
+            types.push(inputs[0])
           }
         }
         if (outputs?.[0]) {
           try {
             types.push(typesMap.getUniqueName(outputs[0]))
           } catch {
-            // Skip types not in typesMap (e.g., inline types in generated workflow workers)
+            // Skip types not in typesMap - might be a zod schema name
+            types.push(outputs[0])
           }
         }
         return types
@@ -128,6 +204,7 @@ export async function saveSchemas(
       ),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
+    ...(zodLookup ? Array.from(zodLookup.keys()) : []),
   ])
 
   if (desiredSchemas.size === 0) {
@@ -154,12 +231,13 @@ export async function saveSchemas(
   )
 
   const schemaImports = availableSchemas
-    .map(
-      (schema) => `
-import * as ${schema} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
-addSchema('${schema}', ${schema})
+    .map((schema) => {
+      const identifier = toValidIdentifier(schema)
+      return `
+import * as ${identifier} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
+addSchema('${schema}', ${identifier})
 `
-    )
+    })
     .join('\n')
 
   await writeFileInDir(

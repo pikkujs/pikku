@@ -17,12 +17,12 @@ export const serializeTypedChannelsMap = (
   )
   typesMap.customTypes.forEach(({ references }) => {
     for (const reference of references) {
-      // Skip __object types (placeholder types for invalid/broken functions)
       if (reference !== '__object' && !reference.startsWith('__object_')) {
         requiredTypes.add(reference)
       }
     }
   })
+
   const imports = serializeImportMap(
     relativeToPath,
     packageMappings,
@@ -30,10 +30,11 @@ export const serializeTypedChannelsMap = (
     requiredTypes
   )
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
+
   return `/**
  * This provides the structure needed for TypeScript to be aware of channels
  */
-    
+
 ${imports}
 ${serializedCustomTypes}
 

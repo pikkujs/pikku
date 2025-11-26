@@ -19,7 +19,8 @@ import {
   AssertMCPResourceURIParams
 } from '@pikku/core/mcp'
 
-import type { PikkuFunctionConfig, PikkuFunctionSessionless } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless, InferZodOutput } from '${functionTypesImportPath}'
+import type { ZodLike } from '@pikku/core'
 
 /**
  * Type definition for MCP resources that provide data to AI models.
@@ -84,59 +85,110 @@ export const wireMCPPrompt = <In>(
 }
 
 /**
+ * Configuration for MCP prompt with Zod schema input validation.
+ */
+type MCPPromptFuncConfigWithSchema<InputSchema extends ZodLike> = {
+  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp'>
+  name?: string
+  input: InputSchema
+}
+
+/**
  * Creates a function for handling MCP prompt requests.
  * These functions generate prompt templates for AI models.
  *
- * @template In - Input type for the prompt parameters
+ * Supports two patterns:
+ * 1. Generic types: \`pikkuMCPPromptFunc<Input>({ func: ... })\`
+ * 2. Zod schemas: \`pikkuMCPPromptFunc({ input: z.object(...), func: ... })\`
+ *
+ * @template In - Input type for the prompt parameters (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
  */
-export const pikkuMCPPromptFunc = <In>(
+export function pikkuMCPPromptFunc<InputSchema extends ZodLike>(
+  config: MCPPromptFuncConfigWithSchema<InputSchema>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp'>
+export function pikkuMCPPromptFunc<In>(
   func:
     | PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp'>
     | {
         func: PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp'>
         name?: string
       }
-): PikkuFunctionConfig<In, MCPPromptResponse, 'mcp'> => {
+): PikkuFunctionConfig<In, MCPPromptResponse, 'mcp'>
+export function pikkuMCPPromptFunc(func: any): any {
   return typeof func === 'function' ? { func } : func
+}
+
+/**
+ * Configuration for MCP tool with Zod schema input validation.
+ */
+type MCPToolFuncConfigWithSchema<InputSchema extends ZodLike> = {
+  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp'>
+  name?: string
+  input: InputSchema
 }
 
 /**
  * Creates a function for handling MCP tool invocations.
  * These functions perform actions that AI models can request.
  *
- * @template In - Input type for the tool invocation
+ * Supports two patterns:
+ * 1. Generic types: \`pikkuMCPToolFunc<Input>({ func: ... })\`
+ * 2. Zod schemas: \`pikkuMCPToolFunc({ input: z.object(...), func: ... })\`
+ *
+ * @template In - Input type for the tool invocation (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
  */
-export const pikkuMCPToolFunc = <In>(
+export function pikkuMCPToolFunc<InputSchema extends ZodLike>(
+  config: MCPToolFuncConfigWithSchema<InputSchema>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp'>
+export function pikkuMCPToolFunc<In>(
   func:
     | PikkuFunctionSessionless<In, MCPToolResponse, 'mcp'>
     | {
       func: PikkuFunctionSessionless<In, MCPToolResponse, 'mcp'>
       name?: string
     }
-): PikkuFunctionConfig<In, MCPToolResponse, 'mcp'> => {
+): PikkuFunctionConfig<In, MCPToolResponse, 'mcp'>
+export function pikkuMCPToolFunc(func: any): any {
   return typeof func === 'function' ? { func } : func
+}
+
+/**
+ * Configuration for MCP resource with Zod schema input validation.
+ */
+type MCPResourceFuncConfigWithSchema<InputSchema extends ZodLike> = {
+  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp'>
+  name?: string
+  input: InputSchema
 }
 
 /**
  * Creates a function for handling MCP resource requests.
  * These functions provide data that AI models can access.
  *
- * @template In - Input type for the resource request
+ * Supports two patterns:
+ * 1. Generic types: \`pikkuMCPResourceFunc<Input>({ func: ... })\`
+ * 2. Zod schemas: \`pikkuMCPResourceFunc({ input: z.object(...), func: ... })\`
+ *
+ * @template In - Input type for the resource request (inferred from schema if provided)
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
  */
-export const pikkuMCPResourceFunc = <In>(
+export function pikkuMCPResourceFunc<InputSchema extends ZodLike>(
+  config: MCPResourceFuncConfigWithSchema<InputSchema>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp'>
+export function pikkuMCPResourceFunc<In>(
   func:
     | PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp'>
     | {
       func: PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp'>
       name?: string
     }
-): PikkuFunctionConfig<In, MCPResourceResponse, 'mcp'> => {
+): PikkuFunctionConfig<In, MCPResourceResponse, 'mcp'>
+export function pikkuMCPResourceFunc(func: any): any {
   return typeof func === 'function' ? { func } : func
 }
 `

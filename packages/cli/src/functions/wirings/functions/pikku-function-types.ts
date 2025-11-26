@@ -16,6 +16,7 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
       queueTypesFile,
       mcpTypesFile,
       cliTypesFile,
+      forgeTypesFile,
     } = config
 
     const content = serializePikkuTypesHub(
@@ -29,7 +30,8 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
       ),
       getFileImportRelativePath(typesFile, queueTypesFile, packageMappings),
       getFileImportRelativePath(typesFile, mcpTypesFile, packageMappings),
-      getFileImportRelativePath(typesFile, cliTypesFile, packageMappings)
+      getFileImportRelativePath(typesFile, cliTypesFile, packageMappings),
+      getFileImportRelativePath(typesFile, forgeTypesFile, packageMappings)
     )
 
     await writeFileInDir(logger, typesFile, content)

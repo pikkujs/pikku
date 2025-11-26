@@ -30,7 +30,7 @@ export const serializeQueueMap = (
   return `/**
  * This provides the structure needed for typescript to be aware of Queue workers and their input/output types
  */
-    
+
 ${serializedImportMap}
 ${serializedCustomTypes}
 
@@ -93,8 +93,23 @@ function generateQueues(
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Store the input and output types for QueueHandler
-    const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
-    const outputType = output ? typesMap.getTypeMeta(output).uniqueName : 'null'
+    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
+    let inputType = 'null'
+    if (input) {
+      try {
+        inputType = typesMap.getTypeMeta(input).uniqueName
+      } catch {
+        inputType = input
+      }
+    }
+    let outputType = 'null'
+    if (output) {
+      try {
+        outputType = typesMap.getTypeMeta(output).uniqueName
+      } catch {
+        outputType = output
+      }
+    }
 
     requiredTypes.add(inputType)
     requiredTypes.add(outputType)

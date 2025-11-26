@@ -48,6 +48,7 @@ import { pikkuNext } from '../runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuOpenAPI } from '../wirings/http/pikku-command-openapi.js'
 import { pikkuPackage } from '../wirings/package/pikku-command-package.js'
 import { pikkuForgeNodes } from '../wirings/forge/pikku-command-forge-nodes.js'
+import { pikkuForgeTypes } from '../wirings/forge/pikku-command-forge-types.js'
 import { PikkuWire } from '@pikku/core'
 
 export const all: any = pikkuVoidFunc({
@@ -129,6 +130,9 @@ export const all: any = pikkuVoidFunc({
     await pikkuRPCExposedMap.func(services, null, wire)
     await pikkuPublicRPC.func(services, null, wire)
     await pikkuRPCClient.func(services, null, wire)
+
+    // Generate Forge types (depends on RPC internal map for FlattenedRPCMap)
+    await pikkuForgeTypes.func(services, null, wire)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)

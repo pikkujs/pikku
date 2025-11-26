@@ -152,14 +152,18 @@ const resolveUnionTypes = (
   // Check if it's a union type AND not part of an intersection
   if (type.isUnion() && !(type.flags & ts.TypeFlags.Intersection)) {
     for (const t of type.types) {
-      const name = nullifyTypes(checker.typeToString(t))
+      const name = nullifyTypes(
+        checker.typeToString(t, undefined, ts.TypeFormatFlags.NoTruncation)
+      )
       if (name) {
         types.push(t)
         names.push(name)
       }
     }
   } else {
-    const name = nullifyTypes(checker.typeToString(type))
+    const name = nullifyTypes(
+      checker.typeToString(type, undefined, ts.TypeFormatFlags.NoTruncation)
+    )
     if (name) {
       types.push(type)
       names.push(name)
@@ -322,6 +326,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   } = extractFunctionNode(firstArg, checker)
 
+  // Variables to hold zod schema references if provided
+  let inputZodSchemaVar: string | null = null
+  let outputZodSchemaVar: string | null = null
+
   // Extract config properties if using object form
   if (ts.isObjectLiteralExpression(firstArg)) {
     objectNode = firstArg
@@ -332,6 +340,20 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+
+    // Extract zod schema variable names from input/output properties
+    for (const prop of firstArg.properties) {
+      if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+        if (prop.name.text === 'input' && ts.isIdentifier(prop.initializer)) {
+          inputZodSchemaVar = prop.initializer.text
+        } else if (
+          prop.name.text === 'output' &&
+          ts.isIdentifier(prop.initializer)
+        ) {
+          outputZodSchemaVar = prop.initializer.text
+        }
+      }
+    }
   }
 
   // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
@@ -404,23 +426,46 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     .map((tn) => checker.getTypeFromTypeNode(tn))
     .map((t) => unwrapPromise(checker, t))
 
+  const sourceFile = node.getSourceFile().fileName
+  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1)
+
   // --- Input Extraction ---
-  let { names: inputNames, types: inputTypes } = getNamesAndTypes(
-    checker,
-    state.functions.typesMap,
-    'Input',
-    name,
-    genericTypes[0]
-  )
-  // if (inputTypes.length === 0) {
-  //   logger.debug(
-  //     `\x1b[31m• Unknown input type for '${name}', assuming void.\x1b[0m`
-  //   )
-  // }
+  let inputNames: string[] = []
+  let inputTypes: ts.Type[] = []
+
+  if (inputZodSchemaVar) {
+    const schemaName = `${capitalizedName}Input`
+    inputNames = [schemaName]
+    state.zodLookup.set(schemaName, {
+      variableName: inputZodSchemaVar,
+      sourceFile,
+    })
+    state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
+  } else {
+    // Fall back to extracting from generic type arguments
+    const result = getNamesAndTypes(
+      checker,
+      state.functions.typesMap,
+      'Input',
+      name,
+      genericTypes[0]
+    )
+    inputNames = result.names
+    inputTypes = result.types
+  }
 
   // --- Output Extraction ---
   let outputNames: string[] = []
-  if (genericTypes.length >= 2) {
+
+  if (outputZodSchemaVar) {
+    const schemaName = `${capitalizedName}Output`
+    outputNames = [schemaName]
+    state.zodLookup.set(schemaName, {
+      variableName: outputZodSchemaVar,
+      sourceFile,
+    })
+    state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
+  } else if (genericTypes.length >= 2) {
     outputNames = getNamesAndTypes(
       checker,
       state.functions.typesMap,

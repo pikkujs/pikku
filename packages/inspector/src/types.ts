@@ -6,7 +6,7 @@ import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
-import { ForgeNodesMeta } from '@pikku/core/forge-node'
+import { ForgeNodesMeta, ForgeCredentialsMeta } from '@pikku/core/forge-node'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -55,6 +55,14 @@ export interface InspectorHTTPState {
   // Pattern '*' matches all routes (from addHTTPPermission('*', [...]))
   // Pattern '/api/*' matches specific routes (from addHTTPPermission('/api/*', [...]))
   routePermissions: Map<string, PermissionGroupMeta>
+}
+
+/**
+ * Zod schema reference for deferred conversion to JSON Schema at build time
+ */
+export interface ZodSchemaRef {
+  variableName: string
+  sourceFile: string
 }
 
 export interface InspectorFunctionState {
@@ -201,6 +209,7 @@ export interface InspectorState {
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
+  zodLookup: Map<string, ZodSchemaRef> // Lookup for Zod schemas by name for deferred JSON Schema conversion
   http: InspectorHTTPState
   functions: InspectorFunctionState
   channels: InspectorChannelState
@@ -236,6 +245,10 @@ export interface InspectorState {
   }
   forgeNodes: {
     meta: ForgeNodesMeta
+    files: Set<string>
+  }
+  forgeCredentials: {
+    meta: ForgeCredentialsMeta
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

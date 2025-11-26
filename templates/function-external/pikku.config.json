@@ -9,8 +9,7 @@
       "displayName": "External Functions",
       "description": "Example external package functions for Forge",
       "categories": ["Communication", "Utility"],
-      "iconsDir": "./src/icons",
-      "icon": "package.svg"
+      "icon": "./src/icons/package.svg"
     }
   }
 }

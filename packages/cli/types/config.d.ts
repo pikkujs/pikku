@@ -91,6 +91,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Package service factories (for external packages)
   packageFile: string
+
+  // Forge
+  forgeTypesFile: string
 }
 
 export type PikkuCLIInput = {
@@ -183,7 +186,6 @@ export type PikkuCLIInput = {
     verboseMeta?: boolean
     node?: {
       categories?: string[]
-      iconsDir?: string
       icon?: string
       displayName?: string
       description?: string
@@ -293,7 +295,6 @@ export type PikkuCLIConfig = {
     verboseMeta?: boolean
     node?: {
       categories?: string[]
-      iconsDir?: string
       icon?: string
       displayName?: string
       description?: string

@@ -7,11 +7,3 @@ wireHTTP({
   func: external('ext:hello'),
   tags: ['external'],
 })
-
-wireHTTP({
-  auth: false,
-  method: 'get',
-  route: '/external/goodbye',
-  func: external('ext:goodbye'),
-  tags: ['external'],
-})

@@ -62,6 +62,7 @@ export interface SerializableInspectorState {
       >,
     ]
   >
+  zodLookup: Array<[string, { variableName: string; sourceFile: string }]>
   functions: {
     typesMap: {
       map: Array<[string, { originalName: string; path: string | null }]>
@@ -136,6 +137,10 @@ export interface SerializableInspectorState {
   }
   forgeNodes: {
     meta: InspectorState['forgeNodes']['meta']
+    files: string[]
+  }
+  forgeCredentials: {
+    meta: InspectorState['forgeCredentials']['meta']
     files: string[]
   }
   middleware: {
@@ -236,6 +241,7 @@ export function serializeInspectorState(
     filesAndMethodsErrors: Array.from(
       state.filesAndMethodsErrors.entries()
     ).map(([key, mapValue]) => [key, Array.from(mapValue.entries())] as const),
+    zodLookup: Array.from(state.zodLookup.entries()),
     functions: {
       typesMap: serializeTypesMap(state.functions.typesMap),
       meta: state.functions.meta,
@@ -286,6 +292,10 @@ export function serializeInspectorState(
       meta: state.forgeNodes.meta,
       files: Array.from(state.forgeNodes.files),
     },
+    forgeCredentials: {
+      meta: state.forgeCredentials.meta,
+      files: Array.from(state.forgeCredentials.files),
+    },
     middleware: {
       meta: state.middleware.meta,
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
@@ -312,7 +322,9 @@ export function serializeInspectorState(
  */
 export function deserializeInspectorState(
   data: SerializableInspectorState
-): Omit<InspectorState, 'typesLookup'> {
+): Omit<InspectorState, 'typesLookup' | 'zodLookup'> & {
+  zodLookup: Map<string, { variableName: string; sourceFile: string }>
+} {
   // Helper to deserialize TypesMap
   const deserializeTypesMap = (
     serialized: SerializableInspectorState['functions']['typesMap']
@@ -347,6 +359,7 @@ export function deserializeInspectorState(
         new Map(entries),
       ])
     ),
+    zodLookup: new Map(data.zodLookup || []),
     functions: {
       typesMap: deserializeTypesMap(data.functions.typesMap),
       meta: data.functions.meta,
@@ -396,6 +409,10 @@ export function deserializeInspectorState(
     forgeNodes: {
       meta: data.forgeNodes?.meta || {},
       files: new Set(data.forgeNodes?.files || []),
+    },
+    forgeCredentials: {
+      meta: data.forgeCredentials?.meta || {},
+      files: new Set(data.forgeCredentials?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,

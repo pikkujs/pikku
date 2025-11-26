@@ -32,7 +32,7 @@ export const serializeTypedHTTPWiringsMap = (
   return `/**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
-    
+
 ${serializedImportMap}
 ${serializedCustomTypes}
 ${serializedMetaTypes}
@@ -79,16 +79,28 @@ function generateHTTPWirings(
       const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
       const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
-      // Initialize the route entry if it doesn't exist
       if (!routesObj[route]) {
         routesObj[route] = {}
       }
 
-      // Store the input and output types separately for RouteHandler
-      const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'null'
-      const outputType = output
-        ? typesMap.getTypeMeta(output).uniqueName
-        : 'null'
+      // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
+      let inputType = 'null'
+      if (input) {
+        try {
+          inputType = typesMap.getTypeMeta(input).uniqueName
+        } catch {
+          inputType = input
+        }
+      }
+      let outputType = 'null'
+      if (output) {
+        try {
+          outputType = typesMap.getTypeMeta(output).uniqueName
+        } catch {
+          // Zod-derived schema - use the schema name directly
+          outputType = output
+        }
+      }
 
       requiredTypes.add(inputType)
       requiredTypes.add(outputType)
@@ -121,7 +133,13 @@ const generateMetaTypes = (metaTypes: MetaInputTypes, typesMap: TypesMap) => {
   const nameToTypeMap = Array.from(metaTypes.entries()).reduce<
     Map<string, string>
   >((result, [_name, { query, body, params }]) => {
-    const { uniqueName } = typesMap.getTypeMeta(_name)
+    let uniqueName: string
+    try {
+      uniqueName = typesMap.getTypeMeta(_name).uniqueName
+    } catch {
+      // Zod-derived schema - use the name directly
+      uniqueName = _name
+    }
     const queryType =
       query && query.length > 0
         ? `Pick<${uniqueName}, '${query?.join("' | '")}'>`

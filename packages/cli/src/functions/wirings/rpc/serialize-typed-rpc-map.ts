@@ -150,13 +150,14 @@ function generateRPCs(
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Store the input and output types for RPCHandler
-    // Use 'any' for types not in typesMap (e.g., inline types in generated workflow workers)
+    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
     let inputType = 'null'
     if (input) {
       try {
         inputType = typesMap.getTypeMeta(input).uniqueName
       } catch {
-        inputType = 'any'
+        // Type not in typesMap - use the name directly (e.g., zod-derived types)
+        inputType = input
       }
     }
 
@@ -165,7 +166,8 @@ function generateRPCs(
       try {
         outputType = typesMap.getTypeMeta(output).uniqueName
       } catch {
-        outputType = 'any'
+        // Type not in typesMap - use the name directly (e.g., zod-derived types)
+        outputType = output
       }
     }
 

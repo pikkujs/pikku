@@ -97,8 +97,23 @@ function generateWorkflows(
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
     // Store the input and output types for WorkflowHandler
-    const inputType = input ? typesMap.getTypeMeta(input).uniqueName : 'void'
-    const outputType = output ? typesMap.getTypeMeta(output).uniqueName : 'void'
+    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
+    let inputType = 'void'
+    if (input) {
+      try {
+        inputType = typesMap.getTypeMeta(input).uniqueName
+      } catch {
+        inputType = input
+      }
+    }
+    let outputType = 'void'
+    if (output) {
+      try {
+        outputType = typesMap.getTypeMeta(output).uniqueName
+      } catch {
+        outputType = output
+      }
+    }
 
     requiredTypes.add(inputType)
     requiredTypes.add(outputType)

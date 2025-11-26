@@ -11,24 +11,13 @@ import { join, isAbsolute } from 'path'
  */
 const loadIcon = async (
   iconPath: string | undefined,
-  iconsDir: string | undefined,
   rootDir: string,
   logger: any
 ): Promise<string | undefined> => {
   if (!iconPath) return undefined
 
-  // Determine the full path to the icon
-  let fullPath: string
-  if (isAbsolute(iconPath)) {
-    fullPath = iconPath
-  } else if (iconsDir) {
-    const resolvedIconsDir = isAbsolute(iconsDir)
-      ? iconsDir
-      : join(rootDir, iconsDir)
-    fullPath = join(resolvedIconsDir, iconPath)
-  } else {
-    fullPath = join(rootDir, iconPath)
-  }
+  // Resolve the full path to the icon
+  const fullPath = isAbsolute(iconPath) ? iconPath : join(rootDir, iconPath)
 
   try {
     const content = await readFile(fullPath, 'utf-8')
@@ -53,15 +42,16 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
   boolean | undefined
 >({
   func: async ({ logger, config, getInspectorState }) => {
-    const { forgeNodes } = await getInspectorState()
+    const { forgeNodes, forgeCredentials } = await getInspectorState()
     const { forgeNodesMetaJsonFile, forge, rootDir } = config
 
-    // Only generate if there are forge nodes
-    if (Object.keys(forgeNodes.meta).length === 0) {
+    const hasNodes = Object.keys(forgeNodes.meta).length > 0
+    const hasCredentials = Object.keys(forgeCredentials.meta).length > 0
+
+    // Only generate if there are forge nodes or credentials
+    if (!hasNodes && !hasCredentials) {
       return undefined
     }
-
-    const iconsDir = forge?.node?.iconsDir
 
     // Validate categories if configured
     const allowedCategories = forge?.node?.categories
@@ -80,34 +70,23 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
       }
     }
 
-    // Build the output metadata with package-level defaults and loaded icons
+    // Build the output metadata - remove per-node icon field
     const outputMeta: Record<string, any> = {}
     for (const [name, meta] of Object.entries(forgeNodes.meta) as [
       string,
       any,
     ][]) {
-      // Determine icon path (node-level or package-level default)
-      const iconPath = meta.icon || forge?.node?.icon
-
-      // Load and inline the SVG content
-      const iconContent = await loadIcon(iconPath, iconsDir, rootDir, logger)
-
-      outputMeta[name] = {
-        ...meta,
-        icon: iconContent,
-      }
+      // Remove icon from node meta - only package-level icon is used
+      const { icon: _icon, ...nodeMetaWithoutIcon } = meta
+      outputMeta[name] = nodeMetaWithoutIcon
     }
 
-    // Load package-level icon if specified
-    const packageIcon = await loadIcon(
-      forge?.node?.icon,
-      iconsDir,
-      rootDir,
-      logger
-    )
+    // Load package-level icon
+    const packageIcon = await loadIcon(forge?.node?.icon, rootDir, logger)
 
     const metaData = {
       nodes: outputMeta,
+      credentials: forgeCredentials.meta,
       package: {
         displayName: forge?.node?.displayName,
         description: forge?.node?.description,

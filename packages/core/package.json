@@ -47,6 +47,14 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9"
   },
+  "peerDependencies": {
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">=18"
   }
