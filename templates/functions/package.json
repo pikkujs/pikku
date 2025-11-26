@@ -9,8 +9,7 @@
     "@pikku/templates-function-external": "workspace:*",
     "eventsource": "^4.0.0",
     "ws": "^8.18.3",
-    "zod": "^3.24.0",
-    "zod-to-json-schema": "^3.24.0"
+    "zod": "^4"
   },
   "devDependencies": {
     "@pikku/cli": "^0.11.2",

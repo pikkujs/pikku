@@ -5,8 +5,8 @@ import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { tsImport } from 'tsx/esm/api'
+import * as z from 'zod'
 
 /**
  * Convert a name to a valid JavaScript identifier.
@@ -203,16 +203,6 @@ export async function generateZodSchemas(
     return schemas
   }
 
-  // Import zod-to-json-schema from the user's project to match their zod version
-  let userZodToJsonSchema: typeof zodToJsonSchema
-  try {
-    const userModule = await tsImport('zod-to-json-schema', import.meta.url)
-    userZodToJsonSchema = userModule.zodToJsonSchema as typeof zodToJsonSchema
-  } catch {
-    // Fall back to CLI's version
-    userZodToJsonSchema = zodToJsonSchema
-  }
-
   for (const [schemaName, ref] of zodLookup.entries()) {
     try {
       // Import the TypeScript file directly using tsx loader
@@ -226,15 +216,9 @@ export async function generateZodSchemas(
         continue
       }
 
-      const jsonSchema = userZodToJsonSchema(zodSchema, {
-        $refStrategy: 'none',
-        target: 'jsonSchema7',
-      })
-
-      const { $schema, ...schemaWithoutMeta } = jsonSchema as Record<
-        string,
-        unknown
-      >
+      const { $schema, ...schemaWithoutMeta } = z.toJSONSchema(
+        zodSchema
+      ) as Record<string, unknown>
 
       schemas[schemaName] = schemaWithoutMeta as JSONValue
 
