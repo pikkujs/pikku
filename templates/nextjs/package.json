@@ -17,7 +17,7 @@
     "@pikku/core": "^0.11.1",
     "@pikku/fetch": "^0.11.1",
     "@pikku/jose": "^0.11.1",
-    "@pikku/next": "^0.11.1",
+    "@pikku/next": "^0.11.2",
     "next": "^15",
     "react": "^19",
     "react-dom": "^19",
@@ -25,7 +25,7 @@
     "tsx": "^4.20.6"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.11.2",
+    "@pikku/cli": "^0.11.3",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",

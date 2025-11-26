@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.3
+
+### Patch Changes
+
+- 14a3dcd: fix: nextjs rpc route wasn't working
+
 ## 0.11.2
 
 ### Patch Changes

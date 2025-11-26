@@ -3571,7 +3571,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.11.2, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.11.2, @pikku/cli@npm:^0.11.3, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -3784,7 +3784,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/next@npm:^0.11.1, @pikku/next@workspace:packages/runtimes/next":
+"@pikku/next@npm:^0.11.2, @pikku/next@workspace:packages/runtimes/next":
   version: 0.0.0-use.local
   resolution: "@pikku/next@workspace:packages/runtimes/next"
   dependencies:
@@ -3964,7 +3964,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cli@workspace:templates/cli"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/uws": "npm:^0.11.1"
     "@pikku/websocket": "npm:^0.11.0"
@@ -4005,7 +4005,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/express-middleware": "npm:^0.11.1"
     "@pikku/jose": "npm:^0.11.1"
@@ -4084,7 +4084,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/fetch": "npm:^0.11.1"
     "@pikku/jose": "npm:^0.11.1"
@@ -4119,11 +4119,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/fetch": "npm:^0.11.1"
     "@pikku/jose": "npm:^0.11.1"
-    "@pikku/next": "npm:^0.11.1"
+    "@pikku/next": "npm:^0.11.2"
     "@types/node": "npm:^24"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -4171,7 +4171,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/express": "npm:^0.11.1"
     "@pikku/queue-bullmq": "npm:^0.11.1"
@@ -4187,7 +4187,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/express": "npm:^0.11.1"
     "@pikku/pg": "npm:^0.11.1"
@@ -4246,7 +4246,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-external@workspace:verifiers/external"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
@@ -4258,7 +4258,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
@@ -4270,7 +4270,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verify-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
@@ -4282,7 +4282,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verify-treeshaking@workspace:verifiers/treeshaking"
   dependencies:
-    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.1"
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
