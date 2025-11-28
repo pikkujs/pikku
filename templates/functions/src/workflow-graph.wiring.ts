@@ -21,7 +21,7 @@ wireWorkflowGraph({
     },
     sendWelcome: {
       input: (ref) => ({
-        to: ref('entry', 'createdAt'),
+        to: ref('entry', 'email'),
         subject: 'Welcome!',
         body: 'Thanks for signing up!',
       }),

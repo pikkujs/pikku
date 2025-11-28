@@ -99,10 +99,16 @@ type ComputeNodeInputs<
 }
 
 /**
- * Map input type fields to allow RefValue as an alternative
+ * Typed ref value - carries the type of the referenced field as a phantom type.
+ * At runtime this is just RefValue, but TypeScript tracks the type T.
+ */
+export type TypedRef<T> = RefValue & { __phantomType?: T }
+
+/**
+ * Map input type fields to allow TypedRef of matching type as an alternative
  */
 type InputWithRefs<T> = {
-  [K in keyof T]: T[K] | RefValue
+  [K in keyof T]: T[K] | TypedRef<T[K]>
 }
 
 export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
@@ -117,10 +123,10 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
       [K in NodeIds]: {
         next?: NextConfig<NodeIds>
         input?: (
-          ref: <N extends NodeIds>(
+          ref: <N extends NodeIds, P extends keyof NodeOutputs[N] & string>(
             nodeId: N,
-            path: keyof NodeOutputs[N] & string
-          ) => RefValue
+            path: P
+          ) => TypedRef<NodeOutputs[N][P]>
         ) => InputWithRefs<NodeInputs[K]>
         onError?: NodeIds | NodeIds[]
       }

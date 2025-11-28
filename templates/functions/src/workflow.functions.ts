@@ -4,14 +4,14 @@ import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 // Pikku function to create a user profile
 export const createUserProfile = pikkuSessionlessFunc<
   { email: string; userId: string },
-  { id: string; email: string; name: string; createdAt: string }
+  { id: string; email: string; name: string; createdAt: Date }
 >(async ({ logger }, data) => {
   logger.info(`Creating user profile for ${data.email}`)
   return {
     id: data.userId,
     email: data.email,
     name: data.email.split('@')[0]!,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(),
   }
 })
 
