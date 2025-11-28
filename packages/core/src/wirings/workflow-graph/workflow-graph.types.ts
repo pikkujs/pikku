@@ -1,25 +1,3 @@
-import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
-
-/**
- * Extract input type from a PikkuFunc
- */
-export type InputType<F> =
-  F extends CorePikkuFunctionConfig<infer Func, any, any, any, any>
-    ? Func extends (services: any, data: infer I, wire: any) => any
-      ? I
-      : never
-    : never
-
-/**
- * Extract output type from a PikkuFunc
- */
-export type OutputType<F> =
-  F extends CorePikkuFunctionConfig<infer Func, any, any, any, any>
-    ? Func extends (services: any, data: any, wire: any) => Promise<infer O>
-      ? O
-      : never
-    : never
-
 /**
  * Ref value - internal representation after input callback is evaluated
  */
@@ -65,13 +43,6 @@ export type RefFn<NodeIds extends string = string> = (
 ) => RefValue
 
 /**
- * Input mapping - each key can be a literal value OR a ref
- */
-export type InputMapping<T> = {
-  [K in keyof T]-?: T[K] | RefValue
-}
-
-/**
  * Next node configuration - fully serializable
  * - string: single next node
  * - string[]: parallel execution (all run concurrently)
@@ -83,25 +54,16 @@ export type NextConfig<NodeIds extends string = string> =
   | Record<string, NodeIds | NodeIds[]>
 
 /**
- * Graph node configuration returned by graphNode()
+ * Graph node configuration - references functions by RPC name
  */
-export interface GraphNodeConfig<
-  Func extends CorePikkuFunctionConfig<
-    any,
-    any,
-    any,
-    any,
-    any
-  > = CorePikkuFunctionConfig<any, any, any, any, any>,
-  NodeIds extends string = string,
-> {
-  /** The pikku function */
-  func: Func
-  /** Input mapping callback - receives ref function, returns input mapping */
-  input?: (ref: RefFn<NodeIds>) => InputMapping<InputType<Func>>
+export interface GraphNodeConfig<NodeIds extends string = string> {
+  /** RPC function name */
+  func: string
+  /** Input mapping callback - receives ref function, returns input object */
+  input?: (ref: RefFn<NodeIds>) => Record<string, unknown>
   /** Next nodes - string, array, or record for branching */
   next?: NextConfig<NodeIds>
-  /** Error routing - only valid if function has errorOutput */
+  /** Error routing - node(s) to execute on error */
   onError?: NodeIds | NodeIds[]
 }
 
@@ -126,10 +88,10 @@ export interface WorkflowGraphTriggers {
  * Workflow graph definition
  */
 export interface WorkflowGraphDefinition<
-  Nodes extends Record<
+  Nodes extends Record<string, GraphNodeConfig<string>> = Record<
     string,
-    GraphNodeConfig<any, Extract<keyof Nodes, string>>
-  > = Record<string, GraphNodeConfig>,
+    GraphNodeConfig
+  >,
 > {
   /** Unique workflow name */
   name: string
@@ -138,73 +100,6 @@ export interface WorkflowGraphDefinition<
   /** Graph nodes */
   graph: Nodes
 }
-
-/**
- * Serialized graph node for runtime/storage
- * This is what gets stored after input callbacks are evaluated
- */
-export interface SerializedGraphNode {
-  /** Node ID */
-  nodeId: string
-  /** RPC function name */
-  rpcName: string
-  /** Resolved input mapping with refs */
-  input: Record<string, unknown | RefValue>
-  /**
-   * Next node configuration (fully serializable)
-   * - string: single next node
-   * - string[]: parallel execution
-   * - Record<string, string | string[]>: branching (requires graph.branch() call)
-   */
-  next?: string | string[] | Record<string, string | string[]>
-  /** Error routing */
-  onError?: string | string[]
-}
-
-/**
- * Serialized workflow graph for runtime/storage
- */
-export interface SerializedWorkflowGraph {
-  /** Workflow name */
-  name: string
-  /** Triggers */
-  triggers: WorkflowGraphTriggers
-  /** Serialized nodes */
-  nodes: Record<string, SerializedGraphNode>
-  /** Entry node ID */
-  entryNodeId: string
-}
-
-/**
- * Workflow graph metadata for inspector
- */
-export interface WorkflowGraphMeta {
-  /** Workflow name */
-  workflowName: string
-  /** Trigger configuration */
-  triggers: WorkflowGraphTriggers
-  /** Node metadata */
-  nodes: Record<
-    string,
-    {
-      rpcName: string
-      inputRefs: InputRef[]
-      next?: string | string[] | Record<string, string | string[]>
-      onError?: string | string[]
-    }
-  >
-  /** Entry node ID */
-  entryNodeId: string
-  /** Optional tags for organization */
-  tags?: string[]
-  /** Optional description */
-  description?: string
-}
-
-/**
- * All workflow graphs metadata
- */
-export type WorkflowGraphsMeta = Record<string, WorkflowGraphMeta>
 
 /**
  * Graph wire context - available to functions running in a workflow graph

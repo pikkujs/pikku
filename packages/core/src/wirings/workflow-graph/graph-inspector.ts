@@ -1,11 +1,6 @@
 import type {
   GraphNodeConfig,
   WorkflowGraphDefinition,
-  WorkflowGraphMeta,
-  WorkflowGraphsMeta,
-  SerializedGraphNode,
-  SerializedWorkflowGraph,
-  InputRef,
   RefValue,
 } from './workflow-graph.types.js'
 import { createRef } from './workflow-graph.types.js'
@@ -16,30 +11,6 @@ import { getAllWorkflowGraphs } from './wire-workflow-graph.js'
  */
 function getRpcName(node: GraphNodeConfig): string {
   return (node.func as any).name || 'unknown'
-}
-
-/**
- * Evaluate a node's input callback to extract refs
- */
-function evaluateInputForRefs(node: GraphNodeConfig): InputRef[] {
-  if (!node.input) return []
-
-  const refs: InputRef[] = []
-
-  // Create a ref function that captures refs
-  const ref = (nodeId: string, path?: string): RefValue => {
-    refs.push({ nodeId, path })
-    return createRef(nodeId, path)
-  }
-
-  // Call the input callback to discover refs
-  try {
-    node.input(ref)
-  } catch {
-    // Ignore errors - we just want to capture the refs
-  }
-
-  return refs
 }
 
 /**
@@ -75,7 +46,9 @@ function hasIncomingEdges(
 /**
  * Find entry nodes (nodes with no incoming edges)
  */
-function findEntryNodeId(graph: Record<string, GraphNodeConfig>): string {
+export function findEntryNodeId(
+  graph: Record<string, GraphNodeConfig>
+): string {
   const entryNodes = Object.keys(graph).filter(
     (nodeId) => !hasIncomingEdges(graph, nodeId)
   )
@@ -83,134 +56,69 @@ function findEntryNodeId(graph: Record<string, GraphNodeConfig>): string {
 }
 
 /**
- * Extract metadata from a workflow graph definition for inspector/CLI use.
- * This is called at build time, not runtime.
+ * Evaluate a node's input callback to resolve refs at runtime.
+ * Returns the resolved input mapping with RefValues.
  */
-export function extractGraphMeta(
-  definition: WorkflowGraphDefinition<any>
-): WorkflowGraphMeta {
-  const nodes: WorkflowGraphMeta['nodes'] = {}
-
-  for (const [nodeId, node] of Object.entries(definition.graph)) {
-    const typedNode = node as GraphNodeConfig
-    nodes[nodeId] = {
-      rpcName: getRpcName(typedNode),
-      inputRefs: evaluateInputForRefs(typedNode),
-      next: typedNode.next,
-      onError: typedNode.onError,
-    }
-  }
-
-  return {
-    workflowName: definition.name,
-    triggers: definition.triggers,
-    nodes,
-    entryNodeId: findEntryNodeId(definition.graph),
-  }
-}
-
-/**
- * Extract metadata from all registered workflow graphs.
- * This is called at build time by the CLI.
- */
-export function extractAllGraphsMeta(): WorkflowGraphsMeta {
-  const graphs = getAllWorkflowGraphs()
-  const meta: WorkflowGraphsMeta = {}
-
-  for (const [name, definition] of graphs) {
-    meta[name] = extractGraphMeta(definition)
-  }
-
-  return meta
-}
-
-/**
- * Serialize a graph node for storage/transmission.
- * Evaluates the input callback and stores the resolved mapping.
- */
-export function serializeGraphNode(
-  nodeId: string,
+export function evaluateNodeInput(
   node: GraphNodeConfig
-): SerializedGraphNode {
-  // Evaluate input callback
-  let input: Record<string, unknown | RefValue> = {}
-  if (node.input) {
-    const ref = (targetNodeId: string, path?: string): RefValue =>
-      createRef(targetNodeId, path)
-    input = node.input(ref)
-  }
+): Record<string, unknown | RefValue> {
+  if (!node.input) return {}
 
-  return {
-    nodeId,
-    rpcName: getRpcName(node),
-    input,
-    next: node.next,
-    onError: node.onError,
-  }
+  const ref = (nodeId: string, path?: string): RefValue =>
+    createRef(nodeId, path)
+
+  return node.input(ref)
 }
 
 /**
- * Serialize a complete workflow graph for storage/transmission.
+ * Get all registered workflow graphs.
+ * Delegates to wire-workflow-graph registry.
  */
-export function serializeWorkflowGraph(
-  definition: WorkflowGraphDefinition<any>
-): SerializedWorkflowGraph {
-  const nodes: Record<string, SerializedGraphNode> = {}
-
-  for (const [nodeId, node] of Object.entries(definition.graph)) {
-    nodes[nodeId] = serializeGraphNode(nodeId, node as GraphNodeConfig)
-  }
-
-  return {
-    name: definition.name,
-    triggers: definition.triggers,
-    nodes,
-    entryNodeId: findEntryNodeId(definition.graph),
-  }
+export function getRegisteredGraphs(): Map<
+  string,
+  WorkflowGraphDefinition<any>
+> {
+  return getAllWorkflowGraphs()
 }
 
 /**
  * Generate a visual representation of the graph (for CLI display)
  */
-export function generateGraphVisualization(meta: WorkflowGraphMeta): string {
+export function generateGraphVisualization(
+  definition: WorkflowGraphDefinition<any>
+): string {
   const lines: string[] = []
-  lines.push(`Workflow Graph: ${meta.workflowName}`)
+  lines.push(`Workflow Graph: ${definition.name}`)
   lines.push('─'.repeat(40))
 
   // Show triggers
-  if (meta.triggers.http) {
+  if (definition.triggers.http) {
     lines.push(
-      `Trigger: HTTP ${meta.triggers.http.method.toUpperCase()} ${meta.triggers.http.route}`
+      `Trigger: HTTP ${definition.triggers.http.method.toUpperCase()} ${definition.triggers.http.route}`
     )
   }
-  if (meta.triggers.queue) {
-    lines.push(`Trigger: Queue ${meta.triggers.queue}`)
+  if (definition.triggers.queue) {
+    lines.push(`Trigger: Queue ${definition.triggers.queue}`)
   }
   lines.push('')
 
   // Show nodes
+  const entryNodeId = findEntryNodeId(definition.graph)
   lines.push('Nodes:')
-  for (const [nodeId, node] of Object.entries(meta.nodes)) {
-    const isEntry = nodeId === meta.entryNodeId
+  for (const [nodeId, node] of Object.entries(definition.graph)) {
+    const typedNode = node as GraphNodeConfig
+    const isEntry = nodeId === entryNodeId
     const prefix = isEntry ? '► ' : '  '
-    lines.push(`${prefix}${nodeId} -> ${node.rpcName}`)
-
-    // Show input refs
-    if (node.inputRefs.length > 0) {
-      const refs = node.inputRefs
-        .map((r) => (r.path ? `${r.nodeId}.${r.path}` : r.nodeId))
-        .join(', ')
-      lines.push(`    inputs: [${refs}]`)
-    }
+    lines.push(`${prefix}${nodeId} -> ${getRpcName(typedNode)}`)
 
     // Show next
-    if (node.next) {
-      if (typeof node.next === 'string') {
-        lines.push(`    next: ${node.next}`)
-      } else if (Array.isArray(node.next)) {
-        lines.push(`    next: [${node.next.join(', ')}] (parallel)`)
+    if (typedNode.next) {
+      if (typeof typedNode.next === 'string') {
+        lines.push(`    next: ${typedNode.next}`)
+      } else if (Array.isArray(typedNode.next)) {
+        lines.push(`    next: [${typedNode.next.join(', ')}] (parallel)`)
       } else {
-        const branches = Object.entries(node.next)
+        const branches = Object.entries(typedNode.next)
           .map(([k, v]) => `${k}:${Array.isArray(v) ? `[${v.join(',')}]` : v}`)
           .join(', ')
         lines.push(`    next: {${branches}} (branching)`)
@@ -218,10 +126,10 @@ export function generateGraphVisualization(meta: WorkflowGraphMeta): string {
     }
 
     // Show error handler
-    if (node.onError) {
-      const errorNodes = Array.isArray(node.onError)
-        ? node.onError.join(', ')
-        : node.onError
+    if (typedNode.onError) {
+      const errorNodes = Array.isArray(typedNode.onError)
+        ? typedNode.onError.join(', ')
+        : typedNode.onError
       lines.push(`    onError: ${errorNodes}`)
     }
   }

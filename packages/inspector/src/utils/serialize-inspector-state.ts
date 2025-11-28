@@ -143,6 +143,10 @@ export interface SerializableInspectorState {
     meta: InspectorState['forgeCredentials']['meta']
     files: string[]
   }
+  workflowGraphs: {
+    meta: InspectorState['workflowGraphs']['meta']
+    files: string[]
+  }
   middleware: {
     meta: InspectorState['middleware']['meta']
     tagMiddleware: Array<
@@ -296,6 +300,10 @@ export function serializeInspectorState(
       meta: state.forgeCredentials.meta,
       files: Array.from(state.forgeCredentials.files),
     },
+    workflowGraphs: {
+      meta: state.workflowGraphs.meta,
+      files: Array.from(state.workflowGraphs.files),
+    },
     middleware: {
       meta: state.middleware.meta,
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
@@ -413,6 +421,10 @@ export function deserializeInspectorState(
     forgeCredentials: {
       meta: data.forgeCredentials?.meta || {},
       files: new Set(data.forgeCredentials?.files || []),
+    },
+    workflowGraphs: {
+      meta: data.workflowGraphs?.meta || {},
+      files: new Set(data.workflowGraphs?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,

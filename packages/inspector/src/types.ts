@@ -10,6 +10,7 @@ import { ForgeNodesMeta, ForgeCredentialsMeta } from '@pikku/core/forge-node'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
+import type { SerializedWorkflowGraphs } from './workflow-graph/workflow-graph.types.js'
 
 export type PathToNameAndType = Map<
   string,
@@ -249,6 +250,10 @@ export interface InspectorState {
   }
   forgeCredentials: {
     meta: ForgeCredentialsMeta
+    files: Set<string>
+  }
+  workflowGraphs: {
+    meta: SerializedWorkflowGraphs
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

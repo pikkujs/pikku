@@ -352,6 +352,20 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Workflow Graphs
+    if (!result.workflowGraphsMetaJsonFile) {
+      result.workflowGraphsMetaJsonFile = join(
+        workflowDir,
+        'pikku-workflow-graphs-meta.gen.json'
+      )
+    }
+    if (!result.workflowGraphTypesFile) {
+      result.workflowGraphTypesFile = join(
+        workflowDir,
+        'pikku-workflow-graph-types.gen.ts'
+      )
+    }
+
     // Services
     if (!result.servicesFile) {
       result.servicesFile = join(result.outDir, 'pikku-services.gen.ts')

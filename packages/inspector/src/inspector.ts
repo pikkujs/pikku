@@ -95,6 +95,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       meta: {},
       files: new Set(),
     },
+    workflowGraphs: {
+      meta: {},
+      files: new Set(),
+    },
     middleware: {
       meta: {},
       tagMiddleware: new Map(),

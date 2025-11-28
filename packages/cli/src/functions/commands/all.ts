@@ -49,6 +49,8 @@ import { pikkuOpenAPI } from '../wirings/http/pikku-command-openapi.js'
 import { pikkuPackage } from '../wirings/package/pikku-command-package.js'
 import { pikkuForgeNodes } from '../wirings/forge/pikku-command-forge-nodes.js'
 import { pikkuForgeTypes } from '../wirings/forge/pikku-command-forge-types.js'
+import { pikkuWorkflowGraphs } from '../wirings/workflow-graph/pikku-command-workflow-graphs.js'
+import { pikkuWorkflowGraphTypes } from '../wirings/workflow-graph/pikku-command-workflow-graph-types.js'
 import { PikkuWire } from '@pikku/core'
 
 export const all: any = pikkuVoidFunc({
@@ -228,6 +230,12 @@ export const all: any = pikkuVoidFunc({
     // This runs for both main apps and external packages
     await pikkuForgeNodes.func(services, null, wire)
 
+    // Generate Workflow graphs metadata (JSON only, no runtime)
+    await pikkuWorkflowGraphs.func(services, null, wire)
+
+    // Generate typed workflow graph helpers
+    await pikkuWorkflowGraphTypes.func(services, null, wire)
+
     if (config.nextBackendFile || config.nextHTTPFile) {
       await pikkuNext.func(services, null, wire)
     }
@@ -330,6 +338,11 @@ ${Object.entries(usedExternalPackages)
     if (state.forgeNodes?.meta) {
       const forgeNodesCount = Object.keys(state.forgeNodes.meta).length
       if (forgeNodesCount > 0) summary.set('forgeNodes', forgeNodesCount)
+    }
+    if (state.workflowGraphs?.meta) {
+      const workflowGraphsCount = Object.keys(state.workflowGraphs.meta).length
+      if (workflowGraphsCount > 0)
+        summary.set('workflowGraphs', workflowGraphsCount)
     }
 
     // Display summary (unless in silent mode)

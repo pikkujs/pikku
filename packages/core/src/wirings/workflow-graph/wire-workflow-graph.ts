@@ -14,12 +14,14 @@ import type {
  *   triggers: {
  *     http: { route: '/orders', method: 'post' }
  *   },
- *   graph: {
- *     // Simple sequential flow
- *     entry: graphNode(entryFunc, { next: 'validateOrder' }),
+ *   graph: graph((node) => ({
+ *     entry: node({
+ *       func: 'external:entryFunc',
+ *       next: 'validateOrder',
+ *     }),
  *
- *     // Branching - use Record<string, next> + graph.branch('key') in function
- *     validateOrder: graphNode(validateOrderFunc, {
+ *     validateOrder: node({
+ *       func: 'external:validateOrderFunc',
  *       input: (ref) => ({
  *         orderId: ref('entry', 'orderId'),
  *       }),
@@ -29,28 +31,26 @@ import type {
  *       }
  *     }),
  *
- *     // Parallel execution - use array of next nodes
- *     processPayment: graphNode(processPaymentFunc, {
+ *     processPayment: node({
+ *       func: 'external:processPaymentFunc',
  *       input: (ref) => ({
  *         orderId: ref('validateOrder', 'orderId'),
  *       }),
  *       next: ['sendConfirmation', 'updateInventory']
  *     }),
  *
- *     reject: graphNode(rejectFunc, {
+ *     reject: node({
+ *       func: 'external:rejectFunc',
  *       input: (ref) => ({
  *         orderId: ref('validateOrder', 'orderId'),
  *       }),
  *     }),
- *   },
+ *   })),
  * })
  * ```
  */
 export function wireWorkflowGraph<
-  Nodes extends Record<
-    string,
-    GraphNodeConfig<any, Extract<keyof Nodes, string>>
-  >,
+  Nodes extends Record<string, GraphNodeConfig<string>>,
 >(definition: WorkflowGraphDefinition<Nodes>): void {
   const { name, graph } = definition
 
