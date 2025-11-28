@@ -31,6 +31,8 @@ import {
   CoreWorkflow,
   WorkflowsMeta,
 } from '../wirings/workflow/workflow.types.js'
+import type { WorkflowGraphDefinition } from '../wirings/workflow-graph/workflow-graph.types.js'
+import { CoreTrigger, TriggerMeta } from '../wirings/trigger/trigger.types.js'
 import {
   FunctionsMeta,
   CorePikkuMiddleware,
@@ -86,6 +88,13 @@ export interface PikkuPackageState {
   workflows: {
     registrations: Map<string, CoreWorkflow>
     meta: WorkflowsMeta
+  }
+  workflowGraphs: {
+    registrations: Map<string, WorkflowGraphDefinition<any>>
+  }
+  trigger: {
+    triggers: Map<string, CoreTrigger>
+    meta: TriggerMeta
   }
   mcp: {
     resources: Map<string, CoreMCPResource>

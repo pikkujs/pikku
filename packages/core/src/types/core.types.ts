@@ -16,6 +16,8 @@ import {
   WorkflowServiceConfig,
   WorkflowStepWire,
 } from '../wirings/workflow/workflow.types.js'
+import type { PikkuGraphWire } from '../wirings/workflow-graph/workflow-graph.types.js'
+import { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 
 export type PikkuWiringTypes =
@@ -189,6 +191,7 @@ export type PikkuWire<
   IsChannel extends true | null = null,
   MCPTools extends string | never = never,
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
+  TriggerOutput = unknown,
 > = Partial<{
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
@@ -201,6 +204,8 @@ export type PikkuWire<
   cli: PikkuCLI
   workflow: TypedWorkflow
   workflowStep: WorkflowStepWire
+  graph: PikkuGraphWire
+  trigger: PikkuTrigger<TriggerOutput>
   initialSession: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined

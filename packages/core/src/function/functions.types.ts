@@ -225,3 +225,108 @@ export type CorePikkuFunctionConfig<
   input?: InputSchema
   output?: OutputSchema
 }
+
+/**
+ * A trigger function that sets up a subscription and returns a teardown function.
+ * The trigger is fired via wire.trigger.trigger(data).
+ *
+ * @template TConfig - Configuration type (hardcoded when wired)
+ * @template TOutput - Output type produced when trigger fires
+ * @template Services - Services available to the trigger
+ */
+export type CorePikkuTriggerFunction<
+  TConfig = unknown,
+  TOutput = unknown,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+> = (
+  services: Services,
+  config: TConfig,
+  wire: { trigger: { trigger: (data: TOutput) => void } }
+) => Promise<() => void | Promise<void>>
+
+/**
+ * Configuration object for creating a trigger function with metadata
+ */
+export type CorePikkuTriggerFunctionConfig<
+  TConfig = unknown,
+  TOutput = unknown,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+  ConfigSchema extends ZodLike | undefined = undefined,
+  OutputSchema extends ZodLike | undefined = undefined,
+> = {
+  /** Optional human-readable name for the trigger */
+  name?: string
+  /** Optional description of what the trigger does */
+  description?: string
+  /** Optional tags for categorization */
+  tags?: string[]
+  /** The trigger function */
+  func: CorePikkuTriggerFunction<TConfig, TOutput, Services>
+  /** Optional Zod schema for config validation */
+  config?: ConfigSchema
+  /** Optional Zod schema for output validation */
+  output?: OutputSchema
+}
+
+/**
+ * Factory function for creating trigger functions
+ * Supports both direct function and configuration object syntax
+ *
+ * @example
+ * ```typescript
+ * // Direct function syntax
+ * export const redisSubscribeTrigger = pikkuTriggerFunc<
+ *   { channel: string },
+ *   { message: string }
+ * >(async ({ redis }, { channel }, { trigger }) => {
+ *   const subscriber = redis.duplicate()
+ *   await subscriber.subscribe(channel, (msg) => {
+ *     trigger.trigger({ message: msg })
+ *   })
+ *   return () => subscriber.unsubscribe()
+ * })
+ *
+ * // Configuration object syntax with metadata
+ * export const redisSubscribeTrigger = pikkuTriggerFunc({
+ *   name: 'Redis Subscribe Trigger',
+ *   description: 'Listens to Redis pub/sub channel',
+ *   config: z.object({ channel: z.string() }),
+ *   output: z.object({ message: z.string() }),
+ *   func: async ({ redis }, { channel }, { trigger }) => {
+ *     const subscriber = redis.duplicate()
+ *     await subscriber.subscribe(channel, (msg) => {
+ *       trigger.trigger({ message: msg })
+ *     })
+ *     return () => subscriber.unsubscribe()
+ *   }
+ * })
+ * ```
+ */
+export const pikkuTriggerFunc = <
+  TConfig = unknown,
+  TOutput = unknown,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+  ConfigSchema extends ZodLike | undefined = undefined,
+  OutputSchema extends ZodLike | undefined = undefined,
+>(
+  triggerOrConfig:
+    | CorePikkuTriggerFunction<TConfig, TOutput, Services>
+    | CorePikkuTriggerFunctionConfig<
+        TConfig,
+        TOutput,
+        Services,
+        ConfigSchema,
+        OutputSchema
+      >
+): CorePikkuTriggerFunctionConfig<
+  TConfig,
+  TOutput,
+  Services,
+  ConfigSchema,
+  OutputSchema
+> => {
+  if (typeof triggerOrConfig === 'function') {
+    return { func: triggerOrConfig }
+  }
+  return triggerOrConfig
+}

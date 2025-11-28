@@ -91,6 +91,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
         status ${this.schemaName}.step_status_enum NOT NULL DEFAULT 'pending',
         result JSONB,
         error JSONB,
+        branch_taken TEXT,
         retries INTEGER,
         retry_delay TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -508,6 +509,98 @@ export class PgWorkflowService extends PikkuWorkflowService {
       hash = hash & hash // Convert to 32bit integer
     }
     return Math.abs(hash)
+  }
+
+  // ============================================================================
+  // Workflow Graph Methods
+  // ============================================================================
+
+  async getCompletedGraphState(runId: string): Promise<{
+    completedNodeIds: string[]
+    branchKeys: Record<string, string>
+  }> {
+    const result = await this.sql.unsafe(
+      `SELECT step_name, branch_taken
+       FROM ${this.schemaName}.workflow_step
+       WHERE workflow_run_id = $1
+         AND status = 'succeeded'
+         AND step_name LIKE 'node:%'`,
+      [runId]
+    )
+
+    const completedNodeIds: string[] = []
+    const branchKeys: Record<string, string> = {}
+
+    for (const row of result) {
+      const stepName = row.step_name as string
+      const nodeId = stepName.replace(/^node:/, '')
+      completedNodeIds.push(nodeId)
+
+      if (row.branch_taken) {
+        branchKeys[nodeId] = row.branch_taken as string
+      }
+    }
+
+    return { completedNodeIds, branchKeys }
+  }
+
+  async getNodesWithoutSteps(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<string[]> {
+    if (nodeIds.length === 0) return []
+
+    const stepNames = nodeIds.map((id) => `node:${id}`)
+
+    // Find which step names already exist
+    const result = await this.sql.unsafe(
+      `SELECT step_name
+       FROM ${this.schemaName}.workflow_step
+       WHERE workflow_run_id = $1
+         AND step_name = ANY($2)`,
+      [runId, stepNames]
+    )
+
+    const existingStepNames = new Set(result.map((r) => r.step_name as string))
+
+    // Return node IDs that don't have steps
+    return nodeIds.filter((id) => !existingStepNames.has(`node:${id}`))
+  }
+
+  async getNodeResults(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<Record<string, any>> {
+    if (nodeIds.length === 0) return {}
+
+    const stepNames = nodeIds.map((id) => `node:${id}`)
+
+    const result = await this.sql.unsafe(
+      `SELECT step_name, result
+       FROM ${this.schemaName}.workflow_step
+       WHERE workflow_run_id = $1
+         AND step_name = ANY($2)
+         AND status = 'succeeded'`,
+      [runId, stepNames]
+    )
+
+    const results: Record<string, any> = {}
+    for (const row of result) {
+      const stepName = row.step_name as string
+      const nodeId = stepName.replace(/^node:/, '')
+      results[nodeId] = row.result
+    }
+
+    return results
+  }
+
+  async setBranchTaken(stepId: string, branchKey: string): Promise<void> {
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_step
+       SET branch_taken = $1, updated_at = now()
+       WHERE workflow_step_id = $2`,
+      [branchKey, stepId]
+    )
   }
 
   async close(): Promise<void> {

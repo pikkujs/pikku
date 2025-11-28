@@ -31,6 +31,8 @@ import {
 import { PikkuSessionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
+import { startWorkflowGraph } from '../workflow-graph/graph-scheduler.js'
+import type { WorkflowGraphDefinition } from '../workflow-graph/workflow-graph.types.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
@@ -204,6 +206,27 @@ const getMatchingRoute = (requestType: string, requestPath: string) => {
 }
 
 /**
+ * Find a workflow graph that matches the given route and method.
+ */
+const findMatchingWorkflowGraph = (
+  route: string,
+  method: string
+): { name: string; definition: WorkflowGraphDefinition<any> } | undefined => {
+  const graphs = pikkuState(null, 'workflowGraphs', 'registrations')
+  for (const [name, definition] of graphs) {
+    const httpTrigger = definition.triggers?.http
+    if (
+      httpTrigger &&
+      httpTrigger.route === route &&
+      httpTrigger.method === method.toLowerCase()
+    ) {
+      return { name, definition }
+    }
+  }
+  return undefined
+}
+
+/**
  * Combines the request and response objects into a single HTTP wire object.
  *
  * This utility function creates an object that holds both the HTTP request and response,
@@ -275,12 +298,38 @@ const executeRoute = async (
   const { singletonServices, createWireServices, skipUserSession, requestId } =
     services
 
+  // Attach URL parameters to the request object
+  http?.request?.setParams(params)
+
+  // Handle workflow graph triggers
+  if (meta.graph) {
+    const matchingGraph = findMatchingWorkflowGraph(meta.route, meta.method)
+    if (!matchingGraph) {
+      throw new Error(
+        `No workflow graph found for route ${meta.method.toUpperCase()} ${meta.route}`
+      )
+    }
+
+    const workflowService = singletonServices.workflowService
+    if (!workflowService) {
+      throw new Error('WorkflowService not configured for graph triggers')
+    }
+
+    const input = await http.request!.data()
+    const { runId } = await startWorkflowGraph(
+      workflowService,
+      matchingGraph.name,
+      input
+    )
+
+    http?.response?.json({ runId, status: 'started' })
+    http?.response?.status(202)
+    return { result: { runId, status: 'started' } }
+  }
+
   const requiresSession = route.auth !== false
   let wireServices: any
   let result: any
-
-  // Attach URL parameters to the request object
-  http?.request?.setParams(params)
 
   singletonServices.logger.info(
     `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`

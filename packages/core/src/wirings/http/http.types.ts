@@ -245,6 +245,8 @@ export type HTTPWiringMeta = CommonWireMeta & {
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes
   sse?: true
+  /** If true, this route triggers a workflow graph (matched by route/method) */
+  graph?: true
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 

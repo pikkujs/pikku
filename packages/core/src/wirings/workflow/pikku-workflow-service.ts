@@ -24,6 +24,10 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
+import {
+  executeGraphStep,
+  isGraphNodeStep,
+} from '../workflow-graph/graph-scheduler.js'
 
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
@@ -192,6 +196,49 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Close any open connections
    */
   abstract close(): Promise<void>
+
+  // ============================================================================
+  // Workflow Graph Methods
+  // ============================================================================
+
+  /**
+   * Get completed graph state (lightweight - no results)
+   * @param runId - Run ID
+   * @returns Completed node IDs and their branch keys
+   */
+  abstract getCompletedGraphState(runId: string): Promise<{
+    completedNodeIds: string[]
+    branchKeys: Record<string, string>
+  }>
+
+  /**
+   * Filter candidate nodes to only those without existing steps
+   * @param runId - Run ID
+   * @param nodeIds - Candidate node IDs to check
+   * @returns Node IDs that don't have a step yet
+   */
+  abstract getNodesWithoutSteps(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<string[]>
+
+  /**
+   * Get results for specific nodes
+   * @param runId - Run ID
+   * @param nodeIds - Node IDs to fetch results for
+   * @returns Map of nodeId to result
+   */
+  abstract getNodeResults(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<Record<string, any>>
+
+  /**
+   * Set the branch key for a graph node step
+   * @param stepId - Step ID
+   * @param branchKey - Branch key selected by graph.branch()
+   */
+  abstract setBranchTaken(stepId: string, branchKey: string): Promise<void>
 
   // ============================================================================
   // Workflow Lifecycle Methods
@@ -364,14 +411,38 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
 
       try {
-        // Execute RPC with workflow step context
-        const result = await rpcService.rpcWithWire(rpcName, data, {
-          workflowStep: {
+        let result: any
+
+        // Check if this is a graph node step (step name starts with 'node:')
+        if (isGraphNodeStep(stepName)) {
+          // Get the graph name from the workflow run
+          const run = await this.getRun(runId)
+          if (!run) {
+            throw new Error(`Workflow run not found: ${runId}`)
+          }
+          const graphName = run.workflow
+
+          // Execute as graph step with graph wire context
+          result = await executeGraphStep(
+            this,
+            rpcService,
             runId,
-            stepId: stepState.stepId,
-            attemptCount: stepState.attemptCount,
-          },
-        })
+            stepState.stepId,
+            stepName,
+            rpcName,
+            data,
+            graphName
+          )
+        } else {
+          // Execute RPC with workflow step context (regular workflow)
+          result = await rpcService.rpcWithWire(rpcName, data, {
+            workflowStep: {
+              runId,
+              stepId: stepState.stepId,
+              attemptCount: stepState.attemptCount,
+            },
+          })
+        }
 
         // Store result and mark succeeded
         await this.setStepResult(stepState.stepId, result)

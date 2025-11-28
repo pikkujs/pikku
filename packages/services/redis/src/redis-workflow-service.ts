@@ -695,6 +695,113 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
+  // ============================================================================
+  // Workflow Graph Methods
+  // ============================================================================
+
+  async getCompletedGraphState(runId: string): Promise<{
+    completedNodeIds: string[]
+    branchKeys: Record<string, string>
+  }> {
+    const completedNodeIds: string[] = []
+    const branchKeys: Record<string, string> = {}
+
+    // Scan for step keys with 'node:' prefix
+    const pattern = `${this.keyPrefix}:step:${runId}:node:*`
+    let cursor = '0'
+
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = newCursor
+
+      // Check each key for succeeded status and branch_taken
+      for (const key of foundKeys) {
+        const data = await this.redis.hmget(key, 'status', 'branchTaken')
+        const [status, branchTaken] = data
+
+        if (status === 'succeeded') {
+          // Extract node ID from key: workflows:step:runId:node:nodeId
+          const parts = key.split(':')
+          const nodeIndex = parts.indexOf('node')
+          if (nodeIndex !== -1 && nodeIndex < parts.length - 1) {
+            const nodeId = parts.slice(nodeIndex + 1).join(':')
+            completedNodeIds.push(nodeId)
+
+            if (branchTaken) {
+              branchKeys[nodeId] = branchTaken
+            }
+          }
+        }
+      }
+    } while (cursor !== '0')
+
+    return { completedNodeIds, branchKeys }
+  }
+
+  async getNodesWithoutSteps(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<string[]> {
+    if (nodeIds.length === 0) return []
+
+    const result: string[] = []
+
+    for (const nodeId of nodeIds) {
+      const key = this.stepKey(runId, `node:${nodeId}`)
+      const exists = await this.redis.exists(key)
+      if (!exists) {
+        result.push(nodeId)
+      }
+    }
+
+    return result
+  }
+
+  async getNodeResults(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<Record<string, any>> {
+    if (nodeIds.length === 0) return {}
+
+    const results: Record<string, any> = {}
+
+    for (const nodeId of nodeIds) {
+      const key = this.stepKey(runId, `node:${nodeId}`)
+      const data = await this.redis.hmget(key, 'status', 'result')
+      const [status, result] = data
+
+      if (status === 'succeeded' && result) {
+        results[nodeId] = JSON.parse(result)
+      }
+    }
+
+    return results
+  }
+
+  async setBranchTaken(stepId: string, branchKey: string): Promise<void> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
+    const now = Date.now()
+    const key = this.stepKey(runId, stepName)
+
+    await this.redis.hmset(
+      key,
+      'branchTaken',
+      branchKey,
+      'updatedAt',
+      now.toString()
+    )
+  }
+
   async close(): Promise<void> {
     if (this.ownsConnection) {
       await this.redis.quit()
