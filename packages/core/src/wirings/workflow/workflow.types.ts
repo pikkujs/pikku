@@ -42,6 +42,26 @@ export interface WorkflowServiceConfig {
 }
 
 /**
+ * HTTP wire configuration for workflows
+ */
+export interface WorkflowHTTPWire {
+  route: string
+  method: 'get' | 'post' | 'put' | 'patch' | 'delete'
+}
+
+/**
+ * Wire configuration for workflows
+ * Defines how a workflow can be triggered
+ */
+export interface WorkflowWires {
+  /** HTTP trigger */
+  http?: WorkflowHTTPWire
+  /** Queue trigger */
+  queue?: string
+  // Future: schedule, channel, etc.
+}
+
+/**
  * Workflow run status
  */
 export type WorkflowStatus = 'running' | 'completed' | 'failed' | 'cancelled'
@@ -152,8 +172,7 @@ export type WorkflowsMeta = Record<
   CommonWireMeta & {
     workflowName: string
     steps: WorkflowStepMeta[]
-    /** Whether this workflow conforms to simple workflow DSL */
-    simple?: boolean
+    dsl?: boolean
   }
 >
 

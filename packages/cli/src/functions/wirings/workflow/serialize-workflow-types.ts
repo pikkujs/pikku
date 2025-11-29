@@ -1,7 +1,7 @@
 /**
  * Generate all workflow type helpers for authoring workflows
  * Combines DSL helpers (pikkuWorkflowFunc, pikkuWorkflowComplexFunc) and
- * graph helpers (graph, wireWorkflowGraph) into one file
+ * graph helpers (pikkuWorkflowGraph) with unified wireWorkflow
  */
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
@@ -12,11 +12,11 @@ export const serializeWorkflowTypes = (
  * Used for authoring both DSL and graph-based workflows
  */
 
-import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowWires } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
-import type { GraphNodeConfig, WorkflowGraphTriggers } from '@pikku/core'
-import { createGraph, wireWorkflowGraph as coreWireWorkflowGraph } from '@pikku/core'
+import type { GraphNodeConfig } from '@pikku/core'
+import { createGraph, wireWorkflow as coreWireWorkflow } from '@pikku/core'
 
 // ============================================================================
 // DSL Workflow Types (pikkuWorkflowFunc, pikkuWorkflowComplexFunc)
@@ -72,50 +72,107 @@ export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
 }
 
 // ============================================================================
-// Graph Workflow Types (wireWorkflowGraph)
+// Graph Workflow Types (pikkuWorkflowGraph)
 // ============================================================================
 
 /**
  * Type-safe graph builder with full RPC autocomplete
  */
-const graph = createGraph<FlattenedRPCMap>()
+const graphBuilder = createGraph<FlattenedRPCMap>()
 
 /** Type for the graph builder function */
-type GraphBuilder = typeof graph
+type GraphBuilder = typeof graphBuilder
 
-/**
- * Definition returned by the callback
- */
-interface WorkflowGraphCallbackDefinition<T> {
+/** Configuration for graph-based workflow */
+export interface PikkuWorkflowGraphConfig<T> {
+  /** Workflow name */
   name: string
-  triggers: WorkflowGraphTriggers
+  /** Optional description */
+  description?: string
+  /** Optional tags for organization */
+  tags?: string[]
+  /** Graph definition callback */
+  graph: (graph: GraphBuilder) => T
+}
+
+/** Result of pikkuWorkflowGraph - includes metadata for wiring */
+export interface PikkuWorkflowGraphResult<T> {
+  __type: 'pikkuWorkflowGraph'
+  name: string
+  description?: string
+  tags?: string[]
   graph: T
 }
 
 /**
- * Type-safe wireWorkflowGraph with RPC-aware graph definition
- * The graph builder is passed as a callback parameter for cleaner API
+ * Creates a graph-based workflow definition with metadata
  *
  * @example
- * wireWorkflowGraph((graph) => ({
+ * export const myGraphWorkflow = pikkuWorkflowGraph({
  *   name: 'myWorkflow',
- *   triggers: { http: { route: '/start', method: 'post' } },
- *   graph: graph({
- *     entry: 'createUser',
- *     sendEmail: 'sendWelcomeEmail',
- *   })({
- *     entry: { next: 'sendEmail' },
- *     sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
- *   }),
- * }))
+ *   description: 'Handles user onboarding',
+ *   tags: ['onboarding'],
+ *   graph: (graph) =>
+ *     graph({
+ *       entry: 'createUser',
+ *       sendEmail: 'sendWelcomeEmail',
+ *     })({
+ *       entry: { next: 'sendEmail' },
+ *       sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
+ *     }),
+ * })
  */
-export function wireWorkflowGraph<
+export function pikkuWorkflowGraph<
   T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>
 >(
-  callback: (graph: GraphBuilder) => WorkflowGraphCallbackDefinition<T>
+  config: PikkuWorkflowGraphConfig<T>
+): PikkuWorkflowGraphResult<T> {
+  return {
+    __type: 'pikkuWorkflowGraph',
+    name: config.name,
+    description: config.description,
+    tags: config.tags,
+    graph: config.graph(graphBuilder),
+  }
+}
+
+// ============================================================================
+// Unified wireWorkflow
+// ============================================================================
+
+/** Workflow definition with DSL function */
+interface WorkflowDefinitionFunc {
+  wires: WorkflowWires
+  func: ReturnType<typeof pikkuWorkflowFunc> | ReturnType<typeof pikkuWorkflowComplexFunc>
+}
+
+/** Workflow definition with graph */
+interface WorkflowDefinitionGraph<T> {
+  wires: WorkflowWires
+  graph: PikkuWorkflowGraphResult<T>
+}
+
+/**
+ * Wire a workflow with wires
+ * Accepts either a DSL function (func) or a graph definition (graph)
+ *
+ * @example
+ * // DSL workflow
+ * wireWorkflow({
+ *   wires: { http: { route: '/start', method: 'post' } },
+ *   func: myWorkflowFunc,
+ * })
+ *
+ * // Graph workflow
+ * wireWorkflow({
+ *   wires: { http: { route: '/graph-start', method: 'post' } },
+ *   graph: myGraphWorkflow,
+ * })
+ */
+export function wireWorkflow<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>>(
+  definition: WorkflowDefinitionFunc | WorkflowDefinitionGraph<T>
 ): void {
-  const definition = callback(graph)
-  coreWireWorkflowGraph(definition)
+  coreWireWorkflow(definition as any)
 }
 `
 }

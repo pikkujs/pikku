@@ -30,8 +30,12 @@ import {
 import {
   CoreWorkflow,
   WorkflowsRuntimeMeta,
+  WorkflowWires,
 } from '../wirings/workflow/workflow.types.js'
-import type { WorkflowGraphDefinition } from '../wirings/workflow/graph/workflow-graph.types.js'
+import type {
+  WorkflowGraphDefinition,
+  GraphNodeConfig,
+} from '../wirings/workflow/graph/workflow-graph.types.js'
 import { CoreTrigger, TriggerMeta } from '../wirings/trigger/trigger.types.js'
 import {
   FunctionsMeta,
@@ -88,6 +92,13 @@ export interface PikkuPackageState {
   workflows: {
     registrations: Map<string, CoreWorkflow>
     graphRegistrations: Map<string, WorkflowGraphDefinition<any>>
+    /** DSL workflow wirings (from wireWorkflow({ func: ... })) */
+    wirings: Map<any, { wires: WorkflowWires; func: any }>
+    /** Graph workflow wirings (from wireWorkflow({ graph: ... })) */
+    graphWirings: Map<
+      any,
+      { wires: WorkflowWires; graph: Record<string, GraphNodeConfig<string>> }
+    >
     meta: WorkflowsRuntimeMeta
   }
   trigger: {

@@ -321,7 +321,7 @@ export function convertDslToGraph(
     source: 'dsl',
     description: meta.description,
     tags: meta.tags,
-    triggers: {}, // DSL workflows don't have explicit triggers in meta
+    wires: {}, // DSL workflows don't have explicit wires in meta
     nodes: nodesRecord,
     entryNodeIds,
   }

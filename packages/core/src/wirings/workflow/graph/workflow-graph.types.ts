@@ -35,7 +35,7 @@ export interface InputRef {
 
 /**
  * Ref function type - provides type-safe references to other nodes' outputs
- * The actual typing is done at the wireWorkflowGraph level
+ * The actual typing is done at the pikkuWorkflowGraph level
  */
 export type RefFn<NodeIds extends string = string> = (
   nodeId: NodeIds,
@@ -67,25 +67,13 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
   onError?: NodeIds | NodeIds[]
 }
 
-/**
- * Trigger configuration for HTTP
- */
-export interface HTTPTriggerConfig {
-  route: string
-  method: 'get' | 'post' | 'put' | 'patch' | 'delete'
-}
+// Import unified wire types from workflow module
+import type { WorkflowWires } from '../workflow.types.js'
+
+export type { WorkflowWires }
 
 /**
- * Trigger configuration for workflows
- */
-export interface WorkflowGraphTriggers {
-  http?: HTTPTriggerConfig
-  queue?: string
-  // Future: channel, cli, schedule, subscription
-}
-
-/**
- * Workflow graph definition
+ * Workflow graph definition (internal use)
  */
 export interface WorkflowGraphDefinition<
   Nodes extends Record<string, GraphNodeConfig<string>> = Record<
@@ -95,8 +83,8 @@ export interface WorkflowGraphDefinition<
 > {
   /** Unique workflow name */
   name: string
-  /** Trigger configuration */
-  triggers: WorkflowGraphTriggers
+  /** Wire configuration */
+  wires: WorkflowWires
   /** Graph nodes */
   graph: Nodes
 }

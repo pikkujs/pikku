@@ -143,9 +143,9 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  let wrapperType: 'simple' | 'regular' | null = null
+  let wrapperType: 'dsl' | 'regular' | null = null
   if (expression.text === 'pikkuWorkflowFunc') {
-    wrapperType = 'simple'
+    wrapperType = 'dsl'
   } else if (expression.text === 'pikkuWorkflowComplexFunc') {
     wrapperType = 'regular'
   } else {
@@ -224,7 +224,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   let steps: WorkflowStepMeta[] = []
-  let simple: boolean | undefined = undefined
+  let dsl: boolean | undefined = undefined
 
   // Try DSL workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
@@ -233,36 +233,36 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (result.status === 'ok' && result.steps) {
     // Simple extraction succeeded
     steps = result.steps
-    simple = true
-    // Collect all invoked RPCs from simple workflow steps
+    dsl = true
+    // Collect all invoked RPCs from dsl workflow steps
     const rpcs = new Set<string>()
     collectInvokedRPCs(steps, rpcs)
     for (const rpc of rpcs) {
       state.rpc.invokedFunctions.add(rpc)
     }
   } else {
-    // Simple extraction failed
-    if (wrapperType === 'simple') {
+    // DSL extraction failed
+    if (wrapperType === 'dsl') {
       // For pikkuWorkflowFunc, this is a critical error
       logger.critical(
-        ErrorCode.INVALID_SIMPLE_WORKFLOW,
-        `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
+        ErrorCode.INVALID_DSL_WORKFLOW,
+        `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to dsl workflow DSL:\n${result.reason || 'Unknown error'}`
       )
       return
     } else {
       // For pikkuWorkflowComplexFunc, fall back to basic extraction
       logger.debug(
-        `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+        `Workflow '${workflowName}' could not be extracted as dsl workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
       )
-      simple = false
+      dsl = false
     }
   }
 
   /**
-   * Only do basic extraction for non-simple workflows.
+   * Only do basic extraction for non-dsl workflows.
    * Simple workflows already have properly extracted steps.
    */
-  if (!simple) {
+  if (!dsl) {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
   }
 
@@ -270,7 +270,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     pikkuFuncName,
     workflowName,
     steps,
-    simple,
+    dsl,
     summary,
     description,
     errors,

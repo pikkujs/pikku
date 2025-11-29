@@ -1,7 +1,7 @@
 /**
  * Serialized types for workflow graphs
  * These are extracted by the inspector and stored as JSON
- * Can be created from code (wireWorkflowGraph) or UI
+ * Can be created from code (wireWorkflow) or UI
  */
 
 /**
@@ -132,18 +132,18 @@ export const isFlowNode = (node: SerializedGraphNode): node is FlowNode =>
   'flow' in node
 
 /**
- * HTTP trigger configuration
+ * HTTP wire configuration
  */
-export interface HTTPTriggerConfig {
+export interface HTTPWireConfig {
   route: string
   method: 'get' | 'post' | 'put' | 'patch' | 'delete'
 }
 
 /**
- * Trigger configuration
+ * Wire configuration for workflows
  */
-export interface WorkflowGraphTriggers {
-  http?: HTTPTriggerConfig
+export interface WorkflowWires {
+  http?: HTTPWireConfig
   queue?: string
   schedule?: string
 }
@@ -161,14 +161,14 @@ export interface SerializedWorkflowGraph {
   name: string
   /** Pikku function name (for runtime registration) */
   pikkuFuncName: string
-  /** Source type: 'dsl' for pikkuWorkflowFunc, 'graph' for wireWorkflowGraph */
+  /** Source type: 'dsl' for pikkuWorkflowFunc, 'graph' for pikkuWorkflowGraph */
   source: WorkflowSourceType
   /** Optional description */
   description?: string
   /** Tags for organization */
   tags?: string[]
-  /** Triggers - how the workflow is started */
-  triggers: WorkflowGraphTriggers
+  /** Wires - how the workflow is triggered */
+  wires: WorkflowWires
   /** Serialized nodes */
   nodes: Record<string, SerializedGraphNode>
   /** Entry node(s) - first nodes to execute */
