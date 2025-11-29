@@ -99,5 +99,7 @@ export const startWorkflowByHttpWire = async (
     wire,
     {}
   )
-  await workflowService.startWorkflow(workflowName, data, rpcService)
+  await workflowService.startWorkflow(workflowName, data, rpcService, {
+    inline: true,
+  })
 }

@@ -322,12 +322,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   /**
    * Start a new workflow run
    * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
-   * @param wire - Optional wire context (http, channel) for workflows triggered via HTTP
+   * @param options.inline - If true, execute workflow directly without queue service
    */
   public async startWorkflow<I>(
     name: string,
     input: I,
-    rpcService: any
+    rpcService: any,
+    options?: { inline?: boolean }
   ): Promise<{ runId: string }> {
     // Check meta to determine workflow type
     const meta = pikkuState(null, 'workflows', 'meta')
@@ -354,14 +355,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Create workflow run in state
     const runId = await this.createRun(name, input)
 
-    // If queue service is available, use remote execution (queue-based)
-    // Otherwise, execute directly (inline/synchronous)
-    if (this.singletonServices?.queueService) {
-      // Queue orchestrator to start the workflow
-      await this.resumeWorkflow(runId)
-    } else {
-      // No queue service - execute directly via runWorkflowJob
+    // If inline mode or no queue service, execute directly
+    // Otherwise, use remote execution (queue-based)
+    if (options?.inline || !this.singletonServices?.queueService) {
       await this.runWorkflowJob(runId, rpcService)
+    } else {
+      await this.resumeWorkflow(runId)
     }
 
     return { runId }
