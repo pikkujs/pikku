@@ -1179,7 +1179,19 @@ function extractReturn(
 function extractInputSources(
   node: ts.Node,
   context: ExtractionContext
-): Record<string, InputSource> | undefined {
+): Record<string, InputSource> | 'passthrough' | undefined {
+  // Handle when data is passed directly (e.g., workflow.do('step', 'rpc', data))
+  if (ts.isIdentifier(node)) {
+    if (node.text === context.inputParamName) {
+      // The entire input data is being passed through
+      return 'passthrough'
+    }
+    // Check if it's an output variable being passed directly
+    if (context.outputVars.has(node.text)) {
+      return 'passthrough'
+    }
+  }
+
   if (!ts.isObjectLiteralExpression(node)) {
     return undefined
   }

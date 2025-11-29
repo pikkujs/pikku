@@ -56,9 +56,14 @@ function convertStepToNode(
         next: nextNodeId,
       }
       if (step.inputs) {
-        node.input = {}
-        for (const [key, source] of Object.entries(step.inputs)) {
-          node.input[key] = convertInputSource(source as any)
+        if (step.inputs === 'passthrough') {
+          // Entire data is passed through - store as reference to trigger
+          node.input = { $passthrough: { $ref: 'trigger' } }
+        } else {
+          node.input = {}
+          for (const [key, source] of Object.entries(step.inputs)) {
+            node.input[key] = convertInputSource(source as any)
+          }
         }
       }
       if (step.outputVar) {

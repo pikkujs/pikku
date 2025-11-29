@@ -75,8 +75,8 @@ export interface RpcStepMeta {
   rpcName: string
   /** Output variable name (if assigned) */
   outputVar?: string
-  /** Input source mappings */
-  inputs?: Record<string, InputSource>
+  /** Input source mappings, or 'passthrough' when entire data is passed */
+  inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
   options?: WorkflowStepOptions
 }

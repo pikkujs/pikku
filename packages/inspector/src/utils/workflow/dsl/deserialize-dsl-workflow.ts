@@ -41,9 +41,25 @@ function dataRefToCode(ref: DataRef): string {
 }
 
 /**
+ * Check if input represents passthrough (entire data object)
+ */
+function isPassthrough(input: Record<string, unknown>): boolean {
+  if (Object.keys(input).length === 1 && '$passthrough' in input) {
+    const passthrough = input.$passthrough
+    return isDataRef(passthrough) && passthrough.$ref === 'trigger'
+  }
+  return false
+}
+
+/**
  * Convert input object to code
  */
 function inputToCode(input: Record<string, unknown>, indent: string): string {
+  // Check if this is a passthrough (entire data object)
+  if (isPassthrough(input)) {
+    return 'data'
+  }
+
   const entries = Object.entries(input)
   if (entries.length === 0) return '{}'
 
