@@ -207,8 +207,11 @@ export interface WorkflowWiresConfig {
 
 /**
  * Workflow source type
+ * - 'dsl': Pure DSL workflow (pikkuWorkflowFunc) - can be round-tripped to code
+ * - 'complex': Complex workflow (pikkuWorkflowComplexFunc) - contains inline steps, not serializable
+ * - 'graph': Graph-based workflow (pikkuWorkflowGraph)
  */
-export type WorkflowSourceType = 'dsl' | 'graph'
+export type WorkflowSourceType = 'dsl' | 'complex' | 'graph'
 
 /**
  * Serialized workflow graph - the canonical JSON format

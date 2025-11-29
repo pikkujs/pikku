@@ -250,8 +250,8 @@ export interface WorkflowRuntimeMeta {
   name: string
   /** Pikku function name (for execution) */
   pikkuFuncName: string
-  /** Source type */
-  source?: 'dsl' | 'graph'
+  /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph' */
+  source?: 'dsl' | 'complex' | 'graph'
   /** Optional description */
   description?: string
   /** Tags for organization */

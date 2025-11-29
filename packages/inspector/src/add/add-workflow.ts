@@ -15,6 +15,30 @@ import { getCommonWireMetaData } from '../utils/get-property-value.js'
 import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
 
 /**
+ * Recursively check if any step has inline type (non-serializable)
+ */
+function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
+  for (const step of steps) {
+    if (step.type === 'inline') {
+      return true
+    } else if (step.type === 'branch') {
+      if (step.thenSteps && hasInlineSteps(step.thenSteps)) return true
+      if (step.elseSteps && hasInlineSteps(step.elseSteps)) return true
+    } else if (step.type === 'switch' && step.cases) {
+      for (const c of step.cases) {
+        if (c.steps && hasInlineSteps(c.steps)) return true
+      }
+      if (step.defaultSteps && hasInlineSteps(step.defaultSteps)) return true
+    } else if (step.type === 'fanout' && step.child) {
+      if (hasInlineSteps([step.child])) return true
+    } else if (step.type === 'parallel' && step.children) {
+      if (hasInlineSteps(step.children)) return true
+    }
+  }
+  return false
+}
+
+/**
  * Recursively collect all RPC names from workflow steps
  */
 function collectInvokedRPCs(
@@ -231,10 +255,26 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   const result = extractDSLWorkflow(node, checker)
 
   if (result.status === 'ok' && result.steps) {
-    // Simple extraction succeeded
+    // Extraction succeeded
     steps = result.steps
-    dsl = true
-    // Collect all invoked RPCs from dsl workflow steps
+
+    // Check if workflow contains inline steps (non-serializable)
+    if (hasInlineSteps(steps)) {
+      if (wrapperType === 'dsl') {
+        // pikkuWorkflowFunc should not have inline steps
+        logger.critical(
+          ErrorCode.INVALID_DSL_WORKFLOW,
+          `Workflow '${workflowName}' uses pikkuWorkflowFunc but contains inline steps which are not allowed in DSL workflows. Use pikkuWorkflowComplexFunc instead.`
+        )
+        return
+      }
+      // pikkuWorkflowComplexFunc with inline steps is marked as non-dsl
+      dsl = false
+    } else {
+      dsl = true
+    }
+
+    // Collect all invoked RPCs from workflow steps
     const rpcs = new Set<string>()
     collectInvokedRPCs(steps, rpcs)
     for (const rpc of rpcs) {
@@ -246,13 +286,13 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
       // For pikkuWorkflowFunc, this is a critical error
       logger.critical(
         ErrorCode.INVALID_DSL_WORKFLOW,
-        `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to dsl workflow DSL:\n${result.reason || 'Unknown error'}`
+        `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to DSL workflow rules:\n${result.reason || 'Unknown error'}`
       )
       return
     } else {
       // For pikkuWorkflowComplexFunc, fall back to basic extraction
       logger.debug(
-        `Workflow '${workflowName}' could not be extracted as dsl workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+        `Workflow '${workflowName}' could not be extracted as DSL workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
       )
       dsl = false
     }

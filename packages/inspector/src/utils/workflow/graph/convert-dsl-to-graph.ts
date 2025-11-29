@@ -337,10 +337,15 @@ export function convertDslToGraph(
   // Find entry nodes (step_0 is always entry for sequential workflows)
   const entryNodeIds = nodes.length > 0 ? ['step_0'] : []
 
+  // Determine source type based on dsl flag:
+  // - dsl === true: pure DSL workflow, can be serialized
+  // - dsl === false: complex workflow with inline steps, not serializable
+  const source = meta.dsl === false ? 'complex' : 'dsl'
+
   return {
     name: workflowName,
     pikkuFuncName: meta.pikkuFuncName,
-    source: 'dsl',
+    source,
     description: meta.description,
     tags: meta.tags,
     wires: {}, // DSL workflows don't have explicit wires in meta
