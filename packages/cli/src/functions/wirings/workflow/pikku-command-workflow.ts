@@ -1,15 +1,12 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { ErrorCode } from '@pikku/inspector'
+import { convertAllDstToGraphs } from '@pikku/inspector/workflow-graph'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import {
-  serializeWorkflowMeta,
-  serializeWorkflowMetaTS,
-} from './serialize-workflow-meta.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
+import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
-import { serializeWorkflowWirings } from './serialize-workflow-wirings.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { join } from 'path'
 
@@ -21,22 +18,27 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const visitState = await getInspectorState()
     const {
       workflowsWiringFile,
-      workflowsWiringMetaFile,
-      workflowsWiringMetaJsonFile,
-      workflowsWiringMetaVerboseJsonFile,
+      workflowGraphsMetaJsonFile,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
       typesDeclarationFile,
       packageMappings,
       schema,
-      forge,
     } = config
-    const { workflows, functions: functionState } = visitState
+    const { workflows, workflowGraphs, functions: functionState } = visitState
     const { typesMap } = functionState
 
-    // Validate that workflowService service is configured if workflows are defined
-    const hasWorkflows = Object.keys(workflows.meta).length > 0
+    // Get all workflow names (both DST and graph-based)
+    const dstWorkflowNames = Object.keys(workflows.meta)
+    const graphWorkflowNames = Object.keys(workflowGraphs.meta)
+    const allWorkflowNames = [
+      ...new Set([...dstWorkflowNames, ...graphWorkflowNames]),
+    ]
+
+    const hasWorkflows = allWorkflowNames.length > 0
+
+    // Validate that workflowService is configured if workflows are defined
     if (hasWorkflows) {
       const hasWorkflowState =
         visitState.serviceAggregation.allSingletonServices.includes(
@@ -53,58 +55,49 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
-    await writeFileInDir(
-      logger,
-      workflowsWiringMetaJsonFile,
-      JSON.stringify(serializeWorkflowMeta(workflows.meta), null, 2)
-    )
+    // Generate unified JSON (convert DST to graph format and merge)
+    if (hasWorkflows && workflowGraphsMetaJsonFile) {
+      const dstAsGraphs = convertAllDstToGraphs(workflows.meta)
+      const unifiedMeta = {
+        ...dstAsGraphs,
+        ...workflowGraphs.meta,
+      }
 
-    // Write verbose metadata if forge.verboseMeta is enabled
-    if (forge?.verboseMeta) {
       await writeFileInDir(
         logger,
-        workflowsWiringMetaVerboseJsonFile,
-        JSON.stringify(workflows.meta, null, 2)
+        workflowGraphsMetaJsonFile,
+        JSON.stringify(unifiedMeta, null, 2),
+        { ignoreModifyComment: true }
       )
     }
 
+    // Generate workflow registration (meta + DST workflow registrations)
     const jsonImportPath = getFileImportRelativePath(
-      workflowsWiringMetaFile,
-      workflowsWiringMetaJsonFile,
+      workflowsWiringFile,
+      workflowGraphsMetaJsonFile,
       packageMappings
     )
 
-    // Write workflow metadata TypeScript file that imports JSON
     await writeFileInDir(
       logger,
-      workflowsWiringMetaFile,
-      serializeWorkflowMetaTS(
-        workflows.meta,
+      workflowsWiringFile,
+      serializeWorkflowRegistration(
+        workflowsWiringFile,
         jsonImportPath,
+        allWorkflowNames,
+        workflows.files,
+        packageMappings,
         schema?.supportsImportAttributes ?? false,
         config.externalPackageName
       )
     )
 
-    // Write workflow wirings (imports and addWorkflow calls)
-    await writeFileInDir(
-      logger,
-      workflowsWiringFile,
-      serializeWorkflowWirings(
-        workflowsWiringFile,
-        workflows.files,
-        packageMappings
-      )
-    )
-
-    // Write workflow types
+    // Generate workflow types (DST + graph helpers in one file)
     const functionTypesImportPath = getFileImportRelativePath(
       workflowTypesFile,
       functionTypesFile,
       packageMappings
     )
-
-    // Get RPC map import path
     const rpcMapImportPath = getFileImportRelativePath(
       workflowTypesFile,
       config.rpcInternalMapDeclarationFile,
@@ -117,7 +110,8 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       serializeWorkflowTypes(functionTypesImportPath, rpcMapImportPath)
     )
 
-    // Write workflow map (type-safe client API)
+    // Generate workflow map (I/O types for type-safe client)
+    // Always generate even if empty - RPC map imports WorkflowMap
     await writeFileInDir(
       logger,
       workflowMapDeclarationFile,
@@ -130,6 +124,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       )
     )
 
+    // Generate workflow workers if configured
     if (config.workflows) {
       if (config.workflows.singleQueue) {
         const workflowPath = join(config.rootDir, config.workflows.path)
@@ -152,12 +147,12 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
-    return true
+    return hasWorkflows
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Finding Workflows',
-      commandEnd: 'Found Workflows',
+      commandStart: 'Generating Workflows',
+      commandEnd: 'Generated Workflows',
     }),
   ],
 })

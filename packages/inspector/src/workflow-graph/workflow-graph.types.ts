@@ -61,15 +61,28 @@ export interface NodeOptions {
 }
 
 /**
- * Serialized graph node
+ * Flow node types for control flow (no RPC call)
  */
-export interface SerializedGraphNode {
+export type FlowType =
+  | 'sleep'
+  | 'branch'
+  | 'parallel'
+  | 'fanout'
+  | 'inline'
+  | 'switch'
+  | 'filter'
+  | 'arrayPredicate'
+  | 'return'
+  | 'cancel'
+
+/**
+ * Base node properties shared by all node types
+ */
+interface BaseNode {
   /** Node ID */
   nodeId: string
-  /** RPC function name */
-  rpcName: string
-  /** Input mapping - values can be literals or DataRefs */
-  input: Record<string, unknown | DataRef>
+  /** Step name/description */
+  stepName?: string
   /** Next node(s) - simple, parallel, or conditional */
   next?: SerializedNext
   /** Error routing - node(s) to execute on error */
@@ -77,6 +90,46 @@ export interface SerializedGraphNode {
   /** Execution options */
   options?: NodeOptions
 }
+
+/**
+ * Function node - calls an RPC
+ */
+export interface FunctionNode extends BaseNode {
+  /** RPC function name */
+  rpcName: string
+  /** Input mapping - values can be literals or DataRefs */
+  input?: Record<string, unknown | DataRef>
+  /** Output variable name for storing result */
+  outputVar?: string
+}
+
+/**
+ * Flow node - control flow only, no RPC call
+ */
+export interface FlowNode extends BaseNode {
+  /** Flow type */
+  flow: FlowType
+  /** Flow-specific properties */
+  [key: string]: unknown
+}
+
+/**
+ * Serialized graph node - either a function node or flow node
+ */
+export type SerializedGraphNode = FunctionNode | FlowNode
+
+/**
+ * Type guard for function nodes
+ */
+export const isFunctionNode = (
+  node: SerializedGraphNode
+): node is FunctionNode => 'rpcName' in node
+
+/**
+ * Type guard for flow nodes
+ */
+export const isFlowNode = (node: SerializedGraphNode): node is FlowNode =>
+  'flow' in node
 
 /**
  * HTTP trigger configuration
@@ -96,11 +149,20 @@ export interface WorkflowGraphTriggers {
 }
 
 /**
+ * Workflow source type
+ */
+export type WorkflowSourceType = 'dst' | 'graph'
+
+/**
  * Serialized workflow graph - the canonical JSON format
  */
 export interface SerializedWorkflowGraph {
   /** Workflow name */
   name: string
+  /** Pikku function name (for runtime registration) */
+  pikkuFuncName: string
+  /** Source type: 'dst' for pikkuWorkflowFunc, 'graph' for wireWorkflowGraph */
+  source: WorkflowSourceType
   /** Optional description */
   description?: string
   /** Tags for organization */

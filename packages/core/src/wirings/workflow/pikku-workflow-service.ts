@@ -339,7 +339,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       try {
         const result = await runPikkuFunc(
           'workflow',
-          workflowMeta.workflowName,
+          workflowMeta.name,
           workflowMeta.pikkuFuncName,
           {
             singletonServices: this.singletonServices!,
@@ -448,11 +448,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         await this.setStepResult(stepState.stepId, result)
 
         // Resume orchestrator to continue workflow
-        try {
-          await this.resumeWorkflow(runId)
-        } catch (resumeError: any) {
-          throw resumeError
-        }
+        await this.resumeWorkflow(runId)
       } catch (error: any) {
         // Store error and mark failed
         await this.setStepError(stepState.stepId, error)
@@ -522,7 +518,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
-    } catch (error: any) {
+    } catch {
       // Step doesn't exist - create it
       stepState = await this.insertStepState(
         runId,
@@ -636,7 +632,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
-    } catch (error: any) {
+    } catch {
       // Step doesn't exist - create it (inline, no RPC)
       stepState = await this.insertStepState(
         runId,
@@ -687,7 +683,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
-    } catch (error: any) {
+    } catch {
       // Step doesn't exist - create it (sleep step, no RPC)
       stepState = await this.insertStepState(
         runId,

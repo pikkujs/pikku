@@ -26,6 +26,8 @@ export type {
   PikkuWorkflowWire,
   PikkuWorkflow,
   WorkflowsMeta,
+  WorkflowRuntimeMeta,
+  WorkflowsRuntimeMeta,
   WorkflowRun,
   StepState,
   WorkflowStatus,
@@ -43,7 +45,7 @@ export { addWorkflow } from './workflow-runner.js'
  * TODO: Remove this export in a future release after updating code generation
  */
 export const wireWorkflow = <T extends { name: string; func: any }>(
-  workflow: T
+  _workflow: T
 ): void => {
   // Empty function - no longer used, kept for backwards compatibility
 }

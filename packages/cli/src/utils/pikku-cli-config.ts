@@ -321,18 +321,6 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-wirings-meta.gen.ts'
       )
     }
-    if (!result.workflowsWiringMetaJsonFile) {
-      result.workflowsWiringMetaJsonFile = join(
-        workflowDir,
-        'pikku-workflow-wirings-meta.gen.json'
-      )
-    }
-    if (!result.workflowsWiringMetaVerboseJsonFile) {
-      result.workflowsWiringMetaVerboseJsonFile = join(
-        workflowDir,
-        'pikku-workflow-wirings-meta-verbose.gen.json'
-      )
-    }
     if (!result.workflowsWorkersFile) {
       result.workflowsWorkersFile = join(
         workflowDir,
@@ -352,11 +340,11 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Workflow Graphs
+    // Workflow Graphs (unified JSON contains both DST and graph workflows)
     if (!result.workflowGraphsMetaJsonFile) {
       result.workflowGraphsMetaJsonFile = join(
         workflowDir,
-        'pikku-workflow-graphs-meta.gen.json'
+        'pikku-workflow-wirings-meta.gen.json'
       )
     }
     if (!result.workflowGraphTypesFile) {

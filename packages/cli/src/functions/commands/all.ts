@@ -11,7 +11,6 @@ import { pikkuHTTPTypes } from '../wirings/http/pikku-command-http-types.js'
 import { pikkuChannelTypes } from '../wirings/channels/pikku-command-channel-types.js'
 import { pikkuSchedulerTypes } from '../wirings/scheduler/pikku-command-scheduler-types.js'
 import { pikkuQueueTypes } from '../wirings/queue/pikku-command-queue-types.js'
-import { pikkuWorkflowTypes } from '../wirings/workflow/pikku-command-workflow-types.js'
 import { pikkuMCPTypes } from '../wirings/mcp/pikku-command-mcp-types.js'
 import { pikkuCLITypes } from '../wirings/cli/pikku-command-cli-types.js'
 import { pikkuFunctions } from '../wirings/functions/pikku-command-functions.js'
@@ -33,7 +32,6 @@ import { pikkuFetch } from '../wirings/fetch/index.js'
 import { pikkuScheduler } from '../wirings/scheduler/pikku-command-scheduler.js'
 import { pikkuWorkflow } from '../wirings/workflow/pikku-command-workflow.js'
 import { pikkuRemoteRPC } from '../wirings/rpc/pikku-command-remote-rpc.js'
-import { pikkuWorkflowMap } from '../wirings/workflow/pikku-command-workflow-map.js'
 import { pikkuQueue } from '../wirings/queue/pikku-command-queue.js'
 import { pikkuQueueMap } from '../wirings/queue/pikku-command-queue-map.js'
 import { pikkuQueueService } from '../wirings/queue/pikku-command-queue-service.js'
@@ -49,8 +47,6 @@ import { pikkuOpenAPI } from '../wirings/http/pikku-command-openapi.js'
 import { pikkuPackage } from '../wirings/package/pikku-command-package.js'
 import { pikkuForgeNodes } from '../wirings/forge/pikku-command-forge-nodes.js'
 import { pikkuForgeTypes } from '../wirings/forge/pikku-command-forge-types.js'
-import { pikkuWorkflowGraphs } from '../wirings/workflow-graph/pikku-command-workflow-graphs.js'
-import { pikkuWorkflowGraphTypes } from '../wirings/workflow-graph/pikku-command-workflow-graph-types.js'
 import { PikkuWire } from '@pikku/core'
 
 export const all: any = pikkuVoidFunc({
@@ -75,7 +71,6 @@ export const all: any = pikkuVoidFunc({
 
     // Generate wiring-specific type files for tree-shaking
     await pikkuFunctionTypesSplit.func(services, null, wire)
-    await pikkuWorkflowTypes.func(services, null, wire)
 
     // Skip infrastructure wirings for external packages (only keep functions, RPC, services, workflows)
     if (!config.externalPackage) {
@@ -165,7 +160,7 @@ export const all: any = pikkuVoidFunc({
       }
     }
 
-    // Generate Workflows
+    // Generate Workflows (includes JSON, meta, types, map, graph types)
     const workflows = await pikkuWorkflow.func(services, null, wire)
 
     // Generate Remote RPC Workers (infrastructure - skip for external packages)
@@ -180,11 +175,8 @@ export const all: any = pikkuVoidFunc({
     }
 
     if (workflows) {
-      await pikkuWorkflowMap.func(services, null, wire)
-      allImports.push(
-        config.workflowsWiringMetaFile,
-        config.workflowsWiringFile
-      )
+      // Only import wiring file - it now includes meta registration
+      allImports.push(config.workflowsWiringFile)
     }
 
     // Skip infrastructure wirings for external packages
@@ -229,12 +221,6 @@ export const all: any = pikkuVoidFunc({
     // Generate Forge nodes metadata (JSON only, no runtime)
     // This runs for both main apps and external packages
     await pikkuForgeNodes.func(services, null, wire)
-
-    // Generate Workflow graphs metadata (JSON only, no runtime)
-    await pikkuWorkflowGraphs.func(services, null, wire)
-
-    // Generate typed workflow graph helpers
-    await pikkuWorkflowGraphTypes.func(services, null, wire)
 
     if (config.nextBackendFile || config.nextHTTPFile) {
       await pikkuNext.func(services, null, wire)

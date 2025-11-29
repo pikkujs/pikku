@@ -1,7 +1,7 @@
 import {
   wireWorkflowGraph,
   graph,
-} from '../.pikku/workflow/pikku-workflow-graph-types.gen.js'
+} from '../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Example workflow graph: User Onboarding

@@ -29,7 +29,7 @@ import {
 } from '../wirings/scheduler/scheduler.types.js'
 import {
   CoreWorkflow,
-  WorkflowsMeta,
+  WorkflowsRuntimeMeta,
 } from '../wirings/workflow/workflow.types.js'
 import type { WorkflowGraphDefinition } from '../wirings/workflow-graph/workflow-graph.types.js'
 import { CoreTrigger, TriggerMeta } from '../wirings/trigger/trigger.types.js'
@@ -87,7 +87,7 @@ export interface PikkuPackageState {
   }
   workflows: {
     registrations: Map<string, CoreWorkflow>
-    meta: WorkflowsMeta
+    meta: WorkflowsRuntimeMeta
   }
   workflowGraphs: {
     registrations: Map<string, WorkflowGraphDefinition<any>>

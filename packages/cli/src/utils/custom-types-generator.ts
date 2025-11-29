@@ -1,17 +1,24 @@
 import { TypesMap } from '@pikku/inspector'
 
+// Sanitize a type name to be a valid TypeScript identifier
+function sanitizeTypeName(name: string): string {
+  // Replace hyphens with underscores
+  return name.replace(/-/g, '_')
+}
+
 export function generateCustomTypes(
   typesMap: TypesMap,
   requiredTypes: Set<string>
 ) {
   return `
 ${Array.from(typesMap.customTypes.entries())
-  .filter(([name, { type }]) => {
+  .filter(([_name, { type }]) => {
     const hasUndefinedGeneric =
       /\b(Name|In|Out|Key)\b/.test(type) && /\[.*\]/.test(type)
     return !hasUndefinedGeneric
   })
-  .map(([name, { type, references }]) => {
+  .map(([originalName, { type, references }]) => {
+    const name = sanitizeTypeName(originalName)
     references.forEach((refName) => {
       if (refName !== '__object' && !refName.startsWith('__object_')) {
         requiredTypes.add(refName)
@@ -37,7 +44,7 @@ ${Array.from(typesMap.customTypes.entries())
         if (typeMeta.path) {
           requiredTypes.add(typeMeta.originalName)
         }
-      } catch (e) {
+      } catch {
         // Type not found in map (ambient/builtin type)
       }
     })

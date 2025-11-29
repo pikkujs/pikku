@@ -1,6 +1,7 @@
 import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,
+  FunctionNode,
   DataRef,
   SerializedNext,
 } from './workflow-graph.types.js'
@@ -145,13 +146,14 @@ export function serializeWorkflowGraph(
     // Get RPC name from func
     const rpcName = node.func?.name || 'unknown'
 
-    nodes[nodeId] = {
+    const funcNode: FunctionNode = {
       nodeId,
       rpcName,
       input,
       next: serializeNext(node.next),
       onError: node.onError,
     }
+    nodes[nodeId] = funcNode
 
     // Entry nodes have no incoming edges
     if (!hasIncomingEdge.has(nodeId)) {
@@ -161,6 +163,8 @@ export function serializeWorkflowGraph(
 
   return {
     name: definition.name,
+    pikkuFuncName: definition.name, // For graph workflows, pikkuFuncName is the workflow name
+    source: 'graph' as const,
     description: options?.description,
     tags: options?.tags,
     triggers: definition.triggers as SerializedWorkflowGraph['triggers'],
@@ -198,11 +202,15 @@ export function deserializeWorkflowGraph(serialized: SerializedWorkflowGraph): {
   > = {}
 
   for (const [nodeId, node] of Object.entries(serialized.nodes)) {
-    graph[nodeId] = {
-      rpcName: node.rpcName,
-      input: node.input,
-      next: node.next,
-      onError: node.onError,
+    // Only include FunctionNode properties (nodes with rpcName)
+    if ('rpcName' in node) {
+      const funcNode = node as FunctionNode
+      graph[nodeId] = {
+        rpcName: funcNode.rpcName,
+        input: funcNode.input ?? {},
+        next: funcNode.next,
+        onError: funcNode.onError,
+      }
     }
   }
 

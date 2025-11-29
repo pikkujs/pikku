@@ -64,7 +64,7 @@ function extractTriggers(
  */
 function extractInputMapping(
   node: ts.Node,
-  checker: ts.TypeChecker
+  _checker: ts.TypeChecker
 ): Record<string, unknown | DataRef> {
   // Must be an arrow function
   if (!ts.isArrowFunction(node)) {
@@ -288,7 +288,7 @@ function extractGraphNodes(
  */
 function extractNextConfig(
   node: ts.Node,
-  checker: ts.TypeChecker
+  _checker: ts.TypeChecker
 ): string | string[] | Record<string, string | string[]> | undefined {
   if (ts.isStringLiteral(node)) {
     return node.text
@@ -356,8 +356,6 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   let name: string | undefined
   let triggers: SerializedWorkflowGraph['triggers'] = {}
   let graphNodes: Record<string, any> = {}
-  let description: string | undefined
-  let tags: string[] | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -458,6 +456,8 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   // Store in state
   const serialized: SerializedWorkflowGraph = {
     name,
+    pikkuFuncName: name, // For graph workflows, pikkuFuncName is the workflow name
+    source: 'graph',
     description,
     tags,
     triggers,

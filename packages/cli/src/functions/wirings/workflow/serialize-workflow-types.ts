@@ -1,27 +1,32 @@
 /**
- * Generates type definitions for workflow wirings
+ * Generate all workflow type helpers for authoring workflows
+ * Combines DST helpers (pikkuWorkflowFunc, pikkuSimpleWorkflowFunc) and
+ * graph helpers (graph, wireWorkflowGraph) into one file
  */
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
   rpcMapImportPath: string
 ) => {
   return `/**
- * Workflow-specific type definitions for tree-shaking optimization
+ * Workflow type definitions and helpers
+ * Used for authoring both DST and graph-based workflows
  */
 
 import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
-import type { RPCMap } from '${rpcMapImportPath}'
+import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
+import type { GraphNodeConfig, WorkflowGraphTriggers } from '@pikku/core'
+import { createGraph } from '@pikku/core'
+
+// ============================================================================
+// DST Workflow Types (pikkuWorkflowFunc, pikkuSimpleWorkflowFunc)
+// ============================================================================
 
 /**
  * Typed workflow wire with RPC awareness
  * Provides type-safe workflow.do() for RPC steps
  */
 export interface TypedWorkflow extends PikkuWorkflowWire {
-  /**
-   * Execute a workflow step with RPC invocation (typed based on available RPCs)
-   * @template K - RPC name from the RPC map
-   */
   do<K extends keyof RPCMap>(
     stepName: string,
     rpcName: K,
@@ -29,10 +34,6 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
     options?: WorkflowStepOptions
   ): Promise<RPCMap[K]['output']>
 
-  /**
-   * Execute a workflow step with inline function
-   * @template T - Return type of the inline function
-   */
   do<T>(
     stepName: string,
     fn: () => T | Promise<T>,
@@ -42,28 +43,14 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
 
 /**
  * Workflow function type with typed workflow service
- * Includes the workflow wire object with typed RPC methods
  */
 export type PikkuFunctionWorkflow<
   In = unknown,
   Out = never
-> = PikkuFunctionSessionless<
-  In,
-  Out,
-  'workflow'
->
+> = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * Creates a workflow function with typed input and output.
- * Workflow functions have access to the workflow wire object for step execution.
- *
- * This is the permissive mode - workflows that don't conform to simple DSL will fall back
- * to basic extraction with a warning.
- *
- * @template In - Input type for the workflow
- * @template Out - Output type for the workflow
- * @param func - Function definition, either direct function or configuration object
- * @returns The normalized configuration object
+ * Creates a workflow function (permissive mode)
  */
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:
@@ -74,22 +61,7 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 }
 
 /**
- * Creates a simple workflow function with typed input and output.
- * Simple workflows must conform to the restricted DSL for static analysis.
- *
- * This is the strict mode - workflows that don't conform to simple DSL will cause
- * a critical error during inspection.
- *
- * Constraints:
- * - Must use only workflow.do() with RPC form (no inline functions)
- * - Only if/else, for..of, and Promise.all(array.map()) control flow allowed
- * - Step names must be unique (except across mutually exclusive branches)
- * - All workflow calls must be awaited
- *
- * @template In - Input type for the workflow
- * @template Out - Output type for the workflow
- * @param func - Function definition, either direct function or configuration object
- * @returns The normalized configuration object
+ * Creates a simple workflow function (strict mode for static analysis)
  */
 export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
   func:
@@ -99,5 +71,27 @@ export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
   return typeof func === 'function' ? { func } : func
 }
 
+// ============================================================================
+// Graph Workflow Types (graph, wireWorkflowGraph)
+// ============================================================================
+
+/**
+ * Type-safe graph builder with full RPC autocomplete
+ */
+export const graph = createGraph<FlattenedRPCMap>()
+
+/**
+ * Type-safe wireWorkflowGraph with RPC-aware graph definition
+ */
+export function wireWorkflowGraph<
+  T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>
+>(definition: {
+  name: string
+  triggers: WorkflowGraphTriggers
+  graph: T
+}): void {
+  const { wireWorkflowGraph: coreWire } = require('@pikku/core')
+  coreWire(definition)
+}
 `
 }
