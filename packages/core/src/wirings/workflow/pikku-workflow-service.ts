@@ -456,7 +456,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
         // Check if it's a WorkflowCancelledException
         if (error instanceof WorkflowCancelledException) {
-          // Workflow was cancelled - status already updated, just rethrow
+          // Workflow was cancelled - update status and rethrow
+          await this.updateRunStatus(runId, 'cancelled', undefined, {
+            message: error.message || 'Workflow cancelled',
+            stack: '',
+            code: 'WORKFLOW_CANCELLED',
+          })
           throw error
         }
 
@@ -873,18 +878,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private async cancelWorkflow(runId: string, reason?: string) {
-    // Update workflow run status to cancelled
-    await this.updateRunStatus(runId, 'cancelled', undefined, {
-      message: reason || 'Workflow cancelled by user',
-      stack: '',
-      code: 'WORKFLOW_CANCELLED',
-    })
-
-    // Throw cancellation exception to stop workflow execution
-    throw new WorkflowCancelledException(runId, reason)
-  }
-
   private createWorkflowWire(
     workflowName: string,
     runId: string,
@@ -930,11 +923,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           stepName,
           getDurationInMilliseconds(duration)
         )
-      },
-
-      // Implement workflow.cancel()
-      cancel: async (reason?: string): Promise<void> => {
-        await this.cancelWorkflow(runId, reason)
       },
     }
     return workflowWire

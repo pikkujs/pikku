@@ -179,6 +179,8 @@ export interface SleepStepMeta {
 export interface CancelStepMeta {
   /** Cancel step */
   type: 'cancel'
+  /** Optional cancellation reason */
+  reason?: string
 }
 
 /**
@@ -284,7 +286,4 @@ export interface PikkuWorkflowWire {
 
   /** Sleep for a duration */
   sleep: WorkflowWireSleep
-
-  /** Cancel the current workflow run */
-  cancel: (reason?: string) => Promise<void>
 }

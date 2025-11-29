@@ -12,7 +12,10 @@ export const serializeWorkflowTypes = (
  * Used for authoring both DSL and graph-based workflows
  */
 
-import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException } from '@pikku/core/workflow'
+
+// Re-export WorkflowCancelledException for use in workflow functions
+export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { GraphNodeConfig, HTTPMethod } from '@pikku/core'

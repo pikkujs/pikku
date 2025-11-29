@@ -19,6 +19,7 @@ export interface ValidationError {
  * - SwitchStatement (switch/case)
  * - ForOfStatement (sequential fanout)
  * - ReturnStatement
+ * - ThrowStatement (for WorkflowCancelledException)
  * - Block (containers)
  */
 export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
@@ -32,7 +33,8 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         ts.isIfStatement(statement) ||
         ts.isSwitchStatement(statement) ||
         ts.isForOfStatement(statement) ||
-        ts.isReturnStatement(statement)
+        ts.isReturnStatement(statement) ||
+        ts.isThrowStatement(statement)
       ) {
         // Allowed statement type - recurse into it
         visitNode(statement)
@@ -40,7 +42,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         // Unknown/disallowed statement type
         const nodeType = ts.SyntaxKind[statement.kind]
         errors.push({
-          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, switch/case, for..of, return, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
+          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, switch/case, for..of, return, throw, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
           node: statement,
         })
       }
@@ -139,9 +141,7 @@ export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
       if (ts.isPropertyAccessExpression(node.expression)) {
         const propAccess = node.expression
         if (
-          (propAccess.name.text === 'do' ||
-            propAccess.name.text === 'sleep' ||
-            propAccess.name.text === 'cancel') &&
+          (propAccess.name.text === 'do' || propAccess.name.text === 'sleep') &&
           ts.isIdentifier(propAccess.expression) &&
           propAccess.expression.text === 'workflow'
         ) {

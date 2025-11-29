@@ -43,22 +43,58 @@ export function isWorkflowSleepCall(
 }
 
 /**
- * Check if a call expression is workflow.cancel()
+ * Check if a throw statement throws WorkflowCancelledException
+ * Matches: throw new WorkflowCancelledException(...) or throw WorkflowCancelledException(...)
  */
-export function isWorkflowCancelCall(
-  node: ts.CallExpression,
-  checker: ts.TypeChecker
-): boolean {
-  if (!ts.isPropertyAccessExpression(node.expression)) {
-    return false
+export function isThrowCancelException(node: ts.ThrowStatement): boolean {
+  const expr = node.expression
+  if (!expr) return false
+
+  // Check for: throw new WorkflowCancelledException(...)
+  if (ts.isNewExpression(expr)) {
+    if (ts.isIdentifier(expr.expression)) {
+      return expr.expression.text === 'WorkflowCancelledException'
+    }
   }
 
-  const propAccess = node.expression
-  return (
-    propAccess.name.text === 'cancel' &&
-    ts.isIdentifier(propAccess.expression) &&
-    propAccess.expression.text === 'workflow'
-  )
+  // Check for: throw WorkflowCancelledException(...) - function call style
+  if (ts.isCallExpression(expr)) {
+    if (ts.isIdentifier(expr.expression)) {
+      return expr.expression.text === 'WorkflowCancelledException'
+    }
+  }
+
+  return false
+}
+
+/**
+ * Extract the reason string from a throw WorkflowCancelledException statement
+ */
+export function extractCancelReason(
+  node: ts.ThrowStatement,
+  checker: ts.TypeChecker
+): string | undefined {
+  const expr = node.expression
+  if (!expr) return undefined
+
+  let args: ts.NodeArray<ts.Expression> | undefined
+
+  if (ts.isNewExpression(expr) && expr.arguments) {
+    args = expr.arguments
+  } else if (ts.isCallExpression(expr)) {
+    args = expr.arguments
+  }
+
+  if (args && args.length > 0) {
+    const firstArg = args[0]
+    if (ts.isStringLiteral(firstArg)) {
+      return firstArg.text
+    }
+    // For template literals or other expressions, return the source text
+    return firstArg.getText()
+  }
+
+  return undefined
 }
 
 /**

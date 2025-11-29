@@ -18,7 +18,8 @@ import {
 import {
   isWorkflowDoCall,
   isWorkflowSleepCall,
-  isWorkflowCancelCall,
+  isThrowCancelException,
+  extractCancelReason,
   isParallelFanout,
   isParallelGroup,
   isSequentialFanout,
@@ -266,6 +267,11 @@ function extractStep(
     return extractReturn(statement, context)
   }
 
+  // Throw statement (for WorkflowCancelledException)
+  if (ts.isThrowStatement(statement)) {
+    return extractThrowCancel(statement, context)
+  }
+
   return null
 }
 
@@ -403,10 +409,6 @@ function extractExpressionStatement(
 
     if (isWorkflowSleepCall(call, context.checker)) {
       return extractSleepStep(call, context)
-    }
-
-    if (isWorkflowCancelCall(call, context.checker)) {
-      return extractCancelStep(call, context)
     }
 
     // Check for parallel group or fanout
@@ -553,14 +555,20 @@ function extractSleepStep(
 }
 
 /**
- * Extract cancel step from workflow.cancel() call
+ * Extract cancel step from throw WorkflowCancelledException statement
  */
-function extractCancelStep(
-  call: ts.CallExpression,
+function extractThrowCancel(
+  statement: ts.ThrowStatement,
   context: ExtractionContext
 ): CancelStepMeta | null {
+  if (!isThrowCancelException(statement)) {
+    return null
+  }
+
+  const reason = extractCancelReason(statement, context.checker)
   return {
     type: 'cancel',
+    reason,
   }
 }
 

@@ -11,6 +11,17 @@ import type {
 } from './workflow-graph.types.js'
 
 /**
+ * Check if a node is a terminal flow (no next step should follow)
+ */
+function isTerminalFlow(node: SerializedGraphNode): boolean {
+  if ('flow' in node) {
+    // Cancel and return are terminal flows - they end execution
+    return node.flow === 'cancel' || node.flow === 'return'
+  }
+  return false
+}
+
+/**
  * Convert InputSource to DataRef
  */
 function convertInputSource(source: {
@@ -116,14 +127,16 @@ function convertStepToNode(
         next: nextNodeId,
       }
 
-      // Link last then/else nodes back to next
+      // Link last then/else nodes back to next (unless terminal flow)
       if (thenNodes.length > 0 && nextNodeId) {
         const lastThen = thenNodes[thenNodes.length - 1]
-        if (!lastThen.next) lastThen.next = nextNodeId
+        if (!lastThen.next && !isTerminalFlow(lastThen))
+          lastThen.next = nextNodeId
       }
       if (elseNodes.length > 0 && nextNodeId) {
         const lastElse = elseNodes[elseNodes.length - 1]
-        if (!lastElse.next) lastElse.next = nextNodeId
+        if (!lastElse.next && !isTerminalFlow(lastElse))
+          lastElse.next = nextNodeId
       }
 
       return [node, ...thenNodes, ...elseNodes]
@@ -148,10 +161,11 @@ function convertStepToNode(
             expression: step.cases[i].expression,
             entry: caseSteps[0].nodeId,
           })
-          // Link last case node to next
+          // Link last case node to next (unless terminal flow)
           if (nextNodeId) {
             const lastCase = caseSteps[caseSteps.length - 1]
-            if (!lastCase.next) lastCase.next = nextNodeId
+            if (!lastCase.next && !isTerminalFlow(lastCase))
+              lastCase.next = nextNodeId
           }
           caseNodes.push(...caseSteps)
         }
@@ -165,9 +179,11 @@ function convertStepToNode(
         )
         if (defaultNodes.length > 0) {
           defaultEntry = defaultNodes[0].nodeId
+          // Link last default node to next (unless terminal flow)
           if (nextNodeId) {
             const lastDefault = defaultNodes[defaultNodes.length - 1]
-            if (!lastDefault.next) lastDefault.next = nextNodeId
+            if (!lastDefault.next && !isTerminalFlow(lastDefault))
+              lastDefault.next = nextNodeId
           }
           caseNodes.push(...defaultNodes)
         }
@@ -277,6 +293,7 @@ function convertStepToNode(
       const node: FlowNode = {
         nodeId,
         flow: 'cancel',
+        reason: step.reason,
       }
       return [node]
     }

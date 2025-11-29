@@ -1,4 +1,7 @@
-import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  WorkflowCancelledException,
+} from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 /**
@@ -33,7 +36,7 @@ export const unhappyRetryWorkflow = pikkuWorkflowFunc<
   func: async ({}, data, { workflow }) => {
     // If value is negative, cancel the workflow immediately
     if (data.value < 0) {
-      await workflow.cancel(
+      throw new WorkflowCancelledException(
         `Workflow cancelled: value ${data.value} is negative`
       )
     }

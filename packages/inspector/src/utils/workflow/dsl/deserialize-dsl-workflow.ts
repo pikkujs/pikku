@@ -194,8 +194,10 @@ function nodeToCode(
         break
 
       case 'cancel':
+        const cancelReason =
+          flowNode.reason || flowNode.stepName || 'Workflow cancelled'
         lines.push(
-          `${indent}await workflow.cancel('${flowNode.stepName || 'Cancelled'}')`
+          `${indent}throw new WorkflowCancelledException('${cancelReason}')`
         )
         lines.push('')
         break
@@ -369,8 +371,19 @@ export function deserializeDslWorkflow(
 
   const lines: string[] = []
 
+  // Check if workflow has any cancel nodes
+  const hasCancelNode = Object.values(workflow.nodes).some(
+    (node) => 'flow' in node && (node as any).flow === 'cancel'
+  )
+
   // Import statement
-  lines.push(`import { pikkuWorkflowFunc } from '${pikkuImportPath}'`)
+  if (hasCancelNode) {
+    lines.push(
+      `import { pikkuWorkflowFunc, WorkflowCancelledException } from '${pikkuImportPath}'`
+    )
+  } else {
+    lines.push(`import { pikkuWorkflowFunc } from '${pikkuImportPath}'`)
+  }
   lines.push('')
 
   // Add description as comment if present

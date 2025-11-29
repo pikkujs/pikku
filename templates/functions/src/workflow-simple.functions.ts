@@ -13,7 +13,10 @@
  * - All workflow calls must be awaited
  */
 
-import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  WorkflowCancelledException,
+} from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 // RPC function to create organization
@@ -86,8 +89,7 @@ export const orgOnboardingSimpleWorkflow = pikkuWorkflowFunc<
    * Cancel if no members to invite
    */
   if (data.memberEmails.length === 0) {
-    await workflow.cancel('No members to invite')
-    return
+    throw new WorkflowCancelledException('No members to invite')
   }
 
   // Step 2: Plan-based setup using switch statement
