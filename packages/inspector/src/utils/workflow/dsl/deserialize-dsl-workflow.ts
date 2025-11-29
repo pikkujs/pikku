@@ -154,12 +154,103 @@ function traverseNodes(
 }
 
 /**
+ * Collect conditional variables that need to be declared before a branch
+ */
+function collectBranchConditionalVars(
+  branchNode: any,
+  nodes: Record<string, SerializedGraphNode>,
+  conditionalVars: Set<string>
+): string[] {
+  const vars: string[] = []
+
+  // Check then branch
+  if (branchNode.thenEntry) {
+    collectVarsFromBranch(branchNode.thenEntry, nodes, conditionalVars, vars)
+  }
+
+  // Check else branch
+  if (branchNode.elseEntry) {
+    collectVarsFromBranch(branchNode.elseEntry, nodes, conditionalVars, vars)
+  }
+
+  return vars
+}
+
+/**
+ * Recursively collect output variables from a branch that are in conditionalVars
+ */
+function collectVarsFromBranch(
+  nodeId: string,
+  nodes: Record<string, SerializedGraphNode>,
+  conditionalVars: Set<string>,
+  result: string[]
+): void {
+  const node = nodes[nodeId]
+  if (!node) return
+
+  // Check if this node has an outputVar that's conditional
+  if ('outputVar' in node && node.outputVar) {
+    const varName = node.outputVar as string
+    if (conditionalVars.has(varName) && !result.includes(varName)) {
+      result.push(varName)
+    }
+  }
+
+  // Follow the chain of nodes within the branch
+  if ('next' in node && node.next) {
+    const nextId = node.next as string
+    // Only follow if it's still within the branch (has _then_ or _else_ in ID)
+    if (nextId.includes('_then_') || nextId.includes('_else_')) {
+      collectVarsFromBranch(nextId, nodes, conditionalVars, result)
+    }
+  }
+}
+
+/**
+ * Generate code for branch content (then/else blocks)
+ */
+function generateBranchContent(
+  entryNodeId: string,
+  nodes: Record<string, SerializedGraphNode>,
+  indent: string,
+  conditionalVars: Set<string>
+): string[] {
+  const lines: string[] = []
+  let currentId: string | undefined = entryNodeId
+
+  while (currentId) {
+    const node = nodes[currentId]
+    if (!node) break
+
+    const nodeLines = nodeToCode(node, nodes, indent, conditionalVars, true)
+    lines.push(...nodeLines)
+
+    // Follow to next node within the branch
+    if ('next' in node && node.next) {
+      const nextId = node.next as string
+      // Only continue if it's still within the branch
+      if (nextId.includes('_then_') || nextId.includes('_else_')) {
+        currentId = nextId
+      } else {
+        break
+      }
+    } else {
+      break
+    }
+  }
+
+  return lines
+}
+
+/**
  * Generate DSL code for a single node
  */
 function nodeToCode(
   node: SerializedGraphNode,
   nodes: Record<string, SerializedGraphNode>,
-  indent: string
+  indent: string,
+  conditionalVars: Set<string> = new Set(),
+  isInsideBranch: boolean = false
 ): string[] {
   const lines: string[] = []
 
@@ -182,7 +273,12 @@ function nodeToCode(
     doCall += ')'
 
     if (outputVar) {
-      lines.push(`${indent}const ${outputVar} = ${doCall}`)
+      // If this is a conditional var inside a branch, use assignment (let was declared above)
+      if (isInsideBranch && conditionalVars.has(outputVar)) {
+        lines.push(`${indent}${outputVar} = ${doCall}`)
+      } else {
+        lines.push(`${indent}const ${outputVar} = ${doCall}`)
+      }
     } else {
       lines.push(`${indent}${doCall}`)
     }
@@ -212,14 +308,25 @@ function nodeToCode(
         break
 
       case 'branch':
+        // Declare conditional variables before the if statement
+        const branchConditionalVars = collectBranchConditionalVars(
+          flowNode,
+          nodes,
+          conditionalVars
+        )
+        for (const varName of branchConditionalVars) {
+          lines.push(`${indent}let ${varName}`)
+        }
+
         const condition = conditionToCode(flowNode.conditions)
         lines.push(`${indent}if (${condition}) {`)
         // Process then branch nodes
         if (flowNode.thenEntry && nodes[flowNode.thenEntry]) {
-          const thenLines = nodeToCode(
-            nodes[flowNode.thenEntry],
+          const thenLines = generateBranchContent(
+            flowNode.thenEntry,
             nodes,
-            indent + '  '
+            indent + '  ',
+            conditionalVars
           )
           lines.push(...thenLines)
         }
@@ -377,6 +484,54 @@ function nodeToCode(
 }
 
 /**
+ * Find variables that are defined inside branches but used in return statements
+ * These need to be hoisted with `let` declarations
+ */
+function findConditionalVars(
+  nodes: Record<string, SerializedGraphNode>
+): Set<string> {
+  const conditionalVars = new Set<string>()
+  const varsInBranches = new Set<string>()
+  const varsUsedInReturn = new Set<string>()
+
+  // Collect variables defined in branches (then/else/case/default nodes)
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    if (
+      nodeId.includes('_then_') ||
+      nodeId.includes('_else_') ||
+      nodeId.includes('_case') ||
+      nodeId.includes('_default_')
+    ) {
+      if ('outputVar' in node && node.outputVar) {
+        varsInBranches.add(node.outputVar as string)
+      }
+    }
+  }
+
+  // Collect variables used in return statements
+  for (const node of Object.values(nodes)) {
+    if ('flow' in node && node.flow === 'return' && node.outputs) {
+      for (const output of Object.values(
+        node.outputs as Record<string, { from: string; name?: string }>
+      )) {
+        if (output.from === 'outputVar' && output.name) {
+          varsUsedInReturn.add(output.name)
+        }
+      }
+    }
+  }
+
+  // Variables that are both in branches and used in return need hoisting
+  for (const varName of varsInBranches) {
+    if (varsUsedInReturn.has(varName)) {
+      conditionalVars.add(varName)
+    }
+  }
+
+  return conditionalVars
+}
+
+/**
  * Deserialize a workflow graph to DSL code
  */
 export function deserializeDslWorkflow(
@@ -392,6 +547,9 @@ export function deserializeDslWorkflow(
   const hasCancelNode = Object.values(workflow.nodes).some(
     (node) => 'flow' in node && (node as any).flow === 'cancel'
   )
+
+  // Find variables defined in branches that need hoisting
+  const conditionalVars = findConditionalVars(workflow.nodes)
 
   // Import statement
   if (hasCancelNode) {
@@ -426,6 +584,7 @@ export function deserializeDslWorkflow(
     // Skip child nodes that are processed as part of their parent
     if (
       node.nodeId.includes('_then_') ||
+      node.nodeId.includes('_else_') ||
       node.nodeId.includes('_case') ||
       node.nodeId.includes('_default_') ||
       node.nodeId.includes('_child_') ||
@@ -434,7 +593,7 @@ export function deserializeDslWorkflow(
       continue
     }
 
-    const nodeLines = nodeToCode(node, workflow.nodes, '  ')
+    const nodeLines = nodeToCode(node, workflow.nodes, '  ', conditionalVars)
     lines.push(...nodeLines)
   }
 
