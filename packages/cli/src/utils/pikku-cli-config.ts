@@ -340,12 +340,9 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Workflow Graphs (unified JSON contains both DSL and graph workflows)
-    if (!result.workflowGraphsMetaJsonFile) {
-      result.workflowGraphsMetaJsonFile = join(
-        workflowDir,
-        'pikku-workflow-wirings-meta.gen.json'
-      )
+    // Workflow meta directory (individual JSON files for each workflow)
+    if (!result.workflowMetaDir) {
+      result.workflowMetaDir = join(workflowDir, 'meta')
     }
 
     // Services

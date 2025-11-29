@@ -1,39 +1,29 @@
 /**
  * Generate workflow runtime registration
- * Combines meta registration (pikkuState) and DSL workflow registration (addWorkflow)
+ * Imports meta (which registers with pikkuState) and registers DSL workflows (addWorkflow)
  */
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const serializeWorkflowRegistration = (
   outputPath: string,
-  jsonImportPath: string,
+  metaImportPath: string,
   workflowNames: string[],
   workflowFiles: Map<string, { path: string; exportedName: string }>,
   packageMappings: Record<string, string>,
-  supportsImportAttributes: boolean,
-  packageName?: string
+  _packageName?: string
 ) => {
   const lines: string[] = []
   const hasWorkflows = workflowNames.length > 0
   const hasDslWorkflows = workflowFiles.size > 0
 
-  // Imports - only add if they'll be used
-  if (hasWorkflows) {
-    lines.push("import { pikkuState } from '@pikku/core'")
-    lines.push(
-      "import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'"
-    )
-  }
+  // Imports
   if (hasDslWorkflows) {
     lines.push("import { addWorkflow } from '@pikku/core/workflow'")
   }
 
-  // Import JSON meta
+  // Import meta file (which registers meta with pikkuState)
   if (hasWorkflows) {
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
-    lines.push(importStatement)
+    lines.push(`import '${metaImportPath}'`)
   }
 
   // Import DSL workflow functions
@@ -50,15 +40,6 @@ export const serializeWorkflowRegistration = (
   }
 
   lines.push('')
-
-  // Register meta to pikkuState
-  if (hasWorkflows) {
-    const packageNameValue = packageName ? `'${packageName}'` : 'null'
-    lines.push(
-      `pikkuState(${packageNameValue}, 'workflows', 'meta', metaData as SerializedWorkflowGraphs)`
-    )
-    lines.push('')
-  }
 
   // Register DSL workflows
   for (const [pikkuFuncName, { exportedName }] of sortedWorkflows) {

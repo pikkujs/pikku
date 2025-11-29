@@ -87,6 +87,7 @@ export const orgOnboardingSimpleWorkflow = pikkuWorkflowFunc<
    */
   if (data.memberEmails.length === 0) {
     await workflow.cancel('No members to invite')
+    return
   }
 
   // Step 2: Plan-based setup using switch statement

@@ -1,10 +1,12 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { convertAllDslToGraphs, ErrorCode } from '@pikku/inspector'
+import { convertDslToGraph, ErrorCode } from '@pikku/inspector'
+import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
+import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { join } from 'path'
@@ -17,7 +19,8 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const visitState = await getInspectorState()
     const {
       workflowsWiringFile,
-      workflowGraphsMetaJsonFile,
+      workflowsWiringMetaFile,
+      workflowMetaDir,
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
@@ -54,26 +57,53 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
-    // Generate unified JSON (convert DSL to graph format and merge)
-    if (hasWorkflows && workflowGraphsMetaJsonFile) {
-      const dslAsGraphs = convertAllDslToGraphs(workflows.meta)
-      const unifiedMeta = {
-        ...dslAsGraphs,
-        ...workflows.graphMeta,
+    // Generate individual JSON files for each workflow (convert DSL to graph format)
+    if (hasWorkflows && workflowMetaDir) {
+      // Write individual JSON files for DSL workflows
+      const dslMeta = workflows.meta as WorkflowsMeta
+      for (const [name, meta] of Object.entries(dslMeta)) {
+        const graphMeta = convertDslToGraph(name, meta)
+        const jsonPath = join(workflowMetaDir, `${name}.gen.json`)
+        await writeFileInDir(
+          logger,
+          jsonPath,
+          JSON.stringify(graphMeta, null, 2),
+          { ignoreModifyComment: true }
+        )
       }
 
+      // Write individual JSON files for graph workflows
+      for (const [name, graphMeta] of Object.entries(workflows.graphMeta)) {
+        const jsonPath = join(workflowMetaDir, `${name}.gen.json`)
+        await writeFileInDir(
+          logger,
+          jsonPath,
+          JSON.stringify(graphMeta, null, 2),
+          { ignoreModifyComment: true }
+        )
+      }
+    }
+
+    // Generate workflow meta aggregation file
+    if (workflowsWiringMetaFile && workflowMetaDir) {
       await writeFileInDir(
         logger,
-        workflowGraphsMetaJsonFile,
-        JSON.stringify(unifiedMeta, null, 2),
-        { ignoreModifyComment: true }
+        workflowsWiringMetaFile,
+        serializeWorkflowMeta(
+          workflowsWiringMetaFile,
+          workflowMetaDir,
+          allWorkflowNames,
+          packageMappings,
+          schema?.supportsImportAttributes ?? false,
+          config.externalPackageName
+        )
       )
     }
 
     // Generate workflow registration (meta + DSL workflow registrations)
-    const jsonImportPath = getFileImportRelativePath(
+    const metaImportPath = getFileImportRelativePath(
       workflowsWiringFile,
-      workflowGraphsMetaJsonFile,
+      workflowsWiringMetaFile,
       packageMappings
     )
 
@@ -82,11 +112,10 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       workflowsWiringFile,
       serializeWorkflowRegistration(
         workflowsWiringFile,
-        jsonImportPath,
+        metaImportPath,
         allWorkflowNames,
         workflows.files,
         packageMappings,
-        schema?.supportsImportAttributes ?? false,
         config.externalPackageName
       )
     )

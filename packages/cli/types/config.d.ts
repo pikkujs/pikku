@@ -59,9 +59,7 @@ export interface PikkuCLICoreOutputFiles {
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
-
-  // Workflow Graphs
-  workflowGraphsMetaJsonFile: string
+  workflowMetaDir: string
 
   // MCP
   mcpWiringsFile: string
