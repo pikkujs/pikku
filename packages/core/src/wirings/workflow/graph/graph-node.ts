@@ -56,19 +56,21 @@ export interface GraphNodeDef<
  * // Import the typed graph from generated types
  * import { pikkuWorkflowGraph, wireWorkflow } from './.pikku/workflow/pikku-workflow-types.gen.js'
  *
- * export const myGraph = pikkuWorkflowGraph((graph) =>
- *   graph({
+ * export const myGraph = pikkuWorkflowGraph({
+ *   name: 'myWorkflow',
+ *   nodes: {
  *     entry: 'createUserProfile',  // autocompletes RPC names
  *     sendWelcome: 'sendEmail',
- *   })({
+ *   },
+ *   config: {
  *     entry: { next: 'sendWelcome' },
  *     sendWelcome: {
  *       input: (ref) => ({
  *         to: ref('entry', 'email'),  // 'entry' and 'email' both autocomplete
  *       }),
  *     },
- *   })
- * )
+ *   },
+ * })
  *
  * wireWorkflow({
  *   wires: { http: { route: '/start', method: 'post' } },
@@ -115,47 +117,63 @@ type InputWithRefs<T> = {
 
 export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
   return <const FuncMap extends Record<string, keyof RPCMap & string>>(
-    funcMap: FuncMap
-  ) => {
+    funcMap: FuncMap,
+    nodesOrBuilder?:
+      | GraphNodeConfigMap<FuncMap, RPCMap>
+      | ((nodes: FuncMap) => GraphNodeConfigMap<FuncMap, RPCMap>)
+  ): Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>> => {
     type NodeIds = Extract<keyof FuncMap, string>
-    type NodeOutputs = ComputeNodeOutputs<FuncMap, RPCMap>
-    type NodeInputs = ComputeNodeInputs<FuncMap, RPCMap>
 
-    type NodeConfig = {
-      [K in NodeIds]: {
-        next?: NextConfig<NodeIds>
-        input?: (
-          ref: <N extends NodeIds, P extends keyof NodeOutputs[N] & string>(
-            nodeId: N,
-            path: P
-          ) => TypedRef<NodeOutputs[N][P]>
-        ) => InputWithRefs<NodeInputs[K]>
-        onError?: NodeIds | NodeIds[]
-      }
-    }
-
-    // Support both direct object and callback syntax
-    return (
-      nodesOrBuilder: NodeConfig | ((nodes: FuncMap) => NodeConfig)
-    ): Record<NodeIds, GraphNodeConfig<NodeIds>> => {
-      const nodes =
-        typeof nodesOrBuilder === 'function'
-          ? nodesOrBuilder(funcMap)
-          : nodesOrBuilder
-
+    // If no nodes provided, return just the funcMap converted to graph nodes
+    if (!nodesOrBuilder) {
       const result: Record<string, GraphNodeConfig<string>> = {}
-
-      for (const [nodeId, def] of Object.entries(nodes) as [string, any][]) {
+      for (const [nodeId, rpcName] of Object.entries(funcMap)) {
         result[nodeId] = {
-          func: funcMap[nodeId] as string,
-          input: def.input as any,
-          next: def.next,
-          onError: def.onError,
+          func: rpcName as string,
         }
       }
-
       return result as Record<NodeIds, GraphNodeConfig<NodeIds>>
     }
+
+    const nodes =
+      typeof nodesOrBuilder === 'function'
+        ? nodesOrBuilder(funcMap)
+        : nodesOrBuilder
+
+    const result: Record<string, GraphNodeConfig<string>> = {}
+
+    for (const [nodeId, def] of Object.entries(nodes) as [string, any][]) {
+      result[nodeId] = {
+        func: funcMap[nodeId] as string,
+        input: def?.input as any,
+        next: def?.next,
+        onError: def?.onError,
+      }
+    }
+
+    return result as Record<NodeIds, GraphNodeConfig<NodeIds>>
+  }
+}
+
+/**
+ * Type helper for node configuration map
+ */
+type GraphNodeConfigMap<
+  FuncMap extends Record<string, string>,
+  RPCMap extends Record<string, RPCHandler>,
+> = {
+  [K in Extract<keyof FuncMap, string>]?: {
+    next?: NextConfig<Extract<keyof FuncMap, string>>
+    input?: (
+      ref: <
+        N extends Extract<keyof FuncMap, string>,
+        P extends keyof ComputeNodeOutputs<FuncMap, RPCMap>[N] & string,
+      >(
+        nodeId: N,
+        path: P
+      ) => TypedRef<ComputeNodeOutputs<FuncMap, RPCMap>[N][P]>
+    ) => InputWithRefs<ComputeNodeInputs<FuncMap, RPCMap>[K]>
+    onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
   }
 }
 

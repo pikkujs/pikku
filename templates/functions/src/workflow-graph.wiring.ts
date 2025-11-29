@@ -11,22 +11,22 @@ export const graphOnboarding = pikkuWorkflowGraph({
   name: 'graphOnboarding',
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
-  graph: (graph) =>
-    graph({
-      entry: 'createUserProfile',
-      sendWelcome: 'sendEmail',
-    })({
-      entry: {
-        next: 'sendWelcome',
-      },
-      sendWelcome: {
-        input: (ref) => ({
-          to: ref('entry', 'email'),
-          subject: 'Welcome!',
-          body: 'Thanks for signing up!',
-        }),
-      },
-    }),
+  nodes: {
+    entry: 'createUserProfile',
+    sendWelcome: 'sendEmail',
+  },
+  config: {
+    entry: {
+      next: 'sendWelcome',
+    },
+    sendWelcome: {
+      input: (ref) => ({
+        to: ref('entry', 'email'),
+        subject: 'Welcome!',
+        body: 'Thanks for signing up!',
+      }),
+    },
+  },
 })
 
 wireWorkflow({

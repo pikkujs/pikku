@@ -80,19 +80,21 @@ export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
  */
 const graphBuilder = createGraph<FlattenedRPCMap>()
 
-/** Type for the graph builder function */
-type GraphBuilder = typeof graphBuilder
-
 /** Configuration for graph-based workflow */
-export interface PikkuWorkflowGraphConfig<T> {
+export interface PikkuWorkflowGraphConfig<
+  FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
+  T
+> {
   /** Workflow name */
   name: string
   /** Optional description */
   description?: string
   /** Optional tags for organization */
   tags?: string[]
-  /** Graph definition callback */
-  graph: (graph: GraphBuilder) => T
+  /** Node to RPC function mapping */
+  nodes: FuncMap
+  /** Node configurations (next, input, onError) */
+  config?: T
 }
 
 /** Result of pikkuWorkflowGraph - includes metadata for wiring */
@@ -112,29 +114,48 @@ export interface PikkuWorkflowGraphResult<T> {
  *   name: 'myWorkflow',
  *   description: 'Handles user onboarding',
  *   tags: ['onboarding'],
- *   graph: (graph) =>
- *     graph({
- *       entry: 'createUser',
- *       sendEmail: 'sendWelcomeEmail',
- *     })({
- *       entry: { next: 'sendEmail' },
- *       sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
- *     }),
+ *   nodes: {
+ *     entry: 'createUser',
+ *     sendEmail: 'sendWelcomeEmail',
+ *   },
+ *   config: {
+ *     entry: { next: 'sendEmail' },
+ *     sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
+ *   },
  * })
  */
 export function pikkuWorkflowGraph<
-  T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>
+  const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
 >(
-  config: PikkuWorkflowGraphConfig<T>
-): PikkuWorkflowGraphResult<T> {
+  config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
+): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>> {
   return {
     __type: 'pikkuWorkflowGraph',
     name: config.name,
     description: config.description,
     tags: config.tags,
-    graph: config.graph(graphBuilder),
+    graph: graphBuilder(config.nodes, config.config as any),
   }
 }
+
+/** Type helper for node configuration */
+type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
+  [K in Extract<keyof FuncMap, string>]?: {
+    next?: NextConfig<Extract<keyof FuncMap, string>>
+    input?: (
+      ref: <
+        N extends Extract<keyof FuncMap, string>,
+        P extends string
+      >(
+        nodeId: N,
+        path: P
+      ) => any
+    ) => any
+    onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
+  }
+}
+
+type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
 
 // ============================================================================
 // Unified wireWorkflow

@@ -438,14 +438,14 @@ function inputToGraphCode(input: Record<string, unknown>): {
   const lines = entries.map(([key, value]) => {
     if (isDataRef(value)) {
       hasRefs = true
-      return `          ${key}: ${dataRefToGraphRef(value)},`
+      return `        ${key}: ${dataRefToGraphRef(value)},`
     }
-    return `          ${key}: ${JSON.stringify(value)},`
+    return `        ${key}: ${JSON.stringify(value)},`
   })
 
   return {
     hasRefs,
-    code: `{\n${lines.join('\n')}\n        }`,
+    code: `{\n${lines.join('\n')}\n      }`,
   }
 }
 
@@ -532,7 +532,7 @@ export function deserializeGraphWorkflow(
 
     if (configParts.length > 0) {
       nodeConfigs.push(
-        `      ${nodeId}: {\n        ${configParts.join(',\n        ')},\n      }`
+        `    ${nodeId}: {\n      ${configParts.join(',\n      ')},\n    }`
       )
     }
   }
@@ -547,27 +547,25 @@ export function deserializeGraphWorkflow(
     lines.push(`  tags: [${workflow.tags.map((t) => `'${t}'`).join(', ')}],`)
   }
 
-  // Generate graph builder
-  lines.push(`  graph: (graph) =>`)
-
-  // First phase: node to RPC mapping
+  // Generate nodes (RPC mapping)
   const rpcMapEntries = Object.entries(nodeRpcMap)
   if (rpcMapEntries.length > 0) {
-    lines.push(`    graph({`)
+    lines.push(`  nodes: {`)
     for (const [nodeId, rpcName] of rpcMapEntries) {
-      lines.push(`      ${nodeId}: '${rpcName}',`)
+      lines.push(`    ${nodeId}: '${rpcName}',`)
     }
-    lines.push(`    })({`)
+    lines.push(`  },`)
   } else {
-    lines.push(`    graph({})({`)
+    lines.push(`  nodes: {},`)
   }
 
-  // Second phase: node configurations
+  // Generate config (node configurations)
   if (nodeConfigs.length > 0) {
+    lines.push(`  config: {`)
     lines.push(nodeConfigs.join(',\n'))
+    lines.push(`  },`)
   }
 
-  lines.push(`    }),`)
   lines.push(`})`)
   lines.push('')
 
