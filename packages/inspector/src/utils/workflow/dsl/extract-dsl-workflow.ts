@@ -999,6 +999,13 @@ function extractSequentialFanout(
   let childStep: RpcStepMeta | null = null
   let timeBetween: string | undefined = undefined
 
+  // Create a child context with the loop variable added
+  const childContext: ExtractionContext = {
+    ...context,
+    outputVars: new Map(context.outputVars),
+    loopVars: new Set([...context.loopVars, itemVar]),
+  }
+
   for (const stmt of statement.statement.statements) {
     // Look for workflow.do
     if (ts.isExpressionStatement(stmt)) {
@@ -1008,7 +1015,7 @@ function extractSequentialFanout(
         const call = expr.expression
 
         if (isWorkflowDoCall(call, context.checker)) {
-          const step = extractRpcStep(call, context)
+          const step = extractRpcStep(call, childContext)
           if (step) {
             childStep = step
           }

@@ -207,6 +207,24 @@ export function isSequentialFanout(node: ts.ForOfStatement): boolean {
 }
 
 /**
+ * Extract full source path from an expression (e.g., data.memberEmails)
+ */
+function extractSourcePath(expr: ts.Expression): string | null {
+  if (ts.isIdentifier(expr)) {
+    return expr.text
+  }
+
+  if (ts.isPropertyAccessExpression(expr)) {
+    const base = extractSourcePath(expr.expression)
+    if (base) {
+      return `${base}.${expr.name.text}`
+    }
+  }
+
+  return null
+}
+
+/**
  * Extract the variable name from a for..of statement
  */
 export function extractForOfVariable(
@@ -223,17 +241,8 @@ export function extractForOfVariable(
 
   const itemVar = decl.name.text
 
-  // Extract source variable
-  let sourceVar: string | null = null
-  if (ts.isIdentifier(node.expression)) {
-    sourceVar = node.expression.text
-  } else if (
-    ts.isPropertyAccessExpression(node.expression) &&
-    ts.isIdentifier(node.expression.expression)
-  ) {
-    // Handle data.memberEmails
-    sourceVar = node.expression.expression.text
-  }
+  // Extract source variable with full path (e.g., data.memberEmails)
+  const sourceVar = extractSourcePath(node.expression)
 
   if (!sourceVar) {
     return null
