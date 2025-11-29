@@ -72,24 +72,49 @@ export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
 }
 
 // ============================================================================
-// Graph Workflow Types (graph, wireWorkflowGraph)
+// Graph Workflow Types (wireWorkflowGraph)
 // ============================================================================
 
 /**
  * Type-safe graph builder with full RPC autocomplete
  */
-export const graph = createGraph<FlattenedRPCMap>()
+const graph = createGraph<FlattenedRPCMap>()
+
+/** Type for the graph builder function */
+type GraphBuilder = typeof graph
 
 /**
- * Type-safe wireWorkflowGraph with RPC-aware graph definition
+ * Definition returned by the callback
  */
-export function wireWorkflowGraph<
-  T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>
->(definition: {
+interface WorkflowGraphCallbackDefinition<T> {
   name: string
   triggers: WorkflowGraphTriggers
   graph: T
-}): void {
+}
+
+/**
+ * Type-safe wireWorkflowGraph with RPC-aware graph definition
+ * The graph builder is passed as a callback parameter for cleaner API
+ *
+ * @example
+ * wireWorkflowGraph((graph) => ({
+ *   name: 'myWorkflow',
+ *   triggers: { http: { route: '/start', method: 'post' } },
+ *   graph: graph({
+ *     entry: 'createUser',
+ *     sendEmail: 'sendWelcomeEmail',
+ *   })({
+ *     entry: { next: 'sendEmail' },
+ *     sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
+ *   }),
+ * }))
+ */
+export function wireWorkflowGraph<
+  T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>
+>(
+  callback: (graph: GraphBuilder) => WorkflowGraphCallbackDefinition<T>
+): void {
+  const definition = callback(graph)
   coreWireWorkflowGraph(definition)
 }
 `

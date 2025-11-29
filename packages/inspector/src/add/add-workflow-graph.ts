@@ -328,6 +328,51 @@ function extractNextConfig(
 }
 
 /**
+ * Extract definition object from wireWorkflowGraph call
+ * Supports both direct object and callback patterns:
+ * - wireWorkflowGraph({ name, triggers, graph })
+ * - wireWorkflowGraph((graph) => ({ name, triggers, graph }))
+ */
+function extractDefinitionObject(
+  firstArg: ts.Node
+): ts.ObjectLiteralExpression | undefined {
+  // Direct object: wireWorkflowGraph({ ... })
+  if (ts.isObjectLiteralExpression(firstArg)) {
+    return firstArg
+  }
+
+  // Callback pattern: wireWorkflowGraph((graph) => ({ ... }))
+  if (ts.isArrowFunction(firstArg)) {
+    const body = firstArg.body
+
+    // Direct return: (graph) => ({ ... })
+    if (ts.isObjectLiteralExpression(body)) {
+      return body
+    }
+
+    // Parenthesized: (graph) => ({ ... })
+    if (ts.isParenthesizedExpression(body)) {
+      if (ts.isObjectLiteralExpression(body.expression)) {
+        return body.expression
+      }
+    }
+
+    // Block with return: (graph) => { return { ... } }
+    if (ts.isBlock(body)) {
+      for (const stmt of body.statements) {
+        if (ts.isReturnStatement(stmt) && stmt.expression) {
+          if (ts.isObjectLiteralExpression(stmt.expression)) {
+            return stmt.expression
+          }
+        }
+      }
+    }
+  }
+
+  return undefined
+}
+
+/**
  * Inspector for wireWorkflowGraph() calls
  * Extracts workflow graph definitions and serializes them
  */
@@ -344,10 +389,20 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   const args = node.arguments
   const firstArg = args[0]
 
-  if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) {
+  if (!firstArg) {
     logger.critical(
       ErrorCode.MISSING_FUNC,
-      'wireWorkflowGraph requires an object argument'
+      'wireWorkflowGraph requires an argument'
+    )
+    return
+  }
+
+  const definitionObj = extractDefinitionObject(firstArg)
+
+  if (!definitionObj) {
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      'wireWorkflowGraph requires an object argument or callback returning an object'
     )
     return
   }
@@ -359,7 +414,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   let triggers: SerializedWorkflowGraph['triggers'] = {}
   let graphNodes: Record<string, any> = {}
 
-  for (const prop of firstArg.properties) {
+  for (const prop of definitionObj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
 
     const propName = prop.name.text

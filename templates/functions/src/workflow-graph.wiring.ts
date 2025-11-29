@@ -1,13 +1,10 @@
-import {
-  wireWorkflowGraph,
-  graph,
-} from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import { wireWorkflowGraph } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Example workflow graph: User Onboarding
  * Demonstrates sequential flow with input refs
  */
-wireWorkflowGraph({
+wireWorkflowGraph((graph) => ({
   name: 'graphOnboarding',
   triggers: {
     http: { route: '/graph-onboarding', method: 'post' },
@@ -27,4 +24,4 @@ wireWorkflowGraph({
       }),
     },
   }),
-})
+}))
