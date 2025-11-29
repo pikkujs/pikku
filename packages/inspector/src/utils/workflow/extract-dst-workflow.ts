@@ -35,7 +35,10 @@ import {
   formatValidationErrors,
   ValidationError,
 } from './validation.js'
-import { extractStringLiteral, extractNumberLiteral } from '../extract-node-value.js'
+import {
+  extractStringLiteral,
+  extractNumberLiteral,
+} from '../extract-node-value.js'
 
 /**
  * Extraction context to track state during AST traversal
@@ -62,7 +65,7 @@ export interface ExtractionResult {
 /**
  * Extract simple workflow metadata from a function declaration
  */
-export function extractSimpleWorkflow(
+export function extractDSTWorkflow(
   funcNode: ts.Node,
   checker: ts.TypeChecker
 ): ExtractionResult {

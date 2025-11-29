@@ -12,7 +12,7 @@ import {
   extractDuration,
 } from '../utils/extract-node-value.js'
 import { getCommonWireMetaData } from '../utils/get-property-value.js'
-import { extractSimpleWorkflow } from '../utils/workflow/extract-simple-workflow.js'
+import { extractDSTWorkflow } from '../utils/workflow/extract-dst-workflow.js'
 
 /**
  * Recursively collect all RPC names from workflow steps
@@ -228,7 +228,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   // Try simple workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
-  const result = extractSimpleWorkflow(node, checker)
+  const result = extractDSTWorkflow(node, checker)
 
   if (result.status === 'ok' && result.steps) {
     // Simple extraction succeeded

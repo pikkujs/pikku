@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { ErrorCode } from '@pikku/inspector'
-import { convertAllDstToGraphs } from '@pikku/inspector/workflow-graph'
+import { convertAllDstToGraphs, ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
