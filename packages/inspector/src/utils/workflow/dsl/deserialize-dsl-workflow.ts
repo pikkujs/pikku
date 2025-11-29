@@ -415,6 +415,175 @@ export function deserializeDslWorkflow(
 }
 
 /**
+ * Convert a DataRef to graph ref() call
+ */
+function dataRefToGraphRef(ref: DataRef): string {
+  if (ref.path) {
+    return `ref('${ref.$ref}', '${ref.path}')`
+  }
+  return `ref('${ref.$ref}')`
+}
+
+/**
+ * Convert input object to graph input code using ref()
+ */
+function inputToGraphCode(input: Record<string, unknown>): {
+  hasRefs: boolean
+  code: string
+} {
+  const entries = Object.entries(input)
+  if (entries.length === 0) return { hasRefs: false, code: '{}' }
+
+  let hasRefs = false
+  const lines = entries.map(([key, value]) => {
+    if (isDataRef(value)) {
+      hasRefs = true
+      return `          ${key}: ${dataRefToGraphRef(value)},`
+    }
+    return `          ${key}: ${JSON.stringify(value)},`
+  })
+
+  return {
+    hasRefs,
+    code: `{\n${lines.join('\n')}\n        }`,
+  }
+}
+
+/**
+ * Serialize wires to code
+ */
+function wiresToCode(wires: SerializedWorkflowGraph['wires']): string {
+  if (!wires || Object.keys(wires).length === 0) return '{}'
+
+  const parts: string[] = []
+  if (wires.http) {
+    const httpParts: string[] = []
+    httpParts.push(`route: '${wires.http.route}'`)
+    if (wires.http.method) {
+      httpParts.push(`method: '${wires.http.method}'`)
+    }
+    parts.push(`http: { ${httpParts.join(', ')} }`)
+  }
+  // Add other wire types as needed (queue, schedule, etc.)
+
+  return `{ ${parts.join(', ')} }`
+}
+
+/**
+ * Deserialize a graph workflow to pikkuWorkflowGraph code
+ */
+export function deserializeGraphWorkflow(
+  workflow: SerializedWorkflowGraph,
+  options: DeserializeOptions = {}
+): string {
+  const { pikkuImportPath = '../.pikku/workflow/pikku-workflow-types.gen.js' } =
+    options
+
+  const lines: string[] = []
+
+  // Import statement
+  lines.push(
+    `import { pikkuWorkflowGraph, wireWorkflow } from '${pikkuImportPath}'`
+  )
+  lines.push('')
+
+  // Add description as comment if present
+  if (workflow.description) {
+    lines.push(`/**`)
+    lines.push(` * ${workflow.description}`)
+    lines.push(` */`)
+  }
+
+  // Build node to RPC mapping (first phase)
+  const nodeRpcMap: Record<string, string> = {}
+  for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+    if (
+      'rpcName' in node &&
+      typeof node.rpcName === 'string' &&
+      node.rpcName !== 'unknown'
+    ) {
+      nodeRpcMap[nodeId] = node.rpcName
+    }
+  }
+
+  // Build node configurations (second phase)
+  const nodeConfigs: string[] = []
+
+  for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+    const configParts: string[] = []
+
+    // Add next if present
+    if ('next' in node && node.next) {
+      configParts.push(`next: '${node.next}'`)
+    }
+
+    // Add input if present
+    if ('input' in node && node.input) {
+      const input = node.input as Record<string, unknown>
+      if (Object.keys(input).length > 0) {
+        const { hasRefs, code } = inputToGraphCode(input)
+        if (hasRefs) {
+          configParts.push(`input: (ref) => (${code})`)
+        } else {
+          configParts.push(`input: ${code}`)
+        }
+      }
+    }
+
+    if (configParts.length > 0) {
+      nodeConfigs.push(
+        `      ${nodeId}: {\n        ${configParts.join(',\n        ')},\n      }`
+      )
+    }
+  }
+
+  // Generate the pikkuWorkflowGraph call
+  lines.push(`export const ${workflow.name} = pikkuWorkflowGraph({`)
+  lines.push(`  name: '${workflow.name}',`)
+  if (workflow.description) {
+    lines.push(`  description: '${workflow.description}',`)
+  }
+  if (workflow.tags && workflow.tags.length > 0) {
+    lines.push(`  tags: [${workflow.tags.map((t) => `'${t}'`).join(', ')}],`)
+  }
+
+  // Generate graph builder
+  lines.push(`  graph: (graph) =>`)
+
+  // First phase: node to RPC mapping
+  const rpcMapEntries = Object.entries(nodeRpcMap)
+  if (rpcMapEntries.length > 0) {
+    lines.push(`    graph({`)
+    for (const [nodeId, rpcName] of rpcMapEntries) {
+      lines.push(`      ${nodeId}: '${rpcName}',`)
+    }
+    lines.push(`    })({`)
+  } else {
+    lines.push(`    graph({})({`)
+  }
+
+  // Second phase: node configurations
+  if (nodeConfigs.length > 0) {
+    lines.push(nodeConfigs.join(',\n'))
+  }
+
+  lines.push(`    }),`)
+  lines.push(`})`)
+  lines.push('')
+
+  // Generate wireWorkflow if wires are present
+  if (workflow.wires && Object.keys(workflow.wires).length > 0) {
+    lines.push(`wireWorkflow({`)
+    lines.push(`  wires: ${wiresToCode(workflow.wires)},`)
+    lines.push(`  graph: ${workflow.name},`)
+    lines.push(`})`)
+    lines.push('')
+  }
+
+  return lines.join('\n')
+}
+
+/**
  * Deserialize all workflows from JSON to DSL code
  */
 export function deserializeAllDslWorkflows(
@@ -424,9 +593,10 @@ export function deserializeAllDslWorkflows(
   const result: Record<string, string> = {}
 
   for (const [name, workflow] of Object.entries(workflows)) {
-    // Only deserialize DSL workflows
     if (workflow.source === 'dsl') {
       result[name] = deserializeDslWorkflow(workflow, options)
+    } else if (workflow.source === 'graph') {
+      result[name] = deserializeGraphWorkflow(workflow, options)
     }
   }
 

@@ -4,6 +4,7 @@
 export { extractDSLWorkflow } from './extract-dsl-workflow.js'
 export {
   deserializeDslWorkflow,
+  deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
 } from './deserialize-dsl-workflow.js'
 export * from './patterns.js'
