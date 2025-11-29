@@ -13,9 +13,9 @@
       "default": "./dist/index.js"
     },
     "./workflow-graph": {
-      "types": "./dist/workflow/graph/index.d.ts",
-      "import": "./dist/workflow/graph/index.js",
-      "default": "./dist/workflow/graph/index.js"
+      "types": "./dist/utils/workflow/graph/index.d.ts",
+      "import": "./dist/utils/workflow/graph/index.js",
+      "default": "./dist/utils/workflow/graph/index.js"
     }
   },
   "scripts": {
