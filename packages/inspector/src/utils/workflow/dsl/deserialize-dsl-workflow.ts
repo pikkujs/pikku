@@ -31,10 +31,15 @@ function isDataRef(value: unknown): value is DataRef {
 /**
  * Convert a DataRef to code expression
  */
-function dataRefToCode(ref: DataRef): string {
+function dataRefToCode(ref: DataRef, itemVar?: string): string {
   if (ref.$ref === 'trigger') {
     // Reference to trigger input (data)
     return ref.path ? `data.${ref.path}` : 'data'
+  }
+  if (ref.$ref === '$item') {
+    // Reference to the current loop item
+    // The path contains the variable name in this case
+    return ref.path || itemVar || 'item'
   }
   // Reference to a step output variable
   return ref.path ? `${ref.$ref}.${ref.path}` : ref.$ref
@@ -54,7 +59,11 @@ function isPassthrough(input: Record<string, unknown>): boolean {
 /**
  * Convert input object to code
  */
-function inputToCode(input: Record<string, unknown>, indent: string): string {
+function inputToCode(
+  input: Record<string, unknown>,
+  indent: string,
+  itemVar?: string
+): string {
   // Check if this is a passthrough (entire data object)
   if (isPassthrough(input)) {
     return 'data'
@@ -65,7 +74,7 @@ function inputToCode(input: Record<string, unknown>, indent: string): string {
 
   const lines = entries.map(([key, value]) => {
     if (isDataRef(value)) {
-      return `${indent}  ${key}: ${dataRefToCode(value)},`
+      return `${indent}  ${key}: ${dataRefToCode(value, itemVar)},`
     }
     return `${indent}  ${key}: ${JSON.stringify(value)},`
   })
@@ -276,7 +285,11 @@ function nodeToCode(
             if ('rpcName' in childNode && childNode.rpcName) {
               const stepName = childNode.stepName || `Call ${childNode.rpcName}`
               const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(input, indent + '    ')
+              const inputCode = inputToCode(
+                input,
+                indent + '    ',
+                flowNode.itemVar
+              )
               lines.push(
                 `${indent}    await workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode})`
               )
@@ -294,7 +307,11 @@ function nodeToCode(
             if ('rpcName' in childNode && childNode.rpcName) {
               const stepName = childNode.stepName || `Call ${childNode.rpcName}`
               const input = (childNode.input || {}) as Record<string, unknown>
-              const inputCode = inputToCode(input, indent + '  ')
+              const inputCode = inputToCode(
+                input,
+                indent + '  ',
+                flowNode.itemVar
+              )
               lines.push(
                 `${indent}  await workflow.do('${stepName}', '${childNode.rpcName}', ${inputCode})`
               )

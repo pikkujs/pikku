@@ -51,6 +51,26 @@ interface ExtractionContext {
   conditionalVars: Set<string>
   inputParamName: string
   errors: ValidationError[]
+  /** Loop variables in scope (for fanout item variables) */
+  loopVars: Set<string>
+}
+
+/**
+ * Extract full source path from an expression (e.g., data.memberEmails)
+ */
+function extractSourcePath(expr: ts.Expression): string | null {
+  if (ts.isIdentifier(expr)) {
+    return expr.text
+  }
+
+  if (ts.isPropertyAccessExpression(expr)) {
+    const base = extractSourcePath(expr.expression)
+    if (base) {
+      return `${base}.${expr.name.text}`
+    }
+  }
+
+  return null
 }
 
 /**
@@ -99,6 +119,7 @@ export function extractDSLWorkflow(
       conditionalVars: new Set(),
       inputParamName,
       errors: [],
+      loopVars: new Set(),
     }
 
     // Validate no disallowed patterns
@@ -744,16 +765,7 @@ function extractArrayFilter(
   }
 
   const sourceExpr = call.expression.expression
-  let sourceVar: string | null = null
-
-  if (ts.isIdentifier(sourceExpr)) {
-    sourceVar = sourceExpr.text
-  } else if (
-    ts.isPropertyAccessExpression(sourceExpr) &&
-    ts.isIdentifier(sourceExpr.expression)
-  ) {
-    sourceVar = sourceExpr.expression.text
-  }
+  const sourceVar = extractSourcePath(sourceExpr)
 
   if (!sourceVar) {
     return null
@@ -801,16 +813,7 @@ function extractArrayPredicate(
 
   const mode = call.expression.name.text as 'some' | 'every'
   const sourceExpr = call.expression.expression
-  let sourceVar: string | null = null
-
-  if (ts.isIdentifier(sourceExpr)) {
-    sourceVar = sourceExpr.text
-  } else if (
-    ts.isPropertyAccessExpression(sourceExpr) &&
-    ts.isIdentifier(sourceExpr.expression)
-  ) {
-    sourceVar = sourceExpr.expression.text
-  }
+  const sourceVar = extractSourcePath(sourceExpr)
 
   if (!sourceVar) {
     return null
@@ -863,16 +866,7 @@ function extractParallelFanout(
 
   // Extract source array
   const sourceExpr = mapCall.expression.expression
-  let sourceVar: string | null = null
-
-  if (ts.isIdentifier(sourceExpr)) {
-    sourceVar = sourceExpr.text
-  } else if (
-    ts.isPropertyAccessExpression(sourceExpr) &&
-    ts.isIdentifier(sourceExpr.expression)
-  ) {
-    sourceVar = sourceExpr.expression.text
-  }
+  const sourceVar = extractSourcePath(sourceExpr)
 
   if (!sourceVar) {
     return null
@@ -924,10 +918,11 @@ function extractParallelFanout(
     return null
   }
 
-  // Create a temporary context for the child step
+  // Create a temporary context for the child step with the loop variable
   const childContext: ExtractionContext = {
     ...context,
     outputVars: new Map(context.outputVars),
+    loopVars: new Set([...context.loopVars, itemVar]),
   }
 
   const childStep = extractRpcStep(doCall, childContext)
@@ -1219,9 +1214,11 @@ function extractInputSources(
       let source: InputSource | null = null
 
       if (ts.isShorthandPropertyAssignment(prop)) {
-        // { email } - could be from input or output var
+        // { email } - could be from loop var, output var, or input
         const varName = prop.name.text
-        if (context.outputVars.has(varName)) {
+        if (context.loopVars.has(varName)) {
+          source = { from: 'item', path: varName }
+        } else if (context.outputVars.has(varName)) {
           source = { from: 'outputVar', name: varName }
         } else {
           source = { from: 'input', path: varName }
@@ -1279,6 +1276,11 @@ function extractInputSource(
   // Identifier: email, orgId
   if (ts.isIdentifier(node)) {
     const varName = node.text
+
+    // Check if it's a loop variable (from fanout)
+    if (context.loopVars.has(varName)) {
+      return { from: 'item', path: varName }
+    }
 
     if (context.outputVars.has(varName)) {
       return { from: 'outputVar', name: varName }
