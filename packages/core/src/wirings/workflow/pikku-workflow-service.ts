@@ -349,12 +349,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Start a new workflow run
    * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
    * @param options.inline - If true, execute workflow directly without queue service
+   * @param options.startNode - Starting node ID for graph workflows (from wire config)
    */
   public async startWorkflow<I>(
     name: string,
     input: I,
     rpcService: any,
-    options?: { inline?: boolean }
+    options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }> {
     // Check meta to determine workflow type
     const meta = pikkuState(null, 'workflows', 'meta')
@@ -367,7 +368,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Check if this is a graph workflow (source === 'graph')
     if (workflowMeta.source === 'graph') {
       // Graph workflows use the graph scheduler
-      return runWorkflowGraph(this, name, input, rpcService, options?.inline)
+      return runWorkflowGraph(
+        this,
+        name,
+        input,
+        rpcService,
+        options?.inline,
+        options?.startNode
+      )
     }
 
     // DSL workflow - check registration exists

@@ -11,27 +11,38 @@ import { HTTPWiringMeta } from '../http/http.types.js'
 import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
 
 /**
+ * Result of finding a workflow by HTTP wire
+ */
+export interface WorkflowHttpMatch {
+  workflowName: string
+  startNode?: string
+}
+
+/**
  * Find workflow name by matching route and method against workflow wires
  */
 export const findWorkflowByHttpWire = (
   route: string,
   method: string
-): string | undefined => {
+): WorkflowHttpMatch | undefined => {
   const wirings = pikkuState(null, 'workflows', 'wirings')
   const graphWirings = pikkuState(null, 'workflows', 'graphWirings')
 
   // Check DSL workflow wirings
   for (const [, wiring] of wirings) {
-    if (
-      wiring.wires?.http?.route === route &&
-      wiring.wires?.http?.method === method
-    ) {
-      const meta = pikkuState(null, 'workflows', 'meta')
-      for (const [name, workflowMeta] of Object.entries(meta)) {
-        if (workflowMeta.source !== 'graph') {
-          const registrations = pikkuState(null, 'workflows', 'registrations')
-          if (registrations.has(name)) {
-            return name
+    const httpWires = wiring.wires?.http
+    if (httpWires) {
+      const matchedWire = httpWires.find(
+        (w) => w.route === route && w.method === method
+      )
+      if (matchedWire) {
+        const meta = pikkuState(null, 'workflows', 'meta')
+        for (const [name, workflowMeta] of Object.entries(meta)) {
+          if (workflowMeta.source !== 'graph') {
+            const registrations = pikkuState(null, 'workflows', 'registrations')
+            if (registrations.has(name)) {
+              return { workflowName: name, startNode: matchedWire.startNode }
+            }
           }
         }
       }
@@ -40,14 +51,17 @@ export const findWorkflowByHttpWire = (
 
   // Check graph workflow wirings
   for (const [, wiring] of graphWirings) {
-    if (
-      wiring.wires?.http?.route === route &&
-      wiring.wires?.http?.method === method
-    ) {
-      const meta = pikkuState(null, 'workflows', 'meta')
-      for (const [name, workflowMeta] of Object.entries(meta)) {
-        if (workflowMeta.source === 'graph') {
-          return name
+    const httpWires = wiring.wires?.http
+    if (httpWires) {
+      const matchedWire = httpWires.find(
+        (w) => w.route === route && w.method === method
+      )
+      if (matchedWire) {
+        const meta = pikkuState(null, 'workflows', 'meta')
+        for (const [name, workflowMeta] of Object.entries(meta)) {
+          if (workflowMeta.source === 'graph') {
+            return { workflowName: name, startNode: matchedWire.startNode }
+          }
         }
       }
     }
@@ -79,8 +93,8 @@ export const startWorkflowByHttpWire = async (
 ): Promise<void> => {
   const { meta } = matchedRoute
 
-  const workflowName = findWorkflowByHttpWire(meta.route, meta.method)
-  if (!workflowName) {
+  const match = findWorkflowByHttpWire(meta.route, meta.method)
+  if (!match) {
     throw new NotFoundError(
       `No workflow found for route ${meta.method.toUpperCase()} ${meta.route}`
     )
@@ -99,7 +113,8 @@ export const startWorkflowByHttpWire = async (
     wire,
     {}
   )
-  await workflowService.startWorkflow(workflowName, data, rpcService, {
+  await workflowService.startWorkflow(match.workflowName, data, rpcService, {
     inline: true,
+    startNode: match.startNode,
   })
 }

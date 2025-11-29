@@ -132,20 +132,77 @@ export const isFlowNode = (node: SerializedGraphNode): node is FlowNode =>
   'flow' in node
 
 /**
- * HTTP wire configuration
+ * HTTP wire configuration with startNode
  */
-export interface HTTPWireConfig {
+export interface HttpWire {
   route: string
   method: 'get' | 'post' | 'put' | 'patch' | 'delete'
+  startNode: string
 }
 
 /**
- * Wire configuration for workflows
+ * Channel wire configuration
  */
-export interface WorkflowWires {
-  http?: HTTPWireConfig
-  queue?: string
-  schedule?: string
+export interface ChannelWire {
+  name: string
+  onConnect?: string
+  onDisconnect?: string
+  onMessage?: string
+}
+
+/**
+ * Queue wire configuration
+ */
+export interface QueueWire {
+  name: string
+  startNode: string
+}
+
+/**
+ * CLI wire configuration
+ */
+export interface CliWire {
+  command: string
+  startNode: string
+}
+
+/**
+ * MCP wire configurations
+ */
+export interface McpWires {
+  tool?: Array<{ name: string; startNode: string }>
+  prompt?: Array<{ name: string; startNode: string }>
+  resource?: Array<{ uri: string; startNode: string }>
+}
+
+/**
+ * Schedule wire configuration
+ */
+export interface ScheduleWire {
+  cron?: string
+  interval?: string
+  startNode: string
+}
+
+/**
+ * Trigger wire configuration
+ */
+export interface TriggerWire {
+  name: string
+  startNode: string
+}
+
+/**
+ * All wire configurations for workflows
+ */
+export interface WorkflowWiresConfig {
+  http?: HttpWire[]
+  channel?: ChannelWire[]
+  queue?: QueueWire[]
+  cli?: CliWire[]
+  mcp?: McpWires
+  schedule?: ScheduleWire[]
+  trigger?: TriggerWire[]
 }
 
 /**
@@ -168,7 +225,7 @@ export interface SerializedWorkflowGraph {
   /** Tags for organization */
   tags?: string[]
   /** Wires - how the workflow is triggered */
-  wires: WorkflowWires
+  wires: WorkflowWiresConfig
   /** Serialized nodes */
   nodes: Record<string, SerializedGraphNode>
   /** Entry node(s) - first nodes to execute */

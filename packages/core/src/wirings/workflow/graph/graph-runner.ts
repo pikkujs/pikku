@@ -456,13 +456,15 @@ async function continueGraphInline(
 
 /**
  * Start a workflow graph execution
+ * @param startNode - Optional starting node ID (from wire config). If not provided, uses entryNodeIds from meta.
  */
 export async function runWorkflowGraph(
   workflowService: PikkuWorkflowService,
   graphName: string,
   triggerInput: any,
   rpcService?: any,
-  inline?: boolean
+  inline?: boolean,
+  startNode?: string
 ): Promise<{ runId: string }> {
   const definition = getWorkflowGraph(graphName)
   if (!definition) {
@@ -472,8 +474,16 @@ export async function runWorkflowGraph(
   // Get precomputed entryNodeIds from workflow meta (computed at build time)
   const meta = pikkuState(null, 'workflows', 'meta')
   const workflowMeta = meta[graphName]
-  if (!workflowMeta?.entryNodeIds) {
-    throw new Error(`Workflow graph '${graphName}' has no entry nodes in meta`)
+
+  // Use startNode from wire if provided, otherwise use entryNodeIds from meta
+  const entryNodes: string[] = startNode
+    ? [startNode]
+    : (workflowMeta?.entryNodeIds ?? [])
+
+  if (entryNodes.length === 0) {
+    throw new Error(
+      `Workflow graph '${graphName}' has no entry nodes in meta and no startNode was provided`
+    )
   }
 
   const graph = definition.graph
@@ -488,7 +498,7 @@ export async function runWorkflowGraph(
     if (inline && rpcService) {
       // Inline mode - execute entry nodes in parallel
       await Promise.all(
-        workflowMeta.entryNodeIds.map((nodeId) =>
+        entryNodes.map((nodeId) =>
           executeGraphNodeInline(
             workflowService,
             rpcService,
@@ -511,7 +521,7 @@ export async function runWorkflowGraph(
       )
     } else {
       // Queue-based mode
-      for (const nodeId of workflowMeta.entryNodeIds) {
+      for (const nodeId of entryNodes) {
         const node = graph[nodeId]
         if (!node) continue
 

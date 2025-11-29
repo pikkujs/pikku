@@ -5,51 +5,341 @@ import { extractStringLiteral } from '../utils/extract-node-value.js'
 import type {
   SerializedWorkflowGraph,
   DataRef,
-  WorkflowWires,
+  WorkflowWiresConfig,
+  HttpWire,
+  ChannelWire,
+  QueueWire,
+  CliWire,
+  McpWires,
+  ScheduleWire,
+  TriggerWire,
 } from '../utils/workflow/graph/workflow-graph.types.js'
 
 /**
  * Extract wire configuration from object literal
  */
-function extractWires(
+function extractWiresConfig(
   wiresNode: ts.ObjectLiteralExpression,
   checker: ts.TypeChecker
-): WorkflowWires {
-  const wires: WorkflowWires = {}
+): WorkflowWiresConfig {
+  const wires: WorkflowWiresConfig = {}
 
   for (const prop of wiresNode.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
 
     const propName = prop.name.text
 
-    if (propName === 'http' && ts.isObjectLiteralExpression(prop.initializer)) {
-      const httpWire: { route?: string; method?: string } = {}
-
-      for (const httpProp of prop.initializer.properties) {
-        if (
-          !ts.isPropertyAssignment(httpProp) ||
-          !ts.isIdentifier(httpProp.name)
-        )
-          continue
-
-        if (httpProp.name.text === 'route') {
-          httpWire.route = extractStringLiteral(httpProp.initializer, checker)
-        } else if (httpProp.name.text === 'method') {
-          httpWire.method = extractStringLiteral(httpProp.initializer, checker)
+    if (propName === 'http' && ts.isArrayLiteralExpression(prop.initializer)) {
+      wires.http = []
+      for (const elem of prop.initializer.elements) {
+        if (ts.isObjectLiteralExpression(elem)) {
+          const httpWire: Partial<HttpWire> = {}
+          for (const httpProp of elem.properties) {
+            if (
+              !ts.isPropertyAssignment(httpProp) ||
+              !ts.isIdentifier(httpProp.name)
+            )
+              continue
+            const httpPropName = httpProp.name.text
+            if (httpPropName === 'route') {
+              httpWire.route = extractStringLiteral(
+                httpProp.initializer,
+                checker
+              )
+            } else if (httpPropName === 'method') {
+              httpWire.method = extractStringLiteral(
+                httpProp.initializer,
+                checker
+              ) as HttpWire['method']
+            } else if (httpPropName === 'startNode') {
+              httpWire.startNode = extractStringLiteral(
+                httpProp.initializer,
+                checker
+              )
+            }
+          }
+          if (httpWire.route && httpWire.method && httpWire.startNode) {
+            wires.http.push(httpWire as HttpWire)
+          }
         }
       }
-
-      if (httpWire.route && httpWire.method) {
-        wires.http = httpWire as WorkflowWires['http']
+    } else if (
+      propName === 'channel' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      wires.channel = []
+      for (const elem of prop.initializer.elements) {
+        if (ts.isObjectLiteralExpression(elem)) {
+          const channelWire: Partial<ChannelWire> = {}
+          for (const channelProp of elem.properties) {
+            if (
+              !ts.isPropertyAssignment(channelProp) ||
+              !ts.isIdentifier(channelProp.name)
+            )
+              continue
+            const channelPropName = channelProp.name.text
+            if (channelPropName === 'name') {
+              channelWire.name = extractStringLiteral(
+                channelProp.initializer,
+                checker
+              )
+            } else if (channelPropName === 'onConnect') {
+              channelWire.onConnect = extractStringLiteral(
+                channelProp.initializer,
+                checker
+              )
+            } else if (channelPropName === 'onDisconnect') {
+              channelWire.onDisconnect = extractStringLiteral(
+                channelProp.initializer,
+                checker
+              )
+            } else if (channelPropName === 'onMessage') {
+              channelWire.onMessage = extractStringLiteral(
+                channelProp.initializer,
+                checker
+              )
+            }
+          }
+          if (channelWire.name) {
+            wires.channel.push(channelWire as ChannelWire)
+          }
+        }
       }
-    } else if (propName === 'queue') {
-      wires.queue = extractStringLiteral(prop.initializer, checker)
-    } else if (propName === 'schedule') {
-      wires.schedule = extractStringLiteral(prop.initializer, checker)
+    } else if (
+      propName === 'queue' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      wires.queue = []
+      for (const elem of prop.initializer.elements) {
+        if (ts.isObjectLiteralExpression(elem)) {
+          const queueWire: Partial<QueueWire> = {}
+          for (const queueProp of elem.properties) {
+            if (
+              !ts.isPropertyAssignment(queueProp) ||
+              !ts.isIdentifier(queueProp.name)
+            )
+              continue
+            const queuePropName = queueProp.name.text
+            if (queuePropName === 'name') {
+              queueWire.name = extractStringLiteral(
+                queueProp.initializer,
+                checker
+              )
+            } else if (queuePropName === 'startNode') {
+              queueWire.startNode = extractStringLiteral(
+                queueProp.initializer,
+                checker
+              )
+            }
+          }
+          if (queueWire.name && queueWire.startNode) {
+            wires.queue.push(queueWire as QueueWire)
+          }
+        }
+      }
+    } else if (
+      propName === 'cli' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      wires.cli = []
+      for (const elem of prop.initializer.elements) {
+        if (ts.isObjectLiteralExpression(elem)) {
+          const cliWire: Partial<CliWire> = {}
+          for (const cliProp of elem.properties) {
+            if (
+              !ts.isPropertyAssignment(cliProp) ||
+              !ts.isIdentifier(cliProp.name)
+            )
+              continue
+            const cliPropName = cliProp.name.text
+            if (cliPropName === 'command') {
+              cliWire.command = extractStringLiteral(
+                cliProp.initializer,
+                checker
+              )
+            } else if (cliPropName === 'startNode') {
+              cliWire.startNode = extractStringLiteral(
+                cliProp.initializer,
+                checker
+              )
+            }
+          }
+          if (cliWire.command && cliWire.startNode) {
+            wires.cli.push(cliWire as CliWire)
+          }
+        }
+      }
+    } else if (
+      propName === 'mcp' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      const mcpWires: McpWires = {}
+      for (const mcpProp of prop.initializer.properties) {
+        if (!ts.isPropertyAssignment(mcpProp) || !ts.isIdentifier(mcpProp.name))
+          continue
+        const mcpPropName = mcpProp.name.text
+        if (
+          mcpPropName === 'tool' &&
+          ts.isArrayLiteralExpression(mcpProp.initializer)
+        ) {
+          mcpWires.tool = extractMcpToolWireArray(mcpProp.initializer, checker)
+        } else if (
+          mcpPropName === 'prompt' &&
+          ts.isArrayLiteralExpression(mcpProp.initializer)
+        ) {
+          mcpWires.prompt = extractMcpToolWireArray(
+            mcpProp.initializer,
+            checker
+          )
+        } else if (
+          mcpPropName === 'resource' &&
+          ts.isArrayLiteralExpression(mcpProp.initializer)
+        ) {
+          mcpWires.resource = extractMcpResourceWireArray(
+            mcpProp.initializer,
+            checker
+          )
+        }
+      }
+      if (mcpWires.tool || mcpWires.prompt || mcpWires.resource) {
+        wires.mcp = mcpWires
+      }
+    } else if (
+      propName === 'schedule' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      wires.schedule = []
+      for (const elem of prop.initializer.elements) {
+        if (ts.isObjectLiteralExpression(elem)) {
+          const scheduleWire: Partial<ScheduleWire> = {}
+          for (const scheduleProp of elem.properties) {
+            if (
+              !ts.isPropertyAssignment(scheduleProp) ||
+              !ts.isIdentifier(scheduleProp.name)
+            )
+              continue
+            const schedulePropName = scheduleProp.name.text
+            if (schedulePropName === 'cron') {
+              scheduleWire.cron = extractStringLiteral(
+                scheduleProp.initializer,
+                checker
+              )
+            } else if (schedulePropName === 'interval') {
+              scheduleWire.interval = extractStringLiteral(
+                scheduleProp.initializer,
+                checker
+              )
+            } else if (schedulePropName === 'startNode') {
+              scheduleWire.startNode = extractStringLiteral(
+                scheduleProp.initializer,
+                checker
+              )
+            }
+          }
+          if (
+            (scheduleWire.cron || scheduleWire.interval) &&
+            scheduleWire.startNode
+          ) {
+            wires.schedule.push(scheduleWire as ScheduleWire)
+          }
+        }
+      }
+    } else if (
+      propName === 'trigger' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      wires.trigger = []
+      for (const elem of prop.initializer.elements) {
+        if (ts.isObjectLiteralExpression(elem)) {
+          const triggerWire: Partial<TriggerWire> = {}
+          for (const triggerProp of elem.properties) {
+            if (
+              !ts.isPropertyAssignment(triggerProp) ||
+              !ts.isIdentifier(triggerProp.name)
+            )
+              continue
+            const triggerPropName = triggerProp.name.text
+            if (triggerPropName === 'name') {
+              triggerWire.name = extractStringLiteral(
+                triggerProp.initializer,
+                checker
+              )
+            } else if (triggerPropName === 'startNode') {
+              triggerWire.startNode = extractStringLiteral(
+                triggerProp.initializer,
+                checker
+              )
+            }
+          }
+          if (triggerWire.name && triggerWire.startNode) {
+            wires.trigger.push(triggerWire as TriggerWire)
+          }
+        }
+      }
     }
   }
 
   return wires
+}
+
+/**
+ * Helper to extract MCP wire arrays for tool/prompt (name field)
+ */
+function extractMcpToolWireArray(
+  arrayNode: ts.ArrayLiteralExpression,
+  checker: ts.TypeChecker
+): Array<{ name: string; startNode: string }> {
+  const result: Array<{ name: string; startNode: string }> = []
+  for (const elem of arrayNode.elements) {
+    if (ts.isObjectLiteralExpression(elem)) {
+      let name: string | undefined
+      let startNode: string | undefined
+      for (const prop of elem.properties) {
+        if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name))
+          continue
+        const propName = prop.name.text
+        if (propName === 'name') {
+          name = extractStringLiteral(prop.initializer, checker)
+        } else if (propName === 'startNode') {
+          startNode = extractStringLiteral(prop.initializer, checker)
+        }
+      }
+      if (name && startNode) {
+        result.push({ name, startNode })
+      }
+    }
+  }
+  return result
+}
+
+/**
+ * Helper to extract MCP wire arrays for resource (uri field)
+ */
+function extractMcpResourceWireArray(
+  arrayNode: ts.ArrayLiteralExpression,
+  checker: ts.TypeChecker
+): Array<{ uri: string; startNode: string }> {
+  const result: Array<{ uri: string; startNode: string }> = []
+  for (const elem of arrayNode.elements) {
+    if (ts.isObjectLiteralExpression(elem)) {
+      let uri: string | undefined
+      let startNode: string | undefined
+      for (const prop of elem.properties) {
+        if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name))
+          continue
+        const propName = prop.name.text
+        if (propName === 'uri') {
+          uri = extractStringLiteral(prop.initializer, checker)
+        } else if (propName === 'startNode') {
+          startNode = extractStringLiteral(prop.initializer, checker)
+        }
+      }
+      if (uri && startNode) {
+        result.push({ uri, startNode })
+      }
+    }
+  }
+  return result
 }
 
 /**
@@ -138,128 +428,6 @@ function extractInputMapping(
   }
 
   return input
-}
-
-/**
- * Extract node config from a call expression
- */
-function extractNodeFromCall(
-  callExpr: ts.CallExpression,
-  checker: ts.TypeChecker
-): {
-  rpcName: string
-  input: Record<string, any>
-  next: any
-  onError: any
-} | null {
-  const args = callExpr.arguments
-  const configArg = args[0]
-
-  if (configArg && ts.isObjectLiteralExpression(configArg)) {
-    return extractNodeFromObject(configArg, checker)
-  }
-
-  return null
-}
-
-/**
- * Extract node config from an object literal
- */
-function extractNodeFromObject(
-  obj: ts.ObjectLiteralExpression,
-  checker: ts.TypeChecker
-): {
-  rpcName: string
-  input: Record<string, any>
-  next: any
-  onError: any
-} | null {
-  let rpcName = 'unknown'
-  let input: Record<string, any> = {}
-  let next: any = undefined
-  let onError: any = undefined
-
-  for (const prop of obj.properties) {
-    if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
-
-    const propName = prop.name.text
-
-    if (propName === 'func') {
-      const funcValue = extractStringLiteral(prop.initializer, checker)
-      if (funcValue) {
-        rpcName = funcValue
-      }
-    } else if (propName === 'next') {
-      next = extractNextConfig(prop.initializer, checker)
-    } else if (propName === 'onError') {
-      onError = extractNextConfig(prop.initializer, checker)
-    } else if (propName === 'input') {
-      input = extractInputMapping(prop.initializer, checker)
-    }
-  }
-
-  return { rpcName, input, next, onError }
-}
-
-/**
- * Extract graph nodes from object literal
- */
-function extractGraphNodes(
-  graphObj: ts.ObjectLiteralExpression,
-  checker: ts.TypeChecker,
-  state: any
-): {
-  nodes: Record<string, any>
-  rpcNames: Set<string>
-} {
-  const nodes: Record<string, any> = {}
-  const rpcNames = new Set<string>()
-
-  for (const prop of graphObj.properties) {
-    if (!ts.isPropertyAssignment(prop)) continue
-
-    const nodeId = ts.isIdentifier(prop.name)
-      ? prop.name.text
-      : ts.isStringLiteral(prop.name)
-        ? prop.name.text
-        : null
-
-    if (!nodeId) continue
-
-    let nodeConfig: {
-      rpcName: string
-      input: Record<string, any>
-      next: any
-      onError: any
-    } | null = null
-
-    if (ts.isCallExpression(prop.initializer)) {
-      const expr = prop.initializer.expression
-      if (
-        ts.isIdentifier(expr) &&
-        (expr.text === 'graphNode' || expr.text === 'node')
-      ) {
-        nodeConfig = extractNodeFromCall(prop.initializer, checker)
-      }
-    } else if (ts.isObjectLiteralExpression(prop.initializer)) {
-      nodeConfig = extractNodeFromObject(prop.initializer, checker)
-    }
-
-    if (nodeConfig) {
-      rpcNames.add(nodeConfig.rpcName)
-      state.rpc.invokedFunctions.add(nodeConfig.rpcName)
-
-      nodes[nodeId] = {
-        nodeId,
-        rpcName: nodeConfig.rpcName,
-        input: nodeConfig.input,
-        next: nodeConfig.next,
-        onError: nodeConfig.onError,
-      }
-    }
-  }
-
-  return { nodes, rpcNames }
 }
 
 /**
@@ -372,22 +540,24 @@ function computeEntryNodeIds(graphNodes: Record<string, any>): string[] {
   )
 }
 
+interface PikkuWorkflowGraphExtract {
+  name?: string
+  description?: string
+  tags?: string[]
+  wires?: WorkflowWiresConfig
+  nodesNode?: ts.ObjectLiteralExpression // The nodes: { entry: 'rpc1', ... } object
+  configNode?: ts.ObjectLiteralExpression // The config: { entry: { next: ... }, ... } object
+  exportedName?: string
+}
+
 /**
  * Extract pikkuWorkflowGraph config from a variable reference or call expression
- * Returns { name, description, tags, graphConfigNode, exportedName } where graphConfigNode is the graph callback's object
+ * New format: pikkuWorkflowGraph({ nodes: {...}, wires: {...}, config: {...} })
  */
 function extractPikkuWorkflowGraphConfig(
   node: ts.Node,
   checker: ts.TypeChecker
-):
-  | {
-      name?: string
-      description?: string
-      tags?: string[]
-      graphConfigNode?: ts.Node
-      exportedName?: string
-    }
-  | undefined {
+): PikkuWorkflowGraphExtract | undefined {
   // If it's an identifier, resolve to the declaration
   if (ts.isIdentifier(node)) {
     const symbol = checker.getSymbolAtLocation(node)
@@ -422,7 +592,9 @@ function extractPikkuWorkflowGraphConfig(
         let name: string | undefined
         let description: string | undefined
         let tags: string[] | undefined
-        let graphConfigNode: ts.Node | undefined
+        let wires: WorkflowWiresConfig | undefined
+        let nodesNode: ts.ObjectLiteralExpression | undefined
+        let configNode: ts.ObjectLiteralExpression | undefined
 
         for (const prop of configArg.properties) {
           if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name))
@@ -440,13 +612,25 @@ function extractPikkuWorkflowGraphConfig(
             tags = prop.initializer.elements
               .filter(ts.isStringLiteral)
               .map((el) => (el as ts.StringLiteral).text)
-          } else if (propName === 'graph') {
-            // The graph property is a callback: (graph) => graph({...})({...})
-            graphConfigNode = prop.initializer
+          } else if (
+            propName === 'wires' &&
+            ts.isObjectLiteralExpression(prop.initializer)
+          ) {
+            wires = extractWiresConfig(prop.initializer, checker)
+          } else if (
+            propName === 'nodes' &&
+            ts.isObjectLiteralExpression(prop.initializer)
+          ) {
+            nodesNode = prop.initializer
+          } else if (
+            propName === 'config' &&
+            ts.isObjectLiteralExpression(prop.initializer)
+          ) {
+            configNode = prop.initializer
           }
         }
 
-        return { name, description, tags, graphConfigNode }
+        return { name, description, tags, wires, nodesNode, configNode }
       }
     }
   }
@@ -455,66 +639,112 @@ function extractPikkuWorkflowGraphConfig(
 }
 
 /**
- * Extract graph nodes from a pikkuWorkflowGraph graph callback
- * The callback is: (graph) => graph({ entry: 'rpc1', ... })({ entry: { next: ... }, ... })
+ * Extract graph nodes from the new pikkuWorkflowGraph format
+ * New format: { nodes: { entry: 'rpcName', ... }, config: { entry: { next: 'sendWelcome', ... }, ... } }
  */
-function extractGraphFromCallback(
-  callbackNode: ts.Node,
+function extractGraphFromNewFormat(
+  nodesNode: ts.ObjectLiteralExpression | undefined,
+  configNode: ts.ObjectLiteralExpression | undefined,
   checker: ts.TypeChecker,
   state: any
 ): Record<string, any> {
-  if (!ts.isArrowFunction(callbackNode)) {
-    return {}
+  const nodes: Record<string, any> = {}
+
+  if (!nodesNode) {
+    return nodes
   }
 
-  const body = callbackNode.body
+  // Extract node ID to RPC name mapping from 'nodes' property
+  const nodeRpcMap: Record<string, string> = {}
+  for (const prop of nodesNode.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue
 
-  // The body should be a call expression: graph({...})({...})
-  let resultCall: ts.CallExpression | undefined
+    const nodeId = ts.isIdentifier(prop.name)
+      ? prop.name.text
+      : ts.isStringLiteral(prop.name)
+        ? prop.name.text
+        : null
 
-  if (ts.isCallExpression(body)) {
-    resultCall = body
-  } else if (
-    ts.isParenthesizedExpression(body) &&
-    ts.isCallExpression(body.expression)
-  ) {
-    resultCall = body.expression
-  }
+    if (!nodeId) continue
 
-  if (!resultCall) {
-    return {}
-  }
-
-  // This is the second call in curried pattern: graph({funcMap})({nodeConfig})
-  // The argument is the node config object
-  const nodeConfigArg = resultCall.arguments[0]
-  if (nodeConfigArg) {
-    if (ts.isObjectLiteralExpression(nodeConfigArg)) {
-      const result = extractGraphNodes(nodeConfigArg, checker, state)
-      return result.nodes
+    const rpcName = extractStringLiteral(prop.initializer, checker)
+    if (rpcName) {
+      nodeRpcMap[nodeId] = rpcName
+      state.rpc.invokedFunctions.add(rpcName)
     }
-    if (ts.isArrowFunction(nodeConfigArg)) {
-      // Handle callback pattern: graph({...})((nodes) => ({...}))
-      const callbackBody = nodeConfigArg.body
-      if (ts.isObjectLiteralExpression(callbackBody)) {
-        const result = extractGraphNodes(callbackBody, checker, state)
-        return result.nodes
-      }
-      if (
-        ts.isParenthesizedExpression(callbackBody) &&
-        ts.isObjectLiteralExpression(callbackBody.expression)
-      ) {
-        const result = extractGraphNodes(
-          callbackBody.expression,
-          checker,
-          state
+  }
+
+  // Initialize nodes with their RPC names
+  for (const [nodeId, rpcName] of Object.entries(nodeRpcMap)) {
+    nodes[nodeId] = {
+      nodeId,
+      rpcName,
+      input: {},
+      next: undefined,
+      onError: undefined,
+    }
+  }
+
+  // Extract config for each node from 'config' property
+  if (configNode) {
+    for (const prop of configNode.properties) {
+      if (!ts.isPropertyAssignment(prop)) continue
+
+      const nodeId = ts.isIdentifier(prop.name)
+        ? prop.name.text
+        : ts.isStringLiteral(prop.name)
+          ? prop.name.text
+          : null
+
+      if (!nodeId || !nodes[nodeId]) continue
+
+      if (ts.isObjectLiteralExpression(prop.initializer)) {
+        const nodeConfig = extractNodeConfigFromObject(
+          prop.initializer,
+          checker
         )
-        return result.nodes
+        if (nodeConfig) {
+          nodes[nodeId].next = nodeConfig.next
+          nodes[nodeId].onError = nodeConfig.onError
+          nodes[nodeId].input = nodeConfig.input
+        }
       }
     }
   }
 
-  return {}
+  return nodes
+}
+
+/**
+ * Extract node config (next, onError, input) from object literal
+ */
+function extractNodeConfigFromObject(
+  obj: ts.ObjectLiteralExpression,
+  checker: ts.TypeChecker
+): {
+  next: any
+  onError: any
+  input: Record<string, any>
+} {
+  let next: any = undefined
+  let onError: any = undefined
+  let input: Record<string, any> = {}
+
+  for (const prop of obj.properties) {
+    if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
+
+    const propName = prop.name.text
+
+    if (propName === 'next') {
+      next = extractNextConfig(prop.initializer, checker)
+    } else if (propName === 'onError') {
+      onError = extractNextConfig(prop.initializer, checker)
+    } else if (propName === 'input') {
+      input = extractInputMapping(prop.initializer, checker)
+    }
+  }
+
+  return { next, onError, input }
 }
 
 /**
@@ -551,7 +781,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
 
   // Check if this is a graph workflow (has 'graph' property)
   let graphPropNode: ts.Node | undefined
-  let wires: WorkflowWires = {}
+  let enabled = true // Default to true
 
   for (const prop of definitionObj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -559,12 +789,13 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     const propName = prop.name.text
     if (propName === 'graph') {
       graphPropNode = prop.initializer
-    } else if (
-      propName === 'wires' &&
-      ts.isObjectLiteralExpression(prop.initializer)
-    ) {
-      wires = extractWires(prop.initializer, checker)
+    } else if (propName === 'enabled') {
+      // Check if enabled is explicitly set to false
+      if (prop.initializer.kind === ts.SyntaxKind.FalseKeyword) {
+        enabled = false
+      }
     }
+    // Note: We no longer extract wires from wireWorkflow - they come from pikkuWorkflowGraph
   }
 
   // If no graph property, this is a DSL workflow - skip (handled by add-workflow.ts)
@@ -594,17 +825,21 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  // Extract graph nodes from the graph callback
+  // Extract graph nodes from the new format (nodes + config properties)
   let graphNodes: Record<string, any> = {}
-  if (graphConfig.graphConfigNode) {
-    graphNodes = extractGraphFromCallback(
-      graphConfig.graphConfigNode,
+  if (graphConfig.nodesNode) {
+    graphNodes = extractGraphFromNewFormat(
+      graphConfig.nodesNode,
+      graphConfig.configNode,
       checker,
       state
     )
   }
 
   const entryNodeIds = computeEntryNodeIds(graphNodes)
+
+  // Use wires from pikkuWorkflowGraph (not from wireWorkflow)
+  const wires = graphConfig.wires || {}
 
   const serialized: SerializedWorkflowGraph = {
     name: workflowName,
@@ -617,6 +852,9 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     entryNodeIds,
   }
 
-  state.workflows.graphMeta[workflowName] = serialized
-  state.workflows.graphFiles.add(node.getSourceFile().fileName)
+  // Only add if enabled (or not explicitly disabled)
+  if (enabled) {
+    state.workflows.graphMeta[workflowName] = serialized
+    state.workflows.graphFiles.add(node.getSourceFile().fileName)
+  }
 }

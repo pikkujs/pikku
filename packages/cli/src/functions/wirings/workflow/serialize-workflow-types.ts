@@ -12,10 +12,10 @@ export const serializeWorkflowTypes = (
  * Used for authoring both DSL and graph-based workflows
  */
 
-import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowWires } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
-import type { GraphNodeConfig } from '@pikku/core'
+import type { GraphNodeConfig, HTTPMethod } from '@pikku/core'
 import { createGraph, wireWorkflow as coreWireWorkflow } from '@pikku/core'
 
 // ============================================================================
@@ -80,6 +80,64 @@ export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
  */
 const graphBuilder = createGraph<FlattenedRPCMap>()
 
+/** HTTP wire configuration for graph workflows */
+interface GraphHttpWire<NodeIds extends string> {
+  route: string
+  method: HTTPMethod
+  startNode: NodeIds
+}
+
+/** Channel wire configuration for graph workflows */
+interface GraphChannelWire<NodeIds extends string> {
+  name: string
+  onConnect?: NodeIds
+  onDisconnect?: NodeIds
+  onMessage?: NodeIds
+}
+
+/** Queue wire configuration for graph workflows */
+interface GraphQueueWire<NodeIds extends string> {
+  name: string
+  startNode: NodeIds
+}
+
+/** CLI wire configuration for graph workflows */
+interface GraphCliWire<NodeIds extends string> {
+  command: string
+  startNode: NodeIds
+}
+
+/** MCP wire configurations for graph workflows */
+interface GraphMcpWires<NodeIds extends string> {
+  tool?: Array<{ name: string; startNode: NodeIds }>
+  prompt?: Array<{ name: string; startNode: NodeIds }>
+  resource?: Array<{ uri: string; startNode: NodeIds }>
+}
+
+/** Schedule wire configuration for graph workflows */
+interface GraphScheduleWire<NodeIds extends string> {
+  cron?: string
+  interval?: string
+  startNode: NodeIds
+}
+
+/** Trigger wire configuration for graph workflows */
+interface GraphTriggerWire<NodeIds extends string> {
+  name: string  // RPC name of the trigger function
+  startNode: NodeIds
+}
+
+/** All wire configurations for graph workflows */
+interface GraphWiresConfig<NodeIds extends string> {
+  http?: Array<GraphHttpWire<NodeIds>>
+  channel?: Array<GraphChannelWire<NodeIds>>
+  queue?: Array<GraphQueueWire<NodeIds>>
+  cli?: Array<GraphCliWire<NodeIds>>
+  mcp?: GraphMcpWires<NodeIds>
+  schedule?: Array<GraphScheduleWire<NodeIds>>
+  trigger?: Array<GraphTriggerWire<NodeIds>>
+}
+
 /** Configuration for graph-based workflow */
 export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
@@ -93,16 +151,19 @@ export interface PikkuWorkflowGraphConfig<
   tags?: string[]
   /** Node to RPC function mapping */
   nodes: FuncMap
+  /** Wire configurations - how this workflow can be triggered */
+  wires?: GraphWiresConfig<Extract<keyof FuncMap, string>>
   /** Node configurations (next, input, onError) */
   config?: T
 }
 
 /** Result of pikkuWorkflowGraph - includes metadata for wiring */
-export interface PikkuWorkflowGraphResult<T> {
+export interface PikkuWorkflowGraphResult<T, NodeIds extends string = string> {
   __type: 'pikkuWorkflowGraph'
   name?: string
   description?: string
   tags?: string[]
+  wires?: GraphWiresConfig<NodeIds>
   graph: T
 }
 
@@ -129,12 +190,13 @@ export function pikkuWorkflowGraph<
   const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
 >(
   config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
-): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>> {
+): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> {
   return {
     __type: 'pikkuWorkflowGraph',
     name: config.name,
     description: config.description,
     tags: config.tags,
+    wires: config.wires,
     graph: graphBuilder(config.nodes, config.config as any),
   }
 }
@@ -186,14 +248,24 @@ type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; th
 
 /** Workflow definition with DSL function */
 interface WorkflowDefinitionFunc {
-  wires: WorkflowWires
+  /** Whether this workflow wiring is enabled (default: true) */
+  enabled?: boolean
+  /** Wire configurations for the workflow */
+  wires: {
+    http?: { route: string; method: HTTPMethod }
+    channel?: string
+    queue?: string
+  }
+  /** DSL workflow function */
   func: ReturnType<typeof pikkuWorkflowFunc> | ReturnType<typeof pikkuWorkflowComplexFunc>
 }
 
 /** Workflow definition with graph */
-interface WorkflowDefinitionGraph<T> {
-  wires: WorkflowWires
-  graph: PikkuWorkflowGraphResult<T>
+interface WorkflowDefinitionGraph<T, NodeIds extends string = string> {
+  /** Whether this workflow wiring is enabled (default: true) */
+  enabled?: boolean
+  /** Graph workflow definition - wires are defined in the graph itself */
+  graph: PikkuWorkflowGraphResult<T, NodeIds>
 }
 
 /**
@@ -207,14 +279,15 @@ interface WorkflowDefinitionGraph<T> {
  *   func: myWorkflowFunc,
  * })
  *
- * // Graph workflow
+ * @example
+ * // Graph workflow - wires are defined in the graph itself
  * wireWorkflow({
- *   wires: { http: { route: '/graph-start', method: 'post' } },
+ *   enabled: true,  // default: true
  *   graph: myGraphWorkflow,
  * })
  */
-export function wireWorkflow<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>>(
-  definition: WorkflowDefinitionFunc | WorkflowDefinitionGraph<T>
+export function wireWorkflow<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>, NodeIds extends string = string>(
+  definition: WorkflowDefinitionFunc | WorkflowDefinitionGraph<T, NodeIds>
 ): void {
   coreWireWorkflow(definition as any)
 }

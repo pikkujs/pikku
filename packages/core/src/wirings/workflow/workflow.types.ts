@@ -47,6 +47,59 @@ export interface WorkflowServiceConfig {
 export interface WorkflowHTTPWire {
   route: string
   method: 'get' | 'post' | 'put' | 'patch' | 'delete'
+  startNode: string
+}
+
+/**
+ * Channel wire configuration for workflows
+ */
+export interface WorkflowChannelWire {
+  name: string
+  onConnect?: string
+  onDisconnect?: string
+  onMessage?: string
+}
+
+/**
+ * Queue wire configuration for workflows
+ */
+export interface WorkflowQueueWire {
+  name: string
+  startNode: string
+}
+
+/**
+ * CLI wire configuration for workflows
+ */
+export interface WorkflowCliWire {
+  command: string
+  startNode: string
+}
+
+/**
+ * MCP wire configurations for workflows
+ */
+export interface WorkflowMcpWires {
+  tool?: Array<{ name: string; startNode: string }>
+  prompt?: Array<{ name: string; startNode: string }>
+  resource?: Array<{ uri: string; startNode: string }>
+}
+
+/**
+ * Schedule wire configuration for workflows
+ */
+export interface WorkflowScheduleWire {
+  cron?: string
+  interval?: string
+  startNode: string
+}
+
+/**
+ * Trigger wire configuration for workflows
+ */
+export interface WorkflowTriggerWire {
+  name: string
+  startNode: string
 }
 
 /**
@@ -54,11 +107,20 @@ export interface WorkflowHTTPWire {
  * Defines how a workflow can be triggered
  */
 export interface WorkflowWires {
-  /** HTTP trigger */
-  http?: WorkflowHTTPWire
-  /** Queue trigger */
-  queue?: string
-  // Future: schedule, channel, etc.
+  /** HTTP triggers */
+  http?: WorkflowHTTPWire[]
+  /** Channel triggers */
+  channel?: WorkflowChannelWire[]
+  /** Queue triggers */
+  queue?: WorkflowQueueWire[]
+  /** CLI triggers */
+  cli?: WorkflowCliWire[]
+  /** MCP triggers (tool, prompt, resource) */
+  mcp?: WorkflowMcpWires
+  /** Schedule triggers */
+  schedule?: WorkflowScheduleWire[]
+  /** Named trigger wires */
+  trigger?: WorkflowTriggerWire[]
 }
 
 /**
@@ -194,6 +256,10 @@ export interface WorkflowRuntimeMeta {
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** Wires - how the workflow is triggered */
+  wires?: WorkflowWires
+  /** Serialized nodes */
+  nodes?: Record<string, any>
   /** Entry node IDs for graph workflows (computed at build time) */
   entryNodeIds?: string[]
 }

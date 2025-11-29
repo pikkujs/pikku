@@ -16,6 +16,23 @@ export const graphOnboarding = pikkuWorkflowGraph({
     entry: 'createUserProfile',
     sendWelcome: 'sendEmail',
   },
+  wires: {
+    http: [
+      {
+        route: '/workflow/graph-onboarding',
+        method: 'post',
+        startNode: 'entry',
+      },
+    ],
+    channel: [
+      {
+        name: 'workflow-graph-onboarding',
+        onConnect: 'entry',
+        onDisconnect: 'entry',
+        onMessage: 'sendWelcome',
+      },
+    ],
+  },
   config: {
     entry: {
       next: 'sendWelcome',
@@ -30,10 +47,12 @@ export const graphOnboarding = pikkuWorkflowGraph({
   },
 })
 
+/**
+ * Wire the graph workflow to enable its wires
+ * enabled: true (default) allows the workflow to be triggered
+ */
 wireWorkflow({
-  wires: {
-    http: { route: '/workflow/graph-onboarding', method: 'post' },
-  },
+  enabled: true,
   graph: graphOnboarding,
 })
 
@@ -42,9 +61,17 @@ wireWorkflow({
  * workflow: true means it directly triggers the workflow without a separate function
  */
 wireHTTP({
-  auth: false,
   method: 'post',
   route: '/workflow/graph-onboarding',
   workflow: true,
-  tags: ['workflow', 'graph'],
 })
+
+// TODO: Enable when channel workflow triggers are implemented
+// /**
+//  * Channel endpoint to trigger the graph workflow
+//  * workflow: true means it directly triggers the workflow without a separate function
+//  */
+// wireChannel({
+//   name: 'workflow-graph-onboarding',
+//   workflow: true,
+// })

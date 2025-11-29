@@ -456,15 +456,57 @@ function wiresToCode(wires: SerializedWorkflowGraph['wires']): string {
   if (!wires || Object.keys(wires).length === 0) return '{}'
 
   const parts: string[] = []
-  if (wires.http) {
-    const httpParts: string[] = []
-    httpParts.push(`route: '${wires.http.route}'`)
-    if (wires.http.method) {
-      httpParts.push(`method: '${wires.http.method}'`)
-    }
-    parts.push(`http: { ${httpParts.join(', ')} }`)
+
+  if (wires.http && wires.http.length > 0) {
+    const httpItems = wires.http.map(
+      (h) =>
+        `{ route: '${h.route}', method: '${h.method}', startNode: '${h.startNode}' }`
+    )
+    parts.push(`http: [${httpItems.join(', ')}]`)
   }
-  // Add other wire types as needed (queue, schedule, etc.)
+
+  if (wires.channel && wires.channel.length > 0) {
+    const channelItems = wires.channel.map((c) => {
+      const channelParts: string[] = [`name: '${c.name}'`]
+      if (c.onConnect) channelParts.push(`onConnect: '${c.onConnect}'`)
+      if (c.onDisconnect) channelParts.push(`onDisconnect: '${c.onDisconnect}'`)
+      if (c.onMessage) channelParts.push(`onMessage: '${c.onMessage}'`)
+      return `{ ${channelParts.join(', ')} }`
+    })
+    parts.push(`channel: [${channelItems.join(', ')}]`)
+  }
+
+  if (wires.queue && wires.queue.length > 0) {
+    const queueItems = wires.queue.map(
+      (q) => `{ name: '${q.name}', startNode: '${q.startNode}' }`
+    )
+    parts.push(`queue: [${queueItems.join(', ')}]`)
+  }
+
+  if (wires.cli && wires.cli.length > 0) {
+    const cliItems = wires.cli.map(
+      (c) => `{ command: '${c.command}', startNode: '${c.startNode}' }`
+    )
+    parts.push(`cli: [${cliItems.join(', ')}]`)
+  }
+
+  if (wires.schedule && wires.schedule.length > 0) {
+    const scheduleItems = wires.schedule.map((s) => {
+      const scheduleParts: string[] = []
+      if (s.cron) scheduleParts.push(`cron: '${s.cron}'`)
+      if (s.interval) scheduleParts.push(`interval: '${s.interval}'`)
+      scheduleParts.push(`startNode: '${s.startNode}'`)
+      return `{ ${scheduleParts.join(', ')} }`
+    })
+    parts.push(`schedule: [${scheduleItems.join(', ')}]`)
+  }
+
+  if (wires.trigger && wires.trigger.length > 0) {
+    const triggerItems = wires.trigger.map(
+      (t) => `{ name: '${t.name}', startNode: '${t.startNode}' }`
+    )
+    parts.push(`trigger: [${triggerItems.join(', ')}]`)
+  }
 
   return `{ ${parts.join(', ')} }`
 }
