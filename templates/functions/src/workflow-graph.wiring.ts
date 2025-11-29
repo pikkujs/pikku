@@ -2,6 +2,7 @@ import {
   pikkuWorkflowGraph,
   wireWorkflow,
 } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import { wireHTTP } from '../.pikku/pikku-types.gen.js'
 
 /**
  * Example workflow graph: User Onboarding
@@ -31,7 +32,19 @@ export const graphOnboarding = pikkuWorkflowGraph({
 
 wireWorkflow({
   wires: {
-    http: { route: '/graph-onboarding', method: 'post' },
+    http: { route: '/workflow/graph-onboarding', method: 'post' },
   },
   graph: graphOnboarding,
+})
+
+/**
+ * HTTP endpoint to trigger the graph workflow
+ * workflow: true means it directly triggers the workflow without a separate function
+ */
+wireHTTP({
+  auth: false,
+  method: 'post',
+  route: '/workflow/graph-onboarding',
+  workflow: true,
+  tags: ['workflow', 'graph'],
 })

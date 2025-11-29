@@ -225,6 +225,19 @@ export type CoreHTTPFunctionWiring<
       middleware?: PikkuMiddleware[]
       sse?: undefined
     })
+  | {
+      /** Route triggers a workflow matched by route/method from workflow wires.http */
+      route: R
+      method: HTTPMethod
+      workflow: true
+      func?: undefined
+      permissions?: undefined
+      auth?: undefined
+      tags?: undefined
+      middleware?: undefined
+      returnsJSON?: undefined
+      sse?: boolean
+    }
 
 /**
  * Represents the input types for HTTP wiring metadata, including parameters, query, and body types.
@@ -245,8 +258,7 @@ export type HTTPWiringMeta = CommonWireMeta & {
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes
   sse?: true
-  /** If true, this route triggers a workflow graph (matched by route/method) */
-  graph?: true
+  workflow?: true
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 

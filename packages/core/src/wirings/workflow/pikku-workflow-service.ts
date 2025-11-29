@@ -322,6 +322,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   /**
    * Start a new workflow run
    * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
+   * @param wire - Optional wire context (http, channel) for workflows triggered via HTTP
    */
   public async startWorkflow<I>(
     name: string,

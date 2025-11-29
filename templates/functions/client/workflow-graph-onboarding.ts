@@ -22,7 +22,7 @@ async function main() {
   try {
     console.log('\n📤 Starting graph onboarding workflow...\n')
 
-    const response = await pikkuFetch.post('/graph-onboarding', {
+    const response = await pikkuFetch.post('/workflow/graph-onboarding', {
       email: 'graph-test@example.com',
       userId: 'graph-user-123',
     })
