@@ -38,7 +38,7 @@ import {
 import {
   extractStringLiteral,
   extractNumberLiteral,
-} from '../extract-node-value.js'
+} from '../../extract-node-value.js'
 
 /**
  * Extraction context to track state during AST traversal
