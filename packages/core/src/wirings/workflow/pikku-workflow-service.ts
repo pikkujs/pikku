@@ -9,22 +9,61 @@ import {
   SerializedError,
 } from '../../types/core.types.js'
 import { QueueService } from '../queue/queue.types.js'
-import {
-  WorkflowAsyncException,
-  WorkflowCancelledException,
-  WorkflowNotFoundError,
-  WorkflowRunNotFound,
-} from './dsl/workflow-runner.js'
 import type {
   PikkuWorkflowWire,
   StepState,
   WorkflowRun,
   WorkflowStatus,
-  WorkflowService,
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
 import { executeGraphStep, runWorkflowGraph } from './graph/graph-runner.js'
+import { WorkflowService } from '../../services/workflow-service.js'
+import { PikkuError } from '../../errors/error-handler.js'
+
+/**
+ * Exception thrown when workflow needs to pause for async step
+ */
+export class WorkflowAsyncException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string
+  ) {
+    super(`Workflow paused at step: ${stepName}`)
+    this.name = 'WorkflowAsyncException'
+  }
+}
+
+/**
+ * Exception thrown when workflow is cancelled
+ */
+export class WorkflowCancelledException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly reason?: string
+  ) {
+    super(reason || 'Workflow cancelled')
+    this.name = 'WorkflowCancelledException'
+  }
+}
+
+/**
+ * Error class for workflow not found
+ */
+export class WorkflowNotFoundError extends PikkuError {
+  constructor(name: string) {
+    super(`Workflow not found: ${name}`)
+  }
+}
+
+/**
+ * Error class for workflow not found
+ */
+export class WorkflowRunNotFound extends PikkuError {
+  constructor(runId: string) {
+    super(`Workflow run not found: ${runId}`)
+  }
+}
 
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {

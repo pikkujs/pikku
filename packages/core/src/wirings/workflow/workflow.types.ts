@@ -1,11 +1,8 @@
-import {
-  SerializedError,
-  CoreSingletonServices,
-  CreateWireServices,
-  CoreConfig,
-  CommonWireMeta,
-} from '../../types/core.types.js'
+import { SerializedError, CommonWireMeta } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+
+// Re-export WorkflowService from services module
+export type { WorkflowService } from '../../services/workflow-service.js'
 
 // Re-export DSL types from dsl module
 export type {
@@ -184,68 +181,6 @@ export interface WorkflowRuntimeMeta {
  * Unified workflow runtime metadata map
  */
 export type WorkflowsRuntimeMeta = Record<string, WorkflowRuntimeMeta>
-
-/**
- * Interface for workflow orchestration
- * Handles workflow execution, replay, orchestration logic, and run-level state
- */
-export interface WorkflowService {
-  // Run-level state operations
-  createRun(workflowName: string, input: any): Promise<string>
-  getRun(id: string): Promise<WorkflowRun | null>
-  getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
-  updateRunStatus(
-    id: string,
-    status: WorkflowStatus,
-    output?: any,
-    error?: SerializedError
-  ): Promise<void>
-  withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T>
-  close(): Promise<void>
-
-  // Orchestration operations
-  resumeWorkflow(runId: string): Promise<void>
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices: CreateWireServices,
-    config: CoreConfig
-  ): void
-  startWorkflow<I>(
-    name: string,
-    input: I,
-    rpcService: any
-  ): Promise<{ runId: string }>
-  runWorkflowJob(runId: string, rpcService: any): Promise<void>
-  orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
-  executeWorkflowSleep(runId: string, stepId: string): Promise<void>
-
-  // Step-level state operations
-  insertStepState(
-    runId: string,
-    stepName: string,
-    rpcName: string,
-    data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number }
-  ): Promise<StepState>
-  getStepState(runId: string, stepName: string): Promise<StepState>
-  setStepRunning(stepId: string): Promise<void>
-  setStepScheduled(stepId: string): Promise<void>
-  setStepResult(stepId: string, result: any): Promise<void>
-  setStepError(stepId: string, error: Error): Promise<void>
-  createRetryAttempt(
-    stepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState>
-
-  // Step execution
-  executeWorkflowStep(
-    runId: string,
-    stepName: string,
-    rpcName: string | null,
-    data: any,
-    rpcService: any
-  ): Promise<void>
-}
 
 /**
  * Worker input types for generated queue workers

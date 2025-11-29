@@ -1,13 +1,40 @@
 /**
  * Workflow module exports
  */
+export { PikkuWorkflowService } from './pikku-workflow-service.js'
 
-// Types
+// Internal registration function (used by generated code)
+export { addWorkflow } from './dsl/workflow-runner.js'
+
+// Re-export all types from workflow.types
 export type {
+  WorkflowService,
+  WorkflowServiceConfig,
+  WorkflowStatus,
+  StepStatus,
+  WorkflowRun,
+  StepState,
   CoreWorkflow,
+  PikkuWorkflow,
+  WorkflowsMeta,
+  WorkflowRuntimeMeta,
+  WorkflowsRuntimeMeta,
+  WorkflowStepInput,
+  WorkflowOrchestratorInput,
+  WorkflowSleeperInput,
+} from './workflow.types.js'
+
+// Re-export DSL types
+export type {
   WorkflowStepOptions,
-  WorkflowStepMeta,
+  WorkflowWireDoRPC,
+  WorkflowWireDoInline,
+  WorkflowWireSleep,
+  InputSource,
+  OutputBinding,
   RpcStepMeta,
+  SimpleCondition,
+  Condition,
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,
@@ -15,26 +42,11 @@ export type {
   InlineStepMeta,
   SleepStepMeta,
   CancelStepMeta,
-  SwitchStepMeta,
   SwitchCaseMeta,
+  SwitchStepMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
-  InputSource,
-  OutputBinding,
-  Condition,
-  SimpleCondition,
+  WorkflowStepMeta,
+  WorkflowStepWire,
   PikkuWorkflowWire,
-  PikkuWorkflow,
-  WorkflowsMeta,
-  WorkflowRuntimeMeta,
-  WorkflowsRuntimeMeta,
-  WorkflowRun,
-  StepState,
-  WorkflowStatus,
-  StepStatus,
 } from './workflow.types.js'
-
-export { PikkuWorkflowService } from './pikku-workflow-service.js'
-
-// Internal registration function (used by generated code)
-export { addWorkflow } from './dsl/workflow-runner.js'
