@@ -1,6 +1,6 @@
-import { pikkuState } from '../../pikku-state.js'
-import { PikkuError } from '../../errors/error-handler.js'
-import { addFunction } from '../../function/function-runner.js'
+import { pikkuState } from '../../../pikku-state.js'
+import { PikkuError } from '../../../errors/error-handler.js'
+import { addFunction } from '../../../function/function-runner.js'
 
 /**
  * Exception thrown when workflow needs to pause for async step

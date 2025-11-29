@@ -14,7 +14,7 @@ import {
   WorkflowCancelledException,
   WorkflowNotFoundError,
   WorkflowRunNotFound,
-} from './workflow-runner.js'
+} from './dsl/workflow-runner.js'
 import type {
   PikkuWorkflowWire,
   StepState,

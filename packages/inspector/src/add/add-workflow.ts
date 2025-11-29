@@ -12,7 +12,7 @@ import {
   extractDuration,
 } from '../utils/extract-node-value.js'
 import { getCommonWireMetaData } from '../utils/get-property-value.js'
-import { extractDSLWorkflow } from '../utils/workflow/extract-dsl-workflow.js'
+import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
 
 /**
  * Recursively collect all RPC names from workflow steps

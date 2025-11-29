@@ -37,4 +37,4 @@ export type {
 export { PikkuWorkflowService } from './pikku-workflow-service.js'
 
 // Internal registration function (used by generated code)
-export { addWorkflow } from './workflow-runner.js'
+export { addWorkflow } from './dsl/workflow-runner.js'
