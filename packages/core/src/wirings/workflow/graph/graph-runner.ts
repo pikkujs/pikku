@@ -292,12 +292,177 @@ export async function onGraphNodeComplete(
 }
 
 /**
+ * Execute a graph node inline (without queue)
+ */
+async function executeGraphNodeInline(
+  workflowService: PikkuWorkflowService,
+  rpcService: any,
+  runId: string,
+  graphName: string,
+  nodeId: string,
+  input: any,
+  graph: Record<string, GraphNodeConfig>
+): Promise<void> {
+  const node = graph[nodeId]
+  if (!node) return
+
+  const rpcName = getRpcName(node)
+  const stepName = `node:${nodeId}`
+
+  // Insert step state
+  const stepState = await workflowService.insertStepState(
+    runId,
+    stepName,
+    rpcName,
+    input,
+    { retries: 3 }
+  )
+
+  await workflowService.setStepRunning(stepState.stepId)
+
+  // Execute with graph wire context
+  const wireState: GraphWireState = {}
+  const graphWire: PikkuGraphWire = {
+    runId,
+    graphName,
+    nodeId,
+    branch: (key: string) => {
+      wireState.branchKey = key
+    },
+  }
+
+  try {
+    const result = await rpcService.rpcWithWire(rpcName, input, {
+      graph: graphWire,
+    })
+
+    // If branch was called, store the branch key
+    if (wireState.branchKey) {
+      await workflowService.setBranchTaken(
+        stepState.stepId,
+        wireState.branchKey
+      )
+    }
+
+    await workflowService.setStepResult(stepState.stepId, result)
+  } catch (error) {
+    await workflowService.setStepError(stepState.stepId, error as Error)
+
+    // Check if this node has an onError handler
+    const definition = getWorkflowGraph(graphName)
+    if (definition) {
+      const node = definition.graph[nodeId]
+      if (node?.onError) {
+        // Route to error handler nodes (inline)
+        const errorNodes = Array.isArray(node.onError)
+          ? node.onError
+          : [node.onError]
+        await Promise.all(
+          errorNodes.map((errorNodeId) =>
+            executeGraphNodeInline(
+              workflowService,
+              rpcService,
+              runId,
+              graphName,
+              errorNodeId,
+              { error: { message: (error as Error).message } },
+              graph
+            )
+          )
+        )
+        return
+      }
+    }
+    // No error handler - rethrow
+    throw error
+  }
+}
+
+/**
+ * Continue graph execution inline (without queue)
+ * Executes nodes in parallel where possible using Promise.all
+ */
+async function continueGraphInline(
+  workflowService: PikkuWorkflowService,
+  rpcService: any,
+  runId: string,
+  graphName: string,
+  graph: Record<string, GraphNodeConfig>
+): Promise<void> {
+  while (true) {
+    // Get completed node IDs + branch keys (lightweight, no results)
+    const { completedNodeIds, branchKeys } =
+      await workflowService.getCompletedGraphState(runId)
+
+    // Find candidate next nodes from completed nodes
+    const candidateNodes: string[] = []
+
+    for (const nodeId of completedNodeIds) {
+      const node = graph[nodeId]
+      if (!node?.next) continue
+
+      const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
+      candidateNodes.push(...nextNodes)
+    }
+
+    if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
+      // No more nodes to run - graph complete
+      await workflowService.updateRunStatus(runId, 'completed')
+      return
+    }
+
+    // Filter to only nodes that don't have a step yet
+    const nodesToExecute = await workflowService.getNodesWithoutSteps(
+      runId,
+      candidateNodes
+    )
+
+    if (nodesToExecute.length === 0) {
+      // No more nodes to execute
+      return
+    }
+
+    // Execute all nodes in parallel
+    await Promise.all(
+      nodesToExecute.map(async (nodeId) => {
+        const node = graph[nodeId]
+        if (!node) return
+
+        // Evaluate input callback to get the mapping
+        const inputMapping = evaluateInputCallback(node)
+
+        // Only fetch results for nodes referenced in this node's input
+        const referencedNodeIds = extractReferencedNodeIds(inputMapping)
+        const nodeResults = await workflowService.getNodeResults(
+          runId,
+          referencedNodeIds
+        )
+
+        const resolvedInput = resolveInputMapping(inputMapping, nodeResults)
+
+        await executeGraphNodeInline(
+          workflowService,
+          rpcService,
+          runId,
+          graphName,
+          nodeId,
+          resolvedInput,
+          graph
+        )
+      })
+    )
+  }
+}
+
+/**
  * Start a workflow graph execution
  */
 export async function runWorkflowGraph(
   workflowService: PikkuWorkflowService,
   graphName: string,
-  triggerInput: any
+  triggerInput: any,
+  rpcService?: any,
+  inline?: boolean
 ): Promise<{ runId: string }> {
   const definition = getWorkflowGraph(graphName)
   if (!definition) {
@@ -312,22 +477,61 @@ export async function runWorkflowGraph(
   }
 
   const graph = definition.graph
-  const runId = await workflowService.createRun(graphName, triggerInput)
+  const runId = await workflowService.createRun(graphName, triggerInput, inline)
 
-  for (const nodeId of workflowMeta.entryNodeIds) {
-    const node = graph[nodeId]
-    if (!node) continue
-
-    const rpcName = getRpcName(node)
-    await queueGraphNode(
-      workflowService,
-      runId,
-      graphName,
-      nodeId,
-      rpcName,
-      triggerInput
-    )
+  // Register as inline for fast lookup
+  if (inline) {
+    workflowService.registerInlineRun(runId)
   }
 
-  return { runId }
+  try {
+    if (inline && rpcService) {
+      // Inline mode - execute entry nodes in parallel
+      await Promise.all(
+        workflowMeta.entryNodeIds.map((nodeId) =>
+          executeGraphNodeInline(
+            workflowService,
+            rpcService,
+            runId,
+            graphName,
+            nodeId,
+            triggerInput,
+            graph
+          )
+        )
+      )
+
+      // Continue executing remaining nodes inline
+      await continueGraphInline(
+        workflowService,
+        rpcService,
+        runId,
+        graphName,
+        graph
+      )
+    } else {
+      // Queue-based mode
+      for (const nodeId of workflowMeta.entryNodeIds) {
+        const node = graph[nodeId]
+        if (!node) continue
+
+        const rpcName = getRpcName(node)
+        await queueGraphNode(
+          workflowService,
+          runId,
+          graphName,
+          nodeId,
+          rpcName,
+          triggerInput
+        )
+      }
+    }
+
+    return { runId }
+  } finally {
+    // Clean up inline tracking
+    if (inline) {
+      workflowService.unregisterInlineRun(runId)
+    }
+  }
 }

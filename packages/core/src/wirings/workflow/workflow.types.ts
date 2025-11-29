@@ -92,6 +92,8 @@ export interface WorkflowRun {
   output?: any
   /** Error (if failed) */
   error?: SerializedError
+  /** If true, workflow executes inline without queues */
+  inline?: boolean
   /** Creation timestamp */
   createdAt: Date
   /** Last update timestamp */

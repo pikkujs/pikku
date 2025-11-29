@@ -78,9 +78,14 @@ export class PgWorkflowService extends PikkuWorkflowService {
         input JSONB NOT NULL,
         output JSONB,
         error JSONB,
+        inline BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
+
+      -- Add inline column if it doesn't exist (for existing tables)
+      ALTER TABLE ${this.schemaName}.workflow_runs
+        ADD COLUMN IF NOT EXISTS inline BOOLEAN DEFAULT FALSE;
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step (
         workflow_step_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -118,14 +123,18 @@ export class PgWorkflowService extends PikkuWorkflowService {
     this.initialized = true
   }
 
-  async createRun(workflowName: string, input: any): Promise<string> {
+  async createRun(
+    workflowName: string,
+    input: any,
+    inline?: boolean
+  ): Promise<string> {
     const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.workflow_runs
-        (workflow, status, input)
+        (workflow, status, input, inline)
       VALUES
-        ($1, $2, $3)
+        ($1, $2, $3, $4)
       RETURNING workflow_run_id`,
-      [workflowName, 'running', input]
+      [workflowName, 'running', input, inline ?? false]
     )
 
     return result[0]!.workflow_run_id
@@ -133,7 +142,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
 
   async getRun(id: string): Promise<WorkflowRun | null> {
     const result = await this.sql.unsafe(
-      `SELECT workflow_run_id, workflow, status, input, output, error, created_at, updated_at
+      `SELECT workflow_run_id, workflow, status, input, output, error, inline, created_at, updated_at
       FROM ${this.schemaName}.workflow_runs
       WHERE workflow_run_id = $1`,
       [id]
@@ -151,6 +160,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
       input: row.input,
       output: row.output,
       error: row.error,
+      inline: row.inline as boolean | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }

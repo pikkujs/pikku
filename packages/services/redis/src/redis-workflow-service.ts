@@ -201,7 +201,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async createRun(workflowName: string, input: any): Promise<string> {
+  async createRun(
+    workflowName: string,
+    input: any,
+    inline?: boolean
+  ): Promise<string> {
     const id = randomUUID()
     const now = Date.now()
 
@@ -217,6 +221,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       'running',
       'input',
       JSON.stringify(input),
+      'inline',
+      inline ? 'true' : 'false',
       'createdAt',
       now.toString(),
       'updatedAt',
@@ -241,6 +247,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       input: JSON.parse(data.input!),
       output: data.output ? JSON.parse(data.output) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
+      inline: data.inline === 'true' ? true : undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }

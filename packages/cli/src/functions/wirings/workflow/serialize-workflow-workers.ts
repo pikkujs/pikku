@@ -28,7 +28,7 @@ export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<{ runId: string },
 
 export const pikkuWorkflowSleeper = pikkuSessionlessFunc<{ runId: string, stepId: string }, void>({
   func: async ({ workflowService }, { runId, stepId }) => {
-    await workflowService!.executeWorkflowSleep(runId, stepId)
+    await workflowService!.executeWorkflowSleepCompleted(runId, stepId)
   },
   name: 'pikkuWorkflowStepSleeper',
   internal: true,

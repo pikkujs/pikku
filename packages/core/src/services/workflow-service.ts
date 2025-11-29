@@ -16,7 +16,7 @@ import {
  */
 export interface WorkflowService {
   // Run-level state operations
-  createRun(workflowName: string, input: any): Promise<string>
+  createRun(workflowName: string, input: any, inline?: boolean): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
   getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
   updateRunStatus(
@@ -43,7 +43,7 @@ export interface WorkflowService {
   ): Promise<{ runId: string }>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
   orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
-  executeWorkflowSleep(runId: string, stepId: string): Promise<void>
+  executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>
 
   // Step-level state operations
   insertStepState(
