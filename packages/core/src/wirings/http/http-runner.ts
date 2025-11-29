@@ -31,8 +31,8 @@ import {
 import { PikkuSessionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
-import { startWorkflowGraph } from '../workflow-graph/graph-scheduler.js'
-import type { WorkflowGraphDefinition } from '../workflow-graph/workflow-graph.types.js'
+import { runWorkflowGraph } from '../workflow/graph/graph-runner.js'
+import type { WorkflowGraphDefinition } from '../workflow/graph/workflow-graph.types.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
@@ -212,7 +212,7 @@ const findMatchingWorkflowGraph = (
   route: string,
   method: string
 ): { name: string; definition: WorkflowGraphDefinition<any> } | undefined => {
-  const graphs = pikkuState(null, 'workflowGraphs', 'registrations')
+  const graphs = pikkuState(null, 'workflows', 'graphRegistrations')
   for (const [name, definition] of graphs) {
     const httpTrigger = definition.triggers?.http
     if (
@@ -316,7 +316,7 @@ const executeRoute = async (
     }
 
     const input = await http.request!.data()
-    const { runId } = await startWorkflowGraph(
+    const { runId } = await runWorkflowGraph(
       workflowService,
       matchingGraph.name,
       input

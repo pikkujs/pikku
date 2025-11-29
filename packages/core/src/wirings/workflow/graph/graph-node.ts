@@ -54,7 +54,7 @@ export interface GraphNodeDef<
  * @example
  * ```typescript
  * // Import the typed graph from generated types
- * import { graph } from './.pikku/workflow/pikku-workflow-graph-types.gen.js'
+ * import { graph } from './.pikku/workflow/pikku-workflow-types.gen.js'
  *
  * wireWorkflowGraph({
  *   name: 'myWorkflow',

@@ -11,8 +11,8 @@ import {
   extractDescription,
   extractDuration,
 } from '../utils/extract-node-value.js'
-import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
 import { getCommonWireMetaData } from '../utils/get-property-value.js'
+import { extractSimpleWorkflow } from '../utils/workflow/extract-simple-workflow.js'
 
 /**
  * Recursively collect all RPC names from workflow steps
@@ -145,9 +145,9 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   let wrapperType: 'simple' | 'regular' | null = null
   if (expression.text === 'pikkuWorkflowFunc') {
-    wrapperType = 'regular'
-  } else if (expression.text === 'pikkuSimpleWorkflowFunc') {
     wrapperType = 'simple'
+  } else if (expression.text === 'pikkuWorkflowComplexFunc') {
+    wrapperType = 'regular'
   } else {
     return
   }
@@ -243,14 +243,14 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   } else {
     // Simple extraction failed
     if (wrapperType === 'simple') {
-      // For pikkuSimpleWorkflowFunc, this is a critical error
+      // For pikkuWorkflowFunc, this is a critical error
       logger.critical(
         ErrorCode.INVALID_SIMPLE_WORKFLOW,
-        `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
+        `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
       )
       return
     } else {
-      // For pikkuWorkflowFunc, fall back to basic extraction
+      // For pikkuWorkflowComplexFunc, fall back to basic extraction
       logger.debug(
         `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
       )

@@ -26,12 +26,12 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       packageMappings,
       schema,
     } = config
-    const { workflows, workflowGraphs, functions: functionState } = visitState
+    const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
 
     // Get all workflow names (both DST and graph-based)
     const dstWorkflowNames = Object.keys(workflows.meta)
-    const graphWorkflowNames = Object.keys(workflowGraphs.meta)
+    const graphWorkflowNames = Object.keys(workflows.graphMeta)
     const allWorkflowNames = [
       ...new Set([...dstWorkflowNames, ...graphWorkflowNames]),
     ]
@@ -60,7 +60,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       const dstAsGraphs = convertAllDstToGraphs(workflows.meta)
       const unifiedMeta = {
         ...dstAsGraphs,
-        ...workflowGraphs.meta,
+        ...workflows.graphMeta,
       }
 
       await writeFileInDir(

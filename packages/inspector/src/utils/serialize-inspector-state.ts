@@ -116,6 +116,8 @@ export interface SerializableInspectorState {
   workflows: {
     meta: InspectorState['workflows']['meta']
     files: Array<[string, { path: string; exportedName: string }]>
+    graphMeta: InspectorState['workflows']['graphMeta']
+    graphFiles: string[]
   }
   rpc: {
     internalMeta: InspectorState['rpc']['internalMeta']
@@ -141,10 +143,6 @@ export interface SerializableInspectorState {
   }
   forgeCredentials: {
     meta: InspectorState['forgeCredentials']['meta']
-    files: string[]
-  }
-  workflowGraphs: {
-    meta: InspectorState['workflowGraphs']['meta']
     files: string[]
   }
   middleware: {
@@ -273,6 +271,8 @@ export function serializeInspectorState(
     workflows: {
       meta: state.workflows.meta,
       files: Array.from(state.workflows.files.entries()),
+      graphMeta: state.workflows.graphMeta,
+      graphFiles: Array.from(state.workflows.graphFiles),
     },
     rpc: {
       internalMeta: state.rpc.internalMeta,
@@ -299,10 +299,6 @@ export function serializeInspectorState(
     forgeCredentials: {
       meta: state.forgeCredentials.meta,
       files: Array.from(state.forgeCredentials.files),
-    },
-    workflowGraphs: {
-      meta: state.workflowGraphs.meta,
-      files: Array.from(state.workflowGraphs.files),
     },
     middleware: {
       meta: state.middleware.meta,
@@ -395,6 +391,8 @@ export function deserializeInspectorState(
     workflows: {
       meta: data.workflows.meta,
       files: new Map(data.workflows.files),
+      graphMeta: data.workflows.graphMeta || {},
+      graphFiles: new Set(data.workflows.graphFiles || []),
     },
     rpc: {
       internalMeta: data.rpc.internalMeta,
@@ -421,10 +419,6 @@ export function deserializeInspectorState(
     forgeCredentials: {
       meta: data.forgeCredentials?.meta || {},
       files: new Set(data.forgeCredentials?.files || []),
-    },
-    workflowGraphs: {
-      meta: data.workflowGraphs?.meta || {},
-      files: new Set(data.workflowGraphs?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,

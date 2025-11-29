@@ -347,12 +347,6 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-wirings-meta.gen.json'
       )
     }
-    if (!result.workflowGraphTypesFile) {
-      result.workflowGraphTypesFile = join(
-        workflowDir,
-        'pikku-workflow-graph-types.gen.ts'
-      )
-    }
 
     // Services
     if (!result.servicesFile) {

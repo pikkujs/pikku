@@ -1,14 +1,69 @@
-import type { PikkuWorkflowService } from '../workflow/pikku-workflow-service.js'
+import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import type {
   GraphNodeConfig,
   RefValue,
   RefFn,
   NextConfig,
   GraphWireState,
+  PikkuGraphWire,
+  WorkflowGraphDefinition,
 } from './workflow-graph.types.js'
 import { createRef, isRef } from './workflow-graph.types.js'
-import { getWorkflowGraph } from './wire-workflow-graph.js'
-import { createGraphWire } from './graph-runner.js'
+import { pikkuState } from '../../../pikku-state.js'
+
+/**
+ * Wires a workflow graph for registration.
+ *
+ * @example
+ * ```typescript
+ * wireWorkflowGraph({
+ *   name: 'orderProcessingWorkflow',
+ *   triggers: {
+ *     http: { route: '/orders', method: 'post' }
+ *   },
+ *   graph: graph((node) => ({
+ *     entry: node({
+ *       func: 'external:entryFunc',
+ *       next: 'validateOrder',
+ *     }),
+ *     validateOrder: node({
+ *       func: 'external:validateOrderFunc',
+ *       input: (ref) => ({
+ *         orderId: ref('entry', 'orderId'),
+ *       }),
+ *       next: {
+ *         'valid': 'processPayment',
+ *         'invalid': 'reject'
+ *       }
+ *     }),
+ *   })),
+ * })
+ * ```
+ */
+export function wireWorkflowGraph<
+  Nodes extends Record<string, GraphNodeConfig<string>>,
+>(definition: WorkflowGraphDefinition<Nodes>): void {
+  const { name, graph } = definition
+
+  // Validate that 'entry' node exists
+  if (!('entry' in graph)) {
+    throw new Error(`Workflow graph '${name}' must have an 'entry' node`)
+  }
+
+  // Register raw definition - CLI/inspector handles serialization
+  const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
+  registrations.set(name, definition)
+}
+
+/**
+ * Get a registered workflow graph by name
+ */
+export function getWorkflowGraph(
+  name: string
+): WorkflowGraphDefinition<any> | undefined {
+  const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
+  return registrations.get(name)
+}
 
 /**
  * Resolve next config to array of node IDs
@@ -28,43 +83,6 @@ function resolveNextFromConfig(
 
   const branchNext = next[branchKey]
   return Array.isArray(branchNext) ? branchNext : [branchNext]
-}
-
-/**
- * Check if a node can be reached from any other node's next config
- * Used to identify entry nodes (nodes with no incoming edges)
- */
-function hasIncomingEdges(
-  graph: Record<string, GraphNodeConfig>,
-  nodeId: string
-): boolean {
-  for (const node of Object.values(graph)) {
-    const next = node.next
-    if (!next) continue
-
-    if (typeof next === 'string') {
-      if (next === nodeId) return true
-    } else if (Array.isArray(next)) {
-      if (next.includes(nodeId)) return true
-    } else {
-      // Record - check all branches
-      for (const branchNext of Object.values(next)) {
-        if (typeof branchNext === 'string') {
-          if (branchNext === nodeId) return true
-        } else if (branchNext.includes(nodeId)) {
-          return true
-        }
-      }
-    }
-  }
-  return false
-}
-
-/**
- * Find entry nodes (nodes with no incoming edges)
- */
-function findEntryNodes(graph: Record<string, GraphNodeConfig>): string[] {
-  return Object.keys(graph).filter((nodeId) => !hasIncomingEdges(graph, nodeId))
 }
 
 /**
@@ -141,6 +159,29 @@ function getRpcName(node: GraphNodeConfig): string {
 }
 
 /**
+ * Queue a graph node for execution
+ */
+async function queueGraphNode(
+  workflowService: PikkuWorkflowService,
+  runId: string,
+  _graphName: string,
+  nodeId: string,
+  rpcName: string,
+  input: any
+): Promise<void> {
+  // Step name convention: node:<nodeId>
+  // Graph name is stored as the workflow name on the run
+  await workflowService.insertStepState(
+    runId,
+    `node:${nodeId}`,
+    rpcName,
+    input,
+    { retries: 3 }
+  )
+  await workflowService.resumeWorkflow(runId)
+}
+
+/**
  * Continue graph execution
  * Non-blocking - finds pending nodes, resolves inputs, queues them for execution
  */
@@ -213,54 +254,8 @@ export async function continueGraph(
 }
 
 /**
- * Queue a graph node for execution
- */
-async function queueGraphNode(
-  workflowService: PikkuWorkflowService,
-  runId: string,
-  _graphName: string,
-  nodeId: string,
-  rpcName: string,
-  input: any
-): Promise<void> {
-  // Step name convention: node:<nodeId>
-  // Graph name is stored as the workflow name on the run
-  await workflowService.insertStepState(
-    runId,
-    `node:${nodeId}`,
-    rpcName,
-    input,
-    { retries: 3 }
-  )
-  await workflowService.resumeWorkflow(runId)
-}
-
-/**
- * Check if a step name is a graph node step
- */
-export function isGraphNodeStep(stepName: string): boolean {
-  return stepName.startsWith('node:')
-}
-
-/**
- * Extract node ID from a graph step name
- */
-export function extractNodeId(stepName: string): string {
-  return stepName.replace(/^node:/, '')
-}
-
-/**
  * Execute a graph step with wire context.
  * Called by the step worker when executing graph nodes.
- *
- * @param workflowService - The workflow service
- * @param rpcService - The RPC service for function execution
- * @param runId - Workflow run ID
- * @param stepId - Step ID
- * @param stepName - Step name (format: node:<nodeId>)
- * @param rpcName - RPC function name
- * @param data - Input data
- * @param graphName - Graph name (workflow name from run)
  */
 export async function executeGraphStep(
   workflowService: PikkuWorkflowService,
@@ -272,14 +267,16 @@ export async function executeGraphStep(
   data: any,
   graphName: string
 ): Promise<any> {
-  // Extract nodeId from step name convention: node:<nodeId>
-  const nodeId = extractNodeId(stepName)
-
-  // Create mutable state to capture branch selection
+  const nodeId = stepName.replace(/^node:/, '')
   const wireState: GraphWireState = {}
-
-  // Create the graph wire context
-  const graphWire = createGraphWire(runId, graphName, nodeId, wireState)
+  const graphWire: PikkuGraphWire = {
+    runId,
+    graphName,
+    nodeId,
+    branch: (key: string) => {
+      wireState.branchKey = key
+    },
+  }
 
   try {
     // Execute the RPC with graph wire context
@@ -341,7 +338,7 @@ export async function onGraphNodeComplete(
 /**
  * Start a workflow graph execution
  */
-export async function startWorkflowGraph(
+export async function runWorkflowGraph(
   workflowService: PikkuWorkflowService,
   graphName: string,
   triggerInput: any
@@ -351,21 +348,21 @@ export async function startWorkflowGraph(
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
 
-  const graph = definition.graph
+  // Get precomputed entryNodeIds from workflow meta (computed at build time)
+  const meta = pikkuState(null, 'workflows', 'meta')
+  const workflowMeta = meta[graphName]
+  if (!workflowMeta?.entryNodeIds) {
+    throw new Error(`Workflow graph '${graphName}' has no entry nodes in meta`)
+  }
 
-  // Create workflow run
+  const graph = definition.graph
   const runId = await workflowService.createRun(graphName, triggerInput)
 
-  // Find and queue entry nodes (nodes with no incoming edges)
-  const entryNodes = findEntryNodes(graph)
-
-  for (const nodeId of entryNodes) {
+  for (const nodeId of workflowMeta.entryNodeIds) {
     const node = graph[nodeId]
     if (!node) continue
 
     const rpcName = getRpcName(node)
-
-    // Entry nodes get trigger input directly (no refs to resolve)
     await queueGraphNode(
       workflowService,
       runId,

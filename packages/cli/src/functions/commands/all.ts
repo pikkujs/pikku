@@ -325,8 +325,8 @@ ${Object.entries(usedExternalPackages)
       const forgeNodesCount = Object.keys(state.forgeNodes.meta).length
       if (forgeNodesCount > 0) summary.set('forgeNodes', forgeNodesCount)
     }
-    if (state.workflowGraphs?.meta) {
-      const workflowGraphsCount = Object.keys(state.workflowGraphs.meta).length
+    if (state.workflows?.graphMeta) {
+      const workflowGraphsCount = Object.keys(state.workflows.graphMeta).length
       if (workflowGraphsCount > 0)
         summary.set('workflowGraphs', workflowGraphsCount)
     }

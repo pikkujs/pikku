@@ -16,10 +16,6 @@ import {
   Condition,
 } from '@pikku/core/workflow'
 import {
-  extractStringLiteral,
-  extractNumberLiteral,
-} from '../utils/extract-node-value.js'
-import {
   isWorkflowDoCall,
   isWorkflowSleepCall,
   isWorkflowCancelCall,
@@ -39,6 +35,7 @@ import {
   formatValidationErrors,
   ValidationError,
 } from './validation.js'
+import { extractStringLiteral, extractNumberLiteral } from '../extract-node-value.js'
 
 /**
  * Extraction context to track state during AST traversal
@@ -150,7 +147,7 @@ export function extractSimpleWorkflow(
  * Find the workflow function (async arrow function)
  */
 function findWorkflowFunction(node: ts.Node): ts.ArrowFunction | null {
-  // Handle pikkuSimpleWorkflowFunc(async () => {}) or pikkuWorkflowFunc(async () => {})
+  // Handle pikkuWorkflowFunc(async () => {}) or pikkuWorkflowComplexFunc(async () => {})
   if (ts.isCallExpression(node)) {
     const arg = node.arguments[0]
     if (arg && ts.isArrowFunction(arg)) {
@@ -172,7 +169,7 @@ function findWorkflowFunction(node: ts.Node): ts.ArrowFunction | null {
     }
   }
 
-  // Handle pikkuSimpleWorkflowFunc({ func: async () => {} })
+  // Handle pikkuWorkflowFunc({ func: async () => {} })
   if (ts.isObjectLiteralExpression(node)) {
     for (const prop of node.properties) {
       if (

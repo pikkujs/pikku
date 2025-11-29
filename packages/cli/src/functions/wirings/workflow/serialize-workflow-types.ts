@@ -1,6 +1,6 @@
 /**
  * Generate all workflow type helpers for authoring workflows
- * Combines DST helpers (pikkuWorkflowFunc, pikkuSimpleWorkflowFunc) and
+ * Combines DST helpers (pikkuWorkflowFunc, pikkuWorkflowComplexFunc) and
  * graph helpers (graph, wireWorkflowGraph) into one file
  */
 export const serializeWorkflowTypes = (
@@ -16,10 +16,10 @@ import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { GraphNodeConfig, WorkflowGraphTriggers } from '@pikku/core'
-import { createGraph } from '@pikku/core'
+import { createGraph, wireWorkflowGraph as coreWireWorkflowGraph } from '@pikku/core'
 
 // ============================================================================
-// DST Workflow Types (pikkuWorkflowFunc, pikkuSimpleWorkflowFunc)
+// DST Workflow Types (pikkuWorkflowFunc, pikkuWorkflowComplexFunc)
 // ============================================================================
 
 /**
@@ -50,7 +50,7 @@ export type PikkuFunctionWorkflow<
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * Creates a workflow function (permissive mode)
+ * Creates a DST-compatible workflow function (serializable, shows in Forge UI)
  */
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:
@@ -61,9 +61,9 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 }
 
 /**
- * Creates a simple workflow function (strict mode for static analysis)
+ * Creates a complex workflow function (arbitrary code, hidden from Forge UI)
  */
-export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
+export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
@@ -90,8 +90,7 @@ export function wireWorkflowGraph<
   triggers: WorkflowGraphTriggers
   graph: T
 }): void {
-  const { wireWorkflowGraph: coreWire } = require('@pikku/core')
-  coreWire(definition)
+  coreWireWorkflowGraph(definition)
 }
 `
 }

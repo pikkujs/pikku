@@ -24,10 +24,7 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
-import {
-  executeGraphStep,
-  isGraphNodeStep,
-} from '../workflow-graph/graph-scheduler.js'
+import { executeGraphStep, runWorkflowGraph } from './graph/graph-runner.js'
 
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
@@ -285,12 +282,28 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   /**
    * Start a new workflow run
+   * Automatically detects workflow type (DST or graph) from meta and executes accordingly
    */
   public async startWorkflow<I>(
     name: string,
     input: I,
     rpcService: any
   ): Promise<{ runId: string }> {
+    // Check meta to determine workflow type
+    const meta = pikkuState(null, 'workflows', 'meta')
+    const workflowMeta = meta[name]
+
+    if (!workflowMeta) {
+      throw new WorkflowNotFoundError(name)
+    }
+
+    // Check if this is a graph workflow (source === 'graph')
+    if (workflowMeta.source === 'graph') {
+      // Graph workflows use the graph scheduler
+      return runWorkflowGraph(this, name, input)
+    }
+
+    // DST workflow - check registration exists
     const registrations = pikkuState(null, 'workflows', 'registrations')
     const workflow = registrations.get(name)
 
@@ -414,7 +427,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         let result: any
 
         // Check if this is a graph node step (step name starts with 'node:')
-        if (isGraphNodeStep(stepName)) {
+        if (stepName.startsWith('node:')) {
           // Get the graph name from the workflow run
           const run = await this.getRun(runId)
           if (!run) {

@@ -5,7 +5,7 @@ import { extractStringLiteral } from '../utils/extract-node-value.js'
 import type {
   SerializedWorkflowGraph,
   DataRef,
-} from './workflow-graph.types.js'
+} from '../utils/workflow/graph/workflow-graph.types.js'
 
 /**
  * Extract trigger configuration from object literal
@@ -354,6 +354,8 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
 
   // Extract properties from the definition object
   let name: string | undefined
+  let description: string | undefined
+  let tags: string[] | undefined
   let triggers: SerializedWorkflowGraph['triggers'] = {}
   let graphNodes: Record<string, any> = {}
 
@@ -364,6 +366,15 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
 
     if (propName === 'name') {
       name = extractStringLiteral(prop.initializer, checker)
+    } else if (propName === 'description') {
+      description = extractStringLiteral(prop.initializer, checker)
+    } else if (
+      propName === 'tags' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      tags = prop.initializer.elements
+        .filter(ts.isStringLiteral)
+        .map((el) => (el as ts.StringLiteral).text)
     } else if (
       propName === 'triggers' &&
       ts.isObjectLiteralExpression(prop.initializer)
@@ -465,14 +476,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     entryNodeIds,
   }
 
-  // Add to state (need to add workflowGraphs to InspectorState)
-  if (!state.workflowGraphs) {
-    ;(state as any).workflowGraphs = {
-      meta: {},
-      files: new Set<string>(),
-    }
-  }
-
-  ;(state as any).workflowGraphs.meta[name] = serialized
-  ;(state as any).workflowGraphs.files.add(node.getSourceFile().fileName)
+  // Add to workflows state
+  state.workflows.graphMeta[name] = serialized
+  state.workflows.graphFiles.add(node.getSourceFile().fileName)
 }

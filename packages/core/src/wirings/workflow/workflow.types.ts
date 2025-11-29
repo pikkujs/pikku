@@ -431,6 +431,8 @@ export interface WorkflowRuntimeMeta {
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** Entry node IDs for graph workflows (computed at build time) */
+  entryNodeIds?: string[]
 }
 
 /**

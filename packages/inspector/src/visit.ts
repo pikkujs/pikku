@@ -17,7 +17,7 @@ import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
 import { addForgeNode } from './add/add-forge-node.js'
 import { addForgeCredential } from './add/add-forge-credential.js'
-import { addWorkflowGraph } from './workflow-graph/add-workflow-graph.js'
+import { addWorkflowGraph } from './add/add-workflow-graph.js'
 
 export const visitSetup = (
   logger: InspectorLogger,

@@ -65,6 +65,8 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     workflows: {
       meta: {},
       files: new Map(),
+      graphMeta: {},
+      graphFiles: new Set(),
     },
     rpc: {
       internalMeta: {},
@@ -92,10 +94,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     forgeCredentials: {
-      meta: {},
-      files: new Set(),
-    },
-    workflowGraphs: {
       meta: {},
       files: new Set(),
     },
