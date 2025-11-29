@@ -374,7 +374,7 @@ function computeEntryNodeIds(graphNodes: Record<string, any>): string[] {
 
 /**
  * Extract pikkuWorkflowGraph config from a variable reference or call expression
- * Returns { name, description, tags, graphConfigNode } where graphConfigNode is the graph callback's object
+ * Returns { name, description, tags, graphConfigNode, exportedName } where graphConfigNode is the graph callback's object
  */
 function extractPikkuWorkflowGraphConfig(
   node: ts.Node,
@@ -385,6 +385,7 @@ function extractPikkuWorkflowGraphConfig(
       description?: string
       tags?: string[]
       graphConfigNode?: ts.Node
+      exportedName?: string
     }
   | undefined {
   // If it's an identifier, resolve to the declaration
@@ -395,7 +396,17 @@ function extractPikkuWorkflowGraphConfig(
       if (declarations && declarations.length > 0) {
         const decl = declarations[0]
         if (ts.isVariableDeclaration(decl) && decl.initializer) {
-          return extractPikkuWorkflowGraphConfig(decl.initializer, checker)
+          const result = extractPikkuWorkflowGraphConfig(
+            decl.initializer,
+            checker
+          )
+          if (result) {
+            // Use the variable name as exportedName
+            result.exportedName = ts.isIdentifier(decl.name)
+              ? decl.name.text
+              : undefined
+          }
+          return result
         }
       }
     }
@@ -564,10 +575,21 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   // Extract config from the pikkuWorkflowGraph result
   const graphConfig = extractPikkuWorkflowGraphConfig(graphPropNode, checker)
 
-  if (!graphConfig || !graphConfig.name) {
+  if (!graphConfig) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      'wireWorkflow with graph requires a pikkuWorkflowGraph with a name property'
+      'wireWorkflow with graph requires a pikkuWorkflowGraph'
+    )
+    return
+  }
+
+  // Use explicit name or fall back to exported variable name
+  const workflowName = graphConfig.name || graphConfig.exportedName
+
+  if (!workflowName) {
+    logger.critical(
+      ErrorCode.MISSING_NAME,
+      'wireWorkflow with graph requires a pikkuWorkflowGraph with a name property or exported variable name'
     )
     return
   }
@@ -585,8 +607,8 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   const entryNodeIds = computeEntryNodeIds(graphNodes)
 
   const serialized: SerializedWorkflowGraph = {
-    name: graphConfig.name,
-    pikkuFuncName: graphConfig.name,
+    name: workflowName,
+    pikkuFuncName: workflowName,
     source: 'graph',
     description: graphConfig.description,
     tags: graphConfig.tags,
@@ -595,6 +617,6 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     entryNodeIds,
   }
 
-  state.workflows.graphMeta[graphConfig.name] = serialized
+  state.workflows.graphMeta[workflowName] = serialized
   state.workflows.graphFiles.add(node.getSourceFile().fileName)
 }

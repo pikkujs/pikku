@@ -85,8 +85,8 @@ export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
   T
 > {
-  /** Workflow name */
-  name: string
+  /** Workflow name (optional - defaults to exported variable name) */
+  name?: string
   /** Optional description */
   description?: string
   /** Optional tags for organization */
@@ -100,7 +100,7 @@ export interface PikkuWorkflowGraphConfig<
 /** Result of pikkuWorkflowGraph - includes metadata for wiring */
 export interface PikkuWorkflowGraphResult<T> {
   __type: 'pikkuWorkflowGraph'
-  name: string
+  name?: string
   description?: string
   tags?: string[]
   graph: T
@@ -108,10 +108,11 @@ export interface PikkuWorkflowGraphResult<T> {
 
 /**
  * Creates a graph-based workflow definition with metadata
+ * Name defaults to the exported variable name if not provided.
  *
  * @example
- * export const myGraphWorkflow = pikkuWorkflowGraph({
- *   name: 'myWorkflow',
+ * // Name inferred from exported variable name
+ * export const myWorkflow = pikkuWorkflowGraph({
  *   description: 'Handles user onboarding',
  *   tags: ['onboarding'],
  *   nodes: {

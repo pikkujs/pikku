@@ -6,9 +6,9 @@ import {
 /**
  * Example workflow graph: User Onboarding
  * Demonstrates sequential flow with input refs
+ * Name is inferred from the exported variable name
  */
 export const graphOnboarding = pikkuWorkflowGraph({
-  name: 'graphOnboarding',
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
   nodes: {
