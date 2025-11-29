@@ -121,7 +121,10 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
     nodesOrBuilder?:
       | GraphNodeConfigMap<FuncMap, RPCMap>
       | ((nodes: FuncMap) => GraphNodeConfigMap<FuncMap, RPCMap>)
-  ): Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>> => {
+  ): Record<
+    Extract<keyof FuncMap, string>,
+    GraphNodeConfig<Extract<keyof FuncMap, string>>
+  > => {
     type NodeIds = Extract<keyof FuncMap, string>
 
     // If no nodes provided, return just the funcMap converted to graph nodes
