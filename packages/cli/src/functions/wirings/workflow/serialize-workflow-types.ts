@@ -1,6 +1,6 @@
 /**
  * Generate all workflow type helpers for authoring workflows
- * Combines DST helpers (pikkuWorkflowFunc, pikkuWorkflowComplexFunc) and
+ * Combines DSL helpers (pikkuWorkflowFunc, pikkuWorkflowComplexFunc) and
  * graph helpers (graph, wireWorkflowGraph) into one file
  */
 export const serializeWorkflowTypes = (
@@ -9,7 +9,7 @@ export const serializeWorkflowTypes = (
 ) => {
   return `/**
  * Workflow type definitions and helpers
- * Used for authoring both DST and graph-based workflows
+ * Used for authoring both DSL and graph-based workflows
  */
 
 import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
@@ -19,7 +19,7 @@ import type { GraphNodeConfig, WorkflowGraphTriggers } from '@pikku/core'
 import { createGraph, wireWorkflowGraph as coreWireWorkflowGraph } from '@pikku/core'
 
 // ============================================================================
-// DST Workflow Types (pikkuWorkflowFunc, pikkuWorkflowComplexFunc)
+// DSL Workflow Types (pikkuWorkflowFunc, pikkuWorkflowComplexFunc)
 // ============================================================================
 
 /**
@@ -50,7 +50,7 @@ export type PikkuFunctionWorkflow<
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * Creates a DST-compatible workflow function (serializable, shows in Forge UI)
+ * Creates a DSL-compatible workflow function (serializable, shows in Forge UI)
  */
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:

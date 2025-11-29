@@ -151,7 +151,7 @@ export interface WorkflowGraphTriggers {
 /**
  * Workflow source type
  */
-export type WorkflowSourceType = 'dst' | 'graph'
+export type WorkflowSourceType = 'dsl' | 'graph'
 
 /**
  * Serialized workflow graph - the canonical JSON format
@@ -161,7 +161,7 @@ export interface SerializedWorkflowGraph {
   name: string
   /** Pikku function name (for runtime registration) */
   pikkuFuncName: string
-  /** Source type: 'dst' for pikkuWorkflowFunc, 'graph' for wireWorkflowGraph */
+  /** Source type: 'dsl' for pikkuWorkflowFunc, 'graph' for wireWorkflowGraph */
   source: WorkflowSourceType
   /** Optional description */
   description?: string

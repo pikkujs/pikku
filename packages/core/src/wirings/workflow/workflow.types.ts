@@ -403,7 +403,7 @@ export interface PikkuWorkflow {
 }
 
 /**
- * Workflows metadata for inspector/CLI (DST step-based format)
+ * Workflows metadata for inspector/CLI (DSL step-based format)
  */
 export type WorkflowsMeta = Record<
   string,
@@ -418,7 +418,7 @@ export type WorkflowsMeta = Record<
 /**
  * Unified workflow runtime meta (used by runtime to execute workflows)
  * This is the format stored in pikkuState('workflows', 'meta')
- * Both DST and graph-based workflows are converted to this format
+ * Both DSL and graph-based workflows are converted to this format
  */
 export interface WorkflowRuntimeMeta {
   /** Workflow name (used as key in registrations) */
@@ -426,7 +426,7 @@ export interface WorkflowRuntimeMeta {
   /** Pikku function name (for execution) */
   pikkuFuncName: string
   /** Source type */
-  source?: 'dst' | 'graph'
+  source?: 'dsl' | 'graph'
   /** Optional description */
   description?: string
   /** Tags for organization */

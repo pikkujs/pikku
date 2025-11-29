@@ -1,5 +1,5 @@
 /**
- * Converts DST (Declarative Simple Workflow) step-based format to graph node format
+ * Converts DSL (Domain Specific Language) step-based format to graph node format
  */
 import type { WorkflowStepMeta, WorkflowsMeta } from '@pikku/core/workflow'
 import type {
@@ -35,7 +35,7 @@ function convertInputSource(source: {
 }
 
 /**
- * Convert a single DST step to graph node(s)
+ * Convert a single DSL step to graph node(s)
  */
 function convertStepToNode(
   step: WorkflowStepMeta,
@@ -299,9 +299,9 @@ function convertStepsToNodes(
 }
 
 /**
- * Convert a DST workflow to graph format
+ * Convert a DSL workflow to graph format
  */
-export function convertDstToGraph(
+export function convertDslToGraph(
   workflowName: string,
   meta: WorkflowsMeta[string]
 ): SerializedWorkflowGraph {
@@ -318,25 +318,25 @@ export function convertDstToGraph(
   return {
     name: workflowName,
     pikkuFuncName: meta.pikkuFuncName,
-    source: 'dst',
+    source: 'dsl',
     description: meta.description,
     tags: meta.tags,
-    triggers: {}, // DST workflows don't have explicit triggers in meta
+    triggers: {}, // DSL workflows don't have explicit triggers in meta
     nodes: nodesRecord,
     entryNodeIds,
   }
 }
 
 /**
- * Convert all DST workflows to graph format
+ * Convert all DSL workflows to graph format
  */
-export function convertAllDstToGraphs(
+export function convertAllDslToGraphs(
   workflowsMeta: WorkflowsMeta
 ): Record<string, SerializedWorkflowGraph> {
   const result: Record<string, SerializedWorkflowGraph> = {}
 
   for (const [name, meta] of Object.entries(workflowsMeta)) {
-    result[name] = convertDstToGraph(name, meta)
+    result[name] = convertDslToGraph(name, meta)
   }
 
   return result

@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
-import { convertAllDstToGraphs, ErrorCode } from '@pikku/inspector'
+import { convertAllDslToGraphs, ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
@@ -28,11 +28,11 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
 
-    // Get all workflow names (both DST and graph-based)
-    const dstWorkflowNames = Object.keys(workflows.meta)
+    // Get all workflow names (both DSL and graph-based)
+    const dslWorkflowNames = Object.keys(workflows.meta)
     const graphWorkflowNames = Object.keys(workflows.graphMeta)
     const allWorkflowNames = [
-      ...new Set([...dstWorkflowNames, ...graphWorkflowNames]),
+      ...new Set([...dslWorkflowNames, ...graphWorkflowNames]),
     ]
 
     const hasWorkflows = allWorkflowNames.length > 0
@@ -54,11 +54,11 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       }
     }
 
-    // Generate unified JSON (convert DST to graph format and merge)
+    // Generate unified JSON (convert DSL to graph format and merge)
     if (hasWorkflows && workflowGraphsMetaJsonFile) {
-      const dstAsGraphs = convertAllDstToGraphs(workflows.meta)
+      const dslAsGraphs = convertAllDslToGraphs(workflows.meta)
       const unifiedMeta = {
-        ...dstAsGraphs,
+        ...dslAsGraphs,
         ...workflows.graphMeta,
       }
 
@@ -70,7 +70,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       )
     }
 
-    // Generate workflow registration (meta + DST workflow registrations)
+    // Generate workflow registration (meta + DSL workflow registrations)
     const jsonImportPath = getFileImportRelativePath(
       workflowsWiringFile,
       workflowGraphsMetaJsonFile,
@@ -91,7 +91,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       )
     )
 
-    // Generate workflow types (DST + graph helpers in one file)
+    // Generate workflow types (DSL + graph helpers in one file)
     const functionTypesImportPath = getFileImportRelativePath(
       workflowTypesFile,
       functionTypesFile,

@@ -65,7 +65,7 @@ export interface ExtractionResult {
 /**
  * Extract simple workflow metadata from a function declaration
  */
-export function extractDSTWorkflow(
+export function extractDSLWorkflow(
   funcNode: ts.Node,
   checker: ts.TypeChecker
 ): ExtractionResult {

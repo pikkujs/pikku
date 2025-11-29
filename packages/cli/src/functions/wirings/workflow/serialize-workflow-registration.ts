@@ -1,6 +1,6 @@
 /**
  * Generate workflow runtime registration
- * Combines meta registration (pikkuState) and DST workflow registration (addWorkflow)
+ * Combines meta registration (pikkuState) and DSL workflow registration (addWorkflow)
  */
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
@@ -15,7 +15,7 @@ export const serializeWorkflowRegistration = (
 ) => {
   const lines: string[] = []
   const hasWorkflows = workflowNames.length > 0
-  const hasDstWorkflows = workflowFiles.size > 0
+  const hasDslWorkflows = workflowFiles.size > 0
 
   // Imports - only add if they'll be used
   if (hasWorkflows) {
@@ -24,7 +24,7 @@ export const serializeWorkflowRegistration = (
       "import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'"
     )
   }
-  if (hasDstWorkflows) {
+  if (hasDslWorkflows) {
     lines.push("import { addWorkflow } from '@pikku/core/workflow'")
   }
 
@@ -36,7 +36,7 @@ export const serializeWorkflowRegistration = (
     lines.push(importStatement)
   }
 
-  // Import DST workflow functions
+  // Import DSL workflow functions
   const sortedWorkflows = Array.from(workflowFiles.entries()).sort((a, b) =>
     a[0].localeCompare(b[0])
   )
@@ -60,7 +60,7 @@ export const serializeWorkflowRegistration = (
     lines.push('')
   }
 
-  // Register DST workflows
+  // Register DSL workflows
   for (const [pikkuFuncName, { exportedName }] of sortedWorkflows) {
     lines.push(`addWorkflow('${pikkuFuncName}', ${exportedName})`)
   }

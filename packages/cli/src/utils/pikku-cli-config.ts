@@ -340,7 +340,7 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Workflow Graphs (unified JSON contains both DST and graph workflows)
+    // Workflow Graphs (unified JSON contains both DSL and graph workflows)
     if (!result.workflowGraphsMetaJsonFile) {
       result.workflowGraphsMetaJsonFile = join(
         workflowDir,

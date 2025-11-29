@@ -1,5 +1,5 @@
 /**
- * Example of a Simple Workflow using pikkuSimpleWorkflowFunc
+ * Example of a DSL Workflow using pikkuWorkflowFunc
  *
  * Simple workflows must conform to a restricted DSL that enables:
  * - Static analysis and visualization
@@ -13,7 +13,7 @@
  * - All workflow calls must be awaited
  */
 
-import { pikkuSimpleWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 // RPC function to create organization
@@ -70,7 +70,7 @@ export const sendWelcomeEmail = pikkuSessionlessFunc<
 /**
  * Organization onboarding workflow (simple DSL)
  */
-export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
+export const orgOnboardingSimpleWorkflow = pikkuWorkflowFunc<
   { email: string; name: string; plan: string; memberEmails: string[] },
   { orgId: string; ownerId?: string }
 >(async ({}, data, { workflow }) => {
@@ -169,7 +169,7 @@ export const orgOnboardingSimpleWorkflow = pikkuSimpleWorkflowFunc<
 /**
  * Sequential member invitation with delays (simple DSL)
  */
-export const sequentialInviteSimpleWorkflow = pikkuSimpleWorkflowFunc<
+export const sequentialInviteSimpleWorkflow = pikkuWorkflowFunc<
   { orgId: string; memberEmails: string[]; delayMs: number },
   { invitedCount: number }
 >(async ({}, data, { workflow }) => {

@@ -282,7 +282,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   /**
    * Start a new workflow run
-   * Automatically detects workflow type (DST or graph) from meta and executes accordingly
+   * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
    */
   public async startWorkflow<I>(
     name: string,
@@ -303,7 +303,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       return runWorkflowGraph(this, name, input)
     }
 
-    // DST workflow - check registration exists
+    // DSL workflow - check registration exists
     const registrations = pikkuState(null, 'workflows', 'registrations')
     const workflow = registrations.get(name)
 
