@@ -138,6 +138,28 @@ export function pikkuWorkflowGraph<
   }
 }
 
+/** Compute output types for all nodes based on their RPC mapping */
+type ComputeNodeOutputs<FuncMap extends Record<string, string>> = {
+  [K in keyof FuncMap]: FuncMap[K] extends keyof FlattenedRPCMap
+    ? FlattenedRPCMap[FuncMap[K]]['output']
+    : unknown
+}
+
+/** Compute input types for all nodes based on their RPC mapping */
+type ComputeNodeInputs<FuncMap extends Record<string, string>> = {
+  [K in keyof FuncMap]: FuncMap[K] extends keyof FlattenedRPCMap
+    ? FlattenedRPCMap[FuncMap[K]]['input']
+    : unknown
+}
+
+/** Typed ref value */
+type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
+
+/** Map input type fields to allow TypedRef of matching type */
+type InputWithRefs<T> = {
+  [K in keyof T]: T[K] | TypedRef<T[K]>
+}
+
 /** Type helper for node configuration */
 type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
   [K in Extract<keyof FuncMap, string>]?: {
@@ -145,12 +167,12 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
     input?: (
       ref: <
         N extends Extract<keyof FuncMap, string>,
-        P extends string
+        P extends keyof ComputeNodeOutputs<FuncMap>[N] & string
       >(
         nodeId: N,
         path: P
-      ) => any
-    ) => any
+      ) => TypedRef<ComputeNodeOutputs<FuncMap>[N][P]>
+    ) => InputWithRefs<ComputeNodeInputs<FuncMap>[K]>
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
   }
 }
