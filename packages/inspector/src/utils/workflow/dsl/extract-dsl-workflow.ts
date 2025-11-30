@@ -1347,5 +1347,33 @@ function extractInputSource(
     return { from: 'literal', value: arr }
   }
 
+  // No substitution template literal: `hello`
+  if (ts.isNoSubstitutionTemplateLiteral(node)) {
+    return { from: 'literal', value: node.text }
+  }
+
+  // Template expression with substitutions: `hello ${name}`
+  if (ts.isTemplateExpression(node)) {
+    const parts: string[] = [node.head.text]
+    const expressions: InputSource[] = []
+
+    for (const span of node.templateSpans) {
+      // Extract each expression
+      const exprSource = extractInputSource(span.expression, context)
+      if (exprSource) {
+        expressions.push(exprSource)
+      } else {
+        // Fallback: use source text as literal
+        expressions.push({
+          from: 'literal',
+          value: getSourceText(span.expression),
+        })
+      }
+      parts.push(span.literal.text)
+    }
+
+    return { from: 'template', parts, expressions }
+  }
+
   return null
 }

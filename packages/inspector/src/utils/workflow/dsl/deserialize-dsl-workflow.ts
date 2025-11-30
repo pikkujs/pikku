@@ -29,6 +29,25 @@ function isDataRef(value: unknown): value is DataRef {
 }
 
 /**
+ * Check if value is a template literal reference
+ */
+interface TemplateRef {
+  $template: {
+    parts: string[]
+    expressions: unknown[]
+  }
+}
+
+function isTemplateRef(value: unknown): value is TemplateRef {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '$template' in value &&
+    typeof (value as TemplateRef).$template === 'object'
+  )
+}
+
+/**
  * Convert a DataRef to code expression
  */
 function dataRefToCode(ref: DataRef, itemVar?: string): string {
@@ -43,6 +62,48 @@ function dataRefToCode(ref: DataRef, itemVar?: string): string {
   }
   // Reference to a step output variable
   return ref.path ? `${ref.$ref}.${ref.path}` : ref.$ref
+}
+
+/**
+ * Convert a template ref to template literal code
+ */
+function templateRefToCode(template: TemplateRef, itemVar?: string): string {
+  const { parts, expressions } = template.$template
+  let result = '`'
+
+  for (let i = 0; i < parts.length; i++) {
+    result += parts[i]
+    if (i < expressions.length) {
+      const expr = expressions[i]
+      let exprCode: string
+      if (isDataRef(expr)) {
+        exprCode = dataRefToCode(expr, itemVar)
+      } else if (isTemplateRef(expr)) {
+        // Nested template (unlikely but handle it)
+        exprCode = templateRefToCode(expr, itemVar)
+      } else {
+        // Literal value
+        exprCode = String(expr)
+      }
+      result += '${' + exprCode + '}'
+    }
+  }
+
+  result += '`'
+  return result
+}
+
+/**
+ * Convert a single value to code (handles refs, templates, and literals)
+ */
+function valueToCode(value: unknown, itemVar?: string): string {
+  if (isDataRef(value)) {
+    return dataRefToCode(value, itemVar)
+  }
+  if (isTemplateRef(value)) {
+    return templateRefToCode(value, itemVar)
+  }
+  return JSON.stringify(value)
 }
 
 /**
@@ -73,10 +134,7 @@ function inputToCode(
   if (entries.length === 0) return '{}'
 
   const lines = entries.map(([key, value]) => {
-    if (isDataRef(value)) {
-      return `${indent}  ${key}: ${dataRefToCode(value, itemVar)},`
-    }
-    return `${indent}  ${key}: ${JSON.stringify(value)},`
+    return `${indent}  ${key}: ${valueToCode(value, itemVar)},`
   })
 
   return `{\n${lines.join('\n')}\n${indent}}`

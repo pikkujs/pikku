@@ -53,6 +53,7 @@ export type InputSource =
   | { from: 'outputVar'; name: string; path?: string }
   | { from: 'item'; path: string }
   | { from: 'literal'; value: unknown }
+  | { from: 'template'; parts: string[]; expressions: InputSource[] }
 
 /**
  * Output binding for return statements in DSL workflows

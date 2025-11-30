@@ -29,6 +29,8 @@ function convertInputSource(source: {
   path?: string
   name?: string
   value?: unknown
+  parts?: string[]
+  expressions?: unknown[]
 }): unknown | DataRef {
   if (source.from === 'literal') {
     return source.value
@@ -41,6 +43,16 @@ function convertInputSource(source: {
   }
   if (source.from === 'item') {
     return { $ref: '$item', path: source.path }
+  }
+  if (source.from === 'template') {
+    return {
+      $template: {
+        parts: source.parts,
+        expressions: source.expressions?.map((expr) =>
+          convertInputSource(expr as any)
+        ),
+      },
+    }
   }
   return source.value
 }
