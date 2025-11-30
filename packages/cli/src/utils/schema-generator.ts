@@ -30,6 +30,19 @@ function toValidIdentifier(name: string): string {
   return result
 }
 
+/** Primitive types that don't need schema generation */
+const PRIMITIVE_TYPES = new Set([
+  'boolean',
+  'string',
+  'number',
+  'null',
+  'undefined',
+  'void',
+  'any',
+  'unknown',
+  'never',
+])
+
 export async function generateSchemas(
   logger: CLILogger,
   tsconfig: string,
@@ -90,6 +103,10 @@ export async function generateSchemas(
   const schemas: Record<string, JSONValue> = {}
 
   schemasSet.forEach((schema) => {
+    // Skip primitive types - they don't need schema generation
+    if (PRIMITIVE_TYPES.has(schema)) {
+      return
+    }
     try {
       schemas[schema] = generator.createSchema(schema) as JSONValue
     } catch (e) {
@@ -197,11 +214,7 @@ export async function saveSchemas(
         return types
       })
       .flat()
-      .filter(
-        (s): s is string =>
-          !!s &&
-          !['boolean', 'string', 'number', 'null', 'undefined'].includes(s)
-      ),
+      .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
     ...(zodLookup ? Array.from(zodLookup.keys()) : []),
