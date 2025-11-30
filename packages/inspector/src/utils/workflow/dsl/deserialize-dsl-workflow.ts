@@ -672,18 +672,30 @@ export function deserializeDslWorkflow(
 
 /**
  * Convert a DataRef to graph ref() call
+ * @param ref - The data reference
+ * @param outputVarToNodeId - Map from outputVar names to node IDs
  */
-function dataRefToGraphRef(ref: DataRef): string {
+function dataRefToGraphRef(
+  ref: DataRef,
+  outputVarToNodeId: Map<string, string>
+): string {
+  // Convert outputVar reference to nodeId reference
+  const nodeId = outputVarToNodeId.get(ref.$ref) || ref.$ref
   if (ref.path) {
-    return `ref('${ref.$ref}', '${ref.path}')`
+    return `ref('${nodeId}', '${ref.path}')`
   }
-  return `ref('${ref.$ref}')`
+  return `ref('${nodeId}')`
 }
 
 /**
  * Convert input object to graph input code using ref()
+ * @param input - The input mapping
+ * @param outputVarToNodeId - Map from outputVar names to node IDs
  */
-function inputToGraphCode(input: Record<string, unknown>): {
+function inputToGraphCode(
+  input: Record<string, unknown>,
+  outputVarToNodeId: Map<string, string>
+): {
   hasRefs: boolean
   code: string
 } {
@@ -694,7 +706,7 @@ function inputToGraphCode(input: Record<string, unknown>): {
   const lines = entries.map(([key, value]) => {
     if (isDataRef(value)) {
       hasRefs = true
-      return `        ${key}: ${dataRefToGraphRef(value)},`
+      return `        ${key}: ${dataRefToGraphRef(value, outputVarToNodeId)},`
     }
     return `        ${key}: ${JSON.stringify(value)},`
   })
@@ -768,6 +780,13 @@ function wiresToCode(wires: SerializedWorkflowGraph['wires']): string {
 }
 
 /**
+ * Check if a node is a flow node (non-RPC control flow)
+ */
+function isFlowNode(node: any): boolean {
+  return 'flow' in node
+}
+
+/**
  * Deserialize a graph workflow to pikkuWorkflowGraph code
  */
 export function deserializeGraphWorkflow(
@@ -780,9 +799,7 @@ export function deserializeGraphWorkflow(
   const lines: string[] = []
 
   // Import statement
-  lines.push(
-    `import { pikkuWorkflowGraph, wireWorkflow } from '${pikkuImportPath}'`
-  )
+  lines.push(`import { pikkuWorkflowGraph } from '${pikkuImportPath}'`)
   lines.push('')
 
   // Add description as comment if present
@@ -792,7 +809,23 @@ export function deserializeGraphWorkflow(
     lines.push(` */`)
   }
 
-  // Build node to RPC mapping (first phase)
+  // Identify flow nodes (non-RPC nodes like return, sleep, branch)
+  const flowNodeIds = new Set<string>()
+  for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+    if (isFlowNode(node)) {
+      flowNodeIds.add(nodeId)
+    }
+  }
+
+  // Build outputVar to nodeId mapping (for resolving variable references to node IDs)
+  const outputVarToNodeId = new Map<string, string>()
+  for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+    if ('outputVar' in node && typeof node.outputVar === 'string') {
+      outputVarToNodeId.set(node.outputVar, nodeId)
+    }
+  }
+
+  // Build node to RPC mapping (only RPC nodes, not flow nodes)
   const nodeRpcMap: Record<string, string> = {}
   for (const [nodeId, node] of Object.entries(workflow.nodes)) {
     if (
@@ -804,26 +837,37 @@ export function deserializeGraphWorkflow(
     }
   }
 
-  // Build node configurations (second phase)
+  // Build node configurations (only for RPC nodes)
   const nodeConfigs: string[] = []
 
   for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+    // Skip flow nodes - they can't be represented in pikkuWorkflowGraph
+    if (flowNodeIds.has(nodeId)) {
+      continue
+    }
+
     const configParts: string[] = []
 
-    // Add next if present
+    // Add next if present and not pointing to a flow node
     if ('next' in node && node.next) {
-      configParts.push(`next: '${node.next}'`)
+      const nextId = node.next as string
+      // Don't add next if it points to a flow node (like return)
+      if (!flowNodeIds.has(nextId)) {
+        configParts.push(`next: '${nextId}'`)
+      }
     }
 
     // Add input if present
+    // Always use callback form to avoid excess property checking in TypeScript
     if ('input' in node && node.input) {
       const input = node.input as Record<string, unknown>
       if (Object.keys(input).length > 0) {
-        const { hasRefs, code } = inputToGraphCode(input)
+        const { hasRefs, code } = inputToGraphCode(input, outputVarToNodeId)
         if (hasRefs) {
           configParts.push(`input: (ref) => (${code})`)
         } else {
-          configParts.push(`input: ${code}`)
+          // Wrap in callback to avoid TypeScript excess property checking
+          configParts.push(`input: () => (${code})`)
         }
       }
     }

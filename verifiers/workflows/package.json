@@ -21,6 +21,7 @@
     "build": "tsc -b",
     "pikku": "pikku",
     "serialize-dsl": "npx tsx src/tests/serialize-dsl.test.ts",
+    "serialize-graph": "npx tsx src/tests/serialize-graph.test.ts",
     "test": "pikku && npx tsx src/tests/serialize-dsl.test.ts",
     "test:bullmq": "npx tsx src/runners/bullmq.runner.ts",
     "test:pgboss": "npx tsx src/runners/pgboss.runner.ts"

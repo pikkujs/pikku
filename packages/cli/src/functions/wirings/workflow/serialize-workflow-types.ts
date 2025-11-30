@@ -221,24 +221,24 @@ type ComputeNodeInputs<FuncMap extends Record<string, string>> = {
 /** Typed ref value */
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
 
-/** Map input type fields to allow TypedRef of matching type */
+/** Map input type fields to allow TypedRef of matching type or any additional properties */
 type InputWithRefs<T> = {
-  [K in keyof T]: T[K] | TypedRef<T[K]>
-}
+  [K in keyof T]?: T[K] | TypedRef<T[K]> | TypedRef<unknown>
+} & Record<string, unknown>
 
 /** Type helper for node configuration */
 type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
   [K in Extract<keyof FuncMap, string>]?: {
     next?: NextConfig<Extract<keyof FuncMap, string>>
-    input?: (
+    input?: Record<string, unknown> | (() => Record<string, unknown>) | ((
       ref: <
-        N extends Extract<keyof FuncMap, string>,
-        P extends keyof ComputeNodeOutputs<FuncMap>[N] & string
+        N extends Extract<keyof FuncMap, string> | 'trigger' | '$item',
+        P extends string
       >(
         nodeId: N,
-        path: P
-      ) => TypedRef<ComputeNodeOutputs<FuncMap>[N][P]>
-    ) => InputWithRefs<ComputeNodeInputs<FuncMap>[K]>
+        path?: P
+      ) => TypedRef<unknown>
+    ) => Record<string, unknown>)
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
   }
 }
