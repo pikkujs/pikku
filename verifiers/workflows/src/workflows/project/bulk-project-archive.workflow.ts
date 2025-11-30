@@ -3,12 +3,12 @@
  * Demonstrates archiving multiple projects sequentially
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Bulk project archive workflow
  */
-export const bulkProjectArchiveWorkflow = pikkuWorkflowFunc<
+export const bulkProjectArchiveWorkflow = pikkuWorkflowComplexFunc<
   { projectIds: string[] },
   { archivedProjects: Array<{ projectId: string; archivedAt: string }> }
 >(async (_services, data, { workflow }) => {

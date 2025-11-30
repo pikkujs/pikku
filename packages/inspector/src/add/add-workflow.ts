@@ -137,13 +137,10 @@ function getWorkflowInvocations(
     }
   }
 
-  // Don't recurse into nested functions - only look at top-level workflow calls
+  // Recurse into children, including arrow functions (for Promise.all callbacks)
+  // but skip function declarations (which would be separate functions)
   ts.forEachChild(node, (child) => {
-    if (
-      ts.isFunctionDeclaration(child) ||
-      ts.isFunctionExpression(child) ||
-      ts.isArrowFunction(child)
-    ) {
+    if (ts.isFunctionDeclaration(child)) {
       return
     }
     getWorkflowInvocations(child, checker, state, workflowName, steps)
@@ -284,6 +281,8 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     // DSL extraction failed
     if (wrapperType === 'dsl') {
       // For pikkuWorkflowFunc, this is a critical error
+      // But still track RPC invocations for function registration
+      getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
       logger.critical(
         ErrorCode.INVALID_DSL_WORKFLOW,
         `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to DSL workflow rules:\n${result.reason || 'Unknown error'}`
@@ -299,10 +298,11 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   /**
-   * Only do basic extraction for non-dsl workflows.
-   * Simple workflows already have properly extracted steps.
+   * For non-dsl workflows or pikkuWorkflowComplexFunc, run basic extraction
+   * to ensure all RPC invocations are tracked for function registration.
+   * This catches RPCs in Promise.all callbacks and other patterns DSL can't extract.
    */
-  if (!dsl) {
+  if (!dsl || wrapperType === 'regular') {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
   }
 

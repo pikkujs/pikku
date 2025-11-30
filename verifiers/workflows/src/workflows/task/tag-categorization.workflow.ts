@@ -3,12 +3,12 @@
  * Demonstrates categorizing tasks using tags
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Tag-based task categorization workflow
  */
-export const tagCategorizationWorkflow = pikkuWorkflowFunc<
+export const tagCategorizationWorkflow = pikkuWorkflowComplexFunc<
   {
     tasks: Array<{
       title: string

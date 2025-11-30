@@ -4,14 +4,14 @@
  */
 
 import {
-  pikkuWorkflowFunc,
+  pikkuWorkflowComplexFunc,
   WorkflowCancelledException,
 } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Order fulfillment workflow: get order, check inventory, create shipment
  */
-export const orderFulfillmentWorkflow = pikkuWorkflowFunc<
+export const orderFulfillmentWorkflow = pikkuWorkflowComplexFunc<
   { orderId: string; carrier: string },
   { shipmentId: string; trackingNumber: string; status: string }
 >(async (_services, data, { workflow }) => {

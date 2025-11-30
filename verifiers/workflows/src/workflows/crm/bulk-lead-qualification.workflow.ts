@@ -2,9 +2,9 @@
  * Bulk lead qualification workflow
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const bulkLeadQualificationWorkflow = pikkuWorkflowFunc<
+export const bulkLeadQualificationWorkflow = pikkuWorkflowComplexFunc<
   { leadIds: string[]; minimumScore: number },
   { qualified: string[]; rejected: string[] }
 >(async (_services, data, { workflow }) => {

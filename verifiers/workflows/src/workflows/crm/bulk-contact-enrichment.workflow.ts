@@ -2,9 +2,9 @@
  * Bulk contact enrichment workflow
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const bulkContactEnrichmentWorkflow = pikkuWorkflowFunc<
+export const bulkContactEnrichmentWorkflow = pikkuWorkflowComplexFunc<
   { contactIds: string[] },
   { enrichedCount: number; failedCount: number }
 >(async (_services, data, { workflow }) => {

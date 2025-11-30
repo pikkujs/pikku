@@ -2,9 +2,9 @@
  * Multi-level approval workflow
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const multiLevelApprovalWorkflow = pikkuWorkflowFunc<
+export const multiLevelApprovalWorkflow = pikkuWorkflowComplexFunc<
   {
     documentId: string
     approvalLevels: Array<{ level: number; approverId: string }>

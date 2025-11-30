@@ -2,9 +2,9 @@
  * Pipeline aggregation workflow
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const pipelineAggregationWorkflow = pikkuWorkflowFunc<
+export const pipelineAggregationWorkflow = pikkuWorkflowComplexFunc<
   { leadIds: string[] },
   {
     totalLeads: number

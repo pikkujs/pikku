@@ -1006,8 +1006,36 @@ function extractSequentialFanout(
     loopVars: new Set([...context.loopVars, itemVar]),
   }
 
+  let workflowDoCount = 0
+
   for (const stmt of statement.statement.statements) {
-    // Look for workflow.do
+    // Look for workflow.do in VariableStatement (const x = await workflow.do(...))
+    if (ts.isVariableStatement(stmt)) {
+      const declList = stmt.declarationList
+      if (declList.declarations.length === 1) {
+        const decl = declList.declarations[0]
+        const init = decl.initializer
+        if (
+          init &&
+          ts.isAwaitExpression(init) &&
+          ts.isCallExpression(init.expression)
+        ) {
+          const call = init.expression
+          if (isWorkflowDoCall(call, context.checker)) {
+            workflowDoCount++
+            const varName = ts.isIdentifier(decl.name)
+              ? decl.name.text
+              : undefined
+            const step = extractRpcStep(call, childContext, varName)
+            if (step) {
+              childStep = step
+            }
+          }
+        }
+      }
+    }
+
+    // Look for workflow.do in ExpressionStatement (await workflow.do(...))
     if (ts.isExpressionStatement(stmt)) {
       const expr = stmt.expression
 
@@ -1015,6 +1043,7 @@ function extractSequentialFanout(
         const call = expr.expression
 
         if (isWorkflowDoCall(call, context.checker)) {
+          workflowDoCount++
           const step = extractRpcStep(call, childContext)
           if (step) {
             childStep = step
@@ -1079,6 +1108,15 @@ function extractSequentialFanout(
   }
 
   if (!childStep) {
+    return null
+  }
+
+  // If there are multiple workflow.do calls, the loop is too complex for DSL
+  if (workflowDoCount > 1) {
+    context.errors.push({
+      message: `For-of loop has ${workflowDoCount} workflow.do calls but DSL only supports 1. Use pikkuWorkflowComplexFunc for complex loops.`,
+      node: statement,
+    })
     return null
   }
 

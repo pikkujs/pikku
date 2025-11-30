@@ -3,7 +3,12 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "workspace:*"
+    "@pikku/core": "workspace:*",
+    "@pikku/pg": "workspace:*",
+    "@pikku/queue-bullmq": "workspace:*",
+    "@pikku/queue-pg-boss": "workspace:*",
+    "@pikku/redis": "workspace:*",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
@@ -16,6 +21,7 @@
     "build": "tsc -b",
     "pikku": "pikku",
     "serialize-dsl": "npx tsx src/tests/serialize-dsl.test.ts",
+    "test": "pikku && npx tsx src/tests/serialize-dsl.test.ts",
     "test:bullmq": "npx tsx src/runners/bullmq.runner.ts",
     "test:pgboss": "npx tsx src/runners/pgboss.runner.ts"
   }

@@ -3802,7 +3802,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/pg@npm:^0.11.1, @pikku/pg@workspace:packages/services/pg":
+"@pikku/pg@npm:^0.11.1, @pikku/pg@workspace:*, @pikku/pg@workspace:packages/services/pg":
   version: 0.0.0-use.local
   resolution: "@pikku/pg@workspace:packages/services/pg"
   dependencies:
@@ -3824,7 +3824,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/queue-bullmq@npm:^0.11.1, @pikku/queue-bullmq@workspace:packages/services/queue-bullmq":
+"@pikku/queue-bullmq@npm:^0.11.1, @pikku/queue-bullmq@workspace:*, @pikku/queue-bullmq@workspace:packages/services/queue-bullmq":
   version: 0.0.0-use.local
   resolution: "@pikku/queue-bullmq@workspace:packages/services/queue-bullmq"
   dependencies:
@@ -3836,7 +3836,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/queue-pg-boss@npm:^0.11.1, @pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss":
+"@pikku/queue-pg-boss@npm:^0.11.1, @pikku/queue-pg-boss@workspace:*, @pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss":
   version: 0.0.0-use.local
   resolution: "@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"
   dependencies:
@@ -3847,7 +3847,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/redis@npm:^0.11.1, @pikku/redis@workspace:packages/services/redis":
+"@pikku/redis@npm:^0.11.1, @pikku/redis@workspace:*, @pikku/redis@workspace:packages/services/redis":
   version: 0.0.0-use.local
   resolution: "@pikku/redis@workspace:packages/services/redis"
   dependencies:
@@ -4273,7 +4273,12 @@ __metadata:
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
     "@pikku/inspector": "workspace:*"
+    "@pikku/pg": "workspace:*"
+    "@pikku/queue-bullmq": "workspace:*"
+    "@pikku/queue-pg-boss": "workspace:*"
+    "@pikku/redis": "workspace:*"
     "@types/node": "npm:^24"
+    postgres: "npm:^3.4.7"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
   languageName: unknown

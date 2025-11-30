@@ -3,12 +3,12 @@
  * Demonstrates notification escalation with retries
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Escalation chain workflow: notify, wait for response, escalate if no response
  */
-export const escalationChainWorkflow = pikkuWorkflowFunc<
+export const escalationChainWorkflow = pikkuWorkflowComplexFunc<
   {
     alertTitle: string
     alertMessage: string
