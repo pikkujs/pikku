@@ -631,29 +631,46 @@ function parseCondition(expr: ts.Expression): Condition {
 }
 
 /**
- * Extract branch step from if statement
+ * Extract branch step from if statement (supports if/else-if/else chains)
  */
 function extractBranch(
   statement: ts.IfStatement,
   context: ExtractionContext
 ): BranchStepMeta | null {
-  const conditions = parseCondition(statement.expression)
+  const branches: BranchStepMeta['branches'] = []
+  let elseSteps: BranchStepMeta['elseSteps']
 
-  // Handle both block statements and single statements
-  const thenSteps = ts.isBlock(statement.thenStatement)
-    ? extractSteps(statement.thenStatement, context)
-    : extractStepsFromStatement(statement.thenStatement, context)
+  // Walk the if/else-if chain
+  let current: ts.IfStatement | undefined = statement
+  while (current) {
+    const condition = parseCondition(current.expression)
+    const steps = ts.isBlock(current.thenStatement)
+      ? extractSteps(current.thenStatement, context)
+      : extractStepsFromStatement(current.thenStatement, context)
 
-  const elseSteps = statement.elseStatement
-    ? ts.isBlock(statement.elseStatement)
-      ? extractSteps(statement.elseStatement, context)
-      : extractStepsFromStatement(statement.elseStatement, context)
-    : undefined
+    branches.push({ condition, steps })
+
+    // Check for else-if or else
+    if (current.elseStatement) {
+      if (ts.isIfStatement(current.elseStatement)) {
+        // else-if: continue the chain
+        current = current.elseStatement
+      } else {
+        // else: extract the final else block and stop
+        elseSteps = ts.isBlock(current.elseStatement)
+          ? extractSteps(current.elseStatement, context)
+          : extractStepsFromStatement(current.elseStatement, context)
+        current = undefined
+      }
+    } else {
+      // No else clause
+      current = undefined
+    }
+  }
 
   return {
     type: 'branch',
-    conditions,
-    thenSteps,
+    branches,
     elseSteps,
   }
 }

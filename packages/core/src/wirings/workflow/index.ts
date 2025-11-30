@@ -49,6 +49,7 @@ export type {
   RpcStepMeta,
   SimpleCondition,
   Condition,
+  BranchCase,
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,

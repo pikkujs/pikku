@@ -221,9 +221,13 @@ function collectBranchConditionalVars(
 ): string[] {
   const vars: string[] = []
 
-  // Check then branch
-  if (branchNode.thenEntry) {
-    collectVarsFromBranch(branchNode.thenEntry, nodes, conditionalVars, vars)
+  // Check all branches (if/else-if chain)
+  if (branchNode.branches) {
+    for (const branch of branchNode.branches) {
+      if (branch.entry) {
+        collectVarsFromBranch(branch.entry, nodes, conditionalVars, vars)
+      }
+    }
   }
 
   // Check else branch
@@ -376,19 +380,38 @@ function nodeToCode(
           lines.push(`${indent}let ${varName}`)
         }
 
-        const condition = conditionToCode(flowNode.conditions)
-        lines.push(`${indent}if (${condition}) {`)
-        // Process then branch nodes
-        if (flowNode.thenEntry && nodes[flowNode.thenEntry]) {
-          const thenLines = generateBranchContent(
-            flowNode.thenEntry,
+        // Generate if/else-if/else chain
+        const branches = flowNode.branches || []
+        for (let i = 0; i < branches.length; i++) {
+          const branch = branches[i]
+          const condition = conditionToCode(branch.condition)
+          const keyword = i === 0 ? 'if' : 'else if'
+          lines.push(`${indent}${keyword} (${condition}) {`)
+
+          if (branch.entry && nodes[branch.entry]) {
+            const branchLines = generateBranchContent(
+              branch.entry,
+              nodes,
+              indent + '  ',
+              conditionalVars
+            )
+            lines.push(...branchLines)
+          }
+          lines.push(`${indent}}`)
+        }
+
+        // Generate else block if present
+        if (flowNode.elseEntry && nodes[flowNode.elseEntry]) {
+          lines.push(`${indent}else {`)
+          const elseLines = generateBranchContent(
+            flowNode.elseEntry,
             nodes,
             indent + '  ',
             conditionalVars
           )
-          lines.push(...thenLines)
+          lines.push(...elseLines)
+          lines.push(`${indent}}`)
         }
-        lines.push(`${indent}}`)
         lines.push('')
         break
 

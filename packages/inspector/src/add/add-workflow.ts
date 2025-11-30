@@ -22,7 +22,9 @@ function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
     if (step.type === 'inline') {
       return true
     } else if (step.type === 'branch') {
-      if (step.thenSteps && hasInlineSteps(step.thenSteps)) return true
+      for (const branch of step.branches) {
+        if (hasInlineSteps(branch.steps)) return true
+      }
       if (step.elseSteps && hasInlineSteps(step.elseSteps)) return true
     } else if (step.type === 'switch' && step.cases) {
       for (const c of step.cases) {
@@ -49,7 +51,9 @@ function collectInvokedRPCs(
     if (step.type === 'rpc' && step.rpcName) {
       rpcs.add(step.rpcName)
     } else if (step.type === 'branch') {
-      if (step.thenSteps) collectInvokedRPCs(step.thenSteps, rpcs)
+      for (const branch of step.branches) {
+        collectInvokedRPCs(branch.steps, rpcs)
+      }
       if (step.elseSteps) collectInvokedRPCs(step.elseSteps, rpcs)
     } else if (step.type === 'switch' && step.cases) {
       for (const c of step.cases) {

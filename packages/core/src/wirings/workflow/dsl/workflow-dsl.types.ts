@@ -99,15 +99,23 @@ export type Condition =
   | { type: 'or'; conditions: Condition[] }
 
 /**
- * Branch step metadata (if/else control flow)
+ * A single branch in an if/else-if chain
+ */
+export interface BranchCase {
+  /** Condition for this branch */
+  condition: Condition
+  /** Steps to execute when condition is true */
+  steps: WorkflowStepMeta[]
+}
+
+/**
+ * Branch step metadata (if/else-if/else control flow)
  */
 export interface BranchStepMeta {
   type: 'branch'
-  /** Nested condition structure */
-  conditions: Condition
-  /** Then branch steps */
-  thenSteps: WorkflowStepMeta[]
-  /** Else branch steps (optional) */
+  /** Branches in order: first is "if", rest are "else if" */
+  branches: BranchCase[]
+  /** Else branch steps (when no conditions match) */
   elseSteps?: WorkflowStepMeta[]
 }
 

@@ -124,34 +124,52 @@ function convertStepToNode(
     }
 
     case 'branch': {
-      // Convert nested then/else steps
-      const thenNodes = convertStepsToNodes(step.thenSteps, `${nodeId}_then`)
+      // Convert all branch conditions (if/else-if chain)
+      const branchNodes: SerializedGraphNode[] = []
+      const branches: Array<{
+        condition: unknown
+        entry: string
+      }> = []
+
+      for (let i = 0; i < step.branches.length; i++) {
+        const branchSteps = convertStepsToNodes(
+          step.branches[i].steps,
+          `${nodeId}_branch${i}`
+        )
+        if (branchSteps.length > 0) {
+          branches.push({
+            condition: step.branches[i].condition,
+            entry: branchSteps[0].nodeId,
+          })
+          // Link last branch node back to next (unless terminal flow)
+          if (nextNodeId) {
+            const lastBranch = branchSteps[branchSteps.length - 1]
+            if (!lastBranch.next && !isTerminalFlow(lastBranch))
+              lastBranch.next = nextNodeId
+          }
+          branchNodes.push(...branchSteps)
+        }
+      }
+
+      // Convert else branch
       const elseNodes = step.elseSteps
         ? convertStepsToNodes(step.elseSteps, `${nodeId}_else`)
         : []
-
-      const node: FlowNode = {
-        nodeId,
-        flow: 'branch',
-        conditions: step.conditions,
-        thenEntry: thenNodes.length > 0 ? thenNodes[0].nodeId : undefined,
-        elseEntry: elseNodes.length > 0 ? elseNodes[0].nodeId : undefined,
-        next: nextNodeId,
-      }
-
-      // Link last then/else nodes back to next (unless terminal flow)
-      if (thenNodes.length > 0 && nextNodeId) {
-        const lastThen = thenNodes[thenNodes.length - 1]
-        if (!lastThen.next && !isTerminalFlow(lastThen))
-          lastThen.next = nextNodeId
-      }
       if (elseNodes.length > 0 && nextNodeId) {
         const lastElse = elseNodes[elseNodes.length - 1]
         if (!lastElse.next && !isTerminalFlow(lastElse))
           lastElse.next = nextNodeId
       }
 
-      return [node, ...thenNodes, ...elseNodes]
+      const node: FlowNode = {
+        nodeId,
+        flow: 'branch',
+        branches,
+        elseEntry: elseNodes.length > 0 ? elseNodes[0].nodeId : undefined,
+        next: nextNodeId,
+      }
+
+      return [node, ...branchNodes, ...elseNodes]
     }
 
     case 'switch': {
