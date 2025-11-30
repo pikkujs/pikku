@@ -3,12 +3,17 @@
  * Demonstrates cleaning up pending tasks before archiving
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Project cleanup before archive workflow
+ *
+ * Uses pikkuWorkflowComplexFunc because:
+ * - Filter callback to find pending tasks based on runtime status
+ * - Dynamic for-of loop over filtered results
+ * - Loop iteration count depends on runtime data
  */
-export const projectCleanupAndArchiveWorkflow = pikkuWorkflowFunc<
+export const projectCleanupAndArchiveWorkflow = pikkuWorkflowComplexFunc<
   { projectId: string; completePendingTasks: boolean },
   { archivedAt: string; tasksCompleted: number }
 >(async (_services, data, { workflow }) => {

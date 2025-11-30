@@ -60,6 +60,7 @@ export type InputSource =
  */
 export type OutputBinding =
   | { from: 'outputVar'; name: string; path?: string }
+  | { from: 'stateVar'; name: string; path?: string }
   | { from: 'input'; path: string }
   | { from: 'literal'; value: unknown }
   | { from: 'expression'; expression: string }
@@ -193,6 +194,18 @@ export interface CancelStepMeta {
 }
 
 /**
+ * Set step metadata (context variable assignment)
+ */
+export interface SetStepMeta {
+  /** Set step */
+  type: 'set'
+  /** Variable name to set (must be in context) */
+  variable: string
+  /** Value to assign (literal or expression) */
+  value: unknown
+}
+
+/**
  * Switch case metadata
  */
 export interface SwitchCaseMeta {
@@ -264,6 +277,7 @@ export type WorkflowStepMeta =
   | SwitchStepMeta
   | FilterStepMeta
   | ArrayPredicateStepMeta
+  | SetStepMeta
 
 /**
  * Workflow step wire context for RPC functions

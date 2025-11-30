@@ -24,6 +24,37 @@ export const isDataRef = (value: unknown): value is DataRef =>
   typeof (value as DataRef).$ref === 'string'
 
 /**
+ * Reference to a context/state variable
+ */
+export interface StateRef {
+  /** Context variable name */
+  $state: string
+  /** Optional path into the value (dot notation for nested objects) */
+  path?: string
+}
+
+/**
+ * Check if value is a StateRef
+ */
+export const isStateRef = (value: unknown): value is StateRef =>
+  typeof value === 'object' &&
+  value !== null &&
+  '$state' in value &&
+  typeof (value as StateRef).$state === 'string'
+
+/**
+ * Helper functions for building input mappings
+ */
+export const ref = (nodeId: string, path?: string): DataRef => ({
+  $ref: nodeId,
+  path,
+})
+export const state = (name: string, path?: string): StateRef => ({
+  $state: name,
+  path,
+})
+
+/**
  * Condition for branching
  */
 export interface BranchCondition {
@@ -74,6 +105,12 @@ export type FlowType =
   | 'arrayPredicate'
   | 'return'
   | 'cancel'
+  | 'set'
+
+// Import and re-export context types from core
+import type { ContextVariable, WorkflowContext } from '@pikku/core/workflow'
+
+export type { ContextVariable, WorkflowContext }
 
 /**
  * Base node properties shared by all node types
@@ -227,6 +264,8 @@ export interface SerializedWorkflowGraph {
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** Workflow context/state variables (from Zod schema) */
+  context?: WorkflowContext
   /** Wires - how the workflow is triggered */
   wires: WorkflowWiresConfig
   /** Serialized nodes */

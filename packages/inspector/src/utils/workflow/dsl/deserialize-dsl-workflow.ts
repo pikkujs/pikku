@@ -7,6 +7,7 @@ import type {
   SerializedWorkflowGraph,
   SerializedGraphNode,
   DataRef,
+  ContextVariable,
 } from '../graph/workflow-graph.types.js'
 
 interface DeserializeOptions {
@@ -25,6 +26,26 @@ function isDataRef(value: unknown): value is DataRef {
     value !== null &&
     '$ref' in value &&
     typeof (value as DataRef).$ref === 'string'
+  )
+}
+
+/**
+ * State reference (context variable)
+ */
+interface StateRef {
+  $state: string
+  path?: string
+}
+
+/**
+ * Check if a value is a StateRef
+ */
+function isStateRef(value: unknown): value is StateRef {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '$state' in value &&
+    typeof (value as StateRef).$state === 'string'
   )
 }
 
@@ -94,11 +115,21 @@ function templateRefToCode(template: TemplateRef, itemVar?: string): string {
 }
 
 /**
- * Convert a single value to code (handles refs, templates, and literals)
+ * Convert a StateRef to code expression
+ */
+function stateRefToCode(ref: StateRef): string {
+  return ref.path ? `${ref.$state}.${ref.path}` : ref.$state
+}
+
+/**
+ * Convert a single value to code (handles refs, templates, state refs, and literals)
  */
 function valueToCode(value: unknown, itemVar?: string): string {
   if (isDataRef(value)) {
     return dataRefToCode(value, itemVar)
+  }
+  if (isStateRef(value)) {
+    return stateRefToCode(value)
   }
   if (isTemplateRef(value)) {
     return templateRefToCode(value, itemVar)
@@ -261,11 +292,22 @@ function collectVarsFromBranch(
   // Follow the chain of nodes within the branch
   if ('next' in node && node.next) {
     const nextId = node.next as string
-    // Only follow if it's still within the branch (has _then_ or _else_ in ID)
-    if (nextId.includes('_then_') || nextId.includes('_else_')) {
+    // Only follow if it's still within the branch
+    if (isWithinBranch(nextId)) {
       collectVarsFromBranch(nextId, nodes, conditionalVars, result)
     }
   }
+}
+
+/**
+ * Check if a node ID is still within a branch (not the main flow)
+ */
+function isWithinBranch(nodeId: string): boolean {
+  return (
+    nodeId.includes('_then_') ||
+    nodeId.includes('_else_') ||
+    nodeId.includes('_branch')
+  )
 }
 
 /**
@@ -291,7 +333,7 @@ function generateBranchContent(
     if ('next' in node && node.next) {
       const nextId = node.next as string
       // Only continue if it's still within the branch
-      if (nextId.includes('_then_') || nextId.includes('_else_')) {
+      if (isWithinBranch(nextId)) {
         currentId = nextId
       } else {
         break
@@ -541,6 +583,10 @@ function nodeToCode(
               value = output.path
                 ? `${output.name}?.${output.path}`
                 : output.name
+            } else if (output.from === 'stateVar') {
+              value = output.path
+                ? `${output.name}.${output.path}`
+                : output.name
             } else if (output.from === 'input') {
               value = `data.${output.path}`
             } else if (output.from === 'literal') {
@@ -565,6 +611,17 @@ function nodeToCode(
           `${indent}// Inline step: ${flowNode.stepName || 'Dynamic code'}`
         )
         lines.push(`${indent}// ${flowNode.description || '<dynamic code>'}`)
+        lines.push('')
+        break
+
+      case 'set':
+        // Generate variable assignment: varName = value
+        const setVar = flowNode.variable
+        const setValue =
+          typeof flowNode.value === 'string'
+            ? `'${flowNode.value}'`
+            : JSON.stringify(flowNode.value)
+        lines.push(`${indent}${setVar} = ${setValue}`)
         lines.push('')
         break
     }
@@ -622,6 +679,26 @@ function findConditionalVars(
 }
 
 /**
+ * Get default value for a context variable type
+ */
+function getDefaultForType(type: string): string {
+  switch (type) {
+    case 'string':
+      return "''"
+    case 'number':
+      return '0'
+    case 'boolean':
+      return 'false'
+    case 'array':
+      return '[]'
+    case 'object':
+      return '{}'
+    default:
+      return 'undefined'
+  }
+}
+
+/**
  * Deserialize a workflow graph to DSL code
  */
 export function deserializeDslWorkflow(
@@ -666,6 +743,23 @@ export function deserializeDslWorkflow(
   lines.push(
     `export const ${workflow.name} = pikkuWorkflowFunc(async ({}, data, { workflow }) => {${tagsComment}`
   )
+
+  // Generate context variable declarations at the top
+  if (workflow.context && Object.keys(workflow.context).length > 0) {
+    for (const [varName, varDef] of Object.entries(workflow.context) as [
+      string,
+      ContextVariable,
+    ][]) {
+      const defaultValue =
+        varDef.default !== undefined
+          ? typeof varDef.default === 'string'
+            ? `'${varDef.default}'`
+            : JSON.stringify(varDef.default)
+          : getDefaultForType(varDef.type)
+      lines.push(`  let ${varName} = ${defaultValue}`)
+    }
+    lines.push('')
+  }
 
   // Process nodes in order
   const orderedNodes = traverseNodes(workflow.nodes, workflow.entryNodeIds)

@@ -3,18 +3,27 @@
  * Demonstrates order creation with inventory validation
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Order with inventory check workflow
+ *
+ * Uses pikkuWorkflowComplexFunc because:
+ * - Dynamic iteration over data.items array with Promise.all
+ * - Filter callback to determine unavailable items
+ * - Loop iteration count depends on runtime data
  */
-export const orderWithInventoryCheckWorkflow = pikkuWorkflowFunc<
+export const orderWithInventoryCheckWorkflow = pikkuWorkflowComplexFunc<
   {
     customerId: string
     items: Array<{ productId: string; quantity: number; price: number }>
   },
   { orderId: string; allItemsAvailable: boolean; unavailableItems: string[] }
 >(async (_services, data, { workflow }) => {
+  let orderId = ''
+  let allItemsAvailable = false
+  const unavailableItems: string[] = []
+
   // Step 1: Check inventory for all items in parallel
   const inventoryChecks = await Promise.all(
     data.items.map(
@@ -30,17 +39,17 @@ export const orderWithInventoryCheckWorkflow = pikkuWorkflowFunc<
   )
 
   // Step 2: Determine unavailable items
-  const unavailableItems = data.items
-    .filter((item, index) => {
-      const check = inventoryChecks[index]
-      return check.available < item.quantity
-    })
-    .map((item) => item.productId)
+  for (let i = 0; i < data.items.length; i++) {
+    const item = data.items[i]
+    const check = inventoryChecks[i]
+    if (check.available < item.quantity) {
+      unavailableItems.push(item.productId)
+    }
+  }
 
-  const allItemsAvailable = unavailableItems.length === 0
+  allItemsAvailable = unavailableItems.length === 0
 
   // Step 3: Create order only if all items available
-  let orderId = ''
   if (allItemsAvailable) {
     const order = await workflow.do('Create order', 'orderCreate', {
       customerId: data.customerId,

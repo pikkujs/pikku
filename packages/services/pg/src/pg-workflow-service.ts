@@ -78,6 +78,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
         input JSONB NOT NULL,
         output JSONB,
         error JSONB,
+        state JSONB DEFAULT '{}',
         inline BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -86,6 +87,10 @@ export class PgWorkflowService extends PikkuWorkflowService {
       -- Add inline column if it doesn't exist (for existing tables)
       ALTER TABLE ${this.schemaName}.workflow_runs
         ADD COLUMN IF NOT EXISTS inline BOOLEAN DEFAULT FALSE;
+
+      -- Add state column if it doesn't exist (for existing tables)
+      ALTER TABLE ${this.schemaName}.workflow_runs
+        ADD COLUMN IF NOT EXISTS state JSONB DEFAULT '{}';
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step (
         workflow_step_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -611,6 +616,30 @@ export class PgWorkflowService extends PikkuWorkflowService {
        WHERE workflow_step_id = $2`,
       [branchKey, stepId]
     )
+  }
+
+  async updateRunState(
+    runId: string,
+    name: string,
+    value: unknown
+  ): Promise<void> {
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.workflow_runs
+       SET state = jsonb_set(COALESCE(state, '{}'), $1, $2), updated_at = now()
+       WHERE workflow_run_id = $3`,
+      [[name], JSON.stringify(value), runId]
+    )
+  }
+
+  async getRunState(runId: string): Promise<Record<string, unknown>> {
+    const result = await this.sql.unsafe(
+      `SELECT state FROM ${this.schemaName}.workflow_runs WHERE workflow_run_id = $1`,
+      [runId]
+    )
+    if (result.length === 0) {
+      return {}
+    }
+    return (result[0]!.state as Record<string, unknown>) || {}
   }
 
   async close(): Promise<void> {

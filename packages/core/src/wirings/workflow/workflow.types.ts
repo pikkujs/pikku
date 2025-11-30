@@ -23,6 +23,7 @@ export type {
   InlineStepMeta,
   SleepStepMeta,
   CancelStepMeta,
+  SetStepMeta,
   SwitchCaseMeta,
   SwitchStepMeta,
   FilterStepMeta,
@@ -232,6 +233,23 @@ export interface PikkuWorkflow {
 }
 
 /**
+ * Context variable definition (serialized from Zod schema or type inference)
+ */
+export interface ContextVariable {
+  /** Variable type */
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array'
+  /** Default value */
+  default?: unknown
+  /** Description for UI/docs */
+  description?: string
+}
+
+/**
+ * Workflow context - state variables with defaults and types
+ */
+export type WorkflowContext = Record<string, ContextVariable>
+
+/**
  * Workflows metadata for inspector/CLI (DSL step-based format)
  */
 export type WorkflowsMeta = Record<
@@ -239,6 +257,7 @@ export type WorkflowsMeta = Record<
   CommonWireMeta & {
     workflowName: string
     steps: WorkflowStepMeta[]
+    context?: WorkflowContext
     dsl?: boolean
   }
 >

@@ -3,7 +3,7 @@ import { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { ErrorCode } from '../error-codes.js'
-import { WorkflowStepMeta } from '@pikku/core/workflow'
+import { WorkflowStepMeta, WorkflowContext } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
   isStringLike,
@@ -249,6 +249,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   let steps: WorkflowStepMeta[] = []
+  let context: WorkflowContext | undefined = undefined
   let dsl: boolean | undefined = undefined
 
   // Try DSL workflow extraction first
@@ -258,6 +259,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (result.status === 'ok' && result.steps) {
     // Extraction succeeded
     steps = result.steps
+    context = result.context
 
     // Check if workflow contains inline steps (non-serializable)
     if (hasInlineSteps(steps)) {
@@ -315,6 +317,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     pikkuFuncName,
     workflowName,
     steps,
+    context,
     dsl,
     summary,
     description,

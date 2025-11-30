@@ -302,6 +302,25 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   abstract setBranchTaken(stepId: string, branchKey: string): Promise<void>
 
+  /**
+   * Update a state variable in the workflow run's state
+   * @param runId - Run ID
+   * @param name - Variable name
+   * @param value - Value to store
+   */
+  abstract updateRunState(
+    runId: string,
+    name: string,
+    value: unknown
+  ): Promise<void>
+
+  /**
+   * Get the entire state object for a workflow run
+   * @param runId - Run ID
+   * @returns The state object with all variables
+   */
+  abstract getRunState(runId: string): Promise<Record<string, unknown>>
+
   // ============================================================================
   // Workflow Lifecycle Methods
   // ============================================================================

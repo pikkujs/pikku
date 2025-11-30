@@ -809,6 +809,39 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
+  async updateRunState(
+    runId: string,
+    name: string,
+    value: unknown
+  ): Promise<void> {
+    const key = this.runKey(runId)
+    const now = Date.now()
+
+    // Get existing state or create empty object
+    const existingState = await this.redis.hget(key, 'state')
+    const state = existingState ? JSON.parse(existingState) : {}
+
+    // Update the specific field
+    state[name] = value
+
+    await this.redis.hmset(
+      key,
+      'state',
+      JSON.stringify(state),
+      'updatedAt',
+      now.toString()
+    )
+  }
+
+  async getRunState(runId: string): Promise<Record<string, unknown>> {
+    const key = this.runKey(runId)
+    const stateStr = await this.redis.hget(key, 'state')
+    if (!stateStr) {
+      return {}
+    }
+    return JSON.parse(stateStr)
+  }
+
   async close(): Promise<void> {
     if (this.ownsConnection) {
       await this.redis.quit()

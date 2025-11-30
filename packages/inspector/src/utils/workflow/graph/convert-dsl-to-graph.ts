@@ -44,6 +44,9 @@ function convertInputSource(source: {
   if (source.from === 'item') {
     return { $ref: '$item', path: source.path }
   }
+  if (source.from === 'stateVar') {
+    return { $state: source.name!, path: source.path }
+  }
   if (source.from === 'template') {
     return {
       $template: {
@@ -328,6 +331,17 @@ function convertStepToNode(
       return [node]
     }
 
+    case 'set': {
+      const node: FlowNode = {
+        nodeId,
+        flow: 'set',
+        variable: step.variable,
+        value: step.value,
+        next: nextNodeId,
+      }
+      return [node]
+    }
+
     default:
       return []
   }
@@ -378,6 +392,7 @@ export function convertDslToGraph(
     source,
     description: meta.description,
     tags: meta.tags,
+    context: meta.context,
     wires: {}, // DSL workflows don't have explicit wires in meta
     nodes: nodesRecord,
     entryNodeIds,

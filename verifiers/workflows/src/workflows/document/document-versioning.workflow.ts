@@ -17,6 +17,8 @@ export const documentVersioningWorkflow = pikkuWorkflowFunc<
   },
   { documentId: string; newVersion: number; watchersNotified: number }
 >(async (_services, data, { workflow }) => {
+  let watchersNotified = 0
+
   // Step 1: Get current document
   const doc = await workflow.do('Get document', 'documentGet', {
     documentId: data.documentId,
@@ -36,20 +38,25 @@ export const documentVersioningWorkflow = pikkuWorkflowFunc<
   })
 
   // Step 4: Notify watchers if requested
-  let watchersNotified = 0
   if (data.notifyWatchers) {
-    // Mock: notify 3 watchers
-    const watchers = ['watcher-1', 'watcher-2', 'watcher-3']
-    await Promise.all(
-      watchers.map(async (watcherId) => {
-        await workflow.do(`Notify watcher ${watcherId}`, 'notifyEmail', {
-          userId: watcherId,
-          subject: `Document Updated: ${doc.title}`,
-          body: `Version ${version.version} created. Change: ${data.changeNote}`,
-        })
-        watchersNotified++
-      })
-    )
+    await Promise.all([
+      workflow.do('Notify watcher 1', 'notifyEmail', {
+        userId: 'watcher-1',
+        subject: `Document Updated: ${doc.title}`,
+        body: `Version ${version.version} created. Change: ${data.changeNote}`,
+      }),
+      workflow.do('Notify watcher 2', 'notifyEmail', {
+        userId: 'watcher-2',
+        subject: `Document Updated: ${doc.title}`,
+        body: `Version ${version.version} created. Change: ${data.changeNote}`,
+      }),
+      workflow.do('Notify watcher 3', 'notifyEmail', {
+        userId: 'watcher-3',
+        subject: `Document Updated: ${doc.title}`,
+        body: `Version ${version.version} created. Change: ${data.changeNote}`,
+      }),
+    ])
+    watchersNotified = 3
   }
 
   return {

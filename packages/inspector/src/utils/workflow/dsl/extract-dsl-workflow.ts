@@ -7,6 +7,7 @@ import {
   FanoutStepMeta,
   ReturnStepMeta,
   CancelStepMeta,
+  SetStepMeta,
   SwitchStepMeta,
   SwitchCaseMeta,
   FilterStepMeta,
@@ -14,6 +15,8 @@ import {
   InputSource,
   OutputBinding,
   Condition,
+  WorkflowContext,
+  ContextVariable,
 } from '@pikku/core/workflow'
 import {
   isWorkflowDoCall,
@@ -53,6 +56,10 @@ interface ExtractionContext {
   errors: ValidationError[]
   /** Loop variables in scope (for fanout item variables) */
   loopVars: Set<string>
+  /** Context variables (top-level let/const with simple values) */
+  contextVars: Map<string, { type: string; default: unknown }>
+  /** Track nesting depth to detect block-scoped vars */
+  depth: number
 }
 
 /**
@@ -79,6 +86,8 @@ function extractSourcePath(expr: ts.Expression): string | null {
 export interface ExtractionResult {
   status: 'ok' | 'error'
   steps?: WorkflowStepMeta[]
+  /** Workflow context (top-level variables) */
+  context?: WorkflowContext
   reason?: string
   simple?: boolean
 }
@@ -120,6 +129,8 @@ export function extractDSLWorkflow(
       inputParamName,
       errors: [],
       loopVars: new Set(),
+      contextVars: new Map(),
+      depth: 0,
     }
 
     // Validate no disallowed patterns
@@ -154,9 +165,20 @@ export function extractDSLWorkflow(
       }
     }
 
+    // Build workflow context from extracted context variables
+    const workflowContext: WorkflowContext = {}
+    for (const [name, info] of context.contextVars) {
+      workflowContext[name] = {
+        type: info.type as ContextVariable['type'],
+        default: info.default,
+      }
+    }
+
     return {
       status: 'ok',
       steps,
+      context:
+        Object.keys(workflowContext).length > 0 ? workflowContext : undefined,
       simple: true,
     }
   } catch (error) {
@@ -233,7 +255,8 @@ function extractInputParamName(arrowFunc: ts.ArrowFunction): string | null {
  */
 function extractSteps(
   body: ts.Node,
-  context: ExtractionContext
+  context: ExtractionContext,
+  incrementDepth = false
 ): WorkflowStepMeta[] {
   const steps: WorkflowStepMeta[] = []
 
@@ -241,11 +264,21 @@ function extractSteps(
     return steps
   }
 
+  // Increment depth when entering a nested block
+  if (incrementDepth) {
+    context.depth++
+  }
+
   for (const statement of body.statements) {
     const extracted = extractStep(statement, context)
     if (extracted) {
       steps.push(extracted)
     }
+  }
+
+  // Restore depth
+  if (incrementDepth) {
+    context.depth--
   }
 
   return steps
@@ -316,8 +349,26 @@ function extractVariableDeclaration(
   const varName = decl.name.text
   const init = decl.initializer
 
+  // Check for block-scoped variable declarations (not allowed)
+  if (context.depth > 0) {
+    context.errors.push({
+      message: `Variable declaration '${varName}' inside block is not supported in DSL workflows. Move all let/const declarations to the top level.`,
+      node: statement,
+    })
+    return null
+  }
+
   if (!init) {
     return null
+  }
+
+  // Check for simple literal/expression context variable (let x = 'value')
+  const literalValue = extractLiteralValue(init)
+  if (literalValue !== undefined) {
+    const tsType = context.checker.getTypeAtLocation(decl)
+    const typeStr = inferSimpleType(tsType, context.checker)
+    context.contextVars.set(varName, { type: typeStr, default: literalValue })
+    return null // No step emitted, just register the context var
   }
 
   // Check for await workflow.do(...)
@@ -393,7 +444,7 @@ function extractExpressionStatement(
 ): WorkflowStepMeta | null {
   let expr = statement.expression
 
-  // Handle assignment: owner = await workflow.do(...)
+  // Handle assignment: x = value or x = await workflow.do(...)
   let outputVar: string | undefined
   if (
     ts.isBinaryExpression(expr) &&
@@ -402,6 +453,24 @@ function extractExpressionStatement(
     // Extract variable name from left side
     if (ts.isIdentifier(expr.left)) {
       outputVar = expr.left.text
+
+      // Check if this is an assignment to a context variable (set step)
+      if (context.contextVars.has(outputVar)) {
+        const literalValue = extractLiteralValue(expr.right)
+        if (literalValue !== undefined) {
+          return {
+            type: 'set',
+            variable: outputVar,
+            value: literalValue,
+          } as SetStepMeta
+        }
+        // Non-literal assignment to context var - use expression as string
+        return {
+          type: 'set',
+          variable: outputVar,
+          value: getSourceText(expr.right),
+        } as SetStepMeta
+      }
     }
     // Use right side as the expression to extract from
     expr = expr.right
@@ -645,7 +714,7 @@ function extractBranch(
   while (current) {
     const condition = parseCondition(current.expression)
     const steps = ts.isBlock(current.thenStatement)
-      ? extractSteps(current.thenStatement, context)
+      ? extractSteps(current.thenStatement, context, true)
       : extractStepsFromStatement(current.thenStatement, context)
 
     branches.push({ condition, steps })
@@ -658,7 +727,7 @@ function extractBranch(
       } else {
         // else: extract the final else block and stop
         elseSteps = ts.isBlock(current.elseStatement)
-          ? extractSteps(current.elseStatement, context)
+          ? extractSteps(current.elseStatement, context, true)
           : extractStepsFromStatement(current.elseStatement, context)
         current = undefined
       }
@@ -682,7 +751,10 @@ function extractStepsFromStatement(
   statement: ts.Statement,
   context: ExtractionContext
 ): WorkflowStepMeta[] {
+  // Increment depth for single-statement blocks (if without braces)
+  context.depth++
   const step = extractStep(statement, context)
+  context.depth--
   return step ? [step] : []
 }
 
@@ -755,6 +827,9 @@ function extractCaseSteps(
 ): WorkflowStepMeta[] {
   const steps: WorkflowStepMeta[] = []
 
+  // Increment depth for case blocks
+  context.depth++
+
   for (const statement of statements) {
     if (ts.isBreakStatement(statement)) {
       break
@@ -765,6 +840,9 @@ function extractCaseSteps(
       steps.push(step)
     }
   }
+
+  // Restore depth
+  context.depth--
 
   return steps
 }
@@ -1165,6 +1243,9 @@ function extractOutputBinding(
     if (objName && context.outputVars.has(objName)) {
       return { from: 'outputVar', name: objName, path: propPath }
     }
+    if (objName && context.contextVars.has(objName)) {
+      return { from: 'stateVar', name: objName, path: propPath }
+    }
     if (objName === context.inputParamName) {
       return { from: 'input', path: propPath }
     }
@@ -1175,6 +1256,9 @@ function extractOutputBinding(
     const varName = expr.text
     if (context.outputVars.has(varName)) {
       return { from: 'outputVar', name: varName }
+    }
+    if (context.contextVars.has(varName)) {
+      return { from: 'stateVar', name: varName }
     }
     if (varName === context.inputParamName) {
       return { from: 'input', path: varName }
@@ -1232,10 +1316,12 @@ function extractReturn(
       let binding: OutputBinding | null = null
 
       if (ts.isShorthandPropertyAssignment(prop)) {
-        // { orgId } - must be an output variable or input
+        // { orgId } - must be an output variable, context variable, or input
         const varName = prop.name.text
         if (context.outputVars.has(varName)) {
           binding = { from: 'outputVar', name: varName }
+        } else if (context.contextVars.has(varName)) {
+          binding = { from: 'stateVar', name: varName }
         } else {
           binding = { from: 'input', path: varName }
         }
@@ -1452,4 +1538,62 @@ function extractInputSource(
   }
 
   return null
+}
+
+/**
+ * Extract a literal value from an expression
+ */
+function extractLiteralValue(expr: ts.Expression): unknown | undefined {
+  if (ts.isStringLiteral(expr)) {
+    return expr.text
+  }
+  if (ts.isNumericLiteral(expr)) {
+    return Number(expr.text)
+  }
+  if (expr.kind === ts.SyntaxKind.TrueKeyword) {
+    return true
+  }
+  if (expr.kind === ts.SyntaxKind.FalseKeyword) {
+    return false
+  }
+  if (expr.kind === ts.SyntaxKind.NullKeyword) {
+    return null
+  }
+  // Array literal
+  if (ts.isArrayLiteralExpression(expr)) {
+    const values: unknown[] = []
+    for (const el of expr.elements) {
+      const v = extractLiteralValue(el)
+      if (v === undefined) return undefined
+      values.push(v)
+    }
+    return values
+  }
+  // Object literal (simple keys with literal values)
+  if (ts.isObjectLiteralExpression(expr)) {
+    const obj: Record<string, unknown> = {}
+    for (const prop of expr.properties) {
+      if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+        const v = extractLiteralValue(prop.initializer)
+        if (v === undefined) return undefined
+        obj[prop.name.text] = v
+      } else {
+        return undefined
+      }
+    }
+    return obj
+  }
+  return undefined
+}
+
+/**
+ * Infer a simple type string from a TypeScript type
+ */
+function inferSimpleType(type: ts.Type, checker: ts.TypeChecker): string {
+  const typeStr = checker.typeToString(type)
+  if (typeStr === 'string') return 'string'
+  if (typeStr === 'number') return 'number'
+  if (typeStr === 'boolean') return 'boolean'
+  if (typeStr.endsWith('[]') || typeStr.startsWith('Array<')) return 'array'
+  return 'object'
 }

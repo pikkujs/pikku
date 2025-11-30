@@ -105,6 +105,17 @@ export interface PikkuGraphWire {
    * @param key - The branch key to take (must match a key in the next Record)
    */
   branch: (key: string) => void
+  /**
+   * Set a state variable value.
+   * @param name - Variable name
+   * @param value - Value to store
+   */
+  setState: (name: string, value: unknown) => Promise<void>
+  /**
+   * Get the entire state object.
+   * @returns The state object with all variables
+   */
+  getState: () => Promise<Record<string, unknown>>
 }
 
 /**

@@ -347,6 +347,9 @@ export async function executeGraphStep(
     branch: (key: string) => {
       wireState.branchKey = key
     },
+    setState: (name: string, value: unknown) =>
+      workflowService.updateRunState(runId, name, value),
+    getState: () => workflowService.getRunState(runId),
   }
 
   try {
@@ -444,6 +447,9 @@ async function executeGraphNodeInline(
     branch: (key: string) => {
       wireState.branchKey = key
     },
+    setState: (name: string, value: unknown) =>
+      workflowService.updateRunState(runId, name, value),
+    getState: () => workflowService.getRunState(runId),
   }
 
   try {
