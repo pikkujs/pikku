@@ -221,16 +221,74 @@ type ComputeNodeInputs<FuncMap extends Record<string, string>> = {
 /** Typed ref value */
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
 
-/** Map input type fields to allow TypedRef of matching type or any additional properties */
+/** Template string type - assignable to string fields */
+type TemplateString = {
+  $template: {
+    parts: string[]
+    expressions: Array<{ $ref: string; path?: string }>
+  }
+} & { __brand: 'TemplateString' }
+
+/**
+ * Creates a template string with variable interpolation
+ * Uses indexed placeholders $0, $1, etc. with refs array
+ *
+ * @example
+ * template('Hello $0, your order $1 is ready', [ref('trigger', 'name'), ref('step_0', 'orderId')])
+ */
+export function template(templateStr: string, refs: TypedRef<unknown>[]): TemplateString {
+  const parts: string[] = []
+  const expressions: Array<{ $ref: string; path?: string }> = []
+
+  // Parse template string: "Hello $0" -> parts: ["Hello ", ""], use refs[0] for expression
+  const regex = /\$(\d+)/g
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(templateStr)) !== null) {
+    // Add the part before this match
+    parts.push(templateStr.slice(lastIndex, match.index))
+
+    // Get the ref by index
+    const refIndex = parseInt(match[1], 10)
+    const refValue = refs[refIndex]
+    if (refValue) {
+      const expr: { $ref: string; path?: string } = { $ref: refValue.$ref }
+      if (refValue.path) {
+        expr.path = refValue.path
+      }
+      expressions.push(expr)
+    } else {
+      expressions.push({ $ref: 'unknown' })
+    }
+
+    lastIndex = regex.lastIndex
+  }
+
+  // Add the remaining part
+  parts.push(templateStr.slice(lastIndex))
+
+  return {
+    $template: { parts, expressions }
+  } as TemplateString
+}
+
+/** Map input type fields to allow TypedRef or TemplateString for any field */
 type InputWithRefs<T> = {
-  [K in keyof T]?: T[K] | TypedRef<T[K]> | TypedRef<unknown>
-} & Record<string, unknown>
+  [K in keyof T]?: T[K] | TypedRef<T[K]> | TypedRef<unknown> | TemplateString
+}
+
+/** Get the input type for a node based on its RPC mapping */
+type NodeInputType<FuncMap extends Record<string, string>, K extends keyof FuncMap> =
+  FuncMap[K] extends keyof FlattenedRPCMap
+    ? InputWithRefs<FlattenedRPCMap[FuncMap[K]]['input']>
+    : Record<string, unknown>
 
 /** Type helper for node configuration */
 type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
   [K in Extract<keyof FuncMap, string>]?: {
     next?: NextConfig<Extract<keyof FuncMap, string>>
-    input?: Record<string, unknown> | (() => Record<string, unknown>) | ((
+    input?: NodeInputType<FuncMap, K> | (() => NodeInputType<FuncMap, K>) | ((
       ref: <
         N extends Extract<keyof FuncMap, string> | 'trigger' | '$item',
         P extends string
@@ -238,7 +296,7 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
         nodeId: N,
         path?: P
       ) => TypedRef<unknown>
-    ) => Record<string, unknown>)
+    ) => NodeInputType<FuncMap, K>)
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
   }
 }

@@ -688,6 +688,51 @@ function dataRefToGraphRef(
 }
 
 /**
+ * Convert a template ref to template() function call for graph code
+ * e.g. {$template: {parts: ["Hello ", ""], expressions: [{$ref: "trigger", path: "name"}]}}
+ * becomes: template('Hello $0', [ref('trigger', 'name')])
+ */
+function templateRefToGraphCode(
+  tmpl: TemplateRef,
+  outputVarToNodeId: Map<string, string>
+): { code: string; hasRefs: boolean } {
+  const { parts, expressions } = tmpl.$template
+
+  // Build the template string with $0, $1, etc. placeholders
+  let templateStr = ''
+  for (let i = 0; i < parts.length; i++) {
+    templateStr += parts[i]
+    if (i < expressions.length) {
+      templateStr += `$${i}`
+    }
+  }
+
+  // Build the refs array
+  const refs: string[] = []
+  for (const expr of expressions) {
+    if (isDataRef(expr)) {
+      refs.push(dataRefToGraphRef(expr, outputVarToNodeId))
+    } else {
+      // Literal JS expression - can't be represented as a typed ref
+      refs.push(`{ $ref: '${String(expr).replace(/'/g, "\\'")}' } as any`)
+    }
+  }
+
+  // Escape single quotes and newlines in the template string
+  templateStr = templateStr
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+
+  const hasRefs = refs.length > 0
+  return {
+    code: `template('${templateStr}', [${refs.join(', ')}])`,
+    hasRefs,
+  }
+}
+
+/**
  * Convert input object to graph input code using ref()
  * @param input - The input mapping
  * @param outputVarToNodeId - Map from outputVar names to node IDs
@@ -707,6 +752,13 @@ function inputToGraphCode(
     if (isDataRef(value)) {
       hasRefs = true
       return `        ${key}: ${dataRefToGraphRef(value, outputVarToNodeId)},`
+    }
+    if (isTemplateRef(value)) {
+      const tmpl = templateRefToGraphCode(value, outputVarToNodeId)
+      if (tmpl.hasRefs) {
+        hasRefs = true
+      }
+      return `        ${key}: ${tmpl.code},`
     }
     return `        ${key}: ${JSON.stringify(value)},`
   })
@@ -799,7 +851,9 @@ export function deserializeGraphWorkflow(
   const lines: string[] = []
 
   // Import statement
-  lines.push(`import { pikkuWorkflowGraph } from '${pikkuImportPath}'`)
+  lines.push(
+    `import { pikkuWorkflowGraph, template } from '${pikkuImportPath}'`
+  )
   lines.push('')
 
   // Add description as comment if present
