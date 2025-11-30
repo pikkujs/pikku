@@ -120,7 +120,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
       stepWorkerQueueName:
         workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
-      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowStepSleeper',
+      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
     }
   }
 

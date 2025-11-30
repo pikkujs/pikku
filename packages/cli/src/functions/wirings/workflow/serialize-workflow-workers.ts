@@ -30,7 +30,6 @@ export const pikkuWorkflowSleeper = pikkuSessionlessFunc<{ runId: string, stepId
   func: async ({ workflowService }, { runId, stepId }) => {
     await workflowService!.executeWorkflowSleepCompleted(runId, stepId)
   },
-  name: 'pikkuWorkflowStepSleeper',
   internal: true,
 })
 

@@ -109,9 +109,16 @@ function getValueAtPath(obj: any, path: string): any {
 
 /**
  * Get the RPC name from a graph node's func
+ * Supports both function references (func.name) and string RPC names
  */
 function getRpcName(node: GraphNodeConfig): string {
-  return (node.func as any).name || 'unknown'
+  const func = node.func as any
+  // If func is a string, use it directly as the RPC name
+  if (typeof func === 'string') {
+    return func
+  }
+  // Otherwise, it's a function reference - use its name
+  return func?.name || 'unknown'
 }
 
 /**

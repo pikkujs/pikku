@@ -204,20 +204,6 @@ export function pikkuWorkflowGraph<
   }
 }
 
-/** Compute output types for all nodes based on their RPC mapping */
-type ComputeNodeOutputs<FuncMap extends Record<string, string>> = {
-  [K in keyof FuncMap]: FuncMap[K] extends keyof FlattenedRPCMap
-    ? FlattenedRPCMap[FuncMap[K]]['output']
-    : unknown
-}
-
-/** Compute input types for all nodes based on their RPC mapping */
-type ComputeNodeInputs<FuncMap extends Record<string, string>> = {
-  [K in keyof FuncMap]: FuncMap[K] extends keyof FlattenedRPCMap
-    ? FlattenedRPCMap[FuncMap[K]]['input']
-    : unknown
-}
-
 /** Typed ref value */
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
 
@@ -250,7 +236,7 @@ export function template(templateStr: string, refs: TypedRef<unknown>[]): Templa
     parts.push(templateStr.slice(lastIndex, match.index))
 
     // Get the ref by index
-    const refIndex = parseInt(match[1], 10)
+    const refIndex = parseInt(match[1]!, 10)
     const refValue = refs[refIndex]
     if (refValue) {
       const expr: { $ref: string; path?: string } = { $ref: refValue.$ref }
@@ -284,19 +270,34 @@ type NodeInputType<FuncMap extends Record<string, string>, K extends keyof FuncM
     ? InputWithRefs<FlattenedRPCMap[FuncMap[K]]['input']>
     : Record<string, unknown>
 
+/** Get the output type keys for a node based on its RPC mapping */
+type NodeOutputKeys<FuncMap extends Record<string, string>, N extends string> =
+  N extends keyof FuncMap
+    ? FuncMap[N] extends keyof FlattenedRPCMap
+      ? keyof FlattenedRPCMap[FuncMap[N]]['output'] & string
+      : string
+    : string
+
+/** Ref function type with path validation */
+type RefFunction<FuncMap extends Record<string, string>> = {
+  <N extends Extract<keyof FuncMap, string>>(
+    nodeId: N,
+    path: NodeOutputKeys<FuncMap, N>
+  ): TypedRef<unknown>
+  (nodeId: 'trigger' | '$item', path?: string): TypedRef<unknown>
+}
+
+/** Template function type */
+type TemplateFunction = (templateStr: string, refs: TypedRef<unknown>[]) => TemplateString
+
 /** Type helper for node configuration */
 type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
   [K in Extract<keyof FuncMap, string>]?: {
     next?: NextConfig<Extract<keyof FuncMap, string>>
-    input?: NodeInputType<FuncMap, K> | (() => NodeInputType<FuncMap, K>) | ((
-      ref: <
-        N extends Extract<keyof FuncMap, string> | 'trigger' | '$item',
-        P extends string
-      >(
-        nodeId: N,
-        path?: P
-      ) => TypedRef<unknown>
-    ) => NodeInputType<FuncMap, K>)
+    input?:
+      | NodeInputType<FuncMap, K>
+      | (() => NodeInputType<FuncMap, K>)
+      | ((ref: RefFunction<FuncMap>, template: TemplateFunction) => NodeInputType<FuncMap, K>)
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
   }
 }

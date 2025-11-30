@@ -695,7 +695,7 @@ function dataRefToGraphRef(
 function templateRefToGraphCode(
   tmpl: TemplateRef,
   outputVarToNodeId: Map<string, string>
-): { code: string; hasRefs: boolean } {
+): string {
   const { parts, expressions } = tmpl.$template
 
   // Build the template string with $0, $1, etc. placeholders
@@ -725,11 +725,7 @@ function templateRefToGraphCode(
     .replace(/\n/g, '\\n')
     .replace(/\r/g, '\\r')
 
-  const hasRefs = refs.length > 0
-  return {
-    code: `template('${templateStr}', [${refs.join(', ')}])`,
-    hasRefs,
-  }
+  return `template('${templateStr}', [${refs.join(', ')}])`
 }
 
 /**
@@ -754,11 +750,8 @@ function inputToGraphCode(
       return `        ${key}: ${dataRefToGraphRef(value, outputVarToNodeId)},`
     }
     if (isTemplateRef(value)) {
-      const tmpl = templateRefToGraphCode(value, outputVarToNodeId)
-      if (tmpl.hasRefs) {
-        hasRefs = true
-      }
-      return `        ${key}: ${tmpl.code},`
+      hasRefs = true
+      return `        ${key}: ${templateRefToGraphCode(value, outputVarToNodeId)},`
     }
     return `        ${key}: ${JSON.stringify(value)},`
   })
@@ -851,9 +844,7 @@ export function deserializeGraphWorkflow(
   const lines: string[] = []
 
   // Import statement
-  lines.push(
-    `import { pikkuWorkflowGraph, template } from '${pikkuImportPath}'`
-  )
+  lines.push(`import { pikkuWorkflowGraph } from '${pikkuImportPath}'`)
   lines.push('')
 
   // Add description as comment if present
@@ -918,7 +909,8 @@ export function deserializeGraphWorkflow(
       if (Object.keys(input).length > 0) {
         const { hasRefs, code } = inputToGraphCode(input, outputVarToNodeId)
         if (hasRefs) {
-          configParts.push(`input: (ref) => (${code})`)
+          // Always pass both ref and template for consistent type signature
+          configParts.push(`input: (ref, template) => (${code})`)
         } else {
           // Wrap in callback to avoid TypeScript excess property checking
           configParts.push(`input: () => (${code})`)
