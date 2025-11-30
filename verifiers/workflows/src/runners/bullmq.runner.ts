@@ -2,6 +2,10 @@
  * BullMQ Workflow Runner
  * Executes all workflows using BullMQ queue service and Redis workflow storage
  * Uses inline execution mode for testing without requiring queue workers
+ *
+ * Usage:
+ *   yarn test:bullmq          - Run DSL workflows
+ *   yarn test:bullmq --graph  - Run graph-based workflows (graph* prefix)
  */
 
 import { RedisWorkflowService } from '@pikku/redis'
@@ -18,8 +22,13 @@ import { workflowTestData } from './workflow-test-data.js'
 // Import bootstrap to register all workflows
 import '../../.pikku/pikku-bootstrap.gen.js'
 
+// Parse command line args
+const useGraph = process.argv.includes('--graph')
+
 async function main(): Promise<void> {
-  console.log('=== BullMQ Workflow Runner ===\n')
+  console.log(
+    `=== BullMQ Workflow Runner ${useGraph ? '(Graph Mode)' : '(DSL Mode)'} ===\n`
+  )
 
   const config = await createConfig()
 
@@ -49,9 +58,18 @@ async function main(): Promise<void> {
 
   // Get registered workflows
   const meta = pikkuState(null, 'workflows', 'meta')
-  const workflowNames = Object.keys(meta)
+  const allWorkflowNames = Object.keys(meta)
 
-  console.log(`Found ${workflowNames.length} workflows to execute\n`)
+  // Filter workflows based on mode
+  // In graph mode: run only graph* workflows
+  // In DSL mode: run only non-graph workflows
+  const workflowNames = allWorkflowNames.filter((name) =>
+    useGraph ? name.startsWith('graph') : !name.startsWith('graph')
+  )
+
+  console.log(
+    `Found ${workflowNames.length} workflows to execute (${allWorkflowNames.length} total registered)\n`
+  )
 
   const results: Array<{
     name: string
@@ -61,16 +79,23 @@ async function main(): Promise<void> {
   }> = []
 
   for (const workflowName of workflowNames) {
-    const testData = workflowTestData[workflowName]
+    // For graph workflows, look up test data using the DSL workflow name
+    // e.g., graphAutoRestockWorkflow -> autoRestockWorkflow
+    const testDataKey = useGraph
+      ? workflowName
+          .replace(/^graph/, '')
+          .replace(/^[A-Z]/, (c) => c.toLowerCase())
+      : workflowName
+    const testData = workflowTestData[testDataKey]
 
     if (!testData) {
       results.push({
         name: workflowName,
         status: 'skipped',
-        error: 'No test data defined',
+        error: `No test data defined (looked up: ${testDataKey})`,
         duration: 0,
       })
-      console.log(`SKIP: ${workflowName} (no test data)`)
+      console.log(`SKIP: ${workflowName} (no test data for ${testDataKey})`)
       continue
     }
 

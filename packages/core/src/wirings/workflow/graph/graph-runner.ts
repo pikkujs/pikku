@@ -12,6 +12,32 @@ import { createRef, isRef } from './workflow-graph.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 
 /**
+ * Add a workflow graph to the system
+ * This is called by the generated workflow wirings
+ */
+export const addWorkflowGraph = (
+  workflowName: string,
+  graphResult: { graph: Record<string, GraphNodeConfig<string>>; wires?: any }
+) => {
+  // Get workflow metadata from inspector
+  const meta = pikkuState(null, 'workflows', 'meta')
+  const workflowMeta = meta[workflowName]
+  if (!workflowMeta) {
+    throw new Error(
+      `Workflow metadata not found for '${workflowName}'. Make sure to run the CLI to generate metadata.`
+    )
+  }
+
+  // Store workflow graph definition in state
+  const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
+  registrations.set(workflowName, {
+    name: workflowName,
+    wires: graphResult.wires || {},
+    graph: graphResult.graph,
+  })
+}
+
+/**
  * Get a registered workflow graph by name
  */
 export function getWorkflowGraph(
@@ -42,39 +68,119 @@ function resolveNextFromConfig(
 }
 
 /**
+ * Template value - represents a string template with variable interpolation
+ */
+interface TemplateValue {
+  $template: {
+    parts: string[]
+    expressions: Array<{ $ref: string; path?: string }>
+  }
+}
+
+/**
+ * Check if a value is a template
+ */
+function isTemplate(value: unknown): value is TemplateValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '$template' in value &&
+    typeof (value as any).$template === 'object'
+  )
+}
+
+/**
+ * Create a template function for use in input callbacks
+ */
+function createTemplate(templateStr: string, refs: RefValue[]): TemplateValue {
+  const parts: string[] = []
+  const expressions: Array<{ $ref: string; path?: string }> = []
+
+  const regex = /\$(\d+)/g
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(templateStr)) !== null) {
+    parts.push(templateStr.slice(lastIndex, match.index))
+    const refIndex = parseInt(match[1]!, 10)
+    const refValue = refs[refIndex]
+    if (refValue) {
+      expressions.push({ $ref: refValue.nodeId, path: refValue.path })
+    } else {
+      expressions.push({ $ref: 'unknown' })
+    }
+    lastIndex = regex.lastIndex
+  }
+  parts.push(templateStr.slice(lastIndex))
+
+  return { $template: { parts, expressions } }
+}
+
+/**
  * Evaluate a node's input callback to get the input mapping
  */
 function evaluateInputCallback(
   node: GraphNodeConfig
-): Record<string, unknown | RefValue> {
+): Record<string, unknown | RefValue | TemplateValue> {
   if (!node.input) return {}
 
   const ref: RefFn<string> = (targetNodeId: string, path?: string) =>
     createRef(targetNodeId, path)
 
-  return node.input(ref)
+  const template = (templateStr: string, refs: RefValue[]) =>
+    createTemplate(templateStr, refs)
+
+  // Call with both ref and template - input callback may accept 1 or 2 params
+  return (node.input as any)(ref, template)
 }
 
 /**
- * Extract node IDs referenced in an input mapping
+ * Extract node IDs referenced in an input mapping (including from templates)
  */
 function extractReferencedNodeIds(
-  inputMapping: Record<string, unknown | RefValue>
+  inputMapping: Record<string, unknown | RefValue | TemplateValue>
 ): string[] {
   const nodeIds: string[] = []
   for (const value of Object.values(inputMapping)) {
     if (isRef(value)) {
       nodeIds.push(value.nodeId)
+    } else if (isTemplate(value)) {
+      for (const expr of value.$template.expressions) {
+        nodeIds.push(expr.$ref)
+      }
     }
   }
   return [...new Set(nodeIds)]
 }
 
 /**
+ * Resolve a template value using node results
+ */
+function resolveTemplate(
+  template: TemplateValue,
+  nodeResults: Record<string, any>
+): string {
+  const { parts, expressions } = template.$template
+  let result = ''
+  for (let i = 0; i < parts.length; i++) {
+    result += parts[i]
+    if (i < expressions.length) {
+      const expr = expressions[i]
+      const nodeResult = nodeResults[expr.$ref]
+      const value = expr.path
+        ? getValueAtPath(nodeResult, expr.path)
+        : nodeResult
+      result += String(value ?? '')
+    }
+  }
+  return result
+}
+
+/**
  * Resolve input mapping using node results
  */
 function resolveInputMapping(
-  inputMapping: Record<string, unknown | RefValue>,
+  inputMapping: Record<string, unknown | RefValue | TemplateValue>,
   nodeResults: Record<string, any>
 ): Record<string, any> {
   const resolved: Record<string, any> = {}
@@ -85,6 +191,8 @@ function resolveInputMapping(
       resolved[key] = value.path
         ? getValueAtPath(nodeResult, value.path)
         : nodeResult
+    } else if (isTemplate(value)) {
+      resolved[key] = resolveTemplate(value, nodeResults)
     } else {
       resolved[key] = value
     }
@@ -394,7 +502,8 @@ async function continueGraphInline(
   rpcService: any,
   runId: string,
   graphName: string,
-  graph: Record<string, GraphNodeConfig>
+  graph: Record<string, GraphNodeConfig>,
+  triggerInput: any
 ): Promise<void> {
   while (true) {
     // Get completed node IDs + branch keys (lightweight, no results)
@@ -438,12 +547,17 @@ async function continueGraphInline(
         // Evaluate input callback to get the mapping
         const inputMapping = evaluateInputCallback(node)
 
-        // Only fetch results for nodes referenced in this node's input
-        const referencedNodeIds = extractReferencedNodeIds(inputMapping)
-        const nodeResults = await workflowService.getNodeResults(
+        // Only fetch results for nodes referenced in this node's input (excluding trigger)
+        const referencedNodeIds = extractReferencedNodeIds(inputMapping).filter(
+          (id) => id !== 'trigger'
+        )
+        const fetchedResults = await workflowService.getNodeResults(
           runId,
           referencedNodeIds
         )
+
+        // Merge fetched results with trigger input
+        const nodeResults = { trigger: triggerInput, ...fetchedResults }
 
         const resolvedInput = resolveInputMapping(inputMapping, nodeResults)
 
@@ -501,21 +615,34 @@ export async function runWorkflowGraph(
     workflowService.registerInlineRun(runId)
   }
 
+  // Create nodeResults with trigger for resolving entry node inputs
+  const triggerNodeResults = { trigger: triggerInput }
+
   try {
     if (inline && rpcService) {
       // Inline mode - execute entry nodes in parallel
       await Promise.all(
-        entryNodes.map((nodeId) =>
-          executeGraphNodeInline(
+        entryNodes.map(async (nodeId) => {
+          const node = graph[nodeId]
+          if (!node) return
+
+          // Evaluate and resolve entry node input
+          const inputMapping = evaluateInputCallback(node)
+          const resolvedInput =
+            Object.keys(inputMapping).length > 0
+              ? resolveInputMapping(inputMapping, triggerNodeResults)
+              : triggerInput
+
+          await executeGraphNodeInline(
             workflowService,
             rpcService,
             runId,
             graphName,
             nodeId,
-            triggerInput,
+            resolvedInput,
             graph
           )
-        )
+        })
       )
 
       // Continue executing remaining nodes inline
@@ -524,13 +651,21 @@ export async function runWorkflowGraph(
         rpcService,
         runId,
         graphName,
-        graph
+        graph,
+        triggerInput
       )
     } else {
       // Queue-based mode
       for (const nodeId of entryNodes) {
         const node = graph[nodeId]
         if (!node) continue
+
+        // Evaluate and resolve entry node input
+        const inputMapping = evaluateInputCallback(node)
+        const resolvedInput =
+          Object.keys(inputMapping).length > 0
+            ? resolveInputMapping(inputMapping, triggerNodeResults)
+            : triggerInput
 
         const rpcName = getRpcName(node)
         await queueGraphNode(
@@ -539,7 +674,7 @@ export async function runWorkflowGraph(
           graphName,
           nodeId,
           rpcName,
-          triggerInput
+          resolvedInput
         )
       }
     }

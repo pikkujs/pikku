@@ -6,8 +6,9 @@ export {
   WorkflowCancelledException,
 } from './pikku-workflow-service.js'
 
-// Internal registration function (used by generated code)
+// Internal registration functions (used by generated code)
 export { addWorkflow } from './dsl/workflow-runner.js'
+export { addWorkflowGraph } from './graph/graph-runner.js'
 
 // Unified wireWorkflow function
 export { wireWorkflow } from './wire-workflow.js'

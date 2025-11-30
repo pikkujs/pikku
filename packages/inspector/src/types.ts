@@ -226,7 +226,7 @@ export interface InspectorState {
     meta: WorkflowsMeta
     files: Map<string, { path: string; exportedName: string }>
     graphMeta: SerializedWorkflowGraphs
-    graphFiles: Set<string>
+    graphFiles: Map<string, { path: string; exportedName: string }>
   }
   rpc: {
     internalMeta: Record<string, string>

@@ -115,6 +115,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
         metaImportPath,
         allWorkflowNames,
         workflows.files,
+        workflows.graphFiles,
         packageMappings,
         config.externalPackageName
       )

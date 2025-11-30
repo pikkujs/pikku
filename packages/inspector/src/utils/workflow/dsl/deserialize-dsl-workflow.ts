@@ -832,6 +832,40 @@ function isFlowNode(node: any): boolean {
 }
 
 /**
+ * Follow through flow nodes to find the next RPC node
+ * This traverses the 'next' chain, skipping flow nodes until finding an RPC node
+ */
+function findNextRpcNode(
+  startNextId: string,
+  nodes: Record<string, SerializedGraphNode>,
+  flowNodeIds: Set<string>,
+  visited: Set<string> = new Set()
+): string | null {
+  if (visited.has(startNextId)) {
+    return null // Cycle detected, stop
+  }
+  visited.add(startNextId)
+
+  // If it's not a flow node, we found our target
+  if (!flowNodeIds.has(startNextId)) {
+    // Make sure the node exists and has an rpcName (is an RPC node)
+    const node = nodes[startNextId]
+    if (node && 'rpcName' in node) {
+      return startNextId
+    }
+    return null
+  }
+
+  // It's a flow node - follow its 'next' if it has one
+  const flowNode = nodes[startNextId]
+  if (flowNode && 'next' in flowNode && flowNode.next) {
+    return findNextRpcNode(flowNode.next as string, nodes, flowNodeIds, visited)
+  }
+
+  return null
+}
+
+/**
  * Deserialize a graph workflow to pikkuWorkflowGraph code
  */
 export function deserializeGraphWorkflow(
@@ -844,7 +878,9 @@ export function deserializeGraphWorkflow(
   const lines: string[] = []
 
   // Import statement
-  lines.push(`import { pikkuWorkflowGraph } from '${pikkuImportPath}'`)
+  lines.push(
+    `import { pikkuWorkflowGraph, wireWorkflow } from '${pikkuImportPath}'`
+  )
   lines.push('')
 
   // Add description as comment if present
@@ -893,12 +929,16 @@ export function deserializeGraphWorkflow(
 
     const configParts: string[] = []
 
-    // Add next if present and not pointing to a flow node
+    // Add next if present - follow through flow nodes to find the actual next RPC node
     if ('next' in node && node.next) {
       const nextId = node.next as string
-      // Don't add next if it points to a flow node (like return)
-      if (!flowNodeIds.has(nextId)) {
-        configParts.push(`next: '${nextId}'`)
+      // If next points to a flow node, follow through to find the next RPC node
+      const actualNextId = flowNodeIds.has(nextId)
+        ? findNextRpcNode(nextId, workflow.nodes, flowNodeIds)
+        : nextId
+      // Only add if we found a valid next RPC node
+      if (actualNextId && !flowNodeIds.has(actualNextId)) {
+        configParts.push(`next: '${actualNextId}'`)
       }
     }
 
@@ -957,14 +997,19 @@ export function deserializeGraphWorkflow(
   lines.push(`})`)
   lines.push('')
 
-  // Generate wireWorkflow if wires are present
+  // Always generate wireWorkflow to register the graph workflow
+  // (needed for testing even without explicit wires)
   if (workflow.wires && Object.keys(workflow.wires).length > 0) {
     lines.push(`wireWorkflow({`)
     lines.push(`  wires: ${wiresToCode(workflow.wires)},`)
     lines.push(`  graph: ${workflow.name},`)
     lines.push(`})`)
-    lines.push('')
+  } else {
+    lines.push(`wireWorkflow({`)
+    lines.push(`  graph: ${workflow.name},`)
+    lines.push(`})`)
   }
+  lines.push('')
 
   return lines.join('\n')
 }

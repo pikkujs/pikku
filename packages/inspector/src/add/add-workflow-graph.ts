@@ -855,6 +855,10 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   // Only add if enabled (or not explicitly disabled)
   if (enabled) {
     state.workflows.graphMeta[workflowName] = serialized
-    state.workflows.graphFiles.add(node.getSourceFile().fileName)
+    // Store file path and exported name for import generation
+    state.workflows.graphFiles.set(workflowName, {
+      path: node.getSourceFile().fileName,
+      exportedName: graphConfig.exportedName || workflowName,
+    })
   }
 }

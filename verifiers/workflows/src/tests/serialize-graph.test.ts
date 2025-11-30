@@ -64,9 +64,9 @@ async function main() {
       pikkuImportPath: '../../.pikku/workflow/pikku-workflow-types.gen.js',
     })
 
-    // Write to graph directory with 'graph' prefix and .gen.ts extension
+    // Write to graph directory with 'graph' prefix and .converted.ts extension
     const baseName = file.replace('.gen.json', '')
-    const graphFileName = `graph${baseName.charAt(0).toUpperCase()}${baseName.slice(1)}.gen.ts`
+    const graphFileName = `graph${baseName.charAt(0).toUpperCase()}${baseName.slice(1)}.converted.ts`
     const graphPath = join(GRAPH_DIR, graphFileName)
     await writeFile(graphPath, graphCode)
 
