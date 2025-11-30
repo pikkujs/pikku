@@ -513,12 +513,21 @@ function nodeToCode(
           for (const [key, output] of Object.entries(
             flowNode.outputs as Record<string, any>
           )) {
+            let value: string
             if (output.from === 'outputVar') {
-              const value = output.path
+              value = output.path
                 ? `${output.name}?.${output.path}`
                 : output.name
-              returnObj.push(`${indent}  ${key}: ${value},`)
+            } else if (output.from === 'input') {
+              value = `data.${output.path}`
+            } else if (output.from === 'literal') {
+              value = JSON.stringify(output.value)
+            } else if (output.from === 'expression') {
+              value = output.expression
+            } else {
+              continue
             }
+            returnObj.push(`${indent}  ${key}: ${value},`)
           }
           if (returnObj.length > 0) {
             lines.push(`${indent}return {`)

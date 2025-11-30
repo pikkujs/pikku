@@ -1094,6 +1094,60 @@ function extractSequentialFanout(
 }
 
 /**
+ * Extract a single output binding from an expression
+ */
+function extractOutputBinding(
+  expr: ts.Expression,
+  context: ExtractionContext
+): OutputBinding | null {
+  // Check for property access (e.g., org.id, payment.status)
+  if (ts.isPropertyAccessExpression(expr)) {
+    const objName = ts.isIdentifier(expr.expression)
+      ? expr.expression.text
+      : null
+    const propPath = expr.name.text
+
+    if (objName && context.outputVars.has(objName)) {
+      return { from: 'outputVar', name: objName, path: propPath }
+    }
+    if (objName === context.inputParamName) {
+      return { from: 'input', path: propPath }
+    }
+  }
+
+  // Check for identifier (simple variable reference)
+  if (ts.isIdentifier(expr)) {
+    const varName = expr.text
+    if (context.outputVars.has(varName)) {
+      return { from: 'outputVar', name: varName }
+    }
+    if (varName === context.inputParamName) {
+      return { from: 'input', path: varName }
+    }
+  }
+
+  // Check for literals
+  if (ts.isStringLiteral(expr)) {
+    return { from: 'literal', value: expr.text }
+  }
+  if (ts.isNumericLiteral(expr)) {
+    return { from: 'literal', value: Number(expr.text) }
+  }
+  if (expr.kind === ts.SyntaxKind.TrueKeyword) {
+    return { from: 'literal', value: true }
+  }
+  if (expr.kind === ts.SyntaxKind.FalseKeyword) {
+    return { from: 'literal', value: false }
+  }
+  if (expr.kind === ts.SyntaxKind.NullKeyword) {
+    return { from: 'literal', value: null }
+  }
+
+  // For any other expression (comparisons, method calls, etc.), capture as expression
+  return { from: 'expression', expression: getSourceText(expr) }
+}
+
+/**
  * Extract return step
  */
 function extractReturn(
@@ -1123,48 +1177,15 @@ function extractReturn(
       let binding: OutputBinding | null = null
 
       if (ts.isShorthandPropertyAssignment(prop)) {
-        // { orgId } - must be an output variable
+        // { orgId } - must be an output variable or input
         const varName = prop.name.text
         if (context.outputVars.has(varName)) {
           binding = { from: 'outputVar', name: varName }
+        } else {
+          binding = { from: 'input', path: varName }
         }
       } else if (ts.isPropertyAssignment(prop)) {
-        const init = prop.initializer
-
-        // Check for property access (e.g., org.id, owner?.id)
-        if (ts.isPropertyAccessExpression(init)) {
-          const objName = ts.isIdentifier(init.expression)
-            ? init.expression.text
-            : null
-          const propPath = init.name.text
-
-          if (objName && context.outputVars.has(objName)) {
-            binding = { from: 'outputVar', name: objName, path: propPath }
-          }
-        }
-
-        // Check for optional chaining (e.g., owner?.id)
-        if (
-          init.kind === ts.SyntaxKind.PropertyAccessExpression ||
-          init.kind === ts.SyntaxKind.NonNullExpression
-        ) {
-          const text = init.getText()
-          const match = text.match(/^(\w+)\??\.(\w+)$/)
-          if (match) {
-            const [, objName, propPath] = match
-            if (context.outputVars.has(objName)) {
-              binding = { from: 'outputVar', name: objName, path: propPath }
-            }
-          }
-        }
-
-        // Check for identifier (simple variable reference)
-        if (ts.isIdentifier(init)) {
-          const varName = init.text
-          if (context.outputVars.has(varName)) {
-            binding = { from: 'outputVar', name: varName }
-          }
-        }
+        binding = extractOutputBinding(prop.initializer, context)
       }
 
       if (binding) {

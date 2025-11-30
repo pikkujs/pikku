@@ -58,11 +58,11 @@ export type InputSource =
 /**
  * Output binding for return statements in DSL workflows
  */
-export interface OutputBinding {
-  from: 'outputVar' | 'input'
-  name?: string
-  path?: string
-}
+export type OutputBinding =
+  | { from: 'outputVar'; name: string; path?: string }
+  | { from: 'input'; path: string }
+  | { from: 'literal'; value: unknown }
+  | { from: 'expression'; expression: string }
 
 /**
  * RPC step metadata (base form)
