@@ -3,7 +3,10 @@
  * Demonstrates order fulfillment with shipping
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  WorkflowCancelledException,
+} from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Order fulfillment workflow: get order, check inventory, create shipment
@@ -26,7 +29,9 @@ export const orderFulfillmentWorkflow = pikkuWorkflowFunc<
     )
 
     if (!inventoryCheck.inStock) {
-      await workflow.cancel(`Item ${item.productId} is out of stock`)
+      throw new WorkflowCancelledException(
+        `Item ${item.productId} is out of stock`
+      )
     }
 
     await workflow.do(`Reserve ${item.productId}`, 'inventoryReserve', {

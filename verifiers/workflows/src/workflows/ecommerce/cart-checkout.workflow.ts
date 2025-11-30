@@ -3,7 +3,10 @@
  * Demonstrates cart to order conversion with payment
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  WorkflowCancelledException,
+} from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Cart checkout workflow: get cart, create order, process payment
@@ -19,7 +22,7 @@ export const cartCheckoutWorkflow = pikkuWorkflowFunc<
 
   // Step 2: Validate cart has items
   if (cart.items.length === 0) {
-    await workflow.cancel('Cart is empty')
+    throw new WorkflowCancelledException('Cart is empty')
   }
 
   // Step 3: Check inventory for all items
@@ -35,7 +38,7 @@ export const cartCheckoutWorkflow = pikkuWorkflowFunc<
   // Verify all items in stock
   const outOfStock = cart.items.filter((item, i) => !inventoryChecks[i].inStock)
   if (outOfStock.length > 0) {
-    await workflow.cancel(
+    throw new WorkflowCancelledException(
       `Items out of stock: ${outOfStock.map((i) => i.productId).join(', ')}`
     )
   }

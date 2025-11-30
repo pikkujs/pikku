@@ -3,7 +3,10 @@
  * Demonstrates single-item express checkout
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowFunc,
+  WorkflowCancelledException,
+} from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Express checkout workflow (single step)
@@ -23,7 +26,7 @@ export const expressCheckoutWorkflow = pikkuWorkflowFunc<
   })
 
   if (inventory.available < data.quantity) {
-    await workflow.cancel('Insufficient inventory')
+    throw new WorkflowCancelledException('Insufficient inventory')
   }
 
   // Step 2: Create single-item order
