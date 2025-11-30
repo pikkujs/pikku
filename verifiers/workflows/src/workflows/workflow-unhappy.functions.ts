@@ -1,8 +1,8 @@
 import {
   pikkuWorkflowFunc,
   WorkflowCancelledException,
-} from '../.pikku/workflow/pikku-workflow-types.gen.js'
-import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
+} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 
 /**
  * RPC function that ALWAYS fails

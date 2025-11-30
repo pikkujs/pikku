@@ -1,8 +1,8 @@
 import {
   pikkuWorkflowGraph,
   wireWorkflow,
-} from '../.pikku/workflow/pikku-workflow-types.gen.js'
-import { wireHTTP } from '../.pikku/pikku-types.gen.js'
+} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 
 /**
  * Example workflow graph: User Onboarding

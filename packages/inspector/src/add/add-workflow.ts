@@ -268,7 +268,8 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
       // pikkuWorkflowComplexFunc with inline steps is marked as non-dsl
       dsl = false
     } else {
-      dsl = true
+      // pikkuWorkflowComplexFunc is always non-dsl, pikkuWorkflowFunc is dsl
+      dsl = wrapperType === 'dsl'
     }
 
     // Collect all invoked RPCs from workflow steps

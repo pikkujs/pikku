@@ -534,7 +534,11 @@ async function continueGraphInline(
     )
 
     if (nodesToExecute.length === 0) {
-      // No more nodes to execute
+      // No more nodes to execute - if we've completed at least one node, we're done
+      // This handles branching where only some paths are taken
+      if (completedNodeIds.length > 0) {
+        await workflowService.updateRunStatus(runId, 'completed')
+      }
       return
     }
 
@@ -577,7 +581,7 @@ async function continueGraphInline(
 
 /**
  * Start a workflow graph execution
- * @param startNode - Optional starting node ID (from wire config). If not provided, uses entryNodeIds from meta.
+ * @param startNode - Optional starting node ID (from wire config). If not provided, uses wires.api from graph definition.
  */
 export async function runWorkflowGraph(
   workflowService: PikkuWorkflowService,
@@ -592,18 +596,13 @@ export async function runWorkflowGraph(
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
 
-  // Get precomputed entryNodeIds from workflow meta (computed at build time)
-  const meta = pikkuState(null, 'workflows', 'meta')
-  const workflowMeta = meta[graphName]
-
-  // Use startNode from wire if provided, otherwise use entryNodeIds from meta
-  const entryNodes: string[] = startNode
-    ? [startNode]
-    : (workflowMeta?.entryNodeIds ?? [])
+  // Use startNode from caller if provided, otherwise use wires.api from graph definition
+  const apiStartNode = startNode ?? definition.wires?.api
+  const entryNodes: string[] = apiStartNode ? [apiStartNode] : []
 
   if (entryNodes.length === 0) {
     throw new Error(
-      `Workflow graph '${graphName}' has no entry nodes in meta and no startNode was provided`
+      `Workflow graph '${graphName}' has no wires.api defined and no startNode was provided`
     )
   }
 

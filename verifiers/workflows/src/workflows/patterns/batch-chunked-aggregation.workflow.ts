@@ -1,11 +1,14 @@
 /**
  * Batch aggregation with chunking workflow
- * Note: Chunks must be pre-computed and passed as input since DSL doesn't support index-based loops
+ *
+ * Note: Uses pikkuWorkflowComplexFunc because Promise.all(chunk.map(...)) pattern
+ * is not supported by DSL static analysis. DSL only supports direct workflow.do()
+ * calls inside for-of loops, not nested parallel patterns.
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const batchChunkedAggregationWorkflow = pikkuWorkflowFunc<
+export const batchChunkedAggregationWorkflow = pikkuWorkflowComplexFunc<
   { documentChunks: string[][] },
   { totalProcessed: number; chunks: number }
 >(async (_services, data, { workflow }) => {

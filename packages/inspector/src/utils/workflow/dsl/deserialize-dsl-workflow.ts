@@ -965,6 +965,27 @@ export function deserializeGraphWorkflow(
     }
   }
 
+  // Compute entry node (first node with no incoming edges from RPC nodes)
+  const rpcNodeIds = new Set(Object.keys(nodeRpcMap))
+  const nodesWithIncomingEdges = new Set<string>()
+  for (const [nodeId, node] of Object.entries(workflow.nodes)) {
+    if (!rpcNodeIds.has(nodeId)) continue
+    if ('next' in node && node.next) {
+      const nextId = node.next as string
+      // Follow through flow nodes to find the actual next RPC node
+      const actualNextId = flowNodeIds.has(nextId)
+        ? findNextRpcNode(nextId, workflow.nodes, flowNodeIds)
+        : nextId
+      if (actualNextId && rpcNodeIds.has(actualNextId)) {
+        nodesWithIncomingEdges.add(actualNextId)
+      }
+    }
+  }
+  // Entry node is the first RPC node with no incoming edges
+  const entryNode = Object.keys(nodeRpcMap).find(
+    (id) => !nodesWithIncomingEdges.has(id)
+  )
+
   // Generate the pikkuWorkflowGraph call
   lines.push(`export const ${workflow.name} = pikkuWorkflowGraph({`)
   lines.push(`  name: '${workflow.name}',`)
@@ -985,6 +1006,13 @@ export function deserializeGraphWorkflow(
     lines.push(`  },`)
   } else {
     lines.push(`  nodes: {},`)
+  }
+
+  // Generate wires with api entry point
+  if (entryNode) {
+    lines.push(`  wires: {`)
+    lines.push(`    api: '${entryNode}',`)
+    lines.push(`  },`)
   }
 
   // Generate config (node configurations)

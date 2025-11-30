@@ -107,6 +107,8 @@ export interface WorkflowTriggerWire {
  * Defines how a workflow can be triggered
  */
 export interface WorkflowWires {
+  /** API entry point - node ID for startWorkflow() calls */
+  api?: string
   /** HTTP triggers */
   http?: WorkflowHTTPWire[]
   /** Channel triggers */
