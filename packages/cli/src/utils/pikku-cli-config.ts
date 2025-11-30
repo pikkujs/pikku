@@ -139,18 +139,6 @@ const _getPikkuCLIConfig = async (
         'pikku-functions-meta.gen.json'
       )
     }
-    if (!result.functionsMetaMinFile) {
-      result.functionsMetaMinFile = join(
-        functionDir,
-        'pikku-functions-meta.min.gen.ts'
-      )
-    }
-    if (!result.functionsMetaMinJsonFile) {
-      result.functionsMetaMinJsonFile = join(
-        functionDir,
-        'pikku-functions-meta.min.gen.json'
-      )
-    }
     if (!result.functionTypesFile) {
       result.functionTypesFile = join(
         functionDir,

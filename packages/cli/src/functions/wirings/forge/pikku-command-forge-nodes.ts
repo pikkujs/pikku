@@ -4,6 +4,10 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { readFile } from 'fs/promises'
 import { join, isAbsolute } from 'path'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+} from '../../../utils/strip-verbose-meta.js'
 
 /**
  * Load and sanitize an SVG icon file.
@@ -96,12 +100,28 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
     }
 
     if (forgeNodesMetaJsonFile) {
+      // Write minimal JSON (runtime-only fields)
+      const minimalMeta = stripVerboseFields(metaData)
       await writeFileInDir(
         logger,
         forgeNodesMetaJsonFile,
-        JSON.stringify(metaData, null, 2),
+        JSON.stringify(minimalMeta, null, 2),
         { ignoreModifyComment: true }
       )
+
+      // Write verbose JSON only if it has additional fields
+      if (hasVerboseFields(metaData)) {
+        const verbosePath = forgeNodesMetaJsonFile.replace(
+          /\.gen\.json$/,
+          '-verbose.gen.json'
+        )
+        await writeFileInDir(
+          logger,
+          verbosePath,
+          JSON.stringify(metaData, null, 2),
+          { ignoreModifyComment: true }
+        )
+      }
     }
 
     return true

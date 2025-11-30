@@ -14,8 +14,6 @@ export interface PikkuCLICoreOutputFiles {
   functionsFile: string
   functionsMetaFile: string
   functionsMetaJsonFile: string
-  functionsMetaMinFile: string
-  functionsMetaMinJsonFile: string
   functionTypesFile: string
 
   // HTTP

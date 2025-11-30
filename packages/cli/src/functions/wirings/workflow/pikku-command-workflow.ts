@@ -9,6 +9,10 @@ import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+} from '../../../utils/strip-verbose-meta.js'
 import { join } from 'path'
 
 export const pikkuWorkflow: any = pikkuSessionlessFunc<
@@ -63,24 +67,51 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       const dslMeta = workflows.meta as WorkflowsMeta
       for (const [name, meta] of Object.entries(dslMeta)) {
         const graphMeta = convertDslToGraph(name, meta)
-        const jsonPath = join(workflowMetaDir, `${name}.gen.json`)
+
+        // Write minimal version (runtime-only fields)
+        const minimalMeta = stripVerboseFields(graphMeta)
+        const minimalPath = join(workflowMetaDir, `${name}.gen.json`)
         await writeFileInDir(
           logger,
-          jsonPath,
-          JSON.stringify(graphMeta, null, 2),
+          minimalPath,
+          JSON.stringify(minimalMeta, null, 2),
           { ignoreModifyComment: true }
         )
+
+        // Write verbose version only if it has additional fields
+        if (hasVerboseFields(graphMeta)) {
+          const verbosePath = join(workflowMetaDir, `${name}-verbose.gen.json`)
+          await writeFileInDir(
+            logger,
+            verbosePath,
+            JSON.stringify(graphMeta, null, 2),
+            { ignoreModifyComment: true }
+          )
+        }
       }
 
       // Write individual JSON files for graph workflows
       for (const [name, graphMeta] of Object.entries(workflows.graphMeta)) {
-        const jsonPath = join(workflowMetaDir, `${name}.gen.json`)
+        // Write minimal version (runtime-only fields)
+        const minimalMeta = stripVerboseFields(graphMeta)
+        const minimalPath = join(workflowMetaDir, `${name}.gen.json`)
         await writeFileInDir(
           logger,
-          jsonPath,
-          JSON.stringify(graphMeta, null, 2),
+          minimalPath,
+          JSON.stringify(minimalMeta, null, 2),
           { ignoreModifyComment: true }
         )
+
+        // Write verbose version only if it has additional fields
+        if (hasVerboseFields(graphMeta)) {
+          const verbosePath = join(workflowMetaDir, `${name}-verbose.gen.json`)
+          await writeFileInDir(
+            logger,
+            verbosePath,
+            JSON.stringify(graphMeta, null, 2),
+            { ignoreModifyComment: true }
+          )
+        }
       }
     }
 

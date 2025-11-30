@@ -5,6 +5,10 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+} from '../../../utils/strip-verbose-meta.js'
 
 // Helper function to generate arguments from schema
 const generateArgumentsFromSchema = async (
@@ -101,11 +105,27 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       toolsMeta: mcpEndpoints.toolsMeta,
       promptsMeta: promptsMetaWithArguments,
     }
+
+    // Write minimal JSON (runtime-only fields)
+    const minimalMeta = stripVerboseFields(metaData)
     await writeFileInDir(
       logger,
       config.mcpWiringsMetaJsonFile,
-      JSON.stringify(metaData, null, 2)
+      JSON.stringify(minimalMeta, null, 2)
     )
+
+    // Write verbose JSON only if it has additional fields
+    if (hasVerboseFields(metaData)) {
+      const verbosePath = config.mcpWiringsMetaJsonFile.replace(
+        /\.gen\.json$/,
+        '-verbose.gen.json'
+      )
+      await writeFileInDir(
+        logger,
+        verbosePath,
+        JSON.stringify(metaData, null, 2)
+      )
+    }
 
     const jsonImportPath = getFileImportRelativePath(
       mcpWiringsMetaFile,
