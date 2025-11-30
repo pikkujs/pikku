@@ -20,3 +20,8 @@ export {
   convertAllDslToGraphs,
   convertDslToGraph,
 } from './utils/workflow/graph/convert-dsl-to-graph.js'
+export {
+  deserializeDslWorkflow,
+  deserializeGraphWorkflow,
+  deserializeAllDslWorkflows,
+} from './utils/workflow/dsl/deserialize-dsl-workflow.js'

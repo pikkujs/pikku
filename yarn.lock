@@ -3571,7 +3571,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.11.2, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.11.2, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -3613,7 +3613,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:*, @pikku/core@npm:^0.11.0, @pikku/core@npm:^0.11.1, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:*, @pikku/core@npm:^0.11.0, @pikku/core@npm:^0.11.1, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -3706,7 +3706,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/inspector@npm:^0.11.1, @pikku/inspector@workspace:packages/inspector":
+"@pikku/inspector@npm:^0.11.1, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
@@ -4262,6 +4262,19 @@ __metadata:
     "@pikku/core": "npm:^0.11.1"
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-workflows@workspace:verifiers/workflows":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-workflows@workspace:verifiers/workflows"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/inspector": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft

@@ -7,6 +7,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@pikku/inspector": "workspace:*",
     "@types/node": "^24",
     "tsx": "^4.20.6",
     "typescript": "^5.9"
@@ -14,6 +15,7 @@
   "scripts": {
     "build": "tsc -b",
     "pikku": "pikku",
+    "serialize-dsl": "npx tsx src/tests/serialize-dsl.test.ts",
     "test:bullmq": "npx tsx src/runners/bullmq.runner.ts",
     "test:pgboss": "npx tsx src/runners/pgboss.runner.ts"
   }
