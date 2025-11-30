@@ -1,4 +1,7 @@
-import { pikkuWorkflowComplexFunc } from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  pikkuWorkflowComplexFunc,
+  pikkuWorkflowFunc,
+} from '../.pikku/workflow/pikku-workflow-types.gen.js'
 import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
 
 // Pikku function to create a user profile
@@ -118,4 +121,43 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
   }
 
   throw new Error(`Workflow timeout after ${maxAttempts} attempts`)
+})
+
+/**
+ * Simple DSL Workflow Example
+ *
+ * DSL workflows use pikkuWorkflowFunc with only RPC calls (no inline functions).
+ * This enables static analysis and visualization.
+ *
+ * Demonstrates:
+ * - Sequential steps with workflow.do()
+ * - Conditional branching
+ * - Sleep/delay
+ */
+export const simpleOnboardingWorkflow = pikkuWorkflowFunc<
+  { email: string; userId: string; sendWelcome: boolean },
+  { userId: string; welcomeSent: boolean }
+>(async ({}, data, { workflow }) => {
+  // Step 1: Create user profile
+  const user = await workflow.do('Create user profile', 'createUserProfile', {
+    email: data.email,
+    userId: data.userId,
+  })
+
+  // Step 2: Wait for profile to propagate
+  await workflow.sleep('Wait for profile sync', '1s')
+
+  // Step 3: Conditionally send welcome email
+  if (data.sendWelcome) {
+    await workflow.do('Send welcome email', 'sendEmail', {
+      to: user.email,
+      subject: 'Welcome!',
+      body: `Hello ${user.name}, welcome to our platform!`,
+    })
+  }
+
+  return {
+    userId: user.id,
+    welcomeSent: data.sendWelcome,
+  }
 })

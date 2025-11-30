@@ -1,12 +1,11 @@
 import { wireHTTP } from '../.pikku/pikku-types.gen.js'
-import { triggerOnboardingWorkflow } from './workflow.functions.js'
-import { happyRetry } from './workflow-happy.functions.js'
-import { unhappyRetry } from './workflow-unhappy.functions.js'
 import {
-  triggerOrgOnboardingSimple,
-  triggerSequentialInviteSimple,
-} from './workflow-simple.functions.js'
+  pikkuWorkflowGraph,
+  wireWorkflow,
+} from '../.pikku/workflow/pikku-workflow-types.gen.js'
+import { triggerOnboardingWorkflow } from './workflow.functions.js'
 
+// HTTP endpoint to trigger the onboarding workflow
 wireHTTP({
   auth: false,
   method: 'post',
@@ -15,36 +14,52 @@ wireHTTP({
   tags: ['workflow'],
 })
 
-// Wire HTTP endpoints for test workflows
-wireHTTP({
-  auth: false,
-  method: 'post',
-  route: '/workflow/test/happy-retry',
-  func: happyRetry,
-  tags: ['workflow', 'test'],
+/**
+ * Graph Workflow Example: User Welcome
+ *
+ * Graph workflows are defined declaratively with:
+ * - nodes: Map step IDs to RPC function names
+ * - config: Define input mappings and flow (next, onError)
+ * - wires: HTTP/channel triggers
+ */
+export const graphUserWelcome = pikkuWorkflowGraph({
+  description: 'Send welcome email after user profile creation',
+  tags: ['onboarding', 'graph'],
+  nodes: {
+    createProfile: 'createUserProfile',
+    sendWelcome: 'sendEmail',
+  },
+  wires: {
+    http: [
+      {
+        route: '/workflow/graph/welcome',
+        method: 'post',
+        startNode: 'createProfile',
+      },
+    ],
+  },
+  config: {
+    createProfile: {
+      next: 'sendWelcome',
+    },
+    sendWelcome: {
+      input: (ref) => ({
+        to: ref('createProfile', 'email'),
+        subject: 'Welcome!',
+        body: 'Thanks for signing up!',
+      }),
+    },
+  },
 })
 
-wireHTTP({
-  auth: false,
-  method: 'post',
-  route: '/workflow/test/unhappy-retry',
-  func: unhappyRetry,
-  tags: ['workflow', 'test'],
+// Register the graph workflow
+wireWorkflow({
+  graph: graphUserWelcome,
 })
 
-// Wire HTTP endpoints for simple workflow examples
+// HTTP endpoint for graph workflow
 wireHTTP({
-  auth: false,
   method: 'post',
-  route: '/workflow/simple/org-onboarding',
-  func: triggerOrgOnboardingSimple,
-  tags: ['workflow', 'simple'],
-})
-
-wireHTTP({
-  auth: false,
-  method: 'post',
-  route: '/workflow/simple/sequential-invite',
-  func: triggerSequentialInviteSimple,
-  tags: ['workflow', 'simple'],
+  route: '/workflow/graph/welcome',
+  workflow: true,
 })
