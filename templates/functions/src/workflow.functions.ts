@@ -134,7 +134,7 @@ export const triggerOnboardingWorkflow = pikkuSessionlessFunc<
  * - Conditional branching
  * - Sleep/delay
  */
-export const simpleOnboardingWorkflow = pikkuWorkflowFunc<
+export const onboardingDSLWorkflow = pikkuWorkflowFunc<
   { email: string; userId: string; sendWelcome: boolean },
   { userId: string; welcomeSent: boolean }
 >(async ({}, data, { workflow }) => {
