@@ -22,8 +22,9 @@ async function main() {
   try {
     console.log('\n📤 Starting happyRetry workflow via RPC...\n')
 
-    const response = await pikkuFetch.post('/workflow/test/happy-retry', {
-      value: 10,
+    const response = await pikkuFetch.post('/workflow/start', {
+      email: 'happyRetryWorkflow',
+      userId: 'happyRetryWorkflowUser',
     })
 
     console.log('\n' + '='.repeat(70))

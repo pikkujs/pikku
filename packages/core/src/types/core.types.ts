@@ -1,5 +1,6 @@
 import type { Logger, LogLevel } from '../services/logger.js'
 import { VariablesService } from '../services/variables-service.js'
+import { SecretService } from '../services/secret-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
@@ -171,6 +172,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   /** The variable service to be used */
   variables: VariablesService
+  /** The secrets service to retrieve secrets */
+  secrets: SecretService
   /** The workflow orchestrator service */
   workflowService?: WorkflowService
   /** The queue service */

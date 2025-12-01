@@ -9,6 +9,7 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { resolvePermissions } from '../utils/permissions.js'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -504,6 +505,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     ? resolveMiddleware(state, objectNode, tags, checker)
     : undefined
 
+  // --- resolve permissions ---
+  const permissions = objectNode
+    ? resolvePermissions(state, objectNode, tags, checker)
+    : undefined
+
   state.functions.meta[pikkuFuncName] = {
     pikkuFuncName,
     name,
@@ -520,6 +526,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     description,
     errors,
     middleware,
+    permissions,
     isDirectFunction,
   }
 
