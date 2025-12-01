@@ -6,11 +6,10 @@ async function check() {
   try {
     console.log('🔄 Testing Server-Sent Events...')
 
-    const serverUrl =
-      process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+    const serverUrl = process.env.TODO_APP_URL || 'http://localhost:4002'
     console.log('Starting HTTP SSE test with url:', serverUrl)
 
-    const evtSource = new EventSource(`${serverUrl}/sse`, {
+    const evtSource = new EventSource(`${serverUrl}/todos/stream`, {
       withCredentials: true,
     })
 

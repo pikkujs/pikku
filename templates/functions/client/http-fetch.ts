@@ -7,19 +7,47 @@ async function check() {
   const RETRY_INTERVAL = 2000
 
   try {
-    const res = await pikkuFetch.fetch('/', 'GET', null)
-    if (res.status === 200) {
-      console.log('✅ HTTP test passed with 200 OK')
+    // List todos
+    const todos = await pikkuFetch.get('/todos', {
+      userId: 'user1',
+      completed: undefined,
+      priority: undefined,
+      tag: undefined,
+    })
 
-      const data = await pikkuFetch.get('/hello-world')
-      console.log('Data from /hello-world', data)
+    console.log('✅ HTTP test passed')
+    console.log('Todos:', todos)
 
-      process.exit(0)
-    } else {
-      console.log(`Still failing (status ${res.status}), retrying...`)
-    }
-  } catch (err: any) {
-    console.log(`Still failing (${err.message}), retrying...`)
+    // Create a new todo
+    const created = await pikkuFetch.post('/todos', {
+      title: 'Test todo from client',
+      priority: 'high',
+      userId: 'user1',
+      description: undefined,
+      dueDate: undefined,
+      tags: undefined,
+    })
+    console.log('Created todo:', created)
+
+    // Complete the todo
+    const completed = await pikkuFetch.post(
+      `/todos/${created.todo.id}/complete`,
+      {
+        id: created.todo.id,
+      }
+    )
+    console.log('Completed todo:', completed)
+
+    // Delete the todo
+    const deleted = await pikkuFetch.delete(`/todos/${created.todo.id}`, {
+      id: created.todo.id,
+    })
+    console.log('Deleted todo:', deleted)
+
+    process.exit(0)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.log(`Still failing (${message}), retrying...`)
   }
 
   if (Date.now() - start > TIMEOUT) {
@@ -30,7 +58,7 @@ async function check() {
   setTimeout(check, RETRY_INTERVAL)
 }
 
-const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
+const url = process.env.TODO_APP_URL || 'http://localhost:4002'
 pikkuFetch.setServerUrl(url)
 console.log('Starting HTTP fetch test with url:', url)
 
