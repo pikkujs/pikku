@@ -319,7 +319,7 @@ interface WorkflowDefinitionFunc {
     queue?: string
   }
   /** DSL workflow function */
-  func: ReturnType<typeof pikkuWorkflowFunc> | ReturnType<typeof pikkuWorkflowComplexFunc>
+  func: PikkuFunctionConfig<any, any, 'workflow', PikkuFunctionWorkflow<any, any>>
 }
 
 /** Workflow definition with graph */

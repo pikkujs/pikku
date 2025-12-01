@@ -1,0 +1,70 @@
+import { z } from 'zod'
+import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
+import { store } from '../services/store.service.js'
+import {
+  LoginInputSchema,
+  LoginResponseSchema,
+  UserResponseSchema,
+} from '../schemas.js'
+
+/**
+ * Login with username and password.
+ * Sets the session with userId for subsequent authenticated requests.
+ * Demo: any password works, just validates username exists.
+ */
+export const login = pikkuFunc({
+  input: LoginInputSchema,
+  output: LoginResponseSchema,
+  func: async (_services, { username, password }, { session }) => {
+    const user = store.getUserByUsername(username)
+    if (!user) {
+      throw new Error('Invalid username or password')
+    }
+
+    // Demo: accept any password (just needs to be non-empty)
+    if (password.length < 1) {
+      throw new Error('Invalid username or password')
+    }
+
+    // Set the session - this will be used by auth middleware
+    await session.set({ userId: user.id })
+
+    return {
+      token: user.id, // In demo mode, we use userId as token; real app would use JWT
+      user,
+    }
+  },
+})
+
+/**
+ * Get current authenticated user.
+ * Uses the initial session (set by middleware) to get user info.
+ */
+export const getMe = pikkuFunc({
+  input: z.object({}),
+  output: UserResponseSchema,
+  func: async (_services, _input, { initialSession }) => {
+    if (!initialSession?.userId) {
+      throw new Error('Not authenticated')
+    }
+
+    const user = store.getUserById(initialSession.userId)
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    return { user }
+  },
+})
+
+/**
+ * Logout - clears the session.
+ */
+export const logout = pikkuFunc({
+  input: z.object({}),
+  output: z.object({ success: z.boolean() }),
+  func: async (_services, _input, { session }) => {
+    await session.clear()
+    return { success: true }
+  },
+})

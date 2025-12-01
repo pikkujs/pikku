@@ -442,7 +442,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
       sourceFile,
     })
     state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
-  } else {
+  } else if (genericTypes.length >= 1 && genericTypes[0]) {
     // Fall back to extracting from generic type arguments
     const result = getNamesAndTypes(
       checker,
@@ -453,6 +453,21 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     )
     inputNames = result.names
     inputTypes = result.types
+  } else {
+    // Fall back to extracting from the function's second parameter type
+    const secondParam = handler.parameters[1]
+    if (secondParam) {
+      const paramType = checker.getTypeAtLocation(secondParam)
+      const result = getNamesAndTypes(
+        checker,
+        state.functions.typesMap,
+        'Input',
+        pikkuFuncName,
+        paramType
+      )
+      inputNames = result.names
+      inputTypes = result.types
+    }
   }
 
   // --- Output Extraction ---

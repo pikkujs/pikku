@@ -19,6 +19,7 @@ export interface UserSession extends CoreUserSession {
 export interface SingletonServices extends CoreSingletonServices<Config> {
   jwt?: JWTService
   eventHub?: EventHubService<EventHubTopics>
+  secrets?: SecretService
   queueService?: QueueService
 }
 

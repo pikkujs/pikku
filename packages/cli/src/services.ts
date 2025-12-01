@@ -10,7 +10,11 @@ import {
   CreateSingletonServices,
 } from '@pikku/core'
 import { pikkuCLIRender } from '@pikku/core/cli'
-import { LocalVariablesService, LogLevel } from '@pikku/core/services'
+import {
+  LocalVariablesService,
+  LocalSecretService,
+  LogLevel,
+} from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import {
@@ -298,6 +302,7 @@ export const createSingletonServices: CreateSingletonServices<
     config,
     logger,
     variables,
+    secrets: new LocalSecretService(variables),
     getInspectorState,
   }
 }

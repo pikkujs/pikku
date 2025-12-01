@@ -1,0 +1,52 @@
+import {
+  wireWorkflow,
+  pikkuWorkflowGraph,
+} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { createAndNotifyWorkflow } from '../functions/workflow.functions.js'
+
+// Wire the DSL workflow with HTTP endpoint
+wireWorkflow({
+  wires: {
+    http: { route: '/workflow/create-todo', method: 'post' },
+  },
+  func: createAndNotifyWorkflow,
+})
+
+/**
+ * Graph Workflow: Review overdue todos and send summary.
+ * Graph workflows are defined in wiring files for proper type inference.
+ */
+export const todoReviewWorkflow = pikkuWorkflowGraph({
+  description: 'Review overdue todos and send summary notification',
+  tags: ['review', 'overdue', 'notification'],
+  nodes: {
+    fetchOverdue: 'fetchOverdueTodos',
+    sendSummary: 'sendOverdueSummary',
+  },
+  wires: {
+    http: [
+      {
+        route: '/workflow/review',
+        method: 'post',
+        startNode: 'fetchOverdue',
+      },
+    ],
+  },
+  config: {
+    fetchOverdue: {
+      next: 'sendSummary',
+    },
+    sendSummary: {
+      input: (ref) => ({
+        userId: ref('fetchOverdue', 'userId'),
+        overdueCount: ref('fetchOverdue', 'count'),
+        todos: ref('fetchOverdue', 'todos'),
+      }),
+    },
+  },
+})
+
+// Wire the graph workflow
+wireWorkflow({
+  graph: todoReviewWorkflow,
+})
