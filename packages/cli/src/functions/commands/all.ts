@@ -123,6 +123,13 @@ export const all: any = pikkuVoidFunc({
     }
 
     const hasInternalRPCs = await pikkuRPC.func(services, null, wire)
+
+    // Generate schemas BEFORE RPC maps so Zod types are resolved in typesMap
+    const schemas = await pikkuSchemas.func(services, null, wire)
+    if (schemas) {
+      allImports.push(`${config.schemaDirectory}/register.gen.ts`)
+    }
+
     await pikkuRPCInternalMap.func(services, null, wire)
     await pikkuRPCExposedMap.func(services, null, wire)
     await pikkuPublicRPC.func(services, null, wire)
@@ -133,11 +140,6 @@ export const all: any = pikkuVoidFunc({
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)
-    }
-
-    const schemas = await pikkuSchemas.func(services, null, wire)
-    if (schemas) {
-      allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
     // Skip infrastructure wirings for external packages

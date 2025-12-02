@@ -31,9 +31,9 @@ export type User = z.infer<typeof UserSchema>
 export const CreateTodoInputSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
-  priority: PrioritySchema.default('medium'),
+  priority: PrioritySchema.optional().default('medium'),
   dueDate: z.string().optional(),
-  tags: z.array(z.string()).default([]),
+  tags: z.array(z.string()).optional().default([]),
 })
 export type CreateTodoInput = z.infer<typeof CreateTodoInputSchema>
 
@@ -81,4 +81,112 @@ export const UserResponseSchema = z.object({
 
 export const DeleteResponseSchema = z.object({
   success: z.boolean(),
+})
+
+// Extended input schemas with userId
+export const ListTodosWithUserInputSchema = ListTodosInputSchema.extend({
+  userId: z
+    .string()
+    .optional()
+    .describe('User ID (uses demo user if not provided)'),
+})
+
+export const CreateTodoWithUserInputSchema = CreateTodoInputSchema.extend({
+  userId: z
+    .string()
+    .optional()
+    .describe('User ID (uses demo user if not provided)'),
+})
+
+// Todo operation schemas
+export const TodoIdInputSchema = z.object({
+  id: z.string().describe('Todo ID'),
+})
+
+export const UpdateTodoWithIdInputSchema = z.object({
+  id: z.string().describe('Todo ID'),
+  ...UpdateTodoInputSchema.shape,
+})
+
+export const TodoOutputSchema = z.object({
+  todo: TodoSchema.nullable(),
+})
+
+export const TodoSuccessOutputSchema = z.object({
+  todo: TodoSchema.nullable(),
+  success: z.boolean(),
+})
+
+export const CreateTodoOutputSchema = z.object({
+  todo: TodoSchema,
+})
+
+// Auth schemas
+export const EmptyInputSchema = z.object({})
+
+export const SuccessOutputSchema = z.object({
+  success: z.boolean(),
+})
+
+// Channel schemas
+export const EventTopicSchema = z.enum([
+  'todo-created',
+  'todo-updated',
+  'todo-deleted',
+  'todo-completed',
+])
+
+export const SubscribeInputSchema = z.object({
+  topic: EventTopicSchema.describe('Event topic to subscribe to'),
+})
+
+export const SubscribeOutputSchema = z.object({
+  subscribed: z.boolean(),
+  topic: z.string(),
+})
+
+export const UnsubscribeInputSchema = z.object({
+  topic: EventTopicSchema.describe('Event topic to unsubscribe from'),
+})
+
+export const UnsubscribeOutputSchema = z.object({
+  unsubscribed: z.boolean(),
+  topic: z.string(),
+})
+
+// MCP schemas
+export const UserIdInputSchema = z.object({
+  userId: z
+    .string()
+    .optional()
+    .describe('User ID (uses demo user if not provided)'),
+})
+
+export const PrioritizePromptInputSchema = z.object({
+  userId: z
+    .string()
+    .optional()
+    .describe('User ID (uses demo user if not provided)'),
+  focus: z
+    .enum(['urgency', 'importance', 'quick-wins'])
+    .optional()
+    .describe('Prioritization focus'),
+})
+
+// Queue schemas
+export const ProcessReminderInputSchema = z.object({
+  todoId: z.string(),
+  userId: z.string(),
+})
+
+export const ProcessReminderOutputSchema = z.object({
+  processed: z.boolean(),
+  message: z.string(),
+})
+
+// SSE schemas
+export const TodoStreamOutputSchema = z.object({
+  todos: z.array(TodoSchema),
+  timestamp: z.string(),
+  count: z.number(),
 })

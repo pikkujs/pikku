@@ -1,19 +1,16 @@
-import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { store } from '../services/store.service.js'
+import {
+  ProcessReminderInputSchema,
+  ProcessReminderOutputSchema,
+} from '../schemas.js'
 
 /**
  * Queue worker: Process todo reminder jobs.
  */
 export const processReminder = pikkuSessionlessFunc({
-  input: z.object({
-    todoId: z.string(),
-    userId: z.string(),
-  }),
-  output: z.object({
-    processed: z.boolean(),
-    message: z.string(),
-  }),
+  input: ProcessReminderInputSchema,
+  output: ProcessReminderOutputSchema,
   func: async ({ logger }, { todoId, userId }) => {
     logger.info(`Processing reminder for todo ${todoId}, user ${userId}`)
 

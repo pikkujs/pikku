@@ -1,27 +1,23 @@
-import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { store } from '../services/store.service.js'
 import {
-  CreateTodoInputSchema,
-  UpdateTodoInputSchema,
-  ListTodosInputSchema,
-  TodoSchema,
+  ListTodosWithUserInputSchema,
+  CreateTodoWithUserInputSchema,
+  TodoIdInputSchema,
+  UpdateTodoWithIdInputSchema,
+  TodoOutputSchema,
+  TodoSuccessOutputSchema,
+  CreateTodoOutputSchema,
+  TodoListResponseSchema,
+  DeleteResponseSchema,
 } from '../schemas.js'
 
 /**
  * List todos for a user with optional filters.
  */
 export const listTodos = pikkuSessionlessFunc({
-  input: ListTodosInputSchema.extend({
-    userId: z
-      .string()
-      .optional()
-      .describe('User ID (uses demo user if not provided)'),
-  }),
-  output: z.object({
-    todos: z.array(TodoSchema),
-    total: z.number(),
-  }),
+  input: ListTodosWithUserInputSchema,
+  output: TodoListResponseSchema,
   func: async ({ logger }, { userId, completed, priority, tag }) => {
     const uid = userId || 'user1' // Default to demo user
     const todos = store.getTodosByUser(uid, { completed, priority, tag })
@@ -34,12 +30,8 @@ export const listTodos = pikkuSessionlessFunc({
  * Get a single todo by ID.
  */
 export const getTodo = pikkuSessionlessFunc({
-  input: z.object({
-    id: z.string().describe('Todo ID'),
-  }),
-  output: z.object({
-    todo: TodoSchema.nullable(),
-  }),
+  input: TodoIdInputSchema,
+  output: TodoOutputSchema,
   func: async ({ logger }, { id }) => {
     const todo = store.getTodo(id)
     logger.info(`Get todo ${id}: ${todo ? 'found' : 'not found'}`)
@@ -51,15 +43,8 @@ export const getTodo = pikkuSessionlessFunc({
  * Create a new todo.
  */
 export const createTodo = pikkuSessionlessFunc({
-  input: CreateTodoInputSchema.extend({
-    userId: z
-      .string()
-      .optional()
-      .describe('User ID (uses demo user if not provided)'),
-  }),
-  output: z.object({
-    todo: TodoSchema,
-  }),
+  input: CreateTodoWithUserInputSchema,
+  output: CreateTodoOutputSchema,
   func: async (
     { logger, eventHub },
     { userId, title, description, priority, dueDate, tags }
@@ -88,14 +73,8 @@ export const createTodo = pikkuSessionlessFunc({
  * Update an existing todo.
  */
 export const updateTodo = pikkuSessionlessFunc({
-  input: z.object({
-    id: z.string().describe('Todo ID'),
-    ...UpdateTodoInputSchema.shape,
-  }),
-  output: z.object({
-    todo: TodoSchema.nullable(),
-    success: z.boolean(),
-  }),
+  input: UpdateTodoWithIdInputSchema,
+  output: TodoSuccessOutputSchema,
   func: async (
     { logger, eventHub },
     { id, title, description, priority, dueDate, tags, completed }
@@ -124,12 +103,8 @@ export const updateTodo = pikkuSessionlessFunc({
  * Delete a todo.
  */
 export const deleteTodo = pikkuSessionlessFunc({
-  input: z.object({
-    id: z.string().describe('Todo ID'),
-  }),
-  output: z.object({
-    success: z.boolean(),
-  }),
+  input: TodoIdInputSchema,
+  output: DeleteResponseSchema,
   func: async ({ logger, eventHub }, { id }) => {
     const success = store.deleteTodo(id)
     logger.info(`Deleted todo ${id}: ${success}`)
@@ -146,13 +121,8 @@ export const deleteTodo = pikkuSessionlessFunc({
  * Mark a todo as complete.
  */
 export const completeTodo = pikkuSessionlessFunc({
-  input: z.object({
-    id: z.string().describe('Todo ID'),
-  }),
-  output: z.object({
-    todo: TodoSchema.nullable(),
-    success: z.boolean(),
-  }),
+  input: TodoIdInputSchema,
+  output: TodoSuccessOutputSchema,
   func: async ({ logger, eventHub }, { id }) => {
     const todo = store.completeTodo(id)
 

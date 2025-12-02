@@ -33,9 +33,15 @@ export const corePikkuFetch = async (
     }
   }
 
+  const headers = { ...options?.headers } as Record<string, string>
+  if (!body) {
+    delete headers['Content-Type']
+  }
+
   return await fetch(uri, {
     method: method.toUpperCase(),
     ...options,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   })
 }

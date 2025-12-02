@@ -154,6 +154,19 @@ export async function generateZodSchemas(
       }
 
       const schema = z.toJSONSchema(zodSchema) as any
+
+      // Remove fields with defaults from the required array
+      // Fields with defaults are semantically optional in input validation
+      if (schema.required && schema.properties) {
+        schema.required = schema.required.filter((fieldName: string) => {
+          const prop = schema.properties[fieldName]
+          return prop && prop.default === undefined
+        })
+        if (schema.required.length === 0) {
+          delete schema.required
+        }
+      }
+
       schemas[schemaName] = schema
       const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
 

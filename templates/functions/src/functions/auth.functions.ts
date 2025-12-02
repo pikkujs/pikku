@@ -1,10 +1,11 @@
-import { z } from 'zod'
 import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
 import { store } from '../services/store.service.js'
 import {
   LoginInputSchema,
   LoginResponseSchema,
   UserResponseSchema,
+  EmptyInputSchema,
+  SuccessOutputSchema,
 } from '../schemas.js'
 
 /**
@@ -41,7 +42,7 @@ export const login = pikkuFunc({
  * Uses the initial session (set by middleware) to get user info.
  */
 export const getMe = pikkuFunc({
-  input: z.object({}),
+  input: EmptyInputSchema,
   output: UserResponseSchema,
   func: async (_services, _input, { initialSession }) => {
     if (!initialSession?.userId) {
@@ -61,8 +62,8 @@ export const getMe = pikkuFunc({
  * Logout - clears the session.
  */
 export const logout = pikkuFunc({
-  input: z.object({}),
-  output: z.object({ success: z.boolean() }),
+  input: EmptyInputSchema,
+  output: SuccessOutputSchema,
   func: async (_services, _input, { session }) => {
     await session.clear()
     return { success: true }

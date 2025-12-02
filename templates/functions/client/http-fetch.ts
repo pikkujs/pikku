@@ -30,16 +30,13 @@ async function check() {
     console.log('Created todo:', created)
 
     // Complete the todo
-    const completed = await pikkuFetch.post(
-      `/todos/${created.todo.id}/complete`,
-      {
-        id: created.todo.id,
-      }
-    )
+    const completed = await pikkuFetch.post('/todos/:id/complete', {
+      id: created.todo.id,
+    })
     console.log('Completed todo:', completed)
 
     // Delete the todo
-    const deleted = await pikkuFetch.delete(`/todos/${created.todo.id}`, {
+    const deleted = await pikkuFetch.delete('/todos/:id', {
       id: created.todo.id,
     })
     console.log('Deleted todo:', deleted)

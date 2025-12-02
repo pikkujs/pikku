@@ -3,10 +3,11 @@ import { EventHubTopics } from '../types/eventhub-topics.js'
 import WSWebsocket from 'ws'
 
 export const check = async (serverUrl: string, testUserId: string) => {
+  const wsPath = process.env.WS_PATH ?? ''
   const wsUrl = serverUrl
     .replace('http://', 'ws://')
     .replace('https://', 'wss://')
-  const ws = new WSWebsocket(`${wsUrl}/ws`)
+  const ws = new WSWebsocket(`${wsUrl}${wsPath}`)
   const websocket = new PikkuWebSocket<'todos-live', EventHubTopics>(ws as any)
 
   ws.onopen = async () => {

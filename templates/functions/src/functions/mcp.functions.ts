@@ -1,10 +1,13 @@
-import { z } from 'zod'
 import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,
   pikkuMCPToolFunc,
 } from '../../.pikku/pikku-types.gen.js'
-import type { Todo } from '../schemas.js'
+import {
+  UserIdInputSchema,
+  PrioritizePromptInputSchema,
+  type Todo,
+} from '../schemas.js'
 
 /**
  * Helper to format a todo for display
@@ -137,12 +140,7 @@ export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>(
  * MCP Prompt: Plan the day based on pending todos
  */
 export const planDayPrompt = pikkuMCPPromptFunc({
-  input: z.object({
-    userId: z
-      .string()
-      .optional()
-      .describe('User ID (uses demo user if not provided)'),
-  }),
+  input: UserIdInputSchema,
   func: async (_services, { userId }, { rpc }) => {
     const result = await rpc.invoke('listTodos', {
       userId,
@@ -189,16 +187,7 @@ export const planDayPrompt = pikkuMCPPromptFunc({
  * MCP Prompt: Help prioritize todos
  */
 export const prioritizePrompt = pikkuMCPPromptFunc({
-  input: z.object({
-    userId: z
-      .string()
-      .optional()
-      .describe('User ID (uses demo user if not provided)'),
-    focus: z
-      .enum(['urgency', 'importance', 'quick-wins'])
-      .optional()
-      .describe('Prioritization focus'),
-  }),
+  input: PrioritizePromptInputSchema,
   func: async (_services, { userId, focus }, { rpc }) => {
     const result = await rpc.invoke('listTodos', {
       userId,

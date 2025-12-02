@@ -14,7 +14,7 @@ import {
 
 wireChannel({
   name: 'todos-live',
-  route: '/ws',
+  route: '/',
   onConnect,
   onDisconnect,
   onMessageWiring: {

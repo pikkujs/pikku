@@ -1,24 +1,14 @@
-import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { store } from '../services/store.service.js'
-import { TodoSchema } from '../schemas.js'
+import { UserIdInputSchema, TodoStreamOutputSchema } from '../schemas.js'
 
 /**
  * SSE stream that sends todo updates periodically.
  * Demonstrates Server-Sent Events pattern.
  */
 export const todoStream = pikkuSessionlessFunc({
-  input: z.object({
-    userId: z
-      .string()
-      .optional()
-      .describe('User ID (uses demo user if not provided)'),
-  }),
-  output: z.object({
-    todos: z.array(TodoSchema),
-    timestamp: z.string(),
-    count: z.number(),
-  }),
+  input: UserIdInputSchema,
+  output: TodoStreamOutputSchema,
   func: async ({ logger }, { userId }, { channel }) => {
     const uid = userId || 'user1'
     logger.info(`SSE stream started for user ${uid}`)
