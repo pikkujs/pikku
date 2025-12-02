@@ -16,5 +16,10 @@
   "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
   "externalPackages": {
     "ext": "@pikku/templates-function-external"
+  },
+  "cli": {
+    "entrypoints": {
+      "todo-cli": "client/cli-local.gen.ts"
+    }
   }
 }
