@@ -12,6 +12,7 @@
     "zod": "^4"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
     "@pikku/cli": "^0.11.2",
     "@pikku/fetch": "^0.11.1",
     "@pikku/websocket": "^0.11.0",
@@ -29,6 +30,7 @@
     "pikku": "pikku",
     "test:http-fetch": "npx tsx client/http-fetch.ts",
     "test:http-sse": "npx tsx client/http-sse.ts",
+    "test:mcp": "npx tsx client/mcp.ts",
     "test:rpc": "npx tsx client/rpc.ts",
     "test:websocket": "npx tsx client/websocket.ts",
     "test:cli:local": "npx tsx client/cli-local.gen.ts"
