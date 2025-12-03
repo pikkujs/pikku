@@ -255,7 +255,7 @@ const FILE_FEATURE_MAPPING = {
   'queue.': ['queue'],
   'scheduled.': ['scheduled'],
   'sse.': ['sse'],
-  'todos.': ['http', 'mcp'], // MCP functions depend on todos
+  'todos.': ['http', 'mcp', 'cli'], // MCP and CLI depend on todos
   'workflow.': ['workflows'],
   'cli.': ['cli'],
 } as const
