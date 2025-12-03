@@ -20,25 +20,24 @@ export function fastifyToRequest(req: FastifyRequest): Request {
     }
   }
 
-  // For non-GET/HEAD methods, attach the body.
+  // For non-GET/HEAD methods, attach the body if present.
   let body: BodyInit | undefined = undefined
   if (method !== 'GET' && method !== 'HEAD') {
     if (req.body !== undefined) {
-      // If a parsed body exists, use it:
       if (typeof req.body === 'string') {
         body = req.body
       } else if (Buffer.isBuffer(req.body)) {
         body = req.body.toString('utf-8')
       } else {
-        // Otherwise, assume it's a JSON object and stringify it.
         body = JSON.stringify(req.body)
         if (!headers.has('Content-Type')) {
           headers.set('Content-Type', 'application/json')
         }
       }
-    } else {
-      // Fallback: use the raw Node stream converted to a WHATWG ReadableStream.
-      // Note: Readable.toWeb is available in Node 16.7+.
+    } else if (
+      req.headers['content-length'] ||
+      req.headers['transfer-encoding']
+    ) {
       body = Readable.toWeb(req.raw) as unknown as BodyInit
     }
   }

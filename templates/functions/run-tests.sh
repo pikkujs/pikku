@@ -33,6 +33,7 @@ RUN_MCP_TESTS=false
 RUN_CLI_TESTS=false
 RUN_WORKFLOW_TESTS=false
 IGNORE_SERVER_READY_CHECK=false
+WS_PATH=""
 
 # -------- ARGUMENT PARSING --------
 while [[ $# -gt 0 ]]; do
@@ -51,6 +52,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --url)
             HELLO_WORLD_URL_PREFIX="$2"
+            shift 2
+            ;;
+        --ws-path)
+            WS_PATH="$2"
             shift 2
             ;;
         --http)
@@ -100,6 +105,8 @@ fi
 
 # -------- EXPORT URL FOR TEST SCRIPTS --------
 export HELLO_WORLD_URL_PREFIX
+export TODO_APP_URL="$HELLO_WORLD_URL_PREFIX"
+export WS_PATH
 
 # -------- START SERVER --------
 echo "Starting server: $SERVER_CMD"

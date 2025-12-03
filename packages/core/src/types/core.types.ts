@@ -1,5 +1,6 @@
 import type { Logger, LogLevel } from '../services/logger.js'
 import { VariablesService } from '../services/variables-service.js'
+import { SecretService } from '../services/secret-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
@@ -16,6 +17,8 @@ import {
   WorkflowServiceConfig,
   WorkflowStepWire,
 } from '../wirings/workflow/workflow.types.js'
+import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
+import { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 
 export type PikkuWiringTypes =
@@ -169,6 +172,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   logger: Logger
   /** The variable service to be used */
   variables: VariablesService
+  /** The secrets service to retrieve secrets */
+  secrets: SecretService
   /** The workflow orchestrator service */
   workflowService?: WorkflowService
   /** The queue service */
@@ -189,6 +194,7 @@ export type PikkuWire<
   IsChannel extends true | null = null,
   MCPTools extends string | never = never,
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
+  TriggerOutput = unknown,
 > = Partial<{
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
@@ -201,6 +207,8 @@ export type PikkuWire<
   cli: PikkuCLI
   workflow: TypedWorkflow
   workflowStep: WorkflowStepWire
+  graph: PikkuGraphWire
+  trigger: PikkuTrigger<TriggerOutput>
   initialSession: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined
@@ -231,8 +239,8 @@ export type CorePikkuMiddlewareConfig<
 > = {
   /** The middleware function */
   func: CorePikkuMiddleware<SingletonServices, UserSession>
-  /** Optional human-readable name for the middleware */
-  name?: string
+  /** Optional human-readable title for the middleware */
+  title?: string
   /** Optional description of what the middleware does */
   description?: string
 }
@@ -275,7 +283,7 @@ export type CorePikkuMiddlewareGroup<
  *
  * // Configuration object syntax with metadata
  * export const logMiddleware = pikkuMiddleware({
- *   name: 'Request Logger',
+ *   title: 'Request Logger',
  *   description: 'Logs request information',
  *   func: async ({ logger }, next) => {
  *     logger.info('Request started')
@@ -367,6 +375,7 @@ export type CreateConfig<
 export type CommonWireMeta = {
   pikkuFuncName: string
 
+  title?: string
   tags?: string[]
   summary?: string
   description?: string

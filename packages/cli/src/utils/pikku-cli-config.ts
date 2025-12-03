@@ -139,18 +139,6 @@ const _getPikkuCLIConfig = async (
         'pikku-functions-meta.gen.json'
       )
     }
-    if (!result.functionsMetaMinFile) {
-      result.functionsMetaMinFile = join(
-        functionDir,
-        'pikku-functions-meta.min.gen.ts'
-      )
-    }
-    if (!result.functionsMetaMinJsonFile) {
-      result.functionsMetaMinJsonFile = join(
-        functionDir,
-        'pikku-functions-meta.min.gen.json'
-      )
-    }
     if (!result.functionTypesFile) {
       result.functionTypesFile = join(
         functionDir,
@@ -321,18 +309,6 @@ const _getPikkuCLIConfig = async (
         'pikku-workflow-wirings-meta.gen.ts'
       )
     }
-    if (!result.workflowsWiringMetaJsonFile) {
-      result.workflowsWiringMetaJsonFile = join(
-        workflowDir,
-        'pikku-workflow-wirings-meta.gen.json'
-      )
-    }
-    if (!result.workflowsWiringMetaVerboseJsonFile) {
-      result.workflowsWiringMetaVerboseJsonFile = join(
-        workflowDir,
-        'pikku-workflow-wirings-meta-verbose.gen.json'
-      )
-    }
     if (!result.workflowsWorkersFile) {
       result.workflowsWorkersFile = join(
         workflowDir,
@@ -350,6 +326,11 @@ const _getPikkuCLIConfig = async (
         workflowDir,
         'pikku-workflow-types.gen.ts'
       )
+    }
+
+    // Workflow meta directory (individual JSON files for each workflow)
+    if (!result.workflowMetaDir) {
+      result.workflowMetaDir = join(workflowDir, 'meta')
     }
 
     // Services

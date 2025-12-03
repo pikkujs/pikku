@@ -24,10 +24,9 @@ export class PikkuDuplexResponse implements PikkuHTTPResponse {
     return this
   }
 
-  // Set the response body as JSON
   public json(body: JSONValue): this {
     this.header('Content-Type', 'application/json')
-    this.json(JSON.stringify(body))
+    this.writeBody(JSON.stringify(body))
     return this
   }
 

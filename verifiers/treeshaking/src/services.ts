@@ -9,7 +9,11 @@ import {
   CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
+import {
+  ConsoleLogger,
+  LocalVariablesService,
+  LocalSecretService,
+} from '@pikku/core/services'
 import { EmailService } from './services/email.service.js'
 import { SMSService } from './services/sms.service.js'
 import { PaymentService } from './services/payment.service.js'
@@ -32,6 +36,7 @@ export const createSingletonServices: CreateSingletonServices<
     config: _config,
     logger: new ConsoleLogger(),
     variables,
+    secrets: new LocalSecretService(variables),
     schema: {} as any,
     email: new EmailService(),
     sms: new SMSService(),

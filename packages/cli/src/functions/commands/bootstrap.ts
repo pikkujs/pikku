@@ -7,7 +7,7 @@ import { pikkuHTTPTypes } from '../wirings/http/pikku-command-http-types.js'
 import { pikkuChannelTypes } from '../wirings/channels/pikku-command-channel-types.js'
 import { pikkuSchedulerTypes } from '../wirings/scheduler/pikku-command-scheduler-types.js'
 import { pikkuQueueTypes } from '../wirings/queue/pikku-command-queue-types.js'
-import { pikkuWorkflowTypes } from '../wirings/workflow/pikku-command-workflow-types.js'
+import { pikkuWorkflow } from '../wirings/workflow/pikku-command-workflow.js'
 import { pikkuMCPTypes } from '../wirings/mcp/pikku-command-mcp-types.js'
 import { pikkuCLITypes } from '../wirings/cli/pikku-command-cli-types.js'
 import { PikkuWire } from '@pikku/core'
@@ -31,7 +31,7 @@ export const bootstrap: any = pikkuVoidFunc({
     await pikkuChannelTypes.func(services, null, wire)
     await pikkuSchedulerTypes.func(services, null, wire)
     await pikkuQueueTypes.func(services, null, wire)
-    await pikkuWorkflowTypes.func(services, null, wire)
+    await pikkuWorkflow.func(services, null, wire)
     await pikkuMCPTypes.func(services, null, wire)
     await pikkuCLITypes.func(services, null, wire)
 

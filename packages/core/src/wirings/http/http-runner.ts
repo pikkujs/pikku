@@ -36,6 +36,7 @@ import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
+import { startWorkflowByHttpWire } from '../workflow/workflow-utils.js'
 
 /**
  * Registers HTTP middleware for a specific route pattern.
@@ -158,7 +159,9 @@ export const wireHTTP = <
   if (!routeMeta) {
     throw new Error('Route metadata not found')
   }
-  addFunction(routeMeta.pikkuFuncName, httpWiring.func)
+  if (httpWiring.func) {
+    addFunction(routeMeta.pikkuFuncName, httpWiring.func)
+  }
   const routes = pikkuState(null, 'http', 'routes')
   if (!routes.has(httpWiring.method)) {
     routes.set(httpWiring.method, new Map())
@@ -275,12 +278,12 @@ const executeRoute = async (
   const { singletonServices, createWireServices, skipUserSession, requestId } =
     services
 
+  // Attach URL parameters to the request object
+  http?.request?.setParams(params)
+
   const requiresSession = route.auth !== false
   let wireServices: any
   let result: any
-
-  // Attach URL parameters to the request object
-  http?.request?.setParams(params)
 
   singletonServices.logger.info(
     `Matched route: ${route.route} | method: ${route.method.toUpperCase()} | auth: ${requiresSession.toString()}`
@@ -322,6 +325,18 @@ const executeRoute = async (
   }
 
   const wire: PikkuWire = { http, channel, session: userSession }
+
+  if (matchedRoute.meta.workflow === true) {
+    await startWorkflowByHttpWire(
+      singletonServices,
+      createWireServices,
+      matchedRoute,
+      wire
+    )
+    return wireServices
+      ? { wireServices, result: http.response }
+      : { result: http.response }
+  }
 
   result = await runPikkuFunc(
     'http',

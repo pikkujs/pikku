@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "module": "node18",
+    "types": ["node"]
+  },
+  "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],
+  "files": []
+}

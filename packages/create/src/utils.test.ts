@@ -272,150 +272,190 @@ describe('Functions Test Suite', () => {
 
   test('filterFilesByFeatures: removes files not supported by template features', () => {
     const testDir = path.join(tempRoot, 'filterFeaturesTest')
-    const srcDir = path.join(testDir, 'src')
-    fs.mkdirSync(srcDir, { recursive: true })
+    const functionsDir = path.join(testDir, 'src', 'functions')
+    const wiringsDir = path.join(testDir, 'src', 'wirings')
+    const servicesDir = path.join(testDir, 'src', 'services')
+    fs.mkdirSync(functionsDir, { recursive: true })
+    fs.mkdirSync(wiringsDir, { recursive: true })
+    fs.mkdirSync(servicesDir, { recursive: true })
 
-    // Create test files
-    const testFiles = [
-      'http.functions.ts',
-      'http.routes.ts',
+    // Create test files in functions directory
+    const functionFiles = [
+      'todos.functions.ts',
+      'auth.functions.ts',
       'channel.functions.ts',
-      'channel.routes.ts',
       'mcp.functions.ts',
-      'mcp.routes.ts',
-      'queue-worker.functions.ts',
-      'scheduled-task.functions.ts',
-      'http-progressive-enhancement.functions.ts',
-      'services.ts', // Should always be kept
+      'queue.functions.ts',
+      'scheduled.functions.ts',
+      'sse.functions.ts',
     ]
 
-    testFiles.forEach((file) => {
-      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    functionFiles.forEach((file) => {
+      fs.writeFileSync(path.join(functionsDir, file), `// ${file} content`)
     })
+
+    // Create test files in wirings directory
+    const wiringFiles = [
+      'todos.wiring.ts',
+      'channel.wiring.ts',
+      'mcp.wiring.ts',
+    ]
+
+    wiringFiles.forEach((file) => {
+      fs.writeFileSync(path.join(wiringsDir, file), `// ${file} content`)
+    })
+
+    // Create services file
+    fs.writeFileSync(
+      path.join(servicesDir, 'store.service.ts'),
+      '// services content'
+    )
 
     // Test filtering for HTTP-only template
     filterFilesByFeatures(testDir, ['http'])
 
-    // Check which files remain
-    const remainingFiles = fs.readdirSync(srcDir)
+    // Check which files remain in functions
+    const remainingFunctions = fs.readdirSync(functionsDir)
 
-    // Should keep HTTP files and services.ts
+    // Should keep HTTP-related files (todos.*, auth.*)
     assert.ok(
-      remainingFiles.includes('http.functions.ts'),
-      'HTTP functions should remain'
+      remainingFunctions.includes('todos.functions.ts'),
+      'Todos functions should remain'
     )
     assert.ok(
-      remainingFiles.includes('http.routes.ts'),
-      'HTTP routes should remain'
-    )
-    assert.ok(
-      remainingFiles.includes('services.ts'),
-      'Services should always remain'
+      remainingFunctions.includes('auth.functions.ts'),
+      'Auth functions should remain'
     )
 
     // Should remove non-HTTP files
     assert.ok(
-      !remainingFiles.includes('channel.functions.ts'),
+      !remainingFunctions.includes('channel.functions.ts'),
       'Channel functions should be removed'
     )
     assert.ok(
-      !remainingFiles.includes('mcp.functions.ts'),
+      !remainingFunctions.includes('mcp.functions.ts'),
       'MCP functions should be removed'
     )
     assert.ok(
-      !remainingFiles.includes('queue-worker.functions.ts'),
-      'Queue worker should be removed'
+      !remainingFunctions.includes('queue.functions.ts'),
+      'Queue functions should be removed'
     )
     assert.ok(
-      !remainingFiles.includes('scheduled-task.functions.ts'),
-      'Scheduled task should be removed'
+      !remainingFunctions.includes('scheduled.functions.ts'),
+      'Scheduled functions should be removed'
     )
 
-    // http-progressive-enhancement should be removed (it's for channels)
+    // Check wirings directory
+    const remainingWirings = fs.readdirSync(wiringsDir)
     assert.ok(
-      !remainingFiles.includes('http-progressive-enhancement.functions.ts'),
-      'Progressive enhancement should be removed'
+      remainingWirings.includes('todos.wiring.ts'),
+      'Todos wiring should remain'
+    )
+    assert.ok(
+      !remainingWirings.includes('channel.wiring.ts'),
+      'Channel wiring should be removed'
+    )
+    assert.ok(
+      !remainingWirings.includes('mcp.wiring.ts'),
+      'MCP wiring should be removed'
+    )
+
+    // Services should be untouched
+    const remainingServices = fs.readdirSync(servicesDir)
+    assert.ok(
+      remainingServices.includes('store.service.ts'),
+      'Services should always remain'
     )
   })
 
   test('filterFilesByFeatures: keeps channel files for channel template', () => {
     const testDir = path.join(tempRoot, 'filterChannelTest')
-    const srcDir = path.join(testDir, 'src')
-    fs.mkdirSync(srcDir, { recursive: true })
+    const functionsDir = path.join(testDir, 'src', 'functions')
+    const wiringsDir = path.join(testDir, 'src', 'wirings')
+    fs.mkdirSync(functionsDir, { recursive: true })
+    fs.mkdirSync(wiringsDir, { recursive: true })
 
-    // Create test files
-    const testFiles = [
-      'http.functions.ts',
+    // Create test files in functions
+    const functionFiles = [
+      'todos.functions.ts',
       'channel.functions.ts',
-      'channel.routes.ts',
-      'http-progressive-enhancement.functions.ts',
-      'services.ts',
+      'auth.functions.ts',
     ]
 
-    testFiles.forEach((file) => {
-      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    functionFiles.forEach((file) => {
+      fs.writeFileSync(path.join(functionsDir, file), `// ${file} content`)
+    })
+
+    // Create test files in wirings
+    const wiringFiles = ['todos.wiring.ts', 'channel.wiring.ts']
+
+    wiringFiles.forEach((file) => {
+      fs.writeFileSync(path.join(wiringsDir, file), `// ${file} content`)
     })
 
     // Test filtering for channel-only template
     filterFilesByFeatures(testDir, ['channel'])
 
-    // Check which files remain
-    const remainingFiles = fs.readdirSync(srcDir)
+    // Check which files remain in functions
+    const remainingFunctions = fs.readdirSync(functionsDir)
 
-    // Should keep channel files and progressive enhancement (which is for channels)
+    // Should keep channel files
     assert.ok(
-      remainingFiles.includes('channel.functions.ts'),
+      remainingFunctions.includes('channel.functions.ts'),
       'Channel functions should remain'
     )
+
+    // Should remove HTTP files (todos.*, auth.*)
     assert.ok(
-      remainingFiles.includes('channel.routes.ts'),
-      'Channel routes should remain'
+      !remainingFunctions.includes('todos.functions.ts'),
+      'Todos functions should be removed'
     )
     assert.ok(
-      remainingFiles.includes('http-progressive-enhancement.functions.ts'),
-      'Progressive enhancement should remain'
-    )
-    assert.ok(
-      remainingFiles.includes('services.ts'),
-      'Services should always remain'
+      !remainingFunctions.includes('auth.functions.ts'),
+      'Auth functions should be removed'
     )
 
-    // Should remove HTTP files
+    // Check wirings
+    const remainingWirings = fs.readdirSync(wiringsDir)
     assert.ok(
-      !remainingFiles.includes('http.functions.ts'),
-      'HTTP functions should be removed'
+      remainingWirings.includes('channel.wiring.ts'),
+      'Channel wiring should remain'
+    )
+    assert.ok(
+      !remainingWirings.includes('todos.wiring.ts'),
+      'Todos wiring should be removed'
     )
   })
 
   test('filterFilesByFeatures: removes workflow files when workflows not supported', () => {
     const testDir = path.join(tempRoot, 'filterWorkflowTest')
-    const srcDir = path.join(testDir, 'src')
+    const functionsDir = path.join(testDir, 'src', 'functions')
+    const wiringsDir = path.join(testDir, 'src', 'wirings')
     const clientDir = path.join(testDir, 'client')
-    fs.mkdirSync(srcDir, { recursive: true })
+    fs.mkdirSync(functionsDir, { recursive: true })
+    fs.mkdirSync(wiringsDir, { recursive: true })
     fs.mkdirSync(clientDir, { recursive: true })
 
-    // Create workflow files in src directory
-    const srcFiles = [
+    // Create workflow and HTTP files in functions directory
+    const functionFiles = [
       'workflow.functions.ts',
-      'workflow.wiring.ts',
-      'workflow-happy.functions.ts',
-      'workflow-unhappy.functions.ts',
-      'http.functions.ts',
-      'services.ts',
+      'todos.functions.ts',
+      'auth.functions.ts',
     ]
 
-    srcFiles.forEach((file) => {
-      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    functionFiles.forEach((file) => {
+      fs.writeFileSync(path.join(functionsDir, file), `// ${file} content`)
+    })
+
+    // Create workflow and HTTP files in wirings directory
+    const wiringFiles = ['workflow.wiring.ts', 'todos.wiring.ts']
+
+    wiringFiles.forEach((file) => {
+      fs.writeFileSync(path.join(wiringsDir, file), `// ${file} content`)
     })
 
     // Create workflow files in client directory
-    const clientFiles = [
-      'workflow-start.ts',
-      'workflow-cancel.ts',
-      'workflow-happy.ts',
-      'workflow-unhappy.ts',
-      'http-fetch.ts',
-    ]
+    const clientFiles = ['http-fetch.ts', 'websocket.ts']
 
     clientFiles.forEach((file) => {
       fs.writeFileSync(path.join(clientDir, file), `// ${file} content`)
@@ -424,35 +464,34 @@ describe('Functions Test Suite', () => {
     // Test filtering for HTTP-only template (no workflows support)
     filterFilesByFeatures(testDir, ['http'])
 
-    // Check which files remain in src
-    const remainingSrcFiles = fs.readdirSync(srcDir)
+    // Check which files remain in functions
+    const remainingFunctions = fs.readdirSync(functionsDir)
 
-    // Should keep HTTP files and services.ts
+    // Should keep HTTP files (todos.*, auth.*)
     assert.ok(
-      remainingSrcFiles.includes('http.functions.ts'),
-      'HTTP functions should remain'
+      remainingFunctions.includes('todos.functions.ts'),
+      'Todos functions should remain'
     )
     assert.ok(
-      remainingSrcFiles.includes('services.ts'),
-      'Services should always remain'
+      remainingFunctions.includes('auth.functions.ts'),
+      'Auth functions should remain'
     )
 
-    // Should remove all workflow files from src
+    // Should remove workflow files
     assert.ok(
-      !remainingSrcFiles.includes('workflow.functions.ts'),
+      !remainingFunctions.includes('workflow.functions.ts'),
       'workflow.functions.ts should be removed'
     )
+
+    // Check wirings
+    const remainingWirings = fs.readdirSync(wiringsDir)
     assert.ok(
-      !remainingSrcFiles.includes('workflow.wiring.ts'),
+      remainingWirings.includes('todos.wiring.ts'),
+      'Todos wiring should remain'
+    )
+    assert.ok(
+      !remainingWirings.includes('workflow.wiring.ts'),
       'workflow.wiring.ts should be removed'
-    )
-    assert.ok(
-      !remainingSrcFiles.includes('workflow-happy.functions.ts'),
-      'workflow-happy.functions.ts should be removed'
-    )
-    assert.ok(
-      !remainingSrcFiles.includes('workflow-unhappy.functions.ts'),
-      'workflow-unhappy.functions.ts should be removed'
     )
 
     // Check which files remain in client
@@ -464,55 +503,46 @@ describe('Functions Test Suite', () => {
       'HTTP fetch client should remain'
     )
 
-    // Should remove all workflow client files
+    // Should remove websocket (channel feature)
     assert.ok(
-      !remainingClientFiles.includes('workflow-start.ts'),
-      'workflow-start.ts should be removed'
-    )
-    assert.ok(
-      !remainingClientFiles.includes('workflow-cancel.ts'),
-      'workflow-cancel.ts should be removed'
-    )
-    assert.ok(
-      !remainingClientFiles.includes('workflow-happy.ts'),
-      'workflow-happy.ts should be removed'
-    )
-    assert.ok(
-      !remainingClientFiles.includes('workflow-unhappy.ts'),
-      'workflow-unhappy.ts should be removed'
+      !remainingClientFiles.includes('websocket.ts'),
+      'websocket.ts should be removed'
     )
   })
 
   test('filterFilesByFeatures: keeps workflow files when workflows supported', () => {
     const testDir = path.join(tempRoot, 'filterWorkflowKeepTest')
-    const srcDir = path.join(testDir, 'src')
+    const functionsDir = path.join(testDir, 'src', 'functions')
+    const wiringsDir = path.join(testDir, 'src', 'wirings')
     const clientDir = path.join(testDir, 'client')
-    fs.mkdirSync(srcDir, { recursive: true })
+    fs.mkdirSync(functionsDir, { recursive: true })
+    fs.mkdirSync(wiringsDir, { recursive: true })
     fs.mkdirSync(clientDir, { recursive: true })
 
-    // Create workflow files in src directory
-    const srcFiles = [
+    // Create workflow and HTTP files in functions directory
+    const functionFiles = [
       'workflow.functions.ts',
-      'workflow.wiring.ts',
-      'workflow-happy.functions.ts',
-      'workflow-unhappy.functions.ts',
-      'http.functions.ts',
+      'todos.functions.ts',
       'channel.functions.ts',
-      'services.ts',
     ]
 
-    srcFiles.forEach((file) => {
-      fs.writeFileSync(path.join(srcDir, file), `// ${file} content`)
+    functionFiles.forEach((file) => {
+      fs.writeFileSync(path.join(functionsDir, file), `// ${file} content`)
     })
 
-    // Create workflow files in client directory
-    const clientFiles = [
-      'workflow-start.ts',
-      'workflow-cancel.ts',
-      'workflow-happy.ts',
-      'workflow-unhappy.ts',
-      'http-fetch.ts',
+    // Create workflow and HTTP files in wirings directory
+    const wiringFiles = [
+      'workflow.wiring.ts',
+      'todos.wiring.ts',
+      'channel.wiring.ts',
     ]
+
+    wiringFiles.forEach((file) => {
+      fs.writeFileSync(path.join(wiringsDir, file), `// ${file} content`)
+    })
+
+    // Create client files
+    const clientFiles = ['http-fetch.ts', 'websocket.ts']
 
     clientFiles.forEach((file) => {
       fs.writeFileSync(path.join(clientDir, file), `// ${file} content`)
@@ -521,64 +551,53 @@ describe('Functions Test Suite', () => {
     // Test filtering for workflows template (http + workflows support)
     filterFilesByFeatures(testDir, ['http', 'workflows'])
 
-    // Check which files remain in src
-    const remainingSrcFiles = fs.readdirSync(srcDir)
+    // Check which files remain in functions
+    const remainingFunctions = fs.readdirSync(functionsDir)
 
     // Should keep HTTP and workflow files
     assert.ok(
-      remainingSrcFiles.includes('http.functions.ts'),
-      'HTTP functions should remain'
+      remainingFunctions.includes('todos.functions.ts'),
+      'Todos functions should remain'
     )
     assert.ok(
-      remainingSrcFiles.includes('workflow.functions.ts'),
+      remainingFunctions.includes('workflow.functions.ts'),
       'workflow.functions.ts should remain'
-    )
-    assert.ok(
-      remainingSrcFiles.includes('workflow.wiring.ts'),
-      'workflow.wiring.ts should remain'
-    )
-    assert.ok(
-      remainingSrcFiles.includes('workflow-happy.functions.ts'),
-      'workflow-happy.functions.ts should remain'
-    )
-    assert.ok(
-      remainingSrcFiles.includes('workflow-unhappy.functions.ts'),
-      'workflow-unhappy.functions.ts should remain'
-    )
-    assert.ok(
-      remainingSrcFiles.includes('services.ts'),
-      'Services should always remain'
     )
 
     // Should remove channel files
     assert.ok(
-      !remainingSrcFiles.includes('channel.functions.ts'),
+      !remainingFunctions.includes('channel.functions.ts'),
       'Channel functions should be removed'
+    )
+
+    // Check wirings
+    const remainingWirings = fs.readdirSync(wiringsDir)
+    assert.ok(
+      remainingWirings.includes('todos.wiring.ts'),
+      'Todos wiring should remain'
+    )
+    assert.ok(
+      remainingWirings.includes('workflow.wiring.ts'),
+      'workflow.wiring.ts should remain'
+    )
+    assert.ok(
+      !remainingWirings.includes('channel.wiring.ts'),
+      'Channel wiring should be removed'
     )
 
     // Check which files remain in client
     const remainingClientFiles = fs.readdirSync(clientDir)
 
-    // Should keep all workflow client files
+    // Should keep HTTP fetch
     assert.ok(
       remainingClientFiles.includes('http-fetch.ts'),
       'HTTP fetch client should remain'
     )
+
+    // Should remove websocket (channel feature)
     assert.ok(
-      remainingClientFiles.includes('workflow-start.ts'),
-      'workflow-start.ts should remain'
-    )
-    assert.ok(
-      remainingClientFiles.includes('workflow-cancel.ts'),
-      'workflow-cancel.ts should remain'
-    )
-    assert.ok(
-      remainingClientFiles.includes('workflow-happy.ts'),
-      'workflow-happy.ts should remain'
-    )
-    assert.ok(
-      remainingClientFiles.includes('workflow-unhappy.ts'),
-      'workflow-unhappy.ts should remain'
+      !remainingClientFiles.includes('websocket.ts'),
+      'websocket.ts should be removed'
     )
   })
 })

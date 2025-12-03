@@ -3,7 +3,7 @@ import { AddWiring, InspectorState } from '../types.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { ErrorCode } from '../error-codes.js'
-import { WorkflowStepMeta } from '@pikku/core/workflow'
+import { WorkflowStepMeta, WorkflowContext } from '@pikku/core/workflow'
 import {
   extractStringLiteral,
   isStringLike,
@@ -11,8 +11,34 @@ import {
   extractDescription,
   extractDuration,
 } from '../utils/extract-node-value.js'
-import { extractSimpleWorkflow } from '../workflow/extract-simple-workflow.js'
 import { getCommonWireMetaData } from '../utils/get-property-value.js'
+import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
+
+/**
+ * Recursively check if any step has inline type (non-serializable)
+ */
+function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
+  for (const step of steps) {
+    if (step.type === 'inline') {
+      return true
+    } else if (step.type === 'branch') {
+      for (const branch of step.branches) {
+        if (hasInlineSteps(branch.steps)) return true
+      }
+      if (step.elseSteps && hasInlineSteps(step.elseSteps)) return true
+    } else if (step.type === 'switch' && step.cases) {
+      for (const c of step.cases) {
+        if (c.steps && hasInlineSteps(c.steps)) return true
+      }
+      if (step.defaultSteps && hasInlineSteps(step.defaultSteps)) return true
+    } else if (step.type === 'fanout' && step.child) {
+      if (hasInlineSteps([step.child])) return true
+    } else if (step.type === 'parallel' && step.children) {
+      if (hasInlineSteps(step.children)) return true
+    }
+  }
+  return false
+}
 
 /**
  * Recursively collect all RPC names from workflow steps
@@ -25,7 +51,9 @@ function collectInvokedRPCs(
     if (step.type === 'rpc' && step.rpcName) {
       rpcs.add(step.rpcName)
     } else if (step.type === 'branch') {
-      if (step.thenSteps) collectInvokedRPCs(step.thenSteps, rpcs)
+      for (const branch of step.branches) {
+        collectInvokedRPCs(branch.steps, rpcs)
+      }
       if (step.elseSteps) collectInvokedRPCs(step.elseSteps, rpcs)
     } else if (step.type === 'switch' && step.cases) {
       for (const c of step.cases) {
@@ -113,13 +141,10 @@ function getWorkflowInvocations(
     }
   }
 
-  // Don't recurse into nested functions - only look at top-level workflow calls
+  // Recurse into children, including arrow functions (for Promise.all callbacks)
+  // but skip function declarations (which would be separate functions)
   ts.forEachChild(node, (child) => {
-    if (
-      ts.isFunctionDeclaration(child) ||
-      ts.isFunctionExpression(child) ||
-      ts.isArrowFunction(child)
-    ) {
+    if (ts.isFunctionDeclaration(child)) {
       return
     }
     getWorkflowInvocations(child, checker, state, workflowName, steps)
@@ -143,11 +168,11 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  let wrapperType: 'simple' | 'regular' | null = null
+  let wrapperType: 'dsl' | 'regular' | null = null
   if (expression.text === 'pikkuWorkflowFunc') {
+    wrapperType = 'dsl'
+  } else if (expression.text === 'pikkuWorkflowComplexFunc') {
     wrapperType = 'regular'
-  } else if (expression.text === 'pikkuSimpleWorkflowFunc') {
-    wrapperType = 'simple'
   } else {
     return
   }
@@ -224,45 +249,67 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   let steps: WorkflowStepMeta[] = []
-  let simple: boolean | undefined = undefined
+  let context: WorkflowContext | undefined = undefined
+  let dsl: boolean | undefined = undefined
 
-  // Try simple workflow extraction first
+  // Try DSL workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
-  const result = extractSimpleWorkflow(node, checker)
+  const result = extractDSLWorkflow(node, checker)
 
   if (result.status === 'ok' && result.steps) {
-    // Simple extraction succeeded
+    // Extraction succeeded
     steps = result.steps
-    simple = true
-    // Collect all invoked RPCs from simple workflow steps
+    context = result.context
+
+    // Check if workflow contains inline steps (non-serializable)
+    if (hasInlineSteps(steps)) {
+      if (wrapperType === 'dsl') {
+        // pikkuWorkflowFunc should not have inline steps
+        logger.critical(
+          ErrorCode.INVALID_DSL_WORKFLOW,
+          `Workflow '${workflowName}' uses pikkuWorkflowFunc but contains inline steps which are not allowed in DSL workflows. Use pikkuWorkflowComplexFunc instead.`
+        )
+        return
+      }
+      // pikkuWorkflowComplexFunc with inline steps is marked as non-dsl
+      dsl = false
+    } else {
+      // pikkuWorkflowComplexFunc is always non-dsl, pikkuWorkflowFunc is dsl
+      dsl = wrapperType === 'dsl'
+    }
+
+    // Collect all invoked RPCs from workflow steps
     const rpcs = new Set<string>()
     collectInvokedRPCs(steps, rpcs)
     for (const rpc of rpcs) {
       state.rpc.invokedFunctions.add(rpc)
     }
   } else {
-    // Simple extraction failed
-    if (wrapperType === 'simple') {
-      // For pikkuSimpleWorkflowFunc, this is a critical error
+    // DSL extraction failed
+    if (wrapperType === 'dsl') {
+      // For pikkuWorkflowFunc, this is a critical error
+      // But still track RPC invocations for function registration
+      getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
       logger.critical(
-        ErrorCode.INVALID_SIMPLE_WORKFLOW,
-        `Workflow '${workflowName}' uses pikkuSimpleWorkflowFunc but does not conform to simple workflow DSL:\n${result.reason || 'Unknown error'}`
+        ErrorCode.INVALID_DSL_WORKFLOW,
+        `Workflow '${workflowName}' uses pikkuWorkflowFunc but does not conform to DSL workflow rules:\n${result.reason || 'Unknown error'}`
       )
       return
     } else {
-      // For pikkuWorkflowFunc, fall back to basic extraction
+      // For pikkuWorkflowComplexFunc, fall back to basic extraction
       logger.debug(
-        `Workflow '${workflowName}' could not be extracted as simple workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+        `Workflow '${workflowName}' could not be extracted as DSL workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
       )
-      simple = false
+      dsl = false
     }
   }
 
   /**
-   * Only do basic extraction for non-simple workflows.
-   * Simple workflows already have properly extracted steps.
+   * For non-dsl workflows or pikkuWorkflowComplexFunc, run basic extraction
+   * to ensure all RPC invocations are tracked for function registration.
+   * This catches RPCs in Promise.all callbacks and other patterns DSL can't extract.
    */
-  if (!simple) {
+  if (!dsl || wrapperType === 'regular') {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
   }
 
@@ -270,7 +317,8 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     pikkuFuncName,
     workflowName,
     steps,
-    simple,
+    context,
+    dsl,
     summary,
     description,
     errors,

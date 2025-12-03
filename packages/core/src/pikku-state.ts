@@ -6,6 +6,7 @@ import {
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
 import { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
+import { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -94,7 +95,14 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   },
   workflows: {
     registrations: new Map(),
+    graphRegistrations: new Map(),
+    wirings: new Map(),
+    graphWirings: new Map(),
     meta: {},
+  },
+  trigger: {
+    triggers: new Map(),
+    meta: {} as TriggerMeta,
   },
   mcp: {
     resources: new Map(),

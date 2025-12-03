@@ -1,11 +1,12 @@
 import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import {
-  generateRuntimeMeta,
-  serializeFunctionImports,
-} from './serialize-function-imports.js'
+import { serializeFunctionImports } from './serialize-function-imports.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+} from '../../../utils/strip-verbose-meta.js'
 
 export const pikkuFunctions: any = pikkuSessionlessFunc<
   void,
@@ -16,29 +17,42 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     const {
       functionsMetaFile,
       functionsMetaJsonFile,
-      functionsMetaMinFile,
-      functionsMetaMinJsonFile,
       functionsFile,
       packageMappings,
       schema,
     } = config
 
+    // Write minimal JSON (runtime-only fields)
+    const minimalMeta = stripVerboseFields(functions.meta)
     await writeFileInDir(
       logger,
       functionsMetaJsonFile,
-      JSON.stringify(functions.meta, null, 2)
+      JSON.stringify(minimalMeta, null, 2)
     )
 
-    const fullJsonImportPath = getFileImportRelativePath(
+    // Write verbose JSON only if it has additional fields
+    if (hasVerboseFields(functions.meta)) {
+      const verbosePath = functionsMetaJsonFile.replace(
+        /\.gen\.json$/,
+        '-verbose.gen.json'
+      )
+      await writeFileInDir(
+        logger,
+        verbosePath,
+        JSON.stringify(functions.meta, null, 2)
+      )
+    }
+
+    const jsonImportPath = getFileImportRelativePath(
       functionsMetaFile,
       functionsMetaJsonFile,
       packageMappings
     )
 
     const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const fullImportStatement = supportsImportAttributes
-      ? `import metaData from '${fullJsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${fullJsonImportPath}'`
+    const importStatement = supportsImportAttributes
+      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${jsonImportPath}'`
 
     const packageName = config.externalPackageName
       ? `'${config.externalPackageName}'`
@@ -47,30 +61,7 @@ export const pikkuFunctions: any = pikkuSessionlessFunc<
     await writeFileInDir(
       logger,
       functionsMetaFile,
-      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${fullImportStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
-    )
-
-    const runtimeMeta = generateRuntimeMeta(functions.meta)
-    await writeFileInDir(
-      logger,
-      functionsMetaMinJsonFile,
-      JSON.stringify(runtimeMeta, null, 2)
-    )
-
-    const minJsonImportPath = getFileImportRelativePath(
-      functionsMetaMinFile,
-      functionsMetaMinJsonFile,
-      packageMappings
-    )
-
-    const minImportStatement = supportsImportAttributes
-      ? `import metaData from '${minJsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${minJsonImportPath}'`
-
-    await writeFileInDir(
-      logger,
-      functionsMetaMinFile,
-      `import { pikkuState, FunctionsRuntimeMeta } from '@pikku/core'\n${minImportStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsRuntimeMeta)`
+      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
     )
 
     // For external packages, register ALL functions (they'll be invoked by consumers)

@@ -7,6 +7,10 @@ import {
   serializeQueueMetaTS,
 } from './serialize-queue-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+} from '../../../utils/strip-verbose-meta.js'
 
 export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -20,12 +24,28 @@ export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean | undefined>({
     } = config
     const { queueWorkers } = visitState
 
-    // Write JSON file
+    const fullMeta = serializeQueueMeta(queueWorkers.meta)
+
+    // Write minimal JSON file (runtime-only fields)
+    const minimalMeta = stripVerboseFields(fullMeta)
     await writeFileInDir(
       logger,
       queueWorkersWiringMetaJsonFile,
-      JSON.stringify(serializeQueueMeta(queueWorkers.meta), null, 2)
+      JSON.stringify(minimalMeta, null, 2)
     )
+
+    // Write verbose JSON only if it has additional fields
+    if (hasVerboseFields(fullMeta)) {
+      const verbosePath = queueWorkersWiringMetaJsonFile.replace(
+        /\.gen\.json$/,
+        '-verbose.gen.json'
+      )
+      await writeFileInDir(
+        logger,
+        verbosePath,
+        JSON.stringify(fullMeta, null, 2)
+      )
+    }
 
     // Calculate relative path from TS file to JSON file
     const jsonImportPath = getFileImportRelativePath(

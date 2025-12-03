@@ -360,10 +360,10 @@ export function extractFunctionName(
           if (
             ts.isPropertyAssignment(prop) &&
             ts.isIdentifier(prop.name) &&
-            prop.name.text === 'name' &&
+            prop.name.text === 'override' &&
             ts.isStringLiteral(prop.initializer)
           ) {
-            // Priority 1: Object with name property
+            // Priority 1: Object with override property
             result.explicitName = prop.initializer.text
             break
           }
@@ -614,17 +614,17 @@ export function extractFunctionName(
             // instead of the variable declaration position
             originalCallExpr = decl.initializer
 
-            // Check for object with 'name' property in first argument
+            // Check for object with 'override' property in first argument
             const firstArg = decl.initializer.arguments[0]
             if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
               for (const prop of firstArg.properties) {
                 if (
                   ts.isPropertyAssignment(prop) &&
                   ts.isIdentifier(prop.name) &&
-                  prop.name.text === 'name' &&
+                  prop.name.text === 'override' &&
                   ts.isStringLiteral(prop.initializer)
                 ) {
-                  // Priority 1: Object with name property
+                  // Priority 1: Object with override property
                   result.explicitName = prop.initializer.text
                   break
                 }
@@ -713,7 +713,7 @@ export function extractFunctionName(
   ) {
     result.propertyName = parent.name.text
   }
-  // 3) Handle any remaining cases for pikkuFunc({ name: '…', func: … })
+  // 3) Handle any remaining cases for pikkuFunc({ override: '…', func: … })
   else if (ts.isCallExpression(originalCallExpr)) {
     const firstArg = originalCallExpr.arguments[0]
     if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
@@ -721,7 +721,7 @@ export function extractFunctionName(
         if (
           ts.isPropertyAssignment(prop) &&
           ts.isIdentifier(prop.name) &&
-          prop.name.text === 'name' &&
+          prop.name.text === 'override' &&
           ts.isStringLiteral(prop.initializer) &&
           !result.explicitName // Only set if not already set
         ) {

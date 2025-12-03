@@ -201,7 +201,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async createRun(workflowName: string, input: any): Promise<string> {
+  async createRun(
+    workflowName: string,
+    input: any,
+    inline?: boolean
+  ): Promise<string> {
     const id = randomUUID()
     const now = Date.now()
 
@@ -217,6 +221,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       'running',
       'input',
       JSON.stringify(input),
+      'inline',
+      inline ? 'true' : 'false',
       'createdAt',
       now.toString(),
       'updatedAt',
@@ -241,6 +247,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       input: JSON.parse(data.input!),
       output: data.output ? JSON.parse(data.output) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
+      inline: data.inline === 'true' ? true : undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
@@ -693,6 +700,146 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(now),
     }
+  }
+
+  // ============================================================================
+  // Workflow Graph Methods
+  // ============================================================================
+
+  async getCompletedGraphState(runId: string): Promise<{
+    completedNodeIds: string[]
+    branchKeys: Record<string, string>
+  }> {
+    const completedNodeIds: string[] = []
+    const branchKeys: Record<string, string> = {}
+
+    // Scan for step keys with 'node:' prefix
+    const pattern = `${this.keyPrefix}:step:${runId}:node:*`
+    let cursor = '0'
+
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = newCursor
+
+      // Check each key for succeeded status and branch_taken
+      for (const key of foundKeys) {
+        const data = await this.redis.hmget(key, 'status', 'branchTaken')
+        const [status, branchTaken] = data
+
+        if (status === 'succeeded') {
+          // Extract node ID from key: workflows:step:runId:node:nodeId
+          const parts = key.split(':')
+          const nodeIndex = parts.indexOf('node')
+          if (nodeIndex !== -1 && nodeIndex < parts.length - 1) {
+            const nodeId = parts.slice(nodeIndex + 1).join(':')
+            completedNodeIds.push(nodeId)
+
+            if (branchTaken) {
+              branchKeys[nodeId] = branchTaken
+            }
+          }
+        }
+      }
+    } while (cursor !== '0')
+
+    return { completedNodeIds, branchKeys }
+  }
+
+  async getNodesWithoutSteps(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<string[]> {
+    if (nodeIds.length === 0) return []
+
+    const result: string[] = []
+
+    for (const nodeId of nodeIds) {
+      const key = this.stepKey(runId, `node:${nodeId}`)
+      const exists = await this.redis.exists(key)
+      if (!exists) {
+        result.push(nodeId)
+      }
+    }
+
+    return result
+  }
+
+  async getNodeResults(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<Record<string, any>> {
+    if (nodeIds.length === 0) return {}
+
+    const results: Record<string, any> = {}
+
+    for (const nodeId of nodeIds) {
+      const key = this.stepKey(runId, `node:${nodeId}`)
+      const data = await this.redis.hmget(key, 'status', 'result')
+      const [status, result] = data
+
+      if (status === 'succeeded' && result) {
+        results[nodeId] = JSON.parse(result)
+      }
+    }
+
+    return results
+  }
+
+  async setBranchTaken(stepId: string, branchKey: string): Promise<void> {
+    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+
+    const now = Date.now()
+    const key = this.stepKey(runId, stepName)
+
+    await this.redis.hmset(
+      key,
+      'branchTaken',
+      branchKey,
+      'updatedAt',
+      now.toString()
+    )
+  }
+
+  async updateRunState(
+    runId: string,
+    name: string,
+    value: unknown
+  ): Promise<void> {
+    const key = this.runKey(runId)
+    const now = Date.now()
+
+    // Get existing state or create empty object
+    const existingState = await this.redis.hget(key, 'state')
+    const state = existingState ? JSON.parse(existingState) : {}
+
+    // Update the specific field
+    state[name] = value
+
+    await this.redis.hmset(
+      key,
+      'state',
+      JSON.stringify(state),
+      'updatedAt',
+      now.toString()
+    )
+  }
+
+  async getRunState(runId: string): Promise<Record<string, unknown>> {
+    const key = this.runKey(runId)
+    const stateStr = await this.redis.hget(key, 'state')
+    if (!stateStr) {
+      return {}
+    }
+    return JSON.parse(stateStr)
   }
 
   async close(): Promise<void> {

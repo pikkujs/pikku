@@ -1,0 +1,37 @@
+{
+  "name": "@pikku/verifiers-functions",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@pikku/core": "^0.11.1",
+    "@pikku/jose": "^0.11.1",
+    "@pikku/schema-cfworker": "^0.11.0",
+    "@pikku/templates-function-external": "workspace:*",
+    "eventsource": "^4.0.0",
+    "ws": "^8.18.3",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.11.2",
+    "@pikku/fetch": "^0.11.1",
+    "@pikku/websocket": "^0.11.0",
+    "@types/node": "^24",
+    "@types/ws": "^8",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "pikku": "pikku",
+    "test:http-fetch": "npx tsx client/http-fetch.ts",
+    "test:http-sse": "npx tsx client/http-sse.ts",
+    "test:rpc": "npx tsx client/rpc.ts",
+    "test:websocket": "npx tsx client/websocket.ts",
+    "test:queue": "npx tsx client/queue-worker.ts",
+    "test:mcp": "npx tsx client/mcp.ts"
+  }
+}

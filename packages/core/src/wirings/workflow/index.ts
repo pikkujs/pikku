@@ -1,13 +1,57 @@
 /**
  * Workflow module exports
  */
+export {
+  PikkuWorkflowService,
+  WorkflowCancelledException,
+} from './pikku-workflow-service.js'
 
-// Types
+// Internal registration functions (used by generated code)
+export { addWorkflow } from './dsl/workflow-runner.js'
+export { addWorkflowGraph } from './graph/graph-runner.js'
+
+// Unified wireWorkflow function
+export { wireWorkflow } from './wire-workflow.js'
 export type {
+  WorkflowDefinition,
+  WorkflowDefinitionFunc,
+  WorkflowDefinitionGraph,
+} from './wire-workflow.js'
+
+// Re-export all types from workflow.types
+export type {
+  WorkflowService,
+  WorkflowServiceConfig,
+  WorkflowHTTPWire,
+  WorkflowWires,
+  WorkflowStatus,
+  StepStatus,
+  WorkflowRun,
+  StepState,
   CoreWorkflow,
+  PikkuWorkflow,
+  ContextVariable,
+  WorkflowContext,
+  WorkflowsMeta,
+  WorkflowRuntimeMeta,
+  WorkflowsRuntimeMeta,
+  WorkflowStepInput,
+  WorkflowOrchestratorInput,
+  WorkflowSleeperInput,
+} from './workflow.types.js'
+
+// Re-export DSL types
+export type {
   WorkflowStepOptions,
-  WorkflowStepMeta,
+  WorkflowWireDoRPC,
+  WorkflowWireDoInline,
+  WorkflowWireSleep,
+  InputSource,
+  OutputBinding,
   RpcStepMeta,
+  SimpleCondition,
+  Condition,
+  BranchCase,
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,
@@ -15,35 +59,12 @@ export type {
   InlineStepMeta,
   SleepStepMeta,
   CancelStepMeta,
-  SwitchStepMeta,
+  SetStepMeta,
   SwitchCaseMeta,
+  SwitchStepMeta,
   FilterStepMeta,
   ArrayPredicateStepMeta,
-  InputSource,
-  OutputBinding,
-  Condition,
-  SimpleCondition,
+  WorkflowStepMeta,
+  WorkflowStepWire,
   PikkuWorkflowWire,
-  PikkuWorkflow,
-  WorkflowsMeta,
-  WorkflowRun,
-  StepState,
-  WorkflowStatus,
-  StepStatus,
 } from './workflow.types.js'
-
-export { PikkuWorkflowService } from './pikku-workflow-service.js'
-
-// Internal registration function (used by generated code)
-export { addWorkflow } from './workflow-runner.js'
-
-/**
- * @deprecated This function is no longer used and will be removed in a future release.
- * It exists only for backwards compatibility with generated code.
- * TODO: Remove this export in a future release after updating code generation
- */
-export const wireWorkflow = <T extends { name: string; func: any }>(
-  workflow: T
-): void => {
-  // Empty function - no longer used, kept for backwards compatibility
-}

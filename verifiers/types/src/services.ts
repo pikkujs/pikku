@@ -9,7 +9,11 @@ import {
   CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
+import {
+  ConsoleLogger,
+  LocalVariablesService,
+  LocalSecretService,
+} from '@pikku/core/services'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 
@@ -27,6 +31,7 @@ export const createSingletonServices: CreateSingletonServices<
     config,
     logger: new ConsoleLogger(),
     variables,
+    secrets: new LocalSecretService(variables),
   }
 }
 

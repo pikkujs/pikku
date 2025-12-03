@@ -19,7 +19,7 @@ export const generateBootstrapFile = async (
     commonImports.push(config.middlewareFile)
   }
 
-  commonImports.push(config.functionsMetaMinFile, config.functionsFile)
+  commonImports.push(config.functionsMetaFile, config.functionsFile)
 
   // Add schema if it exists
   if (schemas) {

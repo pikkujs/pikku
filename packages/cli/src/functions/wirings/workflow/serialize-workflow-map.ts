@@ -1,3 +1,6 @@
+/**
+ * Generate workflow map type definitions for type-safe client API
+ */
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
@@ -12,7 +15,8 @@ export const serializeWorkflowMap = (
   workflowsMeta: WorkflowsMeta
 ) => {
   const requiredTypes = new Set<string>()
-  const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
+
+  // First generate workflows to collect required types
   const serializedWorkflows = generateWorkflows(
     workflowsMeta,
     functionsMeta,
@@ -20,15 +24,23 @@ export const serializeWorkflowMap = (
     requiredTypes
   )
 
-  const serializedImportMap = serializeImportMap(
-    relativeToPath,
-    packageMappings,
-    typesMap,
-    requiredTypes
-  )
+  // Only generate custom types if we have workflows with types
+  const hasWorkflows = Object.keys(workflowsMeta).length > 0
+  const serializedCustomTypes = hasWorkflows
+    ? generateCustomTypes(typesMap, requiredTypes)
+    : ''
+
+  const serializedImportMap = hasWorkflows
+    ? serializeImportMap(
+        relativeToPath,
+        packageMappings,
+        typesMap,
+        requiredTypes
+      )
+    : ''
 
   return `/**
- * This provides the structure needed for TypeScript to be aware of workflows and their input/output types
+ * Workflow type map with input/output types for each workflow
  */
 
 ${serializedImportMap}
@@ -41,33 +53,16 @@ interface WorkflowHandler<I, O> {
 
 ${serializedWorkflows}
 
-/**
- * Type-safe workflow client API
- */
 export type WorkflowClient<Name extends keyof WorkflowMap> = {
-  /**
-   * Start a new workflow run
-   */
   start: (input: WorkflowMap[Name]['input']) => Promise<{ runId: string }>;
-
-  /**
-   * Get a workflow run by ID
-   */
   getRun: <output extends keyof WorkflowMap[Name]>(runId: string) => Promise<WorkflowMap[Name][output]>;
-
-  /**
-   * Cancel a running workflow
-   */
   cancelRun: (runId: string) => Promise<boolean>;
 }
 
-/**
- * Map of all registered workflows with type-safe client APIs
- */
 export type TypedWorkflowClients = {
   [Name in keyof WorkflowMap]: WorkflowClient<Name>;
 }
-  `
+`
 }
 
 function generateWorkflows(
@@ -76,13 +71,11 @@ function generateWorkflows(
   typesMap: TypesMap,
   requiredTypes: Set<string>
 ) {
-  // Initialize an object to collect workflows
   const workflowsObj: Record<
     string,
     { inputType: string; outputType: string }
   > = {}
 
-  // Iterate through workflow metadata
   for (const [workflowName, { pikkuFuncName }] of Object.entries(
     workflowsMeta
   )) {
@@ -96,8 +89,6 @@ function generateWorkflows(
     const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
     const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
-    // Store the input and output types for WorkflowHandler
-    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
     let inputType = 'void'
     if (input) {
       try {
@@ -117,21 +108,13 @@ function generateWorkflows(
 
     requiredTypes.add(inputType)
     requiredTypes.add(outputType)
-
-    // Add workflow entry
-    workflowsObj[workflowName] = {
-      inputType,
-      outputType,
-    }
+    workflowsObj[workflowName] = { inputType, outputType }
   }
 
-  // Build the Workflows object as a string
   let workflowsStr = 'export type WorkflowMap = {\n'
-
   for (const [workflowName, handler] of Object.entries(workflowsObj)) {
     workflowsStr += `  readonly '${workflowName}': WorkflowHandler<${handler.inputType}, ${handler.outputType}>,\n`
   }
-
   workflowsStr += '};\n'
 
   return workflowsStr

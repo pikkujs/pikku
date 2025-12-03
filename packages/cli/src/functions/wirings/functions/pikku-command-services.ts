@@ -41,7 +41,7 @@ export const serializeServicesMap = (
   })
 
   // Services that are always required internally by the framework
-  const defaultServices = ['config', 'logger', 'variables', 'schema']
+  const defaultServices = ['config', 'logger', 'variables', 'schema', 'secrets']
   defaultServices.forEach((service) => usedServices.add(service))
 
   // Create singleton services map: all singleton services with true/false based on usage

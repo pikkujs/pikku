@@ -10,6 +10,7 @@ export interface CommandSummaryStats {
   cliCommands?: number
   workflows?: number
   forgeNodes?: number
+  workflowGraphs?: number
   [key: string]: number | undefined
 }
 
@@ -77,6 +78,7 @@ export class CommandSummary {
       cliCommands: 'CLI command',
       workflows: 'Workflow',
       forgeNodes: 'Forge node',
+      workflowGraphs: 'Workflow graph',
     }
 
     for (const [key, label] of Object.entries(statLabels)) {

@@ -30,6 +30,65 @@ function toValidIdentifier(name: string): string {
   return result
 }
 
+/** Primitive types that don't need schema generation */
+const PRIMITIVE_TYPES = new Set([
+  'boolean',
+  'string',
+  'number',
+  'null',
+  'undefined',
+  'void',
+  'any',
+  'unknown',
+  'never',
+])
+
+/** Map TypeScript type strings to JSON Schema. Returns null if no schema should be generated. */
+function primitiveTypeToSchema(typeStr: string): JSONValue | null {
+  const normalized = typeStr.trim()
+
+  // void/undefined/never mean no data - don't generate a schema
+  if (
+    normalized === 'void' ||
+    normalized === 'undefined' ||
+    normalized === 'never'
+  ) {
+    return null
+  }
+
+  // Handle boolean literals
+  if (
+    normalized === 'boolean' ||
+    normalized === 'false | true' ||
+    normalized === 'true | false'
+  ) {
+    return { type: 'boolean' }
+  }
+  if (normalized === 'true') {
+    return { const: true }
+  }
+  if (normalized === 'false') {
+    return { const: false }
+  }
+
+  // Handle string
+  if (normalized === 'string') {
+    return { type: 'string' }
+  }
+
+  // Handle number
+  if (normalized === 'number') {
+    return { type: 'number' }
+  }
+
+  // Handle null
+  if (normalized === 'null') {
+    return { type: 'null' }
+  }
+
+  return null
+}
+
 export async function generateSchemas(
   logger: CLILogger,
   tsconfig: string,
@@ -90,14 +149,23 @@ export async function generateSchemas(
   const schemas: Record<string, JSONValue> = {}
 
   schemasSet.forEach((schema) => {
+    // Skip primitive types - they don't need schema generation
+    if (PRIMITIVE_TYPES.has(schema)) {
+      return
+    }
     try {
       schemas[schema] = generator.createSchema(schema) as JSONValue
     } catch (e) {
-      // Ignore rootless errors
+      // Handle rootless errors - type aliases that resolve to primitives
       if (e instanceof RootlessError) {
-        logger.error(
-          `[${ErrorCode.SCHEMA_NO_ROOT}] Error generating schema since it has no root: ${schema}`
-        )
+        const customType = typesMap.customTypes.get(schema)
+        if (customType) {
+          const primitiveSchema = primitiveTypeToSchema(customType.type)
+          if (primitiveSchema) {
+            schemas[schema] = primitiveSchema
+          }
+          // If primitiveSchema is null (void/undefined), we just skip - no schema needed
+        }
         return
       }
       logger.error(
@@ -137,6 +205,19 @@ export async function generateZodSchemas(
       }
 
       const schema = z.toJSONSchema(zodSchema) as any
+
+      // Remove fields with defaults from the required array
+      // Fields with defaults are semantically optional in input validation
+      if (schema.required && schema.properties) {
+        schema.required = schema.required.filter((fieldName: string) => {
+          const prop = schema.properties[fieldName]
+          return prop && prop.default === undefined
+        })
+        if (schema.required.length === 0) {
+          delete schema.required
+        }
+      }
+
       schemas[schemaName] = schema
       const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
 
@@ -197,11 +278,7 @@ export async function saveSchemas(
         return types
       })
       .flat()
-      .filter(
-        (s): s is string =>
-          !!s &&
-          !['boolean', 'string', 'number', 'null', 'undefined'].includes(s)
-      ),
+      .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
     ...(zodLookup ? Array.from(zodLookup.keys()) : []),

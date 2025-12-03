@@ -1,27 +1,35 @@
 /**
- * Generates type definitions for workflow wirings
+ * Generate all workflow type helpers for authoring workflows
+ * Combines DSL helpers (pikkuWorkflowFunc, pikkuWorkflowComplexFunc) and
+ * graph helpers (pikkuWorkflowGraph) with unified wireWorkflow
  */
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
   rpcMapImportPath: string
 ) => {
   return `/**
- * Workflow-specific type definitions for tree-shaking optimization
+ * Workflow type definitions and helpers
+ * Used for authoring both DSL and graph-based workflows
  */
 
-import { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException } from '@pikku/core/workflow'
+
+// Re-export WorkflowCancelledException for use in workflow functions
+export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
-import type { RPCMap } from '${rpcMapImportPath}'
+import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
+import type { GraphNodeConfig, HTTPMethod } from '@pikku/core'
+import { createGraph, wireWorkflow as coreWireWorkflow } from '@pikku/core'
+
+// ============================================================================
+// DSL Workflow Types (pikkuWorkflowFunc, pikkuWorkflowComplexFunc)
+// ============================================================================
 
 /**
  * Typed workflow wire with RPC awareness
  * Provides type-safe workflow.do() for RPC steps
  */
 export interface TypedWorkflow extends PikkuWorkflowWire {
-  /**
-   * Execute a workflow step with RPC invocation (typed based on available RPCs)
-   * @template K - RPC name from the RPC map
-   */
   do<K extends keyof RPCMap>(
     stepName: string,
     rpcName: K,
@@ -29,10 +37,6 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
     options?: WorkflowStepOptions
   ): Promise<RPCMap[K]['output']>
 
-  /**
-   * Execute a workflow step with inline function
-   * @template T - Return type of the inline function
-   */
   do<T>(
     stepName: string,
     fn: () => T | Promise<T>,
@@ -42,28 +46,14 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
 
 /**
  * Workflow function type with typed workflow service
- * Includes the workflow wire object with typed RPC methods
  */
 export type PikkuFunctionWorkflow<
   In = unknown,
   Out = never
-> = PikkuFunctionSessionless<
-  In,
-  Out,
-  'workflow'
->
+> = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * Creates a workflow function with typed input and output.
- * Workflow functions have access to the workflow wire object for step execution.
- *
- * This is the permissive mode - workflows that don't conform to simple DSL will fall back
- * to basic extraction with a warning.
- *
- * @template In - Input type for the workflow
- * @template Out - Output type for the workflow
- * @param func - Function definition, either direct function or configuration object
- * @returns The normalized configuration object
+ * Creates a DSL-compatible workflow function (serializable, shows in Forge UI)
  */
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:
@@ -74,24 +64,9 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 }
 
 /**
- * Creates a simple workflow function with typed input and output.
- * Simple workflows must conform to the restricted DSL for static analysis.
- *
- * This is the strict mode - workflows that don't conform to simple DSL will cause
- * a critical error during inspection.
- *
- * Constraints:
- * - Must use only workflow.do() with RPC form (no inline functions)
- * - Only if/else, for..of, and Promise.all(array.map()) control flow allowed
- * - Step names must be unique (except across mutually exclusive branches)
- * - All workflow calls must be awaited
- *
- * @template In - Input type for the workflow
- * @template Out - Output type for the workflow
- * @param func - Function definition, either direct function or configuration object
- * @returns The normalized configuration object
+ * Creates a complex workflow function (arbitrary code, hidden from Forge UI)
  */
-export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
+export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
@@ -99,5 +74,284 @@ export const pikkuSimpleWorkflowFunc = <In, Out = unknown>(
   return typeof func === 'function' ? { func } : func
 }
 
+// ============================================================================
+// Graph Workflow Types (pikkuWorkflowGraph)
+// ============================================================================
+
+/**
+ * Type-safe graph builder with full RPC autocomplete
+ */
+const graphBuilder = createGraph<FlattenedRPCMap>()
+
+/** HTTP wire configuration for graph workflows */
+interface GraphHttpWire<NodeIds extends string> {
+  route: string
+  method: HTTPMethod
+  startNode: NodeIds
+}
+
+/** Channel wire configuration for graph workflows */
+interface GraphChannelWire<NodeIds extends string> {
+  name: string
+  onConnect?: NodeIds
+  onDisconnect?: NodeIds
+  onMessage?: NodeIds
+}
+
+/** Queue wire configuration for graph workflows */
+interface GraphQueueWire<NodeIds extends string> {
+  name: string
+  startNode: NodeIds
+}
+
+/** CLI wire configuration for graph workflows */
+interface GraphCliWire<NodeIds extends string> {
+  command: string
+  startNode: NodeIds
+}
+
+/** MCP wire configurations for graph workflows */
+interface GraphMcpWires<NodeIds extends string> {
+  tool?: Array<{ name: string; startNode: NodeIds }>
+  prompt?: Array<{ name: string; startNode: NodeIds }>
+  resource?: Array<{ uri: string; startNode: NodeIds }>
+}
+
+/** Schedule wire configuration for graph workflows */
+interface GraphScheduleWire<NodeIds extends string> {
+  cron?: string
+  interval?: string
+  startNode: NodeIds
+}
+
+/** Trigger wire configuration for graph workflows */
+interface GraphTriggerWire<NodeIds extends string> {
+  name: string  // RPC name of the trigger function
+  startNode: NodeIds
+}
+
+/** All wire configurations for graph workflows */
+interface GraphWiresConfig<NodeIds extends string> {
+  http?: Array<GraphHttpWire<NodeIds>>
+  channel?: Array<GraphChannelWire<NodeIds>>
+  queue?: Array<GraphQueueWire<NodeIds>>
+  cli?: Array<GraphCliWire<NodeIds>>
+  mcp?: GraphMcpWires<NodeIds>
+  schedule?: Array<GraphScheduleWire<NodeIds>>
+  trigger?: Array<GraphTriggerWire<NodeIds>>
+}
+
+/** Configuration for graph-based workflow */
+export interface PikkuWorkflowGraphConfig<
+  FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
+  T
+> {
+  /** Workflow name (optional - defaults to exported variable name) */
+  name?: string
+  /** Optional description */
+  description?: string
+  /** Optional tags for organization */
+  tags?: string[]
+  /** Node to RPC function mapping */
+  nodes: FuncMap
+  /** Wire configurations - how this workflow can be triggered */
+  wires?: GraphWiresConfig<Extract<keyof FuncMap, string>>
+  /** Node configurations (next, input, onError) */
+  config?: T
+}
+
+/** Result of pikkuWorkflowGraph - includes metadata for wiring */
+export interface PikkuWorkflowGraphResult<T, NodeIds extends string = string> {
+  __type: 'pikkuWorkflowGraph'
+  name?: string
+  description?: string
+  tags?: string[]
+  wires?: GraphWiresConfig<NodeIds>
+  graph: T
+}
+
+/**
+ * Creates a graph-based workflow definition with metadata
+ * Name defaults to the exported variable name if not provided.
+ *
+ * @example
+ * // Name inferred from exported variable name
+ * export const myWorkflow = pikkuWorkflowGraph({
+ *   description: 'Handles user onboarding',
+ *   tags: ['onboarding'],
+ *   nodes: {
+ *     entry: 'createUser',
+ *     sendEmail: 'sendWelcomeEmail',
+ *   },
+ *   config: {
+ *     entry: { next: 'sendEmail' },
+ *     sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
+ *   },
+ * })
+ */
+export function pikkuWorkflowGraph<
+  const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
+>(
+  config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
+): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> {
+  return {
+    __type: 'pikkuWorkflowGraph',
+    name: config.name,
+    description: config.description,
+    tags: config.tags,
+    wires: config.wires,
+    graph: graphBuilder(config.nodes, config.config as any),
+  }
+}
+
+/** Typed ref value */
+type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
+
+/** Template string type - assignable to string fields */
+type TemplateString = {
+  $template: {
+    parts: string[]
+    expressions: Array<{ $ref: string; path?: string }>
+  }
+} & { __brand: 'TemplateString' }
+
+/**
+ * Creates a template string with variable interpolation
+ * Uses indexed placeholders $0, $1, etc. with refs array
+ *
+ * @example
+ * template('Hello $0, your order $1 is ready', [ref('trigger', 'name'), ref('step_0', 'orderId')])
+ */
+export function template(templateStr: string, refs: TypedRef<unknown>[]): TemplateString {
+  const parts: string[] = []
+  const expressions: Array<{ $ref: string; path?: string }> = []
+
+  // Parse template string: "Hello $0" -> parts: ["Hello ", ""], use refs[0] for expression
+  const regex = /\$(\d+)/g
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(templateStr)) !== null) {
+    // Add the part before this match
+    parts.push(templateStr.slice(lastIndex, match.index))
+
+    // Get the ref by index
+    const refIndex = parseInt(match[1]!, 10)
+    const refValue = refs[refIndex]
+    if (refValue) {
+      const expr: { $ref: string; path?: string } = { $ref: refValue.$ref }
+      if (refValue.path) {
+        expr.path = refValue.path
+      }
+      expressions.push(expr)
+    } else {
+      expressions.push({ $ref: 'unknown' })
+    }
+
+    lastIndex = regex.lastIndex
+  }
+
+  // Add the remaining part
+  parts.push(templateStr.slice(lastIndex))
+
+  return {
+    $template: { parts, expressions }
+  } as TemplateString
+}
+
+/** Map input type fields to allow TypedRef or TemplateString for any field */
+type InputWithRefs<T> = {
+  [K in keyof T]?: T[K] | TypedRef<T[K]> | TypedRef<unknown> | TemplateString
+}
+
+/** Get the input type for a node based on its RPC mapping */
+type NodeInputType<FuncMap extends Record<string, string>, K extends keyof FuncMap> =
+  FuncMap[K] extends keyof FlattenedRPCMap
+    ? InputWithRefs<FlattenedRPCMap[FuncMap[K]]['input']>
+    : Record<string, unknown>
+
+/** Get the output type keys for a node based on its RPC mapping */
+type NodeOutputKeys<FuncMap extends Record<string, string>, N extends string> =
+  N extends keyof FuncMap
+    ? FuncMap[N] extends keyof FlattenedRPCMap
+      ? keyof FlattenedRPCMap[FuncMap[N]]['output'] & string
+      : string
+    : string
+
+/** Ref function type with path validation */
+type RefFunction<FuncMap extends Record<string, string>> = {
+  <N extends Extract<keyof FuncMap, string>>(
+    nodeId: N,
+    path: NodeOutputKeys<FuncMap, N>
+  ): TypedRef<unknown>
+  (nodeId: 'trigger' | '$item', path?: string): TypedRef<unknown>
+}
+
+/** Template function type */
+type TemplateFunction = (templateStr: string, refs: TypedRef<unknown>[]) => TemplateString
+
+/** Type helper for node configuration */
+type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
+  [K in Extract<keyof FuncMap, string>]?: {
+    next?: NextConfig<Extract<keyof FuncMap, string>>
+    input?:
+      | NodeInputType<FuncMap, K>
+      | (() => NodeInputType<FuncMap, K>)
+      | ((ref: RefFunction<FuncMap>, template: TemplateFunction) => NodeInputType<FuncMap, K>)
+    onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
+  }
+}
+
+type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
+
+// ============================================================================
+// Unified wireWorkflow
+// ============================================================================
+
+/** Workflow definition with DSL function */
+interface WorkflowDefinitionFunc {
+  /** Whether this workflow wiring is enabled (default: true) */
+  enabled?: boolean
+  /** Wire configurations for the workflow */
+  wires: {
+    http?: { route: string; method: HTTPMethod }
+    channel?: string
+    queue?: string
+  }
+  /** DSL workflow function */
+  func: PikkuFunctionConfig<any, any, 'workflow', PikkuFunctionWorkflow<any, any>>
+}
+
+/** Workflow definition with graph */
+interface WorkflowDefinitionGraph<T, NodeIds extends string = string> {
+  /** Whether this workflow wiring is enabled (default: true) */
+  enabled?: boolean
+  /** Graph workflow definition - wires are defined in the graph itself */
+  graph: PikkuWorkflowGraphResult<T, NodeIds>
+}
+
+/**
+ * Wire a workflow with wires
+ * Accepts either a DSL function (func) or a graph definition (graph)
+ *
+ * @example
+ * // DSL workflow
+ * wireWorkflow({
+ *   wires: { http: { route: '/start', method: 'post' } },
+ *   func: myWorkflowFunc,
+ * })
+ *
+ * @example
+ * // Graph workflow - wires are defined in the graph itself
+ * wireWorkflow({
+ *   enabled: true,  // default: true
+ *   graph: myGraphWorkflow,
+ * })
+ */
+export function wireWorkflow<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>, NodeIds extends string = string>(
+  definition: WorkflowDefinitionFunc | WorkflowDefinitionGraph<T, NodeIds>
+): void {
+  coreWireWorkflow(definition as any)
+}
 `
 }

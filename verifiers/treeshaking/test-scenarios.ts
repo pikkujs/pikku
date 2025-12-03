@@ -17,6 +17,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'sms',
       'storage',
     ],
@@ -28,21 +29,21 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Tag: notifications',
     filter: '--tags=notifications',
-    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
     expectedWireServices: ['userContext'],
     description: 'Email, sms, logger (middleware) from notification routes',
   },
   {
     name: 'Tag: email',
     filter: '--tags=email',
-    expectedSingletonServices: ['email', 'logger'],
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: ['userContext'],
     description: 'Email (function + permissions), logger (middleware)',
   },
   {
     name: 'Tag: sms',
     filter: '--tags=sms',
-    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
     expectedWireServices: [],
     description:
       'SMS (function), logger (middleware), email/logger from session creation',
@@ -55,6 +56,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'storage',
     ],
     expectedWireServices: ['userPreferences'],
@@ -64,7 +66,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Tag: storage',
     filter: '--tags=storage',
-    expectedSingletonServices: ['email', 'logger', 'storage'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'storage'],
     expectedWireServices: ['userContext', 'userPreferences'],
     description:
       'Storage (session service) with email/logger from session creation',
@@ -79,6 +81,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'sms',
       'storage',
     ],
@@ -88,14 +91,14 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Tags: email,sms',
     filter: '--tags=email,sms',
-    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
     expectedWireServices: ['userContext'],
     description: 'Both email and SMS routes',
   },
   {
     name: 'Tags: notifications,storage',
     filter: '--tags=notifications,storage',
-    expectedSingletonServices: ['email', 'logger', 'sms', 'storage'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms', 'storage'],
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'All notification + storage routes',
   },
@@ -109,6 +112,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'sms',
       'storage',
     ],
@@ -125,6 +129,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'sms',
       'storage',
     ],
@@ -134,7 +139,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'HTTP Method: GET',
     filter: '--httpMethods=GET',
-    expectedSingletonServices: ['email', 'logger'],
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: [],
     description: 'No GET routes exist, only email/logger from session creation',
   },
@@ -143,7 +148,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'HTTP Route: /api/notifications/*',
     filter: '--httpRoutes=/api/notifications/*',
-    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
     expectedWireServices: ['userContext'],
     description: 'Only notification routes',
   },
@@ -155,6 +160,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'storage',
     ],
     expectedWireServices: ['userPreferences'],
@@ -163,7 +169,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'HTTP Route: /api/storage/*',
     filter: '--httpRoutes=/api/storage/*',
-    expectedSingletonServices: ['email', 'logger', 'storage'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'storage'],
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'Only storage routes',
   },
@@ -177,6 +183,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'sms',
       'storage',
     ],
@@ -187,7 +194,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Directory: src/nonexistent',
     filter: '--directories=src/nonexistent',
-    expectedSingletonServices: ['email', 'logger'],
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: [],
     description:
       'No wirings in nonexistent directory, only email/logger from session creation',
@@ -197,7 +204,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Combo: notifications + POST',
     filter: '--tags=notifications --httpMethods=POST',
-    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
     expectedWireServices: ['userContext'],
     description: 'Notification routes that are POST',
   },
@@ -209,6 +216,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'storage',
     ],
     expectedWireServices: ['userPreferences'],
@@ -219,7 +227,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Name: send*',
     filter: '--names=send*',
-    expectedSingletonServices: ['email', 'logger', 'sms'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
     expectedWireServices: ['userContext'],
     description: 'Routes using sendEmail and sendSMS functions + middleware',
   },
@@ -231,6 +239,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'storage',
     ],
     expectedWireServices: ['userPreferences'],
@@ -244,6 +253,7 @@ export const scenarios: TestScenario[] = [
       'email',
       'logger',
       'payment',
+      'secrets',
       'storage',
     ],
     expectedWireServices: ['userPreferences'],
@@ -252,7 +262,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Name: saveData',
     filter: '--names=saveData',
-    expectedSingletonServices: ['email', 'logger', 'storage'],
+    expectedSingletonServices: ['email', 'logger', 'secrets', 'storage'],
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'Routes using saveData function',
   },
@@ -261,7 +271,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'External Package: testExternal included',
     filter: '--names=testExternal',
-    expectedSingletonServices: ['email', 'logger'],
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: [],
     expectedExternalBootstrap: true,
     description:
@@ -270,7 +280,7 @@ export const scenarios: TestScenario[] = [
   {
     name: 'External Package: not called - excluded',
     filter: '--names=sendEmail',
-    expectedSingletonServices: ['email', 'logger'],
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: ['userContext'],
     expectedExternalBootstrap: true,
     description:

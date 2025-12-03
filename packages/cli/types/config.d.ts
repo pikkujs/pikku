@@ -14,8 +14,6 @@ export interface PikkuCLICoreOutputFiles {
   functionsFile: string
   functionsMetaFile: string
   functionsMetaJsonFile: string
-  functionsMetaMinFile: string
-  functionsMetaMinJsonFile: string
   functionTypesFile: string
 
   // HTTP
@@ -56,11 +54,10 @@ export interface PikkuCLICoreOutputFiles {
   // Workflows
   workflowsWiringFile: string
   workflowsWiringMetaFile: string
-  workflowsWiringMetaJsonFile: string
-  workflowsWiringMetaVerboseJsonFile: string
   workflowsWorkersFile: string
   workflowMapDeclarationFile: string
   workflowTypesFile: string
+  workflowMetaDir: string
 
   // MCP
   mcpWiringsFile: string

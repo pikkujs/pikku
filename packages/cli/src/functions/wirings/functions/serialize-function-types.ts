@@ -334,6 +334,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   RequiredWires extends keyof PikkuWire = never
 > = {
   name?: string
+  description?: string
   tags?: string[]
   expose?: boolean
   internal?: boolean

@@ -65,6 +65,8 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     workflows: {
       meta: {},
       files: new Map(),
+      graphMeta: {},
+      graphFiles: new Map(),
     },
     rpc: {
       internalMeta: {},

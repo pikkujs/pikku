@@ -8,7 +8,7 @@ export const serializeHTTPTypes = (functionTypesImportPath: string) => {
 
 import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, addHTTPPermission as addHTTPPermissionCore } from '@pikku/core/http'
 import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
-import type { CoreHTTPFunctionWiring } from '@pikku/core/http'
+import type { CoreHTTPFunctionWiring, HTTPMethod } from '@pikku/core/http'
 
 /**
  * Type definition for HTTP API wirings with type-safe path parameters.
@@ -21,6 +21,22 @@ import type { CoreHTTPFunctionWiring } from '@pikku/core/http'
 type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out, Route, PikkuFunction<In, Out, 'rpc' | 'session'>, PikkuFunctionSessionless<In, Out, 'rpc' | 'session'>, PikkuPermission<In>, PikkuMiddleware>
 
 /**
+ * HTTP wiring for workflow triggers (no function needed)
+ */
+type HTTPWorkflowWiring<Route extends string> = {
+  route: Route
+  method: HTTPMethod
+  workflow: true
+  func?: undefined
+  permissions?: undefined
+  auth?: undefined
+  tags?: undefined
+  middleware?: undefined
+  returnsJSON?: undefined
+  sse?: boolean
+}
+
+/**
  * Registers an HTTP wiring with the Pikku framework.
  *
  * @template In - Input type for the HTTP wiring
@@ -29,7 +45,7 @@ type HTTPWiring<In, Out, Route extends string> = CoreHTTPFunctionWiring<In, Out,
  * @param httpWiring - HTTP wiring definition with handler, method, and optional middleware
  */
 export const wireHTTP = <In, Out, Route extends string>(
-  httpWiring: HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>
+  httpWiring: (HTTPWiring<In, Out, Route> & AssertHTTPWiringParams<In, Route>) | HTTPWorkflowWiring<Route>
 ) => {
   wireHTTPCore(httpWiring as any)
 }
