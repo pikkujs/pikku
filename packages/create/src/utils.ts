@@ -164,6 +164,13 @@ export function cleanPikkuConfig(
 
   delete pikkuConfig.extends
 
+  // Fix srcDirectories paths that reference ../functions/src (from templates designed for multi-template use)
+  if (pikkuConfig.srcDirectories && Array.isArray(pikkuConfig.srcDirectories)) {
+    pikkuConfig.srcDirectories = pikkuConfig.srcDirectories.map(
+      (dir: string) => (dir === '../functions/src' ? './src' : dir)
+    )
+  }
+
   // Remove config options for unsupported features
   if (!supportedFeatures.includes('http')) {
     delete pikkuConfig.fetchFile
