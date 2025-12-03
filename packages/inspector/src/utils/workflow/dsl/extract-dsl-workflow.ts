@@ -994,7 +994,16 @@ function extractParallelFanout(
   } else if (ts.isBlock(mapFn.body)) {
     // Look for workflow.do in block
     for (const stmt of mapFn.body.statements) {
-      if (ts.isReturnStatement(stmt) && stmt.expression) {
+      if (ts.isExpressionStatement(stmt)) {
+        // Handle: await workflow.do(...)
+        if (
+          ts.isAwaitExpression(stmt.expression) &&
+          ts.isCallExpression(stmt.expression.expression)
+        ) {
+          doCall = stmt.expression.expression
+          break
+        }
+      } else if (ts.isReturnStatement(stmt) && stmt.expression) {
         if (ts.isCallExpression(stmt.expression)) {
           doCall = stmt.expression
           break
