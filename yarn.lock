@@ -4254,6 +4254,28 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-functions@workspace:verifiers/functions":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-functions@workspace:verifiers/functions"
+  dependencies:
+    "@pikku/cli": "npm:^0.11.2"
+    "@pikku/core": "npm:^0.11.1"
+    "@pikku/fetch": "npm:^0.11.1"
+    "@pikku/jose": "npm:^0.11.1"
+    "@pikku/schema-cfworker": "npm:^0.11.0"
+    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/websocket": "npm:^0.11.0"
+    "@types/node": "npm:^24"
+    "@types/ws": "npm:^8"
+    concurrently: "npm:^9.2.1"
+    eventsource: "npm:^4.0.0"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+    ws: "npm:^8.18.3"
+    zod: "npm:^4"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-types@workspace:verifiers/types":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
