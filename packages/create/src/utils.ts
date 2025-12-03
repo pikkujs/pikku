@@ -248,7 +248,7 @@ const FILE_FEATURE_MAPPING = {
   'queue.': ['queue'],
   'scheduled.': ['scheduled'],
   'sse.': ['sse'],
-  'todos.': ['http'],
+  'todos.': ['http', 'mcp'], // MCP functions depend on todos
   'workflow.': ['workflows'],
   'cli.': ['cli'],
 } as const
@@ -259,7 +259,7 @@ const FILE_FEATURE_MAPPING = {
 const CLIENT_FEATURE_MAPPING = {
   'http-fetch.ts': ['http'],
   'http-sse.ts': ['sse'],
-  'rpc.ts': ['http'],
+  'rpc.ts': ['external'], // Requires external packages which aren't included in standalone templates
   'websocket.ts': ['channel'],
 } as const
 

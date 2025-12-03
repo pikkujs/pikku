@@ -11,6 +11,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -47,6 +48,7 @@ jobs:
   verifiers:
     name: Verifiers
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     strategy:
       fail-fast: false
@@ -73,6 +75,7 @@ jobs:
   templates:
     name: Templates
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     services:
       redis:
