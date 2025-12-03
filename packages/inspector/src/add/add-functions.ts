@@ -312,6 +312,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   const { pikkuFuncName, name, explicitName, exportedName } =
     extractFunctionName(node, checker, state.rootDir)
 
+  let title: string | undefined
   let tags: string[] | undefined
   let summary: string | undefined
   let description: string | undefined
@@ -370,6 +371,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   if (ts.isObjectLiteralExpression(firstArg)) {
     objectNode = firstArg
     const metadata = getCommonWireMetaData(firstArg, 'Function', name, logger)
+    title = metadata.title
     tags = metadata.tags
     summary = metadata.summary
     description = metadata.description
@@ -580,6 +582,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
     internal: internal || undefined,
+    title,
     tags: tags || undefined,
     summary,
     description,

@@ -70,7 +70,7 @@ export const addHTTPRoute: AddWiring = (
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
-  const { tags, summary, description, errors } = getCommonWireMetaData(
+  const { title, tags, summary, description, errors } = getCommonWireMetaData(
     obj,
     'HTTP route',
     route,
@@ -91,6 +91,7 @@ export const addHTTPRoute: AddWiring = (
       params: params.length > 0 ? params : undefined,
       query: query.length > 0 ? query : undefined,
       inputTypes: undefined,
+      title,
       summary,
       description,
       errors,
@@ -180,6 +181,7 @@ export const addHTTPRoute: AddWiring = (
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,
     inputTypes,
+    title,
     summary,
     description,
     errors,

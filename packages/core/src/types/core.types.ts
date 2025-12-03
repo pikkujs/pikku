@@ -375,6 +375,7 @@ export type CreateConfig<
 export type CommonWireMeta = {
   pikkuFuncName: string
 
+  title?: string
   tags?: string[]
   summary?: string
   description?: string
