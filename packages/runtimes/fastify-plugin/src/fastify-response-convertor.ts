@@ -18,6 +18,21 @@ export async function sendResponseToFastify(
   // Determine the content type.
   const contentType = response.headers.get('content-type') || ''
 
+  // For SSE streams, use streaming response
+  if (contentType === 'text/event-stream' && response.body) {
+    const reader = response.body.getReader()
+    const write = async () => {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        reply.raw.write(value)
+      }
+      reply.raw.end()
+    }
+    await write()
+    return
+  }
+
   // For text-based or JSON responses, send as a string.
   if (
     contentType.startsWith('text/') ||
