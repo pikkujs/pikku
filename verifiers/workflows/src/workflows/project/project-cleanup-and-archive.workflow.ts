@@ -16,32 +16,36 @@ import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflo
 export const projectCleanupAndArchiveWorkflow = pikkuWorkflowComplexFunc<
   { projectId: string; completePendingTasks: boolean },
   { archivedAt: string; tasksCompleted: number }
->(async (_services, data, { workflow }) => {
-  // Step 1: Get project tasks
-  const tasks = await workflow.do('Get project tasks', 'projectTaskList', {
-    projectId: data.projectId,
-  })
+>({
+  title: 'Project Cleanup And Archive',
+  tags: ['project'],
+  func: async (_services, data, { workflow }) => {
+    // Step 1: Get project tasks
+    const tasks = await workflow.do('Get project tasks', 'projectTaskList', {
+      projectId: data.projectId,
+    })
 
-  // Step 2: Complete pending tasks if requested
-  let tasksCompleted = 0
-  if (data.completePendingTasks) {
-    const pendingTasks = tasks.tasks.filter((t) => t.status === 'pending')
-    for (const task of pendingTasks) {
-      await workflow.do(`Complete task ${task.id}`, 'taskUpdate', {
-        taskId: task.id,
-        status: 'completed',
-      })
-      tasksCompleted++
+    // Step 2: Complete pending tasks if requested
+    let tasksCompleted = 0
+    if (data.completePendingTasks) {
+      const pendingTasks = tasks.tasks.filter((t) => t.status === 'pending')
+      for (const task of pendingTasks) {
+        await workflow.do(`Complete task ${task.id}`, 'taskUpdate', {
+          taskId: task.id,
+          status: 'completed',
+        })
+        tasksCompleted++
+      }
     }
-  }
 
-  // Step 3: Archive the project
-  const archived = await workflow.do('Archive project', 'projectArchive', {
-    projectId: data.projectId,
-  })
+    // Step 3: Archive the project
+    const archived = await workflow.do('Archive project', 'projectArchive', {
+      projectId: data.projectId,
+    })
 
-  return {
-    archivedAt: archived.archivedAt,
-    tasksCompleted,
-  }
+    return {
+      archivedAt: archived.archivedAt,
+      tasksCompleted,
+    }
+  },
 })

@@ -17,32 +17,36 @@ export const complexFilterChainWorkflow = pikkuWorkflowFunc<
     targetStatus: string
   },
   { matchingOrders: string[]; totalValue: number }
->(async (_services, data, { workflow }) => {
-  // Chain multiple filters
-  const matchingOrders = data.orders
-    .filter((order) => order.status === data.targetStatus)
-    .filter((order) => order.total >= data.minTotal)
-    .map((order) => order.id)
+>({
+  title: 'Complex Filter Chain',
+  tags: ['patterns'],
+  func: async (_services, data, { workflow }) => {
+    // Chain multiple filters
+    const matchingOrders = data.orders
+      .filter((order) => order.status === data.targetStatus)
+      .filter((order) => order.total >= data.minTotal)
+      .map((order) => order.id)
 
-  // Calculate total value
-  const totalValue = data.orders
-    .filter((order) => matchingOrders.includes(order.id))
-    .reduce((sum, order) => sum + order.total, 0)
+    // Calculate total value
+    const totalValue = data.orders
+      .filter((order) => matchingOrders.includes(order.id))
+      .reduce((sum, order) => sum + order.total, 0)
 
-  // Process matching orders
-  for (const orderId of matchingOrders) {
-    await workflow.do(`Flag order ${orderId}`, 'orderUpdate', {
-      orderId,
-      status: 'flagged_for_review',
+    // Process matching orders
+    for (const orderId of matchingOrders) {
+      await workflow.do(`Flag order ${orderId}`, 'orderUpdate', {
+        orderId,
+        status: 'flagged_for_review',
+      })
+    }
+
+    // Notify about results
+    await workflow.do('Send filter results', 'notifyEmail', {
+      userId: 'analyst',
+      subject: 'Order Analysis Complete',
+      body: `Found ${matchingOrders.length} orders totaling $${totalValue}`,
     })
-  }
 
-  // Notify about results
-  await workflow.do('Send filter results', 'notifyEmail', {
-    userId: 'analyst',
-    subject: 'Order Analysis Complete',
-    body: `Found ${matchingOrders.length} orders totaling $${totalValue}`,
-  })
-
-  return { matchingOrders, totalValue }
+    return { matchingOrders, totalValue }
+  },
 })

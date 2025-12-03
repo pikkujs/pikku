@@ -12,22 +12,26 @@ export const timedReminderWorkflow = pikkuWorkflowFunc<
     intervals: string[]
   },
   { remindersSent: number }
->(async (_services, data, { workflow }) => {
-  let remindersSent = 0
+>({
+  title: 'Timed Reminder',
+  tags: ['notification'],
+  func: async (_services, data, { workflow }) => {
+    let remindersSent = 0
 
-  for (const interval of data.intervals) {
-    // Wait for the interval
-    await workflow.sleep(`Wait ${interval}`, interval)
+    for (const interval of data.intervals) {
+      // Wait for the interval
+      await workflow.sleep(`Wait ${interval}`, interval)
 
-    // Send reminder
-    await workflow.do(`Send reminder ${remindersSent + 1}`, 'notifyEmail', {
-      userId: data.userId,
-      subject: `Reminder: ${data.reminderTitle}`,
-      body: `${data.reminderMessage}\n\n(Reminder ${remindersSent + 1} of ${data.intervals.length})`,
-    })
+      // Send reminder
+      await workflow.do(`Send reminder ${remindersSent + 1}`, 'notifyEmail', {
+        userId: data.userId,
+        subject: `Reminder: ${data.reminderTitle}`,
+        body: `${data.reminderMessage}\n\n(Reminder ${remindersSent + 1} of ${data.intervals.length})`,
+      })
 
-    remindersSent++
-  }
+      remindersSent++
+    }
 
-  return { remindersSent }
+    return { remindersSent }
+  },
 })

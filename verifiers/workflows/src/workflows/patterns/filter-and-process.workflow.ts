@@ -11,23 +11,27 @@ import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types
 export const filterAndProcessWorkflow = pikkuWorkflowFunc<
   { items: Array<{ id: string; status: string; priority: number }> },
   { processedCount: number; skippedCount: number }
->(async (_services, data, { workflow }) => {
-  // Filter to get only active items
-  const activeItems = data.items.filter((item) => item.status === 'active')
+>({
+  title: 'Filter And Process',
+  tags: ['patterns'],
+  func: async (_services, data, { workflow }) => {
+    // Filter to get only active items
+    const activeItems = data.items.filter((item) => item.status === 'active')
 
-  // Filter further for high priority
-  const highPriorityItems = activeItems.filter((item) => item.priority > 5)
+    // Filter further for high priority
+    const highPriorityItems = activeItems.filter((item) => item.priority > 5)
 
-  // Process high priority items
-  for (const item of highPriorityItems) {
-    await workflow.do(`Process high priority item ${item.id}`, 'taskCreate', {
-      title: `Process ${item.id}`,
-      description: `Priority: ${item.priority}`,
-    })
-  }
+    // Process high priority items
+    for (const item of highPriorityItems) {
+      await workflow.do(`Process high priority item ${item.id}`, 'taskCreate', {
+        title: `Process ${item.id}`,
+        description: `Priority: ${item.priority}`,
+      })
+    }
 
-  return {
-    processedCount: highPriorityItems.length,
-    skippedCount: data.items.length - highPriorityItems.length,
-  }
+    return {
+      processedCount: highPriorityItems.length,
+      skippedCount: data.items.length - highPriorityItems.length,
+    }
+  },
 })

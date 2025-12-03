@@ -15,30 +15,38 @@ export const tripleNestedLoopWorkflow = pikkuWorkflowFunc<
     }>
   },
   { totalProcessed: number }
->(async (_services, data, { workflow }) => {
-  let totalProcessed = 0
+>({
+  title: 'Triple Nested Loop',
+  tags: ['patterns'],
+  func: async (_services, data, { workflow }) => {
+    let totalProcessed = 0
 
-  // Level 1: Organizations
-  for (const org of data.organizations) {
-    await workflow.do(`Process org ${org.orgId}`, 'projectGet', {
-      projectId: org.orgId,
-    })
-
-    // Level 2: Projects
-    for (const project of org.projects) {
-      await workflow.do(`Process project ${project.projectId}`, 'projectGet', {
-        projectId: project.projectId,
+    // Level 1: Organizations
+    for (const org of data.organizations) {
+      await workflow.do(`Process org ${org.orgId}`, 'projectGet', {
+        projectId: org.orgId,
       })
 
-      // Level 3: Tasks
-      for (const taskId of project.taskIds) {
-        await workflow.do(`Process task ${taskId}`, 'taskGet', {
-          taskId,
-        })
-        totalProcessed++
+      // Level 2: Projects
+      for (const project of org.projects) {
+        await workflow.do(
+          `Process project ${project.projectId}`,
+          'projectGet',
+          {
+            projectId: project.projectId,
+          }
+        )
+
+        // Level 3: Tasks
+        for (const taskId of project.taskIds) {
+          await workflow.do(`Process task ${taskId}`, 'taskGet', {
+            taskId,
+          })
+          totalProcessed++
+        }
       }
     }
-  }
 
-  return { totalProcessed }
+    return { totalProcessed }
+  },
 })

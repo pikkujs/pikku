@@ -19,22 +19,25 @@ export const orderCreate = pikkuSessionlessFunc<
     status: string
     createdAt: string
   }
->(async ({ logger }, data) => {
-  const total = data.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  )
-  logger.info(
-    `Creating order for customer: ${data.customerId}, total: ${total}`
-  )
-  return {
-    id: `order-${Date.now()}`,
-    customerId: data.customerId,
-    items: data.items,
-    total,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  }
+>({
+  title: 'Create Order',
+  func: async ({ logger }, data) => {
+    const total = data.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    )
+    logger.info(
+      `Creating order for customer: ${data.customerId}, total: ${total}`
+    )
+    return {
+      id: `order-${Date.now()}`,
+      customerId: data.customerId,
+      items: data.items,
+      total,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+  },
 })
 
 export const orderGet = pikkuSessionlessFunc<
@@ -47,44 +50,53 @@ export const orderGet = pikkuSessionlessFunc<
     status: string
     createdAt: string
   }
->(async ({ logger }, data) => {
-  logger.info(`Getting order: ${data.orderId}`)
-  return {
-    id: data.orderId,
-    customerId: 'customer-1',
-    items: [
-      { productId: 'prod-1', quantity: 2, price: 29.99 },
-      { productId: 'prod-2', quantity: 1, price: 49.99 },
-    ],
-    total: 109.97,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  }
+>({
+  title: 'Get Order',
+  func: async ({ logger }, data) => {
+    logger.info(`Getting order: ${data.orderId}`)
+    return {
+      id: data.orderId,
+      customerId: 'customer-1',
+      items: [
+        { productId: 'prod-1', quantity: 2, price: 29.99 },
+        { productId: 'prod-2', quantity: 1, price: 49.99 },
+      ],
+      total: 109.97,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+  },
 })
 
 export const orderUpdate = pikkuSessionlessFunc<
   { orderId: string; status?: string; shippingAddress?: string },
   { id: string; status: string; updatedAt: string }
->(async ({ logger }, data) => {
-  logger.info(`Updating order: ${data.orderId}`)
-  return {
-    id: data.orderId,
-    status: data.status || 'pending',
-    updatedAt: new Date().toISOString(),
-  }
+>({
+  title: 'Update Order',
+  func: async ({ logger }, data) => {
+    logger.info(`Updating order: ${data.orderId}`)
+    return {
+      id: data.orderId,
+      status: data.status || 'pending',
+      updatedAt: new Date().toISOString(),
+    }
+  },
 })
 
 export const orderCancel = pikkuSessionlessFunc<
   { orderId: string; reason?: string },
   { id: string; status: string; cancelledAt: string; reason?: string }
->(async ({ logger }, data) => {
-  logger.info(`Cancelling order: ${data.orderId}`)
-  return {
-    id: data.orderId,
-    status: 'cancelled',
-    cancelledAt: new Date().toISOString(),
-    reason: data.reason,
-  }
+>({
+  title: 'Cancel Order',
+  func: async ({ logger }, data) => {
+    logger.info(`Cancelling order: ${data.orderId}`)
+    return {
+      id: data.orderId,
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+      reason: data.reason,
+    }
+  },
 })
 
 export const orderList = pikkuSessionlessFunc<
@@ -98,33 +110,36 @@ export const orderList = pikkuSessionlessFunc<
       createdAt: string
     }>
   }
->(async ({ logger }, data) => {
-  logger.info(`Listing orders for customer: ${data.customerId}`)
-  return {
-    orders: [
-      {
-        id: 'order-1',
-        customerId: 'customer-1',
-        total: 109.97,
-        status: 'completed',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'order-2',
-        customerId: 'customer-1',
-        total: 59.99,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'order-3',
-        customerId: 'customer-2',
-        total: 199.99,
-        status: 'shipped',
-        createdAt: new Date().toISOString(),
-      },
-    ],
-  }
+>({
+  title: 'List Orders',
+  func: async ({ logger }, data) => {
+    logger.info(`Listing orders for customer: ${data.customerId}`)
+    return {
+      orders: [
+        {
+          id: 'order-1',
+          customerId: 'customer-1',
+          total: 109.97,
+          status: 'completed',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'order-2',
+          customerId: 'customer-1',
+          total: 59.99,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 'order-3',
+          customerId: 'customer-2',
+          total: 199.99,
+          status: 'shipped',
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    }
+  },
 })
 
 // Order Items
@@ -137,27 +152,33 @@ export const orderItemAdd = pikkuSessionlessFunc<
     price: number
     addedAt: string
   }
->(async ({ logger }, data) => {
-  logger.info(`Adding item ${data.productId} to order: ${data.orderId}`)
-  return {
-    orderId: data.orderId,
-    productId: data.productId,
-    quantity: data.quantity,
-    price: data.price,
-    addedAt: new Date().toISOString(),
-  }
+>({
+  title: 'Add Order Item',
+  func: async ({ logger }, data) => {
+    logger.info(`Adding item ${data.productId} to order: ${data.orderId}`)
+    return {
+      orderId: data.orderId,
+      productId: data.productId,
+      quantity: data.quantity,
+      price: data.price,
+      addedAt: new Date().toISOString(),
+    }
+  },
 })
 
 export const orderItemRemove = pikkuSessionlessFunc<
   { orderId: string; productId: string },
   { orderId: string; productId: string; removed: boolean }
->(async ({ logger }, data) => {
-  logger.info(`Removing item ${data.productId} from order: ${data.orderId}`)
-  return {
-    orderId: data.orderId,
-    productId: data.productId,
-    removed: true,
-  }
+>({
+  title: 'Remove Order Item',
+  func: async ({ logger }, data) => {
+    logger.info(`Removing item ${data.productId} from order: ${data.orderId}`)
+    return {
+      orderId: data.orderId,
+      productId: data.productId,
+      removed: true,
+    }
+  },
 })
 
 // Cart
@@ -168,29 +189,35 @@ export const cartGet = pikkuSessionlessFunc<
     items: Array<{ productId: string; quantity: number; price: number }>
     total: number
   }
->(async ({ logger }, data) => {
-  logger.info(`Getting cart for customer: ${data.customerId}`)
-  return {
-    customerId: data.customerId,
-    items: [
-      { productId: 'prod-1', quantity: 2, price: 29.99 },
-      { productId: 'prod-2', quantity: 1, price: 49.99 },
-    ],
-    total: 109.97,
-  }
+>({
+  title: 'Get Cart',
+  func: async ({ logger }, data) => {
+    logger.info(`Getting cart for customer: ${data.customerId}`)
+    return {
+      customerId: data.customerId,
+      items: [
+        { productId: 'prod-1', quantity: 2, price: 29.99 },
+        { productId: 'prod-2', quantity: 1, price: 49.99 },
+      ],
+      total: 109.97,
+    }
+  },
 })
 
 export const cartCheckout = pikkuSessionlessFunc<
   { customerId: string; shippingAddress: string; paymentMethodId: string },
   { orderId: string; status: string; total: number; createdAt: string }
->(async ({ logger }, data) => {
-  logger.info(`Checking out cart for customer: ${data.customerId}`)
-  return {
-    orderId: `order-${Date.now()}`,
-    status: 'pending_payment',
-    total: 109.97,
-    createdAt: new Date().toISOString(),
-  }
+>({
+  title: 'Checkout Cart',
+  func: async ({ logger }, data) => {
+    logger.info(`Checking out cart for customer: ${data.customerId}`)
+    return {
+      orderId: `order-${Date.now()}`,
+      status: 'pending_payment',
+      total: 109.97,
+      createdAt: new Date().toISOString(),
+    }
+  },
 })
 
 // Shipping
@@ -204,26 +231,34 @@ export const shipmentCreate = pikkuSessionlessFunc<
     status: string
     createdAt: string
   }
->(async ({ logger }, data) => {
-  logger.info(`Creating shipment for order: ${data.orderId}`)
-  return {
-    id: `shipment-${Date.now()}`,
-    orderId: data.orderId,
-    carrier: data.carrier,
-    trackingNumber: data.trackingNumber || `TRK${Date.now()}`,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  }
+>({
+  title: 'Create Shipment',
+  func: async ({ logger }, data) => {
+    logger.info(`Creating shipment for order: ${data.orderId}`)
+    return {
+      id: `shipment-${Date.now()}`,
+      orderId: data.orderId,
+      carrier: data.carrier,
+      trackingNumber: data.trackingNumber || `TRK${Date.now()}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    }
+  },
 })
 
 export const shipmentUpdateStatus = pikkuSessionlessFunc<
   { shipmentId: string; status: string },
   { id: string; status: string; updatedAt: string }
->(async ({ logger }, data) => {
-  logger.info(`Updating shipment ${data.shipmentId} status to: ${data.status}`)
-  return {
-    id: data.shipmentId,
-    status: data.status,
-    updatedAt: new Date().toISOString(),
-  }
+>({
+  title: 'Update Shipment Status',
+  func: async ({ logger }, data) => {
+    logger.info(
+      `Updating shipment ${data.shipmentId} status to: ${data.status}`
+    )
+    return {
+      id: data.shipmentId,
+      status: data.status,
+      updatedAt: new Date().toISOString(),
+    }
+  },
 })
