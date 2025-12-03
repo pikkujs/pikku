@@ -3,7 +3,7 @@ import {
   pikkuServices,
   pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
-import { LocalVariablesService } from '@pikku/core/services'
+import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
 
 export const createConfig = pikkuConfig(async () => {
@@ -12,11 +12,13 @@ export const createConfig = pikkuConfig(async () => {
 
 export const createSingletonServices = pikkuServices(async (config) => {
   const logger = new CustomLogger()
+  const variables = new LocalVariablesService()
 
   return {
-    variables: new LocalVariablesService(),
+    variables,
     config,
     logger,
+    secrets: new LocalSecretService(variables),
   }
 })
 
