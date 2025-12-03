@@ -239,8 +239,8 @@ export type CorePikkuMiddlewareConfig<
 > = {
   /** The middleware function */
   func: CorePikkuMiddleware<SingletonServices, UserSession>
-  /** Optional human-readable name for the middleware */
-  name?: string
+  /** Optional human-readable title for the middleware */
+  title?: string
   /** Optional description of what the middleware does */
   description?: string
 }
@@ -283,7 +283,7 @@ export type CorePikkuMiddlewareGroup<
  *
  * // Configuration object syntax with metadata
  * export const logMiddleware = pikkuMiddleware({
- *   name: 'Request Logger',
+ *   title: 'Request Logger',
  *   description: 'Logs request information',
  *   func: async ({ logger }, next) => {
  *     logger.info('Request started')

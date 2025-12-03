@@ -94,8 +94,8 @@ export type CorePikkuPermissionConfig<
 > = {
   /** The permission function */
   func: CorePikkuPermission<In, Services, Wire>
-  /** Optional human-readable name for the permission */
-  name?: string
+  /** Optional human-readable title for the permission */
+  title?: string
   /** Optional description of what the permission checks */
   description?: string
 }
@@ -116,7 +116,7 @@ export type CorePikkuPermissionConfig<
  *
  * // Configuration object syntax with metadata
  * export const adminPermission = pikkuPermission({
- *   name: 'Admin Permission',
+ *   title: 'Admin Permission',
  *   description: 'Checks if user has admin role',
  *   func: async ({ logger }, _data, { session }) => {
  *     const currentSession = await session.get()
@@ -214,6 +214,10 @@ export type CorePikkuFunctionConfig<
   InputSchema extends ZodLike | undefined = undefined,
   OutputSchema extends ZodLike | undefined = undefined,
 > = {
+  /** Optional human-readable title for the function */
+  title?: string
+  /** Optional description of what the function does */
+  description?: string
   override?: string
   tags?: string[]
   expose?: boolean
@@ -254,8 +258,8 @@ export type CorePikkuTriggerFunctionConfig<
   ConfigSchema extends ZodLike | undefined = undefined,
   OutputSchema extends ZodLike | undefined = undefined,
 > = {
-  /** Optional human-readable name for the trigger */
-  name?: string
+  /** Optional human-readable title for the trigger */
+  title?: string
   /** Optional description of what the trigger does */
   description?: string
   /** Optional tags for categorization */
@@ -288,7 +292,7 @@ export type CorePikkuTriggerFunctionConfig<
  *
  * // Configuration object syntax with metadata
  * export const redisSubscribeTrigger = pikkuTriggerFunc({
- *   name: 'Redis Subscribe Trigger',
+ *   title: 'Redis Subscribe Trigger',
  *   description: 'Listens to Redis pub/sub channel',
  *   config: z.object({ channel: z.string() }),
  *   output: z.object({ message: z.string() }),
