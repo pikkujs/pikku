@@ -214,7 +214,7 @@ export type CorePikkuFunctionConfig<
   InputSchema extends ZodLike | undefined = undefined,
   OutputSchema extends ZodLike | undefined = undefined,
 > = {
-  name?: string
+  override?: string
   tags?: string[]
   expose?: boolean
   internal?: boolean
