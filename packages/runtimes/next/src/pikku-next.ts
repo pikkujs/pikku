@@ -1,6 +1,5 @@
 import { compile } from 'path-to-regexp'
 import { EventEmitter } from 'eventemitter3'
-import { NextRequest } from 'next/server.js'
 
 import {
   CoreConfig,
@@ -104,10 +103,10 @@ export class PikkuNextJS {
   /**
    * Handles an API request from Next.js App Router route handler.
    *
-   * @param req - The Next.js request object.
-   * @returns A promise that resolves to a Next.js Response object.
+   * @param req - The request object (NextRequest or any Request-compatible object).
+   * @returns A promise that resolves to a Response object.
    */
-  public async apiRequest(req: NextRequest): Promise<Response> {
+  public async apiRequest(req: Request): Promise<Response> {
     const singletonServices = await this.getSingletonServices()
     return fetch(req, {
       singletonServices,

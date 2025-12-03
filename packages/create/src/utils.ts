@@ -479,10 +479,7 @@ export function updatePackageJSONScripts(
  * This prevents yarn from trying to fetch unreleased versions from npm.
  * Also adds resolutions for shared dependencies to avoid type mismatches.
  */
-export function preparePackageJsonForYarnLink(
-  targetPath: string,
-  yarnLinkPath?: string
-): void {
+export function preparePackageJsonForYarnLink(targetPath: string): void {
   const packageFilePath = path.join(targetPath, 'package.json')
   const packageJson = JSON.parse(fs.readFileSync(packageFilePath, 'utf-8'))
 
@@ -499,19 +496,6 @@ export function preparePackageJsonForYarnLink(
           packageJson[depType][pkg] = '*'
         }
       }
-    }
-  }
-
-  // Add resolutions for shared dependencies to avoid type mismatches
-  // when using yarn link with the monorepo
-  if (yarnLinkPath) {
-    const absoluteLinkPath = path.resolve(targetPath, yarnLinkPath)
-    if (!packageJson.resolutions) {
-      packageJson.resolutions = {}
-    }
-    // Add next resolution if the template uses next
-    if (packageJson.dependencies?.next || packageJson.devDependencies?.next) {
-      packageJson.resolutions['next'] = `portal:${absoluteLinkPath}/node_modules/next`
     }
   }
 
