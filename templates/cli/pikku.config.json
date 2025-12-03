@@ -6,22 +6,5 @@
   "schema": {
     "supportsImportAttributes": true,
     "additionalProperties": true
-  },
-  "cli": {
-    "entrypoints": {
-      "my-cli": [
-        {
-          "type": "local",
-          "path": "src/cli-local.ts"
-        },
-        {
-          "type": "channel",
-          "name": "cli",
-          "route": "/cli",
-          "wirePath": "src/cli-channel.ts",
-          "path": "src/cli-remote.ts"
-        }
-      ]
-    }
   }
 }

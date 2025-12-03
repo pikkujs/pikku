@@ -166,9 +166,13 @@ export function cleanPikkuConfig(
 
   // Fix srcDirectories paths that reference ../functions/src (from templates designed for multi-template use)
   if (pikkuConfig.srcDirectories && Array.isArray(pikkuConfig.srcDirectories)) {
-    pikkuConfig.srcDirectories = pikkuConfig.srcDirectories.map(
-      (dir: string) => (dir === '../functions/src' ? './src' : dir)
+    const hasFunctionsRef = pikkuConfig.srcDirectories.some(
+      (dir: string) => dir === '../functions/src'
     )
+    if (hasFunctionsRef) {
+      // Replace with both ./src and ./types (matching functions template structure)
+      pikkuConfig.srcDirectories = ['./src', './types']
+    }
   }
 
   // Remove config options for unsupported features
