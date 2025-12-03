@@ -22,6 +22,8 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
+      # Run pikku again to regenerate schemas after initial bootstrap
+      - run: yarn pikku
       - run: yarn test:coverage
       - run: yarn prettier
       - run: yarn lint

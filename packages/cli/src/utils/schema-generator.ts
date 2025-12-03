@@ -317,10 +317,16 @@ addSchema('${schema}', ${identifier})
     })
     .join('\n')
 
+  // Only import addSchema if there are schemas to register
+  const importStatement =
+    availableSchemas.length > 0
+      ? `import { addSchema } from '@pikku/core/schema'`
+      : '// No schemas to register'
+
   await writeFileInDir(
     logger,
     `${schemaParentDir}/register.gen.ts`,
-    `import { addSchema } from '@pikku/core/schema'
+    `${importStatement}
 ${schemaImports}`,
     { logWrite: true }
   )
