@@ -13,7 +13,7 @@
     "server": "tsx src/server.ts",
     "dev:server": "tsx watch src/server.ts",
     "test": "bash ../functions/run-tests.sh --cli",
-    "test:cli:local": "npx tsx client/cli-local.gen.ts greet TestUser",
+    "test:cli:local": "npx tsx client/cli-local.gen.ts list",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
