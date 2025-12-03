@@ -12,7 +12,7 @@
 import { PikkuNextJS } from '@pikku/next'
 import { NextRequest } from 'next/server.js'
 import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '../functions/.pikku/http/pikku-http-wirings-map.gen.d.js'
-import type { RPCMap } from '../functions/.pikku/rpc/pikku-rpc-wirings-map.gen.d.js'
+import type { FlattenedRPCMap } from '../functions/.pikku/rpc/pikku-rpc-wirings-map.gen.d.js'
 
 type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
@@ -92,14 +92,16 @@ export const pikku = (_options?: any) => {
    *
    * @template Route - The route key with the POST method.
    * @param route - The route identifier.
-   * @param data - The input data for the POST request, defaults to null.
+   * @param data - The input data for the POST request (required if input type is defined).
    * @returns A promise that resolves to the output of the POST handler.
    */
   const dynamicPost = <Route extends HTTPWiringsWithMethod<'POST'>>(
     route: Route,
-    data: HTTPWiringHandlerOf<Route, 'POST'>['input'] = null
+    ...args: HTTPWiringHandlerOf<Route, 'POST'>['input'] extends null | undefined
+      ? [data?: HTTPWiringHandlerOf<Route, 'POST'>['input']]
+      : [data: NonNullable<HTTPWiringHandlerOf<Route, 'POST'>['input']>]
   ): Promise<HTTPWiringHandlerOf<Route, 'POST'>['output']> => {
-    return dynamicActionRequest(route, 'POST', data)
+    return dynamicActionRequest(route, 'POST', args[0] ?? null)
   }
 
   /**
@@ -107,14 +109,16 @@ export const pikku = (_options?: any) => {
    *
    * @template Route - The route key with the GET method.
    * @param route - The route identifier.
-   * @param data - The input data for the GET request, defaults to null.
+   * @param data - The input data for the GET request (required if input type is defined).
    * @returns A promise that resolves to the output of the GET handler.
    */
   const dynamicGet = <Route extends HTTPWiringsWithMethod<'GET'>>(
     route: Route,
-    data: HTTPWiringHandlerOf<Route, 'GET'>['input'] = null
+    ...args: HTTPWiringHandlerOf<Route, 'GET'>['input'] extends null | undefined
+      ? [data?: HTTPWiringHandlerOf<Route, 'GET'>['input']]
+      : [data: NonNullable<HTTPWiringHandlerOf<Route, 'GET'>['input']>]
   ): Promise<HTTPWiringHandlerOf<Route, 'GET'>['output']> => {
-    return dynamicActionRequest(route, 'GET', data)
+    return dynamicActionRequest(route, 'GET', args[0] ?? null)
   }
 
   /**
@@ -122,14 +126,16 @@ export const pikku = (_options?: any) => {
    *
    * @template Route - The route key with the PATCH method.
    * @param route - The route identifier.
-   * @param data - The input data for the PATCH request, defaults to null.
+   * @param data - The input data for the PATCH request (required if input type is defined).
    * @returns A promise that resolves to the output of the PATCH handler.
    */
   const dynamicPatch = <Route extends HTTPWiringsWithMethod<'PATCH'>>(
     route: Route,
-    data: HTTPWiringHandlerOf<Route, 'PATCH'>['input'] = null
+    ...args: HTTPWiringHandlerOf<Route, 'PATCH'>['input'] extends null | undefined
+      ? [data?: HTTPWiringHandlerOf<Route, 'PATCH'>['input']]
+      : [data: NonNullable<HTTPWiringHandlerOf<Route, 'PATCH'>['input']>]
   ): Promise<HTTPWiringHandlerOf<Route, 'PATCH'>['output']> => {
-    return dynamicActionRequest(route, 'PATCH', data)
+    return dynamicActionRequest(route, 'PATCH', args[0] ?? null)
   }
 
   /**
@@ -137,14 +143,16 @@ export const pikku = (_options?: any) => {
    *
    * @template Route - The route key with the DELETE method.
    * @param route - The route identifier.
-   * @param data - The input data for the DELETE request, defaults to null.
+   * @param data - The input data for the DELETE request (required if input type is defined).
    * @returns A promise that resolves to the output of the DELETE handler.
    */
   const dynamicDel = <Route extends HTTPWiringsWithMethod<'DELETE'>>(
     route: Route,
-    data: HTTPWiringHandlerOf<Route, 'DELETE'>['input'] = null
+    ...args: HTTPWiringHandlerOf<Route, 'DELETE'>['input'] extends null | undefined
+      ? [data?: HTTPWiringHandlerOf<Route, 'DELETE'>['input']]
+      : [data: NonNullable<HTTPWiringHandlerOf<Route, 'DELETE'>['input']>]
   ): Promise<HTTPWiringHandlerOf<Route, 'DELETE'>['output']> => {
-    return dynamicActionRequest(route, 'DELETE', data)
+    return dynamicActionRequest(route, 'DELETE', args[0] ?? null)
   }
 
   // Static Requests
@@ -154,14 +162,16 @@ export const pikku = (_options?: any) => {
    *
    * @template Route - The route key with the POST method.
    * @param route - The route identifier.
-   * @param data - The input data for the POST request, defaults to null.
+   * @param data - The input data for the POST request (required if input type is defined).
    * @returns A promise that resolves to the output of the POST handler.
    */
   const staticPost = <Route extends HTTPWiringsWithMethod<'POST'>>(
     route: Route,
-    data: HTTPWiringHandlerOf<Route, 'POST'>['input'] = null
+    ...args: HTTPWiringHandlerOf<Route, 'POST'>['input'] extends null | undefined
+      ? [data?: HTTPWiringHandlerOf<Route, 'POST'>['input']]
+      : [data: NonNullable<HTTPWiringHandlerOf<Route, 'POST'>['input']>]
   ): Promise<HTTPWiringHandlerOf<Route, 'POST'>['output']> => {
-    return staticActionRequest(route, 'POST', data)
+    return staticActionRequest(route, 'POST', args[0] ?? null)
   }
 
   /**
@@ -169,49 +179,53 @@ export const pikku = (_options?: any) => {
    *
    * @template Route - The route key with the GET method.
    * @param route - The route identifier.
-   * @param data - The input data for the GET request, defaults to null.
+   * @param data - The input data for the GET request (required if input type is defined).
    * @returns A promise that resolves to the output of the GET handler.
    */
   const staticGet = <Route extends HTTPWiringsWithMethod<'GET'>>(
     route: Route,
-    data: HTTPWiringHandlerOf<Route, 'GET'>['input'] = null
+    ...args: HTTPWiringHandlerOf<Route, 'GET'>['input'] extends null | undefined
+      ? [data?: HTTPWiringHandlerOf<Route, 'GET'>['input']]
+      : [data: NonNullable<HTTPWiringHandlerOf<Route, 'GET'>['input']>]
   ): Promise<HTTPWiringHandlerOf<Route, 'GET'>['output']> => {
-    return staticActionRequest(route, 'GET', data)
+    return staticActionRequest(route, 'GET', args[0] ?? null)
   }
 
   // RPC Requests
 
   /**
-   * Type definition for RPC invocation with dynamic context.
-   */
-  type RPCInvoke = <Name extends keyof RPCMap>(
-    name: Name,
-    data: RPCMap[Name]['input']
-  ) => Promise<RPCMap[Name]['output']>
-
-  /**
    * Makes a dynamic RPC request.
    *
-   * @template Name - The RPC function name from the RPCMap.
+   * @template Name - The RPC function name from the FlattenedRPCMap.
    * @param name - The RPC function identifier.
-   * @param data - The input data for the RPC request.
+   * @param data - The input data for the RPC request (required if input type is defined).
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const rpc: RPCInvoke = async (rpcName, data) => {
-    return dynamicActionRequest('/rpc/:rpcName', 'POST', { rpcName, data })
+  const rpc = async <Name extends keyof FlattenedRPCMap>(
+    rpcName: Name,
+    ...args: FlattenedRPCMap[Name]['input'] extends null | undefined
+      ? [data?: FlattenedRPCMap[Name]['input']]
+      : [data: NonNullable<FlattenedRPCMap[Name]['input']>]
+  ): Promise<FlattenedRPCMap[Name]['output']> => {
+    return dynamicActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: args[0] ?? null }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   /**
    * Makes a static RPC request.
    * Note: In HTTP wrapper context, both rpc and staticRPC behave the same way.
    *
-   * @template Name - The RPC function name from the RPCMap.
+   * @template Name - The RPC function name from the FlattenedRPCMap.
    * @param name - The RPC function identifier.
-   * @param data - The input data for the RPC request.
+   * @param data - The input data for the RPC request (required if input type is defined).
    * @returns A promise that resolves to the output of the RPC handler.
    */
-  const staticRPC: RPCInvoke = async (rpcName, data) => {
-    return staticActionRequest('/rpc/:rpcName', 'POST', { rpcName, data })
+  const staticRPC = async <Name extends keyof FlattenedRPCMap>(
+    rpcName: Name,
+    ...args: FlattenedRPCMap[Name]['input'] extends null | undefined
+      ? [data?: FlattenedRPCMap[Name]['input']]
+      : [data: NonNullable<FlattenedRPCMap[Name]['input']>]
+  ): Promise<FlattenedRPCMap[Name]['output']> => {
+    return staticActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: args[0] ?? null }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   return {
