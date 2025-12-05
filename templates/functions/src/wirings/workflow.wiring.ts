@@ -15,6 +15,7 @@ export const startCreateAndNotifyWorkflow = pikkuSessionlessFunc<
   { runId: string }
 >({
   expose: true,
+  auth: false,
   func: async (_services, data, { rpc }) => {
     return rpc.startWorkflow('createAndNotifyWorkflow', data)
   },
