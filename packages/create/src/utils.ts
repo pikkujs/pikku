@@ -272,6 +272,7 @@ const CLIENT_FEATURE_MAPPING = {
   'http-sse.ts': ['sse'],
   'rpc.ts': ['external'], // Requires external packages which aren't included in standalone templates
   'websocket.ts': ['channel'],
+  'workflow.ts': ['workflows'],
 } as const
 
 /**
