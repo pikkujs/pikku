@@ -193,10 +193,6 @@ export function cleanPikkuConfig(
     delete pikkuConfig.mcpJsonFile
   }
 
-  // Workflows templates don't use RPC wirings
-  if (supportedFeatures.includes('workflows')) {
-    delete pikkuConfig.rpcWiringsFile
-  }
 
   // We remove external packages as we can't yet test them
   delete pikkuConfig.externalPackages
