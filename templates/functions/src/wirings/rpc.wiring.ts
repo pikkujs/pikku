@@ -35,5 +35,6 @@ wireHTTP({
 wireHTTP({
   route: '/rpc/:rpcName',
   method: 'post',
+  auth: false,
   func: rpcCaller,
 })
