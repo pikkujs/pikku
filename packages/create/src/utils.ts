@@ -108,6 +108,9 @@ export function replaceFunctionReferences(
         .replaceAll('../functions/types/', '../types/')
         .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+        // For workflow templates where rpc/fetch files are in client/
+        .replaceAll(`../${pikkuDir}/pikku-rpc.gen.js`, './pikku-rpc.gen.js')
+        .replaceAll(`../${pikkuDir}/pikku-fetch.gen.js`, './pikku-fetch.gen.js')
     } else {
       // For files in src/ or root, flatten to ./
       updatedContent = updatedContent

@@ -4,5 +4,6 @@
     "singleQueue": true,
     "path": "src/workflows/pikku.workflows.gen.ts"
   },
-  "fetchFile": "client/pikku-fetch.gen.ts"
+  "fetchFile": "client/pikku-fetch.gen.ts",
+  "rpcWiringsFile": "client/pikku-rpc.gen.ts"
 }
