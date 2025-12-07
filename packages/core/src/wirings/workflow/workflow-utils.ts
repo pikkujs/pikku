@@ -110,7 +110,8 @@ export const startWorkflowByHttpWire = async (
   const wireServices = createWireServices?.(singletonServices, wire)
   const rpcService = new ContextAwareRPCService(
     { ...singletonServices, ...wireServices },
-    wire
+    wire,
+    {}
   )
   await workflowService.startWorkflow(match.workflowName, data, rpcService, {
     inline: true,
