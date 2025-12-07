@@ -1,4 +1,4 @@
-import { wireChannel } from '#pikku/pikku-types.gen.js'
+import { wireChannel } from '../../.pikku/pikku-types.gen.js'
 import { login } from '../functions/auth.functions.js'
 import {
   onConnect,

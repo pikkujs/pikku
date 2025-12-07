@@ -1,8 +1,8 @@
 import {
   wireWorkflow,
   pikkuWorkflowGraph,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
+} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { createAndNotifyWorkflow } from '../functions/workflow.functions.js'
 import type { Priority } from '../schemas.js'
 

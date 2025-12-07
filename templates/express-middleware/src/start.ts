@@ -1,4 +1,4 @@
-import '#pikku/pikku-bootstrap.gen.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
   createWireServices,
   createSingletonServices,

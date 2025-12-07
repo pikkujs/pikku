@@ -4,7 +4,7 @@ import { stopSingletonServices } from '@pikku/core'
 import { Server } from 'http'
 import { WebSocketServer } from 'ws'
 
-import '#pikku/pikku-bootstrap.gen.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
   createWireServices,

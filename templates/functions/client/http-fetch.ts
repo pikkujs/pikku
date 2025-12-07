@@ -1,4 +1,4 @@
-import { pikkuFetch } from '#pikku/pikku-fetch.gen.js'
+import { pikkuFetch } from '../.pikku/pikku-fetch.gen.js'
 
 const start = Date.now()
 

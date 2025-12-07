@@ -1,4 +1,4 @@
-import { pikkuRPC } from '#pikku/pikku-rpc.gen.js'
+import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
 
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
 pikkuRPC.setServerUrl(url)

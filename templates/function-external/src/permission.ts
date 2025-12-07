@@ -1,4 +1,4 @@
-import { pikkuPermission, addPermission } from '#pikku/pikku-types.gen.js'
+import { pikkuPermission, addPermission } from '../.pikku/pikku-types.gen.js'
 
 /**
  * External package permission that logs permission checks

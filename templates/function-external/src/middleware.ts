@@ -1,7 +1,7 @@
 import {
   pikkuMiddlewareFactory,
   addMiddleware,
-} from '#pikku/pikku-types.gen.js'
+} from '../.pikku/pikku-types.gen.js'
 
 /**
  * External package middleware that logs when external functions are called

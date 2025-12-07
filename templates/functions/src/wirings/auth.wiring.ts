@@ -1,4 +1,4 @@
-import { wireHTTP } from '#pikku/pikku-types.gen.js'
+import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 import { login, logout, getMe } from '../functions/auth.functions.js'
 
 wireHTTP({

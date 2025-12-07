@@ -2,7 +2,7 @@ import {
   wireMCPTool,
   wireMCPResource,
   wireMCPPrompt,
-} from '#pikku/pikku-types.gen.js'
+} from '../../.pikku/pikku-types.gen.js'
 import {
   getTodoResource,
   createTodoTool,

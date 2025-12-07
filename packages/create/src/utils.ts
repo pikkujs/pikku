@@ -80,11 +80,7 @@ export function mergeJsonFiles(
 }
 
 /**
- * Replaces cross-template references with local paths.
- * Templates use #pikku/* alias for .pikku imports, so we only need to fix:
- * - ../../functions/src/ -> ./ (service imports)
- * - ../../functions/types/ -> ./types/
- * - ../functions/run-tests.sh -> run-tests.sh
+ * Replaces all occurrences of '../functions' with './' in all project files.
  */
 export function replaceFunctionReferences(
   targetPath: string,
@@ -107,20 +103,23 @@ export function replaceFunctionReferences(
       updatedContent = updatedContent
         .replaceAll('../../functions/src/', '../src/')
         .replaceAll('../functions/src/', '../src/')
+        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
+        .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/types/', '../types/')
+        .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
+        // For workflow templates where rpc/fetch files are in client/
+        .replaceAll(`../${pikkuDir}/pikku-rpc.gen.js`, './pikku-rpc.gen.js')
+        .replaceAll(`../${pikkuDir}/pikku-fetch.gen.js`, './pikku-fetch.gen.js')
     } else {
       // For files in src/ or root, flatten to ./
       updatedContent = updatedContent
         .replaceAll('../../functions/src/', './')
         .replaceAll('../functions/src/', './')
+        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/types/', './types/')
+        .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
-    }
-
-    // Replace .pikku with pikku-gen for stackblitz (tsconfig paths alias change)
-    if (stackblitz) {
-      updatedContent = updatedContent.replaceAll('#pikku/', `#${pikkuDir}/`)
     }
 
     fs.writeFileSync(filePath, updatedContent)
@@ -153,16 +152,6 @@ export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
   if (tsconfig.files?.length === 0) {
     delete tsconfig.files
   }
-
-  // Update paths alias for stackblitz (use pikku-gen instead of .pikku)
-  if (stackblitz && tsconfig.compilerOptions?.paths) {
-    const paths = tsconfig.compilerOptions.paths
-    if (paths['#pikku/*']) {
-      paths[`#${pikkuDir}/*`] = [`./${pikkuDir}/*`]
-      delete paths['#pikku/*']
-    }
-  }
-
   fs.writeFileSync(tsconfigFile, JSON.stringify(tsconfig, null, 2))
 }
 
@@ -394,7 +383,6 @@ export function updatePackageJSONScripts(
   supportedFeatures: string[],
   stackblitz?: boolean
 ): void {
-  const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
   const packageFilePath = path.join(targetPath, 'package.json')
   let packageJsonString = fs.readFileSync(packageFilePath, 'utf-8')
   packageJsonString = packageJsonString.replaceAll(
@@ -405,13 +393,6 @@ export function updatePackageJSONScripts(
   delete packageJson.scripts.tsc
   delete packageJson.scripts.ncu
   delete packageJson.packageManager
-
-  // Add imports field for #pikku alias (Node.js subpath imports)
-  // For stackblitz, both the alias and target use pikku-gen
-  const aliasName = stackblitz ? `#${pikkuDir}` : '#pikku'
-  packageJson.imports = {
-    [`${aliasName}/*`]: `./${pikkuDir}/*`,
-  }
 
   packageJson.scripts.postinstall = 'pikku all'
 

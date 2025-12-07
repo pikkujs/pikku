@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { store } from '../services/store.service.js'
 import {
   ProcessReminderInputSchema,

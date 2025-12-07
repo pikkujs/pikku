@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { wireForgeCredential } from '#pikku/pikku-types.gen.js'
+import { wireForgeCredential } from '../.pikku/pikku-types.gen.js'
 
 export const exampleCredentialsSchema = z.object({
   apiKey: z.string().describe('API key for external service'),

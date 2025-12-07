@@ -6,7 +6,7 @@ import { runSQSQueueWorker } from '@pikku/lambda/queue'
 import { createWireServices } from '../../functions/src/services.js'
 import { coldStart } from './cold-start.js'
 
-import '#pikku/pikku-bootstrap.gen.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 export const httpRoute = async (event: APIGatewayProxyEvent) => {
   const singletonServices = await coldStart()
