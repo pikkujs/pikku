@@ -44,10 +44,7 @@ const getPikkuFunctionName = (rpcName: string): string => {
 export class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
-    private wire: PikkuWire,
-    private options: {
-      requiresAuth?: boolean
-    }
+    private wire: PikkuWire
   ) {}
 
   public async rpcExposed(funcName: string, data: any): Promise<any> {
@@ -87,14 +84,12 @@ export class ContextAwareRPCService {
     }
 
     // Main package function
+    // Don't pass auth - let the target function's own auth setting be used
     return runPikkuFunc<In, Out>(
       'rpc',
       funcName,
       getPikkuFunctionName(funcName),
       {
-        auth: this.options.requiresAuth,
-        // TODO: this is a hack since services have already been created
-        // but is valid since we don't want to keep creating new wire services
         singletonServices: this.services,
         data: () => data,
         wire: updatedWire,
@@ -141,8 +136,8 @@ export class ContextAwareRPCService {
     // Execute the function using runPikkuFunc with the external package's state
     // We use the parent services (this.services) since external packages share services
     // Pass the function's tags so tag-based middleware/permissions are applied
+    // Don't pass auth - let the target function's own auth setting be used
     return runPikkuFunc<In, Out>('rpc', namespacedFunction, funcName, {
-      auth: this.options.requiresAuth,
       singletonServices: this.services,
       data: () => data,
       wire,
@@ -168,12 +163,12 @@ export class ContextAwareRPCService {
           }
         : undefined,
     }
+    // Don't pass auth - let the target function's own auth setting be used
     return runPikkuFunc<In, Out>(
       'rpc',
       rpcName,
       getPikkuFunctionName(rpcName),
       {
-        auth: this.options.requiresAuth,
         singletonServices: this.services,
         data: () => data,
         wire: mergedWire,
@@ -201,21 +196,17 @@ export class PikkuRPCService<
   Services extends CoreServices,
   TypedRPC = PikkuRPC,
 > {
-  // Convenience function for initializing
   getContextRPCService(
     services: Services,
     wire: PikkuWire,
-    requiresAuth?: boolean | undefined,
     depth: number = 0
   ): TypedRPC {
-    const serviceRPC = new ContextAwareRPCService(services, wire, {
-      requiresAuth,
-    })
+    const serviceRPC = new ContextAwareRPCService(services, wire)
     return {
       depth,
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
-      invokeExposed: serviceRPC.rpc.bind(serviceRPC),
+      invokeExposed: serviceRPC.rpcExposed.bind(serviceRPC),
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
       rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
     } as any
