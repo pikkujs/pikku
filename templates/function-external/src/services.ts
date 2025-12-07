@@ -2,7 +2,7 @@ import type { Config, SingletonServices } from '../types/application-types.d.js'
 import { CreateSingletonServices } from '@pikku/core'
 import { ConsoleLogger, LocalVariablesService } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { RequiredSingletonServices } from '../.pikku/pikku-services.gen.js'
+import { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { NoopService } from './services/noop-service.js'
 
 export const createSingletonServices: CreateSingletonServices<

@@ -7,7 +7,7 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "paths": {
-      "#pikku": ["./.pikku/pikku-types.gen.ts"]
+      "#pikku/*": ["./.pikku/*"]
     }
   },
   "include": ["src/**/*", "types/**/*", ".pikku/**/*"],

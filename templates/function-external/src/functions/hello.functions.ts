@@ -1,7 +1,7 @@
 import {
   pikkuSessionlessFunc,
   wireForgeNode,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku/pikku-types.gen.js'
 import { externalMiddleware } from '../middleware.js'
 import { externalPermission } from '../permission.js'
 

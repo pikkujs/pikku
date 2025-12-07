@@ -7,7 +7,7 @@ import {
   createWireServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 // Use DATABASE_URL environment variable or provide a connection string
 const connectionString =

@@ -5,7 +5,10 @@
     "resolveJsonModule": true,
     "module": "Node18",
     "moduleResolution": "NodeNext",
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "#pikku/*": ["./.pikku/*"]
+    }
   },
   "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],
   "files": []

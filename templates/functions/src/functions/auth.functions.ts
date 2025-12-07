@@ -1,4 +1,4 @@
-import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuFunc } from '#pikku/pikku-types.gen.js'
 import { store } from '../services/store.service.js'
 import {
   LoginInputSchema,

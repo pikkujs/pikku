@@ -2,7 +2,7 @@ import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,
   pikkuMCPToolFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku/pikku-types.gen.js'
 import {
   UserIdInputSchema,
   PrioritizePromptInputSchema,

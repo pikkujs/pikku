@@ -5,12 +5,12 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { requiredSingletonServices } from '../.pikku/pikku-services.gen.js'
+import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import {
   pikkuConfig,
   pikkuServices,
   pikkuWireServices,
-} from '../.pikku/pikku-types.gen.js'
+} from '#pikku/pikku-types.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {}

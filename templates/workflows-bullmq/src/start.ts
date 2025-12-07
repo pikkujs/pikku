@@ -6,7 +6,7 @@ import {
   createWireServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 
 async function main(): Promise<void> {
   try {

@@ -2,7 +2,7 @@ import {
   pikkuChannelFunc,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku/pikku-types.gen.js'
 import {
   SubscribeInputSchema,
   SubscribeOutputSchema,

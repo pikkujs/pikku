@@ -1,4 +1,4 @@
-import { wireScheduler } from '../../.pikku/pikku-types.gen.js'
+import { wireScheduler } from '#pikku/pikku-types.gen.js'
 import {
   dailySummary,
   weeklyCleanup,

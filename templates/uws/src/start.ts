@@ -1,6 +1,6 @@
 import { PikkuUWSServer } from '@pikku/uws'
 
-import '../../functions/.pikku/pikku-bootstrap.gen.js'
+import '#pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
   createWireServices,
