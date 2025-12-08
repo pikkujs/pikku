@@ -13,12 +13,10 @@ export const check = async (serverUrl: string, testUserId: string) => {
   ws.onopen = async () => {
     console.log(`${testUserId}: WebSocket connected`)
 
-    // Subscribe to global messages
     websocket.subscribe((data) => {
       console.log(`${testUserId}: Global message:`, data)
     })
 
-    // Subscribe to todo events via EventHub
     websocket.subscribeToEventHub('todo-created', (data) => {
       console.log(`${testUserId}: Todo created event:`, data)
     })
@@ -29,38 +27,31 @@ export const check = async (serverUrl: string, testUserId: string) => {
 
     const route = websocket.getRoute('action')
 
-    // Subscribe to auth responses
     route.subscribe('auth', (data) => {
       console.log(`${testUserId}: Auth response:`, data)
     })
 
-    // Subscribe to list responses
     route.subscribe('list', (data) => {
       console.log(`${testUserId}: List response:`, data)
     })
 
-    // Subscribe to create responses
     route.subscribe('create', (data) => {
       console.log(`${testUserId}: Create response:`, data)
     })
 
-    // Subscribe to complete responses
     route.subscribe('complete', (data) => {
       console.log(`${testUserId}: Complete response:`, data)
     })
 
-    // Authenticate (using login function)
     route.send('auth', { username: 'demo', password: 'test' })
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Subscribe to todo events
     route.send('subscribe', { topic: 'todo-created' })
     route.send('subscribe', { topic: 'todo-completed' })
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // List todos
     route.send('list', {
       userId: 'user1',
       completed: undefined,

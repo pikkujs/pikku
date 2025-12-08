@@ -4,7 +4,6 @@ import { getFileImportRelativePath } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
 import { CommandSummary } from '../../utils/command-summary.js'
 
-// Import all command functions directly
 import { pikkuFunctionTypes } from '../wirings/functions/pikku-command-function-types.js'
 import { pikkuFunctionTypesSplit } from '../wirings/functions/pikku-command-function-types-split.js'
 import { pikkuHTTPTypes } from '../wirings/http/pikku-command-http-types.js'
@@ -63,16 +62,13 @@ export const all: any = pikkuVoidFunc({
 
     await pikkuFunctionTypes.func(services, null, wire)
 
-    // This is needed since the wireHTTP function will add the routes to the visitState
     if (!typesDeclarationFileExists) {
       logger.debug(`• Type file first created, inspecting again...`)
       await getInspectorState(true)
     }
 
-    // Generate wiring-specific type files for tree-shaking
     await pikkuFunctionTypesSplit.func(services, null, wire)
 
-    // Skip infrastructure wirings for external packages (only keep functions, RPC, services, workflows)
     if (!config.externalPackage) {
       await pikkuHTTPTypes.func(services, null, wire)
       await pikkuChannelTypes.func(services, null, wire)
@@ -88,35 +84,25 @@ export const all: any = pikkuVoidFunc({
       null
     )
 
-    // Generate and register middleware
     const middleware = await pikkuMiddleware.func(services, null, wire)
-    // Middleware must be imported before functions meta to ensure registration happens first
     if (middleware) {
       allImports.push(config.middlewareFile)
     }
 
-    // Generate and register permissions
     const permissions = await pikkuPermissions.func(services, null, wire)
-    // Permissions must be imported before functions meta to ensure registration happens first
     if (permissions) {
       allImports.push(config.permissionsFile)
     }
 
-    // Always import functions meta (needed for all function metadata)
     allImports.push(config.functionsMetaFile)
 
-    // Only import functionsFile if it was generated (has internal/external RPCs)
     if (hasFunctionRegistrations) {
       allImports.push(config.functionsFile)
     }
 
-    // Generate services map
     await pikkuServices.func(services, null, wire)
-
-    // Generate service metadata JSON files for AI consumption
     await pikkuServiceMetadata.func(services, null, wire)
 
-    // Generate package service factories for external packages
     const hasPackageFactories = await pikkuPackage.func(services, null, wire)
     if (hasPackageFactories) {
       allImports.push(config.packageFile)
@@ -124,7 +110,6 @@ export const all: any = pikkuVoidFunc({
 
     const hasInternalRPCs = await pikkuRPC.func(services, null, wire)
 
-    // Generate schemas BEFORE RPC maps so Zod types are resolved in typesMap
     const schemas = await pikkuSchemas.func(services, null, wire)
     if (schemas) {
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
@@ -135,16 +120,13 @@ export const all: any = pikkuVoidFunc({
     await pikkuPublicRPC.func(services, null, wire)
     await pikkuRPCClient.func(services, null, wire)
 
-    // Generate Forge types (depends on RPC internal map for FlattenedRPCMap)
     await pikkuForgeTypes.func(services, null, wire)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)
     }
 
-    // Skip infrastructure wirings for external packages
     if (!config.externalPackage) {
-      // Generate HTTP
       const http = await pikkuHTTP.func(services, null, wire)
       if (http) {
         await pikkuHTTPMap.func(services, null, wire)
@@ -152,7 +134,6 @@ export const all: any = pikkuVoidFunc({
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
 
-      // Generate Scheduler
       const scheduler = await pikkuScheduler.func(services, null, wire)
       if (scheduler) {
         allImports.push(
@@ -162,28 +143,22 @@ export const all: any = pikkuVoidFunc({
       }
     }
 
-    // Generate Workflows (includes JSON, meta, types, map, graph types)
     const workflows = await pikkuWorkflow.func(services, null, wire)
 
-    // Generate Remote RPC Workers (infrastructure - skip for external packages)
     let remoteRPC = false
     if (!config.externalPackage) {
       remoteRPC = await pikkuRemoteRPC.func(services, null, wire)
     }
 
-    // Reinspect to pick up generated workflow workers and remote RPC workers BEFORE generating maps
     if (workflows || remoteRPC) {
       await getInspectorState(true)
     }
 
     if (workflows) {
-      // Only import wiring file - it now includes meta registration
       allImports.push(config.workflowsWiringFile)
     }
 
-    // Skip infrastructure wirings for external packages
     if (!config.externalPackage) {
-      // Generate Queues
       const queues = await pikkuQueue.func(services, null, wire)
       if (queues) {
         await pikkuQueueMap.func(services, null, wire)
@@ -194,7 +169,6 @@ export const all: any = pikkuVoidFunc({
         )
       }
 
-      // Generate Channels
       const channels = await pikkuChannels.func(services, null, wire)
       if (channels) {
         await pikkuChannelsMap.func(services, null, wire)
@@ -205,14 +179,12 @@ export const all: any = pikkuVoidFunc({
         )
       }
 
-      // Generate MCP
       const mcp = await pikkuMCP.func(services, null, wire)
       if (mcp) {
         await pikkuMCPJSON.func(services, null, wire)
         allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
       }
 
-      // Generate CLI
       const cli = await pikkuCLI.func(services, null, wire)
       if (cli) {
         await pikkuCLIEntry.func(services, null, wire)
@@ -220,8 +192,6 @@ export const all: any = pikkuVoidFunc({
       }
     }
 
-    // Generate Forge nodes metadata (JSON only, no runtime)
-    // This runs for both main apps and external packages
     await pikkuForgeNodes.func(services, null, wire)
 
     if (config.nextBackendFile || config.nextHTTPFile) {
@@ -256,17 +226,14 @@ export const all: any = pikkuVoidFunc({
       }
     }
 
-    // Generate main bootstrap file (pass all imports directly since this is the main file)
     const localImports = allImports.map(
       (to) =>
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
     )
-    // External package imports should use package names directly, not relative paths
     const externalImports = externalPackageBootstraps.map(
       (packagePath) => `import '${packagePath}'`
     )
 
-    // Generate code to register external packages in pikkuState
     let externalPackagesRegistration = ''
     if (Object.keys(usedExternalPackages).length > 0) {
       externalPackagesRegistration = `
@@ -287,12 +254,11 @@ ${Object.entries(usedExternalPackages)
           if (aMeta && !bMeta) return -1
           if (!aMeta && bMeta) return 1
           return 0
-        }) // Ensure meta files are at the top
+        })
         .join('\n') + externalPackagesRegistration
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
 
-    // Get final inspector state and collect stats for summary
     const state = await getInspectorState()
     if (state.http?.meta)
       summary.set('httpRoutes', Object.keys(state.http.meta).length)
@@ -313,7 +279,6 @@ ${Object.entries(usedExternalPackages)
       if (mcpTotal > 0) summary.set('mcpEndpoints', mcpTotal)
     }
     if (state.cli?.meta) {
-      // Count total CLI commands across all programs
       const totalCommands: number = Object.values(state.cli.meta).reduce(
         (sum: number, program: any) => sum + (program.commands?.length || 0),
         0
@@ -333,12 +298,10 @@ ${Object.entries(usedExternalPackages)
         summary.set('workflowGraphs', workflowGraphsCount)
     }
 
-    // Display summary (unless in silent mode)
     if (!logger.isSilent()) {
       console.log(summary.format())
     }
 
-    // Check for critical errors and exit if any were logged
     if (logger.hasCriticalErrors()) {
       process.exit(1)
     }

@@ -42,7 +42,6 @@ export const pikkuNext: any = pikkuSessionlessFunc<void, void>({
     }
 
     if (nextBackendFile) {
-      // Check for required types
       checkRequiredTypes(visitState.filesAndMethodsErrors, {
         config: true,
         singletonServicesFactory: true,
