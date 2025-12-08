@@ -21,16 +21,13 @@ import {
  * Replaces hyphens and other invalid characters with underscores.
  */
 function toValidIdentifier(name: string): string {
-  // Replace hyphens and dots with underscores
   let result = name.replace(/[-./]/g, '_')
-  // If starts with a number, prefix with underscore
   if (/^\d/.test(result)) {
     result = '_' + result
   }
   return result
 }
 
-/** Primitive types that don't need schema generation */
 const PRIMITIVE_TYPES = new Set([
   'boolean',
   'string',
@@ -96,7 +93,8 @@ export async function generateSchemas(
   functionMeta: FunctionsMeta,
   httpWiringsMeta: HTTPWiringsMeta,
   additionalTypes?: string[],
-  additionalProperties: boolean = false
+  additionalProperties: boolean = false,
+  zodLookup?: Map<string, ZodSchemaRef>
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -127,7 +125,6 @@ export async function generateSchemas(
     }
   }
 
-  // Add additional types from schemasFromTypes config
   if (additionalTypes) {
     for (const type of additionalTypes) {
       schemasSet.add(type)
@@ -149,14 +146,15 @@ export async function generateSchemas(
   const schemas: Record<string, JSONValue> = {}
 
   schemasSet.forEach((schema) => {
-    // Skip primitive types - they don't need schema generation
     if (PRIMITIVE_TYPES.has(schema)) {
+      return
+    }
+    if (zodLookup?.has(schema)) {
       return
     }
     try {
       schemas[schema] = generator.createSchema(schema) as JSONValue
     } catch (e) {
-      // Handle rootless errors - type aliases that resolve to primitives
       if (e instanceof RootlessError) {
         const customType = typesMap.customTypes.get(schema)
         if (customType) {
@@ -164,7 +162,6 @@ export async function generateSchemas(
           if (primitiveSchema) {
             schemas[schema] = primitiveSchema
           }
-          // If primitiveSchema is null (void/undefined), we just skip - no schema needed
         }
         return
       }
