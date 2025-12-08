@@ -10,7 +10,6 @@ const start = Date.now()
 
 async function check() {
   try {
-    // Start the createAndNotifyWorkflow via exposed RPC
     const result = await pikkuRPC.invoke('startCreateAndNotifyWorkflow', {
       userId: 'user1',
       title: 'Workflow test todo',

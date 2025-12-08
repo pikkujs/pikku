@@ -21,7 +21,6 @@ export const startCreateAndNotifyWorkflow = pikkuSessionlessFunc<
   },
 })
 
-// Wire the DSL workflow with HTTP endpoint
 wireWorkflow({
   wires: {
     http: { route: '/workflow/create-todo', method: 'post' },
@@ -63,7 +62,6 @@ export const todoReviewWorkflow = pikkuWorkflowGraph({
   },
 })
 
-// Wire the graph workflow
 wireWorkflow({
   graph: todoReviewWorkflow,
 })

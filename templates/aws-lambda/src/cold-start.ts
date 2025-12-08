@@ -17,7 +17,6 @@ export const coldStart = async () => {
   }
   if (!singletonServices) {
     singletonServices = await createSingletonServices(config, {
-      // @ts-ignore: TODO AWS Region required for this to work..
       secrets: new AWSSecrets(config),
     })
   }

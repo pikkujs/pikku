@@ -22,7 +22,6 @@ async function main(): Promise<void> {
     )
     await bullQueueWorkers.registerQueues()
 
-    // Handle graceful shutdown
     const shutdown = async (signal: string) => {
       singletonServices.logger.info(
         `Received ${signal}, shutting down gracefully...`

@@ -14,7 +14,6 @@ export const todoStream = pikkuSessionlessFunc({
     logger.info(`SSE stream started for user ${uid}`)
 
     if (channel) {
-      // Send updates every 5 seconds for demo
       let count = 0
       const interval = setInterval(async () => {
         const todos = store.getTodosByUser(uid, { completed: false })
@@ -25,7 +24,6 @@ export const todoStream = pikkuSessionlessFunc({
         })
         count++
 
-        // Close after 30 seconds (6 updates)
         if (count >= 6) {
           clearInterval(interval)
           channel.close()
@@ -33,7 +31,6 @@ export const todoStream = pikkuSessionlessFunc({
       }, 5000)
     }
 
-    // Return initial state
     const todos = store.getTodosByUser(uid, { completed: false })
     return {
       todos,

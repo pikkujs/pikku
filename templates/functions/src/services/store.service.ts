@@ -10,7 +10,6 @@ class TodoStore {
   private idCounter = 1
 
   constructor() {
-    // Seed with demo users
     this.users.set('user1', {
       id: 'user1',
       username: 'demo',
@@ -22,7 +21,6 @@ class TodoStore {
       email: 'admin@example.com',
     })
 
-    // Seed with demo todos
     const now = new Date().toISOString()
     this.todos.set('todo1', {
       id: 'todo1',
@@ -48,7 +46,6 @@ class TodoStore {
     })
   }
 
-  // User methods
   getUserByUsername(username: string): User | undefined {
     return Array.from(this.users.values()).find((u) => u.username === username)
   }
@@ -57,7 +54,6 @@ class TodoStore {
     return this.users.get(id)
   }
 
-  // Todo methods
   createTodo(
     userId: string,
     data: Omit<Todo, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
@@ -131,7 +127,6 @@ class TodoStore {
     return this.updateTodo(id, { completed: true })
   }
 
-  // Stats methods
   getStats(userId: string): {
     total: number
     completed: number
@@ -155,5 +150,4 @@ class TodoStore {
   }
 }
 
-// Export singleton instance
 export const store = new TodoStore()

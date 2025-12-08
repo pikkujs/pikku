@@ -1,10 +1,8 @@
 import { z } from 'zod'
 
-// Priority enum
 export const PrioritySchema = z.enum(['low', 'medium', 'high'])
 export type Priority = z.infer<typeof PrioritySchema>
 
-// Todo schema
 export const TodoSchema = z.object({
   id: z.string(),
   userId: z.string(),
@@ -19,7 +17,6 @@ export const TodoSchema = z.object({
 })
 export type Todo = z.infer<typeof TodoSchema>
 
-// User schema (for auth)
 export const UserSchema = z.object({
   id: z.string(),
   username: z.string(),
@@ -27,7 +24,6 @@ export const UserSchema = z.object({
 })
 export type User = z.infer<typeof UserSchema>
 
-// Input schemas
 export const CreateTodoInputSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
@@ -60,7 +56,6 @@ export const LoginInputSchema = z.object({
 })
 export type LoginInput = z.infer<typeof LoginInputSchema>
 
-// Output schemas
 export const TodoResponseSchema = z.object({
   todo: TodoSchema,
 })
@@ -83,7 +78,6 @@ export const DeleteResponseSchema = z.object({
   success: z.boolean(),
 })
 
-// Extended input schemas with userId
 export const ListTodosWithUserInputSchema = ListTodosInputSchema.extend({
   userId: z
     .string()
@@ -98,7 +92,6 @@ export const CreateTodoWithUserInputSchema = CreateTodoInputSchema.extend({
     .describe('User ID (uses demo user if not provided)'),
 })
 
-// Todo operation schemas
 export const TodoIdInputSchema = z.object({
   id: z.string().describe('Todo ID'),
 })
@@ -121,14 +114,12 @@ export const CreateTodoOutputSchema = z.object({
   todo: TodoSchema,
 })
 
-// Auth schemas
 export const EmptyInputSchema = z.object({})
 
 export const SuccessOutputSchema = z.object({
   success: z.boolean(),
 })
 
-// Channel schemas
 export const EventTopicSchema = z.enum([
   'todo-created',
   'todo-updated',
@@ -154,7 +145,6 @@ export const UnsubscribeOutputSchema = z.object({
   topic: z.string(),
 })
 
-// MCP schemas
 export const UserIdInputSchema = z.object({
   userId: z
     .string()
@@ -173,7 +163,6 @@ export const PrioritizePromptInputSchema = z.object({
     .describe('Prioritization focus'),
 })
 
-// Queue schemas
 export const ProcessReminderInputSchema = z.object({
   todoId: z.string(),
   userId: z.string(),
@@ -184,7 +173,6 @@ export const ProcessReminderOutputSchema = z.object({
   message: z.string(),
 })
 
-// SSE schemas
 export const TodoStreamOutputSchema = z.object({
   todos: z.array(TodoSchema),
   timestamp: z.string(),

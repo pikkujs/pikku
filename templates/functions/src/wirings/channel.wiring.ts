@@ -19,19 +19,16 @@ wireChannel({
   onDisconnect,
   onMessageWiring: {
     action: {
-      // Authentication
       auth: {
         func: login,
         auth: false,
       },
-      // Subscribe to todo updates via EventHub
       subscribe: {
         func: subscribe,
       },
       unsubscribe: {
         func: unsubscribe,
       },
-      // Todo operations via WebSocket
       list: {
         func: listTodos,
       },

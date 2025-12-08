@@ -61,7 +61,6 @@ export const check = async (serverUrl: string, testUserId: string) => {
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Create a todo (this will trigger todo-created event)
     route.send('create', {
       title: `Todo from ${testUserId}`,
       priority: 'high',
@@ -73,7 +72,6 @@ export const check = async (serverUrl: string, testUserId: string) => {
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // Close after 3 seconds
     setTimeout(() => {
       ws.onclose = () => {
         console.log(`${testUserId}: WebSocket closed`)

@@ -20,9 +20,6 @@ const formatTodo = (todo: Todo): string => {
   return `${status} ${priority} ${todo.id}: ${todo.title}${due}${tags}`
 }
 
-// =============================================================================
-// MCP Resources - for reading data
-// =============================================================================
 
 /**
  * MCP Resource: Get a specific todo
@@ -64,9 +61,6 @@ export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
   }
 )
 
-// =============================================================================
-// MCP Tools - for mutations/actions
-// =============================================================================
 
 /**
  * MCP Tool: Create a new todo
@@ -132,9 +126,6 @@ export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>(
   }
 )
 
-// =============================================================================
-// MCP Prompts - for AI-assisted interactions
-// =============================================================================
 
 /**
  * MCP Prompt: Plan the day based on pending todos
@@ -161,7 +152,6 @@ export const planDayPrompt = pikkuMCPPromptFunc({
 
     const todoList = result.todos.map(formatTodo).join('\n')
 
-    // Find overdue items
     const now = new Date()
     const overdue = result.todos.filter(
       (t) => t.dueDate && new Date(t.dueDate) < now

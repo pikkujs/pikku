@@ -1,7 +1,6 @@
 import { PikkuQueue } from '../../functions/.pikku/pikku-queue.gen.js'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 
-// Use DATABASE_URL environment variable or provide a connection string
 const connectionString =
   process.env.DATABASE_URL ||
   'postgres://postgres:password@localhost:5432/pikku_queue'
@@ -15,7 +14,6 @@ async function main(): Promise<void> {
     let returnCount = 0
     let successful = true
 
-    // Test a successful job (todo exists scenario - will return "not found" but processes successfully)
     setTimeout(async () => {
       try {
         const queueJob = await queueService.add('todo-reminders', {
@@ -36,7 +34,6 @@ async function main(): Promise<void> {
       }
     }, 2000)
 
-    // Test another job with different data
     setTimeout(async () => {
       try {
         const queueJob = await queueService.add('todo-reminders', {
@@ -63,7 +60,6 @@ async function main(): Promise<void> {
       }
     }, 1000)
 
-    // Handle graceful shutdown
     process.on('SIGTERM', async () => {
       await pgBossFactory.close()
       process.exit(0)

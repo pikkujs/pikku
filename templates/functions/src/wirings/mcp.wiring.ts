@@ -12,9 +12,6 @@ import {
   prioritizePrompt,
 } from '../functions/mcp.functions.js'
 
-// =============================================================================
-// MCP Resources - for reading data
-// =============================================================================
 
 wireMCPResource({
   uri: 'todos/{id}',
@@ -24,9 +21,6 @@ wireMCPResource({
   tags: ['todos'],
 })
 
-// =============================================================================
-// MCP Tools - for mutations/actions
-// =============================================================================
 
 wireMCPTool({
   name: 'createTodo',
@@ -50,9 +44,6 @@ wireMCPTool({
   tags: ['todos', 'delete'],
 })
 
-// =============================================================================
-// MCP Prompts - for AI-assisted interactions
-// =============================================================================
 
 wireMCPPrompt({
   name: 'planDay',

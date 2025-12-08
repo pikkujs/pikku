@@ -31,16 +31,13 @@ export class PikkuMCPTestClient {
   }
 
   async connect(): Promise<void> {
-    // Create transport using the server process stdio
     this.transport = new StdioClientTransport({
       command: this.serverCommand,
       args: this.serverArgs,
     })
 
-    // Connect to the server
     await this.client.connect(this.transport)
 
-    // Handle server process errors
     this.transport.onerror = (error: Error) => {
       console.error('Server process error:', error)
     }
@@ -136,12 +133,10 @@ export class PikkuMCPTestClient {
     )
   }
 
-  // Helper method to run a comprehensive test
   async runFullTest(): Promise<void> {
     console.log('🚀 Starting MCP Server Test Client')
 
     try {
-      // Test ping
       console.log('\n📡 Testing ping...')
       try {
         const pingResult = await this.ping()
@@ -150,12 +145,10 @@ export class PikkuMCPTestClient {
         console.log('ℹ️  Ping not supported (expected for some servers)')
       }
 
-      // Test listing tools
       console.log('\n🔧 Testing tools...')
       const tools = await this.listTools()
       console.log('✅ Tools listed:', tools)
 
-      // Test calling a tool if any exist
       if (tools.tools && tools.tools.length > 0) {
         const firstTool = tools.tools[0]
         console.log(`\n🔧 Testing tool call: ${firstTool.name}`)
@@ -167,17 +160,14 @@ export class PikkuMCPTestClient {
         }
       }
 
-      // Test listing resources
       console.log('\n📚 Testing resources...')
       const resources = await this.listResources()
       console.log('✅ Resources listed:', resources)
 
-      // Test listing resource templates
       console.log('\n📋 Testing resource templates...')
       const resourceTemplates = await this.listResourceTemplates()
       console.log('✅ Resource templates listed:', resourceTemplates)
 
-      // Test reading a resource if any exist
       if (resources.resources && resources.resources.length > 0) {
         const firstResource = resources.resources[0]
         console.log(`\n📚 Testing resource read: ${firstResource.uri}`)
@@ -189,12 +179,10 @@ export class PikkuMCPTestClient {
         }
       }
 
-      // Test listing prompts
       console.log('\n💭 Testing prompts...')
       const prompts = await this.listPrompts()
       console.log('✅ Prompts listed:', prompts)
 
-      // Test getting a prompt if any exist
       if (prompts.prompts && prompts.prompts.length > 0) {
         const firstPrompt = prompts.prompts[0]
         console.log(`\n💭 Testing prompt get: ${firstPrompt.name}`)
@@ -214,7 +202,6 @@ export class PikkuMCPTestClient {
   }
 }
 
-// Example usage function
 export async function runMCPClientTest(
   serverCommand: string,
   serverArgs: string[] = []
@@ -232,7 +219,6 @@ export async function runMCPClientTest(
   }
 }
 
-// For direct execution (if this file is run directly)
 if (import.meta.url === `file://${process.argv[1]}`) {
   await runMCPClientTest('npx', ['tsx', 'src/start.ts'])
 }

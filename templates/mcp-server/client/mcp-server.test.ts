@@ -2,7 +2,6 @@ import { test } from 'node:test'
 import assert from 'node:assert'
 import { PikkuMCPTestClient } from './mcp.js'
 
-// Test configuration - adjust based on your MCP server setup
 const TEST_SERVER_COMMAND = process.env.MCP_SERVER_COMMAND || 'npx'
 const TEST_SERVER_ARGS = process.env.MCP_SERVER_START
   ? [process.env.MCP_SERVER_START]
@@ -14,7 +13,6 @@ test('MCP Server - Basic Connection and Capabilities', async () => {
   try {
     await client.connect()
 
-    // Test listing tools - should include todo tools
     const tools = await client.listTools()
     assert.ok(tools.tools, 'Should have tools')
     assert.ok(Array.isArray(tools.tools), 'Tools should be an array')
@@ -27,7 +25,6 @@ test('MCP Server - Basic Connection and Capabilities', async () => {
     )
     assert.ok(toolNames.includes('deleteTodo'), 'Should have deleteTodo tool')
 
-    // Test listing resource templates - should include todos/{id}
     const resourceTemplates = await client.listResourceTemplates()
     assert.ok(
       resourceTemplates.resourceTemplates,
@@ -46,7 +43,6 @@ test('MCP Server - Basic Connection and Capabilities', async () => {
       'Should have todos/{id} resource template'
     )
 
-    // Test listing prompts - should include planDay and prioritize
     const prompts = await client.listPrompts()
     assert.ok(prompts.prompts, 'Should have prompts')
     assert.ok(Array.isArray(prompts.prompts), 'Prompts should be an array')
@@ -71,7 +67,6 @@ test('MCP Server - createTodo Tool', async () => {
   try {
     await client.connect()
 
-    // Test createTodo with valid data
     const result = await client.callTool('createTodo', {
       title: 'Test todo from MCP',
       priority: 'high',
@@ -95,7 +90,6 @@ test('MCP Server - getTodoResource Resource Template', async () => {
   try {
     await client.connect()
 
-    // Test reading a todo resource (may return "not found" for non-existent todo)
     const resourceResult = await client.readResource('todos/test123', {})
     assert.ok(resourceResult.contents, 'Should have contents')
     assert.ok(resourceResult.contents[0].text, 'Should have text content')
@@ -113,7 +107,6 @@ test('MCP Server - Full Integration Test', async () => {
   try {
     await client.connect()
 
-    // This runs the comprehensive test built into the client
     await client.runFullTest()
 
     await client.disconnect()

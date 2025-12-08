@@ -9,7 +9,6 @@ import {
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
-// Use DATABASE_URL environment variable or provide a connection string
 const connectionString =
   process.env.DATABASE_URL ||
   'postgres://postgres:password@localhost:5432/pikku_queue'
@@ -18,15 +17,12 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
-    // Create pg-boss service factory
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
-    // Create workflow state service
     const workflowService = new PgWorkflowService(postgres(connectionString))
     await workflowService.init()
 
-    // Create singleton services with queue, scheduler, and workflowService
     const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
       schedulerService: pgBossFactory.getSchedulerService(),
@@ -39,7 +35,6 @@ async function main(): Promise<void> {
       config
     )
 
-    // Start HTTP server for workflow triggers
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
       singletonServices,

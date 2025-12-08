@@ -27,7 +27,6 @@ export const createSingletonServices = pikkuServices(
     const schema = new CFWorkerSchemaService(logger)
     const secrets = new LocalSecretService()
 
-    // JWT service for authentication
     let jwt: JWTService | undefined
     if (requiredSingletonServices.jwt) {
       const { JoseJWTService } = await import('@pikku/jose')

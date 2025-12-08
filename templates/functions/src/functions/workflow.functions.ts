@@ -12,7 +12,6 @@ export const sendNotification = pikkuSessionlessFunc<
 >(async ({ logger }, data) => {
   const type = data.type || 'push'
   logger.info(`Sending ${type} notification to ${data.userId}: ${data.message}`)
-  // Mock: In real app, integrate with notification service
   return {
     sent: true,
     notificationId: `notif-${Date.now()}`,
@@ -49,13 +48,11 @@ export const createAndNotifyWorkflow = pikkuWorkflowFunc<
   { userId: string; title: string; priority: Priority; dueDate?: string },
   { todo: Todo; notificationSent: boolean; reminderScheduled: boolean }
 >(async ({}, data, { workflow }) => {
-  // Declare all variables at top level (DSL workflow requirement)
   let notificationSent = false
   let reminderScheduled = false
   let notifResult: { sent: boolean; notificationId: string } | undefined
   let reminderResult: { scheduled: boolean; jobId: string } | undefined
 
-  // Step 1: Create the todo
   const createResult = await workflow.do('Create todo', 'createTodo', {
     userId: data.userId,
     title: data.title,
@@ -65,7 +62,6 @@ export const createAndNotifyWorkflow = pikkuWorkflowFunc<
   })
   const todo = createResult.todo
 
-  // Step 2: If high priority, send notification
   if (data.priority === 'high') {
     await workflow.sleep('Wait before notification', '1s')
     notifResult = await workflow.do(
@@ -80,7 +76,6 @@ export const createAndNotifyWorkflow = pikkuWorkflowFunc<
     notificationSent = notifResult!.sent
   }
 
-  // Step 3: If has due date, schedule reminder
   if (data.dueDate) {
     reminderResult = await workflow.do(
       'Schedule reminder',

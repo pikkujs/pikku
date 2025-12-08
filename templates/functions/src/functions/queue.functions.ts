@@ -29,7 +29,6 @@ export const processReminder = pikkuSessionlessFunc({
       }
     }
 
-    // In a real app, this would send an actual notification
     logger.info(`Reminder: Todo "${todo.title}" is due!`)
 
     return {

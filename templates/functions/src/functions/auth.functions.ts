@@ -22,12 +22,10 @@ export const login = pikkuFunc({
       throw new Error('Invalid username or password')
     }
 
-    // Demo: accept any password (just needs to be non-empty)
     if (password.length < 1) {
       throw new Error('Invalid username or password')
     }
 
-    // Set the session - this will be used by auth middleware
     await session.set({ userId: user.id })
 
     return {

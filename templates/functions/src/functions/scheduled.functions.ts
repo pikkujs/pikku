@@ -6,7 +6,6 @@ import { store } from '../services/store.service.js'
  * Runs every day at 9 AM.
  */
 export const dailySummary = pikkuVoidFunc(async ({ logger }) => {
-  // Get stats for demo user
   const stats = store.getStats('user1')
   const overdue = store.getOverdueTodos('user1')
 
@@ -28,8 +27,6 @@ export const dailySummary = pikkuVoidFunc(async ({ logger }) => {
 export const weeklyCleanup = pikkuVoidFunc(async ({ logger }) => {
   logger.info('Running weekly cleanup task')
 
-  // In a real app, this would delete old completed todos
-  // For demo, we just log
   const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   logger.info(
     `Would clean up todos completed before ${cutoffDate.toISOString()}`

@@ -10,7 +10,6 @@ const start = Date.now()
 
 async function check() {
   try {
-    // Test the external package RPC
     const result = await pikkuRPC.invoke('ext:hello', { name: 'Pikku' })
     console.log('✅ RPC test passed:', result)
     process.exit(0)

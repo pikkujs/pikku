@@ -24,7 +24,6 @@ async function main(): Promise<void> {
       createWireServices,
     })
 
-    // Add /health-check endpoint
     server.on('request', (req, res) => {
       if (req.method === 'GET' && req.url === '/health-check') {
         res.writeHead(200, { 'Content-Type': 'application/json' })

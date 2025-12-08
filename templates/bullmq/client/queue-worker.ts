@@ -9,7 +9,6 @@ async function main(): Promise<void> {
     let returnCount = 0
     let successful = true
 
-    // Test a successful job (todo exists scenario - will return "not found" but processes successfully)
     setTimeout(async () => {
       try {
         const queueJob = await queueService.add('todo-reminders', {
@@ -30,7 +29,6 @@ async function main(): Promise<void> {
       }
     }, 2000)
 
-    // Test another job with different data
     setTimeout(async () => {
       try {
         const queueJob = await queueService.add('todo-reminders', {

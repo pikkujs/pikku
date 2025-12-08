@@ -60,7 +60,6 @@ export const createTodo = pikkuSessionlessFunc({
     })
     logger.info(`Created todo ${todo.id} for user ${uid}`)
 
-    // Broadcast to all subscribers (null = all)
     if (eventHub) {
       await eventHub.publish('todo-created', null, { todo })
     }

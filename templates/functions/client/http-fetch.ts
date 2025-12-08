@@ -7,7 +7,6 @@ async function check() {
   const RETRY_INTERVAL = 2000
 
   try {
-    // List todos
     const todos = await pikkuFetch.get('/todos', {
       userId: 'user1',
       completed: undefined,
@@ -18,7 +17,6 @@ async function check() {
     console.log('✅ HTTP test passed')
     console.log('Todos:', todos)
 
-    // Create a new todo
     const created = await pikkuFetch.post('/todos', {
       title: 'Test todo from client',
       priority: 'high',
@@ -29,13 +27,11 @@ async function check() {
     })
     console.log('Created todo:', created)
 
-    // Complete the todo
     const completed = await pikkuFetch.post('/todos/:id/complete', {
       id: created.todo.id,
     })
     console.log('Completed todo:', completed)
 
-    // Delete the todo
     const deleted = await pikkuFetch.delete('/todos/:id', {
       id: created.todo.id,
     })

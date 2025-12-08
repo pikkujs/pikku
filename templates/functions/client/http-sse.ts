@@ -42,7 +42,6 @@ async function runSSETest() {
     process.exit(1)
   }
 
-  // Timeout after 20 seconds (SSE sends every 5 seconds, so 2 messages = ~10 seconds)
   setTimeout(() => {
     if (!testCompleted) {
       console.log('SSE connection timeout')

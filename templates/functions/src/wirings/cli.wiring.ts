@@ -16,7 +16,6 @@ import {
 wireCLI({
   program: 'todo-cli',
   commands: {
-    // List todos - reuses listTodos function
     list: pikkuCLICommand({
       func: listTodos,
       description: 'List all todos',
@@ -33,7 +32,6 @@ wireCLI({
       },
     }),
 
-    // Add a new todo - reuses createTodo function
     add: pikkuCLICommand({
       parameters: '<title>',
       func: createTodo,
@@ -52,7 +50,6 @@ wireCLI({
       },
     }),
 
-    // Show a todo - reuses getTodo function
     show: pikkuCLICommand({
       parameters: '<id>',
       func: getTodo,
@@ -60,7 +57,6 @@ wireCLI({
       render: todoRenderer,
     }),
 
-    // Complete a todo - reuses completeTodo function
     complete: pikkuCLICommand({
       parameters: '<id>',
       func: completeTodo,
@@ -68,7 +64,6 @@ wireCLI({
       render: successRenderer,
     }),
 
-    // Delete a todo - reuses deleteTodo function
     delete: pikkuCLICommand({
       parameters: '<id>',
       func: deleteTodo,
