@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { pikkuFunc, pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
+import { pikkuFunc, pikkuSessionlessFunc } from '#pikku'
 
 export const greetInputSchema = z.object({
   name: z.string().min(1).describe('The name to greet'),

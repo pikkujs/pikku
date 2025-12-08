@@ -5,7 +5,7 @@ import {
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
   wireChannel,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 // Wire-level inline middleware (not exported, won't be in pikku-middleware.gen.ts)
 const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {

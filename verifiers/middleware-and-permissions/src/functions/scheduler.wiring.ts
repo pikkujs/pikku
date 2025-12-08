@@ -3,7 +3,7 @@ import {
   addMiddleware,
   addPermission,
   pikkuPermission,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'

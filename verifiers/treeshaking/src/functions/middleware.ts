@@ -1,7 +1,7 @@
 import {
   pikkuMiddleware,
   pikkuMiddlewareFactory,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 export const logRequest = pikkuMiddleware(async ({ logger }) => {
   logger.info('Request logged')

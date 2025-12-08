@@ -1,7 +1,7 @@
 import {
   pikkuPermission,
   pikkuPermissionFactory,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
   pikkuPermission(async ({ logger }, _data, { initialSession }) => {

@@ -1,4 +1,4 @@
-import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuFunc } from '#pikku'
 
 export const sendEmail = pikkuFunc<
   { to: string; subject: string; body: string },

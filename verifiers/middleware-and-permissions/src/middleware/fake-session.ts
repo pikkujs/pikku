@@ -1,4 +1,4 @@
-import { pikkuMiddleware, addMiddleware } from '../../.pikku/pikku-types.gen.js'
+import { pikkuMiddleware, addMiddleware } from '#pikku'
 
 /**
  * Session tag middleware that sets a fake session for testing.

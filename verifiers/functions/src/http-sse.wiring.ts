@@ -1,4 +1,4 @@
-import { wireHTTP } from '../.pikku/pikku-types.gen.js'
+import { wireHTTP } from '#pikku'
 import { timeSinceOpened } from './http-sse.functions.js'
 
 wireHTTP({

@@ -1,7 +1,7 @@
 import {
   pikkuPermission,
   pikkuPermissionFactory,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 export const canSendEmail = pikkuPermission(async ({ email }) => {
   // Check email quota or something

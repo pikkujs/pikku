@@ -4,7 +4,7 @@
  * MCP tools accept input parameters that must be properly typed.
  */
 
-import { wireMCPTool, pikkuMCPToolFunc } from '../../.pikku/pikku-types.gen.js'
+import { wireMCPTool, pikkuMCPToolFunc } from '#pikku'
 
 // Valid: Tool with properly typed input
 wireMCPTool({

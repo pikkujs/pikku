@@ -37,7 +37,7 @@ Constraints are organized by Pikku component type:
 
 ```typescript
 // src/http/route-param-mismatch.ts
-import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
+import { wireHTTP } from '#pikku'
 import type { CorePikkuFunctionSessionless } from '@pikku/core'
 
 // @ts-expect-error - Route has :id param but function doesn't accept it

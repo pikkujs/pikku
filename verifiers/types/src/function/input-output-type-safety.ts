@@ -5,7 +5,7 @@
  * type safety for function inputs and outputs.
  */
 
-import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuFunc } from '#pikku'
 
 // Valid: Correct input and output types
 const validFunc = pikkuFunc<{ name: string }, { greeting: string }>(

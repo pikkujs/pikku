@@ -3,7 +3,7 @@
  * Mock implementations for leads, deals, and contacts
  */
 
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 // Leads
 export const leadCreate = pikkuSessionlessFunc<

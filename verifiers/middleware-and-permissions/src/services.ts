@@ -2,7 +2,7 @@ import {
   pikkuConfig,
   pikkuServices,
   pikkuWireServices,
-} from '../.pikku/pikku-types.gen.js'
+} from '#pikku'
 import { LocalVariablesService, LocalSecretService, LogLevel } from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
 

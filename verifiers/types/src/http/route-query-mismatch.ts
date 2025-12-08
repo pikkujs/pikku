@@ -5,7 +5,7 @@
  * must include those query parameters.
  */
 
-import { wireHTTP, pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { wireHTTP, pikkuSessionlessFunc } from '#pikku'
 
 // Valid: Query params match function input type
 wireHTTP({

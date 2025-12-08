@@ -3,7 +3,7 @@ import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,
   pikkuMCPToolFunc,
-} from '../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 /**
  * A simple hello world MCP tool that greets the user

@@ -2,7 +2,7 @@
  * Tests for external package RPC invocations with middleware and permissions
  */
 
-import { pikkuSessionlessFunc } from '../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { functionMiddleware } from './middleware/function.js'
 import { functionPermission } from './permissions/function.js'
 

@@ -3,7 +3,7 @@
  * Mock implementations for payment operations
  */
 
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 export const paymentProcess = pikkuSessionlessFunc<
   {

@@ -1,4 +1,4 @@
-import { pikkuPermission } from '../../.pikku/pikku-types.gen.js'
+import { pikkuPermission } from '#pikku'
 
 export const httpGlobalPermission = pikkuPermission(
   async ({ logger }, _data, { initialSession }) => {

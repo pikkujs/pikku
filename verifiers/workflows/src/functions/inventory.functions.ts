@@ -3,7 +3,7 @@
  * Mock implementations for stock management
  */
 
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 export const inventoryCheck = pikkuSessionlessFunc<
   { productId: string },

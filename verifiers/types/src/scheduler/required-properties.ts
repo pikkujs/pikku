@@ -7,7 +7,7 @@
 import {
   wireScheduler,
   pikkuSessionlessFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 const validTask = pikkuSessionlessFunc<void, void>(async () => {})
 

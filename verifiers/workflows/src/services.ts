@@ -18,7 +18,7 @@ import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import {
   RequiredSingletonServices,
   requiredSingletonServices,
-} from '../.pikku/pikku-services.gen.js'
+} from '#pikku/pikku-services.gen.js'
 
 export const createConfig: CreateConfig<Config> = async () => {
   return {}

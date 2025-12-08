@@ -2,6 +2,10 @@
   "name": "@pikku/verifiers-workflows",
   "type": "module",
   "private": true,
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
   "dependencies": {
     "@pikku/core": "workspace:*",
     "@pikku/pg": "workspace:*",

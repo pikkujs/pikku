@@ -1,8 +1,8 @@
-import { wireHTTP } from '../.pikku/pikku-types.gen.js'
+import { wireHTTP } from '#pikku'
 import {
   pikkuWorkflowGraph,
   wireWorkflow,
-} from '../.pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { triggerOnboardingWorkflow } from './workflow.functions.js'
 
 // HTTP endpoint to trigger the onboarding workflow

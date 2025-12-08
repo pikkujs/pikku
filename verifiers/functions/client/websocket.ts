@@ -1,4 +1,4 @@
-import { PikkuWebSocket } from '../.pikku/pikku-websocket.gen.js'
+import { PikkuWebSocket } from '#pikku/pikku-websocket.gen.js'
 import { EventHubTopics } from '../types/eventhub-topics.js'
 import WSWebsocket from 'ws'
 

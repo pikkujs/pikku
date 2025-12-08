@@ -8,7 +8,7 @@
 import {
   wireMCPResource,
   pikkuMCPResourceFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 // Valid: URI params match function input type
 wireMCPResource({

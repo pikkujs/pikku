@@ -3,7 +3,7 @@ import {
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
   pikkuSessionlessFunc,
-} from '../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
   async ({ logger }, _, { channel }) => {

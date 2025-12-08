@@ -1,5 +1,5 @@
-import { pikkuWorkflowFunc } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 /**
  * RPC function that fails on first attempt, succeeds on retry

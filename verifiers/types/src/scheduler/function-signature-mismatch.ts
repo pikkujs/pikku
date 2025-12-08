@@ -9,7 +9,7 @@ import {
   wireScheduler,
   pikkuSessionlessFunc,
   pikkuFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 // Valid: Scheduler with void -> void function
 wireScheduler({

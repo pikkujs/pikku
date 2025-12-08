@@ -3,7 +3,7 @@
  * Mock implementations for task CRUD, comments, tags, and subtasks
  */
 
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 // Task CRUD
 export const taskCreate = pikkuSessionlessFunc<

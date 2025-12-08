@@ -1,4 +1,4 @@
-import { wireHTTP, external } from '../.pikku/pikku-types.gen.js'
+import { wireHTTP, external } from '#pikku'
 
 wireHTTP({
   auth: false,
