@@ -1,4 +1,4 @@
-import { pikkuPermission } from '../../.pikku/pikku-types.gen.js'
+import { pikkuPermission } from '#pikku'
 
 // Wire-level permission (will be in pikku-permissions.gen.ts because it's exported)
 export const wirePermission = pikkuPermission(

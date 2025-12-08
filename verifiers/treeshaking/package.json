@@ -2,6 +2,10 @@
   "name": "@pikku/verify-treeshaking",
   "type": "module",
   "private": true,
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
   "scripts": {
     "tsc": "tsc --noEmit",
     "ncu": "npx npm-check-updates",

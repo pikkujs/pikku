@@ -12,14 +12,11 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
-    // Create BullMQ service factory
     const bullFactory = new BullServiceFactory()
     await bullFactory.init()
 
-    // Create workflow state service
     const workflowService = new RedisWorkflowService(undefined)
 
-    // Create singleton services with queue and workflowService
     const singletonServices = await createSingletonServices(config, {
       queueService: bullFactory.getQueueService(),
       schedulerService: bullFactory.getSchedulerService(),
@@ -32,7 +29,6 @@ async function main(): Promise<void> {
       config
     )
 
-    // Start HTTP server for workflow triggers
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
       singletonServices,

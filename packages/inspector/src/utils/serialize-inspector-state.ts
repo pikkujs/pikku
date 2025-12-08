@@ -116,6 +116,8 @@ export interface SerializableInspectorState {
   workflows: {
     meta: InspectorState['workflows']['meta']
     files: Array<[string, { path: string; exportedName: string }]>
+    graphMeta: InspectorState['workflows']['graphMeta']
+    graphFiles: Array<[string, { path: string; exportedName: string }]>
   }
   rpc: {
     internalMeta: InspectorState['rpc']['internalMeta']
@@ -269,6 +271,8 @@ export function serializeInspectorState(
     workflows: {
       meta: state.workflows.meta,
       files: Array.from(state.workflows.files.entries()),
+      graphMeta: state.workflows.graphMeta,
+      graphFiles: Array.from(state.workflows.graphFiles.entries()),
     },
     rpc: {
       internalMeta: state.rpc.internalMeta,
@@ -387,6 +391,8 @@ export function deserializeInspectorState(
     workflows: {
       meta: data.workflows.meta,
       files: new Map(data.workflows.files),
+      graphMeta: data.workflows.graphMeta || {},
+      graphFiles: new Map(data.workflows.graphFiles || []),
     },
     rpc: {
       internalMeta: data.rpc.internalMeta,

@@ -23,7 +23,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       visitState.functions.meta,
       visitState.http.meta,
       config.schemasFromTypes,
-      config.schema?.additionalProperties
+      config.schema?.additionalProperties,
+      visitState.zodLookup
     )
 
     const zodSchemas = await generateZodSchemas(
@@ -32,18 +33,16 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       visitState.functions.typesMap
     )
 
-    // Merge zod schemas into the main schemas object
-    Object.assign(schemas, zodSchemas)
-
     await saveSchemas(
       logger,
       config.schemaDirectory,
-      schemas,
+      { ...schemas, ...zodSchemas},
       visitState.functions.typesMap,
       visitState.functions.meta,
       config.schema?.supportsImportAttributes || true,
       config.schemasFromTypes,
-      visitState.zodLookup
+      visitState.zodLookup,
+      config.externalPackageName || null
     )
 
     return true

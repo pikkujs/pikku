@@ -70,6 +70,12 @@ function generateHTTPWirings(
   for (const methods of Object.values(routesMeta)) {
     for (const meta of Object.values(methods)) {
       const { route, method, pikkuFuncName } = meta
+
+      // Skip workflow-triggered routes (they don't have a function)
+      if (meta.workflow) {
+        continue
+      }
+
       const functionMeta = functionsMeta[pikkuFuncName]
       if (!functionMeta) {
         throw new Error(

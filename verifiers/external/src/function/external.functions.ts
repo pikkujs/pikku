@@ -3,7 +3,7 @@
  * Verifies that external package functions can be called via RPC with proper typing
  */
 
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 export type TestExternalHelloInput = { name: string; greeting?: string }
 export type TestExternalHelloOutput = {

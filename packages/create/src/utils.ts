@@ -106,7 +106,6 @@ export function replaceFunctionReferences(
         .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/types/', '../types/')
-        .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
     } else {
       // For files in src/ or root, flatten to ./
@@ -164,8 +163,19 @@ export function cleanPikkuConfig(
 
   delete pikkuConfig.extends
 
+  // Fix srcDirectories paths that reference ../functions/src (from templates designed for multi-template use)
+  if (pikkuConfig.srcDirectories && Array.isArray(pikkuConfig.srcDirectories)) {
+    const hasFunctionsRef = pikkuConfig.srcDirectories.some(
+      (dir: string) => dir === '../functions/src'
+    )
+    if (hasFunctionsRef) {
+      // Replace with both ./src and ./types (matching functions template structure)
+      pikkuConfig.srcDirectories = ['./src', './types']
+    }
+  }
+
   // Remove config options for unsupported features
-  if (!supportedFeatures.includes('http')) {
+  if (!supportedFeatures.includes('http') && !supportedFeatures.includes('workflows')) {
     delete pikkuConfig.fetchFile
     delete pikkuConfig.rpcWiringsFile
   }
@@ -180,11 +190,6 @@ export function cleanPikkuConfig(
 
   if (!supportedFeatures.includes('mcp')) {
     delete pikkuConfig.mcpJsonFile
-  }
-
-  // Workflows templates don't use RPC wirings
-  if (supportedFeatures.includes('workflows')) {
-    delete pikkuConfig.rpcWiringsFile
   }
 
   // We remove external packages as we can't yet test them
@@ -238,21 +243,19 @@ export function serverlessChanges(targetPath: string, appName: string): void {
 }
 
 /**
- * Maps file patterns to feature types for filtering
+ * Maps file patterns to feature types for filtering.
+ * Used for files in src/functions/ and src/wirings/ directories.
  */
 const FILE_FEATURE_MAPPING = {
+  'auth.': ['http', 'channel'], // Channel wirings use auth functions
   'channel.': ['channel'],
-  'http.': ['http'],
-  'http-external.': ['external'],
-  'http-progressive-enhancement.': ['channel', 'sse'],
-  'http-sse.': ['sse'],
   'mcp.': ['mcp'],
-  'queue-worker.': ['queue'],
-  'rpc.': ['http'],
-  'scheduled-task.': ['scheduled'],
-  'cli.': ['cli'],
+  'queue.': ['queue'],
+  'scheduled.': ['scheduled'],
+  'sse.': ['sse'],
+  'todos.': ['http', 'mcp', 'cli', 'channel'], // MCP, CLI, and Channel depend on todos
   'workflow.': ['workflows'],
-  'workflow-': ['workflows'],
+  'cli.': ['cli'],
 } as const
 
 /**
@@ -261,21 +264,14 @@ const FILE_FEATURE_MAPPING = {
 const CLIENT_FEATURE_MAPPING = {
   'http-fetch.ts': ['http'],
   'http-sse.ts': ['sse'],
-  'mcp.ts': ['mcp'],
-  'queue-worker.ts': ['queue'],
-  'rpc.ts': ['http'],
-  'scheduled-task.ts': ['scheduled'],
+  'rpc.ts': ['external'], // Requires external packages which aren't included in standalone templates
   'websocket.ts': ['channel'],
-  'workflow-start.ts': ['workflows'],
-  'workflow-cancel.ts': ['workflows'],
-  'workflow-happy.ts': ['workflows'],
-  'workflow-unhappy.ts': ['workflows'],
-  'workflow-org-onboarding-simple.ts': ['workflows'],
-  'workflow-sequential-update.ts': ['workflows'],
+  'workflow.ts': ['workflows'],
 } as const
 
 /**
- * Filters files in functionsPath based on supported features
+ * Filters files in functionsPath based on supported features.
+ * Handles the new folder structure: src/functions/, src/wirings/, src/services/
  */
 export function filterFilesByFeatures(
   functionsPath: string,
@@ -286,67 +282,63 @@ export function filterFilesByFeatures(
 
   const filesToRemove: string[] = []
 
-  // Filter src directory files
-  if (fs.existsSync(srcPath)) {
-    fs.readdirSync(srcPath).forEach((file) => {
-      const filePath = path.join(srcPath, file)
+  /**
+   * Check if a file should be kept based on its name and supported features
+   */
+  const shouldKeepFile = (file: string): boolean => {
+    // Check if the file matches any pattern for supported features
+    for (const [pattern, features] of Object.entries(FILE_FEATURE_MAPPING)) {
+      if (file.includes(pattern)) {
+        // Check if any of the file's features are supported
+        return features.some((feature) => supportedFeatures.includes(feature))
+      }
+    }
+    // Keep files that don't match any pattern (like schemas.ts, store.service.ts)
+    return true
+  }
+
+  /**
+   * Filter files in a directory
+   */
+  const filterDirectory = (dirPath: string): void => {
+    if (!fs.existsSync(dirPath)) return
+
+    fs.readdirSync(dirPath).forEach((file) => {
+      const filePath = path.join(dirPath, file)
       if (fs.statSync(filePath).isFile()) {
-        let shouldKeepFile = false
-
-        // Check if the file matches any pattern for supported features
-        for (const [pattern, features] of Object.entries(
-          FILE_FEATURE_MAPPING
-        )) {
-          if (file.includes(pattern)) {
-            // Check if any of the file's features are supported
-            if (
-              features.some((feature) => supportedFeatures.includes(feature))
-            ) {
-              shouldKeepFile = true
-            }
-            break
-          }
-        }
-
-        // Keep files that don't match any pattern (like services.ts)
-        const hasKnownPattern = Object.keys(FILE_FEATURE_MAPPING).some(
-          (pattern) => file.includes(pattern)
-        )
-
-        if (!hasKnownPattern) {
-          shouldKeepFile = true
-        }
-
-        if (!shouldKeepFile) {
+        if (!shouldKeepFile(file)) {
           filesToRemove.push(filePath)
         }
       }
     })
   }
 
+  // Filter src/functions/ directory
+  filterDirectory(path.join(srcPath, 'functions'))
+
+  // Filter src/wirings/ directory
+  filterDirectory(path.join(srcPath, 'wirings'))
+
   // Filter client directory files
   if (fs.existsSync(clientPath)) {
     fs.readdirSync(clientPath).forEach((file) => {
       const filePath = path.join(clientPath, file)
       if (fs.statSync(filePath).isFile()) {
-        let shouldKeepFile = false
+        let shouldKeep = false
 
         // Check if the client file matches supported features
         for (const [clientFile, features] of Object.entries(
           CLIENT_FEATURE_MAPPING
         )) {
           if (file === clientFile) {
-            // Check if any of the file's features are supported
-            if (
-              features.some((feature) => supportedFeatures.includes(feature))
-            ) {
-              shouldKeepFile = true
-            }
+            shouldKeep = features.some((feature) =>
+              supportedFeatures.includes(feature)
+            )
             break
           }
         }
 
-        if (!shouldKeepFile) {
+        if (!shouldKeep) {
           filesToRemove.push(filePath)
         }
       }
@@ -362,6 +354,21 @@ export function filterFilesByFeatures(
       )
     )
   })
+
+  // Clean up empty directories
+  const cleanEmptyDirs = (dirPath: string): void => {
+    if (!fs.existsSync(dirPath)) return
+    const files = fs.readdirSync(dirPath)
+    if (files.length === 0) {
+      fs.rmdirSync(dirPath)
+      console.log(
+        chalk.yellow(`🗑️  Removed empty directory ${path.basename(dirPath)}`)
+      )
+    }
+  }
+
+  cleanEmptyDirs(path.join(srcPath, 'functions'))
+  cleanEmptyDirs(path.join(srcPath, 'wirings'))
 }
 
 export function updatePackageJSONScripts(
@@ -465,6 +472,7 @@ export function updatePackageJSONScripts(
 /**
  * Removes version constraints from @pikku/* packages when using yarn link.
  * This prevents yarn from trying to fetch unreleased versions from npm.
+ * Also adds resolutions for shared dependencies to avoid type mismatches.
  */
 export function preparePackageJsonForYarnLink(targetPath: string): void {
   const packageFilePath = path.join(targetPath, 'package.json')

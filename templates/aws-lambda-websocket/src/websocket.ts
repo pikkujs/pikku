@@ -36,7 +36,6 @@ const getParams = async (event: APIGatewayEvent) => {
     const singletonServices = await createSingletonServices(config, {
       variables,
     })
-    // Configure PostgreSQL connection from DATABASE_URL environment variable
     const databaseUrl =
       (await variables.get('DATABASE_URL')) ||
       'postgresql://localhost:5432/pikku'
@@ -45,7 +44,6 @@ const getParams = async (event: APIGatewayEvent) => {
     const channelStore = new PgChannelStore(sql)
     const eventHubStore = new PgEventHubStore(sql)
 
-    // Initialize stores (creates schema and tables if needed)
     await channelStore.init()
     await eventHubStore.init()
     singletonServices.eventHub = new LambdaEventHubService(

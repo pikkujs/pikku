@@ -12,7 +12,7 @@ import {
   pikkuMiddleware,
   pikkuPermission,
   wireHTTP,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 import {
   httpGlobalMiddleware,
   httpRouteMiddleware,

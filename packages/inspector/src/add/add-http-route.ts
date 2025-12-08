@@ -70,13 +70,36 @@ export const addHTTPRoute: AddWiring = (
 
   const method =
     (getPropertyValue(obj, 'method') as string)?.toLowerCase() || 'get'
-  const { tags, summary, description, errors } = getCommonWireMetaData(
+  const { title, tags, summary, description, errors } = getCommonWireMetaData(
     obj,
     'HTTP route',
     route,
     logger
   )
   const query = (getPropertyValue(obj, 'query') as string[]) || []
+
+  // Check if this is a workflow trigger (workflow: true)
+  const isWorkflowTrigger = getPropertyValue(obj, 'workflow') === true
+  if (isWorkflowTrigger) {
+    // Workflow triggers don't need func - they're handled by workflow-utils
+    // Just record the route for HTTP meta but skip function processing
+    state.http.files.add(node.getSourceFile().fileName)
+    state.http.meta[method][route] = {
+      pikkuFuncName: '', // No function - workflow handles it
+      route,
+      method: method as HTTPMethod,
+      params: params.length > 0 ? params : undefined,
+      query: query.length > 0 ? query : undefined,
+      inputTypes: undefined,
+      title,
+      summary,
+      description,
+      errors,
+      tags,
+      workflow: true,
+    }
+    return
+  }
 
   // --- find the referenced function name first for filtering ---
   const funcInitializer = getPropertyAssignmentInitializer(
@@ -158,6 +181,7 @@ export const addHTTPRoute: AddWiring = (
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,
     inputTypes,
+    title,
     summary,
     description,
     errors,

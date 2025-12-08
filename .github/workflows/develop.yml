@@ -11,6 +11,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -22,6 +23,8 @@ jobs:
           cache: yarn
       - run: yarn install
       - run: yarn build
+      # Run pikku again to regenerate schemas after initial bootstrap
+      - run: yarn pikku
       - run: yarn test:coverage
       - run: yarn prettier
       - run: yarn lint
@@ -45,6 +48,7 @@ jobs:
   verifiers:
     name: Verifiers
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     strategy:
       fail-fast: false
@@ -65,12 +69,13 @@ jobs:
           name: built-packages
           path: packages
       - run: yarn install
-      - run: cd templates/function-external && yarn pikku
+      - run: cd templates/function-external && yarn pikku && yarn build
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
     name: Templates
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
     services:
       redis:

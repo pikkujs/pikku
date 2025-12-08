@@ -11,7 +11,7 @@ import {
   pikkuMCPToolFunc,
   pikkuMCPResourceFunc,
   pikkuMCPPromptFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 const toolFunc = pikkuMCPToolFunc<unknown>(async () => [
   { type: 'text', text: 'result' },

@@ -9,7 +9,7 @@ import {
   wireCLI,
   pikkuCLICommand,
   pikkuFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 // Valid: Subcommands with proper types
 wireCLI({

@@ -7,6 +7,7 @@ import { UnprocessableContentError } from '@pikku/core/errors'
 const ajv = new Ajv({
   removeAdditional: false,
   coerceTypes: true,
+  useDefaults: true,
 })
 addFormats.default(ajv as any)
 

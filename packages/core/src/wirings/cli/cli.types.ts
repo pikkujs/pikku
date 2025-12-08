@@ -222,6 +222,7 @@ export type CoreCLICommandConfig<
 > = {
   parameters?: ValidateParameters<Params, ExtractFunctionInput<FuncConfig>>
   func?: FuncConfig
+  title?: string
   description?: string
   render?: PikkuCLIRender
   options?: {

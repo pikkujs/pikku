@@ -57,7 +57,7 @@ export const getPropertyValue = (
 }
 
 /**
- * Extracts common wire metadata (tags, summary, description, errors) directly from an object
+ * Extracts common wire metadata (title, tags, summary, description, errors) directly from an object
  * @param obj - The TypeScript object literal expression to extract metadata from
  * @param wiringType - The type of wiring (e.g., 'HTTP route', 'Channel', 'Queue worker')
  * @param wiringName - The name/identifier of the wiring (e.g., route path, channel name)
@@ -70,12 +70,14 @@ export const getCommonWireMetaData = (
   wiringName: string | null,
   logger?: { critical: (code: ErrorCode, message: string) => void }
 ): {
+  title?: string
   tags?: string[]
   summary?: string
   description?: string
   errors?: string[]
 } => {
   const metadata: {
+    title?: string
     tags?: string[]
     summary?: string
     description?: string
@@ -86,7 +88,12 @@ export const getCommonWireMetaData = (
     if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
       const propName = prop.name.text
 
-      if (propName === 'summary' && ts.isStringLiteral(prop.initializer)) {
+      if (propName === 'title' && ts.isStringLiteral(prop.initializer)) {
+        metadata.title = prop.initializer.text
+      } else if (
+        propName === 'summary' &&
+        ts.isStringLiteral(prop.initializer)
+      ) {
         metadata.summary = prop.initializer.text
       } else if (
         propName === 'description' &&

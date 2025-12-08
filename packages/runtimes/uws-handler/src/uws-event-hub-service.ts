@@ -26,11 +26,16 @@ export class UWSEventHubService<Mappings extends Record<string, unknown> = {}>
 
   public async publish<T extends keyof Mappings>(
     topic: T,
-    channelId: string,
+    channelId: string | null,
     message: Mappings[T],
     isBinary?: boolean
   ): Promise<void> {
-    const socket = this.sockets.get(channelId)
+    let socket: uWS.WebSocket<unknown> | undefined
+    if (channelId) {
+      socket = this.sockets.get(channelId)
+    } else {
+      socket = this.sockets.values().next().value
+    }
     if (socket) {
       this.forwardPublishMessage(socket, topic as string, message, isBinary)
     }

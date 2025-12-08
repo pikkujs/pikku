@@ -31,7 +31,7 @@
     "test:http-sse": "npx tsx client/http-sse.ts",
     "test:rpc": "npx tsx client/rpc.ts",
     "test:websocket": "npx tsx client/websocket.ts",
-    "test:queue": "npx tsx client/queue-worker.ts",
-    "test:mcp": "npx tsx client/mcp.ts"
+    "test:cli:local": "npx tsx client/cli-local.gen.ts",
+    "test:workflows": "npx tsx client/workflow.ts"
   }
 }

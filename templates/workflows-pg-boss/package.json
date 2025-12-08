@@ -9,7 +9,7 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts",
-    "test:workflows": "tsx client/workflow-start.ts && tsx client/workflow-happy.ts && tsx client/workflow-unhappy.ts && tsx client/workflow-cancel.ts && tsx client/workflow-org-onboarding-simple.ts && tsx client/workflow-sequential-update.ts",
+    "test:workflows": "npx tsx client/workflow.ts",
     "pikku": "pikku",
     "test": "bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },

@@ -9,21 +9,61 @@ import {
   SerializedError,
 } from '../../types/core.types.js'
 import { QueueService } from '../queue/queue.types.js'
-import {
-  WorkflowAsyncException,
-  WorkflowCancelledException,
-  WorkflowNotFoundError,
-  WorkflowRunNotFound,
-} from './workflow-runner.js'
 import type {
   PikkuWorkflowWire,
   StepState,
   WorkflowRun,
   WorkflowStatus,
-  WorkflowService,
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
+import { executeGraphStep, runWorkflowGraph } from './graph/graph-runner.js'
+import { WorkflowService } from '../../services/workflow-service.js'
+import { PikkuError } from '../../errors/error-handler.js'
+
+/**
+ * Exception thrown when workflow needs to pause for async step
+ */
+export class WorkflowAsyncException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string
+  ) {
+    super(`Workflow paused at step: ${stepName}`)
+    this.name = 'WorkflowAsyncException'
+  }
+}
+
+/**
+ * Exception thrown when workflow is cancelled
+ */
+export class WorkflowCancelledException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly reason?: string
+  ) {
+    super(reason || 'Workflow cancelled')
+    this.name = 'WorkflowCancelledException'
+  }
+}
+
+/**
+ * Error class for workflow not found
+ */
+export class WorkflowNotFoundError extends PikkuError {
+  constructor(name: string) {
+    super(`Workflow not found: ${name}`)
+  }
+}
+
+/**
+ * Error class for workflow not found
+ */
+export class WorkflowRunNotFound extends PikkuError {
+  constructor(runId: string) {
+    super(`Workflow run not found: ${runId}`)
+  }
+}
 
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
@@ -41,8 +81,30 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   private config: WorkflowServiceConfig | undefined
   private singletonServices: CoreSingletonServices | undefined
   private createWireServices: CreateWireServices | undefined
+  private inlineRuns = new Set<string>()
 
   constructor() {}
+
+  /**
+   * Check if a run is executing inline (without queues)
+   */
+  protected isInline(runId: string): boolean {
+    return this.inlineRuns.has(runId)
+  }
+
+  /**
+   * Register a run as inline (for graph-runner to use)
+   */
+  public registerInlineRun(runId: string): void {
+    this.inlineRuns.add(runId)
+  }
+
+  /**
+   * Unregister a run from inline tracking
+   */
+  public unregisterInlineRun(runId: string): void {
+    this.inlineRuns.delete(runId)
+  }
 
   public setServices(
     singletonServices: CoreSingletonServices,
@@ -58,7 +120,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
       stepWorkerQueueName:
         workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
-      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowStepSleeper',
+      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
     }
   }
 
@@ -68,7 +130,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param input - Input data for the workflow
    * @returns Run ID
    */
-  abstract createRun(workflowName: string, input: any): Promise<string>
+  abstract createRun(
+    workflowName: string,
+    input: any,
+    inline?: boolean
+  ): Promise<string>
 
   /**
    * Get a workflow run by ID
@@ -194,6 +260,68 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   abstract close(): Promise<void>
 
   // ============================================================================
+  // Workflow Graph Methods
+  // ============================================================================
+
+  /**
+   * Get completed graph state (lightweight - no results)
+   * @param runId - Run ID
+   * @returns Completed node IDs and their branch keys
+   */
+  abstract getCompletedGraphState(runId: string): Promise<{
+    completedNodeIds: string[]
+    branchKeys: Record<string, string>
+  }>
+
+  /**
+   * Filter candidate nodes to only those without existing steps
+   * @param runId - Run ID
+   * @param nodeIds - Candidate node IDs to check
+   * @returns Node IDs that don't have a step yet
+   */
+  abstract getNodesWithoutSteps(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<string[]>
+
+  /**
+   * Get results for specific nodes
+   * @param runId - Run ID
+   * @param nodeIds - Node IDs to fetch results for
+   * @returns Map of nodeId to result
+   */
+  abstract getNodeResults(
+    runId: string,
+    nodeIds: string[]
+  ): Promise<Record<string, any>>
+
+  /**
+   * Set the branch key for a graph node step
+   * @param stepId - Step ID
+   * @param branchKey - Branch key selected by graph.branch()
+   */
+  abstract setBranchTaken(stepId: string, branchKey: string): Promise<void>
+
+  /**
+   * Update a state variable in the workflow run's state
+   * @param runId - Run ID
+   * @param name - Variable name
+   * @param value - Value to store
+   */
+  abstract updateRunState(
+    runId: string,
+    name: string,
+    value: unknown
+  ): Promise<void>
+
+  /**
+   * Get the entire state object for a workflow run
+   * @param runId - Run ID
+   * @returns The state object with all variables
+   */
+  abstract getRunState(runId: string): Promise<Record<string, unknown>>
+
+  // ============================================================================
   // Workflow Lifecycle Methods
   // ============================================================================
 
@@ -211,7 +339,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Sets the step result to null and resumes the workflow
    * @param data - Sleeper input data
    */
-  public async executeWorkflowSleep(
+  public async executeWorkflowSleepCompleted(
     runId: string,
     stepId: string
   ): Promise<void> {
@@ -238,12 +366,38 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   /**
    * Start a new workflow run
+   * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
+   * @param options.inline - If true, execute workflow directly without queue service
+   * @param options.startNode - Starting node ID for graph workflows (from wire config)
    */
   public async startWorkflow<I>(
     name: string,
     input: I,
-    rpcService: any
+    rpcService: any,
+    options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }> {
+    // Check meta to determine workflow type
+    const meta = pikkuState(null, 'workflows', 'meta')
+    const workflowMeta = meta[name]
+
+    if (!workflowMeta) {
+      throw new WorkflowNotFoundError(name)
+    }
+
+    // Check if this is a graph workflow (source === 'graph')
+    if (workflowMeta.source === 'graph') {
+      // Graph workflows use the graph scheduler
+      return runWorkflowGraph(
+        this,
+        name,
+        input,
+        rpcService,
+        options?.inline,
+        options?.startNode
+      )
+    }
+
+    // DSL workflow - check registration exists
     const registrations = pikkuState(null, 'workflows', 'registrations')
     const workflow = registrations.get(name)
 
@@ -252,19 +406,29 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     // Create workflow run in state
-    const runId = await this.createRun(name, input)
+    const runId = await this.createRun(name, input, options?.inline)
 
-    // If queue service is available, use remote execution (queue-based)
-    // Otherwise, execute directly (inline/synchronous)
-    if (this.singletonServices?.queueService) {
-      // Queue orchestrator to start the workflow
-      await this.resumeWorkflow(runId)
-    } else {
-      // No queue service - execute directly via runWorkflowJob
-      await this.runWorkflowJob(runId, rpcService)
+    // Register inline run for fast lookup
+    if (options?.inline) {
+      this.inlineRuns.add(runId)
     }
 
-    return { runId }
+    try {
+      // If inline mode or no queue service, execute directly
+      // Otherwise, use remote execution (queue-based)
+      if (options?.inline || !this.singletonServices?.queueService) {
+        await this.runWorkflowJob(runId, rpcService)
+      } else {
+        await this.resumeWorkflow(runId)
+      }
+
+      return { runId }
+    } finally {
+      // Clean up inline tracking
+      if (options?.inline) {
+        this.inlineRuns.delete(runId)
+      }
+    }
   }
 
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
@@ -292,7 +456,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       try {
         const result = await runPikkuFunc(
           'workflow',
-          workflowMeta.workflowName,
+          workflowMeta.name,
           workflowMeta.pikkuFuncName,
           {
             singletonServices: this.singletonServices!,
@@ -311,7 +475,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
         // Check if it's a WorkflowCancelledException
         if (error instanceof WorkflowCancelledException) {
-          // Workflow was cancelled - status already updated, just rethrow
+          // Workflow was cancelled - update status and rethrow
+          await this.updateRunStatus(runId, 'cancelled', undefined, {
+            message: error.message || 'Workflow cancelled',
+            stack: '',
+            code: 'WORKFLOW_CANCELLED',
+          })
           throw error
         }
 
@@ -364,24 +533,44 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
 
       try {
-        // Execute RPC with workflow step context
-        const result = await rpcService.rpcWithWire(rpcName, data, {
-          workflowStep: {
+        let result: any
+
+        // Check if this is a graph node step (step name starts with 'node:')
+        if (stepName.startsWith('node:')) {
+          // Get the graph name from the workflow run
+          const run = await this.getRun(runId)
+          if (!run) {
+            throw new Error(`Workflow run not found: ${runId}`)
+          }
+          const graphName = run.workflow
+
+          // Execute as graph step with graph wire context
+          result = await executeGraphStep(
+            this,
+            rpcService,
             runId,
-            stepId: stepState.stepId,
-            attemptCount: stepState.attemptCount,
-          },
-        })
+            stepState.stepId,
+            stepName,
+            rpcName,
+            data,
+            graphName
+          )
+        } else {
+          // Execute RPC with workflow step context (regular workflow)
+          result = await rpcService.rpcWithWire(rpcName, data, {
+            workflowStep: {
+              runId,
+              stepId: stepState.stepId,
+              attemptCount: stepState.attemptCount,
+            },
+          })
+        }
 
         // Store result and mark succeeded
         await this.setStepResult(stepState.stepId, result)
 
         // Resume orchestrator to continue workflow
-        try {
-          await this.resumeWorkflow(runId)
-        } catch (resumeError: any) {
-          throw resumeError
-        }
+        await this.resumeWorkflow(runId)
       } catch (error: any) {
         // Store error and mark failed
         await this.setStepError(stepState.stepId, error)
@@ -451,7 +640,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
-    } catch (error: any) {
+    } catch {
       // Step doesn't exist - create it
       stepState = await this.insertStepState(
         runId,
@@ -488,8 +677,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Step is pending - schedule it
     await this.setStepScheduled(stepState.stepId)
 
-    // Enqueue step worker
-    if (this.singletonServices!.queueService) {
+    // Enqueue step worker (unless inline mode)
+    if (!this.isInline(runId) && this.singletonServices!.queueService) {
       // Map step retry options to queue job options
       const retries = stepOptions?.retries ?? 0
       const retryDelay = stepOptions?.retryDelay
@@ -514,45 +703,52 @@ export abstract class PikkuWorkflowService implements WorkflowService {
                 : undefined,
         }
       )
+      // Pause workflow - step will callback when done
+      throw new WorkflowAsyncException(runId, stepName)
     } else {
-      // No queue service - execute locally
+      // Inline or no queue service - execute locally with retry loop
       const retries = stepOptions?.retries ?? 0
       const retryDelay = stepOptions?.retryDelay
-      const attemptCount = stepState.attemptCount
+      let currentStepState = stepState
 
-      try {
-        const result = await rpcService.rpcWithWire(rpcName, data, {
-          workflowStep: {
-            runId,
-            stepId: stepState.stepId,
-            attemptCount: stepState.attemptCount,
-          },
-        })
-        await this.setStepResult(stepState.stepId, result)
-        return result
-      } catch (error: any) {
-        // Record the error (marks step as failed)
-        await this.setStepError(stepState.stepId, error)
+      while (true) {
+        try {
+          await this.setStepRunning(currentStepState.stepId)
+          const result = await rpcService.rpcWithWire(rpcName, data, {
+            workflowStep: {
+              runId,
+              stepId: currentStepState.stepId,
+              attemptCount: currentStepState.attemptCount,
+            },
+          })
+          await this.setStepResult(currentStepState.stepId, result)
+          return result
+        } catch (error: any) {
+          // Record the error (marks step as failed)
+          await this.setStepError(currentStepState.stepId, error)
 
-        // Check if we should retry
-        if (attemptCount < retries) {
-          // Create a new pending retry attempt (copies metadata from failed step)
-          await this.createRetryAttempt(stepState.stepId, 'pending')
+          // Check if we should retry
+          if (currentStepState.attemptCount < retries) {
+            // Create a new pending retry attempt
+            currentStepState = await this.createRetryAttempt(
+              currentStepState.stepId,
+              'pending'
+            )
 
-          // Schedule orchestrator to retry after delay
-          await this.scheduleOrchestratorRetry(runId, retryDelay)
-
-          // Pause workflow - orchestrator will replay and pick up new attempt
-          throw new WorkflowAsyncException(runId, stepName)
+            // Wait for retry delay if specified
+            if (retryDelay) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, getDurationInMilliseconds(retryDelay))
+              )
+            }
+            // Continue loop to retry
+          } else {
+            // No more retries, fail the workflow
+            throw error
+          }
         }
-
-        // No more retries, fail the workflow
-        throw error
       }
     }
-
-    // Pause workflow - step will callback when done
-    throw new WorkflowAsyncException(runId, stepName)
   }
 
   private async inlineStep(
@@ -565,7 +761,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
-    } catch (error: any) {
+    } catch {
       // Step doesn't exist - create it (inline, no RPC)
       stepState = await this.insertStepState(
         runId,
@@ -584,30 +780,68 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Execute inline function
     const retries = stepOptions?.retries ?? this.getConfig().retries
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
-    const attemptCount = stepState.attemptCount
+    let currentStepState = stepState
 
-    try {
-      const result = await fn()
-      await this.setStepResult(stepState.stepId, result)
-      return result
-    } catch (error: any) {
-      // Record the error (marks step as failed)
-      await this.setStepError(stepState.stepId, error)
+    // Check if we're running inline (in-memory) or remote (queue-based)
+    if (this.isInline(runId)) {
+      // Inline mode - execute with retry loop
+      while (true) {
+        try {
+          await this.setStepRunning(currentStepState.stepId)
+          const result = await fn()
+          await this.setStepResult(currentStepState.stepId, result)
+          return result
+        } catch (error: any) {
+          // Record the error (marks step as failed)
+          await this.setStepError(currentStepState.stepId, error)
 
-      // Check if we should retry
-      if (attemptCount < retries) {
-        // Create a new pending retry attempt (copies metadata from failed step)
-        await this.createRetryAttempt(stepState.stepId, 'pending')
+          // Check if we should retry
+          if (currentStepState.attemptCount < retries) {
+            // Create a new pending retry attempt
+            currentStepState = await this.createRetryAttempt(
+              currentStepState.stepId,
+              'pending'
+            )
 
-        // Schedule orchestrator to retry after delay
-        await this.scheduleOrchestratorRetry(runId, retryDelay)
-
-        // Pause workflow - orchestrator will replay and pick up new attempt
-        throw new WorkflowAsyncException(runId, stepName)
+            // Wait for retry delay if specified
+            if (retryDelay) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, getDurationInMilliseconds(retryDelay))
+              )
+            }
+            // Continue loop to retry
+          } else {
+            // No more retries, fail the workflow
+            throw error
+          }
+        }
       }
+    } else {
+      // Remote mode - use queue-based retry
+      try {
+        await this.setStepRunning(currentStepState.stepId)
+        const result = await fn()
+        await this.setStepResult(currentStepState.stepId, result)
+        return result
+      } catch (error: any) {
+        // Record the error (marks step as failed)
+        await this.setStepError(currentStepState.stepId, error)
 
-      // No more retries, fail the workflow
-      throw error
+        // Check if we should retry
+        if (currentStepState.attemptCount < retries) {
+          // Create a new pending retry attempt (copies metadata from failed step)
+          await this.createRetryAttempt(currentStepState.stepId, 'pending')
+
+          // Schedule orchestrator to retry after delay
+          await this.scheduleOrchestratorRetry(runId, retryDelay)
+
+          // Pause workflow - orchestrator will replay and pick up new attempt
+          throw new WorkflowAsyncException(runId, stepName)
+        }
+
+        // No more retries, fail the workflow
+        throw error
+      }
     }
   }
 
@@ -616,7 +850,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
-    } catch (error: any) {
+    } catch {
       // Step doesn't exist - create it (sleep step, no RPC)
       stepState = await this.insertStepState(
         runId,
@@ -640,9 +874,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Step is pending - schedule it
     await this.setStepScheduled(stepState.stepId)
 
-    // Check if we have queue service (remote mode) or inline mode
-    if (this.singletonServices!.schedulerService) {
-      // Remote mode - enqueue sleep worker with delay
+    // Check if inline mode or no scheduler service
+    if (!this.isInline(runId) && this.singletonServices!.schedulerService) {
+      // Remote mode - schedule sleep via scheduler service
       await this.singletonServices!.schedulerService.scheduleRPC(
         duration,
         this.getConfig().sleeperRPCName,
@@ -651,6 +885,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           stepId: stepState.stepId,
         }
       )
+      // Pause workflow - sleep will callback when done
+      throw new WorkflowAsyncException(runId, stepName)
     } else {
       // Inline mode - use setTimeout with actual duration
       await new Promise((resolve) =>
@@ -659,21 +895,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       await this.setStepResult(stepState.stepId, null)
       return
     }
-
-    // Pause workflow - sleep will callback when done
-    throw new WorkflowAsyncException(runId, stepName)
-  }
-
-  private async cancelWorkflow(runId: string, reason?: string) {
-    // Update workflow run status to cancelled
-    await this.updateRunStatus(runId, 'cancelled', undefined, {
-      message: reason || 'Workflow cancelled by user',
-      stack: '',
-      code: 'WORKFLOW_CANCELLED',
-    })
-
-    // Throw cancellation exception to stop workflow execution
-    throw new WorkflowCancelledException(runId, reason)
   }
 
   private createWorkflowWire(
@@ -721,11 +942,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           stepName,
           getDurationInMilliseconds(duration)
         )
-      },
-
-      // Implement workflow.cancel()
-      cancel: async (reason?: string): Promise<void> => {
-        await this.cancelWorkflow(runId, reason)
       },
     }
     return workflowWire

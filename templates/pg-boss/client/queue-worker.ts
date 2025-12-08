@@ -1,7 +1,6 @@
 import { PikkuQueue } from '../../functions/.pikku/pikku-queue.gen.js'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 
-// Use DATABASE_URL environment variable or provide a connection string
 const connectionString =
   process.env.DATABASE_URL ||
   'postgres://postgres:password@localhost:5432/pikku_queue'
@@ -15,43 +14,41 @@ async function main(): Promise<void> {
     let returnCount = 0
     let successful = true
 
-    // Test a successful job
     setTimeout(async () => {
       try {
-        const queueJob = await queueService.add('hello-world-queue', {
-          message: 'Hello from pg-boss!',
-          fail: false,
+        const queueJob = await queueService.add('todo-reminders', {
+          todoId: 'test-todo-123',
+          userId: 'test-user-456',
         })
-        const job = await queueService.getJob('hello-world-queue', queueJob)
+        const job = await queueService.getJob('todo-reminders', queueJob)
         if (!job) {
           throw new Error('Job not found')
         }
         const result = await job.waitForCompletion?.()
-        console.log('✓ Successful job completed:', result)
+        console.log('✓ Reminder job completed:', result)
       } catch (error: any) {
-        console.error('✗ Successful job failed:', error.message)
+        console.error('✗ Reminder job failed:', error.message)
         successful = false
       } finally {
         returnCount++
       }
     }, 2000)
 
-    // Test a failing job
     setTimeout(async () => {
       try {
-        const queueJob = await queueService.add('hello-world-queue', {
-          message: 'Sorry in advance',
-          fail: true,
+        const queueJob = await queueService.add('todo-reminders', {
+          todoId: 'another-todo-789',
+          userId: 'another-user-012',
         })
-        const job = await queueService.getJob('hello-world-queue', queueJob)
+        const job = await queueService.getJob('todo-reminders', queueJob)
         if (!job) {
           throw new Error('Job not found')
         }
         const result = await job.waitForCompletion?.()
-        console.log('✗ Failed job unexpectedly succeeded:', result)
-        successful = false
+        console.log('✓ Second reminder job completed:', result)
       } catch (error: any) {
-        console.log('✓ Failed job correctly threw error:', error.message)
+        console.error('✗ Second reminder job failed:', error.message)
+        successful = false
       } finally {
         returnCount++
       }
@@ -63,7 +60,6 @@ async function main(): Promise<void> {
       }
     }, 1000)
 
-    // Handle graceful shutdown
     process.on('SIGTERM', async () => {
       await pgBossFactory.close()
       process.exit(0)

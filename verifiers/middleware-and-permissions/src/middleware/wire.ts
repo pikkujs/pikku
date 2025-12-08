@@ -1,4 +1,4 @@
-import { pikkuMiddlewareFactory } from '../../.pikku/pikku-types.gen.js'
+import { pikkuMiddlewareFactory } from '#pikku'
 
 export const wireMiddleware = pikkuMiddlewareFactory(
   (name: string) =>

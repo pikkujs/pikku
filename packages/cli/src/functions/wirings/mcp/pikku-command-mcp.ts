@@ -5,6 +5,10 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+} from '../../../utils/strip-verbose-meta.js'
 
 // Helper function to generate arguments from schema
 const generateArgumentsFromSchema = async (
@@ -26,12 +30,13 @@ const generateArgumentsFromSchema = async (
   const uniqueName = typesMap.getUniqueName(inputSchema)
   if (!uniqueName) return []
 
+  const schemaPath = join(
+    schemaDirectory,
+    'schemas',
+    `${uniqueName}.schema.json`
+  )
+
   try {
-    const schemaPath = join(
-      schemaDirectory,
-      'schemas',
-      `${uniqueName}.schema.json`
-    )
     const schemaContent = await readFile(schemaPath, 'utf-8')
     const schema = JSON.parse(schemaContent)
 
@@ -54,7 +59,8 @@ const generateArgumentsFromSchema = async (
     }
     return argumentsArray
   } catch (e) {
-    logger.warn(`Could not load schema for type: ${uniqueName}`)
+    logger.warn(`Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`)
+    console.error(e)
     return []
   }
 }
@@ -101,11 +107,27 @@ export const pikkuMCP: any = pikkuSessionlessFunc<void, boolean | undefined>({
       toolsMeta: mcpEndpoints.toolsMeta,
       promptsMeta: promptsMetaWithArguments,
     }
+
+    // Write minimal JSON (runtime-only fields)
+    const minimalMeta = stripVerboseFields(metaData)
     await writeFileInDir(
       logger,
       config.mcpWiringsMetaJsonFile,
-      JSON.stringify(metaData, null, 2)
+      JSON.stringify(minimalMeta, null, 2)
     )
+
+    // Write verbose JSON only if it has additional fields
+    if (hasVerboseFields(metaData)) {
+      const verbosePath = config.mcpWiringsMetaJsonFile.replace(
+        /\.gen\.json$/,
+        '-verbose.gen.json'
+      )
+      await writeFileInDir(
+        logger,
+        verbosePath,
+        JSON.stringify(metaData, null, 2)
+      )
+    }
 
     const jsonImportPath = getFileImportRelativePath(
       mcpWiringsMetaFile,

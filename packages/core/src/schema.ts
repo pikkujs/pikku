@@ -4,25 +4,32 @@ import { UnprocessableContentError } from './errors/errors.js'
 import { pikkuState } from './pikku-state.js'
 
 /**
- * Adds a schema to the global schemas map.
+ * Adds a schema to the schemas map for a specific package.
  * @param name - The name of the schema.
  * @param value - The schema value.
+ * @param packageName - The package name (null for main package, '@scope/package' for external packages).
  * @ignore
  */
-export const addSchema = (name: string, value: any) => {
-  pikkuState(null, 'misc', 'schemas').set(name, value)
+export const addSchema = (
+  name: string,
+  value: any,
+  packageName: string | null = null
+) => {
+  pikkuState(packageName, 'misc', 'schemas').set(name, value)
 }
 
 /**
- * Retrieves a schema from the global schemas map.
+ * Retrieves a schema from the schemas map for a specific package.
  * @param name - The name of the schema.
+ * @param packageName - The package name (null for main package, '@scope/package' for external packages).
  * @returns The schema value or undefined if not found.
  * @ignore
  */
 export const getSchema = (
-  name: string
+  name: string,
+  packageName: string | null = null
 ): Record<string, unknown> | undefined => {
-  return pikkuState(null, 'misc', 'schemas').get(name)
+  return pikkuState(packageName, 'misc', 'schemas').get(name)
 }
 
 /**
@@ -75,8 +82,12 @@ const validateAllSchemasLoaded = (
   }
 }
 
-export const coerceTopLevelDataFromSchema = (schemaName: string, data: any) => {
-  const schema = pikkuState(null, 'misc', 'schemas').get(schemaName)
+export const coerceTopLevelDataFromSchema = (
+  schemaName: string,
+  data: any,
+  packageName: string | null = null
+) => {
+  const schema = pikkuState(packageName, 'misc', 'schemas').get(schemaName)
   for (const key in schema.properties) {
     const property = schema.properties[key]
     if (typeof property === 'boolean') {
@@ -98,7 +109,8 @@ export const validateSchema = async (
   logger: Logger,
   schemaService: SchemaService | undefined,
   schemaName: string | undefined | null,
-  data: any
+  data: any,
+  packageName: string | null = null
 ) => {
   if (schemaService) {
     if (!schemaName) {
@@ -109,7 +121,23 @@ export const validateSchema = async (
         return
       }
     }
-    const schema = pikkuState(null, 'misc', 'schemas').get(schemaName)
+    logger.debug(
+      `[validateSchema] Validating schema '${schemaName}' for package '${packageName ?? 'main'}' with data:`,
+      JSON.stringify(data)
+    )
+    const schemas = pikkuState(packageName, 'misc', 'schemas')
+    const schema = schemas.get(schemaName)
+    if (schema === undefined) {
+      const availableSchemas = Array.from(schemas.keys())
+      logger.error(
+        `Schema '${schemaName}' not found for package '${packageName ?? 'main'}'. Available schemas: ${availableSchemas.join(', ') || '(none)'}`
+      )
+    } else {
+      logger.debug(
+        `[validateSchema] Found schema '${schemaName}':`,
+        JSON.stringify(schema)
+      )
+    }
     await schemaService.compileSchema(schemaName, schema)
     await schemaService.validateSchema(schemaName, data)
   }

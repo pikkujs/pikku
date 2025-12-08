@@ -13,12 +13,10 @@ async function main(): Promise<void> {
     const singletonServices = await createSingletonServices(config)
     singletonServices.logger.info('Starting pg-boss queue adaptor...')
 
-    // Use DATABASE_URL environment variable or provide a connection string
     const connectionString =
       process.env.DATABASE_URL ||
       'postgres://postgres:password@localhost:5432/pikku_queue'
 
-    // Create pg-boss service factory
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
@@ -27,10 +25,8 @@ async function main(): Promise<void> {
       createWireServices
     )
 
-    // Register queue processors
     await pgBossQueueWorkers.registerQueues()
 
-    // Handle graceful shutdown
     const shutdown = async (signal: string) => {
       singletonServices.logger.info(
         `Received ${signal}, shutting down gracefully...`

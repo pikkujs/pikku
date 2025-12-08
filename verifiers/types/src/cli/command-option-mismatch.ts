@@ -9,7 +9,7 @@ import {
   wireCLI,
   pikkuCLICommand,
   pikkuSessionlessFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 // Valid: Options match function input type
 wireCLI({

@@ -1,4 +1,4 @@
-import { pikkuMiddleware } from '../../.pikku/pikku-types.gen.js'
+import { pikkuMiddleware } from '#pikku'
 
 export const httpGlobalMiddleware = pikkuMiddleware(
   async ({ logger }, _data, next) => {

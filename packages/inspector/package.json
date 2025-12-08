@@ -6,6 +6,18 @@
   "type": "module",
   "module": "dist/index.js",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./workflow-graph": {
+      "types": "./dist/utils/workflow/graph/index.d.ts",
+      "import": "./dist/utils/workflow/graph/index.js",
+      "default": "./dist/utils/workflow/graph/index.js"
+    }
+  },
   "scripts": {
     "tsc": "tsc",
     "build": "tsc -b",

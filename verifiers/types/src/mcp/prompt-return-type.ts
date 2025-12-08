@@ -7,7 +7,7 @@
 import {
   wireMCPPrompt,
   pikkuMCPPromptFunc,
-} from '../../.pikku/pikku-types.gen.js'
+} from '#pikku'
 
 // Valid: Prompt with proper return type
 wireMCPPrompt({

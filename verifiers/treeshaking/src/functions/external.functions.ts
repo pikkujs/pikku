@@ -2,7 +2,7 @@
  * Tests for external package RPC invocations with treeshaking
  */
 
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 
 export type TestExternalInput = { value: string }
 export type TestExternalOutput = { result: string }

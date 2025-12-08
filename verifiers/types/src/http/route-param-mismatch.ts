@@ -5,7 +5,7 @@
  * input type must include those parameters.
  */
 
-import { wireHTTP, pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { wireHTTP, pikkuSessionlessFunc } from '#pikku'
 
 // Valid: Route params match function input type
 wireHTTP({

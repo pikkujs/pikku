@@ -88,7 +88,7 @@ export const wireMCPPrompt = <In>(
  * Configuration for MCP prompt with Zod schema input validation.
  */
 type MCPPromptFuncConfigWithSchema<InputSchema extends ZodLike> = {
-  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp'>
+  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp' | 'rpc'>
   name?: string
   input: InputSchema
 }
@@ -107,15 +107,15 @@ type MCPPromptFuncConfigWithSchema<InputSchema extends ZodLike> = {
  */
 export function pikkuMCPPromptFunc<InputSchema extends ZodLike>(
   config: MCPPromptFuncConfigWithSchema<InputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp'>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp' | 'rpc'>
 export function pikkuMCPPromptFunc<In>(
   func:
-    | PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp'>
+    | PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp' | 'rpc'>
     | {
-        func: PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp'>
+        func: PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp' | 'rpc'>
         name?: string
       }
-): PikkuFunctionConfig<In, MCPPromptResponse, 'mcp'>
+): PikkuFunctionConfig<In, MCPPromptResponse, 'mcp' | 'rpc'>
 export function pikkuMCPPromptFunc(func: any): any {
   return typeof func === 'function' ? { func } : func
 }
@@ -124,7 +124,7 @@ export function pikkuMCPPromptFunc(func: any): any {
  * Configuration for MCP tool with Zod schema input validation.
  */
 type MCPToolFuncConfigWithSchema<InputSchema extends ZodLike> = {
-  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp'>
+  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
   name?: string
   input: InputSchema
 }
@@ -143,15 +143,15 @@ type MCPToolFuncConfigWithSchema<InputSchema extends ZodLike> = {
  */
 export function pikkuMCPToolFunc<InputSchema extends ZodLike>(
   config: MCPToolFuncConfigWithSchema<InputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp'>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
 export function pikkuMCPToolFunc<In>(
   func:
-    | PikkuFunctionSessionless<In, MCPToolResponse, 'mcp'>
+    | PikkuFunctionSessionless<In, MCPToolResponse, 'mcp' | 'rpc'>
     | {
-      func: PikkuFunctionSessionless<In, MCPToolResponse, 'mcp'>
+      func: PikkuFunctionSessionless<In, MCPToolResponse, 'mcp' | 'rpc'>
       name?: string
     }
-): PikkuFunctionConfig<In, MCPToolResponse, 'mcp'>
+): PikkuFunctionConfig<In, MCPToolResponse, 'mcp' | 'rpc'>
 export function pikkuMCPToolFunc(func: any): any {
   return typeof func === 'function' ? { func } : func
 }
@@ -160,7 +160,7 @@ export function pikkuMCPToolFunc(func: any): any {
  * Configuration for MCP resource with Zod schema input validation.
  */
 type MCPResourceFuncConfigWithSchema<InputSchema extends ZodLike> = {
-  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp'>
+  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp' | 'rpc'>
   name?: string
   input: InputSchema
 }
@@ -179,15 +179,15 @@ type MCPResourceFuncConfigWithSchema<InputSchema extends ZodLike> = {
  */
 export function pikkuMCPResourceFunc<InputSchema extends ZodLike>(
   config: MCPResourceFuncConfigWithSchema<InputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp'>
+): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp' | 'rpc'>
 export function pikkuMCPResourceFunc<In>(
   func:
-    | PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp'>
+    | PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp' | 'rpc'>
     | {
-      func: PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp'>
+      func: PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp' | 'rpc'>
       name?: string
     }
-): PikkuFunctionConfig<In, MCPResourceResponse, 'mcp'>
+): PikkuFunctionConfig<In, MCPResourceResponse, 'mcp' | 'rpc'>
 export function pikkuMCPResourceFunc(func: any): any {
   return typeof func === 'function' ? { func } : func
 }

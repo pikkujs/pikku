@@ -21,13 +21,69 @@ import {
  * Replaces hyphens and other invalid characters with underscores.
  */
 function toValidIdentifier(name: string): string {
-  // Replace hyphens and dots with underscores
   let result = name.replace(/[-./]/g, '_')
-  // If starts with a number, prefix with underscore
   if (/^\d/.test(result)) {
     result = '_' + result
   }
   return result
+}
+
+const PRIMITIVE_TYPES = new Set([
+  'boolean',
+  'string',
+  'number',
+  'null',
+  'undefined',
+  'void',
+  'any',
+  'unknown',
+  'never',
+])
+
+/** Map TypeScript type strings to JSON Schema. Returns null if no schema should be generated. */
+function primitiveTypeToSchema(typeStr: string): JSONValue | null {
+  const normalized = typeStr.trim()
+
+  // void/undefined/never mean no data - don't generate a schema
+  if (
+    normalized === 'void' ||
+    normalized === 'undefined' ||
+    normalized === 'never'
+  ) {
+    return null
+  }
+
+  // Handle boolean literals
+  if (
+    normalized === 'boolean' ||
+    normalized === 'false | true' ||
+    normalized === 'true | false'
+  ) {
+    return { type: 'boolean' }
+  }
+  if (normalized === 'true') {
+    return { const: true }
+  }
+  if (normalized === 'false') {
+    return { const: false }
+  }
+
+  // Handle string
+  if (normalized === 'string') {
+    return { type: 'string' }
+  }
+
+  // Handle number
+  if (normalized === 'number') {
+    return { type: 'number' }
+  }
+
+  // Handle null
+  if (normalized === 'null') {
+    return { type: 'null' }
+  }
+
+  return null
 }
 
 export async function generateSchemas(
@@ -37,7 +93,8 @@ export async function generateSchemas(
   functionMeta: FunctionsMeta,
   httpWiringsMeta: HTTPWiringsMeta,
   additionalTypes?: string[],
-  additionalProperties: boolean = false
+  additionalProperties: boolean = false,
+  zodLookup?: Map<string, ZodSchemaRef>
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -68,7 +125,6 @@ export async function generateSchemas(
     }
   }
 
-  // Add additional types from schemasFromTypes config
   if (additionalTypes) {
     for (const type of additionalTypes) {
       schemasSet.add(type)
@@ -90,18 +146,28 @@ export async function generateSchemas(
   const schemas: Record<string, JSONValue> = {}
 
   schemasSet.forEach((schema) => {
+    if (PRIMITIVE_TYPES.has(schema)) {
+      return
+    }
+    if (zodLookup?.has(schema)) {
+      return
+    }
     try {
       schemas[schema] = generator.createSchema(schema) as JSONValue
     } catch (e) {
-      // Ignore rootless errors
       if (e instanceof RootlessError) {
-        logger.error(
-          `[${ErrorCode.SCHEMA_NO_ROOT}] Error generating schema since it has no root: ${schema}`
-        )
+        const customType = typesMap.customTypes.get(schema)
+        if (customType) {
+          const primitiveSchema = primitiveTypeToSchema(customType.type)
+          if (primitiveSchema) {
+            schemas[schema] = primitiveSchema
+          }
+        }
         return
       }
+      const customType = typesMap.customTypes.get(schema)
       logger.error(
-        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}. Message: ${e.message}`
+        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}. Message: ${e.message}. Type info: ${customType ? `type=${customType.type}` : 'not in typesMap'}`
       )
     }
   })
@@ -137,6 +203,19 @@ export async function generateZodSchemas(
       }
 
       const schema = z.toJSONSchema(zodSchema) as any
+
+      // Remove fields with defaults from the required array
+      // Fields with defaults are semantically optional in input validation
+      if (schema.required && schema.properties) {
+        schema.required = schema.required.filter((fieldName: string) => {
+          const prop = schema.properties[fieldName]
+          return prop && prop.default === undefined
+        })
+        if (schema.required.length === 0) {
+          delete schema.required
+        }
+      }
+
       schemas[schemaName] = schema
       const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
 
@@ -166,7 +245,8 @@ export async function saveSchemas(
   functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean,
   additionalTypes?: string[],
-  zodLookup?: Map<string, ZodSchemaRef>
+  zodLookup?: Map<string, ZodSchemaRef>,
+  packageName?: string | null
 ) {
   await writeFileInDir(
     logger,
@@ -197,11 +277,7 @@ export async function saveSchemas(
         return types
       })
       .flat()
-      .filter(
-        (s): s is string =>
-          !!s &&
-          !['boolean', 'string', 'number', 'null', 'undefined'].includes(s)
-      ),
+      .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
     ...(zodLookup ? Array.from(zodLookup.keys()) : []),
@@ -230,20 +306,29 @@ export async function saveSchemas(
     (schema) => schemas[schema]
   )
 
+  // Generate the packageName argument for addSchema calls
+  const packageNameArg = packageName ? `, '${packageName}'` : ''
+
   const schemaImports = availableSchemas
     .map((schema) => {
       const identifier = toValidIdentifier(schema)
       return `
 import * as ${identifier} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
-addSchema('${schema}', ${identifier})
+addSchema('${schema}', ${identifier}${packageNameArg})
 `
     })
     .join('\n')
 
+  // Only import addSchema if there are schemas to register
+  const importStatement =
+    availableSchemas.length > 0
+      ? `import { addSchema } from '@pikku/core/schema'`
+      : '// No schemas to register'
+
   await writeFileInDir(
     logger,
     `${schemaParentDir}/register.gen.ts`,
-    `import { addSchema } from '@pikku/core/schema'
+    `${importStatement}
 ${schemaImports}`,
     { logWrite: true }
   )

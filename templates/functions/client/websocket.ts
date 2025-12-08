@@ -2,67 +2,91 @@ import { PikkuWebSocket } from '../.pikku/pikku-websocket.gen.js'
 import { EventHubTopics } from '../types/eventhub-topics.js'
 import WSWebsocket from 'ws'
 
-export const check = async (serverUrl: string, userId: string) => {
-  let authenticationState: 'initial' | 'authenticated' | 'unauthenticated' =
-    'initial'
-  const ws = new WSWebsocket(serverUrl)
-  const websocket = new PikkuWebSocket<'events', EventHubTopics>(ws as any)
+export const check = async (serverUrl: string, testUserId: string) => {
+  const wsPath = process.env.WS_PATH ?? ''
+  const wsUrl = serverUrl
+    .replace('http://', 'ws://')
+    .replace('https://', 'wss://')
+  const ws = new WSWebsocket(`${wsUrl}${wsPath}`)
+  const websocket = new PikkuWebSocket<'todos-live', EventHubTopics>(ws as any)
 
   ws.onopen = async () => {
-    console.log('Websocket connected')
+    console.log(`${testUserId}: WebSocket connected`)
+
     websocket.subscribe((data) => {
-      console.log(`${userId}: Global message:`, data)
+      console.log(`${testUserId}: Global message:`, data)
     })
 
-    websocket.subscribeToEventHub('test', (data) => {
-      console.log(`${userId}: EventHub message:`, data)
+    websocket.subscribeToEventHub('todo-created', (data) => {
+      console.log(`${testUserId}: Todo created event:`, data)
+    })
+
+    websocket.subscribeToEventHub('todo-completed', (data) => {
+      console.log(`${testUserId}: Todo completed event:`, data)
     })
 
     const route = websocket.getRoute('action')
-    route.subscribe('auth', async (data) => {
-      if (data.authResult === true) {
-        console.log(`${userId}: User is authenticated`)
-        authenticationState = 'authenticated'
-      } else {
-        console.log(`${userId}: User is not authenticated`)
-        authenticationState = 'unauthenticated'
-      }
+
+    route.subscribe('auth', (data) => {
+      console.log(`${testUserId}: Auth response:`, data)
     })
 
-    // Authenticate user
-    route.send('auth', { token: 'valid', userId })
+    route.subscribe('list', (data) => {
+      console.log(`${testUserId}: List response:`, data)
+    })
 
-    // Wait for authentication to be validated
-    while (authenticationState === 'initial') {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
+    route.subscribe('create', (data) => {
+      console.log(`${testUserId}: Create response:`, data)
+    })
 
-    // Default handler - intentionally sending invalid message to test error handling
-    websocket.send('hello')
+    route.subscribe('complete', (data) => {
+      console.log(`${testUserId}: Complete response:`, data)
+    })
 
-    // Route handler
-    route.send('subscribe', { name: 'test' })
+    route.send('auth', { username: 'demo', password: 'test' })
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Publish to everyone
-    route.send('emit', { name: 'test' })
+    route.send('subscribe', { topic: 'todo-created' })
+    route.send('subscribe', { topic: 'todo-completed' })
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    route.send('list', {
+      userId: 'user1',
+      completed: undefined,
+      priority: undefined,
+      tag: undefined,
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    route.send('create', {
+      title: `Todo from ${testUserId}`,
+      priority: 'high',
+      userId: 'user1',
+      description: undefined,
+      dueDate: undefined,
+      tags: undefined,
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     setTimeout(() => {
       ws.onclose = () => {
-        console.log(`${userId}: Websocket closed`)
+        console.log(`${testUserId}: WebSocket closed`)
       }
       ws.close()
-    }, 5000)
+    }, 3000)
   }
 
   ws.onerror = (e) => {
-    console.error('Error with websocket', e)
+    console.error(`${testUserId}: WebSocket error`, e)
   }
 }
 
-const url = process.env.HELLO_WORLD_URL_PREFIX || 'http://localhost:4002'
-console.log('Starting Websocket test with url:', url)
+const url = process.env.TODO_APP_URL || 'http://localhost:4002'
+console.log('Starting WebSocket test with url:', url)
 
-check(url, 'Pikku User 1')
-check(url, 'Pikku User 2')
+check(url, 'User1')
+check(url, 'User2')
