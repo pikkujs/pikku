@@ -30,12 +30,13 @@ const generateArgumentsFromSchema = async (
   const uniqueName = typesMap.getUniqueName(inputSchema)
   if (!uniqueName) return []
 
+  const schemaPath = join(
+    schemaDirectory,
+    'schemas',
+    `${uniqueName}.schema.json`
+  )
+
   try {
-    const schemaPath = join(
-      schemaDirectory,
-      'schemas',
-      `${uniqueName}.schema.json`
-    )
     const schemaContent = await readFile(schemaPath, 'utf-8')
     const schema = JSON.parse(schemaContent)
 
@@ -58,7 +59,8 @@ const generateArgumentsFromSchema = async (
     }
     return argumentsArray
   } catch (e) {
-    logger.warn(`Could not load schema for type: ${uniqueName}`)
+    logger.warn(`Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`)
+    console.error(e)
     return []
   }
 }

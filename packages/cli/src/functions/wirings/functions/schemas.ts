@@ -43,7 +43,8 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
       visitState.functions.meta,
       config.schema?.supportsImportAttributes || true,
       config.schemasFromTypes,
-      visitState.zodLookup
+      visitState.zodLookup,
+      config.externalPackageName || null
     )
 
     return true

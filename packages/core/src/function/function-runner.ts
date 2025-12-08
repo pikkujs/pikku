@@ -195,11 +195,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
         resolvedSingletonServices.logger,
         resolvedSingletonServices.schema,
         inputSchemaName,
-        actualData
+        actualData,
+        packageName
       )
       // Coerce (top level) query string parameters or date objects if specified by the schema
       if (coerceDataFromSchema) {
-        coerceTopLevelDataFromSchema(inputSchemaName, actualData)
+        coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
       }
     }
 

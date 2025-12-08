@@ -106,11 +106,7 @@ export function replaceFunctionReferences(
         .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
         .replaceAll('../functions/types/', '../types/')
-        .replaceAll('/.pikku', `/${pikkuDir}`)
         .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
-        // For workflow templates where rpc/fetch files are in client/
-        .replaceAll(`../${pikkuDir}/pikku-rpc.gen.js`, './pikku-rpc.gen.js')
-        .replaceAll(`../${pikkuDir}/pikku-fetch.gen.js`, './pikku-fetch.gen.js')
     } else {
       // For files in src/ or root, flatten to ./
       updatedContent = updatedContent
@@ -179,7 +175,7 @@ export function cleanPikkuConfig(
   }
 
   // Remove config options for unsupported features
-  if (!supportedFeatures.includes('http')) {
+  if (!supportedFeatures.includes('http') && !supportedFeatures.includes('workflows')) {
     delete pikkuConfig.fetchFile
     delete pikkuConfig.rpcWiringsFile
   }
@@ -195,7 +191,6 @@ export function cleanPikkuConfig(
   if (!supportedFeatures.includes('mcp')) {
     delete pikkuConfig.mcpJsonFile
   }
-
 
   // We remove external packages as we can't yet test them
   delete pikkuConfig.externalPackages

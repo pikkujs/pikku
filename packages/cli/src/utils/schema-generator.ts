@@ -168,8 +168,9 @@ export async function generateSchemas(
         }
         return
       }
+      const customType = typesMap.customTypes.get(schema)
       logger.error(
-        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}. Message: ${e.message}`
+        `[${ErrorCode.SCHEMA_GENERATION_ERROR}] Error generating schema: ${schema}. Message: ${e.message}. Type info: ${customType ? `type=${customType.type}` : 'not in typesMap'}`
       )
     }
   })
@@ -247,7 +248,8 @@ export async function saveSchemas(
   functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean,
   additionalTypes?: string[],
-  zodLookup?: Map<string, ZodSchemaRef>
+  zodLookup?: Map<string, ZodSchemaRef>,
+  packageName?: string | null
 ) {
   await writeFileInDir(
     logger,
@@ -307,12 +309,15 @@ export async function saveSchemas(
     (schema) => schemas[schema]
   )
 
+  // Generate the packageName argument for addSchema calls
+  const packageNameArg = packageName ? `, '${packageName}'` : ''
+
   const schemaImports = availableSchemas
     .map((schema) => {
       const identifier = toValidIdentifier(schema)
       return `
 import * as ${identifier} from './schemas/${schema}.schema.json' ${supportsImportAttributes ? `with { type: 'json' }` : ''}
-addSchema('${schema}', ${identifier})
+addSchema('${schema}', ${identifier}${packageNameArg})
 `
     })
     .join('\n')
