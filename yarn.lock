@@ -920,15 +920,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@azure/functions@npm:4.9.0":
-  version: 4.9.0
-  resolution: "@azure/functions@npm:4.9.0"
+"@azure/functions@npm:4.10.0":
+  version: 4.10.0
+  resolution: "@azure/functions@npm:4.10.0"
   dependencies:
     "@azure/functions-extensions-base": "npm:0.2.0"
     cookie: "npm:^0.7.0"
     long: "npm:^4.0.0"
     undici: "npm:^5.29.0"
-  checksum: 10/7c6c12f2754ecdc99bdec5bd10ed3dcef321c9165610d49de2dc30a8ad0ca134c5506d08f1bdbdaa6736682969dda7cfb171a33c82809be9ae59e26f0d20b208
+  checksum: 10/3229f0d2bc919542df53923327847485f50df7ce599cccb3b91a4cb24b5414064d5c1e38d34ec938d9a6ca08feb76a6f0dd5826056eb87d8aa7da0771542e00d
   languageName: node
   linkType: hard
 
@@ -3564,7 +3564,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/azure-functions@workspace:packages/runtimes/azure-functions"
   dependencies:
-    "@azure/functions": "npm:4.9.0"
+    "@azure/functions": "npm:4.10.0"
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.11.1

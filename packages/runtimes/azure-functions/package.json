@@ -25,6 +25,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@azure/functions": "4.9.0"
+    "@azure/functions": "4.10.0"
   }
 }
