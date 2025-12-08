@@ -20,7 +20,7 @@
     "@pikku/core": "^0.11.1"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.20.1"
+    "@modelcontextprotocol/sdk": "1.24.3"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
