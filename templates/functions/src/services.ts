@@ -13,7 +13,9 @@ import {
 } from '../.pikku/pikku-types.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
-  return {}
+  return {
+    awsRegion: 'us-east-1',
+  }
 })
 
 /**
