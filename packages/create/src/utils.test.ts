@@ -380,6 +380,8 @@ describe('Functions Test Suite', () => {
       'todos.functions.ts',
       'channel.functions.ts',
       'auth.functions.ts',
+      'mcp.functions.ts',
+      'queue.functions.ts',
     ]
 
     functionFiles.forEach((file) => {
@@ -387,7 +389,11 @@ describe('Functions Test Suite', () => {
     })
 
     // Create test files in wirings
-    const wiringFiles = ['todos.wiring.ts', 'channel.wiring.ts']
+    const wiringFiles = [
+      'channel.wiring.ts',
+      'mcp.wiring.ts',
+      'queue.wiring.ts',
+    ]
 
     wiringFiles.forEach((file) => {
       fs.writeFileSync(path.join(wiringsDir, file), `// ${file} content`)
@@ -405,14 +411,26 @@ describe('Functions Test Suite', () => {
       'Channel functions should remain'
     )
 
-    // Should remove HTTP files (todos.*, auth.*)
+    // Should keep todos files (channel depends on todos per FILE_FEATURE_MAPPING)
     assert.ok(
-      !remainingFunctions.includes('todos.functions.ts'),
-      'Todos functions should be removed'
+      remainingFunctions.includes('todos.functions.ts'),
+      'Todos functions should remain (channel depends on todos)'
+    )
+
+    // Should keep auth files (channel wirings use auth functions per FILE_FEATURE_MAPPING)
+    assert.ok(
+      remainingFunctions.includes('auth.functions.ts'),
+      'Auth functions should remain (channel uses auth)'
+    )
+
+    // Should remove mcp and queue files (not in channel features)
+    assert.ok(
+      !remainingFunctions.includes('mcp.functions.ts'),
+      'MCP functions should be removed'
     )
     assert.ok(
-      !remainingFunctions.includes('auth.functions.ts'),
-      'Auth functions should be removed'
+      !remainingFunctions.includes('queue.functions.ts'),
+      'Queue functions should be removed'
     )
 
     // Check wirings
@@ -422,8 +440,12 @@ describe('Functions Test Suite', () => {
       'Channel wiring should remain'
     )
     assert.ok(
-      !remainingWirings.includes('todos.wiring.ts'),
-      'Todos wiring should be removed'
+      !remainingWirings.includes('mcp.wiring.ts'),
+      'MCP wiring should be removed'
+    )
+    assert.ok(
+      !remainingWirings.includes('queue.wiring.ts'),
+      'Queue wiring should be removed'
     )
   })
 

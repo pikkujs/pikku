@@ -11,18 +11,13 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import {
-  CoreServices,
-  CoreSingletonServices,
-  CreateWireServices,
-} from '@pikku/core'
+import { CoreSingletonServices, CreateWireServices } from '@pikku/core'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToPgBoss = (
   workerConfig?: PikkuWorkerConfig
 ): WorkOptions => {
   const workerOptions: WorkOptions = {
-    // Fetch multiple jobs at once to enable parallel processing
     batchSize: 10,
   }
 
@@ -129,11 +124,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
   constructor(
     pgBoss: PgBoss,
     private singletonServices: CoreSingletonServices,
-    private createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      any
-    >
+    private createWireServices?: CreateWireServices
   ) {
     this.pgBoss = pgBoss
   }
