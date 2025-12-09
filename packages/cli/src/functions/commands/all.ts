@@ -260,8 +260,12 @@ ${Object.entries(usedExternalPackages)
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
 
     const state = await getInspectorState()
-    if (state.http?.meta)
-      summary.set('httpRoutes', Object.keys(state.http.meta).length)
+    if (state.http?.meta) {
+      const httpRouteCount = (
+        Object.values(state.http.meta) as Record<string, unknown>[]
+      ).reduce((sum, routes) => sum + Object.keys(routes).length, 0)
+      if (httpRouteCount > 0) summary.set('httpRoutes', httpRouteCount)
+    }
     if (state.channels?.meta)
       summary.set('channels', Object.keys(state.channels.meta).length)
     if (state.scheduledTasks?.meta)
