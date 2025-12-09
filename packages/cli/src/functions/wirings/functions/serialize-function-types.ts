@@ -18,7 +18,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, ZodLike } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, ZodLike, CreateWireServices } from '@pikku/core'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
 ${userSessionTypeImport}
@@ -528,7 +528,7 @@ export const pikkuWireServices = (
     services: SingletonServices,
     wire: any
   ) => Promise<RequiredWireServices>
-) => func
+): CreateWireServices => func as unknown as CreateWireServices
 
 /**
  * Adds global middleware for a specific tag.

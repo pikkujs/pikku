@@ -2,11 +2,7 @@ import { ConnectionOptions } from 'bullmq'
 import { BullQueueService } from './bull-queue-service.js'
 import { BullQueueWorkers } from './bull-queue-worker.js'
 import { BullSchedulerService } from './bull-scheduler-service.js'
-import type {
-  CoreServices,
-  CoreSingletonServices,
-  CreateWireServices,
-} from '@pikku/core'
+import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
 
 /**
  * Factory class for BullMQ services
@@ -41,11 +37,7 @@ export class BullServiceFactory {
    */
   getQueueWorkers(
     singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      any
-    >
+    createWireServices?: CreateWireServices
   ): BullQueueWorkers {
     if (!this.queueWorkers) {
       this.queueWorkers = new BullQueueWorkers(

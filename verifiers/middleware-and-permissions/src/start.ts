@@ -16,7 +16,6 @@ import { testQueueWiring } from './functions/queue.assert.js'
 import { testCLIWiring } from './functions/cli.assert.js'
 import { testChannelWiring } from './functions/channel-local.assert.js'
 import { testChannelWiringServerless } from './functions/channel-serverless.assert.js'
-import { testInternalRPCWiring } from './functions/rpc.assert.js'
 
 async function main(): Promise<void> {
   try {

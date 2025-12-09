@@ -16,11 +16,7 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import type {
-  CoreServices,
-  CoreSingletonServices,
-  CreateWireServices,
-} from '@pikku/core'
+import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToBull = (
@@ -145,11 +141,7 @@ export class BullQueueWorkers implements QueueWorkers {
   constructor(
     private redisConnectionOptions: ConnectionOptions,
     private singletonServices: CoreSingletonServices,
-    private createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      any
-    >
+    private createWireServices?: CreateWireServices
   ) {}
 
   /**
