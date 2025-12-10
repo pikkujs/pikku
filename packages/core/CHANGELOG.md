@@ -1,5 +1,23 @@
 ## 0.11.0
 
+## 0.11.2
+
+### Features
+
+- f35e89da: Add workflow graph system with type-safe builder
+  - `createGraph<RPCMap>()` for building workflow graphs with full type safety
+  - `wireWorkflowGraph()` for registering workflow graphs
+  - `graphNode()` helper for type-safe node creation
+  - Graph scheduler for execution (continueGraph, startWorkflowGraph)
+  - TypedRef for type-safe input refs in workflow graphs
+  - `setBranchTaken` added to WorkflowService interface
+  - Trigger runner for workflow triggers
+
+### Breaking Changes
+
+- Rename `pikkuWorkflowFunc` to `pikkuWorkflowComplexFunc`
+- Rename `pikkuWorkflowDSTFunc` to `pikkuWorkflowFunc`
+
 ## 0.11.1
 
 ### Patch Changes

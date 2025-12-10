@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.2
+
+### Fixes
+
+- ddd87eaf: Simplify CreateWireServices type signature for custom Config compatibility
+
 ## 0.11.1
 
 ### Patch Changes

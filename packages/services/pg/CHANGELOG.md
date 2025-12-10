@@ -1,5 +1,14 @@
 ## 0.11.0
 
+## 0.11.2
+
+### Features
+
+- f35e89da: Add workflow graph support to PgWorkflowService
+  - Add `inline` and `state` columns to workflow_runs table
+  - Add `branch_taken` column to workflow_step table
+  - Add `setBranchTaken` method for graph branching
+
 ## 0.11.1
 
 ### Patch Changes
