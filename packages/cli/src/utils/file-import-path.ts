@@ -16,6 +16,10 @@ export const getFileImportRelativePath = (
     if (nodeModulesIndex !== -1) {
       filePath = filePath.substring(nodeModulesIndex + 'node_modules/'.length)
     }
+    // For @types packages, strip @types/ prefix since TypeScript resolves them automatically
+    if (filePath.startsWith('@types/')) {
+      filePath = filePath.substring('@types/'.length)
+    }
     return filePath.replace('.ts', '.js')
   }
 
