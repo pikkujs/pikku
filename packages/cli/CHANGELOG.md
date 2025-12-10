@@ -1,4 +1,15 @@
-## 0.11.0
+## 0.11.3
+
+### Features
+
+- f35e89da: Add workflow graph code generation
+  - Workflow graph serialization and type generation
+  - DSL to graph conversion for workflow metadata
+
+### Fixes
+
+- ddd87eaf: Make CreateWireServices type compatible with custom Config types
+- c42aad80: Correct HTTP routes count in CLI summary (was showing method count instead of route count)
 
 ## 0.11.2
 

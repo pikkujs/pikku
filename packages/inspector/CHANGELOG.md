@@ -1,4 +1,11 @@
-## 0.11.0
+## 0.11.2
+
+### Features
+
+- f35e89da: Add workflow graph inspection and DSL extraction
+  - Workflow graph inspection with `add-workflow-graph.ts`
+  - DSL workflow extraction utilities (extract, deserialize, validate)
+  - DSL to graph conversion for metadata generation
 
 ## 0.11.1
 

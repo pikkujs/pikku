@@ -1,5 +1,11 @@
 ## 0.11.0
 
+## 0.11.2
+
+### Fixes
+
+- ddd87eaf: Fix srcDirectories paths and config cleanup for workflow templates
+
 ## 0.11.1
 
 ### Patch Changes
