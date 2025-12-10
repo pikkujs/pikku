@@ -176,6 +176,7 @@ export const pikkuWorkflow: any = pikkuSessionlessFunc<
       logger,
       workflowMapDeclarationFile,
       serializeWorkflowMap(
+        logger,
         workflowMapDeclarationFile,
         packageMappings,
         typesMap,

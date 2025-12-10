@@ -9,6 +9,7 @@ export const pikkuHTTPMap: any = pikkuSessionlessFunc<void, void>({
     const { httpMapDeclarationFile, packageMappings } = config
 
     const content = serializeTypedHTTPWiringsMap(
+      logger,
       httpMapDeclarationFile,
       packageMappings,
       functions.typesMap,

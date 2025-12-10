@@ -4,10 +4,7 @@
  * Schedulers require a name, schedule, and func property.
  */
 
-import {
-  wireScheduler,
-  pikkuSessionlessFunc,
-} from '#pikku'
+import { wireScheduler, pikkuSessionlessFunc } from '#pikku'
 
 const validTask = pikkuSessionlessFunc<void, void>(async () => {})
 

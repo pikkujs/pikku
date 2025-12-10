@@ -1,9 +1,10 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
-import { FunctionsMeta } from '@pikku/core'
+import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
 export const serializeTypedRPCMap = (
+  logger: Logger,
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
@@ -21,6 +22,7 @@ export const serializeTypedRPCMap = (
   )
 
   const serializedImportMap = serializeImportMap(
+    logger,
     relativeToPath,
     packageMappings,
     typesMap,

@@ -5,11 +5,7 @@
  * must include those options with compatible types.
  */
 
-import {
-  wireCLI,
-  pikkuCLICommand,
-  pikkuSessionlessFunc,
-} from '#pikku'
+import { wireCLI, pikkuCLICommand, pikkuSessionlessFunc } from '#pikku'
 
 // Valid: Options match function input type
 wireCLI({

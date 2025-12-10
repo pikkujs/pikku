@@ -54,7 +54,9 @@ export const serializeMCPJson = async (
       const schemaContent = await readFile(schemaPath, 'utf-8')
       return JSON.parse(schemaContent)
     } catch (e) {
-      logger.warn(`Serialize MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`)
+      logger.warn(
+        `Serialize MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`
+      )
       console.error(e)
       return undefined
     }

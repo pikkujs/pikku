@@ -10,6 +10,7 @@ export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
       config
 
     const content = serializeTypedRPCMap(
+      logger,
       rpcInternalMapDeclarationFile,
       packageMappings,
       functions.typesMap,
@@ -33,6 +34,7 @@ export const pikkuRPCExposedMap: any = pikkuSessionlessFunc<void, void>({
     const { rpcMapDeclarationFile, packageMappings, externalPackages } = config
 
     const content = serializeTypedRPCMap(
+      logger,
       rpcMapDeclarationFile,
       packageMappings,
       functions.typesMap,

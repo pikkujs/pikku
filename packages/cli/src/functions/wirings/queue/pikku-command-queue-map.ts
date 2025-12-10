@@ -9,6 +9,7 @@ export const pikkuQueueMap: any = pikkuSessionlessFunc<void, void>({
     const { queueMapDeclarationFile, packageMappings } = config
 
     const content = serializeQueueMap(
+      logger,
       queueMapDeclarationFile,
       packageMappings,
       functions.typesMap,

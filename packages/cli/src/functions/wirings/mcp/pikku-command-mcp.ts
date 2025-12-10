@@ -59,7 +59,9 @@ const generateArgumentsFromSchema = async (
     }
     return argumentsArray
   } catch (e) {
-    logger.warn(`Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`)
+    logger.warn(
+      `Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`
+    )
     console.error(e)
     return []
   }

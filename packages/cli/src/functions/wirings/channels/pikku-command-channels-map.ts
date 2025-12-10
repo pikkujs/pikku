@@ -9,6 +9,7 @@ export const pikkuChannelsMap: any = pikkuSessionlessFunc<void, void>({
     const { channelsMapDeclarationFile, packageMappings } = config
 
     const content = serializeTypedChannelsMap(
+      logger,
       channelsMapDeclarationFile,
       packageMappings,
       state.functions.typesMap,
