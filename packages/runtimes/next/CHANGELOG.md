@@ -2,6 +2,15 @@
 
 ## 0.11.2
 
+### Patch Changes
+
+- db9c7bf: Relax apiRequest parameter type from NextRequest to Request
+- 14a3dcd: fix: nextjs rpc route wasn't working
+- Updated dependencies [db9c7bf]
+  - @pikku/core@0.11.2
+
+## 0.11.2
+
 ### Fixes
 
 - f35e89da: Relax apiRequest parameter type from NextRequest to Request for broader compatibility

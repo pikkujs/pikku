@@ -1,5 +1,16 @@
 ## 0.11.3
 
+## 0.11.3
+
+### Patch Changes
+
+- 14a3dcd: fix: nextjs rpc route wasn't working
+- db9c7bf: Add workflow graph code generation and fix HTTP routes count
+- Updated dependencies [db9c7bf]
+- Updated dependencies [db9c7bf]
+  - @pikku/core@0.11.2
+  - @pikku/inspector@0.11.2
+
 ### Features
 
 - f35e89da: Add workflow graph code generation

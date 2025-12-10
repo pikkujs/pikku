@@ -1,6 +1,6 @@
 {
   "name": "@pikku/redis",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",
@@ -16,7 +16,7 @@
     "release": "npm run build && npm test"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.11.1"
+    "@pikku/core": "^0.11.2"
   },
   "dependencies": {
     "ioredis": "^5.8.2"
