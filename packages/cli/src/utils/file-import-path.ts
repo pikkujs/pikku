@@ -11,16 +11,21 @@ export const getFileImportRelativePath = (
   }
 
   // If the path includes node_modules, strip everything before and including node_modules/
+  // For @types packages, strip @types/ prefix since TypeScript resolves them automatically
+  // Also remove trailing /index.d.js or /index.js to get clean package imports
   if (filePath.includes('node_modules')) {
     const nodeModulesIndex = filePath.indexOf('node_modules/')
     if (nodeModulesIndex !== -1) {
       filePath = filePath.substring(nodeModulesIndex + 'node_modules/'.length)
     }
-    // For @types packages, strip @types/ prefix since TypeScript resolves them automatically
     if (filePath.startsWith('@types/')) {
       filePath = filePath.substring('@types/'.length)
     }
-    return filePath.replace('.ts', '.js')
+    filePath = filePath.replace('.ts', '.js')
+    filePath = filePath
+      .replace(/\/index\.d\.js$/, '')
+      .replace(/\/index\.js$/, '')
+    return filePath
   }
 
   const absolutePath = resolve(dirname(from), to)
