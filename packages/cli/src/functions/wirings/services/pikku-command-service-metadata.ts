@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeAllServiceMetadata } from '@pikku/inspector'
 

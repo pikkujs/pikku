@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { convertDslToGraph, ErrorCode } from '@pikku/inspector'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { writeFileInDir } from '../../../utils/file-writer.js'

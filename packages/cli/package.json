@@ -3,6 +3,10 @@
   "version": "0.11.2",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.js",
+    "#pikku/*": "./.pikku/*"
+  },
   "bin": {
     "pikku": "dist/bin/pikku.js"
   },
