@@ -4,8 +4,8 @@
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.js",
-    "#pikku/*": "./.pikku/*"
+    "#pikku": "./dist/.pikku/pikku-types.gen.js",
+    "#pikku/*": "./dist/.pikku/*"
   },
   "bin": {
     "pikku": "dist/bin/pikku.js"
