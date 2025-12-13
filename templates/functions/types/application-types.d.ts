@@ -6,7 +6,6 @@ import type {
   EventHubService,
   JWTService,
   QueueService,
-  SecretService,
 } from '@pikku/core'
 import { EventHubTopics } from './eventhub-topics.js'
 

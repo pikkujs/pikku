@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeQueueMap } from './serialize-queue-map.js'
@@ -9,6 +9,7 @@ export const pikkuQueueMap: any = pikkuSessionlessFunc<void, void>({
     const { queueMapDeclarationFile, packageMappings } = config
 
     const content = serializeQueueMap(
+      logger,
       queueMapDeclarationFile,
       packageMappings,
       functions.typesMap,

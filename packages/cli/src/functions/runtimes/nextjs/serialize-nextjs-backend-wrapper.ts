@@ -206,11 +206,9 @@ export const pikku = (_options?: any) => {
    */
   const rpc = async <Name extends keyof FlattenedRPCMap>(
     rpcName: Name,
-    ...args: FlattenedRPCMap[Name]['input'] extends null | undefined
-      ? [data?: FlattenedRPCMap[Name]['input']]
-      : [data: NonNullable<FlattenedRPCMap[Name]['input']>]
+    data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
-    return dynamicActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: args[0] ?? null }) as unknown as FlattenedRPCMap[Name]['output']
+    return dynamicActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: data ?? null }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   /**
@@ -224,11 +222,9 @@ export const pikku = (_options?: any) => {
    */
   const staticRPC = async <Name extends keyof FlattenedRPCMap>(
     rpcName: Name,
-    ...args: FlattenedRPCMap[Name]['input'] extends null | undefined
-      ? [data?: FlattenedRPCMap[Name]['input']]
-      : [data: NonNullable<FlattenedRPCMap[Name]['input']>]
+    data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
-    return staticActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: args[0] ?? null }) as unknown as FlattenedRPCMap[Name]['output']
+    return staticActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: data ?? null }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   return {

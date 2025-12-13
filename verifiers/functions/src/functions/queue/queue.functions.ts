@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { loggingMiddleware } from './middleware.js'
+import { loggingMiddleware } from '../middleware.js'
 
 export const queueWorker = pikkuSessionlessFunc<
   { message: string; fail: boolean },

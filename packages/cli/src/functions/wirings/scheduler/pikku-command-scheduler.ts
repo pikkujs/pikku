@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'

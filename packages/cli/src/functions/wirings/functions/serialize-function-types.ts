@@ -507,6 +507,53 @@ export const pikkuServices = (
 ) => func
 
 /**
+ * Base services provided to external package service factories.
+ * These are always available from the parent application.
+ */
+export type ExternalBaseServices = {
+  logger: SingletonServices['logger']
+  variables: SingletonServices['variables']
+  secrets: NonNullable<SingletonServices['secrets']>
+}
+
+/**
+ * Creates a Pikku singleton services factory for external packages.
+ * Unlike pikkuServices, this expects the parent application to provide
+ * logger, variables, and secrets - no fallbacks needed.
+ *
+ * @param func - External services factory function that receives config and base services
+ * @returns The singleton services factory function
+ *
+ * @example
+ * \`\`\`typescript
+ * export const createSingletonServices = pikkuExternalServices(async (
+ *   config,
+ *   { secrets }
+ * ) => {
+ *   const creds = await secrets.getSecretJSON<GithubCredentials>('GITHUB_CREDENTIALS')
+ *   const github = new GithubService(creds)
+ *   return { github }
+ * })
+ * \`\`\`
+ */
+export const pikkuExternalServices = <T extends Record<string, any>>(
+  func: (config: Config, services: ExternalBaseServices) => Promise<T>
+) => {
+  return async (config: Config, existingServices: SingletonServices): Promise<RequiredSingletonServices> => {
+    const { logger, variables, secrets } = existingServices
+    if (!secrets) {
+      throw new Error('External packages require a secrets service from the parent application')
+    }
+    const result = await func(config, { logger, variables, secrets })
+    return {
+      ...existingServices,
+      config,
+      ...result,
+    } as unknown as RequiredSingletonServices
+  }
+}
+
+/**
  * Creates a Pikku wire services factory.
  * Use this to define services that are created per-request/session.
  *

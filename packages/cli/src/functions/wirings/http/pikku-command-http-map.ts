@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedHTTPWiringsMap } from './serialize-typed-http-map.js'
@@ -9,6 +9,7 @@ export const pikkuHTTPMap: any = pikkuSessionlessFunc<void, void>({
     const { httpMapDeclarationFile, packageMappings } = config
 
     const content = serializeTypedHTTPWiringsMap(
+      logger,
       httpMapDeclarationFile,
       packageMappings,
       functions.typesMap,

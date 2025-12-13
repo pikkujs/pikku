@@ -14,6 +14,7 @@ import {
   LocalVariablesService,
   LocalSecretService,
   LogLevel,
+  InMemoryWorkflowService,
 } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
@@ -298,12 +299,15 @@ export const createSingletonServices: CreateSingletonServices<
     return filteredState as InspectorState
   }
 
+  const workflowService = new InMemoryWorkflowService()
+
   return {
     config,
     logger,
     variables,
     secrets: new LocalSecretService(variables),
     getInspectorState,
+    workflowService,
   }
 }
 

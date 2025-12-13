@@ -6,9 +6,9 @@ import type {
   EventHubService,
   JWTService,
   QueueService,
-  SecretService,
 } from '@pikku/core'
 import { EventHubTopics } from './eventhub-topics.js'
+import type { CustomLogger } from '../src/services/custom-logger.service.js'
 
 export interface Config extends CoreConfig {}
 
@@ -17,9 +17,9 @@ export interface UserSession extends CoreUserSession {
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
+  logger: CustomLogger
   jwt?: JWTService
   eventHub?: EventHubService<EventHubTopics>
-  secrets?: SecretService
   queueService?: QueueService
 }
 

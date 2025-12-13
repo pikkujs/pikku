@@ -125,10 +125,10 @@ export const inspect = (
   const startProgram = performance.now()
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.CommonJS,
+    module: ts.ModuleKind.Node16,
     skipLibCheck: true,
     skipDefaultLibCheck: true,
-    moduleResolution: ts.ModuleResolutionKind.Node10,
+    moduleResolution: ts.ModuleResolutionKind.Node16,
     types: [],
     allowJs: false,
     checkJs: false,

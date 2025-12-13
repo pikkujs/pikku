@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'

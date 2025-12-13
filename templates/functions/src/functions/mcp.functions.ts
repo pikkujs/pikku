@@ -20,7 +20,6 @@ const formatTodo = (todo: Todo): string => {
   return `${status} ${priority} ${todo.id}: ${todo.title}${due}${tags}`
 }
 
-
 /**
  * MCP Resource: Get a specific todo
  */
@@ -60,7 +59,6 @@ export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
     ]
   }
 )
-
 
 /**
  * MCP Tool: Create a new todo
@@ -125,7 +123,6 @@ export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>(
     ]
   }
 )
-
 
 /**
  * MCP Prompt: Plan the day based on pending todos

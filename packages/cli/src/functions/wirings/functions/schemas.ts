@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import {
   saveSchemas,
   generateSchemas,
@@ -36,7 +36,7 @@ export const pikkuSchemas: any = pikkuSessionlessFunc<
     await saveSchemas(
       logger,
       config.schemaDirectory,
-      { ...schemas, ...zodSchemas},
+      { ...schemas, ...zodSchemas },
       visitState.functions.typesMap,
       visitState.functions.meta,
       config.schema?.supportsImportAttributes || true,

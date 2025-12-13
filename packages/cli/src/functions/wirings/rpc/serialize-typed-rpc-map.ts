@@ -1,15 +1,17 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
-import { FunctionsMeta } from '@pikku/core'
+import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
 export const serializeTypedRPCMap = (
+  logger: Logger,
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   rpcMeta: Record<string, string>,
-  externalPackages?: Record<string, string>
+  externalPackages?: Record<string, string>,
+  workflowMapPath?: string
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -21,6 +23,7 @@ export const serializeTypedRPCMap = (
   )
 
   const serializedImportMap = serializeImportMap(
+    logger,
     relativeToPath,
     packageMappings,
     typesMap,
@@ -59,7 +62,7 @@ export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
 // Import WorkflowMap for workflow typing
-import type { WorkflowMap } from '../workflow/pikku-workflow-map.gen.js'
+import type { WorkflowMap } from '${workflowMapPath}'
 
 export type TypedPikkuRPC = {
   depth: number;

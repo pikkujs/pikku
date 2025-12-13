@@ -4,10 +4,7 @@
  * MCP prompts must return an array of message objects with role and content.
  */
 
-import {
-  wireMCPPrompt,
-  pikkuMCPPromptFunc,
-} from '#pikku'
+import { wireMCPPrompt, pikkuMCPPromptFunc } from '#pikku'
 
 // Valid: Prompt with proper return type
 wireMCPPrompt({

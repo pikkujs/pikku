@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTypedChannelsMap } from './serialize-typed-channel-map.js'
@@ -9,6 +9,7 @@ export const pikkuChannelsMap: any = pikkuSessionlessFunc<void, void>({
     const { channelsMapDeclarationFile, packageMappings } = config
 
     const content = serializeTypedChannelsMap(
+      logger,
       channelsMapDeclarationFile,
       packageMappings,
       state.functions.typesMap,

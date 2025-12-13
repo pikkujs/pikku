@@ -1,8 +1,4 @@
-import {
-  wireMCPTool,
-  wireMCPResource,
-  wireMCPPrompt,
-} from '#pikku'
+import { wireMCPTool, wireMCPResource, wireMCPPrompt } from '#pikku'
 import {
   sayHello,
   disableTool,

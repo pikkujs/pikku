@@ -9,11 +9,8 @@ import {
   CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import {
-  ConsoleLogger,
-  JWTService,
-  LocalVariablesService,
-} from '@pikku/core/services'
+import { JWTService, LocalVariablesService } from '@pikku/core/services'
+import { CustomLogger } from './services/custom-logger.service.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import {
   RequiredSingletonServices,
@@ -36,7 +33,7 @@ export const createSingletonServices: CreateSingletonServices<
   existingServices?: Partial<SingletonServices>
 ): Promise<RequiredSingletonServices> => {
   const variables = existingServices?.variables || new LocalVariablesService()
-  const logger = new ConsoleLogger()
+  const logger = new CustomLogger()
 
   const schema = new CFWorkerSchemaService(logger)
 
