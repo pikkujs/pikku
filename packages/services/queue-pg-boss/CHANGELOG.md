@@ -2,6 +2,12 @@
 
 ## 0.11.2
 
+### Patch Changes
+
+- db9c7bf: Simplify CreateWireServices type signature for custom Config compatibility
+- Updated dependencies [db9c7bf]
+  - @pikku/core@0.11.2
+
 ### Fixes
 
 - ddd87eaf: Simplify CreateWireServices type signature for custom Config compatibility

@@ -14,11 +14,11 @@
     "test": "pikku && tsc && npx tsx src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.11.1",
+    "@pikku/core": "^0.11.2",
     "@pikku/templates-function-external": "workspace:*"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.11.2",
+    "@pikku/cli": "^0.11.3",
     "@types/node": "^24",
     "typescript": "^5.9"
   }

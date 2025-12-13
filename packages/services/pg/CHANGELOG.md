@@ -2,6 +2,12 @@
 
 ## 0.11.2
 
+### Patch Changes
+
+- db9c7bf: Add workflow graph support to PgWorkflowService
+- Updated dependencies [db9c7bf]
+  - @pikku/core@0.11.2
+
 ### Features
 
 - f35e89da: Add workflow graph support to PgWorkflowService

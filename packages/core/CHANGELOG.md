@@ -2,6 +2,10 @@
 
 ## 0.11.2
 
+### Patch Changes
+
+- db9c7bf: Add workflow graph system with type-safe builder
+
 ### Features
 
 - f35e89da: Add workflow graph system with type-safe builder
