@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync } from 'fs'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -11,7 +11,7 @@ const pikkuCliPath = join(__dirname, '../.pikku/cli/pikku-cli.gen.js')
 
 if (existsSync(pikkuCliPath)) {
   try {
-    const { PikkuCLI } = await import(pikkuCliPath)
+    const { PikkuCLI } = await import(pathToFileURL(pikkuCliPath).href)
     await PikkuCLI(process.argv.slice(2))
     process.exit(0)
   } catch (error: any) {
