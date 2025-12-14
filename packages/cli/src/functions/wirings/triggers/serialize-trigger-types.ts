@@ -1,14 +1,19 @@
 /**
  * Generates type definitions for trigger wirings
  */
-export const serializeTriggerTypes = (functionTypesImportPath: string) => {
+export const serializeTriggerTypes = (
+  singletonServicesTypeImport: string,
+  singletonServicesTypeName: string
+) => {
   return `/**
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, pikkuTriggerFunc as pikkuTriggerFuncCore, wireTrigger as wireTriggerCore, addTrigger as addTriggerCore } from '@pikku/core/trigger'
-import type { SingletonServices } from '${functionTypesImportPath}'
+import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, wireTrigger as wireTriggerCore, addTrigger as addTriggerCore } from '@pikku/core/trigger'
+${singletonServicesTypeImport}
 import type { ZodLike } from '@pikku/core'
+
+${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
 
 /**
  * A trigger function that sets up a subscription and returns a teardown function.
@@ -31,6 +36,31 @@ export type PikkuTriggerFunctionConfig<
   InputSchema extends ZodLike | undefined = undefined,
   OutputSchema extends ZodLike | undefined = undefined
 > = CorePikkuTriggerFunctionConfig<TInput, TOutput, SingletonServices, InputSchema, OutputSchema>
+
+/**
+ * Helper type to infer the output type from a Zod schema
+ */
+type InferZodOutput<T> = T extends ZodLike<infer U> ? U : never
+
+/**
+ * Configuration object for trigger functions with Zod schema validation.
+ * Use this when you want to define input/output schemas using Zod.
+ * Types are automatically inferred from the schemas.
+ */
+export type PikkuTriggerFunctionConfigWithSchema<
+  InputSchema extends ZodLike,
+  OutputSchema extends ZodLike | undefined = undefined
+> = {
+  title?: string
+  description?: string
+  tags?: string[]
+  func: PikkuTriggerFunction<
+    InferZodOutput<InputSchema>,
+    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown
+  >
+  input: InputSchema
+  output?: OutputSchema
+}
 
 /**
  * Type definition for trigger wirings.
@@ -65,13 +95,14 @@ export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
  *   return () => subscriber.unsubscribe()
  * })
  *
- * // Configuration object syntax with metadata
+ * // Configuration object syntax with Zod schemas (types inferred automatically)
  * export const redisSubscribeTrigger = pikkuTriggerFunc({
  *   title: 'Redis Subscribe Trigger',
  *   description: 'Listens to Redis pub/sub channel',
  *   input: z.object({ channel: z.string() }),
  *   output: z.object({ message: z.string() }),
  *   func: async ({ redis }, { channel }, { trigger }) => {
+ *     // channel is typed as string (inferred from input schema)
  *     const subscriber = redis.duplicate()
  *     await subscriber.subscribe(channel, (msg) => {
  *       trigger.invoke({ message: msg })
@@ -81,17 +112,22 @@ export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
  * })
  * \`\`\`
  */
-export const pikkuTriggerFunc = <
-  TInput = unknown,
-  TOutput = unknown,
-  InputSchema extends ZodLike | undefined = undefined,
+export function pikkuTriggerFunc<
+  InputSchema extends ZodLike,
   OutputSchema extends ZodLike | undefined = undefined
 >(
+  config: PikkuTriggerFunctionConfigWithSchema<InputSchema, OutputSchema>
+): PikkuTriggerFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, InputSchema, OutputSchema>
+export function pikkuTriggerFunc<TInput, TOutput = unknown>(
   triggerOrConfig:
     | PikkuTriggerFunction<TInput, TOutput>
-    | PikkuTriggerFunctionConfig<TInput, TOutput, InputSchema, OutputSchema>
-): PikkuTriggerFunctionConfig<TInput, TOutput, InputSchema, OutputSchema> => {
-  return pikkuTriggerFuncCore(triggerOrConfig as any) as any
+    | PikkuTriggerFunctionConfig<TInput, TOutput>
+): PikkuTriggerFunctionConfig<TInput, TOutput>
+export function pikkuTriggerFunc(triggerOrConfig: any) {
+  if (typeof triggerOrConfig === 'function') {
+    return { func: triggerOrConfig }
+  }
+  return triggerOrConfig
 }
 
 /**
