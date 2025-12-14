@@ -8,14 +8,14 @@ import type { CorePikkuTriggerFunctionConfig } from '../../function/functions.ty
  * The trigger will be available for setup via setupTrigger.
  */
 export const wireTrigger = <
-  TConfig = unknown,
+  TInput = unknown,
   TOutput = unknown,
   TriggerFunctionConfig extends CorePikkuTriggerFunctionConfig<
-    TConfig,
+    TInput,
     TOutput
-  > = CorePikkuTriggerFunctionConfig<TConfig, TOutput>,
+  > = CorePikkuTriggerFunctionConfig<TInput, TOutput>,
 >(
-  trigger: CoreTrigger<TConfig, TOutput, TriggerFunctionConfig>
+  trigger: CoreTrigger<TInput, TOutput, TriggerFunctionConfig>
 ) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]

@@ -232,7 +232,7 @@ export type CorePikkuFunctionConfig<
 
 /**
  * A trigger function that sets up a subscription and returns a teardown function.
- * The trigger is fired via wire.trigger.trigger(data).
+ * The trigger is fired via wire.trigger.invoke(data).
  *
  * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type produced when trigger fires
@@ -285,7 +285,7 @@ export type CorePikkuTriggerFunctionConfig<
  * >(async ({ redis }, { channel }, { trigger }) => {
  *   const subscriber = redis.duplicate()
  *   await subscriber.subscribe(channel, (msg) => {
- *     trigger.trigger({ message: msg })
+ *     trigger.invoke({ message: msg })
  *   })
  *   return () => subscriber.unsubscribe()
  * })
@@ -299,7 +299,7 @@ export type CorePikkuTriggerFunctionConfig<
  *   func: async ({ redis }, { channel }, { trigger }) => {
  *     const subscriber = redis.duplicate()
  *     await subscriber.subscribe(channel, (msg) => {
- *       trigger.trigger({ message: msg })
+ *       trigger.invoke({ message: msg })
  *     })
  *     return () => subscriber.unsubscribe()
  *   }
