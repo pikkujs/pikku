@@ -25,7 +25,6 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
         ? null
         : getFileImportRelativePath(typesFile, file, packageMappings)
 
-    // Forge and trigger types are included for external packages
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
 

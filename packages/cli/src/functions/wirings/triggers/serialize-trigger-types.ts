@@ -83,7 +83,6 @@ export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
  *
  * @example
  * \`\`\`typescript
- * // Direct function syntax
  * export const redisSubscribeTrigger = pikkuTriggerFunc<
  *   { channel: string },
  *   { message: string }
@@ -95,14 +94,12 @@ export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
  *   return () => subscriber.unsubscribe()
  * })
  *
- * // Configuration object syntax with Zod schemas (types inferred automatically)
  * export const redisSubscribeTrigger = pikkuTriggerFunc({
  *   title: 'Redis Subscribe Trigger',
  *   description: 'Listens to Redis pub/sub channel',
  *   input: z.object({ channel: z.string() }),
  *   output: z.object({ message: z.string() }),
  *   func: async ({ redis }, { channel }, { trigger }) => {
- *     // channel is typed as string (inferred from input schema)
  *     const subscriber = redis.duplicate()
  *     await subscriber.subscribe(channel, (msg) => {
  *       trigger.invoke({ message: msg })
