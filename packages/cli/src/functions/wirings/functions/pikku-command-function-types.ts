@@ -12,6 +12,7 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
       functionTypesFile,
       httpTypesFile,
       channelsTypesFile,
+      triggersTypesFile,
       schedulersTypesFile,
       queueTypesFile,
       mcpTypesFile,
@@ -24,19 +25,20 @@ export const pikkuFunctionTypes: any = pikkuSessionlessFunc<void, void>({
         ? null
         : getFileImportRelativePath(typesFile, file, packageMappings)
 
-    // Forge types are included for external packages (they need wireForgeNode/wireForgeCredential)
-    const getForgeImportPath = (file: string) =>
+    // Forge and trigger types are included for external packages
+    const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
 
     const content = serializePikkuTypesHub(
       getFileImportRelativePath(typesFile, functionTypesFile, packageMappings),
       getImportPath(httpTypesFile),
       getImportPath(channelsTypesFile),
+      getAlwaysImportPath(triggersTypesFile),
       getImportPath(schedulersTypesFile),
       getImportPath(queueTypesFile),
       getImportPath(mcpTypesFile),
       getImportPath(cliTypesFile),
-      getForgeImportPath(forgeTypesFile)
+      getAlwaysImportPath(forgeTypesFile)
     )
 
     await writeFileInDir(logger, typesFile, content)

@@ -20,6 +20,8 @@ export const all: any = pikkuVoidFunc({
 
     await rpc.invoke('pikkuFunctionTypesSplit', null)
 
+    await rpc.invoke('pikkuTriggerTypes', null)
+
     if (!config.externalPackage) {
       await rpc.invoke('pikkuHTTPTypes', null)
       await rpc.invoke('pikkuChannelTypes', null)

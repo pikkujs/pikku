@@ -1,7 +1,10 @@
 import type { CoreSingletonServices } from '../../types/core.types.js'
-import type { CoreTrigger, TriggerInstance } from './trigger.types.js'
+import type {
+  CoreTrigger,
+  TriggerInstance,
+  CorePikkuTriggerFunctionConfig,
+} from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import type { CorePikkuTriggerFunctionConfig } from '../../function/functions.types.js'
 
 /**
  * Adds a trigger function to the registry.

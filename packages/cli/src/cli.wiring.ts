@@ -1,6 +1,6 @@
 import { pikkuSchemas } from './functions/wirings/functions/schemas.js'
-import { pikkuFetch } from './functions/wirings/fetch/index.js'
-import { pikkuWebSocketTyped } from './functions/wirings/channels/pikku-command-websocket-typed.js'
+import { pikkuFetch } from './functions/runtimes/fetch/index.js'
+import { pikkuWebSocketTyped } from './functions/runtimes/websocket/pikku-command-websocket-typed.js'
 import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'

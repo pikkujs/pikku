@@ -1,10 +1,10 @@
 import { PikkuError, ErrorDetails } from '../errors/error-handler.js'
 import {
   CorePikkuFunctionConfig,
-  CorePikkuTriggerFunctionConfig,
   CorePermissionGroup,
   CorePikkuPermission,
 } from '../function/functions.types.js'
+import { CorePikkuTriggerFunctionConfig } from '../wirings/trigger/trigger.types.js'
 import { CoreChannel, ChannelsMeta } from '../wirings/channel/channel.types.js'
 import { CLIMeta, CLIProgramState } from '../wirings/cli/cli.types.js'
 import {
