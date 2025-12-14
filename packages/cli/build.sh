@@ -1,15 +1,16 @@
 #!/bin/bash
-
-set -e
+set -euo pipefail
 
 echo "Starting Pikku CLI build process..."
 
 # Clean .pikku directory and dist
-rm -rf .pikku dist
+test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
+rm -rf -- .pikku dist
 
 # Bootstrap using the published CLI - generates all .pikku files
 echo "Bootstrapping with published @pikku/cli..."
-npx -y @pikku/cli@latest
+: "${PIKKU_CLI_VERSION:=latest}"
+npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
 
 # Build TypeScript
 echo "Building TypeScript to dist..."

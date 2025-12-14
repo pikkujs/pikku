@@ -425,6 +425,30 @@ export const pikkuVoidFunc = (
 }
 
 /**
+ * Creates a trigger function that takes no input and returns no output.
+ * Use this for event-driven triggers, scheduled tasks, or webhook handlers
+ * that don't require request/response semantics.
+ *
+ * @param func - Function definition, either direct function or configuration object
+ * @returns The normalized configuration object
+ *
+ * @example
+ * \`\`\`typescript
+ * const onUserCreated = pikkuTriggerFunc(async ({db, logger}) => {
+ *     logger.info('User created trigger fired')
+ *     await db.notifications.sendWelcomeEmail()
+ * })
+ * \`\`\`
+ */
+export const pikkuTriggerFunc = (
+  func:
+    | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
+    | PikkuFunctionConfig<void, void, 'session' | 'rpc'>
+) => {
+  return typeof func === 'function' ? { func } : func
+}
+
+/**
  * Creates a wrapper function for external package functions that are exposed via RPC.
  * This allows you to wire external functions to any wiring type (HTTP, queue, etc.)
  * without type compatibility issues.

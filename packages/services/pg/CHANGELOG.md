@@ -1,5 +1,3 @@
-## 0.11.0
-
 ## 0.11.2
 
 ### Patch Changes
@@ -32,6 +30,8 @@
 ### Minor Changes
 
 - Initial release with PostgreSQL-backed channel, eventhub, and workflow stores
+
+## 0.11.0
 
 # @pikku-workflows/pg
 

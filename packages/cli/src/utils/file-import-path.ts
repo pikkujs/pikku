@@ -10,20 +10,38 @@ export const getFileImportRelativePath = (
     filePath = `./${filePath}`
   }
 
+  // Normalize to POSIX paths first (replace backslashes with forward slashes)
+  const posixPath = filePath.replace(/\\/g, '/')
+
   // If the path includes node_modules, strip everything before and including node_modules/
-  // For @types packages, strip @types/ prefix since TypeScript resolves them automatically
-  // Also remove trailing /index.d.js or /index.js to get clean package imports
-  if (filePath.includes('node_modules')) {
-    const nodeModulesIndex = filePath.indexOf('node_modules/')
-    if (nodeModulesIndex !== -1) {
-      filePath = filePath.substring(nodeModulesIndex + 'node_modules/'.length)
-    }
+  // For @types packages, strip @types/ prefix and map double-underscore to scoped packages
+  // Also remove trailing /index.d.ts or /index.js to get clean package imports
+  if (posixPath.includes('node_modules/')) {
+    const nodeModulesIndex = posixPath.indexOf('node_modules/')
+    filePath = posixPath.substring(nodeModulesIndex + 'node_modules/'.length)
+
+    // Handle @types packages
     if (filePath.startsWith('@types/')) {
       filePath = filePath.substring('@types/'.length)
+      // Map double-underscore to scoped packages (e.g. "@types/foo__bar" → "@foo/bar")
+      const parts = filePath.split('/')
+      if (parts[0].includes('__')) {
+        const [scope, name] = parts[0].split('__')
+        parts[0] = `@${scope}/${name}`
+        filePath = parts.join('/')
+      }
     }
-    filePath = filePath.replace('.ts', '.js')
+
+    // Handle file extensions: strip .d.ts entirely to avoid .d.js, convert .ts to .js
+    if (filePath.endsWith('.d.ts')) {
+      filePath = filePath.slice(0, -5)
+    } else if (filePath.endsWith('.ts')) {
+      filePath = filePath.slice(0, -3) + '.js'
+    }
+
+    // Clean up index files with POSIX-safe regexes
     filePath = filePath
-      .replace(/\/index\.d\.js$/, '')
+      .replace(/\/index$/, '')
       .replace(/\/index\.js$/, '')
     return filePath
   }
