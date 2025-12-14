@@ -1,5 +1,11 @@
 ## 0.11.3
 
+## 0.11.4
+
+### Patch Changes
+
+- ba19722: Use Pikku for the CLI instead of Commander
+
 ### Patch Changes
 
 - 14a3dcd: fix: nextjs rpc route wasn't working
