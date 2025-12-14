@@ -1,6 +1,7 @@
 import { PikkuError, ErrorDetails } from '../errors/error-handler.js'
 import {
   CorePikkuFunctionConfig,
+  CorePikkuTriggerFunctionConfig,
   CorePermissionGroup,
   CorePikkuPermission,
 } from '../function/functions.types.js'
@@ -102,6 +103,7 @@ export interface PikkuPackageState {
     meta: WorkflowsRuntimeMeta
   }
   trigger: {
+    functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>
     triggers: Map<string, CoreTrigger>
     meta: TriggerMeta
   }
