@@ -5,7 +5,7 @@ import type { CorePikkuTriggerFunctionConfig } from '../../function/functions.ty
  * Call trigger() to fire the trigger and start a new workflow/execution.
  */
 export interface PikkuTrigger<TOutput = unknown> {
-  trigger: (data: TOutput) => void
+  invoke: (data: TOutput) => void
 }
 
 /**
@@ -24,23 +24,23 @@ export type TriggerMeta = Record<
 /**
  * Core trigger definition for registration.
  *
- * @template TConfig - Configuration type
+ * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type
  */
 export interface CoreTrigger<
-  TConfig = unknown,
+  TInput = unknown,
   TOutput = unknown,
   TriggerFunctionConfig extends CorePikkuTriggerFunctionConfig<
-    TConfig,
+    TInput,
     TOutput
-  > = CorePikkuTriggerFunctionConfig<TConfig, TOutput>,
+  > = CorePikkuTriggerFunctionConfig<TInput, TOutput>,
 > {
   /** Unique name for this trigger */
   name: string
   /** The trigger function configuration */
   func: TriggerFunctionConfig
-  /** Configuration to pass to the trigger function */
-  config: TConfig
+  /** Input to pass to the trigger function */
+  input: TInput
   /** Optional description */
   description?: string
   /** Optional tags for categorization */

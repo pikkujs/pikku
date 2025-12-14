@@ -19,7 +19,7 @@ export const serializeFunctionTypes = (
  */
 
 import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, ZodLike, CreateWireServices } from '@pikku/core'
-import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
+import { CorePikkuFunction, CorePikkuFunctionSessionless, CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig } from '@pikku/core/function'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -425,27 +425,80 @@ export const pikkuVoidFunc = (
 }
 
 /**
- * Creates a trigger function that takes no input and returns no output.
- * Use this for event-driven triggers, scheduled tasks, or webhook handlers
- * that don't require request/response semantics.
+ * A trigger function that sets up a subscription and returns a teardown function.
+ * The trigger is fired via wire.trigger.trigger(data).
  *
- * @param func - Function definition, either direct function or configuration object
+ * @template TInput - Input type (configuration passed when wired)
+ * @template TOutput - Output type produced when trigger fires
+ */
+export type PikkuTriggerFunction<
+  TInput = unknown,
+  TOutput = unknown
+> = CorePikkuTriggerFunction<TInput, TOutput, SingletonServices>
+
+/**
+ * Configuration object for creating a trigger function with metadata
+ */
+export type PikkuTriggerFunctionConfig<
+  TInput = unknown,
+  TOutput = unknown,
+  InputSchema extends ZodLike | undefined = undefined,
+  OutputSchema extends ZodLike | undefined = undefined
+> = CorePikkuTriggerFunctionConfig<TInput, TOutput, SingletonServices, InputSchema, OutputSchema>
+
+/**
+ * Creates a trigger function that sets up a subscription and returns a teardown function.
+ * The trigger is fired via wire.trigger.trigger(data).
+ *
+ * @template TInput - Input type (configuration passed when wired)
+ * @template TOutput - Output type produced when trigger fires
+ * @param triggerOrConfig - Function definition or configuration object
  * @returns The normalized configuration object
  *
  * @example
  * \`\`\`typescript
- * const onUserCreated = pikkuTriggerFunc(async ({db, logger}) => {
- *     logger.info('User created trigger fired')
- *     await db.notifications.sendWelcomeEmail()
+ * // Direct function syntax
+ * export const redisSubscribeTrigger = pikkuTriggerFunc<
+ *   { channel: string },
+ *   { message: string }
+ * >(async ({ redis }, { channel }, { trigger }) => {
+ *   const subscriber = redis.duplicate()
+ *   await subscriber.subscribe(channel, (msg) => {
+ *     trigger.invoke({ message: msg })
+ *   })
+ *   return () => subscriber.unsubscribe()
+ * })
+ *
+ * // Configuration object syntax with metadata
+ * export const redisSubscribeTrigger = pikkuTriggerFunc({
+ *   title: 'Redis Subscribe Trigger',
+ *   description: 'Listens to Redis pub/sub channel',
+ *   input: z.object({ channel: z.string() }),
+ *   output: z.object({ message: z.string() }),
+ *   func: async ({ redis }, { channel }, { trigger }) => {
+ *     const subscriber = redis.duplicate()
+ *     await subscriber.subscribe(channel, (msg) => {
+ *       trigger.invoke({ message: msg })
+ *     })
+ *     return () => subscriber.unsubscribe()
+ *   }
  * })
  * \`\`\`
  */
-export const pikkuTriggerFunc = (
-  func:
-    | PikkuFunctionSessionless<void, void, 'session' | 'rpc'>
-    | PikkuFunctionConfig<void, void, 'session' | 'rpc'>
-) => {
-  return typeof func === 'function' ? { func } : func
+export const pikkuTriggerFunc = <
+  TInput = unknown,
+  TOutput = unknown,
+  InputSchema extends ZodLike | undefined = undefined,
+  OutputSchema extends ZodLike | undefined = undefined
+>(
+  triggerOrConfig:
+    | PikkuTriggerFunction<TInput, TOutput>
+    | PikkuTriggerFunctionConfig<TInput, TOutput, InputSchema, OutputSchema>
+): PikkuTriggerFunctionConfig<TInput, TOutput, InputSchema, OutputSchema> => {
+  if (typeof triggerOrConfig === 'function') {
+    return { func: triggerOrConfig }
+  }
+  return triggerOrConfig
 }
 
 /**

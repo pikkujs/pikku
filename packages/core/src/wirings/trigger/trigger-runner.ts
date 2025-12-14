@@ -60,7 +60,7 @@ export async function setupTrigger<TOutput = unknown>({
 
   const wire = {
     trigger: {
-      trigger: (data: TOutput) => {
+      invoke: (data: TOutput) => {
         singletonServices.logger.info(`Trigger fired: ${name}`)
         onTrigger(data)
       },
@@ -71,7 +71,7 @@ export async function setupTrigger<TOutput = unknown>({
 
   const teardown = await trigger.func.func(
     singletonServices,
-    trigger.config,
+    trigger.input,
     wire as any
   )
 

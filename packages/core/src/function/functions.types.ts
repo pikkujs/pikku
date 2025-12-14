@@ -234,28 +234,28 @@ export type CorePikkuFunctionConfig<
  * A trigger function that sets up a subscription and returns a teardown function.
  * The trigger is fired via wire.trigger.trigger(data).
  *
- * @template TConfig - Configuration type (hardcoded when wired)
+ * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type produced when trigger fires
  * @template Services - Services available to the trigger
  */
 export type CorePikkuTriggerFunction<
-  TConfig = unknown,
+  TInput = unknown,
   TOutput = unknown,
   Services extends CoreSingletonServices = CoreSingletonServices,
 > = (
   services: Services,
-  config: TConfig,
-  wire: { trigger: { trigger: (data: TOutput) => void } }
+  input: TInput,
+  wire: { trigger: { invoke: (data: TOutput) => void } }
 ) => Promise<() => void | Promise<void>>
 
 /**
  * Configuration object for creating a trigger function with metadata
  */
 export type CorePikkuTriggerFunctionConfig<
-  TConfig = unknown,
+  TInput = unknown,
   TOutput = unknown,
   Services extends CoreSingletonServices = CoreSingletonServices,
-  ConfigSchema extends ZodLike | undefined = undefined,
+  InputSchema extends ZodLike | undefined = undefined,
   OutputSchema extends ZodLike | undefined = undefined,
 > = {
   /** Optional human-readable title for the trigger */
@@ -265,9 +265,9 @@ export type CorePikkuTriggerFunctionConfig<
   /** Optional tags for categorization */
   tags?: string[]
   /** The trigger function */
-  func: CorePikkuTriggerFunction<TConfig, TOutput, Services>
-  /** Optional Zod schema for config validation */
-  config?: ConfigSchema
+  func: CorePikkuTriggerFunction<TInput, TOutput, Services>
+  /** Optional Zod schema for input validation */
+  input?: InputSchema
   /** Optional Zod schema for output validation */
   output?: OutputSchema
 }
@@ -294,7 +294,7 @@ export type CorePikkuTriggerFunctionConfig<
  * export const redisSubscribeTrigger = pikkuTriggerFunc({
  *   title: 'Redis Subscribe Trigger',
  *   description: 'Listens to Redis pub/sub channel',
- *   config: z.object({ channel: z.string() }),
+ *   input: z.object({ channel: z.string() }),
  *   output: z.object({ message: z.string() }),
  *   func: async ({ redis }, { channel }, { trigger }) => {
  *     const subscriber = redis.duplicate()
@@ -307,26 +307,26 @@ export type CorePikkuTriggerFunctionConfig<
  * ```
  */
 export const pikkuTriggerFunc = <
-  TConfig = unknown,
+  TInput = unknown,
   TOutput = unknown,
   Services extends CoreSingletonServices = CoreSingletonServices,
-  ConfigSchema extends ZodLike | undefined = undefined,
+  InputSchema extends ZodLike | undefined = undefined,
   OutputSchema extends ZodLike | undefined = undefined,
 >(
   triggerOrConfig:
-    | CorePikkuTriggerFunction<TConfig, TOutput, Services>
+    | CorePikkuTriggerFunction<TInput, TOutput, Services>
     | CorePikkuTriggerFunctionConfig<
-        TConfig,
+        TInput,
         TOutput,
         Services,
-        ConfigSchema,
+        InputSchema,
         OutputSchema
       >
 ): CorePikkuTriggerFunctionConfig<
-  TConfig,
+  TInput,
   TOutput,
   Services,
-  ConfigSchema,
+  InputSchema,
   OutputSchema
 > => {
   if (typeof triggerOrConfig === 'function') {
