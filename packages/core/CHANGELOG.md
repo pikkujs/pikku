@@ -6,8 +6,6 @@
 
 - db9c7bf: Add workflow graph system with type-safe builder
 
-## 0.11.2
-
 ### Features
 
 - f35e89da: Add workflow graph system with type-safe builder

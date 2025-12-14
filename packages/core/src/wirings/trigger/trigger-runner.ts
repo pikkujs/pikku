@@ -1,21 +1,36 @@
 import type { CoreSingletonServices } from '../../types/core.types.js'
-import type { CoreTrigger, TriggerInstance } from './trigger.types.js'
+import type {
+  CoreTrigger,
+  TriggerInstance,
+  CorePikkuTriggerFunctionConfig,
+} from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import type { CorePikkuTriggerFunctionConfig } from '../../function/functions.types.js'
+
+/**
+ * Adds a trigger function to the registry.
+ * Similar to addFunction but for trigger-specific functions.
+ */
+export const addTrigger = (
+  triggerName: string,
+  funcConfig: CorePikkuTriggerFunctionConfig<any, any>,
+  packageName: string | null = null
+) => {
+  pikkuState(packageName, 'trigger', 'functions').set(triggerName, funcConfig)
+}
 
 /**
  * Registers a trigger with the Pikku framework.
  * The trigger will be available for setup via setupTrigger.
  */
 export const wireTrigger = <
-  TConfig = unknown,
+  TInput = unknown,
   TOutput = unknown,
   TriggerFunctionConfig extends CorePikkuTriggerFunctionConfig<
-    TConfig,
+    TInput,
     TOutput
-  > = CorePikkuTriggerFunctionConfig<TConfig, TOutput>,
+  > = CorePikkuTriggerFunctionConfig<TInput, TOutput>,
 >(
-  trigger: CoreTrigger<TConfig, TOutput, TriggerFunctionConfig>
+  trigger: CoreTrigger<TInput, TOutput, TriggerFunctionConfig>
 ) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]
@@ -60,7 +75,7 @@ export async function setupTrigger<TOutput = unknown>({
 
   const wire = {
     trigger: {
-      trigger: (data: TOutput) => {
+      invoke: (data: TOutput) => {
         singletonServices.logger.info(`Trigger fired: ${name}`)
         onTrigger(data)
       },
@@ -71,7 +86,7 @@ export async function setupTrigger<TOutput = unknown>({
 
   const teardown = await trigger.func.func(
     singletonServices,
-    trigger.config,
+    trigger.input,
     wire as any
   )
 

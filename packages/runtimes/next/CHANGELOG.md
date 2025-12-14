@@ -1,4 +1,8 @@
-## 0.11.0
+## 0.11.2
+
+### Fixes
+
+- f35e89da: Relax apiRequest parameter type from NextRequest to Request for broader compatibility
 
 ## 0.11.2
 

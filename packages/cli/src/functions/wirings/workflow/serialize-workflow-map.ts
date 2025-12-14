@@ -4,10 +4,11 @@
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
-import { FunctionsMeta } from '@pikku/core'
+import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
 export const serializeWorkflowMap = (
+  logger: Logger,
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
@@ -32,6 +33,7 @@ export const serializeWorkflowMap = (
 
   const serializedImportMap = hasWorkflows
     ? serializeImportMap(
+        logger,
         relativeToPath,
         packageMappings,
         typesMap,

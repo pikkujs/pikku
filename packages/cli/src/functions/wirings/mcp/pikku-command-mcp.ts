@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '../../../../.pikku/pikku-types.gen.js'
+import { pikkuSessionlessFunc } from '#pikku'
 import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -59,7 +59,9 @@ const generateArgumentsFromSchema = async (
     }
     return argumentsArray
   } catch (e) {
-    logger.warn(`Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`)
+    logger.warn(
+      `Command MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`
+    )
     console.error(e)
     return []
   }

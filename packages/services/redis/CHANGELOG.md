@@ -1,4 +1,11 @@
-## 0.11.0
+## 0.11.2
+
+### Features
+
+- f35e89da: Add workflow graph support to RedisWorkflowService
+  - Add `inline` field to workflow runs
+  - Add `getCompletedGraphState` method for graph execution
+  - Add `setBranchTaken` method for graph branching
 
 ## 0.11.2
 

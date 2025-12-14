@@ -175,7 +175,10 @@ export function cleanPikkuConfig(
   }
 
   // Remove config options for unsupported features
-  if (!supportedFeatures.includes('http') && !supportedFeatures.includes('workflows')) {
+  if (
+    !supportedFeatures.includes('http') &&
+    !supportedFeatures.includes('workflows')
+  ) {
     delete pikkuConfig.fetchFile
     delete pikkuConfig.rpcWiringsFile
   }

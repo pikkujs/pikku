@@ -5,11 +5,7 @@
  * the function's input type must include those parameters.
  */
 
-import {
-  wireCLI,
-  pikkuCLICommand,
-  pikkuSessionlessFunc,
-} from '#pikku'
+import { wireCLI, pikkuCLICommand, pikkuSessionlessFunc } from '#pikku'
 
 // Valid: Parameters match function input type
 wireCLI({

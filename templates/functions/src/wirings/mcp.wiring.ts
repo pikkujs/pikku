@@ -12,7 +12,6 @@ import {
   prioritizePrompt,
 } from '../functions/mcp.functions.js'
 
-
 wireMCPResource({
   uri: 'todos/{id}',
   title: 'Todo Details',
@@ -20,7 +19,6 @@ wireMCPResource({
   func: getTodoResource,
   tags: ['todos'],
 })
-
 
 wireMCPTool({
   name: 'createTodo',
@@ -43,7 +41,6 @@ wireMCPTool({
   func: deleteTodoTool,
   tags: ['todos', 'delete'],
 })
-
 
 wireMCPPrompt({
   name: 'planDay',

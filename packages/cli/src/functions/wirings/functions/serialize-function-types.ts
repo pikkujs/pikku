@@ -28,10 +28,10 @@ ${configTypeImport}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 
-${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
-${wireServicesTypeName !== 'Services' ? `type Services = ${wireServicesTypeName}` : ''}
-${userSessionTypeName !== 'Session' ? `type Session = ${userSessionTypeName}` : ''}
-${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
+${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServices = ${singletonServicesTypeName}` : `export type { ${singletonServicesTypeName} as SingletonServices }`}
+${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
+${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeName}` : `export type { ${userSessionTypeName} as Session }`}
+${configTypeImport.includes('Config type not found') ? 'export type Config = any' : ''}
 
 /**
  * Type-safe API permission definition that integrates with your application's session type.
@@ -505,6 +505,53 @@ export const pikkuConfig = (
 export const pikkuServices = (
   func: (config: Config, existingServices?: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
 ) => func
+
+/**
+ * Base services provided to external package service factories.
+ * These are always available from the parent application.
+ */
+export type ExternalBaseServices = {
+  logger: SingletonServices['logger']
+  variables: SingletonServices['variables']
+  secrets: NonNullable<SingletonServices['secrets']>
+}
+
+/**
+ * Creates a Pikku singleton services factory for external packages.
+ * Unlike pikkuServices, this expects the parent application to provide
+ * logger, variables, and secrets - no fallbacks needed.
+ *
+ * @param func - External services factory function that receives config and base services
+ * @returns The singleton services factory function
+ *
+ * @example
+ * \`\`\`typescript
+ * export const createSingletonServices = pikkuExternalServices(async (
+ *   config,
+ *   { secrets }
+ * ) => {
+ *   const creds = await secrets.getSecretJSON<GithubCredentials>('GITHUB_CREDENTIALS')
+ *   const github = new GithubService(creds)
+ *   return { github }
+ * })
+ * \`\`\`
+ */
+export const pikkuExternalServices = <T extends Record<string, any>>(
+  func: (config: Config, services: ExternalBaseServices) => Promise<T>
+) => {
+  return async (config: Config, existingServices: SingletonServices): Promise<RequiredSingletonServices> => {
+    const { logger, variables, secrets } = existingServices
+    if (!secrets) {
+      throw new Error('External packages require a secrets service from the parent application')
+    }
+    const result = await func(config, { logger, variables, secrets })
+    return {
+      ...existingServices,
+      config,
+      ...result,
+    } as unknown as RequiredSingletonServices
+  }
+}
 
 /**
  * Creates a Pikku wire services factory.

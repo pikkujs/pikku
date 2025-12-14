@@ -1,7 +1,4 @@
-import {
-  pikkuPermission,
-  pikkuPermissionFactory,
-} from '#pikku'
+import { pikkuPermission, pikkuPermissionFactory } from '#pikku'
 
 export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
   pikkuPermission(async ({ logger }, _data, { initialSession }) => {

@@ -144,7 +144,7 @@ describe('getFileImportRelativePath', () => {
 
     const result = getFileImportRelativePath(from, to, packageMappings)
 
-    assert.strictEqual(result, '@pikku/core/dist/types/core.types.d.js')
+    assert.strictEqual(result, '@pikku/core/dist/types/core.types')
   })
 
   test('should handle node_modules path with package mappings', () => {
@@ -156,7 +156,7 @@ describe('getFileImportRelativePath', () => {
 
     const result = getFileImportRelativePath(from, to, packageMappings)
 
-    assert.strictEqual(result, '@myorg/utils/dist/utils.d.js')
+    assert.strictEqual(result, '@myorg/utils/dist/utils')
   })
 
   test('should handle deeply nested node_modules paths', () => {
@@ -170,6 +170,6 @@ describe('getFileImportRelativePath', () => {
 
     const result = getFileImportRelativePath(from, to, packageMappings)
 
-    assert.strictEqual(result, '@pikku/core/dist/types/core.types.d.js')
+    assert.strictEqual(result, '@pikku/core/dist/types/core.types')
   })
 })

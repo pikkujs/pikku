@@ -1,72 +1,24 @@
 #!/bin/bash
-
-set -e
+set -euo pipefail
 
 echo "Starting Pikku CLI build process..."
 
-# Clean .pikku directory
-rm -rf .pikku
+# Clean .pikku directory and dist
+test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
+rm -rf -- .pikku dist
 
-# Create minimal bootstrap stub files
-echo "Creating minimal bootstrap stub files..."
-mkdir -p .pikku/function .pikku/cli
+# Bootstrap using the published CLI - generates all .pikku files
+echo "Bootstrapping with published @pikku/cli..."
+: "${PIKKU_CLI_VERSION:=latest}"
+npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
 
-cat > .pikku/pikku-types.gen.ts << 'EOF'
-/**
- * Bootstrap stub - minimal types for initial build
- */
-export * from './function/pikku-function-types.gen.js'
-export * from './cli/pikku-cli-types.gen.js'
-EOF
-
-cat > .pikku/function/pikku-function-types.gen.ts << 'EOF'
-/**
- * Bootstrap stub - minimal function types
- */
-export const pikkuFunc = <In, Out = unknown>(func: any) => {
-  return typeof func === 'function' ? { func } : func
-}
-
-export const pikkuSessionlessFunc = <In, Out = unknown>(func: any) => {
-  return typeof func === 'function' ? { func } : func
-}
-
-export const pikkuVoidFunc = (func: any) => {
-  return typeof func === 'function' ? { func } : func
-}
-EOF
-
-cat > .pikku/cli/pikku-cli-types.gen.ts << 'EOF'
-/**
- * Bootstrap stub - minimal CLI types
- */
-export { wireCLI } from '@pikku/core/cli'
-
-export const pikkuCLICommand = (config: any) => {
-  return config
-}
-EOF
-
-cat > .pikku/pikku-bootstrap.gen.ts << 'EOF'
-/**
- * Bootstrap stub - empty bootstrap file
- */
-EOF
-
-# Build TypeScript with stubs
+# Build TypeScript
 echo "Building TypeScript to dist..."
 yarn tsc -b
 
-# Regenerate types with newly built CLI
-echo "Removing .pikku directory (generated from published version)..."
-rm -rf .pikku
-
-echo "Regenerating Pikku types using local CLI..."
-yarn pikku
-
-# Rebuild with generated types
-echo "Rebuilding TypeScript with local types..."
-yarn tsc -b
+# Copy generated .pikku files to dist (TypeScript doesn't copy .js files)
+echo "Copying generated files to dist..."
+cp -r .pikku dist/
 
 # Copy schema file
 echo "Copying schema file..."

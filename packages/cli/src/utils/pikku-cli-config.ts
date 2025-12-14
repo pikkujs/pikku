@@ -241,6 +241,11 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    const triggerDir = join(result.outDir, 'trigger')
+    if (!result.triggersTypesFile) {
+      result.triggersTypesFile = join(triggerDir, 'pikku-trigger-types.gen.ts')
+    }
+
     // Scheduler
     if (!result.schedulersWiringFile) {
       result.schedulersWiringFile = join(

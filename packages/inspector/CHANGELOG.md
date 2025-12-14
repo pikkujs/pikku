@@ -1,7 +1,5 @@
 ## 0.11.2
 
-## 0.11.2
-
 ### Patch Changes
 
 - db9c7bf: Add workflow graph inspection and DSL extraction

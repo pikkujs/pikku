@@ -1,5 +1,5 @@
 import { wireChannel, wireHTTP } from '#pikku'
-import { progressiveEnhancementExample } from './http-progressive-enhancement.functions.js'
+import { progressiveEnhancementExample } from './progressive-enhancement.functions.js'
 
 wireHTTP({
   auth: false,

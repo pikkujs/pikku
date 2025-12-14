@@ -5,10 +5,7 @@
  * the function's input type must include those parameters.
  */
 
-import {
-  wireMCPResource,
-  pikkuMCPResourceFunc,
-} from '#pikku'
+import { wireMCPResource, pikkuMCPResourceFunc } from '#pikku'
 
 // Valid: URI params match function input type
 wireMCPResource({

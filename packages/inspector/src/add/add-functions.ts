@@ -252,7 +252,6 @@ const isPrimitiveType = (type: ts.Type): boolean => {
     ts.TypeFlags.Void |
     ts.TypeFlags.Undefined |
     ts.TypeFlags.Null |
-    ts.TypeFlags.Any |
     ts.TypeFlags.Unknown |
     ts.TypeFlags.VoidLike
 

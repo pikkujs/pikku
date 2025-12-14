@@ -38,6 +38,8 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Exposed
   rpcMapDeclarationFile: string
 
+  triggersTypesFile: string
+
   // Schedulers
   schedulersWiringFile: string
   schedulersWiringMetaFile: string

@@ -4,6 +4,7 @@ import {
   CorePermissionGroup,
   CorePikkuPermission,
 } from '../function/functions.types.js'
+import { CorePikkuTriggerFunctionConfig } from '../wirings/trigger/trigger.types.js'
 import { CoreChannel, ChannelsMeta } from '../wirings/channel/channel.types.js'
 import { CLIMeta, CLIProgramState } from '../wirings/cli/cli.types.js'
 import {
@@ -102,6 +103,7 @@ export interface PikkuPackageState {
     meta: WorkflowsRuntimeMeta
   }
   trigger: {
+    functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>
     triggers: Map<string, CoreTrigger>
     meta: TriggerMeta
   }

@@ -6,8 +6,6 @@
 
 - db9c7bf: Fix srcDirectories paths and config cleanup for workflow templates
 
-## 0.11.2
-
 ### Fixes
 
 - ddd87eaf: Fix srcDirectories paths and config cleanup for workflow templates
