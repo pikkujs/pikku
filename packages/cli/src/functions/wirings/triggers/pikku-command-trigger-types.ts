@@ -5,15 +5,22 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeTriggerTypes } from './serialize-trigger-types.js'
 
 export const pikkuTriggerTypes: any = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }) => {
-    const { triggersTypesFile, functionTypesFile, packageMappings } = config
+  func: async ({ logger, config, getInspectorState }) => {
+    const { triggersTypesFile, packageMappings } = config
+    const visitState = await getInspectorState()
 
-    const functionTypesImportPath = getFileImportRelativePath(
-      triggersTypesFile,
-      functionTypesFile,
-      packageMappings
+    const { singletonServicesType } = visitState.filesAndMethods
+
+    if (!singletonServicesType) {
+      throw new Error('SingletonServices type not found')
+    }
+
+    const singletonServicesTypeImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(triggersTypesFile, singletonServicesType.typePath, packageMappings)}'`
+
+    const content = serializeTriggerTypes(
+      singletonServicesTypeImport,
+      singletonServicesType.type
     )
-    const content = serializeTriggerTypes(functionTypesImportPath)
     await writeFileInDir(logger, triggersTypesFile, content)
   },
   middleware: [
