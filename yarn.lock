@@ -3604,7 +3604,7 @@ __metadata:
     "@cloudflare/vitest-pool-workers": "npm:^0.10.8"
     "@cloudflare/workers-types": "npm:^4.20251119.0"
     "@vitest/runner": "npm:^2.1.8"
-    "@vitest/snapshot": "npm:^2.1.8"
+    "@vitest/snapshot": "npm:^4.0.15"
     typescript: "npm:^5.9.3"
     vitest: "npm:^2.1.8"
   peerDependencies:
@@ -5537,6 +5537,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vitest/pretty-format@npm:4.0.15":
+  version: 4.0.15
+  resolution: "@vitest/pretty-format@npm:4.0.15"
+  dependencies:
+    tinyrainbow: "npm:^3.0.3"
+  checksum: 10/c8ef240027ac340ae420a9b3eb77683a6399edd066832e27793eae19c189e567c5a225c1f26848aa2a2b7545dcc0c9019d6ff0a643cbf0eae004a05117fc2b05
+  languageName: node
+  linkType: hard
+
 "@vitest/runner@npm:2.1.9, @vitest/runner@npm:^2.1.8":
   version: 2.1.9
   resolution: "@vitest/runner@npm:2.1.9"
@@ -5547,7 +5556,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/snapshot@npm:2.1.9, @vitest/snapshot@npm:^2.1.8":
+"@vitest/snapshot@npm:2.1.9":
   version: 2.1.9
   resolution: "@vitest/snapshot@npm:2.1.9"
   dependencies:
@@ -5555,6 +5564,17 @@ __metadata:
     magic-string: "npm:^0.30.12"
     pathe: "npm:^1.1.2"
   checksum: 10/cb41d952bbad0ba55c265a21862d0ea5d2c54b75636f98cefbf467c973cec5c6edef5c21d325e26531de9a5abfe8ef6c367874163a57c169afd936b041e6cda8
+  languageName: node
+  linkType: hard
+
+"@vitest/snapshot@npm:^4.0.15":
+  version: 4.0.15
+  resolution: "@vitest/snapshot@npm:4.0.15"
+  dependencies:
+    "@vitest/pretty-format": "npm:4.0.15"
+    magic-string: "npm:^0.30.21"
+    pathe: "npm:^2.0.3"
+  checksum: 10/f881257fc1c520541131296f9762d627ad61eb167a3d7129942a5c2dce46e870af1a8446fbf94d2fcdc5a31ab787ffff113f2b8dbd75b15d0494fe43db649682
   languageName: node
   linkType: hard
 
@@ -9141,7 +9161,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.12":
+"magic-string@npm:^0.30.12, magic-string@npm:^0.30.21":
   version: 0.30.21
   resolution: "magic-string@npm:0.30.21"
   dependencies:
@@ -11883,6 +11903,13 @@ __metadata:
   version: 1.2.0
   resolution: "tinyrainbow@npm:1.2.0"
   checksum: 10/2924444db6804355e5ba2b6e586c7f77329d93abdd7257a069a0f4530dff9f16de484e80479094e3f39273462541b003a65ee3a6afc2d12555aa745132deba5d
+  languageName: node
+  linkType: hard
+
+"tinyrainbow@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "tinyrainbow@npm:3.0.3"
+  checksum: 10/169cc63c15e1378674180f3207c82c05bfa58fc79992e48792e8d97b4b759012f48e95297900ede24a81f0087cf329a0d85bb81109739eacf03c650127b3f6c1
   languageName: node
   linkType: hard
 
