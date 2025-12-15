@@ -600,8 +600,18 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   }
 
   // Workflow functions don't get registered as RPC functions,
-  // they are their own type handled by add-workdflow
+  // they are their own type handled by add-workflow
   if (expression.text.includes('Workflow')) {
+    return
+  }
+
+  // Trigger and channel connect/disconnect functions are not callable via RPC
+  const nonRPCPatterns = [
+    /Trigger/i,
+    /ChannelConnection/i,
+    /ChannelDisconnection/i,
+  ]
+  if (nonRPCPatterns.some((pattern) => pattern.test(expression.text))) {
     return
   }
 

@@ -12,11 +12,7 @@ export default async function middleware(req: NextRequest) {
 
   let userSession
   try {
-    userSession = await getSession(
-      req as any, // Request
-      {} as CoreSingletonServices, // Singleton Services Required by session
-      [] // Middleware
-    )
+    userSession = await getSession(req, {} as CoreSingletonServices, [])
   } catch (e) {
     console.error(e)
   }

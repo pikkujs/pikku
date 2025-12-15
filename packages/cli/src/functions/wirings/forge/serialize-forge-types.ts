@@ -11,11 +11,11 @@ export const serializeForgeTypes = (
     : 'never'
 
   return `/**
- * Forge-specific type definitions for typed wireForgeNode and wireForgeCredential
+ * Forge-specific type definitions for typed wireForgeNode
  */
 
-import { wireForgeNode as wireForgeNodeCore, wireForgeCredential as wireForgeCredentialCore } from '@pikku/core/forge-node'
-import type { CoreForgeNode, CoreForgeCredential } from '@pikku/core/forge-node'
+import { wireForgeNode as wireForgeNodeCore } from '@pikku/core/forge-node'
+import type { CoreForgeNode } from '@pikku/core/forge-node'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 
 /**
@@ -60,35 +60,6 @@ export type TypedForgeNode = Omit<CoreForgeNode, 'category' | 'rpc'> & {
  */
 export const wireForgeNode = (config: TypedForgeNode): void => {
   wireForgeNodeCore(config as CoreForgeNode)
-}
-
-/**
- * Registers a Forge credential definition.
- * Credentials define secrets/API keys required by the package.
- *
- * @template T - Zod schema type for the credential structure
- * @param config - Forge credential configuration
- *
- * @example
- * \`\`\`typescript
- * import { z } from 'zod'
- *
- * const apiCredentials = z.object({
- *   apiKey: z.string().describe('API key for authentication'),
- *   apiSecret: z.string().describe('API secret')
- * })
- *
- * wireForgeCredential({
- *   name: 'example-api',
- *   displayName: 'Example API Credentials',
- *   description: 'Credentials for the example external API',
- *   secretId: 'EXAMPLE_API_CREDENTIALS',
- *   schema: apiCredentials
- * })
- * \`\`\`
- */
-export const wireForgeCredential = <T>(config: CoreForgeCredential<T>): void => {
-  wireForgeCredentialCore(config)
 }
 `
 }

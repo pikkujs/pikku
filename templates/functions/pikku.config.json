@@ -15,7 +15,7 @@
   "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
   "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
   "externalPackages": {
-    "ext": "@pikku/templates-function-external"
+    "ext": { "package": "@pikku/templates-function-external" }
   },
   "cli": {
     "entrypoints": {

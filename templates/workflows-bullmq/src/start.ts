@@ -23,11 +23,7 @@ async function main(): Promise<void> {
       workflowService,
     })
 
-    workflowService.setServices(
-      singletonServices,
-      createWireServices as any,
-      config
-    )
+    workflowService.setServices(singletonServices, createWireServices, config)
 
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
@@ -42,7 +38,7 @@ async function main(): Promise<void> {
 
     const bullQueueWorkers = bullFactory.getQueueWorkers(
       singletonServices,
-      createWireServices as any
+      createWireServices
     )
 
     singletonServices.logger.info('Registering workflow queue workers...')

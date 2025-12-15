@@ -7,18 +7,6 @@ import type {
 import { pikkuState } from '../../pikku-state.js'
 
 /**
- * Adds a trigger function to the registry.
- * Similar to addFunction but for trigger-specific functions.
- */
-export const addTrigger = (
-  triggerName: string,
-  funcConfig: CorePikkuTriggerFunctionConfig<any, any>,
-  packageName: string | null = null
-) => {
-  pikkuState(packageName, 'trigger', 'functions').set(triggerName, funcConfig)
-}
-
-/**
  * Registers a trigger with the Pikku framework.
  * The trigger will be available for setup via setupTrigger.
  */

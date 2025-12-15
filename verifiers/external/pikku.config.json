@@ -7,6 +7,6 @@
     "supportsImportAttributes": true
   },
   "externalPackages": {
-    "ext": "@pikku/templates-function-external"
+    "ext": { "package": "@pikku/templates-function-external" }
   }
 }

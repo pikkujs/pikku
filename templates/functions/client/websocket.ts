@@ -8,7 +8,7 @@ export const check = async (serverUrl: string, testUserId: string) => {
     .replace('http://', 'ws://')
     .replace('https://', 'wss://')
   const ws = new WSWebsocket(`${wsUrl}${wsPath}`)
-  const websocket = new PikkuWebSocket<'todos-live', EventHubTopics>(ws as any)
+  const websocket = new PikkuWebSocket<'todos-live', EventHubTopics>(ws)
 
   ws.onopen = async () => {
     console.log(`${testUserId}: WebSocket connected`)

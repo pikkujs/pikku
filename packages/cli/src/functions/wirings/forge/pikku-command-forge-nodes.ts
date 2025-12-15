@@ -46,11 +46,11 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
   boolean | undefined
 >({
   func: async ({ logger, config, getInspectorState }) => {
-    const { forgeNodes, forgeCredentials } = await getInspectorState()
+    const { forgeNodes, credentials } = await getInspectorState()
     const { forgeNodesMetaJsonFile, forge, rootDir } = config
 
     const hasNodes = Object.keys(forgeNodes.meta).length > 0
-    const hasCredentials = Object.keys(forgeCredentials.meta).length > 0
+    const hasCredentials = Object.keys(credentials.meta).length > 0
 
     // Only generate if there are forge nodes or credentials
     if (!hasNodes && !hasCredentials) {
@@ -90,7 +90,7 @@ export const pikkuForgeNodes: any = pikkuSessionlessFunc<
 
     const metaData = {
       nodes: outputMeta,
-      credentials: forgeCredentials.meta,
+      credentials: credentials.meta,
       package: {
         displayName: forge?.node?.displayName,
         description: forge?.node?.description,

@@ -16,9 +16,9 @@ npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
 echo "Building TypeScript to dist..."
 yarn tsc -b
 
-# Copy generated .pikku files to dist (TypeScript doesn't copy .js files)
-echo "Copying generated files to dist..."
-cp -r .pikku dist/
+# Build Pikku using the local CLI
+yarn pikku
+yarn tsc -b
 
 # Copy schema file
 echo "Copying schema file..."

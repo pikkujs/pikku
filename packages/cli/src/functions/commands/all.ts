@@ -70,6 +70,7 @@ export const all: any = pikkuVoidFunc({
     await rpc.invoke('pikkuRPCClient', null)
 
     await rpc.invoke('pikkuForgeTypes', null)
+    await rpc.invoke('pikkuCredentialTypes', null)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)

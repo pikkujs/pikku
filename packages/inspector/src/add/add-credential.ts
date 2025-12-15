@@ -4,12 +4,12 @@ import { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 
 /**
- * Inspector for wireForgeCredential calls.
- * Extracts metadata for Forge package credential declarations.
- * Note: wireForgeCredential is metadata-only - no runtime behavior.
+ * Inspector for wireCredential calls.
+ * Extracts metadata for credential declarations.
+ * Note: wireCredential is metadata-only - no runtime behavior.
  * Schema is stored as the variable name reference; actual Zod→JSON Schema conversion happens at CLI build time.
  */
-export const addForgeCredential: AddWiring = (
+export const addCredential: AddWiring = (
   logger,
   node,
   _checker,
@@ -24,11 +24,8 @@ export const addForgeCredential: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to wireForgeCredential
-  if (
-    !ts.isIdentifier(expression) ||
-    expression.text !== 'wireForgeCredential'
-  ) {
+  // Check if the call is to wireCredential
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireCredential') {
     return
   }
 
@@ -67,7 +64,7 @@ export const addForgeCredential: AddWiring = (
     if (!nameValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        "Forge credential is missing the required 'name' property."
+        "Credential is missing the required 'name' property."
       )
       return
     }
@@ -75,7 +72,7 @@ export const addForgeCredential: AddWiring = (
     if (!displayNameValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        `Forge credential '${nameValue}' is missing the required 'displayName' property.`
+        `Credential '${nameValue}' is missing the required 'displayName' property.`
       )
       return
     }
@@ -83,7 +80,7 @@ export const addForgeCredential: AddWiring = (
     if (!secretIdValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        `Forge credential '${nameValue}' is missing the required 'secretId' property.`
+        `Credential '${nameValue}' is missing the required 'secretId' property.`
       )
       return
     }
@@ -91,24 +88,24 @@ export const addForgeCredential: AddWiring = (
     if (!schemaVariableName) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        `Forge credential '${nameValue}' is missing the required 'schema' property or schema is not a variable reference.`
+        `Credential '${nameValue}' is missing the required 'schema' property or schema is not a variable reference.`
       )
       return
     }
 
     const sourceFile = node.getSourceFile().fileName
 
-    state.forgeCredentials.files.add(sourceFile)
+    state.credentials.files.add(sourceFile)
 
     // Register the zod schema in the central zodLookup for deferred conversion
-    const schemaLookupName = `ForgeCredential_${nameValue}`
+    const schemaLookupName = `Credential_${nameValue}`
     state.zodLookup.set(schemaLookupName, {
       variableName: schemaVariableName,
       sourceFile,
     })
 
     // Store metadata - schema conversion happens later in schema-generator
-    state.forgeCredentials.meta[nameValue] = {
+    state.credentials.meta[nameValue] = {
       name: nameValue,
       displayName: displayNameValue,
       description: descriptionValue || undefined,
