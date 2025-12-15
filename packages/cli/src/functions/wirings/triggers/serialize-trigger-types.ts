@@ -9,7 +9,7 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, wireTrigger as wireTriggerCore, addTrigger as addTriggerCore } from '@pikku/core/trigger'
+import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, wireTrigger as wireTriggerCore } from '@pikku/core/trigger'
 ${singletonServicesTypeImport}
 import type { ZodLike } from '@pikku/core'
 
@@ -137,21 +137,6 @@ export const wireTrigger = <TInput = unknown, TOutput = unknown>(
   trigger: TriggerWiring<TInput, TOutput>
 ) => {
   wireTriggerCore(trigger as any)
-}
-
-/**
- * Registers a trigger function with the Pikku framework.
- *
- * @param triggerName - Unique name for the trigger
- * @param funcConfig - The trigger function configuration
- * @param packageName - Optional package name for external packages
- */
-export const addTrigger = (
-  triggerName: string,
-  funcConfig: PikkuTriggerFunctionConfig<any, any>,
-  packageName: string | null = null
-) => {
-  addTriggerCore(triggerName, funcConfig as any, packageName)
 }
 `
 }

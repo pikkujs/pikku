@@ -4,6 +4,6 @@
   "outDir": ".pikku",
   "entrypoint": "src/index.ts",
   "externalPackages": {
-    "ext": "@pikku/templates-function-external"
+    "ext": { "package": "@pikku/templates-function-external" }
   }
 }

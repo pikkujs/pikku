@@ -271,6 +271,7 @@ export const createSingletonServices: CreateSingletonServices<
           singletonServicesFactoryType: config.singletonServicesFactoryType,
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
+        externalPackages: config.externalPackages,
       })
 
       // Save unfiltered inspector state to file if stateOutput is provided

@@ -17,8 +17,9 @@ export const pikkuBootstrap: any = pikkuSessionlessFunc<BootstrapInput, void>({
       stateBeforeBootstrap.rpc?.usedExternalPackages?.size > 0
     ) {
       for (const namespace of stateBeforeBootstrap.rpc.usedExternalPackages) {
-        const packageName = config.externalPackages[namespace]
-        if (packageName) {
+        const externalPkg = config.externalPackages[namespace]
+        if (externalPkg) {
+          const packageName = externalPkg.package
           const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
           externalPackageBootstraps.push(packageBootstrap)
           usedExternalPackages[namespace] = packageName
