@@ -1,0 +1,26 @@
+{
+  "name": "@pikku/verifiers-oauth",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24",
+    "oauth2-mock-server": "^8.2.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "pikku": "pikku",
+    "test": "pikku && tsc -b && npx tsx src/test-oauth.ts"
+  }
+}

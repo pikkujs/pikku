@@ -114,11 +114,8 @@ wireCLI({
     'oauth:connect': pikkuCLICommand({
       func: oauthConnect,
       description: 'Authorize an OAuth2 credential',
+      parameters: '<credentialName>',
       options: {
-        credentialName: {
-          description: 'OAuth2 credential name',
-          short: 'c',
-        },
         output: {
           description: 'Output mode: console or secret',
           default: 'console' as const,
@@ -133,22 +130,12 @@ wireCLI({
     'oauth:status': pikkuCLICommand({
       func: oauthStatus,
       description: 'Check status of an OAuth2 credential',
-      options: {
-        credentialName: {
-          description: 'OAuth2 credential name',
-          short: 'c',
-        },
-      },
+      parameters: '<credentialName>',
     }),
     'oauth:disconnect': pikkuCLICommand({
       func: oauthDisconnect,
       description: 'Remove stored tokens for an OAuth2 credential',
-      options: {
-        credentialName: {
-          description: 'OAuth2 credential name',
-          short: 'c',
-        },
-      },
+      parameters: '<credentialName>',
     }),
   },
 })
