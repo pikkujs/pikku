@@ -8,7 +8,7 @@ import {
 } from './serialize-queue-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
-export const pikkuQueue: any = pikkuSessionlessFunc<void, boolean>({
+export const pikkuQueue = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {

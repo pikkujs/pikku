@@ -1,9 +1,2 @@
 {
-  "hooks": [
-    {
-      "event": "SessionStart",
-      "type": "command",
-      "command": "cd /Users/yasser/git/pikku/pikku && pwd"
-    }
-  ]
 }

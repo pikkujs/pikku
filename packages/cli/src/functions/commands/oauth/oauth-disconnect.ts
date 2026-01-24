@@ -5,7 +5,7 @@ import { pikkuSessionlessFunc } from '#pikku'
  *
  * Remove stored tokens for an OAuth2 credential.
  */
-export const oauthDisconnect: any = pikkuSessionlessFunc<{
+export const oauthDisconnect = pikkuSessionlessFunc<{
   credentialName: string
 }>({
   internal: true,

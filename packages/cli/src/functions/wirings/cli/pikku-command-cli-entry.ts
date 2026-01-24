@@ -13,7 +13,7 @@ import { existsSync } from 'fs'
 import { rm } from 'fs/promises'
 import { ErrorCode } from '@pikku/inspector'
 
-export const pikkuCLIEntry: any = pikkuSessionlessFunc<void, void>({
+export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 

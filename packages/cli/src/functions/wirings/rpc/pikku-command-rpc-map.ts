@@ -4,7 +4,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
-export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
+export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { functions, rpc } = await getInspectorState()
     const {
@@ -40,7 +40,7 @@ export const pikkuRPCInternalMap: any = pikkuSessionlessFunc<void, void>({
   ],
 })
 
-export const pikkuRPCExposedMap: any = pikkuSessionlessFunc<void, void>({
+export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { functions, rpc } = await getInspectorState()
     const {

@@ -4,7 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
-export const pikkuFetch: any = pikkuSessionlessFunc<void, void>({
+export const pikkuFetch = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const { fetchFile, httpMapDeclarationFile, packageMappings } = config
 

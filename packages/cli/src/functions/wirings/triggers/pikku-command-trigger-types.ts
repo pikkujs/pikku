@@ -4,7 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTriggerTypes } from './serialize-trigger-types.js'
 
-export const pikkuTriggerTypes: any = pikkuSessionlessFunc<void, void>({
+export const pikkuTriggerTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { triggersTypesFile, packageMappings } = config
     const visitState = await getInspectorState()

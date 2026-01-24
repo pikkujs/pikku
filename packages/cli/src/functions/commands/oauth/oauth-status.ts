@@ -5,7 +5,7 @@ import { pikkuSessionlessFunc } from '#pikku'
  *
  * Check if tokens exist for an OAuth2 credential.
  */
-export const oauthStatus: any = pikkuSessionlessFunc<
+export const oauthStatus = pikkuSessionlessFunc<
   { credentialName: string },
   void
 >({

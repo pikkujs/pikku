@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeRemoteRPC } from './serialize-remote-rpc.js'
 import { join } from 'path'
 
-export const pikkuRemoteRPC: any = pikkuSessionlessFunc<void, boolean>({
+export const pikkuRemoteRPC = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
     if (config.rpc?.remoteRpcWorkersPath) {
       const remoteRpcPath = join(
