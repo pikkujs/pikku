@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
 import { pikkuVoidFunc } from '#pikku'
 
-export const all: any = pikkuVoidFunc({
+export const all = pikkuVoidFunc({
   internal: true,
   func: async ({ logger, config, getInspectorState }, _data, { rpc }) => {
     const allImports: string[] = []
