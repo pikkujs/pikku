@@ -135,6 +135,7 @@ export const oauthConnect = pikkuSessionlessFunc<
 
     logger.info(`Starting OAuth2 authorization for '${credentialName}'`)
     logger.info(`Callback URL: ${callbackUri}`)
+    logger.info(`Authorization URL: ${authUrl}`)
 
     // Start callback server
     const { server, callbackPromise } = await startCallbackServer(
