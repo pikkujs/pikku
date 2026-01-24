@@ -7,7 +7,6 @@ import type {
 import type { CLILogger } from '../src/services/cli-logger.service.js'
 import { PikkuCLIConfig } from '../types/config.d.ts'
 import { InspectorState } from '@pikku/inspector'
-import { OAuthCallbackService } from '../src/services/oauth-callback.service.ts'
 
 export interface Config extends CoreConfig<PikkuCLIConfig> {
   // Preloaded inspector state from stateInput file (if provided)
@@ -15,7 +14,6 @@ export interface Config extends CoreConfig<PikkuCLIConfig> {
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
-  oauthCallback: OAuthCallbackService
   logger: CLILogger
   getInspectorState: (
     refresh?: boolean,

@@ -34,7 +34,6 @@ import {
   CLILoggerForwarder,
   ForwardedLogMessage,
 } from './services/cli-logger-forwarder.service.js'
-import { OAuthCallbackService } from './services/oauth-callback.service.js'
 import { readFile, writeFile } from 'fs/promises'
 
 // Logger instance will be configured with log level from CLI flags in createConfig
@@ -302,7 +301,6 @@ export const createSingletonServices: CreateSingletonServices<
   }
 
   const workflowService = new InMemoryWorkflowService()
-  const oauthCallback = new OAuthCallbackService()
 
   return {
     config,
@@ -311,7 +309,6 @@ export const createSingletonServices: CreateSingletonServices<
     secrets: new LocalSecretService(variables),
     getInspectorState,
     workflowService,
-    oauthCallback,
   }
 }
 
