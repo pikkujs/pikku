@@ -2,7 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeAllServiceMetadata } from '@pikku/inspector'
 
-export const pikkuServiceMetadata: any = pikkuSessionlessFunc<void, void>({
+export const pikkuServiceMetadata = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
 

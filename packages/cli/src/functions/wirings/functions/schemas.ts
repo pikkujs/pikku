@@ -9,10 +9,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 /**
  * Generate JSON schemas from TypeScript types and Zod schemas
  */
-export const pikkuSchemas: any = pikkuSessionlessFunc<
-  void,
-  boolean | undefined
->({
+export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
 

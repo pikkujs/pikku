@@ -39,13 +39,13 @@
     "./types": "./dist/types/index.d.ts"
   },
   "dependencies": {
-    "cookie": "^1.0.2",
+    "cookie": "^1.1.1",
     "path-to-regexp": "^8.3.0",
     "picoquery": "^2.5.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "tsx": "^4.20.6",
+    "@types/node": "^24.10.9",
+    "tsx": "^4.21.0",
     "typescript": "^5.9"
   },
   "peerDependencies": {

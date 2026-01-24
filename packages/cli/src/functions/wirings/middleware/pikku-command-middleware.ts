@@ -5,10 +5,7 @@ import { serializeMiddlewareImports } from './serialize-middleware-imports.js'
 import { serializeMiddlewareGroupsMeta } from './serialize-middleware-groups-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
-export const pikkuMiddleware: any = pikkuSessionlessFunc<
-  void,
-  boolean | undefined
->({
+export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
     const { middleware } = state

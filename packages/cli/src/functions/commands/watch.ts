@@ -1,7 +1,7 @@
 import { pikkuVoidFunc } from '#pikku'
 import chokidar from 'chokidar'
 
-export const watch: any = pikkuVoidFunc({
+export const watch = pikkuVoidFunc({
   internal: true,
   func: async ({ logger, config }, _data, { rpc }) => {
     const configWatcher = chokidar.watch(config.srcDirectories, {

@@ -4,7 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeForgeTypes } from './serialize-forge-types.js'
 
-export const pikkuForgeTypes: any = pikkuSessionlessFunc<void, void>({
+export const pikkuForgeTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const {
       forgeTypesFile,

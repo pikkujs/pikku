@@ -15,14 +15,14 @@
     "@pikku/core": "^0.11.2",
     "@pikku/fastify-plugin": "^0.11.1",
     "@pikku/schedule": "^0.11.1",
-    "fastify": "^5.6.2",
+    "fastify": "^5.7.1",
     "fastify-plugin": "^5.1.0",
     "tslib": "^2.8.1",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9"
   },
   "devDependencies": {
     "@types/node": "^24",
-    "fastify": "^5.6.2"
+    "fastify": "^5.7.1"
   }
 }

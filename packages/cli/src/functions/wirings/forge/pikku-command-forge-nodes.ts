@@ -41,10 +41,7 @@ const loadIcon = async (
   }
 }
 
-export const pikkuForgeNodes: any = pikkuSessionlessFunc<
-  void,
-  boolean | undefined
->({
+export const pikkuForgeNodes = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const { forgeNodes, forgeCredentials } = await getInspectorState()
     const { forgeNodesMetaJsonFile, forge, rootDir } = config

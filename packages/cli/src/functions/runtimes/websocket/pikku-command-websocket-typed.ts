@@ -4,7 +4,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWebsocketWrapper } from './serialize-websocket-wrapper.js'
 
-export const pikkuWebSocketTyped: any = pikkuSessionlessFunc<void, void>({
+export const pikkuWebSocketTyped = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const { websocketFile, channelsMapDeclarationFile, packageMappings } =
       config
