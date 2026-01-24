@@ -1,5 +1,4 @@
-import { pikkuFunc, PikkuHTTPRequest } from '#pikku'
-import { wireHTTP } from '@pikku/core/http'
+import { pikkuSessionlessFunc, wireHTTP } from '#pikku'
 import {
   OAuthProviderError,
   OAuthStateError,
@@ -12,13 +11,11 @@ import {
  * This route receives the authorization code from the OAuth provider.
  * Throws errors instead of returning status codes for proper error handling.
  */
-export const oauthCallback = pikkuFunc<
-  PikkuHTTPRequest<{ code?: string; state?: string; error?: string }>,
+export const oauthCallback = pikkuSessionlessFunc<
+  { code?: string; state?: string; error?: string },
   string
 >({
-  func: async ({ oauthCallback: service }, { query }) => {
-    const { code, state, error } = query || {}
-
+  func: async ({ oauthCallback: service }, { code, state, error }) => {
     if (error) {
       if (state) {
         service.handleError(state, error)

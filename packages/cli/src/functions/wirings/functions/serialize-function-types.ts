@@ -11,9 +11,14 @@ export const serializeFunctionTypes = (
   rpcMapTypeImport: string,
   requiredServicesTypeImport: string,
   configTypeImport: string,
-  packageName?: string
+  packageName?: string,
+  workflowTypesImport?: string
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
+  const workflowImport =
+    workflowTypesImport ||
+    `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'`
+
   return `/**
  * Core function, middleware, and permission types for all wirings
  */
@@ -27,6 +32,7 @@ ${wireServicesTypeImport}
 ${configTypeImport}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
+${workflowImport}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServices = ${singletonServicesTypeName}` : `export type { ${singletonServicesTypeName} as SingletonServices }`}
 ${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
@@ -197,7 +203,7 @@ export type PikkuFunctionSessionless<
     In,
     Out,
     RequiredServices,
-    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow>, RequiredWires>
   >
 
 /**
@@ -217,7 +223,7 @@ export type PikkuFunction<
     In,
     Out,
     RequiredServices,
-    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow>, RequiredWires>
   >
 
 /**

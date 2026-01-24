@@ -59,7 +59,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the function's return value
      */
     invoke: RPCInvoke = async (rpcName, data) => {
-       return await this.pikkuFetch.post(\`/rpc/\${rpcName}\` as any, { rpcName: String(rpcName), data }) as any
+       return await this.pikkuFetch.post(\`/rpc/\${rpcName}\` as never, { rpcName: String(rpcName), data }) as any
     }
 }
 

@@ -33,4 +33,12 @@ export class AWSSecrets implements SecretService {
     }
     throw `FATAL: Error finding secret: ${SecretId}`
   }
+
+  public async setSecretJSON(_key: string, _value: unknown): Promise<void> {
+    throw new Error('setSecretJSON is not implemented for AWSSecrets')
+  }
+
+  public async deleteSecret(_key: string): Promise<void> {
+    throw new Error('deleteSecret is not implemented for AWSSecrets')
+  }
 }

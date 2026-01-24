@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc, pikkuVoidFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku'
 
 /**
  * pikku oauth disconnect <credential-name>
@@ -24,23 +24,12 @@ export const oauthDisconnect: any = pikkuSessionlessFunc<{
       process.exit(1)
     }
 
-    // Check if secrets service supports deletion
-    if (
-      'deleteSecret' in secrets &&
-      typeof (secrets as any).deleteSecret === 'function'
-    ) {
-      try {
-        await (secrets as any).deleteSecret(credential.oauth2.tokenSecretId)
-        logger.info(`Tokens removed for '${credentialName}'`)
-      } catch (err: any) {
-        logger.error(`Failed to remove tokens: ${err.message}`)
-        process.exit(1)
-      }
-    } else {
-      logger.warn(
-        `SecretService does not support deletion. To remove tokens manually:`
-      )
-      logger.info(`  Delete the secret: ${credential.oauth2.tokenSecretId}`)
+    try {
+      await secrets.deleteSecret(credential.oauth2.tokenSecretId)
+      logger.info(`Tokens removed for '${credentialName}'`)
+    } catch (err: any) {
+      logger.error(`Failed to remove tokens: ${err.message}`)
+      process.exit(1)
     }
   },
 })

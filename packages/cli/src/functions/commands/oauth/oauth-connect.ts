@@ -11,7 +11,7 @@ import open from 'open'
  *
  * Note: Your Pikku server must be running and serving the /oauth/callback route.
  */
-export const oauthConnect: any = pikkuSessionlessFunc<
+export const oauthConnect = pikkuSessionlessFunc<
   { credentialName: string; output?: string; redirectUri?: string },
   void
 >({
@@ -102,24 +102,13 @@ export const oauthConnect: any = pikkuSessionlessFunc<
         `\nTo store these tokens, set the secret '${credential.oauth2.tokenSecretId}' to the JSON above.`
       )
     } else if (outputMode === 'secret') {
-      // Check if secrets service supports writing
-      if (
-        'setSecretJSON' in secrets &&
-        typeof (secrets as any).setSecretJSON === 'function'
-      ) {
-        await (secrets as any).setSecretJSON(
-          credential.oauth2.tokenSecretId,
-          tokens
-        )
-        logger.info(
-          `Tokens stored in secret '${credential.oauth2.tokenSecretId}'`
-        )
-      } else {
-        logger.error(
-          'SecretService does not support writing. Outputting to console instead:'
-        )
-        console.log(JSON.stringify(tokens, null, 2))
-      }
+      await secrets.setSecretJSON(credential.oauth2.tokenSecretId, tokens)
+      logger.info(
+        `Tokens stored in secret '${credential.oauth2.tokenSecretId}'`
+      )
+      logger.error(
+        'SecretService does not support writing. Outputting to console instead:'
+      )
     }
   },
 })

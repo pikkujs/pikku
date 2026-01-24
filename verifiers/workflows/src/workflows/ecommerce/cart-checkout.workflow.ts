@@ -6,7 +6,7 @@
 import {
   pikkuWorkflowFunc,
   WorkflowCancelledException,
-} from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+} from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
  * Cart checkout workflow: get cart, create order, process payment
@@ -40,7 +40,7 @@ export const cartCheckoutWorkflow = pikkuWorkflowFunc<
 
     // Verify all items in stock
     const outOfStock = cart.items.filter(
-      (item, i) => !inventoryChecks[i].inStock
+      (item, i) => !inventoryChecks[i]!.inStock
     )
     if (outOfStock.length > 0) {
       throw new WorkflowCancelledException(

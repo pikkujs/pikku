@@ -45,7 +45,7 @@ export const orderWithInventoryCheckWorkflow = pikkuWorkflowComplexFunc<
     for (let i = 0; i < data.items.length; i++) {
       const item = data.items[i]
       const check = inventoryChecks[i]
-      if (check.available < item.quantity) {
+      if (item && check && check.available < item.quantity) {
         unavailableItems.push(item.productId)
       }
     }

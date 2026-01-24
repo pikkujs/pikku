@@ -2,7 +2,7 @@
  * Document archive batch workflow
  */
 
-import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 export const documentArchiveBatchWorkflow = pikkuWorkflowFunc<
   { authorId: string; status: string; olderThanDays: number },

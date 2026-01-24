@@ -25,4 +25,12 @@ export class ScopedSecretService implements SecretService {
     this.assertAllowed(key)
     return this.secrets.getSecretJSON<T>(key)
   }
+
+  async setSecretJSON(_key: string, _value: unknown): Promise<void> {
+    throw new Error('setSecretJSON is not allowed in scoped secret service')
+  }
+
+  async deleteSecret(_key: string): Promise<void> {
+    throw new Error('deleteSecret is not allowed in scoped secret service')
+  }
 }
