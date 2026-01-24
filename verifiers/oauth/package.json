@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verifiers-oauth",
+  "name": "@pikku/verify-oauth",
   "type": "module",
   "private": true,
   "imports": {

@@ -26,8 +26,8 @@
     "react-dom": "*"
   },
   "dependencies": {
-    "cookie": "^1.0.2",
-    "eventemitter3": "^5.0.1"
+    "cookie": "^1.1.1",
+    "eventemitter3": "^5.0.4"
   },
   "devDependencies": {
     "@types/react": "^19",
