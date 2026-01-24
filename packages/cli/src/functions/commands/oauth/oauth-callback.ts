@@ -1,4 +1,4 @@
-import { pikkuFunc, wireHTTP } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
 /**
  * OAuth2 callback handler.
@@ -8,7 +8,11 @@ export const oauthCallback = pikkuFunc<
   { code?: string; state?: string; error?: string },
   string
 >({
-  func: async (_services, { code, state, error }, { http }) => {
+  func: async (
+    { oauthCallback: service },
+    { code, state, error },
+    { http }
+  ) => {
     http?.response?.header('Content-Type', 'text/html')
     if (error) {
       // throw 400 error
@@ -19,16 +23,12 @@ export const oauthCallback = pikkuFunc<
       return '<html><body><h1>Authorization Failed</h1><p>No authorization code received</p></body></html>'
     }
 
-    // Store the code and state for the CLI to retrieve
-    // The CLI will poll or use events to get this
-    ;(globalThis as any).__oauthCallback = { code, state }
+    if (state) {
+      service.handleCallback({ code, state })
+    } else {
+      service.handleError(state || '', 'Missing state parameter')
+    }
 
     return '<html><body><h1>Authorization Successful!</h1><p>You can close this window and return to the terminal.</p></body></html>'
   },
-})
-
-wireHTTP({
-  route: '/oauth/callback',
-  method: 'get',
-  func: oauthCallback,
 })

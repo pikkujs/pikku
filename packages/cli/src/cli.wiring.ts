@@ -121,9 +121,9 @@ wireCLI({
           default: 'console' as const,
           short: 'o',
         },
-        redirectUri: {
-          description: 'Redirect URI for OAuth callback',
-          short: 'r',
+        port: {
+          description: 'Port for callback server (default: 9876)',
+          short: 'p',
         },
       },
     }),

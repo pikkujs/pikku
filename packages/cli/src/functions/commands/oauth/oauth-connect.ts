@@ -1,24 +1,91 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { OAuth2Client } from '@pikku/core/oauth2'
+import { createServer, type Server } from 'http'
 import open from 'open'
 
+interface OAuthCallbackResult {
+  code: string
+  state: string
+}
+
 /**
- * pikku oauth connect <credential-name> [--output console|secret] [--redirect-uri <uri>]
+ * Start a temporary HTTP server to receive the OAuth callback
+ */
+function startCallbackServer(
+  port: number,
+  expectedState: string
+): Promise<{ server: Server; callbackPromise: Promise<OAuthCallbackResult> }> {
+  return new Promise((resolve) => {
+    let callbackResolve: (result: OAuthCallbackResult) => void
+    let callbackReject: (error: Error) => void
+
+    const callbackPromise = new Promise<OAuthCallbackResult>((res, rej) => {
+      callbackResolve = res
+      callbackReject = rej
+    })
+
+    const server = createServer((req, res) => {
+      const url = new URL(req.url || '/', `http://localhost:${port}`)
+
+      if (url.pathname === '/oauth/callback') {
+        const code = url.searchParams.get('code')
+        const state = url.searchParams.get('state')
+        const error = url.searchParams.get('error')
+
+        if (error) {
+          res.writeHead(400, { 'Content-Type': 'text/html' })
+          res.end(
+            `<html><body><h1>OAuth Error</h1><p>${error}</p></body></html>`
+          )
+          callbackReject(new Error(`OAuth error: ${error}`))
+          return
+        }
+
+        if (!code || !state) {
+          res.writeHead(400, { 'Content-Type': 'text/html' })
+          res.end('<html><body><h1>Missing code or state</h1></body></html>')
+          callbackReject(new Error('Missing code or state in callback'))
+          return
+        }
+
+        if (state !== expectedState) {
+          res.writeHead(400, { 'Content-Type': 'text/html' })
+          res.end('<html><body><h1>Invalid state</h1></body></html>')
+          callbackReject(new Error('Invalid state in callback'))
+          return
+        }
+
+        res.writeHead(200, { 'Content-Type': 'text/html' })
+        res.end(
+          '<html><body><h1>Authorization successful!</h1><p>You can close this window.</p></body></html>'
+        )
+        callbackResolve({ code, state })
+      } else {
+        res.writeHead(404)
+        res.end('Not found')
+      }
+    })
+
+    server.listen(port, 'localhost', () => {
+      resolve({ server, callbackPromise })
+    })
+  })
+}
+
+/**
+ * pikku oauth:connect <credential-name> [--output console|secret] [--port <port>]
  *
  * Connect to an OAuth2 provider by authorizing and obtaining tokens.
- * This command opens a browser for authorization and waits for the callback
- * to be received by the /oauth/callback wireHTTP route.
- *
- * Note: Your Pikku server must be running and serving the /oauth/callback route.
+ * This command starts a temporary HTTP server to receive the callback.
  */
 export const oauthConnect = pikkuSessionlessFunc<
-  { credentialName: string; output?: string; redirectUri?: string },
+  { credentialName: string; output?: string; port?: number },
   void
 >({
   internal: true,
   func: async (
-    { logger, getInspectorState, secrets, oauthCallback },
-    { credentialName, output, redirectUri }
+    { logger, getInspectorState, secrets },
+    { credentialName, output, port }
   ) => {
     const inspectorState = await getInspectorState(false, false, false)
 
@@ -41,8 +108,8 @@ export const oauthConnect = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    // Use provided redirectUri or default
-    const callbackUri = redirectUri || 'http://localhost:3000/oauth/callback'
+    const callbackPort = port || 9876
+    const callbackUri = `http://localhost:${callbackPort}/oauth/callback`
 
     // Create OAuth2 client
     const oauth2Client = new OAuth2Client(
@@ -62,12 +129,13 @@ export const oauthConnect = pikkuSessionlessFunc<
 
     logger.info(`Starting OAuth2 authorization for '${credentialName}'`)
     logger.info(`Callback URL: ${callbackUri}`)
-    logger.info(
-      `Make sure your Pikku server is running and serving the /oauth/callback route`
-    )
 
-    // Start waiting for callback (registers the state)
-    const callbackPromise = oauthCallback.waitForCallback(oauthState)
+    // Start callback server
+    const { server, callbackPromise } = await startCallbackServer(
+      callbackPort,
+      oauthState
+    )
+    logger.info(`Callback server listening on port ${callbackPort}`)
 
     // Open browser
     logger.info('Opening browser...')
@@ -80,16 +148,15 @@ export const oauthConnect = pikkuSessionlessFunc<
 
     let tokens: any
     try {
-      // Wait for callback from wireHTTP route
+      // Wait for callback
       const callbackResult = await callbackPromise
 
       // Exchange code for tokens
       tokens = await oauth2Client.exchangeCode(callbackResult.code, callbackUri)
 
       logger.info('Authorization successful!')
-    } catch (err) {
-      oauthCallback.cancelCallback(oauthState)
-      throw err
+    } finally {
+      server.close()
     }
 
     // Output based on --output flag
@@ -105,9 +172,6 @@ export const oauthConnect = pikkuSessionlessFunc<
       await secrets.setSecretJSON(credential.oauth2.tokenSecretId, tokens)
       logger.info(
         `Tokens stored in secret '${credential.oauth2.tokenSecretId}'`
-      )
-      logger.error(
-        'SecretService does not support writing. Outputting to console instead:'
       )
     }
   },
