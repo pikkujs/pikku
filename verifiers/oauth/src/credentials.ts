@@ -14,17 +14,3 @@ wireOAuth2Credential({
   tokenUrl: 'http://localhost:8080/token',
   scopes: ['openid', 'profile', 'email'],
 })
-
-/**
- * GitHub OAuth2 credential for real-world testing.
- */
-wireOAuth2Credential({
-  name: 'github',
-  displayName: 'GitHub OAuth',
-  description: 'OAuth2 credentials for GitHub API access',
-  secretId: 'GITHUB_OAUTH_APP',
-  tokenSecretId: 'GITHUB_OAUTH_TOKENS',
-  authorizationUrl: 'https://github.com/login/oauth/authorize',
-  tokenUrl: 'https://github.com/login/oauth/access_token',
-  scopes: ['read:user', 'user:email'],
-})

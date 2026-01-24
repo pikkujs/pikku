@@ -1,9 +1,8 @@
 export * from './forge-node.types.js'
 
-// Deprecated: Use @pikku/core/credential instead
+// Temporary: Keep deprecated exports until next CLI release
+// The published CLI@0.11.3 still generates code using these
 export {
-  /** @deprecated Use wireCredential from @pikku/core/credential instead */
   wireCredential as wireForgeCredential,
-  /** @deprecated Use CoreCredential from @pikku/core/credential instead */
   type CoreCredential as CoreForgeCredential,
 } from '../credential/index.js'
