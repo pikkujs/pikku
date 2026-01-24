@@ -16,7 +16,7 @@ import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
 import { addForgeNode } from './add/add-forge-node.js'
-import { addCredential } from './add/add-credential.js'
+import { addCredential, addOAuth2Credential } from './add/add-credential.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 
 export const visitSetup = (
@@ -104,6 +104,7 @@ export const visitRoutes = (
   addMCPPrompt(logger, node, checker, state, options)
   addForgeNode(logger, node, checker, state, options)
   addCredential(logger, node, checker, state, options)
+  addOAuth2Credential(logger, node, checker, state, options)
   addWorkflowGraph(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>

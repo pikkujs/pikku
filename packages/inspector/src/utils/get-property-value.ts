@@ -1,6 +1,32 @@
 import * as ts from 'typescript'
 import { ErrorCode } from '../error-codes.js'
 
+/**
+ * Extracts an array of strings from an object property.
+ */
+export const getArrayPropertyValue = (
+  obj: ts.ObjectLiteralExpression,
+  propertyName: string
+): string[] | null => {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === propertyName
+  )
+
+  if (property && ts.isPropertyAssignment(property)) {
+    const initializer = property.initializer
+    if (ts.isArrayLiteralExpression(initializer)) {
+      return initializer.elements
+        .filter(ts.isStringLiteral)
+        .map((element) => element.text)
+    }
+  }
+
+  return null
+}
+
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string

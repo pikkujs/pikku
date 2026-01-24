@@ -23,6 +23,24 @@ export type CoreCredential<T = unknown> = {
 }
 
 /**
+ * OAuth2-specific configuration stored in CredentialMeta.
+ */
+export type OAuth2CredentialConfig = {
+  /** Where access/refresh tokens are stored */
+  tokenSecretId: string
+  /** OAuth2 authorization URL */
+  authorizationUrl: string
+  /** OAuth2 token exchange URL */
+  tokenUrl: string
+  /** Required scopes */
+  scopes: string[]
+  /** Use PKCE flow */
+  pkce?: boolean
+  /** Additional query parameters for authorization URL */
+  additionalParams?: Record<string, string>
+}
+
+/**
  * Metadata generated for each credential.
  * Schema is converted from Zod to JSON Schema at build time.
  */
@@ -32,7 +50,9 @@ export type CredentialMeta = {
   description?: string
   secretId: string
   /** JSON Schema (converted from Zod at build time) or zodLookup reference name */
-  schema: Record<string, unknown> | string
+  schema?: Record<string, unknown> | string
+  /** OAuth2 configuration (if this is an OAuth2 credential) */
+  oauth2?: OAuth2CredentialConfig
 }
 
 /**
