@@ -22,6 +22,6 @@
     "build": "tsc -b",
     "pikku": "pikku",
     "mock-server": "npx tsx src/test-oauth.ts",
-    "test": "pikku && tsc -b && npx tsx src/test-oauth.ts"
+    "test": "pikku && tsc -b && ./test.sh"
   }
 }

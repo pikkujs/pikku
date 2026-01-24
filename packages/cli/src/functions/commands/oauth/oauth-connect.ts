@@ -8,11 +8,14 @@ interface OAuthCallbackResult {
   state: string
 }
 
+const CALLBACK_PATH = '/oauth/callback'
+
 /**
  * Start a temporary HTTP server to receive the OAuth callback
  */
 function startCallbackServer(
   port: number,
+  hostname: string,
   expectedState: string
 ): Promise<{ server: Server; callbackPromise: Promise<OAuthCallbackResult> }> {
   return new Promise((resolve) => {
@@ -25,9 +28,9 @@ function startCallbackServer(
     })
 
     const server = createServer((req, res) => {
-      const url = new URL(req.url || '/', `http://localhost:${port}`)
+      const url = new URL(req.url || '/', `http://${hostname}:${port}`)
 
-      if (url.pathname === '/oauth/callback') {
+      if (url.pathname === CALLBACK_PATH) {
         const code = url.searchParams.get('code')
         const state = url.searchParams.get('state')
         const error = url.searchParams.get('error')
@@ -66,26 +69,26 @@ function startCallbackServer(
       }
     })
 
-    server.listen(port, 'localhost', () => {
+    server.listen(port, hostname, () => {
       resolve({ server, callbackPromise })
     })
   })
 }
 
 /**
- * pikku oauth:connect <credential-name> [--output console|secret] [--port <port>]
+ * pikku oauth:connect <credential-name> [--output console|secret] [--url <url>]
  *
  * Connect to an OAuth2 provider by authorizing and obtaining tokens.
  * This command starts a temporary HTTP server to receive the callback.
  */
 export const oauthConnect = pikkuSessionlessFunc<
-  { credentialName: string; output?: string; port?: number },
+  { credentialName: string; output?: string; url?: string },
   void
 >({
   internal: true,
   func: async (
     { logger, getInspectorState, secrets },
-    { credentialName, output, port }
+    { credentialName, output, url }
   ) => {
     const inspectorState = await getInspectorState(false, false, false)
 
@@ -108,8 +111,11 @@ export const oauthConnect = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    const callbackPort = port || 9876
-    const callbackUri = `http://localhost:${callbackPort}/oauth/callback`
+    // Parse URL or use default
+    const baseUrl = new URL(url || 'http://localhost:9876')
+    const callbackHostname = baseUrl.hostname
+    const callbackPort = parseInt(baseUrl.port) || 9876
+    const callbackUri = `${baseUrl.protocol}//${baseUrl.host}${CALLBACK_PATH}`
 
     // Create OAuth2 client
     const oauth2Client = new OAuth2Client(
@@ -133,9 +139,10 @@ export const oauthConnect = pikkuSessionlessFunc<
     // Start callback server
     const { server, callbackPromise } = await startCallbackServer(
       callbackPort,
+      callbackHostname,
       oauthState
     )
-    logger.info(`Callback server listening on port ${callbackPort}`)
+    logger.info(`Callback server listening on ${baseUrl.host}`)
 
     // Open browser
     logger.info('Opening browser...')

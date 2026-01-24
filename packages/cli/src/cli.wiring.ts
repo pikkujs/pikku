@@ -121,9 +121,9 @@ wireCLI({
           default: 'console' as const,
           short: 'o',
         },
-        port: {
-          description: 'Port for callback server (default: 9876)',
-          short: 'p',
+        url: {
+          description: 'Callback server URL (default: http://localhost:9876)',
+          short: 'u',
         },
       },
     }),
