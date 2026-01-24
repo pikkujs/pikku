@@ -8,7 +8,7 @@ import {
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
 
-export const pikkuCLI: any = pikkuSessionlessFunc<void, boolean | undefined>({
+export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {

@@ -3,47 +3,46 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePermissionsImports } from './serialize-permissions-imports.js'
 
-export const pikkuPermissions: any = pikkuSessionlessFunc<
-  void,
-  boolean | undefined
->({
-  func: async ({ logger, config, getInspectorState }) => {
-    const state = await getInspectorState()
-    const { permissions } = state
-    const { permissionsFile, packageMappings } = config
+export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
+  {
+    func: async ({ logger, config, getInspectorState }) => {
+      const state = await getInspectorState()
+      const { permissions } = state
+      const { permissionsFile, packageMappings } = config
 
-    let filesGenerated = false
+      let filesGenerated = false
 
-    // Check if there are any permission group factories
-    const hasHTTPFactories = Array.from(
-      state.http.routePermissions.values()
-    ).some((meta: any) => meta.exportName && meta.isFactory)
-    const hasTagFactories = Array.from(
-      state.permissions.tagPermissions.values()
-    ).some((meta: any) => meta.exportName && meta.isFactory)
-    const hasFactories = hasHTTPFactories || hasTagFactories
+      // Check if there are any permission group factories
+      const hasHTTPFactories = Array.from(
+        state.http.routePermissions.values()
+      ).some((meta: any) => meta.exportName && meta.isFactory)
+      const hasTagFactories = Array.from(
+        state.permissions.tagPermissions.values()
+      ).some((meta: any) => meta.exportName && meta.isFactory)
+      const hasFactories = hasHTTPFactories || hasTagFactories
 
-    // Generate permissions imports file if there are factories
-    if (hasFactories) {
-      await writeFileInDir(
-        logger,
-        permissionsFile,
-        serializePermissionsImports(
+      // Generate permissions imports file if there are factories
+      if (hasFactories) {
+        await writeFileInDir(
+          logger,
           permissionsFile,
-          permissions,
-          state.http,
-          packageMappings
+          serializePermissionsImports(
+            permissionsFile,
+            permissions,
+            state.http,
+            packageMappings
+          )
         )
-      )
-      filesGenerated = true
-    }
+        filesGenerated = true
+      }
 
-    return filesGenerated
-  },
-  middleware: [
-    logCommandInfoAndTime({
-      commandStart: 'Serializing Pikku permissions',
-      commandEnd: 'Serialized Pikku permissions',
-    }),
-  ],
-})
+      return filesGenerated
+    },
+    middleware: [
+      logCommandInfoAndTime({
+        commandStart: 'Serializing Pikku permissions',
+        commandEnd: 'Serialized Pikku permissions',
+      }),
+    ],
+  }
+)

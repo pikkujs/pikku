@@ -15,10 +15,7 @@ import {
 } from '../../../utils/strip-verbose-meta.js'
 import { join } from 'path'
 
-export const pikkuWorkflow: any = pikkuSessionlessFunc<
-  void,
-  boolean | undefined
->({
+export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
     const {

@@ -4,7 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeHTTPTypes } from './serialize-http-types.js'
 
-export const pikkuHTTPTypes: any = pikkuSessionlessFunc<void, void>({
+export const pikkuHTTPTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const { httpTypesFile, functionTypesFile, packageMappings } = config
 

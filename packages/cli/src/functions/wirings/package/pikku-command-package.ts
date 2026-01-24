@@ -3,10 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePackageFactories } from './serialize-package.js'
 
-export const pikkuPackage: any = pikkuSessionlessFunc<
-  void,
-  boolean | undefined
->({
+export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const { externalPackageName, packageMappings, packageFile } = config
 

@@ -25,12 +25,12 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5",
-    "@types/express-serve-static-core": "^5.1.0",
+    "@types/express-serve-static-core": "^5.1.1",
     "content-type": "^1.0.5",
     "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "express": "^5",
-    "raw-body": "^3.0.1"
+    "raw-body": "^3.0.2"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

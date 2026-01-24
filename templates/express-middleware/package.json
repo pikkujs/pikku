@@ -14,10 +14,10 @@
   "devDependencies": {
     "@pikku/cli": "^0.11.3",
     "@types/cookie-parser": "^1.4.10",
-    "@types/express": "^5.0.5",
-    "@types/express-serve-static-core": "^5.1.0",
+    "@types/express": "^5.0.6",
+    "@types/express-serve-static-core": "^5.1.1",
     "@types/node": "^24",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9"
   },
   "scripts": {

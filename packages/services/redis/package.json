@@ -19,7 +19,7 @@
     "@pikku/core": "^0.11.2"
   },
   "dependencies": {
-    "ioredis": "^5.8.2"
+    "ioredis": "^5.9.2"
   },
   "devDependencies": {
     "typescript": "^5.9"

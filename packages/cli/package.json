@@ -24,7 +24,7 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "dependencies": {
-    "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.0",
+    "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
     "@pikku/core": "^0.11.2",
     "@pikku/inspector": "^0.11.2",
     "@types/cookie": "^1.0.0",
@@ -35,14 +35,14 @@
     "path-to-regexp": "^8.3.0",
     "tinyglobby": "^0.2.12",
     "ts-json-schema-generator": "^2.4.0",
-    "tsx": "^4.19.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9",
-    "yaml": "^2.8.1",
-    "zod": "^4.0.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.6",
     "zod-to-ts": "^2.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1"
+    "@types/node": "^24.10.9"
   },
   "engines": {
     "node": ">=18"

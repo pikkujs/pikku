@@ -6,7 +6,7 @@ export type BootstrapInput = {
   allImports: string[]
 }
 
-export const pikkuBootstrap: any = pikkuSessionlessFunc<BootstrapInput, void>({
+export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   func: async ({ logger, config, getInspectorState }, { allImports }) => {
     const stateBeforeBootstrap = await getInspectorState()
     const externalPackageBootstraps: string[] = []

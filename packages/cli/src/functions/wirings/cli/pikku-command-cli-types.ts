@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeCLITypes } from './serialize-cli-types.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 
-export const pikkuCLITypes: any = pikkuSessionlessFunc<void, void>({
+export const pikkuCLITypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { cliTypesFile, functionTypesFile, packageMappings } = config
     const visitState = await getInspectorState()

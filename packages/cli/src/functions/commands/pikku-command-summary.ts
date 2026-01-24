@@ -1,7 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { CommandSummary } from '../../utils/command-summary.js'
 
-export const pikkuSummary: any = pikkuSessionlessFunc<void, void>({
+export const pikkuSummary = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, getInspectorState }) => {
     const summary = new CommandSummary('all')
     const state = await getInspectorState()
