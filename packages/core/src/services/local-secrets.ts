@@ -71,6 +71,19 @@ export class LocalSecretService implements SecretService {
   }
 
   /**
+   * Checks if a secret exists without throwing.
+   * @param key - The key of the secret to check.
+   * @returns A promise that resolves to true if the secret exists.
+   */
+  public async hasSecret(key: string): Promise<boolean> {
+    if (this.localSecrets.has(key)) {
+      return true
+    }
+    const value = await this.variables.get(key)
+    return value !== undefined && value !== null && value !== ''
+  }
+
+  /**
    * Deletes a secret from local storage.
    * @param key - The key of the secret to delete.
    * @returns A promise that resolves when the secret is deleted.

@@ -4630,9 +4630,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/verify-oauth@workspace:verifiers/oauth":
+"@pikku/verify-secrets@workspace:verifiers/secrets":
   version: 0.0.0-use.local
-  resolution: "@pikku/verify-oauth@workspace:verifiers/oauth"
+  resolution: "@pikku/verify-secrets@workspace:verifiers/secrets"
   dependencies:
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"

@@ -96,6 +96,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Credentials
   credentialTypesFile: string
+
+  // Secrets (typed wrapper for SecretService)
+  secretsFile: string
 }
 
 export type PikkuCLIInput = {

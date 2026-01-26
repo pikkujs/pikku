@@ -435,6 +435,12 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Secrets (typed wrapper for SecretService)
+    const secretsDir = join(result.outDir, 'secrets')
+    if (!result.secretsFile) {
+      result.secretsFile = join(secretsDir, 'pikku-secrets.gen.ts')
+    }
+
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)
     }

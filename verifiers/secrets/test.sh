@@ -3,8 +3,16 @@ set -e
 
 CI_MODE=${CI:-false}
 
-echo "=== OAuth2 CLI Test ==="
+echo "=== Secrets Verifier Tests ==="
 echo "CI Mode: $CI_MODE"
+
+# Test 1: PikkuSecrets type inference
+echo ""
+echo "=== Testing PikkuSecrets type inference ==="
+npx tsx src/test-secrets.ts
+
+echo ""
+echo "=== OAuth2 CLI Test ==="
 
 # Set up test credentials
 export MOCK_OAUTH_APP='{"clientId":"test-client","clientSecret":"test-secret"}'
