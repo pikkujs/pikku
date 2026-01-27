@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { OAuth2Client } from '@pikku/core/oauth2'
+import { OAuth2Client, type OAuth2Token } from '@pikku/core/oauth2'
 import { createServer, type Server } from 'http'
 import { randomUUID } from 'crypto'
 import open from 'open'
@@ -8,6 +8,18 @@ import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize
 interface OAuthCallbackResult {
   code: string
   state: string
+}
+
+/**
+ * Escape HTML special characters to prevent XSS.
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 /**
@@ -21,6 +33,7 @@ function maskToken(token: string | undefined): string {
 }
 
 const CALLBACK_PATH = '/oauth/callback'
+const DEFAULT_SERVER_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
 /**
  * Start a temporary HTTP server to receive the OAuth callback
@@ -28,11 +41,13 @@ const CALLBACK_PATH = '/oauth/callback'
 function startCallbackServer(
   port: number,
   hostname: string,
-  expectedState: string
+  expectedState: string,
+  timeoutMs: number = DEFAULT_SERVER_TIMEOUT_MS
 ): Promise<{ server: Server; callbackPromise: Promise<OAuthCallbackResult> }> {
   return new Promise((resolve) => {
     let callbackResolve: (result: OAuthCallbackResult) => void
     let callbackReject: (error: Error) => void
+    let timeoutId: ReturnType<typeof setTimeout>
 
     const callbackPromise = new Promise<OAuthCallbackResult>((res, rej) => {
       callbackResolve = res
@@ -50,7 +65,7 @@ function startCallbackServer(
         if (error) {
           res.writeHead(400, { 'Content-Type': 'text/html' })
           res.end(
-            `<html><body><h1>OAuth Error</h1><p>${error}</p></body></html>`
+            `<html><body><h1>OAuth Error</h1><p>${escapeHtml(error)}</p></body></html>`
           )
           callbackReject(new Error(`OAuth error: ${error}`))
           return
@@ -82,7 +97,22 @@ function startCallbackServer(
     })
 
     server.listen(port, hostname, () => {
-      resolve({ server, callbackPromise })
+      // Set up timeout to close server if no callback is received
+      timeoutId = setTimeout(() => {
+        server.close()
+        callbackReject(
+          new Error(
+            `OAuth callback timeout: no response received within ${Math.round(timeoutMs / 1000)} seconds`
+          )
+        )
+      }, timeoutMs)
+
+      // Wrap callbackPromise to clear timeout when resolved
+      const wrappedPromise = callbackPromise.finally(() => {
+        clearTimeout(timeoutId)
+      })
+
+      resolve({ server, callbackPromise: wrappedPromise })
     })
   })
 }
@@ -172,7 +202,7 @@ export const oauthConnect = pikkuSessionlessFunc<
       logger.info(authUrl)
     })
 
-    let tokens: any
+    let tokens: OAuth2Token
     try {
       // Wait for callback
       const callbackResult = await callbackPromise

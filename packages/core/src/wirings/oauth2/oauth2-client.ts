@@ -30,6 +30,29 @@ import { SecretService } from '../../services/secret-service.js'
  * })
  * ```
  */
+const DEFAULT_TIMEOUT_MS = 30000
+
+/**
+ * Helper to fetch with a timeout using AbortController.
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 export class OAuth2Client {
   private cachedToken: OAuth2Token | null = null
   private cachedAppCredential: OAuth2AppCredential | null = null
@@ -44,27 +67,39 @@ export class OAuth2Client {
   /**
    * Make an authenticated request. Handles token caching and 401 refresh.
    */
-  async request(url: string, options?: RequestInit): Promise<Response> {
+  async request(
+    url: string,
+    options?: RequestInit,
+    timeoutMs: number = DEFAULT_TIMEOUT_MS
+  ): Promise<Response> {
     const token = await this.getAccessToken()
 
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...options?.headers,
-        Authorization: `Bearer ${token}`,
+    const response = await fetchWithTimeout(
+      url,
+      {
+        ...options,
+        headers: {
+          ...options?.headers,
+          Authorization: `Bearer ${token}`,
+        },
       },
-    })
+      timeoutMs
+    )
 
     // Auto-retry on 401 after refresh
     if (response.status === 401) {
       const newToken = await this.refreshAndGetToken()
-      return fetch(url, {
-        ...options,
-        headers: {
-          ...options?.headers,
-          Authorization: `Bearer ${newToken}`,
+      return fetchWithTimeout(
+        url,
+        {
+          ...options,
+          headers: {
+            ...options?.headers,
+            Authorization: `Bearer ${newToken}`,
+          },
         },
-      })
+        timeoutMs
+      )
     }
 
     return response
@@ -142,22 +177,13 @@ export class OAuth2Client {
       params.set('client_secret', appCredential.clientSecret)
     }
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
-
-    let response: Response
-    try {
-      response = await fetch(this.oauth2Config.tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-        signal: controller.signal,
-      })
-    } finally {
-      clearTimeout(timeoutId)
-    }
+    const response = await fetchWithTimeout(this.oauth2Config.tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    })
 
     if (!response.ok) {
       throw new Error(`Token refresh failed: ${response.status}`)
@@ -263,22 +289,13 @@ export class OAuth2Client {
       params.set('client_secret', appCredential.clientSecret)
     }
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
-
-    let response: Response
-    try {
-      response = await fetch(this.oauth2Config.tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-        signal: controller.signal,
-      })
-    } finally {
-      clearTimeout(timeoutId)
-    }
+    const response = await fetchWithTimeout(this.oauth2Config.tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    })
 
     if (!response.ok) {
       throw new Error(`Token exchange failed: ${response.status}`)
