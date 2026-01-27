@@ -1,12 +1,23 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { OAuth2Client } from '@pikku/core/oauth2'
 import { createServer, type Server } from 'http'
+import { randomUUID } from 'crypto'
 import open from 'open'
 import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
 
 interface OAuthCallbackResult {
   code: string
   state: string
+}
+
+/**
+ * Mask a token for safe display in console output.
+ * Shows first 6 and last 3 characters, with asterisks in between.
+ */
+function maskToken(token: string | undefined): string {
+  if (!token) return '(none)'
+  if (token.length <= 12) return '***'
+  return `${token.slice(0, 6)}***${token.slice(-3)}`
 }
 
 const CALLBACK_PATH = '/oauth/callback'
@@ -131,8 +142,8 @@ export const oauthConnect = pikkuSessionlessFunc<
       secrets
     )
 
-    // Generate state for CSRF protection
-    const oauthState = Math.random().toString(36).substring(2, 15)
+    // Generate state for CSRF protection using cryptographically secure random
+    const oauthState = randomUUID()
 
     // Get authorization URL
     const authUrl = await oauth2Client.getAuthorizationUrl(
@@ -178,7 +189,22 @@ export const oauthConnect = pikkuSessionlessFunc<
     const outputMode = output || 'console'
 
     if (outputMode === 'console') {
-      logger.info('Tokens received:')
+      logger.info('Tokens received (masked for security):')
+      logger.info(`  accessToken:  ${maskToken(tokens.accessToken)}`)
+      logger.info(`  refreshToken: ${maskToken(tokens.refreshToken)}`)
+      logger.info(
+        `  expiresAt:    ${tokens.expiresAt ? new Date(tokens.expiresAt).toISOString() : '(none)'}`
+      )
+      logger.info(`  tokenType:    ${tokens.tokenType}`)
+      logger.info(`  scope:        ${tokens.scope || '(none)'}`)
+      logger.warn('')
+      logger.warn(
+        'WARNING: Raw tokens will be printed below. They may be stored in your shell history.'
+      )
+      logger.warn(
+        'Consider using --output secret to store tokens directly in the secret service.'
+      )
+      logger.warn('')
       console.log(JSON.stringify(tokens, null, 2))
       logger.info(
         `\nTo store these tokens, set the secret '${credential.oauth2.tokenSecretId}' to the JSON above.`

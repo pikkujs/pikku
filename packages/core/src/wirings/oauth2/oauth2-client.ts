@@ -142,20 +142,32 @@ export class OAuth2Client {
       params.set('client_secret', appCredential.clientSecret)
     }
 
-    const response = await fetch(this.oauth2Config.tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+    let response: Response
+    try {
+      response = await fetch(this.oauth2Config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Token refresh failed: ${response.status} ${errorText}`)
+      throw new Error(`Token refresh failed: ${response.status}`)
     }
 
     const data = await response.json()
+
+    if (!data.access_token || typeof data.access_token !== 'string') {
+      throw new Error('Invalid token response: missing access_token')
+    }
 
     const token: OAuth2Token = {
       accessToken: data.access_token,
@@ -251,20 +263,32 @@ export class OAuth2Client {
       params.set('client_secret', appCredential.clientSecret)
     }
 
-    const response = await fetch(this.oauth2Config.tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+    let response: Response
+    try {
+      response = await fetch(this.oauth2Config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Token exchange failed: ${response.status} ${errorText}`)
+      throw new Error(`Token exchange failed: ${response.status}`)
     }
 
     const data = await response.json()
+
+    if (!data.access_token || typeof data.access_token !== 'string') {
+      throw new Error('Invalid token response: missing access_token')
+    }
 
     const token: OAuth2Token = {
       accessToken: data.access_token,
