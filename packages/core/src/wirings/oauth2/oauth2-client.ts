@@ -90,6 +90,12 @@ export class OAuth2Client {
       this.oauth2Config.tokenSecretId
     )
     this.cachedToken = token
+
+    // Check if loaded token is expired and needs refresh
+    if (!this.isTokenValid(token) && token.refreshToken) {
+      return this.refreshAndGetToken()
+    }
+
     return token.accessToken
   }
 

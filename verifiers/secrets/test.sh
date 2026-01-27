@@ -6,10 +6,15 @@ CI_MODE=${CI:-false}
 echo "=== Secrets Verifier Tests ==="
 echo "CI Mode: $CI_MODE"
 
-# Test 1: PikkuSecrets type inference
+# Test 1: TypedSecretService type inference
 echo ""
-echo "=== Testing PikkuSecrets type inference ==="
+echo "=== Testing TypedSecretService ==="
 npx tsx src/test-secrets.ts
+
+# Test 2: OAuth2Client against mock server
+echo ""
+echo "=== Testing OAuth2Client ==="
+npx tsx src/test-oauth2-client.ts
 
 echo ""
 echo "=== OAuth2 CLI Test ==="
