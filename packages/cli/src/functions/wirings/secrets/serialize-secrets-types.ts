@@ -11,75 +11,82 @@ export interface SerializeSecretsOptions {
 
 /**
  * Validates credential definitions and builds the credentials meta.
- * Throws if duplicate credentials have different schemas.
+ * Throws if the same secretId is used with different schemas.
+ * Multiple credentials can share the same secretId if they have identical schemas.
  */
 export function validateAndBuildCredentialsMeta(
   definitions: CredentialDefinitions,
   zodLookup: Map<string, ZodSchemaRef>
 ): CredentialsMeta {
   const meta: CredentialsMeta = {}
-  const secretIdToName: Map<string, string> = new Map()
+  // Track secretId -> first definition that used it (for error messages and comparison)
+  const secretIdToDefinition: Map<string, CredentialDefinitions[0]> = new Map()
 
   for (const def of definitions) {
-    // Check for duplicate secretId across different credentials
-    const existingName = secretIdToName.get(def.secretId)
-    if (existingName && existingName !== def.name) {
-      throw new Error(
-        `Credential conflict: secretId '${def.secretId}' is used by both '${existingName}' and '${def.name}'.\n` +
-          `Each credential must have a unique secretId.`
-      )
-    }
-    secretIdToName.set(def.secretId, def.name)
+    const existingDef = secretIdToDefinition.get(def.secretId)
 
-    // Check for duplicate name
-    const existing = meta[def.name]
-    if (existing) {
-      // Compare schemas for regular credentials
-      if (def.schema && existing.schema) {
+    if (existingDef) {
+      // Same secretId - validate schemas are identical
+      if (def.schema && existingDef.schema) {
         const defSchemaRef = zodLookup.get(def.schema as string)
-        const existingSchemaRef = zodLookup.get(existing.schema as string)
+        const existingSchemaRef = zodLookup.get(existingDef.schema as string)
 
         if (defSchemaRef && existingSchemaRef) {
-          // Compare actual schema references
           if (
             defSchemaRef.variableName !== existingSchemaRef.variableName ||
             defSchemaRef.sourceFile !== existingSchemaRef.sourceFile
           ) {
             throw new Error(
-              `Credential '${def.name}' is defined multiple times with different schemas.\n` +
-                `  First definition: ${existing.sourceFile} (schema: ${existingSchemaRef.variableName})\n` +
+              `Secret '${def.secretId}' is defined with different schemas.\n` +
+                `  First definition: ${existingDef.sourceFile} (schema: ${existingSchemaRef.variableName})\n` +
                 `  Second definition: ${def.sourceFile} (schema: ${defSchemaRef.variableName})\n` +
-                `Either use the same schema or rename one of the credentials.`
+                `Credentials sharing a secretId must use the same schema.`
             )
           }
         }
       }
 
       // Compare OAuth2 configs
-      if (def.oauth2 && existing.oauth2) {
-        if (JSON.stringify(def.oauth2) !== JSON.stringify(existing.oauth2)) {
+      if (def.oauth2 && existingDef.oauth2) {
+        if (JSON.stringify(def.oauth2) !== JSON.stringify(existingDef.oauth2)) {
           throw new Error(
-            `OAuth2 credential '${def.name}' is defined multiple times with different configurations.\n` +
-              `  First definition: ${existing.sourceFile}\n` +
+            `OAuth2 secret '${def.secretId}' is defined with different configurations.\n` +
+              `  First definition: ${existingDef.sourceFile}\n` +
               `  Second definition: ${def.sourceFile}\n` +
-              `Either use the same configuration or rename one of the credentials.`
+              `Credentials sharing a secretId must use the same configuration.`
           )
         }
       }
 
-      // Same schema/config - skip duplicate
+      // Same schema/config - skip duplicate (already in meta by name or add by this name)
+      if (!meta[def.name]) {
+        meta[def.name] = {
+          name: def.name,
+          displayName: def.displayName,
+          description: def.description,
+          secretId: def.secretId,
+          schema: def.schema,
+          oauth2: def.oauth2,
+          sourceFile: def.sourceFile,
+        }
+      }
       continue
     }
 
-    // Add to meta
-    meta[def.name] = {
-      name: def.name,
-      displayName: def.displayName,
-      description: def.description,
-      secretId: def.secretId,
-      schema: def.schema,
-      oauth2: def.oauth2,
-      sourceFile: def.sourceFile,
+    // First time seeing this secretId
+    secretIdToDefinition.set(def.secretId, def)
+
+    // Add to meta (keyed by name)
+    if (!meta[def.name]) {
+      meta[def.name] = {
+        name: def.name,
+        displayName: def.displayName,
+        description: def.description,
+        secretId: def.secretId,
+        schema: def.schema,
+        oauth2: def.oauth2,
+        sourceFile: def.sourceFile,
+      }
     }
   }
 
