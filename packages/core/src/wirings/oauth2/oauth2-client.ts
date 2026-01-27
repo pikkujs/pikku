@@ -118,6 +118,8 @@ export class OAuth2Client {
       if (this.cachedToken.refreshToken) {
         return this.refreshAndGetToken()
       }
+      // Token expired and no refresh token available
+      throw new Error('OAuth2 token expired and no refresh token available')
     }
 
     // Load from secrets
@@ -127,8 +129,12 @@ export class OAuth2Client {
     this.cachedToken = token
 
     // Check if loaded token is expired and needs refresh
-    if (!this.isTokenValid(token) && token.refreshToken) {
-      return this.refreshAndGetToken()
+    if (!this.isTokenValid(token)) {
+      if (token.refreshToken) {
+        return this.refreshAndGetToken()
+      }
+      // Token expired and no refresh token available
+      throw new Error('OAuth2 token expired and no refresh token available')
     }
 
     return token.accessToken
@@ -204,6 +210,10 @@ export class OAuth2Client {
       tokenType: data.token_type || 'Bearer',
       scope: data.scope,
     }
+
+    // Cache and persist the refreshed token
+    this.cachedToken = token
+    await this.secrets.setSecretJSON(this.oauth2Config.tokenSecretId, token)
 
     return token
   }

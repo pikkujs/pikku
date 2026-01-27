@@ -11,18 +11,20 @@ const originalFetch = globalThis.fetch
 // Mock SecretService with in-memory store
 function createMockSecretService(
   initialSecrets: Record<string, unknown> = {}
-): SecretService {
+): SecretService & { getStoredSecrets: () => Map<string, unknown> } {
   const secrets = new Map<string, unknown>(Object.entries(initialSecrets))
   return {
     getSecret: async (key: string) => secrets.get(key) as string,
     getSecretJSON: async <T>(key: string) => secrets.get(key) as T,
-    setSecretJSON: async (_key: string, _value: unknown) => {
-      // Not used in tests
+    setSecretJSON: async (key: string, value: unknown) => {
+      secrets.set(key, value)
     },
     deleteSecret: async (_key: string) => {
       // Not used in tests
     },
     hasSecret: async (key: string) => secrets.has(key),
+    // Helper for tests to inspect stored values
+    getStoredSecrets: () => secrets,
   }
 }
 
@@ -319,12 +321,44 @@ describe('OAuth2Client', () => {
 
       const client = new OAuth2Client(defaultConfig, 'APP_CREDS', secrets)
 
-      // First call loads the token without refresh token
-      // Since token is expired and no refresh token, it should try to use it anyway
-      // The behavior depends on implementation - let's check getAccessToken with expired token and no refresh
-      const token = await client.getAccessToken()
-      // It returns the expired token since there's no refresh token
-      assert.equal(token, 'expired-token')
+      await assert.rejects(
+        async () => await client.getAccessToken(),
+        /OAuth2 token expired and no refresh token available/
+      )
+    })
+
+    test('persists refreshed token to secrets', async () => {
+      const expiredToken: OAuth2Token = {
+        accessToken: 'expired-token',
+        refreshToken: 'refresh-token',
+        expiresAt: Date.now() - 1000,
+        tokenType: 'Bearer',
+      }
+
+      const secrets = createMockSecretService({
+        OAUTH_TOKENS: expiredToken,
+        APP_CREDS: defaultAppCredential,
+      })
+
+      globalThis.fetch = mock.fn(async () =>
+        mockFetchResponse({
+          access_token: 'new-persisted-token',
+          refresh_token: 'new-refresh-token',
+          expires_in: 3600,
+          token_type: 'Bearer',
+        })
+      )
+
+      const client = new OAuth2Client(defaultConfig, 'APP_CREDS', secrets)
+      await client.getAccessToken()
+
+      // Verify the token was persisted to secrets
+      const storedToken = secrets
+        .getStoredSecrets()
+        .get('OAUTH_TOKENS') as OAuth2Token
+      assert.equal(storedToken.accessToken, 'new-persisted-token')
+      assert.equal(storedToken.refreshToken, 'new-refresh-token')
+      assert.ok(storedToken.expiresAt && storedToken.expiresAt > Date.now())
     })
 
     test('promise lock prevents concurrent refreshes', async () => {
