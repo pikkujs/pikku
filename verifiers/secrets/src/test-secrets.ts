@@ -1,10 +1,44 @@
 /**
  * Test file to verify TypedSecretService type inference works correctly.
  * This test validates both compile-time types and runtime behavior.
+ *
+ * This validates the same pattern used in templates/function-external:
+ * - wireCredential with Zod schema for type-safe credentials
+ * - wireOAuth2Credential for OAuth2 flows
+ * - TypedSecretService provides compile-time validated access
  */
 
 import { LocalSecretService, VariablesService } from '@pikku/core/services'
-import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
+import {
+  TypedSecretService,
+  CredentialsMap,
+} from '../.pikku/secrets/pikku-secrets.gen.js'
+
+// ============================================================================
+// Compile-time type assertions (these ensure the generated types are correct)
+// ============================================================================
+
+// Verify EXAMPLE_API_CREDENTIALS has the correct inferred Zod schema type
+type ApiCredentialsType = CredentialsMap['EXAMPLE_API_CREDENTIALS']
+// @ts-expect-error - apiKey should be required
+void ({ apiSecret: 'x' } satisfies ApiCredentialsType)
+// @ts-expect-error - apiSecret should be required
+void ({ apiKey: 'x' } satisfies ApiCredentialsType)
+// This should compile - all required fields present, optional baseUrl omitted
+void ({
+  apiKey: 'key',
+  apiSecret: 'secret',
+} satisfies ApiCredentialsType)
+
+// Verify OAuth2AppCredential type is correct
+type OAuthAppType = CredentialsMap['MOCK_OAUTH_APP']
+// @ts-expect-error - clientId should be required
+void ({ clientSecret: 'x' } satisfies OAuthAppType)
+
+// Verify OAuth2Token type is correct
+type OAuthTokenType = CredentialsMap['MOCK_OAUTH_TOKENS']
+// @ts-expect-error - accessToken should be required
+void ({ tokenType: 'Bearer' } satisfies OAuthTokenType)
 
 // Inline VariablesService that reads from process.env
 class EnvVariablesService implements VariablesService {
