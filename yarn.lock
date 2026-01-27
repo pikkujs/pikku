@@ -3986,7 +3986,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin"
   dependencies:
-    fastify: "npm:^5.7.1"
+    fastify: "npm:^5.7.2"
     fastify-plugin: "npm:^5.1.0"
     typescript: "npm:^5.9.3"
   peerDependencies:
@@ -4002,7 +4002,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.11.2"
     "@pikku/fastify-plugin": "npm:^0.11.1"
-    fastify: "npm:^5.7.1"
+    fastify: "npm:^5.7.2"
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.11.1
@@ -4356,7 +4356,7 @@ __metadata:
     "@pikku/fastify-plugin": "npm:^0.11.1"
     "@pikku/schedule": "npm:^0.11.1"
     "@types/node": "npm:^24"
-    fastify: "npm:^5.7.1"
+    fastify: "npm:^5.7.2"
     fastify-plugin: "npm:^5.1.0"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
@@ -4371,7 +4371,7 @@ __metadata:
     "@pikku/core": "npm:^0.11.2"
     "@pikku/fastify": "npm:^0.11.1"
     "@types/node": "npm:^24"
-    fastify: "npm:^5.7.1"
+    fastify: "npm:^5.7.2"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -8580,9 +8580,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify@npm:^5.7.1":
-  version: 5.7.1
-  resolution: "fastify@npm:5.7.1"
+"fastify@npm:^5.7.2":
+  version: 5.7.2
+  resolution: "fastify@npm:5.7.2"
   dependencies:
     "@fastify/ajv-compiler": "npm:^4.0.5"
     "@fastify/error": "npm:^4.0.0"
@@ -8599,7 +8599,7 @@ __metadata:
     secure-json-parse: "npm:^4.0.0"
     semver: "npm:^7.6.0"
     toad-cache: "npm:^3.7.0"
-  checksum: 10/98bf085c251fad6824bc77ce55efb9d121fe0cce45d8d8bba97e5c3a267c2af632e9eb63a3b956a32fd1c5864888cd1777c456017b593e358e977ac132aa1608
+  checksum: 10/5bf5ac677c9a7dedab90eeeb5972aa2a8da6718346859b1519b177ea6f6f3a59bb757010d187c22768fa8b74cb6c47ab7438b812cf16f4d9b460f787149f1849
   languageName: node
   linkType: hard
 
