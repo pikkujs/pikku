@@ -12,13 +12,9 @@ export const teamRoleUpdateWorkflow = pikkuWorkflowFunc<
   tags: ['onboarding'],
   func: async (_services, data, { workflow }) => {
     // Step 1: Get current member list
-    const _members = await workflow.do(
-      'Get team members',
-      'projectMemberList',
-      {
-        projectId: data.teamId,
-      }
-    )
+    await workflow.do('Get team members', 'projectMemberList', {
+      projectId: data.teamId,
+    })
 
     // Find current role (mock)
     const previousRole = 'member'

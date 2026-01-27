@@ -36,19 +36,15 @@ export const taskWithCommentsWorkflow = pikkuWorkflowFunc<
     }
 
     // Step 3: List all comments
-    const _commentList = await workflow.do(
-      'List task comments',
-      'taskCommentList',
-      {
-        taskId: task.id,
-      }
-    )
+    await workflow.do('List task comments', 'taskCommentList', {
+      taskId: task.id,
+    })
 
     // Step 4: Remove the first comment if exists
     if (commentIds.length > 0) {
       await workflow.do('Remove first comment', 'taskCommentRemove', {
         taskId: task.id,
-        commentId: commentIds[0],
+        commentId: commentIds[0]!,
       })
     }
 

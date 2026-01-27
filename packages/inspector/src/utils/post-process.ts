@@ -1,5 +1,9 @@
 import * as ts from 'typescript'
-import { InspectorState } from '../types.js'
+import {
+  InspectorState,
+  InspectorLogger,
+  ExternalPackageConfig,
+} from '../types.js'
 import {
   FunctionServicesMeta,
   MiddlewareMetadata,
@@ -10,6 +14,7 @@ import {
   extractAllServiceMetadata,
   ServiceMetadata,
 } from './extract-service-metadata.js'
+import { ErrorCode } from '../error-codes.js'
 
 /**
  * Helper to extract wire-level middleware/permission names from metadata.
@@ -266,4 +271,36 @@ export function extractServiceInterfaceMetadata(
   }
 
   state.serviceMetadata = allMetadata
+}
+
+/**
+ * Validates credential overrides from external packages.
+ * Ensures that each credential key in credentialOverrides exists in that
+ * external package's credentials metadata.
+ */
+export function validateCredentialOverrides(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  externalPackages?: Record<string, ExternalPackageConfig>
+): void {
+  if (!externalPackages) return
+
+  // Build a set of credential names from definitions
+  const credentialNames = new Set(
+    state.credentials.definitions.map((d) => d.name)
+  )
+
+  for (const [namespace, pkgConfig] of Object.entries(externalPackages)) {
+    if (!pkgConfig.credentialOverrides) continue
+
+    for (const credentialKey of Object.keys(pkgConfig.credentialOverrides)) {
+      if (!credentialNames.has(credentialKey)) {
+        const availableCredentials = Array.from(credentialNames)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Credential override '${credentialKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+        )
+      }
+    }
+  }
 }

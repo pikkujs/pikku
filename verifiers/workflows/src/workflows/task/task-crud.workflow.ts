@@ -22,12 +22,12 @@ export const taskCrudWorkflow = pikkuWorkflowFunc<
     })
 
     // Step 2: Get the task to verify creation
-    const _fetchedTask = await workflow.do('Get task', 'taskGet', {
+    await workflow.do('Get task', 'taskGet', {
       taskId: task.id,
     })
 
     // Step 3: Update the task status
-    const _updatedTask = await workflow.do('Update task status', 'taskUpdate', {
+    await workflow.do('Update task status', 'taskUpdate', {
       taskId: task.id,
       status: 'in_progress',
     })

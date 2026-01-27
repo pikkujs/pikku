@@ -71,7 +71,11 @@ export const createTodoTool = pikkuMCPToolFunc<{
   tags?: string[]
   userId?: string
 }>(async (_services, data, { rpc }) => {
-  const result = await rpc.invoke('createTodo', data as any)
+  const result = await rpc.invoke('createTodo', {
+    ...data,
+    priority: data.priority ?? 'medium',
+    tags: data.tags ?? [],
+  })
 
   return [
     {
@@ -133,7 +137,7 @@ export const planDayPrompt = pikkuMCPPromptFunc({
     const result = await rpc.invoke('listTodos', {
       userId,
       completed: false,
-    } as any)
+    })
 
     if (result.total === 0) {
       return [
@@ -179,7 +183,7 @@ export const prioritizePrompt = pikkuMCPPromptFunc({
     const result = await rpc.invoke('listTodos', {
       userId,
       completed: false,
-    } as any)
+    })
 
     if (result.total === 0) {
       return [

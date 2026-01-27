@@ -8,6 +8,7 @@ import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
   extractServiceInterfaceMetadata,
+  validateCredentialOverrides,
 } from './utils/post-process.js'
 
 /**
@@ -93,8 +94,8 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       meta: {},
       files: new Set(),
     },
-    forgeCredentials: {
-      meta: {},
+    credentials: {
+      definitions: [],
       files: new Set(),
     },
     middleware: {
@@ -203,6 +204,8 @@ export const inspect = (
     logger.debug(
       `Extract service metadata completed in ${(performance.now() - startServiceMeta).toFixed(2)}ms`
     )
+
+    validateCredentialOverrides(logger, state, options.externalPackages)
   }
 
   return state

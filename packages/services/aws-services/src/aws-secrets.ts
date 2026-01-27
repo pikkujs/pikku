@@ -33,4 +33,23 @@ export class AWSSecrets implements SecretService {
     }
     throw `FATAL: Error finding secret: ${SecretId}`
   }
+
+  public async hasSecret(SecretId: string): Promise<boolean> {
+    try {
+      const result = await this.client.send(
+        new GetSecretValueCommand({ SecretId })
+      )
+      return !!result.SecretString
+    } catch {
+      return false
+    }
+  }
+
+  public async setSecretJSON(_key: string, _value: unknown): Promise<void> {
+    throw new Error('setSecretJSON is not implemented for AWSSecrets')
+  }
+
+  public async deleteSecret(_key: string): Promise<void> {
+    throw new Error('deleteSecret is not implemented for AWSSecrets')
+  }
 }

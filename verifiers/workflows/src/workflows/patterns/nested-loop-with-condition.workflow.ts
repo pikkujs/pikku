@@ -16,7 +16,7 @@ export const nestedLoopWithConditionWorkflow = {
 
     // Outer loop: users
     for (const userId of data.userIds) {
-      const _user = await workflow.do(`Get user ${userId}`, 'userGet', {
+      await workflow.do(`Get user ${userId}`, 'userGet', {
         userId,
       })
 

@@ -13,8 +13,8 @@ export const graphOnboarding = pikkuWorkflowGraph({
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
   nodes: {
-    entry: 'createUserProfile',
-    sendWelcome: 'sendEmail',
+    entry: 'userCreate',
+    sendWelcome: 'emailSend',
   },
   wires: {
     http: [

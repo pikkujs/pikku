@@ -371,11 +371,6 @@ const _getPikkuCLIConfig = async (
       result.bootstrapFile = join(result.outDir, 'pikku-bootstrap.gen.ts')
     }
 
-    // Package service factories (for external packages)
-    if (!result.packageFile) {
-      result.packageFile = join(result.outDir, 'pikku-package.gen.ts')
-    }
-
     // MCP
     if (!result.mcpWiringsMetaFile) {
       result.mcpWiringsMetaFile = join(mcpDir, 'pikku-mcp-wirings-meta.gen.ts')
@@ -416,7 +411,7 @@ const _getPikkuCLIConfig = async (
       result.cliTypesFile = join(cliDir, 'pikku-cli-types.gen.ts')
     }
 
-    // Forge
+    // Forge (for wireForgeNode and nodes meta)
     const forgeDir = join(result.outDir, 'forge')
     if (!result.forgeNodesMetaJsonFile) {
       result.forgeNodesMetaJsonFile = join(
@@ -426,6 +421,24 @@ const _getPikkuCLIConfig = async (
     }
     if (!result.forgeTypesFile) {
       result.forgeTypesFile = join(forgeDir, 'pikku-forge-types.gen.ts')
+    }
+
+    // Package (for wireCredential, package service factories, and package meta)
+    const packageDir = join(result.outDir, 'package')
+    if (!result.packageFile) {
+      result.packageFile = join(packageDir, 'pikku-package.gen.ts')
+    }
+    if (!result.credentialTypesFile) {
+      result.credentialTypesFile = join(
+        packageDir,
+        'pikku-credential-types.gen.ts'
+      )
+    }
+
+    // Secrets (typed wrapper for SecretService)
+    const secretsDir = join(result.outDir, 'secrets')
+    if (!result.secretsFile) {
+      result.secretsFile = join(secretsDir, 'pikku-secrets.gen.ts')
     }
 
     if (requiredFields.length > 0) {

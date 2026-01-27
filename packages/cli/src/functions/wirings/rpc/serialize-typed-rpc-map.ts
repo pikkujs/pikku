@@ -1,5 +1,5 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap } from '@pikku/inspector'
+import { TypesMap, ExternalPackageConfig } from '@pikku/inspector'
 import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
@@ -10,7 +10,7 @@ export const serializeTypedRPCMap = (
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   rpcMeta: Record<string, string>,
-  externalPackages?: Record<string, string>,
+  externalPackages?: Record<string, ExternalPackageConfig>,
   workflowMapPath?: string
 ) => {
   const requiredTypes = new Set<string>()
@@ -78,7 +78,7 @@ export type TypedPikkuRPC = {
 }
 
 function generateExternalPackageImports(
-  externalPackages: Record<string, string> | undefined,
+  externalPackages: Record<string, ExternalPackageConfig> | undefined,
   relativeToPath: string
 ): string {
   if (!externalPackages || Object.keys(externalPackages).length === 0) {
@@ -86,16 +86,16 @@ function generateExternalPackageImports(
   }
 
   let imports = '\n// External package RPC maps\n'
-  for (const [namespace, packageName] of Object.entries(externalPackages)) {
+  for (const [namespace, config] of Object.entries(externalPackages)) {
     // Import the RPCMap from each external package's internal RPC map
     // Use .js extension - package.json exports will resolve to .d.ts for types
-    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${packageName}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
+    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${config.package}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
   }
   return imports
 }
 
 function generateMergedRPCMap(
-  externalPackages: Record<string, string> | undefined
+  externalPackages: Record<string, ExternalPackageConfig> | undefined
 ): string {
   if (!externalPackages || Object.keys(externalPackages).length === 0) {
     return `

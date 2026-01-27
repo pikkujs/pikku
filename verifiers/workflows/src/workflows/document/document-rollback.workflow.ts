@@ -17,13 +17,9 @@ export const documentRollbackWorkflow = pikkuWorkflowFunc<
     })
 
     // Step 2: Get version history to find target version content
-    const _history = await workflow.do(
-      'Get version history',
-      'documentVersionList',
-      {
-        documentId: data.documentId,
-      }
-    )
+    await workflow.do('Get version history', 'documentVersionList', {
+      documentId: data.documentId,
+    })
 
     // Step 3: Update document to target version content (mock)
     await workflow.do('Update to target version', 'documentUpdate', {

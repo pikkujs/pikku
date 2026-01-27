@@ -5,17 +5,16 @@ import type {
   CoreUserSession,
   CorePikkuMiddleware,
 } from '@pikku/core'
-import { NextRequest } from 'next/server.js'
 
 /**
  * Retrieves the user session from the request via the middleware provided.
- * @param request
+ * @param request - NextRequest from next/server (accepts any version)
  * @param singletonServices
  * @param middleware
  * @returns
  */
 export const getSession = async <UserSession extends CoreUserSession>(
-  nextRequest: NextRequest,
+  nextRequest: Request,
   singletonServices: CoreSingletonServices,
   middleware: CorePikkuMiddleware[]
 ): Promise<UserSession | undefined> => {

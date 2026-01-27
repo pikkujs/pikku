@@ -14,64 +14,13 @@
 import { readdir, readFile, mkdir, writeFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { deserializeDslWorkflow, convertDslToGraph } from '@pikku/inspector'
+import { deserializeDslWorkflow } from '@pikku/inspector'
 import type { SerializedWorkflowGraph } from '@pikku/inspector'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(__dirname, '../..')
 const META_DIR = join(ROOT_DIR, '.pikku/workflow/meta')
 const DSL_DIR = join(ROOT_DIR, '.pikku/workflow/dsl')
-
-/**
- * Deep comparison of two objects, ignoring property order
- */
-function deepEqual(a: unknown, b: unknown, path = ''): string[] {
-  const errors: string[] = []
-
-  if (a === b) return errors
-
-  if (typeof a !== typeof b) {
-    errors.push(`${path}: type mismatch (${typeof a} vs ${typeof b})`)
-    return errors
-  }
-
-  if (a === null || b === null) {
-    if (a !== b) {
-      errors.push(`${path}: null mismatch`)
-    }
-    return errors
-  }
-
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) {
-      errors.push(`${path}: array length mismatch (${a.length} vs ${b.length})`)
-    }
-    const maxLen = Math.max(a.length, b.length)
-    for (let i = 0; i < maxLen; i++) {
-      errors.push(...deepEqual(a[i], b[i], `${path}[${i}]`))
-    }
-    return errors
-  }
-
-  if (typeof a === 'object' && typeof b === 'object') {
-    const aObj = a as Record<string, unknown>
-    const bObj = b as Record<string, unknown>
-    const allKeys = new Set([...Object.keys(aObj), ...Object.keys(bObj)])
-
-    for (const key of allKeys) {
-      errors.push(...deepEqual(aObj[key], bObj[key], `${path}.${key}`))
-    }
-    return errors
-  }
-
-  if (a !== b) {
-    errors.push(
-      `${path}: value mismatch (${JSON.stringify(a)} vs ${JSON.stringify(b)})`
-    )
-  }
-
-  return errors
-}
 
 async function main() {
   const args = process.argv.slice(2)

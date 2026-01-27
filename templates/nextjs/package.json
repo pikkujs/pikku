@@ -18,7 +18,7 @@
     "@pikku/fetch": "^0.11.1",
     "@pikku/jose": "^0.11.1",
     "@pikku/next": "^0.11.2",
-    "next": "^15",
+    "next": "15.5.9",
     "react": "^19",
     "react-dom": "^19",
     "tslib": "^2.8.1",

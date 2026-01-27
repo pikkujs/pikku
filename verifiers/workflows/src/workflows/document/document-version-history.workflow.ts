@@ -12,7 +12,7 @@ export const documentVersionHistoryWorkflow = pikkuWorkflowFunc<
   tags: ['document'],
   func: async (_services, data, { workflow }) => {
     // Step 1: Get document
-    const _doc = await workflow.do('Get document', 'documentGet', {
+    await workflow.do('Get document', 'documentGet', {
       documentId: data.documentId,
     })
 

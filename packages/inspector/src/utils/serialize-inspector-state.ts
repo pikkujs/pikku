@@ -141,8 +141,8 @@ export interface SerializableInspectorState {
     meta: InspectorState['forgeNodes']['meta']
     files: string[]
   }
-  forgeCredentials: {
-    meta: InspectorState['forgeCredentials']['meta']
+  credentials: {
+    definitions: InspectorState['credentials']['definitions']
     files: string[]
   }
   middleware: {
@@ -296,9 +296,9 @@ export function serializeInspectorState(
       meta: state.forgeNodes.meta,
       files: Array.from(state.forgeNodes.files),
     },
-    forgeCredentials: {
-      meta: state.forgeCredentials.meta,
-      files: Array.from(state.forgeCredentials.files),
+    credentials: {
+      definitions: state.credentials.definitions,
+      files: Array.from(state.credentials.files),
     },
     middleware: {
       meta: state.middleware.meta,
@@ -416,9 +416,9 @@ export function deserializeInspectorState(
       meta: data.forgeNodes?.meta || {},
       files: new Set(data.forgeNodes?.files || []),
     },
-    forgeCredentials: {
-      meta: data.forgeCredentials?.meta || {},
-      files: new Set(data.forgeCredentials?.files || []),
+    credentials: {
+      definitions: data.credentials?.definitions || [],
+      files: new Set(data.credentials?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,

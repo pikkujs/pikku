@@ -55,9 +55,10 @@ export const documentApprovalWorkflow = pikkuWorkflowFunc<
     await workflow.sleep('Wait for review', '2s')
 
     // Step 5: Approve document (mock - in reality would check review status)
+    const approverId = data.reviewerIds[0]!
     const approval = await workflow.do('Approve document', 'documentApprove', {
       documentId: doc.id,
-      approverId: data.reviewerIds[0],
+      approverId,
       comments: 'Looks good!',
     })
 

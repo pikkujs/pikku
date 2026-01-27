@@ -93,6 +93,12 @@ export interface PikkuCLICoreOutputFiles {
 
   // Forge
   forgeTypesFile: string
+
+  // Credentials
+  credentialTypesFile: string
+
+  // Secrets (typed wrapper for SecretService)
+  secretsFile: string
 }
 
 export type PikkuCLIInput = {
@@ -104,7 +110,10 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  externalPackages?: Record<string, string> // namespace -> package name
+  externalPackages?: Record<
+    string,
+    { package: string; credentialOverrides?: Record<string, string> }
+  >
   externalPackage?: boolean
   externalPackageName?: string
 
@@ -205,7 +214,10 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  externalPackages?: Record<string, string> // namespace -> package name
+  externalPackages?: Record<
+    string,
+    { package: string; credentialOverrides?: Record<string, string> }
+  >
   externalPackage?: boolean
   externalPackageName?: string
 
