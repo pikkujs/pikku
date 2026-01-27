@@ -1,24 +1,104 @@
-import { CredentialsMeta } from '@pikku/core/credential'
+import { CredentialsMeta, CredentialDefinitions } from '@pikku/core/credential'
 import { ZodSchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export interface SerializeSecretsOptions {
-  credentials: CredentialsMeta
+  definitions: CredentialDefinitions
   zodLookup: Map<string, ZodSchemaRef>
   secretsFile: string
   packageMappings: Record<string, string>
 }
 
 /**
+ * Validates credential definitions and builds the credentials meta.
+ * Throws if duplicate credentials have different schemas.
+ */
+export function validateAndBuildCredentialsMeta(
+  definitions: CredentialDefinitions,
+  zodLookup: Map<string, ZodSchemaRef>
+): CredentialsMeta {
+  const meta: CredentialsMeta = {}
+  const secretIdToName: Map<string, string> = new Map()
+
+  for (const def of definitions) {
+    // Check for duplicate secretId across different credentials
+    const existingName = secretIdToName.get(def.secretId)
+    if (existingName && existingName !== def.name) {
+      throw new Error(
+        `Credential conflict: secretId '${def.secretId}' is used by both '${existingName}' and '${def.name}'.\n` +
+          `Each credential must have a unique secretId.`
+      )
+    }
+    secretIdToName.set(def.secretId, def.name)
+
+    // Check for duplicate name
+    const existing = meta[def.name]
+    if (existing) {
+      // Compare schemas for regular credentials
+      if (def.schema && existing.schema) {
+        const defSchemaRef = zodLookup.get(def.schema as string)
+        const existingSchemaRef = zodLookup.get(existing.schema as string)
+
+        if (defSchemaRef && existingSchemaRef) {
+          // Compare actual schema references
+          if (
+            defSchemaRef.variableName !== existingSchemaRef.variableName ||
+            defSchemaRef.sourceFile !== existingSchemaRef.sourceFile
+          ) {
+            throw new Error(
+              `Credential '${def.name}' is defined multiple times with different schemas.\n` +
+                `  First definition: ${existing.sourceFile} (schema: ${existingSchemaRef.variableName})\n` +
+                `  Second definition: ${def.sourceFile} (schema: ${defSchemaRef.variableName})\n` +
+                `Either use the same schema or rename one of the credentials.`
+            )
+          }
+        }
+      }
+
+      // Compare OAuth2 configs
+      if (def.oauth2 && existing.oauth2) {
+        if (JSON.stringify(def.oauth2) !== JSON.stringify(existing.oauth2)) {
+          throw new Error(
+            `OAuth2 credential '${def.name}' is defined multiple times with different configurations.\n` +
+              `  First definition: ${existing.sourceFile}\n` +
+              `  Second definition: ${def.sourceFile}\n` +
+              `Either use the same configuration or rename one of the credentials.`
+          )
+        }
+      }
+
+      // Same schema/config - skip duplicate
+      continue
+    }
+
+    // Add to meta
+    meta[def.name] = {
+      name: def.name,
+      displayName: def.displayName,
+      description: def.description,
+      secretId: def.secretId,
+      schema: def.schema,
+      oauth2: def.oauth2,
+      sourceFile: def.sourceFile,
+    }
+  }
+
+  return meta
+}
+
+/**
  * Generates the CredentialsMap type and TypedSecretService wrapper.
  * Maps each secretId to its corresponding TypeScript type.
+ * Validates that duplicate credentials have identical schemas.
  */
 export const serializeSecretsTypes = ({
-  credentials,
+  definitions,
   zodLookup,
   secretsFile,
   packageMappings,
 }: SerializeSecretsOptions) => {
+  // Validate definitions and build meta (throws on conflicts)
+  const credentials = validateAndBuildCredentialsMeta(definitions, zodLookup)
   const credentialEntries = Object.entries(credentials)
 
   if (credentialEntries.length === 0) {

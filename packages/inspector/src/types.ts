@@ -7,7 +7,7 @@ import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
 import { ForgeNodesMeta } from '@pikku/core/forge-node'
-import { CredentialsMeta } from '@pikku/core/credential'
+import { CredentialDefinitions } from '@pikku/core/credential'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -257,7 +257,8 @@ export interface InspectorState {
     files: Set<string>
   }
   credentials: {
-    meta: CredentialsMeta
+    /** All credential definitions (CLI validates duplicates and builds meta) */
+    definitions: CredentialDefinitions
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { OAuth2Client } from '@pikku/core/oauth2'
 import { createServer, type Server } from 'http'
 import open from 'open'
+import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
 
 interface OAuthCallbackResult {
   code: string
@@ -92,13 +93,19 @@ export const oauthConnect = pikkuSessionlessFunc<
   ) => {
     const inspectorState = await getInspectorState(false, false, false)
 
+    // Build credentials meta from definitions
+    const credentialsMeta = validateAndBuildCredentialsMeta(
+      inspectorState.credentials.definitions,
+      inspectorState.zodLookup
+    )
+
     // Find the OAuth2 credential
-    const credential = inspectorState.credentials.meta[credentialName]
+    const credential = credentialsMeta[credentialName]
     if (!credential) {
       logger.error(`OAuth2 credential '${credentialName}' not found`)
       logger.info('Available OAuth2 credentials:')
-      for (const name of Object.keys(inspectorState.credentials.meta)) {
-        const cred = inspectorState.credentials.meta[name]
+      for (const name of Object.keys(credentialsMeta)) {
+        const cred = credentialsMeta[name]
         if (cred.oauth2) {
           logger.info(`  - ${name}`)
         }

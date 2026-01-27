@@ -95,7 +95,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     credentials: {
-      meta: {},
+      definitions: [],
       files: new Set(),
     },
     middleware: {

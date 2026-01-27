@@ -107,14 +107,15 @@ export const addCredential: AddWiring = (
       sourceFile,
     })
 
-    // Store metadata - schema conversion happens later in schema-generator
-    state.credentials.meta[nameValue] = {
+    // Store definition - CLI validates duplicates and builds meta
+    state.credentials.definitions.push({
       name: nameValue,
       displayName: displayNameValue,
       description: descriptionValue || undefined,
       secretId: secretIdValue,
       schema: schemaLookupName,
-    }
+      sourceFile,
+    })
   }
 }
 
@@ -232,8 +233,8 @@ export const addOAuth2Credential: AddWiring = (
 
     state.credentials.files.add(sourceFile)
 
-    // Store OAuth2 credential metadata
-    state.credentials.meta[nameValue] = {
+    // Store OAuth2 credential definition - CLI validates duplicates and builds meta
+    state.credentials.definitions.push({
       name: nameValue,
       displayName: displayNameValue,
       description: descriptionValue || undefined,
@@ -245,6 +246,7 @@ export const addOAuth2Credential: AddWiring = (
         scopes: scopesValue,
         pkce: pkceValue || undefined,
       },
-    }
+      sourceFile,
+    })
   }
 }

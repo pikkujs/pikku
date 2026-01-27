@@ -53,12 +53,19 @@ export type CredentialMeta = {
   schema?: Record<string, unknown> | string
   /** OAuth2 configuration (if this is an OAuth2 credential) */
   oauth2?: OAuth2CredentialConfig
+  /** Source file where this credential was defined */
+  sourceFile?: string
 }
 
 /**
  * Record of all credential metadata, keyed by credential name.
  */
 export type CredentialsMeta = Record<string, CredentialMeta>
+
+/**
+ * Array of all credential definitions (may contain duplicates for validation).
+ */
+export type CredentialDefinitions = CredentialMeta[]
 
 /**
  * No-op function for wireCredential.

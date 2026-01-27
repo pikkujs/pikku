@@ -285,14 +285,17 @@ export function validateCredentialOverrides(
 ): void {
   if (!externalPackages) return
 
-  const localCredentials = state.credentials.meta
+  // Build a set of credential names from definitions
+  const credentialNames = new Set(
+    state.credentials.definitions.map((d) => d.name)
+  )
 
   for (const [namespace, pkgConfig] of Object.entries(externalPackages)) {
     if (!pkgConfig.credentialOverrides) continue
 
     for (const credentialKey of Object.keys(pkgConfig.credentialOverrides)) {
-      if (!localCredentials[credentialKey]) {
-        const availableCredentials = Object.keys(localCredentials)
+      if (!credentialNames.has(credentialKey)) {
+        const availableCredentials = Array.from(credentialNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
           `Credential override '${credentialKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
