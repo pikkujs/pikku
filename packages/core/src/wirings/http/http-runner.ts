@@ -1,4 +1,3 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec'
 import {
   CoreHTTPFunctionWiring,
   RunHTTPWiringOptions,
@@ -23,7 +22,7 @@ import {
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { BadRequestError, NotFoundError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import {
   closeWireServices,
   createWeakUID,
@@ -38,21 +37,7 @@ import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 import { startWorkflowByHttpWire } from '../workflow/workflow-utils.js'
-
-/**
- * Validate data using Standard Schema interface (works with Zod, Valibot, ArkType, etc.)
- */
-async function validateWithStandardSchema<T>(
-  schema: StandardSchemaV1<T>,
-  data: unknown
-): Promise<T> {
-  const result = await schema['~standard'].validate(data)
-  if (result.issues) {
-    const message = result.issues.map((i) => i.message).join(', ')
-    throw new BadRequestError(`Invalid headers: ${message}`)
-  }
-  return result.value
-}
+import { validateSchema } from '../../schema.js'
 
 /**
  * Extract headers from a PikkuHTTPRequest as a record
@@ -328,9 +313,14 @@ const executeRoute = async (
   http?.request?.setParams(params)
 
   // Validate request headers if schema is defined
-  if (route.headers?.request && http.request) {
+  if (meta.headersSchemaName && http.request) {
     const rawHeaders = extractHeadersFromRequest(http.request)
-    await validateWithStandardSchema(route.headers.request, rawHeaders)
+    await validateSchema(
+      singletonServices.logger,
+      singletonServices.schemaService,
+      meta.headersSchemaName,
+      rawHeaders
+    )
   }
 
   const requiresSession = route.auth !== false
