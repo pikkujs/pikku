@@ -65,12 +65,12 @@ export type HTTPMethod =
   | 'options'
 
 /**
- * Header schema configuration for a route.
+ * Header schema type for request header validation.
  * Uses Standard Schema interface - works with Zod, Valibot, ArkType, Effect Schema, etc.
  */
-export type HTTPHeadersConfig = {
-  request?: StandardSchemaV1<Record<string, string | string[] | undefined>>
-}
+export type HTTPHeadersSchema = StandardSchemaV1<
+  Record<string, string | string[] | undefined>
+>
 
 /**
  * Documentation config for OpenAPI generation
@@ -89,7 +89,7 @@ export type HTTPRouteBaseConfig = {
   contentType?: 'xml' | 'json'
   timeout?: number
   tags?: string[]
-  headers?: HTTPHeadersConfig
+  headers?: HTTPHeadersSchema
   docs?: HTTPRouteDocsConfig
 }
 

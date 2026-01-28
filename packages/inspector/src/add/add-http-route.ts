@@ -26,6 +26,7 @@ import type { InspectorLogger } from '../types.js'
 export const extractHeadersSchema = (
   obj: ts.ObjectLiteralExpression,
   routeName: string,
+  method: string,
   state: InspectorState,
   checker: ts.TypeChecker,
   logger: InspectorLogger
@@ -36,19 +37,10 @@ export const extractHeadersSchema = (
     true,
     checker
   )
-  if (!headersNode || !ts.isObjectLiteralExpression(headersNode))
-    return undefined
-
-  const requestNode = getPropertyAssignmentInitializer(
-    headersNode,
-    'request',
-    true,
-    checker
-  )
-  if (!requestNode || !ts.isIdentifier(requestNode)) return undefined
+  if (!headersNode || !ts.isIdentifier(headersNode)) return undefined
 
   // Resolve the schema reference
-  const symbol = checker.getSymbolAtLocation(requestNode)
+  const symbol = checker.getSymbolAtLocation(headersNode)
   if (!symbol) return undefined
 
   const decl = symbol.valueDeclaration || symbol.declarations?.[0]
@@ -73,7 +65,7 @@ export const extractHeadersSchema = (
   }
 
   const vendor = detectSchemaVendorOrError(
-    requestNode,
+    headersNode,
     checker,
     logger,
     `Route '${routeName}' header`,
@@ -81,14 +73,14 @@ export const extractHeadersSchema = (
   )
   if (!vendor) return undefined
 
-  // Create a sanitized schema name from route
+  // Create a sanitized schema name from route and method to avoid collisions
   const sanitizedRoute = routeName
     .replace(/[^a-zA-Z0-9]/g, '_')
     .replace(/^_+|_+$/g, '')
-  const schemaName = `${sanitizedRoute}_Headers`
+  const schemaName = `${method.toUpperCase()}_${sanitizedRoute}_Headers`
 
   state.schemaLookup.set(schemaName, {
-    variableName: requestNode.text,
+    variableName: headersNode.text,
     sourceFile,
     vendor,
   })
@@ -285,6 +277,7 @@ export const addHTTPRoute: AddWiring = (
   const headersSchemaName = extractHeadersSchema(
     obj,
     route,
+    method,
     state,
     checker,
     logger

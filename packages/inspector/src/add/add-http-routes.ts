@@ -400,6 +400,7 @@ function registerRoute(
   const headersSchemaName = extractHeadersSchema(
     obj,
     fullRoute,
+    method,
     state,
     checker,
     logger
