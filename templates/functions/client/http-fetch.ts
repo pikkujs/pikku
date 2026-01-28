@@ -39,7 +39,7 @@ async function check() {
 
     // Test auth flow: login then logout
     const loginResult = await pikkuFetch.post('/auth/login', {
-      username: 'alice',
+      username: 'demo',
       password: 'password',
     })
     console.log('Logged in:', loginResult)
