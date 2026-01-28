@@ -1,22 +1,7 @@
 import * as ts from 'typescript'
-import { pathToRegexp } from 'path-to-regexp'
-import { HTTPMethod } from '@pikku/core/http'
-import {
-  getPropertyValue,
-  getCommonWireMetaData,
-} from '../utils/get-property-value.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
-import {
-  getPropertyAssignmentInitializer,
-  extractTypeKeys,
-} from '../utils/type-utils.js'
+import { getPropertyValue } from '../utils/get-property-value.js'
 import { AddWiring, InspectorState, InspectorLogger } from '../types.js'
-import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
-import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
-import { extractWireNames } from '../utils/post-process.js'
-import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
-import { ErrorCode } from '../error-codes.js'
-import { getInputTypes, extractHeadersSchema } from './add-http-route.js'
+import { registerHTTPRoute } from './add-http-route.js'
 
 /**
  * Group configuration extracted from wireHTTPRoutes or defineHTTPRoutes
@@ -162,7 +147,7 @@ function processRoutes(
   if (ts.isArrayLiteralExpression(node)) {
     for (const element of node.elements) {
       if (ts.isObjectLiteralExpression(element) && isRouteConfig(element)) {
-        registerRoute(element, parentConfig, state, checker, logger, sourceFile)
+        processRoute(element, parentConfig, state, checker, logger, sourceFile)
       }
     }
     return
@@ -172,7 +157,7 @@ function processRoutes(
   if (ts.isObjectLiteralExpression(node)) {
     // Check if this is a route config
     if (isRouteConfig(node)) {
-      registerRoute(node, parentConfig, state, checker, logger, sourceFile)
+      processRoute(node, parentConfig, state, checker, logger, sourceFile)
       return
     }
 
@@ -255,9 +240,9 @@ function resolveIdentifier(
 }
 
 /**
- * Register a single route in the inspector state
+ * Register a single route using the shared registerHTTPRoute function
  */
-function registerRoute(
+function processRoute(
   obj: ts.ObjectLiteralExpression,
   groupConfig: GroupConfig,
   state: InspectorState,
@@ -265,165 +250,13 @@ function registerRoute(
   logger: InspectorLogger,
   sourceFile: ts.SourceFile
 ): void {
-  // Extract route properties
-  const routePath = getPropertyValue(obj, 'route') as string | null
-  if (!routePath) return
-
-  const method = (
-    (getPropertyValue(obj, 'method') as string) || 'get'
-  ).toLowerCase()
-  const fullRoute = groupConfig.basePath + routePath
-
-  // Extract params from route path
-  const keys = pathToRegexp(fullRoute).keys
-  const params = keys.filter((k) => k.type === 'param').map((k) => k.name)
-
-  // Get common metadata
-  const {
-    title,
-    tags: routeTags,
-    summary,
-    description,
-    errors,
-  } = getCommonWireMetaData(obj, 'HTTP route', fullRoute, logger)
-
-  // Merge tags
-  const tags = [...groupConfig.tags, ...(routeTags || [])]
-
-  const query = (getPropertyValue(obj, 'query') as string[]) || []
-
-  // Get function reference
-  const funcInitializer = getPropertyAssignmentInitializer(
+  registerHTTPRoute({
     obj,
-    'func',
-    true,
-    checker
-  )
-  if (!funcInitializer) {
-    logger.critical(
-      ErrorCode.MISSING_FUNC,
-      `No valid 'func' property for route '${fullRoute}'.`
-    )
-    return
-  }
-
-  const funcName = extractFunctionName(
-    funcInitializer,
-    checker,
-    state.rootDir
-  ).pikkuFuncName
-
-  // Ensure function metadata exists
-  ensureFunctionMetadata(state, funcName, fullRoute)
-
-  // Lookup existing function metadata
-  const fnMeta = state.functions.meta[funcName]
-  if (!fnMeta) {
-    logger.critical(
-      ErrorCode.FUNCTION_METADATA_NOT_FOUND,
-      `No function metadata found for '${funcName}'.`
-    )
-    return
-  }
-  const input = fnMeta.inputs?.[0] || null
-
-  // Validate that route params and query params exist in function input type
-  if (params.length > 0 || query.length > 0) {
-    const inputTypes = state.typesLookup.get(funcName)
-    if (inputTypes && inputTypes.length > 0) {
-      const inputKeys = extractTypeKeys(inputTypes[0])
-
-      // Check path params
-      if (params.length > 0) {
-        const missingParams = params.filter((p) => !inputKeys.includes(p))
-        if (missingParams.length > 0) {
-          logger.critical(
-            ErrorCode.ROUTE_PARAM_MISMATCH,
-            `Route '${fullRoute}' has path parameter(s) [${missingParams.join(', ')}] ` +
-              `not found in function '${funcName}' input type. ` +
-              `Input type has: [${inputKeys.join(', ')}]`
-          )
-          return
-        }
-      }
-
-      // Check query params
-      if (query.length > 0) {
-        const missingQuery = query.filter((q) => !inputKeys.includes(q))
-        if (missingQuery.length > 0) {
-          logger.critical(
-            ErrorCode.ROUTE_QUERY_MISMATCH,
-            `Route '${fullRoute}' has query parameter(s) [${missingQuery.join(', ')}] ` +
-              `not found in function '${funcName}' input type. ` +
-              `Input type has: [${inputKeys.join(', ')}]`
-          )
-          return
-        }
-      }
-    }
-  }
-
-  // Compute inputTypes (body/query/params)
-  getInputTypes(state.http.metaInputTypes, method, input, query, params)
-
-  // Resolve middleware
-  const middleware = resolveHTTPMiddlewareFromObject(
-    state,
-    fullRoute,
-    obj,
-    tags,
-    checker
-  )
-
-  // Resolve permissions
-  const permissions = resolveHTTPPermissionsFromObject(
-    state,
-    fullRoute,
-    obj,
-    tags,
-    checker
-  )
-
-  // Track used functions/middleware/permissions for service aggregation
-  state.serviceAggregation.usedFunctions.add(funcName)
-  extractWireNames(middleware).forEach((name) =>
-    state.serviceAggregation.usedMiddleware.add(name)
-  )
-  extractWireNames(permissions).forEach((name) =>
-    state.serviceAggregation.usedPermissions.add(name)
-  )
-
-  // Check for SSE
-  const sse = getPropertyValue(obj, 'sse') === true
-
-  // Extract header schema
-  const headersSchemaName = extractHeadersSchema(
-    obj,
-    fullRoute,
-    method,
     state,
     checker,
-    logger
-  )
-
-  // Record route
-  state.http.files.add(sourceFile.fileName)
-  state.http.meta[method][fullRoute] = {
-    pikkuFuncName: funcName,
-    route: fullRoute,
-    method: method as HTTPMethod,
-    params: params.length > 0 ? params : undefined,
-    query: query.length > 0 ? query : undefined,
-    inputTypes: undefined,
-    title,
-    summary,
-    description,
-    errors,
-    tags: tags.length > 0 ? tags : undefined,
-    middleware,
-    permissions,
-    sse: sse ? true : undefined,
-    headersSchemaName,
-    groupBasePath: groupConfig.basePath || undefined,
-  }
+    logger,
+    sourceFile,
+    basePath: groupConfig.basePath,
+    inheritedTags: groupConfig.tags,
+  })
 }
