@@ -423,5 +423,6 @@ function registerRoute(
     permissions,
     sse: sse ? true : undefined,
     headersSchemaName,
+    groupBasePath: groupConfig.basePath || undefined,
   }
 }

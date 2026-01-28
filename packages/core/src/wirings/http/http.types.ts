@@ -276,6 +276,7 @@ export type HTTPWiringMeta = CommonWireMeta & {
   headersSchemaName?: string
   sse?: true
   workflow?: true
+  groupBasePath?: string
 }
 export type HTTPWiringsMeta = Record<HTTPMethod, Record<string, HTTPWiringMeta>>
 

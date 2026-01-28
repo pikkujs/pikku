@@ -1,6 +1,6 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
-import { wireHTTPRoutes, defineRoutes } from './http-routes.js'
+import { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
@@ -50,9 +50,9 @@ const setupFunctionMeta = (
   }
 }
 
-describe('defineRoutes', () => {
+describe('defineHTTPRoutes', () => {
   test('should accept routes directly', () => {
-    const routes = defineRoutes({
+    const routes = defineHTTPRoutes({
       list: { method: 'get', route: '/todos', func: { func: mockFunc } },
       get: { method: 'get', route: '/todos/:id', func: { func: mockFunc } },
     })
@@ -64,7 +64,7 @@ describe('defineRoutes', () => {
   })
 
   test('should accept config with routes', () => {
-    const routes = defineRoutes({
+    const routes = defineHTTPRoutes({
       auth: true,
       tags: ['todos'],
       routes: {
@@ -78,7 +78,7 @@ describe('defineRoutes', () => {
   })
 
   test('should handle basePath in config', () => {
-    const routes = defineRoutes({
+    const routes = defineHTTPRoutes({
       basePath: '/api',
       routes: {
         list: { method: 'get', route: '/todos', func: { func: mockFunc } },
@@ -244,8 +244,8 @@ describe('wireHTTPRoutes', () => {
     assert.strictEqual(loginRoute?.auth, false)
   })
 
-  test('should wire routes from defineRoutes contracts', () => {
-    const todosRoutes = defineRoutes({
+  test('should wire routes from defineHTTPRoutes contracts', () => {
+    const todosRoutes = defineHTTPRoutes({
       tags: ['todos'],
       routes: {
         list: { method: 'get', route: '/todos', func: { func: mockFunc } },
@@ -269,7 +269,7 @@ describe('wireHTTPRoutes', () => {
   })
 
   test('should cascade basePath from multiple levels', () => {
-    const todosRoutes = defineRoutes({
+    const todosRoutes = defineHTTPRoutes({
       basePath: '/todos',
       routes: {
         list: { method: 'get', route: '', func: { func: mockFunc } },

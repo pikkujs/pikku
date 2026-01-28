@@ -6,9 +6,9 @@ export const serializeHTTPTypes = (functionTypesImportPath: string) => {
  * HTTP-specific type definitions for tree-shaking optimization
  */
 
-import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, addHTTPPermission as addHTTPPermissionCore } from '@pikku/core/http'
-import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
-import type { CoreHTTPFunctionWiring, HTTPMethod } from '@pikku/core/http'
+import { AssertHTTPWiringParams, wireHTTP as wireHTTPCore, addHTTPMiddleware as addHTTPMiddlewareCore, addHTTPPermission as addHTTPPermissionCore, wireHTTPRoutes as wireHTTPRoutesCore, defineHTTPRoutes as defineHTTPRoutesCore } from '@pikku/core/http'
+import type { PikkuFunction, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { CoreHTTPFunctionWiring, HTTPMethod, HTTPRouteBaseConfig } from '@pikku/core/http'
 
 /**
  * Type definition for HTTP API wirings with type-safe path parameters.
@@ -100,6 +100,67 @@ export const addHTTPPermission = <In = unknown>(
   permissions: Record<string, PikkuPermission<In>> | PikkuPermission<In>[]
 ) => {
   addHTTPPermissionCore(pattern, permissions as any)
+}
+
+/**
+ * Route configuration for wireHTTPRoutes with proper typing
+ */
+type HTTPRouteConfig = HTTPRouteBaseConfig & {
+  method: HTTPMethod
+  route: string
+  func: PikkuFunctionConfig<any, any, any, any, any, any>
+  auth?: boolean
+  permissions?: Record<string, PikkuPermission | PikkuPermission[]>
+  middleware?: PikkuMiddleware[]
+  sse?: boolean
+}
+
+/**
+ * Typed route map for wireHTTPRoutes
+ */
+type TypedHTTPRouteMap = {
+  [key: string]: HTTPRouteConfig | TypedHTTPRouteMap | TypedHTTPRouteContract
+}
+
+/**
+ * Typed route contract for defineHTTPRoutes
+ */
+type TypedHTTPRouteContract<T extends TypedHTTPRouteMap = TypedHTTPRouteMap> = TypedHTTPRoutesGroupConfig & {
+  routes: T
+}
+
+/**
+ * Group config with typed middleware/permissions
+ */
+type TypedHTTPRoutesGroupConfig = {
+  basePath?: string
+  tags?: string[]
+  auth?: boolean
+  middleware?: PikkuMiddleware[]
+  permissions?: Record<string, PikkuPermission | PikkuPermission[]>
+}
+
+/**
+ * Full config for wireHTTPRoutes
+ */
+type TypedWireHTTPRoutesConfig = TypedHTTPRoutesGroupConfig & {
+  routes: TypedHTTPRouteMap | HTTPRouteConfig[]
+}
+
+/**
+ * Type-safe helper for defining route contracts that can be composed.
+ */
+export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(routes: T): TypedHTTPRouteContract<T>
+export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(config: TypedHTTPRoutesGroupConfig & { routes: T }): TypedHTTPRouteContract<T>
+export function defineHTTPRoutes<T extends TypedHTTPRouteMap>(configOrRoutes: T | (TypedHTTPRoutesGroupConfig & { routes: T })): TypedHTTPRouteContract<T> {
+  return defineHTTPRoutesCore(configOrRoutes as any) as unknown as TypedHTTPRouteContract<T>
+}
+
+/**
+ * Wires multiple HTTP routes from a nested map or array configuration.
+ */
+export const wireHTTPRoutes = (config: TypedWireHTTPRoutesConfig): void => {
+  wireHTTPRoutesCore(config as any)
 }
 `
 }

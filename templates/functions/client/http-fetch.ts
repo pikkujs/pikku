@@ -17,7 +17,6 @@ async function check() {
     console.log('✅ HTTP test passed')
     console.log('Todos:', todos)
 
-    await pikkuFetch.post('/auth/logout', {})
     const created = await pikkuFetch.post('/todos', {
       title: 'Test todo from client',
       priority: 'high',
@@ -37,6 +36,16 @@ async function check() {
       id: created.todo.id,
     })
     console.log('Deleted todo:', deleted)
+
+    // Test auth flow: login then logout
+    const loginResult = await pikkuFetch.post('/auth/login', {
+      username: 'alice',
+      password: 'password',
+    })
+    console.log('Logged in:', loginResult)
+
+    const logoutResult = await pikkuFetch.post('/auth/logout', {})
+    console.log('Logged out:', logoutResult)
 
     process.exit(0)
   } catch (err: unknown) {

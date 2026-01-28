@@ -3929,17 +3929,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
+    "@standard-schema/spec": "npm:^1.0.0"
     "@types/node": "npm:^24.10.9"
     cookie: "npm:^1.1.1"
     path-to-regexp: "npm:^8.3.0"
     picoquery: "npm:^2.5.0"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
-  peerDependencies:
-    zod: ^4.0.0
-  peerDependenciesMeta:
-    zod:
-      optional: true
   languageName: unknown
   linkType: soft
 

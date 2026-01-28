@@ -1,4 +1,4 @@
-import { wireHTTP } from '#pikku'
+import { wireHTTP, wireHTTPRoutes } from '#pikku'
 import {
   sendEmail,
   sendSMS,
@@ -55,4 +55,25 @@ wireHTTP({
   route: '/api/external/test',
   tags: ['external'],
   func: testExternal,
+})
+
+// Grouped routes via wireHTTPRoutes
+wireHTTPRoutes({
+  basePath: '/api/grouped',
+  tags: ['grouped'],
+  middleware: [logRequest],
+  routes: {
+    email: {
+      method: 'post',
+      route: '/email',
+      func: sendEmail,
+      tags: ['email'],
+    },
+    payment: {
+      method: 'post',
+      route: '/payment',
+      func: processPayment,
+      middleware: [trackAnalytics],
+    },
+  },
 })

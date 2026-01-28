@@ -286,4 +286,34 @@ export const scenarios: TestScenario[] = [
     description:
       'External bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when external RPC methods are invoked)',
   },
+
+  // wireHTTPRoutes group tests
+  {
+    name: 'HTTP Route Group: /api/grouped/*',
+    filter: '--httpRoutes=/api/grouped/*',
+    expectedSingletonServices: [
+      'analytics',
+      'email',
+      'logger',
+      'payment',
+      'secrets',
+    ],
+    expectedWireServices: ['userContext', 'userPreferences'],
+    description:
+      'Filter by wireHTTPRoutes basePath - includes all routes in the group (sendEmail + processPayment)',
+  },
+  {
+    name: 'Tag: grouped',
+    filter: '--tags=grouped',
+    expectedSingletonServices: [
+      'analytics',
+      'email',
+      'logger',
+      'payment',
+      'secrets',
+    ],
+    expectedWireServices: ['userContext', 'userPreferences'],
+    description:
+      'Filter by group tag - includes all routes with "grouped" tag from wireHTTPRoutes',
+  },
 ]
