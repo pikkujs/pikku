@@ -3,6 +3,22 @@ set -e
 
 CI_MODE=${CI:-false}
 
+# Cleanup function to kill background processes
+cleanup() {
+  if [ -n "$CONNECT_PID" ]; then
+    kill $CONNECT_PID 2>/dev/null || true
+  fi
+  if [ -n "$MOCK_PID" ]; then
+    kill $MOCK_PID 2>/dev/null || true
+  fi
+  if [ -n "$OUTPUT_FILE" ] && [ -f "$OUTPUT_FILE" ]; then
+    rm -f "$OUTPUT_FILE"
+  fi
+}
+
+# Set trap to cleanup on exit
+trap cleanup EXIT
+
 echo "=== Secrets Verifier Tests ==="
 echo "CI Mode: $CI_MODE"
 
