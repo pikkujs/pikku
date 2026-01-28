@@ -17,7 +17,7 @@ export const oauthStatus = pikkuSessionlessFunc<
     // Build credentials meta from definitions
     const credentialsMeta = validateAndBuildCredentialsMeta(
       inspectorState.credentials.definitions,
-      inspectorState.zodLookup
+      inspectorState.schemaLookup
     )
 
     // Find the OAuth2 credential

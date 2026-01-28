@@ -10,12 +10,13 @@ export const serializeChannelTypes = (functionTypesImportPath: string) => {
 import { CoreChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
 import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
-import type { ZodLike, CorePermissionGroup } from '@pikku/core'
+import type { CorePermissionGroup } from '@pikku/core'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
- * Helper type to infer the output type from a Zod schema
+ * Helper type to infer the output type from a Standard Schema
  */
-type InferZodOutput<T> = T extends ZodLike<infer U> ? U : never
+type InferSchemaOutput<T> = T extends StandardSchemaV1<any, infer Output> ? Output : never
 
 /**
  * Type definition for WebSocket channels with typed data exchange.
@@ -70,20 +71,20 @@ export const pikkuChannelDisconnectionFunc = (
  * Configuration object for channel functions with Zod schema validation.
  */
 type PikkuChannelFuncConfigWithSchema<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
   name?: string
   tags?: string[]
   expose?: boolean
   internal?: boolean
   func: PikkuFunctionSessionless<
-    InferZodOutput<InputSchema>,
-    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    InferSchemaOutput<InputSchema>,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     'channel' | 'session' | 'rpc'
   >
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
+  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
   middleware?: PikkuMiddleware[]
   input: InputSchema
   output?: OutputSchema
@@ -121,11 +122,11 @@ type PikkuChannelFuncConfigWithSchema<
  * \`\`\`
  */
 export function pikkuChannelFunc<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuChannelFuncConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, 'channel' | 'session' | 'rpc'>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'channel' | 'session' | 'rpc'>
 export function pikkuChannelFunc<In, Out = unknown>(
   func:
     | PikkuFunctionSessionless<In, Out, 'channel' | 'session' | 'rpc'>

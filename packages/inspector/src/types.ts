@@ -60,11 +60,18 @@ export interface InspectorHTTPState {
 }
 
 /**
- * Zod schema reference for deferred conversion to JSON Schema at build time
+ * Schema vendor types for Standard Schema compliant validators
  */
-export interface ZodSchemaRef {
+export type SchemaVendor = 'zod' | 'valibot' | 'arktype' | 'effect' | 'unknown'
+
+/**
+ * Schema reference for deferred conversion to JSON Schema at build time.
+ * Supports Standard Schema compliant validators (Zod, Valibot, ArkType, Effect Schema).
+ */
+export interface SchemaRef {
   variableName: string
   sourceFile: string
+  vendor?: SchemaVendor
 }
 
 export interface InspectorFunctionState {
@@ -216,7 +223,7 @@ export interface InspectorState {
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
-  zodLookup: Map<string, ZodSchemaRef> // Lookup for Zod schemas by name for deferred JSON Schema conversion
+  schemaLookup: Map<string, SchemaRef> // Lookup for schemas by name for deferred JSON Schema conversion (supports Standard Schema vendors)
   http: InspectorHTTPState
   functions: InspectorFunctionState
   channels: InspectorChannelState

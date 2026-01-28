@@ -51,7 +51,7 @@ export const pikkuForgeNodes = pikkuSessionlessFunc<void, boolean | undefined>({
     // Build credentials meta from definitions
     const credentialsMeta = validateAndBuildCredentialsMeta(
       credentials.definitions,
-      state.zodLookup
+      state.schemaLookup
     )
 
     const hasNodes = Object.keys(forgeNodes.meta).length > 0

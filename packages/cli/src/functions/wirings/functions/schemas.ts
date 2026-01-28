@@ -21,12 +21,12 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
       visitState.http.meta,
       config.schemasFromTypes,
       config.schema?.additionalProperties,
-      visitState.zodLookup
+      visitState.schemaLookup
     )
 
     const zodSchemas = await generateZodSchemas(
       logger,
-      visitState.zodLookup,
+      visitState.schemaLookup,
       visitState.functions.typesMap
     )
 
@@ -38,7 +38,7 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
       visitState.functions.meta,
       config.schema?.supportsImportAttributes || true,
       config.schemasFromTypes,
-      visitState.zodLookup,
+      visitState.schemaLookup,
       config.externalPackageName || null
     )
 

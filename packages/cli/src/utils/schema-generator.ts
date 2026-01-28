@@ -3,7 +3,7 @@ import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
 import { HTTPWiringsMeta } from '@pikku/core/http'
-import { TypesMap, ErrorCode, ZodSchemaRef } from '@pikku/inspector'
+import { TypesMap, ErrorCode, SchemaRef } from '@pikku/inspector'
 import { CLILogger } from '../services/cli-logger.service.js'
 import { tsImport } from 'tsx/esm/api'
 import * as z from 'zod'
@@ -94,7 +94,7 @@ export async function generateSchemas(
   httpWiringsMeta: HTTPWiringsMeta,
   additionalTypes?: string[],
   additionalProperties: boolean = false,
-  zodLookup?: Map<string, ZodSchemaRef>
+  schemaLookup?: Map<string, SchemaRef>
 ): Promise<Record<string, JSONValue>> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -149,7 +149,7 @@ export async function generateSchemas(
     if (PRIMITIVE_TYPES.has(schema)) {
       return
     }
-    if (zodLookup?.has(schema)) {
+    if (schemaLookup?.has(schema)) {
       return
     }
     try {
@@ -175,9 +175,14 @@ export async function generateSchemas(
   return schemas
 }
 
+/**
+ * Generate JSON Schemas from Standard Schema compliant validators.
+ * Currently only Zod is supported for JSON Schema generation.
+ * Other vendors (Valibot, ArkType, Effect Schema) will throw an error with instructions.
+ */
 export async function generateZodSchemas(
   logger: CLILogger,
-  zodLookup: Map<string, ZodSchemaRef>,
+  schemaLookup: Map<string, SchemaRef>,
   typesMap: TypesMap
 ): Promise<Record<string, JSONValue>> {
   const schemas: Record<string, JSONValue> = {}
@@ -191,7 +196,16 @@ export async function generateZodSchemas(
     ScriptKind.TS
   )
 
-  for (const [schemaName, ref] of zodLookup.entries()) {
+  for (const [schemaName, ref] of schemaLookup.entries()) {
+    // Only Zod is supported for JSON Schema generation
+    if (ref.vendor && ref.vendor !== 'zod') {
+      throw new Error(
+        `Schema '${schemaName}' uses ${ref.vendor} which is not yet supported for JSON Schema generation. ` +
+          `Currently only Zod schemas can be converted to JSON Schema. ` +
+          `Please use Zod or contribute support for ${ref.vendor}.`
+      )
+    }
+
     try {
       const module = await tsImport(ref.sourceFile, import.meta.url)
       const zodSchema = module[ref.variableName]
@@ -245,7 +259,7 @@ export async function saveSchemas(
   functionsMeta: FunctionsMeta,
   supportsImportAttributes: boolean,
   additionalTypes?: string[],
-  zodLookup?: Map<string, ZodSchemaRef>,
+  schemaLookup?: Map<string, SchemaRef>,
   packageName?: string | null
 ) {
   await writeFileInDir(
@@ -280,7 +294,7 @@ export async function saveSchemas(
       .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
     ...typesMap.customTypes.keys(),
     ...(additionalTypes || []),
-    ...(zodLookup ? Array.from(zodLookup.keys()) : []),
+    ...(schemaLookup ? Array.from(schemaLookup.keys()) : []),
   ])
 
   if (desiredSchemas.size === 0) {

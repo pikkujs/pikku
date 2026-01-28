@@ -30,7 +30,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),
     typesLookup: new Map(),
-    zodLookup: new Map(),
+    schemaLookup: new Map(),
     functions: {
       typesMap: new TypesMap(),
       meta: {},

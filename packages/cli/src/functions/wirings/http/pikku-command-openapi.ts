@@ -19,7 +19,7 @@ export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
       return
     }
 
-    const { http, functions, zodLookup } = await getInspectorState()
+    const { http, functions, schemaLookup } = await getInspectorState()
 
     const schemas = await generateSchemas(
       logger,
@@ -29,7 +29,7 @@ export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
       http.meta,
       schemasFromTypes,
       config.schema?.additionalProperties,
-      zodLookup
+      schemaLookup
     )
     const openAPISpec = await generateOpenAPISpec(
       logger,

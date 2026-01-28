@@ -1,3 +1,4 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import {
   CoreHTTPFunctionWiring,
   RunHTTPWiringOptions,
@@ -22,7 +23,7 @@ import {
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { NotFoundError } from '../../errors/errors.js'
+import { BadRequestError, NotFoundError } from '../../errors/errors.js'
 import {
   closeWireServices,
   createWeakUID,
@@ -37,6 +38,51 @@ import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 import { startWorkflowByHttpWire } from '../workflow/workflow-utils.js'
+
+/**
+ * Validate data using Standard Schema interface (works with Zod, Valibot, ArkType, etc.)
+ */
+async function validateWithStandardSchema<T>(
+  schema: StandardSchemaV1<T>,
+  data: unknown
+): Promise<T> {
+  const result = await schema['~standard'].validate(data)
+  if (result.issues) {
+    const message = result.issues.map((i) => i.message).join(', ')
+    throw new BadRequestError(`Invalid headers: ${message}`)
+  }
+  return result.value
+}
+
+/**
+ * Extract headers from a PikkuHTTPRequest as a record
+ */
+function extractHeadersFromRequest(
+  request: PikkuHTTPRequest
+): Record<string, string | string[] | undefined> {
+  const headers: Record<string, string | string[] | undefined> = {}
+  // Common headers that might be validated
+  const commonHeaders = [
+    'content-type',
+    'authorization',
+    'accept',
+    'x-request-id',
+    'x-idempotency-key',
+    'x-api-key',
+    'x-correlation-id',
+    'user-agent',
+    'origin',
+    'referer',
+    'host',
+  ]
+  for (const headerName of commonHeaders) {
+    const value = request.header(headerName)
+    if (value !== null) {
+      headers[headerName] = value
+    }
+  }
+  return headers
+}
 
 /**
  * Registers HTTP middleware for a specific route pattern.
@@ -280,6 +326,12 @@ const executeRoute = async (
 
   // Attach URL parameters to the request object
   http?.request?.setParams(params)
+
+  // Validate request headers if schema is defined
+  if (route.headers?.request && http.request) {
+    const rawHeaders = extractHeadersFromRequest(http.request)
+    await validateWithStandardSchema(route.headers.request, rawHeaders)
+  }
 
   const requiresSession = route.auth !== false
   let wireServices: any

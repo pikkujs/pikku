@@ -1,10 +1,10 @@
 import { CredentialsMeta, CredentialDefinitions } from '@pikku/core/credential'
-import { ZodSchemaRef } from '@pikku/inspector'
+import { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export interface SerializeSecretsOptions {
   definitions: CredentialDefinitions
-  zodLookup: Map<string, ZodSchemaRef>
+  schemaLookup: Map<string, SchemaRef>
   secretsFile: string
   packageMappings: Record<string, string>
 }
@@ -16,7 +16,7 @@ export interface SerializeSecretsOptions {
  */
 export function validateAndBuildCredentialsMeta(
   definitions: CredentialDefinitions,
-  zodLookup: Map<string, ZodSchemaRef>
+  schemaLookup: Map<string, SchemaRef>
 ): CredentialsMeta {
   const meta: CredentialsMeta = {}
   // Track secretId -> first definition that used it (for error messages and comparison)
@@ -28,8 +28,8 @@ export function validateAndBuildCredentialsMeta(
     if (existingDef) {
       // Same secretId - validate schemas are identical
       if (def.schema && existingDef.schema) {
-        const defSchemaRef = zodLookup.get(def.schema as string)
-        const existingSchemaRef = zodLookup.get(existingDef.schema as string)
+        const defSchemaRef = schemaLookup.get(def.schema as string)
+        const existingSchemaRef = schemaLookup.get(existingDef.schema as string)
 
         if (defSchemaRef && existingSchemaRef) {
           if (
@@ -100,12 +100,12 @@ export function validateAndBuildCredentialsMeta(
  */
 export const serializeSecretsTypes = ({
   definitions,
-  zodLookup,
+  schemaLookup,
   secretsFile,
   packageMappings,
 }: SerializeSecretsOptions) => {
   // Validate definitions and build meta (throws on conflicts)
-  const credentials = validateAndBuildCredentialsMeta(definitions, zodLookup)
+  const credentials = validateAndBuildCredentialsMeta(definitions, schemaLookup)
   const credentialEntries = Object.entries(credentials)
 
   if (credentialEntries.length === 0) {
@@ -143,7 +143,7 @@ export {}
       )
     } else if (meta.schema && typeof meta.schema === 'string') {
       // Regular credential with Zod schema
-      const schemaRef = zodLookup.get(meta.schema)
+      const schemaRef = schemaLookup.get(meta.schema)
       if (schemaRef) {
         needsZod = true
         // Track import

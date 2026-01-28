@@ -1,4 +1,5 @@
 import type { SerializeOptions } from 'cookie'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { PikkuError } from '../../errors/error-handler.js'
 import type {
   CoreServices,
@@ -53,7 +54,7 @@ export type RunHTTPWiringParams = {
 
 /**
  * Represents the HTTP methods supported for API HTTP wirings.
-t */
+ */
 export type HTTPMethod =
   | 'post'
   | 'get'
@@ -64,21 +65,41 @@ export type HTTPMethod =
   | 'options'
 
 /**
+ * Header schema configuration for a route.
+ * Uses Standard Schema interface - works with Zod, Valibot, ArkType, Effect Schema, etc.
+ */
+export type HTTPHeadersConfig = {
+  request?: StandardSchemaV1<Record<string, string | string[] | undefined>>
+}
+
+/**
+ * Documentation config for OpenAPI generation
+ */
+export type HTTPRouteDocsConfig = {
+  description?: string
+  response?: string
+  errors?: Array<typeof PikkuError>
+  tags?: string[]
+}
+
+/**
+ * Common HTTP route configuration shared between wireHTTP and wireHTTPRoutes
+ */
+export type HTTPRouteBaseConfig = {
+  contentType?: 'xml' | 'json'
+  timeout?: number
+  tags?: string[]
+  headers?: HTTPHeadersConfig
+  docs?: HTTPRouteDocsConfig
+}
+
+/**
  * Represents an API HTTP wiring without a function, including metadata such as content type, route, and timeout settings.
  */
-export type CoreHTTPFunction = {
-  contentType?: 'xml' | 'json'
+export type CoreHTTPFunction = HTTPRouteBaseConfig & {
   route: string
   eventChannel?: false
   returnsJSON?: false
-  timeout?: number
-  tags?: string[]
-  docs?: Partial<{
-    description: string
-    response: string
-    errors: Array<typeof PikkuError>
-    tags: string[]
-  }>
 }
 /**
  * Represents a http wire within Pikku, including a request and response.
@@ -149,7 +170,6 @@ export type CoreHTTPFunctionWiring<
       >
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
-      tags?: string[]
       middleware?: PikkuMiddleware[]
       sse?: undefined
     })
@@ -163,7 +183,6 @@ export type CoreHTTPFunctionWiring<
       >
       permissions?: undefined
       auth?: false
-      tags?: string[]
       middleware?: PikkuMiddleware[]
       sse?: undefined
     })
@@ -177,9 +196,8 @@ export type CoreHTTPFunctionWiring<
       >
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
-      sse?: boolean
-      tags?: string[]
       middleware?: PikkuMiddleware[]
+      sse?: boolean
     })
   | (CoreHTTPFunction & {
       route: R
@@ -191,9 +209,8 @@ export type CoreHTTPFunctionWiring<
       >
       permissions?: undefined
       auth?: false
-      sse?: boolean
-      tags?: string[]
       middleware?: PikkuMiddleware[]
+      sse?: boolean
     })
   | (CoreHTTPFunction & {
       route: R
@@ -205,9 +222,8 @@ export type CoreHTTPFunctionWiring<
       >
       permissions?: CorePermissionGroup<PikkuPermission>
       auth?: true
-      query?: Array<keyof In>
-      tags?: string[]
       middleware?: PikkuMiddleware[]
+      query?: Array<keyof In>
       sse?: undefined
     })
   | (CoreHTTPFunction & {
@@ -220,9 +236,8 @@ export type CoreHTTPFunctionWiring<
       >
       permissions?: undefined
       auth?: false
-      query?: Array<keyof In>
-      tags?: string[]
       middleware?: PikkuMiddleware[]
+      query?: Array<keyof In>
       sse?: undefined
     })
   | {
@@ -235,6 +250,7 @@ export type CoreHTTPFunctionWiring<
       auth?: undefined
       tags?: undefined
       middleware?: undefined
+      headers?: undefined
       returnsJSON?: undefined
       sse?: boolean
     }
@@ -257,6 +273,7 @@ export type HTTPWiringMeta = CommonWireMeta & {
   params?: string[]
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes
+  headersSchemaName?: string
   sse?: true
   workflow?: true
 }
@@ -304,4 +321,83 @@ export interface PikkuHTTPResponse<Out = unknown> {
   redirect(location: string, status?: number): this
   close?: () => void
   setMode?: (mode: 'stream') => void
+}
+
+/**
+ * Single route configuration - supports all wireHTTP options
+ */
+export type HTTPRouteConfig<
+  PikkuFunction extends
+    | CorePikkuFunction<any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any> =
+    | CorePikkuFunction<any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any>,
+  PikkuPermission extends CorePikkuPermission<
+    any,
+    any,
+    any
+  > = CorePikkuPermission<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+> = HTTPRouteBaseConfig & {
+  // Required
+  method: HTTPMethod
+  route: string
+  func: CorePikkuFunctionConfig<PikkuFunction, PikkuPermission, PikkuMiddleware>
+
+  // Auth & permissions
+  auth?: boolean
+  permissions?: CorePermissionGroup<PikkuPermission>
+
+  // Middleware
+  middleware?: PikkuMiddleware[]
+
+  // SSE support
+  sse?: boolean
+}
+
+/**
+ * Group-level configuration applied to all routes
+ */
+export type HTTPRoutesGroupConfig<
+  PikkuPermission extends CorePikkuPermission<
+    any,
+    any,
+    any
+  > = CorePikkuPermission<any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
+    any,
+    any
+  >,
+> = {
+  basePath?: string
+  tags?: string[]
+  auth?: boolean
+  middleware?: PikkuMiddleware[]
+  permissions?: CorePermissionGroup<PikkuPermission>
+}
+
+/**
+ * Nested route map - allows hierarchical organization
+ * Can contain individual routes, nested maps, or contracts with config
+ */
+export type HTTPRouteMap = {
+  [key: string]: HTTPRouteConfig | HTTPRouteMap | HTTPRouteContract
+}
+
+/**
+ * A route contract with optional group config (returned by defineRoutes)
+ */
+export type HTTPRouteContract<T extends HTTPRouteMap = HTTPRouteMap> =
+  HTTPRoutesGroupConfig & {
+    routes: T
+  }
+
+/**
+ * Full configuration for wireHTTPRoutes
+ */
+export type WireHTTPRoutesConfig = HTTPRoutesGroupConfig & {
+  routes: HTTPRouteMap | HTTPRouteConfig[]
 }

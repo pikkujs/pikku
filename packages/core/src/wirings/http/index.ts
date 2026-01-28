@@ -10,4 +10,6 @@ export {
   addHTTPPermission,
 } from './http-runner.js'
 
+export { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
+
 export type * from './http.types.js'

@@ -17,6 +17,7 @@ async function check() {
     console.log('✅ HTTP test passed')
     console.log('Todos:', todos)
 
+    await pikkuFetch.post('/auth/logout', {})
     const created = await pikkuFetch.post('/todos', {
       title: 'Test todo from client',
       priority: 'high',

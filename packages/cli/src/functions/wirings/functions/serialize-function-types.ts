@@ -23,7 +23,8 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, ZodLike, CreateWireServices } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
 ${userSessionTypeImport}
@@ -227,9 +228,9 @@ export type PikkuFunction<
   >
 
 /**
- * Helper type to infer the output type from a Zod schema
+ * Helper type to infer the output type from a Standard Schema
  */
-export type InferZodOutput<T> = T extends ZodLike<infer U> ? U : never
+export type InferSchemaOutput<T> = T extends StandardSchemaV1<any, infer Output> ? Output : never
 
 /**
  * Configuration object for Pikku functions with optional middleware, permissions, tags, and documentation.
@@ -244,8 +245,8 @@ export type PikkuFunctionConfig<
   Out = unknown,
   RequiredWires extends keyof PikkuWire = never,
   PikkuFunc extends PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires> = PikkuFunction<In, Out, RequiredWires> | PikkuFunctionSessionless<In, Out, RequiredWires>,
-  InputSchema extends ZodLike | undefined = undefined,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = CorePikkuFunctionConfig<PikkuFunc, PikkuPermission<In>, PikkuMiddleware, InputSchema, OutputSchema>
 
 /**
@@ -254,8 +255,8 @@ export type PikkuFunctionConfig<
  * Types are automatically inferred from the schemas.
  */
 export type PikkuFunctionConfigWithSchema<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined,
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never
 > = {
   name?: string
@@ -263,16 +264,16 @@ export type PikkuFunctionConfigWithSchema<
   expose?: boolean
   internal?: boolean
   func: PikkuFunction<
-    InferZodOutput<InputSchema>,
-    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    InferSchemaOutput<InputSchema>,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     RequiredWires
   > | PikkuFunctionSessionless<
-    InferZodOutput<InputSchema>,
-    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    InferSchemaOutput<InputSchema>,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     RequiredWires
   >
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
+  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
   middleware?: PikkuMiddleware[]
   input: InputSchema
   output?: OutputSchema
@@ -317,11 +318,11 @@ export type PikkuFunctionConfigWithSchema<
  * \`\`\`
  */
 export function pikkuFunc<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuFunc<In, Out = unknown>(
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
@@ -335,8 +336,8 @@ export function pikkuFunc(func: any) {
  * Configuration object for sessionless Pikku functions with Zod schema validation.
  */
 export type PikkuFunctionSessionlessConfigWithSchema<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined,
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never
 > = {
   name?: string
@@ -345,12 +346,12 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   expose?: boolean
   internal?: boolean
   func: PikkuFunctionSessionless<
-    InferZodOutput<InputSchema>,
-    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown,
+    InferSchemaOutput<InputSchema>,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     RequiredWires
   >
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission<InferZodOutput<InputSchema>>>
+  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
   middleware?: PikkuMiddleware[]
   input: InputSchema
   output?: OutputSchema
@@ -392,11 +393,11 @@ export type PikkuFunctionSessionlessConfigWithSchema<
  * \`\`\`
  */
 export function pikkuSessionlessFunc<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuSessionlessFunc<In, Out = unknown>(
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc'>
