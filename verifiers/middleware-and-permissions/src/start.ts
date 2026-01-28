@@ -87,6 +87,47 @@ async function main(): Promise<void> {
       createWireServices
     )
 
+    // Test wireHTTPRoutes - direct route with group config cascading
+    // Note: function's own tags ('function') are NOT applied when wired via wireHTTPRoutes
+    // Only group and route tags are merged. Function-level middleware still runs.
+    const httpRoutesDirectPassed = await testHTTPWiring(
+      '/api/v1/direct',
+      [
+        { name: 'global', type: 'http', phase: 'before' },
+        { name: '/api/*', type: 'route', phase: 'before' },
+        { name: 'session', type: 'tag', phase: 'before' },
+        { name: 'grouped-api', type: 'wire', phase: 'before' }, // Group middleware
+        { name: 'inline', type: 'wire', phase: 'before' }, // Route middleware
+        { name: 'noOp', type: 'function', phase: 'before' }, // Function middleware (no function tag)
+        { name: 'global', type: 'http-permission' },
+        { name: '/api/*', type: 'http-permission' },
+        { name: 'wire', type: 'wire-permission' },
+        { name: 'inline', type: 'wire-permission' },
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices,
+      createWireServices
+    )
+
+    // Test wireHTTPRoutes - nested contract with merged tags (session from top + api from contract)
+    const httpRoutesGroupedPassed = await testHTTPWiring(
+      '/api/v1/grouped',
+      [
+        { name: 'global', type: 'http', phase: 'before' },
+        { name: '/api/*', type: 'route', phase: 'before' },
+        { name: 'session', type: 'tag', phase: 'before' }, // From top-level wireHTTPRoutes + route
+        { name: 'api', type: 'tag', phase: 'before' }, // From defineHTTPRoutes contract
+        { name: 'grouped-api', type: 'wire', phase: 'before' }, // Group middleware cascades
+        { name: 'noOp', type: 'function', phase: 'before' }, // Function middleware (no function tag)
+        { name: 'global', type: 'http-permission' },
+        { name: '/api/*', type: 'http-permission' },
+        { name: 'read', type: 'tag-permission' }, // From 'api' tag
+        { name: 'function', type: 'function-permission' },
+      ],
+      singletonServices,
+      createWireServices
+    )
+
     // Test Scheduler
     const schedulerPassed = await testSchedulerWiring(
       [
@@ -360,6 +401,8 @@ async function main(): Promise<void> {
     const allPassed =
       httpTest1Passed &&
       httpTest2Passed &&
+      httpRoutesDirectPassed &&
+      httpRoutesGroupedPassed &&
       schedulerPassed &&
       queuePassed &&
       cliPassed &&
