@@ -10,7 +10,7 @@ export const pikkuRPCClient = pikkuSessionlessFunc<void, void>({
 
     // If rpcWiringsFile is not set, clean up any existing file and return
     if (!rpcWiringsFile) {
-      logger.info({
+      logger.debug({
         message:
           "Skipping generating RPC wrappers since rpcWiringsFile isn't set in the pikku config.",
         type: 'skip',

@@ -10,13 +10,13 @@ import {
 
 /**
  * Login with username and password.
- * Sets the session with userId for subsequent authenticated requests.
+ * Returns a JWT token for subsequent authenticated requests.
  * Demo: any password works, just validates username exists.
  */
 export const login = pikkuFunc({
   input: LoginInputSchema,
   output: LoginResponseSchema,
-  func: async (_services, { username, password }, { session }) => {
+  func: async ({ jwt }, { username, password }) => {
     const user = store.getUserByUsername(username)
     if (!user) {
       throw new Error('Invalid username or password')
@@ -26,10 +26,17 @@ export const login = pikkuFunc({
       throw new Error('Invalid username or password')
     }
 
-    await session.set({ userId: user.id })
+    if (!jwt) {
+      throw new Error('JWT service not configured')
+    }
+
+    const token = await jwt.encode(
+      { value: 1, unit: 'day' },
+      { userId: user.id }
+    )
 
     return {
-      token: user.id, // In demo mode, we use userId as token; real app would use JWT
+      token,
       user,
     }
   },

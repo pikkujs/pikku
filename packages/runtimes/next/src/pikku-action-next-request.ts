@@ -70,12 +70,14 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
 
   /**
    * Retrieves the cookies from the request.
+   * Returns null in static context (when dynamic is false) to allow
+   * middleware to gracefully handle static page generation.
    *
-   * @returns An object containing the cookies.
+   * @returns The cookie value or null if not found/not available.
    */
   public cookie(cookieName: string): string | null {
     if (!this.dynamic) {
-      throw new Error('Need to allow dynamic option for cookies')
+      return null
     }
     if (!this.cookieStore) {
       throw new Error('Init first needs to be called')
@@ -85,13 +87,15 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
 
   /**
    * Retrieves the value of a specific header from the request.
+   * Returns null in static context (when dynamic is false) to allow
+   * middleware to gracefully handle static page generation.
    *
    * @param headerName - The name of the header to retrieve.
-   * @returns The value of the specified header, or `undefined` if not found.
+   * @returns The value of the specified header, or null if not found/not available.
    */
   public header(headerName: string): string | null {
     if (!this.dynamic) {
-      throw new Error('Need to allow dynamic option for cookies')
+      return null
     }
     if (!this.#headers) {
       throw new Error('Init first needs to be called')

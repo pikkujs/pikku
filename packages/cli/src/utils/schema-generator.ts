@@ -240,7 +240,7 @@ export async function generateZodSchemas(
       )
 
       typesMap.addCustomType(schemaName, typeText, [])
-      logger.info(`• Generated schema from Zod: ${schemaName}`)
+      logger.debug(`• Generated schema from Zod: ${schemaName}`)
     } catch (e) {
       logger.warn(
         `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`

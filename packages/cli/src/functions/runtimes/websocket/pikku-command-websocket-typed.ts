@@ -11,7 +11,7 @@ export const pikkuWebSocketTyped = pikkuSessionlessFunc<void, void>({
 
     // If websocketFile is not set, clean up any existing file and return
     if (!websocketFile) {
-      logger.info({
+      logger.debug({
         message:
           "Skipping generating websocket wrapper since websocketFile isn't set in the pikku config.",
         type: 'skip',

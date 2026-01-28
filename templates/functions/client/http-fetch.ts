@@ -14,7 +14,6 @@ async function check() {
       tag: undefined,
     })
 
-    console.log('✅ HTTP test passed')
     console.log('Todos:', todos)
 
     const created = await pikkuFetch.post('/todos', {
@@ -44,12 +43,17 @@ async function check() {
     })
     console.log('Logged in:', loginResult)
 
+    pikkuFetch.setAuthorizationJWT(loginResult.token)
+
     const logoutResult = await pikkuFetch.post('/auth/logout', {})
     console.log('Logged out:', logoutResult)
 
+    console.log('✅ HTTP test passed')
+
     process.exit(0)
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message =
+      err instanceof Error ? err.message : String(JSON.stringify(err))
     console.log(`Still failing (${message}), retrying...`)
   }
 

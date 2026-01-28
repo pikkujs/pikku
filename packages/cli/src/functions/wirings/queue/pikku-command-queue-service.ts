@@ -11,7 +11,7 @@ export const pikkuQueueService = pikkuSessionlessFunc<void, void>({
 
     // If queueWiringsFile is not set, clean up any existing file and return
     if (!queueWiringsFile) {
-      logger.info({
+      logger.debug({
         message:
           "Skipping generating queue service wrapper since queueWiringsFile isn't set in the pikku config.",
         type: 'skip',

@@ -148,8 +148,16 @@ export function registerHTTPRoute({
   const fullRoute = basePath + routePath
 
   // Extract params from route path
-  const keys = pathToRegexp(fullRoute).keys
-  const params = keys.filter((k) => k.type === 'param').map((k) => k.name)
+  let params: string[] = []
+  try {
+    const keys = pathToRegexp(fullRoute).keys
+    params = keys.filter((k) => k.type === 'param').map((k) => k.name)
+  } catch (e) {
+    logger.error(
+      `Failed to parse route '${fullRoute}': ${e instanceof Error ? e.message : e}`
+    )
+    return
+  }
 
   // Get common metadata
   const {

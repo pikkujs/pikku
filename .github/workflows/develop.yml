@@ -142,6 +142,8 @@ jobs:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
       REDIS_URL: redis://localhost:6379
+      SLS_TELEMETRY_DISABLED: 1
+      SLS_NOTIFICATIONS_MODE: off
 
   # bun-templates:
   #   name: Bun Templates

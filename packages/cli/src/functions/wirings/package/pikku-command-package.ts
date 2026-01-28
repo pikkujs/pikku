@@ -9,7 +9,7 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
 
     // Only generate for external packages
     if (!externalPackageName) {
-      logger.info({
+      logger.debug({
         message:
           'Skipping package factories - not an external package (externalPackageName not set)',
         type: 'skip',
@@ -18,7 +18,7 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
     }
 
     if (!packageFile) {
-      logger.info({
+      logger.debug({
         message: 'Skipping package factories - packageFile not configured',
         type: 'skip',
       })

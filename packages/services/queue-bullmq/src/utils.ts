@@ -36,13 +36,14 @@ export const mapBullJobToQueueJob = async <In, Out>(
     result: bullJob.returnvalue as Out,
     status: async () => mapBullStateToStatus(await bullJob.getState()),
     waitForCompletion: async (ttl?: number): Promise<Out> => {
-      let queueEvents = queueEventsMap.get(bullJob.name)
+      let queueEvents = queueEventsMap.get(bullJob.queueName)
       if (!queueEvents) {
         queueEvents = new QueueEvents(
-          bullJob.name,
+          bullJob.queueName,
           redisConnection ? { connection: redisConnection } : undefined
         )
-        queueEventsMap.set(bullJob.name, queueEvents)
+        queueEventsMap.set(bullJob.queueName, queueEvents)
+        await queueEvents.waitUntilReady()
       }
       return await bullJob.waitUntilFinished(queueEvents, ttl)
     },

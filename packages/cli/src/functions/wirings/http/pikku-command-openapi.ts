@@ -11,7 +11,7 @@ export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
 
     // If openAPI outputFile is not defined, clean up any existing file and return
     if (!openAPI?.outputFile) {
-      logger.info({
+      logger.debug({
         message:
           'Skipping creating OpenAPI spec since openAPI outfile is not defined.',
         type: 'skip',
