@@ -8,7 +8,7 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "test": "bash ../functions/run-tests.sh --url http://localhost:3000/production --http",
-    "start": "npm run build && serverless offline",
+    "start": "npm run build && SLS_TELEMETRY_DISABLED=1 SLS_NOTIFICATIONS_MODE=off serverless offline",
     "build": "rm -rf dist && esbuild ./src/main.ts --format=esm --minify --external:\"@aws-sdk/*\" --bundle --keep-names --sourcemap --platform=node --target=node24 --outdir=dist --out-extension:.js=.mjs --metafile=meta.json",
     "deploy": "npm run build && serverless deploy"
   },

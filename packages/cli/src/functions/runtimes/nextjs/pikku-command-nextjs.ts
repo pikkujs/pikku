@@ -19,7 +19,7 @@ export const pikkuNext = pikkuSessionlessFunc<void, void>({
 
     // If both files are undefined, clean up any existing files and return
     if (!nextBackendFile && !nextHTTPFile) {
-      logger.info({
+      logger.debug({
         message:
           'Skipping generating nextjs wrapper since nextjs outfile is not defined.',
         type: 'skip',

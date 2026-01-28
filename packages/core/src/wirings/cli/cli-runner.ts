@@ -350,7 +350,8 @@ export async function runCLICommand({
     })
 
     // Apply renderer one final time with the final output (if renderer exists)
-    if (renderer) {
+    // Skip if result is undefined (void functions handle their own output)
+    if (renderer && result !== undefined) {
       await Promise.resolve(
         renderer(singletonServices, result, userSession.get())
       )

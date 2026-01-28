@@ -37,6 +37,24 @@ import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 import { startWorkflowByHttpWire } from '../workflow/workflow-utils.js'
+import { validateSchema } from '../../schema.js'
+
+/**
+ * Extract headers from a PikkuHTTPRequest based on the schema keys
+ */
+function extractHeadersFromRequest(
+  request: PikkuHTTPRequest,
+  headerKeys: string[]
+): Record<string, string | string[] | undefined> {
+  const headers: Record<string, string | string[] | undefined> = {}
+  for (const headerName of headerKeys) {
+    const value = request.header(headerName)
+    if (value !== null) {
+      headers[headerName] = value
+    }
+  }
+  return headers
+}
 
 /**
  * Registers HTTP middleware for a specific route pattern.
@@ -280,6 +298,24 @@ const executeRoute = async (
 
   // Attach URL parameters to the request object
   http?.request?.setParams(params)
+
+  // Validate request headers if schema is defined
+  if (
+    meta.headersSchemaName &&
+    http.request &&
+    singletonServices.schemaService
+  ) {
+    const headerKeys = singletonServices.schemaService.getSchemaKeys(
+      meta.headersSchemaName
+    )
+    const rawHeaders = extractHeadersFromRequest(http.request, headerKeys)
+    await validateSchema(
+      singletonServices.logger,
+      singletonServices.schemaService,
+      meta.headersSchemaName,
+      rawHeaders
+    )
+  }
 
   const requiresSession = route.auth !== false
   let wireServices: any

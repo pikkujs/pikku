@@ -13,6 +13,7 @@ addFormats.default(ajv as any)
 
 export class AjvSchemaService implements SchemaService {
   private validators = new Map<string, ValidateFunction>()
+  private schemas = new Map<string, any>()
 
   constructor(private logger: Logger) {}
 
@@ -22,6 +23,7 @@ export class AjvSchemaService implements SchemaService {
       try {
         const validator = ajv.compile(value)
         this.validators.set(schema, validator)
+        this.schemas.set(schema, value)
       } catch (e: any) {
         throw e
       }
@@ -47,5 +49,13 @@ export class AjvSchemaService implements SchemaService {
 
   public getSchemaNames(): Set<string> {
     return new Set(this.validators.keys())
+  }
+
+  public getSchemaKeys(schemaName: string): string[] {
+    const schema = this.schemas.get(schemaName)
+    if (!schema || !schema.properties) {
+      return []
+    }
+    return Object.keys(schema.properties)
   }
 }

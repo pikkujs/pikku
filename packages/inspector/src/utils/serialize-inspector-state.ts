@@ -62,7 +62,16 @@ export interface SerializableInspectorState {
       >,
     ]
   >
-  zodLookup: Array<[string, { variableName: string; sourceFile: string }]>
+  schemaLookup: Array<
+    [
+      string,
+      {
+        variableName: string
+        sourceFile: string
+        vendor?: 'zod' | 'valibot' | 'arktype' | 'effect' | 'unknown'
+      },
+    ]
+  >
   functions: {
     typesMap: {
       map: Array<[string, { originalName: string; path: string | null }]>
@@ -243,7 +252,7 @@ export function serializeInspectorState(
     filesAndMethodsErrors: Array.from(
       state.filesAndMethodsErrors.entries()
     ).map(([key, mapValue]) => [key, Array.from(mapValue.entries())] as const),
-    zodLookup: Array.from(state.zodLookup.entries()),
+    schemaLookup: Array.from(state.schemaLookup.entries()),
     functions: {
       typesMap: serializeTypesMap(state.functions.typesMap),
       meta: state.functions.meta,
@@ -326,8 +335,15 @@ export function serializeInspectorState(
  */
 export function deserializeInspectorState(
   data: SerializableInspectorState
-): Omit<InspectorState, 'typesLookup' | 'zodLookup'> & {
-  zodLookup: Map<string, { variableName: string; sourceFile: string }>
+): Omit<InspectorState, 'typesLookup' | 'schemaLookup'> & {
+  schemaLookup: Map<
+    string,
+    {
+      variableName: string
+      sourceFile: string
+      vendor?: 'zod' | 'valibot' | 'arktype' | 'effect' | 'unknown'
+    }
+  >
 } {
   // Helper to deserialize TypesMap
   const deserializeTypesMap = (
@@ -363,7 +379,7 @@ export function deserializeInspectorState(
         new Map(entries),
       ])
     ),
-    zodLookup: new Map(data.zodLookup || []),
+    schemaLookup: new Map(data.schemaLookup || []),
     functions: {
       typesMap: deserializeTypesMap(data.functions.typesMap),
       meta: data.functions.meta,

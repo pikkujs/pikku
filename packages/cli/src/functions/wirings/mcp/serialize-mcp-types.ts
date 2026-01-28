@@ -19,8 +19,8 @@ import {
   AssertMCPResourceURIParams
 } from '@pikku/core/mcp'
 
-import type { PikkuFunctionConfig, PikkuFunctionSessionless, InferZodOutput } from '${functionTypesImportPath}'
-import type { ZodLike } from '@pikku/core'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless, InferSchemaOutput } from '${functionTypesImportPath}'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
  * Type definition for MCP resources that provide data to AI models.
@@ -87,8 +87,8 @@ export const wireMCPPrompt = <In>(
 /**
  * Configuration for MCP prompt with Zod schema input validation.
  */
-type MCPPromptFuncConfigWithSchema<InputSchema extends ZodLike> = {
-  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp' | 'rpc'>
+type MCPPromptFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
+  func: PikkuFunctionSessionless<InferSchemaOutput<InputSchema>, MCPPromptResponse, 'mcp' | 'rpc'>
   name?: string
   input: InputSchema
 }
@@ -105,9 +105,9 @@ type MCPPromptFuncConfigWithSchema<InputSchema extends ZodLike> = {
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
  */
-export function pikkuMCPPromptFunc<InputSchema extends ZodLike>(
+export function pikkuMCPPromptFunc<InputSchema extends StandardSchemaV1>(
   config: MCPPromptFuncConfigWithSchema<InputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPPromptResponse, 'mcp' | 'rpc'>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, MCPPromptResponse, 'mcp' | 'rpc'>
 export function pikkuMCPPromptFunc<In>(
   func:
     | PikkuFunctionSessionless<In, MCPPromptResponse, 'mcp' | 'rpc'>
@@ -123,8 +123,8 @@ export function pikkuMCPPromptFunc(func: any): any {
 /**
  * Configuration for MCP tool with Zod schema input validation.
  */
-type MCPToolFuncConfigWithSchema<InputSchema extends ZodLike> = {
-  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
+type MCPToolFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
+  func: PikkuFunctionSessionless<InferSchemaOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
   name?: string
   input: InputSchema
 }
@@ -141,9 +141,9 @@ type MCPToolFuncConfigWithSchema<InputSchema extends ZodLike> = {
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
  */
-export function pikkuMCPToolFunc<InputSchema extends ZodLike>(
+export function pikkuMCPToolFunc<InputSchema extends StandardSchemaV1>(
   config: MCPToolFuncConfigWithSchema<InputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
 export function pikkuMCPToolFunc<In>(
   func:
     | PikkuFunctionSessionless<In, MCPToolResponse, 'mcp' | 'rpc'>
@@ -159,8 +159,8 @@ export function pikkuMCPToolFunc(func: any): any {
 /**
  * Configuration for MCP resource with Zod schema input validation.
  */
-type MCPResourceFuncConfigWithSchema<InputSchema extends ZodLike> = {
-  func: PikkuFunctionSessionless<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp' | 'rpc'>
+type MCPResourceFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
+  func: PikkuFunctionSessionless<InferSchemaOutput<InputSchema>, MCPResourceResponse, 'mcp' | 'rpc'>
   name?: string
   input: InputSchema
 }
@@ -177,9 +177,9 @@ type MCPResourceFuncConfigWithSchema<InputSchema extends ZodLike> = {
  * @param func - Function definition, either direct function or configuration object
  * @returns The unwrapped function for internal use
  */
-export function pikkuMCPResourceFunc<InputSchema extends ZodLike>(
+export function pikkuMCPResourceFunc<InputSchema extends StandardSchemaV1>(
   config: MCPResourceFuncConfigWithSchema<InputSchema>
-): PikkuFunctionConfig<InferZodOutput<InputSchema>, MCPResourceResponse, 'mcp' | 'rpc'>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, MCPResourceResponse, 'mcp' | 'rpc'>
 export function pikkuMCPResourceFunc<In>(
   func:
     | PikkuFunctionSessionless<In, MCPResourceResponse, 'mcp' | 'rpc'>

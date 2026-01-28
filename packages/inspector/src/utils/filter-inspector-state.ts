@@ -2,6 +2,9 @@ import { InspectorState, InspectorFilters, InspectorLogger } from '../types.js'
 import { PikkuWiringTypes } from '@pikku/core'
 import { aggregateRequiredServices } from './post-process.js'
 
+// Module-level Set to track warned groups across multiple filter calls
+const globalWarnedGroups = new Set<string>()
+
 /**
  * Match a value against a pattern with wildcard support
  * Supports "*" at the beginning, end, or both (e.g., "send*", "*Payment", "*process*")
@@ -39,8 +42,10 @@ function matchesFilters(
     filePath?: string
     httpRoute?: string
     httpMethod?: string
+    groupBasePath?: string
   },
-  logger: InspectorLogger
+  logger: InspectorLogger,
+  warnedGroups?: Set<string>
 ): boolean {
   // If no filters, allow everything
   if (Object.keys(filters).length === 0) return true
@@ -106,6 +111,23 @@ function matchesFilters(
     if (!routeMatches) {
       logger.debug(`⒡ Filtered by HTTP route: ${meta.httpRoute}`)
       return false
+    }
+
+    // If route is part of a wireHTTPRoutes group, check if filter is at group level
+    if (meta.groupBasePath && warnedGroups) {
+      const groupMatches = filters.httpRoutes.some(
+        (pattern) =>
+          matchesWildcard(meta.groupBasePath!, pattern) ||
+          matchesWildcard(meta.groupBasePath! + '/*', pattern)
+      )
+      if (!groupMatches && !warnedGroups.has(meta.groupBasePath)) {
+        warnedGroups.add(meta.groupBasePath)
+        logger.warn(
+          `Filtering within wireHTTPRoutes group is not yet supported. ` +
+            `Route '${meta.httpRoute}' is part of group '${meta.groupBasePath}'. ` +
+            `Use '--httpRoutes=${meta.groupBasePath}/*' to filter the entire group.`
+        )
+      }
     }
   }
 
@@ -228,8 +250,10 @@ export function filterInspectorState(
           filePath,
           httpRoute: routeMeta.route,
           httpMethod: routeMeta.method,
+          groupBasePath: routeMeta.groupBasePath,
         },
-        logger
+        logger,
+        globalWarnedGroups
       )
 
       if (!matches) {

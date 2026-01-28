@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import { addFileWithFactory } from './add/add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
+import { addHTTPRoutes } from './add/add-http-routes.js'
 import { addSchedule } from './add/add-schedule.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
 import { addWorkflow } from './add/add-workflow.js'
@@ -94,6 +95,7 @@ export const visitRoutes = (
 ) => {
   addFunctions(logger, node, checker, state, options)
   addHTTPRoute(logger, node, checker, state, options)
+  addHTTPRoutes(logger, node, checker, state, options)
   addSchedule(logger, node, checker, state, options)
   addQueueWorker(logger, node, checker, state, options)
   addChannel(logger, node, checker, state, options)

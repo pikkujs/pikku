@@ -10,7 +10,7 @@ export const pikkuFetch = pikkuSessionlessFunc<void, void>({
 
     // If fetchFile is not set, clean up any existing file and return
     if (!fetchFile) {
-      logger.info({
+      logger.debug({
         message:
           "Skipping generating fetch wrapper since fetchFile isn't set in the pikku config.",
         type: 'skip',

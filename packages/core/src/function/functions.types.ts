@@ -6,7 +6,14 @@ import type {
   PikkuWire,
   PickRequired,
 } from '../types/core.types.js'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { Session } from 'inspector'
+
+/**
+ * @deprecated Use StandardSchemaV1 from @standard-schema/spec instead.
+ * This alias exists only for backward compatibility with generated code.
+ */
+export type ZodLike<T = any> = StandardSchemaV1<T, T>
 
 /**
  * Represents a core API function that performs an operation using core services and a user session.
@@ -189,15 +196,6 @@ export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined
 
-/**
- * Zod schema type - matches z.ZodType shape for type inference
- * This avoids requiring zod as a dependency while allowing schema inference
- */
-export type ZodLike<T = any> = {
-  _input: T
-  _output: T
-}
-
 export type CorePikkuFunctionConfig<
   PikkuFunction extends
     | CorePikkuFunction<any, any, any, any>
@@ -211,8 +209,8 @@ export type CorePikkuFunctionConfig<
     any,
     any
   >,
-  InputSchema extends ZodLike | undefined = undefined,
-  OutputSchema extends ZodLike | undefined = undefined,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
 > = {
   /** Optional human-readable title for the function */
   title?: string

@@ -22,7 +22,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
       !config.cli?.entrypoints ||
       Object.keys(config.cli.entrypoints).length === 0
     ) {
-      logger.info({
+      logger.debug({
         message:
           'No CLI entrypoints configured in config.cli.entrypoints, skipping CLI bootstrap generation',
         type: 'skip',

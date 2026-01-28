@@ -13,6 +13,7 @@ import {
   pikkuPermission,
   wireHTTP,
 } from '#pikku'
+import { wireHTTPRoutes, defineHTTPRoutes } from '@pikku/core/http'
 import {
   httpGlobalMiddleware,
   httpRouteMiddleware,
@@ -109,4 +110,44 @@ wireHTTP({
   tags: ['session'],
   func: noOpFunction,
   auth: false, // No authentication required for this example
+})
+
+// ==========================================
+// wireHTTPRoutes - Grouped Route Wiring
+// ==========================================
+
+// Define a route contract with group-level config
+// Note: Using 'as any' because the verifier's generated types differ from core types
+const groupedRoutes = defineHTTPRoutes({
+  tags: ['api'], // Group-level tags cascade to all routes
+  routes: {
+    grouped: {
+      method: 'get',
+      route: '/grouped',
+      func: noOpFunction as any,
+      tags: ['session'], // Route-level tags merge with group tags
+    },
+  },
+})
+
+// Wire routes with basePath - tests cascading behavior
+wireHTTPRoutes({
+  basePath: '/api/v1',
+  tags: ['session'], // Top-level tags cascade to nested routes
+  middleware: [wireMiddleware('grouped-api') as any], // Group middleware runs first
+  routes: {
+    // Direct route - inherits group config
+    direct: {
+      method: 'get',
+      route: '/direct',
+      func: noOpFunction as any,
+      middleware: [inlineWireMiddleware as any], // Route middleware runs after group
+      permissions: {
+        wire: [wirePermission as any, inlineWirePermission as any],
+      },
+      auth: true,
+    },
+    // Nested contract - merges configs
+    todos: groupedRoutes,
+  },
 })

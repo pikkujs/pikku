@@ -11,7 +11,7 @@ export const serializeTriggerTypes = (
 
 import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, wireTrigger as wireTriggerCore } from '@pikku/core/trigger'
 ${singletonServicesTypeImport}
-import type { ZodLike } from '@pikku/core'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
 
@@ -33,14 +33,14 @@ export type PikkuTriggerFunction<
 export type PikkuTriggerFunctionConfig<
   TInput = unknown,
   TOutput = unknown,
-  InputSchema extends ZodLike | undefined = undefined,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = CorePikkuTriggerFunctionConfig<TInput, TOutput, SingletonServices, InputSchema, OutputSchema>
 
 /**
- * Helper type to infer the output type from a Zod schema
+ * Helper type to infer the output type from a Standard Schema
  */
-type InferZodOutput<T> = T extends ZodLike<infer U> ? U : never
+type InferSchemaOutput<T> = T extends StandardSchemaV1<any, infer Output> ? Output : never
 
 /**
  * Configuration object for trigger functions with Zod schema validation.
@@ -48,15 +48,15 @@ type InferZodOutput<T> = T extends ZodLike<infer U> ? U : never
  * Types are automatically inferred from the schemas.
  */
 export type PikkuTriggerFunctionConfigWithSchema<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
   title?: string
   description?: string
   tags?: string[]
   func: PikkuTriggerFunction<
-    InferZodOutput<InputSchema>,
-    OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown
+    InferSchemaOutput<InputSchema>,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
   >
   input: InputSchema
   output?: OutputSchema
@@ -110,11 +110,11 @@ export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
  * \`\`\`
  */
 export function pikkuTriggerFunc<
-  InputSchema extends ZodLike,
-  OutputSchema extends ZodLike | undefined = undefined
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuTriggerFunctionConfigWithSchema<InputSchema, OutputSchema>
-): PikkuTriggerFunctionConfig<InferZodOutput<InputSchema>, OutputSchema extends ZodLike ? InferZodOutput<OutputSchema> : unknown, InputSchema, OutputSchema>
+): PikkuTriggerFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, InputSchema, OutputSchema>
 export function pikkuTriggerFunc<TInput, TOutput = unknown>(
   triggerOrConfig:
     | PikkuTriggerFunction<TInput, TOutput>

@@ -4,6 +4,7 @@ import { Validator } from '@cfworker/json-schema'
 
 export class CFWorkerSchemaService implements SchemaService {
   private validators = new Map<string, Validator>()
+  private schemas = new Map<string, any>()
 
   constructor(private logger: Logger) {}
 
@@ -13,8 +14,10 @@ export class CFWorkerSchemaService implements SchemaService {
       try {
         // We need to deep clone the value to avoid CFWorker's JSON schema validator
         // from mutating the original value (which throws an error)
-        const validator = new Validator(JSON.parse(JSON.stringify(value)))
+        const clonedValue = JSON.parse(JSON.stringify(value))
+        const validator = new Validator(clonedValue)
         this.validators.set(schema, validator)
+        this.schemas.set(schema, value)
       } catch (e: any) {
         throw e
       }
@@ -39,5 +42,13 @@ export class CFWorkerSchemaService implements SchemaService {
 
   public getSchemaNames(): Set<string> {
     return new Set(this.validators.keys())
+  }
+
+  public getSchemaKeys(schemaName: string): string[] {
+    const schema = this.schemas.get(schemaName)
+    if (!schema || !schema.properties) {
+      return []
+    }
+    return Object.keys(schema.properties)
   }
 }

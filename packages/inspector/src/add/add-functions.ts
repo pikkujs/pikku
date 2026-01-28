@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
-import { AddWiring } from '../types.js'
+import { AddWiring, SchemaRef } from '../types.js'
+import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 import { TypesMap } from '../types-map.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
@@ -328,21 +329,23 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   } = extractFunctionNode(firstArg, checker)
 
-  // Variables to hold zod schema references if provided
-  let inputZodSchemaRef: { variableName: string; sourceFile: string } | null =
-    null
-  let outputZodSchemaRef: { variableName: string; sourceFile: string } | null =
-    null
+  // Variables to hold schema references if provided
+  let inputSchemaRef: SchemaRef | null = null
+  let outputSchemaRef: SchemaRef | null = null
 
-  // Helper to resolve schema identifier to its actual source file
-  const resolveSchemaSourceFile = (
-    identifier: ts.Identifier
-  ): { variableName: string; sourceFile: string } | null => {
+  // Helper to resolve schema identifier to its actual source file and detect vendor.
+  // Logs a fatal error and returns null if vendor cannot be determined.
+  const resolveSchemaRef = (
+    identifier: ts.Identifier,
+    context: string
+  ): SchemaRef | null => {
     const symbol = checker.getSymbolAtLocation(identifier)
     if (!symbol) return null
 
     const decl = symbol.valueDeclaration || symbol.declarations?.[0]
     if (!decl) return null
+
+    let sourceFile: string
 
     // If it's an import specifier, resolve the aliased symbol to get the actual source
     if (ts.isImportSpecifier(decl)) {
@@ -351,18 +354,30 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
         const aliasedDecl =
           aliasedSymbol.valueDeclaration || aliasedSymbol.declarations?.[0]
         if (aliasedDecl) {
-          return {
-            variableName: identifier.text,
-            sourceFile: aliasedDecl.getSourceFile().fileName,
-          }
+          sourceFile = aliasedDecl.getSourceFile().fileName
+        } else {
+          return null
         }
+      } else {
+        return null
       }
+    } else {
+      sourceFile = decl.getSourceFile().fileName
     }
 
-    // Not an import - use the current source file
+    const vendor = detectSchemaVendorOrError(
+      identifier,
+      checker,
+      logger,
+      context,
+      sourceFile
+    )
+    if (!vendor) return null
+
     return {
       variableName: identifier.text,
-      sourceFile: decl.getSourceFile().fileName,
+      sourceFile,
+      vendor,
     }
   }
 
@@ -378,27 +393,28 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
 
-    // Extract zod schema variable names from input/output properties
+    // Extract schema variable names from input/output properties
     for (const prop of firstArg.properties) {
       if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
         const propName = prop.name.text
         if (propName === 'input' || propName === 'output') {
           if (ts.isIdentifier(prop.initializer)) {
-            // Good - it's a variable reference, resolve its actual source file
-            const ref = resolveSchemaSourceFile(prop.initializer)
+            // Good - it's a variable reference, resolve its actual source file and vendor
+            const context = `Function '${name}' ${propName}`
+            const ref = resolveSchemaRef(prop.initializer, context)
             if (ref) {
               if (propName === 'input') {
-                inputZodSchemaRef = ref
+                inputSchemaRef = ref
               } else {
-                outputZodSchemaRef = ref
+                outputSchemaRef = ref
               }
             }
           } else if (ts.isCallExpression(prop.initializer)) {
             // Bad - it's an inline expression
             const schemaName = `${name.charAt(0).toUpperCase() + name.slice(1)}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
             logger.critical(
-              ErrorCode.INLINE_ZOD_SCHEMA,
-              `Inline Zod schemas are not supported for '${propName}' in '${name}'.\n` +
+              ErrorCode.INLINE_SCHEMA,
+              `Inline schemas are not supported for '${propName}' in '${name}'.\n` +
                 `  Extract to an exported variable:\n` +
                 `    export const ${schemaName} = ${prop.initializer.getText()}\n` +
                 `  Then use: ${propName}: ${schemaName}`
@@ -485,10 +501,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let inputNames: string[] = []
   let inputTypes: ts.Type[] = []
 
-  if (inputZodSchemaRef) {
+  if (inputSchemaRef) {
     const schemaName = `${capitalizedName}Input`
     inputNames = [schemaName]
-    state.zodLookup.set(schemaName, inputZodSchemaRef)
+    state.schemaLookup.set(schemaName, inputSchemaRef)
     state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
   } else if (genericTypes.length >= 1 && genericTypes[0]) {
     // Fall back to extracting from generic type arguments
@@ -521,10 +537,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   // --- Output Extraction ---
   let outputNames: string[] = []
 
-  if (outputZodSchemaRef) {
+  if (outputSchemaRef) {
     const schemaName = `${capitalizedName}Output`
     outputNames = [schemaName]
-    state.zodLookup.set(schemaName, outputZodSchemaRef)
+    state.schemaLookup.set(schemaName, outputSchemaRef)
     state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
   } else if (genericTypes.length >= 2) {
     outputNames = getNamesAndTypes(

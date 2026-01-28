@@ -1,5 +1,5 @@
 import type { CoreSingletonServices } from '../../types/core.types.js'
-import type { ZodLike } from '../../function/functions.types.js'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
  * The trigger interaction object passed to trigger functions via the wire.
@@ -47,8 +47,8 @@ export type CorePikkuTriggerFunctionConfig<
   TInput = unknown,
   TOutput = unknown,
   Services extends CoreSingletonServices = CoreSingletonServices,
-  InputSchema extends ZodLike | undefined = undefined,
-  OutputSchema extends ZodLike | undefined = undefined,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
 > = {
   /** Optional human-readable title for the trigger */
   title?: string
@@ -102,8 +102,8 @@ export const pikkuTriggerFunc = <
   TInput = unknown,
   TOutput = unknown,
   Services extends CoreSingletonServices = CoreSingletonServices,
-  InputSchema extends ZodLike | undefined = undefined,
-  OutputSchema extends ZodLike | undefined = undefined,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
 >(
   triggerOrConfig:
     | CorePikkuTriggerFunction<TInput, TOutput, Services>

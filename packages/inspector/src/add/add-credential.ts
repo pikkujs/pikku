@@ -5,17 +5,18 @@ import {
 } from '../utils/get-property-value.js'
 import { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
+import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 
 /**
  * Inspector for wireCredential calls.
  * Extracts metadata for credential declarations.
  * Note: wireCredential is metadata-only - no runtime behavior.
- * Schema is stored as the variable name reference; actual Zod→JSON Schema conversion happens at CLI build time.
+ * Schema is stored as the variable name reference; actual schema→JSON Schema conversion happens at CLI build time.
  */
 export const addCredential: AddWiring = (
   logger,
   node,
-  _checker,
+  checker,
   state,
   _options
 ) => {
@@ -48,8 +49,10 @@ export const addCredential: AddWiring = (
       | null
     const secretIdValue = getPropertyValue(obj, 'secretId') as string | null
 
-    // Get schema variable name for later runtime import
+    // Get schema variable name and resolve its source file for later runtime import
     let schemaVariableName: string | null = null
+    let schemaSourceFile: string | null = null
+    let schemaIdentifier: ts.Identifier | null = null
     for (const prop of obj.properties) {
       if (
         ts.isPropertyAssignment(prop) &&
@@ -58,6 +61,28 @@ export const addCredential: AddWiring = (
       ) {
         if (ts.isIdentifier(prop.initializer)) {
           schemaVariableName = prop.initializer.text
+          schemaIdentifier = prop.initializer
+
+          // Resolve the actual source file of the schema
+          const symbol = checker.getSymbolAtLocation(prop.initializer)
+          if (symbol) {
+            const decl = symbol.valueDeclaration || symbol.declarations?.[0]
+            if (decl) {
+              if (ts.isImportSpecifier(decl)) {
+                const aliasedSymbol = checker.getAliasedSymbol(symbol)
+                if (aliasedSymbol) {
+                  const aliasedDecl =
+                    aliasedSymbol.valueDeclaration ||
+                    aliasedSymbol.declarations?.[0]
+                  if (aliasedDecl) {
+                    schemaSourceFile = aliasedDecl.getSourceFile().fileName
+                  }
+                }
+              } else {
+                schemaSourceFile = decl.getSourceFile().fileName
+              }
+            }
+          }
         }
         break
       }
@@ -88,7 +113,7 @@ export const addCredential: AddWiring = (
       return
     }
 
-    if (!schemaVariableName) {
+    if (!schemaVariableName || !schemaSourceFile || !schemaIdentifier) {
       logger.critical(
         ErrorCode.MISSING_NAME,
         `Credential '${nameValue}' is missing the required 'schema' property or schema is not a variable reference.`
@@ -100,11 +125,21 @@ export const addCredential: AddWiring = (
 
     state.credentials.files.add(sourceFile)
 
-    // Register the zod schema in the central zodLookup for deferred conversion
-    const schemaLookupName = `Credential_${nameValue}`
-    state.zodLookup.set(schemaLookupName, {
+    // Register the schema in the central schemaLookup for deferred conversion
+    const vendor = detectSchemaVendorOrError(
+      schemaIdentifier,
+      checker,
+      logger,
+      `Credential '${nameValue}'`,
+      schemaSourceFile
+    )
+    if (!vendor) return
+
+    const schemaLookupName = `CredentialSchema_${nameValue}`
+    state.schemaLookup.set(schemaLookupName, {
       variableName: schemaVariableName,
-      sourceFile,
+      sourceFile: schemaSourceFile,
+      vendor,
     })
 
     // Store definition - CLI validates duplicates and builds meta

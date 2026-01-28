@@ -49,7 +49,7 @@ export type CredentialMeta = {
   displayName: string
   description?: string
   secretId: string
-  /** JSON Schema (converted from Zod at build time) or zodLookup reference name */
+  /** JSON Schema (converted from schema at build time) or schemaLookup reference name */
   schema?: Record<string, unknown> | string
   /** OAuth2 configuration (if this is an OAuth2 credential) */
   oauth2?: OAuth2CredentialConfig
