@@ -1,6 +1,6 @@
 import type { SerializeOptions } from 'cookie'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { PikkuError } from '../../errors/error-handler.js'
+import { PikkuError } from '../../errors/error-handler.js'
 import type {
   CoreServices,
   CoreSingletonServices,

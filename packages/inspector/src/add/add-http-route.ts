@@ -21,7 +21,7 @@ import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 import type { InspectorLogger } from '../types.js'
 
 /**
- * Extract header schema reference from headers.request property
+ * Extract header schema reference from headers property
  */
 export const extractHeadersSchema = (
   obj: ts.ObjectLiteralExpression,

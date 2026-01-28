@@ -40,27 +40,14 @@ import { startWorkflowByHttpWire } from '../workflow/workflow-utils.js'
 import { validateSchema } from '../../schema.js'
 
 /**
- * Extract headers from a PikkuHTTPRequest as a record
+ * Extract headers from a PikkuHTTPRequest based on the schema keys
  */
 function extractHeadersFromRequest(
-  request: PikkuHTTPRequest
+  request: PikkuHTTPRequest,
+  headerKeys: string[]
 ): Record<string, string | string[] | undefined> {
   const headers: Record<string, string | string[] | undefined> = {}
-  // Common headers that might be validated
-  const commonHeaders = [
-    'content-type',
-    'authorization',
-    'accept',
-    'x-request-id',
-    'x-idempotency-key',
-    'x-api-key',
-    'x-correlation-id',
-    'user-agent',
-    'origin',
-    'referer',
-    'host',
-  ]
-  for (const headerName of commonHeaders) {
+  for (const headerName of headerKeys) {
     const value = request.header(headerName)
     if (value !== null) {
       headers[headerName] = value
@@ -313,8 +300,15 @@ const executeRoute = async (
   http?.request?.setParams(params)
 
   // Validate request headers if schema is defined
-  if (meta.headersSchemaName && http.request) {
-    const rawHeaders = extractHeadersFromRequest(http.request)
+  if (
+    meta.headersSchemaName &&
+    http.request &&
+    singletonServices.schemaService
+  ) {
+    const headerKeys = singletonServices.schemaService.getSchemaKeys(
+      meta.headersSchemaName
+    )
+    const rawHeaders = extractHeadersFromRequest(http.request, headerKeys)
     await validateSchema(
       singletonServices.logger,
       singletonServices.schemaService,

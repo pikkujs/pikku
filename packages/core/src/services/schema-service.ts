@@ -23,4 +23,11 @@ export interface SchemaService {
    * @returns {Set<string>} A set containing the names of all available schemas.
    */
   getSchemaNames: () => Set<string>
+
+  /**
+   * Retrieves the property keys from a compiled JSON schema.
+   * @param {string} schemaName - The name of the schema.
+   * @returns {string[]} An array of property keys, or empty array if schema not found.
+   */
+  getSchemaKeys: (schemaName: string) => string[]
 }
