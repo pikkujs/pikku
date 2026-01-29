@@ -1,5 +1,16 @@
 # @pikku/templates-mcp-server
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [6cb7e98]
+- Updated dependencies [7c1f909]
+- Updated dependencies [6cb7e98]
+- Updated dependencies [6cb7e98]
+  - @pikku/core@0.12.0
+  - @pikku/modelcontextprotocol@1.0.0
+
 ## 0.1.4
 
 ### Patch Changes
