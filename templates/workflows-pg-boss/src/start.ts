@@ -1,6 +1,10 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { PgWorkflowService, PgTriggerService } from '@pikku/pg'
+import {
+  PgWorkflowService,
+  PgTriggerService,
+  PgDeploymentService,
+} from '@pikku/pg'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -55,7 +59,16 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    const triggerService = new PgTriggerService(singletonServices, sql, 'pikku')
+    const deploymentService = new PgDeploymentService(sql, 'pikku')
+    await deploymentService.init()
+    await deploymentService.start()
+
+    const triggerService = new PgTriggerService(
+      singletonServices,
+      deploymentService,
+      sql,
+      'pikku'
+    )
     await triggerService.init()
 
     await triggerService.register({

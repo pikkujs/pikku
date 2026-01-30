@@ -5,24 +5,16 @@ import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
 import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
+import { DeploymentService } from './deployment-service.js'
 
 /**
- * Generate a deterministic hash for trigger input.
- * Used to create compact unique keys for trigger+input combinations.
+ * Generate a deterministic hash for trigger input data
  */
-export const generateInputHash = (input: unknown): string => {
+export function generateInputHash(input: unknown): string {
   return createHash('md5')
     .update(JSON.stringify(input))
     .digest('hex')
     .slice(0, 12)
-}
-
-/**
- * Target for a trigger - either an RPC function or a workflow
- */
-export interface TriggerTarget {
-  rpc?: string
-  workflow?: string
 }
 
 /**
@@ -31,7 +23,10 @@ export interface TriggerTarget {
 export interface RegisterOptions<TInput = unknown> {
   trigger: string
   input: TInput
-  target: TriggerTarget
+  target: {
+    rpc?: string
+    workflow?: string
+  }
 }
 
 /**
@@ -73,10 +68,12 @@ interface ActiveTrigger {
  * - Firing triggers and invoking all registered targets
  *
  * Concrete implementations (Postgres, Redis) handle the storage layer.
+ * Heartbeat and deployment tracking are delegated to DeploymentService.
  *
  * @example
  * ```typescript
- * const triggerService = new PgTriggerService(singletonServices)
+ * const deploymentService = new PgDeploymentService(sql, 'pikku')
+ * const triggerService = new PgTriggerService(singletonServices, deploymentService, sql, 'pikku')
  *
  * // Register targets for a trigger
  * await triggerService.register({
@@ -94,12 +91,12 @@ interface ActiveTrigger {
  */
 export abstract class TriggerService {
   protected activeTriggers = new Map<string, ActiveTrigger>()
-  protected heartbeatInterval: ReturnType<typeof setInterval> | null = null
-  protected processId: string
   protected rpcService: ContextAwareRPCService
 
-  constructor(protected singletonServices: CoreSingletonServices) {
-    this.processId = `${process.pid}-${Date.now()}`
+  constructor(
+    protected singletonServices: CoreSingletonServices,
+    protected deploymentService: DeploymentService
+  ) {
     this.rpcService = new ContextAwareRPCService(
       singletonServices as any,
       {},
@@ -143,7 +140,7 @@ export abstract class TriggerService {
 
   /**
    * Attempt to claim a trigger instance for this process.
-   * Should be atomic - only succeeds if unclaimed or expired.
+   * Should be atomic - only succeeds if unclaimed or the current owner is dead.
    * @returns true if claim succeeded, false otherwise
    */
   protected abstract tryClaimInstance(
@@ -159,11 +156,6 @@ export abstract class TriggerService {
     triggerName: string,
     inputHash: string
   ): Promise<void>
-
-  /**
-   * Update heartbeat for all instances claimed by this process
-   */
-  protected abstract updateHeartbeat(): Promise<void>
 
   // ============================================
   // Public API
@@ -224,7 +216,7 @@ export abstract class TriggerService {
    *
    * - Gets supported triggers from pikkuState (what's been wired)
    * - Queries DB for trigger instances we can handle
-   * - Attempts to claim each (with heartbeat-based distributed locking)
+   * - Attempts to claim each (using DeploymentService for liveness checks)
    * - Starts subscriptions for claimed triggers
    */
   async start(): Promise<void> {
@@ -257,23 +249,12 @@ export abstract class TriggerService {
         await this.startSubscription(instance)
       }
     }
-
-    // Start heartbeat interval
-    if (this.activeTriggers.size > 0 && !this.heartbeatInterval) {
-      this.heartbeatInterval = setInterval(() => this.heartbeat(), 10_000)
-    }
   }
 
   /**
    * Stop all trigger subscriptions and release claims
    */
   async stop(): Promise<void> {
-    // Stop heartbeat
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval)
-      this.heartbeatInterval = null
-    }
-
     // Teardown all active triggers and release claims
     for (const [key, trigger] of this.activeTriggers) {
       try {
@@ -325,17 +306,6 @@ export abstract class TriggerService {
       )
       // Release claim if we failed to start
       await this.releaseInstance(instance.triggerName, instance.inputHash)
-    }
-  }
-
-  /**
-   * Heartbeat to keep claims alive
-   */
-  private async heartbeat(): Promise<void> {
-    try {
-      await this.updateHeartbeat()
-    } catch (error) {
-      this.singletonServices.logger.error(`Heartbeat failed: ${error}`)
     }
   }
 

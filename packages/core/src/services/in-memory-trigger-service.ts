@@ -1,8 +1,10 @@
+import { CoreSingletonServices } from '../types/core.types.js'
 import {
   TriggerService,
   TriggerRegistration,
   TriggerInputInstance,
 } from './trigger-service.js'
+import { DeploymentService } from './deployment-service.js'
 
 /**
  * In-memory implementation of TriggerService for testing and single-process use.
@@ -15,7 +17,8 @@ import {
  *
  * @example
  * ```typescript
- * const triggerService = new InMemoryTriggerService(singletonServices)
+ * const deploymentService = new InMemoryDeploymentService()
+ * const triggerService = new InMemoryTriggerService(singletonServices, deploymentService)
  * await triggerService.register({
  *   trigger: 'my-trigger',
  *   input: { channel: 'test' },
@@ -32,11 +35,16 @@ export class InMemoryTriggerService extends TriggerService {
       triggerName: string
       inputHash: string
       inputData: unknown
-      ownerProcessId: string
-      heartbeatAt: Date
+      ownerDeploymentId: string
     }
   > = new Map()
-  heartbeatCount = 0
+
+  constructor(
+    singletonServices: CoreSingletonServices,
+    deploymentService: DeploymentService
+  ) {
+    super(singletonServices, deploymentService)
+  }
 
   protected async storeRegistration(
     registration: TriggerRegistration
@@ -103,15 +111,23 @@ export class InMemoryTriggerService extends TriggerService {
   ): Promise<boolean> {
     const key = `${triggerName}:${inputHash}`
     const existing = this.instances.get(key)
-    if (existing && existing.ownerProcessId !== this.processId) {
-      return false
+    if (existing) {
+      const isOurs =
+        existing.ownerDeploymentId === this.deploymentService.deploymentId
+      if (!isOurs) {
+        const alive = await this.deploymentService.isProcessAlive(
+          existing.ownerDeploymentId
+        )
+        if (alive) {
+          return false
+        }
+      }
     }
     this.instances.set(key, {
       triggerName,
       inputHash,
       inputData,
-      ownerProcessId: this.processId,
-      heartbeatAt: new Date(),
+      ownerDeploymentId: this.deploymentService.deploymentId,
     })
     return true
   }
@@ -122,14 +138,5 @@ export class InMemoryTriggerService extends TriggerService {
   ): Promise<void> {
     const key = `${triggerName}:${inputHash}`
     this.instances.delete(key)
-  }
-
-  protected async updateHeartbeat(): Promise<void> {
-    this.heartbeatCount++
-    for (const [_key, instance] of this.instances) {
-      if (instance.ownerProcessId === this.processId) {
-        instance.heartbeatAt = new Date()
-      }
-    }
   }
 }
