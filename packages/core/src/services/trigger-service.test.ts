@@ -336,7 +336,7 @@ describe('TriggerService.unregister', () => {
   test('should remove a registered target', async () => {
     service = new InMemoryTriggerService(createMockServices())
 
-    await service.register({
+    const reg = await service.register({
       trigger: 'test-trigger',
       input: { channel: 'my-channel' },
       target: { rpc: 'processMessage' },
@@ -344,11 +344,7 @@ describe('TriggerService.unregister', () => {
 
     assert.equal(service.registrations.length, 1)
 
-    await service.unregister({
-      trigger: 'test-trigger',
-      input: { channel: 'my-channel' },
-      target: { rpc: 'processMessage' },
-    })
+    await service.unregister(reg)
 
     assert.equal(service.registrations.length, 0)
   })
@@ -356,7 +352,7 @@ describe('TriggerService.unregister', () => {
   test('should only remove the specific target, not others', async () => {
     service = new InMemoryTriggerService(createMockServices())
 
-    await service.register({
+    const reg1 = await service.register({
       trigger: 'test-trigger',
       input: { channel: 'my-channel' },
       target: { rpc: 'processMessage' },
@@ -368,11 +364,7 @@ describe('TriggerService.unregister', () => {
       target: { workflow: 'logWorkflow' },
     })
 
-    await service.unregister({
-      trigger: 'test-trigger',
-      input: { channel: 'my-channel' },
-      target: { rpc: 'processMessage' },
-    })
+    await service.unregister(reg1)
 
     assert.equal(service.registrations.length, 1)
     assert.equal(service.registrations[0].targetType, 'workflow')
@@ -383,9 +375,11 @@ describe('TriggerService.unregister', () => {
 
     // Should not throw
     await service.unregister({
-      trigger: 'test-trigger',
-      input: { channel: 'my-channel' },
-      target: { rpc: 'nonExistent' },
+      triggerName: 'test-trigger',
+      inputHash: 'nonexistent',
+      inputData: {},
+      targetType: 'rpc',
+      targetName: 'nonExistent',
     })
 
     assert.equal(service.registrations.length, 0)
