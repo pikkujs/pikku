@@ -24,6 +24,7 @@ import { SchedulerService } from '../services/scheduler-service.js'
 export type PikkuWiringTypes =
   | 'http'
   | 'scheduler'
+  | 'trigger'
   | 'channel'
   | 'rpc'
   | 'queue'

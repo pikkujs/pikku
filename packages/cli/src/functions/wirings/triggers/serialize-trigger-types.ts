@@ -65,11 +65,11 @@ export type PikkuTriggerFunctionConfigWithSchema<
 /**
  * Type definition for trigger wirings.
  * Triggers set up subscriptions and fire events via wire.trigger.invoke(data).
+ * Input is provided at runtime via TriggerService.register().
  */
 export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
   name: string
   func: PikkuTriggerFunctionConfig<TInput, TOutput>
-  input: TInput
   description?: string
   tags?: string[]
 }
@@ -129,9 +129,10 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
 
 /**
  * Registers a trigger with the Pikku framework.
- * The trigger will be available for setup via setupTrigger.
+ * The trigger will be available for setup via TriggerService.
+ * Input and targets are registered separately via TriggerService.register().
  *
- * @param trigger - Trigger definition with name, function config, and input
+ * @param trigger - Trigger definition with name and function config
  */
 export const wireTrigger = <TInput = unknown, TOutput = unknown>(
   trigger: TriggerWiring<TInput, TOutput>

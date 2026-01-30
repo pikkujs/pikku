@@ -245,6 +245,24 @@ const _getPikkuCLIConfig = async (
     if (!result.triggersTypesFile) {
       result.triggersTypesFile = join(triggerDir, 'pikku-trigger-types.gen.ts')
     }
+    if (!result.triggersWiringFile) {
+      result.triggersWiringFile = join(
+        triggerDir,
+        'pikku-trigger-wirings.gen.ts'
+      )
+    }
+    if (!result.triggersWiringMetaFile) {
+      result.triggersWiringMetaFile = join(
+        triggerDir,
+        'pikku-trigger-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.triggersWiringMetaJsonFile) {
+      result.triggersWiringMetaJsonFile = join(
+        triggerDir,
+        'pikku-trigger-wirings-meta.gen.json'
+      )
+    }
 
     // Scheduler
     if (!result.schedulersWiringFile) {

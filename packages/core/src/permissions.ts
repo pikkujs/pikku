@@ -125,6 +125,7 @@ const combinedPermissionsCache: Record<
   channel: {},
   queue: {},
   scheduler: {},
+  trigger: {},
   mcp: {},
   cli: {},
   workflow: {},

@@ -145,8 +145,6 @@ export interface CoreTrigger<
   name: string
   /** The trigger function configuration */
   func: TriggerFunctionConfig
-  /** Input to pass to the trigger function */
-  input: TInput
   /** Optional description */
   description?: string
   /** Optional tags for categorization */
