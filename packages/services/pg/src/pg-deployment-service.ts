@@ -59,7 +59,7 @@ export class PgDeploymentService extends DeploymentService {
     this.initialized = true
   }
 
-  protected async registerProcess(): Promise<void> {
+  protected async registerDeployment(): Promise<void> {
     await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.deployments (deployment_id, heartbeat_at)
        VALUES ($1, NOW())
@@ -68,7 +68,7 @@ export class PgDeploymentService extends DeploymentService {
     )
   }
 
-  protected async unregisterProcess(): Promise<void> {
+  protected async unregisterDeployment(): Promise<void> {
     await this.sql.unsafe(
       `DELETE FROM ${this.schemaName}.deployments WHERE deployment_id = $1`,
       [this.deploymentId]
@@ -82,7 +82,7 @@ export class PgDeploymentService extends DeploymentService {
     )
   }
 
-  async isProcessAlive(deploymentId: string): Promise<boolean> {
+  async isDeploymentAlive(deploymentId: string): Promise<boolean> {
     const result = await this.sql.unsafe(
       `SELECT 1 FROM ${this.schemaName}.deployments
        WHERE deployment_id = $1
@@ -90,14 +90,6 @@ export class PgDeploymentService extends DeploymentService {
       [deploymentId]
     )
     return result.length > 0
-  }
-
-  async getAliveDeploymentIds(): Promise<string[]> {
-    const result = await this.sql.unsafe(
-      `SELECT deployment_id FROM ${this.schemaName}.deployments
-       WHERE heartbeat_at > NOW() - INTERVAL '${this.heartbeatTimeoutSeconds} seconds'`
-    )
-    return result.map((row) => row.deployment_id as string)
   }
 
   /**

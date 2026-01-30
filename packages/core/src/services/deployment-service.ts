@@ -29,12 +29,12 @@ export abstract class DeploymentService {
   /**
    * Register this deployment and start heartbeat interval
    */
-  protected abstract registerProcess(): Promise<void>
+  protected abstract registerDeployment(): Promise<void>
 
   /**
    * Unregister this deployment
    */
-  protected abstract unregisterProcess(): Promise<void>
+  protected abstract unregisterDeployment(): Promise<void>
 
   /**
    * Update the heartbeat timestamp for this deployment
@@ -44,18 +44,13 @@ export abstract class DeploymentService {
   /**
    * Check if a deployment is still alive (heartbeat within timeout)
    */
-  abstract isProcessAlive(deploymentId: string): Promise<boolean>
-
-  /**
-   * Get all alive deployment IDs
-   */
-  abstract getAliveDeploymentIds(): Promise<string[]>
+  abstract isDeploymentAlive(deploymentId: string): Promise<boolean>
 
   /**
    * Start this deployment: register and begin heartbeat
    */
   async start(): Promise<void> {
-    await this.registerProcess()
+    await this.registerDeployment()
     this.heartbeatInterval = setInterval(() => {
       this.updateHeartbeat().catch(() => {})
     }, 10_000)
@@ -69,6 +64,6 @@ export abstract class DeploymentService {
       clearInterval(this.heartbeatInterval)
       this.heartbeatInterval = null
     }
-    await this.unregisterProcess()
+    await this.unregisterDeployment()
   }
 }

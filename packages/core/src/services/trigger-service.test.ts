@@ -105,7 +105,7 @@ class InMemoryTriggerService extends TriggerService {
       const isOurs =
         existing.ownerDeploymentId === this.deploymentService.deploymentId
       if (!isOurs) {
-        const alive = await this.deploymentService.isProcessAlive(
+        const alive = await this.deploymentService.isDeploymentAlive(
           existing.ownerDeploymentId
         )
         if (alive) {

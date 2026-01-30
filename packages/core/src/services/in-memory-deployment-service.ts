@@ -21,11 +21,11 @@ export class InMemoryDeploymentService extends DeploymentService {
 
   async init(): Promise<void> {}
 
-  protected async registerProcess(): Promise<void> {
+  protected async registerDeployment(): Promise<void> {
     this.deployments.set(this.deploymentId, { heartbeatAt: Date.now() })
   }
 
-  protected async unregisterProcess(): Promise<void> {
+  protected async unregisterDeployment(): Promise<void> {
     this.deployments.delete(this.deploymentId)
   }
 
@@ -36,20 +36,9 @@ export class InMemoryDeploymentService extends DeploymentService {
     }
   }
 
-  async isProcessAlive(deploymentId: string): Promise<boolean> {
+  async isDeploymentAlive(deploymentId: string): Promise<boolean> {
     const entry = this.deployments.get(deploymentId)
     if (!entry) return false
     return Date.now() - entry.heartbeatAt < this.heartbeatTimeoutMs
-  }
-
-  async getAliveDeploymentIds(): Promise<string[]> {
-    const now = Date.now()
-    const alive: string[] = []
-    for (const [id, entry] of this.deployments) {
-      if (now - entry.heartbeatAt < this.heartbeatTimeoutMs) {
-        alive.push(id)
-      }
-    }
-    return alive
   }
 }

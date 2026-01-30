@@ -223,7 +223,7 @@ export class PgTriggerService extends TriggerService {
     }
 
     const currentOwner = existing[0]!.owner_deployment_id as string
-    const alive = await this.deploymentService.isProcessAlive(currentOwner)
+    const alive = await this.deploymentService.isDeploymentAlive(currentOwner)
 
     if (!alive) {
       // Owner is dead, take over
