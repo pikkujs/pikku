@@ -1,4 +1,4 @@
-import type { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices, DeploymentService } from '@pikku/core'
 import {
   TriggerService,
   TriggerRegistration,
@@ -9,12 +9,13 @@ import { Redis, type RedisOptions } from 'ioredis'
 /**
  * Redis-based implementation of TriggerService
  *
- * Stores trigger registrations and manages distributed claiming with heartbeat-based locking.
- * Uses Redis hashes and sorted sets for storage.
+ * Stores trigger registrations and manages distributed claiming.
+ * Uses DeploymentService for liveness checks instead of heartbeat-based locking.
  *
  * @example
  * ```typescript
- * const triggerService = new RedisTriggerService(singletonServices)
+ * const deploymentService = new RedisDeploymentService(redis, 'pikku')
+ * const triggerService = new RedisTriggerService(singletonServices, deploymentService)
  * await triggerService.init()
  *
  * await triggerService.register({
@@ -30,23 +31,21 @@ export class RedisTriggerService extends TriggerService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean
-  private heartbeatTimeoutMs: number
 
   /**
    * @param singletonServices - Core singleton services
+   * @param deploymentService - DeploymentService for liveness checks
    * @param connectionOrConfig - ioredis Redis instance, RedisOptions config, or connection string
    * @param keyPrefix - Redis key prefix (default: 'pikku:triggers')
-   * @param heartbeatTimeoutSeconds - Seconds before a claim expires (default: 30)
    */
   constructor(
     singletonServices: CoreSingletonServices,
+    deploymentService: DeploymentService,
     connectionOrConfig?: Redis | RedisOptions | string,
-    keyPrefix = 'pikku:triggers',
-    heartbeatTimeoutSeconds = 30
+    keyPrefix = 'pikku:triggers'
   ) {
-    super(singletonServices)
+    super(singletonServices, deploymentService)
     this.keyPrefix = keyPrefix
-    this.heartbeatTimeoutMs = heartbeatTimeoutSeconds * 1000
 
     if (connectionOrConfig instanceof Redis) {
       this.redis = connectionOrConfig
@@ -183,23 +182,25 @@ export class RedisTriggerService extends TriggerService {
     _inputData: unknown
   ): Promise<boolean> {
     const key = this.instanceKey(triggerName, inputHash)
-    const now = Date.now()
+    const deploymentId = this.deploymentService.deploymentId
 
     const existing = await this.redis.hgetall(key)
 
-    if (existing.ownerProcessId) {
-      const heartbeatAt = parseInt(existing.heartbeatAt ?? '0', 10)
-      const isExpired = now - heartbeatAt > this.heartbeatTimeoutMs
-      const isOurs = existing.ownerProcessId === this.processId
+    if (existing.ownerDeploymentId) {
+      const isOurs = existing.ownerDeploymentId === deploymentId
 
-      if (!isExpired && !isOurs) {
-        return false
+      if (!isOurs) {
+        const alive = await this.deploymentService.isProcessAlive(
+          existing.ownerDeploymentId
+        )
+        if (alive) {
+          return false
+        }
       }
     }
 
     await this.redis.hset(key, {
-      ownerProcessId: this.processId,
-      heartbeatAt: now.toString(),
+      ownerDeploymentId: deploymentId,
     })
 
     return true
@@ -210,25 +211,9 @@ export class RedisTriggerService extends TriggerService {
     inputHash: string
   ): Promise<void> {
     const key = this.instanceKey(triggerName, inputHash)
-    const owner = await this.redis.hget(key, 'ownerProcessId')
-    if (owner === this.processId) {
+    const owner = await this.redis.hget(key, 'ownerDeploymentId')
+    if (owner === this.deploymentService.deploymentId) {
       await this.redis.del(key)
-    }
-  }
-
-  protected async updateHeartbeat(): Promise<void> {
-    const members = await this.redis.smembers(this.regIndexKey())
-    const now = Date.now().toString()
-
-    for (const member of members) {
-      const separatorIndex = member.indexOf(':')
-      const triggerName = member.substring(0, separatorIndex)
-      const inputHash = member.substring(separatorIndex + 1)
-      const key = this.instanceKey(triggerName, inputHash)
-      const owner = await this.redis.hget(key, 'ownerProcessId')
-      if (owner === this.processId) {
-        await this.redis.hset(key, 'heartbeatAt', now)
-      }
     }
   }
 

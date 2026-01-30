@@ -7,6 +7,8 @@ import {
   TriggerInputInstance,
   generateInputHash,
 } from './trigger-service.js'
+import { DeploymentService } from './deployment-service.js'
+import { InMemoryDeploymentService } from './in-memory-deployment-service.js'
 import type { CoreSingletonServices } from '../types/core.types.js'
 import { wireTrigger } from '../wirings/trigger/trigger-runner.js'
 
@@ -22,11 +24,16 @@ class InMemoryTriggerService extends TriggerService {
       triggerName: string
       inputHash: string
       inputData: unknown
-      ownerProcessId: string
-      heartbeatAt: Date
+      ownerDeploymentId: string
     }
   > = new Map()
-  heartbeatCount = 0
+
+  constructor(
+    singletonServices: CoreSingletonServices,
+    deploymentService: DeploymentService
+  ) {
+    super(singletonServices, deploymentService)
+  }
 
   protected async storeRegistration(
     registration: TriggerRegistration
@@ -94,16 +101,23 @@ class InMemoryTriggerService extends TriggerService {
   ): Promise<boolean> {
     const key = `${triggerName}:${inputHash}`
     const existing = this.instances.get(key)
-    if (existing && existing.ownerProcessId !== this.processId) {
-      // Already claimed by another process
-      return false
+    if (existing) {
+      const isOurs =
+        existing.ownerDeploymentId === this.deploymentService.deploymentId
+      if (!isOurs) {
+        const alive = await this.deploymentService.isProcessAlive(
+          existing.ownerDeploymentId
+        )
+        if (alive) {
+          return false
+        }
+      }
     }
     this.instances.set(key, {
       triggerName,
       inputHash,
       inputData,
-      ownerProcessId: this.processId,
-      heartbeatAt: new Date(),
+      ownerDeploymentId: this.deploymentService.deploymentId,
     })
     return true
   }
@@ -114,15 +128,6 @@ class InMemoryTriggerService extends TriggerService {
   ): Promise<void> {
     const key = `${triggerName}:${inputHash}`
     this.instances.delete(key)
-  }
-
-  protected async updateHeartbeat(): Promise<void> {
-    this.heartbeatCount++
-    for (const [key, instance] of this.instances) {
-      if (instance.ownerProcessId === this.processId) {
-        instance.heartbeatAt = new Date()
-      }
-    }
   }
 }
 
@@ -146,6 +151,13 @@ const createMockServices = (logger?: ReturnType<typeof createMockLogger>) => {
   return {
     logger: logger ?? createMockLogger(),
   } as any as CoreSingletonServices
+}
+
+const createDeploymentService = () => {
+  const ds = new InMemoryDeploymentService()
+  ds.init()
+  ds.start()
+  return ds
 }
 
 const setupTriggerMeta = (name: string) => {
@@ -184,6 +196,7 @@ const wireMockTrigger = (name: string, options?: { fireOnSetup?: unknown }) => {
 // ============================================
 
 let service: InMemoryTriggerService
+let deploymentService: InMemoryDeploymentService
 
 beforeEach(() => {
   resetPikkuState()
@@ -192,6 +205,9 @@ beforeEach(() => {
 afterEach(async () => {
   if (service) {
     await service.stop()
+  }
+  if (deploymentService) {
+    await deploymentService.stop()
   }
 })
 
@@ -225,7 +241,11 @@ describe('generateInputHash', () => {
 
 describe('TriggerService.register', () => {
   test('should register an RPC target', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'test-trigger',
@@ -240,7 +260,11 @@ describe('TriggerService.register', () => {
   })
 
   test('should register a workflow target', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'test-trigger',
@@ -254,7 +278,11 @@ describe('TriggerService.register', () => {
   })
 
   test('should register multiple targets for the same trigger+input', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'test-trigger',
@@ -272,7 +300,11 @@ describe('TriggerService.register', () => {
   })
 
   test('should be idempotent (duplicate registration is a no-op)', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'test-trigger',
@@ -290,7 +322,11 @@ describe('TriggerService.register', () => {
   })
 
   test('should throw when target has neither rpc nor workflow', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     await assert.rejects(
       async () => {
@@ -310,7 +346,11 @@ describe('TriggerService.register', () => {
   })
 
   test('should compute different input hashes for different inputs', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'test-trigger',
@@ -334,7 +374,11 @@ describe('TriggerService.register', () => {
 
 describe('TriggerService.unregister', () => {
   test('should remove a registered target', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     const reg = await service.register({
       trigger: 'test-trigger',
@@ -350,7 +394,11 @@ describe('TriggerService.unregister', () => {
   })
 
   test('should only remove the specific target, not others', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     const reg1 = await service.register({
       trigger: 'test-trigger',
@@ -371,7 +419,11 @@ describe('TriggerService.unregister', () => {
   })
 
   test('should be a no-op when target does not exist', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     // Should not throw
     await service.unregister({
@@ -389,7 +441,11 @@ describe('TriggerService.unregister', () => {
 describe('TriggerService.start', () => {
   test('should do nothing when no triggers are wired', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'test-trigger',
@@ -405,7 +461,11 @@ describe('TriggerService.start', () => {
 
   test('should start a trigger subscription for wired triggers', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     wireMockTrigger('test-trigger')
 
@@ -423,7 +483,11 @@ describe('TriggerService.start', () => {
 
   test('should only start triggers this process supports', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     wireMockTrigger('supported-trigger')
 
@@ -453,7 +517,11 @@ describe('TriggerService.start', () => {
 
   test('should start multiple trigger instances with different inputs', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     wireMockTrigger('test-trigger')
 
@@ -476,7 +544,11 @@ describe('TriggerService.start', () => {
 
   test('should not start a trigger that is already active', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     wireMockTrigger('test-trigger')
 
@@ -519,7 +591,11 @@ describe('TriggerService.stop', () => {
     })
 
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     await service.register({
       trigger: 'stop-trigger',
@@ -540,7 +616,11 @@ describe('TriggerService.stop', () => {
 
   test('should release claimed instances on stop', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     wireMockTrigger('release-trigger')
 
@@ -558,7 +638,11 @@ describe('TriggerService.stop', () => {
   })
 
   test('should be safe to call stop when nothing is started', async () => {
-    service = new InMemoryTriggerService(createMockServices())
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(),
+      deploymentService
+    )
 
     // Should not throw
     await service.stop()
@@ -575,7 +659,8 @@ describe('TriggerService.onTriggerFire', () => {
       logger: mockLogger,
     } as any
 
-    service = new InMemoryTriggerService(mockServices)
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(mockServices, deploymentService)
 
     // Override the rpcService to capture calls
     ;(service as any).rpcService = {
@@ -624,7 +709,8 @@ describe('TriggerService.onTriggerFire', () => {
       logger: mockLogger,
     } as any
 
-    service = new InMemoryTriggerService(mockServices)
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(mockServices, deploymentService)
     ;(service as any).rpcService = {
       rpc: async () => {},
       startWorkflow: async (name: string, data: any) => {
@@ -669,7 +755,8 @@ describe('TriggerService.onTriggerFire', () => {
       logger: mockLogger,
     } as any
 
-    service = new InMemoryTriggerService(mockServices)
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(mockServices, deploymentService)
     ;(service as any).rpcService = {
       rpc: async (name: string) => {
         invoked.push(`rpc:${name}`)
@@ -725,7 +812,8 @@ describe('TriggerService.onTriggerFire', () => {
       logger: mockLogger,
     } as any
 
-    service = new InMemoryTriggerService(mockServices)
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(mockServices, deploymentService)
     ;(service as any).rpcService = {
       rpc: async () => {
         throw new Error('RPC failed')
@@ -764,9 +852,13 @@ describe('TriggerService.onTriggerFire', () => {
 })
 
 describe('TriggerService claiming', () => {
-  test('should not claim an instance already owned by another process', async () => {
+  test('should not claim an instance already owned by another alive deployment', async () => {
     const mockLogger = createMockLogger()
-    service = new InMemoryTriggerService(createMockServices(mockLogger))
+    deploymentService = createDeploymentService()
+    service = new InMemoryTriggerService(
+      createMockServices(mockLogger),
+      deploymentService
+    )
 
     wireMockTrigger('claimed-trigger')
 
@@ -776,20 +868,25 @@ describe('TriggerService claiming', () => {
       target: { rpc: 'handle' },
     })
 
-    // Simulate another process claiming the instance
+    // Simulate another deployment claiming the instance
+    // We need to register the other deployment as alive in the deployment service
+    const otherDeploymentId = 'other-deployment-123'
+    ;(deploymentService as any).deployments.set(otherDeploymentId, {
+      heartbeatAt: Date.now(),
+    })
+
     const inputHash = generateInputHash({ channel: 'test' })
     service.instances.set(`claimed-trigger:${inputHash}`, {
       triggerName: 'claimed-trigger',
       inputHash,
       inputData: { channel: 'test' },
-      ownerProcessId: 'other-process-123',
-      heartbeatAt: new Date(),
+      ownerDeploymentId: otherDeploymentId,
     })
 
     await service.start()
 
-    // The instance should still be owned by the other process
+    // The instance should still be owned by the other deployment
     const instance = service.instances.get(`claimed-trigger:${inputHash}`)
-    assert.equal(instance?.ownerProcessId, 'other-process-123')
+    assert.equal(instance?.ownerDeploymentId, otherDeploymentId)
   })
 })

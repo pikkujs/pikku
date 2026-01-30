@@ -1,4 +1,4 @@
-import type { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices, DeploymentService } from '@pikku/core'
 import {
   TriggerService,
   TriggerRegistration,
@@ -9,12 +9,14 @@ import postgres from 'postgres'
 /**
  * PostgreSQL-based implementation of TriggerService
  *
- * Stores trigger registrations and manages distributed claiming with heartbeat-based locking.
+ * Stores trigger registrations and manages distributed claiming.
+ * Uses DeploymentService for liveness checks instead of heartbeat-based locking.
  *
  * @example
  * ```typescript
  * const sql = postgres('postgresql://localhost:5432/pikku')
- * const triggerService = new PgTriggerService(singletonServices, sql, 'pikku')
+ * const deploymentService = new PgDeploymentService(sql, 'pikku')
+ * const triggerService = new PgTriggerService(singletonServices, deploymentService, sql, 'pikku')
  * await triggerService.init()
  *
  * // Register a trigger target
@@ -33,23 +35,21 @@ export class PgTriggerService extends TriggerService {
   private schemaName: string
   private initialized = false
   private ownsConnection: boolean
-  private heartbeatTimeoutSeconds: number
 
   /**
    * @param singletonServices - Core singleton services
+   * @param deploymentService - DeploymentService for liveness checks
    * @param connectionOrConfig - postgres.Sql connection instance or postgres.Options config
    * @param schemaName - PostgreSQL schema name (default: 'pikku')
-   * @param heartbeatTimeoutSeconds - Seconds before a claim expires (default: 30)
    */
   constructor(
     singletonServices: CoreSingletonServices,
+    deploymentService: DeploymentService,
     connectionOrConfig: postgres.Sql | postgres.Options<{}>,
-    schemaName = 'pikku',
-    heartbeatTimeoutSeconds = 30
+    schemaName = 'pikku'
   ) {
-    super(singletonServices)
+    super(singletonServices, deploymentService)
     this.schemaName = schemaName
-    this.heartbeatTimeoutSeconds = heartbeatTimeoutSeconds
 
     // Check if it's a postgres.Sql instance or config options
     if (typeof connectionOrConfig === 'function') {
@@ -84,13 +84,13 @@ export class PgTriggerService extends TriggerService {
         UNIQUE(trigger_name, input_hash, target_type, target_name)
       );
 
-      -- Tracks which process owns each trigger subscription
+      -- Tracks which deployment owns each trigger subscription
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.trigger_instances (
         trigger_name VARCHAR NOT NULL,
         input_hash VARCHAR NOT NULL,
         input_data JSONB NOT NULL,
-        owner_process_id VARCHAR NOT NULL,
-        heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        owner_deployment_id VARCHAR NOT NULL,
+        claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (trigger_name, input_hash)
       );
 
@@ -191,22 +191,53 @@ export class PgTriggerService extends TriggerService {
     inputHash: string,
     inputData: unknown
   ): Promise<boolean> {
-    // Atomic claim: insert or update if expired
+    const deploymentId = this.deploymentService.deploymentId
+
+    // First try to insert (unclaimed case) or reclaim our own
     const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.trigger_instances
-        (trigger_name, input_hash, input_data, owner_process_id, heartbeat_at)
+        (trigger_name, input_hash, input_data, owner_deployment_id, claimed_at)
       VALUES ($1, $2, $3, $4, NOW())
       ON CONFLICT (trigger_name, input_hash)
       DO UPDATE SET
-        owner_process_id = $4,
-        heartbeat_at = NOW()
-      WHERE ${this.schemaName}.trigger_instances.heartbeat_at < NOW() - INTERVAL '${this.heartbeatTimeoutSeconds} seconds'
-         OR ${this.schemaName}.trigger_instances.owner_process_id = $4
+        owner_deployment_id = $4,
+        claimed_at = NOW()
+      WHERE ${this.schemaName}.trigger_instances.owner_deployment_id = $4
       RETURNING *`,
-      [triggerName, inputHash, JSON.stringify(inputData), this.processId]
+      [triggerName, inputHash, JSON.stringify(inputData), deploymentId]
     )
 
-    return result.length > 0
+    if (result.length > 0) {
+      return true
+    }
+
+    // Check if the current owner is still alive
+    const existing = await this.sql.unsafe(
+      `SELECT owner_deployment_id FROM ${this.schemaName}.trigger_instances
+       WHERE trigger_name = $1 AND input_hash = $2`,
+      [triggerName, inputHash]
+    )
+
+    if (existing.length === 0) {
+      return false
+    }
+
+    const currentOwner = existing[0]!.owner_deployment_id as string
+    const alive = await this.deploymentService.isProcessAlive(currentOwner)
+
+    if (!alive) {
+      // Owner is dead, take over
+      const takeOver = await this.sql.unsafe(
+        `UPDATE ${this.schemaName}.trigger_instances
+         SET owner_deployment_id = $3, claimed_at = NOW()
+         WHERE trigger_name = $1 AND input_hash = $2 AND owner_deployment_id = $4
+         RETURNING *`,
+        [triggerName, inputHash, deploymentId, currentOwner]
+      )
+      return takeOver.length > 0
+    }
+
+    return false
   }
 
   protected async releaseInstance(
@@ -215,17 +246,8 @@ export class PgTriggerService extends TriggerService {
   ): Promise<void> {
     await this.sql.unsafe(
       `DELETE FROM ${this.schemaName}.trigger_instances
-      WHERE trigger_name = $1 AND input_hash = $2 AND owner_process_id = $3`,
-      [triggerName, inputHash, this.processId]
-    )
-  }
-
-  protected async updateHeartbeat(): Promise<void> {
-    await this.sql.unsafe(
-      `UPDATE ${this.schemaName}.trigger_instances
-      SET heartbeat_at = NOW()
-      WHERE owner_process_id = $1`,
-      [this.processId]
+      WHERE trigger_name = $1 AND input_hash = $2 AND owner_deployment_id = $3`,
+      [triggerName, inputHash, this.deploymentService.deploymentId]
     )
   }
 
@@ -280,12 +302,12 @@ export class PgTriggerService extends TriggerService {
     Array<{
       triggerName: string
       inputHash: string
-      ownerProcessId: string
-      heartbeatAt: Date
+      ownerDeploymentId: string
+      claimedAt: Date
     }>
   > {
     const result = await this.sql.unsafe(
-      `SELECT trigger_name, input_hash, owner_process_id, heartbeat_at
+      `SELECT trigger_name, input_hash, owner_deployment_id, claimed_at
       FROM ${this.schemaName}.trigger_instances
       ORDER BY trigger_name, input_hash`
     )
@@ -293,21 +315,8 @@ export class PgTriggerService extends TriggerService {
     return result.map((row) => ({
       triggerName: row.trigger_name as string,
       inputHash: row.input_hash as string,
-      ownerProcessId: row.owner_process_id as string,
-      heartbeatAt: new Date(row.heartbeat_at as string),
+      ownerDeploymentId: row.owner_deployment_id as string,
+      claimedAt: new Date(row.claimed_at as string),
     }))
-  }
-
-  /**
-   * Clean up expired claims (useful for maintenance)
-   */
-  async cleanupExpiredClaims(): Promise<number> {
-    const result = await this.sql.unsafe(
-      `DELETE FROM ${this.schemaName}.trigger_instances
-      WHERE heartbeat_at < NOW() - INTERVAL '${this.heartbeatTimeoutSeconds} seconds'
-      RETURNING *`
-    )
-
-    return result.length
   }
 }

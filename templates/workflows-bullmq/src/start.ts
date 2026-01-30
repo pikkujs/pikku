@@ -1,6 +1,10 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { RedisWorkflowService, RedisTriggerService } from '@pikku/redis'
+import {
+  RedisWorkflowService,
+  RedisTriggerService,
+  RedisDeploymentService,
+} from '@pikku/redis'
 import {
   createConfig,
   createWireServices,
@@ -47,7 +51,14 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    const triggerService = new RedisTriggerService(singletonServices)
+    const deploymentService = new RedisDeploymentService()
+    await deploymentService.init()
+    await deploymentService.start()
+
+    const triggerService = new RedisTriggerService(
+      singletonServices,
+      deploymentService
+    )
     await triggerService.init()
 
     await triggerService.register({
