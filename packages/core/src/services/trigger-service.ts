@@ -1,3 +1,5 @@
+import { createHash } from 'crypto'
+
 import { CoreSingletonServices } from '../types/core.types.js'
 import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
@@ -5,18 +7,14 @@ import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
 
 /**
- * Generate a deterministic hash for trigger input
- * Used to create unique keys for trigger+input combinations
+ * Generate a deterministic hash for trigger input.
+ * Used to create compact unique keys for trigger+input combinations.
  */
 export const generateInputHash = (input: unknown): string => {
-  const inputStr = JSON.stringify(input)
-  let hash = 0
-  for (let i = 0; i < inputStr.length; i++) {
-    const char = inputStr.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash
-  }
-  return Math.abs(hash).toString(36)
+  return createHash('md5')
+    .update(JSON.stringify(input))
+    .digest('hex')
+    .slice(0, 12)
 }
 
 /**
@@ -171,54 +169,53 @@ export abstract class TriggerService {
   // Public API
   // ============================================
 
-  /**
-   * Register a trigger → target association (stored in DB)
-   * A trigger+input can have multiple targets (RPCs or workflows)
-   */
-  async register<TInput>(options: RegisterOptions<TInput>): Promise<void> {
-    const inputHash = generateInputHash(options.input)
-    const targetType = options.target.workflow ? 'workflow' : 'rpc'
+  private resolveOptions<TInput>(
+    options: RegisterOptions<TInput>
+  ): TriggerRegistration {
+    const targetType = options.target.workflow
+      ? ('workflow' as const)
+      : ('rpc' as const)
     const targetName = options.target.workflow ?? options.target.rpc
 
     if (!targetName) {
       throw new Error('Target must specify either rpc or workflow')
     }
 
-    await this.storeRegistration({
+    return {
       triggerName: options.trigger,
-      inputHash,
+      inputHash: generateInputHash(options.input),
       inputData: options.input,
       targetType,
       targetName,
-    })
+    }
+  }
+
+  /**
+   * Register a trigger → target association (stored in DB).
+   * A trigger+input can have multiple targets (RPCs or workflows).
+   * Returns the registration for use with unregister().
+   */
+  async register<TInput>(
+    options: RegisterOptions<TInput>
+  ): Promise<TriggerRegistration> {
+    const registration = this.resolveOptions(options)
+    await this.storeRegistration(registration)
 
     this.singletonServices.logger.info(
-      `Registered ${targetType} target '${targetName}' for trigger '${options.trigger}'`
+      `Registered ${registration.targetType} target '${registration.targetName}' for trigger '${options.trigger}'`
     )
+
+    return registration
   }
 
   /**
    * Unregister a specific target from a trigger
    */
-  async unregister<TInput>(options: RegisterOptions<TInput>): Promise<void> {
-    const inputHash = generateInputHash(options.input)
-    const targetType = options.target.workflow ? 'workflow' : 'rpc'
-    const targetName = options.target.workflow ?? options.target.rpc
-
-    if (!targetName) {
-      throw new Error('Target must specify either rpc or workflow')
-    }
-
-    await this.removeRegistration({
-      triggerName: options.trigger,
-      inputHash,
-      inputData: options.input,
-      targetType,
-      targetName,
-    })
+  async unregister(registration: TriggerRegistration): Promise<void> {
+    await this.removeRegistration(registration)
 
     this.singletonServices.logger.info(
-      `Unregistered ${targetType} target '${targetName}' from trigger '${options.trigger}'`
+      `Unregistered ${registration.targetType} target '${registration.targetName}' from trigger '${registration.triggerName}'`
     )
   }
 
