@@ -49,11 +49,7 @@ export class RedisDeploymentService extends DeploymentService {
     return `${this.keyPrefix}:deployment:${deploymentId}`
   }
 
-  private deploymentIndexKey(): string {
-    return `${this.keyPrefix}:deployment-index`
-  }
-
-  protected async registerProcess(): Promise<void> {
+  protected async registerDeployment(): Promise<void> {
     const key = this.deploymentKey(this.deploymentId)
     await this.redis.set(
       key,
@@ -61,13 +57,11 @@ export class RedisDeploymentService extends DeploymentService {
       'EX',
       this.heartbeatTimeoutSeconds
     )
-    await this.redis.sadd(this.deploymentIndexKey(), this.deploymentId)
   }
 
-  protected async unregisterProcess(): Promise<void> {
+  protected async unregisterDeployment(): Promise<void> {
     const key = this.deploymentKey(this.deploymentId)
     await this.redis.del(key)
-    await this.redis.srem(this.deploymentIndexKey(), this.deploymentId)
   }
 
   protected async updateHeartbeat(): Promise<void> {
@@ -80,24 +74,10 @@ export class RedisDeploymentService extends DeploymentService {
     )
   }
 
-  async isProcessAlive(deploymentId: string): Promise<boolean> {
+  async isDeploymentAlive(deploymentId: string): Promise<boolean> {
     const key = this.deploymentKey(deploymentId)
     const exists = await this.redis.exists(key)
     return exists === 1
-  }
-
-  async getAliveDeploymentIds(): Promise<string[]> {
-    const members = await this.redis.smembers(this.deploymentIndexKey())
-    const alive: string[] = []
-    for (const id of members) {
-      if (await this.isProcessAlive(id)) {
-        alive.push(id)
-      } else {
-        // Clean up stale index entry
-        await this.redis.srem(this.deploymentIndexKey(), id)
-      }
-    }
-    return alive
   }
 
   /**

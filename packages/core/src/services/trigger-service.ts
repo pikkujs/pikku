@@ -8,16 +8,6 @@ import { pikkuState } from '../pikku-state.js'
 import { DeploymentService } from './deployment-service.js'
 
 /**
- * Generate a deterministic hash for trigger input data
- */
-export function generateInputHash(input: unknown): string {
-  return createHash('md5')
-    .update(JSON.stringify(input))
-    .digest('hex')
-    .slice(0, 12)
-}
-
-/**
  * Options for registering a trigger target
  */
 export interface RegisterOptions<TInput = unknown> {
@@ -175,7 +165,10 @@ export abstract class TriggerService {
 
     return {
       triggerName: options.trigger,
-      inputHash: generateInputHash(options.input),
+      inputHash: createHash('md5')
+        .update(JSON.stringify(options.input))
+        .digest('hex')
+        .slice(0, 12),
       inputData: options.input,
       targetType,
       targetName,
