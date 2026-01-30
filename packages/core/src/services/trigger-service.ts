@@ -8,6 +8,16 @@ import { pikkuState } from '../pikku-state.js'
 import { DeploymentService } from './deployment-service.js'
 
 /**
+ * Generate a deterministic hash from trigger input data
+ */
+export function generateInputHash(input: unknown): string {
+  return createHash('md5')
+    .update(JSON.stringify(input))
+    .digest('hex')
+    .slice(0, 12)
+}
+
+/**
  * Options for registering a trigger target
  */
 export interface RegisterOptions<TInput = unknown> {
@@ -88,7 +98,7 @@ export abstract class TriggerService {
     protected deploymentService: DeploymentService
   ) {
     this.rpcService = new ContextAwareRPCService(
-      singletonServices as any,
+      singletonServices,
       {},
       { requiresAuth: false }
     )
@@ -117,7 +127,7 @@ export abstract class TriggerService {
    * Optionally filtered to only triggers this process supports
    */
   protected abstract getDistinctTriggerInputs(
-    supportedTriggers?: string[]
+    supportedTriggers: string[]
   ): Promise<TriggerInputInstance[]>
 
   /**
@@ -165,10 +175,7 @@ export abstract class TriggerService {
 
     return {
       triggerName: options.trigger,
-      inputHash: createHash('md5')
-        .update(JSON.stringify(options.input))
-        .digest('hex')
-        .slice(0, 12),
+      inputHash: generateInputHash(options.input),
       inputData: options.input,
       targetType,
       targetName,
