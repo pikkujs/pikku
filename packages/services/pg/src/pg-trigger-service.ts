@@ -74,14 +74,21 @@ export class PgTriggerService extends TriggerService {
 
       -- Stores trigger -> target associations
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.trigger_registrations (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         trigger_name VARCHAR NOT NULL,
         input_hash VARCHAR NOT NULL,
         input_data JSONB NOT NULL,
         target_type VARCHAR NOT NULL,
         target_name VARCHAR NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(trigger_name, input_hash, target_type, target_name)
+        PRIMARY KEY (trigger_name, input_hash, target_type, target_name)
+      );
+
+      -- Tracks which deployments are interested in each trigger+input
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.trigger_registration_deployments (
+        trigger_name VARCHAR NOT NULL,
+        input_hash VARCHAR NOT NULL,
+        deployment_id VARCHAR NOT NULL,
+        PRIMARY KEY (trigger_name, input_hash, deployment_id)
       );
 
       -- Tracks which deployment owns each trigger subscription
@@ -93,10 +100,6 @@ export class PgTriggerService extends TriggerService {
         claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (trigger_name, input_hash)
       );
-
-      -- Index for querying targets when trigger fires
-      CREATE INDEX IF NOT EXISTS idx_trigger_registrations_lookup
-        ON ${this.schemaName}.trigger_registrations(trigger_name, input_hash);
     `)
 
     this.initialized = true
@@ -122,14 +125,35 @@ export class PgTriggerService extends TriggerService {
         registration.targetName,
       ]
     )
+
+    // Associate this deployment with the trigger+input
+    await this.sql.unsafe(
+      `INSERT INTO ${this.schemaName}.trigger_registration_deployments
+        (trigger_name, input_hash, deployment_id)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (trigger_name, input_hash, deployment_id) DO NOTHING`,
+      [
+        registration.triggerName,
+        registration.inputHash,
+        this.deploymentService.deploymentId,
+      ]
+    )
   }
 
   protected async removeRegistration(
     registration: TriggerRegistration
   ): Promise<void> {
     await this.sql.unsafe(
-      `DELETE FROM ${this.schemaName}.trigger_registrations
-      WHERE trigger_name = $1 AND input_hash = $2 AND target_type = $3 AND target_name = $4`,
+      `WITH del AS (
+        DELETE FROM ${this.schemaName}.trigger_registrations
+        WHERE trigger_name = $1 AND input_hash = $2 AND target_type = $3 AND target_name = $4
+      )
+      DELETE FROM ${this.schemaName}.trigger_registration_deployments
+      WHERE trigger_name = $1 AND input_hash = $2
+        AND NOT EXISTS (
+          SELECT 1 FROM ${this.schemaName}.trigger_registrations
+          WHERE trigger_name = $1 AND input_hash = $2
+        )`,
       [
         registration.triggerName,
         registration.inputHash,
@@ -140,27 +164,16 @@ export class PgTriggerService extends TriggerService {
   }
 
   protected async getDistinctTriggerInputs(
-    supportedTriggers?: string[]
+    supportedTriggers: string[]
   ): Promise<TriggerInputInstance[]> {
-    let query: string
-    let params: any[]
-
-    if (supportedTriggers && supportedTriggers.length > 0) {
-      query = `
-        SELECT DISTINCT trigger_name, input_hash, input_data
-        FROM ${this.schemaName}.trigger_registrations
-        WHERE trigger_name = ANY($1)
-      `
-      params = [supportedTriggers]
-    } else {
-      query = `
-        SELECT DISTINCT trigger_name, input_hash, input_data
-        FROM ${this.schemaName}.trigger_registrations
-      `
-      params = []
-    }
-
-    const result = await this.sql.unsafe(query, params)
+    const result = await this.sql.unsafe(
+      `SELECT DISTINCT r.trigger_name, r.input_hash, r.input_data
+      FROM ${this.schemaName}.trigger_registrations r
+      INNER JOIN ${this.schemaName}.trigger_registration_deployments d
+        ON r.trigger_name = d.trigger_name AND r.input_hash = d.input_hash
+      WHERE d.deployment_id = $1 AND r.trigger_name = ANY($2)`,
+      [this.deploymentService.deploymentId, supportedTriggers]
+    )
 
     return result.map((row) => ({
       triggerName: row.trigger_name as string,

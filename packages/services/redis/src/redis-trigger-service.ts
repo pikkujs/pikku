@@ -74,6 +74,11 @@ export class RedisTriggerService extends TriggerService {
     return `${this.keyPrefix}:reg-index`
   }
 
+  /** Set key tracking which deployments are interested in a trigger+input */
+  private regDeploymentKey(triggerName: string, inputHash: string): string {
+    return `${this.keyPrefix}:reg-dep:${triggerName}:${inputHash}`
+  }
+
   /** Hash key for a claimed instance */
   private instanceKey(triggerName: string, inputHash: string): string {
     return `${this.keyPrefix}:inst:${triggerName}:${inputHash}`
@@ -107,6 +112,12 @@ export class RedisTriggerService extends TriggerService {
       this.regIndexKey(),
       `${registration.triggerName}:${registration.inputHash}`
     )
+
+    // Associate this deployment with the trigger+input
+    await this.redis.sadd(
+      this.regDeploymentKey(registration.triggerName, registration.inputHash),
+      this.deploymentService.deploymentId
+    )
   }
 
   protected async removeRegistration(
@@ -125,11 +136,15 @@ export class RedisTriggerService extends TriggerService {
         this.regIndexKey(),
         `${registration.triggerName}:${registration.inputHash}`
       )
+      // Clean up all deployment associations for this trigger+input
+      await this.redis.del(
+        this.regDeploymentKey(registration.triggerName, registration.inputHash)
+      )
     }
   }
 
   protected async getDistinctTriggerInputs(
-    supportedTriggers?: string[]
+    supportedTriggers: string[]
   ): Promise<TriggerInputInstance[]> {
     const members = await this.redis.smembers(this.regIndexKey())
     const results: TriggerInputInstance[] = []
@@ -139,7 +154,16 @@ export class RedisTriggerService extends TriggerService {
       const triggerName = member.substring(0, separatorIndex)
       const inputHash = member.substring(separatorIndex + 1)
 
-      if (supportedTriggers && !supportedTriggers.includes(triggerName)) {
+      if (!supportedTriggers.includes(triggerName)) {
+        continue
+      }
+
+      // Check if this deployment is associated with this trigger+input
+      const isMember = await this.redis.sismember(
+        this.regDeploymentKey(triggerName, inputHash),
+        this.deploymentService.deploymentId
+      )
+      if (!isMember) {
         continue
       }
 

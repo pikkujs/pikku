@@ -29,6 +29,8 @@ import { DeploymentService } from './deployment-service.js'
  */
 export class InMemoryTriggerService extends TriggerService {
   registrations: TriggerRegistration[] = []
+  /** Tracks which deployments are interested in each trigger+input */
+  deploymentAssociations: Set<string> = new Set()
   instances: Map<
     string,
     {
@@ -59,6 +61,10 @@ export class InMemoryTriggerService extends TriggerService {
     if (!exists) {
       this.registrations.push(registration)
     }
+    // Associate this deployment with the trigger+input
+    this.deploymentAssociations.add(
+      `${registration.triggerName}:${registration.inputHash}:${this.deploymentService.deploymentId}`
+    )
   }
 
   protected async removeRegistration(
@@ -73,17 +79,43 @@ export class InMemoryTriggerService extends TriggerService {
           r.targetName === registration.targetName
         )
     )
+
+    // If no more registrations exist for this trigger+input, clean up deployment associations
+    const hasRemaining = this.registrations.some(
+      (r) =>
+        r.triggerName === registration.triggerName &&
+        r.inputHash === registration.inputHash
+    )
+    if (!hasRemaining) {
+      for (const key of this.deploymentAssociations) {
+        if (
+          key.startsWith(
+            `${registration.triggerName}:${registration.inputHash}:`
+          )
+        ) {
+          this.deploymentAssociations.delete(key)
+        }
+      }
+    }
   }
 
   protected async getDistinctTriggerInputs(
-    supportedTriggers?: string[]
+    supportedTriggers: string[]
   ): Promise<TriggerInputInstance[]> {
     const seen = new Map<string, TriggerInputInstance>()
     for (const r of this.registrations) {
-      if (supportedTriggers && !supportedTriggers.includes(r.triggerName)) {
+      if (!supportedTriggers.includes(r.triggerName)) {
         continue
       }
       const key = `${r.triggerName}:${r.inputHash}`
+      // Only include trigger+input pairs this deployment is associated with
+      if (
+        !this.deploymentAssociations.has(
+          `${r.triggerName}:${r.inputHash}:${this.deploymentService.deploymentId}`
+        )
+      ) {
+        continue
+      }
       if (!seen.has(key)) {
         seen.set(key, {
           triggerName: r.triggerName,
