@@ -1,6 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { RedisWorkflowService } from '@pikku/redis'
+import { RedisWorkflowService, RedisTriggerService } from '@pikku/redis'
 import {
   createConfig,
   createWireServices,
@@ -46,6 +46,18 @@ async function main(): Promise<void> {
     singletonServices.logger.info(
       'Workflow workers ready and listening for jobs'
     )
+
+    const triggerService = new RedisTriggerService(singletonServices)
+    await triggerService.init()
+
+    await triggerService.register({
+      trigger: 'test-event',
+      input: { eventName: 'order-created' },
+      target: { rpc: 'onTestEvent' },
+    })
+
+    await triggerService.start()
+    singletonServices.logger.info('Trigger service started')
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)

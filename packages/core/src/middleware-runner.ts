@@ -116,6 +116,7 @@ const middlewareCache: Record<
   channel: {},
   queue: {},
   scheduler: {},
+  trigger: {},
   mcp: {},
   cli: {},
   workflow: {},

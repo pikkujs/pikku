@@ -5,6 +5,7 @@ import type {
   CorePikkuTriggerFunctionConfig,
 } from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
+import { addFunction } from '../../function/function-runner.js'
 
 /**
  * Registers a trigger with the Pikku framework.
@@ -26,6 +27,8 @@ export const wireTrigger = <
     throw new Error(`Trigger metadata not found: ${trigger.name}`)
   }
 
+  addFunction(triggerMeta.pikkuFuncName, trigger.func as any)
+
   const triggers = pikkuState(null, 'trigger', 'triggers')
   if (triggers.has(trigger.name)) {
     throw new Error(`Trigger already exists: ${trigger.name}`)
@@ -36,21 +39,28 @@ export const wireTrigger = <
 /**
  * Parameters for setting up a trigger
  */
-export type SetupTriggerParams<TOutput = unknown> = {
+export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
   singletonServices: CoreSingletonServices
+  input: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
 
 /**
  * Sets up a registered trigger and starts listening for events.
  * Returns a TriggerInstance with a teardown function.
+ *
+ * @param name - The trigger name (must be registered via wireTrigger)
+ * @param singletonServices - The singleton services
+ * @param input - The input to pass to the trigger function
+ * @param onTrigger - Callback invoked when the trigger fires
  */
-export async function setupTrigger<TOutput = unknown>({
+export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   name,
   singletonServices,
+  input,
   onTrigger,
-}: SetupTriggerParams<TOutput>): Promise<TriggerInstance> {
+}: SetupTriggerParams<TInput, TOutput>): Promise<TriggerInstance> {
   const trigger = pikkuState(null, 'trigger', 'triggers').get(name)
   const meta = pikkuState(null, 'trigger', 'meta')[name]
 
@@ -74,7 +84,7 @@ export async function setupTrigger<TOutput = unknown>({
 
   const teardown = await trigger.func.func(
     singletonServices,
-    trigger.input,
+    input,
     wire as any
   )
 

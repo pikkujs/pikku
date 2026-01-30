@@ -5,6 +5,7 @@ export interface CommandSummaryStats {
   channels?: number
   functions?: number
   scheduledTasks?: number
+  triggers?: number
   queueWorkers?: number
   mcpEndpoints?: number
   cliCommands?: number
@@ -73,6 +74,7 @@ export class CommandSummary {
       channels: 'WebSocket channel',
       functions: 'Function',
       scheduledTasks: 'Scheduled task',
+      triggers: 'Trigger',
       queueWorkers: 'Queue worker',
       mcpEndpoints: 'MCP endpoint',
       cliCommands: 'CLI command',

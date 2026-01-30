@@ -1,6 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { PgWorkflowService } from '@pikku/pg'
+import { PgWorkflowService, PgTriggerService } from '@pikku/pg'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -17,10 +17,12 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
+    const sql = postgres(connectionString)
+
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
-    const workflowService = new PgWorkflowService(postgres(connectionString))
+    const workflowService = new PgWorkflowService(sql)
     await workflowService.init()
 
     const singletonServices = await createSingletonServices(config, {
@@ -52,6 +54,18 @@ async function main(): Promise<void> {
     singletonServices.logger.info(
       'Workflow workers ready and listening for jobs'
     )
+
+    const triggerService = new PgTriggerService(singletonServices, sql, 'pikku')
+    await triggerService.init()
+
+    await triggerService.register({
+      trigger: 'test-event',
+      input: { eventName: 'order-created' },
+      target: { rpc: 'onTestEvent' },
+    })
+
+    await triggerService.start()
+    singletonServices.logger.info('Trigger service started')
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)

@@ -1,3 +1,4 @@
 export { PgChannelStore } from './pg-channel-store.js'
 export { PgEventHubStore } from './pg-eventhub-store.js'
 export { PgWorkflowService } from './pg-workflow-service.js'
+export { PgTriggerService } from './pg-trigger-service.js'
