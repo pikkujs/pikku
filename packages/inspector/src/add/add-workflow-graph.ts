@@ -671,6 +671,10 @@ function extractGraphFromNewFormat(
     if (rpcName) {
       nodeRpcMap[nodeId] = rpcName
       state.rpc.invokedFunctions.add(rpcName)
+      const funcFile = state.functions.files.get(rpcName)
+      if (funcFile && !state.rpc.internalFiles.has(rpcName)) {
+        state.rpc.internalFiles.set(rpcName, funcFile)
+      }
     }
   }
 
