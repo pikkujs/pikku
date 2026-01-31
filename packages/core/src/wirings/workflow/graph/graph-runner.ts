@@ -10,6 +10,12 @@ import type {
 } from './workflow-graph.types.js'
 import { createRef, isRef } from './workflow-graph.types.js'
 import { pikkuState } from '../../../pikku-state.js'
+import { addFunction } from '../../../function/function-runner.js'
+import type {
+  WorkflowTriggerWire,
+  WorkflowScheduleWire,
+  WorkflowHTTPWire,
+} from '../workflow.types.js'
 
 /**
  * Add a workflow graph to the system
@@ -35,6 +41,103 @@ export const addWorkflowGraph = (
     wires: graphResult.wires || {},
     graph: graphResult.graph,
   })
+
+  const wires = graphResult.wires
+  if (!wires) return
+
+  // Register trigger wires into trigger.workflowTargets
+  const triggers = wires.trigger as WorkflowTriggerWire[] | undefined
+  if (triggers) {
+    const workflowTargets = pikkuState(null, 'trigger', 'workflowTargets')
+    for (const t of triggers) {
+      if (!workflowTargets.has(t.name)) {
+        workflowTargets.set(t.name, [])
+      }
+      workflowTargets.get(t.name)!.push({
+        workflowName,
+        startNode: t.startNode,
+      })
+    }
+  }
+
+  // Register schedule wires as synthetic scheduled tasks
+  const schedules = wires.schedule as WorkflowScheduleWire[] | undefined
+  if (schedules) {
+    for (const s of schedules) {
+      const schedule = s.cron ?? s.interval
+      if (!schedule) continue
+
+      const taskName = `workflow:${workflowName}:${s.startNode}`
+      const pikkuFuncName = `__workflow_schedule__${taskName}`
+
+      // Register a synthetic function that starts the workflow
+      addFunction(pikkuFuncName, {
+        func: async (services: any) => {
+          const { ContextAwareRPCService } = await import(
+            '../../rpc/rpc-runner.js'
+          )
+          const rpcService = new ContextAwareRPCService(
+            services,
+            {},
+            { requiresAuth: false }
+          )
+          await rpcService.startWorkflow(workflowName, {}, {
+            startNode: s.startNode,
+          })
+        },
+      })
+
+      // Register scheduler meta
+      const schedulerMeta = pikkuState(null, 'scheduler', 'meta')
+      schedulerMeta[taskName] = {
+        pikkuFuncName,
+        name: taskName,
+        schedule,
+      }
+
+      // Register function meta
+      const functionMeta = pikkuState(null, 'function', 'meta')
+      functionMeta[pikkuFuncName] = {
+        pikkuFuncName,
+        inputSchemaName: null,
+        outputSchemaName: null,
+      }
+
+      // Register the scheduled task
+      const tasks = pikkuState(null, 'scheduler', 'tasks')
+      tasks.set(taskName, {
+        name: taskName,
+        schedule,
+        func: {
+          func: async (services: any) => {
+            const { ContextAwareRPCService } = await import(
+              '../../rpc/rpc-runner.js'
+            )
+            const rpcService = new ContextAwareRPCService(
+              services,
+              {},
+              { requiresAuth: false }
+            )
+            await rpcService.startWorkflow(workflowName, {}, {
+              startNode: s.startNode,
+            })
+          },
+        },
+      })
+    }
+  }
+
+  // Register HTTP wires into workflows.httpRoutes
+  const httpWires = wires.http as WorkflowHTTPWire[] | undefined
+  if (httpWires) {
+    const httpRoutes = pikkuState(null, 'workflows', 'httpRoutes')
+    for (const h of httpWires) {
+      httpRoutes.set(`${h.method}:${h.route}`, {
+        workflowName,
+        startNode: h.startNode,
+      })
+    }
+  }
 }
 
 /**

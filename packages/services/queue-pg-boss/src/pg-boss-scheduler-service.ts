@@ -7,7 +7,6 @@ import {
   parseDurationString,
 } from '@pikku/core'
 import { getScheduledTasks } from '@pikku/core/scheduler'
-import { findAllWorkflowScheduleWires } from '@pikku/core/workflow'
 
 /**
  * Data stored in scheduled job
@@ -134,26 +133,12 @@ export class PgBossSchedulerService extends SchedulerService {
   async start(): Promise<void> {
     const scheduledTasks = getScheduledTasks()
 
-    // Schedule recurring tasks from wireScheduler
     for (const [name, task] of scheduledTasks) {
       const cronName = `${RECURRING_QUEUE}:${name}`
       await this.pgBoss.schedule(cronName, task.schedule, {
         rpcName: name,
       } as ScheduledJobData)
       this.scheduledCronNames.push(cronName)
-    }
-
-    // Schedule recurring tasks from workflow schedule wires
-    const workflowScheduleWires = findAllWorkflowScheduleWires()
-    for (const wire of workflowScheduleWires) {
-      if (wire.cron) {
-        const name = `workflow:${wire.workflowName}:${wire.startNode}`
-        const cronName = `${RECURRING_QUEUE}:${name}`
-        await this.pgBoss.schedule(cronName, wire.cron, {
-          rpcName: name,
-        } as ScheduledJobData)
-        this.scheduledCronNames.push(cronName)
-      }
     }
   }
 
