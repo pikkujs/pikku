@@ -22,20 +22,14 @@ async function main() {
 
   const triggerService = new InMemoryTriggerService(singletonServices)
 
-  // Test 1: RPC target
+  // RPC targets still require manual registration
   await triggerService.register({
     trigger: 'test-event',
     input: { eventName: 'rpc-test' },
     target: { rpc: 'onTestEvent' },
   })
 
-  // Test 2: Graph workflow target (should resolve startNode from trigger wire)
-  await triggerService.register({
-    trigger: 'test-event',
-    input: { eventName: 'graph-test' },
-    target: { workflow: 'todoReviewWorkflow' },
-  })
-
+  // Workflow targets are auto-registered from wiring declarations on start()
   await triggerService.start()
 
   // The test-event trigger fires every 10s, wait for it

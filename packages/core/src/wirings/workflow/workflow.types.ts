@@ -102,6 +102,7 @@ export interface WorkflowScheduleWire {
 export interface WorkflowTriggerWire {
   name: string
   startNode: string
+  input?: Record<string, unknown>
 }
 
 /**
