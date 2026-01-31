@@ -67,7 +67,7 @@ async function main(): Promise<void> {
     useGraph ? name.startsWith('graph') : !name.startsWith('graph')
   )
 
-  console.log(
+  singletonServices.logger.info(
     `Found ${workflowNames.length} workflows to execute (${allWorkflowNames.length} total registered)\n`
   )
 

@@ -7,7 +7,7 @@ import {
   CoreServices,
   CoreUserSession,
 } from '../../types/core.types.js'
-import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
+import { rpcService } from '../rpc/rpc-runner.js'
 
 /**
  * Start a workflow triggered by an HTTP wire.
@@ -36,14 +36,11 @@ export const startWorkflowByHTTPWire = async (
           throw new Error('WorkflowService not available')
         }
 
-        const wireServices = createWireServices?.(singletonServices, wire)
-        const rpcService = new ContextAwareRPCService(
-          { ...singletonServices, ...wireServices },
-          wire,
-          {}
-        )
+        const wireServices = await createWireServices?.(singletonServices, wire)
+        const services = { ...singletonServices, ...wireServices }
+        const rpc = rpcService.getContextRPCService(services, wire)
 
-        await workflowService.startWorkflow(workflowName, data, rpcService, {
+        await workflowService.startWorkflow(workflowName, data, rpc, {
           inline: true,
           startNode: h.startNode,
         })

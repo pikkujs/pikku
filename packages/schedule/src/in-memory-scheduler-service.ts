@@ -10,7 +10,7 @@ import {
   parseDurationString,
 } from '@pikku/core'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
-import { ContextAwareRPCService } from '@pikku/core/rpc'
+import { rpcService } from '@pikku/core/rpc'
 
 interface DelayedTask {
   taskId: string
@@ -69,14 +69,15 @@ export class InMemorySchedulerService extends SchedulerService {
     const taskId = `inmem-${++this.idCounter}-${Date.now()}`
     const scheduledFor = new Date(Date.now() + delayMs)
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       this.delayedTasks.delete(taskId)
-      const rpcService = new ContextAwareRPCService(
-        this.singletonServices! as CoreServices,
-        {},
+      const wireServices = await this.createWireServices?.(
+        this.singletonServices!,
         {}
       )
-      rpcService.rpc(rpcName, data).catch((err) => {
+      const services = { ...this.singletonServices!, ...wireServices }
+      const rpc = rpcService.getContextRPCService(services, {})
+      rpc.invoke(rpcName, data).catch((err: unknown) => {
         this.singletonServices!.logger.error(
           `Failed to execute delayed RPC '${rpcName}': ${err}`
         )

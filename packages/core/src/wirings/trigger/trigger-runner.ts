@@ -1,5 +1,6 @@
 import {
   PikkuWire,
+  CreateWireServices,
   type CoreSingletonServices,
 } from '../../types/core.types.js'
 import type {
@@ -62,6 +63,7 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
 export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
   singletonServices: CoreSingletonServices
+  createWireServices?: CreateWireServices
   input: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
@@ -78,6 +80,7 @@ export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
 export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   name,
   singletonServices,
+  createWireServices,
   input,
   onTrigger,
 }: SetupTriggerParams<TInput, TOutput>): Promise<TriggerInstance> {
@@ -106,6 +109,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   const teardown = await runPikkuFunc('trigger', name, sourceFuncName, {
     singletonServices,
+    createWireServices,
     auth: false,
     data: () => input as any,
     wire,

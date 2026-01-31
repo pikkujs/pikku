@@ -6,7 +6,7 @@ import type {
 } from '../types/core.types.js'
 import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
-import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
+import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
 
 /**
@@ -63,26 +63,22 @@ export abstract class TriggerService {
 export class InMemoryTriggerService extends TriggerService {
   private activeTriggers = new Map<string, TriggerInstance>()
   private singletonServices?: CoreSingletonServices
-  private rpcService?: ContextAwareRPCService
+  private createWireServices?: CreateWireServices<
+    CoreSingletonServices,
+    CoreServices,
+    CoreUserSession
+  >
 
-  /**
-   * Set services needed for processing triggers.
-   * Must be called before start().
-   */
   setServices(
     singletonServices: CoreSingletonServices,
-    _createWireServices?: CreateWireServices<
+    createWireServices?: CreateWireServices<
       CoreSingletonServices,
       CoreServices,
       CoreUserSession
     >
   ): void {
     this.singletonServices = singletonServices
-    this.rpcService = new ContextAwareRPCService(
-      singletonServices,
-      {},
-      { requiresAuth: false }
-    )
+    this.createWireServices = createWireServices
   }
 
   /**
@@ -90,7 +86,7 @@ export class InMemoryTriggerService extends TriggerService {
    * Also starts triggers from workflow trigger wires.
    */
   async start(): Promise<void> {
-    if (!this.singletonServices || !this.rpcService) {
+    if (!this.singletonServices) {
       throw new Error(
         'InMemoryTriggerService requires singletonServices to start triggers'
       )
@@ -156,6 +152,7 @@ export class InMemoryTriggerService extends TriggerService {
         const triggerInstance = await setupTrigger({
           name,
           singletonServices: this.singletonServices,
+          createWireServices: this.createWireServices as any,
           input: source.input,
           onTrigger: (data) => this.onTriggerFire(name, targets, data),
         })
@@ -205,17 +202,24 @@ export class InMemoryTriggerService extends TriggerService {
     }>,
     data: unknown
   ): Promise<void> {
+    const wireServices = await this.createWireServices?.(
+      this.singletonServices!,
+      {}
+    )
+    const services = { ...this.singletonServices!, ...wireServices }
+    const rpc = rpcService.getContextRPCService(services, {}, false)
+
     for (const target of targets) {
       try {
         if (target.targetType === 'workflow') {
-          await this.rpcService!.startWorkflow(target.targetName, data, {
+          await rpc.startWorkflow(target.targetName, data, {
             startNode: target.startNode,
           })
           this.singletonServices!.logger.info(
             `Trigger '${triggerName}' started workflow '${target.targetName}'`
           )
         } else {
-          await this.rpcService!.rpc(target.targetName, data)
+          await rpc.invoke(target.targetName, data)
           this.singletonServices!.logger.info(
             `Trigger '${triggerName}' invoked RPC '${target.targetName}'`
           )

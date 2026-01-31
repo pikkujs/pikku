@@ -2,6 +2,12 @@ export type PikkuRPC<invoke extends Function = any> = {
   depth: number
   global: boolean
   invoke: invoke
+  invokeExposed: (name: string, data: any) => Promise<any>
+  startWorkflow: (
+    name: string,
+    input: any,
+    options?: { startNode?: string }
+  ) => Promise<{ runId: string }>
 }
 
 export type RPCMeta = {
