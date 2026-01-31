@@ -5,6 +5,7 @@ import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
 import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
+import { findWorkflowByTriggerWire } from '../wirings/workflow/workflow-utils.js'
 import { DeploymentService } from './deployment-service.js'
 
 /**
@@ -322,7 +323,10 @@ export abstract class TriggerService {
     for (const target of targets) {
       try {
         if (target.targetType === 'workflow') {
-          await this.rpcService.startWorkflow(target.targetName, data)
+          const triggerWire = findWorkflowByTriggerWire(triggerName)
+          await this.rpcService.startWorkflow(target.targetName, data, {
+            startNode: triggerWire?.startNode,
+          })
           this.singletonServices.logger.info(
             `Trigger '${triggerName}' started workflow '${target.targetName}'`
           )

@@ -9,6 +9,7 @@ import {
 } from '../../types/core.types.js'
 import { HTTPWiringMeta } from '../http/http.types.js'
 import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
+import { WorkflowTriggerWire } from './workflow.types.js'
 
 /**
  * Result of finding a workflow by HTTP wire
@@ -16,6 +17,57 @@ import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
 export interface WorkflowHttpMatch {
   workflowName: string
   startNode?: string
+}
+
+/**
+ * Find a workflow that declares a trigger wire matching the given trigger name.
+ * Returns the workflow name and the startNode from the wire config.
+ *
+ * Checks graph registrations (runtime wires from pikkuWorkflowGraph),
+ * meta wires (serialized by CLI), and DSL wirings.
+ */
+export const findWorkflowByTriggerWire = (
+  triggerName: string
+): { workflowName: string; startNode: string } | undefined => {
+  // Check graph registrations (populated by addWorkflowGraph at runtime)
+  const graphRegistrations = pikkuState(null, 'workflows', 'graphRegistrations')
+  for (const [name, reg] of graphRegistrations) {
+    const triggers = reg.wires?.trigger as WorkflowTriggerWire[] | undefined
+    if (!triggers) continue
+    const matched = triggers.find((t) => t.name === triggerName)
+    if (matched) {
+      return { workflowName: name, startNode: matched.startNode }
+    }
+  }
+
+  // Check workflow meta wires (serialized by CLI)
+  const meta = pikkuState(null, 'workflows', 'meta')
+  for (const [name, m] of Object.entries(meta)) {
+    const triggers = m.wires?.trigger as WorkflowTriggerWire[] | undefined
+    if (!triggers) continue
+    const matched = triggers.find((t) => t.name === triggerName)
+    if (matched) {
+      return { workflowName: name, startNode: matched.startNode }
+    }
+  }
+
+  // Check DSL wirings
+  const wirings = pikkuState(null, 'workflows', 'wirings')
+  for (const [, wiring] of wirings) {
+    const triggers = wiring.wires?.trigger as WorkflowTriggerWire[] | undefined
+    if (!triggers) continue
+    const matched = triggers.find((t) => t.name === triggerName)
+    if (matched) {
+      // Find the workflow name from meta
+      for (const [name, m] of Object.entries(meta)) {
+        if (m.source !== 'graph' && m.wires === wiring.wires) {
+          return { workflowName: name, startNode: matched.startNode }
+        }
+      }
+    }
+  }
+
+  return undefined
 }
 
 /**

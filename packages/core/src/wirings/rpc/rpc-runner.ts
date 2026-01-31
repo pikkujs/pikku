@@ -183,7 +183,8 @@ export class ContextAwareRPCService {
 
   public async startWorkflow<In = any>(
     workflowName: string,
-    input: In
+    input: In,
+    options?: { startNode?: string }
   ): Promise<{ runId: string }> {
     if (!this.services.workflowService) {
       throw new Error('WorkflowService service not available')
@@ -191,7 +192,8 @@ export class ContextAwareRPCService {
     return this.services.workflowService.startWorkflow(
       workflowName,
       input,
-      this
+      this,
+      options
     )
   }
 }
