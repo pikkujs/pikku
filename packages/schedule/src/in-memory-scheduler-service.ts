@@ -24,7 +24,6 @@ interface DelayedTask {
 /**
  * In-memory SchedulerService implementation.
  * Uses CronJob for recurring tasks and setTimeout for delayed RPCs.
- * Replaces PikkuTaskScheduler as a full SchedulerService implementation.
  */
 export class InMemorySchedulerService extends SchedulerService {
   private cronJobs = new Map<string, CronJob>()
@@ -126,8 +125,6 @@ export class InMemorySchedulerService extends SchedulerService {
 
   /**
    * Start recurring scheduled tasks.
-   * Reads pikkuState for wireScheduler tasks and workflow schedule wires,
-   * then creates local CronJobs for each.
    */
   async start(): Promise<void> {
     const scheduledTasks = getScheduledTasks()

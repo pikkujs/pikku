@@ -17,12 +17,6 @@ interface ScheduledJobData {
   session?: CoreUserSession
 }
 
-/**
- * BullMQ scheduler service implementation
- * Uses BullMQ's delayed jobs for one-time execution
- */
-const RECURRING_QUEUE = 'pikku-recurring-scheduled-task'
-
 export class BullSchedulerService extends SchedulerService {
   private queue: Queue
   private recurringQueue: Queue
@@ -33,7 +27,7 @@ export class BullSchedulerService extends SchedulerService {
     this.queue = new Queue('pikku-remote-internal-rpc', {
       connection: redisConnectionOptions,
     })
-    this.recurringQueue = new Queue(RECURRING_QUEUE, {
+    this.recurringQueue = new Queue('pikku-recurring-scheduled-task', {
       connection: redisConnectionOptions,
     })
   }
@@ -148,8 +142,6 @@ export class BullSchedulerService extends SchedulerService {
 
   /**
    * Start recurring scheduled tasks.
-   * Reads pikkuState for wireScheduler tasks and workflow schedule wires,
-   * then creates BullMQ repeat jobs for each.
    */
   async start(): Promise<void> {
     const scheduledTasks = getScheduledTasks()
