@@ -1,11 +1,14 @@
-import type { CoreSingletonServices } from '../../types/core.types.js'
+import {
+  PikkuWire,
+  type CoreSingletonServices,
+} from '../../types/core.types.js'
 import type {
   CoreTrigger,
   CoreTriggerSource,
   TriggerInstance,
 } from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import { addFunction } from '../../function/function-runner.js'
+import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 
 /**
  * Registers a trigger with the Pikku framework.
@@ -36,6 +39,27 @@ export const wireTrigger = (trigger: CoreTrigger) => {
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: CoreTriggerSource<TInput, TOutput>
 ) => {
+  const meta = pikkuState(null, 'trigger', 'meta')
+  const triggerMeta = meta[source.name]
+  if (!triggerMeta) {
+    throw new Error(`Trigger metadata not found: ${source.name}`)
+  }
+
+  // Register the source function (separate from the target function)
+  const sourceFuncName = `${triggerMeta.pikkuFuncName}__source`
+  addFunction(sourceFuncName, {
+    func: source.func.func,
+    tags: source.func.tags,
+  })
+
+  // Register function meta for the source
+  const functionMeta = pikkuState(null, 'function', 'meta')
+  functionMeta[sourceFuncName] = {
+    pikkuFuncName: sourceFuncName,
+    inputSchemaName: null,
+    outputSchemaName: null,
+  }
+
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {
     throw new Error(`Trigger source already exists: ${source.name}`)
@@ -78,23 +102,27 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     throw new Error(`Trigger metadata not found: ${name}`)
   }
 
-  const wire = {
+  const sourceFuncName = `${meta.pikkuFuncName}__source`
+
+  const wire: PikkuWire = {
     trigger: {
-      invoke: (data: TOutput) => {
+      invoke: (data: unknown) => {
         singletonServices.logger.info(`Trigger fired: ${name}`)
-        onTrigger(data)
+        onTrigger(data as TOutput)
       },
     },
   }
 
   singletonServices.logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await source.func.func(singletonServices, input, wire as any)
+  const teardown = await runPikkuFunc('trigger', name, sourceFuncName, {
+    singletonServices,
+    auth: false,
+    data: () => input as any,
+    wire,
+  })
 
-  return {
-    name,
-    teardown,
-  }
+  return { name, teardown }
 }
 
 /**
