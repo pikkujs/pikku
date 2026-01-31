@@ -53,14 +53,7 @@ const wireMockTriggerWithSource = (
 
   wireTrigger({
     name,
-    func: {
-      func: async (_services: any, _input: any, wire: any) => {
-        if (options?.fireOnSetup !== undefined) {
-          wire.trigger.invoke(options.fireOnSetup)
-        }
-        return () => {}
-      },
-    },
+    func: { func: async () => {} },
   })
 
   wireTriggerSource({
@@ -167,13 +160,7 @@ describe('TriggerService.stop', () => {
     setupTriggerMeta('stop-trigger')
     wireTrigger({
       name: 'stop-trigger',
-      func: {
-        func: async () => {
-          return () => {
-            tornDown = true
-          }
-        },
-      },
+      func: { func: async () => {} },
     })
     wireTriggerSource({
       name: 'stop-trigger',
@@ -231,12 +218,7 @@ describe('TriggerService.onTriggerFire', () => {
     setupTriggerMeta('fire-trigger')
     wireTrigger({
       name: 'fire-trigger',
-      func: {
-        func: async (_services: any, _input: any, wire: any) => {
-          setTimeout(() => wire.trigger.invoke({ message: 'hello' }), 10)
-          return () => {}
-        },
-      },
+      func: { func: async () => {} },
     })
     wireTriggerSource({
       name: 'fire-trigger',
@@ -275,12 +257,7 @@ describe('TriggerService.onTriggerFire', () => {
     setupTriggerMeta('error-trigger')
     wireTrigger({
       name: 'error-trigger',
-      func: {
-        func: async (_services: any, _input: any, wire: any) => {
-          setTimeout(() => wire.trigger.invoke({ data: 'test' }), 10)
-          return () => {}
-        },
-      },
+      func: { func: async () => {} },
     })
     wireTriggerSource({
       name: 'error-trigger',
@@ -347,12 +324,7 @@ describe('TriggerService auto-registration', () => {
     setupTriggerMeta('auto-fire-trigger')
     wireTrigger({
       name: 'auto-fire-trigger',
-      func: {
-        func: async (_services: any, _input: any, wire: any) => {
-          setTimeout(() => wire.trigger.invoke({ payload: 'test' }), 10)
-          return () => {}
-        },
-      },
+      func: { func: async () => {} },
     })
     wireTriggerSource({
       name: 'auto-fire-trigger',
