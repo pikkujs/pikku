@@ -3,10 +3,6 @@ import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
 import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
-import {
-  findWorkflowByTriggerWire,
-  findAllWorkflowTriggerWires,
-} from '../wirings/workflow/workflow-utils.js'
 
 /**
  * Simple concrete TriggerService.
@@ -45,9 +41,7 @@ export class TriggerService {
   async start(): Promise<void> {
     const triggers = pikkuState(null, 'trigger', 'triggers')
     const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
-
-    // Collect workflow trigger wires for target resolution
-    const workflowTriggerWires = findAllWorkflowTriggerWires()
+    const workflowTargets = pikkuState(null, 'trigger', 'workflowTargets')
 
     // Build a map of trigger name -> targets (from wireTrigger declarations and workflow wires)
     const triggerTargets = new Map<
@@ -73,16 +67,18 @@ export class TriggerService {
       }
     }
 
-    // Add workflow targets from workflow trigger wires
-    for (const wire of workflowTriggerWires) {
-      if (!triggerTargets.has(wire.triggerName)) {
-        triggerTargets.set(wire.triggerName, [])
+    // Add workflow targets from trigger.workflowTargets state
+    for (const [triggerName, targets] of workflowTargets) {
+      if (!triggerTargets.has(triggerName)) {
+        triggerTargets.set(triggerName, [])
       }
-      triggerTargets.get(wire.triggerName)!.push({
-        targetType: 'workflow',
-        targetName: wire.workflowName,
-        startNode: wire.startNode,
-      })
+      for (const target of targets) {
+        triggerTargets.get(triggerName)!.push({
+          targetType: 'workflow',
+          targetName: target.workflowName,
+          startNode: target.startNode,
+        })
+      }
     }
 
     // Start triggers that have both a source and at least one target
@@ -155,9 +151,8 @@ export class TriggerService {
     for (const target of targets) {
       try {
         if (target.targetType === 'workflow') {
-          const triggerWire = findWorkflowByTriggerWire(triggerName)
           await this.rpcService.startWorkflow(target.targetName, data, {
-            startNode: triggerWire?.startNode ?? target.startNode,
+            startNode: target.startNode,
           })
           this.singletonServices.logger.info(
             `Trigger '${triggerName}' started workflow '${target.targetName}'`

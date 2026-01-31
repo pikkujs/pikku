@@ -7,6 +7,7 @@ import {
   wireTrigger,
   wireTriggerSource,
 } from '../wirings/trigger/trigger-runner.js'
+import { addWorkflowGraph } from '../wirings/workflow/graph/graph-runner.js'
 
 // ============================================
 // Helpers
@@ -301,14 +302,17 @@ describe('TriggerService auto-registration', () => {
       },
     }
 
-    // Set up a graph registration with a trigger wire
-    const graphRegistrations = pikkuState(
-      null,
-      'workflows',
-      'graphRegistrations'
-    )
-    graphRegistrations.set('autoFireWorkflow', {
+    // Set up workflow meta (required by addWorkflowGraph)
+    const workflowMeta = pikkuState(null, 'workflows', 'meta')
+    workflowMeta['autoFireWorkflow'] = {
       name: 'autoFireWorkflow',
+      pikkuFuncName: 'autoFireWorkflow',
+      source: 'graph',
+    }
+
+    // Register workflow graph with trigger wire
+    addWorkflowGraph('autoFireWorkflow', {
+      graph: {},
       wires: {
         trigger: [
           {
@@ -317,7 +321,6 @@ describe('TriggerService auto-registration', () => {
           },
         ],
       },
-      graph: {},
     })
 
     // Wire the trigger source (subscription function)

@@ -11,7 +11,6 @@ import {
 } from '@pikku/core'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 import { ContextAwareRPCService } from '@pikku/core/rpc'
-import { findAllWorkflowScheduleWires } from '@pikku/core/workflow'
 
 interface DelayedTask {
   taskId: string
@@ -133,18 +132,8 @@ export class InMemorySchedulerService extends SchedulerService {
   async start(): Promise<void> {
     const scheduledTasks = getScheduledTasks()
 
-    // Start CronJobs for wireScheduler tasks
     for (const [, task] of scheduledTasks) {
       this.startCronJob(task.name, task.schedule)
-    }
-
-    // Start CronJobs for workflow schedule wires
-    const workflowScheduleWires = findAllWorkflowScheduleWires()
-    for (const wire of workflowScheduleWires) {
-      if (wire.cron) {
-        const name = `workflow:${wire.workflowName}:${wire.startNode}`
-        this.startCronJob(name, wire.cron)
-      }
     }
   }
 

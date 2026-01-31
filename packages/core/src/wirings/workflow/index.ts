@@ -10,12 +10,6 @@ export {
 export { addWorkflow } from './dsl/workflow-runner.js'
 export { addWorkflowGraph } from './graph/graph-runner.js'
 
-// Workflow utilities
-export {
-  findAllWorkflowTriggerWires,
-  findAllWorkflowScheduleWires,
-  findWorkflowByTriggerWire,
-} from './workflow-utils.js'
 
 // Unified wireWorkflow function
 export { wireWorkflow } from './wire-workflow.js'

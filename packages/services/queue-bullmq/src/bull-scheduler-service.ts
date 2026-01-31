@@ -7,7 +7,6 @@ import {
   parseDurationString,
 } from '@pikku/core'
 import { getScheduledTasks } from '@pikku/core/scheduler'
-import { findAllWorkflowScheduleWires } from '@pikku/core/workflow'
 
 /**
  * Data stored in scheduled job
@@ -155,7 +154,6 @@ export class BullSchedulerService extends SchedulerService {
   async start(): Promise<void> {
     const scheduledTasks = getScheduledTasks()
 
-    // Schedule recurring tasks from wireScheduler
     for (const [name, task] of scheduledTasks) {
       const job = await this.recurringQueue.add(
         name,
@@ -167,25 +165,6 @@ export class BullSchedulerService extends SchedulerService {
       )
       if (job.repeatJobKey) {
         this.repeatJobKeys.push(job.repeatJobKey)
-      }
-    }
-
-    // Schedule recurring tasks from workflow schedule wires
-    const workflowScheduleWires = findAllWorkflowScheduleWires()
-    for (const wire of workflowScheduleWires) {
-      if (wire.cron) {
-        const name = `workflow:${wire.workflowName}:${wire.startNode}`
-        const job = await this.recurringQueue.add(
-          name,
-          { rpcName: name } as ScheduledJobData,
-          {
-            repeat: { pattern: wire.cron },
-            jobId: `recurring:${name}`,
-          }
-        )
-        if (job.repeatJobKey) {
-          this.repeatJobKeys.push(job.repeatJobKey)
-        }
       }
     }
   }
