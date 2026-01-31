@@ -9,7 +9,7 @@ import {
 } from '../../types/core.types.js'
 import { HTTPWiringMeta } from '../http/http.types.js'
 import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
-import { WorkflowTriggerWire } from './workflow.types.js'
+import { WorkflowTriggerWire, WorkflowScheduleWire } from './workflow.types.js'
 
 /**
  * Result of finding a workflow by HTTP wire
@@ -79,13 +79,11 @@ export const findAllWorkflowTriggerWires = (): Array<{
   triggerName: string
   workflowName: string
   startNode: string
-  input: Record<string, unknown>
 }> => {
   const results: Array<{
     triggerName: string
     workflowName: string
     startNode: string
-    input: Record<string, unknown>
   }> = []
 
   // Check graph registrations (populated by addWorkflowGraph at runtime)
@@ -98,7 +96,6 @@ export const findAllWorkflowTriggerWires = (): Array<{
         triggerName: t.name,
         workflowName: name,
         startNode: t.startNode,
-        input: t.input ?? {},
       })
     }
   }
@@ -115,7 +112,59 @@ export const findAllWorkflowTriggerWires = (): Array<{
         triggerName: t.name,
         workflowName: name,
         startNode: t.startNode,
-        input: t.input ?? {},
+      })
+    }
+  }
+
+  return results
+}
+
+/**
+ * Collect all schedule wire declarations from workflows.
+ * Scans graph registrations (runtime) and meta wires (CLI-serialized).
+ * Returns array of { workflowName, startNode, cron?, interval? }.
+ */
+export const findAllWorkflowScheduleWires = (): Array<{
+  workflowName: string
+  startNode: string
+  cron?: string
+  interval?: string
+}> => {
+  const results: Array<{
+    workflowName: string
+    startNode: string
+    cron?: string
+    interval?: string
+  }> = []
+
+  // Check graph registrations (populated by addWorkflowGraph at runtime)
+  const graphRegistrations = pikkuState(null, 'workflows', 'graphRegistrations')
+  for (const [name, reg] of graphRegistrations) {
+    const schedules = reg.wires?.schedule as WorkflowScheduleWire[] | undefined
+    if (!schedules) continue
+    for (const s of schedules) {
+      results.push({
+        workflowName: name,
+        startNode: s.startNode,
+        cron: s.cron,
+        interval: s.interval,
+      })
+    }
+  }
+
+  // Check workflow meta wires (serialized by CLI for non-graph workflows)
+  const meta = pikkuState(null, 'workflows', 'meta')
+  for (const [name, m] of Object.entries(meta)) {
+    // Skip graph workflows (already covered above)
+    if (m.source === 'graph') continue
+    const schedules = m.wires?.schedule as WorkflowScheduleWire[] | undefined
+    if (!schedules) continue
+    for (const s of schedules) {
+      results.push({
+        workflowName: name,
+        startNode: s.startNode,
+        cron: s.cron,
+        interval: s.interval,
       })
     }
   }

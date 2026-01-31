@@ -1,5 +1,3 @@
-import { createHash } from 'crypto'
-
 import { CoreSingletonServices } from '../types/core.types.js'
 import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
@@ -9,98 +7,30 @@ import {
   findWorkflowByTriggerWire,
   findAllWorkflowTriggerWires,
 } from '../wirings/workflow/workflow-utils.js'
-import { DeploymentService } from './deployment-service.js'
 
 /**
- * Generate a deterministic hash from trigger input data
- */
-export function generateInputHash(input: unknown): string {
-  return createHash('md5')
-    .update(JSON.stringify(input))
-    .digest('hex')
-    .slice(0, 12)
-}
-
-/**
- * Options for registering a trigger target
- */
-export interface RegisterOptions<TInput = unknown> {
-  trigger: string
-  input: TInput
-  target: {
-    rpc?: string
-    workflow?: string
-  }
-}
-
-/**
- * A trigger registration stored in the database
- */
-export interface TriggerRegistration {
-  triggerName: string
-  inputHash: string
-  inputData: unknown
-  targetType: 'rpc' | 'workflow'
-  targetName: string
-}
-
-/**
- * A unique trigger instance (trigger name + input combination)
- */
-export interface TriggerInputInstance {
-  triggerName: string
-  inputHash: string
-  inputData: unknown
-}
-
-/**
- * An active trigger subscription managed by this service
- */
-interface ActiveTrigger {
-  name: string
-  inputHash: string
-  input: unknown
-  instance: TriggerInstance
-}
-
-/**
- * Abstract base class for TriggerService implementations.
+ * Simple concrete TriggerService.
  *
- * Handles the orchestration of trigger lifecycle:
- * - Registering trigger → target associations
- * - Starting/stopping trigger subscriptions with distributed claiming
- * - Firing triggers and invoking all registered targets
+ * Reads both `wireTrigger` declarations and `wireTriggerSource` registrations
+ * from pikkuState. Only starts triggers that have both a declaration and a source.
+ * On fire, invokes target via `ContextAwareRPCService`.
  *
- * Concrete implementations (Postgres, Redis) handle the storage layer.
- * Heartbeat and deployment tracking are delegated to DeploymentService.
+ * Single owner — one process runs triggers, no distributed claiming.
  *
  * @example
  * ```typescript
- * const deploymentService = new PgDeploymentService(sql, 'pikku')
- * const triggerService = new PgTriggerService(singletonServices, deploymentService, sql, 'pikku')
- *
- * // Register targets for a trigger
- * await triggerService.register({
- *   trigger: 'redis-subscribe',
- *   input: { channel: 'my-channel' },
- *   target: { rpc: 'processMessage' }
- * })
- *
- * // Start all trigger subscriptions
+ * const triggerService = new TriggerService(singletonServices)
  * await triggerService.start()
  *
  * // On shutdown
  * await triggerService.stop()
  * ```
  */
-export abstract class TriggerService {
-  protected activeTriggers = new Map<string, ActiveTrigger>()
-  protected rpcService: ContextAwareRPCService
+export class TriggerService {
+  private activeTriggers = new Map<string, TriggerInstance>()
+  private rpcService: ContextAwareRPCService
 
-  constructor(
-    protected singletonServices: CoreSingletonServices,
-    protected deploymentService: DeploymentService
-  ) {
+  constructor(private singletonServices: CoreSingletonServices) {
     this.rpcService = new ContextAwareRPCService(
       singletonServices,
       {},
@@ -108,237 +38,126 @@ export abstract class TriggerService {
     )
   }
 
-  // ============================================
-  // Abstract methods - implemented by backends
-  // ============================================
-
   /**
-   * Store a trigger → target registration in the database
-   */
-  protected abstract storeRegistration(
-    registration: TriggerRegistration
-  ): Promise<void>
-
-  /**
-   * Remove a trigger → target registration from the database
-   */
-  protected abstract removeRegistration(
-    registration: TriggerRegistration
-  ): Promise<void>
-
-  /**
-   * Get all unique trigger+input combinations from the database
-   * Optionally filtered to only triggers this process supports
-   */
-  protected abstract getDistinctTriggerInputs(
-    supportedTriggers: string[]
-  ): Promise<TriggerInputInstance[]>
-
-  /**
-   * Get all targets registered for a specific trigger+input
-   */
-  protected abstract getTargetsForTrigger(
-    triggerName: string,
-    inputHash: string
-  ): Promise<Array<{ targetType: 'rpc' | 'workflow'; targetName: string }>>
-
-  /**
-   * Attempt to claim a trigger instance for this process.
-   * Should be atomic - only succeeds if unclaimed or the current owner is dead.
-   * @returns true if claim succeeded, false otherwise
-   */
-  protected abstract tryClaimInstance(
-    triggerName: string,
-    inputHash: string,
-    inputData: unknown
-  ): Promise<boolean>
-
-  /**
-   * Release a claimed trigger instance
-   */
-  protected abstract releaseInstance(
-    triggerName: string,
-    inputHash: string
-  ): Promise<void>
-
-  // ============================================
-  // Public API
-  // ============================================
-
-  private resolveOptions<TInput>(
-    options: RegisterOptions<TInput>
-  ): TriggerRegistration {
-    const targetType = options.target.workflow
-      ? ('workflow' as const)
-      : ('rpc' as const)
-    const targetName = options.target.workflow ?? options.target.rpc
-
-    if (!targetName) {
-      throw new Error('Target must specify either rpc or workflow')
-    }
-
-    return {
-      triggerName: options.trigger,
-      inputHash: generateInputHash(options.input),
-      inputData: options.input,
-      targetType,
-      targetName,
-    }
-  }
-
-  /**
-   * Register a trigger → target association (stored in DB).
-   * A trigger+input can have multiple targets (RPCs or workflows).
-   * Returns the registration for use with unregister().
-   */
-  async register<TInput>(
-    options: RegisterOptions<TInput>
-  ): Promise<TriggerRegistration> {
-    const registration = this.resolveOptions(options)
-    await this.storeRegistration(registration)
-
-    this.singletonServices.logger.info(
-      `Registered ${registration.targetType} target '${registration.targetName}' for trigger '${options.trigger}'`
-    )
-
-    return registration
-  }
-
-  /**
-   * Unregister a specific target from a trigger
-   */
-  async unregister(registration: TriggerRegistration): Promise<void> {
-    await this.removeRegistration(registration)
-
-    this.singletonServices.logger.info(
-      `Unregistered ${registration.targetType} target '${registration.targetName}' from trigger '${registration.triggerName}'`
-    )
-  }
-
-  /**
-   * Start claiming and running triggers this process supports.
-   *
-   * - Gets supported triggers from pikkuState (what's been wired)
-   * - Queries DB for trigger instances we can handle
-   * - Attempts to claim each (using DeploymentService for liveness checks)
-   * - Starts subscriptions for claimed triggers
+   * Start all triggers that have both a wireTrigger declaration and a wireTriggerSource.
+   * Also starts triggers from workflow trigger wires.
    */
   async start(): Promise<void> {
-    // Auto-register workflow targets from wiring declarations
+    const triggers = pikkuState(null, 'trigger', 'triggers')
+    const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
+
+    // Collect workflow trigger wires for target resolution
     const workflowTriggerWires = findAllWorkflowTriggerWires()
+
+    // Build a map of trigger name -> targets (from wireTrigger declarations and workflow wires)
+    const triggerTargets = new Map<
+      string,
+      Array<{
+        targetType: 'rpc' | 'workflow'
+        targetName: string
+        startNode?: string
+      }>
+    >()
+
+    // Add RPC targets from wireTrigger declarations (func-based)
+    for (const [name] of triggers) {
+      const meta = pikkuState(null, 'trigger', 'meta')[name]
+      if (meta) {
+        if (!triggerTargets.has(name)) {
+          triggerTargets.set(name, [])
+        }
+        triggerTargets.get(name)!.push({
+          targetType: 'rpc',
+          targetName: meta.pikkuFuncName,
+        })
+      }
+    }
+
+    // Add workflow targets from workflow trigger wires
     for (const wire of workflowTriggerWires) {
-      await this.register({
-        trigger: wire.triggerName,
-        input: wire.input,
-        target: { workflow: wire.workflowName },
+      if (!triggerTargets.has(wire.triggerName)) {
+        triggerTargets.set(wire.triggerName, [])
+      }
+      triggerTargets.get(wire.triggerName)!.push({
+        targetType: 'workflow',
+        targetName: wire.workflowName,
+        startNode: wire.startNode,
       })
     }
 
-    // Get trigger names this process has wired
-    const supported = Array.from(pikkuState(null, 'trigger', 'triggers').keys())
-
-    if (supported.length === 0) {
-      this.singletonServices.logger.info('No triggers wired, nothing to start')
-      return
-    }
-
-    // Query for trigger instances we support
-    const instances = await this.getDistinctTriggerInputs(supported)
-
-    for (const instance of instances) {
-      const key = `${instance.triggerName}:${instance.inputHash}`
-
-      if (this.activeTriggers.has(key)) {
+    // Start triggers that have both a source and at least one target
+    for (const [name, source] of triggerSources) {
+      if (this.activeTriggers.has(name)) {
         continue
       }
 
-      // Attempt to claim this instance
-      const claimed = await this.tryClaimInstance(
-        instance.triggerName,
-        instance.inputHash,
-        instance.inputData
-      )
-
-      if (claimed) {
-        await this.startSubscription(instance)
+      const targets = triggerTargets.get(name)
+      if (!targets || targets.length === 0) {
+        this.singletonServices.logger.info(
+          `Trigger source '${name}' has no targets, skipping`
+        )
+        continue
       }
-    }
-  }
 
-  /**
-   * Stop all trigger subscriptions and release claims
-   */
-  async stop(): Promise<void> {
-    // Teardown all active triggers and release claims
-    for (const [key, trigger] of this.activeTriggers) {
       try {
-        await trigger.instance.teardown()
-        await this.releaseInstance(trigger.name, trigger.inputHash)
-        this.singletonServices.logger.info(`Stopped trigger: ${key}`)
+        const triggerInstance = await setupTrigger({
+          name,
+          singletonServices: this.singletonServices,
+          input: source.input,
+          onTrigger: (data) => this.onTriggerFire(name, targets, data),
+        })
+
+        this.activeTriggers.set(name, triggerInstance)
+        this.singletonServices.logger.info(`Started trigger: ${name}`)
       } catch (error) {
         this.singletonServices.logger.error(
-          `Error stopping trigger ${key}: ${error}`
+          `Failed to start trigger ${name}: ${error}`
         )
       }
     }
 
-    this.activeTriggers.clear()
-  }
-
-  // ============================================
-  // Internal methods
-  // ============================================
-
-  /**
-   * Start a subscription for a claimed trigger instance
-   */
-  private async startSubscription(
-    instance: TriggerInputInstance
-  ): Promise<void> {
-    const key = `${instance.triggerName}:${instance.inputHash}`
-
-    try {
-      const triggerInstance = await setupTrigger({
-        name: instance.triggerName,
-        singletonServices: this.singletonServices,
-        input: instance.inputData,
-        onTrigger: (data) =>
-          this.onTriggerFire(instance.triggerName, instance.inputHash, data),
-      })
-
-      this.activeTriggers.set(key, {
-        name: instance.triggerName,
-        inputHash: instance.inputHash,
-        input: instance.inputData,
-        instance: triggerInstance,
-      })
-
-      this.singletonServices.logger.info(`Started trigger: ${key}`)
-    } catch (error) {
-      this.singletonServices.logger.error(
-        `Failed to start trigger ${key}: ${error}`
+    if (this.activeTriggers.size === 0) {
+      this.singletonServices.logger.info(
+        'No triggers started (no matching sources and targets found)'
       )
-      // Release claim if we failed to start
-      await this.releaseInstance(instance.triggerName, instance.inputHash)
     }
   }
 
   /**
-   * Handle trigger fire - query DB for targets and invoke them
+   * Stop all trigger subscriptions
+   */
+  async stop(): Promise<void> {
+    for (const [name, instance] of this.activeTriggers) {
+      try {
+        await instance.teardown()
+        this.singletonServices.logger.info(`Stopped trigger: ${name}`)
+      } catch (error) {
+        this.singletonServices.logger.error(
+          `Error stopping trigger ${name}: ${error}`
+        )
+      }
+    }
+    this.activeTriggers.clear()
+  }
+
+  /**
+   * Handle trigger fire — invoke all registered targets
    */
   private async onTriggerFire(
     triggerName: string,
-    inputHash: string,
+    targets: Array<{
+      targetType: 'rpc' | 'workflow'
+      targetName: string
+      startNode?: string
+    }>,
     data: unknown
   ): Promise<void> {
-    const targets = await this.getTargetsForTrigger(triggerName, inputHash)
-
     for (const target of targets) {
       try {
         if (target.targetType === 'workflow') {
           const triggerWire = findWorkflowByTriggerWire(triggerName)
           await this.rpcService.startWorkflow(target.targetName, data, {
-            startNode: triggerWire?.startNode,
+            startNode: triggerWire?.startNode ?? target.startNode,
           })
           this.singletonServices.logger.info(
             `Trigger '${triggerName}' started workflow '${target.targetName}'`

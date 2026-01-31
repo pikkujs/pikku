@@ -1,0 +1,178 @@
+import { CronJob } from 'cron'
+import {
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+  CreateWireServices,
+  SchedulerService,
+  ScheduledTaskInfo,
+  ScheduledTaskSummary,
+  parseDurationString,
+} from '@pikku/core'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { ContextAwareRPCService } from '@pikku/core/rpc'
+import { findAllWorkflowScheduleWires } from '@pikku/core/workflow'
+
+interface DelayedTask {
+  taskId: string
+  rpcName: string
+  data?: any
+  session?: CoreUserSession
+  scheduledFor: Date
+  timer: ReturnType<typeof setTimeout>
+}
+
+/**
+ * In-memory SchedulerService implementation.
+ * Uses CronJob for recurring tasks and setTimeout for delayed RPCs.
+ * Replaces PikkuTaskScheduler as a full SchedulerService implementation.
+ */
+export class InMemorySchedulerService extends SchedulerService {
+  private cronJobs = new Map<string, CronJob>()
+  private delayedTasks = new Map<string, DelayedTask>()
+  private idCounter = 0
+
+  constructor(
+    private singletonServices: CoreSingletonServices,
+    private createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ) {
+    super()
+  }
+
+  async init(): Promise<void> {}
+
+  /**
+   * Schedule a one-off delayed RPC call via setTimeout
+   */
+  async scheduleRPC(
+    delay: number | string,
+    rpcName: string,
+    data?: any,
+    session?: CoreUserSession
+  ): Promise<string> {
+    const delayMs =
+      typeof delay === 'string' ? parseDurationString(delay) : delay
+    const taskId = `inmem-${++this.idCounter}-${Date.now()}`
+    const scheduledFor = new Date(Date.now() + delayMs)
+
+    const timer = setTimeout(() => {
+      this.delayedTasks.delete(taskId)
+      const rpcService = new ContextAwareRPCService(
+        this.singletonServices as CoreServices,
+        {},
+        {}
+      )
+      rpcService.rpc(rpcName, data).catch((err) => {
+        this.singletonServices.logger.error(
+          `Failed to execute delayed RPC '${rpcName}': ${err}`
+        )
+      })
+    }, delayMs)
+
+    this.delayedTasks.set(taskId, {
+      taskId,
+      rpcName,
+      data,
+      session,
+      scheduledFor,
+      timer,
+    })
+
+    return taskId
+  }
+
+  async unschedule(taskId: string): Promise<boolean> {
+    const task = this.delayedTasks.get(taskId)
+    if (task) {
+      clearTimeout(task.timer)
+      this.delayedTasks.delete(taskId)
+      return true
+    }
+    return false
+  }
+
+  async getTask(taskId: string): Promise<ScheduledTaskInfo | null> {
+    const task = this.delayedTasks.get(taskId)
+    if (!task) return null
+    return {
+      taskId: task.taskId,
+      rpcName: task.rpcName,
+      scheduledFor: task.scheduledFor,
+      data: task.data,
+      session: task.session,
+      status: 'scheduled',
+    }
+  }
+
+  async getAllTasks(): Promise<ScheduledTaskSummary[]> {
+    return Array.from(this.delayedTasks.values()).map((t) => ({
+      taskId: t.taskId,
+      rpcName: t.rpcName,
+      scheduledFor: t.scheduledFor,
+    }))
+  }
+
+  async close(): Promise<void> {
+    await this.stop()
+    // Clear delayed tasks
+    for (const [, task] of this.delayedTasks) {
+      clearTimeout(task.timer)
+    }
+    this.delayedTasks.clear()
+  }
+
+  /**
+   * Start recurring scheduled tasks.
+   * Reads pikkuState for wireScheduler tasks and workflow schedule wires,
+   * then creates local CronJobs for each.
+   */
+  async start(): Promise<void> {
+    const scheduledTasks = getScheduledTasks()
+
+    // Start CronJobs for wireScheduler tasks
+    for (const [, task] of scheduledTasks) {
+      this.startCronJob(task.name, task.schedule)
+    }
+
+    // Start CronJobs for workflow schedule wires
+    const workflowScheduleWires = findAllWorkflowScheduleWires()
+    for (const wire of workflowScheduleWires) {
+      if (wire.cron) {
+        const name = `workflow:${wire.workflowName}:${wire.startNode}`
+        this.startCronJob(name, wire.cron)
+      }
+    }
+  }
+
+  /**
+   * Stop all recurring CronJobs.
+   */
+  async stop(): Promise<void> {
+    for (const [, job] of this.cronJobs) {
+      job.stop()
+    }
+    this.cronJobs.clear()
+  }
+
+  private startCronJob(name: string, schedule: string) {
+    const job = new CronJob(
+      schedule,
+      async () => {
+        this.singletonServices.logger.info(`Running scheduled task: ${name}`)
+        await runScheduledTask({
+          singletonServices: this.singletonServices,
+          createWireServices: this.createWireServices as any,
+          name,
+        })
+        this.singletonServices.logger.debug(`Completed scheduled task: ${name}`)
+      },
+      null,
+      true
+    )
+    this.cronJobs.set(name, job)
+  }
+}

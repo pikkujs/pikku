@@ -1,6 +1,7 @@
 import type { CoreSingletonServices } from '../../types/core.types.js'
 import type {
   CoreTrigger,
+  CoreTriggerSource,
   TriggerInstance,
   CorePikkuTriggerFunctionConfig,
 } from './trigger.types.js'
@@ -9,7 +10,8 @@ import { addFunction } from '../../function/function-runner.js'
 
 /**
  * Registers a trigger with the Pikku framework.
- * The trigger will be available for setup via setupTrigger.
+ * Declares a trigger name and its target pikku function.
+ * Runs everywhere. Inspector extracts at build time.
  */
 export const wireTrigger = <
   TInput = unknown,
@@ -34,6 +36,21 @@ export const wireTrigger = <
     throw new Error(`Trigger already exists: ${trigger.name}`)
   }
   triggers.set(trigger.name, trigger as any)
+}
+
+/**
+ * Registers a trigger source with the Pikku framework.
+ * Provides the actual subscription function and input data.
+ * Only imported in the trigger worker process.
+ */
+export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
+  source: CoreTriggerSource<TInput, TOutput>
+) => {
+  const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
+  if (triggerSources.has(source.name)) {
+    throw new Error(`Trigger source already exists: ${source.name}`)
+  }
+  triggerSources.set(source.name, source as any)
 }
 
 /**

@@ -73,4 +73,16 @@ export abstract class SchedulerService {
    * Close any open connections
    */
   abstract close(): Promise<void>
+
+  /**
+   * Start recurring scheduled tasks (reads pikkuState for schedule definitions).
+   * Default no-op for backward compatibility.
+   */
+  async start(): Promise<void> {}
+
+  /**
+   * Stop recurring scheduled tasks.
+   * Default no-op for backward compatibility.
+   */
+  async stop(): Promise<void> {}
 }
