@@ -174,16 +174,13 @@ export class BullSchedulerService extends SchedulerService {
     const workflowScheduleWires = findAllWorkflowScheduleWires()
     for (const wire of workflowScheduleWires) {
       if (wire.cron) {
-        const jobName = `workflow:${wire.workflowName}:${wire.startNode}`
+        const name = `workflow:${wire.workflowName}:${wire.startNode}`
         const job = await this.recurringQueue.add(
-          jobName,
-          {
-            rpcName: `__workflow__:${wire.workflowName}`,
-            data: { startNode: wire.startNode },
-          } as ScheduledJobData,
+          name,
+          { rpcName: name } as ScheduledJobData,
           {
             repeat: { pattern: wire.cron },
-            jobId: `recurring:${jobName}`,
+            jobId: `recurring:${name}`,
           }
         )
         if (job.repeatJobKey) {

@@ -147,10 +147,10 @@ export class PgBossSchedulerService extends SchedulerService {
     const workflowScheduleWires = findAllWorkflowScheduleWires()
     for (const wire of workflowScheduleWires) {
       if (wire.cron) {
-        const cronName = `${RECURRING_QUEUE}:workflow:${wire.workflowName}:${wire.startNode}`
+        const name = `workflow:${wire.workflowName}:${wire.startNode}`
+        const cronName = `${RECURRING_QUEUE}:${name}`
         await this.pgBoss.schedule(cronName, wire.cron, {
-          rpcName: `__workflow__:${wire.workflowName}`,
-          data: { startNode: wire.startNode },
+          rpcName: name,
         } as ScheduledJobData)
         this.scheduledCronNames.push(cronName)
       }
