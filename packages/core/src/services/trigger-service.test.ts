@@ -1,7 +1,7 @@
 import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
-import { TriggerService } from './trigger-service.js'
+import { InMemoryTriggerService } from './trigger-service.js'
 import type { CoreSingletonServices } from '../types/core.types.js'
 import {
   wireTrigger,
@@ -28,6 +28,12 @@ const createMockServices = (logger?: ReturnType<typeof createMockLogger>) => {
   return {
     logger: logger ?? createMockLogger(),
   } as any as CoreSingletonServices
+}
+
+const createService = (mockServices: CoreSingletonServices) => {
+  const service = new InMemoryTriggerService()
+  service.setServices(mockServices)
+  return service
 }
 
 const setupTriggerMeta = (name: string) => {
@@ -80,7 +86,7 @@ const wireMockTriggerWithSource = (
 // Tests
 // ============================================
 
-let service: TriggerService
+let service: InMemoryTriggerService
 
 beforeEach(() => {
   resetPikkuState()
@@ -92,10 +98,10 @@ afterEach(async () => {
   }
 })
 
-describe('TriggerService.start', () => {
+describe('InMemoryTriggerService.start', () => {
   test('should do nothing when no trigger sources exist', async () => {
     const mockLogger = createMockLogger()
-    service = new TriggerService(createMockServices(mockLogger))
+    service = createService(createMockServices(mockLogger))
 
     await service.start()
 
@@ -105,7 +111,7 @@ describe('TriggerService.start', () => {
 
   test('should start a trigger that has both declaration and source', async () => {
     const mockLogger = createMockLogger()
-    service = new TriggerService(createMockServices(mockLogger))
+    service = createService(createMockServices(mockLogger))
 
     wireMockTriggerWithSource('test-trigger')
 
@@ -119,7 +125,7 @@ describe('TriggerService.start', () => {
 
   test('should skip sources without targets', async () => {
     const mockLogger = createMockLogger()
-    service = new TriggerService(createMockServices(mockLogger))
+    service = createService(createMockServices(mockLogger))
 
     // Only register a source, no wireTrigger declaration
     setupTriggerMeta('orphan-source')
@@ -139,7 +145,7 @@ describe('TriggerService.start', () => {
 
   test('should not start a trigger that is already active', async () => {
     const mockLogger = createMockLogger()
-    service = new TriggerService(createMockServices(mockLogger))
+    service = createService(createMockServices(mockLogger))
 
     wireMockTriggerWithSource('test-trigger')
 
@@ -157,9 +163,14 @@ describe('TriggerService.start', () => {
     // Should not have started again
     assert.equal(startCount1, startCount2)
   })
+
+  test('should throw when setServices not called', async () => {
+    service = new InMemoryTriggerService()
+    await assert.rejects(() => service.start(), /requires singletonServices/)
+  })
 })
 
-describe('TriggerService.stop', () => {
+describe('InMemoryTriggerService.stop', () => {
   test('should tear down all active triggers', async () => {
     let tornDown = false
 
@@ -181,7 +192,7 @@ describe('TriggerService.stop', () => {
     })
 
     const mockLogger = createMockLogger()
-    service = new TriggerService(createMockServices(mockLogger))
+    service = createService(createMockServices(mockLogger))
 
     await service.start()
     await service.stop()
@@ -192,14 +203,14 @@ describe('TriggerService.stop', () => {
   })
 
   test('should be safe to call stop when nothing is started', async () => {
-    service = new TriggerService(createMockServices())
+    service = createService(createMockServices())
 
     // Should not throw
     await service.stop()
   })
 })
 
-describe('TriggerService.onTriggerFire', () => {
+describe('InMemoryTriggerService.onTriggerFire', () => {
   test('should invoke RPC targets when trigger fires', async () => {
     let rpcInvoked = false
     let rpcData: any
@@ -209,7 +220,7 @@ describe('TriggerService.onTriggerFire', () => {
       logger: mockLogger,
     } as any
 
-    service = new TriggerService(mockServices)
+    service = createService(mockServices)
 
     // Override the rpcService to capture calls
     ;(service as any).rpcService = {
@@ -252,7 +263,7 @@ describe('TriggerService.onTriggerFire', () => {
       logger: mockLogger,
     } as any
 
-    service = new TriggerService(mockServices)
+    service = createService(mockServices)
     ;(service as any).rpcService = {
       rpc: async () => {
         throw new Error('RPC failed')
@@ -289,7 +300,7 @@ describe('TriggerService.onTriggerFire', () => {
   })
 })
 
-describe('TriggerService auto-registration', () => {
+describe('InMemoryTriggerService auto-registration', () => {
   test('start() auto-starts workflow trigger wires when source exists', async () => {
     let workflowStarted = false
     let startedWorkflowName: string | undefined
@@ -297,7 +308,7 @@ describe('TriggerService auto-registration', () => {
     const mockLogger = createMockLogger()
     const mockServices = { logger: mockLogger } as any
 
-    service = new TriggerService(mockServices)
+    service = createService(mockServices)
     ;(service as any).rpcService = {
       rpc: async () => {},
       startWorkflow: async (name: string) => {

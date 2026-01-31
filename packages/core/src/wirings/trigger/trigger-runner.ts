@@ -47,10 +47,7 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
 
   // Register the source function (separate from the target function)
   const sourceFuncName = `${triggerMeta.pikkuFuncName}__source`
-  addFunction(sourceFuncName, {
-    func: source.func.func,
-    tags: source.func.tags,
-  })
+  addFunction(sourceFuncName, source.func)
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {

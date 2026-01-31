@@ -1,4 +1,9 @@
-import { CoreUserSession } from '../types/core.types.js'
+import type {
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+  CreateWireServices,
+} from '../types/core.types.js'
 
 /**
  * Minimal metadata for listing scheduled tasks
@@ -73,6 +78,20 @@ export abstract class SchedulerService {
    * Close any open connections
    */
   abstract close(): Promise<void>
+
+  /**
+   * Set services needed for processing recurring tasks.
+   * Called after construction since the scheduler is created before
+   * singletonServices are fully assembled.
+   */
+  setServices(
+    _singletonServices: CoreSingletonServices,
+    _createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ): void {}
 
   /**
    * Start recurring scheduled tasks

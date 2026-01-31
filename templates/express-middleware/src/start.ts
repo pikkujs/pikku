@@ -25,7 +25,8 @@ async function main(): Promise<void> {
     singletonServices.logger.info(`server started`)
   )
 
-  const scheduler = new InMemorySchedulerService(singletonServices)
+  const scheduler = new InMemorySchedulerService()
+  scheduler.setServices(singletonServices)
   await scheduler.start()
 }
 

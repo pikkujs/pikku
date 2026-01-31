@@ -1,7 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowService } from '@pikku/pg'
-import { TriggerService } from '@pikku/core'
+import { InMemoryTriggerService } from '@pikku/core'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -34,6 +34,7 @@ async function main(): Promise<void> {
       workflowService,
     })
 
+    schedulerService.setServices(singletonServices, createWireServices)
     workflowService.setServices(singletonServices, createWireServices, config)
 
     const appServer = new PikkuExpressServer(
@@ -60,7 +61,8 @@ async function main(): Promise<void> {
 
     await schedulerService.start()
 
-    const triggerService = new TriggerService(singletonServices)
+    const triggerService = new InMemoryTriggerService()
+    triggerService.setServices(singletonServices)
     await triggerService.start()
 
     singletonServices.logger.info('Trigger service started')
