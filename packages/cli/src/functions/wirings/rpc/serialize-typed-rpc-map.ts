@@ -64,16 +64,14 @@ export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
 // Import WorkflowMap for workflow typing
 import type { WorkflowMap } from '${workflowMapPath}'
 
-export type TypedPikkuRPC = {
-  depth: number;
-  global: boolean;
-  invoke: RPCInvoke;
-  invokeExposed: (name: string, data: any) => Promise<any>;
-  startWorkflow: <Name extends keyof WorkflowMap>(
-    name: Name,
-    input: WorkflowMap[Name]['input']
-  ) => Promise<{ runId: string }>;
-}
+import type { PikkuRPC } from '@pikku/core/rpc'
+
+type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
+  name: Name,
+  input: WorkflowMap[Name]['input']
+) => Promise<{ runId: string }>
+
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, TypedStartWorkflow>
   `
 }
 

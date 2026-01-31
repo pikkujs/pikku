@@ -7,6 +7,7 @@ import {
   wireTrigger,
   wireTriggerSource,
 } from '../wirings/trigger/trigger-runner.js'
+import { rpcService } from '../wirings/rpc/rpc-runner.js'
 
 // ============================================
 // Helpers
@@ -87,6 +88,7 @@ const wireMockTriggerWithSource = (
 // ============================================
 
 let service: InMemoryTriggerService
+const afterCleanups: Array<() => void> = []
 
 beforeEach(() => {
   resetPikkuState()
@@ -96,6 +98,10 @@ afterEach(async () => {
   if (service) {
     await service.stop()
   }
+  for (const cleanup of afterCleanups) {
+    cleanup()
+  }
+  afterCleanups.length = 0
 })
 
 describe('InMemoryTriggerService.start', () => {
@@ -222,14 +228,18 @@ describe('InMemoryTriggerService.onTriggerFire', () => {
 
     service = createService(mockServices)
 
-    // Override the rpcService to capture calls
-    ;(service as any).rpcService = {
-      rpc: async (name: string, data: any) => {
+    const origGetContextRPCService =
+      rpcService.getContextRPCService.bind(rpcService)
+    rpcService.getContextRPCService = (() => ({
+      invoke: async (_name: string, data: any) => {
         rpcInvoked = true
         rpcData = data
       },
       startWorkflow: async () => ({ runId: 'test' }),
-    }
+    })) as any
+    afterCleanups.push(() => {
+      rpcService.getContextRPCService = origGetContextRPCService
+    })
 
     // Wire a trigger that fires on setup
     setupTriggerMeta('fire-trigger')
@@ -264,12 +274,18 @@ describe('InMemoryTriggerService.onTriggerFire', () => {
     } as any
 
     service = createService(mockServices)
-    ;(service as any).rpcService = {
-      rpc: async () => {
+
+    const origGetContextRPCService =
+      rpcService.getContextRPCService.bind(rpcService)
+    rpcService.getContextRPCService = (() => ({
+      invoke: async () => {
         throw new Error('RPC failed')
       },
       startWorkflow: async () => ({ runId: 'test' }),
-    }
+    })) as any
+    afterCleanups.push(() => {
+      rpcService.getContextRPCService = origGetContextRPCService
+    })
 
     setupTriggerMeta('error-trigger')
     wireTrigger({
@@ -309,14 +325,20 @@ describe('InMemoryTriggerService auto-registration', () => {
     const mockServices = { logger: mockLogger } as any
 
     service = createService(mockServices)
-    ;(service as any).rpcService = {
-      rpc: async () => {},
+
+    const origGetContextRPCService =
+      rpcService.getContextRPCService.bind(rpcService)
+    rpcService.getContextRPCService = (() => ({
+      invoke: async () => {},
       startWorkflow: async (name: string) => {
         workflowStarted = true
         startedWorkflowName = name
         return { runId: 'auto-run' }
       },
-    }
+    })) as any
+    afterCleanups.push(() => {
+      rpcService.getContextRPCService = origGetContextRPCService
+    })
 
     // Register workflow with trigger wire in workflows.meta
     const workflowsMeta = pikkuState(null, 'workflows', 'meta')
