@@ -1,5 +1,4 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
-import { store } from '../services/store.service.js'
 import { UserIdInputSchema, TodoStreamOutputSchema } from '../schemas.js'
 
 /**
@@ -9,14 +8,14 @@ import { UserIdInputSchema, TodoStreamOutputSchema } from '../schemas.js'
 export const todoStream = pikkuSessionlessFunc({
   input: UserIdInputSchema,
   output: TodoStreamOutputSchema,
-  func: async ({ logger }, { userId }, { channel }) => {
+  func: async ({ logger, todoStore }, { userId }, { channel }) => {
     const uid = userId || 'user1'
     logger.info(`SSE stream started for user ${uid}`)
 
     if (channel) {
       let count = 0
       const interval = setInterval(async () => {
-        const todos = store.getTodosByUser(uid, { completed: false })
+        const todos = todoStore.getTodosByUser(uid, { completed: false })
         channel.send({
           todos,
           timestamp: new Date().toISOString(),
@@ -31,7 +30,7 @@ export const todoStream = pikkuSessionlessFunc({
       }, 5000)
     }
 
-    const todos = store.getTodosByUser(uid, { completed: false })
+    const todos = todoStore.getTodosByUser(uid, { completed: false })
     return {
       todos,
       timestamp: new Date().toISOString(),

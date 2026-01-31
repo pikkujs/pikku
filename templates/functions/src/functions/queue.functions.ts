@@ -1,5 +1,4 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
-import { store } from '../services/store.service.js'
 import {
   ProcessReminderInputSchema,
   ProcessReminderOutputSchema,
@@ -11,10 +10,10 @@ import {
 export const processReminder = pikkuSessionlessFunc({
   input: ProcessReminderInputSchema,
   output: ProcessReminderOutputSchema,
-  func: async ({ logger }, { todoId, userId }) => {
+  func: async ({ logger, todoStore }, { todoId, userId }) => {
     logger.info(`Processing reminder for todo ${todoId}, user ${userId}`)
 
-    const todo = store.getTodo(todoId)
+    const todo = todoStore.getTodo(todoId)
     if (!todo) {
       return {
         processed: false,

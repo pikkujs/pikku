@@ -1,13 +1,12 @@
 import { pikkuVoidFunc } from '../../.pikku/pikku-types.gen.js'
-import { store } from '../services/store.service.js'
 
 /**
  * Scheduled task: Log daily todo summary.
  * Runs every day at 9 AM.
  */
-export const dailySummary = pikkuVoidFunc(async ({ logger }) => {
-  const stats = store.getStats('user1')
-  const overdue = store.getOverdueTodos('user1')
+export const dailySummary = pikkuVoidFunc(async ({ logger, todoStore }) => {
+  const stats = todoStore.getStats('user1')
+  const overdue = todoStore.getOverdueTodos('user1')
 
   const message = [
     `Daily Todo Summary (${new Date().toISOString()})`,
