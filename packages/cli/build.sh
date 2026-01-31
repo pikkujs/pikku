@@ -12,11 +12,11 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
 npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
 
-# Build TypeScript
+# Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
-yarn tsc -b
+yarn tsc -b || true
 
-# Build Pikku using the local CLI
+# Rebuild Pikku using the local CLI and recompile
 yarn pikku
 yarn tsc -b
 
