@@ -50,7 +50,6 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    // Start recurring scheduled tasks
     await schedulerService.start()
 
     // Start trigger subscriptions

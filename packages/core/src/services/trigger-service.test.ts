@@ -7,7 +7,6 @@ import {
   wireTrigger,
   wireTriggerSource,
 } from '../wirings/trigger/trigger-runner.js'
-import { addWorkflowGraph } from '../wirings/workflow/graph/graph-runner.js'
 
 // ============================================
 // Helpers
@@ -302,26 +301,11 @@ describe('TriggerService auto-registration', () => {
       },
     }
 
-    // Set up workflow meta (required by addWorkflowGraph)
-    const workflowMeta = pikkuState(null, 'workflows', 'meta')
-    workflowMeta['autoFireWorkflow'] = {
-      name: 'autoFireWorkflow',
-      pikkuFuncName: 'autoFireWorkflow',
-      source: 'graph',
-    }
-
-    // Register workflow graph with trigger wire
-    addWorkflowGraph('autoFireWorkflow', {
-      graph: {},
-      wires: {
-        trigger: [
-          {
-            name: 'auto-fire-trigger',
-            startNode: 'begin',
-          },
-        ],
-      },
-    })
+    // Register workflow trigger wire in the unified wires index
+    const wires = pikkuState(null, 'workflows', 'wires')
+    wires.trigger['auto-fire-trigger'] = [
+      { workflowName: 'autoFireWorkflow', startNode: 'begin' },
+    ]
 
     // Wire the trigger source (subscription function)
     setupTriggerMeta('auto-fire-trigger')

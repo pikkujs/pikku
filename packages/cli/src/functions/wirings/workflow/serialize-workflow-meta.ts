@@ -13,9 +13,10 @@ export const serializeWorkflowMeta = (
   packageName?: string
 ) => {
   const lines: string[] = []
+  const packageNameValue = packageName ? `'${packageName}'` : 'null'
 
   if (workflowNames.length === 0) {
-    // Empty meta file - still need to register empty meta
+    // Empty meta file - still need to register empty meta and wires
     lines.push("import { pikkuState } from '@pikku/core'")
     lines.push(
       "import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'"
@@ -23,9 +24,11 @@ export const serializeWorkflowMeta = (
     lines.push('')
     lines.push('const workflowsMeta: SerializedWorkflowGraphs = {}')
     lines.push('')
-    const packageNameValue = packageName ? `'${packageName}'` : 'null'
     lines.push(
       `pikkuState(${packageNameValue}, 'workflows', 'meta', workflowsMeta)`
+    )
+    lines.push(
+      `pikkuState(${packageNameValue}, 'workflows', 'wires', { http: {}, trigger: {} })`
     )
     return lines.join('\n')
   }
@@ -64,9 +67,39 @@ export const serializeWorkflowMeta = (
   lines.push('')
 
   // Register meta with pikkuState
-  const packageNameValue = packageName ? `'${packageName}'` : 'null'
   lines.push(
     `pikkuState(${packageNameValue}, 'workflows', 'meta', workflowsMeta)`
+  )
+
+  lines.push('')
+
+  // Build unified wires index from workflow metadata
+  lines.push('// Build unified wires index from workflow metadata')
+  lines.push(
+    'const httpWires: Record<string, { workflowName: string; startNode?: string }> = {}'
+  )
+  lines.push(
+    'const triggerWires: Record<string, Array<{ workflowName: string; startNode: string }>> = {}'
+  )
+  lines.push('for (const [name, meta] of Object.entries(workflowsMeta)) {')
+  lines.push('  if (meta.wires?.http) {')
+  lines.push('    for (const h of meta.wires.http) {')
+  lines.push(
+    '      httpWires[`${h.method}:${h.route}`] = { workflowName: name, startNode: h.startNode }'
+  )
+  lines.push('    }')
+  lines.push('  }')
+  lines.push('  if (meta.wires?.trigger) {')
+  lines.push('    for (const t of meta.wires.trigger) {')
+  lines.push('      if (!triggerWires[t.name]) triggerWires[t.name] = []')
+  lines.push(
+    '      triggerWires[t.name]!.push({ workflowName: name, startNode: t.startNode })'
+  )
+  lines.push('    }')
+  lines.push('  }')
+  lines.push('}')
+  lines.push(
+    `pikkuState(${packageNameValue}, 'workflows', 'wires', { http: httpWires, trigger: triggerWires })`
   )
 
   return lines.join('\n')
