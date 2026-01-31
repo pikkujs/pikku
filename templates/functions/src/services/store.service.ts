@@ -4,7 +4,7 @@ import type { Todo, User } from '../schemas.js'
  * Singleton in-memory store for todos and users.
  * Persists during server lifetime.
  */
-class TodoStore {
+export class TodoStore {
   private todos: Map<string, Todo> = new Map()
   private users: Map<string, User> = new Map()
   private idCounter = 1
@@ -149,5 +149,3 @@ class TodoStore {
     })
   }
 }
-
-export const store = new TodoStore()

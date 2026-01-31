@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { pikkuWorkflowFunc } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
-import { store } from '../services/store.service.js'
 import { type Todo, type Priority } from '../schemas.js'
 
 /**
@@ -102,9 +101,9 @@ export const createAndNotifyWorkflow = pikkuWorkflowFunc<
 export const fetchOverdueTodos = pikkuSessionlessFunc<
   { userId?: string },
   { userId: string; todos: Todo[]; count: number }
->(async ({ logger }, data) => {
+>(async ({ logger, todoStore }, data) => {
   const uid = data.userId || 'user1'
-  const todos = store.getOverdueTodos(uid)
+  const todos = todoStore.getOverdueTodos(uid)
   logger.info(`Fetched ${todos.length} overdue todos for user ${uid}`)
   return { userId: uid, todos, count: todos.length }
 })

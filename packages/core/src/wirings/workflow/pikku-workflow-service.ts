@@ -387,12 +387,15 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Check if this is a graph workflow (source === 'graph')
     if (workflowMeta.source === 'graph') {
       // Graph workflows use the graph scheduler
+      // Fall back to inline when no queue service (same as DSL path)
+      const shouldInline =
+        options?.inline || !this.singletonServices?.queueService
       return runWorkflowGraph(
         this,
         name,
         input,
         rpcService,
-        options?.inline,
+        shouldInline,
         options?.startNode
       )
     }

@@ -1,5 +1,4 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
-import { store } from '../services/store.service.js'
 import {
   ListTodosWithUserInputSchema,
   CreateTodoWithUserInputSchema,
@@ -18,9 +17,9 @@ import {
 export const listTodos = pikkuSessionlessFunc({
   input: ListTodosWithUserInputSchema,
   output: TodoListResponseSchema,
-  func: async ({ logger }, { userId, completed, priority, tag }) => {
+  func: async ({ logger, todoStore }, { userId, completed, priority, tag }) => {
     const uid = userId || 'user1' // Default to demo user
-    const todos = store.getTodosByUser(uid, { completed, priority, tag })
+    const todos = todoStore.getTodosByUser(uid, { completed, priority, tag })
     logger.info(`Listed ${todos.length} todos for user ${uid}`)
     return { todos, total: todos.length }
   },
@@ -32,8 +31,8 @@ export const listTodos = pikkuSessionlessFunc({
 export const getTodo = pikkuSessionlessFunc({
   input: TodoIdInputSchema,
   output: TodoOutputSchema,
-  func: async ({ logger }, { id }) => {
-    const todo = store.getTodo(id)
+  func: async ({ logger, todoStore }, { id }) => {
+    const todo = todoStore.getTodo(id)
     logger.info(`Get todo ${id}: ${todo ? 'found' : 'not found'}`)
     return { todo: todo || null }
   },
@@ -46,11 +45,11 @@ export const createTodo = pikkuSessionlessFunc({
   input: CreateTodoWithUserInputSchema,
   output: CreateTodoOutputSchema,
   func: async (
-    { logger, eventHub },
+    { logger, eventHub, todoStore },
     { userId, title, description, priority, dueDate, tags }
   ) => {
     const uid = userId || 'user1'
-    const todo = store.createTodo(uid, {
+    const todo = todoStore.createTodo(uid, {
       title,
       description,
       completed: false,
@@ -75,10 +74,10 @@ export const updateTodo = pikkuSessionlessFunc({
   input: UpdateTodoWithIdInputSchema,
   output: TodoSuccessOutputSchema,
   func: async (
-    { logger, eventHub },
+    { logger, eventHub, todoStore },
     { id, title, description, priority, dueDate, tags, completed }
   ) => {
-    const todo = store.updateTodo(id, {
+    const todo = todoStore.updateTodo(id, {
       title,
       description,
       priority,
@@ -104,8 +103,8 @@ export const updateTodo = pikkuSessionlessFunc({
 export const deleteTodo = pikkuSessionlessFunc({
   input: TodoIdInputSchema,
   output: DeleteResponseSchema,
-  func: async ({ logger, eventHub }, { id }) => {
-    const success = store.deleteTodo(id)
+  func: async ({ logger, eventHub, todoStore }, { id }) => {
+    const success = todoStore.deleteTodo(id)
     logger.info(`Deleted todo ${id}: ${success}`)
 
     if (eventHub && success) {
@@ -122,8 +121,8 @@ export const deleteTodo = pikkuSessionlessFunc({
 export const completeTodo = pikkuSessionlessFunc({
   input: TodoIdInputSchema,
   output: TodoSuccessOutputSchema,
-  func: async ({ logger, eventHub }, { id }) => {
-    const todo = store.completeTodo(id)
+  func: async ({ logger, eventHub, todoStore }, { id }) => {
+    const todo = todoStore.completeTodo(id)
 
     if (todo) {
       logger.info(`Completed todo ${id}`)

@@ -1,4 +1,7 @@
-import type { CoreSingletonServices } from '../../types/core.types.js'
+import type {
+  CommonWireMeta,
+  CoreSingletonServices,
+} from '../../types/core.types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
@@ -12,15 +15,7 @@ export interface PikkuTrigger<TOutput = unknown> {
 /**
  * Metadata for registered triggers stored in state.
  */
-export type TriggerMeta = Record<
-  string,
-  {
-    pikkuFuncName: string
-    name: string
-    description?: string
-    tags?: string[]
-  }
->
+export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 
 /**
  * A trigger function that sets up a subscription and returns a teardown function.
@@ -133,24 +128,17 @@ export const pikkuTriggerFunc = <
  * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type
  */
-export interface CoreTrigger<
-  TInput = unknown,
-  TOutput = unknown,
-  TriggerFunctionConfig extends CorePikkuTriggerFunctionConfig<
-    TInput,
-    TOutput
-  > = CorePikkuTriggerFunctionConfig<TInput, TOutput>,
-> {
+export interface CoreTrigger<PikkuFunctionConfig = any> {
   /** Unique name for this trigger */
   name: string
-  /** The trigger function configuration */
-  func: TriggerFunctionConfig
-  /** Input to pass to the trigger function */
-  input: TInput
+  /** The target RPC function to invoke when the trigger fires */
+  func: PikkuFunctionConfig
   /** Optional description */
   description?: string
   /** Optional tags for categorization */
   tags?: string[]
+  /** Whether this trigger is used by a graph workflow */
+  graph?: true
 }
 
 /**
@@ -159,4 +147,20 @@ export interface CoreTrigger<
 export interface TriggerInstance {
   name: string
   teardown: () => void | Promise<void>
+}
+
+/**
+ * A trigger source that provides the subscription function.
+ * Only imported in the trigger worker process.
+ *
+ * @template TInput - Input type passed to the trigger function
+ * @template TOutput - Output type produced when trigger fires
+ */
+export interface CoreTriggerSource<TInput = unknown, TOutput = unknown> {
+  /** Must match a wireTrigger name */
+  name: string
+  /** The trigger function config that sets up the subscription */
+  func: CorePikkuTriggerFunctionConfig<TInput, TOutput>
+  /** Input data passed to the trigger function */
+  input: TInput
 }

@@ -203,6 +203,11 @@ export function filterInspectorState(
       meta: JSON.parse(JSON.stringify(state.channels.meta)),
       files: new Set<string>(), // Will be repopulated with filtered files
     },
+    triggers: {
+      ...state.triggers,
+      meta: JSON.parse(JSON.stringify(state.triggers?.meta ?? {})),
+      files: new Set<string>(),
+    },
     scheduledTasks: {
       ...state.scheduledTasks,
       meta: JSON.parse(JSON.stringify(state.scheduledTasks.meta)),
@@ -316,6 +321,35 @@ export function filterInspectorState(
   // Repopulate channels.files if any channels remain
   if (Object.keys(filteredState.channels.meta).length > 0) {
     filteredState.channels.files = new Set(state.channels.files)
+  }
+
+  // Filter triggers
+  for (const name of Object.keys(filteredState.triggers.meta)) {
+    const triggerMeta = filteredState.triggers.meta[name]
+    const matches = matchesFilters(
+      filters,
+      {
+        type: 'trigger' as PikkuWiringTypes,
+        name,
+        tags: triggerMeta.tags,
+      },
+      logger
+    )
+
+    if (!matches) {
+      delete filteredState.triggers.meta[name]
+    } else {
+      if (triggerMeta.pikkuFuncName) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          triggerMeta.pikkuFuncName
+        )
+      }
+    }
+  }
+
+  // Repopulate triggers.files if any triggers remain
+  if (Object.keys(filteredState.triggers.meta).length > 0) {
+    filteredState.triggers.files = new Set(state.triggers.files)
   }
 
   // Filter scheduled tasks

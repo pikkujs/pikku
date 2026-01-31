@@ -9,7 +9,11 @@ import {
   CreateWireServices,
   CreateSingletonServices,
 } from '@pikku/core'
-import { JWTService, LocalVariablesService } from '@pikku/core/services'
+import {
+  JWTService,
+  LocalSecretService,
+  LocalVariablesService,
+} from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import {
@@ -33,6 +37,7 @@ export const createSingletonServices: CreateSingletonServices<
   existingServices?: Partial<SingletonServices>
 ): Promise<RequiredSingletonServices> => {
   const variables = existingServices?.variables || new LocalVariablesService()
+  const secrets = existingServices?.secrets || new LocalSecretService(variables)
   const logger = new CustomLogger()
 
   const schema = new CFWorkerSchemaService(logger)
@@ -56,12 +61,13 @@ export const createSingletonServices: CreateSingletonServices<
     config,
     logger,
     variables,
+    secrets,
     schema,
     jwt,
     workflowService: existingServices?.workflowService,
     queueService: existingServices?.queueService,
     schedulerService: existingServices?.schedulerService,
-  } as any
+  }
 }
 
 /**

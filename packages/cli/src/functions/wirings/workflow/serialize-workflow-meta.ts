@@ -12,62 +12,45 @@ export const serializeWorkflowMeta = (
   supportsImportAttributes: boolean,
   packageName?: string
 ) => {
-  const lines: string[] = []
+  const pkg = packageName ? `'${packageName}'` : 'null'
 
   if (workflowNames.length === 0) {
-    // Empty meta file - still need to register empty meta
-    lines.push("import { pikkuState } from '@pikku/core'")
-    lines.push(
-      "import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'"
-    )
-    lines.push('')
-    lines.push('const workflowsMeta: SerializedWorkflowGraphs = {}')
-    lines.push('')
-    const packageNameValue = packageName ? `'${packageName}'` : 'null'
-    lines.push(
-      `pikkuState(${packageNameValue}, 'workflows', 'meta', workflowsMeta)`
-    )
-    return lines.join('\n')
+    return `import { pikkuState } from '@pikku/core'
+import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
+
+const workflowsMeta: SerializedWorkflowGraphs = {}
+
+pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
   }
 
-  // Imports
-  lines.push("import { pikkuState } from '@pikku/core'")
-  lines.push(
-    "import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'"
-  )
-  lines.push('')
-
-  // Import each workflow meta JSON
   const sortedNames = [...workflowNames].sort()
-  for (const name of sortedNames) {
-    const jsonPath = `${metaDir}/${name}.gen.json`
-    const importPath = getFileImportRelativePath(
-      outputPath,
-      jsonPath,
-      packageMappings
-    )
-    const importStatement = supportsImportAttributes
-      ? `import ${name}Meta from '${importPath}' with { type: 'json' }`
-      : `import ${name}Meta from '${importPath}'`
-    lines.push(importStatement)
-  }
 
-  lines.push('')
+  const imports = sortedNames
+    .map((name) => {
+      const jsonPath = `${metaDir}/${name}.gen.json`
+      const importPath = getFileImportRelativePath(
+        outputPath,
+        jsonPath,
+        packageMappings
+      )
+      return supportsImportAttributes
+        ? `import ${name}Meta from '${importPath}' with { type: 'json' }`
+        : `import ${name}Meta from '${importPath}'`
+    })
+    .join('\n')
 
-  // Create aggregated meta object (cast JSON imports to proper types)
-  lines.push('const workflowsMeta = {')
-  for (const name of sortedNames) {
-    lines.push(`  '${name}': ${name}Meta,`)
-  }
-  lines.push('} as SerializedWorkflowGraphs')
+  const metaEntries = sortedNames
+    .map((name) => `  '${name}': ${name}Meta,`)
+    .join('\n')
 
-  lines.push('')
+  return `import { pikkuState } from '@pikku/core'
+import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 
-  // Register meta with pikkuState
-  const packageNameValue = packageName ? `'${packageName}'` : 'null'
-  lines.push(
-    `pikkuState(${packageNameValue}, 'workflows', 'meta', workflowsMeta)`
-  )
+${imports}
 
-  return lines.join('\n')
+const workflowsMeta = {
+${metaEntries}
+} as SerializedWorkflowGraphs
+
+pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
 }

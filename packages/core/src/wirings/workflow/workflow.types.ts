@@ -88,15 +88,6 @@ export interface WorkflowMcpWires {
 }
 
 /**
- * Schedule wire configuration for workflows
- */
-export interface WorkflowScheduleWire {
-  cron?: string
-  interval?: string
-  startNode: string
-}
-
-/**
  * Trigger wire configuration for workflows
  */
 export interface WorkflowTriggerWire {
@@ -121,8 +112,6 @@ export interface WorkflowWires {
   cli?: WorkflowCliWire[]
   /** MCP triggers (tool, prompt, resource) */
   mcp?: WorkflowMcpWires
-  /** Schedule triggers */
-  schedule?: WorkflowScheduleWire[]
   /** Named trigger wires */
   trigger?: WorkflowTriggerWire[]
 }

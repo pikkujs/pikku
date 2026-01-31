@@ -1,6 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowService } from '@pikku/pg'
+import { InMemoryTriggerService } from '@pikku/core'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -17,18 +18,23 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
+    const sql = postgres(connectionString)
+
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
-    const workflowService = new PgWorkflowService(postgres(connectionString))
+    const schedulerService = pgBossFactory.getSchedulerService()
+
+    const workflowService = new PgWorkflowService(sql)
     await workflowService.init()
 
     const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
-      schedulerService: pgBossFactory.getSchedulerService(),
+      schedulerService,
       workflowService,
     })
 
+    schedulerService.setServices(singletonServices, createWireServices)
     workflowService.setServices(singletonServices, createWireServices, config)
 
     const appServer = new PikkuExpressServer(
@@ -52,6 +58,14 @@ async function main(): Promise<void> {
     singletonServices.logger.info(
       'Workflow workers ready and listening for jobs'
     )
+
+    await schedulerService.start()
+
+    const triggerService = new InMemoryTriggerService()
+    triggerService.setServices(singletonServices)
+    await triggerService.start()
+
+    singletonServices.logger.info('Trigger service started')
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)

@@ -12,6 +12,7 @@ export * from './variables-service.js'
 export * from './schema-service.js'
 export * from './user-session-service.js'
 export * from './scheduler-service.js'
+export * from './trigger-service.js'
 
 // Local implementations
 export * from './local-secrets.js'

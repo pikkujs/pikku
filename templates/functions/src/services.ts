@@ -11,6 +11,7 @@ import {
   pikkuServices,
   pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
+import { TodoStore } from './services/store.service.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {
@@ -50,6 +51,7 @@ export const createSingletonServices = pikkuServices(
       schema,
       jwt,
       secrets,
+      todoStore: existingServices?.todoStore || new TodoStore(),
       eventHub: existingServices?.eventHub,
       workflowService: existingServices?.workflowService,
       queueService: existingServices?.queueService,

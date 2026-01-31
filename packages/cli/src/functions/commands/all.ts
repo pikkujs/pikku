@@ -92,6 +92,14 @@ export const all = pikkuVoidFunc({
           config.schedulersWiringFile
         )
       }
+
+      const triggers = await rpc.invoke('pikkuTrigger', null)
+      if (triggers) {
+        allImports.push(
+          config.triggersWiringMetaFile,
+          config.triggersWiringFile
+        )
+      }
     }
 
     const workflows = await rpc.invoke('pikkuWorkflow', null)

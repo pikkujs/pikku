@@ -178,3 +178,11 @@ export const TodoStreamOutputSchema = z.object({
   timestamp: z.string(),
   count: z.number(),
 })
+
+export const OnTestEventInputSchema = z.object({
+  payload: z.string(),
+})
+
+export const OnTestEventOutputSchema = z.object({
+  payload: z.string(),
+})

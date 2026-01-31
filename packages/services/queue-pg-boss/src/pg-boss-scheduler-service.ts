@@ -4,8 +4,12 @@ import {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
+  CoreSingletonServices,
+  CoreServices,
+  CreateWireServices,
   parseDurationString,
 } from '@pikku/core'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -18,11 +22,37 @@ interface ScheduledJobData {
 
 /**
  * pg-boss scheduler service implementation
- * Uses pg-boss's schedule() API to store recurring jobs in PostgreSQL
+ * Uses pg-boss's schedule() API to store recurring jobs in PostgreSQL.
+ * Handles both one-off delayed RPCs and recurring cron-scheduled tasks.
  */
 export class PgBossSchedulerService extends SchedulerService {
+  private scheduledCronNames: string[] = []
+  private singletonServices?: CoreSingletonServices
+  private createWireServices?: CreateWireServices<
+    CoreSingletonServices,
+    CoreServices,
+    CoreUserSession
+  >
+
   constructor(private pgBoss: PgBoss) {
     super()
+  }
+
+  /**
+   * Set services needed for processing recurring tasks.
+   * Must be called before start() since the scheduler is typically
+   * created before singletonServices are available.
+   */
+  setServices(
+    singletonServices: CoreSingletonServices,
+    createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ): void {
+    this.singletonServices = singletonServices
+    this.createWireServices = createWireServices
   }
 
   /**
@@ -117,5 +147,52 @@ export class PgBossSchedulerService extends SchedulerService {
    */
   async close(): Promise<void> {
     // No-op - pg-boss lifecycle is managed by factory
+  }
+
+  /**
+   * Start recurring scheduled tasks.
+   * Registers a pg-boss worker to process recurring jobs via runScheduledTask.
+   */
+  async start(): Promise<void> {
+    if (!this.singletonServices) {
+      throw new Error(
+        'PgBossSchedulerService requires singletonServices to start recurring tasks'
+      )
+    }
+
+    const scheduledTasks = getScheduledTasks()
+
+    for (const [name, task] of scheduledTasks) {
+      const cronName = `pikku-recurring-scheduled-task:${name}`
+      await this.pgBoss.schedule(cronName, task.schedule, {
+        rpcName: name,
+      } as ScheduledJobData)
+      this.scheduledCronNames.push(cronName)
+
+      // Register a worker to process the scheduled jobs
+      await this.pgBoss.work<ScheduledJobData>(cronName, async (jobs) => {
+        for (const job of jobs) {
+          const { rpcName } = job.data
+          this.singletonServices!.logger.info(
+            `Running scheduled task: ${rpcName}`
+          )
+          await runScheduledTask({
+            singletonServices: this.singletonServices!,
+            createWireServices: this.createWireServices as any,
+            name: rpcName,
+          })
+        }
+      })
+    }
+  }
+
+  /**
+   * Stop recurring scheduled tasks by unscheduling them from pg-boss.
+   */
+  async stop(): Promise<void> {
+    for (const cronName of this.scheduledCronNames) {
+      await this.pgBoss.unschedule(cronName)
+    }
+    this.scheduledCronNames = []
   }
 }

@@ -25,5 +25,8 @@ import './functions/scheduler/scheduler.wiring.js'
 // RPC wirings
 import './functions/rpc/rpc.wiring.js'
 
+// Trigger wirings
+import './functions/trigger/trigger.wiring.js'
+
 // Workflow wirings
 import './functions/workflow/workflow.wiring.js'

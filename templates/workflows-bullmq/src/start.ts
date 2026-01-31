@@ -1,6 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisWorkflowService } from '@pikku/redis'
+import { InMemoryTriggerService } from '@pikku/core'
 import {
   createConfig,
   createWireServices,
@@ -17,12 +18,15 @@ async function main(): Promise<void> {
 
     const workflowService = new RedisWorkflowService(undefined)
 
+    const schedulerService = bullFactory.getSchedulerService()
+
     const singletonServices = await createSingletonServices(config, {
       queueService: bullFactory.getQueueService(),
-      schedulerService: bullFactory.getSchedulerService(),
+      schedulerService,
       workflowService,
     })
 
+    schedulerService.setServices(singletonServices, createWireServices)
     workflowService.setServices(singletonServices, createWireServices, config)
 
     const appServer = new PikkuExpressServer(
@@ -46,6 +50,12 @@ async function main(): Promise<void> {
     singletonServices.logger.info(
       'Workflow workers ready and listening for jobs'
     )
+
+    const triggerService = new InMemoryTriggerService()
+    triggerService.setServices(singletonServices)
+
+    await schedulerService.start()
+    await triggerService.start()
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)

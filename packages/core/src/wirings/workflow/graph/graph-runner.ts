@@ -19,16 +19,13 @@ export const addWorkflowGraph = (
   workflowName: string,
   graphResult: { graph: Record<string, GraphNodeConfig<string>>; wires?: any }
 ) => {
-  // Get workflow metadata from inspector
   const meta = pikkuState(null, 'workflows', 'meta')
-  const workflowMeta = meta[workflowName]
-  if (!workflowMeta) {
+  if (!meta[workflowName]) {
     throw new Error(
       `Workflow metadata not found for '${workflowName}'. Make sure to run the CLI to generate metadata.`
     )
   }
 
-  // Store workflow graph definition in state
   const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
   registrations.set(workflowName, {
     name: workflowName,

@@ -24,6 +24,11 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
       )
     }
 
+    if (state.triggers?.meta) {
+      const triggerCount = Object.keys(state.triggers.meta).length
+      if (triggerCount > 0) summary.set('triggers', triggerCount)
+    }
+
     if (state.queueWorkers?.meta) {
       summary.set('queueWorkers', Object.keys(state.queueWorkers.meta).length)
     }
