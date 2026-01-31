@@ -2,6 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   wireTrigger,
+  wireTriggerSource,
   setupTrigger,
   getRegisteredTriggers,
 } from './trigger-runner.js'
@@ -35,9 +36,7 @@ describe('wireTrigger', () => {
   test('should successfully wire a trigger', () => {
     const mockTrigger: CoreTrigger = {
       name: 'test-trigger',
-      func: {
-        func: async () => () => {},
-      },
+      func: { func: async () => {} },
     }
 
     setupTriggerMeta('test-trigger')
@@ -50,9 +49,7 @@ describe('wireTrigger', () => {
   test('should throw error when trigger metadata not found', () => {
     const mockTrigger: CoreTrigger = {
       name: 'missing-meta-trigger',
-      func: {
-        func: async () => () => {},
-      },
+      func: { func: async () => {} },
     }
 
     assert.throws(
@@ -67,9 +64,7 @@ describe('wireTrigger', () => {
   test('should throw error when trigger already exists', () => {
     const mockTrigger: CoreTrigger = {
       name: 'duplicate-trigger',
-      func: {
-        func: async () => () => {},
-      },
+      func: { func: async () => {} },
     }
 
     setupTriggerMeta('duplicate-trigger')
@@ -87,9 +82,7 @@ describe('wireTrigger', () => {
   test('should wire trigger with description and tags', () => {
     const mockTrigger: CoreTrigger = {
       name: 'tagged-trigger',
-      func: {
-        func: async () => () => {},
-      },
+      func: { func: async () => {} },
       description: 'A test trigger',
       tags: ['redis', 'pubsub'],
     }
@@ -109,20 +102,22 @@ describe('setupTrigger', () => {
     let receivedInput: any
     let invokedData: any
 
-    const mockTrigger: CoreTrigger = {
+    setupTriggerMeta('setup-trigger')
+    wireTrigger({
+      name: 'setup-trigger',
+      func: { func: async () => {} },
+    })
+    wireTriggerSource({
       name: 'setup-trigger',
       func: {
         func: async (services: any, input: any, wire: any) => {
           receivedInput = input
-          // Simulate trigger firing
           wire.trigger.invoke({ message: 'hello' })
           return () => {}
         },
       },
-    }
-
-    setupTriggerMeta('setup-trigger')
-    wireTrigger(mockTrigger)
+      input: { channel: 'test-channel' },
+    })
 
     const mockLogger = createMockLogger()
     const instance = await setupTrigger({
@@ -142,7 +137,12 @@ describe('setupTrigger', () => {
   test('should pass different inputs to the same trigger', async () => {
     const receivedInputs: any[] = []
 
-    const mockTrigger: CoreTrigger = {
+    setupTriggerMeta('multi-input-trigger')
+    wireTrigger({
+      name: 'multi-input-trigger',
+      func: { func: async () => {} },
+    })
+    wireTriggerSource({
       name: 'multi-input-trigger',
       func: {
         func: async (services: any, input: any, wire: any) => {
@@ -150,10 +150,8 @@ describe('setupTrigger', () => {
           return () => {}
         },
       },
-    }
-
-    setupTriggerMeta('multi-input-trigger')
-    wireTrigger(mockTrigger)
+      input: {},
+    })
 
     const mockLogger = createMockLogger()
 
@@ -176,7 +174,7 @@ describe('setupTrigger', () => {
     assert.deepEqual(receivedInputs[1], { channel: 'channel-b' })
   })
 
-  test('should throw when trigger not found', async () => {
+  test('should throw when trigger source not found', async () => {
     const mockLogger = createMockLogger()
 
     await assert.rejects(
@@ -189,17 +187,18 @@ describe('setupTrigger', () => {
         })
       },
       (error: any) => {
-        assert(error.message.includes('Trigger not found'))
+        assert(error.message.includes('Trigger source not found'))
         return true
       }
     )
   })
 
   test('should throw when trigger metadata not found', async () => {
-    // Manually add a trigger without metadata
-    pikkuState(null, 'trigger', 'triggers').set('no-meta', {
+    // Add a trigger source without metadata
+    pikkuState(null, 'trigger', 'triggerSources').set('no-meta', {
       name: 'no-meta',
       func: { func: async () => () => {} },
+      input: {},
     } as any)
 
     const mockLogger = createMockLogger()
@@ -223,7 +222,12 @@ describe('setupTrigger', () => {
   test('should return a teardown function', async () => {
     let tornDown = false
 
-    const mockTrigger: CoreTrigger = {
+    setupTriggerMeta('teardown-trigger')
+    wireTrigger({
+      name: 'teardown-trigger',
+      func: { func: async () => {} },
+    })
+    wireTriggerSource({
       name: 'teardown-trigger',
       func: {
         func: async () => {
@@ -232,10 +236,8 @@ describe('setupTrigger', () => {
           }
         },
       },
-    }
-
-    setupTriggerMeta('teardown-trigger')
-    wireTrigger(mockTrigger)
+      input: {},
+    })
 
     const mockLogger = createMockLogger()
     const instance = await setupTrigger({
@@ -251,7 +253,12 @@ describe('setupTrigger', () => {
   })
 
   test('should log setup and fire events', async () => {
-    const mockTrigger: CoreTrigger = {
+    setupTriggerMeta('log-trigger')
+    wireTrigger({
+      name: 'log-trigger',
+      func: { func: async () => {} },
+    })
+    wireTriggerSource({
       name: 'log-trigger',
       func: {
         func: async (_services: any, _input: any, wire: any) => {
@@ -259,10 +266,8 @@ describe('setupTrigger', () => {
           return () => {}
         },
       },
-    }
-
-    setupTriggerMeta('log-trigger')
-    wireTrigger(mockTrigger)
+      input: {},
+    })
 
     const mockLogger = createMockLogger()
     await setupTrigger({
@@ -289,9 +294,7 @@ describe('getRegisteredTriggers', () => {
   test('should return the triggers map', () => {
     const mockTrigger: CoreTrigger = {
       name: 'registered-trigger',
-      func: {
-        func: async () => () => {},
-      },
+      func: { func: async () => {} },
     }
 
     setupTriggerMeta('registered-trigger')

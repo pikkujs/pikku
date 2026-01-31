@@ -133,18 +133,11 @@ export const pikkuTriggerFunc = <
  * @template TInput - Input type (configuration passed when wired)
  * @template TOutput - Output type
  */
-export interface CoreTrigger<
-  TInput = unknown,
-  TOutput = unknown,
-  TriggerFunctionConfig extends CorePikkuTriggerFunctionConfig<
-    TInput,
-    TOutput
-  > = CorePikkuTriggerFunctionConfig<TInput, TOutput>,
-> {
+export interface CoreTrigger<PikkuFunctionConfig = any> {
   /** Unique name for this trigger */
   name: string
-  /** The trigger function configuration */
-  func: TriggerFunctionConfig
+  /** The target RPC function to invoke when the trigger fires */
+  func: PikkuFunctionConfig
   /** Optional description */
   description?: string
   /** Optional tags for categorization */

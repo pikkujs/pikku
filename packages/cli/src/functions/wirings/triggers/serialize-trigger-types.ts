@@ -9,7 +9,7 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, CoreTriggerSource, wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
+import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, CoreTriggerSource, CoreTrigger, wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
 ${singletonServicesTypeImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -66,12 +66,7 @@ export type PikkuTriggerFunctionConfigWithSchema<
  * Type definition for trigger wirings.
  * Declares a trigger name and its target pikku function.
  */
-export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
-  name: string
-  func: PikkuTriggerFunctionConfig<TInput, TOutput>
-  description?: string
-  tags?: string[]
-}
+export type TriggerWiring = CoreTrigger
 
 /**
  * Creates a trigger function configuration.
@@ -133,8 +128,8 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
  *
  * @param trigger - Trigger definition with name and function config
  */
-export const wireTrigger = <TInput = unknown, TOutput = unknown>(
-  trigger: TriggerWiring<TInput, TOutput>
+export const wireTrigger = (
+  trigger: TriggerWiring
 ) => {
   wireTriggerCore(trigger as any)
 }

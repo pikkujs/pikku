@@ -3,7 +3,6 @@ import type {
   CoreTrigger,
   CoreTriggerSource,
   TriggerInstance,
-  CorePikkuTriggerFunctionConfig,
 } from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
@@ -13,16 +12,7 @@ import { addFunction } from '../../function/function-runner.js'
  * Declares a trigger name and its target pikku function.
  * Runs everywhere. Inspector extracts at build time.
  */
-export const wireTrigger = <
-  TInput = unknown,
-  TOutput = unknown,
-  TriggerFunctionConfig extends CorePikkuTriggerFunctionConfig<
-    TInput,
-    TOutput
-  > = CorePikkuTriggerFunctionConfig<TInput, TOutput>,
->(
-  trigger: CoreTrigger<TInput, TOutput, TriggerFunctionConfig>
-) => {
+export const wireTrigger = (trigger: CoreTrigger) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]
   if (!triggerMeta) {
@@ -78,11 +68,11 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   input,
   onTrigger,
 }: SetupTriggerParams<TInput, TOutput>): Promise<TriggerInstance> {
-  const trigger = pikkuState(null, 'trigger', 'triggers').get(name)
+  const source = pikkuState(null, 'trigger', 'triggerSources').get(name)
   const meta = pikkuState(null, 'trigger', 'meta')[name]
 
-  if (!trigger) {
-    throw new Error(`Trigger not found: ${name}`)
+  if (!source) {
+    throw new Error(`Trigger source not found: ${name}`)
   }
   if (!meta) {
     throw new Error(`Trigger metadata not found: ${name}`)
@@ -99,11 +89,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   singletonServices.logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await trigger.func.func(
-    singletonServices,
-    input,
-    wire as any
-  )
+  const teardown = await source.func.func(singletonServices, input, wire as any)
 
   return {
     name,
