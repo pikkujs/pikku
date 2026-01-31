@@ -25,7 +25,8 @@ async function main(): Promise<void> {
   await app.listen({ port: 4002, host: 'localhost' })
   singletonServices.logger.info(`server started`)
 
-  const scheduler = new InMemorySchedulerService(singletonServices)
+  const scheduler = new InMemorySchedulerService()
+  scheduler.setServices(singletonServices)
   await scheduler.start()
 }
 

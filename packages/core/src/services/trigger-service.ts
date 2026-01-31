@@ -1,11 +1,48 @@
-import { CoreSingletonServices } from '../types/core.types.js'
+import type {
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+  CreateWireServices,
+} from '../types/core.types.js'
 import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
 import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
 
 /**
- * Simple concrete TriggerService.
+ * Abstract TriggerService interface.
+ *
+ * Implementations manage trigger subscriptions — listening to external events
+ * and dispatching to RPC targets or workflow starts.
+ */
+export abstract class TriggerService {
+  /**
+   * Set services needed for processing triggers.
+   * Called after construction since the trigger service is created before
+   * singletonServices are fully assembled.
+   */
+  setServices(
+    _singletonServices: CoreSingletonServices,
+    _createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ): void {}
+
+  /**
+   * Start all triggers
+   */
+  async start(): Promise<void> {}
+
+  /**
+   * Stop all triggers
+   */
+  async stop(): Promise<void> {}
+}
+
+/**
+ * In-memory TriggerService implementation.
  *
  * Reads both `wireTrigger` declarations and `wireTriggerSource` registrations
  * from pikkuState. Only starts triggers that have both a declaration and a source.
@@ -15,18 +52,32 @@ import { pikkuState } from '../pikku-state.js'
  *
  * @example
  * ```typescript
- * const triggerService = new TriggerService(singletonServices)
+ * const triggerService = new InMemoryTriggerService()
+ * triggerService.setServices(singletonServices, createWireServices)
  * await triggerService.start()
  *
  * // On shutdown
  * await triggerService.stop()
  * ```
  */
-export class TriggerService {
+export class InMemoryTriggerService extends TriggerService {
   private activeTriggers = new Map<string, TriggerInstance>()
-  private rpcService: ContextAwareRPCService
+  private singletonServices?: CoreSingletonServices
+  private rpcService?: ContextAwareRPCService
 
-  constructor(private singletonServices: CoreSingletonServices) {
+  /**
+   * Set services needed for processing triggers.
+   * Must be called before start().
+   */
+  setServices(
+    singletonServices: CoreSingletonServices,
+    _createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ): void {
+    this.singletonServices = singletonServices
     this.rpcService = new ContextAwareRPCService(
       singletonServices,
       {},
@@ -39,6 +90,12 @@ export class TriggerService {
    * Also starts triggers from workflow trigger wires.
    */
   async start(): Promise<void> {
+    if (!this.singletonServices || !this.rpcService) {
+      throw new Error(
+        'InMemoryTriggerService requires singletonServices to start triggers'
+      )
+    }
+
     const triggers = pikkuState(null, 'trigger', 'triggers')
     const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
     const workflowsMeta = pikkuState(null, 'workflows', 'meta')
@@ -126,9 +183,9 @@ export class TriggerService {
     for (const [name, instance] of this.activeTriggers) {
       try {
         await instance.teardown()
-        this.singletonServices.logger.info(`Stopped trigger: ${name}`)
+        this.singletonServices!.logger.info(`Stopped trigger: ${name}`)
       } catch (error) {
-        this.singletonServices.logger.error(
+        this.singletonServices!.logger.error(
           `Error stopping trigger ${name}: ${error}`
         )
       }
@@ -151,20 +208,20 @@ export class TriggerService {
     for (const target of targets) {
       try {
         if (target.targetType === 'workflow') {
-          await this.rpcService.startWorkflow(target.targetName, data, {
+          await this.rpcService!.startWorkflow(target.targetName, data, {
             startNode: target.startNode,
           })
-          this.singletonServices.logger.info(
+          this.singletonServices!.logger.info(
             `Trigger '${triggerName}' started workflow '${target.targetName}'`
           )
         } else {
-          await this.rpcService.rpc(target.targetName, data)
-          this.singletonServices.logger.info(
+          await this.rpcService!.rpc(target.targetName, data)
+          this.singletonServices!.logger.info(
             `Trigger '${triggerName}' invoked RPC '${target.targetName}'`
           )
         }
       } catch (error) {
-        this.singletonServices.logger.error(
+        this.singletonServices!.logger.error(
           `Error invoking ${target.targetType} '${target.targetName}' from trigger '${triggerName}': ${error}`
         )
       }

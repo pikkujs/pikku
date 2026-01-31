@@ -4,9 +4,12 @@ import {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
+  CoreSingletonServices,
+  CoreServices,
+  CreateWireServices,
   parseDurationString,
 } from '@pikku/core'
-import { getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -24,9 +27,32 @@ interface ScheduledJobData {
  */
 export class PgBossSchedulerService extends SchedulerService {
   private scheduledCronNames: string[] = []
+  private singletonServices?: CoreSingletonServices
+  private createWireServices?: CreateWireServices<
+    CoreSingletonServices,
+    CoreServices,
+    CoreUserSession
+  >
 
   constructor(private pgBoss: PgBoss) {
     super()
+  }
+
+  /**
+   * Set services needed for processing recurring tasks.
+   * Must be called before start() since the scheduler is typically
+   * created before singletonServices are available.
+   */
+  setServices(
+    singletonServices: CoreSingletonServices,
+    createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ): void {
+    this.singletonServices = singletonServices
+    this.createWireServices = createWireServices
   }
 
   /**
@@ -125,8 +151,15 @@ export class PgBossSchedulerService extends SchedulerService {
 
   /**
    * Start recurring scheduled tasks.
+   * Registers a pg-boss worker to process recurring jobs via runScheduledTask.
    */
   async start(): Promise<void> {
+    if (!this.singletonServices) {
+      throw new Error(
+        'PgBossSchedulerService requires singletonServices to start recurring tasks'
+      )
+    }
+
     const scheduledTasks = getScheduledTasks()
 
     for (const [name, task] of scheduledTasks) {
@@ -135,6 +168,21 @@ export class PgBossSchedulerService extends SchedulerService {
         rpcName: name,
       } as ScheduledJobData)
       this.scheduledCronNames.push(cronName)
+
+      // Register a worker to process the scheduled jobs
+      await this.pgBoss.work<ScheduledJobData>(cronName, async (jobs) => {
+        for (const job of jobs) {
+          const { rpcName } = job.data
+          this.singletonServices!.logger.info(
+            `Running scheduled task: ${rpcName}`
+          )
+          await runScheduledTask({
+            singletonServices: this.singletonServices!,
+            createWireServices: this.createWireServices as any,
+            name: rpcName,
+          })
+        }
+      })
     }
   }
 

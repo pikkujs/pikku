@@ -21,7 +21,8 @@ async function main(): Promise<void> {
     await appServer.init()
     await appServer.start()
 
-    const scheduler = new InMemorySchedulerService(singletonServices)
+    const scheduler = new InMemorySchedulerService()
+    scheduler.setServices(singletonServices)
     await scheduler.start()
   } catch (e: any) {
     console.error(e.toString())

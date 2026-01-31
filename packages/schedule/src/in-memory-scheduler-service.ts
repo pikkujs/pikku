@@ -29,16 +29,28 @@ export class InMemorySchedulerService extends SchedulerService {
   private cronJobs = new Map<string, CronJob>()
   private delayedTasks = new Map<string, DelayedTask>()
   private idCounter = 0
+  private singletonServices?: CoreSingletonServices
+  private createWireServices?: CreateWireServices<
+    CoreSingletonServices,
+    CoreServices,
+    CoreUserSession
+  >
 
-  constructor(
-    private singletonServices: CoreSingletonServices,
-    private createWireServices?: CreateWireServices<
+  /**
+   * Set services needed for processing recurring tasks.
+   * Must be called before start() since the scheduler is typically
+   * created before singletonServices are available.
+   */
+  setServices(
+    singletonServices: CoreSingletonServices,
+    createWireServices?: CreateWireServices<
       CoreSingletonServices,
       CoreServices,
       CoreUserSession
     >
-  ) {
-    super()
+  ): void {
+    this.singletonServices = singletonServices
+    this.createWireServices = createWireServices
   }
 
   async init(): Promise<void> {}
@@ -60,12 +72,12 @@ export class InMemorySchedulerService extends SchedulerService {
     const timer = setTimeout(() => {
       this.delayedTasks.delete(taskId)
       const rpcService = new ContextAwareRPCService(
-        this.singletonServices as CoreServices,
+        this.singletonServices! as CoreServices,
         {},
         {}
       )
       rpcService.rpc(rpcName, data).catch((err) => {
-        this.singletonServices.logger.error(
+        this.singletonServices!.logger.error(
           `Failed to execute delayed RPC '${rpcName}': ${err}`
         )
       })
@@ -127,6 +139,12 @@ export class InMemorySchedulerService extends SchedulerService {
    * Start recurring scheduled tasks.
    */
   async start(): Promise<void> {
+    if (!this.singletonServices) {
+      throw new Error(
+        'InMemorySchedulerService requires singletonServices to start recurring tasks'
+      )
+    }
+
     const scheduledTasks = getScheduledTasks()
 
     for (const [, task] of scheduledTasks) {
@@ -148,13 +166,15 @@ export class InMemorySchedulerService extends SchedulerService {
     const job = new CronJob(
       schedule,
       async () => {
-        this.singletonServices.logger.info(`Running scheduled task: ${name}`)
+        this.singletonServices!.logger.info(`Running scheduled task: ${name}`)
         await runScheduledTask({
-          singletonServices: this.singletonServices,
+          singletonServices: this.singletonServices!,
           createWireServices: this.createWireServices as any,
           name,
         })
-        this.singletonServices.logger.debug(`Completed scheduled task: ${name}`)
+        this.singletonServices!.logger.debug(
+          `Completed scheduled task: ${name}`
+        )
       },
       null,
       true

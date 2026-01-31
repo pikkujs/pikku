@@ -1,12 +1,15 @@
-import { ConnectionOptions, Queue } from 'bullmq'
+import { ConnectionOptions, Queue, Worker } from 'bullmq'
 import {
   SchedulerService,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
+  CoreSingletonServices,
+  CoreServices,
   CoreUserSession,
+  CreateWireServices,
   parseDurationString,
 } from '@pikku/core'
-import { getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -17,19 +20,45 @@ interface ScheduledJobData {
   session?: CoreUserSession
 }
 
+const RECURRING_QUEUE_NAME = 'pikku-recurring-scheduled-task'
+
 export class BullSchedulerService extends SchedulerService {
   private queue: Queue
   private recurringQueue: Queue
+  private recurringWorker?: Worker
   private repeatJobKeys: string[] = []
+  private singletonServices?: CoreSingletonServices
+  private createWireServices?: CreateWireServices<
+    CoreSingletonServices,
+    CoreServices,
+    CoreUserSession
+  >
 
-  constructor(redisConnectionOptions: ConnectionOptions) {
+  constructor(private redisConnectionOptions: ConnectionOptions) {
     super()
     this.queue = new Queue('pikku-remote-internal-rpc', {
       connection: redisConnectionOptions,
     })
-    this.recurringQueue = new Queue('pikku-recurring-scheduled-task', {
+    this.recurringQueue = new Queue(RECURRING_QUEUE_NAME, {
       connection: redisConnectionOptions,
     })
+  }
+
+  /**
+   * Set services needed for processing recurring tasks.
+   * Must be called before start() since the scheduler is typically
+   * created before singletonServices are available.
+   */
+  setServices(
+    singletonServices: CoreSingletonServices,
+    createWireServices?: CreateWireServices<
+      CoreSingletonServices,
+      CoreServices,
+      CoreUserSession
+    >
+  ): void {
+    this.singletonServices = singletonServices
+    this.createWireServices = createWireServices
   }
 
   /**
@@ -136,15 +165,47 @@ export class BullSchedulerService extends SchedulerService {
    * Close the queue connection
    */
   async close(): Promise<void> {
+    if (this.recurringWorker) {
+      await this.recurringWorker.close()
+    }
     await this.recurringQueue.close()
     await this.queue.close()
   }
 
   /**
    * Start recurring scheduled tasks.
+   * Creates a BullMQ Worker to process repeat jobs via runScheduledTask.
    */
   async start(): Promise<void> {
+    if (!this.singletonServices) {
+      throw new Error(
+        'BullSchedulerService requires singletonServices to start recurring tasks'
+      )
+    }
+
     const scheduledTasks = getScheduledTasks()
+
+    // Create a worker to process recurring scheduled task jobs
+    this.recurringWorker = new Worker(
+      RECURRING_QUEUE_NAME,
+      async (job) => {
+        const { rpcName } = job.data as ScheduledJobData
+        this.singletonServices!.logger.info(
+          `Running scheduled task: ${rpcName}`
+        )
+        await runScheduledTask({
+          singletonServices: this.singletonServices!,
+          createWireServices: this.createWireServices as any,
+          name: rpcName,
+        })
+      },
+      { connection: this.redisConnectionOptions }
+    )
+    this.recurringWorker.on('error', (err) => {
+      this.singletonServices!.logger.error(
+        `Recurring task worker error: ${err}`
+      )
+    })
 
     for (const [name, task] of scheduledTasks) {
       const job = await this.recurringQueue.add(
@@ -169,5 +230,9 @@ export class BullSchedulerService extends SchedulerService {
       await this.recurringQueue.removeRepeatableByKey(key)
     }
     this.repeatJobKeys = []
+    if (this.recurringWorker) {
+      await this.recurringWorker.close()
+      this.recurringWorker = undefined
+    }
   }
 }
