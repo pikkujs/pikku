@@ -6,6 +6,8 @@ import {
   CoreUserSession,
   parseDurationString,
 } from '@pikku/core'
+import { getScheduledTasks } from '@pikku/core/scheduler'
+import { findAllWorkflowScheduleWires } from '@pikku/core/workflow'
 
 /**
  * Data stored in scheduled job
@@ -20,12 +22,19 @@ interface ScheduledJobData {
  * BullMQ scheduler service implementation
  * Uses BullMQ's delayed jobs for one-time execution
  */
+const RECURRING_QUEUE = 'pikku-recurring-scheduled-task'
+
 export class BullSchedulerService extends SchedulerService {
   private queue: Queue
+  private recurringQueue: Queue
+  private repeatJobKeys: string[] = []
 
   constructor(redisConnectionOptions: ConnectionOptions) {
     super()
     this.queue = new Queue('pikku-remote-internal-rpc', {
+      connection: redisConnectionOptions,
+    })
+    this.recurringQueue = new Queue(RECURRING_QUEUE, {
       connection: redisConnectionOptions,
     })
   }
@@ -134,6 +143,63 @@ export class BullSchedulerService extends SchedulerService {
    * Close the queue connection
    */
   async close(): Promise<void> {
+    await this.recurringQueue.close()
     await this.queue.close()
+  }
+
+  /**
+   * Start recurring scheduled tasks.
+   * Reads pikkuState for wireScheduler tasks and workflow schedule wires,
+   * then creates BullMQ repeat jobs for each.
+   */
+  async start(): Promise<void> {
+    const scheduledTasks = getScheduledTasks()
+
+    // Schedule recurring tasks from wireScheduler
+    for (const [name, task] of scheduledTasks) {
+      const job = await this.recurringQueue.add(
+        name,
+        { rpcName: name } as ScheduledJobData,
+        {
+          repeat: { pattern: task.schedule },
+          jobId: `recurring:${name}`,
+        }
+      )
+      if (job.repeatJobKey) {
+        this.repeatJobKeys.push(job.repeatJobKey)
+      }
+    }
+
+    // Schedule recurring tasks from workflow schedule wires
+    const workflowScheduleWires = findAllWorkflowScheduleWires()
+    for (const wire of workflowScheduleWires) {
+      if (wire.cron) {
+        const jobName = `workflow:${wire.workflowName}:${wire.startNode}`
+        const job = await this.recurringQueue.add(
+          jobName,
+          {
+            rpcName: `__workflow__:${wire.workflowName}`,
+            data: { startNode: wire.startNode },
+          } as ScheduledJobData,
+          {
+            repeat: { pattern: wire.cron },
+            jobId: `recurring:${jobName}`,
+          }
+        )
+        if (job.repeatJobKey) {
+          this.repeatJobKeys.push(job.repeatJobKey)
+        }
+      }
+    }
+  }
+
+  /**
+   * Stop recurring scheduled tasks by removing repeat jobs.
+   */
+  async stop(): Promise<void> {
+    for (const key of this.repeatJobKeys) {
+      await this.recurringQueue.removeRepeatableByKey(key)
+    }
+    this.repeatJobKeys = []
   }
 }

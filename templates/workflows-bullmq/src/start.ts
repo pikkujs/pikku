@@ -1,10 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import {
-  RedisWorkflowService,
-  RedisTriggerService,
-  RedisDeploymentService,
-} from '@pikku/redis'
+import { RedisWorkflowService } from '@pikku/redis'
+import { TriggerService } from '@pikku/core'
 import {
   createConfig,
   createWireServices,
@@ -21,9 +18,11 @@ async function main(): Promise<void> {
 
     const workflowService = new RedisWorkflowService(undefined)
 
+    const schedulerService = bullFactory.getSchedulerService()
+
     const singletonServices = await createSingletonServices(config, {
       queueService: bullFactory.getQueueService(),
-      schedulerService: bullFactory.getSchedulerService(),
+      schedulerService,
       workflowService,
     })
 
@@ -51,22 +50,11 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    const deploymentService = new RedisDeploymentService()
-    await deploymentService.init()
-    await deploymentService.start()
+    // Start recurring scheduled tasks
+    await schedulerService.start()
 
-    const triggerService = new RedisTriggerService(
-      singletonServices,
-      deploymentService
-    )
-    await triggerService.init()
-
-    await triggerService.register({
-      trigger: 'test-event',
-      input: { eventName: 'order-created' },
-      target: { rpc: 'onTestEvent' },
-    })
-
+    // Start trigger subscriptions
+    const triggerService = new TriggerService(singletonServices)
     await triggerService.start()
     singletonServices.logger.info('Trigger service started')
   } catch (e: any) {

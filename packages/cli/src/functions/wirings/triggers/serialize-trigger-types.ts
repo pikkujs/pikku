@@ -9,7 +9,7 @@ export const serializeTriggerTypes = (
  * Trigger-specific type definitions for tree-shaking optimization
  */
 
-import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, wireTrigger as wireTriggerCore } from '@pikku/core/trigger'
+import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, CoreTriggerSource, wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
 ${singletonServicesTypeImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -64,8 +64,7 @@ export type PikkuTriggerFunctionConfigWithSchema<
 
 /**
  * Type definition for trigger wirings.
- * Triggers set up subscriptions and fire events via wire.trigger.invoke(data).
- * Input is provided at runtime via TriggerService.register().
+ * Declares a trigger name and its target pikku function.
  */
 export type TriggerWiring<TInput = unknown, TOutput = unknown> = {
   name: string
@@ -129,8 +128,8 @@ export function pikkuTriggerFunc(triggerOrConfig: any) {
 
 /**
  * Registers a trigger with the Pikku framework.
- * The trigger will be available for setup via TriggerService.
- * Input and targets are registered separately via TriggerService.register().
+ * Declares a trigger name and its target pikku function.
+ * Runs everywhere — inspector extracts at build time.
  *
  * @param trigger - Trigger definition with name and function config
  */
@@ -138,6 +137,19 @@ export const wireTrigger = <TInput = unknown, TOutput = unknown>(
   trigger: TriggerWiring<TInput, TOutput>
 ) => {
   wireTriggerCore(trigger as any)
+}
+
+/**
+ * Registers a trigger source with the Pikku framework.
+ * Provides the subscription function and input data.
+ * Only imported in the trigger worker process.
+ *
+ * @param source - Trigger source with name, func, and input
+ */
+export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
+  source: CoreTriggerSource<TInput, TOutput>
+) => {
+  wireTriggerSourceCore(source)
 }
 `
 }

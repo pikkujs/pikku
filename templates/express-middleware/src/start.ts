@@ -4,7 +4,7 @@ import {
   createSingletonServices,
   createConfig,
 } from '../../functions/src/services.js'
-import { PikkuTaskScheduler } from '@pikku/schedule'
+import { InMemorySchedulerService } from '@pikku/schedule'
 import express from 'express'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 
@@ -25,8 +25,8 @@ async function main(): Promise<void> {
     singletonServices.logger.info(`server started`)
   )
 
-  const scheduler = new PikkuTaskScheduler(singletonServices)
-  scheduler.startAll()
+  const scheduler = new InMemorySchedulerService(singletonServices)
+  await scheduler.start()
 }
 
 main()

@@ -160,3 +160,19 @@ export interface TriggerInstance {
   name: string
   teardown: () => void | Promise<void>
 }
+
+/**
+ * A trigger source that provides the subscription function.
+ * Only imported in the trigger worker process.
+ *
+ * @template TInput - Input type passed to the trigger function
+ * @template TOutput - Output type produced when trigger fires
+ */
+export interface CoreTriggerSource<TInput = unknown, TOutput = unknown> {
+  /** Must match a wireTrigger name */
+  name: string
+  /** The trigger function config that sets up the subscription */
+  func: CorePikkuTriggerFunctionConfig<TInput, TOutput>
+  /** Input data passed to the trigger function */
+  input: TInput
+}

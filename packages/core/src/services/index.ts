@@ -13,13 +13,9 @@ export * from './schema-service.js'
 export * from './user-session-service.js'
 export * from './scheduler-service.js'
 export * from './trigger-service.js'
-export * from './deployment-service.js'
 
 // Local implementations
 export * from './local-secrets.js'
 export * from './local-variables.js'
 export * from './logger-console.js'
 export * from './in-memory-workflow-service.js'
-export * from './in-memory-trigger-service.js'
-export * from './in-memory-deployment-service.js'
-export * from './noop-deployment-service.js'

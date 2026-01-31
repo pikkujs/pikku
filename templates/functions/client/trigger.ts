@@ -1,7 +1,4 @@
-import {
-  InMemoryTriggerService,
-  InMemoryWorkflowService,
-} from '@pikku/core/services'
+import { TriggerService, InMemoryWorkflowService } from '@pikku/core/services'
 import {
   createConfig,
   createSingletonServices,
@@ -20,14 +17,7 @@ async function main() {
 
   workflowService.setServices(singletonServices, createWireServices, config)
 
-  const triggerService = new InMemoryTriggerService(singletonServices)
-
-  // RPC targets still require manual registration
-  await triggerService.register({
-    trigger: 'test-event',
-    input: { eventName: 'rpc-test' },
-    target: { rpc: 'onTestEvent' },
-  })
+  const triggerService = new TriggerService(singletonServices)
 
   // Workflow targets are auto-registered from wiring declarations on start()
   await triggerService.start()
