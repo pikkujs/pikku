@@ -97,6 +97,71 @@ describe('wireTrigger', () => {
   })
 })
 
+describe('wireTriggerSource', () => {
+  test('should throw error when trigger metadata not found', () => {
+    assert.throws(
+      () =>
+        wireTriggerSource({
+          name: 'no-meta-source',
+          func: { func: async () => () => {} },
+          input: {},
+        }),
+      (error: any) => {
+        assert(error.message.includes('Trigger metadata not found'))
+        return true
+      }
+    )
+  })
+
+  test('should throw error when trigger source already exists', () => {
+    setupTriggerMeta('dup-source')
+    wireTrigger({
+      name: 'dup-source',
+      func: { func: async () => {} },
+    })
+    wireTriggerSource({
+      name: 'dup-source',
+      func: { func: async () => () => {} },
+      input: {},
+    })
+
+    assert.throws(
+      () =>
+        wireTriggerSource({
+          name: 'dup-source',
+          func: { func: async () => () => {} },
+          input: {},
+        }),
+      (error: any) => {
+        assert(error.message.includes('Trigger source already exists'))
+        return true
+      }
+    )
+  })
+
+  test('should register source function and function meta', () => {
+    setupTriggerMeta('reg-source')
+    wireTrigger({
+      name: 'reg-source',
+      func: { func: async () => {} },
+    })
+    wireTriggerSource({
+      name: 'reg-source',
+      func: { func: async () => () => {} },
+      input: {},
+    })
+
+    const functions = pikkuState(null, 'function', 'functions')
+    assert.equal(functions.has('trigger_reg-source__source'), true)
+
+    const functionMeta = pikkuState(null, 'function', 'meta')
+    assert.equal(
+      functionMeta['trigger_reg-source__source'].pikkuFuncName,
+      'trigger_reg-source__source'
+    )
+  })
+})
+
 describe('setupTrigger', () => {
   test('should set up a trigger with input and invoke callback', async () => {
     let receivedInput: any
