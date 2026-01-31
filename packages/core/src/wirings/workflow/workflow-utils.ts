@@ -10,11 +10,10 @@ import {
 import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
 
 /**
- * Start a workflow triggered by a wire lookup
- * Looks up the wire from the unified workflows.wires state
+ * Start a workflow triggered by an HTTP wire.
+ * Iterates workflows.meta to find a matching HTTP wire.
  */
-export const startWorkflowByWire = async (
-  wireType: 'http' | 'trigger',
+export const startWorkflowByHTTPWire = async (
   wireKey: string,
   singletonServices: CoreSingletonServices,
   createWireServices:
@@ -27,31 +26,31 @@ export const startWorkflowByWire = async (
   wire: PikkuWire,
   data: any
 ): Promise<void> => {
-  const wires = pikkuState(null, 'workflows', 'wires')
-  const match = (wires as any)[wireType]?.[wireKey]
-  if (!match) {
-    throw new NotFoundError(
-      `No workflow found for ${wireType} wire: ${wireKey}`
-    )
+  const meta = pikkuState(null, 'workflows', 'meta')
+
+  for (const [workflowName, wfMeta] of Object.entries(meta)) {
+    for (const h of wfMeta.wires?.http ?? []) {
+      if (`${h.method}:${h.route}` === wireKey) {
+        const workflowService = singletonServices.workflowService
+        if (!workflowService) {
+          throw new Error('WorkflowService not available')
+        }
+
+        const wireServices = createWireServices?.(singletonServices, wire)
+        const rpcService = new ContextAwareRPCService(
+          { ...singletonServices, ...wireServices },
+          wire,
+          {}
+        )
+
+        await workflowService.startWorkflow(workflowName, data, rpcService, {
+          inline: true,
+          startNode: h.startNode,
+        })
+        return
+      }
+    }
   }
 
-  const workflowService = singletonServices.workflowService
-  if (!workflowService) {
-    throw new Error('WorkflowService not available')
-  }
-
-  const wireServices = createWireServices?.(singletonServices, wire)
-  const rpcService = new ContextAwareRPCService(
-    { ...singletonServices, ...wireServices },
-    wire,
-    {}
-  )
-
-  // For http wires, match is a single object; for trigger wires, it's an array
-  if (wireType === 'http') {
-    await workflowService.startWorkflow(match.workflowName, data, rpcService, {
-      inline: true,
-      startNode: match.startNode,
-    })
-  }
+  throw new NotFoundError(`No workflow found for HTTP wire: ${wireKey}`)
 }

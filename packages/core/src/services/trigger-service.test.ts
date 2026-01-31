@@ -307,11 +307,15 @@ describe('TriggerService auto-registration', () => {
       },
     }
 
-    // Register workflow trigger wire in the unified wires index
-    const wires = pikkuState(null, 'workflows', 'wires')
-    wires.trigger['auto-fire-trigger'] = [
-      { workflowName: 'autoFireWorkflow', startNode: 'begin' },
-    ]
+    // Register workflow with trigger wire in workflows.meta
+    const workflowsMeta = pikkuState(null, 'workflows', 'meta')
+    workflowsMeta['autoFireWorkflow'] = {
+      name: 'autoFireWorkflow',
+      pikkuFuncName: 'autoFireWorkflow',
+      wires: {
+        trigger: [{ name: 'auto-fire-trigger', startNode: 'begin' }],
+      },
+    }
 
     // Wire the trigger source (subscription function)
     setupTriggerMeta('auto-fire-trigger')

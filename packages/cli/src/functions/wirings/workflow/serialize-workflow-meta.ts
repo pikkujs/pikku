@@ -4,8 +4,6 @@
  */
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
-const EMPTY_WIRES = '{ http: {}, trigger: {} }'
-
 export const serializeWorkflowMeta = (
   outputPath: string,
   metaDir: string,
@@ -22,8 +20,7 @@ import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
 
 const workflowsMeta: SerializedWorkflowGraphs = {}
 
-pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)
-pikkuState(${pkg}, 'workflows', 'wires', ${EMPTY_WIRES})`
+pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
   }
 
   const sortedNames = [...workflowNames].sort()
@@ -55,23 +52,5 @@ const workflowsMeta = {
 ${metaEntries}
 } as SerializedWorkflowGraphs
 
-pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)
-
-// Build unified wires index from workflow metadata
-const httpWires: Record<string, { workflowName: string; startNode?: string }> = {}
-const triggerWires: Record<string, Array<{ workflowName: string; startNode: string }>> = {}
-for (const [name, meta] of Object.entries(workflowsMeta)) {
-  if (meta.wires?.http) {
-    for (const h of meta.wires.http) {
-      httpWires[\`\${h.method}:\${h.route}\`] = { workflowName: name, startNode: h.startNode }
-    }
-  }
-  if (meta.wires?.trigger) {
-    for (const t of meta.wires.trigger) {
-      if (!triggerWires[t.name]) triggerWires[t.name] = []
-      triggerWires[t.name]!.push({ workflowName: name, startNode: t.startNode })
-    }
-  }
-}
-pikkuState(${pkg}, 'workflows', 'wires', { http: httpWires, trigger: triggerWires })`
+pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
 }
