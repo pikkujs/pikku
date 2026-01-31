@@ -149,6 +149,8 @@ export interface CoreTrigger<
   description?: string
   /** Optional tags for categorization */
   tags?: string[]
+  /** Whether this trigger is used by a graph workflow */
+  graph?: true
 }
 
 /**

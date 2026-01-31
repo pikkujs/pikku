@@ -71,6 +71,59 @@ export const findWorkflowByTriggerWire = (
 }
 
 /**
+ * Collect all trigger wire declarations from workflows.
+ * Scans graph registrations (runtime) and meta wires (CLI-serialized).
+ * Returns array of { triggerName, workflowName, startNode, input }.
+ */
+export const findAllWorkflowTriggerWires = (): Array<{
+  triggerName: string
+  workflowName: string
+  startNode: string
+  input: Record<string, unknown>
+}> => {
+  const results: Array<{
+    triggerName: string
+    workflowName: string
+    startNode: string
+    input: Record<string, unknown>
+  }> = []
+
+  // Check graph registrations (populated by addWorkflowGraph at runtime)
+  const graphRegistrations = pikkuState(null, 'workflows', 'graphRegistrations')
+  for (const [name, reg] of graphRegistrations) {
+    const triggers = reg.wires?.trigger as WorkflowTriggerWire[] | undefined
+    if (!triggers) continue
+    for (const t of triggers) {
+      results.push({
+        triggerName: t.name,
+        workflowName: name,
+        startNode: t.startNode,
+        input: t.input ?? {},
+      })
+    }
+  }
+
+  // Check workflow meta wires (serialized by CLI for non-graph workflows)
+  const meta = pikkuState(null, 'workflows', 'meta')
+  for (const [name, m] of Object.entries(meta)) {
+    // Skip graph workflows (already covered above)
+    if (m.source === 'graph') continue
+    const triggers = m.wires?.trigger as WorkflowTriggerWire[] | undefined
+    if (!triggers) continue
+    for (const t of triggers) {
+      results.push({
+        triggerName: t.name,
+        workflowName: name,
+        startNode: t.startNode,
+        input: t.input ?? {},
+      })
+    }
+  }
+
+  return results
+}
+
+/**
  * Find workflow name by matching route and method against workflow wires
  */
 export const findWorkflowByHttpWire = (

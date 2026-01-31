@@ -874,6 +874,163 @@ describe('TriggerService.onTriggerFire', () => {
   })
 })
 
+describe('TriggerService auto-registration', () => {
+  test('start() auto-registers workflow targets from graph registrations', async () => {
+    const mockLogger = createMockLogger()
+    service = new InMemoryTriggerService(createMockServices(mockLogger))
+
+    // Set up a graph registration with a trigger wire
+    const graphRegistrations = pikkuState(
+      null,
+      'workflows',
+      'graphRegistrations'
+    )
+    graphRegistrations.set('autoWorkflow', {
+      name: 'autoWorkflow',
+      wires: {
+        trigger: [
+          {
+            name: 'auto-trigger',
+            startNode: 'startNode',
+            input: { key: 'val' },
+          },
+        ],
+      },
+      graph: {},
+    })
+
+    // Wire the trigger so the process supports it
+    wireMockTrigger('auto-trigger')
+
+    await service.start()
+
+    // The workflow target should have been auto-registered
+    assert.equal(service.registrations.length, 1)
+    assert.equal(service.registrations[0].triggerName, 'auto-trigger')
+    assert.equal(service.registrations[0].targetType, 'workflow')
+    assert.equal(service.registrations[0].targetName, 'autoWorkflow')
+  })
+
+  test('auto-registered workflow targets use default empty input when none specified', async () => {
+    const mockLogger = createMockLogger()
+    service = new InMemoryTriggerService(createMockServices(mockLogger))
+
+    const graphRegistrations = pikkuState(
+      null,
+      'workflows',
+      'graphRegistrations'
+    )
+    graphRegistrations.set('noInputWorkflow', {
+      name: 'noInputWorkflow',
+      wires: {
+        trigger: [{ name: 'no-input-trigger', startNode: 'entry' }],
+      },
+      graph: {},
+    })
+
+    wireMockTrigger('no-input-trigger')
+
+    await service.start()
+
+    assert.equal(service.registrations.length, 1)
+    // Input should be hashed from empty object
+    const expectedHash = generateInputHash({})
+    assert.equal(service.registrations[0].inputHash, expectedHash)
+  })
+
+  test('auto-registration is idempotent with manual registration', async () => {
+    const mockLogger = createMockLogger()
+    service = new InMemoryTriggerService(createMockServices(mockLogger))
+
+    const graphRegistrations = pikkuState(
+      null,
+      'workflows',
+      'graphRegistrations'
+    )
+    graphRegistrations.set('idempotentWorkflow', {
+      name: 'idempotentWorkflow',
+      wires: {
+        trigger: [
+          { name: 'idem-trigger', startNode: 'start', input: { x: 1 } },
+        ],
+      },
+      graph: {},
+    })
+
+    wireMockTrigger('idem-trigger')
+
+    // Manually register the same target before start()
+    await service.register({
+      trigger: 'idem-trigger',
+      input: { x: 1 },
+      target: { workflow: 'idempotentWorkflow' },
+    })
+
+    assert.equal(service.registrations.length, 1)
+
+    // start() should not duplicate it
+    await service.start()
+
+    assert.equal(service.registrations.length, 1)
+  })
+
+  test('auto-registered workflow targets fire correctly without manual register', async () => {
+    let workflowStarted = false
+    let startedWorkflowName: string | undefined
+
+    const mockLogger = createMockLogger()
+    const mockServices = { logger: mockLogger } as any
+
+    service = new InMemoryTriggerService(mockServices)
+    ;(service as any).rpcService = {
+      rpc: async () => {},
+      startWorkflow: async (name: string) => {
+        workflowStarted = true
+        startedWorkflowName = name
+        return { runId: 'auto-run' }
+      },
+    }
+
+    const graphRegistrations = pikkuState(
+      null,
+      'workflows',
+      'graphRegistrations'
+    )
+    graphRegistrations.set('autoFireWorkflow', {
+      name: 'autoFireWorkflow',
+      wires: {
+        trigger: [
+          {
+            name: 'auto-fire-trigger',
+            startNode: 'begin',
+            input: { chan: 'x' },
+          },
+        ],
+      },
+      graph: {},
+    })
+
+    setupTriggerMeta('auto-fire-trigger')
+    wireTrigger({
+      name: 'auto-fire-trigger',
+      func: {
+        func: async (_services: any, _input: any, wire: any) => {
+          setTimeout(() => wire.trigger.invoke({ payload: 'test' }), 10)
+          return () => {}
+        },
+      },
+    })
+
+    // No manual register() — start() should auto-register and fire
+    await service.start()
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    assert.equal(workflowStarted, true)
+    assert.equal(startedWorkflowName, 'autoFireWorkflow')
+  })
+})
+
 describe('TriggerService claiming', () => {
   test('should not claim an instance already owned by another alive deployment', async () => {
     const mockLogger = createMockLogger()

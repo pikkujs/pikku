@@ -51,6 +51,7 @@ export const todoReviewWorkflow = pikkuWorkflowGraph({
       {
         name: 'test-event',
         startNode: 'fetchOverdue',
+        input: { eventName: 'graph-test' },
       },
     ],
   },

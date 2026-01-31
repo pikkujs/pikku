@@ -5,7 +5,10 @@ import { setupTrigger } from '../wirings/trigger/trigger-runner.js'
 import { TriggerInstance } from '../wirings/trigger/trigger.types.js'
 import { ContextAwareRPCService } from '../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../pikku-state.js'
-import { findWorkflowByTriggerWire } from '../wirings/workflow/workflow-utils.js'
+import {
+  findWorkflowByTriggerWire,
+  findAllWorkflowTriggerWires,
+} from '../wirings/workflow/workflow-utils.js'
 import { DeploymentService } from './deployment-service.js'
 
 /**
@@ -221,6 +224,16 @@ export abstract class TriggerService {
    * - Starts subscriptions for claimed triggers
    */
   async start(): Promise<void> {
+    // Auto-register workflow targets from wiring declarations
+    const workflowTriggerWires = findAllWorkflowTriggerWires()
+    for (const wire of workflowTriggerWires) {
+      await this.register({
+        trigger: wire.triggerName,
+        input: wire.input,
+        target: { workflow: wire.workflowName },
+      })
+    }
+
     // Get trigger names this process has wired
     const supported = Array.from(pikkuState(null, 'trigger', 'triggers').keys())
 
