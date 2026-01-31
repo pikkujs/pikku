@@ -14,10 +14,10 @@ export const testEventTrigger = pikkuTriggerFunc<
 >(async ({ logger }, { eventName }, { trigger }) => {
   logger.info(`Trigger setup for event: ${eventName}`)
 
-  // Example: poll an external source every 10s and invoke the trigger
+  // Example: poll an external source every 1s and invoke the trigger
   const interval = setInterval(() => {
     trigger.invoke({ payload: `event from ${eventName}` })
-  }, 10_000)
+  }, 1_000)
 
   return () => {
     clearInterval(interval)
@@ -31,8 +31,14 @@ export const testEventTrigger = pikkuTriggerFunc<
 export const onTestEvent = pikkuSessionlessFunc({
   input: OnTestEventInputSchema,
   output: OnTestEventOutputSchema,
-  func: async ({ logger }, data) => {
+  func: async ({ logger, todoStore }, data) => {
     logger.info(`Trigger target received: ${data.payload}`)
+    todoStore.createTodo('trigger', {
+      title: data.payload,
+      completed: false,
+      priority: 'low',
+      tags: ['trigger'],
+    })
     return data
   },
   internal: true,

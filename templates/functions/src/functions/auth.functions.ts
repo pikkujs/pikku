@@ -1,5 +1,4 @@
 import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
-import { store } from '../services/store.service.js'
 import {
   LoginInputSchema,
   LoginResponseSchema,
@@ -16,8 +15,8 @@ import {
 export const login = pikkuFunc({
   input: LoginInputSchema,
   output: LoginResponseSchema,
-  func: async ({ jwt }, { username, password }) => {
-    const user = store.getUserByUsername(username)
+  func: async ({ jwt, todoStore }, { username, password }) => {
+    const user = todoStore.getUserByUsername(username)
     if (!user) {
       throw new Error('Invalid username or password')
     }
@@ -49,12 +48,12 @@ export const login = pikkuFunc({
 export const getMe = pikkuFunc({
   input: EmptyInputSchema,
   output: UserResponseSchema,
-  func: async (_services, _input, { initialSession }) => {
+  func: async ({ todoStore }, _input, { initialSession }) => {
     if (!initialSession?.userId) {
       throw new Error('Not authenticated')
     }
 
-    const user = store.getUserById(initialSession.userId)
+    const user = todoStore.getUserById(initialSession.userId)
     if (!user) {
       throw new Error('User not found')
     }
