@@ -99,7 +99,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     wirings: new Map(),
     graphWirings: new Map(),
     meta: {},
-    wires: { http: {}, trigger: {} },
   },
   trigger: {
     functions: new Map(),

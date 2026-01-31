@@ -36,7 +36,7 @@ import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
-import { startWorkflowByWire } from '../workflow/workflow-utils.js'
+import { startWorkflowByHTTPWire } from '../workflow/workflow-utils.js'
 import { validateSchema } from '../../schema.js'
 
 /**
@@ -364,8 +364,7 @@ const executeRoute = async (
 
   if (matchedRoute.meta.workflow === true) {
     const requestData = await wire.http!.request!.data()
-    await startWorkflowByWire(
-      'http',
+    await startWorkflowByHTTPWire(
       `${meta.method}:${meta.route}`,
       singletonServices,
       createWireServices,

@@ -105,13 +105,6 @@ export interface PikkuPackageState {
       { wires: WorkflowWires; graph: Record<string, GraphNodeConfig<string>> }
     >
     meta: WorkflowsRuntimeMeta
-    wires: {
-      http: Record<string, { workflowName: string; startNode?: string }>
-      trigger: Record<
-        string,
-        Array<{ workflowName: string; startNode: string }>
-      >
-    }
   }
   trigger: {
     functions: Map<string, CorePikkuTriggerFunctionConfig<any, any>>
