@@ -17,8 +17,6 @@ interface ScheduledJobData {
   session?: CoreUserSession
 }
 
-const RECURRING_QUEUE = 'pikku-recurring-scheduled-task'
-
 /**
  * pg-boss scheduler service implementation
  * Uses pg-boss's schedule() API to store recurring jobs in PostgreSQL.
@@ -127,14 +125,12 @@ export class PgBossSchedulerService extends SchedulerService {
 
   /**
    * Start recurring scheduled tasks.
-   * Reads pikkuState for wireScheduler tasks and workflow schedule wires,
-   * then creates pg-boss cron schedules for each.
    */
   async start(): Promise<void> {
     const scheduledTasks = getScheduledTasks()
 
     for (const [name, task] of scheduledTasks) {
-      const cronName = `${RECURRING_QUEUE}:${name}`
+      const cronName = `pikku-recurring-scheduled-task:${name}`
       await this.pgBoss.schedule(cronName, task.schedule, {
         rpcName: name,
       } as ScheduledJobData)

@@ -50,12 +50,10 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    await schedulerService.start()
-
-    // Start trigger subscriptions
     const triggerService = new TriggerService(singletonServices)
+
+    await schedulerService.start()
     await triggerService.start()
-    singletonServices.logger.info('Trigger service started')
   } catch (e: any) {
     console.error(e.toString())
     process.exit(1)
