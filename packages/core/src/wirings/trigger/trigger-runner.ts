@@ -52,14 +52,6 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
     tags: source.func.tags,
   })
 
-  // Register function meta for the source
-  const functionMeta = pikkuState(null, 'function', 'meta')
-  functionMeta[sourceFuncName] = {
-    pikkuFuncName: sourceFuncName,
-    inputSchemaName: null,
-    outputSchemaName: null,
-  }
-
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {
     throw new Error(`Trigger source already exists: ${source.name}`)
