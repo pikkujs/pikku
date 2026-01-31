@@ -41,7 +41,7 @@ export class TriggerService {
   async start(): Promise<void> {
     const triggers = pikkuState(null, 'trigger', 'triggers')
     const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
-    const workflowTargets = pikkuState(null, 'trigger', 'workflowTargets')
+    const workflowTriggerWires = pikkuState(null, 'workflows', 'wires').trigger
 
     // Build a map of trigger name -> targets (from wireTrigger declarations and workflow wires)
     const triggerTargets = new Map<
@@ -67,8 +67,8 @@ export class TriggerService {
       }
     }
 
-    // Add workflow targets from trigger.workflowTargets state
-    for (const [triggerName, targets] of workflowTargets) {
+    // Add workflow targets from workflows.wires.trigger state
+    for (const [triggerName, targets] of Object.entries(workflowTriggerWires)) {
       if (!triggerTargets.has(triggerName)) {
         triggerTargets.set(triggerName, [])
       }

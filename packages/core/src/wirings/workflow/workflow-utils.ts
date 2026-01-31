@@ -7,32 +7,15 @@ import {
   CoreServices,
   CoreUserSession,
 } from '../../types/core.types.js'
-import { HTTPWiringMeta } from '../http/http.types.js'
 import { ContextAwareRPCService } from '../rpc/rpc-runner.js'
 
 /**
- * Result of finding a workflow by HTTP wire
+ * Start a workflow triggered by a wire lookup
+ * Looks up the wire from the unified workflows.wires state
  */
-export interface WorkflowHttpMatch {
-  workflowName: string
-  startNode?: string
-}
-
-/**
- * Find workflow name by matching route and method against workflow httpRoutes state
- */
-export const findWorkflowByHttpWire = (
-  route: string,
-  method: string
-): WorkflowHttpMatch | undefined => {
-  return pikkuState(null, 'workflows', 'httpRoutes').get(`${method}:${route}`)
-}
-
-/**
- * Start a workflow triggered by an HTTP wire
- * The workflow is responsible for handling the HTTP response
- */
-export const startWorkflowByHttpWire = async (
+export const startWorkflowByWire = async (
+  wireType: 'http' | 'trigger',
+  wireKey: string,
   singletonServices: CoreSingletonServices,
   createWireServices:
     | CreateWireServices<
@@ -41,20 +24,14 @@ export const startWorkflowByHttpWire = async (
         CoreUserSession
       >
     | undefined,
-  matchedRoute: {
-    matchedPath: any
-    params: any
-    route: any
-    meta: HTTPWiringMeta
-  },
-  wire: PikkuWire
+  wire: PikkuWire,
+  data: any
 ): Promise<void> => {
-  const { meta } = matchedRoute
-
-  const match = findWorkflowByHttpWire(meta.route, meta.method)
+  const wires = pikkuState(null, 'workflows', 'wires')
+  const match = (wires as any)[wireType]?.[wireKey]
   if (!match) {
     throw new NotFoundError(
-      `No workflow found for route ${meta.method.toUpperCase()} ${meta.route}`
+      `No workflow found for ${wireType} wire: ${wireKey}`
     )
   }
 
@@ -63,16 +40,18 @@ export const startWorkflowByHttpWire = async (
     throw new Error('WorkflowService not available')
   }
 
-  const data = await wire.http!.request!.data()
-
   const wireServices = createWireServices?.(singletonServices, wire)
   const rpcService = new ContextAwareRPCService(
     { ...singletonServices, ...wireServices },
     wire,
     {}
   )
-  await workflowService.startWorkflow(match.workflowName, data, rpcService, {
-    inline: true,
-    startNode: match.startNode,
-  })
+
+  // For http wires, match is a single object; for trigger wires, it's an array
+  if (wireType === 'http') {
+    await workflowService.startWorkflow(match.workflowName, data, rpcService, {
+      inline: true,
+      startNode: match.startNode,
+    })
+  }
 }

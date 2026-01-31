@@ -23,10 +23,10 @@ async function main(): Promise<void> {
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
+    const schedulerService = pgBossFactory.getSchedulerService()
+
     const workflowService = new PgWorkflowService(sql)
     await workflowService.init()
-
-    const schedulerService = pgBossFactory.getSchedulerService()
 
     const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
@@ -58,12 +58,11 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    // Start recurring scheduled tasks
     await schedulerService.start()
 
-    // Start trigger subscriptions
     const triggerService = new TriggerService(singletonServices)
     await triggerService.start()
+
     singletonServices.logger.info('Trigger service started')
   } catch (e: any) {
     console.error(e.toString())

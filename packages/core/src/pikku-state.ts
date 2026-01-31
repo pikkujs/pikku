@@ -99,14 +99,13 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     wirings: new Map(),
     graphWirings: new Map(),
     meta: {},
-    httpRoutes: new Map(),
+    wires: { http: {}, trigger: {} },
   },
   trigger: {
     functions: new Map(),
     triggers: new Map(),
     triggerSources: new Map(),
     meta: {} as TriggerMeta,
-    workflowTargets: new Map(),
   },
   mcp: {
     resources: new Map(),
