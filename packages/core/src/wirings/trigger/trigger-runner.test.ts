@@ -30,6 +30,12 @@ const setupTriggerMeta = (name: string) => {
     pikkuFuncName: `trigger_${name}`,
     name,
   }
+  // Simulate CLI build-time output: pre-populate function.meta for the source
+  pikkuState(null, 'function', 'meta')[`trigger_${name}__source`] = {
+    pikkuFuncName: `trigger_${name}__source`,
+    inputSchemaName: null,
+    outputSchemaName: null,
+  }
 }
 
 describe('wireTrigger', () => {
@@ -139,8 +145,13 @@ describe('wireTriggerSource', () => {
     )
   })
 
-  test('should register source function and function meta', () => {
+  test('should register source function but not mutate function meta', () => {
     setupTriggerMeta('reg-source')
+
+    // Capture function.meta before wireTriggerSource
+    const functionMeta = pikkuState(null, 'function', 'meta')
+    const metaBefore = { ...functionMeta['trigger_reg-source__source'] }
+
     wireTrigger({
       name: 'reg-source',
       func: { func: async () => {} },
@@ -151,14 +162,12 @@ describe('wireTriggerSource', () => {
       input: {},
     })
 
+    // Should register the source function
     const functions = pikkuState(null, 'function', 'functions')
     assert.equal(functions.has('trigger_reg-source__source'), true)
 
-    const functionMeta = pikkuState(null, 'function', 'meta')
-    assert.equal(
-      functionMeta['trigger_reg-source__source'].pikkuFuncName,
-      'trigger_reg-source__source'
-    )
+    // function.meta should still have the pre-populated entry (not mutated by wireTriggerSource)
+    assert.deepEqual(functionMeta['trigger_reg-source__source'], metaBefore)
   })
 })
 
