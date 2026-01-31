@@ -47,9 +47,16 @@ export const todoReviewWorkflow = pikkuWorkflowGraph({
         startNode: 'fetchOverdue',
       },
     ],
+    trigger: [
+      {
+        name: 'test-event',
+        startNode: 'fetchOverdue',
+      },
+    ],
   },
   config: {
     fetchOverdue: {
+      input: () => ({ userId: 'user1' }),
       next: 'sendSummary',
     },
     sendSummary: {

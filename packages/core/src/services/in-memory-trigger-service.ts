@@ -4,12 +4,17 @@ import {
   TriggerRegistration,
   TriggerInputInstance,
 } from './trigger-service.js'
-import { DeploymentService } from './deployment-service.js'
+import { NoopDeploymentService } from './noop-deployment-service.js'
 
 /**
- * In-memory implementation of TriggerService for testing and single-process use.
+ * In-memory implementation of TriggerService for single-process use.
  *
- * Stores all registrations and instance claims in memory.
+ * Since this is always single-process, there is no need for deployment
+ * tracking or distributed claiming — all registrations belong to this
+ * process and claiming always succeeds.
+ *
+ * Uses a NoopDeploymentService by default.
+ *
  * Ideal for:
  * - Integration tests
  * - Single-process applications without persistence requirements
@@ -17,8 +22,7 @@ import { DeploymentService } from './deployment-service.js'
  *
  * @example
  * ```typescript
- * const deploymentService = new InMemoryDeploymentService()
- * const triggerService = new InMemoryTriggerService(singletonServices, deploymentService)
+ * const triggerService = new InMemoryTriggerService(singletonServices)
  * await triggerService.register({
  *   trigger: 'my-trigger',
  *   input: { channel: 'test' },
@@ -29,23 +33,9 @@ import { DeploymentService } from './deployment-service.js'
  */
 export class InMemoryTriggerService extends TriggerService {
   registrations: TriggerRegistration[] = []
-  /** Tracks which deployments are interested in each trigger+input */
-  deploymentAssociations: Set<string> = new Set()
-  instances: Map<
-    string,
-    {
-      triggerName: string
-      inputHash: string
-      inputData: unknown
-      ownerDeploymentId: string
-    }
-  > = new Map()
 
-  constructor(
-    singletonServices: CoreSingletonServices,
-    deploymentService: DeploymentService
-  ) {
-    super(singletonServices, deploymentService)
+  constructor(singletonServices: CoreSingletonServices) {
+    super(singletonServices, new NoopDeploymentService())
   }
 
   protected async storeRegistration(
@@ -61,10 +51,6 @@ export class InMemoryTriggerService extends TriggerService {
     if (!exists) {
       this.registrations.push(registration)
     }
-    // Associate this deployment with the trigger+input
-    this.deploymentAssociations.add(
-      `${registration.triggerName}:${registration.inputHash}:${this.deploymentService.deploymentId}`
-    )
   }
 
   protected async removeRegistration(
@@ -79,24 +65,6 @@ export class InMemoryTriggerService extends TriggerService {
           r.targetName === registration.targetName
         )
     )
-
-    // If no more registrations exist for this trigger+input, clean up deployment associations
-    const hasRemaining = this.registrations.some(
-      (r) =>
-        r.triggerName === registration.triggerName &&
-        r.inputHash === registration.inputHash
-    )
-    if (!hasRemaining) {
-      for (const key of this.deploymentAssociations) {
-        if (
-          key.startsWith(
-            `${registration.triggerName}:${registration.inputHash}:`
-          )
-        ) {
-          this.deploymentAssociations.delete(key)
-        }
-      }
-    }
   }
 
   protected async getDistinctTriggerInputs(
@@ -108,14 +76,6 @@ export class InMemoryTriggerService extends TriggerService {
         continue
       }
       const key = `${r.triggerName}:${r.inputHash}`
-      // Only include trigger+input pairs this deployment is associated with
-      if (
-        !this.deploymentAssociations.has(
-          `${r.triggerName}:${r.inputHash}:${this.deploymentService.deploymentId}`
-        )
-      ) {
-        continue
-      }
       if (!seen.has(key)) {
         seen.set(key, {
           triggerName: r.triggerName,
@@ -137,38 +97,18 @@ export class InMemoryTriggerService extends TriggerService {
   }
 
   protected async tryClaimInstance(
-    triggerName: string,
-    inputHash: string,
-    inputData: unknown
+    _triggerName: string,
+    _inputHash: string,
+    _inputData: unknown
   ): Promise<boolean> {
-    const key = `${triggerName}:${inputHash}`
-    const existing = this.instances.get(key)
-    if (existing) {
-      const isOurs =
-        existing.ownerDeploymentId === this.deploymentService.deploymentId
-      if (!isOurs) {
-        const alive = await this.deploymentService.isDeploymentAlive(
-          existing.ownerDeploymentId
-        )
-        if (alive) {
-          return false
-        }
-      }
-    }
-    this.instances.set(key, {
-      triggerName,
-      inputHash,
-      inputData,
-      ownerDeploymentId: this.deploymentService.deploymentId,
-    })
+    // Single-process: always claim successfully
     return true
   }
 
   protected async releaseInstance(
-    triggerName: string,
-    inputHash: string
+    _triggerName: string,
+    _inputHash: string
   ): Promise<void> {
-    const key = `${triggerName}:${inputHash}`
-    this.instances.delete(key)
+    // Single-process: nothing to release
   }
 }

@@ -32,6 +32,7 @@
     "test:rpc": "npx tsx client/rpc.ts",
     "test:websocket": "npx tsx client/websocket.ts",
     "test:cli:local": "npx tsx client/cli-local.gen.ts",
-    "test:workflows": "npx tsx client/workflow.ts"
+    "test:workflows": "npx tsx client/workflow.ts",
+    "test:triggers": "npx tsx client/trigger.ts"
   }
 }
