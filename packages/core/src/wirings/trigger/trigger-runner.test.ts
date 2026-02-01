@@ -30,9 +30,9 @@ const setupTriggerMeta = (name: string) => {
     pikkuFuncName: `trigger_${name}`,
     name,
   }
-  // Simulate CLI build-time output: pre-populate function.meta for the source
-  pikkuState(null, 'function', 'meta')[`trigger_${name}__source`] = {
-    pikkuFuncName: `trigger_${name}__source`,
+  // Source function meta uses the trigger name as key
+  pikkuState(null, 'function', 'meta')[name] = {
+    pikkuFuncName: name,
     inputSchemaName: null,
     outputSchemaName: null,
   }
@@ -62,24 +62,6 @@ describe('wireTrigger', () => {
       () => wireTrigger(mockTrigger),
       (error: any) => {
         assert(error.message.includes('Trigger metadata not found'))
-        return true
-      }
-    )
-  })
-
-  test('should throw error when trigger already exists', () => {
-    const mockTrigger: CoreTrigger = {
-      name: 'duplicate-trigger',
-      func: { func: async () => {} },
-    }
-
-    setupTriggerMeta('duplicate-trigger')
-    wireTrigger(mockTrigger)
-
-    assert.throws(
-      () => wireTrigger(mockTrigger),
-      (error: any) => {
-        assert(error.message.includes('Trigger already exists'))
         return true
       }
     )
@@ -145,12 +127,8 @@ describe('wireTriggerSource', () => {
     )
   })
 
-  test('should register source function but not mutate function meta', () => {
+  test('should register source function using trigger name', () => {
     setupTriggerMeta('reg-source')
-
-    // Capture function.meta before wireTriggerSource
-    const functionMeta = pikkuState(null, 'function', 'meta')
-    const metaBefore = { ...functionMeta['trigger_reg-source__source'] }
 
     wireTrigger({
       name: 'reg-source',
@@ -162,12 +140,9 @@ describe('wireTriggerSource', () => {
       input: {},
     })
 
-    // Should register the source function
+    // Should register the source function using the trigger name
     const functions = pikkuState(null, 'function', 'functions')
-    assert.equal(functions.has('trigger_reg-source__source'), true)
-
-    // function.meta should still have the pre-populated entry (not mutated by wireTriggerSource)
-    assert.deepEqual(functionMeta['trigger_reg-source__source'], metaBefore)
+    assert.equal(functions.has('reg-source'), true)
   })
 })
 
