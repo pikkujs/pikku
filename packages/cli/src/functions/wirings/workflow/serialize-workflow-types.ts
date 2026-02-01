@@ -305,7 +305,7 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
 type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
 
 // ============================================================================
-// Unified wireWorkflow
+// wireWorkflow (DSL) + wireWorkflowGraph (Graph)
 // ============================================================================
 
 /** Workflow definition with DSL function */
@@ -330,26 +330,12 @@ interface WorkflowDefinitionGraph<T, NodeIds extends string = string> {
   graph: PikkuWorkflowGraphResult<T, NodeIds>
 }
 
-/**
- * Wire a workflow with wires
- * Accepts either a DSL function (func) or a graph definition (graph)
- *
- * @example
- * // DSL workflow
- * wireWorkflow({
- *   wires: { http: { route: '/start', method: 'post' } },
- *   func: myWorkflowFunc,
- * })
- *
- * @example
- * // Graph workflow - wires are defined in the graph itself
- * wireWorkflow({
- *   enabled: true,  // default: true
- *   graph: myGraphWorkflow,
- * })
- */
-export function wireWorkflow<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>, NodeIds extends string = string>(
-  definition: WorkflowDefinitionFunc | WorkflowDefinitionGraph<T, NodeIds>
+export function wireWorkflow(definition: WorkflowDefinitionFunc): void {
+  coreWireWorkflow(definition as any)
+}
+
+export function wireWorkflowGraph<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>, NodeIds extends string = string>(
+  definition: WorkflowDefinitionGraph<T, NodeIds>
 ): void {
   coreWireWorkflow(definition as any)
 }

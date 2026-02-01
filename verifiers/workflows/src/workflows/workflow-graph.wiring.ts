@@ -1,6 +1,6 @@
 import {
   pikkuWorkflowGraph,
-  wireWorkflow,
+  wireWorkflowGraph,
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { wireHTTP } from '#pikku'
 
@@ -51,7 +51,7 @@ export const graphOnboarding = pikkuWorkflowGraph({
  * Wire the graph workflow to enable its wires
  * enabled: true (default) allows the workflow to be triggered
  */
-wireWorkflow({
+wireWorkflowGraph({
   enabled: true,
   graph: graphOnboarding,
 })

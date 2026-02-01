@@ -752,8 +752,8 @@ function extractNodeConfigFromObject(
 }
 
 /**
- * Inspector for wireWorkflow() calls with graph definitions
- * Detects: wireWorkflow({ wires: {...}, graph: pikkuWorkflowGraphResult })
+ * Inspector for wireWorkflowGraph() calls with graph definitions
+ * Detects: wireWorkflowGraph({ graph: pikkuWorkflowGraphResult })
  */
 export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
@@ -761,7 +761,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   }
 
   const expression = node.expression
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireWorkflow') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireWorkflowGraph') {
     return
   }
 
@@ -769,7 +769,10 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   const firstArg = args[0]
 
   if (!firstArg) {
-    logger.critical(ErrorCode.MISSING_FUNC, 'wireWorkflow requires an argument')
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      'wireWorkflowGraph requires an argument'
+    )
     return
   }
 
@@ -778,14 +781,13 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!definitionObj) {
     logger.critical(
       ErrorCode.MISSING_FUNC,
-      'wireWorkflow requires an object argument'
+      'wireWorkflowGraph requires an object argument'
     )
     return
   }
 
-  // Check if this is a graph workflow (has 'graph' property)
   let graphPropNode: ts.Node | undefined
-  let enabled = true // Default to true
+  let enabled = true
 
   for (const prop of definitionObj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -794,16 +796,17 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     if (propName === 'graph') {
       graphPropNode = prop.initializer
     } else if (propName === 'enabled') {
-      // Check if enabled is explicitly set to false
       if (prop.initializer.kind === ts.SyntaxKind.FalseKeyword) {
         enabled = false
       }
     }
-    // Note: We no longer extract wires from wireWorkflow - they come from pikkuWorkflowGraph
   }
 
-  // If no graph property, this is a DSL workflow - skip (handled by add-workflow.ts)
   if (!graphPropNode) {
+    logger.critical(
+      ErrorCode.MISSING_FUNC,
+      'wireWorkflowGraph requires a graph property'
+    )
     return
   }
 
@@ -813,7 +816,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!graphConfig) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      'wireWorkflow with graph requires a pikkuWorkflowGraph'
+      'wireWorkflowGraph requires a pikkuWorkflowGraph'
     )
     return
   }
@@ -824,7 +827,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!workflowName) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      'wireWorkflow with graph requires a pikkuWorkflowGraph with a name property or exported variable name'
+      'wireWorkflowGraph requires a pikkuWorkflowGraph with a name property or exported variable name'
     )
     return
   }
