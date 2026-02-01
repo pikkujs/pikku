@@ -47,9 +47,9 @@ const setupTriggerMeta = (name: string) => {
     inputSchemaName: null,
     outputSchemaName: null,
   }
-  // Simulate CLI build-time output: pre-populate function.meta for the source
-  pikkuState(null, 'function', 'meta')[`trigger_${name}__source`] = {
-    pikkuFuncName: `trigger_${name}__source`,
+  // Source function meta uses the trigger name as key (same namespace as the function registration)
+  pikkuState(null, 'function', 'meta')[name] = {
+    pikkuFuncName: name,
     inputSchemaName: null,
     outputSchemaName: null,
   }
