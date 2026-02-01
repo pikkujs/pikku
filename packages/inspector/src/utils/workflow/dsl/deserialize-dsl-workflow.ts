@@ -880,68 +880,6 @@ function inputToGraphCode(
 }
 
 /**
- * Serialize wires to code
- */
-function wiresToCode(wires: SerializedWorkflowGraph['wires']): string {
-  if (!wires || Object.keys(wires).length === 0) return '{}'
-
-  const parts: string[] = []
-
-  if (wires.http && wires.http.length > 0) {
-    const httpItems = wires.http.map(
-      (h) =>
-        `{ route: '${h.route}', method: '${h.method}', startNode: '${h.startNode}' }`
-    )
-    parts.push(`http: [${httpItems.join(', ')}]`)
-  }
-
-  if (wires.channel && wires.channel.length > 0) {
-    const channelItems = wires.channel.map((c) => {
-      const channelParts: string[] = [`name: '${c.name}'`]
-      if (c.onConnect) channelParts.push(`onConnect: '${c.onConnect}'`)
-      if (c.onDisconnect) channelParts.push(`onDisconnect: '${c.onDisconnect}'`)
-      if (c.onMessage) channelParts.push(`onMessage: '${c.onMessage}'`)
-      return `{ ${channelParts.join(', ')} }`
-    })
-    parts.push(`channel: [${channelItems.join(', ')}]`)
-  }
-
-  if (wires.queue && wires.queue.length > 0) {
-    const queueItems = wires.queue.map(
-      (q) => `{ name: '${q.name}', startNode: '${q.startNode}' }`
-    )
-    parts.push(`queue: [${queueItems.join(', ')}]`)
-  }
-
-  if (wires.cli && wires.cli.length > 0) {
-    const cliItems = wires.cli.map(
-      (c) => `{ command: '${c.command}', startNode: '${c.startNode}' }`
-    )
-    parts.push(`cli: [${cliItems.join(', ')}]`)
-  }
-
-  if (wires.schedule && wires.schedule.length > 0) {
-    const scheduleItems = wires.schedule.map((s) => {
-      const scheduleParts: string[] = []
-      if (s.cron) scheduleParts.push(`cron: '${s.cron}'`)
-      if (s.interval) scheduleParts.push(`interval: '${s.interval}'`)
-      scheduleParts.push(`startNode: '${s.startNode}'`)
-      return `{ ${scheduleParts.join(', ')} }`
-    })
-    parts.push(`schedule: [${scheduleItems.join(', ')}]`)
-  }
-
-  if (wires.trigger && wires.trigger.length > 0) {
-    const triggerItems = wires.trigger.map(
-      (t) => `{ name: '${t.name}', startNode: '${t.startNode}' }`
-    )
-    parts.push(`trigger: [${triggerItems.join(', ')}]`)
-  }
-
-  return `{ ${parts.join(', ')} }`
-}
-
-/**
  * Check if a node is a flow node (non-RPC control flow)
  */
 function isFlowNode(node: any): boolean {
@@ -995,9 +933,7 @@ export function deserializeGraphWorkflow(
   const lines: string[] = []
 
   // Import statement
-  lines.push(
-    `import { pikkuWorkflowGraph, wireWorkflow } from '${pikkuImportPath}'`
-  )
+  lines.push(`import { wireWorkflowGraph } from '${pikkuImportPath}'`)
   lines.push('')
 
   // Add description as comment if present
@@ -1103,8 +1039,8 @@ export function deserializeGraphWorkflow(
     (id) => !nodesWithIncomingEdges.has(id)
   )
 
-  // Generate the pikkuWorkflowGraph call
-  lines.push(`export const ${workflow.name} = pikkuWorkflowGraph({`)
+  // Generate the wireWorkflowGraph call (builds graph and registers with core)
+  lines.push(`export const ${workflow.name} = wireWorkflowGraph({`)
   lines.push(`  name: '${workflow.name}',`)
   if (workflow.description) {
     lines.push(`  description: '${workflow.description}',`)
@@ -1140,20 +1076,6 @@ export function deserializeGraphWorkflow(
   }
 
   lines.push(`})`)
-  lines.push('')
-
-  // Always generate wireWorkflow to register the graph workflow
-  // (needed for testing even without explicit wires)
-  if (workflow.wires && Object.keys(workflow.wires).length > 0) {
-    lines.push(`wireWorkflow({`)
-    lines.push(`  wires: ${wiresToCode(workflow.wires)},`)
-    lines.push(`  graph: ${workflow.name},`)
-    lines.push(`})`)
-  } else {
-    lines.push(`wireWorkflow({`)
-    lines.push(`  graph: ${workflow.name},`)
-    lines.push(`})`)
-  }
   lines.push('')
 
   return lines.join('\n')

@@ -1,7 +1,4 @@
-import {
-  pikkuWorkflowGraph,
-  wireWorkflowGraph,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { wireWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { wireHTTP } from '#pikku'
 
 /**
@@ -9,7 +6,8 @@ import { wireHTTP } from '#pikku'
  * Demonstrates sequential flow with input refs
  * Name is inferred from the exported variable name
  */
-export const graphOnboarding = pikkuWorkflowGraph({
+export const graphOnboarding = wireWorkflowGraph({
+  enabled: true,
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
   nodes: {
@@ -45,15 +43,6 @@ export const graphOnboarding = pikkuWorkflowGraph({
       }),
     },
   },
-})
-
-/**
- * Wire the graph workflow to enable its wires
- * enabled: true (default) allows the workflow to be triggered
- */
-wireWorkflowGraph({
-  enabled: true,
-  graph: graphOnboarding,
 })
 
 /**

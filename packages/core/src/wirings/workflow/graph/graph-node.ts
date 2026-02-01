@@ -54,9 +54,9 @@ export interface GraphNodeDef<
  * @example
  * ```typescript
  * // Import the typed graph from generated types
- * import { pikkuWorkflowGraph, wireWorkflow } from './.pikku/workflow/pikku-workflow-types.gen.js'
+ * import { wireWorkflowGraph } from './.pikku/workflow/pikku-workflow-types.gen.js'
  *
- * export const myGraph = pikkuWorkflowGraph({
+ * export const myGraph = wireWorkflowGraph({
  *   name: 'myWorkflow',
  *   nodes: {
  *     entry: 'createUserProfile',  // autocompletes RPC names
@@ -70,11 +70,6 @@ export interface GraphNodeDef<
  *       }),
  *     },
  *   },
- * })
- *
- * wireWorkflow({
- *   wires: { http: { route: '/start', method: 'post' } },
- *   graph: myGraph,
  * })
  * ```
  */
