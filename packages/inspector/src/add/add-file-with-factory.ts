@@ -6,6 +6,7 @@ import { extractServicesFromFunction } from '../utils/extract-services.js'
 const wrapperFunctionMap: Record<string, string> = {
   pikkuConfig: 'CreateConfig',
   pikkuServices: 'CreateSingletonServices',
+  pikkuExternalServices: 'CreateSingletonServices',
   pikkuWireServices: 'CreateWireServices',
 }
 
