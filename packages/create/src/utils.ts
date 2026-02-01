@@ -258,6 +258,7 @@ const FILE_FEATURE_MAPPING = {
   'sse.': ['sse'],
   'todos.': ['http', 'mcp', 'cli', 'channel'], // MCP, CLI, and Channel depend on todos
   'workflow.': ['workflows'],
+  'graph.': ['workflows'],
   'cli.': ['cli'],
 } as const
 
