@@ -3,6 +3,7 @@
  * and registers them with pikkuState
  */
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { sanitizeTypeName } from '../../../utils/custom-types-generator.js'
 
 export const serializeWorkflowMeta = (
   outputPath: string,
@@ -27,6 +28,7 @@ pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
 
   const imports = sortedNames
     .map((name) => {
+      const sanitizedIdentifier = sanitizeTypeName(name)
       const jsonPath = `${metaDir}/${name}.gen.json`
       const importPath = getFileImportRelativePath(
         outputPath,
@@ -34,13 +36,16 @@ pikkuState(${pkg}, 'workflows', 'meta', workflowsMeta)`
         packageMappings
       )
       return supportsImportAttributes
-        ? `import ${name}Meta from '${importPath}' with { type: 'json' }`
-        : `import ${name}Meta from '${importPath}'`
+        ? `import ${sanitizedIdentifier}Meta from '${importPath}' with { type: 'json' }`
+        : `import ${sanitizedIdentifier}Meta from '${importPath}'`
     })
     .join('\n')
 
   const metaEntries = sortedNames
-    .map((name) => `  '${name}': ${name}Meta,`)
+    .map((name) => {
+      const sanitizedIdentifier = sanitizeTypeName(name)
+      return `  '${name}': ${sanitizedIdentifier}Meta,`
+    })
     .join('\n')
 
   return `import { pikkuState } from '@pikku/core'

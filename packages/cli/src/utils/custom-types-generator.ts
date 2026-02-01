@@ -1,7 +1,7 @@
 import { TypesMap } from '@pikku/inspector'
 
 // Sanitize a type name to be a valid TypeScript identifier
-function sanitizeTypeName(name: string): string {
+export function sanitizeTypeName(name: string): string {
   // Replace hyphens with underscores
   return name.replace(/-/g, '_')
 }

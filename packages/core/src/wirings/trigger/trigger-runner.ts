@@ -26,9 +26,6 @@ export const wireTrigger = (trigger: CoreTrigger) => {
   addFunction(triggerMeta.pikkuFuncName, trigger.func as any)
 
   const triggers = pikkuState(null, 'trigger', 'triggers')
-  if (triggers.has(trigger.name)) {
-    throw new Error(`Trigger already exists: ${trigger.name}`)
-  }
   triggers.set(trigger.name, trigger as any)
 }
 
@@ -46,10 +43,10 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
     throw new Error(`Trigger metadata not found: ${source.name}`)
   }
 
-  // Register the source function (separate from the target function)
+  // Register the source function in the appropriate namespace.
+  // The function uses its trigger name as the key within the package namespace.
   const packageName = triggerMeta.packageName || null
-  const sourceFuncName = `${triggerMeta.pikkuFuncName}__source`
-  addFunction(sourceFuncName, source.func, packageName)
+  addFunction(source.name, source.func, packageName)
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {
@@ -95,8 +92,6 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     throw new Error(`Trigger metadata not found: ${name}`)
   }
 
-  const sourceFuncName = `${meta.pikkuFuncName}__source`
-
   const wire: PikkuWire = {
     trigger: {
       invoke: (data: unknown) => {
@@ -108,7 +103,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   singletonServices.logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await runPikkuFunc('trigger', name, sourceFuncName, {
+  const teardown = await runPikkuFunc('trigger', name, name, {
     singletonServices,
     createWireServices,
     auth: false,

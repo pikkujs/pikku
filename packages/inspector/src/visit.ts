@@ -95,6 +95,10 @@ export const visitRoutes = (
   options: InspectorOptions
 ) => {
   addFunctions(logger, node, checker, state, options)
+  addForgeNode(logger, node, checker, state, options)
+  addCredential(logger, node, checker, state, options)
+  addOAuth2Credential(logger, node, checker, state, options)
+
   addHTTPRoute(logger, node, checker, state, options)
   addHTTPRoutes(logger, node, checker, state, options)
   addSchedule(logger, node, checker, state, options)
@@ -106,9 +110,6 @@ export const visitRoutes = (
   addMCPResource(logger, node, checker, state, options)
   addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)
-  addForgeNode(logger, node, checker, state, options)
-  addCredential(logger, node, checker, state, options)
-  addOAuth2Credential(logger, node, checker, state, options)
   addWorkflowGraph(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
