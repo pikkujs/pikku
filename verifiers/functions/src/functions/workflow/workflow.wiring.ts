@@ -1,8 +1,5 @@
 import { wireHTTP } from '#pikku'
-import {
-  pikkuWorkflowGraph,
-  wireWorkflowGraph,
-} from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { wireWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { triggerOnboardingWorkflow } from './workflow.functions.js'
 
 // HTTP endpoint to trigger the onboarding workflow
@@ -22,7 +19,7 @@ wireHTTP({
  * - config: Define input mappings and flow (next, onError)
  * - wires: HTTP/channel triggers
  */
-export const graphUserWelcome = pikkuWorkflowGraph({
+export const graphUserWelcome = wireWorkflowGraph({
   description: 'Send welcome email after user profile creation',
   tags: ['onboarding', 'graph'],
   nodes: {
@@ -50,11 +47,6 @@ export const graphUserWelcome = pikkuWorkflowGraph({
       }),
     },
   },
-})
-
-// Register the graph workflow
-wireWorkflowGraph({
-  graph: graphUserWelcome,
 })
 
 // HTTP endpoint for graph workflow

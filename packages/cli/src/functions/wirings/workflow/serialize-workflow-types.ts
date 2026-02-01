@@ -146,6 +146,8 @@ export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
   T
 > {
+  /** Whether this workflow wiring is enabled (default: true) */
+  enabled?: boolean
   /** Workflow name (optional - defaults to exported variable name) */
   name?: string
   /** Optional description */
@@ -170,39 +172,6 @@ export interface PikkuWorkflowGraphResult<T, NodeIds extends string = string> {
   graph: T
 }
 
-/**
- * Creates a graph-based workflow definition with metadata
- * Name defaults to the exported variable name if not provided.
- *
- * @example
- * // Name inferred from exported variable name
- * export const myWorkflow = pikkuWorkflowGraph({
- *   description: 'Handles user onboarding',
- *   tags: ['onboarding'],
- *   nodes: {
- *     entry: 'createUser',
- *     sendEmail: 'sendWelcomeEmail',
- *   },
- *   config: {
- *     entry: { next: 'sendEmail' },
- *     sendEmail: { input: (ref) => ({ to: ref('entry', 'email') }) },
- *   },
- * })
- */
-export function pikkuWorkflowGraph<
-  const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
->(
-  config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
-): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> {
-  return {
-    __type: 'pikkuWorkflowGraph',
-    name: config.name,
-    description: config.description,
-    tags: config.tags,
-    wires: config.wires,
-    graph: graphBuilder(config.nodes, config.config as any),
-  }
-}
 
 /** Typed ref value */
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
@@ -322,22 +291,27 @@ interface WorkflowDefinitionFunc {
   func: PikkuFunctionConfig<any, any, 'workflow', PikkuFunctionWorkflow<any, any>>
 }
 
-/** Workflow definition with graph */
-interface WorkflowDefinitionGraph<T, NodeIds extends string = string> {
-  /** Whether this workflow wiring is enabled (default: true) */
-  enabled?: boolean
-  /** Graph workflow definition - wires are defined in the graph itself */
-  graph: PikkuWorkflowGraphResult<T, NodeIds>
-}
-
 export function wireWorkflow(definition: WorkflowDefinitionFunc): void {
   coreWireWorkflow(definition as any)
 }
 
-export function wireWorkflowGraph<T extends Record<string, GraphNodeConfig<Extract<keyof T, string>>>, NodeIds extends string = string>(
-  definition: WorkflowDefinitionGraph<T, NodeIds>
-): void {
-  coreWireWorkflow(definition as any)
+export function wireWorkflowGraph<
+  const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
+>(
+  config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
+): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> {
+  const result: PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> = {
+    __type: 'pikkuWorkflowGraph',
+    name: config.name,
+    description: config.description,
+    tags: config.tags,
+    wires: config.wires,
+    graph: graphBuilder(config.nodes, config.config as any),
+  }
+  if (config.enabled !== false) {
+    coreWireWorkflow({ graph: result } as any)
+  }
+  return result
 }
 `
 }

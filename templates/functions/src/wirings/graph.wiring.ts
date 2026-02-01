@@ -1,10 +1,7 @@
-import {
-  wireWorkflowGraph,
-  pikkuWorkflowGraph,
-} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { wireWorkflowGraph } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
 import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 
-export const todoReviewWorkflow = pikkuWorkflowGraph({
+export const todoReviewWorkflow = wireWorkflowGraph({
   description: 'Review overdue todos and send summary notification',
   tags: ['review', 'overdue', 'notification'],
   nodes: {
@@ -65,10 +62,6 @@ export const todoReviewWorkflow = pikkuWorkflowGraph({
       }),
     },
   },
-})
-
-wireWorkflowGraph({
-  graph: todoReviewWorkflow,
 })
 
 wireHTTP({
