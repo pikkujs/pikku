@@ -36,6 +36,8 @@ This repository contains multiple sub-projects:
 
 ## Development Commands
 
+Always use `yarn` for all commands in this monorepo. Do not use npm or bun.
+
 ### Main Pikku Framework (pikku/)
 
 ```bash

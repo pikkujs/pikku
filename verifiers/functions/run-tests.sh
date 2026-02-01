@@ -1,27 +1,8 @@
 #!/bin/bash
 set -e
 
-# -------- DETECT PACKAGE MANAGER --------
-# When invoked via yarn/bun/npm, they set npm_config_user_agent
-# Examples:
-#   yarn: "yarn/1.22.19 npm/? node/v18.0.0 darwin x64"
-#   bun: "bun/1.0.0"
-#   npm: "npm/9.0.0 node/v18.0.0 darwin x64"
-if [[ "$npm_config_user_agent" == bun* ]] || [[ "$npm_execpath" == *bun* ]]; then
-    PKG_MANAGER="bun"
-elif [[ "$npm_config_user_agent" == yarn* ]] || [[ "$npm_execpath" == *yarn* ]]; then
-    PKG_MANAGER="yarn"
-elif [[ "$npm_config_user_agent" == npm* ]] || [[ "$npm_execpath" == *npm* ]]; then
-    PKG_MANAGER="npm"
-else
-    # Default to yarn if we can't detect
-    PKG_MANAGER="yarn"
-fi
-
-echo "Detected package manager: $PKG_MANAGER"
-
 # -------- DEFAULTS --------
-SERVER_CMD="$PKG_MANAGER run start"
+SERVER_CMD="yarn run start"
 BUILD_CMD=""
 HELLO_WORLD_URL_PREFIX="http://localhost:4002"
 RUN_HTTP_TESTS=false
@@ -142,52 +123,52 @@ fi
 # -------- RUN HTTP TESTS IF REQUESTED --------
 if $RUN_HTTP_TESTS; then
     echo "Running HTTP tests..."
-    $PKG_MANAGER run test:http-fetch
+    yarn run test:http-fetch
 fi
 
 # -------- RUN WEBSOCKET TESTS IF REQUESTED --------
 if $RUN_WS_TESTS; then
     echo "Running WebSocket tests..."
-    $PKG_MANAGER run test:websocket
+    yarn run test:websocket
 fi
 
 # -------- RUN RPC TESTS IF REQUESTED --------
 if $RUN_RPC_TESTS; then
     echo "Running RPC tests..."
-    $PKG_MANAGER run test:rpc
+    yarn run test:rpc
 fi
 
 # -------- RUN HTTP-SSE TESTS IF REQUESTED --------
 if $RUN_HTTP_SSE_TESTS; then
     echo "Running HTTP-SSE tests..."
-    $PKG_MANAGER run test:http-sse
+    yarn run test:http-sse
 fi
 
 # -------- RUN QUEUE TESTS IF REQUESTED --------
 if $RUN_QUEUE_TESTS; then
     echo "Running Queue tests..."
-    $PKG_MANAGER run test:queue
+    yarn run test:queue
 fi
 
 # -------- RUN MCP TESTS IF REQUESTED --------
 if $RUN_MCP_TESTS; then
     echo "Running MCP tests..."
-    $PKG_MANAGER run test:mcp
+    yarn run test:mcp
 fi
 
 # -------- RUN CLI TESTS IF REQUESTED --------
 if $RUN_CLI_TESTS; then
     echo "Running CLI tests..."
     echo "Testing local CLI..."
-    $PKG_MANAGER run test:cli:local
+    yarn run test:cli:local
     # echo "Testing remote CLI..."
-    # $PKG_MANAGER run test:cli:remote
+    # yarn run test:cli:remote
 fi
 
 # -------- RUN WORKFLOWS TESTS IF REQUESTED --------
 if $RUN_WORKFLOW_TESTS; then
     echo "Running Workflow tests..."
-    $PKG_MANAGER run test:workflows
+    yarn run test:workflows
 fi
 
 echo "✅ All tests completed successfully."

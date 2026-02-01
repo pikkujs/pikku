@@ -49,7 +49,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        verifier: [middleware-and-permissions, treeshaking, types, secrets, workflows]
+        verifier:
+          [middleware-and-permissions, treeshaking, types, secrets, workflows]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
