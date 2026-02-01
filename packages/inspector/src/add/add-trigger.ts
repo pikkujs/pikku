@@ -8,6 +8,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { resolveExternalPackageName } from '../utils/resolve-external-package.js'
 
 import { ErrorCode } from '../error-codes.js'
 export const addTrigger: AddWiring = (
@@ -15,7 +16,7 @@ export const addTrigger: AddWiring = (
   node,
   checker,
   state,
-  _options
+  options
 ) => {
   if (!ts.isCallExpression(node)) {
     return
@@ -32,7 +33,7 @@ export const addTrigger: AddWiring = (
   if (expression.text === 'wireTrigger') {
     addWireTrigger(logger, node, checker, state, firstArg)
   } else if (expression.text === 'wireTriggerSource') {
-    addWireTriggerSource(logger, node, checker, state, firstArg)
+    addWireTriggerSource(logger, node, checker, state, options, firstArg)
   }
 }
 
@@ -100,14 +101,6 @@ const addWireTrigger: (
     tags,
     middleware,
   }
-
-  // Register function meta for the source function (used by wireTriggerSource at runtime)
-  const sourceFuncName = `${pikkuFuncName}__source`
-  state.functions.meta[sourceFuncName] = {
-    pikkuFuncName: sourceFuncName,
-    inputSchemaName: null,
-    outputSchemaName: null,
-  }
 }
 
 const addWireTriggerSource: (
@@ -115,8 +108,9 @@ const addWireTriggerSource: (
   node: ts.CallExpression,
   checker: Parameters<AddWiring>[2],
   state: Parameters<AddWiring>[3],
+  options: Parameters<AddWiring>[4],
   firstArg: ts.Expression | undefined
-) => void = (logger, node, checker, state, firstArg) => {
+) => void = (logger, node, checker, state, options, firstArg) => {
   if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) {
     return
   }
@@ -142,20 +136,17 @@ const addWireTriggerSource: (
     return
   }
 
-  const pikkuFuncName = extractFunctionName(
-    funcInitializer,
-    checker,
-    state.rootDir
-  ).pikkuFuncName
-
-  // Derive the source function name (same convention as runtime)
-  const sourceFuncName = `${pikkuFuncName}__source`
-
-  // Register function meta for the source at build time
-  state.functions.meta[sourceFuncName] = {
-    pikkuFuncName: sourceFuncName,
-    inputSchemaName: null,
-    outputSchemaName: null,
+  // Detect if the source function comes from an external package
+  // and set packageName on the trigger meta entry
+  if (ts.isIdentifier(funcInitializer)) {
+    const packageName = resolveExternalPackageName(
+      funcInitializer,
+      checker,
+      options.externalPackages
+    )
+    if (packageName && state.triggers.meta[nameValue]) {
+      state.triggers.meta[nameValue].packageName = packageName
+    }
   }
 
   state.triggers.files.add(node.getSourceFile().fileName)

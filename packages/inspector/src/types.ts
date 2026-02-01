@@ -141,6 +141,7 @@ export type ExternalPackageConfig = {
 export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
+  isExternalPackage: boolean
   types: Partial<{
     configFileType: string
     userSessionType: string

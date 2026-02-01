@@ -265,6 +265,7 @@ export const createSingletonServices: CreateSingletonServices<
       unfilteredState = inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
+        isExternalPackage: config.externalPackage,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,

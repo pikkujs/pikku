@@ -68,10 +68,11 @@ import type { PikkuRPC } from '@pikku/core/rpc'
 
 type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   name: Name,
-  input: WorkflowMap[Name]['input']
+  input: WorkflowMap[Name]['input'],
+  options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke, TypedStartWorkflow>
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke>
   `
 }
 
