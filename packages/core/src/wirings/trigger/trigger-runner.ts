@@ -47,8 +47,9 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   }
 
   // Register the source function (separate from the target function)
+  const packageName = triggerMeta.packageName || null
   const sourceFuncName = `${triggerMeta.pikkuFuncName}__source`
-  addFunction(sourceFuncName, source.func)
+  addFunction(sourceFuncName, source.func, packageName)
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {
@@ -113,6 +114,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     auth: false,
     data: () => input as any,
     wire,
+    packageName: meta.packageName || null,
   })
 
   return { name, teardown }
