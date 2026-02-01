@@ -100,6 +100,14 @@ const addWireTrigger: (
     tags,
     middleware,
   }
+
+  // Register function meta for the source function (used by wireTriggerSource at runtime)
+  const sourceFuncName = `${pikkuFuncName}__source`
+  state.functions.meta[sourceFuncName] = {
+    pikkuFuncName: sourceFuncName,
+    inputSchemaName: null,
+    outputSchemaName: null,
+  }
 }
 
 const addWireTriggerSource: (
