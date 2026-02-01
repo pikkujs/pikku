@@ -1,7 +1,7 @@
 import { wireHTTP } from '#pikku'
 import {
   pikkuWorkflowGraph,
-  wireWorkflow,
+  wireWorkflowGraph,
 } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { triggerOnboardingWorkflow } from './workflow.functions.js'
 
@@ -53,7 +53,7 @@ export const graphUserWelcome = pikkuWorkflowGraph({
 })
 
 // Register the graph workflow
-wireWorkflow({
+wireWorkflowGraph({
   graph: graphUserWelcome,
 })
 
