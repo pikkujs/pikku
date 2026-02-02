@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.975.0",
-    "@aws-sdk/client-s3": "^3.975.0",
+    "@aws-sdk/client-s3": "^3.980.0",
     "@aws-sdk/client-secrets-manager": "^3.975.0",
     "@aws-sdk/client-sqs": "^3.975.0",
     "@aws-sdk/cloudfront-signer": "^3.975.0",
