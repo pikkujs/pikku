@@ -3598,7 +3598,7 @@ __metadata:
   dependencies:
     "@types/node": "npm:^24.10.9"
     cron: "npm:^4.4.0"
-    cron-schedule: "npm:^5.0.4"
+    cron-schedule: "npm:^6.0.0"
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.11.1
@@ -6428,10 +6428,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cron-schedule@npm:^5.0.4":
-  version: 5.0.4
-  resolution: "cron-schedule@npm:5.0.4"
-  checksum: 10/0b3fced7464ed8c2f92e9a801972fa1606cf351a32e31871d99fc70774387c87315aea06b40a7cf54ec6b12a2569921a7f570e927866f8408cf082475282cc49
+"cron-schedule@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "cron-schedule@npm:6.0.0"
+  checksum: 10/08b9d1b2229954ca8a42a4df5d35f906e962ec3a9c63c26a92be9c587c5dc792895284322f0fd325853edceeb4a1829d8362469289425bb386ce863345c05832
   languageName: node
   linkType: hard
 
