@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "cron": "^4.4.0",
-    "cron-schedule": "^5.0.4"
+    "cron-schedule": "^6.0.0"
   }
 }
