@@ -137,7 +137,7 @@ const addWireTriggerSource: (
   }
 
   // Detect if the source function comes from an external package
-  // and set packageName on the trigger meta entry
+  // and set packageName and pikkuFuncName on the trigger meta entry
   if (ts.isIdentifier(funcInitializer)) {
     const packageName = resolveExternalPackageName(
       funcInitializer,
@@ -146,6 +146,8 @@ const addWireTriggerSource: (
     )
     if (packageName && state.triggers.meta[nameValue]) {
       state.triggers.meta[nameValue].packageName = packageName
+      // Use the identifier text as the function name - this is the exported name from the package
+      state.triggers.meta[nameValue].pikkuFuncName = funcInitializer.text
     }
   }
 

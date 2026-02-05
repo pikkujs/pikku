@@ -43,11 +43,6 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
     throw new Error(`Trigger metadata not found: ${source.name}`)
   }
 
-  // Register the source function in the appropriate namespace.
-  // The function uses its trigger name as the key within the package namespace.
-  const packageName = triggerMeta.packageName || null
-  addFunction(source.name, source.func, packageName)
-
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {
     throw new Error(`Trigger source already exists: ${source.name}`)
