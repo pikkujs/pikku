@@ -57,6 +57,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     },
     triggers: {
       meta: {},
+      sourceMeta: {},
       files: new Set(),
     },
     scheduledTasks: {

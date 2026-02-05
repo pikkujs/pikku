@@ -15,9 +15,11 @@ export interface PikkuTrigger<TOutput = unknown> {
 /**
  * Metadata for registered triggers stored in state.
  */
-export type TriggerMeta = Record<
+export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
+
+export type TriggerSourceMeta = Record<
   string,
-  CommonWireMeta & { name: string; packageName?: string }
+  { name: string; pikkuFuncName: string; packageName?: string }
 >
 
 /**

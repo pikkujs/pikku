@@ -263,6 +263,18 @@ const _getPikkuCLIConfig = async (
         'pikku-trigger-wirings-meta.gen.json'
       )
     }
+    if (!result.triggerSourcesMetaFile) {
+      result.triggerSourcesMetaFile = join(
+        triggerDir,
+        'pikku-trigger-sources-meta.gen.ts'
+      )
+    }
+    if (!result.triggerSourcesMetaJsonFile) {
+      result.triggerSourcesMetaJsonFile = join(
+        triggerDir,
+        'pikku-trigger-sources-meta.gen.json'
+      )
+    }
 
     // Scheduler
     if (!result.schedulersWiringFile) {

@@ -41,6 +41,7 @@ import {
   CoreTrigger,
   CoreTriggerSource,
   TriggerMeta,
+  TriggerSourceMeta,
 } from '../wirings/trigger/trigger.types.js'
 import {
   FunctionsMeta,
@@ -111,6 +112,7 @@ export interface PikkuPackageState {
     triggers: Map<string, CoreTrigger>
     triggerSources: Map<string, CoreTriggerSource>
     meta: TriggerMeta
+    sourceMeta: TriggerSourceMeta
   }
   mcp: {
     resources: Map<string, CoreMCPResource>

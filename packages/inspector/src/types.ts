@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import { TriggerMeta } from '@pikku/core/trigger'
+import { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
 import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
@@ -231,6 +231,7 @@ export interface InspectorState {
   channels: InspectorChannelState
   triggers: {
     meta: TriggerMeta
+    sourceMeta: TriggerSourceMeta
     files: Set<string>
   }
   scheduledTasks: {

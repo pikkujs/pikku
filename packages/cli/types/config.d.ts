@@ -43,6 +43,8 @@ export interface PikkuCLICoreOutputFiles {
   triggersWiringFile: string
   triggersWiringMetaFile: string
   triggersWiringMetaJsonFile: string
+  triggerSourcesMetaFile: string
+  triggerSourcesMetaJsonFile: string
 
   // Schedulers
   schedulersWiringFile: string

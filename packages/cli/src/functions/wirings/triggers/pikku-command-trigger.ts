@@ -5,6 +5,8 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import {
   serializeTriggerMeta,
   serializeTriggerMetaTS,
+  serializeTriggerSourceMeta,
+  serializeTriggerSourceMetaTS,
 } from './serialize-trigger-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
@@ -19,6 +21,8 @@ export const pikkuTrigger = pikkuSessionlessFunc<void, boolean | undefined>({
       triggersWiringFile,
       triggersWiringMetaFile,
       triggersWiringMetaJsonFile,
+      triggerSourcesMetaFile,
+      triggerSourcesMetaJsonFile,
       packageMappings,
       schema,
     } = config
@@ -75,6 +79,29 @@ export const pikkuTrigger = pikkuSessionlessFunc<void, boolean | undefined>({
         triggersWiringFile,
         triggers.files,
         packageMappings
+      )
+    )
+
+    const sourceMetaJson = serializeTriggerSourceMeta(triggers.sourceMeta)
+    await writeFileInDir(
+      logger,
+      triggerSourcesMetaJsonFile,
+      JSON.stringify(sourceMetaJson, null, 2)
+    )
+
+    const sourceMetaJsonImportPath = getFileImportRelativePath(
+      triggerSourcesMetaFile,
+      triggerSourcesMetaJsonFile,
+      packageMappings
+    )
+
+    await writeFileInDir(
+      logger,
+      triggerSourcesMetaFile,
+      serializeTriggerSourceMetaTS(
+        triggers.sourceMeta,
+        sourceMetaJsonImportPath,
+        schema?.supportsImportAttributes ?? false
       )
     )
 

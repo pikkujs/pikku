@@ -98,6 +98,7 @@ export const all = pikkuVoidFunc({
       if (triggers) {
         allImports.push(
           config.triggersWiringMetaFile,
+          config.triggerSourcesMetaFile,
           config.triggersWiringFile
         )
       }
