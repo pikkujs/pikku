@@ -116,6 +116,7 @@ export interface SerializableInspectorState {
   }
   triggers: {
     meta: InspectorState['triggers']['meta']
+    sourceMeta: InspectorState['triggers']['sourceMeta']
     files: string[]
   }
   scheduledTasks: {
@@ -275,6 +276,7 @@ export function serializeInspectorState(
     },
     triggers: {
       meta: state.triggers.meta,
+      sourceMeta: state.triggers.sourceMeta,
       files: Array.from(state.triggers.files),
     },
     scheduledTasks: {
@@ -406,6 +408,7 @@ export function deserializeInspectorState(
     },
     triggers: {
       meta: data.triggers?.meta ?? {},
+      sourceMeta: data.triggers?.sourceMeta ?? {},
       files: new Set(data.triggers?.files ?? []),
     },
     scheduledTasks: {
