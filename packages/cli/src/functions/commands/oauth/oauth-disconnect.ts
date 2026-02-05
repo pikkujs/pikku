@@ -3,6 +3,7 @@ import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize
 
 /**
  * pikku oauth disconnect <credential-name>
+ * TODO: Document
  *
  * Remove stored tokens for an OAuth2 credential.
  */
@@ -13,13 +14,11 @@ export const oauthDisconnect = pikkuSessionlessFunc<{
   func: async ({ logger, getInspectorState, secrets }, { credentialName }) => {
     const inspectorState = await getInspectorState(false, false, false)
 
-    // Build credentials meta from definitions
     const credentialsMeta = validateAndBuildCredentialsMeta(
       inspectorState.credentials.definitions,
       inspectorState.schemaLookup
     )
 
-    // Find the OAuth2 credential
     const credential = credentialsMeta[credentialName]
     if (!credential) {
       logger.error(`Credential '${credentialName}' not found`)

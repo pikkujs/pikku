@@ -103,7 +103,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   singletonServices.logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await runPikkuFunc('trigger', name, name, {
+  const teardown = await runPikkuFunc('trigger', name, meta.pikkuFuncName, {
     singletonServices,
     createWireServices,
     auth: false,

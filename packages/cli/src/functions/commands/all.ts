@@ -23,6 +23,7 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuTriggerTypes', null)
 
     if (!config.externalPackage) {
+      // TODO: An external package can still export defineHTTPRoutes
       await rpc.invoke('pikkuHTTPTypes', null)
       await rpc.invoke('pikkuChannelTypes', null)
       await rpc.invoke('pikkuSchedulerTypes', null)
