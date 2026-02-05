@@ -544,14 +544,23 @@ export type ExternalBaseServices = {
  * \`\`\`
  */
 export const pikkuExternalServices = <T extends Record<string, any>>(
-  func: (config: Config, services: ExternalBaseServices) => Promise<T>
+  func: (config: Config, services: ExternalBaseServices & Partial<SingletonServices>) => Promise<T>
 ) => {
-  return async (config: Config, existingServices: SingletonServices): Promise<RequiredSingletonServices> => {
-    const { logger, variables, secrets } = existingServices
+  return async (config: Config, existingServices?: Partial<SingletonServices>): Promise<RequiredSingletonServices> => {
+    if (!existingServices) {
+      throw new Error('External packages require existingServices from the parent application')
+    }
+    const { logger, variables, secrets } = existingServices as SingletonServices
+    if (!logger) {
+      throw new Error('External packages require a logger service from the parent application')
+    }
+    if (!variables) {
+      throw new Error('External packages require a variables service from the parent application')
+    }
     if (!secrets) {
       throw new Error('External packages require a secrets service from the parent application')
     }
-    const result = await func(config, { logger, variables, secrets })
+    const result = await func(config, { ...existingServices, logger, variables, secrets })
     return {
       ...existingServices,
       config,
