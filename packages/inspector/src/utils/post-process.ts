@@ -1,4 +1,3 @@
-import * as ts from 'typescript'
 import {
   InspectorState,
   InspectorLogger,
@@ -10,10 +9,6 @@ import {
   PermissionMetadata,
 } from '@pikku/core'
 import { extractTypeKeys } from './type-utils.js'
-import {
-  extractAllServiceMetadata,
-  ServiceMetadata,
-} from './extract-service-metadata.js'
 import { ErrorCode } from '../error-codes.js'
 
 /**
@@ -223,54 +218,6 @@ export function aggregateRequiredServices(
       }
     })
   }
-}
-
-/**
- * Extract service interface metadata for all user-defined services.
- * This extracts metadata for services in SingletonServices and Services types
- * to generate documentation for AI consumption.
- *
- * Must be called after aggregateRequiredServices() to ensure types are loaded.
- */
-export function extractServiceInterfaceMetadata(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  checker: ts.TypeChecker
-): void {
-  if (!('typesLookup' in state)) {
-    return
-  }
-
-  const allMetadata: ServiceMetadata[] = []
-
-  const singletonServicesTypes = state.typesLookup.get('SingletonServices')
-  if (singletonServicesTypes && singletonServicesTypes.length > 0) {
-    const singletonMeta = extractAllServiceMetadata(
-      singletonServicesTypes[0],
-      checker,
-      state.rootDir
-    )
-    allMetadata.push(...singletonMeta)
-  }
-
-  const servicesTypes = state.typesLookup.get('Services')
-  if (servicesTypes && servicesTypes.length > 0) {
-    const wireServicesMeta = extractAllServiceMetadata(
-      servicesTypes[0],
-      checker,
-      state.rootDir
-    )
-
-    const singletonNames = new Set(
-      state.serviceAggregation.allSingletonServices
-    )
-    const uniqueWireServices = wireServicesMeta.filter(
-      (meta) => !singletonNames.has(meta.name)
-    )
-
-    allMetadata.push(...uniqueWireServices)
-  }
-
-  state.serviceMetadata = allMetadata
 }
 
 export function validateSecretOverrides(

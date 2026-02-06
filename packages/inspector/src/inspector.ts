@@ -7,7 +7,6 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
-  extractServiceInterfaceMetadata,
   validateSecretOverrides,
 } from './utils/post-process.js'
 
@@ -123,7 +122,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       allSingletonServices: [],
       allWireServices: [],
     },
-    serviceMetadata: [],
   }
 }
 
@@ -206,12 +204,6 @@ export const inspect = (
     aggregateRequiredServices(state)
     logger.debug(
       `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
-    )
-
-    const startServiceMeta = performance.now()
-    extractServiceInterfaceMetadata(state, checker)
-    logger.debug(
-      `Extract service metadata completed in ${(performance.now() - startServiceMeta).toFixed(2)}ms`
     )
 
     validateSecretOverrides(logger, state, options.externalPackages)

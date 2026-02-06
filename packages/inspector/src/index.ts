@@ -14,8 +14,6 @@ export {
 } from './utils/serialize-inspector-state.js'
 export type { SerializableInspectorState } from './utils/serialize-inspector-state.js'
 export { filterInspectorState } from './utils/filter-inspector-state.js'
-export { writeAllServiceMetadata } from './utils/write-service-metadata.js'
-export type { ServiceMetadata } from './utils/extract-service-metadata.js'
 export {
   convertAllDslToGraphs,
   convertDslToGraph,
