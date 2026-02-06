@@ -8,7 +8,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
-import { validateAndBuildCredentialsMeta } from '../secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '../secrets/serialize-secrets-types.js'
 
 /**
  * Load and sanitize an SVG icon file.
@@ -45,20 +45,18 @@ const loadIcon = async (
 export const pikkuForgeNodes = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
-    const { forgeNodes, credentials } = state
+    const { forgeNodes, secrets } = state
     const { forgeNodesMetaJsonFile, forge, rootDir } = config
 
-    // Build credentials meta from definitions
-    const credentialsMeta = validateAndBuildCredentialsMeta(
-      credentials.definitions,
+    const secretsMeta = validateAndBuildSecretDefinitionsMeta(
+      secrets.definitions,
       state.schemaLookup
     )
 
     const hasNodes = Object.keys(forgeNodes.meta).length > 0
-    const hasCredentials = credentials.definitions.length > 0
+    const hasSecrets = secrets.definitions.length > 0
 
-    // Only generate if there are forge nodes or credentials
-    if (!hasNodes && !hasCredentials) {
+    if (!hasNodes && !hasSecrets) {
       return undefined
     }
 
@@ -95,7 +93,7 @@ export const pikkuForgeNodes = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const metaData = {
       nodes: outputMeta,
-      credentials: credentialsMeta,
+      secrets: secretsMeta,
       package: {
         displayName: forge?.node?.displayName,
         description: forge?.node?.description,

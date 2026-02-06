@@ -101,7 +101,7 @@ export interface PikkuCLICoreOutputFiles {
   forgeTypesFile: string
 
   // Credentials
-  credentialTypesFile: string
+  secretTypesFile: string
 
   // Secrets (typed wrapper for SecretService)
   secretsFile: string
@@ -121,7 +121,7 @@ export type PikkuCLIInput = {
     {
       package: string
       rpcEndpoint?: string
-      credentialOverrides?: Record<string, string>
+      secretOverrides?: Record<string, string>
     }
   >
   externalPackage?: boolean
@@ -229,7 +229,7 @@ export type PikkuCLIConfig = {
     {
       package: string
       rpcEndpoint?: string
-      credentialOverrides?: Record<string, string>
+      secretOverrides?: Record<string, string>
     }
   >
   externalPackage?: boolean

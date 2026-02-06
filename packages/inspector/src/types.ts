@@ -8,7 +8,7 @@ import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
 import { ForgeNodesMeta } from '@pikku/core/forge-node'
-import { CredentialDefinitions } from '@pikku/core/credential'
+import { SecretDefinitions } from '@pikku/core/secret'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -136,7 +136,7 @@ export type InspectorFilters = {
 export type ExternalPackageConfig = {
   package: string
   rpcEndpoint?: string
-  credentialOverrides?: Record<string, string>
+  secretOverrides?: Record<string, string>
 }
 
 export type InspectorOptions = Partial<{
@@ -271,9 +271,8 @@ export interface InspectorState {
     meta: ForgeNodesMeta
     files: Set<string>
   }
-  credentials: {
-    /** All credential definitions (CLI validates duplicates and builds meta) */
-    definitions: CredentialDefinitions
+  secrets: {
+    definitions: SecretDefinitions
     files: Set<string>
   }
   middleware: InspectorMiddlewareState

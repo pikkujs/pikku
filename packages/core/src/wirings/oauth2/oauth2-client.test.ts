@@ -2,7 +2,7 @@ import { describe, test, afterEach, mock } from 'node:test'
 import * as assert from 'node:assert/strict'
 import { OAuth2Client } from './oauth2-client.js'
 import type { OAuth2Token, OAuth2AppCredential } from './oauth2.types.js'
-import type { OAuth2CredentialConfig } from '../credential/credential.types.js'
+import type { OAuth2CredentialConfig } from '../secret/secret.types.js'
 import type { SecretService } from '../../services/secret-service.js'
 
 // Store the original fetch for restoration

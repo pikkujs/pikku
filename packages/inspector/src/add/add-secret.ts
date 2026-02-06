@@ -7,13 +7,7 @@ import { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 
-/**
- * Inspector for wireCredential calls.
- * Extracts metadata for credential declarations.
- * Note: wireCredential is metadata-only - no runtime behavior.
- * Schema is stored as the variable name reference; actual schema→JSON Schema conversion happens at CLI build time.
- */
-export const addCredential: AddWiring = (
+export const addSecret: AddWiring = (
   logger,
   node,
   checker,
@@ -28,8 +22,7 @@ export const addCredential: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to wireCredential
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireCredential') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'wireSecret') {
     return
   }
 
@@ -49,7 +42,6 @@ export const addCredential: AddWiring = (
       | null
     const secretIdValue = getPropertyValue(obj, 'secretId') as string | null
 
-    // Get schema variable name and resolve its source file for later runtime import
     let schemaVariableName: string | null = null
     let schemaSourceFile: string | null = null
     let schemaIdentifier: ts.Identifier | null = null
@@ -63,7 +55,6 @@ export const addCredential: AddWiring = (
           schemaVariableName = prop.initializer.text
           schemaIdentifier = prop.initializer
 
-          // Resolve the actual source file of the schema
           const symbol = checker.getSymbolAtLocation(prop.initializer)
           if (symbol) {
             const decl = symbol.valueDeclaration || symbol.declarations?.[0]
@@ -88,11 +79,10 @@ export const addCredential: AddWiring = (
       }
     }
 
-    // Validate required fields
     if (!nameValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        "Credential is missing the required 'name' property."
+        "Secret is missing the required 'name' property."
       )
       return
     }
@@ -100,7 +90,7 @@ export const addCredential: AddWiring = (
     if (!displayNameValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        `Credential '${nameValue}' is missing the required 'displayName' property.`
+        `Secret '${nameValue}' is missing the required 'displayName' property.`
       )
       return
     }
@@ -108,7 +98,7 @@ export const addCredential: AddWiring = (
     if (!secretIdValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        `Credential '${nameValue}' is missing the required 'secretId' property.`
+        `Secret '${nameValue}' is missing the required 'secretId' property.`
       )
       return
     }
@@ -116,34 +106,32 @@ export const addCredential: AddWiring = (
     if (!schemaVariableName || !schemaSourceFile || !schemaIdentifier) {
       logger.critical(
         ErrorCode.MISSING_NAME,
-        `Credential '${nameValue}' is missing the required 'schema' property or schema is not a variable reference.`
+        `Secret '${nameValue}' is missing the required 'schema' property or schema is not a variable reference.`
       )
       return
     }
 
     const sourceFile = node.getSourceFile().fileName
 
-    state.credentials.files.add(sourceFile)
+    state.secrets.files.add(sourceFile)
 
-    // Register the schema in the central schemaLookup for deferred conversion
     const vendor = detectSchemaVendorOrError(
       schemaIdentifier,
       checker,
       logger,
-      `Credential '${nameValue}'`,
+      `Secret '${nameValue}'`,
       schemaSourceFile
     )
     if (!vendor) return
 
-    const schemaLookupName = `CredentialSchema_${nameValue}`
+    const schemaLookupName = `SecretSchema_${nameValue}`
     state.schemaLookup.set(schemaLookupName, {
       variableName: schemaVariableName,
       sourceFile: schemaSourceFile,
       vendor,
     })
 
-    // Store definition - CLI validates duplicates and builds meta
-    state.credentials.definitions.push({
+    state.secrets.definitions.push({
       name: nameValue,
       displayName: displayNameValue,
       description: descriptionValue || undefined,
@@ -154,11 +142,6 @@ export const addCredential: AddWiring = (
   }
 }
 
-/**
- * Inspector for wireOAuth2Credential calls.
- * Extracts metadata for OAuth2 credential declarations.
- * Note: wireOAuth2Credential is metadata-only - no runtime behavior.
- */
 export const addOAuth2Credential: AddWiring = (
   logger,
   node,
@@ -174,7 +157,6 @@ export const addOAuth2Credential: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  // Check if the call is to wireOAuth2Credential
   if (
     !ts.isIdentifier(expression) ||
     expression.text !== 'wireOAuth2Credential'
@@ -207,7 +189,6 @@ export const addOAuth2Credential: AddWiring = (
     const scopesValue = getArrayPropertyValue(obj, 'scopes')
     const pkceValue = getPropertyValue(obj, 'pkce') as boolean | null
 
-    // Validate required fields
     if (!nameValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
@@ -266,10 +247,9 @@ export const addOAuth2Credential: AddWiring = (
 
     const sourceFile = node.getSourceFile().fileName
 
-    state.credentials.files.add(sourceFile)
+    state.secrets.files.add(sourceFile)
 
-    // Store OAuth2 credential definition - CLI validates duplicates and builds meta
-    state.credentials.definitions.push({
+    state.secrets.definitions.push({
       name: nameValue,
       displayName: displayNameValue,
       description: descriptionValue || undefined,

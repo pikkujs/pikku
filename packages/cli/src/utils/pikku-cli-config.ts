@@ -453,16 +453,13 @@ const _getPikkuCLIConfig = async (
       result.forgeTypesFile = join(forgeDir, 'pikku-forge-types.gen.ts')
     }
 
-    // Package (for wireCredential, package service factories, and package meta)
+    // Package (for wireSecret, package service factories, and package meta)
     const packageDir = join(result.outDir, 'package')
     if (!result.packageFile) {
       result.packageFile = join(packageDir, 'pikku-package.gen.ts')
     }
-    if (!result.credentialTypesFile) {
-      result.credentialTypesFile = join(
-        packageDir,
-        'pikku-credential-types.gen.ts'
-      )
+    if (!result.secretTypesFile) {
+      result.secretTypesFile = join(packageDir, 'pikku-secret-types.gen.ts')
     }
 
     // Secrets (typed wrapper for SecretService)

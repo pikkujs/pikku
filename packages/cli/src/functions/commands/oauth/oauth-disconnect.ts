@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
 
 /**
  * pikku oauth disconnect <credential-name>
@@ -14,12 +14,12 @@ export const oauthDisconnect = pikkuSessionlessFunc<{
   func: async ({ logger, getInspectorState, secrets }, { credentialName }) => {
     const inspectorState = await getInspectorState(false, false, false)
 
-    const credentialsMeta = validateAndBuildCredentialsMeta(
-      inspectorState.credentials.definitions,
+    const secretsMeta = validateAndBuildSecretDefinitionsMeta(
+      inspectorState.secrets.definitions,
       inspectorState.schemaLookup
     )
 
-    const credential = credentialsMeta[credentialName]
+    const credential = secretsMeta[credentialName]
     if (!credential) {
       logger.error(`Credential '${credentialName}' not found`)
       process.exit(1)

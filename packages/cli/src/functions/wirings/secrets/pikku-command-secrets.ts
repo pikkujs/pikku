@@ -14,7 +14,7 @@ export const pikkuSecrets = pikkuSessionlessFunc<void, void>({
     const state = await getInspectorState()
 
     const content = serializeSecretsTypes({
-      definitions: state.credentials.definitions,
+      definitions: state.secrets.definitions,
       schemaLookup: state.schemaLookup,
       secretsFile,
       packageMappings,

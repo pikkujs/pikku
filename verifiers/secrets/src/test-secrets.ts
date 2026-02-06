@@ -3,7 +3,7 @@
  * This test validates both compile-time types and runtime behavior.
  *
  * This validates the same pattern used in templates/function-external:
- * - wireCredential with Zod schema for type-safe credentials
+ * - wireSecret with Zod schema for type-safe secrets
  * - wireOAuth2Credential for OAuth2 flows
  * - TypedSecretService provides compile-time validated access
  */
