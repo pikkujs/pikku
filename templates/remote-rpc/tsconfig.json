@@ -4,6 +4,6 @@
     "noEmit": true,
     "resolveJsonModule": true
   },
-  "include": ["src/", "client/", "types/", ".pikku/*"],
+  "include": ["src/", "client/"],
   "files": []
 }

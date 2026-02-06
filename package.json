@@ -40,8 +40,7 @@
     "changeset": "npx changeset",
     "pikku:functions": "cd templates/functions && yarn pikku",
     "pikku:functions:external": "cd templates/function-external && yarn pikku",
-    "pikku:remote-rpc": "cd templates/remote-rpc && yarn pikku",
-    "pikku": "yarn run pikku:functions:external && yarn run pikku:functions && yarn run pikku:remote-rpc"
+    "pikku": "yarn run pikku:functions:external && yarn run pikku:functions"
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {

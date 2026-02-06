@@ -1,5 +1,5 @@
-import { wireHTTP } from '#pikku'
-import { greet, remoteGreet } from '../functions/greet.js'
+import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
+import { greet, remoteGreet } from '../functions/remote-rpc.functions.js'
 
 wireHTTP({
   route: '/greet',
