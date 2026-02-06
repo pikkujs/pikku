@@ -17,7 +17,7 @@ import { pikkuState } from '../../../pikku-state.js'
  */
 export const addWorkflowGraph = (
   workflowName: string,
-  graphResult: { graph: Record<string, GraphNodeConfig<string>>; wires?: any }
+  graphResult: { graph: Record<string, GraphNodeConfig<string>> }
 ) => {
   const meta = pikkuState(null, 'workflows', 'meta')
   if (!meta[workflowName]) {
@@ -29,7 +29,6 @@ export const addWorkflowGraph = (
   const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
   registrations.set(workflowName, {
     name: workflowName,
-    wires: graphResult.wires || {},
     graph: graphResult.graph,
   })
 }
@@ -599,14 +598,10 @@ export async function runWorkflowGraph(
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
 
-  // Use startNode from caller if provided, otherwise use wires.api from graph definition
-  const apiStartNode = startNode ?? definition.wires?.api
-  const entryNodes: string[] = apiStartNode ? [apiStartNode] : []
+  const entryNodes: string[] = startNode ? [startNode] : []
 
   if (entryNodes.length === 0) {
-    throw new Error(
-      `Workflow graph '${graphName}' has no wires.api defined and no startNode was provided`
-    )
+    throw new Error(`Workflow graph '${graphName}': no startNode was provided`)
   }
 
   const graph = definition.graph

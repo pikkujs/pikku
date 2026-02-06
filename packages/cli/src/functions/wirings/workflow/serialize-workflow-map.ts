@@ -3,7 +3,7 @@
  */
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap } from '@pikku/inspector'
+import type { TypesMap, SerializedWorkflowGraphs } from '@pikku/inspector'
 import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 
@@ -13,11 +13,11 @@ export const serializeWorkflowMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
-  workflowsMeta: WorkflowsMeta
+  workflowsMeta: WorkflowsMeta,
+  graphMeta: SerializedWorkflowGraphs
 ) => {
   const requiredTypes = new Set<string>()
 
-  // First generate workflows to collect required types
   const serializedWorkflows = generateWorkflows(
     workflowsMeta,
     functionsMeta,
@@ -25,13 +25,20 @@ export const serializeWorkflowMap = (
     requiredTypes
   )
 
-  // Only generate custom types if we have workflows with types
-  const hasWorkflows = Object.keys(workflowsMeta).length > 0
-  const serializedCustomTypes = hasWorkflows
+  const serializedGraphs = generateGraphs(
+    graphMeta,
+    functionsMeta,
+    typesMap,
+    requiredTypes
+  )
+
+  const hasAny =
+    Object.keys(workflowsMeta).length > 0 || Object.keys(graphMeta).length > 0
+  const serializedCustomTypes = hasAny
     ? generateCustomTypes(typesMap, requiredTypes)
     : ''
 
-  const serializedImportMap = hasWorkflows
+  const serializedImportMap = hasAny
     ? serializeImportMap(
         logger,
         relativeToPath,
@@ -53,7 +60,13 @@ interface WorkflowHandler<I, O> {
     output: O;
 }
 
+interface GraphNodeHandler<I> {
+    input: I;
+}
+
 ${serializedWorkflows}
+
+${serializedGraphs}
 
 export type WorkflowClient<Name extends keyof WorkflowMap> = {
   start: (input: WorkflowMap[Name]['input']) => Promise<{ runId: string }>;
@@ -117,7 +130,52 @@ function generateWorkflows(
   for (const [workflowName, handler] of Object.entries(workflowsObj)) {
     workflowsStr += `  readonly '${workflowName}': WorkflowHandler<${handler.inputType}, ${handler.outputType}>,\n`
   }
-  workflowsStr += '};\n'
+  workflowsStr += '};'
 
   return workflowsStr
+}
+
+function generateGraphs(
+  graphMeta: SerializedWorkflowGraphs,
+  functionsMeta: FunctionsMeta,
+  typesMap: TypesMap,
+  requiredTypes: Set<string>
+) {
+  const graphsObj: Record<string, Record<string, { inputType: string }>> = {}
+
+  for (const [graphName, graph] of Object.entries(graphMeta)) {
+    graphsObj[graphName] = {}
+    for (const [nodeId, node] of Object.entries(graph.nodes)) {
+      if (!('rpcName' in node) || typeof node.rpcName !== 'string') {
+        continue
+      }
+      const functionMeta = functionsMeta[node.rpcName as string]
+      if (!functionMeta) {
+        continue
+      }
+      const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
+      let inputType = 'void'
+      if (input) {
+        try {
+          inputType = typesMap.getTypeMeta(input).uniqueName
+        } catch {
+          inputType = input
+        }
+      }
+      requiredTypes.add(inputType)
+      graphsObj[graphName][nodeId] = { inputType }
+    }
+  }
+
+  let graphsStr = 'export type GraphsMap = {\n'
+  for (const [graphName, nodes] of Object.entries(graphsObj)) {
+    graphsStr += `  readonly '${graphName}': {\n`
+    for (const [nodeId, handler] of Object.entries(nodes)) {
+      graphsStr += `    readonly '${nodeId}': GraphNodeHandler<${handler.inputType}>,\n`
+    }
+    graphsStr += '  },\n'
+  }
+  graphsStr += '};'
+
+  return graphsStr
 }

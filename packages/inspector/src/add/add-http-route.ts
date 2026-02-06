@@ -173,28 +173,6 @@ export function registerHTTPRoute({
 
   const query = (getPropertyValue(obj, 'query') as string[]) || []
 
-  // Check if this is a workflow trigger
-  const isWorkflowTrigger = getPropertyValue(obj, 'workflow') === true
-  if (isWorkflowTrigger) {
-    state.http.files.add(sourceFile.fileName)
-    state.http.meta[method][fullRoute] = {
-      pikkuFuncName: '',
-      route: fullRoute,
-      method: method as HTTPMethod,
-      params: params.length > 0 ? params : undefined,
-      query: query.length > 0 ? query : undefined,
-      inputTypes: undefined,
-      title,
-      summary,
-      description,
-      errors,
-      tags: tags.length > 0 ? tags : undefined,
-      workflow: true,
-      groupBasePath: basePath || undefined,
-    }
-    return
-  }
-
   // Get function reference
   const funcInitializer = getPropertyAssignmentInitializer(
     obj,

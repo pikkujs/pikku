@@ -22,8 +22,6 @@ export type {
 export type {
   WorkflowService,
   WorkflowServiceConfig,
-  WorkflowHTTPWire,
-  WorkflowWires,
   WorkflowStatus,
   StepStatus,
   WorkflowRun,

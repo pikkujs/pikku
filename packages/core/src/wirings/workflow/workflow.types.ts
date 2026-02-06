@@ -44,79 +44,6 @@ export interface WorkflowServiceConfig {
 }
 
 /**
- * HTTP wire configuration for workflows
- */
-export interface WorkflowHTTPWire {
-  route: string
-  method: 'get' | 'post' | 'put' | 'patch' | 'delete'
-  startNode: string
-}
-
-/**
- * Channel wire configuration for workflows
- */
-export interface WorkflowChannelWire {
-  name: string
-  onConnect?: string
-  onDisconnect?: string
-  onMessage?: string
-}
-
-/**
- * Queue wire configuration for workflows
- */
-export interface WorkflowQueueWire {
-  name: string
-  startNode: string
-}
-
-/**
- * CLI wire configuration for workflows
- */
-export interface WorkflowCliWire {
-  command: string
-  startNode: string
-}
-
-/**
- * MCP wire configurations for workflows
- */
-export interface WorkflowMcpWires {
-  tool?: Array<{ name: string; startNode: string }>
-  prompt?: Array<{ name: string; startNode: string }>
-  resource?: Array<{ uri: string; startNode: string }>
-}
-
-/**
- * Trigger wire configuration for workflows
- */
-export interface WorkflowTriggerWire {
-  name: string
-  startNode: string
-}
-
-/**
- * Wire configuration for workflows
- * Defines how a workflow can be triggered
- */
-export interface WorkflowWires {
-  /** API entry point - node ID for startWorkflow() calls */
-  api?: string
-  /** HTTP triggers */
-  http?: WorkflowHTTPWire[]
-  /** Channel triggers */
-  channel?: WorkflowChannelWire[]
-  /** Queue triggers */
-  queue?: WorkflowQueueWire[]
-  /** CLI triggers */
-  cli?: WorkflowCliWire[]
-  /** MCP triggers (tool, prompt, resource) */
-  mcp?: WorkflowMcpWires
-  /** Named trigger wires */
-  trigger?: WorkflowTriggerWire[]
-}
-
-/**
  * Workflow run status
  */
 export type WorkflowStatus = 'running' | 'completed' | 'failed' | 'cancelled'
@@ -267,8 +194,6 @@ export interface WorkflowRuntimeMeta {
   description?: string
   /** Tags for organization */
   tags?: string[]
-  /** Wires - how the workflow is triggered */
-  wires?: WorkflowWires
   /** Serialized nodes */
   nodes?: Record<string, any>
   /** Entry node IDs for graph workflows (computed at build time) */

@@ -82,10 +82,6 @@ function serializeNext(
 export function serializeWorkflowGraph(
   definition: {
     name: string
-    wires: {
-      http?: { route: string; method: string }
-      queue?: string
-    }
     graph: Record<
       string,
       {
@@ -167,7 +163,6 @@ export function serializeWorkflowGraph(
     source: 'graph' as const,
     description: options?.description,
     tags: options?.tags,
-    wires: definition.wires as SerializedWorkflowGraph['wires'],
     nodes,
     entryNodeIds,
   }
@@ -179,7 +174,6 @@ export function serializeWorkflowGraph(
  */
 export function deserializeWorkflowGraph(serialized: SerializedWorkflowGraph): {
   name: string
-  wires: SerializedWorkflowGraph['wires']
   graph: Record<
     string,
     {
@@ -216,7 +210,6 @@ export function deserializeWorkflowGraph(serialized: SerializedWorkflowGraph): {
 
   return {
     name: serialized.name,
-    wires: serialized.wires,
     graph,
     entryNodeIds: serialized.entryNodeIds,
   }

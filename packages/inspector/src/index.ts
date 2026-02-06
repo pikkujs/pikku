@@ -23,4 +23,7 @@ export {
   deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
 } from './utils/workflow/dsl/deserialize-dsl-workflow.js'
-export type { SerializedWorkflowGraph } from './utils/workflow/graph/workflow-graph.types.js'
+export type {
+  SerializedWorkflowGraph,
+  SerializedWorkflowGraphs,
+} from './utils/workflow/graph/workflow-graph.types.js'
