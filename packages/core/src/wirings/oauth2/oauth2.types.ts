@@ -24,7 +24,7 @@ export type OAuth2Token = {
 
 /**
  * OAuth2-specific configuration that extends a credential.
- * This is stored in CredentialMeta.oauth2 field.
+ * This is stored in SecretDefinitionMeta.oauth2 field.
  */
 export type OAuth2Config = {
   /** Where access/refresh tokens are stored */

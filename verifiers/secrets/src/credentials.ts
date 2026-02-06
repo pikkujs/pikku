@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { wireCredential } from '@pikku/core/credential'
+import { wireSecret } from '@pikku/core/secret'
 import { wireOAuth2Credential } from '@pikku/core/oauth2'
 
 /**
- * Example API credentials using wireCredential with Zod schema.
- * Tests type inference for regular credentials.
+ * Example API credentials using wireSecret with Zod schema.
+ * Tests type inference for regular secrets.
  */
 export const apiCredentialsSchema = z.object({
   apiKey: z.string().describe('API key for authentication'),
@@ -12,7 +12,7 @@ export const apiCredentialsSchema = z.object({
   baseUrl: z.url().optional().describe('Optional custom API endpoint'),
 })
 
-wireCredential({
+wireSecret({
   name: 'example-api',
   displayName: 'Example API',
   description: 'Credentials for the example external API',

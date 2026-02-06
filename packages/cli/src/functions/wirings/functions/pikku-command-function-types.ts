@@ -18,7 +18,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       mcpTypesFile,
       cliTypesFile,
       forgeTypesFile,
-      credentialTypesFile,
+      secretTypesFile,
     } = config
 
     const getImportPath = (file: string) =>
@@ -40,7 +40,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       getImportPath(mcpTypesFile),
       getImportPath(cliTypesFile),
       getAlwaysImportPath(forgeTypesFile),
-      getAlwaysImportPath(credentialTypesFile)
+      getAlwaysImportPath(secretTypesFile)
     )
 
     await writeFileInDir(logger, typesFile, content)

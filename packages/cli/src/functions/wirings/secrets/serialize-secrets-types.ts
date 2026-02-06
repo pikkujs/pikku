@@ -1,26 +1,21 @@
-import { CredentialsMeta, CredentialDefinitions } from '@pikku/core/credential'
+import { SecretDefinitionsMeta, SecretDefinitions } from '@pikku/core/secret'
 import { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export interface SerializeSecretsOptions {
-  definitions: CredentialDefinitions
+  definitions: SecretDefinitions
   schemaLookup: Map<string, SchemaRef>
   secretsFile: string
   packageMappings: Record<string, string>
 }
 
-/**
- * Validates credential definitions and builds the credentials meta.
- * Throws if the same secretId is used with different schemas.
- * Multiple credentials can share the same secretId if they have identical schemas.
- */
-export function validateAndBuildCredentialsMeta(
-  definitions: CredentialDefinitions,
+export function validateAndBuildSecretDefinitionsMeta(
+  definitions: SecretDefinitions,
   schemaLookup: Map<string, SchemaRef>
-): CredentialsMeta {
-  const meta: CredentialsMeta = {}
+): SecretDefinitionsMeta {
+  const meta: SecretDefinitionsMeta = {}
   // Track secretId -> first definition that used it (for error messages and comparison)
-  const secretIdToDefinition: Map<string, CredentialDefinitions[0]> = new Map()
+  const secretIdToDefinition: Map<string, SecretDefinitions[0]> = new Map()
 
   for (const def of definitions) {
     const existingDef = secretIdToDefinition.get(def.secretId)
@@ -105,8 +100,11 @@ export const serializeSecretsTypes = ({
   packageMappings,
 }: SerializeSecretsOptions) => {
   // Validate definitions and build meta (throws on conflicts)
-  const credentials = validateAndBuildCredentialsMeta(definitions, schemaLookup)
-  const credentialEntries = Object.entries(credentials)
+  const secrets = validateAndBuildSecretDefinitionsMeta(
+    definitions,
+    schemaLookup
+  )
+  const credentialEntries = Object.entries(secrets)
 
   if (credentialEntries.length === 0) {
     return `/**
@@ -190,7 +188,7 @@ export {}
 
   return `/**
  * Typed secrets wrapper for credential access.
- * Generated from wireCredential and wireOAuth2Credential declarations.
+ * Generated from wireSecret and wireOAuth2Credential declarations.
  */
 
 ${imports.join('\n')}

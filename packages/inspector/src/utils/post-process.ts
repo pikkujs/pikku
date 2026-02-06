@@ -273,32 +273,24 @@ export function extractServiceInterfaceMetadata(
   state.serviceMetadata = allMetadata
 }
 
-/**
- * Validates credential overrides from external packages.
- * Ensures that each credential key in credentialOverrides exists in that
- * external package's credentials metadata.
- */
-export function validateCredentialOverrides(
+export function validateSecretOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>,
   externalPackages?: Record<string, ExternalPackageConfig>
 ): void {
   if (!externalPackages) return
 
-  // Build a set of credential names from definitions
-  const credentialNames = new Set(
-    state.credentials.definitions.map((d) => d.name)
-  )
+  const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
 
   for (const [namespace, pkgConfig] of Object.entries(externalPackages)) {
-    if (!pkgConfig.credentialOverrides) continue
+    if (!pkgConfig.secretOverrides) continue
 
-    for (const credentialKey of Object.keys(pkgConfig.credentialOverrides)) {
-      if (!credentialNames.has(credentialKey)) {
-        const availableCredentials = Array.from(credentialNames)
+    for (const secretKey of Object.keys(pkgConfig.secretOverrides)) {
+      if (!secretNames.has(secretKey)) {
+        const availableSecrets = Array.from(secretNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${credentialKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Secret override '${secretKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
         )
       }
     }
