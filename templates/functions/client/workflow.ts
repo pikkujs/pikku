@@ -1,7 +1,7 @@
-import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
+import { pikkuFetch } from '../.pikku/pikku-fetch.gen.js'
 
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
-pikkuRPC.setServerUrl(url)
+pikkuFetch.setServerUrl(url)
 console.log('Starting workflow test with url:', url)
 
 const TIMEOUT = 30000
@@ -10,7 +10,7 @@ const start = Date.now()
 
 async function check() {
   try {
-    const result = await pikkuRPC.invoke('startCreateAndNotifyWorkflow', {
+    const result = await pikkuFetch.post('/workflow/create-todo', {
       userId: 'user1',
       title: 'Workflow test todo',
       priority: 'high',
