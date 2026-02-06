@@ -93,7 +93,7 @@ export abstract class PikkuTriggerService implements TriggerService {
     return triggerTargets
   }
 
-  protected getTriggerSources(): Map<string, { input: unknown }> {
+  protected getTriggerSources(): Map<string, { input?: unknown }> {
     return pikkuState(null, 'trigger', 'triggerSources')
   }
 

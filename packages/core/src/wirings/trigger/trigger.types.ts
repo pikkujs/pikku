@@ -167,5 +167,5 @@ export interface CoreTriggerSource<TInput = unknown, TOutput = unknown> {
   /** The trigger function config that sets up the subscription */
   func: CorePikkuTriggerFunctionConfig<TInput, TOutput>
   /** Input data passed to the trigger function */
-  input: TInput
+  input?: TInput
 }
