@@ -453,28 +453,34 @@ const _getPikkuCLIConfig = async (
       result.forgeTypesFile = join(forgeDir, 'pikku-forge-types.gen.ts')
     }
 
-    // Package (for wireSecret, package service factories, and package meta)
-    const packageDir = join(result.outDir, 'package')
+    // External (for wireSecret, external service factories, and external meta)
+    const externalDir = join(result.outDir, 'external')
     if (!result.packageFile) {
-      result.packageFile = join(packageDir, 'pikku-package.gen.ts')
+      result.packageFile = join(externalDir, 'pikku-package.gen.ts')
     }
-    if (!result.secretTypesFile) {
-      result.secretTypesFile = join(packageDir, 'pikku-secret-types.gen.ts')
+    if (!result.externalTypesFile) {
+      result.externalTypesFile = join(
+        externalDir,
+        'pikku-external-types.gen.ts'
+      )
     }
-
     // Secrets (typed wrapper for SecretService)
     const secretsDir = join(result.outDir, 'secrets')
+    if (!result.secretTypesFile) {
+      result.secretTypesFile = join(secretsDir, 'pikku-secret-types.gen.ts')
+    }
     if (!result.secretsFile) {
       result.secretsFile = join(secretsDir, 'pikku-secrets.gen.ts')
     }
 
-    // Variables
-    if (!result.variableTypesFile) {
-      result.variableTypesFile = join(packageDir, 'pikku-variable-types.gen.ts')
-    }
-
     // Variables (typed wrapper for VariablesService)
     const variablesDir = join(result.outDir, 'variables')
+    if (!result.variableTypesFile) {
+      result.variableTypesFile = join(
+        variablesDir,
+        'pikku-variable-types.gen.ts'
+      )
+    }
     if (!result.variablesFile) {
       result.variablesFile = join(variablesDir, 'pikku-variables.gen.ts')
     }

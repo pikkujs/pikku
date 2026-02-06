@@ -491,18 +491,6 @@ export const pikkuConfig = (
   func: (variables?: any, ...args: any[]) => Promise<Config>
 ) => func
 
-/**
- * Creates a Pikku config factory for external packages.
- * Unlike pikkuConfig, this receives ExternalBaseServices (logger, variables, secrets)
- * from the parent application, so external packages can read variables/secrets during config creation.
- */
-export const pikkuExternalConfig = (
-  func: (services: ExternalBaseServices & Partial<SingletonServices>) => Promise<Config>
-) => {
-  return async (_variables: any, existingServices?: Partial<SingletonServices>): Promise<Config> => {
-    return func(existingServices as ExternalBaseServices & Partial<SingletonServices>)
-  }
-}
 
 /**
  * Creates a Pikku singleton services factory.
@@ -525,62 +513,6 @@ export const pikkuExternalConfig = (
 export const pikkuServices = (
   func: (config: Config, existingServices?: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
 ) => func
-
-/**
- * Base services provided to external package service factories.
- * These are always available from the parent application.
- */
-export type ExternalBaseServices = {
-  logger: SingletonServices['logger']
-  variables: SingletonServices['variables']
-  secrets: NonNullable<SingletonServices['secrets']>
-}
-
-/**
- * Creates a Pikku singleton services factory for external packages.
- * Unlike pikkuServices, this expects the parent application to provide
- * logger, variables, and secrets - no fallbacks needed.
- *
- * @param func - External services factory function that receives config and base services
- * @returns The singleton services factory function
- *
- * @example
- * \`\`\`typescript
- * export const createSingletonServices = pikkuExternalServices(async (
- *   config,
- *   { secrets }
- * ) => {
- *   const creds = await secrets.getSecretJSON<GithubCredentials>('GITHUB_CREDENTIALS')
- *   const github = new GithubService(creds)
- *   return { github }
- * })
- * \`\`\`
- */
-export const pikkuExternalServices = <T extends Record<string, any>>(
-  func: (config: Config, services: ExternalBaseServices & Partial<SingletonServices>) => Promise<T>
-) => {
-  return async (config: Config, existingServices?: Partial<SingletonServices>): Promise<RequiredSingletonServices> => {
-    if (!existingServices) {
-      throw new Error('External packages require existingServices from the parent application')
-    }
-    const { logger, variables, secrets } = existingServices as SingletonServices
-    if (!logger) {
-      throw new Error('External packages require a logger service from the parent application')
-    }
-    if (!variables) {
-      throw new Error('External packages require a variables service from the parent application')
-    }
-    if (!secrets) {
-      throw new Error('External packages require a secrets service from the parent application')
-    }
-    const result = await func(config, { ...existingServices, logger, variables, secrets })
-    return {
-      ...existingServices,
-      config,
-      ...result,
-    } as unknown as RequiredSingletonServices
-  }
-}
 
 /**
  * Creates a Pikku wire services factory.

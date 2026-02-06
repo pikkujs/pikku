@@ -97,6 +97,9 @@ export interface PikkuCLICoreOutputFiles {
   // Package service factories (for external packages)
   packageFile: string
 
+  // External package types (pikkuExternalConfig, pikkuExternalServices, etc.)
+  externalTypesFile: string
+
   // Forge
   forgeTypesFile: string
 
