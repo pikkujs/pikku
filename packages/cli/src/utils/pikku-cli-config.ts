@@ -468,6 +468,17 @@ const _getPikkuCLIConfig = async (
       result.secretsFile = join(secretsDir, 'pikku-secrets.gen.ts')
     }
 
+    // Variables
+    if (!result.variableTypesFile) {
+      result.variableTypesFile = join(packageDir, 'pikku-variable-types.gen.ts')
+    }
+
+    // Variables (typed wrapper for VariablesService)
+    const variablesDir = join(result.outDir, 'variables')
+    if (!result.variablesFile) {
+      result.variablesFile = join(variablesDir, 'pikku-variables.gen.ts')
+    }
+
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)
     }

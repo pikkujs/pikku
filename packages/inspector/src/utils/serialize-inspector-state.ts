@@ -159,6 +159,10 @@ export interface SerializableInspectorState {
     definitions: InspectorState['secrets']['definitions']
     files: string[]
   }
+  variables: {
+    definitions: InspectorState['variables']['definitions']
+    files: string[]
+  }
   middleware: {
     meta: InspectorState['middleware']['meta']
     tagMiddleware: Array<
@@ -319,6 +323,10 @@ export function serializeInspectorState(
       definitions: state.secrets.definitions,
       files: Array.from(state.secrets.files),
     },
+    variables: {
+      definitions: state.variables.definitions,
+      files: Array.from(state.variables.files),
+    },
     middleware: {
       meta: state.middleware.meta,
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
@@ -450,6 +458,10 @@ export function deserializeInspectorState(
     secrets: {
       definitions: data.secrets?.definitions || [],
       files: new Set(data.secrets?.files || []),
+    },
+    variables: {
+      definitions: data.variables?.definitions || [],
+      files: new Set(data.variables?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,

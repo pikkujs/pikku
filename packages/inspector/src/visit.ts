@@ -19,6 +19,7 @@ import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
 import { addForgeNode } from './add/add-forge-node.js'
 import { addSecret, addOAuth2Credential } from './add/add-secret.js'
+import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 
 export const visitSetup = (
@@ -98,6 +99,7 @@ export const visitRoutes = (
   addForgeNode(logger, node, checker, state, options)
   addSecret(logger, node, checker, state, options)
   addOAuth2Credential(logger, node, checker, state, options)
+  addVariable(logger, node, checker, state, options)
 
   addHTTPRoute(logger, node, checker, state, options)
   addHTTPRoutes(logger, node, checker, state, options)
