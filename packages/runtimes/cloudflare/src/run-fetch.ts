@@ -14,11 +14,9 @@ export const runFetch = async <
 >(
   request: Request,
   singletonServices: SingletonServices,
-  createWireServices: CreateWireServices<
-    SingletonServices,
-    Services,
-    UserSession
-  >,
+  createWireServices:
+    | CreateWireServices<SingletonServices, Services, UserSession>
+    | undefined,
   websocketHibernationServer?: CloudflareWebSocketHibernationServer<SingletonServices>
 ) => {
   const isWebsocketUpgradeRequest =

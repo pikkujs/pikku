@@ -39,7 +39,7 @@ export class PikkuUWSServer {
   constructor(
     private readonly config: UWSCoreConfig,
     private readonly singletonServices: CoreSingletonServices,
-    private readonly createWireServices: CreateWireServices<any, any, any>
+    private readonly createWireServices?: CreateWireServices<any, any, any>
   ) {}
 
   /**

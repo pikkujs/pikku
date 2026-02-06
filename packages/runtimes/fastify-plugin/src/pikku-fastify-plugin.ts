@@ -23,7 +23,7 @@ import { sendResponseToFastify } from './fastify-response-convertor.js'
 export type PikkuFastifyPluginOptions = {
   pikku: {
     singletonServices: CoreSingletonServices
-    createWireServices: CreateWireServices<any, any, any>
+    createWireServices?: CreateWireServices<any, any, any>
     logRoutes?: boolean
     loadSchemas?: boolean
   } & RunHTTPWiringOptions

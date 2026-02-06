@@ -45,7 +45,7 @@ export type RunHTTPWiringOptions = Partial<{
 
 export type RunHTTPWiringParams = {
   singletonServices: CoreSingletonServices
-  createWireServices: CreateWireServices<
+  createWireServices?: CreateWireServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
     CoreUserSession
