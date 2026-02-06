@@ -607,14 +607,6 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   }
 
-  // Store function file location for wiring generation
-  if (exportedName) {
-    state.functions.files.set(pikkuFuncName, {
-      path: node.getSourceFile().fileName,
-      exportedName,
-    })
-  }
-
   // Workflow functions don't get registered as RPC functions,
   // they are their own type handled by add-workflow
   if (expression.text.includes('Workflow')) {
@@ -629,6 +621,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   ]
   if (nonRPCPatterns.some((pattern) => pattern.test(expression.text))) {
     return
+  }
+
+  // Store function file location for wiring generation
+  if (exportedName) {
+    state.functions.files.set(pikkuFuncName, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
   }
 
   if (exportedName || explicitName) {
