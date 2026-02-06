@@ -128,6 +128,12 @@ const templates = [
     supports: ['cli'],
   },
   {
+    template: 'remote-rpc-pg',
+    description:
+      'A two-server remote RPC template using PostgreSQL deployment discovery',
+    supports: ['http'],
+  },
+  {
     template: 'workflows-pg-boss',
     description: 'A PostgreSQL pg-boss based workflow template',
     supports: ['http', 'workflows'],

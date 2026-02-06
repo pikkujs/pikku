@@ -3885,9 +3885,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-remote-rpc@workspace:templates/remote-rpc":
+"@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg":
   version: 0.0.0-use.local
-  resolution: "@pikku/templates-remote-rpc@workspace:templates/remote-rpc"
+  resolution: "@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"
   dependencies:
     "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.2"
@@ -3901,7 +3901,6 @@ __metadata:
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
-    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 

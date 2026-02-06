@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/templates-remote-rpc",
+  "name": "@pikku/templates-remote-rpc-pg",
   "main": "src/start.ts",
   "type": "module",
   "private": true,
@@ -15,7 +15,8 @@
     "pikku": "pikku",
     "start": "tsx src/start.ts",
     "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid",
-    "test": "tsx client/test-remote-rpc.ts"
+    "test": "bash ../functions/run-tests.sh --url http://localhost:3001 --http",
+    "test:http-fetch": "tsx client/test-remote-rpc.ts"
   },
   "dependencies": {
     "@pikku/core": "^0.11.2",
@@ -27,8 +28,7 @@
     "postgres": "^3.4.7",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.9",
-    "zod": "^4"
+    "typescript": "^5.9"
   },
   "devDependencies": {
     "@pikku/cli": "^0.11.3",
