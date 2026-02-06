@@ -7,8 +7,8 @@ import {
   createConfig,
   createSingletonServices,
   createWireServices,
-} from './services.js'
-import '../.pikku/pikku-bootstrap.gen.js'
+} from '../../functions/src/services.js'
+import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
 const DEPLOYMENT_BACKEND = process.env.DEPLOYMENT_BACKEND || 'postgres'

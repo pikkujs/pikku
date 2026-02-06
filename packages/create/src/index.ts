@@ -131,7 +131,7 @@ const templates = [
     template: 'remote-rpc',
     description:
       'A two-server remote RPC template with deployment discovery (PostgreSQL or Redis)',
-    supports: ['http'],
+    supports: ['http', 'remote-rpc'],
   },
   {
     template: 'workflows-pg-boss',
