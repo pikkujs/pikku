@@ -161,11 +161,15 @@ export interface TriggerInstance {
  * @template TInput - Input type passed to the trigger function
  * @template TOutput - Output type produced when trigger fires
  */
-export interface CoreTriggerSource<TInput = unknown, TOutput = unknown> {
+export type CoreTriggerSource<TInput = unknown, TOutput = unknown> = {
   /** Must match a wireTrigger name */
   name: string
   /** The trigger function config that sets up the subscription */
-  func: CorePikkuTriggerFunctionConfig<TInput, TOutput>
-  /** Input data passed to the trigger function */
-  input?: TInput
-}
+  func: CorePikkuTriggerFunctionConfig<
+    TInput,
+    TOutput,
+    CoreSingletonServices,
+    StandardSchemaV1 | undefined,
+    StandardSchemaV1 | undefined
+  >
+} & (unknown extends TInput ? { input?: TInput } : { input: TInput })
