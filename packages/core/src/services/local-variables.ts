@@ -14,4 +14,10 @@ export class LocalVariablesService implements VariablesService {
   public get(name: string): Promise<string | undefined> | string | undefined {
     return this.variables[name]
   }
+
+  public getJSON<T = unknown>(name: string): T | undefined {
+    const value = this.variables[name]
+    if (value === undefined) return undefined
+    return JSON.parse(value)
+  }
 }
