@@ -393,7 +393,6 @@ export function convertDslToGraph(
     description: meta.description,
     tags: meta.tags,
     context: meta.context,
-    wires: {}, // DSL workflows don't have explicit wires in meta
     nodes: nodesRecord,
     entryNodeIds,
   }

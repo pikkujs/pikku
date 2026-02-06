@@ -178,7 +178,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
         packageMappings,
         typesMap,
         functionState.meta,
-        workflows.meta
+        workflows.meta,
+        workflows.graphMeta
       )
     )
 

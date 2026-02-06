@@ -60,7 +60,6 @@ export abstract class PikkuTriggerService implements TriggerService {
 
   protected getTriggerTargets(): Map<string, TriggerTarget[]> {
     const triggers = pikkuState(null, 'trigger', 'triggers')
-    const workflowsMeta = pikkuState(null, 'workflows', 'meta')
 
     const triggerTargets = new Map<string, TriggerTarget[]>()
 
@@ -73,19 +72,6 @@ export abstract class PikkuTriggerService implements TriggerService {
         triggerTargets.get(name)!.push({
           targetType: 'rpc',
           targetName: meta.pikkuFuncName,
-        })
-      }
-    }
-
-    for (const [workflowName, wfMeta] of Object.entries(workflowsMeta)) {
-      for (const t of wfMeta.wires?.trigger ?? []) {
-        if (!triggerTargets.has(t.name)) {
-          triggerTargets.set(t.name, [])
-        }
-        triggerTargets.get(t.name)!.push({
-          targetType: 'workflow',
-          targetName: workflowName,
-          startNode: t.startNode,
         })
       }
     }

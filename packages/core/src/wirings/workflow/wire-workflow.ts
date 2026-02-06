@@ -1,12 +1,10 @@
 import { pikkuState } from '../../pikku-state.js'
-import type { WorkflowWires } from './workflow.types.js'
 import type { GraphNodeConfig } from './graph/workflow-graph.types.js'
 
 /**
  * Workflow definition with DSL function
  */
 export interface WorkflowDefinitionFunc {
-  wires: WorkflowWires
   func: { func: (...args: any[]) => any } | ((...args: any[]) => any)
 }
 
@@ -19,7 +17,6 @@ export interface WorkflowDefinitionGraph<
     GraphNodeConfig<string>
   >,
 > {
-  wires: WorkflowWires
   graph: T
 }
 
@@ -52,20 +49,18 @@ function isWorkflowDefinitionGraph(
 }
 
 /**
- * Wire a workflow with triggers.
+ * Wire a workflow.
  * Accepts either a DSL function (func) or a graph definition (graph).
  *
  * @example
  * ```typescript
  * // DSL workflow
  * wireWorkflow({
- *   wires: { http: { route: '/start', method: 'post' } },
  *   func: myWorkflowFunc,
  * })
  *
  * // Graph workflow
  * wireWorkflow({
- *   wires: { http: { route: '/graph-start', method: 'post' } },
  *   graph: myGraphWorkflow,
  * })
  * ```
@@ -74,20 +69,13 @@ export function wireWorkflow<T extends Record<string, GraphNodeConfig<string>>>(
   definition: WorkflowDefinitionFunc | WorkflowDefinitionGraph<T>
 ): void {
   if (isWorkflowDefinitionFunc(definition)) {
-    // DSL workflow - store wiring for later registration by inspector
     const wirings = pikkuState(null, 'workflows', 'wirings')
-    // The wiring will be matched to the function by the inspector
-    // Store the func reference and wires
     wirings.set(definition.func, {
-      wires: definition.wires,
       func: definition.func,
     })
   } else if (isWorkflowDefinitionGraph(definition)) {
-    // Graph workflow - store for registration
     const graphWirings = pikkuState(null, 'workflows', 'graphWirings')
-    // Store the graph reference and wires
     graphWirings.set(definition.graph, {
-      wires: definition.wires,
       graph: definition.graph,
     })
   }

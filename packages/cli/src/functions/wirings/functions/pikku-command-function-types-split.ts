@@ -13,6 +13,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
       packageMappings,
       rpcInternalMapDeclarationFile,
       servicesFile,
+      workflowMapDeclarationFile,
     } = config
 
     // Check for required types
@@ -37,6 +38,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
       ? `import type { ${pikkuConfigType.type} } from '${getFileImportRelativePath(functionTypesFile, pikkuConfigType.typePath, packageMappings)}'`
       : '// Config type not found, will use fallback'
 
+    const workflowMapImport = `import type { WorkflowMap, GraphsMap } from '${getFileImportRelativePath(functionTypesFile, workflowMapDeclarationFile, packageMappings)}'`
+
     const content = serializeFunctionTypes(
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(functionTypesFile, userSessionType.typePath, packageMappings)}'`,
       userSessionType.type,
@@ -49,7 +52,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
       configTypeImport,
       config.externalPackageName,
       undefined,
-      config.forge?.node?.categories
+      config.forge?.node?.categories,
+      workflowMapImport
     )
 
     await writeFileInDir(logger, functionTypesFile, content)
