@@ -1,6 +1,6 @@
 /**
  * Forge node types for workflow builder visualization.
- * wireForgeNode is metadata-only - no runtime behavior.
+ * Forge metadata is now defined inline via the `forge` property on pikkuFunc/pikkuSessionlessFunc.
  * The CLI extracts this via AST and generates JSON metadata.
  */
 
@@ -13,26 +13,18 @@
 export type ForgeNodeType = 'trigger' | 'action' | 'end'
 
 /**
- * Configuration for wireForgeNode.
- * This is the input type that developers use when defining nodes.
+ * Inline forge configuration for pikkuFunc/pikkuSessionlessFunc.
+ * Replaces the separate wireForgeNode() call.
  */
-export type CoreForgeNode = {
-  /** Unique identifier for this node */
-  name: string
+export type CoreNodeConfig = {
   /** Human-readable name for UI display */
   displayName: string
   /** Grouping category (validated against forge.node.categories in config) */
   category: string
   /** Node type determining behavior and outputs */
   type: ForgeNodeType
-  /** RPC name to call when node executes (local name, Forge handles package aliasing) */
-  rpc: string
-  /** Optional description for UI */
-  description?: string
   /** Whether to add an error output port alongside the default output */
   errorOutput?: boolean
-  /** Optional tags for filtering/categorization */
-  tags?: string[]
 }
 
 /**
@@ -62,9 +54,23 @@ export type ForgeNodeMeta = {
 export type ForgeNodesMeta = Record<string, ForgeNodeMeta>
 
 /**
- * No-op function for wireForgeNode.
- * This exists purely for TypeScript type checking and will be tree-shaken.
- * The CLI extracts metadata via AST parsing.
+ * @deprecated Use the `forge` property on pikkuFunc/pikkuSessionlessFunc instead.
+ * This exists only for backward compatibility with existing code.
+ */
+export type CoreForgeNode = {
+  name: string
+  displayName: string
+  category: string
+  type: ForgeNodeType
+  rpc: string
+  description?: string
+  errorOutput?: boolean
+  tags?: string[]
+}
+
+/**
+ * @deprecated Use the `forge` property on pikkuFunc/pikkuSessionlessFunc instead.
+ * No-op function kept for backward compatibility.
  */
 export const wireForgeNode = (_config: CoreForgeNode): void => {
   // No-op - metadata only, extracted by CLI via AST

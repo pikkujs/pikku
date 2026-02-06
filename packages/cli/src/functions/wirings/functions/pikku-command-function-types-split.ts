@@ -47,7 +47,9 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
       `import type { TypedPikkuRPC, FlattenedRPCMap } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
       `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
       configTypeImport,
-      config.externalPackageName
+      config.externalPackageName,
+      undefined,
+      config.forge?.node?.categories
     )
 
     await writeFileInDir(logger, functionTypesFile, content)

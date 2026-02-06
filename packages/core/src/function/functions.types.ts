@@ -8,6 +8,7 @@ import type {
 } from '../types/core.types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { Session } from 'inspector'
+import type { CoreNodeConfig } from '../wirings/forge-node/forge-node.types.js'
 
 /**
  * @deprecated Use StandardSchemaV1 from @standard-schema/spec instead.
@@ -226,4 +227,5 @@ export type CorePikkuFunctionConfig<
   middleware?: PikkuMiddleware[]
   input?: InputSchema
   output?: OutputSchema
+  node?: CoreNodeConfig
 }
