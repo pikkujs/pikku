@@ -37,6 +37,7 @@
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
     "./services/local-content": "./dist/services/local-content.js",
+    "./services/gopass-secrets": "./dist/services/gopass-secrets.js",
     "./schema": "./dist/schema.js",
     "./types": "./dist/types/index.d.ts"
   },
