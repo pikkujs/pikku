@@ -3885,6 +3885,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/templates-remote-rpc@workspace:templates/remote-rpc":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-remote-rpc@workspace:templates/remote-rpc"
+  dependencies:
+    "@pikku/cli": "npm:^0.11.3"
+    "@pikku/core": "npm:^0.11.2"
+    "@pikku/express": "npm:^0.11.1"
+    "@pikku/jose": "npm:^0.11.1"
+    "@pikku/pg": "npm:^0.11.2"
+    "@pikku/schema-cfworker": "npm:^0.11.0"
+    "@types/node": "npm:^24"
+    pino-pretty: "npm:^13.1.3"
+    postgres: "npm:^3.4.7"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+    zod: "npm:^4"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/templates-uws@workspace:templates/uws":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-uws@workspace:templates/uws"

@@ -20,6 +20,7 @@ import {
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
 import { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
 import { SchedulerService } from '../services/scheduler-service.js'
+import { DeploymentService } from '../services/deployment-service.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -181,6 +182,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   queueService?: QueueService
   /** The scheduler service */
   schedulerService?: SchedulerService
+  /** The deployment service for service discovery */
+  deploymentService?: DeploymentService
 }
 
 /**

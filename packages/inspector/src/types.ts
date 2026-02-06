@@ -135,6 +135,7 @@ export type InspectorFilters = {
 
 export type ExternalPackageConfig = {
   package: string
+  rpcEndpoint?: string
   credentialOverrides?: Record<string, string>
 }
 
