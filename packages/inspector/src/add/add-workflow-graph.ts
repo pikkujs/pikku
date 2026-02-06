@@ -172,7 +172,7 @@ interface PikkuWorkflowGraphExtract {
   name?: string
   description?: string
   tags?: string[]
-  enabled?: boolean
+  disabled?: true
   nodesNode?: ts.ObjectLiteralExpression
   configNode?: ts.ObjectLiteralExpression
   exportedName?: string
@@ -188,7 +188,7 @@ function extractWorkflowGraphConfig(
   let name: string | undefined
   let description: string | undefined
   let tags: string[] | undefined
-  let enabled = true
+  let disabled: true | undefined
   let nodesNode: ts.ObjectLiteralExpression | undefined
   let configNode: ts.ObjectLiteralExpression | undefined
 
@@ -200,9 +200,9 @@ function extractWorkflowGraphConfig(
       name = extractStringLiteral(prop.initializer, checker)
     } else if (propName === 'description') {
       description = extractStringLiteral(prop.initializer, checker)
-    } else if (propName === 'enabled') {
-      if (prop.initializer.kind === ts.SyntaxKind.FalseKeyword) {
-        enabled = false
+    } else if (propName === 'disabled') {
+      if (prop.initializer.kind === ts.SyntaxKind.TrueKeyword) {
+        disabled = true
       }
     } else if (
       propName === 'tags' &&
@@ -224,7 +224,7 @@ function extractWorkflowGraphConfig(
     }
   }
 
-  return { name, description, tags, enabled, nodesNode, configNode }
+  return { name, description, tags, disabled, nodesNode, configNode }
 }
 
 /**
@@ -427,13 +427,11 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     entryNodeIds,
   }
 
-  const enabled = graphConfig.enabled !== false
+  if (graphConfig.disabled) return
 
-  if (enabled) {
-    state.workflows.graphMeta[workflowName] = serialized
-    state.workflows.graphFiles.set(workflowName, {
-      path: node.getSourceFile().fileName,
-      exportedName: graphConfig.exportedName || workflowName,
-    })
-  }
+  state.workflows.graphMeta[workflowName] = serialized
+  state.workflows.graphFiles.set(workflowName, {
+    path: node.getSourceFile().fileName,
+    exportedName: graphConfig.exportedName || workflowName,
+  })
 }

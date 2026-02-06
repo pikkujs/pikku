@@ -41,12 +41,11 @@ export const addMCPResource: AddWiring = (
 
     const uriValue = getPropertyValue(obj, 'uri') as string | null
     const titleValue = getPropertyValue(obj, 'title') as string | null
-    const { tags, summary, description, errors } = getCommonWireMetaData(
-      obj,
-      'MCP resource',
-      uriValue,
-      logger
-    )
+    const { disabled, tags, summary, description, errors } =
+      getCommonWireMetaData(obj, 'MCP resource', uriValue, logger)
+
+    if (disabled) return
+
     const streamingValue = getPropertyValue(obj, 'streaming') as boolean | null
 
     if (streamingValue === true) {
