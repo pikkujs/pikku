@@ -45,6 +45,11 @@ class EnvVariablesService implements VariablesService {
   get(key: string): string | undefined {
     return process.env[key]
   }
+  getJSON<T = unknown>(name: string): T | undefined {
+    const value = process.env[name]
+    if (value === undefined) return undefined
+    return JSON.parse(value)
+  }
   getAll(): Record<string, string> {
     return process.env as Record<string, string>
   }

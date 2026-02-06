@@ -19,6 +19,12 @@ class TestVariablesService implements VariablesService {
     return this.store[key]
   }
 
+  getJSON<T = unknown>(name: string): T | undefined {
+    const value = this.store[name]
+    if (value === undefined) return undefined
+    return JSON.parse(value)
+  }
+
   getAll(): Record<string, string> {
     return this.store
   }

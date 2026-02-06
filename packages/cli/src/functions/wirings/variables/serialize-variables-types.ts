@@ -90,14 +90,6 @@ export const serializeVariablesTypes = ({
   )
   const variableEntries = Object.entries(variables)
 
-  if (variableEntries.length === 0) {
-    return `/**
- * No variables declared - TypedVariablesService not generated.
- */
-export {}
-`
-  }
-
   // Collect imports needed
   const schemaImports: Map<string, Set<string>> = new Map()
   let needsZod = false
@@ -201,6 +193,12 @@ export class TypedVariablesService implements VariablesService {
   get(name: string): Promise<string | undefined> | string | undefined
   get(name: string): Promise<string | undefined> | string | undefined {
     return this.variables.get(name)
+  }
+
+  getJSON<K extends VariableId>(name: K): Promise<VariablesMap[K] | undefined> | VariablesMap[K] | undefined
+  getJSON<T = unknown>(name: string): Promise<T | undefined> | T | undefined
+  getJSON(name: string): Promise<unknown> | unknown {
+    return this.variables.getJSON(name)
   }
 
   /**

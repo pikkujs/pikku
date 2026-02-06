@@ -106,14 +106,6 @@ export const serializeSecretsTypes = ({
   )
   const credentialEntries = Object.entries(secrets)
 
-  if (credentialEntries.length === 0) {
-    return `/**
- * No credentials declared - TypedSecretService not generated.
- */
-export {}
-`
-  }
-
   // Collect imports needed
   const schemaImports: Map<string, Set<string>> = new Map() // sourceFile -> variable names
   let needsOAuth2Types = false
