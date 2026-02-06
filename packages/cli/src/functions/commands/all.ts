@@ -19,6 +19,7 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuFunctionTypesSplit', null)
+    await rpc.invoke('pikkuExternalTypes', null)
 
     await rpc.invoke('pikkuTriggerTypes', null)
 
