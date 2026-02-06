@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/templates-remote-rpc",
+  "name": "@pikku/templates-remote-rpc-pg",
   "main": "src/start.ts",
   "type": "module",
   "private": true,
@@ -18,9 +18,7 @@
     "@pikku/express": "^0.11.1",
     "@pikku/jose": "^0.11.1",
     "@pikku/pg": "^0.11.2",
-    "@pikku/redis": "^0.11.2",
     "@pikku/schema-cfworker": "^0.11.0",
-    "ioredis": "^5.9.2",
     "pino-pretty": "^13.1.3",
     "postgres": "^3.4.7",
     "tslib": "^2.8.1",

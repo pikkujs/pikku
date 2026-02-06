@@ -1,6 +1,6 @@
-# Remote RPC Template
+# Remote RPC Template (PostgreSQL)
 
-This template demonstrates how to use `rpc.remote()` with the DeploymentService for service discovery.
+This template demonstrates how to use `rpc.remote()` with the DeploymentService for service discovery using PostgreSQL.
 
 ## What it demonstrates
 
