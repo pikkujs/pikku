@@ -266,7 +266,7 @@ export class PikkuRPCService<
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
       remote: serviceRPC.remote.bind(serviceRPC),
-      invokeExposed: serviceRPC.rpcExposed.bind(serviceRPC),
+      exposed: serviceRPC.rpcExposed.bind(serviceRPC),
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
       rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
     } as any

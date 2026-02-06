@@ -1,13 +1,13 @@
 export type PikkuRPC<
-  invoke extends Function = any,
-  remote extends Function = any,
+  Invoke extends Function = any,
+  Remote extends Function = any,
   startWorkflow extends Function = any,
 > = {
   depth: number
   global: boolean
-  invoke: invoke
-  remote: remote
-  invokeExposed: (name: string, data: any) => Promise<any>
+  invoke: Invoke
+  remote: Remote
+  exposed: (name: string, data: any) => Promise<any>
   startWorkflow: startWorkflow
 }
 
