@@ -40,6 +40,17 @@ export class PgDeploymentService implements DeploymentService {
       return
     }
 
+    try {
+      await this.createSchema()
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await this.createSchema()
+    }
+
+    this.initialized = true
+  }
+
+  private async createSchema(): Promise<void> {
     await this.sql.unsafe(`
       CREATE SCHEMA IF NOT EXISTS ${this.schemaName};
 
@@ -57,8 +68,6 @@ export class PgDeploymentService implements DeploymentService {
       CREATE INDEX IF NOT EXISTS idx_pikku_deployments_heartbeat
         ON ${this.schemaName}.pikku_deployments (last_heartbeat);
     `)
-
-    this.initialized = true
   }
 
   async start(config: DeploymentConfig): Promise<void> {
