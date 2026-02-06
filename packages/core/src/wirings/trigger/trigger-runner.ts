@@ -57,7 +57,7 @@ export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
-  input: TInput
+  input?: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
 
