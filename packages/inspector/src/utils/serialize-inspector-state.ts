@@ -199,16 +199,6 @@ export interface SerializableInspectorState {
     allSingletonServices: string[]
     allWireServices: string[]
   }
-  serviceMetadata: Array<{
-    name: string
-    summary: string
-    description: string
-    package: string
-    path: string
-    version: string
-    interface: string
-    expandedProperties: Record<string, string>
-  }>
 }
 
 /**
@@ -343,7 +333,6 @@ export function serializeInspectorState(
       allSingletonServices: state.serviceAggregation.allSingletonServices,
       allWireServices: state.serviceAggregation.allWireServices,
     },
-    serviceMetadata: state.serviceMetadata,
   }
 }
 
@@ -479,6 +468,5 @@ export function deserializeInspectorState(
       allSingletonServices: data.serviceAggregation.allSingletonServices,
       allWireServices: data.serviceAggregation.allWireServices,
     },
-    serviceMetadata: data.serviceMetadata || [],
   }
 }

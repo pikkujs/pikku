@@ -52,7 +52,6 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuServices', null)
-    await rpc.invoke('pikkuServiceMetadata', null)
 
     const hasPackageFactories = await rpc.invoke('pikkuPackage', null)
     if (hasPackageFactories) {
