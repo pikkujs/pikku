@@ -12,9 +12,13 @@ export const serializeFunctionTypes = (
   requiredServicesTypeImport: string,
   configTypeImport: string,
   packageName?: string,
-  workflowTypesImport?: string
+  workflowTypesImport?: string,
+  forgeCategories?: string[]
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
+  const forgeCategoryType = forgeCategories?.length
+    ? forgeCategories.map((c) => `'${c}'`).join(' | ')
+    : 'string'
   const workflowImport =
     workflowTypesImport ||
     `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'`
@@ -24,6 +28,7 @@ export const serializeFunctionTypes = (
  */
 
 import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
+import type { ForgeNodeType } from '@pikku/core/forge-node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
@@ -39,6 +44,16 @@ ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServ
 ${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
 ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeName}` : `export type { ${userSessionTypeName} as Session }`}
 ${configTypeImport.includes('Config type not found') ? 'export type Config = any' : ''}
+
+/**
+ * Inline forge configuration for function definitions.
+ */
+export type NodeConfig = {
+  displayName: string
+  category: ${forgeCategoryType}
+  type: ForgeNodeType
+  errorOutput?: boolean
+}
 
 /**
  * Type-safe API permission definition that integrates with your application's session type.
@@ -277,6 +292,7 @@ export type PikkuFunctionConfigWithSchema<
   middleware?: PikkuMiddleware[]
   input: InputSchema
   output?: OutputSchema
+  node?: NodeConfig
 }
 
 /**
@@ -355,6 +371,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   middleware?: PikkuMiddleware[]
   input: InputSchema
   output?: OutputSchema
+  node?: NodeConfig
 }
 
 /**

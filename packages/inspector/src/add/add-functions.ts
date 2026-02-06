@@ -12,6 +12,7 @@ import {
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
+import type { ForgeNodeType } from '@pikku/core/forge-node'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -320,6 +321,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let expose: boolean | undefined
   let internal: boolean | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
+  let nodeDisplayName: string | null = null
+  let nodeCategory: string | null = null
+  let nodeType: ForgeNodeType | null = null
+  let nodeErrorOutput: boolean | null = null
 
   // Extract the function node using shared utility
   const firstArg = args[0]!
@@ -392,6 +397,51 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+
+    // Extract node config from nested object
+    for (const prop of firstArg.properties) {
+      if (
+        ts.isPropertyAssignment(prop) &&
+        ts.isIdentifier(prop.name) &&
+        prop.name.text === 'node' &&
+        ts.isObjectLiteralExpression(prop.initializer)
+      ) {
+        const nodeObj = prop.initializer
+        nodeDisplayName = getPropertyValue(nodeObj, 'displayName') as
+          | string
+          | null
+        nodeCategory = getPropertyValue(nodeObj, 'category') as string | null
+        nodeType = getPropertyValue(nodeObj, 'type') as ForgeNodeType | null
+        nodeErrorOutput = getPropertyValue(nodeObj, 'errorOutput') as
+          | boolean
+          | null
+
+        if (!nodeDisplayName) {
+          logger.critical(
+            ErrorCode.MISSING_NAME,
+            `Function '${name}' node config is missing the required 'displayName' property.`
+          )
+        }
+        if (!nodeCategory) {
+          logger.critical(
+            ErrorCode.MISSING_NAME,
+            `Function '${name}' node config is missing the required 'category' property.`
+          )
+        }
+        if (!nodeType) {
+          logger.critical(
+            ErrorCode.MISSING_NAME,
+            `Function '${name}' node config is missing the required 'type' property.`
+          )
+        } else if (!['trigger', 'action', 'end'].includes(nodeType)) {
+          logger.critical(
+            ErrorCode.INVALID_VALUE,
+            `Function '${name}' node config has invalid type '${nodeType}'. Must be 'trigger', 'action', or 'end'.`
+          )
+        }
+        break
+      }
+    }
 
     // Extract schema variable names from input/output properties
     for (const prop of firstArg.properties) {
@@ -608,6 +658,23 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     middleware,
     permissions,
     isDirectFunction,
+  }
+
+  // Populate forge node metadata if node config is present
+  if (nodeDisplayName && nodeCategory && nodeType) {
+    state.forgeNodes.files.add(node.getSourceFile().fileName)
+    state.forgeNodes.meta[pikkuFuncName] = {
+      name: pikkuFuncName,
+      displayName: nodeDisplayName,
+      category: nodeCategory,
+      type: nodeType,
+      rpc: pikkuFuncName,
+      description,
+      errorOutput: nodeErrorOutput ?? false,
+      inputSchemaName: inputNames[0] ?? null,
+      outputSchemaName: outputNames[0] ?? null,
+      tags,
+    }
   }
 
   // Workflow functions don't get registered as RPC functions,
