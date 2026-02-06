@@ -128,9 +128,9 @@ const templates = [
     supports: ['cli'],
   },
   {
-    template: 'remote-rpc-pg',
+    template: 'remote-rpc',
     description:
-      'A two-server remote RPC template using PostgreSQL deployment discovery',
+      'A two-server remote RPC template with deployment discovery (PostgreSQL or Redis)',
     supports: ['http'],
   },
   {
