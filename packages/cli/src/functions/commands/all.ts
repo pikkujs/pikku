@@ -19,7 +19,6 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuFunctionTypesSplit', null)
-    await rpc.invoke('pikkuExternalTypes', null)
 
     await rpc.invoke('pikkuTriggerTypes', null)
 
@@ -75,6 +74,8 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuSecrets', null)
     await rpc.invoke('pikkuVariableDefinitionTypes', null)
     await rpc.invoke('pikkuVariables', null)
+
+    await rpc.invoke('pikkuExternalTypes', null)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)

@@ -7,6 +7,10 @@ import { serializeExternalTypes } from './serialize-external-types.js'
 
 export const pikkuExternalTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
+    if (!config.externalPackage) {
+      return
+    }
+
     const visitState = await getInspectorState()
     const {
       externalTypesFile,
