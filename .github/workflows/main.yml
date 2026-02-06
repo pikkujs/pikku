@@ -114,7 +114,8 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
-            remote-rpc,
+            remote-rpc-pg,
+            remote-rpc-redis,
           ]
         package-manager: [yarn]
     steps:
@@ -243,7 +244,8 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
-            remote-rpc,
+            remote-rpc-pg,
+            remote-rpc-redis,
           ]
     steps:
       - name: Check out repository code
