@@ -119,6 +119,7 @@ jobs:
             bullmq,
             workflows-bullmq,
             workflows-pg-boss,
+            remote-rpc-pg,
           ]
         package-manager: [yarn]
     steps:
