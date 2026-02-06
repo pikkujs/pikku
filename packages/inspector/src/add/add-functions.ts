@@ -586,8 +586,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     ? resolvePermissions(state, objectNode, tags, checker)
     : undefined
 
+  const sessionless = expression.text !== 'pikkuFunc'
+
   state.functions.meta[pikkuFuncName] = {
     pikkuFuncName,
+    sessionless,
     name,
     services,
     usedWires: usedWires.length > 0 ? usedWires : undefined,

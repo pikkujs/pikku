@@ -194,17 +194,27 @@ export const runPikkuFunc = async <In = any, Out = any>(
       initialSession,
     }
 
-    if (wiringAuth === true || funcConfig.auth === true) {
-      // This means it was explicitly enabled in either wiring or function and has to be respected
-      if (!initialSession) {
+    if (funcMeta.sessionless) {
+      if (wiringAuth === true || funcConfig.auth === true) {
+        if (!initialSession) {
+          throw new ForbiddenError('Authentication required')
+        }
+      }
+    } else if (funcMeta.sessionless === false) {
+      if (wiringAuth === false || funcConfig.auth === false) {
+        resolvedSingletonServices.logger.warn(
+          `Function '${funcName}' requires a session but auth was explicitly disabled — use pikkuSessionlessFunc instead.`
+        )
+      } else if (!initialSession) {
         throw new ForbiddenError('Authentication required')
       }
-    }
-    if (wiringAuth === undefined && funcConfig.auth === undefined) {
-      // We always default to requiring auth unless explicitly disabled
-      if (!initialSession) {
-        // TODO: Critical, we need to figure out how to make this work with different wirings
-        // throw new ForbiddenError('Authentication required')
+    } else {
+      // TODO: Remove after a couple of releases — backward compat for
+      // generated metadata that doesn't include the `sessionless` field yet.
+      if (wiringAuth === true || funcConfig.auth === true) {
+        if (!initialSession) {
+          throw new ForbiddenError('Authentication required')
+        }
       }
     }
 
