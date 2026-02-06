@@ -390,6 +390,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   if (ts.isObjectLiteralExpression(firstArg)) {
     objectNode = firstArg
     const metadata = getCommonWireMetaData(firstArg, 'Function', name, logger)
+    if (metadata.disabled) return
     title = metadata.title
     tags = metadata.tags
     summary = metadata.summary

@@ -501,12 +501,11 @@ export const addChannel: AddWiring = (
         .map((k) => k.name)
     : []
 
-  const { tags, summary, description, errors } = getCommonWireMetaData(
-    obj,
-    'Channel',
-    name,
-    logger
-  )
+  const { disabled, tags, summary, description, errors } =
+    getCommonWireMetaData(obj, 'Channel', name, logger)
+
+  if (disabled) return
+
   const query = getPropertyValue(obj, 'query') as string[] | []
 
   const connect = getPropertyAssignmentInitializer(

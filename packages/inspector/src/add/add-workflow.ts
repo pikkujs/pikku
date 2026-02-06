@@ -214,6 +214,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
       workflowName,
       logger
     )
+    if (metadata.disabled) return
     tags = metadata.tags
     summary = metadata.summary
     description = metadata.description

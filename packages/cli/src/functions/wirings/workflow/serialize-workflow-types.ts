@@ -88,8 +88,7 @@ export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
   T
 > {
-  /** Whether this workflow wiring is enabled (default: true) */
-  enabled?: boolean
+  disabled?: true
   /** Workflow name (optional - defaults to exported variable name) */
   name?: string
   /** Optional description */
@@ -218,8 +217,7 @@ type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; th
 
 /** Workflow definition with DSL function */
 interface WorkflowDefinitionFunc {
-  /** Whether this workflow wiring is enabled (default: true) */
-  enabled?: boolean
+  disabled?: true
   /** DSL workflow function */
   func: PikkuFunctionConfig<any, any, 'workflow', PikkuFunctionWorkflow<any, any>>
 }
@@ -240,7 +238,7 @@ export function wireWorkflowGraph<
     tags: config.tags,
     graph: graphBuilder(config.nodes, config.config as any),
   }
-  if (config.enabled !== false) {
+  if (!config.disabled) {
     coreWireWorkflow({ graph: result } as any)
   }
   return result

@@ -161,12 +161,15 @@ export function registerHTTPRoute({
 
   // Get common metadata
   const {
+    disabled,
     title,
     tags: routeTags,
     summary,
     description,
     errors,
   } = getCommonWireMetaData(obj, 'HTTP route', fullRoute, logger)
+
+  if (disabled) return
 
   // Merge inherited tags with route tags
   const tags = [...inheritedTags, ...(routeTags || [])]

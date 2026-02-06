@@ -96,6 +96,7 @@ export const getCommonWireMetaData = (
   wiringName: string | null,
   logger?: { critical: (code: ErrorCode, message: string) => void }
 ): {
+  disabled?: true
   title?: string
   tags?: string[]
   summary?: string
@@ -103,6 +104,7 @@ export const getCommonWireMetaData = (
   errors?: string[]
 } => {
   const metadata: {
+    disabled?: true
     title?: string
     tags?: string[]
     summary?: string
@@ -114,7 +116,12 @@ export const getCommonWireMetaData = (
     if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
       const propName = prop.name.text
 
-      if (propName === 'title' && ts.isStringLiteral(prop.initializer)) {
+      if (
+        propName === 'disabled' &&
+        prop.initializer.kind === ts.SyntaxKind.TrueKeyword
+      ) {
+        metadata.disabled = true
+      } else if (propName === 'title' && ts.isStringLiteral(prop.initializer)) {
         metadata.title = prop.initializer.text
       } else if (
         propName === 'summary' &&

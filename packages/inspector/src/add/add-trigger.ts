@@ -51,12 +51,10 @@ const addWireTrigger: (
   const obj = firstArg
 
   const nameValue = getPropertyValue(obj, 'name') as string | null
-  const { tags, summary, description, errors } = getCommonWireMetaData(
-    obj,
-    'Trigger',
-    nameValue,
-    logger
-  )
+  const { disabled, tags, summary, description, errors } =
+    getCommonWireMetaData(obj, 'Trigger', nameValue, logger)
+
+  if (disabled) return
 
   const funcInitializer = getPropertyAssignmentInitializer(
     obj,

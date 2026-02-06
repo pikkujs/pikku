@@ -106,6 +106,10 @@ function processCLIConfig(
     return null
   }
 
+  if (getPropertyValue(node, 'disabled') === true) {
+    return null
+  }
+
   // Second pass: process other properties with program tags available
   for (const prop of node.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
