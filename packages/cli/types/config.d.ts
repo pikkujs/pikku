@@ -105,6 +105,12 @@ export interface PikkuCLICoreOutputFiles {
 
   // Secrets (typed wrapper for SecretService)
   secretsFile: string
+
+  // Variables
+  variableTypesFile: string
+
+  // Variables (typed wrapper for VariablesService)
+  variablesFile: string
 }
 
 export type PikkuCLIInput = {

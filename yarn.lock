@@ -4100,6 +4100,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verify-variables@workspace:verifiers/variables":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verify-variables@workspace:verifiers/variables"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+    zod: "npm:^4"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/websocket@npm:^0.11.0, @pikku/websocket@workspace:packages/client-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/websocket@workspace:packages/client-websocket"

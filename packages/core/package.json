@@ -33,6 +33,7 @@
     "./cli/channel": "./dist/wirings/cli/channel/index.js",
     "./forge-node": "./dist/wirings/forge-node/index.js",
     "./secret": "./dist/wirings/secret/index.js",
+    "./variable": "./dist/wirings/variable/index.js",
     "./oauth2": "./dist/wirings/oauth2/index.js",
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",

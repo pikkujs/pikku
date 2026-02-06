@@ -37,10 +37,10 @@ export const wireTrigger = (trigger: CoreTrigger) => {
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: CoreTriggerSource<TInput, TOutput>
 ) => {
-  const meta = pikkuState(null, 'trigger', 'meta')
-  const triggerMeta = meta[source.name]
-  if (!triggerMeta) {
-    throw new Error(`Trigger metadata not found: ${source.name}`)
+  const sourceMeta = pikkuState(null, 'trigger', 'sourceMeta')
+  const triggerSourceMeta = sourceMeta[source.name]
+  if (!triggerSourceMeta) {
+    throw new Error(`Trigger source metadata not found: ${source.name}`)
   }
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
@@ -48,6 +48,12 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
     throw new Error(`Trigger source already exists: ${source.name}`)
   }
   triggerSources.set(source.name, source as any)
+
+  addFunction(
+    triggerSourceMeta.pikkuFuncName,
+    source.func as any,
+    triggerSourceMeta.packageName
+  )
 }
 
 /**

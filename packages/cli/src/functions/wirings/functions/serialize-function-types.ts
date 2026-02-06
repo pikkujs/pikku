@@ -492,6 +492,19 @@ export const pikkuConfig = (
 ) => func
 
 /**
+ * Creates a Pikku config factory for external packages.
+ * Unlike pikkuConfig, this receives ExternalBaseServices (logger, variables, secrets)
+ * from the parent application, so external packages can read variables/secrets during config creation.
+ */
+export const pikkuExternalConfig = (
+  func: (services: ExternalBaseServices & Partial<SingletonServices>) => Promise<Config>
+) => {
+  return async (_variables: any, existingServices?: Partial<SingletonServices>): Promise<Config> => {
+    return func(existingServices as ExternalBaseServices & Partial<SingletonServices>)
+  }
+}
+
+/**
  * Creates a Pikku singleton services factory.
  * Use this to define services that are created once and shared across all requests.
  *

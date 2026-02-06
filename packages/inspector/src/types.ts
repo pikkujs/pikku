@@ -9,6 +9,7 @@ import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
 import { ForgeNodesMeta } from '@pikku/core/forge-node'
 import { SecretDefinitions } from '@pikku/core/secret'
+import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -273,6 +274,10 @@ export interface InspectorState {
   }
   secrets: {
     definitions: SecretDefinitions
+    files: Set<string>
+  }
+  variables: {
+    definitions: VariableDefinitions
     files: Set<string>
   }
   middleware: InspectorMiddlewareState
