@@ -13,11 +13,12 @@ import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
  * This is used for public HTTP access to exposed server functions
  */
 export const rpcCaller = pikkuSessionlessFunc<
-  { rpcName: string, data?: any },
-  any
+  { rpcName: string; data?: unknown },
+  unknown
 >({
-  func: async (services, { rpcName, data }, { rpc }) => {
-    return await (rpc.invokeExposed as any)(rpcName, data)
+  auth: false,
+  func: async (_services, { rpcName, data }, { rpc }) => {
+    return await rpc.invokeExposed(rpcName, data)
   },
 })
 
@@ -31,6 +32,7 @@ wireHTTP({
 wireHTTP({
   route: '/rpc/:rpcName',
   method: 'post',
+  auth: false,
   func: rpcCaller,
 })
 `

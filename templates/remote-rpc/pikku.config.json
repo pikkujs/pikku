@@ -1,0 +1,16 @@
+{
+  "$schema": "https://pikku.dev/schemas/pikku.config.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src"],
+  "rootDir": ".",
+  "configDir": ".",
+  "outDir": ".pikku",
+  "packageMappings": {
+    "@pikku/core": "@pikku/core",
+    "@pikku/pg": "@pikku/pg"
+  },
+  "rpc": {
+    "publicRpcPath": "src/wirings/rpc.wiring.gen.ts"
+  },
+  "filters": {}
+}

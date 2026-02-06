@@ -75,6 +75,30 @@ export const addFunction = (
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 
+export const getFunctionNames = (
+  packageName: string | null = null
+): string[] => {
+  const functionsMeta = pikkuState(packageName, 'function', 'meta')
+  return Object.keys(functionsMeta)
+}
+
+export const getAllFunctionNames = (): string[] => {
+  const functions: string[] = []
+
+  const mainFunctionsMeta = pikkuState(null, 'function', 'meta')
+  functions.push(...Object.keys(mainFunctionsMeta))
+
+  const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
+  for (const [namespace, config] of externalPackages) {
+    const packageFunctionsMeta = pikkuState(config.package, 'function', 'meta')
+    for (const funcName of Object.keys(packageFunctionsMeta)) {
+      functions.push(`${namespace}:${funcName}`)
+    }
+  }
+
+  return functions
+}
+
 export const runPikkuFuncDirectly = async <In, Out>(
   funcName: string,
   allServices: CoreServices,

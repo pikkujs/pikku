@@ -118,7 +118,11 @@ export type PikkuCLIInput = {
   packageMappings: Record<string, string>
   externalPackages?: Record<
     string,
-    { package: string; credentialOverrides?: Record<string, string> }
+    {
+      package: string
+      rpcEndpoint?: string
+      credentialOverrides?: Record<string, string>
+    }
   >
   externalPackage?: boolean
   externalPackageName?: string
@@ -222,7 +226,11 @@ export type PikkuCLIConfig = {
   packageMappings: Record<string, string>
   externalPackages?: Record<
     string,
-    { package: string; credentialOverrides?: Record<string, string> }
+    {
+      package: string
+      rpcEndpoint?: string
+      credentialOverrides?: Record<string, string>
+    }
   >
   externalPackage?: boolean
   externalPackageName?: string

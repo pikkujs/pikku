@@ -20,13 +20,13 @@ const resolveNamespace = (
   const functionName = namespacedFunction.substring(colonIndex + 1)
 
   const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
-  const packageName = externalPackages.get(namespace)
-  if (!packageName) {
+  const pkgConfig = externalPackages.get(namespace)
+  if (!pkgConfig) {
     return null
   }
 
   return {
-    package: packageName,
+    package: pkgConfig.package,
     function: functionName,
   }
 }
@@ -196,6 +196,54 @@ export class ContextAwareRPCService {
       options
     )
   }
+
+  public async remote<In = any, Out = any>(
+    funcName: string,
+    data: In
+  ): Promise<Out> {
+    let endpoint: string | undefined
+
+    const colonIndex = funcName.indexOf(':')
+    if (colonIndex !== -1) {
+      const namespace = funcName.substring(0, colonIndex)
+      const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
+      const pkgConfig = externalPackages.get(namespace)
+      endpoint = pkgConfig?.rpcEndpoint
+    }
+
+    if (!endpoint && this.services.deploymentService) {
+      const deployments =
+        await this.services.deploymentService.findFunction(funcName)
+      if (deployments.length > 0) {
+        endpoint = deployments[0].endpoint
+      }
+    }
+
+    if (!endpoint) {
+      throw new Error(
+        `No endpoint configured for remote RPC: ${funcName}. ` +
+          `Configure rpcEndpoint in externalPackages config or set up a DeploymentService.`
+      )
+    }
+
+    const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data }),
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Remote RPC call failed: ${response.status} ${response.statusText}. ${errorBody}`
+      )
+    }
+
+    return response.json() as Promise<Out>
+  }
 }
 
 // RPC Service class for the global interface
@@ -217,7 +265,8 @@ export class PikkuRPCService<
       depth,
       global: false,
       invoke: serviceRPC.rpc.bind(serviceRPC),
-      invokeExposed: serviceRPC.rpc.bind(serviceRPC),
+      remote: serviceRPC.remote.bind(serviceRPC),
+      invokeExposed: serviceRPC.rpcExposed.bind(serviceRPC),
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
       rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
     } as any
