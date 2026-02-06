@@ -32,7 +32,7 @@ type PikkuMiddlewareArgs = RunHTTPWiringOptions & {
  */
 export const pikkuExpressMiddleware = (
   singletonServices: CoreSingletonServices,
-  createWireServices: CreateWireServices<any, any, any>,
+  createWireServices: CreateWireServices<any, any, any> | undefined,
   {
     respondWith404,
     logRoutes,

@@ -4,8 +4,9 @@ export const serializeNextJsBackendWrapper = (
   rpcMapPath: string,
   configImport: string,
   singleServicesFactoryImport: string,
-  wireServicesImport: string
+  wireServicesImport: string | undefined
 ) => {
+  const hasWireServices = !!wireServicesImport
   return `'server-only'
 
 /**
@@ -21,7 +22,7 @@ type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
 ${configImport}
 ${singleServicesFactoryImport}
-${wireServicesImport}
+${wireServicesImport ? wireServicesImport : ''}
 
 import '${bootstrapPath}'
 
@@ -32,17 +33,12 @@ export const removeAPIPrefix = (enable: boolean) => {
   _removeAPIPrefix = enable
 }
 
-/**
- * Initializes and returns an instance of PikkuNextJS with helper methods for handling route requests.
- *
- * @returns An object containing methods for making dynamic and static action requests, as well as session retrieval.
- */
 export const pikku = (_options?: any) => {
   if (!_pikku) {
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      createWireServices
+      ${hasWireServices ? 'createWireServices' : 'undefined'}
     )
   }
 
@@ -259,7 +255,7 @@ export const pikkuAPIRequest = (
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      createWireServices
+      ${hasWireServices ? 'createWireServices' : 'undefined'}
     )
   }
   if (_removeAPIPrefix) {

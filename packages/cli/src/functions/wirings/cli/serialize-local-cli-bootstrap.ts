@@ -9,29 +9,32 @@ export function serializeLocalCLIBootstrap(
   _programMeta: any,
   bootstrapFile: string,
   config: Config,
-  pikkuConfigFactory: { file: string; variable: string },
+  pikkuConfigFactory: { file: string; variable: string } | undefined,
   singletonServicesFactory: { file: string; variable: string },
-  wireServicesFactory: { file: string; variable: string }
+  wireServicesFactory?: { file: string; variable: string }
 ): string {
   const capitalizedName =
     programName.charAt(0).toUpperCase() + programName.slice(1).replace(/-/g, '')
 
-  // Get relative import paths
-  const pikkuConfigPath = getFileImportRelativePath(
-    bootstrapFile,
-    pikkuConfigFactory.file,
-    config.packageMappings
-  )
+  const pikkuConfigPath = pikkuConfigFactory
+    ? getFileImportRelativePath(
+        bootstrapFile,
+        pikkuConfigFactory.file,
+        config.packageMappings
+      )
+    : null
   const singletonServicesPath = getFileImportRelativePath(
     bootstrapFile,
     singletonServicesFactory.file,
     config.packageMappings
   )
-  const wireServicesPath = getFileImportRelativePath(
-    bootstrapFile,
-    wireServicesFactory.file,
-    config.packageMappings
-  )
+  const wireServicesPath = wireServicesFactory
+    ? getFileImportRelativePath(
+        bootstrapFile,
+        wireServicesFactory.file,
+        config.packageMappings
+      )
+    : null
   const cliBootstrapPath = getFileImportRelativePath(
     bootstrapFile,
     config.bootstrapFile,
@@ -40,23 +43,19 @@ export function serializeLocalCLIBootstrap(
 
   return `
 import { executeCLI, CLIError } from '@pikku/core/cli'
-import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'
+${pikkuConfigFactory ? `import { ${pikkuConfigFactory.variable} as createConfig } from '${pikkuConfigPath}'` : ''}
 import { ${singletonServicesFactory.variable} as createSingletonServices } from '${singletonServicesPath}'
-import { ${wireServicesFactory.variable} as createWireServices } from '${wireServicesPath}'
+${wireServicesFactory ? `import { ${wireServicesFactory.variable} as createWireServices } from '${wireServicesPath}'` : ''}
 import '${cliBootstrapPath}'
 
-/**
- * ${capitalizedName} CLI function
- * Handles command line arguments and executes the appropriate function
- */
 export async function ${capitalizedName}CLI(args: string[]): Promise<void> {
   try {
     await executeCLI({
       programName: '${programName}',
       args: args || process.argv.slice(2),
-      createConfig,
+${pikkuConfigFactory ? '      createConfig,' : ''}
       createSingletonServices,
-      createWireServices,
+${wireServicesFactory ? '      createWireServices,' : ''}
     })
   } catch (error) {
     if (error instanceof CLIError) {

@@ -32,11 +32,11 @@ export class PikkuNextJS {
    * @param createWireServices - A function that creates session-specific services for each request.
    */
   constructor(
-    private readonly createConfig: CreateConfig<CoreConfig>,
+    private readonly createConfig: CreateConfig<CoreConfig> | undefined,
     private readonly createSingletonServices: (
       config: CoreConfig
     ) => Promise<CoreSingletonServices>,
-    private readonly createWireServices: CreateWireServices<any, any, any>
+    private readonly createWireServices?: CreateWireServices<any, any, any>
   ) {}
 
   /**
@@ -125,7 +125,9 @@ export class PikkuNextJS {
     }
 
     if (this.readyEmitter.listenerCount('ready') === 0) {
-      const config = await this.createConfig()
+      const config = this.createConfig
+        ? await this.createConfig()
+        : ({} as CoreConfig)
       this.createSingletonServices(config).then((singletonServices) => {
         this.singletonServices = singletonServices
         this.readyEmitter.emit('ready')
