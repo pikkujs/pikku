@@ -2,7 +2,6 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
 
 /**
- * TODO: Document
  * pikku oauth status <credential-name>
  *
  * Check if tokens exist for an OAuth2 credential.
@@ -20,7 +19,6 @@ export const oauthStatus = pikkuSessionlessFunc<
       inspectorState.schemaLookup
     )
 
-    // TODO: The following is common in oauth-connect
     const credential = secretsMeta[credentialName]
     if (!credential) {
       logger.error(`Credential '${credentialName}' not found`)

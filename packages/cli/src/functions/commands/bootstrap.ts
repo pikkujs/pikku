@@ -1,6 +1,5 @@
 import { pikkuVoidFunc } from '#pikku'
 
-// TODO: is this being use anywhere?
 export const bootstrap = pikkuVoidFunc({
   internal: true,
   func: async ({ logger, getInspectorState }, _data, { rpc }) => {

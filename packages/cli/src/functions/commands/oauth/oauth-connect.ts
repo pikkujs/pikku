@@ -12,7 +12,6 @@ interface OAuthCallbackResult {
 
 /**
  * Escape HTML special characters to prevent XSS.
- * TODO: Should this be in a seperate utils file
  */
 function escapeHtml(str: string): string {
   return str
@@ -39,7 +38,6 @@ const DEFAULT_SERVER_TIMEOUT_MS = 5 * 60 * 1000
 
 /**
  * Start a temporary HTTP server to receive the OAuth callback
- * TODO: I would like for this to somehow use a wireHTTP, but we need to figure out how
  */
 function startCallbackServer(
   port: number,
@@ -122,7 +120,6 @@ function startCallbackServer(
 }
 
 /**
- * TODO: This needs to be documented somewhere somehow
  * pikku oauth:connect <credential-name> [--output console|secret] [--url <url>]
  *
  * Connect to an OAuth2 provider by authorizing and obtaining tokens.
