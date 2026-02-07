@@ -5,7 +5,8 @@
  */
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
-  rpcMapImportPath: string
+  rpcMapImportPath: string,
+  workflowMapImportPath: string
 ) => {
   return `/**
  * Workflow type definitions and helpers
@@ -18,6 +19,7 @@ import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException } fr
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
+import type { WorkflowMap, GraphsMap } from '${workflowMapImportPath}'
 import type { GraphNodeConfig } from '@pikku/core'
 import { createGraph, wireWorkflow as coreWireWorkflow } from '@pikku/core'
 
@@ -242,6 +244,94 @@ export function wireWorkflowGraph<
     coreWireWorkflow({ graph: result } as any)
   }
   return result
+}
+
+// ============================================================================
+// Workflow & Graph HTTP helpers
+// ============================================================================
+
+export const workflow = <Name extends keyof WorkflowMap>(
+  workflowName: Name,
+  options?: { pollIntervalMs?: number }
+): PikkuFunctionConfig<
+  WorkflowMap[Name]['input'],
+  WorkflowMap[Name]['output'],
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (services: any, data: any, { rpc }: any) => {
+      return services.workflowService.runToCompletion(workflowName, data, rpc, options)
+    }) as any
+  } as PikkuFunctionConfig<
+    WorkflowMap[Name]['input'],
+    WorkflowMap[Name]['output'],
+    'session' | 'rpc'
+  >
+}
+
+export const workflowStart = <Name extends keyof WorkflowMap>(
+  workflowName: Name
+): PikkuFunctionConfig<
+  WorkflowMap[Name]['input'],
+  { runId: string },
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (_services: any, data: any, { rpc }: any) => {
+      return rpc.startWorkflow(workflowName, data)
+    }) as any
+  } as PikkuFunctionConfig<
+    WorkflowMap[Name]['input'],
+    { runId: string },
+    'session' | 'rpc'
+  >
+}
+
+export const workflowStatus = <Name extends keyof WorkflowMap>(
+  _workflowName: Name
+): PikkuFunctionConfig<
+  { runId: string },
+  { id: string; status: 'running' | 'completed' | 'failed' | 'cancelled'; output?: WorkflowMap[Name]['output']; error?: { message?: string } },
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (services: any, data: any) => {
+      const run = await services.workflowService.getRun(data.runId)
+      if (!run) {
+        // TODO: Throw NotFoundError
+        throw new Error('Workflow run not found: ' + data.runId)
+      }
+      return {
+        id: run.id,
+        status: run.status,
+        output: run.output,
+        error: run.error ? { message: run.error.message } : undefined,
+      }
+    }) as any
+  } as PikkuFunctionConfig<
+    { runId: string },
+    { id: string; status: 'running' | 'completed' | 'failed' | 'cancelled'; output?: WorkflowMap[Name]['output']; error?: { message?: string } },
+    'session' | 'rpc'
+  >
+}
+
+export const graphStart = <Name extends keyof GraphsMap, Node extends string & keyof GraphsMap[Name]>(
+  graphName: Name,
+  startNode: Node
+): PikkuFunctionConfig<
+  GraphsMap[Name][Node] extends { input: infer I } ? I : never,
+  { runId: string },
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (_services: any, data: any, { rpc }: any) => {
+      return rpc.startWorkflow(graphName, data, { startNode })
+    }) as any
+  } as PikkuFunctionConfig<
+    GraphsMap[Name][Node] extends { input: infer I } ? I : never,
+    { runId: string },
+    'session' | 'rpc'
+  >
 }
 `
 }

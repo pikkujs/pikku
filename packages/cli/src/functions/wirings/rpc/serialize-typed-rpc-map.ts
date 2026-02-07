@@ -74,7 +74,7 @@ type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote>
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow>
   `
 }
 

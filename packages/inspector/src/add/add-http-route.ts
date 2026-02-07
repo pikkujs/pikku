@@ -197,8 +197,7 @@ export function registerHTTPRoute({
     state.rootDir
   ).pikkuFuncName
 
-  // Ensure function metadata exists
-  ensureFunctionMetadata(state, funcName, fullRoute)
+  ensureFunctionMetadata(state, funcName, fullRoute, funcInitializer, checker)
 
   // Lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]

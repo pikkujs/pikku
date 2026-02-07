@@ -1,5 +1,8 @@
-import { wireWorkflowGraph } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
-import { wireHTTP, graph } from '../../.pikku/pikku-types.gen.js'
+import {
+  wireWorkflowGraph,
+  graphStart,
+} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 
 export const todoReviewWorkflow = wireWorkflowGraph({
   description: 'Review overdue todos and send summary notification',
@@ -27,5 +30,5 @@ wireHTTP({
   auth: false,
   method: 'post',
   route: '/workflow/review',
-  func: graph('todoReviewWorkflow', 'fetchOverdue'),
+  func: graphStart('todoReviewWorkflow', 'fetchOverdue'),
 })

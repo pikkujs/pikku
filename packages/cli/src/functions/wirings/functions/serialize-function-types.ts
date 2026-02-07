@@ -13,8 +13,7 @@ export const serializeFunctionTypes = (
   configTypeImport: string,
   packageName?: string,
   workflowTypesImport?: string,
-  forgeCategories?: string[],
-  workflowMapImport?: string
+  forgeCategories?: string[]
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
   const forgeCategoryType = forgeCategories?.length
@@ -23,9 +22,6 @@ export const serializeFunctionTypes = (
   const workflowImport =
     workflowTypesImport ||
     `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'`
-  const workflowMapImportLine =
-    workflowMapImport ||
-    `import type { WorkflowMap, GraphsMap } from '../workflow/pikku-workflow-map.gen.js'`
 
   return `/**
  * Core function, middleware, and permission types for all wirings
@@ -43,7 +39,6 @@ ${configTypeImport}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 ${workflowImport}
-${workflowMapImportLine}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServices = ${singletonServicesTypeName}` : `export type { ${singletonServicesTypeName} as SingletonServices }`}
 ${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
@@ -488,80 +483,6 @@ export const external = <Name extends keyof FlattenedRPCMap>(
   } as PikkuFunctionConfig<
     FlattenedRPCMap[Name]['input'],
     FlattenedRPCMap[Name]['output'],
-    'session' | 'rpc'
-  >
-}
-
-/**
- * Creates a function config that starts a DSL workflow by name.
- * Use this to wire a workflow to any wiring type (HTTP, queue, etc.)
- *
- * @template Name - The workflow name (must be a key in WorkflowMap)
- * @param workflowName - The name of the workflow to start
- * @returns A Pikku function config that starts the workflow
- *
- * @example
- * \`\`\`typescript
- * wireHTTP({
- *   auth: false,
- *   method: 'post',
- *   route: '/workflow/create-todo',
- *   func: workflow('createAndNotifyWorkflow'),
- * })
- * \`\`\`
- */
-export const workflow = <Name extends keyof WorkflowMap>(
-  workflowName: Name
-): PikkuFunctionConfig<
-  WorkflowMap[Name]['input'],
-  { runId: string },
-  'session' | 'rpc'
-> => {
-  return {
-    func: (async (_services: any, data: any, { rpc }: any) => {
-      return rpc.startWorkflow(workflowName, data)
-    }) as any
-  } as PikkuFunctionConfig<
-    WorkflowMap[Name]['input'],
-    { runId: string },
-    'session' | 'rpc'
-  >
-}
-
-/**
- * Creates a function config that starts a graph workflow by name with a specific start node.
- * Use this to wire a graph workflow to any wiring type (HTTP, queue, etc.)
- *
- * @template Name - The graph name (must be a key in GraphsMap)
- * @template Node - The start node ID (must be a key in GraphsMap[Name])
- * @param graphName - The name of the graph workflow to start
- * @param startNode - The node ID to start execution from
- * @returns A Pikku function config that starts the graph workflow
- *
- * @example
- * \`\`\`typescript
- * wireHTTP({
- *   method: 'post',
- *   route: '/workflow/review',
- *   func: graph('todoReviewWorkflow', 'fetchOverdue'),
- * })
- * \`\`\`
- */
-export const graph = <Name extends keyof GraphsMap, Node extends string & keyof GraphsMap[Name]>(
-  graphName: Name,
-  startNode: Node
-): PikkuFunctionConfig<
-  GraphsMap[Name][Node] extends { input: infer I } ? I : never,
-  { runId: string },
-  'session' | 'rpc'
-> => {
-  return {
-    func: (async (_services: any, data: any, { rpc }: any) => {
-      return rpc.startWorkflow(graphName, data, { startNode })
-    }) as any
-  } as PikkuFunctionConfig<
-    GraphsMap[Name][Node] extends { input: infer I } ? I : never,
-    { runId: string },
     'session' | 'rpc'
   >
 }
