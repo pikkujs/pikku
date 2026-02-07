@@ -72,6 +72,12 @@ export class WorkflowStepNameNotString extends Error {
   }
 }
 
+const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
+  'completed',
+  'failed',
+  'cancelled',
+])
+
 /**
  * Abstract workflow state service
  * Implementations provide pluggable storage backends (SQLite, PostgreSQL, etc.)
@@ -431,6 +437,34 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       if (options?.inline) {
         this.inlineRuns.delete(runId)
       }
+    }
+  }
+
+  public async runToCompletion<I>(
+    name: string,
+    input: I,
+    rpcService: any,
+    options?: { pollIntervalMs?: number }
+  ): Promise<any> {
+    const pollInterval = options?.pollIntervalMs ?? 1000
+    const { runId } = await this.startWorkflow(name, input, rpcService, {
+      inline: true,
+    })
+    while (true) {
+      const run = await this.getRun(runId)
+      if (!run) {
+        throw new WorkflowRunNotFound(runId)
+      }
+      if (WORKFLOW_END_STATES.has(run.status)) {
+        if (run.status === 'failed') {
+          throw new Error(run.error?.message || 'Workflow failed')
+        }
+        if (run.status === 'cancelled') {
+          throw new Error('Workflow was cancelled')
+        }
+        return run.output
+      }
+      await new Promise((resolve) => setTimeout(resolve, pollInterval))
     }
   }
 

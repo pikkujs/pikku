@@ -1,5 +1,8 @@
-import { wireHTTP, graph } from '#pikku'
-import { wireWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { wireHTTP } from '#pikku'
+import {
+  wireWorkflowGraph,
+  graphStart,
+} from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { triggerOnboardingWorkflow } from './workflow.functions.js'
 
 wireHTTP({
@@ -35,5 +38,5 @@ wireHTTP({
   auth: false,
   method: 'post',
   route: '/workflow/graph/welcome',
-  func: graph('graphUserWelcome', 'createProfile'),
+  func: graphStart('graphUserWelcome', 'createProfile'),
 })
