@@ -55,10 +55,12 @@ ${mergedRPCMap}
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
   name: Name,
-  data: FlattenedRPCMap[Name]['input'],
-  options?: {
-    location?: 'local' | 'remote' | 'auto'
-  }
+  data: FlattenedRPCMap[Name]['input']
+) => Promise<FlattenedRPCMap[Name]['output']>
+
+export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
+  name: Name,
+  data: FlattenedRPCMap[Name]['input']
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
 // Import WorkflowMap for workflow typing
@@ -72,7 +74,7 @@ type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke>
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow>
   `
 }
 

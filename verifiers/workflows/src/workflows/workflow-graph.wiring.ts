@@ -1,35 +1,11 @@
 import { wireWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
-import { wireHTTP } from '#pikku'
 
-/**
- * Example workflow graph: User Onboarding
- * Demonstrates sequential flow with input refs
- * Name is inferred from the exported variable name
- */
 export const graphOnboarding = wireWorkflowGraph({
-  enabled: true,
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
   nodes: {
     entry: 'userCreate',
     sendWelcome: 'emailSend',
-  },
-  wires: {
-    http: [
-      {
-        route: '/workflow/graph-onboarding',
-        method: 'post',
-        startNode: 'entry',
-      },
-    ],
-    channel: [
-      {
-        name: 'workflow-graph-onboarding',
-        onConnect: 'entry',
-        onDisconnect: 'entry',
-        onMessage: 'sendWelcome',
-      },
-    ],
   },
   config: {
     entry: {
@@ -44,23 +20,3 @@ export const graphOnboarding = wireWorkflowGraph({
     },
   },
 })
-
-/**
- * HTTP endpoint to trigger the graph workflow
- * workflow: true means it directly triggers the workflow without a separate function
- */
-wireHTTP({
-  method: 'post',
-  route: '/workflow/graph-onboarding',
-  workflow: true,
-})
-
-// TODO: Enable when channel workflow triggers are implemented
-// /**
-//  * Channel endpoint to trigger the graph workflow
-//  * workflow: true means it directly triggers the workflow without a separate function
-//  */
-// wireChannel({
-//   name: 'workflow-graph-onboarding',
-//   workflow: true,
-// })

@@ -116,6 +116,7 @@ export interface SerializableInspectorState {
   }
   triggers: {
     meta: InspectorState['triggers']['meta']
+    sourceMeta: InspectorState['triggers']['sourceMeta']
     files: string[]
   }
   scheduledTasks: {
@@ -131,6 +132,7 @@ export interface SerializableInspectorState {
     files: Array<[string, { path: string; exportedName: string }]>
     graphMeta: InspectorState['workflows']['graphMeta']
     graphFiles: Array<[string, { path: string; exportedName: string }]>
+    invokedWorkflows: string[]
   }
   rpc: {
     internalMeta: InspectorState['rpc']['internalMeta']
@@ -150,12 +152,16 @@ export interface SerializableInspectorState {
     meta: InspectorState['cli']['meta']
     files: string[]
   }
-  forgeNodes: {
-    meta: InspectorState['forgeNodes']['meta']
+  nodes: {
+    meta: InspectorState['nodes']['meta']
     files: string[]
   }
-  credentials: {
-    definitions: InspectorState['credentials']['definitions']
+  secrets: {
+    definitions: InspectorState['secrets']['definitions']
+    files: string[]
+  }
+  variables: {
+    definitions: InspectorState['variables']['definitions']
     files: string[]
   }
   middleware: {
@@ -194,16 +200,6 @@ export interface SerializableInspectorState {
     allSingletonServices: string[]
     allWireServices: string[]
   }
-  serviceMetadata: Array<{
-    name: string
-    summary: string
-    description: string
-    package: string
-    path: string
-    version: string
-    interface: string
-    expandedProperties: Record<string, string>
-  }>
 }
 
 /**
@@ -275,6 +271,7 @@ export function serializeInspectorState(
     },
     triggers: {
       meta: state.triggers.meta,
+      sourceMeta: state.triggers.sourceMeta,
       files: Array.from(state.triggers.files),
     },
     scheduledTasks: {
@@ -290,6 +287,7 @@ export function serializeInspectorState(
       files: Array.from(state.workflows.files.entries()),
       graphMeta: state.workflows.graphMeta,
       graphFiles: Array.from(state.workflows.graphFiles.entries()),
+      invokedWorkflows: Array.from(state.workflows.invokedWorkflows),
     },
     rpc: {
       internalMeta: state.rpc.internalMeta,
@@ -309,13 +307,17 @@ export function serializeInspectorState(
       meta: state.cli.meta,
       files: Array.from(state.cli.files),
     },
-    forgeNodes: {
-      meta: state.forgeNodes.meta,
-      files: Array.from(state.forgeNodes.files),
+    nodes: {
+      meta: state.nodes.meta,
+      files: Array.from(state.nodes.files),
     },
-    credentials: {
-      definitions: state.credentials.definitions,
-      files: Array.from(state.credentials.files),
+    secrets: {
+      definitions: state.secrets.definitions,
+      files: Array.from(state.secrets.files),
+    },
+    variables: {
+      definitions: state.variables.definitions,
+      files: Array.from(state.variables.files),
     },
     middleware: {
       meta: state.middleware.meta,
@@ -333,7 +335,6 @@ export function serializeInspectorState(
       allSingletonServices: state.serviceAggregation.allSingletonServices,
       allWireServices: state.serviceAggregation.allWireServices,
     },
-    serviceMetadata: state.serviceMetadata,
   }
 }
 
@@ -406,6 +407,7 @@ export function deserializeInspectorState(
     },
     triggers: {
       meta: data.triggers?.meta ?? {},
+      sourceMeta: data.triggers?.sourceMeta ?? {},
       files: new Set(data.triggers?.files ?? []),
     },
     scheduledTasks: {
@@ -421,6 +423,7 @@ export function deserializeInspectorState(
       files: new Map(data.workflows.files),
       graphMeta: data.workflows.graphMeta || {},
       graphFiles: new Map(data.workflows.graphFiles || []),
+      invokedWorkflows: new Set(data.workflows.invokedWorkflows || []),
     },
     rpc: {
       internalMeta: data.rpc.internalMeta,
@@ -440,13 +443,17 @@ export function deserializeInspectorState(
       meta: data.cli.meta,
       files: new Set(data.cli.files),
     },
-    forgeNodes: {
-      meta: data.forgeNodes?.meta || {},
-      files: new Set(data.forgeNodes?.files || []),
+    nodes: {
+      meta: data.nodes?.meta || {},
+      files: new Set(data.nodes?.files || []),
     },
-    credentials: {
-      definitions: data.credentials?.definitions || [],
-      files: new Set(data.credentials?.files || []),
+    secrets: {
+      definitions: data.secrets?.definitions || [],
+      files: new Set(data.secrets?.files || []),
+    },
+    variables: {
+      definitions: data.variables?.definitions || [],
+      files: new Set(data.variables?.files || []),
     },
     middleware: {
       meta: data.middleware.meta,
@@ -464,6 +471,5 @@ export function deserializeInspectorState(
       allSingletonServices: data.serviceAggregation.allSingletonServices,
       allWireServices: data.serviceAggregation.allWireServices,
     },
-    serviceMetadata: data.serviceMetadata || [],
   }
 }

@@ -2,13 +2,14 @@ import * as ts from 'typescript'
 import { ChannelsMeta } from '@pikku/core/channel'
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import { TriggerMeta } from '@pikku/core/trigger'
+import { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
 import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
-import { ForgeNodesMeta } from '@pikku/core/forge-node'
-import { CredentialDefinitions } from '@pikku/core/credential'
+import { NodesMeta } from '@pikku/core/node'
+import { SecretDefinitions } from '@pikku/core/secret'
+import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
@@ -135,7 +136,8 @@ export type InspectorFilters = {
 
 export type ExternalPackageConfig = {
   package: string
-  credentialOverrides?: Record<string, string>
+  rpcEndpoint?: string
+  secretOverrides?: Record<string, string>
 }
 
 export type InspectorOptions = Partial<{
@@ -231,6 +233,7 @@ export interface InspectorState {
   channels: InspectorChannelState
   triggers: {
     meta: TriggerMeta
+    sourceMeta: TriggerSourceMeta
     files: Set<string>
   }
   scheduledTasks: {
@@ -246,6 +249,7 @@ export interface InspectorState {
     files: Map<string, { path: string; exportedName: string }>
     graphMeta: SerializedWorkflowGraphs
     graphFiles: Map<string, { path: string; exportedName: string }>
+    invokedWorkflows: Set<string>
   }
   rpc: {
     internalMeta: Record<string, string>
@@ -265,13 +269,16 @@ export interface InspectorState {
     meta: CLIMeta
     files: Set<string>
   }
-  forgeNodes: {
-    meta: ForgeNodesMeta
+  nodes: {
+    meta: NodesMeta
     files: Set<string>
   }
-  credentials: {
-    /** All credential definitions (CLI validates duplicates and builds meta) */
-    definitions: CredentialDefinitions
+  secrets: {
+    definitions: SecretDefinitions
+    files: Set<string>
+  }
+  variables: {
+    definitions: VariableDefinitions
     files: Set<string>
   }
   middleware: InspectorMiddlewareState
@@ -284,14 +291,4 @@ export interface InspectorState {
     allSingletonServices: string[] // All services available in SingletonServices type
     allWireServices: string[] // All services available in Services type (excluding SingletonServices)
   }
-  serviceMetadata: Array<{
-    name: string
-    summary: string
-    description: string
-    package: string
-    path: string
-    version: string
-    interface: string
-    expandedProperties: Record<string, string>
-  }>
 }

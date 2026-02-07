@@ -276,6 +276,41 @@ export function extractFunctionName(
     explicitName: null,
   }
 
+  const workflowHelpers = new Set([
+    'workflow',
+    'workflowStart',
+    'workflowStatus',
+    'graphStart',
+  ])
+
+  if (
+    ts.isCallExpression(callExpr) &&
+    ts.isIdentifier(callExpr.expression) &&
+    workflowHelpers.has(callExpr.expression.text)
+  ) {
+    const helperName = callExpr.expression.text
+    const [firstArg, secondArg] = callExpr.arguments
+    if (firstArg && ts.isStringLiteral(firstArg)) {
+      const workflowName = firstArg.text
+      let funcName: string
+      if (helperName === 'workflow') {
+        funcName = workflowName
+      } else if (
+        helperName === 'graphStart' &&
+        secondArg &&
+        ts.isStringLiteral(secondArg)
+      ) {
+        funcName = `${helperName}_${workflowName}_${secondArg.text}`
+      } else {
+        funcName = `${helperName}_${workflowName}`
+      }
+      result.pikkuFuncName = funcName
+      result.name = funcName
+      result.explicitName = funcName
+      return result
+    }
+  }
+
   // Special case for wireHTTP: if this is an identifier within an object literal,
   // it might be coming from the HTTP route handling flow
   if (

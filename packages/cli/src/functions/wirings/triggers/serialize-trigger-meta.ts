@@ -1,4 +1,4 @@
-import { TriggerMeta } from '@pikku/core/trigger'
+import { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
 
 export const serializeTriggerMeta = (triggerMeta: TriggerMeta) => {
   return triggerMeta
@@ -29,5 +29,31 @@ export const serializeTriggerMetaTS = (
       `export type TriggerNames = '${triggerMetaValues.map((t) => t.name).join("' | '")}'`
     )
   }
+  return serializedOutput.join('\n')
+}
+
+export const serializeTriggerSourceMeta = (sourceMeta: TriggerSourceMeta) => {
+  return sourceMeta
+}
+
+export const serializeTriggerSourceMetaTS = (
+  sourceMeta: TriggerSourceMeta,
+  jsonImportPath: string,
+  supportsImportAttributes: boolean
+) => {
+  const importStatement = supportsImportAttributes
+    ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+    : `import metaData from '${jsonImportPath}'`
+
+  const serializedOutput: string[] = []
+  serializedOutput.push("import { pikkuState } from '@pikku/core'")
+  serializedOutput.push(
+    "import { TriggerSourceMeta } from '@pikku/core/trigger'"
+  )
+  serializedOutput.push(importStatement)
+  serializedOutput.push('')
+  serializedOutput.push(
+    "pikkuState(null, 'trigger', 'sourceMeta', metaData as TriggerSourceMeta)"
+  )
   return serializedOutput.join('\n')
 }

@@ -53,9 +53,9 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
       summary.set('workflows', Object.keys(state.workflows.meta).length)
     }
 
-    if (state.forgeNodes?.meta) {
-      const forgeNodesCount = Object.keys(state.forgeNodes.meta).length
-      if (forgeNodesCount > 0) summary.set('forgeNodes', forgeNodesCount)
+    if (state.nodes?.meta) {
+      const nodesCount = Object.keys(state.nodes.meta).length
+      if (nodesCount > 0) summary.set('nodes', nodesCount)
     }
 
     if (state.workflows?.graphMeta) {

@@ -43,6 +43,8 @@ export interface PikkuCLICoreOutputFiles {
   triggersWiringFile: string
   triggersWiringMetaFile: string
   triggersWiringMetaJsonFile: string
+  triggerSourcesMetaFile: string
+  triggerSourcesMetaJsonFile: string
 
   // Schedulers
   schedulersWiringFile: string
@@ -95,14 +97,23 @@ export interface PikkuCLICoreOutputFiles {
   // Package service factories (for external packages)
   packageFile: string
 
-  // Forge
-  forgeTypesFile: string
+  // External package types (pikkuExternalConfig, pikkuExternalServices, etc.)
+  externalTypesFile: string
+
+  // Node
+  nodeTypesFile: string
 
   // Credentials
-  credentialTypesFile: string
+  secretTypesFile: string
 
   // Secrets (typed wrapper for SecretService)
   secretsFile: string
+
+  // Variables
+  variableTypesFile: string
+
+  // Variables (typed wrapper for VariablesService)
+  variablesFile: string
 }
 
 export type PikkuCLIInput = {
@@ -116,7 +127,11 @@ export type PikkuCLIInput = {
   packageMappings: Record<string, string>
   externalPackages?: Record<
     string,
-    { package: string; credentialOverrides?: Record<string, string> }
+    {
+      package: string
+      rpcEndpoint?: string
+      secretOverrides?: Record<string, string>
+    }
   >
   externalPackage?: boolean
   externalPackageName?: string
@@ -194,17 +209,16 @@ export type PikkuCLIInput = {
   stateOutput?: string
   stateInput?: string
 
-  forge?: {
-    verboseMeta?: boolean
-    node?: {
-      categories?: string[]
-      icon?: string
-      displayName?: string
-      description?: string
-    }
+  verboseMeta?: boolean
+
+  node?: {
+    categories?: string[]
+    icon?: string
+    displayName?: string
+    description?: string
   }
 
-  forgeNodesMetaJsonFile?: string
+  nodesMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
@@ -220,7 +234,11 @@ export type PikkuCLIConfig = {
   packageMappings: Record<string, string>
   externalPackages?: Record<
     string,
-    { package: string; credentialOverrides?: Record<string, string> }
+    {
+      package: string
+      rpcEndpoint?: string
+      secretOverrides?: Record<string, string>
+    }
   >
   externalPackage?: boolean
   externalPackageName?: string
@@ -306,17 +324,16 @@ export type PikkuCLIConfig = {
   stateOutput?: string
   stateInput?: string
 
-  forge?: {
-    verboseMeta?: boolean
-    node?: {
-      categories?: string[]
-      icon?: string
-      displayName?: string
-      description?: string
-    }
+  verboseMeta?: boolean
+
+  node?: {
+    categories?: string[]
+    icon?: string
+    displayName?: string
+    description?: string
   }
 
-  forgeNodesMetaJsonFile?: string
+  nodesMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

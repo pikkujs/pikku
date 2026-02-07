@@ -3,7 +3,7 @@
  * This test validates both compile-time types and runtime behavior.
  *
  * This validates the same pattern used in templates/function-external:
- * - wireCredential with Zod schema for type-safe credentials
+ * - wireSecret with Zod schema for type-safe secrets
  * - wireOAuth2Credential for OAuth2 flows
  * - TypedSecretService provides compile-time validated access
  */
@@ -44,6 +44,11 @@ void ({ tokenType: 'Bearer' } satisfies OAuthTokenType)
 class EnvVariablesService implements VariablesService {
   get(key: string): string | undefined {
     return process.env[key]
+  }
+  getJSON<T = unknown>(name: string): T | undefined {
+    const value = process.env[name]
+    if (value === undefined) return undefined
+    return JSON.parse(value)
   }
   getAll(): Record<string, string> {
     return process.env as Record<string, string>

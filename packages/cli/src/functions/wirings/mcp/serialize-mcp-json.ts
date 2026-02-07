@@ -128,15 +128,14 @@ export const serializeMCPJson = async (
     }
 
     const inputType = functionMeta.inputs?.[0]
-    // TODO: this needs to be a json schema type, not any
-    const inputSchema: any = await loadSchema(inputType)
+    const inputSchema = await loadSchema(inputType)
 
     // Generate arguments from input schema
     const argumentsArray: any[] = []
     if (
       inputSchema &&
       typeof inputSchema === 'object' &&
-      inputSchema.properties
+      !(inputSchema instanceof Array)
     ) {
       const properties = inputSchema.properties as Record<string, any>
       const required = (inputSchema.required as string[]) || []

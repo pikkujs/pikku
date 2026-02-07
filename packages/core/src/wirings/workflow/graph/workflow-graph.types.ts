@@ -67,11 +67,6 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
   onError?: NodeIds | NodeIds[]
 }
 
-// Import unified wire types from workflow module
-import type { WorkflowWires } from '../workflow.types.js'
-
-export type { WorkflowWires }
-
 /**
  * Workflow graph definition (internal use)
  */
@@ -83,8 +78,6 @@ export interface WorkflowGraphDefinition<
 > {
   /** Unique workflow name */
   name: string
-  /** Wire configuration */
-  wires: WorkflowWires
   /** Graph nodes */
   graph: Nodes
 }

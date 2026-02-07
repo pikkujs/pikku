@@ -39,7 +39,7 @@ export class PikkuExpressServer {
   constructor(
     private readonly config: ExpressCoreConfig,
     private readonly singletonServices: CoreSingletonServices,
-    private readonly createWireServices: CreateWireServices<any, any, any>
+    private readonly createWireServices?: CreateWireServices<any, any, any>
   ) {
     this.app.get(
       this.config.healthCheckPath || '/health-check',

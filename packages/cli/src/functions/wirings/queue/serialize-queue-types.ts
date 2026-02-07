@@ -24,7 +24,7 @@ type QueueWiring<In, Out> = CoreQueueWorker<PikkuFunctionConfig<In, Out, 'sessio
  * @param queueWorker - Queue worker definition with job handler
  */
 export const wireQueueWorker = (queueWorker: QueueWiring<any, any>) => {
-  wireQueueWorkerCore(queueWorker as any) // TODO
+  wireQueueWorkerCore(queueWorker as any)
 }
 `
 }

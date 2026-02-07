@@ -4,12 +4,10 @@
   "srcDirectories": ["src", "types"],
   "outDir": "./.pikku",
   "externalPackage": true,
-  "forge": {
-    "node": {
-      "displayName": "External Functions",
-      "description": "Example external package functions for Forge",
-      "categories": ["Communication", "Utility"],
-      "icon": "./src/icons/package.svg"
-    }
+  "node": {
+    "displayName": "External Functions",
+    "description": "Example external package functions",
+    "categories": ["Communication", "Utility"],
+    "icon": "./src/icons/package.svg"
   }
 }

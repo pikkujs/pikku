@@ -40,12 +40,10 @@ export const addMCPPrompt: AddWiring = (
     const obj = firstArg
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
-    const { tags, summary, description, errors } = getCommonWireMetaData(
-      obj,
-      'MCP prompt',
-      nameValue,
-      logger
-    )
+    const { disabled, tags, summary, description, errors } =
+      getCommonWireMetaData(obj, 'MCP prompt', nameValue, logger)
+
+    if (disabled) return
 
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,

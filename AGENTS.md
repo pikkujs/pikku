@@ -210,3 +210,7 @@ Only add comments when absolutely necessary to explain:
 - Workarounds for known issues or limitations
 
 Avoid comments that simply restate what the code does. Instead, focus on making the code itself more readable.
+
+### Environment Variables
+
+**DO NOT use `process.env` inside pikku functions.** Use the `variables` service instead (`services.variables.get('VAR_NAME')`). `process.env` access belongs in server bootstrap code (e.g. `start.ts`, `server.ts`), not in business logic functions.

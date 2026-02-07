@@ -216,7 +216,15 @@ export async function generateZodSchemas(
         continue
       }
 
-      const schema = z.toJSONSchema(zodSchema) as any
+      const schema = z.toJSONSchema(zodSchema, {
+        unrepresentable: 'any',
+        override: ({ zodSchema, jsonSchema }) => {
+          if ((zodSchema as any)._zod?.def?.type === 'date') {
+            ;(jsonSchema as any).type = 'string'
+            ;(jsonSchema as any).format = 'date-time'
+          }
+        },
+      }) as any
 
       // Remove fields with defaults from the required array
       // Fields with defaults are semantically optional in input validation

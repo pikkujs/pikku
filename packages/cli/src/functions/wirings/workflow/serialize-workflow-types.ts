@@ -5,20 +5,22 @@
  */
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
-  rpcMapImportPath: string
+  rpcMapImportPath: string,
+  workflowMapImportPath: string
 ) => {
   return `/**
  * Workflow type definitions and helpers
  * Used for authoring both DSL and graph-based workflows
  */
 
-import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException, WorkflowRunNotFoundError } from '@pikku/core/workflow'
 
 // Re-export WorkflowCancelledException for use in workflow functions
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
-import type { GraphNodeConfig, HTTPMethod } from '@pikku/core'
+import type { WorkflowMap, GraphsMap } from '${workflowMapImportPath}'
+import type { GraphNodeConfig } from '@pikku/core'
 import { createGraph, wireWorkflow as coreWireWorkflow } from '@pikku/core'
 
 // ============================================================================
@@ -53,7 +55,7 @@ export type PikkuFunctionWorkflow<
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * Creates a DSL-compatible workflow function (serializable, shows in Forge UI)
+ * Creates a DSL-compatible workflow function (serializable, shows in UI)
  */
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:
@@ -64,7 +66,7 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 }
 
 /**
- * Creates a complex workflow function (arbitrary code, hidden from Forge UI)
+ * Creates a complex workflow function (arbitrary code, hidden from UI)
  */
 export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
   func:
@@ -83,71 +85,12 @@ export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
  */
 const graphBuilder = createGraph<FlattenedRPCMap>()
 
-/** HTTP wire configuration for graph workflows */
-interface GraphHttpWire<NodeIds extends string> {
-  route: string
-  method: HTTPMethod
-  startNode: NodeIds
-}
-
-/** Channel wire configuration for graph workflows */
-interface GraphChannelWire<NodeIds extends string> {
-  name: string
-  onConnect?: NodeIds
-  onDisconnect?: NodeIds
-  onMessage?: NodeIds
-}
-
-/** Queue wire configuration for graph workflows */
-interface GraphQueueWire<NodeIds extends string> {
-  name: string
-  startNode: NodeIds
-}
-
-/** CLI wire configuration for graph workflows */
-interface GraphCliWire<NodeIds extends string> {
-  command: string
-  startNode: NodeIds
-}
-
-/** MCP wire configurations for graph workflows */
-interface GraphMcpWires<NodeIds extends string> {
-  tool?: Array<{ name: string; startNode: NodeIds }>
-  prompt?: Array<{ name: string; startNode: NodeIds }>
-  resource?: Array<{ uri: string; startNode: NodeIds }>
-}
-
-/** Schedule wire configuration for graph workflows */
-interface GraphScheduleWire<NodeIds extends string> {
-  cron?: string
-  interval?: string
-  startNode: NodeIds
-}
-
-/** Trigger wire configuration for graph workflows */
-interface GraphTriggerWire<NodeIds extends string> {
-  name: string  // RPC name of the trigger function
-  startNode: NodeIds
-}
-
-/** All wire configurations for graph workflows */
-interface GraphWiresConfig<NodeIds extends string> {
-  http?: Array<GraphHttpWire<NodeIds>>
-  channel?: Array<GraphChannelWire<NodeIds>>
-  queue?: Array<GraphQueueWire<NodeIds>>
-  cli?: Array<GraphCliWire<NodeIds>>
-  mcp?: GraphMcpWires<NodeIds>
-  schedule?: Array<GraphScheduleWire<NodeIds>>
-  trigger?: Array<GraphTriggerWire<NodeIds>>
-}
-
 /** Configuration for graph-based workflow */
 export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, keyof FlattenedRPCMap & string>,
   T
 > {
-  /** Whether this workflow wiring is enabled (default: true) */
-  enabled?: boolean
+  disabled?: true
   /** Workflow name (optional - defaults to exported variable name) */
   name?: string
   /** Optional description */
@@ -156,19 +99,16 @@ export interface PikkuWorkflowGraphConfig<
   tags?: string[]
   /** Node to RPC function mapping */
   nodes: FuncMap
-  /** Wire configurations - how this workflow can be triggered */
-  wires?: GraphWiresConfig<Extract<keyof FuncMap, string>>
   /** Node configurations (next, input, onError) */
   config?: T
 }
 
 /** Result of pikkuWorkflowGraph - includes metadata for wiring */
-export interface PikkuWorkflowGraphResult<T, NodeIds extends string = string> {
+export interface PikkuWorkflowGraphResult<T> {
   __type: 'pikkuWorkflowGraph'
   name?: string
   description?: string
   tags?: string[]
-  wires?: GraphWiresConfig<NodeIds>
   graph: T
 }
 
@@ -196,7 +136,7 @@ export function template(templateStr: string, refs: TypedRef<unknown>[]): Templa
   const expressions: Array<{ $ref: string; path?: string }> = []
 
   // Parse template string: "Hello $0" -> parts: ["Hello ", ""], use refs[0] for expression
-  const regex = /\$(\d+)/g
+  const regex = /\\$(\\d+)/g
   let lastIndex = 0
   let match
 
@@ -279,14 +219,7 @@ type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; th
 
 /** Workflow definition with DSL function */
 interface WorkflowDefinitionFunc {
-  /** Whether this workflow wiring is enabled (default: true) */
-  enabled?: boolean
-  /** Wire configurations for the workflow */
-  wires: {
-    http?: { route: string; method: HTTPMethod }
-    channel?: string
-    queue?: string
-  }
+  disabled?: true
   /** DSL workflow function */
   func: PikkuFunctionConfig<any, any, 'workflow', PikkuFunctionWorkflow<any, any>>
 }
@@ -299,19 +232,105 @@ export function wireWorkflowGraph<
   const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
 >(
   config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
-): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> {
-  const result: PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>, Extract<keyof FuncMap, string>> = {
+): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>> {
+  const result: PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>> = {
     __type: 'pikkuWorkflowGraph',
     name: config.name,
     description: config.description,
     tags: config.tags,
-    wires: config.wires,
     graph: graphBuilder(config.nodes, config.config as any),
   }
-  if (config.enabled !== false) {
+  if (!config.disabled) {
     coreWireWorkflow({ graph: result } as any)
   }
   return result
+}
+
+// ============================================================================
+// Workflow & Graph HTTP helpers
+// ============================================================================
+
+export const workflow = <Name extends keyof WorkflowMap>(
+  workflowName: Name,
+  options?: { pollIntervalMs?: number }
+): PikkuFunctionConfig<
+  WorkflowMap[Name]['input'],
+  WorkflowMap[Name]['output'],
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (services: any, data: any, { rpc }: any) => {
+      return services.workflowService.runToCompletion(workflowName, data, rpc, options)
+    }) as any
+  } as PikkuFunctionConfig<
+    WorkflowMap[Name]['input'],
+    WorkflowMap[Name]['output'],
+    'session' | 'rpc'
+  >
+}
+
+export const workflowStart = <Name extends keyof WorkflowMap>(
+  workflowName: Name
+): PikkuFunctionConfig<
+  WorkflowMap[Name]['input'],
+  { runId: string },
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (_services: any, data: any, { rpc }: any) => {
+      return rpc.startWorkflow(workflowName, data)
+    }) as any
+  } as PikkuFunctionConfig<
+    WorkflowMap[Name]['input'],
+    { runId: string },
+    'session' | 'rpc'
+  >
+}
+
+export const workflowStatus = <Name extends keyof WorkflowMap>(
+  _workflowName: Name
+): PikkuFunctionConfig<
+  { runId: string },
+  { id: string; status: 'running' | 'completed' | 'failed' | 'cancelled'; output?: WorkflowMap[Name]['output']; error?: { message?: string } },
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (services: any, data: any) => {
+      const run = await services.workflowService.getRun(data.runId)
+      if (!run) {
+        throw new WorkflowRunNotFoundError(data.runId)
+      }
+      return {
+        id: run.id,
+        status: run.status,
+        output: run.output,
+        error: run.error ? { message: run.error.message } : undefined,
+      }
+    }) as any
+  } as PikkuFunctionConfig<
+    { runId: string },
+    { id: string; status: 'running' | 'completed' | 'failed' | 'cancelled'; output?: WorkflowMap[Name]['output']; error?: { message?: string } },
+    'session' | 'rpc'
+  >
+}
+
+export const graphStart = <Name extends keyof GraphsMap, Node extends string & keyof GraphsMap[Name]>(
+  graphName: Name,
+  startNode: Node
+): PikkuFunctionConfig<
+  GraphsMap[Name][Node] extends { input: infer I } ? I : never,
+  { runId: string },
+  'session' | 'rpc'
+> => {
+  return {
+    func: (async (_services: any, data: any, { rpc }: any) => {
+      return rpc.startWorkflow(graphName, data, { startNode })
+    }) as any
+  } as PikkuFunctionConfig<
+    GraphsMap[Name][Node] extends { input: infer I } ? I : never,
+    { runId: string },
+    'session' | 'rpc'
+  >
 }
 `
 }

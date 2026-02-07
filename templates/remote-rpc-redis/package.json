@@ -1,0 +1,32 @@
+{
+  "name": "@pikku/templates-remote-rpc-redis",
+  "main": "src/start.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "start": "tsx src/start.ts",
+    "dev": "tsx watch src/start.ts | pino-pretty -i time,hostname,pid",
+    "test": "bash ../functions/run-tests.sh --url http://localhost:3001 --http",
+    "test:http-fetch": "tsx client/test-remote-rpc.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.11.2",
+    "@pikku/express": "^0.11.1",
+    "@pikku/jose": "^0.11.1",
+    "@pikku/redis": "^0.11.2",
+    "@pikku/schema-cfworker": "^0.11.0",
+    "ioredis": "^5.9.2",
+    "pino-pretty": "^13.1.3",
+    "tslib": "^2.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  },
+  "devDependencies": {
+    "@pikku/cli": "^0.11.3",
+    "@types/node": "^24"
+  }
+}

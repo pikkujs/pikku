@@ -50,7 +50,6 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuServices', null)
-    await rpc.invoke('pikkuServiceMetadata', null)
 
     const hasPackageFactories = await rpc.invoke('pikkuPackage', null)
     if (hasPackageFactories) {
@@ -69,9 +68,13 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuPublicRPC', null)
     await rpc.invoke('pikkuRPCClient', null)
 
-    await rpc.invoke('pikkuForgeTypes', null)
-    await rpc.invoke('pikkuCredentialTypes', null)
+    await rpc.invoke('pikkuNodeTypes', null)
+    await rpc.invoke('pikkuSecretDefinitionTypes', null)
     await rpc.invoke('pikkuSecrets', null)
+    await rpc.invoke('pikkuVariableDefinitionTypes', null)
+    await rpc.invoke('pikkuVariables', null)
+
+    await rpc.invoke('pikkuExternalTypes', null)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)
@@ -97,6 +100,7 @@ export const all = pikkuVoidFunc({
       if (triggers) {
         allImports.push(
           config.triggersWiringMetaFile,
+          config.triggerSourcesMetaFile,
           config.triggersWiringFile
         )
       }
@@ -151,7 +155,7 @@ export const all = pikkuVoidFunc({
       }
     }
 
-    await rpc.invoke('pikkuForgeNodes', null)
+    await rpc.invoke('pikkuNodesMeta', null)
 
     if (config.nextBackendFile || config.nextHTTPFile) {
       await rpc.invoke('pikkuNext', null)

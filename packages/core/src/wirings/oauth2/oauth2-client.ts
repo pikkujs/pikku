@@ -1,5 +1,5 @@
 import { OAuth2Token, OAuth2AppCredential } from './oauth2.types.js'
-import { OAuth2CredentialConfig } from '../credential/credential.types.js'
+import { OAuth2CredentialConfig } from '../secret/secret.types.js'
 import { SecretService } from '../../services/secret-service.js'
 
 /**

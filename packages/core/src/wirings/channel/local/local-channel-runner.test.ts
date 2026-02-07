@@ -160,6 +160,4 @@ test('runChannel should return a channel handler if channel matches and no auth 
 
   // Simulate opening the channel
   result.open()
-
-  // TODO: Test that the opened channel works
 })

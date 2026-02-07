@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
 
 /**
  * pikku oauth status <credential-name>
@@ -14,21 +14,19 @@ export const oauthStatus = pikkuSessionlessFunc<
   func: async ({ logger, getInspectorState, secrets }, { credentialName }) => {
     const inspectorState = await getInspectorState(false, false, false)
 
-    // Build credentials meta from definitions
-    const credentialsMeta = validateAndBuildCredentialsMeta(
-      inspectorState.credentials.definitions,
+    const secretsMeta = validateAndBuildSecretDefinitionsMeta(
+      inspectorState.secrets.definitions,
       inspectorState.schemaLookup
     )
 
-    // Find the OAuth2 credential
-    const credential = credentialsMeta[credentialName]
+    const credential = secretsMeta[credentialName]
     if (!credential) {
       logger.error(`Credential '${credentialName}' not found`)
-      logger.info('Available OAuth2 credentials:')
-      for (const name of Object.keys(credentialsMeta)) {
-        const cred = credentialsMeta[name]
+      logger.error('Available OAuth2 credentials:')
+      for (const name of Object.keys(secretsMeta)) {
+        const cred = secretsMeta[name]
         if (cred.oauth2) {
-          logger.info(`  - ${name}`)
+          logger.error(`  - ${name}`)
         }
       }
       process.exit(1)

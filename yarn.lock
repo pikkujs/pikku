@@ -3408,7 +3408,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin"
   dependencies:
-    fastify: "npm:^5.7.2"
+    fastify: "npm:^5.7.4"
     fastify-plugin: "npm:^5.1.0"
     typescript: "npm:^5.9.3"
   peerDependencies:
@@ -3424,7 +3424,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.11.2"
     "@pikku/fastify-plugin": "npm:^0.11.1"
-    fastify: "npm:^5.7.2"
+    fastify: "npm:^5.7.4"
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.11.1
@@ -3778,7 +3778,7 @@ __metadata:
     "@pikku/fastify-plugin": "npm:^0.11.1"
     "@pikku/schedule": "npm:^0.11.1"
     "@types/node": "npm:^24"
-    fastify: "npm:^5.7.2"
+    fastify: "npm:^5.7.4"
     fastify-plugin: "npm:^5.1.0"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
@@ -3793,7 +3793,7 @@ __metadata:
     "@pikku/core": "npm:^0.11.2"
     "@pikku/fastify": "npm:^0.11.1"
     "@types/node": "npm:^24"
-    fastify: "npm:^5.7.2"
+    fastify: "npm:^5.7.4"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -3879,6 +3879,44 @@ __metadata:
     "@pikku/core": "npm:^0.11.2"
     "@pikku/queue-pg-boss": "npm:^0.11.2"
     "@types/node": "npm:^24"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"
+  dependencies:
+    "@pikku/cli": "npm:^0.11.3"
+    "@pikku/core": "npm:^0.11.2"
+    "@pikku/express": "npm:^0.11.1"
+    "@pikku/jose": "npm:^0.11.1"
+    "@pikku/pg": "npm:^0.11.2"
+    "@pikku/schema-cfworker": "npm:^0.11.0"
+    "@types/node": "npm:^24"
+    pino-pretty: "npm:^13.1.3"
+    postgres: "npm:^3.4.7"
+    tslib: "npm:^2.8.1"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis"
+  dependencies:
+    "@pikku/cli": "npm:^0.11.3"
+    "@pikku/core": "npm:^0.11.2"
+    "@pikku/express": "npm:^0.11.1"
+    "@pikku/jose": "npm:^0.11.1"
+    "@pikku/redis": "npm:^0.11.2"
+    "@pikku/schema-cfworker": "npm:^0.11.0"
+    "@types/node": "npm:^24"
+    ioredis: "npm:^5.9.2"
+    pino-pretty: "npm:^13.1.3"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -4076,6 +4114,20 @@ __metadata:
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verify-variables@workspace:verifiers/variables":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verify-variables@workspace:verifiers/variables"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 
@@ -7366,9 +7418,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify@npm:^5.7.2":
-  version: 5.7.2
-  resolution: "fastify@npm:5.7.2"
+"fastify@npm:^5.7.4":
+  version: 5.7.4
+  resolution: "fastify@npm:5.7.4"
   dependencies:
     "@fastify/ajv-compiler": "npm:^4.0.5"
     "@fastify/error": "npm:^4.0.0"
@@ -7385,7 +7437,7 @@ __metadata:
     secure-json-parse: "npm:^4.0.0"
     semver: "npm:^7.6.0"
     toad-cache: "npm:^3.7.0"
-  checksum: 10/5bf5ac677c9a7dedab90eeeb5972aa2a8da6718346859b1519b177ea6f6f3a59bb757010d187c22768fa8b74cb6c47ab7438b812cf16f4d9b460f787149f1849
+  checksum: 10/037fb94fb40b85b9da430dd5314ab3326ee40b10419ca81d514a5e948b67547aacfa60131e330a8e28927b8b875c70c7a156954118a06c958e9c20b24ab00881
   languageName: node
   linkType: hard
 

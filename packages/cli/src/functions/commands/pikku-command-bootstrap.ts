@@ -6,11 +6,16 @@ export type BootstrapInput = {
   allImports: string[]
 }
 
+type ExternalPackageRuntime = {
+  package: string
+  rpcEndpoint?: string
+}
+
 export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   func: async ({ logger, config, getInspectorState }, { allImports }) => {
     const stateBeforeBootstrap = await getInspectorState()
     const externalPackageBootstraps: string[] = []
-    const usedExternalPackages: Record<string, string> = {}
+    const usedExternalPackages: Record<string, ExternalPackageRuntime> = {}
 
     if (
       config.externalPackages &&
@@ -22,7 +27,10 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
           const packageName = externalPkg.package
           const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
           externalPackageBootstraps.push(packageBootstrap)
-          usedExternalPackages[namespace] = packageName
+          usedExternalPackages[namespace] = {
+            package: packageName,
+            rpcEndpoint: externalPkg.rpcEndpoint,
+          }
           logger.debug(
             `• External package detected: ${namespace} (${packageName})`
           )
@@ -45,7 +53,12 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
 import { pikkuState } from '@pikku/core'
 const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
 ${Object.entries(usedExternalPackages)
-  .map(([ns, pkg]) => `externalPackages.set('${ns}', '${pkg}')`)
+  .map(([ns, cfg]) => {
+    const rpcEndpointPart = cfg.rpcEndpoint
+      ? `, rpcEndpoint: '${cfg.rpcEndpoint}'`
+      : ''
+    return `externalPackages.set('${ns}', { package: '${cfg.package}'${rpcEndpointPart} })`
+  })
   .join('\n')}
 `
     }

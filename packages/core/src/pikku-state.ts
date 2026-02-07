@@ -105,6 +105,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     triggers: new Map(),
     triggerSources: new Map(),
     meta: {} as TriggerMeta,
+    sourceMeta: {},
   },
   mcp: {
     resources: new Map(),

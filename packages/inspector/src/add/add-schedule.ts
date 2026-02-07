@@ -39,12 +39,10 @@ export const addSchedule: AddWiring = (
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const scheduleValue = getPropertyValue(obj, 'schedule') as string | null
-    const { tags, summary, description, errors } = getCommonWireMetaData(
-      obj,
-      'Scheduler',
-      nameValue,
-      logger
-    )
+    const { disabled, tags, summary, description, errors } =
+      getCommonWireMetaData(obj, 'Scheduler', nameValue, logger)
+
+    if (disabled) return
 
     const funcInitializer = getPropertyAssignmentInitializer(
       obj,

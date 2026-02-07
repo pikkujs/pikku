@@ -1,4 +1,3 @@
-import * as ts from 'typescript'
 import {
   InspectorState,
   InspectorLogger,
@@ -10,10 +9,6 @@ import {
   PermissionMetadata,
 } from '@pikku/core'
 import { extractTypeKeys } from './type-utils.js'
-import {
-  extractAllServiceMetadata,
-  ServiceMetadata,
-} from './extract-service-metadata.js'
 import { ErrorCode } from '../error-codes.js'
 
 /**
@@ -225,80 +220,24 @@ export function aggregateRequiredServices(
   }
 }
 
-/**
- * Extract service interface metadata for all user-defined services.
- * This extracts metadata for services in SingletonServices and Services types
- * to generate documentation for AI consumption.
- *
- * Must be called after aggregateRequiredServices() to ensure types are loaded.
- */
-export function extractServiceInterfaceMetadata(
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  checker: ts.TypeChecker
-): void {
-  if (!('typesLookup' in state)) {
-    return
-  }
-
-  const allMetadata: ServiceMetadata[] = []
-
-  const singletonServicesTypes = state.typesLookup.get('SingletonServices')
-  if (singletonServicesTypes && singletonServicesTypes.length > 0) {
-    const singletonMeta = extractAllServiceMetadata(
-      singletonServicesTypes[0],
-      checker,
-      state.rootDir
-    )
-    allMetadata.push(...singletonMeta)
-  }
-
-  const servicesTypes = state.typesLookup.get('Services')
-  if (servicesTypes && servicesTypes.length > 0) {
-    const wireServicesMeta = extractAllServiceMetadata(
-      servicesTypes[0],
-      checker,
-      state.rootDir
-    )
-
-    const singletonNames = new Set(
-      state.serviceAggregation.allSingletonServices
-    )
-    const uniqueWireServices = wireServicesMeta.filter(
-      (meta) => !singletonNames.has(meta.name)
-    )
-
-    allMetadata.push(...uniqueWireServices)
-  }
-
-  state.serviceMetadata = allMetadata
-}
-
-/**
- * Validates credential overrides from external packages.
- * Ensures that each credential key in credentialOverrides exists in that
- * external package's credentials metadata.
- */
-export function validateCredentialOverrides(
+export function validateSecretOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>,
   externalPackages?: Record<string, ExternalPackageConfig>
 ): void {
   if (!externalPackages) return
 
-  // Build a set of credential names from definitions
-  const credentialNames = new Set(
-    state.credentials.definitions.map((d) => d.name)
-  )
+  const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
 
   for (const [namespace, pkgConfig] of Object.entries(externalPackages)) {
-    if (!pkgConfig.credentialOverrides) continue
+    if (!pkgConfig.secretOverrides) continue
 
-    for (const credentialKey of Object.keys(pkgConfig.credentialOverrides)) {
-      if (!credentialNames.has(credentialKey)) {
-        const availableCredentials = Array.from(credentialNames)
+    for (const secretKey of Object.keys(pkgConfig.secretOverrides)) {
+      if (!secretNames.has(secretKey)) {
+        const availableSecrets = Array.from(secretNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${credentialKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Secret override '${secretKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
         )
       }
     }

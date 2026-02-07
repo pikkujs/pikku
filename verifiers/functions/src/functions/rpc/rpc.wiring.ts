@@ -19,7 +19,7 @@ export const rpcCaller = pikkuSessionlessFunc<
 >({
   auth: false,
   func: async (_services, { rpcName, data }, { rpc }) => {
-    return await rpc.invokeExposed(rpcName, data)
+    return await rpc.exposed(rpcName, data)
   },
 })
 

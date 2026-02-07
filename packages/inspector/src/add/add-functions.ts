@@ -12,6 +12,7 @@ import {
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
+import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -320,6 +321,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let expose: boolean | undefined
   let internal: boolean | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
+  let nodeDisplayName: string | null = null
+  let nodeCategory: string | null = null
+  let nodeType: NodeType | null = null
+  let nodeErrorOutput: boolean | null = null
 
   // Extract the function node using shared utility
   const firstArg = args[0]!
@@ -385,6 +390,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   if (ts.isObjectLiteralExpression(firstArg)) {
     objectNode = firstArg
     const metadata = getCommonWireMetaData(firstArg, 'Function', name, logger)
+    if (metadata.disabled) return
     title = metadata.title
     tags = metadata.tags
     summary = metadata.summary
@@ -392,6 +398,51 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+
+    // Extract node config from nested object
+    for (const prop of firstArg.properties) {
+      if (
+        ts.isPropertyAssignment(prop) &&
+        ts.isIdentifier(prop.name) &&
+        prop.name.text === 'node' &&
+        ts.isObjectLiteralExpression(prop.initializer)
+      ) {
+        const nodeObj = prop.initializer
+        nodeDisplayName = getPropertyValue(nodeObj, 'displayName') as
+          | string
+          | null
+        nodeCategory = getPropertyValue(nodeObj, 'category') as string | null
+        nodeType = getPropertyValue(nodeObj, 'type') as NodeType | null
+        nodeErrorOutput = getPropertyValue(nodeObj, 'errorOutput') as
+          | boolean
+          | null
+
+        if (!nodeDisplayName) {
+          logger.critical(
+            ErrorCode.MISSING_NAME,
+            `Function '${name}' node config is missing the required 'displayName' property.`
+          )
+        }
+        if (!nodeCategory) {
+          logger.critical(
+            ErrorCode.MISSING_NAME,
+            `Function '${name}' node config is missing the required 'category' property.`
+          )
+        }
+        if (!nodeType) {
+          logger.critical(
+            ErrorCode.MISSING_NAME,
+            `Function '${name}' node config is missing the required 'type' property.`
+          )
+        } else if (!['trigger', 'action', 'end'].includes(nodeType)) {
+          logger.critical(
+            ErrorCode.INVALID_VALUE,
+            `Function '${name}' node config has invalid type '${nodeType}'. Must be 'trigger', 'action', or 'end'.`
+          )
+        }
+        break
+      }
+    }
 
     // Extract schema variable names from input/output properties
     for (const prop of firstArg.properties) {
@@ -586,8 +637,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     ? resolvePermissions(state, objectNode, tags, checker)
     : undefined
 
+  const sessionless = expression.text !== 'pikkuFunc'
+
   state.functions.meta[pikkuFuncName] = {
     pikkuFuncName,
+    sessionless,
     name,
     services,
     usedWires: usedWires.length > 0 ? usedWires : undefined,
@@ -607,12 +661,21 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   }
 
-  // Store function file location for wiring generation
-  if (exportedName) {
-    state.functions.files.set(pikkuFuncName, {
-      path: node.getSourceFile().fileName,
-      exportedName,
-    })
+  // Populate node metadata if node config is present
+  if (nodeDisplayName && nodeCategory && nodeType) {
+    state.nodes.files.add(node.getSourceFile().fileName)
+    state.nodes.meta[pikkuFuncName] = {
+      name: pikkuFuncName,
+      displayName: nodeDisplayName,
+      category: nodeCategory,
+      type: nodeType,
+      rpc: pikkuFuncName,
+      description,
+      errorOutput: nodeErrorOutput ?? false,
+      inputSchemaName: inputNames[0] ?? null,
+      outputSchemaName: outputNames[0] ?? null,
+      tags,
+    }
   }
 
   // Workflow functions don't get registered as RPC functions,
@@ -629,6 +692,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   ]
   if (nonRPCPatterns.some((pattern) => pattern.test(expression.text))) {
     return
+  }
+
+  // Store function file location for wiring generation
+  if (exportedName) {
+    state.functions.files.set(pikkuFuncName, {
+      path: node.getSourceFile().fileName,
+      exportedName,
+    })
   }
 
   if (exportedName || explicitName) {

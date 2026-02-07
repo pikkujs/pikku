@@ -51,12 +51,10 @@ const addWireTrigger: (
   const obj = firstArg
 
   const nameValue = getPropertyValue(obj, 'name') as string | null
-  const { tags, summary, description, errors } = getCommonWireMetaData(
-    obj,
-    'Trigger',
-    nameValue,
-    logger
-  )
+  const { disabled, tags, summary, description, errors } =
+    getCommonWireMetaData(obj, 'Trigger', nameValue, logger)
+
+  if (disabled) return
 
   const funcInitializer = getPropertyAssignmentInitializer(
     obj,
@@ -136,16 +134,16 @@ const addWireTriggerSource: (
     return
   }
 
-  // Detect if the source function comes from an external package
-  // and set packageName on the trigger meta entry
   if (ts.isIdentifier(funcInitializer)) {
     const packageName = resolveExternalPackageName(
       funcInitializer,
       checker,
       options.externalPackages
     )
-    if (packageName && state.triggers.meta[nameValue]) {
-      state.triggers.meta[nameValue].packageName = packageName
+    state.triggers.sourceMeta[nameValue] = {
+      name: nameValue,
+      pikkuFuncName: funcInitializer.text,
+      packageName: packageName || undefined,
     }
   }
 

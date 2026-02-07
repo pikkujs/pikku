@@ -31,7 +31,6 @@ import {
 import {
   CoreWorkflow,
   WorkflowsRuntimeMeta,
-  WorkflowWires,
 } from '../wirings/workflow/workflow.types.js'
 import type {
   WorkflowGraphDefinition,
@@ -41,6 +40,7 @@ import {
   CoreTrigger,
   CoreTriggerSource,
   TriggerMeta,
+  TriggerSourceMeta,
 } from '../wirings/trigger/trigger.types.js'
 import {
   FunctionsMeta,
@@ -73,8 +73,8 @@ export interface PikkuPackageState {
         path: string
       }
     >
-    /** Maps namespace aliases to package names (e.g., 'ext' -> '@pikku/templates-function-external') */
-    externalPackages: Map<string, string>
+    /** Maps namespace aliases to package config (e.g., 'ext' -> { package: '@pikku/...', rpcEndpoint: '...' }) */
+    externalPackages: Map<string, { package: string; rpcEndpoint?: string }>
   }
   http: {
     middleware: Map<string, CorePikkuMiddleware<any, any>[]>
@@ -98,12 +98,9 @@ export interface PikkuPackageState {
     registrations: Map<string, CoreWorkflow>
     graphRegistrations: Map<string, WorkflowGraphDefinition<any>>
     /** DSL workflow wirings (from wireWorkflow({ func: ... })) */
-    wirings: Map<any, { wires: WorkflowWires; func: any }>
+    wirings: Map<any, { func: any }>
     /** Graph workflow wirings (from wireWorkflow({ graph: ... })) */
-    graphWirings: Map<
-      any,
-      { wires: WorkflowWires; graph: Record<string, GraphNodeConfig<string>> }
-    >
+    graphWirings: Map<any, { graph: Record<string, GraphNodeConfig<string>> }>
     meta: WorkflowsRuntimeMeta
   }
   trigger: {
@@ -111,6 +108,7 @@ export interface PikkuPackageState {
     triggers: Map<string, CoreTrigger>
     triggerSources: Map<string, CoreTriggerSource>
     meta: TriggerMeta
+    sourceMeta: TriggerSourceMeta
   }
   mcp: {
     resources: Map<string, CoreMCPResource>

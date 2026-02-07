@@ -1,12 +1,11 @@
-/**
- * Generates type definitions for credentials with wireCredential
- */
-export const serializeCredentialTypes = () => {
-  return `/**
- * Credential type definitions for wireCredential
- */
+export const serializeSecretDefinitionTypes = () => {
+  return `export { wireSecret } from '@pikku/core/secret'
+export type { CoreSecret, SecretDefinitionMeta, SecretDefinitionsMeta } from '@pikku/core/secret'
+`
+}
 
-export { wireCredential } from '@pikku/core/credential'
-export type { CoreCredential, CredentialMeta, CredentialsMeta } from '@pikku/core/credential'
+export const serializeVariableDefinitionTypes = () => {
+  return `export { wireVariable } from '@pikku/core/variable'
+export type { CoreVariable, VariableDefinitionMeta, VariableDefinitionsMeta } from '@pikku/core/variable'
 `
 }

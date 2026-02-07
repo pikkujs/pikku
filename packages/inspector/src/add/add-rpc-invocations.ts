@@ -43,6 +43,23 @@ export function addRPCInvocations(
       }
     }
 
+    // Check for workflow('...'), workflowStart('...'), workflowRun('...'), workflowStatus('...'), graphStart('...') calls
+    if (
+      ts.isIdentifier(expression) &&
+      (expression.text === 'workflow' ||
+        expression.text === 'workflowStart' ||
+        expression.text === 'workflowRun' ||
+        expression.text === 'workflowStatus' ||
+        expression.text === 'graphStart')
+    ) {
+      const [firstArg] = args
+      if (firstArg && ts.isStringLiteral(firstArg)) {
+        const workflowName = firstArg.text
+        logger.debug(`• Found ${expression.text}() call: ${workflowName}`)
+        state.workflows.invokedWorkflows.add(workflowName)
+      }
+    }
+
     // Check for rpc.invoke('...') calls
     if (
       ts.isPropertyAccessExpression(expression) &&

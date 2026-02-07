@@ -1,4 +1,7 @@
-import { wireWorkflowGraph } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import {
+  wireWorkflowGraph,
+  graphStart,
+} from '../../.pikku/workflow/pikku-workflow-types.gen.js'
 import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 
 export const todoReviewWorkflow = wireWorkflowGraph({
@@ -7,47 +10,6 @@ export const todoReviewWorkflow = wireWorkflowGraph({
   nodes: {
     fetchOverdue: 'fetchOverdueTodos',
     sendSummary: 'sendOverdueSummary',
-  },
-  wires: {
-    http: [
-      {
-        route: '/workflow/review',
-        method: 'post',
-        startNode: 'fetchOverdue',
-      },
-    ],
-    trigger: [
-      {
-        name: 'test-event',
-        startNode: 'fetchOverdue',
-      },
-    ],
-    schedule: [
-      {
-        cron: '0 9 * * 1',
-        startNode: 'fetchOverdue',
-      },
-    ],
-    queue: [
-      {
-        name: 'todo-review-queue',
-        startNode: 'fetchOverdue',
-      },
-    ],
-    cli: [
-      {
-        command: 'review-todos',
-        startNode: 'fetchOverdue',
-      },
-    ],
-    mcp: {
-      tool: [
-        {
-          name: 'reviewOverdueTodos',
-          startNode: 'fetchOverdue',
-        },
-      ],
-    },
   },
   config: {
     fetchOverdue: {
@@ -65,7 +27,8 @@ export const todoReviewWorkflow = wireWorkflowGraph({
 })
 
 wireHTTP({
+  auth: false,
   method: 'post',
   route: '/workflow/review',
-  workflow: true,
+  func: graphStart('todoReviewWorkflow', 'fetchOverdue'),
 })

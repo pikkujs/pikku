@@ -3,7 +3,7 @@ import { OAuth2Client, type OAuth2Token } from '@pikku/core/oauth2'
 import { createServer, type Server } from 'http'
 import { randomUUID } from 'crypto'
 import open from 'open'
-import { validateAndBuildCredentialsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
 
 interface OAuthCallbackResult {
   code: string
@@ -32,8 +32,9 @@ function maskToken(token: string | undefined): string {
   return `${token.slice(0, 6)}***${token.slice(-3)}`
 }
 
+// TODO: These should be passed in via config
 const CALLBACK_PATH = '/oauth/callback'
-const DEFAULT_SERVER_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+const DEFAULT_SERVER_TIMEOUT_MS = 5 * 60 * 1000
 
 /**
  * Start a temporary HTTP server to receive the OAuth callback
@@ -89,6 +90,7 @@ function startCallbackServer(
         res.end(
           '<html><body><h1>Authorization successful!</h1><p>You can close this window.</p></body></html>'
         )
+
         callbackResolve({ code, state })
       } else {
         res.writeHead(404)
@@ -134,21 +136,19 @@ export const oauthConnect = pikkuSessionlessFunc<
   ) => {
     const inspectorState = await getInspectorState(false, false, false)
 
-    // Build credentials meta from definitions
-    const credentialsMeta = validateAndBuildCredentialsMeta(
-      inspectorState.credentials.definitions,
+    const secretsMeta = validateAndBuildSecretDefinitionsMeta(
+      inspectorState.secrets.definitions,
       inspectorState.schemaLookup
     )
 
-    // Find the OAuth2 credential
-    const credential = credentialsMeta[credentialName]
+    const credential = secretsMeta[credentialName]
     if (!credential) {
       logger.error(`OAuth2 credential '${credentialName}' not found`)
-      logger.info('Available OAuth2 credentials:')
-      for (const name of Object.keys(credentialsMeta)) {
-        const cred = credentialsMeta[name]
+      logger.error('Available OAuth2 credentials:')
+      for (const name of Object.keys(secretsMeta)) {
+        const cred = secretsMeta[name]
         if (cred.oauth2) {
-          logger.info(`  - ${name}`)
+          logger.error(`  - ${name}`)
         }
       }
       process.exit(1)
@@ -159,23 +159,18 @@ export const oauthConnect = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    // Parse URL or use default
     const baseUrl = new URL(url || 'http://localhost:9876')
     const callbackHostname = baseUrl.hostname
     const callbackPort = parseInt(baseUrl.port) || 9876
     const callbackUri = `${baseUrl.protocol}//${baseUrl.host}${CALLBACK_PATH}`
 
-    // Create OAuth2 client
     const oauth2Client = new OAuth2Client(
       credential.oauth2,
       credential.secretId,
       secrets
     )
 
-    // Generate state for CSRF protection using cryptographically secure random
     const oauthState = randomUUID()
-
-    // Get authorization URL
     const authUrl = await oauth2Client.getAuthorizationUrl(
       oauthState,
       callbackUri
@@ -185,7 +180,6 @@ export const oauthConnect = pikkuSessionlessFunc<
     logger.info(`Callback URL: ${callbackUri}`)
     logger.info(`Authorization URL: ${authUrl}`)
 
-    // Start callback server
     const { server, callbackPromise } = await startCallbackServer(
       callbackPort,
       callbackHostname,
@@ -193,7 +187,6 @@ export const oauthConnect = pikkuSessionlessFunc<
     )
     logger.info(`Callback server listening on ${baseUrl.host}`)
 
-    // Open browser
     logger.info('Opening browser...')
     open(authUrl).catch(() => {
       logger.warn(
@@ -204,18 +197,13 @@ export const oauthConnect = pikkuSessionlessFunc<
 
     let tokens: OAuth2Token
     try {
-      // Wait for callback
       const callbackResult = await callbackPromise
-
-      // Exchange code for tokens
       tokens = await oauth2Client.exchangeCode(callbackResult.code, callbackUri)
-
       logger.info('Authorization successful!')
     } finally {
       server.close()
     }
 
-    // Output based on --output flag
     const outputMode = output || 'console'
 
     if (outputMode === 'console') {

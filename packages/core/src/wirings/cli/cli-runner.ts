@@ -396,7 +396,7 @@ export async function executeCLI({
 }: {
   programName: string
   args?: string[]
-  createConfig: CreateConfig<any, any>
+  createConfig?: CreateConfig<any, any>
   createSingletonServices: CreateSingletonServices<any, any>
   createWireServices?: CreateWireServices<any, any, any>
 }): Promise<void> {
@@ -471,7 +471,9 @@ export async function executeCLI({
     const data = { ...parsed.positionals, ...parsed.options }
 
     // Create config (pass data in case it needs to use any parsed options)
-    const config = await createConfig(new LocalVariablesService(), data)
+    const config = createConfig
+      ? await createConfig(new LocalVariablesService(), data)
+      : ({} as any)
 
     // Create services with config
     const singletonServices = await createSingletonServices(config)

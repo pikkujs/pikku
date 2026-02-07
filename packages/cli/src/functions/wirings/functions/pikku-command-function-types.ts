@@ -17,8 +17,9 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       queueTypesFile,
       mcpTypesFile,
       cliTypesFile,
-      forgeTypesFile,
-      credentialTypesFile,
+      nodeTypesFile,
+      secretTypesFile,
+      externalTypesFile,
     } = config
 
     const getImportPath = (file: string) =>
@@ -26,7 +27,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
         ? null
         : getFileImportRelativePath(typesFile, file, packageMappings)
 
-    // Forge and trigger types are included for external packages
+    // Node and trigger types are included for external packages
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
 
@@ -39,8 +40,9 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       getImportPath(queueTypesFile),
       getImportPath(mcpTypesFile),
       getImportPath(cliTypesFile),
-      getAlwaysImportPath(forgeTypesFile),
-      getAlwaysImportPath(credentialTypesFile)
+      getAlwaysImportPath(nodeTypesFile),
+      getAlwaysImportPath(secretTypesFile),
+      config.externalPackage ? getAlwaysImportPath(externalTypesFile) : null
     )
 
     await writeFileInDir(logger, typesFile, content)

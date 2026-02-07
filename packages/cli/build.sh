@@ -12,6 +12,14 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
 npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
 
+# Patch stale forge references from published CLI (renamed to node/)
+rm -rf .pikku/forge
+if [ -f .pikku/pikku-types.gen.ts ]; then
+  tmp=$(mktemp)
+  sed "s|./forge/pikku-forge-types.gen.js|./node/pikku-node-types.gen.js|g" .pikku/pikku-types.gen.ts > "$tmp" && mv "$tmp" .pikku/pikku-types.gen.ts
+fi
+mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
+
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
 yarn tsc -b || true

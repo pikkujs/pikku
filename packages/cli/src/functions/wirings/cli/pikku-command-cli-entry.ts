@@ -171,9 +171,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
         // Get service factories for local mode
         // Check for required types
         checkRequiredTypes(visitState.filesAndMethodsErrors, {
-          config: true,
           singletonServicesFactory: true,
-          wireServicesFactory: true,
         })
 
         const {
@@ -182,11 +180,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
           wireServicesFactory,
         } = visitState.filesAndMethods
 
-        if (
-          !pikkuConfigFactory ||
-          !singletonServicesFactory ||
-          !wireServicesFactory
-        ) {
+        if (!singletonServicesFactory) {
           throw new Error('Required types not found')
         }
 

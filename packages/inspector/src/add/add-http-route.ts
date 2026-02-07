@@ -161,6 +161,7 @@ export function registerHTTPRoute({
 
   // Get common metadata
   const {
+    disabled,
     title,
     tags: routeTags,
     summary,
@@ -168,32 +169,12 @@ export function registerHTTPRoute({
     errors,
   } = getCommonWireMetaData(obj, 'HTTP route', fullRoute, logger)
 
+  if (disabled) return
+
   // Merge inherited tags with route tags
   const tags = [...inheritedTags, ...(routeTags || [])]
 
   const query = (getPropertyValue(obj, 'query') as string[]) || []
-
-  // Check if this is a workflow trigger
-  const isWorkflowTrigger = getPropertyValue(obj, 'workflow') === true
-  if (isWorkflowTrigger) {
-    state.http.files.add(sourceFile.fileName)
-    state.http.meta[method][fullRoute] = {
-      pikkuFuncName: '',
-      route: fullRoute,
-      method: method as HTTPMethod,
-      params: params.length > 0 ? params : undefined,
-      query: query.length > 0 ? query : undefined,
-      inputTypes: undefined,
-      title,
-      summary,
-      description,
-      errors,
-      tags: tags.length > 0 ? tags : undefined,
-      workflow: true,
-      groupBasePath: basePath || undefined,
-    }
-    return
-  }
 
   // Get function reference
   const funcInitializer = getPropertyAssignmentInitializer(
@@ -216,8 +197,7 @@ export function registerHTTPRoute({
     state.rootDir
   ).pikkuFuncName
 
-  // Ensure function metadata exists
-  ensureFunctionMetadata(state, funcName, fullRoute)
+  ensureFunctionMetadata(state, funcName, fullRoute, funcInitializer, checker)
 
   // Lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]

@@ -146,7 +146,7 @@ export function pikkuChannelFunc(func: any) {
 export const wireChannel = <ChannelData, Channel extends string>(
   channel: ChannelWiring<ChannelData, Channel> & AssertHTTPWiringParams<ChannelData, Channel>
 ) => {
-  wireChannelCore(channel as any) // TODO
+  wireChannelCore(channel as any)
 }
 `
 }

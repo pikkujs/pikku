@@ -1,15 +1,12 @@
 import { Logger } from './services/logger.js'
-import { CoreSingletonServices } from './types/core.types.js'
+import { CoreSingletonServices, WireServices } from './types/core.types.js'
 
-// TODO: WireServices probably needs it's own type
-// but is an issue for the future and will be tackled
-// with dependency injection
 export const closeWireServices = async (
   logger: Logger,
-  wireServices: Record<string, any>
+  wireServices: WireServices
 ) => {
   await Promise.all(
-    Object.values(wireServices).map(async (service) => {
+    Object.values(wireServices).map(async (service: any) => {
       if (service?.close) {
         try {
           await service.close()

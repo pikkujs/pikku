@@ -15,11 +15,9 @@ export const runFetch = async <
   UserSession extends CoreUserSession,
 >(
   singletonServices: SingletonServices,
-  createWireServices: CreateWireServices<
-    SingletonServices,
-    Services,
-    UserSession
-  >,
+  createWireServices:
+    | CreateWireServices<SingletonServices, Services, UserSession>
+    | undefined,
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
   const request = lambdaEventToRequest(event)

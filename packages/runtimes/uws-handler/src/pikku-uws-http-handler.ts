@@ -23,7 +23,7 @@ import { compileAllSchemas } from '@pikku/core/schema'
  */
 export type PikkuuWSHandlerOptions = {
   singletonServices: CoreSingletonServices
-  createWireServices: CreateWireServices<any, any, any>
+  createWireServices?: CreateWireServices<any, any, any>
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions

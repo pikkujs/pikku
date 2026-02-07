@@ -37,22 +37,23 @@ export const wireTrigger = (trigger: CoreTrigger) => {
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   source: CoreTriggerSource<TInput, TOutput>
 ) => {
-  const meta = pikkuState(null, 'trigger', 'meta')
-  const triggerMeta = meta[source.name]
-  if (!triggerMeta) {
-    throw new Error(`Trigger metadata not found: ${source.name}`)
+  const sourceMeta = pikkuState(null, 'trigger', 'sourceMeta')
+  const triggerSourceMeta = sourceMeta[source.name]
+  if (!triggerSourceMeta) {
+    throw new Error(`Trigger source metadata not found: ${source.name}`)
   }
-
-  // Register the source function in the appropriate namespace.
-  // The function uses its trigger name as the key within the package namespace.
-  const packageName = triggerMeta.packageName || null
-  addFunction(source.name, source.func, packageName)
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
   if (triggerSources.has(source.name)) {
     throw new Error(`Trigger source already exists: ${source.name}`)
   }
   triggerSources.set(source.name, source as any)
+
+  addFunction(
+    triggerSourceMeta.pikkuFuncName,
+    source.func as any,
+    triggerSourceMeta.packageName
+  )
 }
 
 /**
@@ -62,7 +63,7 @@ export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
   singletonServices: CoreSingletonServices
   createWireServices?: CreateWireServices
-  input: TInput
+  input?: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
 
@@ -83,13 +84,13 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   onTrigger,
 }: SetupTriggerParams<TInput, TOutput>): Promise<TriggerInstance> {
   const source = pikkuState(null, 'trigger', 'triggerSources').get(name)
-  const meta = pikkuState(null, 'trigger', 'meta')[name]
+  const sourceMeta = pikkuState(null, 'trigger', 'sourceMeta')[name]
 
   if (!source) {
     throw new Error(`Trigger source not found: ${name}`)
   }
-  if (!meta) {
-    throw new Error(`Trigger metadata not found: ${name}`)
+  if (!sourceMeta) {
+    throw new Error(`Trigger source metadata not found: ${name}`)
   }
 
   const wire: PikkuWire = {
@@ -103,14 +104,19 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   singletonServices.logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await runPikkuFunc('trigger', name, name, {
-    singletonServices,
-    createWireServices,
-    auth: false,
-    data: () => input as any,
-    wire,
-    packageName: meta.packageName || null,
-  })
+  const teardown = await runPikkuFunc(
+    'trigger',
+    name,
+    sourceMeta.pikkuFuncName,
+    {
+      singletonServices,
+      createWireServices,
+      auth: false,
+      data: () => input as any,
+      wire,
+      packageName: sourceMeta.packageName || null,
+    }
+  )
 
   return { name, teardown }
 }

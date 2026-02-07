@@ -32,12 +32,10 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
     const obj = firstArg
 
     const queueName = getPropertyValue(obj, 'queueName') as string | null
-    const { tags, summary, description, errors } = getCommonWireMetaData(
-      obj,
-      'Queue worker',
-      queueName,
-      logger
-    )
+    const { disabled, tags, summary, description, errors } =
+      getCommonWireMetaData(obj, 'Queue worker', queueName, logger)
+
+    if (disabled) return
 
     // --- find the referenced function ---
     const funcInitializer = getPropertyAssignmentInitializer(

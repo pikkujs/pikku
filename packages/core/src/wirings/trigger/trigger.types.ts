@@ -3,6 +3,7 @@ import type {
   CoreSingletonServices,
 } from '../../types/core.types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { CoreNodeConfig } from '../node/node.types.js'
 
 /**
  * The trigger interaction object passed to trigger functions via the wire.
@@ -15,9 +16,11 @@ export interface PikkuTrigger<TOutput = unknown> {
 /**
  * Metadata for registered triggers stored in state.
  */
-export type TriggerMeta = Record<
+export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
+
+export type TriggerSourceMeta = Record<
   string,
-  CommonWireMeta & { name: string; packageName?: string }
+  { name: string; pikkuFuncName: string; packageName?: string }
 >
 
 /**
@@ -60,6 +63,8 @@ export type CorePikkuTriggerFunctionConfig<
   input?: InputSchema
   /** Optional Zod schema for output validation */
   output?: OutputSchema
+  /** Optional node configuration */
+  node?: CoreNodeConfig
 }
 
 /**
@@ -159,11 +164,15 @@ export interface TriggerInstance {
  * @template TInput - Input type passed to the trigger function
  * @template TOutput - Output type produced when trigger fires
  */
-export interface CoreTriggerSource<TInput = unknown, TOutput = unknown> {
+export type CoreTriggerSource<TInput = unknown, TOutput = unknown> = {
   /** Must match a wireTrigger name */
   name: string
   /** The trigger function config that sets up the subscription */
-  func: CorePikkuTriggerFunctionConfig<TInput, TOutput>
-  /** Input data passed to the trigger function */
-  input: TInput
-}
+  func: CorePikkuTriggerFunctionConfig<
+    TInput,
+    TOutput,
+    CoreSingletonServices,
+    StandardSchemaV1 | undefined,
+    StandardSchemaV1 | undefined
+  >
+} & (unknown extends TInput ? { input?: TInput } : { input: TInput })
