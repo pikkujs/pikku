@@ -10,7 +10,7 @@ export const serializeTriggerTypes = (
  */
 
 import { CorePikkuTriggerFunction, CorePikkuTriggerFunctionConfig, CoreTriggerSource, CoreTrigger, wireTrigger as wireTriggerCore, wireTriggerSource as wireTriggerSourceCore } from '@pikku/core/trigger'
-import type { CoreNodeConfig } from '@pikku/core/forge-node'
+import type { CoreNodeConfig } from '@pikku/core/node'
 ${singletonServicesTypeImport}
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 

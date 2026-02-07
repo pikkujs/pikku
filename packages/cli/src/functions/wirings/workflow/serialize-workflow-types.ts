@@ -55,7 +55,7 @@ export type PikkuFunctionWorkflow<
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 /**
- * Creates a DSL-compatible workflow function (serializable, shows in Forge UI)
+ * Creates a DSL-compatible workflow function (serializable, shows in UI)
  */
 export const pikkuWorkflowFunc = <In, Out = unknown>(
   func:
@@ -66,7 +66,7 @@ export const pikkuWorkflowFunc = <In, Out = unknown>(
 }
 
 /**
- * Creates a complex workflow function (arbitrary code, hidden from Forge UI)
+ * Creates a complex workflow function (arbitrary code, hidden from UI)
  */
 export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
   func:

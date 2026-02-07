@@ -152,8 +152,8 @@ export interface SerializableInspectorState {
     meta: InspectorState['cli']['meta']
     files: string[]
   }
-  forgeNodes: {
-    meta: InspectorState['forgeNodes']['meta']
+  nodes: {
+    meta: InspectorState['nodes']['meta']
     files: string[]
   }
   secrets: {
@@ -307,9 +307,9 @@ export function serializeInspectorState(
       meta: state.cli.meta,
       files: Array.from(state.cli.files),
     },
-    forgeNodes: {
-      meta: state.forgeNodes.meta,
-      files: Array.from(state.forgeNodes.files),
+    nodes: {
+      meta: state.nodes.meta,
+      files: Array.from(state.nodes.files),
     },
     secrets: {
       definitions: state.secrets.definitions,
@@ -443,9 +443,9 @@ export function deserializeInspectorState(
       meta: data.cli.meta,
       files: new Set(data.cli.files),
     },
-    forgeNodes: {
-      meta: data.forgeNodes?.meta || {},
-      files: new Set(data.forgeNodes?.files || []),
+    nodes: {
+      meta: data.nodes?.meta || {},
+      files: new Set(data.nodes?.files || []),
     },
     secrets: {
       definitions: data.secrets?.definitions || [],

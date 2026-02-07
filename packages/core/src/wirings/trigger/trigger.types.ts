@@ -3,7 +3,7 @@ import type {
   CoreSingletonServices,
 } from '../../types/core.types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { CoreNodeConfig } from '../forge-node/forge-node.types.js'
+import type { CoreNodeConfig } from '../node/node.types.js'
 
 /**
  * The trigger interaction object passed to trigger functions via the wire.
@@ -63,7 +63,7 @@ export type CorePikkuTriggerFunctionConfig<
   input?: InputSchema
   /** Optional Zod schema for output validation */
   output?: OutputSchema
-  /** Optional forge node configuration */
+  /** Optional node configuration */
   node?: CoreNodeConfig
 }
 

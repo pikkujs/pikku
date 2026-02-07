@@ -95,7 +95,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       },
       files: new Set(),
     },
-    forgeNodes: {
+    nodes: {
       meta: {},
       files: new Set(),
     },

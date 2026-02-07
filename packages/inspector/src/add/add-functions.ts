@@ -12,7 +12,7 @@ import {
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
-import type { ForgeNodeType } from '@pikku/core/forge-node'
+import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
   const regex = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/
@@ -323,7 +323,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
   let nodeCategory: string | null = null
-  let nodeType: ForgeNodeType | null = null
+  let nodeType: NodeType | null = null
   let nodeErrorOutput: boolean | null = null
 
   // Extract the function node using shared utility
@@ -412,7 +412,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
           | string
           | null
         nodeCategory = getPropertyValue(nodeObj, 'category') as string | null
-        nodeType = getPropertyValue(nodeObj, 'type') as ForgeNodeType | null
+        nodeType = getPropertyValue(nodeObj, 'type') as NodeType | null
         nodeErrorOutput = getPropertyValue(nodeObj, 'errorOutput') as
           | boolean
           | null
@@ -661,10 +661,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     isDirectFunction,
   }
 
-  // Populate forge node metadata if node config is present
+  // Populate node metadata if node config is present
   if (nodeDisplayName && nodeCategory && nodeType) {
-    state.forgeNodes.files.add(node.getSourceFile().fileName)
-    state.forgeNodes.meta[pikkuFuncName] = {
+    state.nodes.files.add(node.getSourceFile().fileName)
+    state.nodes.meta[pikkuFuncName] = {
       name: pikkuFuncName,
       displayName: nodeDisplayName,
       category: nodeCategory,

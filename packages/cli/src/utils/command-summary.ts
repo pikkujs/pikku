@@ -10,7 +10,7 @@ export interface CommandSummaryStats {
   mcpEndpoints?: number
   cliCommands?: number
   workflows?: number
-  forgeNodes?: number
+  nodes?: number
   workflowGraphs?: number
   [key: string]: number | undefined
 }
@@ -79,7 +79,7 @@ export class CommandSummary {
       mcpEndpoints: 'MCP endpoint',
       cliCommands: 'CLI command',
       workflows: 'Workflow',
-      forgeNodes: 'Forge node',
+      nodes: 'Node',
       workflowGraphs: 'Workflow graph',
     }
 

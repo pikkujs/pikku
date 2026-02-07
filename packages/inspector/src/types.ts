@@ -7,7 +7,7 @@ import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
 import { CLIMeta } from '@pikku/core/cli'
-import { ForgeNodesMeta } from '@pikku/core/forge-node'
+import { NodesMeta } from '@pikku/core/node'
 import { SecretDefinitions } from '@pikku/core/secret'
 import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
@@ -269,8 +269,8 @@ export interface InspectorState {
     meta: CLIMeta
     files: Set<string>
   }
-  forgeNodes: {
-    meta: ForgeNodesMeta
+  nodes: {
+    meta: NodesMeta
     files: Set<string>
   }
   secrets: {
