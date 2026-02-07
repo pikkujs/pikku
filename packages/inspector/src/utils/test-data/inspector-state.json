@@ -1262,7 +1262,8 @@
   },
   "workflows": {
     "meta": {},
-    "files": []
+    "files": [],
+    "invokedWorkflows": []
   },
   "rpc": {
     "internalMeta": {

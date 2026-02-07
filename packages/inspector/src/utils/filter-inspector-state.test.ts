@@ -200,6 +200,13 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
       },
       files: new Set(['/test/project/src/workers/email.ts']),
     },
+    workflows: {
+      meta: {},
+      files: new Map(),
+      graphMeta: {},
+      graphFiles: new Map(),
+      invokedWorkflows: new Set(),
+    },
     rpc: {
       internalMeta: {},
       internalFiles: new Map(),
