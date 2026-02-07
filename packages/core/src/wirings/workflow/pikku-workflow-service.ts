@@ -19,7 +19,7 @@ import type {
 } from './workflow.types.js'
 import { executeGraphStep, runWorkflowGraph } from './graph/graph-runner.js'
 import { WorkflowService } from '../../services/workflow-service.js'
-import { PikkuError } from '../../errors/error-handler.js'
+import { PikkuError, addError } from '../../errors/error-handler.js'
 
 /**
  * Exception thrown when workflow needs to pause for async step
@@ -55,15 +55,20 @@ export class WorkflowNotFoundError extends PikkuError {
     super(`Workflow not found: ${name}`)
   }
 }
+addError(WorkflowNotFoundError, {
+  status: 404,
+  message: 'Workflow not found.',
+})
 
-/**
- * Error class for workflow not found
- */
-export class WorkflowRunNotFound extends PikkuError {
+export class WorkflowRunNotFoundError extends PikkuError {
   constructor(runId: string) {
     super(`Workflow run not found: ${runId}`)
   }
 }
+addError(WorkflowRunNotFoundError, {
+  status: 404,
+  message: 'Workflow run not found.',
+})
 
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
@@ -453,7 +458,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     while (true) {
       const run = await this.getRun(runId)
       if (!run) {
-        throw new WorkflowRunNotFound(runId)
+        throw new WorkflowRunNotFoundError(runId)
       }
       if (WORKFLOW_END_STATES.has(run.status)) {
         if (run.status === 'failed') {
@@ -471,7 +476,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
     const run = await this.getRun(runId)
     if (!run) {
-      throw new WorkflowRunNotFound(runId)
+      throw new WorkflowRunNotFoundError(runId)
     }
 
     const registrations = pikkuState(null, 'workflows', 'registrations')

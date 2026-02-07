@@ -13,7 +13,7 @@ export const serializeWorkflowTypes = (
  * Used for authoring both DSL and graph-based workflows
  */
 
-import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException } from '@pikku/core/workflow'
+import { PikkuWorkflowWire, WorkflowStepOptions, WorkflowCancelledException, WorkflowRunNotFoundError } from '@pikku/core/workflow'
 
 // Re-export WorkflowCancelledException for use in workflow functions
 export { WorkflowCancelledException }
@@ -298,8 +298,7 @@ export const workflowStatus = <Name extends keyof WorkflowMap>(
     func: (async (services: any, data: any) => {
       const run = await services.workflowService.getRun(data.runId)
       if (!run) {
-        // TODO: Throw NotFoundError
-        throw new Error('Workflow run not found: ' + data.runId)
+        throw new WorkflowRunNotFoundError(data.runId)
       }
       return {
         id: run.id,

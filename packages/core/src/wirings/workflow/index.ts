@@ -4,6 +4,8 @@
 export {
   PikkuWorkflowService,
   WorkflowCancelledException,
+  WorkflowNotFoundError,
+  WorkflowRunNotFoundError,
 } from './pikku-workflow-service.js'
 
 // Internal registration functions (used by generated code)
