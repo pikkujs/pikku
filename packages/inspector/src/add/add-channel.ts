@@ -565,6 +565,7 @@ export const addChannel: AddWiring = (
     ).pikkuFuncName
     state.serviceAggregation.usedFunctions.add(connectFuncName)
   }
+
   if (disconnect) {
     const disconnectFuncName = extractFunctionName(
       disconnect as any,
@@ -573,21 +574,20 @@ export const addChannel: AddWiring = (
     ).pikkuFuncName
     state.serviceAggregation.usedFunctions.add(disconnectFuncName)
   }
+
   if (message) {
     state.serviceAggregation.usedFunctions.add(message.pikkuFuncName)
   }
-  // Track message wiring handlers
+
   for (const channelHandlers of Object.values(messageWirings)) {
     for (const handler of Object.values(channelHandlers)) {
       state.serviceAggregation.usedFunctions.add(handler.pikkuFuncName)
     }
   }
-  // Track middleware
   extractWireNames(middleware).forEach((name) =>
     state.serviceAggregation.usedMiddleware.add(name)
   )
 
-  // record into state
   state.channels.files.add(node.getSourceFile().fileName)
   state.channels.meta[name] = {
     name,
@@ -595,13 +595,6 @@ export const addChannel: AddWiring = (
     input: null,
     params: params.length ? params : undefined,
     query: query?.length ? query : undefined,
-    // inputTypes: getInputTypes(
-    //   state.channels.metaInputTypes,
-    //   'get',
-    //   null, // TODO
-    //   query,
-    //   params
-    // ),
     connect: connect
       ? {
           pikkuFuncName: extractFunctionName(connect, checker, state.rootDir)

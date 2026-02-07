@@ -3,7 +3,6 @@ import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/ser
 
 /**
  * pikku oauth disconnect <credential-name>
- * TODO: Document
  *
  * Remove stored tokens for an OAuth2 credential.
  */

@@ -93,8 +93,6 @@ export class ContextAwareRPCService {
       getPikkuFunctionName(funcName),
       {
         auth: this.options.requiresAuth,
-        // TODO: this is a hack since services have already been created
-        // but is valid since we don't want to keep creating new wire services
         singletonServices: this.services,
         data: () => data,
         wire: updatedWire,
