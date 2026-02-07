@@ -49,7 +49,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
       configTypeImport,
       config.externalPackageName,
       undefined,
-      config.forge?.node?.categories
+      config.node?.categories
     )
 
     await writeFileInDir(logger, functionTypesFile, content)

@@ -13,11 +13,11 @@ export const serializeFunctionTypes = (
   configTypeImport: string,
   packageName?: string,
   workflowTypesImport?: string,
-  forgeCategories?: string[]
+  nodeCategories?: string[]
 ) => {
   const packageNameValue = packageName ? `'${packageName}'` : 'null'
-  const forgeCategoryType = forgeCategories?.length
-    ? forgeCategories.map((c) => `'${c}'`).join(' | ')
+  const nodeCategoryType = nodeCategories?.length
+    ? nodeCategories.map((c) => `'${c}'`).join(' | ')
     : 'string'
   const workflowImport =
     workflowTypesImport ||
@@ -28,7 +28,7 @@ export const serializeFunctionTypes = (
  */
 
 import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
-import type { ForgeNodeType } from '@pikku/core/forge-node'
+import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
 
@@ -46,12 +46,12 @@ ${userSessionTypeName !== 'Session' ? `export type Session = ${userSessionTypeNa
 ${configTypeImport.includes('Config type not found') ? 'export type Config = any' : ''}
 
 /**
- * Inline forge configuration for function definitions.
+ * Inline node configuration for function definitions.
  */
 export type NodeConfig = {
   displayName: string
-  category: ${forgeCategoryType}
-  type: ForgeNodeType
+  category: ${nodeCategoryType}
+  type: NodeType
   errorOutput?: boolean
 }
 

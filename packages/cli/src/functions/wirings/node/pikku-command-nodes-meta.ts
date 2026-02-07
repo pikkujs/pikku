@@ -10,10 +10,6 @@ import {
 } from '../../../utils/strip-verbose-meta.js'
 import { validateAndBuildSecretDefinitionsMeta } from '../secrets/serialize-secrets-types.js'
 
-/**
- * Load and sanitize an SVG icon file.
- * Returns the SVG content as a string, or undefined if not found.
- */
 const loadIcon = async (
   iconPath: string | undefined,
   rootDir: string,
@@ -21,20 +17,17 @@ const loadIcon = async (
 ): Promise<string | undefined> => {
   if (!iconPath) return undefined
 
-  // Resolve the full path to the icon
   const fullPath = isAbsolute(iconPath) ? iconPath : join(rootDir, iconPath)
 
   try {
     const content = await readFile(fullPath, 'utf-8')
 
-    // Basic SVG validation - must start with <svg
     const trimmed = content.trim()
     if (!trimmed.startsWith('<svg') && !trimmed.startsWith('<?xml')) {
       logger.warn(`Icon file is not a valid SVG: ${fullPath}`)
       return undefined
     }
 
-    // Return the sanitized SVG (remove XML declaration if present)
     return trimmed.replace(/<\?xml[^?]*\?>\s*/g, '').trim()
   } catch (e) {
     logger.warn(`Could not load icon: ${fullPath}`)
@@ -42,79 +35,70 @@ const loadIcon = async (
   }
 }
 
-export const pikkuForgeNodes = pikkuSessionlessFunc<void, boolean | undefined>({
+export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
-    const { forgeNodes, secrets } = state
-    const { forgeNodesMetaJsonFile, forge, rootDir } = config
+    const { nodes, secrets } = state
+    const { nodesMetaJsonFile, node, rootDir } = config
 
     const secretsMeta = validateAndBuildSecretDefinitionsMeta(
       secrets.definitions,
       state.schemaLookup
     )
 
-    const hasNodes = Object.keys(forgeNodes.meta).length > 0
+    const hasNodes = Object.keys(nodes.meta).length > 0
     const hasSecrets = secrets.definitions.length > 0
 
     if (!hasNodes && !hasSecrets) {
       return undefined
     }
 
-    // Validate categories if configured
-    const allowedCategories = forge?.node?.categories
+    const allowedCategories = node?.categories
     if (allowedCategories && allowedCategories.length > 0) {
-      for (const [name, meta] of Object.entries(forgeNodes.meta) as [
+      for (const [name, meta] of Object.entries(nodes.meta) as [
         string,
         any,
       ][]) {
         if (!allowedCategories.includes(meta.category)) {
           logger.critical(
             ErrorCode.INVALID_VALUE,
-            `Forge node '${name}' has invalid category '${meta.category}'. ` +
+            `Node '${name}' has invalid category '${meta.category}'. ` +
               `Allowed categories: ${allowedCategories.join(', ')}`
           )
         }
       }
     }
 
-    // Build the output metadata - remove per-node icon field
     const outputMeta: Record<string, any> = {}
-    for (const [name, meta] of Object.entries(forgeNodes.meta) as [
-      string,
-      any,
-    ][]) {
-      // Remove icon from node meta - only package-level icon is used
+    for (const [name, meta] of Object.entries(nodes.meta) as [string, any][]) {
       const { icon: _icon, ...nodeMetaWithoutIcon } = meta
       outputMeta[name] = nodeMetaWithoutIcon
     }
 
-    // Load package-level icon
-    const packageIcon = await loadIcon(forge?.node?.icon, rootDir, logger)
+    const packageIcon = await loadIcon(node?.icon, rootDir, logger)
 
     const metaData = {
       nodes: outputMeta,
       secrets: secretsMeta,
       package: {
-        displayName: forge?.node?.displayName,
-        description: forge?.node?.description,
+        displayName: node?.displayName,
+        description: node?.description,
         icon: packageIcon,
-        categories: forge?.node?.categories,
+        categories: node?.categories,
       },
     }
 
-    if (forgeNodesMetaJsonFile) {
-      // Write minimal JSON (runtime-only fields)
+    if (nodesMetaJsonFile) {
       const minimalMeta = stripVerboseFields(metaData)
       await writeFileInDir(
         logger,
-        forgeNodesMetaJsonFile,
+        nodesMetaJsonFile,
         JSON.stringify(minimalMeta, null, 2),
         { ignoreModifyComment: true }
       )
 
-      // Write verbose JSON only if it has additional fields
       if (hasVerboseFields(metaData)) {
-        const verbosePath = forgeNodesMetaJsonFile.replace(
+        const verbosePath = nodesMetaJsonFile.replace(
           /\.gen\.json$/,
           '-verbose.gen.json'
         )
@@ -131,8 +115,8 @@ export const pikkuForgeNodes = pikkuSessionlessFunc<void, boolean | undefined>({
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Generating Forge nodes metadata',
-      commandEnd: 'Generated Forge nodes metadata',
+      commandStart: 'Generating nodes metadata',
+      commandEnd: 'Generated nodes metadata',
     }),
   ],
 })

@@ -100,8 +100,8 @@ export interface PikkuCLICoreOutputFiles {
   // External package types (pikkuExternalConfig, pikkuExternalServices, etc.)
   externalTypesFile: string
 
-  // Forge
-  forgeTypesFile: string
+  // Node
+  nodeTypesFile: string
 
   // Credentials
   secretTypesFile: string
@@ -209,17 +209,16 @@ export type PikkuCLIInput = {
   stateOutput?: string
   stateInput?: string
 
-  forge?: {
-    verboseMeta?: boolean
-    node?: {
-      categories?: string[]
-      icon?: string
-      displayName?: string
-      description?: string
-    }
+  verboseMeta?: boolean
+
+  node?: {
+    categories?: string[]
+    icon?: string
+    displayName?: string
+    description?: string
   }
 
-  forgeNodesMetaJsonFile?: string
+  nodesMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
@@ -325,17 +324,16 @@ export type PikkuCLIConfig = {
   stateOutput?: string
   stateInput?: string
 
-  forge?: {
-    verboseMeta?: boolean
-    node?: {
-      categories?: string[]
-      icon?: string
-      displayName?: string
-      description?: string
-    }
+  verboseMeta?: boolean
+
+  node?: {
+    categories?: string[]
+    icon?: string
+    displayName?: string
+    description?: string
   }
 
-  forgeNodesMetaJsonFile?: string
+  nodesMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

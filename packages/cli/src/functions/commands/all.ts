@@ -68,7 +68,7 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuPublicRPC', null)
     await rpc.invoke('pikkuRPCClient', null)
 
-    await rpc.invoke('pikkuForgeTypes', null)
+    await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
     await rpc.invoke('pikkuSecrets', null)
     await rpc.invoke('pikkuVariableDefinitionTypes', null)
@@ -155,7 +155,7 @@ export const all = pikkuVoidFunc({
       }
     }
 
-    await rpc.invoke('pikkuForgeNodes', null)
+    await rpc.invoke('pikkuNodesMeta', null)
 
     if (config.nextBackendFile || config.nextHTTPFile) {
       await rpc.invoke('pikkuNext', null)

@@ -441,16 +441,12 @@ const _getPikkuCLIConfig = async (
       result.cliTypesFile = join(cliDir, 'pikku-cli-types.gen.ts')
     }
 
-    // Forge (for wireForgeNode and nodes meta)
-    const forgeDir = join(result.outDir, 'forge')
-    if (!result.forgeNodesMetaJsonFile) {
-      result.forgeNodesMetaJsonFile = join(
-        forgeDir,
-        'pikku-forge-nodes-meta.gen.json'
-      )
+    const nodeDir = join(result.outDir, 'node')
+    if (!result.nodesMetaJsonFile) {
+      result.nodesMetaJsonFile = join(nodeDir, 'pikku-nodes-meta.gen.json')
     }
-    if (!result.forgeTypesFile) {
-      result.forgeTypesFile = join(forgeDir, 'pikku-forge-types.gen.ts')
+    if (!result.nodeTypesFile) {
+      result.nodeTypesFile = join(nodeDir, 'pikku-node-types.gen.ts')
     }
 
     // External (for wireSecret, external service factories, and external meta)
