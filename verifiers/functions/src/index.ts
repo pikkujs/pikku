@@ -9,9 +9,11 @@ import './functions/http/zod.wiring.js'
 
 // Channel wirings
 import './functions/channel/channel.wiring.js'
+import './functions/channel/channel-external.wiring.js'
 
 // CLI wirings
 import './functions/cli/cli.wiring.js'
+import './functions/cli/cli-external.wiring.js'
 
 // MCP wirings
 import './functions/mcp/mcp.wiring.js'

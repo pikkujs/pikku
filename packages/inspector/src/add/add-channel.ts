@@ -11,6 +11,7 @@ import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { resolveIdentifier } from '../utils/resolve-identifier.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -125,8 +126,20 @@ export function addMessagesRoutes(
     return result
 
   for (const chanElem of onMsgRouteProp.properties) {
-    const chanInit = getInitializerOf(chanElem)
-    if (!chanInit || !ts.isObjectLiteralExpression(chanInit)) continue
+    let chanInit = getInitializerOf(chanElem)
+    if (!chanInit) continue
+
+    // If the value is an identifier, resolve it (handles defineChannelRoutes)
+    if (ts.isIdentifier(chanInit)) {
+      const resolved = resolveIdentifier(chanInit, checker, [
+        'defineChannelRoutes',
+      ])
+      if (resolved && ts.isObjectLiteralExpression(resolved)) {
+        chanInit = resolved
+      }
+    }
+
+    if (!ts.isObjectLiteralExpression(chanInit)) continue
 
     const channelKey = chanElem.name!.getText()
     result[channelKey] = {}
