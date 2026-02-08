@@ -10,6 +10,7 @@ import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
+import { resolveIdentifier } from '../utils/resolve-identifier.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
 const configTypeWarningShown = new Set<string>()
@@ -181,6 +182,30 @@ function processCommands(
   let defaultCommandName: string | null = null
 
   for (const prop of node.properties) {
+    // Handle spread assignments: { ...externalCommands }
+    if (ts.isSpreadAssignment(prop)) {
+      let spreadTarget: ts.Node | undefined = prop.expression
+      if (ts.isIdentifier(prop.expression)) {
+        spreadTarget = resolveIdentifier(prop.expression, typeChecker, [
+          'defineCLICommands',
+        ])
+      }
+      if (spreadTarget && ts.isObjectLiteralExpression(spreadTarget)) {
+        const spreadCommands = processCommands(
+          logger,
+          spreadTarget,
+          sourceFile,
+          typeChecker,
+          programName,
+          inspectorState,
+          options,
+          programTags
+        )
+        Object.assign(commands, spreadCommands)
+      }
+      continue
+    }
+
     if (!ts.isPropertyAssignment(prop)) continue
 
     const commandName = getPropertyName(prop)

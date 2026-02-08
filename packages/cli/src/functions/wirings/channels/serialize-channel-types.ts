@@ -7,7 +7,7 @@ export const serializeChannelTypes = (functionTypesImportPath: string) => {
  * Channel-specific type definitions for tree-shaking optimization
  */
 
-import { CoreChannel, wireChannel as wireChannelCore } from '@pikku/core/channel'
+import { CoreChannel, wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore } from '@pikku/core/channel'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
 import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 import type { CorePermissionGroup } from '@pikku/core'
@@ -147,6 +147,18 @@ export const wireChannel = <ChannelData, Channel extends string>(
   channel: ChannelWiring<ChannelData, Channel> & AssertHTTPWiringParams<ChannelData, Channel>
 ) => {
   wireChannelCore(channel as any)
+}
+
+/**
+ * Type-safe helper for defining channel message routes that can be composed.
+ * Returns the routes record as-is for use with wireChannel's onMessageWiring.
+ *
+ * @template T - Record of channel route handlers
+ * @param routes - The channel routes record
+ * @returns The same routes record (identity function for type safety)
+ */
+export function defineChannelRoutes<T extends Record<string, any>>(routes: T): T {
+  return defineChannelRoutesCore(routes)
 }
 `
 }

@@ -13,7 +13,7 @@ export const serializeCLITypes = (
  * CLI-specific type definitions for tree-shaking optimization
  */
 
-import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender, CoreCLICommandConfig } from '@pikku/core/cli'
+import { CoreCLI, wireCLI as wireCLICore, CorePikkuCLIRender, CoreCLICommandConfig, defineCLICommands as defineCLICommandsCore } from '@pikku/core/cli'
 import type { PikkuFunctionConfig, PikkuMiddleware } from '${functionTypesImportPath}'
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
@@ -96,6 +96,19 @@ export const pikkuCLICommand = <
   config: CLICommandConfig<FuncConfig, any, any, Params>
 ): CoreCLICommandConfig<FuncConfig, PikkuMiddleware, PikkuCLIRender<any>, string> => {
   return config as any
+}
+
+/**
+ * Type-safe helper for defining CLI commands that can be composed and spread into wireCLI.
+ *
+ * @template T - Record of CLI command configurations
+ * @param commands - The CLI commands record
+ * @returns The same commands record (identity function for type safety)
+ */
+export const defineCLICommands = <T extends Record<string, CoreCLICommandConfig<any, PikkuMiddleware, PikkuCLIRender<any>, any>>>(
+  commands: T
+): T => {
+  return defineCLICommandsCore(commands as any) as T
 }
 `
 }
