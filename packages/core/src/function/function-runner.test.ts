@@ -72,7 +72,6 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
         data: () => ({}),
         wireMiddleware: [createMiddleware('wiringMiddleware')],
         inheritedMiddleware: [{ type: 'tag', tag: 'wiringTag' }],
@@ -142,7 +141,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         wirePermissions: wiringPermissions,
         tags: ['wiringTag'],
@@ -174,7 +173,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     await assert.rejects(
       runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         tags: ['wiringTag'],
         auth: false,
@@ -198,7 +197,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     await assert.rejects(
       runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         wirePermissions: wiringPermissions,
         auth: false,
@@ -223,7 +222,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     await assert.rejects(
       runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         auth: false,
         wire: {},
@@ -247,7 +246,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     await assert.rejects(
       runPikkuFunc('rpc', Math.random().toString(), 'testFunc', {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         auth: false,
         wire: {},
@@ -332,7 +331,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         auth: false,
         wire: {},
@@ -360,7 +359,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'simpleFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         auth: false,
         wire: {},
@@ -404,7 +403,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         wireMiddleware: [wiringMiddleware],
         wirePermissions: wiringPermissions,
@@ -458,7 +457,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       'testFunc',
       {
         singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
+
         data: () => ({}),
         auth: false,
         wire: {},

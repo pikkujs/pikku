@@ -74,7 +74,13 @@ export const processMessageHandlers = (
     routingProperty?: string,
     routerValue?: string
   ): Promise<unknown> => {
-    if (!validateAuth(requiresSession, channelHandler, onMessage)) {
+    if (
+      !validateAuth(
+        requiresSession,
+        userSession ? await userSession.get() : undefined,
+        onMessage
+      )
+    ) {
       const routeMessage = routingProperty
         ? `route '${routingProperty}:${routerValue}'`
         : 'the default message route'
