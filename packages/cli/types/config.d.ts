@@ -103,7 +103,7 @@ export interface PikkuCLICoreOutputFiles {
   // Node
   nodeTypesFile: string
 
-  // Credentials
+  // Secrets
   secretTypesFile: string
 
   // Secrets (typed wrapper for SecretService)
