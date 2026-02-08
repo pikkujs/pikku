@@ -345,3 +345,14 @@ addError(MaxComputeTimeReachedError, {
   message:
     'The server took too long to complete the request, reaching the maximum compute time allowed.',
 })
+
+/**
+ * A required schema was not found during validation.
+ * @group Error
+ */
+export class MissingSchemaError extends PikkuError {}
+addError(MissingSchemaError, {
+  status: 500,
+  message:
+    'A required schema was not found. Ensure schema generation has been run.',
+})

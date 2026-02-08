@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import { SecretService } from './secret-service.js'
 
 /**
@@ -14,10 +14,6 @@ export class GopassSecretService implements SecretService {
 
   private getFullKey(key: string): string {
     return this.prefix ? `${this.prefix}${key}` : key
-  }
-
-  private exec(command: string): string {
-    return execSync(command, { encoding: 'utf8' }).trim()
   }
 
   /**
@@ -40,9 +36,11 @@ export class GopassSecretService implements SecretService {
   public async getSecret(key: string): Promise<string> {
     const fullKey = this.getFullKey(key)
     try {
-      return this.exec(`gopass show -o "${fullKey}"`)
+      return execFileSync('gopass', ['show', '-o', fullKey], {
+        encoding: 'utf8',
+      }).trim()
     } catch (error: any) {
-      throw new Error(`Secret Not Found: ${key}`)
+      throw new Error(`Secret Not Found: ${key}`, { cause: error })
     }
   }
 
@@ -54,7 +52,7 @@ export class GopassSecretService implements SecretService {
   public async hasSecret(key: string): Promise<boolean> {
     const fullKey = this.getFullKey(key)
     try {
-      this.exec(`gopass show -o "${fullKey}"`)
+      execFileSync('gopass', ['show', '-o', fullKey], { encoding: 'utf8' })
       return true
     } catch {
       return false
@@ -70,17 +68,14 @@ export class GopassSecretService implements SecretService {
   public async setSecretJSON(key: string, value: unknown): Promise<void> {
     const fullKey = this.getFullKey(key)
     const jsonValue = JSON.stringify(value)
-    // Use echo and pipe to gopass insert with --force to overwrite without prompting
     try {
-      execSync(
-        `echo "${jsonValue.replace(/"/g, '\\"')}" | gopass insert -f "${fullKey}"`,
-        {
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      )
+      execFileSync('gopass', ['insert', '-f', fullKey], {
+        encoding: 'utf8',
+        input: jsonValue,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
     } catch (error: any) {
-      throw new Error(`Failed to set secret: ${key} - ${error.message}`)
+      throw new Error(`Failed to set secret: ${key}`, { cause: error })
     }
   }
 
@@ -92,7 +87,7 @@ export class GopassSecretService implements SecretService {
   public async deleteSecret(key: string): Promise<void> {
     const fullKey = this.getFullKey(key)
     try {
-      this.exec(`gopass rm -f "${fullKey}"`)
+      execFileSync('gopass', ['rm', '-f', fullKey], { encoding: 'utf8' })
     } catch {
       // Ignore errors if secret doesn't exist
     }

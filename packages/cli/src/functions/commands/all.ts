@@ -115,6 +115,7 @@ export const all = pikkuVoidFunc({
 
     if (workflows || remoteRPC) {
       await getInspectorState(true)
+      await rpc.invoke('pikkuSchemas', null)
     }
 
     if (workflows) {

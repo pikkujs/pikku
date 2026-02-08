@@ -51,6 +51,7 @@ export class RedisDeploymentService implements DeploymentService {
     const functions = config.functions ?? getAllFunctionNames()
     this.deploymentConfig = { ...config, functions }
     const ttlSeconds = Math.ceil(this.heartbeatTtl / 1000)
+    const expiryScore = Date.now() + this.heartbeatTtl
 
     const pipeline = this.redis.pipeline()
 
@@ -61,7 +62,11 @@ export class RedisDeploymentService implements DeploymentService {
     pipeline.expire(this.deploymentKey(config.deploymentId), ttlSeconds)
 
     for (const fn of functions) {
-      pipeline.sadd(this.functionsIndexKey(fn), config.deploymentId)
+      pipeline.zadd(
+        this.functionsIndexKey(fn),
+        expiryScore,
+        config.deploymentId
+      )
     }
 
     await pipeline.exec()
@@ -84,7 +89,7 @@ export class RedisDeploymentService implements DeploymentService {
 
       pipeline.del(this.deploymentKey(deploymentId))
       for (const fn of functions!) {
-        pipeline.srem(this.functionsIndexKey(fn), deploymentId)
+        pipeline.zrem(this.functionsIndexKey(fn), deploymentId)
       }
 
       await pipeline.exec()
@@ -96,9 +101,15 @@ export class RedisDeploymentService implements DeploymentService {
   }
 
   async findFunction(name: string): Promise<DeploymentInfo[]> {
-    const deploymentIds = await this.redis.smembers(
-      this.functionsIndexKey(name)
-    )
+    const indexKey = this.functionsIndexKey(name)
+    const now = Date.now()
+
+    const pipeline = this.redis.pipeline()
+    pipeline.zremrangebyscore(indexKey, '-inf', now)
+    pipeline.zrangebyscore(indexKey, now, '+inf')
+    const pipelineResults = await pipeline.exec()
+
+    const deploymentIds = (pipelineResults?.[1]?.[1] as string[]) ?? []
 
     if (deploymentIds.length === 0) {
       return []
@@ -114,7 +125,7 @@ export class RedisDeploymentService implements DeploymentService {
       if (endpoint) {
         results.push({ deploymentId, endpoint })
       } else {
-        await this.redis.srem(this.functionsIndexKey(name), deploymentId)
+        await this.redis.zrem(indexKey, deploymentId)
       }
     }
 
@@ -124,13 +135,17 @@ export class RedisDeploymentService implements DeploymentService {
   private async sendHeartbeat(): Promise<void> {
     if (!this.deploymentConfig) return
 
+    const { deploymentId, functions } = this.deploymentConfig
     const ttlSeconds = Math.ceil(this.heartbeatTtl / 1000)
+    const expiryScore = Date.now() + this.heartbeatTtl
 
     try {
-      await this.redis.expire(
-        this.deploymentKey(this.deploymentConfig.deploymentId),
-        ttlSeconds
-      )
+      const pipeline = this.redis.pipeline()
+      pipeline.expire(this.deploymentKey(deploymentId), ttlSeconds)
+      for (const fn of functions!) {
+        pipeline.zadd(this.functionsIndexKey(fn), expiryScore, deploymentId)
+      }
+      await pipeline.exec()
     } catch {
       // Heartbeat failed, will retry on next interval
     }

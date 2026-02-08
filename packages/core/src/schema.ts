@@ -1,6 +1,9 @@
 import { Logger } from './services/logger.js'
 import { SchemaService } from './services/schema-service.js'
-import { UnprocessableContentError } from './errors/errors.js'
+import {
+  MissingSchemaError,
+  UnprocessableContentError,
+} from './errors/errors.js'
 import { pikkuState } from './pikku-state.js'
 
 /**
@@ -132,10 +135,8 @@ export const validateSchema = async (
       logger.error(
         `Schema '${schemaName}' not found for package '${packageName ?? 'main'}'. Available schemas: ${availableSchemas.join(', ') || '(none)'}`
       )
-    } else {
-      logger.debug(
-        `[validateSchema] Found schema '${schemaName}':`,
-        JSON.stringify(schema)
+      throw new MissingSchemaError(
+        `Schema '${schemaName}' not found. Ensure schema generation has been run.`
       )
     }
     await schemaService.compileSchema(schemaName, schema)

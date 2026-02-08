@@ -225,22 +225,36 @@ export class ContextAwareRPCService {
     }
 
     const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
+    const timeoutMs = 30_000
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ data }),
+      signal: AbortSignal.timeout(timeoutMs),
     })
 
     if (!response.ok) {
-      const errorBody = await response.text()
+      let errorBody: string
+      try {
+        errorBody = JSON.stringify(await response.json())
+      } catch {
+        errorBody = await response.text()
+      }
       throw new Error(
         `Remote RPC call failed: ${response.status} ${response.statusText}. ${errorBody}`
       )
     }
 
-    return response.json() as Promise<Out>
+    try {
+      return (await response.json()) as Out
+    } catch {
+      const text = await response.text()
+      throw new Error(
+        `Remote RPC call returned non-JSON response: ${response.status} ${response.statusText}. ${text}`
+      )
+    }
   }
 }
 
