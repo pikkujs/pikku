@@ -38,7 +38,7 @@ export const pikkuExternalConfig = <ExistingServices extends Omit<Partial<Single
   func: (services: ExistingServices) => Promise<Config>
 ) => {
   return async (_variables: any, existingServices?: Partial<SingletonServices>): Promise<Config> => {
-    const { secrets, variables, ...rest } = existingServices as unknown as SingletonServices
+    const { secrets, variables, ...rest } = (existingServices ?? {}) as unknown as SingletonServices
     return func({ ...rest, secrets: new TypedSecretService(secrets), variables: new TypedVariablesService(variables) } as ExistingServices)
   }
 }
@@ -67,7 +67,7 @@ export const pikkuExternalServices = <T extends Record<string, any>, ExistingSer
   func: (config: Config, services: ExistingServices) => Promise<T>
 ) => {
   return async (config: Config, existingServices?: Partial<SingletonServices>): Promise<RequiredSingletonServices> => {
-    const { logger, variables, secrets } = existingServices as unknown as SingletonServices
+    const { logger, variables, secrets } = (existingServices ?? {}) as unknown as SingletonServices
     const typedVariables = new TypedVariablesService(variables)
     const typedSecrets = new TypedSecretService(secrets)
     const result = await func(config, { ...existingServices, logger, variables: typedVariables, secrets: typedSecrets } as ExistingServices)
