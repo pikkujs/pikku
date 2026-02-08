@@ -43,13 +43,13 @@
     "./types": "./dist/types/index.d.ts"
   },
   "dependencies": {
-    "@standard-schema/spec": "^1.0.0",
+    "@standard-schema/spec": "^1.1.0",
     "cookie": "^1.1.1",
     "path-to-regexp": "^8.3.0",
     "picoquery": "^2.5.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.9",
+    "@types/node": "^24.10.12",
     "tsx": "^4.21.0",
     "typescript": "^5.9"
   },
