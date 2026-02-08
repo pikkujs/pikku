@@ -293,9 +293,7 @@ export function extractFunctionName(
     if (firstArg && ts.isStringLiteral(firstArg)) {
       const workflowName = firstArg.text
       let funcName: string
-      if (helperName === 'workflow') {
-        funcName = workflowName
-      } else if (
+      if (
         helperName === 'graphStart' &&
         secondArg &&
         ts.isStringLiteral(secondArg)
