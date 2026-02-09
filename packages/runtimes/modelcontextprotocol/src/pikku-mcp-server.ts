@@ -120,11 +120,12 @@ export class PikkuMCPServer {
       ): void {
         server.sendLoggingMessage({
           level: 'info',
-          message:
+          data:
             typeof messageOrObj === 'string'
-              ? messageOrObj
-              : JSON.stringify(messageOrObj),
-          data: meta.length > 0 ? meta : undefined,
+              ? meta.length > 0
+                ? { message: messageOrObj, meta }
+                : messageOrObj
+              : messageOrObj,
         })
       },
       warn: function (
@@ -133,11 +134,12 @@ export class PikkuMCPServer {
       ): void {
         server.sendLoggingMessage({
           level: 'warning',
-          message:
+          data:
             typeof messageOrObj === 'string'
-              ? messageOrObj
-              : JSON.stringify(messageOrObj),
-          data: meta.length > 0 ? meta : undefined,
+              ? meta.length > 0
+                ? { message: messageOrObj, meta }
+                : messageOrObj
+              : messageOrObj,
         })
       },
       error: function (
@@ -146,18 +148,18 @@ export class PikkuMCPServer {
       ): void {
         server.sendLoggingMessage({
           level: 'error',
-          message:
+          data:
             typeof messageOrObj === 'string'
-              ? messageOrObj
-              : JSON.stringify(messageOrObj),
-          data: meta.length > 0 ? meta : undefined,
+              ? meta.length > 0
+                ? { message: messageOrObj, meta }
+                : messageOrObj
+              : messageOrObj,
         })
       },
       debug: function (message: string, ...meta: any[]): void {
         server.sendLoggingMessage({
           level: 'debug',
-          message,
-          data: meta.length > 0 ? meta : undefined,
+          data: meta.length > 0 ? { message, meta } : message,
         })
       },
       setLevel: function (_level: LogLevel): void {
@@ -297,13 +299,13 @@ export class PikkuMCPServer {
     this.server.setRequestHandler(
       ReadResourceRequestSchema,
       async (request) => {
-        const { uri, arguments: args } = request.params
+        const { uri } = request.params
         try {
           const { result: contents } = await runMCPResource(
             {
               jsonrpc: '2.0' as const,
               id: Date.now().toString(),
-              params: args || {},
+              params: {},
             },
             {
               singletonServices: this.singletonServices,
@@ -320,16 +322,14 @@ export class PikkuMCPServer {
             const { code, message, data } = error.error
             this.server.sendLoggingMessage({
               level: 'error',
-              message: `Error reading resource ${uri}: code ${code}: ${message}`,
-              data: { uri, error },
+              data: `Error reading resource ${uri}: code ${code}: ${message}`,
             })
             throw new McpError(code, message, data)
           }
 
           this.server.sendLoggingMessage({
             level: 'error',
-            message: `Error reading resource ${uri}: ${error instanceof Error ? error.message : String(error)}`,
-            data: { uri, error },
+            data: `Error reading resource ${uri}: ${error instanceof Error ? error.message : String(error)}`,
           })
           throw error
         }
