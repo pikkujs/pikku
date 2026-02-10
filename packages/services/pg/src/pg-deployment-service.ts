@@ -40,19 +40,19 @@ export class PgDeploymentService implements DeploymentService {
       return
     }
 
-    try {
-      await this.createSchema()
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      await this.createSchema()
-    }
-
+    await this.createSchema()
     this.initialized = true
   }
 
   private async createSchema(): Promise<void> {
     await this.sql.unsafe(`
-      CREATE SCHEMA IF NOT EXISTS ${this.schemaName};
+      DO $$
+      BEGIN
+        CREATE SCHEMA ${this.schemaName};
+      EXCEPTION WHEN duplicate_schema THEN
+        NULL;
+      END
+      $$;
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.pikku_deployments (
         deployment_id TEXT PRIMARY KEY,

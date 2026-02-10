@@ -1,3 +1,18 @@
+async function waitForServer(port: number, timeoutMs = 15000): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    try {
+      await fetch(`http://localhost:${port}/remote-greet`, {
+        method: 'OPTIONS',
+      })
+      return
+    } catch {
+      await new Promise((r) => setTimeout(r, 250))
+    }
+  }
+  throw new Error(`Server on port ${port} not ready after ${timeoutMs}ms`)
+}
+
 async function testRemoteRpc(
   fromPort: number,
   expectOtherPort: number
@@ -37,6 +52,10 @@ async function testRemoteRpc(
 async function main(): Promise<void> {
   console.log('Remote RPC Two-Server Test')
   console.log('==========================\n')
+
+  console.log('Waiting for both servers...')
+  await Promise.all([waitForServer(3001), waitForServer(3002)])
+  console.log('Both servers ready.\n')
 
   console.log('Test 1: Call /remote-greet on port 3001')
   console.log(
