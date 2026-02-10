@@ -71,7 +71,7 @@ export abstract class PikkuTriggerService implements TriggerService {
         }
         triggerTargets.get(name)!.push({
           targetType: 'rpc',
-          targetName: meta.pikkuFuncName,
+          targetName: meta.pikkuFuncId,
         })
       }
     }

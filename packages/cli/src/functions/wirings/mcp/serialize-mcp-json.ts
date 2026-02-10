@@ -64,10 +64,10 @@ export const serializeMCPJson = async (
 
   // Process MCP resources
   for (const [name, endpointMeta] of Object.entries(mcpResourceMeta)) {
-    const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
+    const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
     if (!functionMeta) {
       logger.warn(
-        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping resource ${name}.`
+        `Function ${endpointMeta.pikkuFuncId} not found in functionsMeta. Skipping resource ${name}.`
       )
       continue
     }
@@ -92,10 +92,10 @@ export const serializeMCPJson = async (
 
   // Process MCP tools
   for (const [name, endpointMeta] of Object.entries(mcpToolMeta)) {
-    const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
+    const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
     if (!functionMeta) {
       logger.warn(
-        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping tool ${name}.`
+        `Function ${endpointMeta.pikkuFuncId} not found in functionsMeta. Skipping tool ${name}.`
       )
       continue
     }
@@ -119,10 +119,10 @@ export const serializeMCPJson = async (
 
   // Process MCP prompts
   for (const [name, endpointMeta] of Object.entries(mcpPromptMeta)) {
-    const functionMeta = functionsMeta[endpointMeta.pikkuFuncName]
+    const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
     if (!functionMeta) {
       logger.warn(
-        `Function ${endpointMeta.pikkuFuncName} not found in functionsMeta. Skipping prompt ${name}.`
+        `Function ${endpointMeta.pikkuFuncId} not found in functionsMeta. Skipping prompt ${name}.`
       )
       continue
     }

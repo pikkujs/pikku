@@ -61,7 +61,7 @@ export const wireQueueWorker = <
   }
 
   // Register the function with pikku
-  addFunction(processorMeta.pikkuFuncName, {
+  addFunction(processorMeta.pikkuFuncId, {
     func: queueWorker.func.func,
     auth: queueWorker.func.auth,
     permissions: queueWorker.func.permissions,
@@ -153,7 +153,7 @@ export async function runQueueJob({
     const result = await runPikkuFunc(
       'queue',
       job.queueName,
-      processorMeta.pikkuFuncName,
+      processorMeta.pikkuFuncId,
       {
         singletonServices,
         createWireServices,

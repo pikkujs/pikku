@@ -20,7 +20,7 @@ export type TriggerMeta = Record<string, CommonWireMeta & { name: string }>
 
 export type TriggerSourceMeta = Record<
   string,
-  { name: string; pikkuFuncName: string; packageName?: string }
+  { name: string; pikkuFuncId: string; packageName?: string }
 >
 
 /**

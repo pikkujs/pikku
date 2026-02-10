@@ -61,7 +61,7 @@ export const wireMCPResource = <
   if (!mcpResourceMeta) {
     throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
   }
-  addFunction(mcpResourceMeta.pikkuFuncName, mcpResource.func as any)
+  addFunction(mcpResourceMeta.pikkuFuncId, mcpResource.func as any)
   const resources = pikkuState(null, 'mcp', 'resources')
   if (resources.has(mcpResource.uri)) {
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
@@ -81,7 +81,7 @@ export const wireMCPTool = <
   if (!mcpToolMeta) {
     throw new Error(`MCP tool metadata not found for '${mcpTool.name}'`)
   }
-  addFunction(mcpToolMeta.pikkuFuncName, mcpTool.func as any)
+  addFunction(mcpToolMeta.pikkuFuncId, mcpTool.func as any)
   const tools = pikkuState(null, 'mcp', 'tools')
   if (tools.has(mcpTool.name)) {
     throw new Error(`MCP tool already exists: ${mcpTool.name}`)
@@ -101,7 +101,7 @@ export const wireMCPPrompt = <
   if (!mcpPromptMeta) {
     throw new Error(`MCP prompt metadata not found for '${mcpPrompt.name}'`)
   }
-  addFunction(mcpPromptMeta.pikkuFuncName, mcpPrompt.func as any)
+  addFunction(mcpPromptMeta.pikkuFuncId, mcpPrompt.func as any)
   const prompts = pikkuState(null, 'mcp', 'prompts')
   if (prompts.has(mcpPrompt.name)) {
     throw new Error(`MCP prompt already exists: ${mcpPrompt.name}`)
@@ -115,7 +115,7 @@ export async function runMCPResource(
   uri: string
 ) {
   let endpoint: CoreMCPResource | undefined
-  let pikkuFuncName: string | undefined
+  let pikkuFuncId: string | undefined
   let extractedParams: Record<string, string> = {}
 
   const metas = pikkuState(null, 'mcp', 'resourcesMeta')
@@ -123,7 +123,7 @@ export async function runMCPResource(
 
   if (endpoints.has(uri)) {
     endpoint = endpoints.get(uri)
-    pikkuFuncName = metas[uri]?.pikkuFuncName
+    pikkuFuncId = metas[uri]?.pikkuFuncId
   } else {
     for (const [uriTemplate, value] of endpoints.entries()) {
       // Extract parameter names from the template
@@ -139,7 +139,7 @@ export async function runMCPResource(
 
       if (match) {
         endpoint = value
-        pikkuFuncName = metas[uriTemplate]?.pikkuFuncName
+        pikkuFuncId = metas[uriTemplate]?.pikkuFuncId
 
         // Extract parameter values and create params object
         for (let i = 0; i < paramNames.length; i++) {
@@ -158,7 +158,7 @@ export async function runMCPResource(
     'resource',
     uri,
     endpoint,
-    pikkuFuncName,
+    pikkuFuncId,
     { ...params, mcp: { ...params.mcp, uri } } as RunMCPEndpointParams<
       keyof CoreMCPResource
     >
@@ -177,7 +177,7 @@ export async function runMCPTool(
     'tool',
     name,
     endpoint,
-    meta?.pikkuFuncName,
+    meta?.pikkuFuncId,
     params
   )
 }
@@ -194,7 +194,7 @@ export async function runMCPPrompt(
     'prompt',
     name,
     endpoint,
-    meta?.pikkuFuncName,
+    meta?.pikkuFuncId,
     params
   )
 }
@@ -207,7 +207,7 @@ async function runMCPPikkuFunc(
   type: 'resource' | 'tool' | 'prompt',
   name: string,
   mcp: CoreMCPResource | CoreMCPTool | CoreMCPPrompt | undefined,
-  pikkuFuncName: string | undefined,
+  pikkuFuncId: string | undefined,
   { singletonServices, createWireServices, mcp: mcpWire }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
   let wireServices: any
@@ -226,7 +226,7 @@ async function runMCPPikkuFunc(
       )
     }
 
-    if (!pikkuFuncName) {
+    if (!pikkuFuncId) {
       throw new NotFoundError(
         `MCP '${type}' PikkuFunction Mapping not found for '${name}'`
       )
@@ -249,7 +249,7 @@ async function runMCPPikkuFunc(
       meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
     }
 
-    const result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncName, {
+    const result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncId, {
       singletonServices,
       createWireServices,
       data: () => request.params,

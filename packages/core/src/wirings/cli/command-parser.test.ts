@@ -17,7 +17,7 @@ const testMeta: CLIMeta = {
       commands: {
         greet: {
           parameters: '<name>',
-          pikkuFuncName: 'greetFunc',
+          pikkuFuncId: 'greetFunc',
           positionals: [{ name: 'name', required: true }],
           options: {
             loud: {
@@ -28,13 +28,13 @@ const testMeta: CLIMeta = {
           },
         },
         user: {
-          pikkuFuncName: '',
+          pikkuFuncId: '',
           positionals: [],
           options: {},
           subcommands: {
             create: {
               parameters: '<name> <email>',
-              pikkuFuncName: 'createUserFunc',
+              pikkuFuncId: 'createUserFunc',
               positionals: [
                 { name: 'name', required: true },
                 { name: 'email', required: true },
@@ -50,7 +50,7 @@ const testMeta: CLIMeta = {
             },
             delete: {
               parameters: '<id>',
-              pikkuFuncName: 'deleteUserFunc',
+              pikkuFuncId: 'deleteUserFunc',
               positionals: [{ name: 'id', required: true }],
               options: {
                 force: {
@@ -64,13 +64,13 @@ const testMeta: CLIMeta = {
         },
         files: {
           parameters: '<paths...>',
-          pikkuFuncName: 'filesFunc',
+          pikkuFuncId: 'filesFunc',
           positionals: [{ name: 'paths', required: true, variadic: true }],
           options: {},
         },
         optional: {
           parameters: '[name]',
-          pikkuFuncName: 'optionalFunc',
+          pikkuFuncId: 'optionalFunc',
           positionals: [{ name: 'name', required: false }],
           options: {},
         },
@@ -299,7 +299,7 @@ describe('Command Parser', () => {
             options: {},
             commands: {
               test: {
-                pikkuFuncName: 'testFunc',
+                pikkuFuncId: 'testFunc',
                 positionals: [],
                 options: {
                   port: {
@@ -380,7 +380,7 @@ describe('Command Parser', () => {
             commands: {
               greet: {
                 parameters: '<name>',
-                pikkuFuncName: 'greetFunc',
+                pikkuFuncId: 'greetFunc',
                 description: 'Greet a user',
                 positionals: [{ name: 'name', required: true }],
                 options: {},

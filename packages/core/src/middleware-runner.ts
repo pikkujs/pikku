@@ -96,7 +96,7 @@ export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
  * This function looks up middleware that was registered with registerMiddleware.
  * It's used internally by the framework to resolve middleware references in metadata.
  *
- * @param {string} name - The unique name (pikkuFuncName) of the middleware function.
+ * @param {string} name - The unique name (pikkuFuncId) of the middleware function.
  * @returns {CorePikkuMiddleware | undefined} The middleware function, or undefined if not found.
  *
  * @internal

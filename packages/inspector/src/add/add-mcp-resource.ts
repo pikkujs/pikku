@@ -6,7 +6,10 @@ import {
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { AddWiring } from '../types.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
@@ -68,14 +71,23 @@ export const addMCPResource: AddWiring = (
       return
     }
 
-    const pikkuFuncName = extractFunctionName(
+    const extracted = extractFunctionName(
       funcInitializer,
       checker,
       state.rootDir
-    ).pikkuFuncName
+    )
+    let pikkuFuncId = extracted.pikkuFuncId
+    if (pikkuFuncId.startsWith('__temp_') && uriValue) {
+      pikkuFuncId = makeContextBasedId('mcp', 'resource', uriValue)
+    }
 
-    // Ensure function metadata exists (creates stub for inline functions)
-    ensureFunctionMetadata(state, pikkuFuncName, uriValue || undefined)
+    ensureFunctionMetadata(
+      state,
+      pikkuFuncId,
+      uriValue || undefined,
+      funcInitializer,
+      checker
+    )
 
     if (!uriValue) {
       logger.critical(
@@ -102,11 +114,11 @@ export const addMCPResource: AddWiring = (
     }
 
     // lookup existing function metadata
-    const fnMeta = state.functions.meta[pikkuFuncName]
+    const fnMeta = state.functions.meta[pikkuFuncId]
     if (!fnMeta) {
       logger.critical(
         ErrorCode.FUNCTION_METADATA_NOT_FOUND,
-        `No function metadata found for '${pikkuFuncName}'.`
+        `No function metadata found for '${pikkuFuncId}'.`
       )
       return
     }
@@ -120,7 +132,7 @@ export const addMCPResource: AddWiring = (
     const permissions = resolvePermissions(state, obj, tags, checker)
 
     // --- track used functions/middleware/permissions for service aggregation ---
-    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
+    state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     extractWireNames(middleware).forEach((name) =>
       state.serviceAggregation.usedMiddleware.add(name)
     )
@@ -131,7 +143,7 @@ export const addMCPResource: AddWiring = (
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
 
     state.mcpEndpoints.resourcesMeta[uriValue] = {
-      pikkuFuncName,
+      pikkuFuncId,
       uri: uriValue,
       title: titleValue,
       description,

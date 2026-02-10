@@ -4,7 +4,10 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { AddWiring } from '../types.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
@@ -52,16 +55,20 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    const pikkuFuncName = extractFunctionName(
+    const extracted = extractFunctionName(
       funcInitializer,
       checker,
       state.rootDir
-    ).pikkuFuncName
+    )
+    let pikkuFuncId = extracted.pikkuFuncId
+    if (pikkuFuncId.startsWith('__temp_') && queueName) {
+      pikkuFuncId = makeContextBasedId('queue', queueName)
+    }
 
     if (!queueName) {
       logger.critical(
         ErrorCode.MISSING_QUEUE_NAME,
-        `No 'queueName' provided for queue processor function '${pikkuFuncName}'.`
+        `No 'queueName' provided for queue processor function '${pikkuFuncId}'.`
       )
       return
     }
@@ -70,14 +77,14 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
     const middleware = resolveMiddleware(state, obj, tags, checker)
 
     // --- track used functions/middleware for service aggregation ---
-    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
+    state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     extractWireNames(middleware).forEach((name) =>
       state.serviceAggregation.usedMiddleware.add(name)
     )
 
     state.queueWorkers.files.add(node.getSourceFile().fileName)
     state.queueWorkers.meta[queueName] = {
-      pikkuFuncName,
+      pikkuFuncId,
       queueName,
       summary,
       description,

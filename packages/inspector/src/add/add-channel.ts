@@ -5,7 +5,10 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
@@ -62,31 +65,31 @@ function getHandlerNameFromExpression(
             ts.isFunctionExpression(decl.initializer)
           ) {
             // Extract function name from the declaration's initializer
-            const { pikkuFuncName } = extractFunctionName(
+            const { pikkuFuncId } = extractFunctionName(
               decl.initializer,
               checker,
               rootDir
             )
-            return pikkuFuncName
+            return pikkuFuncId
           }
         }
         // For function declarations, use directly
         else if (ts.isFunctionDeclaration(decl)) {
-          const { pikkuFuncName } = extractFunctionName(decl, checker, rootDir)
-          return pikkuFuncName
+          const { pikkuFuncId } = extractFunctionName(decl, checker, rootDir)
+          return pikkuFuncId
         }
       }
     }
 
     // Fallback: try to extract directly from the identifier
-    const { pikkuFuncName } = extractFunctionName(expr, checker, rootDir)
-    return pikkuFuncName
+    const { pikkuFuncId } = extractFunctionName(expr, checker, rootDir)
+    return pikkuFuncId
   }
 
   // Handle call expressions
   if (ts.isCallExpression(expr)) {
-    const { pikkuFuncName } = extractFunctionName(expr, checker, rootDir)
-    return pikkuFuncName
+    const { pikkuFuncId } = extractFunctionName(expr, checker, rootDir)
+    return pikkuFuncId
   }
 
   // Handle object literals with 'func' property
@@ -206,12 +209,12 @@ export function addMessagesRoutes(
                     ts.isFunctionExpression(importDecl.initializer) ||
                     ts.isCallExpression(importDecl.initializer)
                   ) {
-                    const { pikkuFuncName } = extractFunctionName(
+                    const { pikkuFuncId } = extractFunctionName(
                       importDecl.initializer,
                       checker,
                       state.rootDir
                     )
-                    const handlerName = pikkuFuncName
+                    const handlerName = pikkuFuncId
 
                     // Look up in the registry
                     const fnMeta = state.functions.meta[handlerName]
@@ -230,7 +233,7 @@ export function addMessagesRoutes(
                         : undefined
 
                       result[channelKey]![routeKey] = {
-                        pikkuFuncName: handlerName,
+                        pikkuFuncId: handlerName,
                         middleware: routeMiddleware,
                       }
                       continue
@@ -238,12 +241,12 @@ export function addMessagesRoutes(
                   }
                 } else if (ts.isFunctionDeclaration(importDecl)) {
                   // Extract from the function declaration
-                  const { pikkuFuncName } = extractFunctionName(
+                  const { pikkuFuncId } = extractFunctionName(
                     importDecl,
                     checker,
                     state.rootDir
                   )
-                  const handlerName = pikkuFuncName
+                  const handlerName = pikkuFuncId
 
                   // Look up in the registry
                   const fnMeta = state.functions.meta[handlerName]
@@ -262,7 +265,7 @@ export function addMessagesRoutes(
                       : undefined
 
                     result[channelKey]![routeKey] = {
-                      pikkuFuncName: handlerName,
+                      pikkuFuncId: handlerName,
                       middleware: routeMiddleware,
                     }
                     continue
@@ -288,12 +291,12 @@ export function addMessagesRoutes(
                         ts.isVariableDeclaration(exportDecl) &&
                         exportDecl.initializer
                       ) {
-                        const { pikkuFuncName } = extractFunctionName(
+                        const { pikkuFuncId } = extractFunctionName(
                           exportDecl.initializer,
                           checker,
                           state.rootDir
                         )
-                        const handlerName = pikkuFuncName
+                        const handlerName = pikkuFuncId
 
                         const fnMeta = state.functions.meta[handlerName]
                         if (fnMeta) {
@@ -313,18 +316,18 @@ export function addMessagesRoutes(
                             : undefined
 
                           result[channelKey]![routeKey] = {
-                            pikkuFuncName: handlerName,
+                            pikkuFuncId: handlerName,
                             middleware: routeMiddleware,
                           }
                           continue
                         }
                       } else if (ts.isFunctionDeclaration(exportDecl)) {
-                        const { pikkuFuncName } = extractFunctionName(
+                        const { pikkuFuncId } = extractFunctionName(
                           exportDecl,
                           checker,
                           state.rootDir
                         )
-                        const handlerName = pikkuFuncName
+                        const handlerName = pikkuFuncId
 
                         const fnMeta = state.functions.meta[handlerName]
                         if (fnMeta) {
@@ -344,7 +347,7 @@ export function addMessagesRoutes(
                             : undefined
 
                           result[channelKey]![routeKey] = {
-                            pikkuFuncName: handlerName,
+                            pikkuFuncId: handlerName,
                             middleware: routeMiddleware,
                           }
                           continue
@@ -378,7 +381,7 @@ export function addMessagesRoutes(
                 continue
               }
               result[channelKey]![routeKey] = {
-                pikkuFuncName: possibleMatch,
+                pikkuFuncId: possibleMatch,
               }
               continue
             }
@@ -405,12 +408,12 @@ export function addMessagesRoutes(
             // If we found the actual function, extract its name
             if (actualFunction) {
               // Extract the function name directly from the actual function
-              const { pikkuFuncName } = extractFunctionName(
+              const { pikkuFuncId } = extractFunctionName(
                 actualFunction,
                 checker,
                 state.rootDir
               )
-              const handlerName = pikkuFuncName
+              const handlerName = pikkuFuncId
 
               // Now use this handlerName to look up in the registry
               const fnMeta = state.functions.meta[handlerName]
@@ -430,7 +433,7 @@ export function addMessagesRoutes(
                   : undefined
 
                 result[channelKey]![routeKey] = {
-                  pikkuFuncName: handlerName,
+                  pikkuFuncId: handlerName,
                   middleware: routeMiddleware,
                 }
                 continue // Skip the normal processing below
@@ -472,7 +475,7 @@ export function addMessagesRoutes(
         : undefined
 
       result[channelKey]![routeKey] = {
-        pikkuFuncName: handlerName,
+        pikkuFuncId: handlerName,
         middleware: routeMiddleware,
       }
     }
@@ -544,21 +547,20 @@ export const addChannel: AddWiring = (
   )
 
   if (onMsgProp) {
-    const { pikkuFuncName } = extractFunctionName(
-      onMsgProp,
-      checker,
-      state.rootDir
-    )
-    const fnMeta = state.functions.meta[pikkuFuncName]
+    const extracted = extractFunctionName(onMsgProp, checker, state.rootDir)
+    const msgFuncId = extracted.pikkuFuncId.startsWith('__temp_')
+      ? makeContextBasedId('channel', name, 'message')
+      : extracted.pikkuFuncId
+    const fnMeta = state.functions.meta[msgFuncId]
     if (!fnMeta) {
       logger.critical(
         ErrorCode.FUNCTION_METADATA_NOT_FOUND,
-        `No function metadata found for onMessage handler '${pikkuFuncName}'`
+        `No function metadata found for onMessage handler '${msgFuncId}'`
       )
       return
     }
     message = {
-      pikkuFuncName,
+      pikkuFuncId: msgFuncId,
     }
   }
 
@@ -570,31 +572,35 @@ export const addChannel: AddWiring = (
 
   // --- track used functions/middleware for service aggregation ---
   // Track connect/disconnect/message handlers
+  let connectFuncId: string | undefined
   if (connect) {
-    const connectFuncName = extractFunctionName(
-      connect,
-      checker,
-      state.rootDir
-    ).pikkuFuncName
-    state.serviceAggregation.usedFunctions.add(connectFuncName)
+    const extracted = extractFunctionName(connect, checker, state.rootDir)
+    connectFuncId = extracted.pikkuFuncId.startsWith('__temp_')
+      ? makeContextBasedId('channel', name, 'connect')
+      : extracted.pikkuFuncId
+    state.serviceAggregation.usedFunctions.add(connectFuncId)
   }
 
+  let disconnectFuncId: string | undefined
   if (disconnect) {
-    const disconnectFuncName = extractFunctionName(
+    const extracted = extractFunctionName(
       disconnect as any,
       checker,
       state.rootDir
-    ).pikkuFuncName
-    state.serviceAggregation.usedFunctions.add(disconnectFuncName)
+    )
+    disconnectFuncId = extracted.pikkuFuncId.startsWith('__temp_')
+      ? makeContextBasedId('channel', name, 'disconnect')
+      : extracted.pikkuFuncId
+    state.serviceAggregation.usedFunctions.add(disconnectFuncId)
   }
 
   if (message) {
-    state.serviceAggregation.usedFunctions.add(message.pikkuFuncName)
+    state.serviceAggregation.usedFunctions.add(message.pikkuFuncId)
   }
 
   for (const channelHandlers of Object.values(messageWirings)) {
     for (const handler of Object.values(channelHandlers)) {
-      state.serviceAggregation.usedFunctions.add(handler.pikkuFuncName)
+      state.serviceAggregation.usedFunctions.add(handler.pikkuFuncId)
     }
   }
   extractWireNames(middleware).forEach((name) =>
@@ -608,21 +614,8 @@ export const addChannel: AddWiring = (
     input: null,
     params: params.length ? params : undefined,
     query: query?.length ? query : undefined,
-    connect: connect
-      ? {
-          pikkuFuncName: extractFunctionName(connect, checker, state.rootDir)
-            .pikkuFuncName,
-        }
-      : null,
-    disconnect: disconnect
-      ? {
-          pikkuFuncName: extractFunctionName(
-            disconnect as any,
-            checker,
-            state.rootDir
-          ).pikkuFuncName,
-        }
-      : null,
+    connect: connectFuncId ? { pikkuFuncId: connectFuncId } : null,
+    disconnect: disconnectFuncId ? { pikkuFuncId: disconnectFuncId } : null,
     message,
     messageWirings,
     summary,

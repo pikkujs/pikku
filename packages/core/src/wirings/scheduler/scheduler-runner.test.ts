@@ -38,7 +38,7 @@ describe('wireScheduler', () => {
 
     // Set up metadata first
     pikkuState(null, 'scheduler', 'meta')['test-task'] = {
-      pikkuFuncName: 'scheduler_test-task',
+      pikkuFuncId: 'scheduler_test-task',
       name: 'test-task',
       schedule: '0 0 * * *',
     }
@@ -81,7 +81,7 @@ describe('wireScheduler', () => {
 
     // Set up metadata
     pikkuState(null, 'scheduler', 'meta')['duplicate-task'] = {
-      pikkuFuncName: 'scheduler_duplicate-task',
+      pikkuFuncId: 'scheduler_duplicate-task',
       name: 'duplicate-task',
       schedule: '0 0 * * *',
     }
@@ -121,7 +121,7 @@ describe('wireScheduler', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['task-with-middleware'] = {
-      pikkuFuncName: 'scheduler_task-with-middleware',
+      pikkuFuncId: 'scheduler_task-with-middleware',
       name: 'task-with-middleware',
       schedule: '0 0 * * *',
     }
@@ -152,12 +152,12 @@ describe('runScheduledTask', () => {
 
     // Set up metadata and task
     pikkuState(null, 'scheduler', 'meta')['simple-task'] = {
-      pikkuFuncName: 'scheduler_simple-task',
+      pikkuFuncId: 'scheduler_simple-task',
       name: 'simple-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_simple-task'] = {
-      pikkuFuncName: 'scheduler_simple-task',
+      pikkuFuncId: 'scheduler_simple-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -192,12 +192,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['task-with-session'] = {
-      pikkuFuncName: 'scheduler_task-with-session',
+      pikkuFuncId: 'scheduler_task-with-session',
       name: 'task-with-session',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_task-with-session'] = {
-      pikkuFuncName: 'scheduler_task-with-session',
+      pikkuFuncId: 'scheduler_task-with-session',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -274,12 +274,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['skipped-task'] = {
-      pikkuFuncName: 'scheduler_skipped-task',
+      pikkuFuncId: 'scheduler_skipped-task',
       name: 'skipped-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_skipped-task'] = {
-      pikkuFuncName: 'scheduler_skipped-task',
+      pikkuFuncId: 'scheduler_skipped-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -317,12 +317,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['skipped-task-no-reason'] = {
-      pikkuFuncName: 'scheduler_skipped-task-no-reason',
+      pikkuFuncId: 'scheduler_skipped-task-no-reason',
       name: 'skipped-task-no-reason',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_skipped-task-no-reason'] = {
-      pikkuFuncName: 'scheduler_skipped-task-no-reason',
+      pikkuFuncId: 'scheduler_skipped-task-no-reason',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -363,12 +363,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['wire-task'] = {
-      pikkuFuncName: 'scheduler_wire-task',
+      pikkuFuncId: 'scheduler_wire-task',
       name: 'wire-task',
       schedule: '*/5 * * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_wire-task'] = {
-      pikkuFuncName: 'scheduler_wire-task',
+      pikkuFuncId: 'scheduler_wire-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -401,12 +401,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['session-services-task'] = {
-      pikkuFuncName: 'scheduler_session-services-task',
+      pikkuFuncId: 'scheduler_session-services-task',
       name: 'session-services-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_session-services-task'] = {
-      pikkuFuncName: 'scheduler_session-services-task',
+      pikkuFuncId: 'scheduler_session-services-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -446,12 +446,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['cleanup-task'] = {
-      pikkuFuncName: 'scheduler_cleanup-task',
+      pikkuFuncId: 'scheduler_cleanup-task',
       name: 'cleanup-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_cleanup-task'] = {
-      pikkuFuncName: 'scheduler_cleanup-task',
+      pikkuFuncId: 'scheduler_cleanup-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -490,12 +490,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['error-cleanup-task'] = {
-      pikkuFuncName: 'scheduler_error-cleanup-task',
+      pikkuFuncId: 'scheduler_error-cleanup-task',
       name: 'error-cleanup-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_error-cleanup-task'] = {
-      pikkuFuncName: 'scheduler_error-cleanup-task',
+      pikkuFuncId: 'scheduler_error-cleanup-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -527,12 +527,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['error-task'] = {
-      pikkuFuncName: 'scheduler_error-task',
+      pikkuFuncId: 'scheduler_error-task',
       name: 'error-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_error-task'] = {
-      pikkuFuncName: 'scheduler_error-task',
+      pikkuFuncId: 'scheduler_error-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -574,12 +574,12 @@ describe('runScheduledTask', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['middleware-task'] = {
-      pikkuFuncName: 'scheduler_middleware-task',
+      pikkuFuncId: 'scheduler_middleware-task',
       name: 'middleware-task',
       schedule: '0 0 * * *',
     }
     pikkuState(null, 'function', 'meta')['scheduler_middleware-task'] = {
-      pikkuFuncName: 'scheduler_middleware-task',
+      pikkuFuncId: 'scheduler_middleware-task',
       inputSchemaName: null,
       outputSchemaName: null,
     }
@@ -608,7 +608,7 @@ describe('getScheduledTasks', () => {
     }
 
     pikkuState(null, 'scheduler', 'meta')['test-task'] = {
-      pikkuFuncName: 'scheduler_test-task',
+      pikkuFuncId: 'scheduler_test-task',
       name: 'test-task',
       schedule: '0 0 * * *',
     }

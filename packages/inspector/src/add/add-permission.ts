@@ -64,12 +64,12 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
-    const { pikkuFuncName, exportedName } = extractFunctionName(
+    const { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
       state.rootDir
     )
-    state.permissions.meta[pikkuFuncName] = {
+    state.permissions.meta[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
@@ -141,12 +141,12 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    const { pikkuFuncName, exportedName } = extractFunctionName(
+    const { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
       state.rootDir
     )
-    state.permissions.meta[pikkuFuncName] = {
+    state.permissions.meta[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
@@ -192,7 +192,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    // Extract permission pikkuFuncNames from array
+    // Extract permission pikkuFuncIds from array
     const permissionNames = extractPermissionPikkuNames(
       permissionsArrayArg,
       checker,
@@ -306,7 +306,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    // Extract permission pikkuFuncNames from array
+    // Extract permission pikkuFuncIds from array
     const permissionNames = extractPermissionPikkuNames(
       permissionsArrayArg,
       checker,

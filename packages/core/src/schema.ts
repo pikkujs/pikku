@@ -64,7 +64,7 @@ const validateAllSchemasLoaded = (
 
   for (const routePaths of Object.values(routesMeta)) {
     for (const meta of Object.values(routePaths)) {
-      const inputs = pikkuState(null, 'function', 'meta')[meta.pikkuFuncName]
+      const inputs = pikkuState(null, 'function', 'meta')[meta.pikkuFuncId]
         ?.inputs
       const input = inputs?.[0]
       if (!input || validators.has(input)) {

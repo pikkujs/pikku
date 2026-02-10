@@ -30,7 +30,7 @@ const setupFunctionMeta = (
 
   for (const { method, route } of routes) {
     meta[method][route] = {
-      pikkuFuncName: `func_${route.replace(/[^a-z0-9]/gi, '_')}`,
+      pikkuFuncId: `func_${route.replace(/[^a-z0-9]/gi, '_')}`,
       route,
       method,
     }
@@ -42,7 +42,7 @@ const setupFunctionMeta = (
     const funcName = `func_${route.replace(/[^a-z0-9]/gi, '_')}`
     pikkuState(null, 'function', 'meta', {
       [funcName]: {
-        pikkuFuncName: funcName,
+        pikkuFuncId: funcName,
         services: [],
       },
     } as any)

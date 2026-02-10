@@ -4,8 +4,8 @@ import { extractFunctionName } from './extract-function-name.js'
 import { InspectorState } from '../types.js'
 
 /**
- * Extract middleware pikkuFuncNames from an array literal expression
- * Resolves each identifier to its pikkuFuncName using extractFunctionName
+ * Extract middleware pikkuFuncIds from an array literal expression
+ * Resolves each identifier to its pikkuFuncId using extractFunctionName
  * Also handles call expressions (like logCommandInfoAndTime({...}))
  */
 export function extractMiddlewarePikkuNames(
@@ -20,18 +20,18 @@ export function extractMiddlewarePikkuNames(
   const names: string[] = []
   for (const element of arrayNode.elements) {
     if (ts.isIdentifier(element)) {
-      // Resolve the identifier to its pikkuFuncName
-      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
-      names.push(pikkuFuncName)
+      // Resolve the identifier to its pikkuFuncId
+      const { pikkuFuncId } = extractFunctionName(element, checker, rootDir)
+      names.push(pikkuFuncId)
     } else if (ts.isCallExpression(element)) {
       // Handle call expressions like rateLimiter(10) or logCommandInfoAndTime({...})
       // Extract the function being called (e.g., 'rateLimiter' from 'rateLimiter(10)')
-      const { pikkuFuncName } = extractFunctionName(
+      const { pikkuFuncId } = extractFunctionName(
         element.expression,
         checker,
         rootDir
       )
-      names.push(pikkuFuncName)
+      names.push(pikkuFuncId)
     }
   }
   return names

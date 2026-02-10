@@ -92,7 +92,7 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
     // Populate arguments for prompts meta before serializing
     const promptsMetaWithArguments = { ...mcpEndpoints.promptsMeta }
     for (const promptMeta of Object.values(promptsMetaWithArguments) as any[]) {
-      const functionMeta = functions.meta[promptMeta.pikkuFuncName]
+      const functionMeta = functions.meta[promptMeta.pikkuFuncId]
       if (functionMeta) {
         const inputType = functionMeta.inputs?.[0]
         promptMeta.arguments = await generateArgumentsFromSchema(

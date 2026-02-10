@@ -177,7 +177,7 @@ export const wireHTTP = <
     throw new Error('Route metadata not found')
   }
   if (httpWiring.func) {
-    addFunction(routeMeta.pikkuFuncName, httpWiring.func)
+    addFunction(routeMeta.pikkuFuncId, httpWiring.func)
   }
   const routes = pikkuState(null, 'http', 'routes')
   if (!routes.has(httpWiring.method)) {
@@ -364,7 +364,7 @@ const executeRoute = async (
   result = await runPikkuFunc(
     'http',
     `${meta.method}:${meta.route}`,
-    meta.pikkuFuncName,
+    meta.pikkuFuncId,
     {
       singletonServices,
       createWireServices,

@@ -12,7 +12,7 @@ export type PikkuRPC<
 }
 
 export type RPCMeta = {
-  pikkuFuncName: string
+  pikkuFuncId: string
   expose: boolean
   internal?: boolean
 }

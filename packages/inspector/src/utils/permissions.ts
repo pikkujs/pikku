@@ -4,8 +4,8 @@ import { extractFunctionName } from './extract-function-name.js'
 import { InspectorState } from '../types.js'
 
 /**
- * Extract permission pikkuFuncNames from an expression (array or object literal)
- * Resolves each identifier to its pikkuFuncName using extractFunctionName
+ * Extract permission pikkuFuncIds from an expression (array or object literal)
+ * Resolves each identifier to its pikkuFuncId using extractFunctionName
  * Also handles call expressions (like rolePermission({...}))
  *
  * Supports both formats:
@@ -22,17 +22,17 @@ export function extractPermissionPikkuNames(
   // Helper to extract from a single element
   const extractFromElement = (element: ts.Expression) => {
     if (ts.isIdentifier(element)) {
-      const { pikkuFuncName } = extractFunctionName(element, checker, rootDir)
-      names.push(pikkuFuncName)
+      const { pikkuFuncId } = extractFunctionName(element, checker, rootDir)
+      names.push(pikkuFuncId)
     } else if (ts.isCallExpression(element)) {
       // Handle call expressions like hasEmailQuota(100) or rolePermission({...})
       // Extract the function being called (e.g., 'hasEmailQuota' from 'hasEmailQuota(100)')
-      const { pikkuFuncName } = extractFunctionName(
+      const { pikkuFuncId } = extractFunctionName(
         element.expression,
         checker,
         rootDir
       )
-      names.push(pikkuFuncName)
+      names.push(pikkuFuncId)
     } else if (ts.isArrayLiteralExpression(element)) {
       // Nested array (for Record values that are arrays)
       for (const nestedElement of element.elements) {

@@ -141,7 +141,7 @@ function registerCLICommands(
     for (let i = 1; i < fullPath.length; i++) {
       currentMeta = currentMeta?.subcommands?.[fullPath[i]]
     }
-    const funcName = currentMeta?.pikkuFuncName
+    const funcName = currentMeta?.pikkuFuncId
 
     // Skip if no function name (could be a command group)
     if (!funcName) {
@@ -272,7 +272,7 @@ export async function runCLICommand({
     currentCommand = currentCommand.subcommands[commandPath[i]]
   }
 
-  const funcName = currentCommand.pikkuFuncName
+  const funcName = currentCommand.pikkuFuncId
 
   // Get program-specific data
   const programs: Record<string, CLIProgramState> =

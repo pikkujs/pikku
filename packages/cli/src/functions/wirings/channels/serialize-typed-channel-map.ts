@@ -93,10 +93,10 @@ function generateChannels(
     }
 
     if (message) {
-      const func = functionsMeta[message.pikkuFuncName]
+      const func = functionsMeta[message.pikkuFuncId]
       if (!func) {
         throw new Error(
-          `Function ${message.pikkuFuncName} not found in functionsMeta for channel ${name}`
+          `Function ${message.pikkuFuncId} not found in functionsMeta for channel ${name}`
         )
       }
       const inputTypes = func.inputs || null
@@ -113,11 +113,11 @@ function generateChannels(
       if (!channelsObject[name].routes[key]) {
         channelsObject[name].routes[key] = {}
       }
-      for (const [method, { pikkuFuncName }] of Object.entries(route)) {
-        const func = functionsMeta[pikkuFuncName]
+      for (const [method, { pikkuFuncId }] of Object.entries(route)) {
+        const func = functionsMeta[pikkuFuncId]
         if (!func) {
           throw new Error(
-            `Function ${pikkuFuncName} not found in functionsMeta for channel ${name}, route ${key}, method ${method}`
+            `Function ${pikkuFuncId} not found in functionsMeta for channel ${name}, route ${key}, method ${method}`
           )
         }
         const inputTypes = func.inputs || null

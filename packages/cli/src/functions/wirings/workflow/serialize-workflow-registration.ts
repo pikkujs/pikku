@@ -64,8 +64,8 @@ export const serializeWorkflowRegistration = (
   lines.push('')
 
   // Register DSL workflows
-  for (const [pikkuFuncName, { exportedName }] of sortedWorkflows) {
-    lines.push(`addWorkflow('${pikkuFuncName}', ${exportedName})`)
+  for (const [pikkuFuncId, { exportedName }] of sortedWorkflows) {
+    lines.push(`addWorkflow('${pikkuFuncId}', ${exportedName})`)
   }
 
   // Register graph workflows

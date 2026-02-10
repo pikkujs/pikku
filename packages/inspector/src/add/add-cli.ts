@@ -157,7 +157,7 @@ function processCLIConfig(
           prop.initializer,
           typeChecker,
           inspectorState.rootDir
-        ).pikkuFuncName
+        ).pikkuFuncId
         break
     }
   }
@@ -272,11 +272,11 @@ function processCommand(
     ts.isFunctionExpression(node)
   ) {
     return {
-      pikkuFuncName: extractFunctionName(
+      pikkuFuncId: extractFunctionName(
         node,
         typeChecker,
         inspectorState.rootDir
-      ).pikkuFuncName,
+      ).pikkuFuncId,
       positionals: [],
       options: {},
     }
@@ -314,13 +314,13 @@ function processCommand(
   }
 
   const meta: CLICommandMeta = {
-    pikkuFuncName: '',
+    pikkuFuncId: '',
     positionals: [],
     options: {},
   }
 
-  // First pass: extract pikkuFuncName and tags so we can use them when processing options/middleware
-  let pikkuFuncName: string | undefined
+  // First pass: extract pikkuFuncId and tags so we can use them when processing options/middleware
+  let pikkuFuncId: string | undefined
   let optionsNode: ts.ObjectLiteralExpression | undefined
   let tags: string[] | undefined
 
@@ -331,12 +331,12 @@ function processCommand(
     const propName = prop.name.text
 
     if (propName === 'func') {
-      pikkuFuncName = extractFunctionName(
+      pikkuFuncId = extractFunctionName(
         prop.initializer,
         typeChecker,
         inspectorState.rootDir
-      ).pikkuFuncName
-      meta.pikkuFuncName = pikkuFuncName
+      ).pikkuFuncId
+      meta.pikkuFuncId = pikkuFuncId
     } else if (
       propName === 'options' &&
       ts.isObjectLiteralExpression(prop.initializer)
@@ -396,11 +396,11 @@ function processCommand(
           prop.initializer,
           typeChecker,
           inspectorState.rootDir
-        ).pikkuFuncName
+        ).pikkuFuncId
         break
 
       case 'options':
-        // Process with pikkuFuncName from first pass
+        // Process with pikkuFuncId from first pass
         if (optionsNode) {
           meta.options = processOptions(
             logger,
@@ -408,7 +408,7 @@ function processCommand(
             typeChecker,
             inspectorState,
             options,
-            pikkuFuncName
+            pikkuFuncId
           )
         }
         break
@@ -454,7 +454,7 @@ function processCommand(
   }
 
   // --- track used functions/middleware for service aggregation ---
-  inspectorState.serviceAggregation.usedFunctions.add(meta.pikkuFuncName)
+  inspectorState.serviceAggregation.usedFunctions.add(meta.pikkuFuncId)
   extractWireNames(meta.middleware).forEach((name) =>
     inspectorState.serviceAggregation.usedMiddleware.add(name)
   )
@@ -472,7 +472,7 @@ function processOptions(
   typeChecker: TypeChecker,
   inspectorState: InspectorState,
   inspectorOptions: InspectorOptions,
-  pikkuFuncName?: string
+  pikkuFuncId?: string
 ): Record<string, any> {
   const options: Record<string, any> = {}
 
@@ -535,10 +535,10 @@ function processOptions(
       }
 
       // Extract enum values from the function input type if available
-      // Get the input type if we have a pikkuFuncName
+      // Get the input type if we have a pikkuFuncId
       let inputTypes: ts.Type[] | undefined
-      if (pikkuFuncName) {
-        inputTypes = inspectorState.typesLookup.get(pikkuFuncName)
+      if (pikkuFuncId) {
+        inputTypes = inspectorState.typesLookup.get(pikkuFuncId)
       }
 
       let derivedChoices: string[] | null = null
@@ -801,7 +801,7 @@ export const addCLIRenderers: AddWiring = (
   if (args.length === 0) return
 
   // Extract renderer name
-  const { pikkuFuncName, exportedName } = extractFunctionName(
+  const { pikkuFuncId, exportedName } = extractFunctionName(
     node,
     typeChecker,
     inspectorState.rootDir
@@ -837,8 +837,8 @@ export const addCLIRenderers: AddWiring = (
   }
 
   // Store renderer metadata
-  inspectorState.cli.meta.renderers[pikkuFuncName] = {
-    name: pikkuFuncName,
+  inspectorState.cli.meta.renderers[pikkuFuncId] = {
+    name: pikkuFuncId,
     exportedName: exportedName ?? undefined,
     services,
     filePath,

@@ -159,7 +159,7 @@ export function serializeWorkflowGraph(
 
   return {
     name: definition.name,
-    pikkuFuncName: definition.name, // For graph workflows, pikkuFuncName is the workflow name
+    pikkuFuncId: definition.name, // For graph workflows, pikkuFuncId is the workflow name
     source: 'graph' as const,
     description: options?.description,
     tags: options?.tags,

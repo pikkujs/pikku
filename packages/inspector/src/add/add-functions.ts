@@ -2,7 +2,10 @@ import * as ts from 'typescript'
 import { AddWiring, SchemaRef } from '../types.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 import { TypesMap } from '../types-map.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  funcIdToTypeName,
+} from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { FunctionServicesMeta } from '@pikku/core'
 import {
@@ -24,7 +27,8 @@ const nullifyTypes = (type: string | null) => {
     type === 'void' ||
     type === 'undefined' ||
     type === 'unknown' ||
-    type === 'any'
+    type === 'any' ||
+    type === 'null'
   ) {
     return null
   }
@@ -188,8 +192,8 @@ const getNamesAndTypes = (
     return { names: [], types: [] }
   }
 
-  // 1) Handle an explicit void (or undefined) type up front
-  if (type.flags & ts.TypeFlags.VoidLike) {
+  // 1) Handle an explicit void (or undefined or null) type up front
+  if (type.flags & (ts.TypeFlags.VoidLike | ts.TypeFlags.Null)) {
     return {
       names: [],
       types: [],
@@ -207,8 +211,7 @@ const getNamesAndTypes = (
   const firstName = rawNames[0]
   if (rawNames.length > 1 || (firstName && !isValidVariableName(firstName))) {
     const aliasType = rawNames.join(' | ')
-    const aliasName =
-      funcName.charAt(0).toUpperCase() + funcName.slice(1) + direction
+    const aliasName = funcIdToTypeName(funcName) + direction
 
     // record the alias in your TypesMap
     const references = rawTypes
@@ -310,8 +313,15 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   if (args.length === 0) return
 
-  const { pikkuFuncName, name, explicitName, exportedName } =
-    extractFunctionName(node, checker, state.rootDir)
+  const { pikkuFuncId, name, explicitName, exportedName } = extractFunctionName(
+    node,
+    checker,
+    state.rootDir
+  )
+
+  if (!pikkuFuncId) {
+    return
+  }
 
   let title: string | undefined
   let tags: string[] | undefined
@@ -462,7 +472,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
             }
           } else if (ts.isCallExpression(prop.initializer)) {
             // Bad - it's an inline expression
-            const schemaName = `${name.charAt(0).toUpperCase() + name.slice(1)}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
+            const schemaName = `${funcIdToTypeName(name)}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
             logger.critical(
               ErrorCode.INLINE_SCHEMA,
               `Inline schemas are not supported for '${propName}' in '${name}'.\n` +
@@ -485,10 +495,10 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   // Validate that we got a valid function
   if (!ts.isArrowFunction(handler) && !ts.isFunctionExpression(handler)) {
-    logger.error(`• No valid 'func' property found for ${pikkuFuncName}.`)
+    logger.error(`• No valid 'func' property found for ${pikkuFuncId}.`)
     // Create stub metadata to prevent "function not found" errors in wirings
-    state.functions.meta[pikkuFuncName] = {
-      pikkuFuncName,
+    state.functions.meta[pikkuFuncId] = {
+      pikkuFuncId,
       name,
       services: { optimized: false, services: [] },
       inputSchemaName: null,
@@ -546,7 +556,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     .map((tn) => checker.getTypeFromTypeNode(tn))
     .map((t) => unwrapPromise(checker, t))
 
-  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1)
+  const capitalizedName = funcIdToTypeName(name)
 
   // --- Input Extraction ---
   let inputNames: string[] = []
@@ -577,7 +587,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
         checker,
         state.functions.typesMap,
         'Input',
-        pikkuFuncName,
+        pikkuFuncId,
         paramType
       )
       inputNames = result.names
@@ -610,7 +620,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
         checker,
         state.functions.typesMap,
         'Output',
-        pikkuFuncName,
+        pikkuFuncId,
         unwrapped
       ).names
     }
@@ -624,7 +634,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   // Store the input type for later use
   if (inputTypes.length > 0) {
-    state.typesLookup.set(pikkuFuncName, inputTypes)
+    state.typesLookup.set(pikkuFuncId, inputTypes)
   }
 
   // --- resolve middleware ---
@@ -639,8 +649,8 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   const sessionless = expression.text !== 'pikkuFunc'
 
-  state.functions.meta[pikkuFuncName] = {
-    pikkuFuncName,
+  state.functions.meta[pikkuFuncId] = {
+    pikkuFuncId,
     sessionless,
     name,
     services,
@@ -664,12 +674,12 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   // Populate node metadata if node config is present
   if (nodeDisplayName && nodeCategory && nodeType) {
     state.nodes.files.add(node.getSourceFile().fileName)
-    state.nodes.meta[pikkuFuncName] = {
-      name: pikkuFuncName,
+    state.nodes.meta[pikkuFuncId] = {
+      name: pikkuFuncId,
       displayName: nodeDisplayName,
       category: nodeCategory,
       type: nodeType,
-      rpc: pikkuFuncName,
+      rpc: pikkuFuncId,
       description,
       errorOutput: nodeErrorOutput ?? false,
       inputSchemaName: inputNames[0] ?? null,
@@ -696,7 +706,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   // Store function file location for wiring generation
   if (exportedName) {
-    state.functions.files.set(pikkuFuncName, {
+    state.functions.files.set(pikkuFuncId, {
       path: node.getSourceFile().fileName,
       exportedName,
     })
@@ -712,26 +722,26 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
     // Mark internal functions as invoked to force bundling
     if (internal) {
-      state.rpc.invokedFunctions.add(pikkuFuncName)
+      state.rpc.invokedFunctions.add(pikkuFuncId)
     }
 
     if (expose) {
-      state.rpc.exposedMeta[name] = pikkuFuncName
+      state.rpc.exposedMeta[name] = pikkuFuncId
       state.rpc.exposedFiles.set(name, {
         path: node.getSourceFile().fileName,
         exportedName,
       })
       // Track exposed RPC function for service aggregation
-      state.serviceAggregation.usedFunctions.add(pikkuFuncName)
+      state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     }
 
     // We add it to internal meta to allow autocomplete for everything
-    state.rpc.internalMeta[name] = pikkuFuncName
+    state.rpc.internalMeta[name] = pikkuFuncId
 
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
-    if (state.rpc.invokedFunctions.has(pikkuFuncName) || expose || internal) {
-      state.rpc.internalFiles.set(pikkuFuncName, {
+    if (state.rpc.invokedFunctions.has(pikkuFuncId) || expose || internal) {
+      state.rpc.internalFiles.set(pikkuFuncId, {
         path: node.getSourceFile().fileName,
         exportedName,
       })

@@ -12,7 +12,7 @@
  * for resolving tag middleware and permissions in function-runner.ts
  *
  * IMPORTANT: We only strip verbose fields at the direct meta entry level.
- * For most meta types (HTTP, Queue, Scheduler, etc.), entries have pikkuFuncName.
+ * For most meta types (HTTP, Queue, Scheduler, etc.), entries have pikkuFuncId.
  * For workflow graphs, we strip at the root level AND from nodes.
  * We do NOT strip from deeply nested structures like CLI options where 'description' is required.
  */
@@ -97,11 +97,11 @@ function hasVerboseShallow(
  * Strip verbose fields from a meta object.
  *
  * Handles different meta structure patterns:
- * 1. Single workflow graph: { name, pikkuFuncName, nodes: {...}, description, tags }
+ * 1. Single workflow graph: { name, pikkuFuncId, nodes: {...}, description, tags }
  *    -> Strips description, tags at root; strips stepName from each node
- * 2. Record of meta entries: { "entryName": { pikkuFuncName, description, tags, ... } }
+ * 2. Record of meta entries: { "entryName": { pikkuFuncId, description, tags, ... } }
  *    -> Strips description, tags from each entry (one level deep only)
- * 3. CLI meta and others with complex nesting: preserved as-is except for pikkuFuncName entries
+ * 3. CLI meta and others with complex nesting: preserved as-is except for pikkuFuncId entries
  */
 export function stripVerboseFields<T>(obj: T): T {
   if (obj === null || obj === undefined || typeof obj !== 'object') {
@@ -114,7 +114,7 @@ export function stripVerboseFields<T>(obj: T): T {
       if (
         typeof item === 'object' &&
         item !== null &&
-        'pikkuFuncName' in (item as Record<string, unknown>)
+        'pikkuFuncId' in (item as Record<string, unknown>)
       ) {
         return stripVerboseShallow(item)
       }
@@ -124,8 +124,8 @@ export function stripVerboseFields<T>(obj: T): T {
 
   const objRecord = obj as Record<string, unknown>
 
-  // Case 1: Single workflow graph (has 'nodes' and 'pikkuFuncName' at root)
-  if ('nodes' in objRecord && 'pikkuFuncName' in objRecord) {
+  // Case 1: Single workflow graph (has 'nodes' and 'pikkuFuncId' at root)
+  if ('nodes' in objRecord && 'pikkuFuncId' in objRecord) {
     const result: Record<string, unknown> = {}
 
     for (const [key, value] of Object.entries(objRecord)) {
@@ -150,15 +150,15 @@ export function stripVerboseFields<T>(obj: T): T {
     return result as T
   }
 
-  // Case 2: Record of meta entries (each entry has pikkuFuncName)
+  // Case 2: Record of meta entries (each entry has pikkuFuncId)
   // Only strip at exactly one level deep - the immediate children
   const result: Record<string, unknown> = {}
 
   for (const [key, value] of Object.entries(objRecord)) {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const valueObj = value as Record<string, unknown>
-      // Only strip from entries that look like meta entries (have pikkuFuncName)
-      if ('pikkuFuncName' in valueObj) {
+      // Only strip from entries that look like meta entries (have pikkuFuncId)
+      if ('pikkuFuncId' in valueObj) {
         result[key] = stripVerboseShallow(value)
       } else {
         // Keep nested structures as-is (e.g., CLI programs, options)
@@ -185,7 +185,7 @@ export function hasVerboseFields(obj: unknown): boolean {
       if (
         typeof item === 'object' &&
         item !== null &&
-        'pikkuFuncName' in (item as Record<string, unknown>)
+        'pikkuFuncId' in (item as Record<string, unknown>)
       ) {
         return hasVerboseShallow(item)
       }
@@ -196,7 +196,7 @@ export function hasVerboseFields(obj: unknown): boolean {
   const objRecord = obj as Record<string, unknown>
 
   // Case 1: Single workflow graph
-  if ('nodes' in objRecord && 'pikkuFuncName' in objRecord) {
+  if ('nodes' in objRecord && 'pikkuFuncId' in objRecord) {
     // Check root level
     if (hasVerboseShallow(objRecord)) {
       return true
@@ -217,7 +217,7 @@ export function hasVerboseFields(obj: unknown): boolean {
   for (const value of Object.values(objRecord)) {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const valueObj = value as Record<string, unknown>
-      if ('pikkuFuncName' in valueObj && hasVerboseShallow(value)) {
+      if ('pikkuFuncId' in valueObj && hasVerboseShallow(value)) {
         return true
       }
     }

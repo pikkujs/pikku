@@ -81,10 +81,8 @@ function generateQueues(
     {}
 
   // Iterate through Queue metadata
-  for (const [queueName, { pikkuFuncName }] of Object.entries(
-    queueWorkersMeta
-  )) {
-    const functionMeta = functionsMeta[pikkuFuncName]
+  for (const [queueName, { pikkuFuncId }] of Object.entries(queueWorkersMeta)) {
+    const functionMeta = functionsMeta[pikkuFuncId]
     if (!functionMeta) {
       throw new Error(
         `Function ${queueName} not found in functionsMeta. Please check your configuration.`

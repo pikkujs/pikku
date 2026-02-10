@@ -83,8 +83,8 @@ const convertSchemasToBodyPayloads = async (
 ) => {
   const requiredSchemas = new Set<string>()
   for (const routeMeta of Object.values(routesMeta)) {
-    for (const { inputTypes, pikkuFuncName } of Object.values(routeMeta)) {
-      const output = functionsMeta[pikkuFuncName]?.outputs?.[0]
+    for (const { inputTypes, pikkuFuncId } of Object.values(routeMeta)) {
+      const output = functionsMeta[pikkuFuncId]?.outputs?.[0]
       if (inputTypes?.body) {
         requiredSchemas.add(inputTypes?.body)
       }
@@ -124,17 +124,17 @@ export async function generateOpenAPISpec(
         route,
         method,
         inputTypes,
-        pikkuFuncName,
+        pikkuFuncId,
         params,
         query,
         errors,
         description,
         tags,
       } = meta
-      const functionMeta = functionsMeta[pikkuFuncName]
+      const functionMeta = functionsMeta[pikkuFuncId]
       if (!functionMeta) {
         logger.error(
-          `• No function metadata found for '${pikkuFuncName}' in route '${route}'.`
+          `• No function metadata found for '${pikkuFuncId}' in route '${route}'.`
         )
         continue
       }
