@@ -468,6 +468,12 @@ const _getPikkuCLIConfig = async (
     if (!result.secretsFile) {
       result.secretsFile = join(secretsDir, 'pikku-secrets.gen.ts')
     }
+    if (!result.secretsMetaJsonFile) {
+      result.secretsMetaJsonFile = join(
+        secretsDir,
+        'pikku-secrets-meta.gen.json'
+      )
+    }
 
     // Variables (typed wrapper for VariablesService)
     const variablesDir = join(result.outDir, 'variables')

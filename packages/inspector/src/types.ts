@@ -138,6 +138,7 @@ export type ExternalPackageConfig = {
   package: string
   rpcEndpoint?: string
   secretOverrides?: Record<string, string>
+  forceInclude?: boolean
 }
 
 export type InspectorOptions = Partial<{
