@@ -81,7 +81,7 @@ export type PermissionMetadata =
     }
 
 export type FunctionRuntimeMeta = {
-  pikkuFuncName: string
+  pikkuFuncId: string
   inputSchemaName: string | null
   outputSchemaName: string | null
   expose?: boolean
@@ -378,7 +378,7 @@ export type CreateConfig<
  * Represents the documentation for a route, including summary, description, tags, and errors.
  */
 export type CommonWireMeta = {
-  pikkuFuncName: string
+  pikkuFuncId: string
 
   title?: string
   tags?: string[]

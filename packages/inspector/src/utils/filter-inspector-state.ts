@@ -241,16 +241,14 @@ export function filterInspectorState(
       const routeMeta = routes[route]
 
       // Get function file path for directory filtering
-      const funcFile = filteredState.functions.files.get(
-        routeMeta.pikkuFuncName
-      )
+      const funcFile = filteredState.functions.files.get(routeMeta.pikkuFuncId)
       const filePath = funcFile?.path
 
       const matches = matchesFilters(
         filters,
         {
           type: 'http' as PikkuWiringTypes,
-          name: routeMeta.pikkuFuncName, // Use function name, not route
+          name: routeMeta.pikkuFuncId, // Use function name, not route
           tags: routeMeta.tags,
           filePath,
           httpRoute: routeMeta.route,
@@ -265,9 +263,9 @@ export function filterInspectorState(
         delete routes[route]
       } else {
         // Track used functions/middleware/permissions
-        if (routeMeta.pikkuFuncName) {
+        if (routeMeta.pikkuFuncId) {
           filteredState.serviceAggregation.usedFunctions.add(
-            routeMeta.pikkuFuncName
+            routeMeta.pikkuFuncId
           )
         }
         extractWireNames(routeMeta.middleware).forEach((name: string) =>
@@ -304,9 +302,9 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.channels.meta[name]
     } else {
-      if (channelMeta.pikkuFuncName) {
+      if (channelMeta.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          channelMeta.pikkuFuncName
+          channelMeta.pikkuFuncId
         )
       }
       extractWireNames(channelMeta.middleware).forEach((name: string) =>
@@ -339,9 +337,9 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.triggers.meta[name]
     } else {
-      if (triggerMeta.pikkuFuncName) {
+      if (triggerMeta.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          triggerMeta.pikkuFuncName
+          triggerMeta.pikkuFuncId
         )
       }
     }
@@ -368,10 +366,8 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.scheduledTasks.meta[name]
     } else {
-      if (taskMeta.pikkuFuncName) {
-        filteredState.serviceAggregation.usedFunctions.add(
-          taskMeta.pikkuFuncName
-        )
+      if (taskMeta.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(taskMeta.pikkuFuncId)
       }
       extractWireNames(taskMeta.middleware).forEach((name: string) =>
         filteredState.serviceAggregation.usedMiddleware.add(name)
@@ -400,9 +396,9 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.queueWorkers.meta[name]
     } else {
-      if (workerMeta.pikkuFuncName) {
+      if (workerMeta.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          workerMeta.pikkuFuncName
+          workerMeta.pikkuFuncId
         )
       }
       extractWireNames(workerMeta.middleware).forEach((name: string) =>
@@ -432,10 +428,8 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.mcpEndpoints.toolsMeta[name]
     } else {
-      if (toolMeta.pikkuFuncName) {
-        filteredState.serviceAggregation.usedFunctions.add(
-          toolMeta.pikkuFuncName
-        )
+      if (toolMeta.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(toolMeta.pikkuFuncId)
       }
       extractWireNames(toolMeta.middleware).forEach((name: string) =>
         filteredState.serviceAggregation.usedMiddleware.add(name)
@@ -462,9 +456,9 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.mcpEndpoints.resourcesMeta[name]
     } else {
-      if (resourceMeta.pikkuFuncName) {
+      if (resourceMeta.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          resourceMeta.pikkuFuncName
+          resourceMeta.pikkuFuncId
         )
       }
       extractWireNames(resourceMeta.middleware).forEach((name: string) =>
@@ -492,9 +486,9 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.mcpEndpoints.promptsMeta[name]
     } else {
-      if (promptMeta.pikkuFuncName) {
+      if (promptMeta.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          promptMeta.pikkuFuncName
+          promptMeta.pikkuFuncId
         )
       }
       extractWireNames(promptMeta.middleware).forEach((name: string) =>
@@ -537,9 +531,9 @@ export function filterInspectorState(
       if (!matches) {
         delete programMeta.commands[commandName]
       } else {
-        if (commandMeta.pikkuFuncName) {
+        if (commandMeta.pikkuFuncId) {
           filteredState.serviceAggregation.usedFunctions.add(
-            commandMeta.pikkuFuncName
+            commandMeta.pikkuFuncId
           )
         }
         extractWireNames(commandMeta.middleware).forEach((name: string) =>

@@ -69,7 +69,7 @@ export interface CLIProgramState {
  */
 export interface CLICommandMeta {
   parameters?: string
-  pikkuFuncName: string
+  pikkuFuncId: string
   positionals: CLIPositional[]
   options: Record<string, CLIOption>
   renderName?: string

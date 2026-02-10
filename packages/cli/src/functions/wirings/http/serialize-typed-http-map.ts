@@ -71,12 +71,12 @@ function generateHTTPWirings(
 
   for (const methods of Object.values(routesMeta)) {
     for (const meta of Object.values(methods)) {
-      const { route, method, pikkuFuncName } = meta
+      const { route, method, pikkuFuncId } = meta
 
-      const functionMeta = functionsMeta[pikkuFuncName]
+      const functionMeta = functionsMeta[pikkuFuncId]
       if (!functionMeta) {
         throw new Error(
-          `Function ${pikkuFuncName} not found in functionsMeta. Please check your configuration.`
+          `Function ${pikkuFuncId} not found in functionsMeta. Please check your configuration.`
         )
       }
       const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined

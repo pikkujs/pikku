@@ -182,7 +182,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   // Extract workflow name and metadata using same logic as add-functions
-  const { pikkuFuncName, name, exportedName } = extractFunctionName(
+  const { pikkuFuncId, name, exportedName } = extractFunctionName(
     node,
     checker,
     state.rootDir
@@ -243,7 +243,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   // Track workflow file for wiring generation
   if (exportedName) {
-    state.workflows.files.set(pikkuFuncName, {
+    state.workflows.files.set(pikkuFuncId, {
       path: node.getSourceFile().fileName,
       exportedName,
     })
@@ -315,7 +315,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   state.workflows.meta[workflowName] = {
-    pikkuFuncName,
+    pikkuFuncId,
     workflowName,
     steps,
     context,

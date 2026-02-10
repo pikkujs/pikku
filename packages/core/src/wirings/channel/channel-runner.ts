@@ -43,21 +43,18 @@ export const wireChannel = <
 
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {
-    addFunction(channelMeta.connect.pikkuFuncName, channel.onConnect as any)
+    addFunction(channelMeta.connect.pikkuFuncId, channel.onConnect as any)
   }
 
   // Register onDisconnect function if provided
   if (channel.onDisconnect && channelMeta.disconnect) {
-    addFunction(
-      channelMeta.disconnect.pikkuFuncName,
-      channel.onDisconnect as any
-    )
+    addFunction(channelMeta.disconnect.pikkuFuncId, channel.onDisconnect as any)
   }
 
   // Register onMessage function if provided
-  if (channel.onMessage && channelMeta.message?.pikkuFuncName) {
+  if (channel.onMessage && channelMeta.message?.pikkuFuncId) {
     addFunction(
-      channelMeta.message.pikkuFuncName,
+      channelMeta.message.pikkuFuncId,
       (channel.onMessage as any).func instanceof Function
         ? channel.onMessage
         : (channel.onMessage as any).func
@@ -79,7 +76,7 @@ export const wireChannel = <
         // Register the function using the pikku name from metadata
         // It could be a FuncConfig or a wiring override with a funcConfig
         addFunction(
-          wiringMeta.pikkuFuncName,
+          wiringMeta.pikkuFuncId,
           (handler as any).func instanceof Function
             ? handler
             : (handler as any).func

@@ -59,7 +59,7 @@ const verifyPermissions = async <Out = any>(
  * This function looks up permissions that was registered with registerPermission.
  * It's used internally by the framework to resolve permission references in metadata.
  *
- * @param {string} name - The unique name (pikkuFuncName) of the permission function.
+ * @param {string} name - The unique name (pikkuFuncId) of the permission function.
  * @returns {CorePikkuPermission | undefined} The permission function, or undefined if not found.
  *
  * @internal

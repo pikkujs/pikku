@@ -91,10 +91,8 @@ function generateWorkflows(
     { inputType: string; outputType: string }
   > = {}
 
-  for (const [workflowName, { pikkuFuncName }] of Object.entries(
-    workflowsMeta
-  )) {
-    const functionMeta = functionsMeta[pikkuFuncName]
+  for (const [workflowName, { pikkuFuncId }] of Object.entries(workflowsMeta)) {
+    const functionMeta = functionsMeta[pikkuFuncId]
     if (!functionMeta) {
       throw new Error(
         `Function ${workflowName} not found in functionsMeta. Please check your configuration.`

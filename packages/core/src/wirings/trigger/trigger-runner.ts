@@ -23,7 +23,7 @@ export const wireTrigger = (trigger: CoreTrigger) => {
     throw new Error(`Trigger metadata not found: ${trigger.name}`)
   }
 
-  addFunction(triggerMeta.pikkuFuncName, trigger.func as any)
+  addFunction(triggerMeta.pikkuFuncId, trigger.func as any)
 
   const triggers = pikkuState(null, 'trigger', 'triggers')
   triggers.set(trigger.name, trigger as any)
@@ -50,7 +50,7 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   triggerSources.set(source.name, source as any)
 
   addFunction(
-    triggerSourceMeta.pikkuFuncName,
+    triggerSourceMeta.pikkuFuncId,
     source.func as any,
     triggerSourceMeta.packageName
   )
@@ -104,19 +104,14 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
 
   singletonServices.logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await runPikkuFunc(
-    'trigger',
-    name,
-    sourceMeta.pikkuFuncName,
-    {
-      singletonServices,
-      createWireServices,
-      auth: false,
-      data: () => input as any,
-      wire,
-      packageName: sourceMeta.packageName || null,
-    }
-  )
+  const teardown = await runPikkuFunc('trigger', name, sourceMeta.pikkuFuncId, {
+    singletonServices,
+    createWireServices,
+    auth: false,
+    data: () => input as any,
+    wire,
+    packageName: sourceMeta.packageName || null,
+  })
 
   return { name, teardown }
 }

@@ -50,7 +50,7 @@ export type PikkuMCP<Tools extends string = any> = {
 export type MCPResourceMeta = Record<
   string,
   Omit<CoreMCPResource, 'func' | 'middleware' | 'permissions'> & {
-    pikkuFuncName: string
+    pikkuFuncId: string
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
@@ -64,7 +64,7 @@ export type MCPResourceMeta = Record<
 export type MCPToolMeta = Record<
   string,
   Omit<CoreMCPTool, 'func' | 'middleware' | 'permissions'> & {
-    pikkuFuncName: string
+    pikkuFuncId: string
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
@@ -78,7 +78,7 @@ export type MCPToolMeta = Record<
 export type MCPPromptMeta = Record<
   string,
   Omit<CoreMCPPrompt, 'func' | 'middleware' | 'permissions'> & {
-    pikkuFuncName: string
+    pikkuFuncId: string
     inputSchema: string | null
     outputSchema: string | null
     arguments: Array<{

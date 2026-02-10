@@ -4,7 +4,10 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { AddWiring } from '../types.js'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
@@ -58,11 +61,15 @@ export const addSchedule: AddWiring = (
       return
     }
 
-    const pikkuFuncName = extractFunctionName(
+    const extracted = extractFunctionName(
       funcInitializer,
       checker,
       state.rootDir
-    ).pikkuFuncName
+    )
+    let pikkuFuncId = extracted.pikkuFuncId
+    if (pikkuFuncId.startsWith('__temp_') && nameValue) {
+      pikkuFuncId = makeContextBasedId('scheduler', nameValue)
+    }
 
     if (!nameValue || !scheduleValue) {
       return
@@ -72,14 +79,14 @@ export const addSchedule: AddWiring = (
     const middleware = resolveMiddleware(state, obj, tags, checker)
 
     // --- track used functions/middleware for service aggregation ---
-    state.serviceAggregation.usedFunctions.add(pikkuFuncName)
+    state.serviceAggregation.usedFunctions.add(pikkuFuncId)
     extractWireNames(middleware).forEach((name) =>
       state.serviceAggregation.usedMiddleware.add(name)
     )
 
     state.scheduledTasks.files.add(node.getSourceFile().fileName)
     state.scheduledTasks.meta[nameValue] = {
-      pikkuFuncName,
+      pikkuFuncId,
       name: nameValue,
       schedule: scheduleValue,
       summary,

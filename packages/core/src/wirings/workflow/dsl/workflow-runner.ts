@@ -23,5 +23,5 @@ export const addWorkflow = (workflowName: string, workflowFunc: any) => {
   })
 
   // Register the function with pikku
-  addFunction(workflowMeta.pikkuFuncName, workflowFunc)
+  addFunction(workflowMeta.pikkuFuncId, workflowFunc)
 }

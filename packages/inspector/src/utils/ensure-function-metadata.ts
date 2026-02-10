@@ -1,5 +1,9 @@
 import * as ts from 'typescript'
 import { InspectorState } from '../types.js'
+import { funcIdToTypeName } from './extract-function-name.js'
+import { getCommonWireMetaData } from './get-property-value.js'
+import { resolveMiddleware } from './middleware.js'
+import { resolvePermissions } from './permissions.js'
 
 function isVoidLike(type: ts.Type): boolean {
   return !!(
@@ -53,14 +57,20 @@ function resolveTypeName(
   funcName: string,
   direction: 'Input' | 'Output'
 ): string | null {
-  if (type.flags & ts.TypeFlags.VoidLike) return null
+  if (type.flags & (ts.TypeFlags.VoidLike | ts.TypeFlags.Null)) return null
 
   const typeStr = checker.typeToString(
     type,
     undefined,
     ts.TypeFormatFlags.NoTruncation
   )
-  if (!typeStr || typeStr === 'void' || typeStr === 'undefined') return null
+  if (
+    !typeStr ||
+    typeStr === 'void' ||
+    typeStr === 'undefined' ||
+    typeStr === 'null'
+  )
+    return null
 
   const isSimpleName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(typeStr)
   if (isSimpleName) {
@@ -77,8 +87,7 @@ function resolveTypeName(
     return typeStr
   }
 
-  const aliasName =
-    funcName.charAt(0).toUpperCase() + funcName.slice(1) + direction
+  const aliasName = funcIdToTypeName(funcName) + direction
   state.functions.typesMap.addCustomType(aliasName, typeStr, [])
   return aliasName
 }
@@ -97,7 +106,7 @@ function getFirstCallSignature(type: ts.Type): ts.Signature | undefined {
 
 function resolveFromConfigTypeArgs(
   state: InspectorState,
-  pikkuFuncName: string,
+  pikkuFuncId: string,
   configType: ts.Type,
   checker: ts.TypeChecker,
   meta: NonNullable<InspectorState['functions']['meta'][string]>
@@ -115,7 +124,7 @@ function resolveFromConfigTypeArgs(
       checker,
       inputType,
       state,
-      pikkuFuncName,
+      pikkuFuncId,
       'Input'
     )
     if (inputName) {
@@ -130,7 +139,7 @@ function resolveFromConfigTypeArgs(
       checker,
       resolvedOutput,
       state,
-      pikkuFuncName,
+      pikkuFuncId,
       'Output'
     )
     if (outputName) {
@@ -142,11 +151,11 @@ function resolveFromConfigTypeArgs(
 
 function resolveFuncConfigTypes(
   state: InspectorState,
-  pikkuFuncName: string,
+  pikkuFuncId: string,
   funcInitializer: ts.Node,
   checker: ts.TypeChecker
 ): void {
-  const meta = state.functions.meta[pikkuFuncName]
+  const meta = state.functions.meta[pikkuFuncId]
   if (!meta || (meta.inputs && meta.inputs.length > 0)) return
 
   const configType = checker.getTypeAtLocation(funcInitializer)
@@ -166,7 +175,7 @@ function resolveFuncConfigTypes(
       checker,
       inputType,
       state,
-      pikkuFuncName,
+      pikkuFuncId,
       'Input'
     )
     if (inputName) {
@@ -181,7 +190,7 @@ function resolveFuncConfigTypes(
     checker,
     outputType,
     state,
-    pikkuFuncName,
+    pikkuFuncId,
     'Output'
   )
   if (outputName) {
@@ -189,25 +198,55 @@ function resolveFuncConfigTypes(
     meta.outputSchemaName = outputName
   }
 
-  resolveFromConfigTypeArgs(state, pikkuFuncName, configType, checker, meta)
+  resolveFromConfigTypeArgs(state, pikkuFuncId, configType, checker, meta)
+}
+
+function resolveToPikkuFuncCall(
+  node: ts.Node,
+  checker: ts.TypeChecker
+): ts.CallExpression | null {
+  if (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text.startsWith('pikku')
+  ) {
+    return node
+  }
+
+  if (ts.isIdentifier(node)) {
+    const sym = checker.getSymbolAtLocation(node)
+    if (sym) {
+      let resolved = sym
+      if (resolved.flags & ts.SymbolFlags.Alias) {
+        resolved = checker.getAliasedSymbol(resolved) ?? resolved
+      }
+      const decl = resolved.declarations?.[0]
+      if (decl && ts.isVariableDeclaration(decl) && decl.initializer) {
+        return resolveToPikkuFuncCall(decl.initializer, checker)
+      }
+    }
+  }
+
+  return null
 }
 
 /**
- * Ensures that function metadata exists for a given pikkuFuncName.
+ * Ensures that function metadata exists for a given pikkuFuncId.
  * Creates stub metadata if it doesn't exist (useful for inline functions).
- * When funcInitializer and checker are provided, resolves types from the expression.
+ * When funcInitializer and checker are provided, resolves types and
+ * extracts tags/middleware/permissions from the pikkuFunc() config.
  */
 export function ensureFunctionMetadata(
   state: InspectorState,
-  pikkuFuncName: string,
+  pikkuFuncId: string,
   fallbackName?: string,
   funcInitializer?: ts.Node,
   checker?: ts.TypeChecker
 ): void {
-  if (!state.functions.meta[pikkuFuncName]) {
-    state.functions.meta[pikkuFuncName] = {
-      pikkuFuncName,
-      name: fallbackName || pikkuFuncName,
+  if (!state.functions.meta[pikkuFuncId]) {
+    state.functions.meta[pikkuFuncId] = {
+      pikkuFuncId,
+      name: fallbackName || pikkuFuncId,
       services: { optimized: false, services: [] },
       inputSchemaName: null,
       outputSchemaName: null,
@@ -217,24 +256,65 @@ export function ensureFunctionMetadata(
     }
   }
 
-  if (funcInitializer && checker && ts.isCallExpression(funcInitializer)) {
-    resolveFuncConfigTypes(state, pikkuFuncName, funcInitializer, checker)
-    if (!state.typesLookup.has(pikkuFuncName)) {
-      populateTypesLookup(state, pikkuFuncName, funcInitializer, checker)
+  const meta = state.functions.meta[pikkuFuncId]!
+
+  if (funcInitializer && checker) {
+    let pikkuFuncCall: ts.CallExpression | null = null
+
+    if (ts.isCallExpression(funcInitializer)) {
+      pikkuFuncCall = funcInitializer
+      resolveFuncConfigTypes(state, pikkuFuncId, pikkuFuncCall, checker)
+      if (!state.typesLookup.has(pikkuFuncId)) {
+        populateTypesLookup(state, pikkuFuncId, pikkuFuncCall, checker)
+      }
+    } else {
+      pikkuFuncCall = resolveToPikkuFuncCall(funcInitializer, checker)
+    }
+
+    if (pikkuFuncCall) {
+      const firstArg = pikkuFuncCall.arguments[0]
+      if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
+        if (!meta.tags) {
+          const { tags } = getCommonWireMetaData(
+            firstArg,
+            'Function',
+            fallbackName || pikkuFuncId
+          )
+          if (tags) {
+            meta.tags = tags
+          }
+        }
+        if (!meta.middleware) {
+          meta.middleware = resolveMiddleware(
+            state,
+            firstArg,
+            meta.tags,
+            checker
+          )
+        }
+        if (!meta.permissions) {
+          meta.permissions = resolvePermissions(
+            state,
+            firstArg,
+            meta.tags,
+            checker
+          )
+        }
+      }
     }
   }
 }
 
 function populateTypesLookup(
   state: InspectorState,
-  pikkuFuncName: string,
+  pikkuFuncId: string,
   funcInitializer: ts.CallExpression,
   checker: ts.TypeChecker
 ): void {
   const typeArgs = funcInitializer.typeArguments
   if (typeArgs && typeArgs.length >= 1) {
     const inputType = checker.getTypeFromTypeNode(typeArgs[0]!)
-    state.typesLookup.set(pikkuFuncName, [inputType])
+    state.typesLookup.set(pikkuFuncId, [inputType])
     return
   }
 
@@ -253,7 +333,7 @@ function populateTypesLookup(
       funcInitializer
     )
     if (!(inputType.flags & ts.TypeFlags.VoidLike)) {
-      state.typesLookup.set(pikkuFuncName, [inputType])
+      state.typesLookup.set(pikkuFuncId, [inputType])
     }
   }
 }

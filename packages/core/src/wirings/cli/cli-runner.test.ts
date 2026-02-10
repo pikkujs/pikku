@@ -91,7 +91,7 @@ describe('CLI Runner', () => {
             commands: {
               greet: {
                 command: 'greet <name>',
-                pikkuFuncName: 'greetFunc',
+                pikkuFuncId: 'greetFunc',
                 positionals: [{ name: 'name', required: true }],
                 options: {},
               },
@@ -112,7 +112,7 @@ describe('CLI Runner', () => {
 
       pikkuState(null, 'function', 'meta', {
         greetFunc: {
-          pikkuFuncName: 'greetFunc',
+          pikkuFuncId: 'greetFunc',
           inputSchemaName: null,
           outputSchemaName: null,
         },
@@ -155,7 +155,7 @@ describe('CLI Runner', () => {
             commands: {
               test: {
                 command: 'test',
-                pikkuFuncName: 'testFunc',
+                pikkuFuncId: 'testFunc',
                 positionals: [],
                 options: {},
               },
@@ -176,7 +176,7 @@ describe('CLI Runner', () => {
 
       pikkuState(null, 'function', 'meta', {
         testFunc: {
-          pikkuFuncName: 'testFunc',
+          pikkuFuncId: 'testFunc',
           inputSchemaName: null,
           outputSchemaName: null,
         },
@@ -215,7 +215,7 @@ describe('CLI Runner', () => {
             commands: {
               greet: {
                 command: 'greet <name>',
-                pikkuFuncName: 'greetFunc',
+                pikkuFuncId: 'greetFunc',
                 positionals: [{ name: 'name', required: true }],
                 options: {},
               },
@@ -236,7 +236,7 @@ describe('CLI Runner', () => {
 
       pikkuState(null, 'function', 'meta', {
         greetFunc: {
-          pikkuFuncName: 'greetFunc',
+          pikkuFuncId: 'greetFunc',
           inputSchemaName: null,
           outputSchemaName: null,
         },
@@ -267,7 +267,7 @@ describe('CLI Runner', () => {
             commands: {
               secure: {
                 command: 'secure',
-                pikkuFuncName: 'secureFunc',
+                pikkuFuncId: 'secureFunc',
                 positionals: [],
                 options: {},
               },
@@ -280,7 +280,7 @@ describe('CLI Runner', () => {
 
       pikkuState(null, 'function', 'meta', {
         secureFunc: {
-          pikkuFuncName: 'secureFunc',
+          pikkuFuncId: 'secureFunc',
           inputSchemaName: null,
           outputSchemaName: null,
         },
@@ -313,7 +313,7 @@ describe('CLI Runner', () => {
             commands: {
               greet: {
                 command: 'greet <name>',
-                pikkuFuncName: 'greetFunc',
+                pikkuFuncId: 'greetFunc',
                 positionals: [{ name: 'name', required: true }],
                 options: {
                   loud: {

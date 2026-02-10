@@ -39,7 +39,7 @@ export const wireScheduler = <
   if (!taskMeta) {
     throw new Error('Task metadata not found')
   }
-  addFunction(taskMeta.pikkuFuncName, {
+  addFunction(taskMeta.pikkuFuncId, {
     func: scheduledTask.func.func,
     auth: scheduledTask.func.auth,
     permissions: scheduledTask.func.permissions,
@@ -111,7 +111,7 @@ export async function runScheduledTask({
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
-    await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncName, {
+    await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncId, {
       singletonServices,
       createWireServices,
       auth: false,

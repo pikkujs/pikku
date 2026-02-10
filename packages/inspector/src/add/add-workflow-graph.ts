@@ -419,7 +419,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
 
   const serialized: SerializedWorkflowGraph = {
     name: workflowName,
-    pikkuFuncName: workflowName,
+    pikkuFuncId: workflowName,
     source: 'graph',
     description: graphConfig.description,
     tags: graphConfig.tags,

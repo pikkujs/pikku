@@ -499,7 +499,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         const result = await runPikkuFunc(
           'workflow',
           workflowMeta.name,
-          workflowMeta.pikkuFuncName,
+          workflowMeta.pikkuFuncId,
           {
             singletonServices: this.singletonServices!,
             wire,

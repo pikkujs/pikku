@@ -64,12 +64,12 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
-    const { pikkuFuncName, exportedName } = extractFunctionName(
+    const { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
       state.rootDir
     )
-    state.middleware.meta[pikkuFuncName] = {
+    state.middleware.meta[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
@@ -141,12 +141,12 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    const { pikkuFuncName, exportedName } = extractFunctionName(
+    const { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
       state.rootDir
     )
-    state.middleware.meta[pikkuFuncName] = {
+    state.middleware.meta[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
@@ -189,7 +189,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    // Extract middleware pikkuFuncNames from array
+    // Extract middleware pikkuFuncIds from array
     const middlewareNames = extractMiddlewarePikkuNames(
       middlewareArrayArg,
       checker,
@@ -300,7 +300,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    // Extract middleware pikkuFuncNames from array
+    // Extract middleware pikkuFuncIds from array
     const middlewareNames = extractMiddlewarePikkuNames(
       middlewareArrayArg,
       checker,

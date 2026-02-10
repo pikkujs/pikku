@@ -56,7 +56,7 @@ export const runChannelLifecycleWithMiddleware = async ({
   // Run the lifecycle function
   const runLifecycle = async () => {
     return await runPikkuFuncDirectly(
-      meta.pikkuFuncName,
+      meta.pikkuFuncId,
       services,
       { channel },
       data

@@ -87,7 +87,7 @@ export const processMessageHandlers = (
     }
 
     const {
-      pikkuFuncName,
+      pikkuFuncId,
       middleware: routeInheritedMiddleware,
       permissions: inheritedPermissions,
     } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
@@ -122,7 +122,7 @@ export const processMessageHandlers = (
       ? `${channelConfig.name}:${routingProperty}:${routerValue}`
       : `${channelConfig.name}:default`
 
-    return await runPikkuFunc('channel', cacheKey, pikkuFuncName, {
+    return await runPikkuFunc('channel', cacheKey, pikkuFuncId, {
       singletonServices: services,
       data: () => data,
       inheritedMiddleware,

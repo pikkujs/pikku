@@ -142,8 +142,8 @@ function generateRPCs(
   const rpcsObj: Record<string, { inputType: string; outputType: string }> = {}
 
   // Iterate through RPC metadata
-  for (const [funcName, pikkuFuncName] of Object.entries(rpcMeta)) {
-    const functionMeta = functionsMeta[pikkuFuncName]
+  for (const [funcName, pikkuFuncId] of Object.entries(rpcMeta)) {
+    const functionMeta = functionsMeta[pikkuFuncId]
     if (!functionMeta) {
       throw new Error(
         `Function ${funcName} not found in functionsMeta. Please check your configuration.`

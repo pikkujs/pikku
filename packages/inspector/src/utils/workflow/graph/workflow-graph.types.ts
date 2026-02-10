@@ -183,7 +183,7 @@ export interface SerializedWorkflowGraph {
   /** Workflow name */
   name: string
   /** Pikku function name (for runtime registration) */
-  pikkuFuncName: string
+  pikkuFuncId: string
   /** Source type: 'dsl' for pikkuWorkflowFunc, 'graph' for pikkuWorkflowGraph */
   source: WorkflowSourceType
   /** Optional description */

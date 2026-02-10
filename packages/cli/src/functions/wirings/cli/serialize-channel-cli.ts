@@ -21,7 +21,7 @@ export function serializeChannelCLI(
   // Flatten all commands into a single routing map
   const commandMap: Record<
     string,
-    { pikkuFuncName: string; importPath?: string }
+    { pikkuFuncId: string; importPath?: string }
   > = {}
 
   const collectCommands = (
@@ -32,9 +32,9 @@ export function serializeChannelCLI(
       const fullPath = [...path, name]
       const commandKey = fullPath.join('.')
 
-      if (cmd.pikkuFuncName) {
+      if (cmd.pikkuFuncId) {
         commandMap[commandKey] = {
-          pikkuFuncName: cmd.pikkuFuncName,
+          pikkuFuncId: cmd.pikkuFuncId,
         }
       }
 
@@ -49,13 +49,13 @@ export function serializeChannelCLI(
 
   // Generate imports from function file locations
   const funcNames = [
-    ...new Set(Object.values(commandMap).map((v) => v.pikkuFuncName)),
+    ...new Set(Object.values(commandMap).map((v) => v.pikkuFuncId)),
   ]
   const imports = funcNames
-    .map((pikkuFuncName) => {
-      const fileInfo = functionFiles.get(pikkuFuncName)
+    .map((pikkuFuncId) => {
+      const fileInfo = functionFiles.get(pikkuFuncId)
       if (!fileInfo) {
-        throw new Error(`Function not found in files map: ${pikkuFuncName}`)
+        throw new Error(`Function not found in files map: ${pikkuFuncId}`)
       }
 
       const importPath = getFileImportRelativePath(
@@ -119,9 +119,9 @@ wireChannel({
     command: {
 ${Object.entries(commandMap)
   .map(
-    ([commandKey, { pikkuFuncName }]) =>
+    ([commandKey, { pikkuFuncId }]) =>
       `      '${commandKey}': {
-        func: ${pikkuFuncName},
+        func: ${pikkuFuncId},
         middleware: [cliCloseOnComplete],
       }`
   )

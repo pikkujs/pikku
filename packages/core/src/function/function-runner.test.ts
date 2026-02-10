@@ -22,7 +22,7 @@ const addTestFunction = (funcName: string, funcConfig: any) => {
     ? funcConfig.tags.map((tag: string) => ({ type: 'tag' as const, tag }))
     : undefined
   pikkuState(null, 'function', 'meta')[funcName] = {
-    pikkuFuncName: funcName,
+    pikkuFuncId: funcName,
     inputSchemaName: null,
     outputSchemaName: null,
     middleware,

@@ -36,7 +36,7 @@ Remote RPCs, deployment service, workflow improvements, and credential-to-secret
 
 **@pikku/inspector:**
 
-- Fixed `workflow()` helper generating wrong `pikkuFuncName` (used raw name instead of `workflow_` prefix)
+- Fixed `workflow()` helper generating wrong `pikkuFuncId` (used raw name instead of `workflow_` prefix)
 - Added support for extracting `disabled`, `node` config, and workflow helper function names
 - Split trigger meta into separate meta and sourceMeta structures
 

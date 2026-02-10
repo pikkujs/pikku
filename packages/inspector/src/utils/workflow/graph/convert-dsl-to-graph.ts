@@ -388,7 +388,7 @@ export function convertDslToGraph(
 
   return {
     name: workflowName,
-    pikkuFuncName: meta.pikkuFuncName,
+    pikkuFuncId: meta.pikkuFuncId,
     source,
     description: meta.description,
     tags: meta.tags,

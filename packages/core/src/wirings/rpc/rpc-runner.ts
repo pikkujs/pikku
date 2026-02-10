@@ -134,7 +134,7 @@ export class ContextAwareRPCService {
           `Available functions: ${Object.keys(externalFunctionMeta).join(', ') || '(none)'}`
       )
     }
-    const funcName = funcMeta.pikkuFuncName || resolved.function
+    const funcName = funcMeta.pikkuFuncId || resolved.function
 
     // Execute the function using runPikkuFunc with the external package's state
     // We use the parent services (this.services) since external packages share services

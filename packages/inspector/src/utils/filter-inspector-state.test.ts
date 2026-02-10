@@ -46,7 +46,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
       meta: {
         get: {
           '/api/users': {
-            pikkuFuncName: 'getUsers',
+            pikkuFuncId: 'getUsers',
             route: '/api/users',
             method: 'GET',
             tags: ['api', 'public'],
@@ -54,7 +54,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
             permissions: [],
           },
           '/admin/settings': {
-            pikkuFuncName: 'getAdminSettings',
+            pikkuFuncId: 'getAdminSettings',
             route: '/admin/settings',
             method: 'GET',
             tags: ['admin'],
@@ -64,7 +64,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
         },
         post: {
           '/api/users': {
-            pikkuFuncName: 'createUser',
+            pikkuFuncId: 'createUser',
             route: '/api/users',
             method: 'POST',
             tags: ['api'],
@@ -152,13 +152,13 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
     channels: {
       meta: {
         'chat-channel': {
-          pikkuFuncName: 'handleChatMessage',
+          pikkuFuncId: 'handleChatMessage',
           tags: ['realtime', 'public'],
           middleware: [],
           permissions: [],
         },
         'admin-channel': {
-          pikkuFuncName: 'handleAdminMessage',
+          pikkuFuncId: 'handleAdminMessage',
           tags: ['realtime', 'admin'],
           middleware: [{ type: 'wire', name: 'authMiddleware' }],
           permissions: [],
@@ -169,13 +169,13 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
     scheduledTasks: {
       meta: {
         'daily-report': {
-          pikkuFuncName: 'dailyReport',
+          pikkuFuncId: 'dailyReport',
           schedule: '0 0 * * *',
           tags: ['cron', 'reports'],
           middleware: [],
         },
         'hourly-cleanup': {
-          pikkuFuncName: 'hourlyCleanup',
+          pikkuFuncId: 'hourlyCleanup',
           schedule: '0 * * * *',
           tags: ['cron', 'maintenance'],
           middleware: [],
@@ -186,13 +186,13 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
     queueWorkers: {
       meta: {
         'email-worker': {
-          pikkuFuncName: 'sendEmailWorker',
+          pikkuFuncId: 'sendEmailWorker',
           queueName: 'email-queue',
           tags: ['queue', 'email'],
           middleware: [],
         },
         'notification-worker': {
-          pikkuFuncName: 'sendNotificationWorker',
+          pikkuFuncId: 'sendNotificationWorker',
           queueName: 'notification-queue',
           tags: ['queue', 'notifications'],
           middleware: [],
@@ -219,7 +219,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
         'search-tool': {
           name: 'search-tool',
           description: 'Search tool',
-          pikkuFuncName: 'mcpSearchTool',
+          pikkuFuncId: 'mcpSearchTool',
           tags: ['mcp', 'search'],
           middleware: [],
           permissions: [],
@@ -227,7 +227,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
         'analyze-tool': {
           name: 'analyze-tool',
           description: 'Analyze tool',
-          pikkuFuncName: 'mcpAnalyzeTool',
+          pikkuFuncId: 'mcpAnalyzeTool',
           tags: ['mcp', 'analytics'],
           middleware: [],
           permissions: [],
@@ -238,7 +238,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           title: 'Docs Resource',
           description: 'Documentation resource',
           uri: 'docs://resource',
-          pikkuFuncName: 'mcpDocsResource',
+          pikkuFuncId: 'mcpDocsResource',
           tags: ['mcp', 'docs'],
           middleware: [],
           permissions: [],
@@ -248,7 +248,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
         'help-prompt': {
           name: 'help-prompt',
           description: 'Help prompt',
-          pikkuFuncName: 'mcpHelpPrompt',
+          pikkuFuncId: 'mcpHelpPrompt',
           tags: ['mcp', 'help'],
           middleware: [],
           permissions: [],
@@ -262,14 +262,14 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           'my-cli': {
             commands: {
               build: {
-                pikkuFuncName: 'cliCommand',
+                pikkuFuncId: 'cliCommand',
                 tags: ['cli', 'build'],
                 middleware: [],
                 positionals: [],
                 options: {},
               } as any,
               test: {
-                pikkuFuncName: 'cliTestCommand',
+                pikkuFuncId: 'cliTestCommand',
                 tags: ['cli', 'test'],
                 middleware: [],
                 positionals: [],
@@ -420,7 +420,7 @@ describe('filterInspectorState', () => {
 
       assert.equal(Object.keys(result.http.meta.get).length, 1)
       assert.ok(result.http.meta.get['/api/users'])
-      assert.equal(result.http.meta.get['/api/users'].pikkuFuncName, 'getUsers')
+      assert.equal(result.http.meta.get['/api/users'].pikkuFuncId, 'getUsers')
     })
 
     test('should filter HTTP routes by name wildcard', () => {

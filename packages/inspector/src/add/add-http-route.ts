@@ -5,7 +5,10 @@ import {
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
 import { HTTPMethod } from '@pikku/core/http'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import {
   getPropertyAssignmentInitializer,
   extractTypeKeys,
@@ -191,11 +194,11 @@ export function registerHTTPRoute({
     return
   }
 
-  const funcName = extractFunctionName(
-    funcInitializer,
-    checker,
-    state.rootDir
-  ).pikkuFuncName
+  const extracted = extractFunctionName(funcInitializer, checker, state.rootDir)
+  let funcName = extracted.pikkuFuncId
+  if (funcName.startsWith('__temp_')) {
+    funcName = makeContextBasedId('http', method, fullRoute)
+  }
 
   ensureFunctionMetadata(state, funcName, fullRoute, funcInitializer, checker)
 
@@ -292,7 +295,7 @@ export function registerHTTPRoute({
   // Record route
   state.http.files.add(sourceFile.fileName)
   state.http.meta[method][fullRoute] = {
-    pikkuFuncName: funcName,
+    pikkuFuncId: funcName,
     route: fullRoute,
     method: method as HTTPMethod,
     params: params.length > 0 ? params : undefined,
