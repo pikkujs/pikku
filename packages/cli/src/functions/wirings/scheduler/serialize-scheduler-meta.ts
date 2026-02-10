@@ -1,4 +1,5 @@
 import { ScheduledTasksMeta } from '@pikku/core/scheduler'
+import { serializeMetaTS } from '../../../utils/serialize-meta-ts.js'
 
 export const serializeSchedulerMeta = (
   scheduledTasksMeta: ScheduledTasksMeta
@@ -9,29 +10,24 @@ export const serializeSchedulerMeta = (
 export const serializeSchedulerMetaTS = (
   scheduledTasksMeta: ScheduledTasksMeta,
   jsonImportPath: string,
-  supportsImportAttributes
+  supportsImportAttributes: boolean
 ) => {
-  const importStatement = supportsImportAttributes
-    ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-    : `import metaData from '${jsonImportPath}'`
-
-  const serializedOutput: string[] = []
-  serializedOutput.push("import { pikkuState } from '@pikku/core'")
-  serializedOutput.push(
-    "import { ScheduledTasksMeta } from '@pikku/core/scheduler'"
-  )
-  serializedOutput.push(importStatement)
-  serializedOutput.push('')
-  serializedOutput.push(
-    "pikkuState(null, 'scheduler', 'meta', metaData as ScheduledTasksMeta)"
-  )
-  serializedOutput.push('')
+  const base = serializeMetaTS({
+    jsonImportPath,
+    supportsImportAttributes,
+    pikkuStateNamespace: 'scheduler',
+    pikkuStateKey: 'meta',
+    metaTypeImport: '@pikku/core/scheduler',
+    metaTypeName: 'ScheduledTasksMeta',
+  })
 
   const scheduledTasksMetaValues = Object.values(scheduledTasksMeta)
   if (scheduledTasksMetaValues.length > 0) {
-    serializedOutput.push(
+    return (
+      base +
+      '\n\n' +
       `export type ScheduledTaskNames = '${scheduledTasksMetaValues.map((s) => s.name).join("' | '")}'`
     )
   }
-  return serializedOutput.join('\n')
+  return base
 }

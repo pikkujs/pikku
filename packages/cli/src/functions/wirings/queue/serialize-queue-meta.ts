@@ -1,4 +1,5 @@
 import { QueueWorkersMeta } from '@pikku/core/queue'
+import { serializeMetaTS } from '../../../utils/serialize-meta-ts.js'
 
 export const serializeQueueMeta = (queueWorkersMeta: QueueWorkersMeta) => {
   return queueWorkersMeta
@@ -8,17 +9,12 @@ export const serializeQueueMetaTS = (
   jsonImportPath: string,
   supportsImportAttributes: boolean
 ) => {
-  const importStatement = supportsImportAttributes
-    ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-    : `import metaData from '${jsonImportPath}'`
-
-  const serializedOutput: string[] = []
-  serializedOutput.push("import { pikkuState } from '@pikku/core'")
-  serializedOutput.push("import { QueueWorkersMeta } from '@pikku/core/queue'")
-  serializedOutput.push(importStatement)
-  serializedOutput.push('')
-  serializedOutput.push(
-    "pikkuState(null, 'queue', 'meta', metaData as QueueWorkersMeta)"
-  )
-  return serializedOutput.join('\n')
+  return serializeMetaTS({
+    jsonImportPath,
+    supportsImportAttributes,
+    pikkuStateNamespace: 'queue',
+    pikkuStateKey: 'meta',
+    metaTypeImport: '@pikku/core/queue',
+    metaTypeName: 'QueueWorkersMeta',
+  })
 }

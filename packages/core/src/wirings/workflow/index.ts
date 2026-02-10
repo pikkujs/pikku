@@ -12,6 +12,22 @@ export {
 export { addWorkflow } from './dsl/workflow-runner.js'
 export { addWorkflowGraph } from './graph/graph-runner.js'
 
+// Graph helpers (template, wireWorkflowGraph)
+export { template, type TemplateString } from './graph/template.js'
+export {
+  wireWorkflowGraph,
+  type PikkuWorkflowGraphConfig,
+  type PikkuWorkflowGraphResult,
+} from './graph/wire-workflow-graph.js'
+
+// Workflow helpers (runtime factories for HTTP handlers)
+export {
+  workflow,
+  workflowStart,
+  workflowStatus,
+  graphStart,
+} from './workflow-helpers.js'
+
 // Unified wireWorkflow function
 export { wireWorkflow } from './wire-workflow.js'
 export type {

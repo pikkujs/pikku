@@ -8,7 +8,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
-import { validateAndBuildSecretDefinitionsMeta } from '../secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 
 const loadIcon = async (
   iconPath: string | undefined,
