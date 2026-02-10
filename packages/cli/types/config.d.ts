@@ -109,6 +109,9 @@ export interface PikkuCLICoreOutputFiles {
   // Secrets (typed wrapper for SecretService)
   secretsFile: string
 
+  // Secrets metadata JSON
+  secretsMetaJsonFile: string
+
   // Variables
   variableTypesFile: string
 
@@ -131,6 +134,7 @@ export type PikkuCLIInput = {
       package: string
       rpcEndpoint?: string
       secretOverrides?: Record<string, string>
+      forceInclude?: boolean
     }
   >
   externalPackage?: boolean
@@ -238,6 +242,7 @@ export type PikkuCLIConfig = {
       package: string
       rpcEndpoint?: string
       secretOverrides?: Record<string, string>
+      forceInclude?: boolean
     }
   >
   externalPackage?: boolean

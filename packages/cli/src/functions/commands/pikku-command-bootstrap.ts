@@ -17,13 +17,13 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     const externalPackageBootstraps: string[] = []
     const usedExternalPackages: Record<string, ExternalPackageRuntime> = {}
 
-    if (
-      config.externalPackages &&
-      stateBeforeBootstrap.rpc?.usedExternalPackages?.size > 0
-    ) {
-      for (const namespace of stateBeforeBootstrap.rpc.usedExternalPackages) {
-        const externalPkg = config.externalPackages[namespace]
-        if (externalPkg) {
+    if (config.externalPackages) {
+      for (const [namespace, externalPkg] of Object.entries(
+        config.externalPackages
+      )) {
+        const isUsed =
+          stateBeforeBootstrap.rpc?.usedExternalPackages?.has(namespace)
+        if (isUsed || externalPkg.forceInclude) {
           const packageName = externalPkg.package
           const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
           externalPackageBootstraps.push(packageBootstrap)
@@ -32,7 +32,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
             rpcEndpoint: externalPkg.rpcEndpoint,
           }
           logger.debug(
-            `• External package detected: ${namespace} (${packageName})`
+            `• External package ${externalPkg.forceInclude && !isUsed ? 'force-included' : 'detected'}: ${namespace} (${packageName})`
           )
         }
       }
