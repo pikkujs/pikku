@@ -49,7 +49,7 @@ export class PgDeploymentService implements DeploymentService {
       DO $$
       BEGIN
         CREATE SCHEMA ${this.schemaName};
-      EXCEPTION WHEN duplicate_schema THEN
+      EXCEPTION WHEN duplicate_schema OR unique_violation THEN
         NULL;
       END
       $$;
