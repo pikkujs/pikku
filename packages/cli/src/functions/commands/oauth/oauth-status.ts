@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 
 /**
  * pikku oauth status <credential-name>

@@ -2,6 +2,7 @@ import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap, ExternalPackageConfig } from '@pikku/inspector'
 import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
+import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
 
 export const serializeTypedRPCMap = (
   logger: Logger,
@@ -138,51 +139,15 @@ function generateRPCs(
   typesMap: TypesMap,
   requiredTypes: Set<string>
 ) {
-  // Initialize an object to collect RPCs
   const rpcsObj: Record<string, { inputType: string; outputType: string }> = {}
 
-  // Iterate through RPC metadata
   for (const [funcName, pikkuFuncId] of Object.entries(rpcMeta)) {
-    const functionMeta = functionsMeta[pikkuFuncId]
-    if (!functionMeta) {
-      throw new Error(
-        `Function ${funcName} not found in functionsMeta. Please check your configuration.`
-      )
-    }
-
-    const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
-    const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
-
-    // Store the input and output types for RPCHandler
-    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
-    let inputType = 'null'
-    if (input) {
-      try {
-        inputType = typesMap.getTypeMeta(input).uniqueName
-      } catch {
-        // Type not in typesMap - use the name directly (e.g., zod-derived types)
-        inputType = input
-      }
-    }
-
-    let outputType = 'null'
-    if (output) {
-      try {
-        outputType = typesMap.getTypeMeta(output).uniqueName
-      } catch {
-        // Type not in typesMap - use the name directly (e.g., zod-derived types)
-        outputType = output
-      }
-    }
-
-    requiredTypes.add(inputType)
-    requiredTypes.add(outputType)
-
-    // Add RPC entry
-    rpcsObj[funcName] = {
-      inputType,
-      outputType,
-    }
+    rpcsObj[funcName] = resolveFunctionIOTypes(
+      pikkuFuncId,
+      functionsMeta,
+      typesMap,
+      requiredTypes
+    )
   }
 
   // Build the RPCs object as a string

@@ -3,6 +3,7 @@ import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap } from '@pikku/inspector'
 import { FunctionsMeta, Logger } from '@pikku/core'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
+import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
 
 export const serializeQueueMap = (
   logger: Logger,
@@ -76,49 +77,16 @@ function generateQueues(
   typesMap: TypesMap,
   requiredTypes: Set<string>
 ) {
-  // Initialize an object to collect queues
   const queuesObj: Record<string, { inputType: string; outputType: string }> =
     {}
 
-  // Iterate through Queue metadata
   for (const [queueName, { pikkuFuncId }] of Object.entries(queueWorkersMeta)) {
-    const functionMeta = functionsMeta[pikkuFuncId]
-    if (!functionMeta) {
-      throw new Error(
-        `Function ${queueName} not found in functionsMeta. Please check your configuration.`
-      )
-    }
-
-    const input = functionMeta.inputs ? functionMeta.inputs[0] : undefined
-    const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
-
-    // Store the input and output types for QueueHandler
-    // For zod-derived schemas, the type might not be in typesMap, so use the schema name directly
-    let inputType = 'null'
-    if (input) {
-      try {
-        inputType = typesMap.getTypeMeta(input).uniqueName
-      } catch {
-        inputType = input
-      }
-    }
-    let outputType = 'null'
-    if (output) {
-      try {
-        outputType = typesMap.getTypeMeta(output).uniqueName
-      } catch {
-        outputType = output
-      }
-    }
-
-    requiredTypes.add(inputType)
-    requiredTypes.add(outputType)
-
-    // Add Queue entry
-    queuesObj[queueName] = {
-      inputType,
-      outputType,
-    }
+    queuesObj[queueName] = resolveFunctionIOTypes(
+      pikkuFuncId,
+      functionsMeta,
+      typesMap,
+      requiredTypes
+    )
   }
 
   // Build the Queues object as a string

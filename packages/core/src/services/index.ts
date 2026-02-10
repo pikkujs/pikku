@@ -15,6 +15,9 @@ export * from './scheduler-service.js'
 export * from './trigger-service.js'
 export * from './deployment-service.js'
 
+export * from './typed-secret-service.js'
+export * from './typed-variables-service.js'
+
 // Local implementations
 export * from './local-secrets.js'
 export * from './local-variables.js'

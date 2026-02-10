@@ -3,7 +3,7 @@ import { OAuth2Client, type OAuth2Token } from '@pikku/core/oauth2'
 import { createServer, type Server } from 'http'
 import { randomUUID } from 'crypto'
 import open from 'open'
-import { validateAndBuildSecretDefinitionsMeta } from '../../wirings/secrets/serialize-secrets-types.js'
+import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
 
 interface OAuthCallbackResult {
   code: string

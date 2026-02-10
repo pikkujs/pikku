@@ -51,7 +51,17 @@ export class ContextAwareRPCService {
   ) {}
 
   public async rpcExposed(funcName: string, data: any): Promise<any> {
-    const functionMeta = pikkuState(null, 'function', 'meta')[funcName]
+    let functionMeta: any
+    if (funcName.includes(':')) {
+      const resolved = resolveNamespace(funcName)
+      if (resolved) {
+        functionMeta = pikkuState(resolved.package, 'function', 'meta')[
+          resolved.function
+        ]
+      }
+    } else {
+      functionMeta = pikkuState(null, 'function', 'meta')[funcName]
+    }
     if (!functionMeta) {
       throw new Error(`Function not found: ${funcName}`)
     }
