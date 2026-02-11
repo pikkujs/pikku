@@ -241,11 +241,13 @@ export function ensureFunctionMetadata(
   pikkuFuncId: string,
   fallbackName?: string,
   funcInitializer?: ts.Node,
-  checker?: ts.TypeChecker
+  checker?: ts.TypeChecker,
+  isHelper?: boolean
 ): void {
   if (!state.functions.meta[pikkuFuncId]) {
     state.functions.meta[pikkuFuncId] = {
       pikkuFuncId,
+      functionType: isHelper ? 'helper' : 'inline',
       name: fallbackName || pikkuFuncId,
       services: { optimized: false, services: [] },
       inputSchemaName: null,

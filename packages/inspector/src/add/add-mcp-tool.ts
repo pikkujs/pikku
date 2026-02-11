@@ -86,7 +86,8 @@ export const addMCPTool: AddWiring = (
       pikkuFuncId,
       nameValue || undefined,
       funcInitializer,
-      checker
+      checker,
+      extracted.isHelper
     )
 
     if (!nameValue) {

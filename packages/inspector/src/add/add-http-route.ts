@@ -200,7 +200,14 @@ export function registerHTTPRoute({
     funcName = makeContextBasedId('http', method, fullRoute)
   }
 
-  ensureFunctionMetadata(state, funcName, fullRoute, funcInitializer, checker)
+  ensureFunctionMetadata(
+    state,
+    funcName,
+    fullRoute,
+    funcInitializer,
+    checker,
+    extracted.isHelper
+  )
 
   // Lookup existing function metadata
   const fnMeta = state.functions.meta[funcName]

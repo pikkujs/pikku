@@ -93,6 +93,8 @@ export type FunctionMeta = FunctionRuntimeMeta &
   Partial<
     {
       name: string
+      functionType: 'user' | 'inline' | 'helper'
+      funcWrapper: string
       services: FunctionServicesMeta
       usedWires: string[]
       inputs: string[] | null

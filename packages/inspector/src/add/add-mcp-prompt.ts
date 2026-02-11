@@ -77,7 +77,8 @@ export const addMCPPrompt: AddWiring = (
       pikkuFuncId,
       nameValue || undefined,
       funcInitializer,
-      checker
+      checker,
+      extracted.isHelper
     )
 
     if (!nameValue) {

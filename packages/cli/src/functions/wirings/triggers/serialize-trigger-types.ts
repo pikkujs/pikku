@@ -71,6 +71,20 @@ export type PikkuTriggerFunctionConfigWithSchema<
 export type TriggerWiring = CoreTrigger
 
 /**
+ * A trigger source with the subscription function, using project-specific services.
+ *
+ * @template TInput - Input type passed to the trigger function
+ * @template TOutput - Output type produced when trigger fires
+ */
+export type TriggerSource<
+  TInput = unknown,
+  TOutput = unknown
+> = {
+  name: string
+  func: PikkuTriggerFunctionConfig<TInput, TOutput>
+} & (unknown extends TInput ? { input?: TInput } : { input: TInput })
+
+/**
  * Creates a trigger function configuration.
  * Use this to define trigger functions that set up subscriptions.
  *
@@ -144,9 +158,9 @@ export const wireTrigger = (
  * @param source - Trigger source with name, func, and input
  */
 export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
-  source: CoreTriggerSource<TInput, TOutput>
+  source: TriggerSource<TInput, TOutput>
 ) => {
-  wireTriggerSourceCore(source)
+  wireTriggerSourceCore(source as any)
 }
 `
 }
