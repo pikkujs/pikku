@@ -139,7 +139,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
       async (queueName, processor) => {
         await this.pgBoss.createQueue(queueName)
         const workerId = await this.pgBoss.work<any>(
-          processor.queueName,
+          processor.name,
           {
             ...mapPikkuWorkerToPgBoss(processor.config),
             includeMetadata: true,
