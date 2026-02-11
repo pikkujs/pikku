@@ -940,12 +940,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private createWorkflowWire(
-    workflowName: string,
+    name: string,
     runId: string,
     rpcService: any
   ): PikkuWorkflowWire {
     const workflowWire: PikkuWorkflowWire = {
-      workflowName,
+      name,
       runId,
       getRun: async () => (await this.getRun(runId)) as WorkflowRun,
 

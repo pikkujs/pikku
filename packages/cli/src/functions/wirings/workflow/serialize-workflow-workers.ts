@@ -40,8 +40,8 @@ export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<{ rpcName: string, da
   internal: true,
 })
 
-wireQueueWorker({ queueName: 'pikku-workflow-step-worker', func: pikkuWorkflowWorker })
-wireQueueWorker({ queueName: 'pikku-workflow-orchestrator', func: pikkuWorkflowOrchestrator })
-wireQueueWorker({ queueName: 'pikku-remote-internal-rpc', func: pikkuRemoteInternalRPC })
+wireQueueWorker({ name: 'pikku-workflow-step-worker', func: pikkuWorkflowWorker })
+wireQueueWorker({ name: 'pikku-workflow-orchestrator', func: pikkuWorkflowOrchestrator })
+wireQueueWorker({ name: 'pikku-remote-internal-rpc', func: pikkuRemoteInternalRPC })
 `
 }

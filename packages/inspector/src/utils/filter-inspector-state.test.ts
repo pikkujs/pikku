@@ -187,13 +187,13 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
       meta: {
         'email-worker': {
           pikkuFuncId: 'sendEmailWorker',
-          queueName: 'email-queue',
+          name: 'email-queue',
           tags: ['queue', 'email'],
           middleware: [],
         },
         'notification-worker': {
           pikkuFuncId: 'sendNotificationWorker',
-          queueName: 'notification-queue',
+          name: 'notification-queue',
           tags: ['queue', 'notifications'],
           middleware: [],
         },

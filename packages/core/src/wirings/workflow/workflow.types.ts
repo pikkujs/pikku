@@ -171,7 +171,7 @@ export type WorkflowContext = Record<string, ContextVariable>
 export type WorkflowsMeta = Record<
   string,
   CommonWireMeta & {
-    workflowName: string
+    name: string
     steps: WorkflowStepMeta[]
     context?: WorkflowContext
     dsl?: boolean

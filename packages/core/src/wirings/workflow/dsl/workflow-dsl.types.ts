@@ -298,7 +298,7 @@ export interface WorkflowStepWire {
  */
 export interface PikkuWorkflowWire {
   /** The workflow name */
-  workflowName: string
+  name: string
   /** The current run ID */
   runId: string
   /** Get the current workflow run */

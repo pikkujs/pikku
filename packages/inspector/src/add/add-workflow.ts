@@ -316,7 +316,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   state.workflows.meta[workflowName] = {
     pikkuFuncId,
-    workflowName,
+    name: workflowName,
     steps,
     context,
     dsl,
