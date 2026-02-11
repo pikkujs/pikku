@@ -51,7 +51,7 @@ const addTestQueueFunction = (pikkuFuncId: string) => {
 describe('wireQueueWorker', () => {
   test('should successfully wire a queue worker', () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'test-queue',
+      name: 'test-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           return { processed: true }
@@ -60,10 +60,9 @@ describe('wireQueueWorker', () => {
       },
     }
 
-    // Set up metadata first
     pikkuState(null, 'queue', 'meta')['test-queue'] = {
       pikkuFuncId: 'queue_test-queue',
-      queueName: 'test-queue',
+      name: 'test-queue',
     }
     addTestQueueFunction('queue_test-queue')
     wireQueueWorker(mockWorker)
@@ -75,7 +74,7 @@ describe('wireQueueWorker', () => {
 
   test('should throw error when processor metadata not found', () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'missing-meta-queue',
+      name: 'missing-meta-queue',
       func: {
         func: async () => {},
         auth: false,
@@ -98,7 +97,7 @@ describe('wireQueueWorker', () => {
     }
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'worker-with-middleware',
+      name: 'worker-with-middleware',
       func: {
         func: async () => {},
         auth: false,
@@ -111,7 +110,7 @@ describe('wireQueueWorker', () => {
 
     pikkuState(null, 'queue', 'meta')['worker-with-middleware'] = {
       pikkuFuncId: 'queue_worker-with-middleware',
-      queueName: 'worker-with-middleware',
+      name: 'worker-with-middleware',
     }
     addTestQueueFunction('queue_worker-with-middleware')
     wireQueueWorker(mockWorker)
@@ -126,7 +125,7 @@ describe('wireQueueWorker', () => {
 describe('getQueueWorkers', () => {
   test('should return the registrations map', () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'test-queue',
+      name: 'test-queue',
       func: {
         func: async () => {},
         auth: false,
@@ -135,7 +134,7 @@ describe('getQueueWorkers', () => {
 
     pikkuState(null, 'queue', 'meta')['test-queue'] = {
       pikkuFuncId: 'queue_test-queue',
-      queueName: 'test-queue',
+      name: 'test-queue',
     }
     addTestQueueFunction('queue_test-queue')
     wireQueueWorker(mockWorker)
@@ -155,7 +154,7 @@ describe('getQueueWorkers', () => {
 describe('removeQueueWorker', () => {
   test('should successfully remove a queue worker', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'removable-queue',
+      name: 'removable-queue',
       func: {
         func: async () => {},
         auth: false,
@@ -164,7 +163,7 @@ describe('removeQueueWorker', () => {
 
     pikkuState(null, 'queue', 'meta')['removable-queue'] = {
       pikkuFuncId: 'queue_removable-queue',
-      queueName: 'removable-queue',
+      name: 'removable-queue',
     }
     addTestQueueFunction('queue_removable-queue')
     wireQueueWorker(mockWorker)
@@ -198,7 +197,7 @@ describe('runQueueJob', () => {
     let receivedData: any
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'simple-queue',
+      name: 'simple-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           jobProcessed = true
@@ -211,7 +210,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['simple-queue'] = {
       pikkuFuncId: 'queue_simple-queue',
-      queueName: 'simple-queue',
+      name: 'simple-queue',
     }
     addTestQueueFunction('queue_simple-queue')
     wireQueueWorker(mockWorker)
@@ -238,7 +237,7 @@ describe('runQueueJob', () => {
 
   test('should handle job.fail() by throwing QueueJobFailedError', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'fail-queue',
+      name: 'fail-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           await wire.queue.fail('Processing failed')
@@ -249,7 +248,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['fail-queue'] = {
       pikkuFuncId: 'queue_fail-queue',
-      queueName: 'fail-queue',
+      name: 'fail-queue',
     }
     addTestQueueFunction('queue_fail-queue')
     wireQueueWorker(mockWorker)
@@ -276,7 +275,7 @@ describe('runQueueJob', () => {
 
   test('should handle job.fail() without reason', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'fail-no-reason-queue',
+      name: 'fail-no-reason-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           await wire.queue.fail()
@@ -287,7 +286,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['fail-no-reason-queue'] = {
       pikkuFuncId: 'queue_fail-no-reason-queue',
-      queueName: 'fail-no-reason-queue',
+      name: 'fail-no-reason-queue',
     }
     addTestQueueFunction('queue_fail-no-reason-queue')
     wireQueueWorker(mockWorker)
@@ -312,7 +311,7 @@ describe('runQueueJob', () => {
 
   test('should handle job.discard() by throwing QueueJobDiscardedError', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'discard-queue',
+      name: 'discard-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           await wire.queue.discard('Invalid data')
@@ -323,7 +322,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['discard-queue'] = {
       pikkuFuncId: 'queue_discard-queue',
-      queueName: 'discard-queue',
+      name: 'discard-queue',
     }
     addTestQueueFunction('queue_discard-queue')
     wireQueueWorker(mockWorker)
@@ -352,7 +351,7 @@ describe('runQueueJob', () => {
     const progressUpdates: Array<number | string | object> = []
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'progress-queue',
+      name: 'progress-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           await wire.queue.updateProgress(25)
@@ -366,7 +365,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['progress-queue'] = {
       pikkuFuncId: 'queue_progress-queue',
-      queueName: 'progress-queue',
+      name: 'progress-queue',
     }
     addTestQueueFunction('queue_progress-queue')
     wireQueueWorker(mockWorker)
@@ -387,7 +386,7 @@ describe('runQueueJob', () => {
 
   test('should use default updateProgress when not provided', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'default-progress-queue',
+      name: 'default-progress-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           await wire.queue.updateProgress(50)
@@ -399,7 +398,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['default-progress-queue'] = {
       pikkuFuncId: 'queue_default-progress-queue',
-      queueName: 'default-progress-queue',
+      name: 'default-progress-queue',
     }
     addTestQueueFunction('queue_default-progress-queue')
     wireQueueWorker(mockWorker)
@@ -421,7 +420,7 @@ describe('runQueueJob', () => {
     let capturedWire: any
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'wire-queue',
+      name: 'wire-queue',
       func: {
         func: async (services: any, data: any, wire: any) => {
           capturedWire = wire
@@ -433,7 +432,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['wire-queue'] = {
       pikkuFuncId: 'queue_wire-queue',
-      queueName: 'wire-queue',
+      name: 'wire-queue',
     }
     addTestQueueFunction('queue_wire-queue')
     wireQueueWorker(mockWorker)
@@ -473,10 +472,9 @@ describe('runQueueJob', () => {
   })
 
   test('should throw error when queue worker registration not found', async () => {
-    // Add metadata but not registration
     pikkuState(null, 'queue', 'meta')['no-registration-queue'] = {
       pikkuFuncId: 'queue_no-registration-queue',
-      queueName: 'no-registration-queue',
+      name: 'no-registration-queue',
     }
 
     const mockLogger = createMockLogger()
@@ -502,7 +500,7 @@ describe('runQueueJob', () => {
     const mockWireService = { custom: 'service' }
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'session-services-queue',
+      name: 'session-services-queue',
       func: {
         func: async () => 'ok',
         auth: false,
@@ -511,7 +509,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['session-services-queue'] = {
       pikkuFuncId: 'queue_session-services-queue',
-      queueName: 'session-services-queue',
+      name: 'session-services-queue',
     }
     addTestQueueFunction('queue_session-services-queue')
     wireQueueWorker(mockWorker)
@@ -533,7 +531,7 @@ describe('runQueueJob', () => {
 
   test('should log errors when job processing fails', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'error-queue',
+      name: 'error-queue',
       func: {
         func: async () => {
           throw new Error('Processing error')
@@ -544,7 +542,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['error-queue'] = {
       pikkuFuncId: 'queue_error-queue',
-      queueName: 'error-queue',
+      name: 'error-queue',
     }
     addTestQueueFunction('queue_error-queue')
     wireQueueWorker(mockWorker)
@@ -580,7 +578,7 @@ describe('runQueueJob', () => {
     }
 
     const mockWorker: CoreQueueWorker = {
-      queueName: 'middleware-queue',
+      name: 'middleware-queue',
       func: {
         func: async () => {
           executionOrder.push('job')
@@ -593,7 +591,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['middleware-queue'] = {
       pikkuFuncId: 'queue_middleware-queue',
-      queueName: 'middleware-queue',
+      name: 'middleware-queue',
     }
     addTestQueueFunction('queue_middleware-queue')
     wireQueueWorker(mockWorker)
@@ -611,7 +609,7 @@ describe('runQueueJob', () => {
 
   test('should log debug message on successful job completion', async () => {
     const mockWorker: CoreQueueWorker = {
-      queueName: 'debug-queue',
+      name: 'debug-queue',
       func: {
         func: async () => 'success',
         auth: false,
@@ -620,7 +618,7 @@ describe('runQueueJob', () => {
 
     pikkuState(null, 'queue', 'meta')['debug-queue'] = {
       pikkuFuncId: 'queue_debug-queue',
-      queueName: 'debug-queue',
+      name: 'debug-queue',
     }
     addTestQueueFunction('queue_debug-queue')
     wireQueueWorker(mockWorker)

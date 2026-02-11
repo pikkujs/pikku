@@ -32,7 +32,7 @@ export const queueTagPermissions = () =>
 export { sessionTagMiddleware } from '../middleware/fake-session.js'
 
 wireQueueWorker({
-  queueName: 'test-queue',
+  name: 'test-queue',
   tags: ['session', 'queue'],
   middleware: [wireMiddleware('queue')],
   func: noOpFunction,

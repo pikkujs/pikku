@@ -34,9 +34,9 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
   if (ts.isObjectLiteralExpression(firstArg)) {
     const obj = firstArg
 
-    const queueName = getPropertyValue(obj, 'queueName') as string | null
+    const name = getPropertyValue(obj, 'name') as string | null
     const { disabled, tags, summary, description, errors } =
-      getCommonWireMetaData(obj, 'Queue worker', queueName, logger)
+      getCommonWireMetaData(obj, 'Queue worker', name, logger)
 
     if (disabled) return
 
@@ -50,7 +50,7 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
     if (!funcInitializer) {
       logger.critical(
         ErrorCode.MISSING_FUNC,
-        `No valid 'func' property for queue processor '${queueName}'.`
+        `No valid 'func' property for queue processor '${name}'.`
       )
       return
     }
@@ -61,14 +61,14 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
       state.rootDir
     )
     let pikkuFuncId = extracted.pikkuFuncId
-    if (pikkuFuncId.startsWith('__temp_') && queueName) {
-      pikkuFuncId = makeContextBasedId('queue', queueName)
+    if (pikkuFuncId.startsWith('__temp_') && name) {
+      pikkuFuncId = makeContextBasedId('queue', name)
     }
 
-    if (!queueName) {
+    if (!name) {
       logger.critical(
         ErrorCode.MISSING_QUEUE_NAME,
-        `No 'queueName' provided for queue processor function '${pikkuFuncId}'.`
+        `No 'name' provided for queue processor function '${pikkuFuncId}'.`
       )
       return
     }
@@ -78,14 +78,14 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
 
     // --- track used functions/middleware for service aggregation ---
     state.serviceAggregation.usedFunctions.add(pikkuFuncId)
-    extractWireNames(middleware).forEach((name) =>
-      state.serviceAggregation.usedMiddleware.add(name)
+    extractWireNames(middleware).forEach((n) =>
+      state.serviceAggregation.usedMiddleware.add(n)
     )
 
     state.queueWorkers.files.add(node.getSourceFile().fileName)
-    state.queueWorkers.meta[queueName] = {
+    state.queueWorkers.meta[name] = {
       pikkuFuncId,
-      queueName,
+      name,
       summary,
       description,
       errors,

@@ -53,10 +53,10 @@ export const wireQueueWorker = <
 ) => {
   // Get processor metadata
   const meta = pikkuState(null, 'queue', 'meta')
-  const processorMeta = meta[queueWorker.queueName]
+  const processorMeta = meta[queueWorker.name]
   if (!processorMeta) {
     throw new Error(
-      `Queue processor metadata not found for '${queueWorker.queueName}'. Make sure to run the CLI to generate metadata.`
+      `Queue processor metadata not found for '${queueWorker.name}'. Make sure to run the CLI to generate metadata.`
     )
   }
 
@@ -71,7 +71,7 @@ export const wireQueueWorker = <
 
   // Store processor definition in state - runtime adapters will pick this up
   const registrations = pikkuState(null, 'queue', 'registrations')
-  registrations.set(queueWorker.queueName, queueWorker)
+  registrations.set(queueWorker.name, queueWorker)
 }
 
 /**

@@ -26,7 +26,7 @@ export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<
 })
 
 wireQueueWorker({
-  queueName: 'pikku-remote-internal-rpc',
+  name: 'pikku-remote-internal-rpc',
   func: pikkuRemoteInternalRPC,
 })
 `

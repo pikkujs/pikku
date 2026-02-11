@@ -148,7 +148,7 @@ export interface QueueWorkers {
 export type QueueWorkersMeta = Record<
   string,
   CommonWireMeta & {
-    queueName: string
+    name: string
     config?: PikkuWorkerConfig
   }
 >
@@ -163,7 +163,7 @@ export type CoreQueueWorker<
     any
   > = CorePikkuFunctionConfig<any, any, any>,
 > = {
-  queueName: string
+  name: string
   func: PikkuFunctionConfig
   config?: PikkuWorkerConfig
   errors?: string[]
