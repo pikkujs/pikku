@@ -499,6 +499,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     // Create stub metadata to prevent "function not found" errors in wirings
     state.functions.meta[pikkuFuncId] = {
       pikkuFuncId,
+      functionType: 'user',
       name,
       services: { optimized: false, services: [] },
       inputSchemaName: null,
@@ -626,6 +627,17 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     }
   }
 
+  const mcpOutputTypes: Record<string, string> = {
+    pikkuMCPResourceFunc: 'MCPResourceResponse',
+    pikkuMCPToolFunc: 'MCPToolResponse',
+    pikkuMCPPromptFunc: 'MCPPromptResponse',
+  }
+  const mcpOutputType = mcpOutputTypes[expression.text]
+  if (mcpOutputType && outputNames[0] !== mcpOutputType) {
+    state.functions.typesMap.addCustomType(mcpOutputType, mcpOutputType, [])
+    outputNames = [mcpOutputType]
+  }
+
   if (inputNames.length > 1) {
     logger.warn(
       'More than one input type detected, only the first one will be used as a schema.'
@@ -651,6 +663,8 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   state.functions.meta[pikkuFuncId] = {
     pikkuFuncId,
+    functionType: 'user',
+    funcWrapper: expression.text,
     sessionless,
     name,
     services,

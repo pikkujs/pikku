@@ -86,7 +86,8 @@ export const addMCPResource: AddWiring = (
       pikkuFuncId,
       uriValue || undefined,
       funcInitializer,
-      checker
+      checker,
+      extracted.isHelper
     )
 
     if (!uriValue) {

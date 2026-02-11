@@ -7,6 +7,7 @@ export type ExtractedFunctionName = {
   explicitName: string | null
   exportedName: string | null
   propertyName: string | null
+  isHelper: boolean
 }
 
 export function makeContextBasedId(
@@ -38,6 +39,7 @@ export function extractFunctionName(
     exportedName: null,
     propertyName: null,
     explicitName: null,
+    isHelper: false,
   }
 
   const workflowHelpers = new Set([
@@ -69,6 +71,7 @@ export function extractFunctionName(
       result.pikkuFuncId = funcName
       result.name = funcName
       result.explicitName = funcName
+      result.isHelper = true
       return result
     }
   }
