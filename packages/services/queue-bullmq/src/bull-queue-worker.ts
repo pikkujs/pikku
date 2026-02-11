@@ -153,7 +153,7 @@ export class BullQueueWorkers implements QueueWorkers {
       this.singletonServices.logger,
       async (queueName, processor) => {
         const worker = new Worker(
-          processor.queueName,
+          processor.name,
           async (job: Bull.Job) => {
             try {
               return await runQueueJob({
