@@ -319,7 +319,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     state.rootDir
   )
 
-  if (!pikkuFuncId) {
+  if (!pikkuFuncId || pikkuFuncId.startsWith('__temp_')) {
     return
   }
 
