@@ -20,10 +20,10 @@ if [ -f .pikku/pikku-types.gen.ts ]; then
 fi
 mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
 
-# Patch pikkuFuncName → pikkuFuncId in bootstrapped files
+# Patch pikkuFuncId → pikkuFuncId in bootstrapped files
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
-  sed 's/pikkuFuncName/pikkuFuncId/g' "$f" > "$tmp" && mv "$tmp" "$f"
+  sed 's/pikkuFuncId/pikkuFuncId/g' "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)
