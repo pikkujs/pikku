@@ -69,7 +69,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       checker,
       state.rootDir
     )
-    state.permissions.meta[pikkuFuncId] = {
+    state.permissions.definitions[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
@@ -146,7 +146,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       checker,
       state.rootDir
     )
-    state.permissions.meta[pikkuFuncId] = {
+    state.permissions.definitions[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
@@ -207,7 +207,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // Collect services from all permissions in the group
     const allServices = new Set<string>()
     for (const permissionName of permissionNames) {
-      const permissionMeta = state.permissions.meta[permissionName]
+      const permissionMeta = state.permissions.definitions[permissionName]
       if (permissionMeta && permissionMeta.services) {
         for (const service of permissionMeta.services.services) {
           allServices.add(service)
@@ -264,7 +264,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
         optimized: false,
         services: Array.from(allServices),
       },
-      permissionCount: permissionNames.length,
+      count: permissionNames.length,
+      instanceIds: permissionNames,
       isFactory,
     })
 
@@ -323,7 +324,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // Collect services from all permissions in the group
     const allServices = new Set<string>()
     for (const permissionName of permissionNames) {
-      const permissionMeta = state.permissions.meta[permissionName]
+      const permissionMeta = state.permissions.definitions[permissionName]
       if (permissionMeta && permissionMeta.services) {
         for (const service of permissionMeta.services.services) {
           allServices.add(service)
@@ -379,7 +380,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
         optimized: false,
         services: Array.from(allServices),
       },
-      permissionCount: permissionNames.length,
+      count: permissionNames.length,
+      instanceIds: permissionNames,
       isFactory,
     })
 

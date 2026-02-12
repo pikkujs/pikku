@@ -165,7 +165,8 @@ export interface SerializableInspectorState {
     files: string[]
   }
   middleware: {
-    meta: InspectorState['middleware']['meta']
+    definitions: InspectorState['middleware']['definitions']
+    instances: InspectorState['middleware']['instances']
     tagMiddleware: Array<
       [
         string,
@@ -179,7 +180,8 @@ export interface SerializableInspectorState {
     >
   }
   permissions: {
-    meta: InspectorState['permissions']['meta']
+    definitions: InspectorState['permissions']['definitions']
+    instances: InspectorState['permissions']['instances']
     tagPermissions: Array<
       [
         string,
@@ -320,11 +322,13 @@ export function serializeInspectorState(
       files: Array.from(state.variables.files),
     },
     middleware: {
-      meta: state.middleware.meta,
+      definitions: state.middleware.definitions,
+      instances: state.middleware.instances,
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
     },
     permissions: {
-      meta: state.permissions.meta,
+      definitions: state.permissions.definitions,
+      instances: state.permissions.instances,
       tagPermissions: Array.from(state.permissions.tagPermissions.entries()),
     },
     serviceAggregation: {
@@ -456,11 +460,13 @@ export function deserializeInspectorState(
       files: new Set(data.variables?.files || []),
     },
     middleware: {
-      meta: data.middleware.meta,
+      definitions: data.middleware.definitions,
+      instances: data.middleware.instances || {},
       tagMiddleware: new Map(data.middleware.tagMiddleware),
     },
     permissions: {
-      meta: data.permissions.meta,
+      definitions: data.permissions.definitions,
+      instances: data.permissions.instances || {},
       tagPermissions: new Map(data.permissions.tagPermissions),
     },
     serviceAggregation: {

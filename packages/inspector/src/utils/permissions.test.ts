@@ -54,7 +54,8 @@ describe('resolveHTTPPermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     }
     state.http.routePermissions.set('*', globalPermission)
@@ -79,7 +80,8 @@ describe('resolveHTTPPermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     }
     state.http.routePermissions.set('/api/*', apiPermission)
@@ -104,7 +106,8 @@ describe('resolveHTTPPermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     }
     state.permissions.tagPermissions.set('admin', adminPermission)
@@ -131,7 +134,8 @@ describe('resolveHTTPPermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     })
 
@@ -141,7 +145,8 @@ describe('resolveHTTPPermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     })
 
@@ -151,12 +156,13 @@ describe('resolveHTTPPermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     })
 
     // Setup explicit permission
-    state.permissions.meta['testPermission'] = {
+    state.permissions.definitions['testPermission'] = {
       services: { services: [], singletons: [] },
       sourceFile: '/test.ts',
       position: 0,
@@ -197,7 +203,8 @@ describe('resolvePermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     }
     state.permissions.tagPermissions.set('mcp', mcpPermission)
@@ -217,7 +224,8 @@ describe('resolvePermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     })
     state.permissions.tagPermissions.set('admin', {
@@ -225,7 +233,8 @@ describe('resolvePermissions', () => {
       sourceFile: '/test.ts',
       position: 0,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     })
     const mockObj = createMockObjectLiteral()
@@ -323,11 +332,13 @@ function createMockState(): InspectorState {
       files: new Set(),
     },
     middleware: {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagMiddleware: new Map(),
     },
     permissions: {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map(),
     },
   }

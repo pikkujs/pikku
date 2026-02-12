@@ -141,11 +141,11 @@ export function resolveHTTPPermissions(
       state.rootDir
     )
     for (const name of permissionNames) {
-      const meta = state.permissions.meta[name]
+      const def = state.permissions.definitions[name]
       resolved.push({
         type: 'wire',
         name,
-        inline: meta?.exportedName === null,
+        inline: def?.exportedName === null,
       })
     }
   }
@@ -187,11 +187,11 @@ function resolveTagAndExplicitPermissions(
       state.rootDir
     )
     for (const name of permissionNames) {
-      const meta = state.permissions.meta[name]
+      const def = state.permissions.definitions[name]
       resolved.push({
         type: 'wire',
         name,
-        inline: meta?.exportedName === null,
+        inline: def?.exportedName === null,
       })
     }
   }

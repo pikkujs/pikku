@@ -133,7 +133,7 @@ export function aggregateRequiredServices(
 
   // 2. Services from used middleware (individual + groups)
   usedMiddleware.forEach((middlewareName) => {
-    const middlewareMeta = state.middleware.meta[middlewareName]
+    const middlewareMeta = state.middleware.definitions[middlewareName]
     if (middlewareMeta?.services) {
       addServices(middlewareMeta.services)
     }
@@ -141,7 +141,7 @@ export function aggregateRequiredServices(
 
   // 3. Services from used permissions (individual + groups)
   usedPermissions.forEach((permissionName) => {
-    const permissionMeta = state.permissions.meta[permissionName]
+    const permissionMeta = state.permissions.definitions[permissionName]
     if (permissionMeta?.services) {
       addServices(permissionMeta.services)
     }

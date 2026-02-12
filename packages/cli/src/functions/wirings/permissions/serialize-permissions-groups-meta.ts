@@ -1,8 +1,8 @@
 import type { InspectorState } from '@pikku/inspector'
 
-export const serializeMiddlewareGroupsMeta = (state: InspectorState) => {
+export const serializePermissionsGroupsMeta = (state: InspectorState) => {
   const httpGroups: Record<string, any> = {}
-  for (const [pattern, meta] of state.http.routeMiddleware.entries()) {
+  for (const [pattern, meta] of state.http.routePermissions.entries()) {
     httpGroups[pattern] = {
       exportName: meta.exportName,
       sourceFile: meta.sourceFile,
@@ -15,7 +15,7 @@ export const serializeMiddlewareGroupsMeta = (state: InspectorState) => {
   }
 
   const tagGroups: Record<string, any> = {}
-  for (const [tag, meta] of state.middleware.tagMiddleware.entries()) {
+  for (const [tag, meta] of state.permissions.tagPermissions.entries()) {
     tagGroups[tag] = {
       exportName: meta.exportName,
       sourceFile: meta.sourceFile,
@@ -28,8 +28,7 @@ export const serializeMiddlewareGroupsMeta = (state: InspectorState) => {
   }
 
   return {
-    definitions: state.middleware.definitions,
-    instances: state.middleware.instances,
+    definitions: state.permissions.definitions,
     httpGroups,
     tagGroups,
   }

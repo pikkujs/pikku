@@ -10,7 +10,8 @@ import type {
 describe('serializePermissionsImports', () => {
   test('should return empty string when no permission factories exist', () => {
     const permissionsState: InspectorPermissionState = {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map(),
     }
     const httpState: InspectorHTTPState = {
@@ -40,7 +41,8 @@ describe('serializePermissionsImports', () => {
 
   test('should generate imports and calls for HTTP permission factories', () => {
     const permissionsState: InspectorPermissionState = {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map(),
     }
 
@@ -49,7 +51,8 @@ describe('serializePermissionsImports', () => {
       sourceFile: '/src/permissions/http.ts',
       position: 100,
       services: { services: [], singletons: [] },
-      permissionCount: 2,
+      count: 2,
+      instanceIds: [],
       isFactory: true,
     }
 
@@ -91,12 +94,14 @@ describe('serializePermissionsImports', () => {
       sourceFile: '/src/permissions/admin.ts',
       position: 200,
       services: { services: [], singletons: [] },
-      permissionCount: 3,
+      count: 3,
+      instanceIds: [],
       isFactory: true,
     }
 
     const permissionsState: InspectorPermissionState = {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map([['admin', tagPermissionMeta]]),
     }
 
@@ -133,12 +138,14 @@ describe('serializePermissionsImports', () => {
       sourceFile: '/src/permissions/shared.ts',
       position: 300,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     }
 
     const permissionsState: InspectorPermissionState = {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map([['shared', sharedPermissionMeta]]),
     }
 
@@ -189,12 +196,14 @@ describe('serializePermissionsImports', () => {
       sourceFile: '/src/permissions/direct.ts',
       position: 500,
       services: { services: [], singletons: [] },
-      permissionCount: 2,
+      count: 2,
+      instanceIds: [],
       isFactory: false, // Not a factory
     }
 
     const permissionsState: InspectorPermissionState = {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map([['direct', nonFactoryMeta]]),
     }
 
@@ -234,12 +243,14 @@ describe('serializePermissionsImports', () => {
       sourceFile: '/Users/test/project/packages/api/src/permissions.ts',
       position: 600,
       services: { services: [], singletons: [] },
-      permissionCount: 1,
+      count: 1,
+      instanceIds: [],
       isFactory: true,
     }
 
     const permissionsState: InspectorPermissionState = {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map([['api', permissionMeta]]),
     }
 
