@@ -634,7 +634,39 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   }
   const mcpOutputType = mcpOutputTypes[expression.text]
   if (mcpOutputType && outputNames[0] !== mcpOutputType) {
-    state.functions.typesMap.addCustomType(mcpOutputType, mcpOutputType, [])
+    let resolved = false
+    const rawSymbol = checker.getSymbolAtLocation(expression)
+    const funcSymbol =
+      rawSymbol && rawSymbol.flags & ts.SymbolFlags.Alias
+        ? checker.getAliasedSymbol(rawSymbol)
+        : rawSymbol
+    const funcDecls = funcSymbol?.getDeclarations() || []
+    for (const funcDecl of funcDecls) {
+      if (resolved) break
+      const mcpTypeSymbol = checker.resolveName(
+        mcpOutputType,
+        funcDecl,
+        ts.SymbolFlags.Type,
+        false
+      )
+      if (mcpTypeSymbol) {
+        const aliased =
+          mcpTypeSymbol.flags & ts.SymbolFlags.Alias
+            ? checker.getAliasedSymbol(mcpTypeSymbol)
+            : mcpTypeSymbol
+        const typeDecl = aliased?.getDeclarations()?.[0]
+        if (typeDecl) {
+          const path = typeDecl.getSourceFile().fileName
+          if (!state.functions.typesMap.exists(mcpOutputType, path)) {
+            state.functions.typesMap.addType(mcpOutputType, path)
+          }
+          resolved = true
+        }
+      }
+    }
+    if (!resolved) {
+      state.functions.typesMap.addCustomType(mcpOutputType, mcpOutputType, [])
+    }
     outputNames = [mcpOutputType]
   }
 
