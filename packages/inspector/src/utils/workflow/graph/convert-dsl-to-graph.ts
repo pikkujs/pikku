@@ -10,6 +10,24 @@ import type {
   DataRef,
 } from './workflow-graph.types.js'
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+}
+
+function makeNodeId(
+  step: WorkflowStepMeta,
+  index: number,
+  prefix: string
+): string {
+  if ('stepName' in step && step.stepName) {
+    return slugify(step.stepName)
+  }
+  return `${prefix}_${index}`
+}
+
 /**
  * Check if a node is a terminal flow (no next step should follow)
  */
@@ -69,9 +87,11 @@ function convertStepToNode(
   steps: WorkflowStepMeta[],
   nodeIdPrefix: string = 'step'
 ): SerializedGraphNode[] {
-  const nodeId = `${nodeIdPrefix}_${index}`
+  const nodeId = makeNodeId(step, index, nodeIdPrefix)
   const nextNodeId =
-    index < steps.length - 1 ? `${nodeIdPrefix}_${index + 1}` : undefined
+    index < steps.length - 1
+      ? makeNodeId(steps[index + 1], index + 1, nodeIdPrefix)
+      : undefined
 
   switch (step.type) {
     case 'rpc': {
@@ -378,8 +398,7 @@ export function convertDslToGraph(
     nodesRecord[node.nodeId] = node
   }
 
-  // Find entry nodes (step_0 is always entry for sequential workflows)
-  const entryNodeIds = nodes.length > 0 ? ['step_0'] : []
+  const entryNodeIds = nodes.length > 0 ? [nodes[0].nodeId] : []
 
   // Determine source type based on dsl flag:
   // - dsl === true: pure DSL workflow, can be serialized
