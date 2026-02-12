@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePermissionsImports } from './serialize-permissions-imports.js'
+import { serializePermissionsGroupsMeta } from './serialize-permissions-groups-meta.js'
 
 export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
   {
@@ -12,17 +13,31 @@ export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
 
       let filesGenerated = false
 
-      // Check if there are any permission group factories
+      const hasHTTPGroups = state.http.routePermissions.size > 0
+      const hasTagGroups = state.permissions.tagPermissions.size > 0
+      const hasIndividual =
+        Object.keys(state.permissions.definitions).length > 0
+
+      if (hasHTTPGroups || hasTagGroups || hasIndividual) {
+        const metaData = serializePermissionsGroupsMeta(state)
+
+        await writeFileInDir(
+          logger,
+          config.permissionsGroupsMetaJsonFile,
+          JSON.stringify(metaData, null, 2)
+        )
+
+        filesGenerated = true
+      }
+
       const hasHTTPFactories = Array.from(
         state.http.routePermissions.values()
       ).some((meta: any) => meta.exportName && meta.isFactory)
       const hasTagFactories = Array.from(
         state.permissions.tagPermissions.values()
       ).some((meta: any) => meta.exportName && meta.isFactory)
-      const hasFactories = hasHTTPFactories || hasTagFactories
 
-      // Generate permissions imports file if there are factories
-      if (hasFactories) {
+      if (hasHTTPFactories || hasTagFactories) {
         await writeFileInDir(
           logger,
           permissionsFile,

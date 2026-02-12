@@ -34,7 +34,8 @@ export interface MiddlewareGroupMeta {
   sourceFile: string
   position: number
   services: FunctionServicesMeta
-  middlewareCount: number
+  count: number
+  instanceIds: string[]
   isFactory: boolean // true if wrapped in () => add...()
 }
 
@@ -43,7 +44,8 @@ export interface PermissionGroupMeta {
   sourceFile: string
   position: number
   services: FunctionServicesMeta
-  permissionCount: number
+  count: number
+  instanceIds: string[]
   isFactory: boolean // true if wrapped in () => add...()
 }
 
@@ -87,41 +89,51 @@ export interface InspectorChannelState {
   files: Set<string>
 }
 
+export interface InspectorMiddlewareDefinition {
+  services: FunctionServicesMeta
+  sourceFile: string
+  position: number
+  exportedName: string | null
+  factory?: boolean
+  name?: string
+  description?: string
+  package?: string
+}
+
+export interface InspectorMiddlewareInstance {
+  definitionId: string
+  sourceFile: string
+  position: number
+  isFactoryCall: boolean
+}
+
 export interface InspectorMiddlewareState {
-  // Individual middleware function metadata
-  meta: Record<
-    string,
-    {
-      services: FunctionServicesMeta
-      sourceFile: string
-      position: number
-      exportedName: string | null
-      factory?: boolean // true if wrapped with pikkuMiddlewareFactory
-      name?: string // optional name from pikkuMiddleware({ name: '...' })
-      description?: string // optional description from pikkuMiddleware({ description: '...' })
-    }
-  >
-  // Tag-based middleware calls tracking - tag -> group metadata
-  // e.g., export const adminMiddleware = () => addMiddleware('admin', [...])
+  definitions: Record<string, InspectorMiddlewareDefinition>
+  instances: Record<string, InspectorMiddlewareInstance>
   tagMiddleware: Map<string, MiddlewareGroupMeta>
 }
 
+export interface InspectorPermissionDefinition {
+  services: FunctionServicesMeta
+  sourceFile: string
+  position: number
+  exportedName: string | null
+  factory?: boolean
+  name?: string
+  description?: string
+  package?: string
+}
+
+export interface InspectorPermissionInstance {
+  definitionId: string
+  sourceFile: string
+  position: number
+  isFactoryCall: boolean
+}
+
 export interface InspectorPermissionState {
-  // Individual permission function metadata
-  meta: Record<
-    string,
-    {
-      services: FunctionServicesMeta
-      sourceFile: string
-      position: number
-      exportedName: string | null
-      factory?: boolean // true if wrapped with pikkuPermissionFactory
-      name?: string // optional name from pikkuPermission({ name: '...' })
-      description?: string // optional description from pikkuPermission({ description: '...' })
-    }
-  >
-  // Tag-based permission calls tracking - tag -> group metadata
-  // e.g., export const adminPermissions = () => addPermission('admin', [...])
+  definitions: Record<string, InspectorPermissionDefinition>
+  instances: Record<string, InspectorPermissionInstance>
   tagPermissions: Map<string, PermissionGroupMeta>
 }
 

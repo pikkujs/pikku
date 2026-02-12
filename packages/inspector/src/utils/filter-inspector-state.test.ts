@@ -282,11 +282,13 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
       files: new Set(['/test/project/src/cli/commands.ts']),
     },
     middleware: {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagMiddleware: new Map(),
     },
     permissions: {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map(),
     },
     serviceAggregation: {

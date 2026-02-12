@@ -3,64 +3,28 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeMiddlewareImports } from './serialize-middleware-imports.js'
 import { serializeMiddlewareGroupsMeta } from './serialize-middleware-groups-meta.js'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
     const { middleware } = state
-    const { middlewareFile, packageMappings, schema } = config
+    const { middlewareFile, packageMappings } = config
 
     let filesGenerated = false
 
-    // Check if there are any middleware groups
     const hasHTTPGroups = state.http.routeMiddleware.size > 0
     const hasTagGroups = state.middleware.tagMiddleware.size > 0
+    const hasDefinitions = Object.keys(state.middleware.definitions).length > 0
 
-    if (hasHTTPGroups || hasTagGroups) {
+    if (hasHTTPGroups || hasTagGroups || hasDefinitions) {
       const metaData = serializeMiddlewareGroupsMeta(state)
 
-      // Write JSON file
       await writeFileInDir(
         logger,
         config.middlewareGroupsMetaJsonFile,
         JSON.stringify(metaData, null, 2)
       )
 
-      // Calculate relative path from TS file to JSON file
-      const jsonImportPath = getFileImportRelativePath(
-        config.middlewareGroupsMetaFile,
-        config.middlewareGroupsMetaJsonFile,
-        packageMappings
-      )
-
-      // Write TypeScript file that imports JSON
-      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-      const importStatement = supportsImportAttributes
-        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-        : `import metaData from '${jsonImportPath}'`
-
-      const packageNameValue = config.externalPackageName
-        ? `'${config.externalPackageName}'`
-        : 'null'
-
-      const tsContent = `import { pikkuState } from '@pikku/core'
-${importStatement}
-
-// HTTP middleware groups metadata
-if (metaData.httpGroups && Object.keys(metaData.httpGroups).length > 0) {
-  pikkuState(${packageNameValue}, 'middleware', 'httpGroupMeta', metaData.httpGroups)
-}
-
-// Tag middleware groups metadata
-if (metaData.tagGroups && Object.keys(metaData.tagGroups).length > 0) {
-  pikkuState(${packageNameValue}, 'middleware', 'tagGroupMeta', metaData.tagGroups)
-}
-`
-
-      await writeFileInDir(logger, config.middlewareGroupsMetaFile, tsContent)
-
-      // Always generate middleware imports file when groups exist (even if empty)
       await writeFileInDir(
         logger,
         middlewareFile,

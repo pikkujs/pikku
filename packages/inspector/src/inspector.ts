@@ -108,11 +108,13 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
     },
     middleware: {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagMiddleware: new Map(),
     },
     permissions: {
-      meta: {},
+      definitions: {},
+      instances: {},
       tagPermissions: new Map(),
     },
     serviceAggregation: {
