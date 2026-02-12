@@ -87,12 +87,24 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       checker,
       state.rootDir
     )
-    if (
-      pikkuFuncId.startsWith('__temp_') &&
-      ts.isVariableDeclaration(node.parent) &&
-      ts.isIdentifier(node.parent.name)
-    ) {
-      pikkuFuncId = node.parent.name.text
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuMiddleware() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myMiddleware = pikkuMiddleware(...)`
+        )
+        return
+      }
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
@@ -164,12 +176,24 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       checker,
       state.rootDir
     )
-    if (
-      pikkuFuncId.startsWith('__temp_') &&
-      ts.isVariableDeclaration(node.parent) &&
-      ts.isIdentifier(node.parent.name)
-    ) {
-      pikkuFuncId = node.parent.name.text
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuMiddlewareFactory() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myMiddleware = pikkuMiddlewareFactory(...)`
+        )
+        return
+      }
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,

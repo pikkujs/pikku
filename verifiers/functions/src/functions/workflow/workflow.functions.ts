@@ -48,7 +48,7 @@ export const onboardingWorkflow = pikkuWorkflowComplexFunc<
   func: async ({}, data, { workflow }) => {
     // Step 1: Create user profile (RPC call - generates queue worker)
     const user = await workflow.do(
-      `Create user profile in database for ${data.email}`,
+      `Create user profile in database`,
       'createUserProfile',
       data
     )

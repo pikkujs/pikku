@@ -377,12 +377,6 @@ const _getPikkuCLIConfig = async (
     if (!result.middlewareFile) {
       result.middlewareFile = join(middlewareDir, 'pikku-middleware.gen.ts')
     }
-    if (!result.middlewareGroupsMetaFile) {
-      result.middlewareGroupsMetaFile = join(
-        middlewareDir,
-        'pikku-middleware-groups-meta.gen.ts'
-      )
-    }
     if (!result.middlewareGroupsMetaJsonFile) {
       result.middlewareGroupsMetaJsonFile = join(
         middlewareDir,
@@ -394,6 +388,12 @@ const _getPikkuCLIConfig = async (
     const permissionsDir = join(result.outDir, 'permissions')
     if (!result.permissionsFile) {
       result.permissionsFile = join(permissionsDir, 'pikku-permissions.gen.ts')
+    }
+    if (!result.permissionsGroupsMetaJsonFile) {
+      result.permissionsGroupsMetaJsonFile = join(
+        permissionsDir,
+        'pikku-permissions-groups-meta.gen.json'
+      )
     }
 
     // Bootstrap files
