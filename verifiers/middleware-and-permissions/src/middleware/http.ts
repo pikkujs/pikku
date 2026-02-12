@@ -20,7 +20,7 @@ export const httpRouteMiddleware = pikkuMiddleware(
 
 // Example using new object syntax with metadata
 export const httpRouteMiddlewareWithMetadata = pikkuMiddleware({
-  name: 'HTTP Route Middleware',
+  name: 'HTTP Route Middleware With Metadata',
   description: 'Logs and processes requests for /api/* routes',
   func: async ({ logger }, _data, next) => {
     logger.info({

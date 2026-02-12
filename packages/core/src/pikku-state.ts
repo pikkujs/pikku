@@ -122,14 +122,10 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   middleware: {
     tagGroup: {},
     httpGroup: {},
-    tagGroupMeta: {},
-    httpGroupMeta: {},
   },
   permissions: {
     tagGroup: {},
     httpGroup: {},
-    tagGroupMeta: {},
-    httpGroupMeta: {},
   },
   misc: {
     errors: new Map(),

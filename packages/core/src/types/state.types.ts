@@ -46,7 +46,6 @@ import {
   FunctionsMeta,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
-  FunctionServicesMeta,
   CreateConfig,
   CreateSingletonServices,
   CreateWireServices,
@@ -125,54 +124,10 @@ export interface PikkuPackageState {
   middleware: {
     tagGroup: Record<string, CorePikkuMiddlewareGroup>
     httpGroup: Record<string, CorePikkuMiddlewareGroup>
-    tagGroupMeta: Record<
-      string,
-      {
-        exportName: string | null
-        sourceFile: string
-        position: number
-        services: FunctionServicesMeta
-        middlewareCount: number
-        isFactory: boolean
-      }
-    >
-    httpGroupMeta: Record<
-      string,
-      {
-        exportName: string | null
-        sourceFile: string
-        position: number
-        services: FunctionServicesMeta
-        middlewareCount: number
-        isFactory: boolean
-      }
-    >
   }
   permissions: {
     tagGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
     httpGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
-    tagGroupMeta: Record<
-      string,
-      {
-        exportName: string | null
-        sourceFile: string
-        position: number
-        services: FunctionServicesMeta
-        permissionCount: number
-        isFactory: boolean
-      }
-    >
-    httpGroupMeta: Record<
-      string,
-      {
-        exportName: string | null
-        sourceFile: string
-        position: number
-        services: FunctionServicesMeta
-        permissionCount: number
-        isFactory: boolean
-      }
-    >
   }
   misc: {
     errors: Map<PikkuError, ErrorDetails>

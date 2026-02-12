@@ -1,13 +1,54 @@
 import * as ts from 'typescript'
-import { AddWiring } from '../types.js'
+import type { AddWiring, InspectorState } from '../types.js'
 import {
   extractFunctionName,
   isNamedExport,
+  makeContextBasedId,
 } from '../utils/extract-function-name.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 import { extractPermissionPikkuNames } from '../utils/permissions.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
+
+function renameTempDefinitions(
+  state: InspectorState,
+  definitionIds: string[],
+  groupType: string,
+  groupKey: string
+): void {
+  const tempIndices = definitionIds
+    .map((name, i) => (name.startsWith('__temp_') ? i : -1))
+    .filter((i) => i >= 0)
+
+  for (const idx of tempIndices) {
+    const oldId = definitionIds[idx]
+    const newId =
+      tempIndices.length === 1
+        ? makeContextBasedId(groupType, groupKey)
+        : makeContextBasedId(groupType, groupKey, String(idx))
+    const existing = state.permissions.definitions[oldId]
+    if (existing) {
+      delete state.permissions.definitions[oldId]
+      state.permissions.definitions[newId] = existing
+    }
+    definitionIds[idx] = newId
+  }
+}
+
+function isInsidePermissionFactory(node: ts.Node): boolean {
+  let current = node.parent
+  while (current) {
+    if (
+      ts.isCallExpression(current) &&
+      ts.isIdentifier(current.expression) &&
+      current.expression.text === 'pikkuPermissionFactory'
+    ) {
+      return true
+    }
+    current = current.parent
+  }
+  return false
+}
 
 /**
  * Inspect pikkuPermission calls, addPermission calls, and addHTTPPermission calls
@@ -24,6 +65,9 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
   // Handle pikkuPermission(...) - individual permission function definition
   if (expression.text === 'pikkuPermission') {
+    // Skip if nested inside pikkuPermissionFactory — the factory handler extracts services itself
+    if (isInsidePermissionFactory(node)) return
+
     const arg = args[0]
     if (!arg) return
 
@@ -31,15 +75,12 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     let name: string | undefined
     let description: string | undefined
 
-    // Check if using object syntax: pikkuPermission({ func: ..., name: '...', description: '...' })
     if (ts.isObjectLiteralExpression(arg)) {
-      // Extract name and description metadata
       const nameValue = getPropertyValue(arg, 'name')
       const descValue = getPropertyValue(arg, 'description')
       name = typeof nameValue === 'string' ? nameValue : undefined
       description = typeof descValue === 'string' ? descValue : undefined
 
-      // Extract the func property
       const fnProp = getPropertyAssignmentInitializer(
         arg,
         'func',
@@ -64,11 +105,30 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
-    const { pikkuFuncId, exportedName } = extractFunctionName(
+    let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
       state.rootDir
     )
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuPermission() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myPermission = pikkuPermission(...)`
+        )
+        return
+      }
+    }
     state.permissions.definitions[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
@@ -141,11 +201,30 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    const { pikkuFuncId, exportedName } = extractFunctionName(
+    let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
       state.rootDir
     )
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuPermissionFactory() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myPermission = pikkuPermissionFactory(...)`
+        )
+        return
+      }
+    }
     state.permissions.definitions[pikkuFuncId] = {
       services,
       sourceFile: node.getSourceFile().fileName,
@@ -204,7 +283,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    // Collect services from all permissions in the group
+    renameTempDefinitions(state, permissionNames, 'tag', tag)
+
     const allServices = new Set<string>()
     for (const permissionName of permissionNames) {
       const permissionMeta = state.permissions.definitions[permissionName]
@@ -215,24 +295,17 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    // Check if this call is wrapped in a factory function
-    // We need to walk up the tree to see if the parent is: const x = () => addPermission(...)
     let isFactory = false
     let exportedName: string | null = null
     let parent = node.parent
 
-    // Check if parent is arrow function: () => addPermission(...)
     if (parent && ts.isArrowFunction(parent)) {
-      // Check if arrow function has no parameters
       if (parent.parameters.length === 0) {
         isFactory = true
 
-        // For factories, we need to check the arrow function's parent for the export name
-        // const apiTagPermissions = () => addPermission(...)
         const arrowParent = parent.parent
         if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
           if (ts.isIdentifier(arrowParent.name)) {
-            // Check if it's exported
             if (isNamedExport(arrowParent)) {
               exportedName = arrowParent.name.text
             }
@@ -241,13 +314,11 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    // If not a factory, get export name from the call expression itself
     if (!isFactory) {
       const extracted = extractFunctionName(node, checker, state.rootDir)
       exportedName = extracted.exportedName
     }
 
-    // Log warning if not using factory pattern
     if (!isFactory && exportedName) {
       logger.warn(
         `• Permission group '${exportedName}' for tag '${tag}' is not wrapped in a factory function. ` +
@@ -255,7 +326,6 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       )
     }
 
-    // Store group metadata
     state.permissions.tagPermissions.set(tag, {
       exportName: exportedName,
       sourceFile: node.getSourceFile().fileName,
@@ -321,7 +391,8 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       return
     }
 
-    // Collect services from all permissions in the group
+    renameTempDefinitions(state, permissionNames, 'http', pattern)
+
     const allServices = new Set<string>()
     for (const permissionName of permissionNames) {
       const permissionMeta = state.permissions.definitions[permissionName]
@@ -332,23 +403,17 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    // Check if this call is wrapped in a factory function
     let isFactory = false
     let exportedName: string | null = null
     let parent = node.parent
 
-    // Check if parent is arrow function: () => addHTTPPermission(...)
     if (parent && ts.isArrowFunction(parent)) {
-      // Check if arrow function has no parameters
       if (parent.parameters.length === 0) {
         isFactory = true
 
-        // For factories, we need to check the arrow function's parent for the export name
-        // const apiRoutePermissions = () => addHTTPPermission(...)
         const arrowParent = parent.parent
         if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
           if (ts.isIdentifier(arrowParent.name)) {
-            // Check if it's exported
             if (isNamedExport(arrowParent)) {
               exportedName = arrowParent.name.text
             }
@@ -357,13 +422,11 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       }
     }
 
-    // If not a factory, get export name from the call expression itself
     if (!isFactory) {
       const extracted = extractFunctionName(node, checker, state.rootDir)
       exportedName = extracted.exportedName
     }
 
-    // Log warning if not using factory pattern
     if (!isFactory && exportedName) {
       logger.warn(
         `• HTTP permission group '${exportedName}' for pattern '${pattern}' is not wrapped in a factory function. ` +
@@ -371,7 +434,6 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       )
     }
 
-    // Store group metadata
     state.http.routePermissions.set(pattern, {
       exportName: exportedName,
       sourceFile: node.getSourceFile().fileName,
