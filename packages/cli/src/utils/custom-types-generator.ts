@@ -51,6 +51,7 @@ export function generateCustomTypes(
         }
       })
 
+      if (name === type) return null
       return `export type ${name} = ${type}`
     })
 
@@ -76,5 +77,5 @@ export function generateCustomTypes(
     )
     .join('\n')
 
-  return `${importLines}\n\n${typeDeclarations.join('\n')}`
+  return `${importLines}\n\n${typeDeclarations.filter(Boolean).join('\n')}`
 }
