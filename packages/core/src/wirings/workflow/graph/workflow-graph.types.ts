@@ -68,21 +68,6 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
 }
 
 /**
- * Workflow graph definition (internal use)
- */
-export interface WorkflowGraphDefinition<
-  Nodes extends Record<string, GraphNodeConfig<string>> = Record<
-    string,
-    GraphNodeConfig
-  >,
-> {
-  /** Unique workflow name */
-  name: string
-  /** Graph nodes */
-  graph: Nodes
-}
-
-/**
  * Graph wire context - available to functions running in a workflow graph
  */
 export interface PikkuGraphWire {

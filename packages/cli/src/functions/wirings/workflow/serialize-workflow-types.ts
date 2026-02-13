@@ -22,8 +22,6 @@ export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { WorkflowMap, GraphsMap } from '${workflowMapImportPath}'
-import type { GraphNodeConfig } from '@pikku/core'
-import { createGraph } from '@pikku/core'
 
 export { template }
 
@@ -62,8 +60,6 @@ export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
 ) => {
   return typeof func === 'function' ? { func } : func
 }
-
-const graphBuilder = createGraph<FlattenedRPCMap>()
 
 type TypedRef<T> = { $ref: string; path?: string } & { __phantomType?: T }
 
@@ -117,8 +113,8 @@ export function pikkuWorkflowGraph<
   const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
 >(
   config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
-): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>> {
-  return corePikkuWorkflowGraph(graphBuilder as any, config as any) as any
+): PikkuWorkflowGraphResult {
+  return corePikkuWorkflowGraph(config as any)
 }
 
 export const workflow = <Name extends keyof WorkflowMap>(
