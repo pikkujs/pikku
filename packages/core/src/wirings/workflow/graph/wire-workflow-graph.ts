@@ -1,5 +1,4 @@
 import type { GraphNodeConfig } from './workflow-graph.types.js'
-import { wireWorkflow } from '../wire-workflow.js'
 
 export interface PikkuWorkflowGraphConfig<
   FuncMap extends Record<string, string>,
@@ -21,7 +20,9 @@ export interface PikkuWorkflowGraphResult<T> {
   graph: T
 }
 
-export function wireWorkflowGraph<const FuncMap extends Record<string, string>>(
+export function pikkuWorkflowGraph<
+  const FuncMap extends Record<string, string>,
+>(
   graphBuilder: (
     funcMap: FuncMap,
     config: any
@@ -47,9 +48,6 @@ export function wireWorkflowGraph<const FuncMap extends Record<string, string>>(
       Extract<keyof FuncMap, string>,
       GraphNodeConfig<Extract<keyof FuncMap, string>>
     >,
-  }
-  if (!config.disabled) {
-    wireWorkflow({ graph: result } as any)
   }
   return result
 }

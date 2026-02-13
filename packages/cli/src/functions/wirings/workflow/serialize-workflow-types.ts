@@ -12,7 +12,7 @@ import {
 } from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
 import {
-  wireWorkflowGraph as coreWireWorkflowGraph,
+  pikkuWorkflowGraph as corePikkuWorkflowGraph,
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from '@pikku/core/workflow'
@@ -23,7 +23,7 @@ import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTy
 import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { WorkflowMap, GraphsMap } from '${workflowMapImportPath}'
 import type { GraphNodeConfig } from '@pikku/core'
-import { createGraph, wireWorkflow as coreWireWorkflow } from '@pikku/core'
+import { createGraph } from '@pikku/core'
 
 export { template }
 
@@ -113,21 +113,12 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
 
 type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
 
-interface WorkflowDefinitionFunc {
-  disabled?: true
-  func: PikkuFunctionConfig<any, any, 'workflow', PikkuFunctionWorkflow<any, any>>
-}
-
-export function wireWorkflow(definition: WorkflowDefinitionFunc): void {
-  coreWireWorkflow(definition as any)
-}
-
-export function wireWorkflowGraph<
+export function pikkuWorkflowGraph<
   const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
 >(
   config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
 ): PikkuWorkflowGraphResult<Record<Extract<keyof FuncMap, string>, GraphNodeConfig<Extract<keyof FuncMap, string>>>> {
-  return coreWireWorkflowGraph(graphBuilder as any, config as any) as any
+  return corePikkuWorkflowGraph(graphBuilder as any, config as any) as any
 }
 
 export const workflow = <Name extends keyof WorkflowMap>(

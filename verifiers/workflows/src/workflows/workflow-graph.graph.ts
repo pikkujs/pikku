@@ -1,6 +1,6 @@
-import { wireWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-export const graphOnboarding = wireWorkflowGraph({
+export const graphOnboarding = pikkuWorkflowGraph({
   description: 'User onboarding workflow',
   tags: ['onboarding', 'graph'],
   nodes: {

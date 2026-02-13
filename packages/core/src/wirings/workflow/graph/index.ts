@@ -3,7 +3,7 @@ export * from './graph-node.js'
 export * from './graph-runner.js'
 export * from './template.js'
 export {
-  wireWorkflowGraph,
+  pikkuWorkflowGraph,
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from './wire-workflow-graph.js'
