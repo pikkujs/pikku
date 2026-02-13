@@ -165,10 +165,19 @@ export async function continueGraph(
     return
   }
 
+  if (candidateNodes.length === 0 && completedNodeIds.length === 0) {
+    candidateNodes.push(...(meta.entryNodeIds ?? []))
+  }
+
   const nodesToQueue = await workflowService.getNodesWithoutSteps(
     runId,
     candidateNodes
   )
+
+  if (nodesToQueue.length === 0) return
+
+  const run = await workflowService.getRun(runId)
+  const triggerInput = run?.input
 
   for (const nodeId of nodesToQueue) {
     const node = nodes[nodeId]
@@ -177,11 +186,12 @@ export async function continueGraph(
     const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
       (id) => id !== 'trigger'
     )
-    const nodeResults = await workflowService.getNodeResults(
+    const fetchedResults = await workflowService.getNodeResults(
       runId,
       referencedNodeIds
     )
 
+    const nodeResults = { trigger: triggerInput, ...fetchedResults }
     const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
     await queueGraphNode(
@@ -434,10 +444,14 @@ export async function runWorkflowGraph(
   }
 
   const nodes = meta.nodes
-  const entryNodes: string[] = startNode ? [startNode] : []
+  const entryNodes: string[] = startNode
+    ? [startNode]
+    : (meta.entryNodeIds ?? [])
 
   if (entryNodes.length === 0) {
-    throw new Error(`Workflow graph '${graphName}': no startNode was provided`)
+    throw new Error(
+      `Workflow graph '${graphName}': no entry nodes found in meta or startNode`
+    )
   }
 
   const runId = await workflowService.createRun(

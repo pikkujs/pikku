@@ -583,15 +583,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       return
     }
 
-    if (source === 'dsl') {
-      await this.updateRunStatus(run.id, 'failed', undefined, {
-        message: `Workflow '${run.workflow}' definition changed. DSL workflow graph fallback not yet supported.`,
-        stack: '',
-        code: 'VERSION_CONFLICT',
-      })
-      return
-    }
-
     const version = await this.getWorkflowVersion(run.workflow, run.graphHash!)
     if (!version) {
       await this.updateRunStatus(run.id, 'failed', undefined, {
