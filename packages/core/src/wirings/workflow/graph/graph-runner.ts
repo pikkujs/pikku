@@ -1,71 +1,17 @@
 import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
-import type {
-  GraphNodeConfig,
-  RefValue,
-  RefFn,
-  NextConfig,
-  GraphWireState,
-  PikkuGraphWire,
-  WorkflowGraphDefinition,
-} from './workflow-graph.types.js'
-import { createRef, isRef } from './workflow-graph.types.js'
+import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState } from '../../../pikku-state.js'
+import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 
-/**
- * Add a workflow graph to the system
- * This is called by the generated workflow wirings
- */
-export const addWorkflowGraph = (
-  workflowName: string,
-  graphResult: { graph: Record<string, GraphNodeConfig<string>> }
-) => {
-  const meta = pikkuState(null, 'workflows', 'meta')
-  if (!meta[workflowName]) {
-    throw new Error(
-      `Workflow metadata not found for '${workflowName}'. Make sure to run the CLI to generate metadata.`
-    )
-  }
-
-  const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
-  registrations.set(workflowName, {
-    name: workflowName,
-    graph: graphResult.graph,
-  })
+function isDataRef(value: unknown): value is { $ref: string; path?: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '$ref' in value &&
+    typeof (value as any).$ref === 'string'
+  )
 }
 
-/**
- * Get a registered workflow graph by name
- */
-export function getWorkflowGraph(
-  name: string
-): WorkflowGraphDefinition<any> | undefined {
-  const registrations = pikkuState(null, 'workflows', 'graphRegistrations')
-  return registrations.get(name)
-}
-
-/**
- * Resolve next config to array of node IDs
- * For branching (Record), uses the branch key from step
- */
-function resolveNextFromConfig(
-  next: NextConfig<string> | undefined,
-  branchKey?: string
-): string[] {
-  if (!next) return []
-
-  if (typeof next === 'string') return [next]
-  if (Array.isArray(next)) return next
-
-  // Record (branching) - use branch key set by graph.branch()
-  if (!branchKey || !(branchKey in next)) return []
-
-  const branchNext = next[branchKey]
-  return Array.isArray(branchNext) ? branchNext : [branchNext]
-}
-
-/**
- * Template value - represents a string template with variable interpolation
- */
 interface TemplateValue {
   $template: {
     parts: string[]
@@ -73,9 +19,6 @@ interface TemplateValue {
   }
 }
 
-/**
- * Check if a value is a template
- */
 function isTemplate(value: unknown): value is TemplateValue {
   return (
     typeof value === 'object' &&
@@ -85,121 +28,26 @@ function isTemplate(value: unknown): value is TemplateValue {
   )
 }
 
-/**
- * Create a template function for use in input callbacks
- */
-function createTemplate(templateStr: string, refs: RefValue[]): TemplateValue {
-  const parts: string[] = []
-  const expressions: Array<{ $ref: string; path?: string }> = []
-
-  const regex = /\$(\d+)/g
-  let lastIndex = 0
-  let match
-
-  while ((match = regex.exec(templateStr)) !== null) {
-    parts.push(templateStr.slice(lastIndex, match.index))
-    const refIndex = parseInt(match[1]!, 10)
-    const refValue = refs[refIndex]
-    if (refValue) {
-      expressions.push({ $ref: refValue.nodeId, path: refValue.path })
-    } else {
-      expressions.push({ $ref: 'unknown' })
-    }
-    lastIndex = regex.lastIndex
-  }
-  parts.push(templateStr.slice(lastIndex))
-
-  return { $template: { parts, expressions } }
+function getWorkflowMeta(name: string): WorkflowRuntimeMeta | undefined {
+  const meta = pikkuState(null, 'workflows', 'meta')
+  return meta[name]
 }
 
-/**
- * Evaluate a node's input callback to get the input mapping
- */
-function evaluateInputCallback(
-  node: GraphNodeConfig
-): Record<string, unknown | RefValue | TemplateValue> {
-  if (!node.input) return {}
+function resolveNextFromConfig(next: unknown, branchKey?: string): string[] {
+  if (!next) return []
 
-  const ref: RefFn<string> = (targetNodeId: string, path?: string) =>
-    createRef(targetNodeId, path)
+  if (typeof next === 'string') return [next]
+  if (Array.isArray(next)) return next
 
-  const template = (templateStr: string, refs: RefValue[]) =>
-    createTemplate(templateStr, refs)
-
-  // Call with both ref and template - input callback may accept 1 or 2 params
-  return (node.input as any)(ref, template)
-}
-
-/**
- * Extract node IDs referenced in an input mapping (including from templates)
- */
-function extractReferencedNodeIds(
-  inputMapping: Record<string, unknown | RefValue | TemplateValue>
-): string[] {
-  const nodeIds: string[] = []
-  for (const value of Object.values(inputMapping)) {
-    if (isRef(value)) {
-      nodeIds.push(value.nodeId)
-    } else if (isTemplate(value)) {
-      for (const expr of value.$template.expressions) {
-        nodeIds.push(expr.$ref)
-      }
-    }
-  }
-  return [...new Set(nodeIds)]
-}
-
-/**
- * Resolve a template value using node results
- */
-function resolveTemplate(
-  template: TemplateValue,
-  nodeResults: Record<string, any>
-): string {
-  const { parts, expressions } = template.$template
-  let result = ''
-  for (let i = 0; i < parts.length; i++) {
-    result += parts[i]
-    if (i < expressions.length) {
-      const expr = expressions[i]
-      const nodeResult = nodeResults[expr.$ref]
-      const value = expr.path
-        ? getValueAtPath(nodeResult, expr.path)
-        : nodeResult
-      result += String(value ?? '')
-    }
-  }
-  return result
-}
-
-/**
- * Resolve input mapping using node results
- */
-function resolveInputMapping(
-  inputMapping: Record<string, unknown | RefValue | TemplateValue>,
-  nodeResults: Record<string, any>
-): Record<string, any> {
-  const resolved: Record<string, any> = {}
-
-  for (const [key, value] of Object.entries(inputMapping)) {
-    if (isRef(value)) {
-      const nodeResult = nodeResults[value.nodeId]
-      resolved[key] = value.path
-        ? getValueAtPath(nodeResult, value.path)
-        : nodeResult
-    } else if (isTemplate(value)) {
-      resolved[key] = resolveTemplate(value, nodeResults)
-    } else {
-      resolved[key] = value
-    }
+  if (typeof next === 'object' && next !== null) {
+    if (!branchKey || !(branchKey in next)) return []
+    const branchNext = (next as Record<string, string | string[]>)[branchKey]!
+    return Array.isArray(branchNext) ? branchNext : [branchNext]
   }
 
-  return resolved
+  return []
 }
 
-/**
- * Get value at a dot-notation path from an object
- */
 function getValueAtPath(obj: any, path: string): any {
   if (!path) return obj
   const parts = path.split('.')
@@ -211,23 +59,63 @@ function getValueAtPath(obj: any, path: string): any {
   return current
 }
 
-/**
- * Get the RPC name from a graph node's func
- * Supports both function references (func.name) and string RPC names
- */
-function getRpcName(node: GraphNodeConfig): string {
-  const func = node.func as any
-  // If func is a string, use it directly as the RPC name
-  if (typeof func === 'string') {
-    return func
+function resolveTemplate(
+  template: TemplateValue,
+  nodeResults: Record<string, any>
+): string {
+  const { parts, expressions } = template.$template
+  let result = ''
+  for (let i = 0; i < parts.length; i++) {
+    result += parts[i]
+    if (i < expressions.length) {
+      const expr = expressions[i]!
+      const nodeResult = nodeResults[expr.$ref]
+      const value = expr.path
+        ? getValueAtPath(nodeResult, expr.path)
+        : nodeResult
+      result += String(value ?? '')
+    }
   }
-  // Otherwise, it's a function reference - use its name
-  return func?.name || 'unknown'
+  return result
 }
 
-/**
- * Queue a graph node for execution
- */
+function resolveSerializedInput(
+  input: Record<string, unknown> | undefined,
+  nodeResults: Record<string, any>
+): Record<string, any> {
+  if (!input || Object.keys(input).length === 0) return {}
+
+  const resolved: Record<string, any> = {}
+  for (const [key, value] of Object.entries(input)) {
+    if (isDataRef(value)) {
+      const source = nodeResults[value.$ref]
+      resolved[key] = value.path ? getValueAtPath(source, value.path) : source
+    } else if (isTemplate(value)) {
+      resolved[key] = resolveTemplate(value, nodeResults)
+    } else {
+      resolved[key] = value
+    }
+  }
+  return resolved
+}
+
+function extractReferencedNodeIds(
+  input: Record<string, unknown> | undefined
+): string[] {
+  if (!input) return []
+  const nodeIds: string[] = []
+  for (const value of Object.values(input)) {
+    if (isDataRef(value)) {
+      nodeIds.push(value.$ref)
+    } else if (isTemplate(value)) {
+      for (const expr of value.$template.expressions) {
+        nodeIds.push(expr.$ref)
+      }
+    }
+  }
+  return [...new Set(nodeIds)]
+}
+
 async function queueGraphNode(
   workflowService: PikkuWorkflowService,
   runId: string,
@@ -236,8 +124,6 @@ async function queueGraphNode(
   rpcName: string,
   input: any
 ): Promise<void> {
-  // Step name convention: node:<nodeId>
-  // Graph name is stored as the workflow name on the run
   await workflowService.insertStepState(
     runId,
     `node:${nodeId}`,
@@ -248,31 +134,25 @@ async function queueGraphNode(
   await workflowService.resumeWorkflow(runId)
 }
 
-/**
- * Continue graph execution
- * Non-blocking - finds pending nodes, resolves inputs, queues them for execution
- */
 export async function continueGraph(
   workflowService: PikkuWorkflowService,
   runId: string,
   graphName: string
 ): Promise<void> {
-  const definition = getWorkflowGraph(graphName)
-  if (!definition) {
-    throw new Error(`Workflow graph '${graphName}' not found`)
+  const meta = getWorkflowMeta(graphName)
+  if (!meta?.nodes) {
+    throw new Error(`Workflow graph meta '${graphName}' not found`)
   }
 
-  const graph = definition.graph
+  const nodes = meta.nodes
 
-  // Get completed node IDs + branch keys (lightweight, no results)
   const { completedNodeIds, branchKeys } =
     await workflowService.getCompletedGraphState(runId)
 
-  // Find candidate next nodes from completed nodes
   const candidateNodes: string[] = []
 
   for (const nodeId of completedNodeIds) {
-    const node = graph[nodeId]
+    const node = nodes[nodeId]
     if (!node?.next) continue
 
     const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
@@ -280,50 +160,40 @@ export async function continueGraph(
   }
 
   if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
-    // No more nodes to run - graph complete
     await workflowService.updateRunStatus(runId, 'completed')
     return
   }
 
-  // Filter to only nodes that don't have a step yet
   const nodesToQueue = await workflowService.getNodesWithoutSteps(
     runId,
     candidateNodes
   )
 
-  // Queue each node for execution
   for (const nodeId of nodesToQueue) {
-    const node = graph[nodeId]
+    const node = nodes[nodeId]
     if (!node) continue
 
-    // Evaluate input callback to get the mapping
-    const inputMapping = evaluateInputCallback(node)
-
-    // Only fetch results for nodes referenced in this node's input
-    const referencedNodeIds = extractReferencedNodeIds(inputMapping)
+    const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
+      (id) => id !== 'trigger'
+    )
     const nodeResults = await workflowService.getNodeResults(
       runId,
       referencedNodeIds
     )
 
-    const resolvedInput = resolveInputMapping(inputMapping, nodeResults)
-    const rpcName = getRpcName(node)
+    const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
     await queueGraphNode(
       workflowService,
       runId,
       graphName,
       nodeId,
-      rpcName,
+      node.rpcName,
       resolvedInput
     )
   }
 }
 
-/**
- * Execute a graph step with wire context.
- * Called by the step worker when executing graph nodes.
- */
 export async function executeGraphStep(
   workflowService: PikkuWorkflowService,
   rpcService: any,
@@ -349,54 +219,43 @@ export async function executeGraphStep(
   }
 
   try {
-    // Execute the RPC with graph wire context
     const result = await rpcService.rpcWithWire(rpcName, data, {
       graph: graphWire,
     })
 
-    // If branch was called, store the branch key
     if (wireState.branchKey) {
       await workflowService.setBranchTaken(stepId, wireState.branchKey)
     }
 
     return result
   } catch (error) {
-    // Check if this node has an onError handler
-    const definition = getWorkflowGraph(graphName)
-    if (definition) {
-      const node = definition.graph[nodeId]
+    const meta = getWorkflowMeta(graphName)
+    if (meta?.nodes) {
+      const node = meta.nodes[nodeId]
       if (node?.onError) {
-        // Route to error handler nodes
         const errorNodes = Array.isArray(node.onError)
           ? node.onError
           : [node.onError]
         for (const errorNodeId of errorNodes) {
-          const errorNode = definition.graph[errorNodeId]
+          const errorNode = meta.nodes[errorNodeId]
           if (errorNode) {
-            const errorRpcName = getRpcName(errorNode)
-            // Queue error node with the error as input
             await queueGraphNode(
               workflowService,
               runId,
               graphName,
               errorNodeId,
-              errorRpcName,
+              errorNode.rpcName,
               { error: { message: (error as Error).message } }
             )
           }
         }
-        // Don't rethrow - error was handled by routing to error nodes
         return
       }
     }
-    // No error handler - rethrow
     throw error
   }
 }
 
-/**
- * Handle node completion - re-triggers graph continuation
- */
 export async function onGraphNodeComplete(
   workflowService: PikkuWorkflowService,
   runId: string,
@@ -405,9 +264,6 @@ export async function onGraphNodeComplete(
   await continueGraph(workflowService, runId, graphName)
 }
 
-/**
- * Execute a graph node inline (without queue)
- */
 async function executeGraphNodeInline(
   workflowService: PikkuWorkflowService,
   rpcService: any,
@@ -415,15 +271,14 @@ async function executeGraphNodeInline(
   graphName: string,
   nodeId: string,
   input: any,
-  graph: Record<string, GraphNodeConfig>
+  nodes: Record<string, any>
 ): Promise<void> {
-  const node = graph[nodeId]
+  const node = nodes[nodeId]
   if (!node) return
 
-  const rpcName = getRpcName(node)
+  const rpcName = node.rpcName
   const stepName = `node:${nodeId}`
 
-  // Insert step state
   const stepState = await workflowService.insertStepState(
     runId,
     stepName,
@@ -434,7 +289,6 @@ async function executeGraphNodeInline(
 
   await workflowService.setStepRunning(stepState.stepId)
 
-  // Execute with graph wire context
   const wireState: GraphWireState = {}
   const graphWire: PikkuGraphWire = {
     runId,
@@ -453,7 +307,6 @@ async function executeGraphNodeInline(
       graph: graphWire,
     })
 
-    // If branch was called, store the branch key
     if (wireState.branchKey) {
       await workflowService.setBranchTaken(
         stepState.stepId,
@@ -465,58 +318,45 @@ async function executeGraphNodeInline(
   } catch (error) {
     await workflowService.setStepError(stepState.stepId, error as Error)
 
-    // Check if this node has an onError handler
-    const definition = getWorkflowGraph(graphName)
-    if (definition) {
-      const node = definition.graph[nodeId]
-      if (node?.onError) {
-        // Route to error handler nodes (inline)
-        const errorNodes = Array.isArray(node.onError)
-          ? node.onError
-          : [node.onError]
-        await Promise.all(
-          errorNodes.map((errorNodeId) =>
-            executeGraphNodeInline(
-              workflowService,
-              rpcService,
-              runId,
-              graphName,
-              errorNodeId,
-              { error: { message: (error as Error).message } },
-              graph
-            )
+    if (node?.onError) {
+      const errorNodes = Array.isArray(node.onError)
+        ? node.onError
+        : [node.onError]
+      await Promise.all(
+        errorNodes.map((errorNodeId: string) =>
+          executeGraphNodeInline(
+            workflowService,
+            rpcService,
+            runId,
+            graphName,
+            errorNodeId,
+            { error: { message: (error as Error).message } },
+            nodes
           )
         )
-        return
-      }
+      )
+      return
     }
-    // No error handler - rethrow
     throw error
   }
 }
 
-/**
- * Continue graph execution inline (without queue)
- * Executes nodes in parallel where possible using Promise.all
- */
 async function continueGraphInline(
   workflowService: PikkuWorkflowService,
   rpcService: any,
   runId: string,
   graphName: string,
-  graph: Record<string, GraphNodeConfig>,
+  nodes: Record<string, any>,
   triggerInput: any
 ): Promise<void> {
   while (true) {
-    // Get completed node IDs + branch keys (lightweight, no results)
     const { completedNodeIds, branchKeys } =
       await workflowService.getCompletedGraphState(runId)
 
-    // Find candidate next nodes from completed nodes
     const candidateNodes: string[] = []
 
     for (const nodeId of completedNodeIds) {
-      const node = graph[nodeId]
+      const node = nodes[nodeId]
       if (!node?.next) continue
 
       const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
@@ -524,37 +364,28 @@ async function continueGraphInline(
     }
 
     if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
-      // No more nodes to run - graph complete
       await workflowService.updateRunStatus(runId, 'completed')
       return
     }
 
-    // Filter to only nodes that don't have a step yet
     const nodesToExecute = await workflowService.getNodesWithoutSteps(
       runId,
       candidateNodes
     )
 
     if (nodesToExecute.length === 0) {
-      // No more nodes to execute - if we've completed at least one node, we're done
-      // This handles branching where only some paths are taken
       if (completedNodeIds.length > 0) {
         await workflowService.updateRunStatus(runId, 'completed')
       }
       return
     }
 
-    // Execute all nodes in parallel
     await Promise.all(
       nodesToExecute.map(async (nodeId) => {
-        const node = graph[nodeId]
+        const node = nodes[nodeId]
         if (!node) return
 
-        // Evaluate input callback to get the mapping
-        const inputMapping = evaluateInputCallback(node)
-
-        // Only fetch results for nodes referenced in this node's input (excluding trigger)
-        const referencedNodeIds = extractReferencedNodeIds(inputMapping).filter(
+        const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
           (id) => id !== 'trigger'
         )
         const fetchedResults = await workflowService.getNodeResults(
@@ -562,10 +393,8 @@ async function continueGraphInline(
           referencedNodeIds
         )
 
-        // Merge fetched results with trigger input
         const nodeResults = { trigger: triggerInput, ...fetchedResults }
-
-        const resolvedInput = resolveInputMapping(inputMapping, nodeResults)
+        const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
         await executeGraphNodeInline(
           workflowService,
@@ -574,17 +403,13 @@ async function continueGraphInline(
           graphName,
           nodeId,
           resolvedInput,
-          graph
+          nodes
         )
       })
     )
   }
 }
 
-/**
- * Start a workflow graph execution
- * @param startNode - Optional starting node ID (from wire config). If not provided, uses wires.api from graph definition.
- */
 export async function runWorkflowGraph(
   workflowService: PikkuWorkflowService,
   graphName: string,
@@ -593,41 +418,36 @@ export async function runWorkflowGraph(
   inline?: boolean,
   startNode?: string
 ): Promise<{ runId: string }> {
-  const definition = getWorkflowGraph(graphName)
-  if (!definition) {
+  const meta = getWorkflowMeta(graphName)
+  if (!meta?.nodes) {
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
 
+  const nodes = meta.nodes
   const entryNodes: string[] = startNode ? [startNode] : []
 
   if (entryNodes.length === 0) {
     throw new Error(`Workflow graph '${graphName}': no startNode was provided`)
   }
 
-  const graph = definition.graph
   const runId = await workflowService.createRun(graphName, triggerInput, inline)
 
-  // Register as inline for fast lookup
   if (inline) {
     workflowService.registerInlineRun(runId)
   }
 
-  // Create nodeResults with trigger for resolving entry node inputs
   const triggerNodeResults = { trigger: triggerInput }
 
   try {
     if (inline && rpcService) {
-      // Inline mode - execute entry nodes in parallel
       await Promise.all(
         entryNodes.map(async (nodeId) => {
-          const node = graph[nodeId]
+          const node = nodes[nodeId]
           if (!node) return
 
-          // Evaluate and resolve entry node input
-          const inputMapping = evaluateInputCallback(node)
           const resolvedInput =
-            Object.keys(inputMapping).length > 0
-              ? resolveInputMapping(inputMapping, triggerNodeResults)
+            node.input && Object.keys(node.input).length > 0
+              ? resolveSerializedInput(node.input, triggerNodeResults)
               : triggerInput
 
           await executeGraphNodeInline(
@@ -637,40 +457,35 @@ export async function runWorkflowGraph(
             graphName,
             nodeId,
             resolvedInput,
-            graph
+            nodes
           )
         })
       )
 
-      // Continue executing remaining nodes inline
       await continueGraphInline(
         workflowService,
         rpcService,
         runId,
         graphName,
-        graph,
+        nodes,
         triggerInput
       )
     } else {
-      // Queue-based mode
       for (const nodeId of entryNodes) {
-        const node = graph[nodeId]
+        const node = nodes[nodeId]
         if (!node) continue
 
-        // Evaluate and resolve entry node input
-        const inputMapping = evaluateInputCallback(node)
         const resolvedInput =
-          Object.keys(inputMapping).length > 0
-            ? resolveInputMapping(inputMapping, triggerNodeResults)
+          node.input && Object.keys(node.input).length > 0
+            ? resolveSerializedInput(node.input, triggerNodeResults)
             : triggerInput
 
-        const rpcName = getRpcName(node)
         await queueGraphNode(
           workflowService,
           runId,
           graphName,
           nodeId,
-          rpcName,
+          node.rpcName,
           resolvedInput
         )
       }
@@ -678,7 +493,6 @@ export async function runWorkflowGraph(
 
     return { runId }
   } finally {
-    // Clean up inline tracking
     if (inline) {
       workflowService.unregisterInlineRun(runId)
     }

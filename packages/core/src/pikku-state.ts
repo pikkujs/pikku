@@ -95,7 +95,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   },
   workflows: {
     registrations: new Map(),
-    graphRegistrations: new Map(),
     meta: {},
   },
   trigger: {

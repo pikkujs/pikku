@@ -10,7 +10,6 @@ export {
 
 // Internal registration functions (used by generated code)
 export { addWorkflow } from './dsl/workflow-runner.js'
-export { addWorkflowGraph } from './graph/graph-runner.js'
 
 // Graph helpers (template, pikkuWorkflowGraph)
 export { template, type TemplateString } from './graph/template.js'
