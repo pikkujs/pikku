@@ -933,7 +933,7 @@ export function deserializeGraphWorkflow(
   const lines: string[] = []
 
   // Import statement
-  lines.push(`import { wireWorkflowGraph } from '${pikkuImportPath}'`)
+  lines.push(`import { pikkuWorkflowGraph } from '${pikkuImportPath}'`)
   lines.push('')
 
   // Add description as comment if present
@@ -1018,8 +1018,8 @@ export function deserializeGraphWorkflow(
     }
   }
 
-  // Generate the wireWorkflowGraph call (builds graph and registers with core)
-  lines.push(`export const ${workflow.name} = wireWorkflowGraph({`)
+  // Generate the pikkuWorkflowGraph call (builds graph and registers with core)
+  lines.push(`export const ${workflow.name} = pikkuWorkflowGraph({`)
   lines.push(`  name: '${workflow.name}',`)
   if (workflow.description) {
     lines.push(`  description: '${workflow.description}',`)

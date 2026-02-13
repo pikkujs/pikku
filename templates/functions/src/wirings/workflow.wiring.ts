@@ -1,15 +1,9 @@
 import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
 import {
-  wireWorkflow,
   workflow,
   workflowStart,
   workflowStatus,
 } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
-import { createAndNotifyWorkflow } from '../functions/workflow.functions.js'
-
-wireWorkflow({
-  func: createAndNotifyWorkflow,
-})
 
 wireHTTP({
   auth: false,

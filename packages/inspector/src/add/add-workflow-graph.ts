@@ -179,7 +179,7 @@ interface PikkuWorkflowGraphExtract {
 }
 
 /**
- * Extract wireWorkflowGraph config from an object literal argument
+ * Extract pikkuWorkflowGraph config from an object literal argument
  */
 function extractWorkflowGraphConfig(
   configArg: ts.ObjectLiteralExpression,
@@ -341,9 +341,9 @@ function extractNodeConfigFromObject(
 }
 
 /**
- * Inspector for wireWorkflowGraph() calls
- * Detects: wireWorkflowGraph({ nodes: {...}, config: {...} })
- * or: export const x = wireWorkflowGraph({...}) where the call is found via variable declaration
+ * Inspector for pikkuWorkflowGraph() calls
+ * Detects: pikkuWorkflowGraph({ nodes: {...}, config: {...} })
+ * or: export const x = pikkuWorkflowGraph({...}) where the call is found via variable declaration
  */
 export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
@@ -351,7 +351,10 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   }
 
   const expression = node.expression
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireWorkflowGraph') {
+  if (
+    !ts.isIdentifier(expression) ||
+    expression.text !== 'pikkuWorkflowGraph'
+  ) {
     return
   }
 
@@ -361,7 +364,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!firstArg) {
     logger.critical(
       ErrorCode.MISSING_FUNC,
-      'wireWorkflowGraph requires an argument'
+      'pikkuWorkflowGraph requires an argument'
     )
     return
   }
@@ -369,7 +372,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!ts.isObjectLiteralExpression(firstArg)) {
     logger.critical(
       ErrorCode.MISSING_FUNC,
-      'wireWorkflowGraph requires an object argument'
+      'pikkuWorkflowGraph requires an object argument'
     )
     return
   }
@@ -379,12 +382,12 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!graphConfig) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      'wireWorkflowGraph: failed to extract config'
+      'pikkuWorkflowGraph: failed to extract config'
     )
     return
   }
 
-  // Resolve exportedName from variable declaration if this is `export const x = wireWorkflowGraph({...})`
+  // Resolve exportedName from variable declaration if this is `export const x = pikkuWorkflowGraph({...})`
   const parent = node.parent
   if (
     !graphConfig.exportedName &&
@@ -400,7 +403,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
   if (!workflowName) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      'wireWorkflowGraph requires a name property or exported variable name'
+      'pikkuWorkflowGraph requires a name property or exported variable name'
     )
     return
   }

@@ -1,7 +1,7 @@
 /**
  * Serialized types for workflow graphs
  * These are extracted by the inspector and stored as JSON
- * Can be created from code (wireWorkflow) or UI
+ * Can be created from code (pikkuWorkflowGraph) or UI
  */
 
 /**
