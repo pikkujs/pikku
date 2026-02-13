@@ -196,6 +196,8 @@ export interface SerializedWorkflowGraph {
   nodes: Record<string, SerializedGraphNode>
   /** Entry node(s) - first nodes to execute */
   entryNodeIds: string[]
+  /** Hash of graph topology (nodes, edges, input mappings) */
+  graphHash?: string
 }
 
 /**

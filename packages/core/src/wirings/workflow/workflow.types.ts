@@ -76,6 +76,8 @@ export interface WorkflowRun {
   error?: SerializedError
   /** If true, workflow executes inline without queues */
   inline?: boolean
+  /** Graph hash of the workflow definition at run creation time */
+  graphHash?: string
   /** Creation timestamp */
   createdAt: Date
   /** Last update timestamp */
@@ -198,6 +200,8 @@ export interface WorkflowRuntimeMeta {
   nodes?: Record<string, any>
   /** Entry node IDs for graph workflows (computed at build time) */
   entryNodeIds?: string[]
+  /** Hash of graph topology (nodes, edges, input mappings) */
+  graphHash?: string
 }
 
 /**
