@@ -135,16 +135,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  /**
-   * Create a new workflow run
-   * @param name - Workflow name
-   * @param input - Input data for the workflow
-   * @returns Run ID
-   */
+  public async registerWorkflowVersions(): Promise<void> {
+    const allMeta = pikkuState(null, 'workflows', 'meta')
+    for (const [name, meta] of Object.entries(allMeta)) {
+      if (!meta.graphHash) continue
+      await this.upsertWorkflowVersion(
+        name,
+        meta.graphHash,
+        meta,
+        meta.source ?? 'dsl'
+      )
+    }
+  }
+
   abstract createRun(
     workflowName: string,
     input: any,
-    inline?: boolean
+    inline: boolean,
+    graphHash: string
   ): Promise<string>
 
   /**
@@ -332,6 +340,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   abstract getRunState(runId: string): Promise<Record<string, unknown>>
 
+  abstract upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string
+  ): Promise<void>
+
+  abstract getWorkflowVersion(
+    name: string,
+    graphHash: string
+  ): Promise<{ graph: any; source: string } | null>
+
   // ============================================================================
   // Workflow Lifecycle Methods
   // ============================================================================
@@ -420,7 +440,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     // Create workflow run in state
-    const runId = await this.createRun(name, input, options?.inline)
+    const runId = await this.createRun(
+      name,
+      input,
+      options?.inline ?? false,
+      workflowMeta.graphHash!
+    )
 
     // Register inline run for fast lookup
     if (options?.inline) {

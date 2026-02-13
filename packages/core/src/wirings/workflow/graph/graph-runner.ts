@@ -430,7 +430,12 @@ export async function runWorkflowGraph(
     throw new Error(`Workflow graph '${graphName}': no startNode was provided`)
   }
 
-  const runId = await workflowService.createRun(graphName, triggerInput, inline)
+  const runId = await workflowService.createRun(
+    graphName,
+    triggerInput,
+    inline ?? false,
+    meta.graphHash!
+  )
 
   if (inline) {
     workflowService.registerInlineRun(runId)
