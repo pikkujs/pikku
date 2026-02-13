@@ -23,6 +23,20 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
+  const mcpTypes = [
+    'MCPResourceResponse',
+    'MCPToolResponse',
+    'MCPPromptResponse',
+  ]
+  const usedMcpTypes = mcpTypes.filter((t) => requiredTypes.has(t))
+  const mcpImport =
+    usedMcpTypes.length > 0
+      ? `import type { ${usedMcpTypes.join(', ')} } from '@pikku/core/mcp'`
+      : ''
+  for (const t of usedMcpTypes) {
+    requiredTypes.delete(t)
+  }
+
   const serializedImportMap = serializeImportMap(
     logger,
     relativeToPath,
@@ -42,6 +56,7 @@ export const serializeTypedRPCMap = (
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
+${mcpImport}
 ${serializedImportMap}
 ${serializedCustomTypes}
 
