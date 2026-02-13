@@ -16,7 +16,12 @@ import {
  */
 export interface WorkflowService {
   // Run-level state operations
-  createRun(workflowName: string, input: any, inline?: boolean): Promise<string>
+  createRun(
+    workflowName: string,
+    input: any,
+    inline: boolean,
+    graphHash: string
+  ): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
   getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
   updateRunStatus(
@@ -71,4 +76,16 @@ export interface WorkflowService {
     data: any,
     rpcService: any
   ): Promise<void>
+
+  // Version operations
+  upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string
+  ): Promise<void>
+  getWorkflowVersion(
+    name: string,
+    graphHash: string
+  ): Promise<{ graph: any; source: string } | null>
 }

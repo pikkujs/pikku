@@ -204,7 +204,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
   async createRun(
     workflowName: string,
     input: any,
-    inline?: boolean
+    inline: boolean,
+    graphHash: string
   ): Promise<string> {
     const id = randomUUID()
     const now = Date.now()
@@ -223,6 +224,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       JSON.stringify(input),
       'inline',
       inline ? 'true' : 'false',
+      'graphHash',
+      graphHash,
       'createdAt',
       now.toString(),
       'updatedAt',
@@ -248,6 +251,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       output: data.output ? JSON.parse(data.output) : undefined,
       error: data.error ? JSON.parse(data.error) : undefined,
       inline: data.inline === 'true' ? true : undefined,
+      graphHash: data.graphHash || undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
@@ -840,6 +844,44 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       return {}
     }
     return JSON.parse(stateStr)
+  }
+
+  private versionKey(name: string, graphHash: string): string {
+    return `${this.keyPrefix}:version:${name}:${graphHash}`
+  }
+
+  async upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string
+  ): Promise<void> {
+    const key = this.versionKey(name, graphHash)
+    const exists = await this.redis.exists(key)
+    if (!exists) {
+      await this.redis.hmset(
+        key,
+        'graph',
+        JSON.stringify(graph),
+        'source',
+        source,
+        'createdAt',
+        Date.now().toString()
+      )
+    }
+  }
+
+  async getWorkflowVersion(
+    name: string,
+    graphHash: string
+  ): Promise<{ graph: any; source: string } | null> {
+    const key = this.versionKey(name, graphHash)
+    const data = await this.redis.hgetall(key)
+    if (!data.graph) return null
+    return {
+      graph: JSON.parse(data.graph),
+      source: data.source!,
+    }
   }
 
   async close(): Promise<void> {

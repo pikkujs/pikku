@@ -80,6 +80,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
         error JSONB,
         state JSONB DEFAULT '{}',
         inline BOOLEAN DEFAULT FALSE,
+        graph_hash TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
@@ -91,6 +92,10 @@ export class PgWorkflowService extends PikkuWorkflowService {
       -- Add state column if it doesn't exist (for existing tables)
       ALTER TABLE ${this.schemaName}.workflow_runs
         ADD COLUMN IF NOT EXISTS state JSONB DEFAULT '{}';
+
+      -- Add graph_hash column if it doesn't exist (for existing tables)
+      ALTER TABLE ${this.schemaName}.workflow_runs
+        ADD COLUMN IF NOT EXISTS graph_hash TEXT;
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step (
         workflow_step_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -123,6 +128,15 @@ export class PgWorkflowService extends PikkuWorkflowService {
         failed_at TIMESTAMPTZ,
         FOREIGN KEY (workflow_step_id) REFERENCES ${this.schemaName}.workflow_step(workflow_step_id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_versions (
+        workflow_name TEXT NOT NULL,
+        graph_hash TEXT NOT NULL,
+        graph JSONB NOT NULL,
+        source TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (workflow_name, graph_hash)
+      );
     `)
 
     this.initialized = true
@@ -131,15 +145,16 @@ export class PgWorkflowService extends PikkuWorkflowService {
   async createRun(
     workflowName: string,
     input: any,
-    inline?: boolean
+    inline: boolean,
+    graphHash: string
   ): Promise<string> {
     const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.workflow_runs
-        (workflow, status, input, inline)
+        (workflow, status, input, inline, graph_hash)
       VALUES
-        ($1, $2, $3, $4)
+        ($1, $2, $3, $4, $5)
       RETURNING workflow_run_id`,
-      [workflowName, 'running', input, inline ?? false]
+      [workflowName, 'running', input, inline, graphHash]
     )
 
     return result[0]!.workflow_run_id
@@ -147,7 +162,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
 
   async getRun(id: string): Promise<WorkflowRun | null> {
     const result = await this.sql.unsafe(
-      `SELECT workflow_run_id, workflow, status, input, output, error, inline, created_at, updated_at
+      `SELECT workflow_run_id, workflow, status, input, output, error, inline, graph_hash, created_at, updated_at
       FROM ${this.schemaName}.workflow_runs
       WHERE workflow_run_id = $1`,
       [id]
@@ -166,6 +181,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
       output: row.output,
       error: row.error,
       inline: row.inline as boolean | undefined,
+      graphHash: row.graph_hash as string | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }
@@ -640,6 +656,43 @@ export class PgWorkflowService extends PikkuWorkflowService {
       return {}
     }
     return (result[0]!.state as Record<string, unknown>) || {}
+  }
+
+  // ============================================================================
+  // Version Methods
+  // ============================================================================
+
+  async upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string
+  ): Promise<void> {
+    await this.sql.unsafe(
+      `INSERT INTO ${this.schemaName}.workflow_versions
+        (workflow_name, graph_hash, graph, source)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (workflow_name, graph_hash)
+      DO NOTHING`,
+      [name, graphHash, graph, source]
+    )
+  }
+
+  async getWorkflowVersion(
+    name: string,
+    graphHash: string
+  ): Promise<{ graph: any; source: string } | null> {
+    const result = await this.sql.unsafe(
+      `SELECT graph, source
+       FROM ${this.schemaName}.workflow_versions
+       WHERE workflow_name = $1 AND graph_hash = $2`,
+      [name, graphHash]
+    )
+    if (result.length === 0) return null
+    return {
+      graph: result[0]!.graph,
+      source: result[0]!.source as string,
+    }
   }
 
   async close(): Promise<void> {

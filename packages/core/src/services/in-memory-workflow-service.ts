@@ -39,11 +39,13 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   >() // keyed by runId
   private runState = new Map<string, Record<string, unknown>>() // keyed by runId
   private branchKeys = new Map<string, string>() // keyed by stepId
+  private workflowVersions = new Map<string, { graph: any; source: string }>() // keyed by `${name}:${graphHash}`
 
   async createRun(
     workflowName: string,
     input: any,
-    inline?: boolean
+    inline: boolean,
+    graphHash: string
   ): Promise<string> {
     const runId = randomUUID()
     const now = new Date()
@@ -54,6 +56,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
       status: 'running',
       input,
       inline,
+      graphHash,
       createdAt: now,
       updatedAt: now,
     }
@@ -270,6 +273,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     this.stepHistory.clear()
     this.runState.clear()
     this.branchKeys.clear()
+    this.workflowVersions.clear()
   }
 
   // Graph workflow methods
@@ -350,5 +354,26 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
 
   async getRunState(runId: string): Promise<Record<string, unknown>> {
     return this.runState.get(runId) || {}
+  }
+
+  async upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string
+  ): Promise<void> {
+    this.workflowVersions.set(`${name}:${graphHash}`, {
+      graph,
+      source,
+    })
+  }
+
+  async getWorkflowVersion(
+    name: string,
+    graphHash: string
+  ): Promise<{ graph: any; source: string } | null> {
+    const version = this.workflowVersions.get(`${name}:${graphHash}`)
+    if (!version) return null
+    return { graph: version.graph, source: version.source }
   }
 }
