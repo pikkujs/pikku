@@ -17,7 +17,11 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
-import { executeGraphStep, runWorkflowGraph } from './graph/graph-runner.js'
+import {
+  executeGraphStep,
+  runWorkflowGraph,
+  runFromMeta,
+} from './graph/graph-runner.js'
 import { WorkflowService } from '../../services/workflow-service.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 
@@ -139,12 +143,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const allMeta = pikkuState(null, 'workflows', 'meta')
     for (const [name, meta] of Object.entries(allMeta)) {
       if (!meta.graphHash) continue
-      await this.upsertWorkflowVersion(
-        name,
-        meta.graphHash,
-        meta,
-        meta.source ?? 'dsl'
-      )
+      await this.upsertWorkflowVersion(name, meta.graphHash, meta, meta.source)
     }
   }
 
@@ -504,6 +503,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowRunNotFoundError(runId)
     }
 
+    const meta = pikkuState(null, 'workflows', 'meta')
+    const workflowMeta = meta[run.workflow]
+
+    if (
+      run.graphHash &&
+      workflowMeta?.graphHash &&
+      run.graphHash !== workflowMeta.graphHash
+    ) {
+      await this.runVersionMismatchFallback(run, workflowMeta, rpcService)
+      return
+    }
+
     const registrations = pikkuState(null, 'workflows', 'registrations')
     const workflow = registrations.get(run.workflow)
     if (!workflow) {
@@ -511,9 +522,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     await this.withRunLock(runId, async () => {
-      const meta = pikkuState(null, 'workflows', 'meta')
-      const workflowMeta = meta[run.workflow]
-
       const workflowWire = this.createWorkflowWire(
         run.workflow,
         runId,
@@ -536,13 +544,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         await this.updateRunStatus(runId, 'completed', result)
       } catch (error: any) {
         if (error instanceof WorkflowAsyncException) {
-          // Normal - workflow paused for step execution
           throw error
         }
 
-        // Check if it's a WorkflowCancelledException
         if (error instanceof WorkflowCancelledException) {
-          // Workflow was cancelled - update status and rethrow
           await this.updateRunStatus(runId, 'cancelled', undefined, {
             message: error.message || 'Workflow cancelled',
             stack: '',
@@ -560,6 +565,44 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         throw error
       }
     })
+  }
+
+  private async runVersionMismatchFallback(
+    run: WorkflowRun,
+    currentMeta: { source: string },
+    rpcService: any
+  ): Promise<void> {
+    const source = currentMeta.source
+
+    if (source === 'complex') {
+      await this.updateRunStatus(run.id, 'failed', undefined, {
+        message: `Workflow '${run.workflow}' definition changed. Complex workflows with inline steps cannot be migrated.`,
+        stack: '',
+        code: 'VERSION_CONFLICT',
+      })
+      return
+    }
+
+    if (source === 'dsl') {
+      await this.updateRunStatus(run.id, 'failed', undefined, {
+        message: `Workflow '${run.workflow}' definition changed. DSL workflow graph fallback not yet supported.`,
+        stack: '',
+        code: 'VERSION_CONFLICT',
+      })
+      return
+    }
+
+    const version = await this.getWorkflowVersion(run.workflow, run.graphHash!)
+    if (!version) {
+      await this.updateRunStatus(run.id, 'failed', undefined, {
+        message: `Workflow '${run.workflow}' version '${run.graphHash}' not found. Cannot resume with changed definition.`,
+        stack: '',
+        code: 'VERSION_NOT_FOUND',
+      })
+      return
+    }
+
+    await runFromMeta(this, run.id, version.graph, rpcService)
   }
 
   /**

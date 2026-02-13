@@ -137,9 +137,10 @@ async function queueGraphNode(
 export async function continueGraph(
   workflowService: PikkuWorkflowService,
   runId: string,
-  graphName: string
+  graphName: string,
+  overrideMeta?: WorkflowRuntimeMeta
 ): Promise<void> {
-  const meta = getWorkflowMeta(graphName)
+  const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
     throw new Error(`Workflow graph meta '${graphName}' not found`)
   }
@@ -262,6 +263,15 @@ export async function onGraphNodeComplete(
   graphName: string
 ): Promise<void> {
   await continueGraph(workflowService, runId, graphName)
+}
+
+export async function runFromMeta(
+  workflowService: PikkuWorkflowService,
+  runId: string,
+  meta: WorkflowRuntimeMeta,
+  _rpcService: any
+): Promise<void> {
+  await continueGraph(workflowService, runId, meta.name, meta)
 }
 
 async function executeGraphNodeInline(
