@@ -13,6 +13,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
+import { computeGraphHash } from '../../../utils/workflow-hash.js'
 import { join } from 'path'
 
 export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
@@ -65,6 +66,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
       for (const [name, meta] of Object.entries(dslMeta)) {
         const graphMeta = convertDslToGraph(name, meta)
 
+        graphMeta.graphHash = computeGraphHash(graphMeta)
+
         // Write minimal version (runtime-only fields)
         const minimalMeta = stripVerboseFields(graphMeta)
         const minimalPath = join(workflowMetaDir, `${name}.gen.json`)
@@ -87,8 +90,9 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
         }
       }
 
-      // Write individual JSON files for graph workflows
       for (const [name, graphMeta] of Object.entries(workflows.graphMeta)) {
+        graphMeta.graphHash = computeGraphHash(graphMeta)
+
         // Write minimal version (runtime-only fields)
         const minimalMeta = stripVerboseFields(graphMeta)
         const minimalPath = join(workflowMetaDir, `${name}.gen.json`)
