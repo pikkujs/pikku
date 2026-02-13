@@ -9,9 +9,6 @@ import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
-import { oauthConnect } from './functions/commands/oauth/oauth-connect.js'
-import { oauthStatus } from './functions/commands/oauth/oauth-status.js'
-import { oauthDisconnect } from './functions/commands/oauth/oauth-disconnect.js'
 // import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -110,32 +107,6 @@ wireCLI({
     nextjs: pikkuCLICommand({
       func: pikkuNext,
       description: 'Generate Next.js backend and HTTP wrappers',
-    }),
-    'oauth:connect': pikkuCLICommand({
-      func: oauthConnect,
-      description: 'Authorize an OAuth2 credential',
-      parameters: '<credentialName>',
-      options: {
-        output: {
-          description: 'Output mode: console or secret',
-          default: 'console' as const,
-          short: 'o',
-        },
-        url: {
-          description: 'Callback server URL (default: http://localhost:9876)',
-          short: 'u',
-        },
-      },
-    }),
-    'oauth:status': pikkuCLICommand({
-      func: oauthStatus,
-      description: 'Check status of an OAuth2 credential',
-      parameters: '<credentialName>',
-    }),
-    'oauth:disconnect': pikkuCLICommand({
-      func: oauthDisconnect,
-      description: 'Remove stored tokens for an OAuth2 credential',
-      parameters: '<credentialName>',
     }),
   },
 })
