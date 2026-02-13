@@ -437,4 +437,10 @@ export const workflowTestData: Record<string, any> = {
     tags: ['important', 'review'],
     tagsToRemove: ['draft'],
   },
+
+  // Graph workflows
+  graphOnboarding: {
+    email: 'newuser@test.com',
+    name: 'New User',
+  },
 }

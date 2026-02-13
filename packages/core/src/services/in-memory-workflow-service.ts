@@ -282,16 +282,18 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     completedNodeIds: string[]
     branchKeys: Record<string, string>
   }> {
-    const history = this.stepHistory.get(runId) || []
-    const completedNodeIds = history
-      .filter((s) => s.status === 'succeeded')
-      .map((s) => s.stepName)
+    const completedNodeIds: string[] = []
+    for (const [key, step] of this.steps.entries()) {
+      if (key.startsWith(`${runId}:node:`) && step.status === 'succeeded') {
+        completedNodeIds.push(key.substring(runId.length + ':node:'.length))
+      }
+    }
 
     const branchKeys: Record<string, string> = {}
     for (const [stepId, branchKey] of this.branchKeys.entries()) {
       const stepData = this.stepData.get(stepId)
-      if (stepData) {
-        branchKeys[stepData.stepName] = branchKey
+      if (stepData && stepData.stepName.startsWith('node:')) {
+        branchKeys[stepData.stepName.replace(/^node:/, '')] = branchKey
       }
     }
 
@@ -304,8 +306,8 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   ): Promise<string[]> {
     const existingSteps = new Set<string>()
     for (const [key] of this.steps.entries()) {
-      if (key.startsWith(`${runId}:`)) {
-        existingSteps.add(key.substring(runId.length + 1))
+      if (key.startsWith(`${runId}:node:`)) {
+        existingSteps.add(key.substring(runId.length + ':node:'.length))
       }
     }
     return nodeIds.filter((id) => !existingSteps.has(id))
@@ -317,7 +319,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   ): Promise<Record<string, any>> {
     const results: Record<string, any> = {}
     for (const nodeId of nodeIds) {
-      const key = `${runId}:${nodeId}`
+      const key = `${runId}:node:${nodeId}`
       const step = this.steps.get(key)
       if (step?.result !== undefined) {
         results[nodeId] = step.result
@@ -331,7 +333,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     nodeId: string,
     branchKey: string
   ): Promise<void> {
-    const key = `${runId}:${nodeId}`
+    const key = `${runId}:node:${nodeId}`
     const step = this.steps.get(key)
     if (step) {
       this.branchKeys.set(step.stepId, branchKey)
