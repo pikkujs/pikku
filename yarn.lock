@@ -4618,7 +4618,6 @@ __metadata:
     "@pikku/core": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
     "@types/node": "npm:^24"
-    oauth2-mock-server: "npm:^8.2.0"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
     zod: "npm:^4"
@@ -6393,15 +6392,6 @@ __metadata:
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
   checksum: 10/669632eb3745404c2f822a18fc3a0122d2f9a7a13f7fb8b5823ee19d1d2ff9ee5b52c53367176ea4ad093c332fd5ab4bd0ebae5a8e27917a4105a4cfc86b1005
-  languageName: node
-  linkType: hard
-
-"basic-auth@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "basic-auth@npm:2.0.1"
-  dependencies:
-    safe-buffer: "npm:5.1.2"
-  checksum: 10/3419b805d5dfc518f3a05dcf42aa53aa9ce820e50b6df5097f9e186322e1bc733c36722b624802cd37e791035aa73b828ed814d8362333d42d7f5cd04d7a5e48
   languageName: node
   linkType: hard
 
@@ -8976,13 +8966,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"is-plain-obj@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "is-plain-obj@npm:4.1.0"
-  checksum: 10/6dc45da70d04a81f35c9310971e78a6a3c7a63547ef782e3a07ee3674695081b6ca4e977fbb8efc48dae3375e0b34558d2bcd722aec9bddfa2d7db5b041be8ce
-  languageName: node
-  linkType: hard
-
 "is-promise@npm:^4.0.0":
   version: 4.0.0
   resolution: "is-promise@npm:4.0.0"
@@ -10207,21 +10190,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"oauth2-mock-server@npm:^8.2.0":
-  version: 8.2.1
-  resolution: "oauth2-mock-server@npm:8.2.1"
-  dependencies:
-    basic-auth: "npm:^2.0.1"
-    cors: "npm:^2.8.6"
-    express: "npm:^5.2.1"
-    is-plain-obj: "npm:^4.1.0"
-    jose: "npm:^6.1.3"
-  bin:
-    oauth2-mock-server: dist/oauth2-mock-server.js
-  checksum: 10/3149e13e9ba49ef5fe6fd86e04fda53ee0a107d2e62546e4d7ab91a4c032cb6d7cdb0d5a1ef13939f582f47e6e501acf496053d5ceecf0af5525d2b6b1bb5a99
-  languageName: node
-  linkType: hard
-
 "object-assign@npm:^4":
   version: 4.1.1
   resolution: "object-assign@npm:4.1.1"
@@ -11380,7 +11348,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"safe-buffer@npm:5.1.2, safe-buffer@npm:~5.1.0, safe-buffer@npm:~5.1.1":
+"safe-buffer@npm:~5.1.0, safe-buffer@npm:~5.1.1":
   version: 5.1.2
   resolution: "safe-buffer@npm:5.1.2"
   checksum: 10/7eb5b48f2ed9a594a4795677d5a150faa7eb54483b2318b568dc0c4fc94092a6cce5be02c7288a0500a156282f5276d5688bce7259299568d1053b2150ef374a
