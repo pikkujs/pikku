@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 import type { SerializedWorkflowGraph } from '@pikku/inspector'
 import type { FunctionsMeta } from '@pikku/core'
+import { parseVersionedId } from '@pikku/core'
 
 function sortKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(sortKeys)
@@ -27,9 +28,14 @@ export function computeStepHashes(
       continue
     }
     const rpcName: string = node.rpcName
-    const meta = functionsMeta[rpcName]
+    let meta = functionsMeta[rpcName]
+    if (!meta) {
+      const { baseName } = parseVersionedId(rpcName)
+      meta = functionsMeta[baseName]
+    }
     const parts = [
       node.nodeId,
+      rpcName,
       meta?.inputsSchemaHash ?? '',
       meta?.outputsSchemaHash ?? '',
     ]

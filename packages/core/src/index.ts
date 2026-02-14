@@ -29,6 +29,7 @@ export * from './errors/index.js'
 export * from './middleware/index.js'
 export * from './utils.js'
 export * from './time-utils.js'
+export * from './version.js'
 export {
   pikkuState,
   initializePikkuState,

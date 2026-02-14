@@ -29,6 +29,7 @@
     "test": "pikku && npx tsx src/tests/serialize-dsl.test.ts",
     "test:bullmq": "npx tsx src/runners/bullmq.runner.ts",
     "test:pgboss": "npx tsx src/runners/pgboss.runner.ts",
+    "test:function-versioning": "npx tsx src/runners/function-versioning.runner.ts",
     "test:version-mismatch": "npx tsx src/runners/version-mismatch.runner.ts",
     "test:version-mismatch:pg": "npx tsx src/runners/version-mismatch.runner.ts --pg",
     "test:version-mismatch:redis": "npx tsx src/runners/version-mismatch.runner.ts --redis"

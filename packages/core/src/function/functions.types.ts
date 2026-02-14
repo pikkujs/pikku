@@ -218,6 +218,7 @@ export type CorePikkuFunctionConfig<
   /** Optional description of what the function does */
   description?: string
   override?: string
+  version?: number
   tags?: string[]
   expose?: boolean
   internal?: boolean

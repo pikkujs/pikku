@@ -17,6 +17,7 @@ import {
   computeGraphHash,
   computeStepHashes,
 } from '../../../utils/workflow-hash.js'
+import { stampVersionsOnGraph } from '../../../utils/stamp-versions-on-graph.js'
 import { join } from 'path'
 
 export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
@@ -69,6 +70,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
       for (const [name, meta] of Object.entries(dslMeta)) {
         const graphMeta = convertDslToGraph(name, meta)
 
+        stampVersionsOnGraph(graphMeta, functionState.meta)
         computeStepHashes(graphMeta, functionState.meta)
         graphMeta.graphHash = computeGraphHash(graphMeta)
 
@@ -95,6 +97,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
       }
 
       for (const [name, graphMeta] of Object.entries(workflows.graphMeta)) {
+        stampVersionsOnGraph(graphMeta, functionState.meta)
         computeStepHashes(graphMeta, functionState.meta)
         graphMeta.graphHash = computeGraphHash(graphMeta)
 

@@ -19,6 +19,7 @@ import {
   CorePikkuFunctionConfig,
   CorePikkuPermission,
 } from './functions.types.js'
+import { parseVersionedId } from '../version.js'
 import {
   SessionService,
   createFunctionSessionWireProps,
@@ -157,14 +158,22 @@ export const runPikkuFunc = async <In = any, Out = any>(
     packageName?: string | null
   }
 ): Promise<Out> => {
-  const funcConfig = pikkuState(packageName, 'function', 'functions').get(
-    funcName
-  )
+  const funcMap = pikkuState(packageName, 'function', 'functions')
+  let funcConfig = funcMap.get(funcName)
+  const allMeta = pikkuState(packageName, 'function', 'meta')
+  let funcMeta = allMeta[funcName]
+
+  if (!funcConfig || !funcMeta) {
+    const { baseName, version } = parseVersionedId(funcName)
+    if (version !== null) {
+      funcConfig = funcConfig || funcMap.get(baseName)
+      funcMeta = funcMeta || allMeta[baseName]
+    }
+  }
+
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  const allMeta = pikkuState(packageName, 'function', 'meta')
-  const funcMeta = allMeta[funcName]
   if (!funcMeta) {
     throw new Error(`Function meta not found: ${funcName}`)
   }

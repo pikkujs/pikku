@@ -31,21 +31,19 @@ export const serializeFunctionImports = (
       packageMappings
     )
 
-    // pikkuFunc/pikkuSessionlessFunc/pikkuVoidFunc always return config objects
-    // For directly exported functions, we can just import and register them
+    const safeAlias = name.replace(/[^a-zA-Z0-9_$]/g, '_')
+
     if (name === exportedName) {
       serializedImports.push(`import { ${exportedName} } from '${filePath}'`)
       serializedRegistrations.push(
         `addFunction('${name}', ${exportedName}${packageArg})`
       )
-    }
-    // For renamed functions, we need to import and alias them
-    else {
+    } else {
       serializedImports.push(
-        `import { ${exportedName} as ${name} } from '${filePath}'`
+        `import { ${exportedName} as ${safeAlias} } from '${filePath}'`
       )
       serializedRegistrations.push(
-        `addFunction('${name}', ${name}${packageArg})`
+        `addFunction('${name}', ${safeAlias}${packageArg})`
       )
     }
   }
@@ -66,13 +64,14 @@ export const generateRuntimeMeta = (
 
   for (const [
     key,
-    { pikkuFuncId, inputSchemaName, outputSchemaName, expose },
+    { pikkuFuncId, inputSchemaName, outputSchemaName, expose, version },
   ] of Object.entries(functions)) {
     runtimeMeta[key] = {
       pikkuFuncId,
       inputSchemaName,
       outputSchemaName,
       expose,
+      version,
     }
   }
 

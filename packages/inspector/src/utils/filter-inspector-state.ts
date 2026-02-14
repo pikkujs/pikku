@@ -1,5 +1,5 @@
 import { InspectorState, InspectorFilters, InspectorLogger } from '../types.js'
-import { PikkuWiringTypes } from '@pikku/core'
+import { PikkuWiringTypes, parseVersionedId } from '@pikku/core'
 import { aggregateRequiredServices } from './post-process.js'
 
 // Module-level Set to track warned groups across multiple filter calls
@@ -92,10 +92,13 @@ function matchesFilters(
     }
   }
 
-  // Check name filter
+  // Check name filter (match against both full ID and base name for versioned functions)
   if (filters.names && filters.names.length > 0) {
-    const nameMatches = filters.names.some((pattern) =>
-      matchesWildcard(meta.name, pattern)
+    const { baseName } = parseVersionedId(meta.name)
+    const nameMatches = filters.names.some(
+      (pattern) =>
+        matchesWildcard(meta.name, pattern) ||
+        (baseName !== meta.name && matchesWildcard(baseName, pattern))
     )
     if (!nameMatches) {
       logger.debug(`⒡ Filtered by name: ${meta.type}:${meta.name}`)
@@ -567,6 +570,21 @@ export function filterInspectorState(
     Object.keys(filteredState.cli.meta.renderers || {}).length > 0
   if (hasCliPrograms || hasCliRenderers) {
     filteredState.cli.files = new Set(state.cli.files)
+  }
+
+  // Post-filter version expansion: include all versions of matched functions
+  const includedBaseNames = new Set<string>()
+  for (const funcId of filteredState.serviceAggregation.usedFunctions) {
+    const { baseName } = parseVersionedId(funcId)
+    includedBaseNames.add(baseName)
+  }
+  if (includedBaseNames.size > 0) {
+    for (const funcId of Object.keys(state.functions.meta)) {
+      const { baseName } = parseVersionedId(funcId)
+      if (includedBaseNames.has(baseName)) {
+        filteredState.serviceAggregation.usedFunctions.add(funcId)
+      }
+    }
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

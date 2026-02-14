@@ -86,6 +86,7 @@ export type FunctionRuntimeMeta = {
   expose?: boolean
   internal?: boolean
   sessionless?: boolean
+  version?: number
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &
