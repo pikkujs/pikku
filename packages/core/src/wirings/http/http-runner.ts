@@ -30,7 +30,7 @@ import {
 } from '../../utils.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -365,7 +365,7 @@ const executeRoute = async (
   const wire: PikkuWire = {
     http,
     channel,
-    ...createSessionWireProps(userSession),
+    ...createMiddlewareSessionWireProps(userSession),
   }
 
   result = await runPikkuFunc(
@@ -384,6 +384,7 @@ const executeRoute = async (
       coerceDataFromSchema: options.coerceDataFromSchema,
       tags: route.tags,
       wire,
+      sessionService: userSession,
     }
   )
 

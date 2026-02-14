@@ -13,7 +13,7 @@ import { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../../../services/user-session-service.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
@@ -110,7 +110,10 @@ export const runChannelConnect = async ({
       channelName: channelConfig.name,
     })
 
-    const wire: PikkuWire = { channel, ...createSessionWireProps(userSession) }
+    const wire: PikkuWire = {
+      channel,
+      ...createMiddlewareSessionWireProps(userSession),
+    }
 
     if (createWireServices) {
       wireServices = await createWireServices(singletonServices, wire)
@@ -183,7 +186,10 @@ export const runChannelDisconnect = async ({
     params.channelId
   )
   userSession.setInitial(session)
-  const wire: PikkuWire = { channel, ...createSessionWireProps(userSession) }
+  const wire: PikkuWire = {
+    channel,
+    ...createMiddlewareSessionWireProps(userSession),
+  }
 
   if (!wireServices && params.createWireServices) {
     wireServices = await params.createWireServices(singletonServices, wire)
@@ -234,7 +240,10 @@ export const runChannelMessage = async (
     params.channelId
   )
   userSession.setInitial(session)
-  const wire: PikkuWire = { channel, ...createSessionWireProps(userSession) }
+  const wire: PikkuWire = {
+    channel,
+    ...createMiddlewareSessionWireProps(userSession),
+  }
 
   if (params.createWireServices) {
     wireServices = await params.createWireServices(singletonServices, wire)

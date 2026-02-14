@@ -41,8 +41,8 @@ export const authBearer = pikkuMiddlewareFactory<{
   }
 }>(({ token } = {}) =>
   pikkuMiddleware(
-    async ({ jwt: jwtService }, { http, session, setSession }, next) => {
-      if (!http?.request || !session || session.get()) {
+    async ({ jwt: jwtService }, { http, setSession, getSession }, next) => {
+      if (!http?.request || !setSession || getSession?.()) {
         return next()
       }
 

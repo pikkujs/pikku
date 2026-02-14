@@ -12,7 +12,7 @@ import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
 import {
   CorePikkuFunctionConfig,
@@ -106,7 +106,7 @@ export async function runScheduledTask({
         throw new ScheduledTaskSkippedError(name, reason)
       },
     },
-    ...createSessionWireProps(userSession),
+    ...createMiddlewareSessionWireProps(userSession),
   }
 
   try {
@@ -123,6 +123,7 @@ export async function runScheduledTask({
       wireMiddleware: task.middleware,
       tags: task.tags,
       wire,
+      sessionService: userSession,
     })
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
