@@ -743,8 +743,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         const [status, branchTaken, attemptCount, retries] = data
 
         const parts = key.split(':')
-        const nodeIndex = parts.indexOf('node')
-        if (nodeIndex === -1 || nodeIndex >= parts.length - 1) continue
+        const stepIndex = parts.lastIndexOf('step')
+        if (stepIndex === -1 || stepIndex + 1 >= parts.length) continue
+        if (parts[stepIndex + 1] !== runId) continue
+        const nodeIndex = parts.lastIndexOf('node')
+        if (nodeIndex <= stepIndex || nodeIndex >= parts.length - 1) continue
         const nodeId = parts.slice(nodeIndex + 1).join(':')
 
         if (status === 'succeeded') {

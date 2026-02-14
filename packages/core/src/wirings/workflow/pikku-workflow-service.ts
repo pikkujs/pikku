@@ -455,12 +455,15 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowNotFoundError(name)
     }
 
-    // Create workflow run in state
+    if (!workflowMeta.graphHash) {
+      throw new Error(`Missing workflow graphHash for '${name}'`)
+    }
+
     const runId = await this.createRun(
       name,
       input,
       options?.inline ?? false,
-      workflowMeta.graphHash!
+      workflowMeta.graphHash
     )
 
     // Register inline run for fast lookup

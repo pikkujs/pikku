@@ -47,7 +47,7 @@ describe('graph-runner bugs', () => {
     assert.equal(run?.status, 'running')
   })
 
-  test('runWorkflowGraph should fail the run (not leave it orphaned) when no entry nodes are ready', async () => {
+  test('runWorkflowGraph should throw and not create a run when no entry nodes are ready', async () => {
     const ws = new InMemoryWorkflowService()
 
     const metaState = pikkuState(null, 'workflows', 'meta')
@@ -66,25 +66,16 @@ describe('graph-runner bugs', () => {
       },
     }
 
-    try {
-      await runWorkflowGraph(ws, 'testOrphanedRun', {})
-    } catch (_) {
-      // expected to throw
-    }
+    await assert.rejects(() => runWorkflowGraph(ws, 'testOrphanedRun', {}), {
+      message: /no entry nodes have satisfied dependencies/,
+    })
 
-    const runs: Array<{ status: string }> = []
-    for (const runId of (ws as any).runs.keys()) {
-      const run = await ws.getRun(runId)
-      if (run) runs.push(run)
-    }
-
-    if (runs.length > 0) {
-      assert.equal(
-        runs[0]!.status,
-        'failed',
-        'orphaned run should be marked as failed, not left running'
-      )
-    }
+    const runs: string[] = [...(ws as any).runs.keys()]
+    assert.equal(
+      runs.length,
+      0,
+      'no run should be created when entry nodes have unsatisfied dependencies'
+    )
 
     delete metaState['testOrphanedRun']
   })

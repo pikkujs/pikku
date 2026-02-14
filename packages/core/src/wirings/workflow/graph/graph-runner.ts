@@ -244,7 +244,7 @@ export async function continueGraph(
 
   for (const nodeId of nodesToQueue) {
     const node = nodes[nodeId]
-    if (!node) continue
+    if (!node?.rpcName) continue
 
     const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
       (id) => !IGNORED_REFS.has(id)
@@ -488,7 +488,7 @@ async function continueGraphInline(
     await Promise.all(
       nodesToExecute.map(async (nodeId) => {
         const node = nodes[nodeId]
-        if (!node) return
+        if (!node?.rpcName) return
 
         const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
           (id) => !IGNORED_REFS.has(id)
@@ -550,11 +550,15 @@ export async function runWorkflowGraph(
     )
   }
 
+  if (!meta.graphHash) {
+    throw new Error(`Workflow graph '${graphName}': missing graphHash in meta`)
+  }
+
   const runId = await workflowService.createRun(
     graphName,
     triggerInput,
     inline ?? false,
-    meta.graphHash!
+    meta.graphHash
   )
 
   if (inline) {
@@ -569,7 +573,7 @@ export async function runWorkflowGraph(
         await Promise.all(
           readyEntryNodes.map(async (nodeId) => {
             const node = nodes[nodeId]
-            if (!node) return
+            if (!node?.rpcName) return
 
             const resolvedInput =
               node.input && Object.keys(node.input).length > 0
@@ -607,7 +611,7 @@ export async function runWorkflowGraph(
     } else {
       for (const nodeId of readyEntryNodes) {
         const node = nodes[nodeId]
-        if (!node) continue
+        if (!node?.rpcName) continue
 
         const resolvedInput =
           node.input && Object.keys(node.input).length > 0
