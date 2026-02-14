@@ -5,7 +5,7 @@ import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../services/user-session-service.js'
 
 beforeEach(() => {
@@ -69,7 +69,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'cookie-jwt-value' }),
           response: mockResponse,
@@ -110,7 +110,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -154,7 +154,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'existing-jwt' }),
           response: mockResponse,
@@ -195,7 +195,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -233,7 +233,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'invalid-jwt' }),
           response: mockResponse,
@@ -277,7 +277,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -312,7 +312,7 @@ describe('authCookie middleware', () => {
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
-      { ...createSessionWireProps(SessionService) } as any,
+      { ...createMiddlewareSessionWireProps(SessionService) } as any,
       async () => {
         nextCalled = true
       }
@@ -340,7 +340,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -374,7 +374,7 @@ describe('authCookie middleware', () => {
         logger: mockLogger,
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -418,7 +418,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: undefined,
@@ -459,7 +459,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             my_custom_cookie: 'custom-cookie-value',
@@ -501,7 +501,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,

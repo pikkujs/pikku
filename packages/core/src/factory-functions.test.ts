@@ -21,8 +21,8 @@ test('pikkuMiddleware returns the same function', async () => {
 
 test('pikkuPermissionFactory creates a factory function', async () => {
   const factory = pikkuPermissionFactory<{ role: string }>(({ role }) => {
-    return pikkuPermission(async ({ logger }, data, { initialSession }) => {
-      return (initialSession as any)?.role === role
+    return pikkuPermission(async ({ logger }, data, { session }) => {
+      return (session as any)?.role === role
     })
   })
 

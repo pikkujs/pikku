@@ -186,8 +186,8 @@ export const pikkuMiddlewareFactory = <In = any>(
  * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
  *   role
  * }) => {
- *   return pikkuPermission(async ({ logger }, data, { initialSession }) => {
- *     if (!initialSession || initialSession.role !== role) {
+ *   return pikkuPermission(async ({ logger }, data, { session }) => {
+ *     if (!session || session.role !== role) {
  *       logger.warn(\`Permission denied: required role '\${role}'\`)
  *       return false
  *     }

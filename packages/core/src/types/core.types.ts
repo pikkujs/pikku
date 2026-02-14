@@ -4,7 +4,6 @@ import { SecretService } from '../services/secret-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
-import { SessionService } from '../services/user-session-service.js'
 import { PikkuChannel } from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
@@ -218,13 +217,13 @@ export type PikkuWire<
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
   trigger: PikkuTrigger<TriggerOutput>
-  initialSession: HasInitialSession extends true
+  session: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined
-  session: SessionService<UserSession>
   setSession: (session: CoreUserSession) => Promise<void> | void
   clearSession: () => Promise<void> | void
   getSession: () => Promise<UserSession> | UserSession | undefined
+  hasSessionChanged: () => boolean
 }>
 
 /**

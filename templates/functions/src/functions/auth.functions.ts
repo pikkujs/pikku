@@ -48,12 +48,12 @@ export const login = pikkuFunc({
 export const getMe = pikkuFunc({
   input: EmptyInputSchema,
   output: UserResponseSchema,
-  func: async ({ todoStore }, _input, { initialSession }) => {
-    if (!initialSession?.userId) {
+  func: async ({ todoStore }, _input, { session }) => {
+    if (!session?.userId) {
       throw new Error('Not authenticated')
     }
 
-    const user = todoStore.getUserById(initialSession.userId)
+    const user = todoStore.getUserById(session.userId)
     if (!user) {
       throw new Error('User not found')
     }

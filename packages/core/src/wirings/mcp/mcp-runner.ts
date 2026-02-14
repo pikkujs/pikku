@@ -25,7 +25,7 @@ import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
 
 export class MCPError extends Error {
@@ -237,12 +237,12 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
+    const mcpSessionService = new PikkuSessionService()
     const wire: PikkuWire = {
       mcp: mcpWire,
-      ...createSessionWireProps(new PikkuSessionService()),
+      ...createMiddlewareSessionWireProps(mcpSessionService),
     }
 
-    // Get metadata for the MCP endpoint to access pre-resolved middleware
     let meta: any
     if (type === 'resource') {
       meta = pikkuState(null, 'mcp', 'resourcesMeta')[name]
@@ -262,6 +262,7 @@ async function runMCPPikkuFunc(
       wirePermissions: mcp.permissions,
       tags: mcp.tags,
       wire,
+      sessionService: mcpSessionService,
     })
 
     return {

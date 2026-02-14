@@ -12,7 +12,7 @@ import { PikkuWire, WireServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../../../services/user-session-service.js'
 import { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
@@ -80,7 +80,7 @@ export const runLocalChannel = async ({
       const channel = channelHandler.getChannel()
       const wire: PikkuWire = {
         channel,
-        ...createSessionWireProps(userSession),
+        ...createMiddlewareSessionWireProps(userSession),
       }
 
       if (createWireServices) {

@@ -5,7 +5,7 @@ import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../services/user-session-service.js'
 import { InvalidSessionError } from '../errors/errors.js'
 
@@ -42,7 +42,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer jwt-token',
@@ -76,7 +76,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             Authorization: 'Bearer jwt-token-2',
@@ -119,7 +119,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer my-static-token',
@@ -150,7 +150,7 @@ describe('authBearer middleware', () => {
         await middleware(
           { jwt: jwtService } as any,
           {
-            session: SessionService,
+            ...createMiddlewareSessionWireProps(SessionService),
             http: {
               request: createMockHTTPRequest({
                 authorization: 'Basic some-token',
@@ -182,7 +182,7 @@ describe('authBearer middleware', () => {
         await middleware(
           { jwt: jwtService } as any,
           {
-            session: SessionService,
+            ...createMiddlewareSessionWireProps(SessionService),
             http: {
               request: createMockHTTPRequest({
                 authorization: 'Bearer',
@@ -214,7 +214,7 @@ describe('authBearer middleware', () => {
         await middleware(
           { jwt: jwtService } as any,
           {
-            session: SessionService,
+            ...createMiddlewareSessionWireProps(SessionService),
             http: {
               request: createMockHTTPRequest({
                 authorization: 'BearerToken',
@@ -245,7 +245,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer invalid-token',
@@ -285,7 +285,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer wrong-token',
@@ -322,7 +322,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer some-token',
@@ -352,7 +352,7 @@ describe('authBearer middleware', () => {
 
     await middleware(
       { jwt: jwtService } as any,
-      { ...createSessionWireProps(SessionService) } as any,
+      { ...createMiddlewareSessionWireProps(SessionService) } as any,
       async () => {
         nextCalled = true
       }
@@ -375,7 +375,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: jwtService } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: createMockHTTPResponse(),
@@ -399,7 +399,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: undefined } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer some-token',
@@ -431,7 +431,7 @@ describe('authBearer middleware', () => {
     await middleware(
       { jwt: undefined } as any,
       {
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             authorization: 'Bearer static-token',

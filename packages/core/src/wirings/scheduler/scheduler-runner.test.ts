@@ -185,7 +185,7 @@ describe('runScheduledTask', () => {
       schedule: '0 0 * * *',
       func: {
         func: async (services: any, data: any, wire: any) => {
-          receivedSession = await wire.session.get()
+          receivedSession = await wire.getSession()
         },
         auth: false,
       },

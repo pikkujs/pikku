@@ -5,7 +5,7 @@ import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
 import {
   PikkuSessionService,
-  createSessionWireProps,
+  createMiddlewareSessionWireProps,
 } from '../services/user-session-service.js'
 
 beforeEach(() => {
@@ -46,7 +46,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'my-api-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -78,7 +78,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-api-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -114,7 +114,7 @@ describe('authAPIKey middleware', () => {
           ),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -146,7 +146,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-fallback' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -174,7 +174,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -202,7 +202,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'invalid-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -237,7 +237,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -261,7 +261,7 @@ describe('authAPIKey middleware', () => {
 
     await middleware(
       { jwt: jwtService } as any,
-      { ...createSessionWireProps(SessionService) } as any,
+      { ...createMiddlewareSessionWireProps(SessionService) } as any,
       async () => {
         nextCalled = true
       }
@@ -284,7 +284,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -316,7 +316,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -349,7 +349,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'header-key' }),
           response: createMockHTTPResponse(),
         },
-        ...createSessionWireProps(SessionService),
+        ...createMiddlewareSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
