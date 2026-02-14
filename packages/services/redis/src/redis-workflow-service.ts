@@ -712,12 +712,13 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
   async getCompletedGraphState(runId: string): Promise<{
     completedNodeIds: string[]
+    failedNodeIds: string[]
     branchKeys: Record<string, string>
   }> {
     const completedNodeIds: string[] = []
+    const failedNodeIds: string[] = []
     const branchKeys: Record<string, string> = {}
 
-    // Scan for step keys with 'node:' prefix
     const pattern = `${this.keyPrefix}:step:${runId}:node:*`
     let cursor = '0'
 
@@ -731,28 +732,37 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       )
       cursor = newCursor
 
-      // Check each key for succeeded status and branch_taken
       for (const key of foundKeys) {
-        const data = await this.redis.hmget(key, 'status', 'branchTaken')
-        const [status, branchTaken] = data
+        const data = await this.redis.hmget(
+          key,
+          'status',
+          'branchTaken',
+          'attemptCount',
+          'retries'
+        )
+        const [status, branchTaken, attemptCount, retries] = data
+
+        const parts = key.split(':')
+        const nodeIndex = parts.indexOf('node')
+        if (nodeIndex === -1 || nodeIndex >= parts.length - 1) continue
+        const nodeId = parts.slice(nodeIndex + 1).join(':')
 
         if (status === 'succeeded') {
-          // Extract node ID from key: workflows:step:runId:node:nodeId
-          const parts = key.split(':')
-          const nodeIndex = parts.indexOf('node')
-          if (nodeIndex !== -1 && nodeIndex < parts.length - 1) {
-            const nodeId = parts.slice(nodeIndex + 1).join(':')
-            completedNodeIds.push(nodeId)
-
-            if (branchTaken) {
-              branchKeys[nodeId] = branchTaken
-            }
+          completedNodeIds.push(nodeId)
+          if (branchTaken) {
+            branchKeys[nodeId] = branchTaken
+          }
+        } else if (status === 'failed') {
+          const maxAttempts = (parseInt(retries || '0', 10) || 0) + 1
+          const attempts = parseInt(attemptCount || '0', 10) || 0
+          if (attempts >= maxAttempts) {
+            failedNodeIds.push(nodeId)
           }
         }
       }
     } while (cursor !== '0')
 
-    return { completedNodeIds, branchKeys }
+    return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
   async getNodesWithoutSteps(

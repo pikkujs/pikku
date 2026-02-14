@@ -134,6 +134,15 @@ function valueToCode(value: unknown, itemVar?: string): string {
   if (isTemplateRef(value)) {
     return templateRefToCode(value, itemVar)
   }
+  if (Array.isArray(value)) {
+    const elements = value.map((v) => valueToCode(v, itemVar))
+    return `[${elements.join(', ')}]`
+  }
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value)
+    const props = entries.map(([k, v]) => `${k}: ${valueToCode(v, itemVar)}`)
+    return `{ ${props.join(', ')} }`
+  }
   return JSON.stringify(value)
 }
 
@@ -845,6 +854,35 @@ function templateRefToGraphCode(
   return `template('${templateStr}', [${refs.join(', ')}])`
 }
 
+function valueToGraphCode(
+  value: unknown,
+  outputVarToNodeId: Map<string, string>,
+  refTracker: { hasRefs: boolean }
+): string {
+  if (isDataRef(value)) {
+    refTracker.hasRefs = true
+    return dataRefToGraphRef(value, outputVarToNodeId)
+  }
+  if (isTemplateRef(value)) {
+    refTracker.hasRefs = true
+    return templateRefToGraphCode(value, outputVarToNodeId)
+  }
+  if (Array.isArray(value)) {
+    const elements = value.map((v) =>
+      valueToGraphCode(v, outputVarToNodeId, refTracker)
+    )
+    return `[${elements.join(', ')}]`
+  }
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value)
+    const props = entries.map(
+      ([k, v]) => `${k}: ${valueToGraphCode(v, outputVarToNodeId, refTracker)}`
+    )
+    return `{ ${props.join(', ')} }`
+  }
+  return JSON.stringify(value)
+}
+
 /**
  * Convert input object to graph input code using ref()
  * @param input - The input mapping
@@ -860,21 +898,13 @@ function inputToGraphCode(
   const entries = Object.entries(input)
   if (entries.length === 0) return { hasRefs: false, code: '{}' }
 
-  let hasRefs = false
+  const refTracker = { hasRefs: false }
   const lines = entries.map(([key, value]) => {
-    if (isDataRef(value)) {
-      hasRefs = true
-      return `        ${key}: ${dataRefToGraphRef(value, outputVarToNodeId)},`
-    }
-    if (isTemplateRef(value)) {
-      hasRefs = true
-      return `        ${key}: ${templateRefToGraphCode(value, outputVarToNodeId)},`
-    }
-    return `        ${key}: ${JSON.stringify(value)},`
+    return `        ${key}: ${valueToGraphCode(value, outputVarToNodeId, refTracker)},`
   })
 
   return {
-    hasRefs,
+    hasRefs: refTracker.hasRefs,
     code: `{\n${lines.join('\n')}\n      }`,
   }
 }

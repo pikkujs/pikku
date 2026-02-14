@@ -18,6 +18,7 @@ import type {
   WorkflowStepOptions,
 } from './workflow.types.js'
 import {
+  continueGraph,
   executeGraphStep,
   runWorkflowGraph,
   runFromMeta,
@@ -288,6 +289,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   abstract getCompletedGraphState(runId: string): Promise<{
     completedNodeIds: string[]
+    failedNodeIds: string[]
     branchKeys: Record<string, string>
   }>
 
@@ -362,6 +364,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async resumeWorkflow(runId: string): Promise<void> {
     const queueService = this.verifyQueueService()
     await queueService.add(this.getConfig().orchestratorQueueName, { runId })
+  }
+
+  public async queueStepWorker(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: any
+  ): Promise<void> {
+    const queueService = this.verifyQueueService()
+    await queueService.add(this.getConfig().stepWorkerQueueName, {
+      runId,
+      stepName,
+      rpcName,
+      data,
+    })
   }
 
   /**
@@ -512,6 +529,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       run.graphHash !== workflowMeta.graphHash
     ) {
       await this.runVersionMismatchFallback(run, workflowMeta, rpcService)
+      return
+    }
+
+    if (workflowMeta?.source === 'graph') {
+      await continueGraph(this, runId, run.workflow)
       return
     }
 

@@ -548,31 +548,40 @@ export class PgWorkflowService extends PikkuWorkflowService {
 
   async getCompletedGraphState(runId: string): Promise<{
     completedNodeIds: string[]
+    failedNodeIds: string[]
     branchKeys: Record<string, string>
   }> {
     const result = await this.sql.unsafe(
-      `SELECT step_name, branch_taken
+      `SELECT step_name, status, branch_taken, attempt_count, retries
        FROM ${this.schemaName}.workflow_step
        WHERE workflow_run_id = $1
-         AND status = 'succeeded'
+         AND status IN ('succeeded', 'failed')
          AND step_name LIKE 'node:%'`,
       [runId]
     )
 
     const completedNodeIds: string[] = []
+    const failedNodeIds: string[] = []
     const branchKeys: Record<string, string> = {}
 
     for (const row of result) {
       const stepName = row.step_name as string
       const nodeId = stepName.replace(/^node:/, '')
-      completedNodeIds.push(nodeId)
 
-      if (row.branch_taken) {
-        branchKeys[nodeId] = row.branch_taken as string
+      if (row.status === 'succeeded') {
+        completedNodeIds.push(nodeId)
+        if (row.branch_taken) {
+          branchKeys[nodeId] = row.branch_taken as string
+        }
+      } else if (row.status === 'failed') {
+        const maxAttempts = ((row.retries as number) ?? 0) + 1
+        if ((row.attempt_count as number) >= maxAttempts) {
+          failedNodeIds.push(nodeId)
+        }
       }
     }
 
-    return { completedNodeIds, branchKeys }
+    return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
   async getNodesWithoutSteps(

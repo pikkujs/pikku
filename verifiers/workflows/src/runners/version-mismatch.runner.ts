@@ -47,9 +47,7 @@ function parseBackend(): Backend {
   return 'memory'
 }
 
-async function createWorkflowService(
-  backend: Backend
-): Promise<{
+async function createWorkflowService(backend: Backend): Promise<{
   workflowService: PikkuWorkflowService
   cleanup: () => Promise<void>
 }> {
@@ -111,7 +109,7 @@ async function main(): Promise<void> {
   )
 
   const rpc = rpcService.getContextRPCService(singletonServices, {})
-  const meta = pikkuState(null, 'workflows', 'meta')
+  const meta = pikkuState(null, 'workflows', 'meta')!
 
   const results: Array<{
     name: string
@@ -171,13 +169,13 @@ async function main(): Promise<void> {
 
     const v1 = await workflowService.getWorkflowVersion(
       'taskCrudWorkflow',
-      meta['taskCrudWorkflow'].graphHash!
+      meta.taskCrudWorkflow!.graphHash!
     )
     if (!v1) throw new Error('taskCrudWorkflow version not stored')
 
     const v2 = await workflowService.getWorkflowVersion(
       'graphOnboarding',
-      meta['graphOnboarding'].graphHash!
+      meta.graphOnboarding!.graphHash!
     )
     if (!v2) throw new Error('graphOnboarding version not stored')
   })
@@ -187,8 +185,8 @@ async function main(): Promise<void> {
   //   and returns — nothing executes.
   console.log('\n── Phase 3: Start workflows (queued, pre-deploy) ──')
 
-  const savedDslHash = meta['taskCrudWorkflow'].graphHash!
-  const savedGraphHash = meta['graphOnboarding'].graphHash!
+  const savedDslHash = meta.taskCrudWorkflow!.graphHash!
+  const savedGraphHash = meta.graphOnboarding!.graphHash!
   let dslRunId: string = ''
   let graphRunId: string = ''
 
@@ -241,8 +239,8 @@ async function main(): Promise<void> {
   // ── Phase 5: Deploy v2 — meta hashes change ───────────────────
   console.log('\n── Phase 5: Deploy v2 (change meta hashes) ──')
 
-  meta['taskCrudWorkflow'].graphHash = 'deployed-v2-dsl'
-  meta['graphOnboarding'].graphHash = 'deployed-v2-graph'
+  meta.taskCrudWorkflow!.graphHash = 'deployed-v2-dsl'
+  meta.graphOnboarding!.graphHash = 'deployed-v2-graph'
   console.log('  Meta hashes updated to v2 values')
 
   // ── Phase 6: Orchestrator resumes stale runs ───────────────────
@@ -288,7 +286,7 @@ async function main(): Promise<void> {
       workflowTestData['graphOnboarding'],
       rpc
     )
-    meta['graphOnboarding'].graphHash = 'completely-unknown-hash'
+    meta.graphOnboarding!.graphHash = 'completely-unknown-hash'
     await workflowService.orchestrateWorkflow(runId, rpc)
     const run = await workflowService.getRun(runId)
     if (run?.status !== 'failed') {
@@ -304,8 +302,8 @@ async function main(): Promise<void> {
   // ── Phase 8: Restore and verify system works ───────────────────
   console.log('\n── Phase 8: Restore and verify ──')
 
-  meta['taskCrudWorkflow'].graphHash = savedDslHash
-  meta['graphOnboarding'].graphHash = savedGraphHash
+  meta.taskCrudWorkflow!.graphHash = savedDslHash
+  meta.graphOnboarding!.graphHash = savedGraphHash
 
   await test('DSL workflow still works after restore', async () => {
     const { runId } = await workflowService.startWorkflow(

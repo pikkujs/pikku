@@ -99,6 +99,8 @@ export type FunctionMeta = FunctionRuntimeMeta &
       usedWires: string[]
       inputs: string[] | null
       outputs: string[] | null
+      inputsSchemaHash: string
+      outputsSchemaHash: string
       middleware: MiddlewareMetadata[]
       permissions: PermissionMetadata[]
       isDirectFunction: boolean

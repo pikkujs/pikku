@@ -280,12 +280,21 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
 
   async getCompletedGraphState(runId: string): Promise<{
     completedNodeIds: string[]
+    failedNodeIds: string[]
     branchKeys: Record<string, string>
   }> {
     const completedNodeIds: string[] = []
+    const failedNodeIds: string[] = []
     for (const [key, step] of this.steps.entries()) {
-      if (key.startsWith(`${runId}:node:`) && step.status === 'succeeded') {
-        completedNodeIds.push(key.substring(runId.length + ':node:'.length))
+      if (!key.startsWith(`${runId}:node:`)) continue
+      const nodeId = key.substring(runId.length + ':node:'.length)
+      if (step.status === 'succeeded') {
+        completedNodeIds.push(nodeId)
+      } else if (step.status === 'failed') {
+        const maxAttempts = (step.retries ?? 0) + 1
+        if (step.attemptCount >= maxAttempts) {
+          failedNodeIds.push(nodeId)
+        }
       }
     }
 
@@ -297,7 +306,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
       }
     }
 
-    return { completedNodeIds, branchKeys }
+    return { completedNodeIds, failedNodeIds, branchKeys }
   }
 
   async getNodesWithoutSteps(

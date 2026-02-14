@@ -14,5 +14,9 @@
   "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
   "externalPackages": {
     "ext": { "package": "@pikku/templates-function-external" }
+  },
+  "workflows": {
+    "singleQueue": true,
+    "path": "src/workflows/pikku.workflows.gen.ts"
   }
 }
