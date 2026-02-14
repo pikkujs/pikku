@@ -552,11 +552,13 @@ export class PgWorkflowService extends PikkuWorkflowService {
     branchKeys: Record<string, string>
   }> {
     const result = await this.sql.unsafe(
-      `SELECT step_name, status, branch_taken, attempt_count, retries
-       FROM ${this.schemaName}.workflow_step
-       WHERE workflow_run_id = $1
-         AND status IN ('succeeded', 'failed')
-         AND step_name LIKE 'node:%'`,
+      `SELECT ws.step_name, ws.status, ws.branch_taken, ws.retries,
+              (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history h
+               WHERE h.workflow_run_id = ws.workflow_run_id AND h.step_name = ws.step_name) AS attempt_count
+       FROM ${this.schemaName}.workflow_step ws
+       WHERE ws.workflow_run_id = $1
+         AND ws.status IN ('succeeded', 'failed')
+         AND ws.step_name LIKE 'node:%'`,
       [runId]
     )
 
