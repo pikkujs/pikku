@@ -61,3 +61,23 @@ export class PikkuSessionService<UserSession extends CoreUserSession>
     return this.session
   }
 }
+
+export function createSessionWireProps<UserSession extends CoreUserSession>(
+  session: SessionService<UserSession>
+) {
+  return {
+    session,
+    setSession: (s: UserSession) => session.setInitial(s),
+    getSession: () => session.get(),
+  }
+}
+
+export function createFunctionSessionWireProps<
+  UserSession extends CoreUserSession,
+>(session: SessionService<UserSession>) {
+  return {
+    setSession: (s: UserSession) => session.set(s),
+    clearSession: () => session.clear(),
+    getSession: () => session.get(),
+  }
+}

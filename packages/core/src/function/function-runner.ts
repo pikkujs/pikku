@@ -19,7 +19,10 @@ import {
   CorePikkuFunctionConfig,
   CorePikkuPermission,
 } from './functions.types.js'
-import { SessionService } from '../services/user-session-service.js'
+import {
+  SessionService,
+  createFunctionSessionWireProps,
+} from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
@@ -116,7 +119,10 @@ export const runPikkuFuncDirectly = async <In, Out>(
   // Inject session into wire
   const wireWithSession = {
     ...wire,
-    session: userSession,
+    ...(userSession && {
+      ...createFunctionSessionWireProps(userSession),
+      session: userSession,
+    }),
   }
   return (await funcConfig.func(allServices, data, wireWithSession)) as Out
 }
@@ -192,6 +198,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     const wireWithInitialSession: PikkuWire = {
       ...wire,
       initialSession,
+      ...(wire.session && createFunctionSessionWireProps(wire.session)),
     }
 
     if (funcMeta.sessionless) {

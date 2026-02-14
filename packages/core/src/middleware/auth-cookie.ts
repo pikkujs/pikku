@@ -41,35 +41,33 @@ export const authCookie = pikkuMiddlewareFactory<{
   pikkuMiddleware(
     async (
       { jwt: jwtService, logger },
-      { http, session: SessionService },
+      { http, session, setSession },
       next
     ) => {
-      if (!http?.request || !SessionService || SessionService.get()) {
+      if (!http?.request || !session || session.get()) {
         return next()
       }
 
-      // Try to decode session from cookie
       const cookieValue = http.request.cookie(name)
       if (cookieValue && jwtService) {
         const userSession = await jwtService.decode(cookieValue)
         if (userSession) {
-          SessionService.setInitial(userSession)
+          setSession?.(userSession)
         }
       }
 
       await next()
 
-      // Set the cookie in the response if the session has changed
       if (!http?.response) {
         return
       }
 
-      if (SessionService.sessionChanged) {
-        const session = SessionService.get()
+      if (session.sessionChanged) {
+        const currentSession = session.get()
         if (jwtService) {
           http.response.cookie(
             name,
-            await jwtService.encode(expiresIn, session),
+            await jwtService.encode(expiresIn, currentSession),
             {
               ...options,
               expires: getRelativeTimeOffsetFromNow(expiresIn),

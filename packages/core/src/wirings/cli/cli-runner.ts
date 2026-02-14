@@ -20,7 +20,10 @@ import type {
   CreateSingletonServices,
 } from '../../types/core.types.js'
 import { PikkuChannel } from '../channel/channel.types.js'
-import { PikkuSessionService } from '../../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createSessionWireProps,
+} from '../../services/user-session-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
@@ -332,7 +335,7 @@ export async function runCLICommand({
       data: pluckedData,
       channel,
     },
-    session: userSession,
+    ...createSessionWireProps(userSession),
   }
 
   try {

@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 import { authAPIKey } from './auth-apikey.js'
 import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
-import { PikkuSessionService } from '../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createSessionWireProps,
+} from '../services/user-session-service.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -43,7 +46,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'my-api-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -75,7 +78,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-api-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -111,7 +114,7 @@ describe('authAPIKey middleware', () => {
           ),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -143,7 +146,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-fallback' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -171,7 +174,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -199,7 +202,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'invalid-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -234,7 +237,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -258,7 +261,7 @@ describe('authAPIKey middleware', () => {
 
     await middleware(
       { jwt: jwtService } as any,
-      { session: SessionService } as any,
+      { ...createSessionWireProps(SessionService) } as any,
       async () => {
         nextCalled = true
       }
@@ -281,7 +284,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'some-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -313,7 +316,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({}, { apiKey: 'query-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true
@@ -346,7 +349,7 @@ describe('authAPIKey middleware', () => {
           request: createMockHTTPRequest({ 'x-api-key': 'header-key' }),
           response: createMockHTTPResponse(),
         },
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
       } as any,
       async () => {
         nextCalled = true

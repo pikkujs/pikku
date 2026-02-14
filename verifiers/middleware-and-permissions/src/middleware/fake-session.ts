@@ -10,13 +10,10 @@ import { pikkuMiddleware, addMiddleware } from '#pikku'
  * For queue/scheduler/CLI/MCP, sessions come from the createWireServices factory.
  */
 export const fakeSessionMiddleware = pikkuMiddleware(
-  async ({ logger }, { session }, next) => {
+  async ({ logger }, { setSession }, next) => {
     logger.info({ type: 'tag', name: 'session', phase: 'before' })
 
-    // Set a fake session for testing - only available in HTTP/Channel contexts
-    if (session) {
-      await session.set({ userId: 'test-user-123' })
-    }
+    await setSession?.({ userId: 'test-user-123' })
 
     const result = await next()
     logger.info({ type: 'tag', name: 'session', phase: 'after' })

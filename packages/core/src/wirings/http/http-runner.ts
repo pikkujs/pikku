@@ -28,7 +28,10 @@ import {
   createWeakUID,
   isSerializable,
 } from '../../utils.js'
-import { PikkuSessionService } from '../../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createSessionWireProps,
+} from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -359,7 +362,11 @@ const executeRoute = async (
     }
   }
 
-  const wire: PikkuWire = { http, channel, session: userSession }
+  const wire: PikkuWire = {
+    http,
+    channel,
+    ...createSessionWireProps(userSession),
+  }
 
   result = await runPikkuFunc(
     'http',
