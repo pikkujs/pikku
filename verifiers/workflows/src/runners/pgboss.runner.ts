@@ -16,7 +16,6 @@ import {
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
-import '../workflows/pikku.workflows.gen.js'
 
 const connectionString =
   process.env.DATABASE_URL ||

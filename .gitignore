@@ -12,6 +12,7 @@ meta.json
 dist
 
 *.gen.ts
+*.converted.ts
 
 my-app
 .pikku
