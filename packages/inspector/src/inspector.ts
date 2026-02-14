@@ -9,6 +9,7 @@ import {
   aggregateRequiredServices,
   validateSecretOverrides,
 } from './utils/post-process.js'
+import { resolveLatestVersions } from './utils/resolve-versions.js'
 
 /**
  * Creates an initial/empty inspector state with all required properties initialized
@@ -191,6 +192,8 @@ export const inspect = (
     logger.debug(
       `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(2)}ms`
     )
+
+    resolveLatestVersions(state, logger)
   }
 
   // Populate filesAndMethods

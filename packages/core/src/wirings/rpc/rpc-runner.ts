@@ -3,6 +3,7 @@ import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
+import { parseVersionedId } from '../../version.js'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -33,7 +34,13 @@ const resolveNamespace = (
 
 const getPikkuFunctionName = (rpcName: string): string => {
   const rpc = pikkuState(null, 'rpc', 'meta')
-  const rpcMeta = rpc[rpcName]
+  let rpcMeta = rpc[rpcName]
+  if (!rpcMeta) {
+    const { baseName, version } = parseVersionedId(rpcName)
+    if (version !== null) {
+      rpcMeta = rpc[baseName]
+    }
+  }
   if (!rpcMeta) {
     throw new Error(`RPC function not found: ${rpcName}`)
   }

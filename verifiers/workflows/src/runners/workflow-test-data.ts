@@ -438,6 +438,9 @@ export const workflowTestData: Record<string, any> = {
     tagsToRemove: ['draft'],
   },
 
+  // Versioned workflows
+  versionedItemWorkflow: { itemId: 'item-123' },
+
   // Graph workflows
   graphOnboarding: {
     email: 'newuser@test.com',

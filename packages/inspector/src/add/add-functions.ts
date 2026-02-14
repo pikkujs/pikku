@@ -8,7 +8,7 @@ import {
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
-import { FunctionServicesMeta } from '@pikku/core'
+import { FunctionServicesMeta, formatVersionedId } from '@pikku/core'
 import {
   getPropertyValue,
   getCommonWireMetaData,
@@ -314,7 +314,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
   if (args.length === 0) return
 
-  const { pikkuFuncId, name, explicitName, exportedName } = extractFunctionName(
+  let { pikkuFuncId, name, explicitName, exportedName } = extractFunctionName(
     node,
     checker,
     state.rootDir
@@ -331,6 +331,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let errors: string[] | undefined
   let expose: boolean | undefined
   let internal: boolean | undefined
+  let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
   let nodeCategory: string | null = null
@@ -410,6 +411,14 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
 
+    const versionRaw = getPropertyValue(firstArg, 'version')
+    if (versionRaw !== null && versionRaw !== undefined) {
+      const parsed = Number(versionRaw)
+      if (Number.isInteger(parsed) && parsed >= 1) {
+        version = parsed
+      }
+    }
+
     // Extract node config from nested object
     for (const prop of firstArg.properties) {
       if (
@@ -485,6 +494,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
         }
       }
     }
+  }
+
+  if (version !== undefined) {
+    const baseName = explicitName || exportedName || pikkuFuncId
+    pikkuFuncId = formatVersionedId(baseName, version)
   }
 
   // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
@@ -693,6 +707,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
     internal: internal || undefined,
+    version,
     title,
     tags: tags || undefined,
     summary,
@@ -769,6 +784,11 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
 
     // We add it to internal meta to allow autocomplete for everything
     state.rpc.internalMeta[name] = pikkuFuncId
+
+    if (version !== undefined) {
+      state.rpc.internalMeta[pikkuFuncId] = pikkuFuncId
+      state.rpc.invokedFunctions.add(pikkuFuncId)
+    }
 
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
