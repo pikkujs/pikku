@@ -12,7 +12,7 @@ import { addFunction } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 
 const sessionMiddleware: CorePikkuMiddleware = async (services, wire, next) => {
-  wire.session?.set({ userId: 'test' } as any)
+  wire.setSession?.({ userId: 'test' } as any)
   await next()
 }
 

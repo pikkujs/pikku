@@ -10,7 +10,10 @@ import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { PikkuSessionService } from '../../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createMiddlewareSessionWireProps,
+} from '../../services/user-session-service.js'
 import {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
@@ -103,7 +106,7 @@ export async function runScheduledTask({
         throw new ScheduledTaskSkippedError(name, reason)
       },
     },
-    session: userSession,
+    ...createMiddlewareSessionWireProps(userSession),
   }
 
   try {
@@ -120,6 +123,7 @@ export async function runScheduledTask({
       wireMiddleware: task.middleware,
       tags: task.tags,
       wire,
+      sessionService: userSession,
     })
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)

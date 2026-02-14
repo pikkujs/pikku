@@ -16,11 +16,11 @@ export const schedulerTagMiddleware = () =>
 export const schedulerTagPermissions = () =>
   addPermission('scheduler', {
     schedulerPermission: pikkuPermission(
-      async ({ logger }, _data, { initialSession }) => {
+      async ({ logger }, _data, { session }) => {
         logger.info({
           type: 'tag-permission',
           name: 'scheduler',
-          sessionExists: !!initialSession,
+          sessionExists: !!session,
         })
         // Return false to ensure all permissions run
         return false

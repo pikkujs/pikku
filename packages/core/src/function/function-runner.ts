@@ -19,7 +19,10 @@ import {
   CorePikkuFunctionConfig,
   CorePikkuPermission,
 } from './functions.types.js'
-import { SessionService } from '../services/user-session-service.js'
+import {
+  SessionService,
+  createFunctionSessionWireProps,
+} from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
@@ -113,10 +116,9 @@ export const runPikkuFuncDirectly = async <In, Out>(
   if (!funcConfig) {
     throw new Error(`Function not found: ${funcName}`)
   }
-  // Inject session into wire
   const wireWithSession = {
     ...wire,
-    session: userSession,
+    ...(userSession && createFunctionSessionWireProps(userSession)),
   }
   return (await funcConfig.func(allServices, data, wireWithSession)) as Out
 }
@@ -137,6 +139,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     coerceDataFromSchema,
     tags = [],
     wire,
+    sessionService,
     packageName = null,
   }: {
     singletonServices: CoreSingletonServices
@@ -150,6 +153,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     coerceDataFromSchema?: boolean
     tags?: string[]
     wire: PikkuWire
+    sessionService?: SessionService<CoreUserSession>
     packageName?: string | null
   }
 ): Promise<Out> => {
@@ -187,16 +191,20 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
-    const initialSession = wire.session?.freezeInitial()
+    const functionWireProps = sessionService
+      ? createFunctionSessionWireProps(sessionService)
+      : undefined
 
-    const wireWithInitialSession: PikkuWire = {
+    const wireWithSession: PikkuWire = {
       ...wire,
-      initialSession,
+      ...functionWireProps,
     }
+
+    const session = wireWithSession.session
 
     if (funcMeta.sessionless) {
       if (wiringAuth === true || funcConfig.auth === true) {
-        if (!initialSession) {
+        if (!session) {
           throw new ForbiddenError('Authentication required')
         }
       }
@@ -205,14 +213,14 @@ export const runPikkuFunc = async <In = any, Out = any>(
         resolvedSingletonServices.logger.warn(
           `Function '${funcName}' requires a session but auth was explicitly disabled — use pikkuSessionlessFunc instead.`
         )
-      } else if (!initialSession) {
+      } else if (!session) {
         throw new ForbiddenError('Authentication required')
       }
     } else {
       // TODO: Remove after a couple of releases — backward compat for
       // generated metadata that doesn't include the `sessionless` field yet.
       if (wiringAuth === true || funcConfig.auth === true) {
-        if (!initialSession) {
+        if (!session) {
           throw new ForbiddenError('Authentication required')
         }
       }
@@ -244,23 +252,20 @@ export const runPikkuFunc = async <In = any, Out = any>(
       funcInheritedPermissions: funcMeta.permissions,
       funcPermissions: funcConfig.permissions,
       services: resolvedSingletonServices,
-      wire: { ...wireWithInitialSession, rpc: undefined } as any,
+      wire: { ...wireWithSession, rpc: undefined } as any,
       data: actualData,
       packageName,
     })
 
     const wireServices = await resolvedCreateWireServices?.(
       resolvedSingletonServices,
-      wireWithInitialSession
+      wireWithSession
     )
     try {
       const services = { ...resolvedSingletonServices, ...wireServices }
-      const rpc = rpcService.getContextRPCService(
-        services,
-        wireWithInitialSession
-      )
+      const rpc = rpcService.getContextRPCService(services, wireWithSession)
       return await funcConfig.func(services, actualData, {
-        ...wireWithInitialSession,
+        ...wireWithSession,
         rpc,
       })
     } finally {

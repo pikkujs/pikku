@@ -5,7 +5,10 @@ import {
   isNamedExport,
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
-import { extractServicesFromFunction } from '../utils/extract-services.js'
+import {
+  extractServicesFromFunction,
+  extractUsedWires,
+} from '../utils/extract-services.js'
 import { extractPermissionPikkuNames } from '../utils/permissions.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
@@ -105,6 +108,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
+    const usedWires = extractUsedWires(actualHandler, 2)
     let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
@@ -131,6 +135,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
     state.permissions.definitions[pikkuFuncId] = {
       services,
+      usedWires: usedWires.length > 0 ? usedWires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
@@ -161,6 +166,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // The factory should return pikkuPermission(...), so we need to find that call
     // If no wrapper is found, extract from the factory's returned function directly
     let services = { optimized: false, services: [] as string[] }
+    let usedWires: string[] = []
 
     const findPikkuPermissionCall = (
       node: ts.Node
@@ -182,21 +188,20 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
         ts.isFunctionExpression(permissionHandler)
       ) {
         services = extractServicesFromFunction(permissionHandler)
+        usedWires = extractUsedWires(permissionHandler, 2)
       }
     } else {
-      // No pikkuPermission wrapper found - extract from factory's return value directly
-      // Factory pattern: (config) => (services, data, wire) => { ... }
       if (
         ts.isArrowFunction(factoryNode) ||
         ts.isFunctionExpression(factoryNode)
       ) {
         const factoryBody = factoryNode.body
-        // Check if the body is an arrow function (direct return)
         if (
           ts.isArrowFunction(factoryBody) ||
           ts.isFunctionExpression(factoryBody)
         ) {
           services = extractServicesFromFunction(factoryBody)
+          usedWires = extractUsedWires(factoryBody, 2)
         }
       }
     }
@@ -227,6 +232,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
     state.permissions.definitions[pikkuFuncId] = {
       services,
+      usedWires: usedWires.length > 0 ? usedWires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,

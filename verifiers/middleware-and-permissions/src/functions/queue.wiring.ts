@@ -15,17 +15,15 @@ export const queueTagMiddleware = () =>
 // Tag permissions for queue
 export const queueTagPermissions = () =>
   addPermission('queue', {
-    queuePermission: pikkuPermission(
-      async ({ logger }, _data, { initialSession }) => {
-        logger.info({
-          type: 'tag-permission',
-          name: 'queue',
-          sessionExists: !!initialSession,
-        })
-        // Return false to ensure all permissions run
-        return false
-      }
-    ),
+    queuePermission: pikkuPermission(async ({ logger }, _data, { session }) => {
+      logger.info({
+        type: 'tag-permission',
+        name: 'queue',
+        sessionExists: !!session,
+      })
+      // Return false to ensure all permissions run
+      return false
+    }),
   })
 
 // Session tag middleware - re-export from shared location

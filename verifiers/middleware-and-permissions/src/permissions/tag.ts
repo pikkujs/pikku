@@ -1,11 +1,11 @@
 import { pikkuPermission, pikkuPermissionFactory } from '#pikku'
 
 export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
-  pikkuPermission(async ({ logger }, _data, { initialSession }) => {
+  pikkuPermission(async ({ logger }, _data, { session }) => {
     logger.info({
       type: 'tag-permission',
       name,
-      sessionExists: !!initialSession,
+      sessionExists: !!session,
     })
     // Return false to ensure all permissions run
     return false
@@ -13,11 +13,11 @@ export const permissionTagFactory = pikkuPermissionFactory((name: string) =>
 )
 
 export const readTagPermission = pikkuPermission(
-  async ({ logger }, _data, { initialSession }) => {
+  async ({ logger }, _data, { session }) => {
     logger.info({
       type: 'tag-permission',
       name: 'read',
-      sessionExists: !!initialSession,
+      sessionExists: !!session,
     })
     // Return false to ensure all permissions run
     return false

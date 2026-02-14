@@ -10,7 +10,10 @@ import {
 } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import { SessionService } from '../../services/user-session-service.js'
+import {
+  SessionService,
+  createMiddlewareSessionWireProps,
+} from '../../services/user-session-service.js'
 
 const getRouteMeta = (
   channelName: string,
@@ -130,9 +133,10 @@ export const processMessageHandlers = (
       inheritedPermissions,
       wirePermissions,
       tags: channelConfig.tags,
+      sessionService: userSession,
       wire: {
         channel: channelHandler.getChannel(),
-        session: userSession,
+        ...(userSession && createMiddlewareSessionWireProps(userSession)),
       },
     })
   }

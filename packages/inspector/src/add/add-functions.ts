@@ -7,6 +7,7 @@ import {
   funcIdToTypeName,
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
+import { extractUsedWires } from '../utils/extract-services.js'
 import { FunctionServicesMeta } from '@pikku/core'
 import {
   getPropertyValue,
@@ -535,22 +536,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     }
   }
 
-  // --- Extract used wires from third parameter ---
-  const usedWires: string[] = []
-  const thirdParam = handler.parameters[2]
-  if (thirdParam && ts.isObjectBindingPattern(thirdParam.name)) {
-    for (const elem of thirdParam.name.elements) {
-      const propertyName =
-        elem.propertyName && ts.isIdentifier(elem.propertyName)
-          ? elem.propertyName.text
-          : ts.isIdentifier(elem.name)
-            ? elem.name.text
-            : undefined
-      if (propertyName) {
-        usedWires.push(propertyName)
-      }
-    }
-  }
+  const usedWires = extractUsedWires(handler, 2)
 
   // --- Generics → ts.Type[], unwrapped from Promise ---
   const genericTypes: ts.Type[] = (typeArguments ?? [])

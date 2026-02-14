@@ -1,4 +1,7 @@
-import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
+import {
+  defineHTTPRoutes,
+  wireHTTPRoutes,
+} from '../../.pikku/pikku-types.gen.js'
 import {
   listTodos,
   getTodo,
@@ -8,50 +11,21 @@ import {
   completeTodo,
 } from '../functions/todos.functions.js'
 
-wireHTTP({
+const todosRoutes = defineHTTPRoutes({
   auth: false,
-  method: 'get',
-  route: '/todos',
-  func: listTodos,
   tags: ['todos'],
+  routes: {
+    list: { method: 'get', route: '/todos', func: listTodos },
+    get: { method: 'get', route: '/todos/:id', func: getTodo },
+    create: { method: 'post', route: '/todos', func: createTodo },
+    update: { method: 'put', route: '/todos/:id', func: updateTodo },
+    delete: { method: 'delete', route: '/todos/:id', func: deleteTodo },
+    complete: {
+      method: 'post',
+      route: '/todos/:id/complete',
+      func: completeTodo,
+    },
+  },
 })
 
-wireHTTP({
-  auth: false,
-  method: 'get',
-  route: '/todos/:id',
-  func: getTodo,
-  tags: ['todos'],
-})
-
-wireHTTP({
-  auth: false,
-  method: 'post',
-  route: '/todos',
-  func: createTodo,
-  tags: ['todos'],
-})
-
-wireHTTP({
-  auth: false,
-  method: 'put',
-  route: '/todos/:id',
-  func: updateTodo,
-  tags: ['todos'],
-})
-
-wireHTTP({
-  auth: false,
-  method: 'delete',
-  route: '/todos/:id',
-  func: deleteTodo,
-  tags: ['todos'],
-})
-
-wireHTTP({
-  auth: false,
-  method: 'post',
-  route: '/todos/:id/complete',
-  func: completeTodo,
-  tags: ['todos'],
-})
+wireHTTPRoutes({ routes: { todos: todosRoutes } })

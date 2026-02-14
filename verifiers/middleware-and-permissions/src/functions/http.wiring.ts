@@ -65,11 +65,11 @@ const inlineWireMiddleware = pikkuMiddleware(async ({ logger }, _, next) => {
 
 // Wire-level inline permission (not exported, won't be in pikku-permissions.gen.ts)
 const inlineWirePermission = pikkuPermission(
-  async ({ logger }, _data, { initialSession }) => {
+  async ({ logger }, _data, { session }) => {
     logger.info({
       type: 'wire-permission',
       name: 'inline',
-      sessionExists: !!initialSession,
+      sessionExists: !!session,
     })
     // Return false to ensure all permissions run
     return false

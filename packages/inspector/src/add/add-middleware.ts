@@ -5,7 +5,10 @@ import {
   isNamedExport,
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
-import { extractServicesFromFunction } from '../utils/extract-services.js'
+import {
+  extractServicesFromFunction,
+  extractUsedWires,
+} from '../utils/extract-services.js'
 import { extractMiddlewareRefs } from '../utils/middleware.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
@@ -82,6 +85,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
+    const usedWires = extractUsedWires(actualHandler, 1)
     let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
@@ -108,6 +112,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
+      usedWires: usedWires.length > 0 ? usedWires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
@@ -134,6 +139,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     let services = { optimized: false, services: [] as string[] }
+    let usedWires: string[] = []
 
     const findPikkuMiddlewareCall = (
       node: ts.Node
@@ -155,6 +161,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
         ts.isFunctionExpression(middlewareHandler)
       ) {
         services = extractServicesFromFunction(middlewareHandler)
+        usedWires = extractUsedWires(middlewareHandler, 1)
       }
     } else {
       if (
@@ -167,6 +174,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
           ts.isFunctionExpression(factoryBody)
         ) {
           services = extractServicesFromFunction(factoryBody)
+          usedWires = extractUsedWires(factoryBody, 1)
         }
       }
     }
@@ -197,6 +205,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
+      usedWires: usedWires.length > 0 ? usedWires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,

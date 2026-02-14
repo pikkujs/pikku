@@ -33,3 +33,25 @@ export function extractServicesFromFunction(
 
   return services
 }
+
+export function extractUsedWires(
+  handlerNode: ts.FunctionExpression | ts.ArrowFunction,
+  paramIndex: number
+): string[] {
+  const usedWires: string[] = []
+  const param = handlerNode.parameters[paramIndex]
+  if (param && ts.isObjectBindingPattern(param.name)) {
+    for (const elem of param.name.elements) {
+      const propertyName =
+        elem.propertyName && ts.isIdentifier(elem.propertyName)
+          ? elem.propertyName.text
+          : ts.isIdentifier(elem.name)
+            ? elem.name.text
+            : undefined
+      if (propertyName) {
+        usedWires.push(propertyName)
+      }
+    }
+  }
+  return usedWires
+}

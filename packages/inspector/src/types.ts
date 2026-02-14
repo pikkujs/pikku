@@ -91,6 +91,7 @@ export interface InspectorChannelState {
 
 export interface InspectorMiddlewareDefinition {
   services: FunctionServicesMeta
+  usedWires?: string[]
   sourceFile: string
   position: number
   exportedName: string | null
@@ -115,6 +116,7 @@ export interface InspectorMiddlewareState {
 
 export interface InspectorPermissionDefinition {
   services: FunctionServicesMeta
+  usedWires?: string[]
   sourceFile: string
   position: number
   exportedName: string | null
