@@ -3,7 +3,10 @@ import assert from 'node:assert/strict'
 import { authCookie } from './auth-cookie.js'
 import { resetPikkuState } from '../pikku-state.js'
 import { CoreUserSession } from '../types/core.types.js'
-import { PikkuSessionService } from '../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createSessionWireProps,
+} from '../services/user-session-service.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -66,7 +69,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'cookie-jwt-value' }),
           response: mockResponse,
@@ -107,7 +110,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -151,7 +154,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'existing-jwt' }),
           response: mockResponse,
@@ -192,7 +195,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -230,7 +233,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'invalid-jwt' }),
           response: mockResponse,
@@ -274,7 +277,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -309,7 +312,7 @@ describe('authCookie middleware', () => {
         jwt: jwtService,
         logger: createMockLogger(),
       } as any,
-      { session: SessionService } as any,
+      { ...createSessionWireProps(SessionService) } as any,
       async () => {
         nextCalled = true
       }
@@ -337,7 +340,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({ session: 'some-jwt' }),
           response: mockResponse,
@@ -371,7 +374,7 @@ describe('authCookie middleware', () => {
         logger: mockLogger,
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,
@@ -415,7 +418,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: undefined,
@@ -456,7 +459,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({
             my_custom_cookie: 'custom-cookie-value',
@@ -498,7 +501,7 @@ describe('authCookie middleware', () => {
         logger: createMockLogger(),
       } as any,
       {
-        session: SessionService,
+        ...createSessionWireProps(SessionService),
         http: {
           request: createMockHTTPRequest({}),
           response: mockResponse,

@@ -222,6 +222,9 @@ export type PikkuWire<
     ? UserSession
     : UserSession | undefined
   session: SessionService<UserSession>
+  setSession: (session: CoreUserSession) => Promise<void> | void
+  clearSession: () => Promise<void> | void
+  getSession: () => Promise<UserSession> | UserSession | undefined
 }>
 
 /**

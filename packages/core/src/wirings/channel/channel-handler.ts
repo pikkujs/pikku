@@ -10,7 +10,10 @@ import {
 } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import { SessionService } from '../../services/user-session-service.js'
+import {
+  SessionService,
+  createSessionWireProps,
+} from '../../services/user-session-service.js'
 
 const getRouteMeta = (
   channelName: string,
@@ -132,7 +135,7 @@ export const processMessageHandlers = (
       tags: channelConfig.tags,
       wire: {
         channel: channelHandler.getChannel(),
-        session: userSession,
+        ...(userSession && createSessionWireProps(userSession)),
       },
     })
   }

@@ -68,8 +68,8 @@ export const getMe = pikkuFunc({
 export const logout = pikkuFunc({
   input: EmptyInputSchema,
   output: SuccessOutputSchema,
-  func: async (_services, _input, { session }) => {
-    await session.clear()
+  func: async (_services, _input, { clearSession }) => {
+    await clearSession?.()
     return { success: true }
   },
 })
