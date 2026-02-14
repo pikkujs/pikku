@@ -138,6 +138,8 @@ export interface FunctionNode extends BaseNode {
   input?: Record<string, unknown | DataRef>
   /** Output variable name for storing result */
   outputVar?: string
+  /** Hash of nodeId + RPC input/output schemas for version detection */
+  stepHash?: string
 }
 
 /**

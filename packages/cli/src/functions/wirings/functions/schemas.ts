@@ -3,6 +3,7 @@ import {
   saveSchemas,
   generateSchemas,
   generateZodSchemas,
+  computeSchemaHashes,
 } from '../../../utils/schema-generator.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
@@ -50,10 +51,18 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
       visitState.schemaLookup
     )
 
+    const allSchemas = { ...schemas, ...zodSchemas }
+
+    computeSchemaHashes(
+      allSchemas,
+      visitState.functions.typesMap,
+      visitState.functions.meta
+    )
+
     await saveSchemas(
       logger,
       config.schemaDirectory,
-      { ...schemas, ...zodSchemas },
+      allSchemas,
       visitState.functions.typesMap,
       visitState.functions.meta,
       config.schema?.supportsImportAttributes || true,

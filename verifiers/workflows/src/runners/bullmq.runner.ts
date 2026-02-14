@@ -1,7 +1,6 @@
 /**
  * BullMQ Workflow Runner
  * Executes all workflows using BullMQ queue service and Redis workflow storage
- * Uses inline execution mode for testing without requiring queue workers
  *
  * Usage:
  *   yarn test:bullmq          - Run DSL workflows
@@ -10,7 +9,7 @@
 
 import { RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { pikkuState, rpcService } from '@pikku/core'
+import { pikkuState } from '@pikku/core'
 
 import {
   createConfig,
@@ -19,11 +18,12 @@ import {
 } from '../services.js'
 import { workflowTestData } from './workflow-test-data.js'
 
-// Import bootstrap to register all workflows
 import '../../.pikku/pikku-bootstrap.gen.js'
+import '../workflows/pikku.workflows.gen.js'
 
-// Parse command line args
 const useGraph = process.argv.includes('--graph')
+const POLL_INTERVAL_MS = 100
+const TIMEOUT_MS = 30_000
 
 async function main(): Promise<void> {
   console.log(
@@ -32,15 +32,12 @@ async function main(): Promise<void> {
 
   const config = await createConfig()
 
-  // Create BullMQ service factory
   const bullFactory = new BullServiceFactory()
   await bullFactory.init()
 
-  // Create workflow state service (Redis)
   const workflowService = new RedisWorkflowService(undefined)
   await workflowService.init()
 
-  // Create singleton services with queue and workflow service
   const singletonServices = await createSingletonServices(config, {
     queueService: bullFactory.getQueueService(),
     schedulerService: bullFactory.getSchedulerService(),
@@ -53,8 +50,11 @@ async function main(): Promise<void> {
     config
   )
 
-  // Create RPC service for inline execution
-  const rpc = rpcService.getContextRPCService(singletonServices, {})
+  const queueWorkers = bullFactory.getQueueWorkers(
+    singletonServices,
+    createWireServices as any
+  )
+  await queueWorkers.registerQueues()
 
   // Get registered workflows
   const meta = pikkuState(null, 'workflows', 'meta')
@@ -102,33 +102,40 @@ async function main(): Promise<void> {
     const startTime = Date.now()
 
     try {
-      // Start workflow with inline execution (no queue workers needed)
       const { runId } = await workflowService.startWorkflow(
         workflowName,
         testData,
-        rpc,
-        { inline: true }
+        null
       )
 
-      // Get final run state
-      const run = await workflowService.getRun(runId)
+      let run = await workflowService.getRun(runId)
+      const deadline = Date.now() + TIMEOUT_MS
+      while (
+        run &&
+        run.status !== 'completed' &&
+        run.status !== 'failed' &&
+        run.status !== 'cancelled'
+      ) {
+        if (Date.now() > deadline) {
+          throw new Error(
+            `Timed out after ${TIMEOUT_MS}ms (status: ${run.status})`
+          )
+        }
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+        run = await workflowService.getRun(runId)
+      }
+
       const duration = Date.now() - startTime
 
-      if (run?.status === 'completed') {
+      if (run?.status === 'completed' || run?.status === 'cancelled') {
         results.push({
           name: workflowName,
           status: 'success',
           duration,
         })
-        console.log(`PASS: ${workflowName} (${duration}ms)`)
-      } else if (run?.status === 'cancelled') {
-        // Cancelled workflows are expected in some test cases
-        results.push({
-          name: workflowName,
-          status: 'success',
-          duration,
-        })
-        console.log(`PASS: ${workflowName} [cancelled] (${duration}ms)`)
+        console.log(
+          `PASS: ${workflowName}${run.status === 'cancelled' ? ' [cancelled]' : ''} (${duration}ms)`
+        )
       } else {
         results.push({
           name: workflowName,
@@ -177,7 +184,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // Cleanup
+  await queueWorkers.close()
   await workflowService.close()
   await bullFactory.close()
 

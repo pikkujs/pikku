@@ -7,10 +7,110 @@ import type {
   DataRef,
 } from '../utils/workflow/graph/workflow-graph.types.js'
 
-/**
- * Extract input mapping from an arrow function
- * Parses: (ref) => ({ key: ref('nodeId', 'path'), key2: 'literal' })
- */
+function extractAstValue(
+  expr: ts.Expression,
+  refParamName: string,
+  templateParamName: string | undefined
+): unknown {
+  if (ts.isStringLiteral(expr)) {
+    return expr.text
+  }
+  if (ts.isNumericLiteral(expr)) {
+    return Number(expr.text)
+  }
+  if (expr.kind === ts.SyntaxKind.TrueKeyword) {
+    return true
+  }
+  if (expr.kind === ts.SyntaxKind.FalseKeyword) {
+    return false
+  }
+  if (expr.kind === ts.SyntaxKind.NullKeyword) {
+    return null
+  }
+  if (ts.isCallExpression(expr)) {
+    const callee = expr.expression
+    if (ts.isIdentifier(callee)) {
+      if (callee.text === refParamName) {
+        const args = expr.arguments
+        const nodeId =
+          args[0] && ts.isStringLiteral(args[0]) ? args[0].text : 'unknown'
+        const path =
+          args[1] && ts.isStringLiteral(args[1]) ? args[1].text : undefined
+        return { $ref: nodeId, path } as DataRef
+      }
+      if (templateParamName && callee.text === templateParamName) {
+        const templateStr =
+          expr.arguments[0] && ts.isStringLiteral(expr.arguments[0])
+            ? expr.arguments[0].text
+            : ''
+        const refsArg = expr.arguments[1]
+        const refs: Array<{ $ref: string; path?: string }> = []
+        if (refsArg && ts.isArrayLiteralExpression(refsArg)) {
+          for (const el of refsArg.elements) {
+            const resolved = extractAstValue(
+              el,
+              refParamName,
+              templateParamName
+            )
+            if (
+              typeof resolved === 'object' &&
+              resolved !== null &&
+              '$ref' in resolved
+            ) {
+              refs.push(resolved as { $ref: string; path?: string })
+            }
+          }
+        }
+        const parts: string[] = []
+        const expressions: Array<{ $ref: string; path?: string }> = []
+        const regex = /\$(\d+)/g
+        let lastIndex = 0
+        let match
+        while ((match = regex.exec(templateStr)) !== null) {
+          parts.push(templateStr.slice(lastIndex, match.index))
+          const refIndex = parseInt(match[1]!, 10)
+          expressions.push(refs[refIndex] ?? { $ref: 'unknown' })
+          lastIndex = regex.lastIndex
+        }
+        parts.push(templateStr.slice(lastIndex))
+        return { $template: { parts, expressions } }
+      }
+    }
+  }
+  if (ts.isArrayLiteralExpression(expr)) {
+    return expr.elements.map((el) =>
+      extractAstValue(el, refParamName, templateParamName)
+    )
+  }
+  if (ts.isObjectLiteralExpression(expr)) {
+    const obj: Record<string, unknown> = {}
+    for (const prop of expr.properties) {
+      if (!ts.isPropertyAssignment(prop)) continue
+      const key = ts.isIdentifier(prop.name)
+        ? prop.name.text
+        : ts.isStringLiteral(prop.name)
+          ? prop.name.text
+          : null
+      if (!key) continue
+      obj[key] = extractAstValue(
+        prop.initializer,
+        refParamName,
+        templateParamName
+      )
+    }
+    return obj
+  }
+  if (ts.isPrefixUnaryExpression(expr)) {
+    if (
+      expr.operator === ts.SyntaxKind.MinusToken &&
+      ts.isNumericLiteral(expr.operand)
+    ) {
+      return -Number(expr.operand.text)
+    }
+  }
+  return undefined
+}
+
 function extractInputMapping(
   node: ts.Node,
   _checker: ts.TypeChecker
@@ -46,6 +146,11 @@ function extractInputMapping(
       ? node.parameters[0].name.text
       : 'ref'
 
+  const templateParamName =
+    node.parameters.length > 1 && ts.isIdentifier(node.parameters[1].name)
+      ? node.parameters[1].name.text
+      : undefined
+
   const input: Record<string, unknown | DataRef> = {}
 
   for (const prop of bodyObj.properties) {
@@ -59,36 +164,13 @@ function extractInputMapping(
 
     if (!key) continue
 
-    if (ts.isCallExpression(prop.initializer)) {
-      const callExpr = prop.initializer.expression
-      if (ts.isIdentifier(callExpr) && callExpr.text === refParamName) {
-        const args = prop.initializer.arguments
-        const nodeIdArg = args[0]
-        const pathArg = args[1]
-
-        const nodeId =
-          nodeIdArg && ts.isStringLiteral(nodeIdArg)
-            ? nodeIdArg.text
-            : 'unknown'
-        const path =
-          pathArg && ts.isStringLiteral(pathArg) ? pathArg.text : undefined
-
-        input[key] = { $ref: nodeId, path } as DataRef
-        continue
-      }
-    }
-
-    if (ts.isStringLiteral(prop.initializer)) {
-      input[key] = prop.initializer.text
-    } else if (ts.isNumericLiteral(prop.initializer)) {
-      input[key] = Number(prop.initializer.text)
-    } else if (
-      prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
-      prop.initializer.kind === ts.SyntaxKind.FalseKeyword
-    ) {
-      input[key] = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
-    } else if (prop.initializer.kind === ts.SyntaxKind.NullKeyword) {
-      input[key] = null
+    const value = extractAstValue(
+      prop.initializer,
+      refParamName,
+      templateParamName
+    )
+    if (value !== undefined) {
+      input[key] = value
     }
   }
 

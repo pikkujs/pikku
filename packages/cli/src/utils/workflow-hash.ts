@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
 import type { SerializedWorkflowGraph } from '@pikku/inspector'
+import type { FunctionsMeta } from '@pikku/core'
 
 function sortKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(sortKeys)
@@ -15,6 +16,25 @@ function sortKeys(obj: unknown): unknown {
 
 function hashString(input: string): string {
   return createHash('sha256').update(input).digest('hex').slice(0, 12)
+}
+
+export function computeStepHashes(
+  graph: SerializedWorkflowGraph,
+  functionsMeta: FunctionsMeta
+): void {
+  for (const node of Object.values(graph.nodes)) {
+    if (!('rpcName' in node) || typeof node.rpcName !== 'string') {
+      continue
+    }
+    const rpcName: string = node.rpcName
+    const meta = functionsMeta[rpcName]
+    const parts = [
+      node.nodeId,
+      meta?.inputsSchemaHash ?? '',
+      meta?.outputsSchemaHash ?? '',
+    ]
+    ;(node as Record<string, unknown>).stepHash = hashString(parts.join(':'))
+  }
 }
 
 export function computeGraphHash(graph: SerializedWorkflowGraph): string {

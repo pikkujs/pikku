@@ -79,6 +79,27 @@ function resolveTemplate(
   return result
 }
 
+function resolveValue(value: unknown, nodeResults: Record<string, any>): any {
+  if (isDataRef(value)) {
+    const source = nodeResults[value.$ref]
+    return value.path ? getValueAtPath(source, value.path) : source
+  }
+  if (isTemplate(value)) {
+    return resolveTemplate(value, nodeResults)
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => resolveValue(item, nodeResults))
+  }
+  if (typeof value === 'object' && value !== null) {
+    const resolved: Record<string, any> = {}
+    for (const [k, v] of Object.entries(value)) {
+      resolved[k] = resolveValue(v, nodeResults)
+    }
+    return resolved
+  }
+  return value
+}
+
 function resolveSerializedInput(
   input: Record<string, unknown> | undefined,
   nodeResults: Record<string, any>
@@ -87,16 +108,27 @@ function resolveSerializedInput(
 
   const resolved: Record<string, any> = {}
   for (const [key, value] of Object.entries(input)) {
-    if (isDataRef(value)) {
-      const source = nodeResults[value.$ref]
-      resolved[key] = value.path ? getValueAtPath(source, value.path) : source
-    } else if (isTemplate(value)) {
-      resolved[key] = resolveTemplate(value, nodeResults)
-    } else {
-      resolved[key] = value
-    }
+    resolved[key] = resolveValue(value, nodeResults)
   }
   return resolved
+}
+
+function collectReferencedNodeIds(value: unknown, nodeIds: string[]): void {
+  if (isDataRef(value)) {
+    nodeIds.push(value.$ref)
+  } else if (isTemplate(value)) {
+    for (const expr of value.$template.expressions) {
+      nodeIds.push(expr.$ref)
+    }
+  } else if (Array.isArray(value)) {
+    for (const item of value) {
+      collectReferencedNodeIds(item, nodeIds)
+    }
+  } else if (typeof value === 'object' && value !== null) {
+    for (const v of Object.values(value)) {
+      collectReferencedNodeIds(v, nodeIds)
+    }
+  }
 }
 
 function extractReferencedNodeIds(
@@ -105,15 +137,21 @@ function extractReferencedNodeIds(
   if (!input) return []
   const nodeIds: string[] = []
   for (const value of Object.values(input)) {
-    if (isDataRef(value)) {
-      nodeIds.push(value.$ref)
-    } else if (isTemplate(value)) {
-      for (const expr of value.$template.expressions) {
-        nodeIds.push(expr.$ref)
-      }
-    }
+    collectReferencedNodeIds(value, nodeIds)
   }
   return [...new Set(nodeIds)]
+}
+
+const IGNORED_REFS = new Set(['trigger', '$item', 'unknown'])
+
+function areDependenciesSatisfied(
+  node: { input?: Record<string, unknown> },
+  completedNodeIds: string[]
+): boolean {
+  const deps = extractReferencedNodeIds(node.input).filter(
+    (id) => !IGNORED_REFS.has(id)
+  )
+  return deps.every((dep) => completedNodeIds.includes(dep))
 }
 
 async function queueGraphNode(
@@ -124,14 +162,11 @@ async function queueGraphNode(
   rpcName: string,
   input: any
 ): Promise<void> {
-  await workflowService.insertStepState(
-    runId,
-    `node:${nodeId}`,
-    rpcName,
-    input,
-    { retries: 3 }
-  )
-  await workflowService.resumeWorkflow(runId)
+  const stepName = `node:${nodeId}`
+  await workflowService.insertStepState(runId, stepName, rpcName, input, {
+    retries: 0,
+  })
+  await workflowService.queueStepWorker(runId, stepName, rpcName, input)
 }
 
 export async function continueGraph(
@@ -147,8 +182,18 @@ export async function continueGraph(
 
   const nodes = meta.nodes
 
-  const { completedNodeIds, branchKeys } =
+  const { completedNodeIds, failedNodeIds, branchKeys } =
     await workflowService.getCompletedGraphState(runId)
+
+  if (failedNodeIds.length > 0) {
+    const failedNode = failedNodeIds[0]!
+    await workflowService.updateRunStatus(runId, 'failed', undefined, {
+      message: `Graph node '${failedNode}' failed after exhausting retries`,
+      stack: '',
+      code: 'GRAPH_NODE_FAILED',
+    })
+    return
+  }
 
   const candidateNodes: string[] = []
 
@@ -160,21 +205,39 @@ export async function continueGraph(
     candidateNodes.push(...nextNodes)
   }
 
+  for (const entryId of meta.entryNodeIds ?? []) {
+    if (!candidateNodes.includes(entryId)) {
+      candidateNodes.push(entryId)
+    }
+  }
+
   if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
     await workflowService.updateRunStatus(runId, 'completed')
     return
   }
 
-  if (candidateNodes.length === 0 && completedNodeIds.length === 0) {
-    candidateNodes.push(...(meta.entryNodeIds ?? []))
-  }
-
-  const nodesToQueue = await workflowService.getNodesWithoutSteps(
+  const unstartedNodes = await workflowService.getNodesWithoutSteps(
     runId,
     candidateNodes
   )
 
-  if (nodesToQueue.length === 0) return
+  const nodesToQueue = unstartedNodes.filter((nodeId) => {
+    const node = nodes[nodeId]
+    return node && areDependenciesSatisfied(node, completedNodeIds)
+  })
+
+  if (nodesToQueue.length === 0) {
+    const allRpcNodes = Object.entries(nodes)
+      .filter(([_, n]) => n.rpcName)
+      .map(([id]) => id)
+    const allRpcCompleted = allRpcNodes.every((id) =>
+      completedNodeIds.includes(id)
+    )
+    if (allRpcCompleted) {
+      await workflowService.updateRunStatus(runId, 'completed')
+    }
+    return
+  }
 
   const run = await workflowService.getRun(runId)
   const triggerInput = run?.input
@@ -184,7 +247,7 @@ export async function continueGraph(
     if (!node) continue
 
     const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
-      (id) => id !== 'trigger'
+      (id) => !IGNORED_REFS.has(id)
     )
     const fetchedResults = await workflowService.getNodeResults(
       runId,
@@ -367,11 +430,22 @@ async function continueGraphInline(
   runId: string,
   graphName: string,
   nodes: Record<string, any>,
-  triggerInput: any
+  triggerInput: any,
+  entryNodeIds: string[]
 ): Promise<void> {
   while (true) {
-    const { completedNodeIds, branchKeys } =
+    const { completedNodeIds, failedNodeIds, branchKeys } =
       await workflowService.getCompletedGraphState(runId)
+
+    if (failedNodeIds.length > 0) {
+      const failedNode = failedNodeIds[0]!
+      await workflowService.updateRunStatus(runId, 'failed', undefined, {
+        message: `Graph node '${failedNode}' failed after exhausting retries`,
+        stack: '',
+        code: 'GRAPH_NODE_FAILED',
+      })
+      return
+    }
 
     const candidateNodes: string[] = []
 
@@ -383,18 +457,29 @@ async function continueGraphInline(
       candidateNodes.push(...nextNodes)
     }
 
+    for (const entryId of entryNodeIds) {
+      if (!candidateNodes.includes(entryId)) {
+        candidateNodes.push(entryId)
+      }
+    }
+
     if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
       await workflowService.updateRunStatus(runId, 'completed')
       return
     }
 
-    const nodesToExecute = await workflowService.getNodesWithoutSteps(
+    const unstartedNodes = await workflowService.getNodesWithoutSteps(
       runId,
       candidateNodes
     )
 
+    const nodesToExecute = unstartedNodes.filter((nodeId) => {
+      const node = nodes[nodeId]
+      return node && areDependenciesSatisfied(node, completedNodeIds)
+    })
+
     if (nodesToExecute.length === 0) {
-      if (completedNodeIds.length > 0) {
+      if (completedNodeIds.length > 0 && unstartedNodes.length === 0) {
         await workflowService.updateRunStatus(runId, 'completed')
       }
       return
@@ -406,7 +491,7 @@ async function continueGraphInline(
         if (!node) return
 
         const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
-          (id) => id !== 'trigger'
+          (id) => !IGNORED_REFS.has(id)
         )
         const fetchedResults = await workflowService.getNodeResults(
           runId,
@@ -454,6 +539,17 @@ export async function runWorkflowGraph(
     )
   }
 
+  const readyEntryNodes = entryNodes.filter((nodeId) => {
+    const node = nodes[nodeId]
+    return node && areDependenciesSatisfied(node, [])
+  })
+
+  if (readyEntryNodes.length === 0) {
+    throw new Error(
+      `Workflow graph '${graphName}': no entry nodes have satisfied dependencies`
+    )
+  }
+
   const runId = await workflowService.createRun(
     graphName,
     triggerInput,
@@ -469,38 +565,47 @@ export async function runWorkflowGraph(
 
   try {
     if (inline && rpcService) {
-      await Promise.all(
-        entryNodes.map(async (nodeId) => {
-          const node = nodes[nodeId]
-          if (!node) return
+      try {
+        await Promise.all(
+          readyEntryNodes.map(async (nodeId) => {
+            const node = nodes[nodeId]
+            if (!node) return
 
-          const resolvedInput =
-            node.input && Object.keys(node.input).length > 0
-              ? resolveSerializedInput(node.input, triggerNodeResults)
-              : triggerInput
+            const resolvedInput =
+              node.input && Object.keys(node.input).length > 0
+                ? resolveSerializedInput(node.input, triggerNodeResults)
+                : triggerInput
 
-          await executeGraphNodeInline(
-            workflowService,
-            rpcService,
-            runId,
-            graphName,
-            nodeId,
-            resolvedInput,
-            nodes
-          )
+            await executeGraphNodeInline(
+              workflowService,
+              rpcService,
+              runId,
+              graphName,
+              nodeId,
+              resolvedInput,
+              nodes
+            )
+          })
+        )
+
+        await continueGraphInline(
+          workflowService,
+          rpcService,
+          runId,
+          graphName,
+          nodes,
+          triggerInput,
+          entryNodes
+        )
+      } catch (error) {
+        await workflowService.updateRunStatus(runId, 'failed', undefined, {
+          message: (error as Error).message,
+          stack: (error as Error).stack || '',
+          code: 'GRAPH_NODE_FAILED',
         })
-      )
-
-      await continueGraphInline(
-        workflowService,
-        rpcService,
-        runId,
-        graphName,
-        nodes,
-        triggerInput
-      )
+      }
     } else {
-      for (const nodeId of entryNodes) {
+      for (const nodeId of readyEntryNodes) {
         const node = nodes[nodeId]
         if (!node) continue
 

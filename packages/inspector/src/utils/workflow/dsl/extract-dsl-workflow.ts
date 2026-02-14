@@ -1426,6 +1426,26 @@ function extractInputSources(
   return Object.keys(inputs).length > 0 ? inputs : undefined
 }
 
+function inputSourceToInlineValue(source: InputSource): unknown {
+  switch (source.from) {
+    case 'literal':
+      return source.value
+    case 'input':
+      return { $ref: 'trigger', path: source.path }
+    case 'outputVar':
+      return { $ref: source.name, path: source.path }
+    case 'item':
+      return { $ref: '$item', path: source.path }
+    case 'template':
+      return {
+        $template: {
+          parts: source.parts,
+          expressions: source.expressions.map(inputSourceToInlineValue),
+        },
+      }
+  }
+}
+
 /**
  * Extract a single input source
  */
@@ -1498,8 +1518,8 @@ function extractInputSource(
       if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
         const propName = prop.name.text
         const propSource = extractInputSource(prop.initializer, context)
-        if (propSource && propSource.from === 'literal') {
-          obj[propName] = propSource.value
+        if (propSource) {
+          obj[propName] = inputSourceToInlineValue(propSource)
         }
       }
     }
@@ -1511,8 +1531,8 @@ function extractInputSource(
     const arr: unknown[] = []
     for (const elem of node.elements) {
       const elemSource = extractInputSource(elem, context)
-      if (elemSource && elemSource.from === 'literal') {
-        arr.push(elemSource.value)
+      if (elemSource) {
+        arr.push(inputSourceToInlineValue(elemSource))
       }
     }
     return { from: 'literal', value: arr }
