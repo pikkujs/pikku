@@ -1,6 +1,7 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
+  getArrayPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
@@ -55,6 +56,7 @@ export const addAIAgent: AddWiring = (
 
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
+    const agentsValue = getArrayPropertyValue(obj, 'agents')
 
     if (!nameValue) {
       logger.critical(
@@ -181,6 +183,7 @@ export const addAIAgent: AddWiring = (
       ...(toolChoiceValue !== null && {
         toolChoice: toolChoiceValue as 'auto' | 'required' | 'none',
       }),
+      ...(agentsValue !== null && { agents: agentsValue }),
       tags,
       inputSchema,
       outputSchema,

@@ -10,6 +10,7 @@ import type {
   AIAgentInput,
   AIAgentOutput,
   AIAgentToolDef,
+  AIAgentMemoryConfig,
   AIMessage,
 } from './ai-agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -18,6 +19,10 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
+import { randomUUID } from 'crypto'
+import type { AIStorageService } from '../../services/ai-storage-service.js'
+import type { AIVectorService } from '../../services/ai-vector-service.js'
+import type { AIEmbedderService } from '../../services/ai-embedder-service.js'
 
 export type RunAIAgentParams = {
   singletonServices: CoreSingletonServices
@@ -44,7 +49,8 @@ export const addAIAgent = (agentName: string, agent: CoreAIAgent) => {
 export async function runAIAgent(
   agentName: string,
   input: AIAgentInput,
-  params: RunAIAgentParams
+  params: RunAIAgentParams,
+  agentSessionMap?: Map<string, string>
 ): Promise<AIAgentOutput> {
   const { singletonServices } = params
   const agent = pikkuState(null, 'agent', 'agents').get(agentName)
@@ -57,18 +63,12 @@ export async function runAIAgent(
     throw new Error('AIAgentRunnerService not available in singletonServices')
   }
 
+  const { storage, vector, embedder } = resolveMemoryServices(
+    agent,
+    singletonServices
+  )
   const memoryConfig = agent.memory
-  const storage = memoryConfig?.storage
-    ? (singletonServices as any)[memoryConfig.storage]
-    : singletonServices.aiStorage
-  const vector = memoryConfig?.vector
-    ? (singletonServices as any)[memoryConfig.vector]
-    : singletonServices.aiVector
-  const embedder = memoryConfig?.embedder
-    ? (singletonServices as any)[memoryConfig.embedder]
-    : singletonServices.aiEmbedder
-
-  let threadId = input.threadId
+  const threadId = input.threadId
 
   if (storage) {
     try {
@@ -79,13 +79,114 @@ export async function runAIAgent(
   }
 
   let messages: AIMessage[] = []
-
   if (storage) {
     messages = await storage.getMessages(threadId, {
       lastN: memoryConfig?.lastMessages ?? 20,
     })
   }
 
+  const contextMessages = await loadContextMessages(
+    memoryConfig,
+    storage,
+    vector,
+    embedder,
+    input
+  )
+
+  const userMessage: AIMessage = {
+    id: `msg-${randomUUID()}`,
+    role: 'user',
+    content: input.message,
+    createdAt: new Date(),
+  }
+
+  const allMessages = [...contextMessages, ...messages, userMessage]
+  const trimmedMessages = trimMessages(allMessages)
+
+  const sessionMap = agentSessionMap ?? new Map<string, string>()
+  const tools = buildToolDefs(
+    agent,
+    singletonServices,
+    params,
+    sessionMap,
+    input.resourceId
+  )
+
+  const instructions = buildInstructions(agent)
+
+  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+  const agentMeta = agentsMeta[agentName]
+  const outputSchemaName = agentMeta?.outputSchema
+  const outputSchema = outputSchemaName
+    ? pikkuState(null, 'misc', 'schemas').get(outputSchemaName)
+    : undefined
+
+  const result = await agentRunner.run({
+    model: agent.model,
+    instructions,
+    messages: trimmedMessages,
+    tools,
+    maxSteps: agent.maxSteps ?? 10,
+    toolChoice: agent.toolChoice ?? 'auto',
+    outputSchema,
+  })
+
+  const responseText = await saveMessages(
+    storage,
+    threadId,
+    input.resourceId,
+    memoryConfig,
+    userMessage,
+    result
+  )
+
+  await updateSemanticEmbeddings(
+    memoryConfig,
+    vector,
+    embedder,
+    threadId,
+    input.resourceId,
+    input.message,
+    responseText
+  )
+
+  return {
+    text: responseText,
+    object: result.object,
+    threadId,
+    steps: result.steps,
+    usage: result.usage,
+  }
+}
+
+function resolveMemoryServices(
+  agent: CoreAIAgent,
+  singletonServices: CoreSingletonServices
+): {
+  storage: AIStorageService | undefined
+  vector: AIVectorService | undefined
+  embedder: AIEmbedderService | undefined
+} {
+  const memoryConfig = agent.memory
+  const storage = memoryConfig?.storage
+    ? (singletonServices as any)[memoryConfig.storage]
+    : singletonServices.aiStorage
+  const vector = memoryConfig?.vector
+    ? (singletonServices as any)[memoryConfig.vector]
+    : singletonServices.aiVector
+  const embedder = memoryConfig?.embedder
+    ? (singletonServices as any)[memoryConfig.embedder]
+    : singletonServices.aiEmbedder
+  return { storage, vector, embedder }
+}
+
+async function loadContextMessages(
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  storage: AIStorageService | undefined,
+  vector: AIVectorService | undefined,
+  embedder: AIEmbedderService | undefined,
+  input: AIAgentInput
+): Promise<AIMessage[]> {
   const contextMessages: AIMessage[] = []
 
   if (memoryConfig?.workingMemory && storage) {
@@ -95,7 +196,7 @@ export async function runAIAgent(
     )
     if (workingMem) {
       contextMessages.push({
-        id: `wm-${Date.now()}`,
+        id: `wm-${randomUUID()}`,
         role: 'system',
         content: `Current working memory:\n${JSON.stringify(workingMem)}\n\nWhen you learn new information about the user, output an updated working memory JSON at the end of your response in <working_memory> tags.`,
         createdAt: new Date(),
@@ -119,7 +220,7 @@ export async function runAIAgent(
         .filter(Boolean)
       if (contextTexts.length > 0) {
         contextMessages.push({
-          id: `sr-${Date.now()}`,
+          id: `sr-${randomUUID()}`,
           role: 'system',
           content: `Relevant context from past conversations:\n${contextTexts.join('\n---\n')}`,
           createdAt: new Date(),
@@ -128,39 +229,39 @@ export async function runAIAgent(
     }
   }
 
-  const userMessage: AIMessage = {
-    id: `msg-${Date.now()}-user`,
-    role: 'user',
-    content: input.message,
-    createdAt: new Date(),
-  }
+  return contextMessages
+}
 
-  const allMessages = [...contextMessages, ...messages, userMessage]
-  const trimmedMessages = trimMessages(allMessages)
-
-  const tools = buildToolDefs(agent, singletonServices, params)
-
-  const instructions = Array.isArray(agent.instructions)
+function buildInstructions(agent: CoreAIAgent): string {
+  const baseInstructions = Array.isArray(agent.instructions)
     ? agent.instructions.join('\n')
     : agent.instructions
 
-  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
-  const agentMeta = agentsMeta[agentName]
-  const outputSchemaName = agentMeta?.outputSchema
-  const outputSchema = outputSchemaName
-    ? pikkuState(null, 'misc', 'schemas').get(outputSchemaName)
-    : undefined
+  return agent.agents?.length
+    ? baseInstructions +
+        '\n\nWhen calling a sub-agent, provide a short session name that describes the task. ' +
+        'Use the same session name to continue a previous conversation with that agent. ' +
+        'Use a new session name for a new independent task.'
+    : baseInstructions
+}
 
-  const result = await agentRunner.run({
-    model: agent.model,
-    instructions,
-    messages: trimmedMessages,
-    tools,
-    maxSteps: agent.maxSteps ?? 10,
-    toolChoice: agent.toolChoice ?? 'auto',
-    outputSchema,
-  })
-
+async function saveMessages(
+  storage: AIStorageService | undefined,
+  threadId: string,
+  resourceId: string,
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  userMessage: AIMessage,
+  result: {
+    text: string
+    steps: {
+      toolCalls?: {
+        name: string
+        args: Record<string, unknown>
+        result: string
+      }[]
+    }[]
+  }
+): Promise<string> {
   let responseText = result.text
 
   if (storage) {
@@ -169,20 +270,20 @@ export async function runAIAgent(
     for (const step of result.steps) {
       if (step.toolCalls?.length) {
         newMessages.push({
-          id: `msg-${Date.now()}-assistant-tc`,
+          id: `msg-${randomUUID()}`,
           role: 'assistant',
           toolCalls: step.toolCalls.map((tc) => ({
-            id: `tc-${tc.name}-${Date.now()}`,
+            id: `tc-${randomUUID()}`,
             name: tc.name,
             args: tc.args,
           })),
           createdAt: new Date(),
         })
         newMessages.push({
-          id: `msg-${Date.now()}-tool`,
+          id: `msg-${randomUUID()}`,
           role: 'tool',
           toolResults: step.toolCalls.map((tc) => ({
-            id: `tr-${tc.name}-${Date.now()}`,
+            id: `tr-${randomUUID()}`,
             name: tc.name,
             result: tc.result,
           })),
@@ -192,7 +293,7 @@ export async function runAIAgent(
     }
 
     newMessages.push({
-      id: `msg-${Date.now()}-assistant`,
+      id: `msg-${randomUUID()}`,
       role: 'assistant',
       content: responseText,
       createdAt: new Date(),
@@ -203,68 +304,74 @@ export async function runAIAgent(
     if (memoryConfig?.workingMemory) {
       const parsed = parseWorkingMemory(responseText)
       if (parsed) {
-        await storage.saveWorkingMemory(input.resourceId, 'resource', parsed)
+        await storage.saveWorkingMemory(resourceId, 'resource', parsed)
         responseText = stripWorkingMemoryTags(responseText)
       }
     }
   }
 
+  return responseText
+}
+
+async function updateSemanticEmbeddings(
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  vector: AIVectorService | undefined,
+  embedder: AIEmbedderService | undefined,
+  threadId: string,
+  resourceId: string,
+  message: string,
+  responseText: string
+): Promise<void> {
   if (
     memoryConfig?.semanticRecall !== false &&
     memoryConfig?.semanticRecall &&
     vector &&
     embedder
   ) {
-    const textsToEmbed = [input.message, responseText].filter(Boolean)
+    const textsToEmbed = [message, responseText].filter(Boolean)
     const vectors = await embedder.embed(textsToEmbed)
     await vector.upsert(
       vectors.map((v, i) => ({
-        id: `embed-${Date.now()}-${i}`,
+        id: `embed-${randomUUID()}`,
         vector: v,
         metadata: {
           threadId,
-          resourceId: input.resourceId,
+          resourceId,
           content: textsToEmbed[i],
         },
       }))
     )
-  }
-
-  return {
-    text: responseText,
-    object: result.object,
-    threadId,
-    steps: result.steps,
-    usage: result.usage,
   }
 }
 
 function buildToolDefs(
   agent: CoreAIAgent,
   singletonServices: CoreSingletonServices,
-  params: RunAIAgentParams
+  params: RunAIAgentParams,
+  agentSessionMap: Map<string, string>,
+  resourceId: string
 ): AIAgentToolDef[] {
-  if (!agent.tools?.length) return []
+  const tools: AIAgentToolDef[] = []
 
-  const functionMeta = pikkuState(null, 'function', 'meta')
-  const schemas = pikkuState(null, 'misc', 'schemas')
+  if (agent.tools?.length) {
+    const functionMeta = pikkuState(null, 'function', 'meta')
+    const schemas = pikkuState(null, 'misc', 'schemas')
 
-  return agent.tools
-    .map((toolName) => {
+    for (const toolName of agent.tools) {
       const rpcMeta = pikkuState(null, 'rpc', 'meta')
       const pikkuFuncId = rpcMeta[toolName]
       if (!pikkuFuncId) {
         singletonServices.logger.warn(
           `AI agent tool '${toolName}' not found in RPC registry`
         )
-        return null
+        continue
       }
 
       const fnMeta = functionMeta[pikkuFuncId]
       const inputSchemaName = fnMeta?.inputSchemaName
       const inputSchema = inputSchemaName ? schemas.get(inputSchemaName) : {}
 
-      const toolDef: AIAgentToolDef = {
+      tools.push({
         name: toolName,
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema: inputSchema || {},
@@ -287,10 +394,60 @@ function buildToolDefs(
           )
           return result
         },
+      })
+    }
+  }
+
+  if (agent.agents?.length) {
+    const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+
+    for (const subAgentName of agent.agents) {
+      const subMeta = agentsMeta[subAgentName]
+      if (!subMeta) {
+        singletonServices.logger.warn(
+          `Sub-agent '${subAgentName}' not found in agent registry`
+        )
+        continue
       }
-      return toolDef
-    })
-    .filter((t): t is AIAgentToolDef => t !== null)
+
+      tools.push({
+        name: subAgentName,
+        description: subMeta.description,
+        inputSchema: {
+          type: 'object',
+          properties: {
+            message: { type: 'string' },
+            session: {
+              type: 'string',
+              description: 'Short session label for thread continuity',
+            },
+          },
+          required: ['message', 'session'],
+        },
+        execute: async (toolInput: unknown) => {
+          const { message, session } = toolInput as {
+            message: string
+            session: string
+          }
+          const sessionKey = `${subAgentName}::${session}`
+          let threadId = agentSessionMap.get(sessionKey)
+          if (!threadId) {
+            threadId = `${subAgentName}-${session}-${Date.now()}`
+            agentSessionMap.set(sessionKey, threadId)
+          }
+          const result = await runAIAgent(
+            subAgentName,
+            { message, threadId, resourceId },
+            params,
+            agentSessionMap
+          )
+          return result.object ?? result.text
+        },
+      })
+    }
+  }
+
+  return tools
 }
 
 function trimMessages(

@@ -36,4 +36,16 @@ const r2 = await runAIAgent(
 )
 console.log('Response:', JSON.stringify(r2.object ?? r2.text, null, 2))
 
+console.log('\n--- Turn 3: Router delegation (fetch todos + plan day) ---')
+const r3 = await runAIAgent(
+  'main-router',
+  {
+    message: 'Get my todos and plan out my day, suggest tasks accordingly',
+    threadId: 'router-test',
+    resourceId: 'test-user',
+  },
+  params
+)
+console.log('Response:', JSON.stringify(r3.object ?? r3.text, null, 2))
+
 process.exit(0)
