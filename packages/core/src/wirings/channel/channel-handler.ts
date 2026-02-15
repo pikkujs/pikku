@@ -15,6 +15,10 @@ import {
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
 
+const getChannelMeta = (channelName: string) => {
+  return pikkuState(null, 'channel', 'meta')[channelName]
+}
+
 const getRouteMeta = (
   channelName: string,
   routingProperty?: string,
@@ -125,11 +129,16 @@ export const processMessageHandlers = (
       ? `${channelConfig.name}:${routingProperty}:${routerValue}`
       : `${channelConfig.name}:default`
 
+    const channelMeta = getChannelMeta(channelConfig.name)
+    const wireChannelMiddleware = channelConfig.channelMiddleware || []
+
     return await runPikkuFunc('channel', cacheKey, pikkuFuncId, {
       singletonServices: services,
       data: () => data,
       inheritedMiddleware,
       wireMiddleware,
+      inheritedChannelMiddleware: channelMeta?.channelMiddleware,
+      wireChannelMiddleware: wireChannelMiddleware as any,
       inheritedPermissions,
       wirePermissions,
       tags: channelConfig.tags,

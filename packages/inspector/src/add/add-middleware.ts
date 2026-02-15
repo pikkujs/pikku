@@ -17,7 +17,8 @@ function renameTempDefinitions(
   state: InspectorState,
   definitionIds: string[],
   groupType: string,
-  groupKey: string
+  groupKey: string,
+  storeKey: 'middleware' | 'channelMiddleware' = 'middleware'
 ): void {
   const tempIndices = definitionIds
     .map((name, i) => (name.startsWith('__temp_') ? i : -1))
@@ -29,10 +30,10 @@ function renameTempDefinitions(
       tempIndices.length === 1
         ? makeContextBasedId(groupType, groupKey)
         : makeContextBasedId(groupType, groupKey, String(idx))
-    const existing = state.middleware.definitions[oldId]
+    const existing = state[storeKey].definitions[oldId]
     if (existing) {
-      delete state.middleware.definitions[oldId]
-      state.middleware.definitions[newId] = existing
+      delete state[storeKey].definitions[oldId]
+      state[storeKey].definitions[newId] = existing
     }
     definitionIds[idx] = newId
   }
@@ -436,6 +437,259 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
     logger.debug(
       `• Found HTTP route middleware group: ${pattern} -> [${instanceIds.join(', ')}] (${isFactory ? 'factory' : 'direct'})`
+    )
+    return
+  }
+
+  if (expression.text === 'pikkuChannelMiddleware') {
+    const arg = args[0]
+    if (!arg) return
+
+    let actualHandler: ts.ArrowFunction | ts.FunctionExpression
+
+    if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) {
+      actualHandler = arg
+    } else {
+      logger.error(`• Handler for pikkuChannelMiddleware is not a function.`)
+      return
+    }
+
+    const services = extractServicesFromFunction(actualHandler)
+    let { pikkuFuncId, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuChannelMiddleware() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myMiddleware = pikkuChannelMiddleware(...)`
+        )
+        return
+      }
+    }
+    state.channelMiddleware.definitions[pikkuFuncId] = {
+      services,
+      sourceFile: node.getSourceFile().fileName,
+      position: node.getStart(),
+      exportedName,
+    }
+
+    logger.debug(
+      `• Found channel middleware with services: ${services.services.join(', ')}`
+    )
+    return
+  }
+
+  if (expression.text === 'pikkuChannelMiddlewareFactory') {
+    const factoryNode = args[0]
+    if (!factoryNode) return
+
+    if (
+      !ts.isArrowFunction(factoryNode) &&
+      !ts.isFunctionExpression(factoryNode)
+    ) {
+      logger.error(
+        `• Handler for pikkuChannelMiddlewareFactory is not a function.`
+      )
+      return
+    }
+
+    let services = { optimized: false, services: [] as string[] }
+
+    const findPikkuChannelMiddlewareCall = (
+      n: ts.Node
+    ): ts.CallExpression | undefined => {
+      if (ts.isCallExpression(n)) {
+        const expr = n.expression
+        if (ts.isIdentifier(expr) && expr.text === 'pikkuChannelMiddleware') {
+          return n
+        }
+      }
+      return ts.forEachChild(n, findPikkuChannelMiddlewareCall)
+    }
+
+    const channelMiddlewareCall = findPikkuChannelMiddlewareCall(factoryNode)
+    if (channelMiddlewareCall && channelMiddlewareCall.arguments[0]) {
+      const middlewareHandler = channelMiddlewareCall.arguments[0]
+      if (
+        ts.isArrowFunction(middlewareHandler) ||
+        ts.isFunctionExpression(middlewareHandler)
+      ) {
+        services = extractServicesFromFunction(middlewareHandler)
+      }
+    } else {
+      if (
+        ts.isArrowFunction(factoryNode) ||
+        ts.isFunctionExpression(factoryNode)
+      ) {
+        const factoryBody = factoryNode.body
+        if (
+          ts.isArrowFunction(factoryBody) ||
+          ts.isFunctionExpression(factoryBody)
+        ) {
+          services = extractServicesFromFunction(factoryBody)
+        }
+      }
+    }
+
+    let { pikkuFuncId, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuChannelMiddlewareFactory() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myMiddleware = pikkuChannelMiddlewareFactory(...)`
+        )
+        return
+      }
+    }
+    state.channelMiddleware.definitions[pikkuFuncId] = {
+      services,
+      sourceFile: node.getSourceFile().fileName,
+      position: node.getStart(),
+      exportedName,
+      factory: true,
+    }
+
+    logger.debug(
+      `• Found channel middleware factory with services: ${services.services.join(', ')}`
+    )
+    return
+  }
+
+  if (expression.text === 'addChannelMiddleware') {
+    const tagArg = args[0]
+    const middlewareArrayArg = args[1]
+
+    if (!tagArg || !middlewareArrayArg) return
+
+    let tag: string | undefined
+    if (ts.isStringLiteral(tagArg)) {
+      tag = tagArg.text
+    }
+
+    if (!tag) {
+      logger.warn(`• addChannelMiddleware call without valid tag string`)
+      return
+    }
+
+    if (!ts.isArrayLiteralExpression(middlewareArrayArg)) {
+      logger.error(
+        `• addChannelMiddleware('${tag}', ...) must have a literal array as second argument`
+      )
+      return
+    }
+
+    const refs = extractMiddlewareRefs(
+      middlewareArrayArg,
+      checker,
+      state.rootDir
+    )
+
+    if (refs.length === 0) {
+      logger.warn(
+        `• addChannelMiddleware('${tag}', ...) has empty middleware array`
+      )
+      return
+    }
+
+    const definitionIds = refs.map((r) => r.definitionId)
+    renameTempDefinitions(state, definitionIds, 'tag', tag, 'channelMiddleware')
+
+    const sourceFile = node.getSourceFile().fileName
+    const instanceIds: string[] = []
+    for (let i = 0; i < refs.length; i++) {
+      const instanceId = makeContextBasedId('tag', tag, String(i))
+      state.channelMiddleware.instances[instanceId] = {
+        definitionId: definitionIds[i],
+        sourceFile,
+        position: node.getStart(),
+        isFactoryCall: refs[i].isFactoryCall,
+      }
+      instanceIds.push(instanceId)
+    }
+
+    const allServices = new Set<string>()
+    for (const defId of definitionIds) {
+      const def = state.channelMiddleware.definitions[defId]
+      if (def?.services) {
+        for (const service of def.services.services) {
+          allServices.add(service)
+        }
+      }
+    }
+
+    let isFactory = false
+    let exportedName: string | null = null
+    let parent = node.parent
+
+    if (parent && ts.isArrowFunction(parent)) {
+      if (parent.parameters.length === 0) {
+        isFactory = true
+
+        const arrowParent = parent.parent
+        if (arrowParent && ts.isVariableDeclaration(arrowParent)) {
+          if (ts.isIdentifier(arrowParent.name)) {
+            if (isNamedExport(arrowParent)) {
+              exportedName = arrowParent.name.text
+            }
+          }
+        }
+      }
+    }
+
+    if (!isFactory) {
+      const extracted = extractFunctionName(node, checker, state.rootDir)
+      exportedName = extracted.exportedName
+    }
+
+    if (!isFactory && exportedName) {
+      logger.warn(
+        `• Channel middleware group '${exportedName}' for tag '${tag}' is not wrapped in a factory function. ` +
+          `For tree-shaking, use: export const ${exportedName} = () => addChannelMiddleware('${tag}', [...])`
+      )
+    }
+
+    state.channelMiddleware.tagMiddleware.set(tag, {
+      exportName: exportedName,
+      sourceFile,
+      position: node.getStart(),
+      services: {
+        optimized: false,
+        services: Array.from(allServices),
+      },
+      count: refs.length,
+      instanceIds,
+      isFactory,
+    })
+
+    logger.debug(
+      `• Found tag channel middleware group: ${tag} -> [${instanceIds.join(', ')}] (${isFactory ? 'factory' : 'direct'})`
     )
     return
   }

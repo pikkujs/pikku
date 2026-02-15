@@ -213,3 +213,54 @@ export function resolveHTTPMiddlewareFromObject(
     checker
   )
 }
+
+function getChannelMiddlewareNode(
+  obj: ts.ObjectLiteralExpression
+): ts.Expression | undefined {
+  const prop = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'channelMiddleware'
+  ) as ts.PropertyAssignment | undefined
+  return prop?.initializer
+}
+
+export function resolveChannelMiddleware(
+  state: InspectorState,
+  obj: ts.ObjectLiteralExpression,
+  tags: string[] | undefined,
+  checker: ts.TypeChecker
+): MiddlewareMetadata[] | undefined {
+  const resolved: MiddlewareMetadata[] = []
+
+  if (tags && tags.length > 0) {
+    for (const tag of tags) {
+      if (state.channelMiddleware.tagMiddleware.has(tag)) {
+        resolved.push({
+          type: 'tag',
+          tag,
+        })
+      }
+    }
+  }
+
+  const explicitNode = getChannelMiddlewareNode(obj)
+  if (explicitNode) {
+    const names = extractMiddlewarePikkuNames(
+      explicitNode,
+      checker,
+      state.rootDir
+    )
+    for (const name of names) {
+      const def = state.channelMiddleware.definitions[name]
+      resolved.push({
+        type: 'wire',
+        name,
+        inline: def?.exportedName === null,
+      })
+    }
+  }
+
+  return resolved.length > 0 ? resolved : undefined
+}

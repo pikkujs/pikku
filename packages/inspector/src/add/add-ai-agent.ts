@@ -10,7 +10,10 @@ import {
   extractFunctionName,
   funcIdToTypeName,
 } from '../utils/extract-function-name.js'
-import { resolveMiddleware } from '../utils/middleware.js'
+import {
+  resolveMiddleware,
+  resolveChannelMiddleware,
+} from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
@@ -157,6 +160,12 @@ export const addAIAgent: AddWiring = (
     }
 
     const middleware = resolveMiddleware(state, obj, tags, checker)
+    const channelMiddleware = resolveChannelMiddleware(
+      state,
+      obj,
+      tags,
+      checker
+    )
     const permissions = resolvePermissions(state, obj, tags, checker)
 
     state.serviceAggregation.usedFunctions.add(nameValue)
@@ -190,6 +199,7 @@ export const addAIAgent: AddWiring = (
       inputSchema,
       outputSchema,
       middleware,
+      channelMiddleware,
       permissions,
     }
   }

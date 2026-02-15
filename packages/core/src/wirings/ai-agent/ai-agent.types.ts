@@ -8,6 +8,7 @@ import {
   PermissionMetadata,
 } from '../../types/core.types.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
+import type { CorePikkuChannelMiddleware } from '../channel/channel.types.js'
 
 export interface AIThread {
   id: string
@@ -93,6 +94,7 @@ export type CoreAIAgent<
   output?: unknown
   tags?: string[]
   middleware?: PikkuMiddleware[]
+  channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 
@@ -163,10 +165,14 @@ export interface AgentRunState {
 
 export type AIAgentMeta = Record<
   string,
-  Omit<CoreAIAgent, 'input' | 'output' | 'middleware' | 'permissions'> & {
+  Omit<
+    CoreAIAgent,
+    'input' | 'output' | 'middleware' | 'channelMiddleware' | 'permissions'
+  > & {
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
+    channelMiddleware?: MiddlewareMetadata[]
     permissions?: PermissionMetadata[]
   }
 >

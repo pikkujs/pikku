@@ -1,5 +1,6 @@
 export * from './channel-runner.js'
 export * from './channel.types.js'
+export * from './channel-middleware-runner.js'
 export * from './log-channels.js'
 export * from './pikku-abstract-channel-handler.js'
 export * from './eventhub-service.js'

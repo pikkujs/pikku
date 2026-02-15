@@ -51,6 +51,7 @@ import {
   CoreServices,
   CoreUserSession,
 } from './core.types.js'
+import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 
 /**
  * State structure for an individual package
@@ -121,6 +122,9 @@ export interface PikkuPackageState {
     tagGroup: Record<string, CorePikkuMiddlewareGroup>
     httpGroup: Record<string, CorePikkuMiddlewareGroup>
   }
+  channelMiddleware: {
+    tagGroup: Record<string, CorePikkuChannelMiddleware[]>
+  }
   permissions: {
     tagGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
     httpGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
@@ -129,6 +133,7 @@ export interface PikkuPackageState {
     errors: Map<PikkuError, ErrorDetails>
     schemas: Map<string, any>
     middleware: Record<string, CorePikkuMiddleware[]>
+    channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
   package: {

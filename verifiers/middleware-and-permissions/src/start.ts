@@ -306,6 +306,26 @@ async function main(): Promise<void> {
       createWireServices
     )
 
+    // Test Channel - with channel middleware (fires on channel.send())
+    const channelTest5Passed = await testChannelWiring(
+      '/test-channel',
+      'withChannelSend',
+      {},
+      [
+        { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
+        { name: 'channel-inline', type: 'wire', phase: 'before' },
+        { name: 'message-middleware', type: 'message', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'channelSend', type: 'function', phase: 'before' },
+        { name: 'function', type: 'function-permission' },
+        { name: 'test-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
+      ],
+      singletonServices,
+      createWireServices
+    )
+
     // Test Channel (Serverless Runner)
     // TODO: Fix middleware execution order - same bug as local runner
     const channelServerlessTest1Passed = await testChannelWiringServerless(
@@ -376,6 +396,26 @@ async function main(): Promise<void> {
       createWireServices
     )
 
+    // Test Channel (Serverless) - with channel middleware (fires on channel.send())
+    const channelServerlessTest5Passed = await testChannelWiringServerless(
+      '/test-channel',
+      'withChannelSend',
+      {},
+      [
+        { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
+        { name: 'channel-inline', type: 'wire', phase: 'before' },
+        { name: 'message-middleware', type: 'message', phase: 'before' },
+        { name: 'function', type: 'tag', phase: 'before' },
+        { name: 'channelSend', type: 'function', phase: 'before' },
+        { name: 'function', type: 'function-permission' },
+        { name: 'test-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
+      ],
+      singletonServices,
+      createWireServices
+    )
+
     // Test Internal RPC with external package call
     // Note: testExternalWithAuth only has 'function' tag (no 'session' tag)
     // When calling ext:hello, the external package's middleware and permissions also execute
@@ -413,10 +453,12 @@ async function main(): Promise<void> {
       channelTest2Passed &&
       channelTest3Passed &&
       channelTest4Passed &&
+      channelTest5Passed &&
       channelServerlessTest1Passed &&
       channelServerlessTest2Passed &&
       channelServerlessTest3Passed &&
       channelServerlessTest4Passed &&
+      channelServerlessTest5Passed &&
       rpcPassed
 
     if (allPassed) {

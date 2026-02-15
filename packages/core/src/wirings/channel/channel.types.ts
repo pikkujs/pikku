@@ -11,6 +11,18 @@ import {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '../../types/core.types.js'
+
+export type CorePikkuChannelMiddleware<Services = any, Event = unknown> = (
+  services: Services,
+  event: Event,
+  next: (event: Event | Event[] | null) => Promise<void> | void
+) => Promise<void> | void
+
+export type CorePikkuChannelMiddlewareFactory<
+  In = any,
+  Services = any,
+  Event = unknown,
+> = (input: In) => CorePikkuChannelMiddleware<Services, Event>
 import {
   CorePermissionGroup,
   CorePikkuFunction,
@@ -62,6 +74,7 @@ export interface ChannelMeta {
   tags?: string[]
   middleware?: MiddlewareMetadata[] // Pre-resolved middleware chain (tag + explicit)
   permissions?: PermissionMetadata[] // Pre-resolved permission chain (tag + explicit)
+  channelMiddleware?: MiddlewareMetadata[]
 }
 
 export type ChannelsMeta = Record<string, ChannelMeta>
@@ -118,6 +131,9 @@ export type CoreChannel<
     >
   >
   middleware?: PikkuMiddleware[]
+  channelMiddleware?: Array<
+    CorePikkuChannelMiddleware | CorePikkuChannelMiddlewareFactory
+  >
   permissions?: CorePermissionGroup<PikkuPermission>
   auth?: boolean
   docs?: Partial<{

@@ -183,6 +183,21 @@ export interface SerializableInspectorState {
       ]
     >
   }
+  channelMiddleware: {
+    definitions: InspectorState['channelMiddleware']['definitions']
+    instances: InspectorState['channelMiddleware']['instances']
+    tagMiddleware: Array<
+      [
+        string,
+        InspectorState['channelMiddleware']['tagMiddleware'] extends Map<
+          string,
+          infer V
+        >
+          ? V
+          : never,
+      ]
+    >
+  }
   permissions: {
     definitions: InspectorState['permissions']['definitions']
     instances: InspectorState['permissions']['instances']
@@ -334,6 +349,13 @@ export function serializeInspectorState(
       instances: state.middleware.instances,
       tagMiddleware: Array.from(state.middleware.tagMiddleware.entries()),
     },
+    channelMiddleware: {
+      definitions: state.channelMiddleware.definitions,
+      instances: state.channelMiddleware.instances,
+      tagMiddleware: Array.from(
+        state.channelMiddleware.tagMiddleware.entries()
+      ),
+    },
     permissions: {
       definitions: state.permissions.definitions,
       instances: state.permissions.instances,
@@ -475,6 +497,11 @@ export function deserializeInspectorState(
       definitions: data.middleware.definitions,
       instances: data.middleware.instances || {},
       tagMiddleware: new Map(data.middleware.tagMiddleware),
+    },
+    channelMiddleware: {
+      definitions: data.channelMiddleware?.definitions || {},
+      instances: data.channelMiddleware?.instances || {},
+      tagMiddleware: new Map(data.channelMiddleware?.tagMiddleware || []),
     },
     permissions: {
       definitions: data.permissions.definitions,

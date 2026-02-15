@@ -15,8 +15,16 @@ export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
     const hasHTTPGroups = state.http.routeMiddleware.size > 0
     const hasTagGroups = state.middleware.tagMiddleware.size > 0
     const hasDefinitions = Object.keys(state.middleware.definitions).length > 0
+    const hasChannelMiddleware =
+      state.channelMiddleware.tagMiddleware.size > 0 ||
+      Object.keys(state.channelMiddleware.definitions).length > 0
 
-    if (hasHTTPGroups || hasTagGroups || hasDefinitions) {
+    if (
+      hasHTTPGroups ||
+      hasTagGroups ||
+      hasDefinitions ||
+      hasChannelMiddleware
+    ) {
       const metaData = serializeMiddlewareGroupsMeta(state)
 
       await writeFileInDir(
@@ -32,7 +40,8 @@ export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
           middlewareFile,
           middleware,
           state.http,
-          packageMappings
+          packageMappings,
+          state
         )
       )
 
