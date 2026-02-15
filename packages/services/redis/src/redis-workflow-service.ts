@@ -719,7 +719,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const failedNodeIds: string[] = []
     const branchKeys: Record<string, string> = {}
 
-    const pattern = `${this.keyPrefix}:step:${runId}:node:*`
+    const pattern = `${this.keyPrefix}:step:${runId}:*`
     let cursor = '0'
 
     do {
@@ -746,9 +746,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         const stepIndex = parts.lastIndexOf('step')
         if (stepIndex === -1 || stepIndex + 1 >= parts.length) continue
         if (parts[stepIndex + 1] !== runId) continue
-        const nodeIndex = parts.lastIndexOf('node')
-        if (nodeIndex <= stepIndex || nodeIndex >= parts.length - 1) continue
-        const nodeId = parts.slice(nodeIndex + 1).join(':')
+        const nodeId = parts.slice(stepIndex + 2).join(':')
 
         if (status === 'succeeded') {
           completedNodeIds.push(nodeId)
@@ -777,7 +775,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const result: string[] = []
 
     for (const nodeId of nodeIds) {
-      const key = this.stepKey(runId, `node:${nodeId}`)
+      const key = this.stepKey(runId, nodeId)
       const exists = await this.redis.exists(key)
       if (!exists) {
         result.push(nodeId)
@@ -796,7 +794,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const results: Record<string, any> = {}
 
     for (const nodeId of nodeIds) {
-      const key = this.stepKey(runId, `node:${nodeId}`)
+      const key = this.stepKey(runId, nodeId)
       const data = await this.redis.hmget(key, 'status', 'result')
       const [status, result] = data
 

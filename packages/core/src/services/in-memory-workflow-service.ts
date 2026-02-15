@@ -285,9 +285,10 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   }> {
     const completedNodeIds: string[] = []
     const failedNodeIds: string[] = []
+    const prefix = `${runId}:`
     for (const [key, step] of this.steps.entries()) {
-      if (!key.startsWith(`${runId}:node:`)) continue
-      const nodeId = key.substring(runId.length + ':node:'.length)
+      if (!key.startsWith(prefix)) continue
+      const nodeId = key.substring(prefix.length)
       if (step.status === 'succeeded') {
         completedNodeIds.push(nodeId)
       } else if (step.status === 'failed') {
@@ -301,8 +302,8 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     const branchKeys: Record<string, string> = {}
     for (const [stepId, branchKey] of this.branchKeys.entries()) {
       const stepData = this.stepData.get(stepId)
-      if (stepData && stepData.stepName.startsWith('node:')) {
-        branchKeys[stepData.stepName.replace(/^node:/, '')] = branchKey
+      if (stepData) {
+        branchKeys[stepData.stepName] = branchKey
       }
     }
 
@@ -314,9 +315,10 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     nodeIds: string[]
   ): Promise<string[]> {
     const existingSteps = new Set<string>()
+    const prefix = `${runId}:`
     for (const [key] of this.steps.entries()) {
-      if (key.startsWith(`${runId}:node:`)) {
-        existingSteps.add(key.substring(runId.length + ':node:'.length))
+      if (key.startsWith(prefix)) {
+        existingSteps.add(key.substring(prefix.length))
       }
     }
     return nodeIds.filter((id) => !existingSteps.has(id))
@@ -328,7 +330,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   ): Promise<Record<string, any>> {
     const results: Record<string, any> = {}
     for (const nodeId of nodeIds) {
-      const key = `${runId}:node:${nodeId}`
+      const key = `${runId}:${nodeId}`
       const step = this.steps.get(key)
       if (step?.result !== undefined) {
         results[nodeId] = step.result
@@ -342,7 +344,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     nodeId: string,
     branchKey: string
   ): Promise<void> {
-    const key = `${runId}:node:${nodeId}`
+    const key = `${runId}:${nodeId}`
     const step = this.steps.get(key)
     if (step) {
       this.branchKeys.set(step.stepId, branchKey)

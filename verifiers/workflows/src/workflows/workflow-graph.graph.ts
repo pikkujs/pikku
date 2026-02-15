@@ -5,13 +5,13 @@ export const graphOnboarding = pikkuWorkflowGraph({
   tags: ['onboarding', 'graph'],
   nodes: {
     entry: 'userCreate',
-    sendWelcome: 'emailSend',
+    ['send welcome']: 'emailSend',
   },
   config: {
     entry: {
-      next: 'sendWelcome',
+      next: 'send welcome',
     },
-    sendWelcome: {
+    ['send welcome']: {
       input: (ref) => ({
         to: ref('entry', 'email'),
         subject: 'Welcome!',

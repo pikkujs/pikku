@@ -661,16 +661,15 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       try {
         let result: any
 
-        // Check if this is a graph node step (step name starts with 'node:')
-        if (stepName.startsWith('node:')) {
-          // Get the graph name from the workflow run
-          const run = await this.getRun(runId)
-          if (!run) {
-            throw new Error(`Workflow run not found: ${runId}`)
-          }
-          const graphName = run.workflow
+        const run = await this.getRun(runId)
+        if (!run) {
+          throw new Error(`Workflow run not found: ${runId}`)
+        }
 
-          // Execute as graph step with graph wire context
+        const meta = pikkuState(null, 'workflows', 'meta')
+        const workflowMeta = meta[run.workflow]
+
+        if (workflowMeta?.nodes && stepName in workflowMeta.nodes) {
           result = await executeGraphStep(
             this,
             rpcService,
@@ -679,10 +678,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             stepName,
             rpcName,
             data,
-            graphName
+            run.workflow
           )
         } else {
-          // Execute RPC with workflow step context (regular workflow)
           result = await rpcService.rpcWithWire(rpcName, data, {
             workflowStep: {
               runId,
@@ -892,8 +890,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       stepState = await this.insertStepState(
         runId,
         stepName,
-        null, // No RPC for inline steps
-        null, // No data for inline steps
+        null,
+        null,
         stepOptions
       )
     }
@@ -978,13 +976,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       stepState = await this.getStepState(runId, stepName)
     } catch {
       // Step doesn't exist - create it (sleep step, no RPC)
-      stepState = await this.insertStepState(
-        runId,
-        stepName,
-        null, // No RPC for sleep steps
-        { duration }, // Store duration as data
-        undefined // No retry options for sleep
-      )
+      stepState = await this.insertStepState(runId, stepName, null, {
+        duration,
+      })
     }
 
     if (stepState.status === 'succeeded') {
