@@ -168,6 +168,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
     if (version !== null) {
       funcConfig = funcConfig || funcMap.get(baseName)
       funcMeta = funcMeta || allMeta[baseName]
+      if (funcConfig || funcMeta) {
+        singletonServices.logger.warn(
+          `Version fallback: '${funcName}' not found, resolved to '${baseName}'`
+        )
+      }
     }
   }
 

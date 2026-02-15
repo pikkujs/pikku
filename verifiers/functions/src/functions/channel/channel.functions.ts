@@ -59,8 +59,8 @@ export const unsubscribe = pikkuChannelFunc<{ name: string }, 'valid'>(
 export const emitMessage = pikkuChannelFunc<
   { name: string },
   { timestamp: string; from: string } | { message: string }
->(async ({ eventHub }, { name }, { channel, getSession }) => {
-  const sessionData = await getSession?.()
+>(async ({ eventHub }, { name }, { channel, session }) => {
+  const sessionData = session
 
   eventHub?.publish('bob', null, {})
 

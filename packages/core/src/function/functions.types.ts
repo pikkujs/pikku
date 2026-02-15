@@ -7,7 +7,6 @@ import type {
   PickRequired,
 } from '../types/core.types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import { Session } from 'inspector'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 
 /**
@@ -28,6 +27,7 @@ export type CorePikkuFunction<
   In,
   Out,
   Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
   Wire extends PikkuWire<In, Out> = PikkuWire<In, Out, true, Session>,
 > = (
   services: Services,
@@ -47,15 +47,16 @@ export type CorePikkuFunctionSessionless<
   In,
   Out,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<In, Out, false, Session, any, any, any> = PikkuWire<
     In,
     Out,
     false,
-    CoreUserSession,
+    Session,
     any,
     any,
     any
-  > = PikkuWire<In, Out, false, CoreUserSession, any, any, any>,
+  >,
 > = (
   services: Services,
   data: In,

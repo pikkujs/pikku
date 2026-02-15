@@ -108,8 +108,7 @@ export const updateProfileOutputSchema = z.object({
 export const updateProfileWithZod = pikkuFunc({
   input: updateProfileInputSchema,
   output: updateProfileOutputSchema,
-  func: async ({ logger }, data, { getSession }) => {
-    const userSession = await getSession?.()
+  func: async ({ logger }, data, { session }) => {
     const updatedFields: string[] = []
 
     if (data.displayName) {
@@ -128,7 +127,7 @@ export const updateProfileWithZod = pikkuFunc({
     }
 
     logger.info(
-      `User ${userSession?.userId} updated profile fields: ${updatedFields.join(', ')}`
+      `User ${session.userId} updated profile fields: ${updatedFields.join(', ')}`
     )
 
     return {
