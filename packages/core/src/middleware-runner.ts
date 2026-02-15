@@ -118,6 +118,7 @@ const middlewareCache: Record<
   scheduler: {},
   trigger: {},
   mcp: {},
+  agent: {},
   cli: {},
   workflow: {},
 }

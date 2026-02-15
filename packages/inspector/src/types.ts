@@ -6,6 +6,7 @@ import { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
 import { QueueWorkersMeta } from '@pikku/core/queue'
 import { WorkflowsMeta } from '@pikku/core/workflow'
 import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
+import { AIAgentMeta } from '@pikku/core/ai-agent'
 import { CLIMeta } from '@pikku/core/cli'
 import { NodesMeta } from '@pikku/core/node'
 import { SecretDefinitions } from '@pikku/core/secret'
@@ -278,6 +279,10 @@ export interface InspectorState {
     resourcesMeta: MCPResourceMeta
     toolsMeta: MCPToolMeta
     promptsMeta: MCPPromptMeta
+    files: Set<string>
+  }
+  agents: {
+    agentsMeta: AIAgentMeta
     files: Set<string>
   }
   cli: {

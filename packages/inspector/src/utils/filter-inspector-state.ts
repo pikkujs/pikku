@@ -228,7 +228,12 @@ export function filterInspectorState(
         JSON.stringify(state.mcpEndpoints.resourcesMeta)
       ),
       promptsMeta: JSON.parse(JSON.stringify(state.mcpEndpoints.promptsMeta)),
-      files: new Set<string>(), // Will be repopulated with filtered files
+      files: new Set<string>(),
+    },
+    agents: {
+      ...state.agents,
+      agentsMeta: JSON.parse(JSON.stringify(state.agents?.agentsMeta ?? {})),
+      files: new Set<string>(),
     },
     cli: {
       ...state.cli,
@@ -510,6 +515,40 @@ export function filterInspectorState(
     Object.keys(filteredState.mcpEndpoints.promptsMeta).length > 0
   if (hasMcpEndpoints) {
     filteredState.mcpEndpoints.files = new Set(state.mcpEndpoints.files)
+  }
+
+  // Filter AI agents
+  for (const name of Object.keys(filteredState.agents.agentsMeta)) {
+    const agentMeta = filteredState.agents.agentsMeta[name]
+    const matches = matchesFilters(
+      filters,
+      {
+        type: 'agent' as PikkuWiringTypes,
+        name,
+        tags: agentMeta.tags,
+      },
+      logger
+    )
+
+    if (!matches) {
+      delete filteredState.agents.agentsMeta[name]
+    } else {
+      if (agentMeta.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          agentMeta.pikkuFuncId
+        )
+      }
+      extractWireNames(agentMeta.middleware).forEach((name: string) =>
+        filteredState.serviceAggregation.usedMiddleware.add(name)
+      )
+      extractWireNames(agentMeta.permissions).forEach((name: string) =>
+        filteredState.serviceAggregation.usedPermissions.add(name)
+      )
+    }
+  }
+
+  if (Object.keys(filteredState.agents.agentsMeta).length > 0) {
+    filteredState.agents.files = new Set(state.agents.files)
   }
 
   // Filter CLI programs (note: CLI filtering might be more complex with nested commands)

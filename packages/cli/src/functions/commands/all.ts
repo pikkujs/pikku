@@ -28,6 +28,7 @@ export const all = pikkuVoidFunc({
       await rpc.invoke('pikkuSchedulerTypes', null)
       await rpc.invoke('pikkuQueueTypes', null)
       await rpc.invoke('pikkuMCPTypes', null)
+      await rpc.invoke('pikkuAIAgentTypes', null)
       await rpc.invoke('pikkuCLITypes', null)
     }
 
@@ -147,6 +148,11 @@ export const all = pikkuVoidFunc({
       if (mcp) {
         await rpc.invoke('pikkuMCPJSON', null)
         allImports.push(config.mcpWiringsMetaFile, config.mcpWiringsFile)
+      }
+
+      const agents = await rpc.invoke('pikkuAIAgent', null)
+      if (agents) {
+        allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
       }
 
       const cli = await rpc.invoke('pikkuCLI', null)

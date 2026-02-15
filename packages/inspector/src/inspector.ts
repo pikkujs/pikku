@@ -89,6 +89,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       promptsMeta: {},
       files: new Set(),
     },
+    agents: {
+      agentsMeta: {},
+      files: new Set(),
+    },
     cli: {
       meta: {
         programs: {},
