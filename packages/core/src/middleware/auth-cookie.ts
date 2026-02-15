@@ -41,10 +41,10 @@ export const authCookie = pikkuMiddlewareFactory<{
   pikkuMiddleware(
     async (
       { jwt: jwtService, logger },
-      { http, setSession, getSession, hasSessionChanged },
+      { http, setSession, getSession, session, hasSessionChanged },
       next
     ) => {
-      if (!http?.request || !setSession || getSession?.()) {
+      if (!http?.request || !setSession || session) {
         return next()
       }
 
@@ -63,7 +63,7 @@ export const authCookie = pikkuMiddlewareFactory<{
       }
 
       if (hasSessionChanged?.()) {
-        const currentSession = getSession?.()
+        const currentSession = await getSession?.()
         if (jwtService) {
           http.response.cookie(
             name,
