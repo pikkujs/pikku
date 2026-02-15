@@ -1,11 +1,11 @@
 export const serializeRPCWrapper = (rpcMapPath: string) => {
   return `
 import { PikkuFetch } from "./pikku-fetch.gen.js"
-import type { RPCInvoke } from '${rpcMapPath}'
+import type { RPCInvoke, TypedAgent } from '${rpcMapPath}'
 
 /**
- * PikkuRPC provides a type-safe client for making Remote Procedure Calls (RPC) 
- * to your Pikku server. It wraps the underlying HTTP client and provides a 
+ * PikkuRPC provides a type-safe client for making Remote Procedure Calls (RPC)
+ * to your Pikku server. It wraps the underlying HTTP client and provides a
  * simple interface for invoking server-side functions.
  */
 export class PikkuRPC {
@@ -15,7 +15,7 @@ export class PikkuRPC {
     /**
      * Sets a custom PikkuFetch instance to use for RPC calls.
      * This allows you to configure custom settings or use a shared client instance.
-     * 
+     *
      * @param pikkuFetch - The PikkuFetch instance to use
      */
     setPikkuFetch(pikkuFetch: PikkuFetch): void {
@@ -24,7 +24,7 @@ export class PikkuRPC {
 
     /**
      * Sets the base server URL for all RPC calls.
-     * 
+     *
      * @param serverUrl - The base URL of your Pikku server (e.g., 'https://api.example.com')
      */
     setServerUrl(serverUrl: string): void {
@@ -33,7 +33,7 @@ export class PikkuRPC {
 
     /**
      * Sets the JWT token for authorization on all RPC calls.
-     * 
+     *
      * @param jwt - The JWT token to use for authorization, or null to remove authorization
      */
     setAuthorizationJWT(jwt: string | null): void {
@@ -42,7 +42,7 @@ export class PikkuRPC {
 
     /**
      * Sets the API key for authorization on all RPC calls.
-     * 
+     *
      * @param apiKey - The API key to use for authorization, or null to remove the API key
      */
     setAPIKey(apiKey: string | null): void {
@@ -60,6 +60,17 @@ export class PikkuRPC {
      */
     invoke: RPCInvoke = async (rpcName, data) => {
        return await this.pikkuFetch.post(\`/rpc/\${rpcName}\` as never, { rpcName: String(rpcName), data }) as any
+    }
+
+    /**
+     * Invokes an AI agent on the server.
+     *
+     * @param agentName - The name of the agent to invoke
+     * @param input - The agent input (message, threadId, resourceId)
+     * @returns A promise that resolves with the agent's output
+     */
+    agent: TypedAgent = async (agentName, input) => {
+       return await this.pikkuFetch.post(\`/agent/\${agentName}\` as never, input) as any
     }
 }
 

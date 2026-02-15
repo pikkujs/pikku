@@ -78,6 +78,7 @@ export interface PikkuCLICoreOutputFiles {
   agentWiringMetaFile: string
   agentWiringMetaJsonFile: string
   agentTypesFile: string
+  agentMapDeclarationFile: string
 
   // CLI
   cliWiringsFile: string
@@ -212,6 +213,10 @@ export type PikkuCLIInput = {
     publicRpcPath?: string
   }
 
+  agent?: {
+    publicAgentPath?: string
+  }
+
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
@@ -326,6 +331,10 @@ export type PikkuCLIConfig = {
   rpc?: {
     remoteRpcWorkersPath?: string
     publicRpcPath?: string
+  }
+
+  agent?: {
+    publicAgentPath?: string
   }
 
   forceRequiredServices?: string[]

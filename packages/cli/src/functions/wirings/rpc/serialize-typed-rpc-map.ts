@@ -12,7 +12,8 @@ export const serializeTypedRPCMap = (
   functionsMeta: FunctionsMeta,
   rpcMeta: Record<string, string>,
   externalPackages?: Record<string, ExternalPackageConfig>,
-  workflowMapPath?: string
+  workflowMapPath?: string,
+  agentMapPath?: string
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -82,7 +83,11 @@ export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
 // Import WorkflowMap for workflow typing
 import type { WorkflowMap } from '${workflowMapPath}'
 
+// Import AgentMap for agent typing
+import type { AgentMap } from '${agentMapPath}'
+
 import type { PikkuRPC } from '@pikku/core/rpc'
+import type { AIAgentInput } from '@pikku/core/ai-agent'
 
 type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   name: Name,
@@ -90,7 +95,12 @@ type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow>
+type TypedAgent = <Name extends keyof AgentMap>(
+  name: Name,
+  input: AIAgentInput
+) => Promise<{ runId: string; result: AgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
+
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgent>
   `
 }
 

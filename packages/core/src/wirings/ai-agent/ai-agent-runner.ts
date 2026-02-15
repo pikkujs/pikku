@@ -12,7 +12,11 @@ import type {
   AIAgentToolDef,
   AIAgentMemoryConfig,
   AIMessage,
+  AIStreamChannel,
+  AIStreamEvent,
 } from './ai-agent.types.js'
+import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
+import { PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import {
@@ -33,6 +37,23 @@ export type RunAIAgentParams = {
   >
 }
 
+export type StreamAIAgentOptions = {
+  requiresToolApproval?: 'all' | 'explicit' | false
+}
+
+export class ToolApprovalRequired extends PikkuError {
+  public readonly toolCallId: string
+  public readonly toolName: string
+  public readonly args: unknown
+
+  constructor(toolCallId: string, toolName: string, args: unknown) {
+    super(`Tool '${toolName}' requires approval`)
+    this.toolCallId = toolCallId
+    this.toolName = toolName
+    this.args = args
+  }
+}
+
 export const addAIAgent = (agentName: string, agent: CoreAIAgent) => {
   const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
   const agentMeta = agentsMeta[agentName]
@@ -46,12 +67,18 @@ export const addAIAgent = (agentName: string, agent: CoreAIAgent) => {
   agents.set(agentName, agent)
 }
 
-export async function runAIAgent(
+type StreamContext = {
+  channel: AIStreamChannel
+  options?: StreamAIAgentOptions
+}
+
+async function prepareAgentRun(
   agentName: string,
   input: AIAgentInput,
   params: RunAIAgentParams,
-  agentSessionMap?: Map<string, string>
-): Promise<AIAgentOutput> {
+  agentSessionMap: Map<string, string>,
+  streamContext?: StreamContext
+) {
   const { singletonServices } = params
   const agent = pikkuState(null, 'agent', 'agents').get(agentName)
   if (!agent) {
@@ -94,7 +121,7 @@ export async function runAIAgent(
   )
 
   const userMessage: AIMessage = {
-    id: `msg-${randomUUID()}`,
+    id: randomUUID(),
     role: 'user',
     content: input.message,
     createdAt: new Date(),
@@ -103,25 +130,25 @@ export async function runAIAgent(
   const allMessages = [...contextMessages, ...messages, userMessage]
   const trimmedMessages = trimMessages(allMessages)
 
-  const sessionMap = agentSessionMap ?? new Map<string, string>()
   const tools = buildToolDefs(
     agent,
     singletonServices,
     params,
-    sessionMap,
-    input.resourceId
+    agentSessionMap,
+    input.resourceId,
+    streamContext
   )
 
   const instructions = buildInstructions(agent)
 
   const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
-  const agentMeta = agentsMeta[agentName]
-  const outputSchemaName = agentMeta?.outputSchema
+  const meta = agentsMeta[agentName]
+  const outputSchemaName = meta?.outputSchema
   const outputSchema = outputSchemaName
     ? pikkuState(null, 'misc', 'schemas').get(outputSchemaName)
     : undefined
 
-  const result = await agentRunner.run({
+  const runnerParams: AIAgentRunnerParams = {
     model: agent.model,
     instructions,
     messages: trimmedMessages,
@@ -129,7 +156,144 @@ export async function runAIAgent(
     maxSteps: agent.maxSteps ?? 10,
     toolChoice: agent.toolChoice ?? 'auto',
     outputSchema,
-  })
+  }
+
+  return {
+    agent,
+    agentRunner,
+    storage,
+    vector,
+    embedder,
+    memoryConfig,
+    threadId,
+    userMessage,
+    runnerParams,
+  }
+}
+
+export async function streamAIAgent(
+  agentName: string,
+  input: AIAgentInput,
+  channel: AIStreamChannel,
+  params: RunAIAgentParams,
+  agentSessionMap?: Map<string, string>,
+  options?: StreamAIAgentOptions
+): Promise<void> {
+  const sessionMap = agentSessionMap ?? new Map<string, string>()
+  const streamContext: StreamContext = { channel, options }
+
+  const {
+    agent,
+    agentRunner,
+    storage,
+    vector,
+    embedder,
+    memoryConfig,
+    threadId,
+    userMessage,
+    runnerParams,
+  } = await prepareAgentRun(agentName, input, params, sessionMap, streamContext)
+
+  const runId = `run-${randomUUID()}`
+  const { singletonServices } = params
+  const aiRunState = singletonServices.aiRunState
+
+  if (aiRunState) {
+    await aiRunState.createRun({
+      runId,
+      agentName,
+      threadId,
+      resourceId: input.resourceId,
+      status: 'running',
+      usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  }
+
+  if (storage) {
+    await storage.saveMessages(threadId, [userMessage])
+  }
+
+  const persistingChannel = createPersistingChannel(channel, storage, threadId)
+
+  try {
+    await agentRunner.stream(runnerParams, persistingChannel)
+
+    if (storage && memoryConfig?.workingMemory && persistingChannel.fullText) {
+      const parsed = parseWorkingMemory(persistingChannel.fullText)
+      if (parsed) {
+        await storage.saveWorkingMemory(input.resourceId, 'resource', parsed)
+      }
+    }
+
+    await updateSemanticEmbeddings(
+      memoryConfig,
+      vector,
+      embedder,
+      threadId,
+      input.resourceId,
+      input.message,
+      persistingChannel.fullText
+    )
+
+    if (aiRunState) {
+      await aiRunState.updateRun(runId, { status: 'completed' })
+    }
+  } catch (err) {
+    if (err instanceof ToolApprovalRequired) {
+      if (aiRunState) {
+        await aiRunState.updateRun(runId, {
+          status: 'suspended',
+          pendingApprovals: [
+            {
+              toolCallId: err.toolCallId,
+              toolName: err.toolName,
+              args: err.args,
+            },
+          ],
+        })
+      }
+      channel.send({
+        type: 'approval-request',
+        id: err.toolCallId,
+        toolName: err.toolName,
+        args: err.args,
+      })
+      return
+    }
+
+    if (aiRunState) {
+      await aiRunState.updateRun(runId, { status: 'failed' })
+    }
+    channel.send({
+      type: 'error',
+      message: err instanceof Error ? err.message : String(err),
+    })
+    channel.send({ type: 'done' })
+  }
+}
+
+export async function runAIAgent(
+  agentName: string,
+  input: AIAgentInput,
+  params: RunAIAgentParams,
+  agentSessionMap?: Map<string, string>
+): Promise<AIAgentOutput> {
+  const sessionMap = agentSessionMap ?? new Map<string, string>()
+
+  const {
+    agentRunner,
+    storage,
+    vector,
+    embedder,
+    memoryConfig,
+    threadId,
+    userMessage,
+    runnerParams,
+  } = await prepareAgentRun(agentName, input, params, sessionMap)
+
+  const result = await agentRunner.run(runnerParams)
 
   const responseText = await saveMessages(
     storage,
@@ -270,20 +434,20 @@ async function saveMessages(
     for (const step of result.steps) {
       if (step.toolCalls?.length) {
         newMessages.push({
-          id: `msg-${randomUUID()}`,
+          id: randomUUID(),
           role: 'assistant',
           toolCalls: step.toolCalls.map((tc) => ({
-            id: `tc-${randomUUID()}`,
+            id: randomUUID(),
             name: tc.name,
             args: tc.args,
           })),
           createdAt: new Date(),
         })
         newMessages.push({
-          id: `msg-${randomUUID()}`,
+          id: randomUUID(),
           role: 'tool',
           toolResults: step.toolCalls.map((tc) => ({
-            id: `tr-${randomUUID()}`,
+            id: randomUUID(),
             name: tc.name,
             result: tc.result,
           })),
@@ -293,7 +457,7 @@ async function saveMessages(
     }
 
     newMessages.push({
-      id: `msg-${randomUUID()}`,
+      id: randomUUID(),
       role: 'assistant',
       content: responseText,
       createdAt: new Date(),
@@ -344,14 +508,126 @@ async function updateSemanticEmbeddings(
   }
 }
 
+type PersistingChannel = AIStreamChannel & { fullText: string }
+
+function createPersistingChannel(
+  parent: AIStreamChannel,
+  storage: AIStorageService | undefined,
+  threadId: string
+): PersistingChannel {
+  let fullText = ''
+  const channel: PersistingChannel = {
+    channelId: parent.channelId,
+    openingData: parent.openingData,
+    get state() {
+      return parent.state
+    },
+    get fullText() {
+      return fullText
+    },
+    close: () => parent.close(),
+    send: (event: AIStreamEvent) => {
+      if (storage) {
+        switch (event.type) {
+          case 'text-delta':
+            fullText += event.text
+            break
+          case 'tool-call':
+            storage.saveMessages(threadId, [
+              {
+                id: randomUUID(),
+                role: 'assistant',
+                toolCalls: [
+                  {
+                    id: randomUUID(),
+                    name: event.toolName,
+                    args: event.args as Record<string, unknown>,
+                  },
+                ],
+                createdAt: new Date(),
+              },
+            ])
+            break
+          case 'tool-result':
+            storage.saveMessages(threadId, [
+              {
+                id: randomUUID(),
+                role: 'tool',
+                toolResults: [
+                  {
+                    id: randomUUID(),
+                    name: event.toolName,
+                    result:
+                      typeof event.result === 'string'
+                        ? event.result
+                        : JSON.stringify(event.result),
+                  },
+                ],
+                createdAt: new Date(),
+              },
+            ])
+            break
+          case 'done':
+            if (fullText) {
+              storage.saveMessages(threadId, [
+                {
+                  id: randomUUID(),
+                  role: 'assistant',
+                  content: fullText,
+                  createdAt: new Date(),
+                },
+              ])
+            }
+            break
+        }
+      }
+      parent.send(event)
+    },
+  }
+  return channel
+}
+
+function createScopedChannel(
+  parent: AIStreamChannel,
+  agentName: string,
+  session: string
+): AIStreamChannel {
+  return {
+    channelId: `${parent.channelId}:${agentName}:${session}`,
+    openingData: parent.openingData,
+    get state() {
+      return parent.state
+    },
+    close: () => parent.close(),
+    send: (event: AIStreamEvent) => {
+      if (event.type === 'done') return
+      if (
+        event.type === 'text-delta' ||
+        event.type === 'reasoning-delta' ||
+        event.type === 'tool-call' ||
+        event.type === 'tool-result' ||
+        event.type === 'approval-request' ||
+        event.type === 'usage' ||
+        event.type === 'error'
+      ) {
+        parent.send({ ...event, agent: agentName, session } as AIStreamEvent)
+      } else {
+        parent.send(event)
+      }
+    },
+  }
+}
+
 function buildToolDefs(
   agent: CoreAIAgent,
   singletonServices: CoreSingletonServices,
   params: RunAIAgentParams,
   agentSessionMap: Map<string, string>,
-  resourceId: string
+  resourceId: string,
+  streamContext?: StreamContext
 ): AIAgentToolDef[] {
   const tools: AIAgentToolDef[] = []
+  const approvalPolicy = streamContext?.options?.requiresToolApproval ?? false
 
   if (agent.tools?.length) {
     const functionMeta = pikkuState(null, 'function', 'meta')
@@ -371,28 +647,29 @@ function buildToolDefs(
       const inputSchemaName = fnMeta?.inputSchemaName
       const inputSchema = inputSchemaName ? schemas.get(inputSchemaName) : {}
 
+      const needsApproval =
+        approvalPolicy === 'all' ||
+        (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
+
       tools.push({
         name: toolName,
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema: inputSchema || {},
         execute: async (toolInput: unknown) => {
+          if (needsApproval) {
+            throw new ToolApprovalRequired(randomUUID(), toolName, toolInput)
+          }
           const sessionService = new PikkuSessionService()
           const wire: PikkuWire = {
             ...createMiddlewareSessionWireProps(sessionService),
           }
-          const result = await runPikkuFunc(
-            'agent',
-            `tool:${toolName}`,
-            pikkuFuncId,
-            {
-              singletonServices,
-              createWireServices: params.createWireServices,
-              data: () => toolInput,
-              wire,
-              sessionService,
-            }
-          )
-          return result
+          return runPikkuFunc('agent', `tool:${toolName}`, pikkuFuncId, {
+            singletonServices,
+            createWireServices: params.createWireServices,
+            data: () => toolInput,
+            wire,
+            sessionService,
+          })
         },
       })
     }
@@ -435,6 +712,37 @@ function buildToolDefs(
             threadId = `${subAgentName}-${session}-${Date.now()}`
             agentSessionMap.set(sessionKey, threadId)
           }
+
+          if (streamContext) {
+            const { channel } = streamContext
+            channel.send({
+              type: 'agent-call',
+              agentName: subAgentName,
+              session,
+              input: message,
+            })
+            const subChannel = createScopedChannel(
+              channel,
+              subAgentName,
+              session
+            )
+            await streamAIAgent(
+              subAgentName,
+              { message, threadId, resourceId },
+              subChannel,
+              params,
+              agentSessionMap,
+              streamContext.options
+            )
+            channel.send({
+              type: 'agent-result',
+              agentName: subAgentName,
+              session,
+              result: null,
+            })
+            return null
+          }
+
           const result = await runAIAgent(
             subAgentName,
             { message, threadId, resourceId },

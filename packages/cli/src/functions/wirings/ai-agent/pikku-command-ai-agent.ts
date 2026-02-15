@@ -6,14 +6,16 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
+import { serializeAgentMap } from './serialize-agent-map.js'
 
 export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { agents } = await getInspectorState()
+    const { agents, functions } = await getInspectorState()
     const {
       agentWiringsFile,
       agentWiringMetaFile,
       agentWiringMetaJsonFile,
+      agentMapDeclarationFile,
       packageMappings,
       schema,
     } = config
@@ -99,6 +101,18 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 ${importStatement}
 pikkuState(null, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)`
+    )
+
+    await writeFileInDir(
+      logger,
+      agentMapDeclarationFile,
+      serializeAgentMap(
+        logger,
+        agentMapDeclarationFile,
+        packageMappings,
+        functions.typesMap,
+        agents.agentsMeta
+      )
     )
 
     return true

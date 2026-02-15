@@ -1,12 +1,11 @@
-import { generateText, tool as aiTool, Output } from 'ai'
+import { generateText, streamText, tool as aiTool, Output } from 'ai'
 import { jsonSchema } from 'ai'
-import type { AIAgentRunnerService } from '@pikku/core/services'
 import type {
-  AIMessage,
-  AIAgentStep,
-  AIAgentModelConfig,
-  AIAgentToolDef,
-} from '@pikku/core/ai-agent'
+  AIAgentRunnerService,
+  AIAgentRunnerParams,
+  AIAgentRunnerResult,
+} from '@pikku/core/services'
+import type { AIStreamChannel } from '@pikku/core/ai-agent'
 import type { SecretService } from '@pikku/core/services'
 import {
   convertToSDKMessages,
@@ -24,8 +23,20 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     }
   }
 
-  private async getProvider(modelConfig: AIAgentModelConfig) {
-    const providerName = modelConfig.provider
+  private parseModel(model: string): { provider: string; modelName: string } {
+    const slashIndex = model.indexOf('/')
+    if (slashIndex === -1) {
+      throw new Error(
+        `Invalid model format '${model}'. Expected 'provider/model' (e.g. 'openai/gpt-4o', 'ollama/qwen2.5:7b').`
+      )
+    }
+    return {
+      provider: model.slice(0, slashIndex),
+      modelName: model.slice(slashIndex + 1),
+    }
+  }
+
+  private async getProvider(providerName: string) {
     if (!this.providers[providerName]) {
       switch (providerName) {
         case 'openai': {
@@ -52,8 +63,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         case 'ollama': {
           const { createOpenAI } = await import('@ai-sdk/openai')
           this.providers[providerName] = createOpenAI({
-            baseURL:
-              (modelConfig as any).baseURL || 'http://localhost:11434/v1',
+            baseURL: 'http://localhost:11434/v1',
             apiKey: 'ollama',
           })
           break
@@ -65,27 +75,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     return this.providers[providerName]
   }
 
-  async run(params: {
-    model: AIAgentModelConfig
-    instructions: string
-    messages: AIMessage[]
-    tools: AIAgentToolDef[]
-    maxSteps: number
-    toolChoice: 'auto' | 'required' | 'none'
-    outputSchema?: Record<string, unknown>
-    onStepFinish?: (step: AIAgentStep) => void
-  }): Promise<{
-    text: string
-    object?: unknown
-    steps: AIAgentStep[]
-    usage: { inputTokens: number; outputTokens: number }
-  }> {
-    const { model: modelName } = params.model
-
-    const provider = await this.getProvider(params.model)
-    const sdkModel = provider(modelName)
-
-    const aiTools = Object.fromEntries(
+  private buildTools(params: AIAgentRunnerParams) {
+    return Object.fromEntries(
       params.tools.map((t) => [
         t.name,
         aiTool({
@@ -95,7 +86,86 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         }),
       ])
     )
+  }
 
+  async stream(
+    params: AIAgentRunnerParams,
+    channel: AIStreamChannel
+  ): Promise<void> {
+    const { provider: providerName, modelName } = this.parseModel(params.model)
+    const provider = await this.getProvider(providerName)
+    const sdkModel = provider(modelName)
+    const aiTools = this.buildTools(params)
+    const messages = convertToSDKMessages(params.messages)
+
+    const result = streamText({
+      model: sdkModel,
+      system: params.instructions,
+      messages,
+      tools: aiTools,
+      maxSteps: params.maxSteps,
+      toolChoice: params.toolChoice,
+      ...(params.outputSchema
+        ? {
+            experimental_output: Output.object({
+              schema: jsonSchema(params.outputSchema as any),
+            }),
+          }
+        : {}),
+    })
+
+    for await (const part of result.fullStream) {
+      switch (part.type) {
+        case 'text-delta':
+          channel.send({ type: 'text-delta', text: part.textDelta })
+          break
+        case 'reasoning':
+          channel.send({ type: 'reasoning-delta', text: part.textDelta })
+          break
+        case 'tool-call':
+          channel.send({
+            type: 'tool-call',
+            toolName: part.toolName,
+            args: part.args,
+          })
+          break
+        case 'tool-result':
+          channel.send({
+            type: 'tool-result',
+            toolName: part.toolName,
+            result: part.result,
+          })
+          break
+        case 'step-finish':
+          channel.send({
+            type: 'usage',
+            tokens: {
+              input: part.usage.promptTokens,
+              output: part.usage.completionTokens,
+            },
+            model: modelName,
+          })
+          break
+        case 'error':
+          channel.send({
+            type: 'error',
+            message:
+              part.error instanceof Error
+                ? part.error.message
+                : String(part.error),
+          })
+          break
+      }
+    }
+
+    channel.send({ type: 'done' })
+  }
+
+  async run(params: AIAgentRunnerParams): Promise<AIAgentRunnerResult> {
+    const { provider: providerName, modelName } = this.parseModel(params.model)
+    const provider = await this.getProvider(providerName)
+    const sdkModel = provider(modelName)
+    const aiTools = this.buildTools(params)
     const messages = convertToSDKMessages(params.messages)
 
     const result = await generateText({
@@ -112,9 +182,6 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             }),
           }
         : {}),
-      onStepFinish: params.onStepFinish
-        ? (step: any) => params.onStepFinish!(convertFromSDKStep(step))
-        : undefined,
     })
 
     return {

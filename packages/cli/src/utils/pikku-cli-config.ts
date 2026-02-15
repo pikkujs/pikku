@@ -441,6 +441,12 @@ const _getPikkuCLIConfig = async (
     if (!result.agentTypesFile) {
       result.agentTypesFile = join(agentDir, 'pikku-agent-types.gen.ts')
     }
+    if (!result.agentMapDeclarationFile) {
+      result.agentMapDeclarationFile = join(
+        agentDir,
+        'pikku-agent-map.gen.d.ts'
+      )
+    }
 
     // CLI
     if (!result.cliWiringsFile) {

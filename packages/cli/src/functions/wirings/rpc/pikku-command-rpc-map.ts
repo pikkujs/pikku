@@ -12,11 +12,18 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
       packageMappings,
       externalPackages,
       workflowMapDeclarationFile,
+      agentMapDeclarationFile,
     } = config
 
     const workflowMapPath = getFileImportRelativePath(
       rpcInternalMapDeclarationFile,
       workflowMapDeclarationFile,
+      packageMappings
+    )
+
+    const agentMapPath = getFileImportRelativePath(
+      rpcInternalMapDeclarationFile,
+      agentMapDeclarationFile,
       packageMappings
     )
 
@@ -28,7 +35,8 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
       functions.meta,
       rpc.internalMeta,
       externalPackages,
-      workflowMapPath
+      workflowMapPath,
+      agentMapPath
     )
     await writeFileInDir(logger, rpcInternalMapDeclarationFile, content)
   },
@@ -48,11 +56,18 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       packageMappings,
       externalPackages,
       workflowMapDeclarationFile,
+      agentMapDeclarationFile,
     } = config
 
     const workflowMapPath = getFileImportRelativePath(
       rpcMapDeclarationFile,
       workflowMapDeclarationFile,
+      packageMappings
+    )
+
+    const agentMapPath = getFileImportRelativePath(
+      rpcMapDeclarationFile,
+      agentMapDeclarationFile,
       packageMappings
     )
 
@@ -64,7 +79,8 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       functions.meta,
       rpc.exposedMeta,
       externalPackages,
-      workflowMapPath
+      workflowMapPath,
+      agentMapPath
     )
     await writeFileInDir(logger, rpcMapDeclarationFile, content)
   },

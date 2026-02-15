@@ -49,6 +49,8 @@ export const addAIAgent: AddWiring = (
 
     if (disabled) return
 
+    const modelValue = getPropertyValue(obj, 'model') as string | null
+
     const instructionsValue = getPropertyValue(obj, 'instructions') as
       | string
       | string[]
@@ -176,7 +178,7 @@ export const addAIAgent: AddWiring = (
       name: nameValue,
       description,
       instructions: instructionsValue || '',
-      model: {} as any,
+      model: modelValue || '',
       summary,
       errors,
       ...(maxStepsValue !== null && { maxSteps: maxStepsValue }),

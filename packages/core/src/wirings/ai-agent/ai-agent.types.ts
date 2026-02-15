@@ -7,6 +7,7 @@ import {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '../../types/core.types.js'
+import type { PikkuChannel } from '../channel/channel.types.js'
 
 export interface AIThread {
   id: string
@@ -57,12 +58,6 @@ export interface AIAgentOutput {
   usage: { inputTokens: number; outputTokens: number }
 }
 
-export interface AIAgentModelConfig {
-  provider: string
-  model: string
-  [key: string]: unknown
-}
-
 export interface AIAgentToolDef {
   name: string
   description: string
@@ -88,7 +83,7 @@ export type CoreAIAgent<
   summary?: string
   errors?: string[]
   instructions: string | string[]
-  model: AIAgentModelConfig
+  model: string
   tools?: string[]
   agents?: string[]
   memory?: AIAgentMemoryConfig
@@ -99,6 +94,71 @@ export type CoreAIAgent<
   tags?: string[]
   middleware?: PikkuMiddleware[]
   permissions?: CorePermissionGroup<PikkuPermission>
+}
+
+export type AIStreamEvent =
+  | { type: 'text-delta'; text: string; agent?: string; session?: string }
+  | { type: 'reasoning-delta'; text: string; agent?: string; session?: string }
+  | {
+      type: 'tool-call'
+      toolName: string
+      args: unknown
+      agent?: string
+      session?: string
+    }
+  | {
+      type: 'tool-result'
+      toolName: string
+      result: unknown
+      agent?: string
+      session?: string
+    }
+  | {
+      type: 'agent-call'
+      agentName: string
+      session: string
+      input: unknown
+    }
+  | {
+      type: 'agent-result'
+      agentName: string
+      session: string
+      result: unknown
+    }
+  | {
+      type: 'approval-request'
+      id: string
+      toolName: string
+      args: unknown
+      agent?: string
+      session?: string
+    }
+  | {
+      type: 'usage'
+      tokens: { input: number; output: number }
+      model: string
+      agent?: string
+      session?: string
+    }
+  | { type: 'error'; message: string; agent?: string; session?: string }
+  | { type: 'done' }
+
+export interface AIStreamChannel extends PikkuChannel<unknown, AIStreamEvent> {}
+
+export interface AgentRunState {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: 'running' | 'suspended' | 'completed' | 'failed'
+  pendingApprovals?: {
+    toolCallId: string
+    toolName: string
+    args: unknown
+  }[]
+  usage: { inputTokens: number; outputTokens: number; model: string }
+  createdAt: Date
+  updatedAt: Date
 }
 
 export type AIAgentMeta = Record<
