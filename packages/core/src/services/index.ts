@@ -18,6 +18,7 @@ export * from './ai-storage-service.js'
 export * from './ai-vector-service.js'
 export * from './ai-embedder-service.js'
 export * from './ai-agent-runner-service.js'
+export * from './ai-run-state-service.js'
 
 export * from './typed-secret-service.js'
 export * from './typed-variables-service.js'

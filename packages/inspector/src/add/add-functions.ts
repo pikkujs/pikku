@@ -331,6 +331,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   let errors: string[] | undefined
   let expose: boolean | undefined
   let internal: boolean | undefined
+  let requiresApproval: boolean | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
@@ -410,6 +411,9 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+    requiresApproval = getPropertyValue(firstArg, 'requiresApproval') as
+      | boolean
+      | undefined
 
     const versionRaw = getPropertyValue(firstArg, 'version')
     if (versionRaw !== null && versionRaw !== undefined) {
@@ -707,6 +711,7 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
     internal: internal || undefined,
+    requiresApproval: requiresApproval || undefined,
     version,
     title,
     tags: tags || undefined,

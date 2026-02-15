@@ -64,7 +64,14 @@ export const generateRuntimeMeta = (
 
   for (const [
     key,
-    { pikkuFuncId, inputSchemaName, outputSchemaName, expose, version },
+    {
+      pikkuFuncId,
+      inputSchemaName,
+      outputSchemaName,
+      expose,
+      version,
+      requiresApproval,
+    },
   ] of Object.entries(functions)) {
     runtimeMeta[key] = {
       pikkuFuncId,
@@ -72,6 +79,7 @@ export const generateRuntimeMeta = (
       outputSchemaName,
       expose,
       version,
+      requiresApproval,
     }
   }
 

@@ -1,9 +1,9 @@
-import type { AIStorageService } from '@pikku/core/services'
-import type { AIThread, AIMessage } from '@pikku/core/ai-agent'
+import type { AIStorageService, AIRunStateService } from '@pikku/core/services'
+import type { AIThread, AIMessage, AgentRunState } from '@pikku/core/ai-agent'
 import postgres from 'postgres'
 import { validateSchemaName } from './schema.js'
 
-export class PgAIStorageService implements AIStorageService {
+export class PgAIStorageService implements AIStorageService, AIRunStateService {
   private sql: postgres.Sql
   private schemaName: string
   private initialized = false
@@ -65,6 +65,34 @@ export class PgAIStorageService implements AIStorageService {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         PRIMARY KEY (id, scope)
       );
+
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_run (
+        run_id TEXT PRIMARY KEY,
+        agent_name TEXT NOT NULL,
+        thread_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_threads(id) ON DELETE CASCADE,
+        resource_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'running',
+        usage_input_tokens INTEGER NOT NULL DEFAULT 0,
+        usage_output_tokens INTEGER NOT NULL DEFAULT 0,
+        usage_model TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_run_thread
+        ON ${this.schemaName}.ai_run (thread_id, created_at);
+
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_run_approval (
+        tool_call_id TEXT PRIMARY KEY,
+        run_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_run(run_id) ON DELETE CASCADE,
+        tool_name TEXT NOT NULL,
+        args JSONB NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_run_approval_run
+        ON ${this.schemaName}.ai_run_approval (run_id);
     `)
 
     this.initialized = true
@@ -258,6 +286,163 @@ export class PgAIStorageService implements AIStorageService {
        ON CONFLICT (id, scope) DO UPDATE SET data = $3, updated_at = now()`,
       [id, scope, JSON.stringify(data)]
     )
+  }
+
+  async createRun(run: AgentRunState): Promise<void> {
+    await this.sql.unsafe(
+      `INSERT INTO ${this.schemaName}.ai_run
+       (run_id, agent_name, thread_id, resource_id, status,
+        usage_input_tokens, usage_output_tokens, usage_model, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        run.runId,
+        run.agentName,
+        run.threadId,
+        run.resourceId,
+        run.status,
+        run.usage.inputTokens,
+        run.usage.outputTokens,
+        run.usage.model,
+        run.createdAt,
+        run.updatedAt,
+      ]
+    )
+
+    if (run.pendingApprovals?.length) {
+      await this.insertApprovals(run.runId, run.pendingApprovals)
+    }
+  }
+
+  async updateRun(
+    runId: string,
+    updates: Partial<AgentRunState>
+  ): Promise<void> {
+    const setClauses: string[] = ['updated_at = now()']
+    const params: any[] = []
+    let paramIdx = 1
+
+    if (updates.status !== undefined) {
+      setClauses.push(`status = $${paramIdx++}`)
+      params.push(updates.status)
+    }
+    if (updates.usage !== undefined) {
+      setClauses.push(`usage_input_tokens = $${paramIdx++}`)
+      params.push(updates.usage.inputTokens)
+      setClauses.push(`usage_output_tokens = $${paramIdx++}`)
+      params.push(updates.usage.outputTokens)
+      setClauses.push(`usage_model = $${paramIdx++}`)
+      params.push(updates.usage.model)
+    }
+
+    params.push(runId)
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.ai_run SET ${setClauses.join(', ')} WHERE run_id = $${paramIdx}`,
+      params
+    )
+
+    if (updates.pendingApprovals !== undefined) {
+      await this.sql.unsafe(
+        `DELETE FROM ${this.schemaName}.ai_run_approval WHERE run_id = $1`,
+        [runId]
+      )
+      if (updates.pendingApprovals.length) {
+        await this.insertApprovals(runId, updates.pendingApprovals)
+      }
+    }
+  }
+
+  async getRun(runId: string): Promise<AgentRunState | null> {
+    const result = await this.sql.unsafe(
+      `SELECT run_id, agent_name, thread_id, resource_id, status,
+              usage_input_tokens, usage_output_tokens,
+              usage_model, created_at, updated_at
+       FROM ${this.schemaName}.ai_run WHERE run_id = $1`,
+      [runId]
+    )
+    if (result.length === 0) return null
+
+    const approvals = await this.sql.unsafe(
+      `SELECT tool_call_id, tool_name, args, status
+       FROM ${this.schemaName}.ai_run_approval
+       WHERE run_id = $1 AND status = 'pending'`,
+      [runId]
+    )
+
+    return this.mapRunRow(result[0]!, approvals)
+  }
+
+  async getRunsByThread(threadId: string): Promise<AgentRunState[]> {
+    const result = await this.sql.unsafe(
+      `SELECT run_id, agent_name, thread_id, resource_id, status,
+              usage_input_tokens, usage_output_tokens,
+              usage_model, created_at, updated_at
+       FROM ${this.schemaName}.ai_run WHERE thread_id = $1
+       ORDER BY created_at DESC`,
+      [threadId]
+    )
+
+    const runs: AgentRunState[] = []
+    for (const row of result) {
+      const approvals = await this.sql.unsafe(
+        `SELECT tool_call_id, tool_name, args, status
+         FROM ${this.schemaName}.ai_run_approval
+         WHERE run_id = $1 AND status = 'pending'`,
+        [row.run_id]
+      )
+      runs.push(this.mapRunRow(row, approvals))
+    }
+    return runs
+  }
+
+  private async insertApprovals(
+    runId: string,
+    approvals: NonNullable<AgentRunState['pendingApprovals']>
+  ): Promise<void> {
+    const values = approvals
+      .map((_, i) => {
+        const base = i * 4
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`
+      })
+      .join(', ')
+
+    const params = approvals.flatMap((a) => [
+      a.toolCallId,
+      runId,
+      a.toolName,
+      JSON.stringify(a.args),
+    ])
+
+    await this.sql.unsafe(
+      `INSERT INTO ${this.schemaName}.ai_run_approval (tool_call_id, run_id, tool_name, args)
+       VALUES ${values}`,
+      params
+    )
+  }
+
+  private mapRunRow(row: any, approvalRows?: any[]): AgentRunState {
+    const pendingApprovals = approvalRows?.length
+      ? approvalRows.map((a: any) => ({
+          toolCallId: a.tool_call_id as string,
+          toolName: a.tool_name as string,
+          args: a.args as unknown,
+        }))
+      : undefined
+
+    return {
+      runId: row.run_id as string,
+      agentName: row.agent_name as string,
+      threadId: row.thread_id as string,
+      resourceId: row.resource_id as string,
+      status: row.status as AgentRunState['status'],
+      pendingApprovals,
+      usage: {
+        inputTokens: row.usage_input_tokens as number,
+        outputTokens: row.usage_output_tokens as number,
+        model: row.usage_model as string,
+      },
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
+    }
   }
 
   public async close(): Promise<void> {

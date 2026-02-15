@@ -24,6 +24,7 @@ import { AIStorageService } from '../services/ai-storage-service.js'
 import { AIVectorService } from '../services/ai-vector-service.js'
 import { AIEmbedderService } from '../services/ai-embedder-service.js'
 import { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
+import { AIRunStateService } from '../services/ai-run-state-service.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -92,6 +93,7 @@ export type FunctionRuntimeMeta = {
   internal?: boolean
   sessionless?: boolean
   version?: number
+  requiresApproval?: boolean
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &
@@ -202,6 +204,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   aiEmbedder?: AIEmbedderService
   /** AI agent runner service (model calls + tool loop) */
   aiAgentRunner?: AIAgentRunnerService
+  /** AI run state service (run lifecycle + approval persistence) */
+  aiRunState?: AIRunStateService
 }
 
 /**

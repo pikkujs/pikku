@@ -1,9 +1,16 @@
-import { CoreServices, PikkuWire } from '../../types/core.types.js'
+import {
+  CoreServices,
+  CoreSingletonServices,
+  PikkuWire,
+} from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
+import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
+import { runAIAgent } from '../ai-agent/ai-agent-runner.js'
+import { randomUUID } from 'crypto'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -212,6 +219,25 @@ export class ContextAwareRPCService {
     )
   }
 
+  public async agent(
+    agentName: string,
+    input: AIAgentInput
+  ): Promise<{
+    runId: string
+    result: unknown
+    usage: { inputTokens: number; outputTokens: number }
+  }> {
+    const runId = randomUUID()
+    const result = await runAIAgent(agentName, input, {
+      singletonServices: this.services as CoreSingletonServices,
+    })
+    return {
+      runId,
+      result: result.object ?? result.text,
+      usage: result.usage,
+    }
+  }
+
   public async remote<In = any, Out = any>(
     funcName: string,
     data: In
@@ -297,6 +323,7 @@ export class PikkuRPCService<
       remote: serviceRPC.remote.bind(serviceRPC),
       exposed: serviceRPC.rpcExposed.bind(serviceRPC),
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
+      agent: serviceRPC.agent.bind(serviceRPC),
       rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
     } as any
   }

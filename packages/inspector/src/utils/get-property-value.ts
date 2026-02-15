@@ -30,7 +30,7 @@ export const getArrayPropertyValue = (
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string
-): string | string[] | null | boolean => {
+): string | string[] | number | null | boolean => {
   const property = obj.properties.find(
     (p) =>
       ts.isPropertyAssignment(p) &&
@@ -67,7 +67,10 @@ export const getPropertyValue = (
       return false
     }
 
-    // Handle string literals for other properties
+    if (ts.isNumericLiteral(initializer)) {
+      return Number(initializer.text)
+    }
+
     if (
       ts.isStringLiteral(initializer) ||
       ts.isNoSubstitutionTemplateLiteral(initializer)
@@ -75,7 +78,6 @@ export const getPropertyValue = (
       return initializer.text
     }
 
-    // Handle other initializer types if necessary
     return initializer.getText()
   }
 

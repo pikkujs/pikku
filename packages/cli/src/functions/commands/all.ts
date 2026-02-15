@@ -153,6 +153,9 @@ export const all = pikkuVoidFunc({
       const agents = await rpc.invoke('pikkuAIAgent', null)
       if (agents) {
         allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
+        if (config.agent?.publicAgentPath) {
+          await rpc.invoke('pikkuPublicAgent', null)
+        }
       }
 
       const cli = await rpc.invoke('pikkuCLI', null)
