@@ -1,5 +1,4 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { serializeFileImports } from '../../../utils/file-imports-serializer.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
@@ -19,16 +18,45 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       schema,
     } = config
 
-    await writeFileInDir(
-      logger,
+    const lines: string[] = []
+    const hasAgents = (agents.files as Map<string, unknown>).size > 0
+
+    if (hasAgents) {
+      lines.push(`import { addAIAgent } from '@pikku/core/ai-agent'`)
+    }
+
+    const metaImportPath = getFileImportRelativePath(
       agentWiringsFile,
-      serializeFileImports(
-        'wireAIAgent',
+      agentWiringMetaFile,
+      packageMappings
+    )
+    if (Object.keys(agents.agentsMeta).length > 0) {
+      lines.push(`import '${metaImportPath}'`)
+    }
+
+    const agentFiles = agents.files as Map<
+      string,
+      { path: string; exportedName: string }
+    >
+    const sortedAgents = Array.from(agentFiles.entries()).sort((a, b) =>
+      a[0].localeCompare(b[0])
+    )
+    for (const [, { path, exportedName }] of sortedAgents) {
+      const importPath = getFileImportRelativePath(
         agentWiringsFile,
-        agents.files,
+        path,
         packageMappings
       )
-    )
+      lines.push(`import { ${exportedName} } from '${importPath}'`)
+    }
+
+    lines.push('')
+
+    for (const [agentName, { exportedName }] of sortedAgents) {
+      lines.push(`addAIAgent('${agentName}', ${exportedName})`)
+    }
+
+    await writeFileInDir(logger, agentWiringsFile, lines.join('\n'))
 
     const metaData = {
       agentsMeta: agents.agentsMeta,

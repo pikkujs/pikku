@@ -7,6 +7,10 @@ import type {
   JWTService,
   QueueService,
 } from '@pikku/core'
+import type {
+  AIStorageService,
+  AIAgentRunnerService,
+} from '@pikku/core/services'
 import { EventHubTopics } from './eventhub-topics.js'
 import { TodoStore } from '../src/services/store.service.ts'
 
@@ -23,6 +27,8 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   eventHub?: EventHubService<EventHubTopics>
   queueService?: QueueService
   todoStore: TodoStore
+  aiStorage?: AIStorageService
+  aiAgentRunner?: AIAgentRunnerService
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

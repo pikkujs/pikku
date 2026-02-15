@@ -12,6 +12,10 @@ import {
   pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
 import { TodoStore } from './services/store.service.js'
+import type {
+  AIStorageService,
+  AIAgentRunnerService,
+} from '@pikku/core/services'
 
 export const createConfig = pikkuConfig(async () => {
   return {
@@ -44,6 +48,20 @@ export const createSingletonServices = pikkuServices(
       )
     }
 
+    let aiStorage: AIStorageService | undefined
+    let aiAgentRunner: AIAgentRunnerService | undefined
+    if (process.env.POSTGRES_URL) {
+      const postgres = (await import('postgres')).default
+      const { PgAIStorageService } = await import('@pikku/pg')
+      const sql = postgres(process.env.POSTGRES_URL)
+      const pgAiStorage = new PgAIStorageService(sql)
+      await pgAiStorage.init()
+      aiStorage = pgAiStorage
+
+      const { VercelAIAgentRunner } = await import('@pikku/ai-vercel')
+      aiAgentRunner = new VercelAIAgentRunner(secrets)
+    }
+
     return {
       config,
       logger,
@@ -52,6 +70,8 @@ export const createSingletonServices = pikkuServices(
       jwt,
       secrets,
       todoStore: existingServices?.todoStore || new TodoStore(),
+      aiStorage: existingServices?.aiStorage || aiStorage,
+      aiAgentRunner: existingServices?.aiAgentRunner || aiAgentRunner,
       eventHub: existingServices?.eventHub,
       workflowService: existingServices?.workflowService,
       queueService: existingServices?.queueService,

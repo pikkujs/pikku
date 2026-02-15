@@ -1,19 +1,18 @@
-export const serializeAIAgentTypes = (functionTypesImportPath: string) => {
+export const serializeAIAgentTypes = (_functionTypesImportPath: string) => {
   return `import {
   CoreAIAgent,
-  wireAIAgent as wireAIAgentCore,
-  AIAgentInput,
-  AIAgentOutput,
 } from '@pikku/core/ai-agent'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-import type { PikkuFunctionConfig } from '${functionTypesImportPath}'
+type AIAgentConfig = CoreAIAgent & {
+  input?: StandardSchemaV1
+  output?: StandardSchemaV1
+}
 
-type AIAgentWiring = CoreAIAgent<PikkuFunctionConfig<AIAgentInput, AIAgentOutput, 'rpc' | 'session'>>
-
-export const wireAIAgent = (
-  agent: AIAgentWiring
+export const pikkuAIAgent = (
+  agent: AIAgentConfig
 ) => {
-  wireAIAgentCore(agent as any)
+  return agent
 }
 `
 }

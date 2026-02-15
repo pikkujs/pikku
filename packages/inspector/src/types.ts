@@ -283,7 +283,7 @@ export interface InspectorState {
   }
   agents: {
     agentsMeta: AIAgentMeta
-    files: Set<string>
+    files: Map<string, { path: string; exportedName: string }>
   }
   cli: {
     meta: CLIMeta

@@ -46,3 +46,18 @@ export const google = (options: GoogleModelOptions): AIAgentModelConfig => ({
   provider: 'google',
   ...options,
 })
+
+export interface OllamaModelOptions {
+  model: string
+  baseURL?: string
+  temperature?: number
+  maxTokens?: number
+  topP?: number
+  topK?: number
+  stopSequences?: string[]
+}
+
+export const ollama = (options: OllamaModelOptions): AIAgentModelConfig => ({
+  provider: 'ollama',
+  ...options,
+})

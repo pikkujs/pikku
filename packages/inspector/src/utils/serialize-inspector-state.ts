@@ -150,7 +150,7 @@ export interface SerializableInspectorState {
   }
   agents: {
     agentsMeta: InspectorState['agents']['agentsMeta']
-    files: string[]
+    files: [string, { path: string; exportedName: string }][]
   }
   cli: {
     meta: InspectorState['cli']['meta']
@@ -311,7 +311,7 @@ export function serializeInspectorState(
     },
     agents: {
       agentsMeta: state.agents?.agentsMeta ?? {},
-      files: Array.from(state.agents?.files ?? []),
+      files: Array.from(state.agents?.files?.entries() ?? []),
     },
     cli: {
       meta: state.cli.meta,
@@ -453,7 +453,7 @@ export function deserializeInspectorState(
     },
     agents: {
       agentsMeta: (data as any).agents?.agentsMeta || {},
-      files: new Set((data as any).agents?.files || []),
+      files: new Map((data as any).agents?.files || []),
     },
     cli: {
       meta: data.cli.meta,

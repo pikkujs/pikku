@@ -4,16 +4,15 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
-import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
-import { AddWiring } from '../types.js'
+import { AddWiring, SchemaRef } from '../types.js'
 import {
   extractFunctionName,
-  makeContextBasedId,
+  funcIdToTypeName,
 } from '../utils/extract-function-name.js'
-import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
+import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 
 export const addAIAgent: AddWiring = (
   logger,
@@ -30,13 +29,15 @@ export const addAIAgent: AddWiring = (
   const firstArg = args[0]
   const expression = node.expression
 
-  if (!ts.isIdentifier(expression) || expression.text !== 'wireAIAgent') {
+  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuAIAgent') {
     return
   }
 
   if (!firstArg) {
     return
   }
+
+  const { exportedName } = extractFunctionName(node, checker, state.rootDir)
 
   if (ts.isObjectLiteralExpression(firstArg)) {
     const obj = firstArg
@@ -55,35 +56,6 @@ export const addAIAgent: AddWiring = (
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
 
-    const funcInitializer = getPropertyAssignmentInitializer(
-      obj,
-      'func',
-      false,
-      checker
-    )
-
-    let pikkuFuncId: string | undefined
-    if (funcInitializer) {
-      const extracted = extractFunctionName(
-        funcInitializer,
-        checker,
-        state.rootDir
-      )
-      pikkuFuncId = extracted.pikkuFuncId
-      if (pikkuFuncId.startsWith('__temp_') && nameValue) {
-        pikkuFuncId = makeContextBasedId('agent', 'agent', nameValue)
-      }
-
-      ensureFunctionMetadata(
-        state,
-        pikkuFuncId,
-        nameValue || undefined,
-        funcInitializer,
-        checker,
-        extracted.isHelper
-      )
-    }
-
     if (!nameValue) {
       logger.critical(
         ErrorCode.MISSING_NAME,
@@ -100,10 +72,90 @@ export const addAIAgent: AddWiring = (
       return
     }
 
+    const resolveSchemaRef = (
+      identifier: ts.Identifier,
+      context: string
+    ): SchemaRef | null => {
+      const symbol = checker.getSymbolAtLocation(identifier)
+      if (!symbol) return null
+
+      const decl = symbol.valueDeclaration || symbol.declarations?.[0]
+      if (!decl) return null
+
+      let sourceFile: string
+
+      if (ts.isImportSpecifier(decl)) {
+        const aliasedSymbol = checker.getAliasedSymbol(symbol)
+        if (aliasedSymbol) {
+          const aliasedDecl =
+            aliasedSymbol.valueDeclaration || aliasedSymbol.declarations?.[0]
+          if (aliasedDecl) {
+            sourceFile = aliasedDecl.getSourceFile().fileName
+          } else {
+            return null
+          }
+        } else {
+          return null
+        }
+      } else {
+        sourceFile = decl.getSourceFile().fileName
+      }
+
+      const vendor = detectSchemaVendorOrError(
+        identifier,
+        checker,
+        logger,
+        context,
+        sourceFile
+      )
+      if (!vendor) return null
+
+      return {
+        variableName: identifier.text,
+        sourceFile,
+        vendor,
+      }
+    }
+
+    let inputSchema: string | null = null
+    let outputSchema: string | null = null
+    const capitalizedName = funcIdToTypeName(nameValue)
+
+    for (const prop of obj.properties) {
+      if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+        const propName = prop.name.text
+        if (propName === 'input' || propName === 'output') {
+          if (ts.isIdentifier(prop.initializer)) {
+            const context = `AI agent '${nameValue}' ${propName}`
+            const ref = resolveSchemaRef(prop.initializer, context)
+            if (ref) {
+              const schemaName = `${capitalizedName}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
+              state.schemaLookup.set(schemaName, ref)
+              state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
+              if (propName === 'input') {
+                inputSchema = schemaName
+              } else {
+                outputSchema = schemaName
+              }
+            }
+          } else if (ts.isCallExpression(prop.initializer)) {
+            const schemaName = `${capitalizedName}${propName.charAt(0).toUpperCase() + propName.slice(1)}`
+            logger.critical(
+              ErrorCode.INLINE_SCHEMA,
+              `Inline schemas are not supported for '${propName}' in AI agent '${nameValue}'.\n` +
+                `  Extract to an exported variable:\n` +
+                `    export const ${schemaName} = ${prop.initializer.getText()}\n` +
+                `  Then use: ${propName}: ${schemaName}`
+            )
+          }
+        }
+      }
+    }
+
     const middleware = resolveMiddleware(state, obj, tags, checker)
     const permissions = resolvePermissions(state, obj, tags, checker)
 
-    state.serviceAggregation.usedFunctions.add(pikkuFuncId ?? nameValue)
+    state.serviceAggregation.usedFunctions.add(nameValue)
     extractWireNames(middleware).forEach((name) =>
       state.serviceAggregation.usedMiddleware.add(name)
     )
@@ -111,20 +163,14 @@ export const addAIAgent: AddWiring = (
       state.serviceAggregation.usedPermissions.add(name)
     )
 
-    let inputSchema: string | null = null
-    let outputSchema: string | null = null
-    if (pikkuFuncId) {
-      const fnMeta = state.functions.meta[pikkuFuncId]
-      if (fnMeta) {
-        inputSchema = fnMeta.inputs?.[0] || null
-        outputSchema = fnMeta.outputs?.[0] || null
-      }
+    if (exportedName) {
+      state.agents.files.set(nameValue, {
+        path: node.getSourceFile().fileName,
+        exportedName,
+      })
     }
 
-    state.agents.files.add(node.getSourceFile().fileName)
-
     state.agents.agentsMeta[nameValue] = {
-      pikkuFuncId,
       name: nameValue,
       description,
       instructions: instructionsValue || '',

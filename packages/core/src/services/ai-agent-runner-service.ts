@@ -13,9 +13,11 @@ export interface AIAgentRunnerService {
     tools: AIAgentToolDef[]
     maxSteps: number
     toolChoice: 'auto' | 'required' | 'none'
+    outputSchema?: Record<string, unknown>
     onStepFinish?: (step: AIAgentStep) => void
   }): Promise<{
     text: string
+    object?: unknown
     steps: AIAgentStep[]
     usage: { inputTokens: number; outputTokens: number }
   }>

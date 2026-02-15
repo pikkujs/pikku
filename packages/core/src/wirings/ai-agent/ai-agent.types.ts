@@ -1,7 +1,5 @@
 import {
   CorePermissionGroup,
-  CorePikkuFunctionConfig,
-  CorePikkuFunctionSessionless,
   CorePikkuPermission,
 } from '../../function/functions.types.js'
 import {
@@ -53,6 +51,7 @@ export interface AIAgentInput {
 
 export interface AIAgentOutput {
   text: string
+  object?: unknown
   threadId: string
   steps: AIAgentStep[]
   usage: { inputTokens: number; outputTokens: number }
@@ -81,9 +80,6 @@ export type AIAgentMemoryConfig = {
 }
 
 export type CoreAIAgent<
-  PikkuFunctionConfig = CorePikkuFunctionConfig<
-    CorePikkuFunctionSessionless<any, any>
-  >,
   PikkuPermission = CorePikkuPermission<any, any>,
   PikkuMiddleware = CorePikkuMiddleware<any>,
 > = {
@@ -97,7 +93,8 @@ export type CoreAIAgent<
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
-  func?: PikkuFunctionConfig
+  input?: unknown
+  output?: unknown
   tags?: string[]
   middleware?: PikkuMiddleware[]
   permissions?: CorePermissionGroup<PikkuPermission>
@@ -105,8 +102,7 @@ export type CoreAIAgent<
 
 export type AIAgentMeta = Record<
   string,
-  Omit<CoreAIAgent, 'func' | 'middleware' | 'permissions'> & {
-    pikkuFuncId?: string
+  Omit<CoreAIAgent, 'input' | 'output' | 'middleware' | 'permissions'> & {
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]

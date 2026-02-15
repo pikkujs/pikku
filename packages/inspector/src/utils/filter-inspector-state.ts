@@ -233,7 +233,7 @@ export function filterInspectorState(
     agents: {
       ...state.agents,
       agentsMeta: JSON.parse(JSON.stringify(state.agents?.agentsMeta ?? {})),
-      files: new Set<string>(),
+      files: new Map(),
     },
     cli: {
       ...state.cli,
@@ -548,7 +548,7 @@ export function filterInspectorState(
   }
 
   if (Object.keys(filteredState.agents.agentsMeta).length > 0) {
-    filteredState.agents.files = new Set(state.agents.files)
+    filteredState.agents.files = new Map(state.agents.files)
   }
 
   // Filter CLI programs (note: CLI filtering might be more complex with nested commands)

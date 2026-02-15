@@ -12,12 +12,8 @@ import type {
   AIAgentToolDef,
   AIMessage,
 } from './ai-agent.types.js'
-import type {
-  CorePikkuFunctionConfig,
-  CorePikkuFunctionSessionless,
-} from '../../function/functions.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { runPikkuFunc } from '../../function/function-runner.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
@@ -32,26 +28,17 @@ export type RunAIAgentParams = {
   >
 }
 
-export const wireAIAgent = <
-  PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    CorePikkuFunctionSessionless<any, any>
-  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
->(
-  agent: CoreAIAgent<PikkuFunctionConfig>
-) => {
+export const addAIAgent = (agentName: string, agent: CoreAIAgent) => {
   const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
-  const agentMeta = agentsMeta[agent.name]
+  const agentMeta = agentsMeta[agentName]
   if (!agentMeta) {
-    throw new Error(`AI agent metadata not found for '${agent.name}'`)
-  }
-  if (agent.func && agentMeta.pikkuFuncId) {
-    addFunction(agentMeta.pikkuFuncId, agent.func as any)
+    throw new Error(`AI agent metadata not found for '${agentName}'`)
   }
   const agents = pikkuState(null, 'agent', 'agents')
-  if (agents.has(agent.name)) {
-    throw new Error(`AI agent already exists: ${agent.name}`)
+  if (agents.has(agentName)) {
+    throw new Error(`AI agent already exists: ${agentName}`)
   }
-  agents.set(agent.name, agent)
+  agents.set(agentName, agent)
 }
 
 export async function runAIAgent(
@@ -157,6 +144,13 @@ export async function runAIAgent(
     ? agent.instructions.join('\n')
     : agent.instructions
 
+  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+  const agentMeta = agentsMeta[agentName]
+  const outputSchemaName = agentMeta?.outputSchema
+  const outputSchema = outputSchemaName
+    ? pikkuState(null, 'misc', 'schemas').get(outputSchemaName)
+    : undefined
+
   const result = await agentRunner.run({
     model: agent.model,
     instructions,
@@ -164,6 +158,7 @@ export async function runAIAgent(
     tools,
     maxSteps: agent.maxSteps ?? 10,
     toolChoice: agent.toolChoice ?? 'auto',
+    outputSchema,
   })
 
   let responseText = result.text
@@ -237,6 +232,7 @@ export async function runAIAgent(
 
   return {
     text: responseText,
+    object: result.object,
     threadId,
     steps: result.steps,
     usage: result.usage,

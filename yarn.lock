@@ -3892,7 +3892,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pikku/ai-vercel@workspace:packages/services/ai-vercel":
+"@pikku/ai-vercel@npm:^0.11.0, @pikku/ai-vercel@workspace:packages/services/ai-vercel":
   version: 0.0.0-use.local
   resolution: "@pikku/ai-vercel@workspace:packages/services/ai-vercel"
   dependencies:
@@ -4449,10 +4449,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
+    "@pikku/ai-vercel": "npm:^0.11.0"
     "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.2"
     "@pikku/fetch": "npm:^0.11.1"
     "@pikku/jose": "npm:^0.11.1"
+    "@pikku/pg": "npm:^0.11.2"
     "@pikku/schema-cfworker": "npm:^0.11.0"
     "@pikku/templates-function-external": "workspace:*"
     "@pikku/websocket": "npm:^0.11.0"
@@ -4460,6 +4462,7 @@ __metadata:
     "@types/ws": "npm:^8"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
+    postgres: "npm:^3.4.8"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
     ws: "npm:^8.19.0"
