@@ -10,20 +10,13 @@ import type {
   DataRef,
 } from './workflow-graph.types.js'
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')
-}
-
 function makeNodeId(
   step: WorkflowStepMeta,
   index: number,
   prefix: string
 ): string {
   if ('stepName' in step && step.stepName) {
-    return slugify(step.stepName)
+    return step.stepName
   }
   return `${prefix}_${index}`
 }
@@ -98,7 +91,6 @@ function convertStepToNode(
       const node: FunctionNode = {
         nodeId,
         rpcName: step.rpcName,
-        stepName: step.stepName,
         next: nextNodeId,
       }
       if (step.inputs) {
@@ -128,7 +120,6 @@ function convertStepToNode(
       const node: FlowNode = {
         nodeId,
         flow: 'sleep',
-        stepName: step.stepName,
         duration: step.duration,
         next: nextNodeId,
       }
@@ -139,7 +130,6 @@ function convertStepToNode(
       const node: FlowNode = {
         nodeId,
         flow: 'inline',
-        stepName: step.stepName,
         description: step.description,
         next: nextNodeId,
       }
@@ -294,7 +284,6 @@ function convertStepToNode(
       const node: FlowNode = {
         nodeId,
         flow: 'fanout',
-        stepName: step.stepName,
         sourceVar: step.sourceVar,
         itemVar: step.itemVar,
         mode: step.mode,

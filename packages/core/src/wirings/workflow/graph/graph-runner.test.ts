@@ -29,11 +29,11 @@ describe('graph-runner bugs', () => {
       'test-hash'
     )
 
-    const stepA = await ws.insertStepState(runId, 'node:a', 'doA', {})
+    const stepA = await ws.insertStepState(runId, 'a', 'doA', {})
     await ws.setStepRunning(stepA.stepId)
     await ws.setStepResult(stepA.stepId, { ok: true })
 
-    const stepB = await ws.insertStepState(runId, 'node:b', 'doB', {})
+    const stepB = await ws.insertStepState(runId, 'b', 'doB', {})
     await ws.setStepRunning(stepB.stepId)
 
     await continueGraph(ws, runId, 'testPrematureCompletion', meta)

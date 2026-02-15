@@ -554,11 +554,10 @@ export class PgWorkflowService extends PikkuWorkflowService {
     const result = await this.sql.unsafe(
       `SELECT ws.step_name, ws.status, ws.branch_taken, ws.retries,
               (SELECT COUNT(*) FROM ${this.schemaName}.workflow_step_history h
-               WHERE h.workflow_run_id = ws.workflow_run_id AND h.step_name = ws.step_name) AS attempt_count
+               WHERE h.workflow_step_id = ws.workflow_step_id) AS attempt_count
        FROM ${this.schemaName}.workflow_step ws
        WHERE ws.workflow_run_id = $1
-         AND ws.status IN ('succeeded', 'failed')
-         AND ws.step_name LIKE 'node:%'`,
+         AND ws.status IN ('succeeded', 'failed')`,
       [runId]
     )
 
@@ -567,8 +566,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
     const branchKeys: Record<string, string> = {}
 
     for (const row of result) {
-      const stepName = row.step_name as string
-      const nodeId = stepName.replace(/^node:/, '')
+      const nodeId = row.step_name as string
 
       if (row.status === 'succeeded') {
         completedNodeIds.push(nodeId)
@@ -592,21 +590,17 @@ export class PgWorkflowService extends PikkuWorkflowService {
   ): Promise<string[]> {
     if (nodeIds.length === 0) return []
 
-    const stepNames = nodeIds.map((id) => `node:${id}`)
-
-    // Find which step names already exist
     const result = await this.sql.unsafe(
       `SELECT step_name
        FROM ${this.schemaName}.workflow_step
        WHERE workflow_run_id = $1
          AND step_name = ANY($2)`,
-      [runId, stepNames]
+      [runId, nodeIds]
     )
 
     const existingStepNames = new Set(result.map((r) => r.step_name as string))
 
-    // Return node IDs that don't have steps
-    return nodeIds.filter((id) => !existingStepNames.has(`node:${id}`))
+    return nodeIds.filter((id) => !existingStepNames.has(id))
   }
 
   async getNodeResults(
@@ -615,22 +609,18 @@ export class PgWorkflowService extends PikkuWorkflowService {
   ): Promise<Record<string, any>> {
     if (nodeIds.length === 0) return {}
 
-    const stepNames = nodeIds.map((id) => `node:${id}`)
-
     const result = await this.sql.unsafe(
       `SELECT step_name, result
        FROM ${this.schemaName}.workflow_step
        WHERE workflow_run_id = $1
          AND step_name = ANY($2)
          AND status = 'succeeded'`,
-      [runId, stepNames]
+      [runId, nodeIds]
     )
 
     const results: Record<string, any> = {}
     for (const row of result) {
-      const stepName = row.step_name as string
-      const nodeId = stepName.replace(/^node:/, '')
-      results[nodeId] = row.result
+      results[row.step_name as string] = row.result
     }
 
     return results

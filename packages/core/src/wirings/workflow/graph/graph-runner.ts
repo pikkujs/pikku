@@ -3,6 +3,60 @@ import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 
+function buildTemplateRegex(nodeId: string): RegExp | null {
+  if (!nodeId.includes('${')) return null
+  const escaped = nodeId
+    .split(/\$\{[^}]+\}/)
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.+')
+  return new RegExp(`^${escaped}$`)
+}
+
+function remapStepNamesToNodeIds(
+  stepNames: string[],
+  nodes: Record<string, any>
+): string[] {
+  const templatePatterns = new Map<string, RegExp>()
+  for (const nodeId of Object.keys(nodes)) {
+    const regex = buildTemplateRegex(nodeId)
+    if (regex) templatePatterns.set(nodeId, regex)
+  }
+  if (templatePatterns.size === 0) return stepNames
+  return stepNames.map((name) => {
+    if (nodes[name]) return name
+    for (const [nodeId, regex] of templatePatterns) {
+      if (regex.test(name)) return nodeId
+    }
+    return name
+  })
+}
+
+function remapBranchKeys(
+  branchKeys: Record<string, string>,
+  nodes: Record<string, any>
+): Record<string, string> {
+  const templatePatterns = new Map<string, RegExp>()
+  for (const nodeId of Object.keys(nodes)) {
+    const regex = buildTemplateRegex(nodeId)
+    if (regex) templatePatterns.set(nodeId, regex)
+  }
+  if (templatePatterns.size === 0) return branchKeys
+  const remapped: Record<string, string> = {}
+  for (const [key, value] of Object.entries(branchKeys)) {
+    let mappedKey = key
+    if (!nodes[key]) {
+      for (const [nodeId, regex] of templatePatterns) {
+        if (regex.test(key)) {
+          mappedKey = nodeId
+          break
+        }
+      }
+    }
+    remapped[mappedKey] = value
+  }
+  return remapped
+}
+
 function isDataRef(value: unknown): value is { $ref: string; path?: string } {
   return (
     typeof value === 'object' &&
@@ -162,11 +216,10 @@ async function queueGraphNode(
   rpcName: string,
   input: any
 ): Promise<void> {
-  const stepName = `node:${nodeId}`
-  await workflowService.insertStepState(runId, stepName, rpcName, input, {
+  await workflowService.insertStepState(runId, nodeId, rpcName, input, {
     retries: 0,
   })
-  await workflowService.queueStepWorker(runId, stepName, rpcName, input)
+  await workflowService.queueStepWorker(runId, nodeId, rpcName, input)
 }
 
 export async function continueGraph(
@@ -182,8 +235,14 @@ export async function continueGraph(
 
   const nodes = meta.nodes
 
-  const { completedNodeIds, failedNodeIds, branchKeys } =
-    await workflowService.getCompletedGraphState(runId)
+  const {
+    completedNodeIds: rawCompleted,
+    failedNodeIds: rawFailed,
+    branchKeys: rawBranch,
+  } = await workflowService.getCompletedGraphState(runId)
+  const completedNodeIds = remapStepNamesToNodeIds(rawCompleted, nodes)
+  const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes)
+  const branchKeys = remapBranchKeys(rawBranch, nodes)
 
   if (failedNodeIds.length > 0) {
     const failedNode = failedNodeIds[0]!
@@ -273,12 +332,11 @@ export async function executeGraphStep(
   rpcService: any,
   runId: string,
   stepId: string,
-  stepName: string,
+  nodeId: string,
   rpcName: string,
   data: any,
   graphName: string
 ): Promise<any> {
-  const nodeId = stepName.replace(/^node:/, '')
   const wireState: GraphWireState = {}
   const graphWire: PikkuGraphWire = {
     runId,
@@ -360,11 +418,10 @@ async function executeGraphNodeInline(
   if (!node) return
 
   const rpcName = node.rpcName
-  const stepName = `node:${nodeId}`
 
   const stepState = await workflowService.insertStepState(
     runId,
-    stepName,
+    nodeId,
     rpcName,
     input,
     { retries: 3 }
@@ -434,8 +491,14 @@ async function continueGraphInline(
   entryNodeIds: string[]
 ): Promise<void> {
   while (true) {
-    const { completedNodeIds, failedNodeIds, branchKeys } =
-      await workflowService.getCompletedGraphState(runId)
+    const {
+      completedNodeIds: rawCompleted,
+      failedNodeIds: rawFailed,
+      branchKeys: rawBranch,
+    } = await workflowService.getCompletedGraphState(runId)
+    const completedNodeIds = remapStepNamesToNodeIds(rawCompleted, nodes)
+    const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes)
+    const branchKeys = remapBranchKeys(rawBranch, nodes)
 
     if (failedNodeIds.length > 0) {
       const failedNode = failedNodeIds[0]!
