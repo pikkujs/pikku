@@ -1,6 +1,6 @@
 import { pikkuAIAgent } from '../../.pikku/agent/pikku-agent-types.gen.js'
 import { AgentOutputSchema } from '../schemas.js'
-import { appendModified } from '../middleware.js'
+import { appendModified, logAgentIO } from '../middleware.js'
 
 export const todoAssistant = pikkuAIAgent({
   name: 'todo-assistant',
@@ -14,6 +14,7 @@ export const todoAssistant = pikkuAIAgent({
   toolChoice: 'auto',
   output: AgentOutputSchema,
   channelMiddleware: [appendModified],
+  aiMiddleware: [logAgentIO],
 })
 
 export const dailyPlanner = pikkuAIAgent({

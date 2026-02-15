@@ -582,6 +582,71 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
+  if (expression.text === 'pikkuAIMiddleware') {
+    const arg = args[0]
+    if (!arg) return
+
+    if (!ts.isObjectLiteralExpression(arg)) {
+      logger.error(`• pikkuAIMiddleware() requires an object literal argument.`)
+      return
+    }
+
+    const allServices = new Set<string>()
+    for (const prop of arg.properties) {
+      if (
+        ts.isPropertyAssignment(prop) &&
+        (ts.isArrowFunction(prop.initializer) ||
+          ts.isFunctionExpression(prop.initializer))
+      ) {
+        const hookServices = extractServicesFromFunction(prop.initializer)
+        for (const s of hookServices.services) {
+          allServices.add(s)
+        }
+      }
+    }
+
+    const services = {
+      optimized: allServices.size > 0,
+      services: Array.from(allServices),
+    }
+
+    let { pikkuFuncId, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuAIMiddleware() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myMiddleware = pikkuAIMiddleware(...)`
+        )
+        return
+      }
+    }
+    state.aiMiddleware.definitions[pikkuFuncId] = {
+      services,
+      sourceFile: node.getSourceFile().fileName,
+      position: node.getStart(),
+      exportedName,
+    }
+
+    logger.debug(
+      `• Found AI middleware with services: ${services.services.join(', ')}`
+    )
+    return
+  }
+
   if (expression.text === 'addChannelMiddleware') {
     const tagArg = args[0]
     const middlewareArrayArg = args[1]

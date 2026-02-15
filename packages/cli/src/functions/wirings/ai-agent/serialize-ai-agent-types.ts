@@ -1,6 +1,7 @@
 export const serializeAIAgentTypes = (_functionTypesImportPath: string) => {
   return `import {
   CoreAIAgent,
+  PikkuAIMiddlewareHooks,
 } from '@pikku/core/ai-agent'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -14,5 +15,12 @@ export const pikkuAIAgent = (
 ) => {
   return agent
 }
+
+export const pikkuAIMiddleware = <
+  SingletonServices = any,
+  Event = unknown,
+>(
+  hooks: PikkuAIMiddlewareHooks<SingletonServices, Event>
+): PikkuAIMiddlewareHooks<SingletonServices, Event> => hooks
 `
 }

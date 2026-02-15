@@ -214,6 +214,43 @@ export function resolveHTTPMiddlewareFromObject(
   )
 }
 
+function getAIMiddlewareNode(
+  obj: ts.ObjectLiteralExpression
+): ts.Expression | undefined {
+  const prop = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'aiMiddleware'
+  ) as ts.PropertyAssignment | undefined
+  return prop?.initializer
+}
+
+export function resolveAIMiddleware(
+  state: InspectorState,
+  obj: ts.ObjectLiteralExpression,
+  checker: ts.TypeChecker
+): MiddlewareMetadata[] | undefined {
+  const explicitNode = getAIMiddlewareNode(obj)
+  if (!explicitNode) return undefined
+
+  const names = extractMiddlewarePikkuNames(
+    explicitNode,
+    checker,
+    state.rootDir
+  )
+  const resolved: MiddlewareMetadata[] = names.map((name) => {
+    const def = state.aiMiddleware.definitions[name]
+    return {
+      type: 'wire' as const,
+      name,
+      inline: def?.exportedName === null,
+    }
+  })
+
+  return resolved.length > 0 ? resolved : undefined
+}
+
 function getChannelMiddlewareNode(
   obj: ts.ObjectLiteralExpression
 ): ts.Expression | undefined {

@@ -198,6 +198,9 @@ export interface SerializableInspectorState {
       ]
     >
   }
+  aiMiddleware: {
+    definitions: InspectorState['aiMiddleware']['definitions']
+  }
   permissions: {
     definitions: InspectorState['permissions']['definitions']
     instances: InspectorState['permissions']['instances']
@@ -356,6 +359,9 @@ export function serializeInspectorState(
         state.channelMiddleware.tagMiddleware.entries()
       ),
     },
+    aiMiddleware: {
+      definitions: state.aiMiddleware.definitions,
+    },
     permissions: {
       definitions: state.permissions.definitions,
       instances: state.permissions.instances,
@@ -502,6 +508,9 @@ export function deserializeInspectorState(
       definitions: data.channelMiddleware?.definitions || {},
       instances: data.channelMiddleware?.instances || {},
       tagMiddleware: new Map(data.channelMiddleware?.tagMiddleware || []),
+    },
+    aiMiddleware: {
+      definitions: (data as any).aiMiddleware?.definitions || {},
     },
     permissions: {
       definitions: data.permissions.definitions,

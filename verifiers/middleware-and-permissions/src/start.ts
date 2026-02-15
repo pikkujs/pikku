@@ -16,6 +16,7 @@ import { testQueueWiring } from './functions/queue.assert.js'
 import { testCLIWiring } from './functions/cli.assert.js'
 import { testChannelWiring } from './functions/channel-local.assert.js'
 import { testChannelWiringServerless } from './functions/channel-serverless.assert.js'
+import { testAgentAIMiddleware } from './functions/agent.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -416,6 +417,9 @@ async function main(): Promise<void> {
       createWireServices
     )
 
+    // Test AI Agent middleware metadata
+    const agentAIMiddlewarePassed = await testAgentAIMiddleware()
+
     // Test Internal RPC with external package call
     // Note: testExternalWithAuth only has 'function' tag (no 'session' tag)
     // When calling ext:hello, the external package's middleware and permissions also execute
@@ -459,7 +463,8 @@ async function main(): Promise<void> {
       channelServerlessTest3Passed &&
       channelServerlessTest4Passed &&
       channelServerlessTest5Passed &&
-      rpcPassed
+      rpcPassed &&
+      agentAIMiddlewarePassed
 
     if (allPassed) {
       console.log('\n\n✓ All wiring types tested successfully!')
