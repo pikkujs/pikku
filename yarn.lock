@@ -4686,7 +4686,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
   dependencies:
-    "@pikku/cli": "npm:^0.11.3"
+    "@pikku/cli": "workspace:*"
     "@pikku/core": "npm:^0.11.2"
     "@pikku/templates-function-external": "workspace:*"
     "@types/node": "npm:^24"
