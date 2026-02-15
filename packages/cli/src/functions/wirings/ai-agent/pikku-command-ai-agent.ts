@@ -18,6 +18,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       agentMapDeclarationFile,
       packageMappings,
       schema,
+      externalPackageName,
     } = config
 
     const lines: string[] = []
@@ -54,8 +55,9 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
 
     lines.push('')
 
+    const packageArg = externalPackageName ? `, '${externalPackageName}'` : ''
     for (const [agentName, { exportedName }] of sortedAgents) {
-      lines.push(`addAIAgent('${agentName}', ${exportedName})`)
+      lines.push(`addAIAgent('${agentName}', ${exportedName}${packageArg})`)
     }
 
     await writeFileInDir(logger, agentWiringsFile, lines.join('\n'))
@@ -100,7 +102,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       `import { pikkuState } from '@pikku/core'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 ${importStatement}
-pikkuState(null, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)`
+pikkuState(${externalPackageName ? `'${externalPackageName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)`
     )
 
     await writeFileInDir(

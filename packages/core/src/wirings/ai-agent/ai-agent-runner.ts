@@ -59,13 +59,17 @@ export class ToolApprovalRequired extends PikkuError {
   }
 }
 
-export const addAIAgent = (agentName: string, agent: CoreAIAgent) => {
-  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+export const addAIAgent = (
+  agentName: string,
+  agent: CoreAIAgent,
+  packageName: string | null = null
+) => {
+  const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
   const agentMeta = agentsMeta[agentName]
   if (!agentMeta) {
     throw new Error(`AI agent metadata not found for '${agentName}'`)
   }
-  const agents = pikkuState(null, 'agent', 'agents')
+  const agents = pikkuState(packageName, 'agent', 'agents')
   if (agents.has(agentName)) {
     throw new Error(`AI agent already exists: ${agentName}`)
   }
@@ -77,6 +81,37 @@ type StreamContext = {
   options?: StreamAIAgentOptions
 }
 
+const resolveAgent = (
+  agentName: string
+): { agent: CoreAIAgent; packageName: string | null; resolvedName: string } => {
+  const mainAgent = pikkuState(null, 'agent', 'agents').get(agentName)
+  if (mainAgent) {
+    return { agent: mainAgent, packageName: null, resolvedName: agentName }
+  }
+
+  const colonIndex = agentName.indexOf(':')
+  if (colonIndex !== -1) {
+    const namespace = agentName.substring(0, colonIndex)
+    const localName = agentName.substring(colonIndex + 1)
+    const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
+    const pkgConfig = externalPackages.get(namespace)
+    if (pkgConfig) {
+      const extAgent = pikkuState(pkgConfig.package, 'agent', 'agents').get(
+        localName
+      )
+      if (extAgent) {
+        return {
+          agent: extAgent,
+          packageName: pkgConfig.package,
+          resolvedName: localName,
+        }
+      }
+    }
+  }
+
+  throw new Error(`AI agent not found: ${agentName}`)
+}
+
 async function prepareAgentRun(
   agentName: string,
   input: AIAgentInput,
@@ -85,10 +120,7 @@ async function prepareAgentRun(
   streamContext?: StreamContext
 ) {
   const { singletonServices } = params
-  const agent = pikkuState(null, 'agent', 'agents').get(agentName)
-  if (!agent) {
-    throw new Error(`AI agent not found: ${agentName}`)
-  }
+  const { agent, packageName, resolvedName } = resolveAgent(agentName)
 
   const agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {
@@ -146,11 +178,11 @@ async function prepareAgentRun(
 
   const instructions = buildInstructions(agent)
 
-  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
-  const meta = agentsMeta[agentName]
+  const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
+  const meta = agentsMeta[resolvedName]
   const outputSchemaName = meta?.outputSchema
   const outputSchema = outputSchemaName
-    ? pikkuState(null, 'misc', 'schemas').get(outputSchemaName)
+    ? pikkuState(packageName, 'misc', 'schemas').get(outputSchemaName)
     : undefined
 
   const runnerParams: AIAgentRunnerParams = {
@@ -165,6 +197,8 @@ async function prepareAgentRun(
 
   return {
     agent,
+    packageName,
+    resolvedName,
     agentRunner,
     storage,
     vector,
@@ -189,6 +223,8 @@ export async function streamAIAgent(
 
   const {
     agent,
+    packageName,
+    resolvedName,
     agentRunner,
     storage,
     vector,
@@ -253,8 +289,8 @@ export async function streamAIAgent(
       }
     })
 
-  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
-  const meta = agentsMeta[agentName]
+  const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
+  const meta = agentsMeta[resolvedName]
   const allChannelMiddleware = combineChannelMiddleware(
     'agent',
     `stream:${agentName}`,
@@ -364,6 +400,8 @@ export async function runAIAgent(
 
   const {
     agent,
+    packageName: _packageName,
+    resolvedName: _resolvedName,
     agentRunner,
     storage,
     vector,
