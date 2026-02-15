@@ -1,9 +1,15 @@
 import { wireMiddleware } from '../middleware/wire.js'
+import {
+  channelTagMiddleware,
+  wireChannelMiddleware,
+} from '../middleware/channel-middleware.js'
 import { noOpFunction } from './no-op.function.js'
+import { channelSendFunction } from './channel-send.function.js'
 import {
   pikkuMiddleware,
   pikkuChannelConnectionFunc,
   pikkuChannelDisconnectionFunc,
+  addChannelMiddleware,
   wireChannel,
 } from '#pikku'
 
@@ -43,6 +49,10 @@ const onDisconnect = pikkuChannelDisconnectionFunc(async ({ logger }) => {
   logger.info({ type: 'lifecycle', name: 'onDisconnect', phase: 'execute' })
 })
 
+// Tag-based channel middleware (applies to channels with 'test' tag)
+export const testChannelTagMiddleware = () =>
+  addChannelMiddleware('test', [channelTagMiddleware('test-cm')])
+
 // Test channel with different message routing scenarios
 wireChannel({
   name: 'test-channel',
@@ -50,6 +60,7 @@ wireChannel({
   tags: ['test'],
   auth: false,
   middleware: [inlineWireMiddleware],
+  channelMiddleware: [wireChannelMiddleware],
   onConnect,
   onDisconnect,
   onMessageWiring: {
@@ -73,6 +84,12 @@ wireChannel({
       withBoth: {
         func: noOpFunction,
         middleware: [wireMiddleware('channel-test'), messageMiddleware],
+      },
+
+      // Test 5: Function that sends on channel (triggers channel middleware)
+      withChannelSend: {
+        func: channelSendFunction,
+        middleware: [messageMiddleware],
       },
     },
   },

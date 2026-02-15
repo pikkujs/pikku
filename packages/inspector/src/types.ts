@@ -115,6 +115,12 @@ export interface InspectorMiddlewareState {
   tagMiddleware: Map<string, MiddlewareGroupMeta>
 }
 
+export interface InspectorChannelMiddlewareState {
+  definitions: Record<string, InspectorMiddlewareDefinition>
+  instances: Record<string, InspectorMiddlewareInstance>
+  tagMiddleware: Map<string, MiddlewareGroupMeta>
+}
+
 export interface InspectorPermissionDefinition {
   services: FunctionServicesMeta
   usedWires?: string[]
@@ -302,6 +308,7 @@ export interface InspectorState {
     files: Set<string>
   }
   middleware: InspectorMiddlewareState
+  channelMiddleware: InspectorChannelMiddlewareState
   permissions: InspectorPermissionState
   serviceAggregation: {
     requiredServices: Set<string> // All services needed across the app

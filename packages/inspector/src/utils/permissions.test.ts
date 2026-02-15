@@ -336,6 +336,11 @@ function createMockState(): InspectorState {
       instances: {},
       tagMiddleware: new Map(),
     },
+    channelMiddleware: {
+      definitions: {},
+      instances: {},
+      tagMiddleware: new Map(),
+    },
     permissions: {
       definitions: {},
       instances: {},

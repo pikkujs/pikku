@@ -100,6 +100,7 @@ export const runLocalChannel = async ({
               services,
               channel,
               data: openingData,
+              channelMiddlewareMeta: meta.channelMiddleware,
             })
             if (result !== undefined) {
               await channel.send(result)
@@ -121,6 +122,7 @@ export const runLocalChannel = async ({
               lifecycleType: 'disconnect',
               services,
               channel,
+              channelMiddlewareMeta: meta.channelMiddleware,
             })
           } catch (e) {
             singletonServices.logger.error(`Error handling onDisconnect: ${e}`)

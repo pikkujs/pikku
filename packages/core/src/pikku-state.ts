@@ -125,6 +125,9 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     tagGroup: {},
     httpGroup: {},
   },
+  channelMiddleware: {
+    tagGroup: {},
+  },
   permissions: {
     tagGroup: {},
     httpGroup: {},
@@ -133,6 +136,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     errors: new Map(),
     schemas: new Map(),
     middleware: {},
+    channelMiddleware: {},
     permissions: {},
   },
   package: {

@@ -133,6 +133,7 @@ export const runChannelConnect = async ({
         services,
         channel,
         data: openingData,
+        channelMiddlewareMeta: meta.channelMiddleware,
       })
     }
     http?.response?.status(101)
@@ -181,6 +182,7 @@ export const runChannelDisconnect = async ({
     openingData,
     channelName,
   })
+
   const userSession = new PikkuSessionService(
     params.channelStore,
     params.channelId
@@ -209,6 +211,7 @@ export const runChannelDisconnect = async ({
         lifecycleType: 'disconnect',
         services,
         channel,
+        channelMiddlewareMeta: meta.channelMiddleware,
       })
     } catch (e: any) {
       singletonServices.logger.error(
@@ -235,6 +238,7 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
+
   const userSession = new PikkuSessionService(
     params.channelStore,
     params.channelId

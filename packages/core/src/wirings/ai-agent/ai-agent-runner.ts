@@ -20,6 +20,10 @@ import { PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import {
+  combineChannelMiddleware,
+  wrapChannelWithMiddleware,
+} from '../channel/channel-middleware-runner.js'
+import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
@@ -215,7 +219,31 @@ export async function streamAIAgent(
     await storage.saveMessages(threadId, [userMessage])
   }
 
-  const persistingChannel = createPersistingChannel(channel, storage, threadId)
+  const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+  const meta = agentsMeta[agentName]
+  const allChannelMiddleware = combineChannelMiddleware(
+    'agent',
+    `stream:${agentName}`,
+    {
+      wireInheritedChannelMiddleware: meta?.channelMiddleware,
+      wireChannelMiddleware: agent.channelMiddleware as any,
+    }
+  )
+
+  const wrappedChannel =
+    allChannelMiddleware.length > 0
+      ? (wrapChannelWithMiddleware(
+          { channel },
+          singletonServices,
+          allChannelMiddleware
+        ).channel as AIStreamChannel)
+      : channel
+
+  const persistingChannel = createPersistingChannel(
+    wrappedChannel,
+    storage,
+    threadId
+  )
 
   try {
     await agentRunner.stream(runnerParams, persistingChannel)

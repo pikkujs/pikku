@@ -4,7 +4,11 @@ import { SecretService } from '../services/secret-service.js'
 import { SchemaService } from '../services/schema-service.js'
 import { JWTService } from '../services/jwt-service.js'
 import { PikkuHTTP } from '../wirings/http/http.types.js'
-import { PikkuChannel } from '../wirings/channel/channel.types.js'
+import {
+  PikkuChannel,
+  CorePikkuChannelMiddleware,
+  CorePikkuChannelMiddlewareFactory,
+} from '../wirings/channel/channel.types.js'
 import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
@@ -352,6 +356,21 @@ export const pikkuMiddleware = <
 export const pikkuMiddlewareFactory = <In = any>(
   factory: CorePikkuMiddlewareFactory<In>
 ): CorePikkuMiddlewareFactory<In> => {
+  return factory
+}
+
+export const pikkuChannelMiddleware = <
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+  Event = unknown,
+>(
+  middleware: CorePikkuChannelMiddleware<SingletonServices, Event>
+): CorePikkuChannelMiddleware<SingletonServices, Event> => {
+  return middleware
+}
+
+export const pikkuChannelMiddlewareFactory = <In = any>(
+  factory: CorePikkuChannelMiddlewareFactory<In>
+): CorePikkuChannelMiddlewareFactory<In> => {
   return factory
 }
 

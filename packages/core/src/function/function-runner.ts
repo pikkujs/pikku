@@ -1,4 +1,8 @@
 import { runMiddleware, combineMiddleware } from '../middleware-runner.js'
+import {
+  combineChannelMiddleware,
+  wrapChannelWithMiddleware,
+} from '../wirings/channel/channel-middleware-runner.js'
 import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
@@ -14,6 +18,7 @@ import {
   CreateWireServices,
   CoreConfig,
 } from '../types/core.types.js'
+import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 import {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
@@ -135,6 +140,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     auth: wiringAuth,
     inheritedMiddleware,
     wireMiddleware,
+    inheritedChannelMiddleware,
+    wireChannelMiddleware,
     inheritedPermissions,
     wirePermissions,
     coerceDataFromSchema,
@@ -149,6 +156,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     auth?: boolean
     inheritedMiddleware?: MiddlewareMetadata[]
     wireMiddleware?: CorePikkuMiddleware[]
+    inheritedChannelMiddleware?: MiddlewareMetadata[]
+    wireChannelMiddleware?: CorePikkuChannelMiddleware[]
     inheritedPermissions?: PermissionMetadata[]
     wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     coerceDataFromSchema?: boolean
@@ -197,6 +206,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
   }
 
+  const allChannelMiddleware = combineChannelMiddleware(wireType, wireId, {
+    wireInheritedChannelMiddleware: inheritedChannelMiddleware,
+    wireChannelMiddleware,
+    packageName,
+  })
+
+  const resolvedWire =
+    allChannelMiddleware.length > 0 && wire.channel
+      ? wrapChannelWithMiddleware(
+          wire,
+          resolvedSingletonServices,
+          allChannelMiddleware
+        )
+      : wire
+
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
   const mergedInheritedPermissions: PermissionMetadata[] = [
     ...(inheritedPermissions || []),
@@ -210,7 +234,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       : undefined
 
     const wireWithSession: PikkuWire = {
-      ...wire,
+      ...resolvedWire,
       ...functionWireProps,
     }
 
@@ -300,7 +324,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
   if (allMiddleware.length > 0) {
     return (await runMiddleware<CorePikkuMiddleware>(
       resolvedSingletonServices,
-      wire,
+      resolvedWire,
       allMiddleware,
       executeFunction
     )) as Out

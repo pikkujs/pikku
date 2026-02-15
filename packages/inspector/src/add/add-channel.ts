@@ -12,7 +12,10 @@ import {
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import type { ChannelMessageMeta, ChannelMeta } from '@pikku/core/channel'
 import type { InspectorState, AddWiring } from '../types.js'
-import { resolveMiddleware } from '../utils/middleware.js'
+import {
+  resolveMiddleware,
+  resolveChannelMiddleware,
+} from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
 
@@ -569,6 +572,7 @@ export const addChannel: AddWiring = (
 
   // --- resolve middleware ---
   const middleware = resolveMiddleware(state, obj, tags, checker)
+  const channelMiddleware = resolveChannelMiddleware(state, obj, tags, checker)
 
   // --- track used functions/middleware for service aggregation ---
   // Track connect/disconnect/message handlers
@@ -623,5 +627,6 @@ export const addChannel: AddWiring = (
     errors,
     tags: tags ?? undefined,
     middleware,
+    channelMiddleware,
   }
 }
