@@ -80,11 +80,11 @@ export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
   data: FlattenedRPCMap[Name]['input']
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
-// Import WorkflowMap for workflow typing
-import type { WorkflowMap } from '${workflowMapPath}'
+${workflowMapPath ? `import type { WorkflowMap } from '${workflowMapPath}'` : `type WorkflowMap = {}`}
 
-// Import AgentMap for agent typing
-import type { AgentMap } from '${agentMapPath}'
+${agentMapPath ? `import type { AgentMap } from '${agentMapPath}'` : `type AgentMap = {}`}
+${generateExternalAgentImports(externalPackages)}
+${generateMergedAgentMap(externalPackages)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 import type { AIAgentInput } from '@pikku/core/ai-agent'
@@ -95,10 +95,10 @@ type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-type TypedAgent = <Name extends keyof AgentMap>(
+type TypedAgent = <Name extends keyof FlattenedAgentMap>(
   name: Name,
   input: AIAgentInput
-) => Promise<{ runId: string; result: AgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
+) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
 
 export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgent>
   `
@@ -156,6 +156,40 @@ function toPascalCase(str: string): string {
     .split(/[-_]/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join('')
+}
+
+function generateExternalAgentImports(
+  externalPackages: Record<string, ExternalPackageConfig> | undefined
+): string {
+  if (!externalPackages || Object.keys(externalPackages).length === 0) {
+    return ''
+  }
+
+  let imports = '\n// External package Agent maps\n'
+  for (const [namespace, config] of Object.entries(externalPackages)) {
+    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${config.package}/.pikku/agent/pikku-agent-map.gen.d.js'\n`
+  }
+  return imports
+}
+
+function generateMergedAgentMap(
+  externalPackages: Record<string, ExternalPackageConfig> | undefined
+): string {
+  if (!externalPackages || Object.keys(externalPackages).length === 0) {
+    return `
+type FlattenedAgentMap = AgentMap
+`
+  }
+
+  return `
+type FlattenedAgentMap =
+  AgentMap${Object.keys(externalPackages)
+    .map(
+      (namespace) =>
+        ` & PrefixKeys<${toPascalCase(namespace)}AgentMap, '${namespace}'>`
+    )
+    .join('')}
+`
 }
 
 function generateRPCs(
