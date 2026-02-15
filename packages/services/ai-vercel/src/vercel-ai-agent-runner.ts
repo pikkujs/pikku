@@ -1,4 +1,4 @@
-import { generateText, tool as aiTool } from 'ai'
+import { generateText, tool as aiTool, Output } from 'ai'
 import { jsonSchema } from 'ai'
 import type { AIAgentRunnerService } from '@pikku/core/services'
 import type {
@@ -24,7 +24,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     }
   }
 
-  private async getProvider(providerName: string) {
+  private async getProvider(modelConfig: AIAgentModelConfig) {
+    const providerName = modelConfig.provider
     if (!this.providers[providerName]) {
       switch (providerName) {
         case 'openai': {
@@ -48,6 +49,15 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
           })
           break
         }
+        case 'ollama': {
+          const { createOpenAI } = await import('@ai-sdk/openai')
+          this.providers[providerName] = createOpenAI({
+            baseURL:
+              (modelConfig as any).baseURL || 'http://localhost:11434/v1',
+            apiKey: 'ollama',
+          })
+          break
+        }
         default:
           throw new Error(`Unknown AI provider: ${providerName}`)
       }
@@ -62,15 +72,17 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     tools: AIAgentToolDef[]
     maxSteps: number
     toolChoice: 'auto' | 'required' | 'none'
+    outputSchema?: Record<string, unknown>
     onStepFinish?: (step: AIAgentStep) => void
   }): Promise<{
     text: string
+    object?: unknown
     steps: AIAgentStep[]
     usage: { inputTokens: number; outputTokens: number }
   }> {
-    const { provider: providerName, model: modelName } = params.model
+    const { model: modelName } = params.model
 
-    const provider = await this.getProvider(providerName)
+    const provider = await this.getProvider(params.model)
     const sdkModel = provider(modelName)
 
     const aiTools = Object.fromEntries(
@@ -93,6 +105,13 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       tools: aiTools,
       maxSteps: params.maxSteps,
       toolChoice: params.toolChoice,
+      ...(params.outputSchema
+        ? {
+            experimental_output: Output.object({
+              schema: jsonSchema(params.outputSchema as any),
+            }),
+          }
+        : {}),
       onStepFinish: params.onStepFinish
         ? (step: any) => params.onStepFinish!(convertFromSDKStep(step))
         : undefined,
@@ -100,6 +119,9 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
     return {
       text: result.text,
+      object: params.outputSchema
+        ? (result as any).experimental_output
+        : undefined,
       steps: result.steps.map(convertFromSDKStep),
       usage: {
         inputTokens: result.usage?.promptTokens ?? 0,

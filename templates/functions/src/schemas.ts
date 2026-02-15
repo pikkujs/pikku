@@ -186,3 +186,8 @@ export const OnTestEventInputSchema = z.object({
 export const OnTestEventOutputSchema = z.object({
   payload: z.string(),
 })
+
+export const AgentOutputSchema = z.object({
+  message: z.string(),
+  todos: z.array(TodoSchema).optional(),
+})

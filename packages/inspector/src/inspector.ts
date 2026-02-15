@@ -91,7 +91,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     },
     agents: {
       agentsMeta: {},
-      files: new Set(),
+      files: new Map(),
     },
     cli: {
       meta: {
