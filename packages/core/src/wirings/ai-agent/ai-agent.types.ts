@@ -66,6 +66,35 @@ export interface AIAgentToolDef {
   execute: (input: unknown) => Promise<unknown>
 }
 
+export interface PikkuAIMiddlewareHooks<Services = any, Event = any> {
+  modifyInput?: (
+    services: Services,
+    ctx: { messages: AIMessage[]; instructions: string }
+  ) =>
+    | Promise<{ messages: AIMessage[]; instructions: string }>
+    | { messages: AIMessage[]; instructions: string }
+
+  modifyOutputStream?: (
+    services: Services,
+    ctx: {
+      event: Event
+      allEvents: readonly Event[]
+      state: Record<string, unknown>
+    }
+  ) => Promise<Event | null> | Event | null
+
+  modifyOutput?: (
+    services: Services,
+    ctx: {
+      text: string
+      messages: AIMessage[]
+      usage: { inputTokens: number; outputTokens: number }
+    }
+  ) =>
+    | Promise<{ text: string; messages: AIMessage[] }>
+    | { text: string; messages: AIMessage[] }
+}
+
 export type AIAgentMemoryConfig = {
   storage?: string
   vector?: string
@@ -95,6 +124,7 @@ export type CoreAIAgent<
   tags?: string[]
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
+  aiMiddleware?: PikkuAIMiddlewareHooks[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 
@@ -167,12 +197,18 @@ export type AIAgentMeta = Record<
   string,
   Omit<
     CoreAIAgent,
-    'input' | 'output' | 'middleware' | 'channelMiddleware' | 'permissions'
+    | 'input'
+    | 'output'
+    | 'middleware'
+    | 'channelMiddleware'
+    | 'aiMiddleware'
+    | 'permissions'
   > & {
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
     channelMiddleware?: MiddlewareMetadata[]
+    aiMiddleware?: MiddlewareMetadata[]
     permissions?: PermissionMetadata[]
   }
 >

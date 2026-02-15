@@ -13,6 +13,7 @@ import {
 import {
   resolveMiddleware,
   resolveChannelMiddleware,
+  resolveAIMiddleware,
 } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
@@ -166,6 +167,7 @@ export const addAIAgent: AddWiring = (
       tags,
       checker
     )
+    const aiMiddleware = resolveAIMiddleware(state, obj, checker)
     const permissions = resolvePermissions(state, obj, tags, checker)
 
     state.serviceAggregation.usedFunctions.add(nameValue)
@@ -200,6 +202,7 @@ export const addAIAgent: AddWiring = (
       outputSchema,
       middleware,
       channelMiddleware,
+      aiMiddleware,
       permissions,
     }
   }

@@ -14,6 +14,7 @@ import type {
   AIMessage,
   AIStreamChannel,
   AIStreamEvent,
+  PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
@@ -202,6 +203,23 @@ export async function streamAIAgent(
   const { singletonServices } = params
   const aiRunState = singletonServices.aiRunState
 
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+
+  let modifiedMessages = runnerParams.messages
+  let modifiedInstructions = runnerParams.instructions
+  for (const mw of aiMiddlewares) {
+    if (mw.modifyInput) {
+      const result = await mw.modifyInput(singletonServices, {
+        messages: modifiedMessages,
+        instructions: modifiedInstructions,
+      })
+      modifiedMessages = result.messages
+      modifiedInstructions = result.instructions
+    }
+  }
+  runnerParams.messages = modifiedMessages
+  runnerParams.instructions = modifiedInstructions
+
   if (aiRunState) {
     await aiRunState.createRun({
       runId,
@@ -219,6 +237,22 @@ export async function streamAIAgent(
     await storage.saveMessages(threadId, [userMessage])
   }
 
+  const streamMiddleware = aiMiddlewares
+    .filter((mw) => mw.modifyOutputStream)
+    .map((mw) => {
+      const state: Record<string, unknown> = {}
+      const allEvents: AIStreamEvent[] = []
+      return async (services: any, event: any, next: any) => {
+        allEvents.push(event)
+        const result = await mw.modifyOutputStream!(services, {
+          event,
+          allEvents,
+          state,
+        })
+        if (result != null) await next(result)
+      }
+    })
+
   const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
   const meta = agentsMeta[agentName]
   const allChannelMiddleware = combineChannelMiddleware(
@@ -226,7 +260,10 @@ export async function streamAIAgent(
     `stream:${agentName}`,
     {
       wireInheritedChannelMiddleware: meta?.channelMiddleware,
-      wireChannelMiddleware: agent.channelMiddleware as any,
+      wireChannelMiddleware: [
+        ...((agent.channelMiddleware as any[]) ?? []),
+        ...streamMiddleware,
+      ],
     }
   )
 
@@ -248,8 +285,23 @@ export async function streamAIAgent(
   try {
     await agentRunner.stream(runnerParams, persistingChannel)
 
-    if (storage && memoryConfig?.workingMemory && persistingChannel.fullText) {
-      const parsed = parseWorkingMemory(persistingChannel.fullText)
+    let outputText = persistingChannel.fullText
+    let outputMessages = runnerParams.messages
+    for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
+      const mw = aiMiddlewares[i]
+      if (mw.modifyOutput) {
+        const result = await mw.modifyOutput(singletonServices, {
+          text: outputText,
+          messages: outputMessages,
+          usage: { inputTokens: 0, outputTokens: 0 },
+        })
+        outputText = result.text
+        outputMessages = result.messages
+      }
+    }
+
+    if (storage && memoryConfig?.workingMemory && outputText) {
+      const parsed = parseWorkingMemory(outputText)
       if (parsed) {
         await storage.saveWorkingMemory(input.resourceId, 'resource', parsed)
       }
@@ -262,7 +314,7 @@ export async function streamAIAgent(
       threadId,
       input.resourceId,
       input.message,
-      persistingChannel.fullText
+      outputText
     )
 
     if (aiRunState) {
@@ -311,6 +363,7 @@ export async function runAIAgent(
   const sessionMap = agentSessionMap ?? new Map<string, string>()
 
   const {
+    agent,
     agentRunner,
     storage,
     vector,
@@ -320,6 +373,24 @@ export async function runAIAgent(
     userMessage,
     runnerParams,
   } = await prepareAgentRun(agentName, input, params, sessionMap)
+
+  const { singletonServices } = params
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+
+  let modifiedMessages = runnerParams.messages
+  let modifiedInstructions = runnerParams.instructions
+  for (const mw of aiMiddlewares) {
+    if (mw.modifyInput) {
+      const result = await mw.modifyInput(singletonServices, {
+        messages: modifiedMessages,
+        instructions: modifiedInstructions,
+      })
+      modifiedMessages = result.messages
+      modifiedInstructions = result.instructions
+    }
+  }
+  runnerParams.messages = modifiedMessages
+  runnerParams.instructions = modifiedInstructions
 
   const result = await agentRunner.run(runnerParams)
 
@@ -332,6 +403,21 @@ export async function runAIAgent(
     result
   )
 
+  let outputText = responseText
+  let outputMessages = runnerParams.messages
+  for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
+    const mw = aiMiddlewares[i]
+    if (mw.modifyOutput) {
+      const modResult = await mw.modifyOutput(singletonServices, {
+        text: outputText,
+        messages: outputMessages,
+        usage: result.usage,
+      })
+      outputText = modResult.text
+      outputMessages = modResult.messages
+    }
+  }
+
   await updateSemanticEmbeddings(
     memoryConfig,
     vector,
@@ -339,11 +425,11 @@ export async function runAIAgent(
     threadId,
     input.resourceId,
     input.message,
-    responseText
+    outputText
   )
 
   return {
-    text: responseText,
+    text: outputText,
     object: result.object,
     threadId,
     steps: result.steps,

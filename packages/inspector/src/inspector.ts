@@ -122,6 +122,9 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       instances: {},
       tagMiddleware: new Map(),
     },
+    aiMiddleware: {
+      definitions: {},
+    },
     permissions: {
       definitions: {},
       instances: {},
