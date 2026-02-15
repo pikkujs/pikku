@@ -142,11 +142,13 @@ export type CoreHTTPFunctionWiring<
     In,
     Out,
     any,
+    any,
     any
   > = CorePikkuFunction<In, Out>,
   PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
     In,
     Out,
+    any,
     any,
     any
   > = CorePikkuFunctionSessionless<In, Out>,
@@ -314,10 +316,10 @@ export interface PikkuHTTPResponse<Out = unknown> {
  */
 export type HTTPRouteConfig<
   PikkuFunction extends
-    | CorePikkuFunction<any, any, any, any>
-    | CorePikkuFunctionSessionless<any, any, any, any> =
-    | CorePikkuFunction<any, any, any, any>
-    | CorePikkuFunctionSessionless<any, any, any, any>,
+    | CorePikkuFunction<any, any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any, any> =
+    | CorePikkuFunction<any, any, any, any, any>
+    | CorePikkuFunctionSessionless<any, any, any, any, any>,
   PikkuPermission extends CorePikkuPermission<
     any,
     any,

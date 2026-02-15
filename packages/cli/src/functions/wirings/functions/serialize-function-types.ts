@@ -219,6 +219,7 @@ export type PikkuFunctionSessionless<
     In,
     Out,
     RequiredServices,
+    Session,
     PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow>, RequiredWires>
   >
 
@@ -239,6 +240,7 @@ export type PikkuFunction<
     In,
     Out,
     RequiredServices,
+    Session,
     PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow>, RequiredWires>
   >
 
