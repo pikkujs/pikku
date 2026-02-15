@@ -90,6 +90,7 @@ export type CoreAIAgent<
   instructions: string | string[]
   model: AIAgentModelConfig
   tools?: string[]
+  agents?: string[]
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
