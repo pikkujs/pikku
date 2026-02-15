@@ -65,6 +65,14 @@ export const all = pikkuVoidFunc({
       allImports.push(`${config.schemaDirectory}/register.gen.ts`)
     }
 
+    const agents = await rpc.invoke('pikkuAIAgent', null)
+    if (agents) {
+      allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
+      if (config.agent?.publicAgentPath) {
+        await rpc.invoke('pikkuPublicAgent', null)
+      }
+    }
+
     await rpc.invoke('pikkuRPCInternalMap', null)
     await rpc.invoke('pikkuRPCExposedMap', null)
     await rpc.invoke('pikkuPublicRPC', null)
@@ -155,14 +163,6 @@ export const all = pikkuVoidFunc({
       if (cli) {
         await rpc.invoke('pikkuCLIEntry', null)
         allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
-      }
-    }
-
-    const agents = await rpc.invoke('pikkuAIAgent', null)
-    if (agents) {
-      allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
-      if (config.agent?.publicAgentPath) {
-        await rpc.invoke('pikkuPublicAgent', null)
       }
     }
 
