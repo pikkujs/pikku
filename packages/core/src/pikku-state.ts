@@ -5,6 +5,7 @@ import {
   MCPToolMeta,
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
+import { AIAgentMeta } from './wirings/ai-agent/ai-agent.types.js'
 import { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 import { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
@@ -111,6 +112,10 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     toolsMeta: {} as MCPToolMeta,
     prompts: new Map(),
     promptsMeta: {} as MCPPromptMeta,
+  },
+  agent: {
+    agents: new Map(),
+    agentsMeta: {} as AIAgentMeta,
   },
   cli: {
     meta: { programs: {}, renderers: {} },

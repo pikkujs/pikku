@@ -421,6 +421,27 @@ const _getPikkuCLIConfig = async (
       result.mcpTypesFile = join(mcpDir, 'pikku-mcp-types.gen.ts')
     }
 
+    // AI Agent
+    const agentDir = join(result.outDir, 'agent')
+    if (!result.agentWiringsFile) {
+      result.agentWiringsFile = join(agentDir, 'pikku-agent-wirings.gen.ts')
+    }
+    if (!result.agentWiringMetaFile) {
+      result.agentWiringMetaFile = join(
+        agentDir,
+        'pikku-agent-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.agentWiringMetaJsonFile) {
+      result.agentWiringMetaJsonFile = join(
+        agentDir,
+        'pikku-agent-wirings-meta.gen.json'
+      )
+    }
+    if (!result.agentTypesFile) {
+      result.agentTypesFile = join(agentDir, 'pikku-agent-types.gen.ts')
+    }
+
     // CLI
     if (!result.cliWiringsFile) {
       result.cliWiringsFile = join(cliDir, 'pikku-cli-wirings.gen.ts')

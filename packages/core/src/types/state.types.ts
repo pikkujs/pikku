@@ -20,6 +20,7 @@ import {
   CoreMCPPrompt,
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
+import { CoreAIAgent, AIAgentMeta } from '../wirings/ai-agent/ai-agent.types.js'
 import {
   CoreQueueWorker,
   QueueWorkersMeta,
@@ -107,6 +108,10 @@ export interface PikkuPackageState {
     toolsMeta: MCPToolMeta
     prompts: Map<string, CoreMCPPrompt>
     promptsMeta: MCPPromptMeta
+  }
+  agent: {
+    agents: Map<string, CoreAIAgent>
+    agentsMeta: AIAgentMeta
   }
   cli: {
     meta: CLIMeta | Record<string, any> // Backward compatible with old published CLI format

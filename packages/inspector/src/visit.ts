@@ -20,6 +20,7 @@ import { addCLI, addCLIRenderers } from './add/add-cli.js'
 import { addSecret, addOAuth2Credential } from './add/add-secret.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
+import { addAIAgent } from './add/add-ai-agent.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -111,6 +112,7 @@ export const visitRoutes = (
   addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)
   addWorkflowGraph(logger, node, checker, state, options)
+  addAIAgent(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitRoutes(logger, checker, child, state, options)

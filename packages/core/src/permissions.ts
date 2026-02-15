@@ -127,6 +127,7 @@ const combinedPermissionsCache: Record<
   scheduler: {},
   trigger: {},
   mcp: {},
+  agent: {},
   cli: {},
   workflow: {},
 }
