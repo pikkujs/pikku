@@ -13,7 +13,7 @@ export const serializeChannelTypes = (
 
 import { CoreChannel, CorePikkuChannelMiddleware, CorePikkuChannelMiddlewareFactory, wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore, addChannelMiddleware as addChannelMiddlewareCore } from '@pikku/core/channel'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
-import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, SingletonServices } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, Services } from '${functionTypesImportPath}'
 import type { CorePermissionGroup } from '@pikku/core'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -165,9 +165,9 @@ export function defineChannelRoutes<T extends Record<string, any>>(routes: T): T
   return defineChannelRoutesCore(routes)
 }
 
-export type PikkuChannelMiddleware<RequiredServices extends SingletonServices = SingletonServices, Event = unknown> = CorePikkuChannelMiddleware<RequiredServices, Event>
+export type PikkuChannelMiddleware<RequiredServices extends Services = Services, Event = unknown> = CorePikkuChannelMiddleware<RequiredServices, Event>
 
-export const pikkuChannelMiddleware = <RequiredServices extends SingletonServices = SingletonServices, Event = unknown>(
+export const pikkuChannelMiddleware = <RequiredServices extends Services = Services, Event = unknown>(
   middleware: PikkuChannelMiddleware<RequiredServices, Event>
 ): PikkuChannelMiddleware<RequiredServices, Event> => {
   return middleware

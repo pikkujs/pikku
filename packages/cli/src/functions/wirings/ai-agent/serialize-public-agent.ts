@@ -1,5 +1,5 @@
 export const serializePublicAgent = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, pikkuChannelFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
 import { pikkuState } from '@pikku/core'
 import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
@@ -42,13 +42,12 @@ export const agentCaller = pikkuSessionlessFunc<
   },
 })
 
-export const agentStreamCaller = pikkuSessionlessFunc<
+export const agentStreamCaller = pikkuChannelFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   void
 >({
   auth: false,
   func: async (services, data, { channel }) => {
-    if (!channel) throw new Error('SSE channel not available')
     await streamAIAgent(
       data.agentName,
       { message: data.message, threadId: data.threadId, resourceId: data.resourceId },
