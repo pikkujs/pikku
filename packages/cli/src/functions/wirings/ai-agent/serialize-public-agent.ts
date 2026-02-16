@@ -5,11 +5,11 @@ import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
 const agentRoutes = [
-  { pikkuFuncId: 'agentCaller', route: '/rpc/agent/:agentName', method: 'post' },
-  { pikkuFuncId: 'agentStreamCaller', route: '/rpc/agent/:agentName/stream', method: 'post', sse: true },
-  { pikkuFuncId: 'agentApproveCaller', route: '/rpc/agent/:agentName/approve', method: 'post' },
-  { pikkuFuncId: 'http:options:/rpc/agent/:agentName', route: '/rpc/agent/:agentName', method: 'options' },
-  { pikkuFuncId: 'http:options:/rpc/agent/:agentName/stream', route: '/rpc/agent/:agentName/stream', method: 'options' },
+  { pikkuFuncId: 'agentCaller', route: '/rpc/agent/:agentName', method: 'post' as const },
+  { pikkuFuncId: 'agentStreamCaller', route: '/rpc/agent/:agentName/stream', method: 'post' as const, sse: true as const },
+  { pikkuFuncId: 'agentApproveCaller', route: '/rpc/agent/:agentName/approve', method: 'post' as const },
+  { pikkuFuncId: 'http:options:/rpc/agent/:agentName', route: '/rpc/agent/:agentName', method: 'options' as const },
+  { pikkuFuncId: 'http:options:/rpc/agent/:agentName/stream', route: '/rpc/agent/:agentName/stream', method: 'options' as const },
 ]
 
 const httpMeta = pikkuState(null, 'http', 'meta')
@@ -25,6 +25,8 @@ for (const r of agentRoutes) {
     functionType: 'inline',
     sessionless: true,
     name: r.pikkuFuncId,
+    inputSchemaName: null,
+    outputSchemaName: null,
   }
 }
 
@@ -34,7 +36,7 @@ export const agentCaller = pikkuSessionlessFunc<
 >({
   auth: false,
   func: async (_services, data, { rpc }) => {
-    return await rpc.agent(data.agentName, {
+    return await (rpc.agent as any)(data.agentName, {
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
@@ -51,7 +53,7 @@ export const agentStreamCaller = pikkuChannelFunc<
     await streamAIAgent(
       data.agentName,
       { message: data.message, threadId: data.threadId, resourceId: data.resourceId },
-      channel as AIStreamChannel,
+      channel as unknown as AIStreamChannel,
       { singletonServices: services }
     )
   },
