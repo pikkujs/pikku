@@ -46,11 +46,11 @@ export const agentApproveCaller = pikkuSessionlessFunc<
 wireHTTPRoutes({
   auth: false,
   routes: {
-    options: { route: '/agent/:agentName', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
-    call: { route: '/agent/:agentName', method: 'post', func: agentCaller },
-    streamOptions: { route: '/agent/:agentName/stream', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
-    stream: { route: '/agent/:agentName/stream', method: 'post', sse: true, func: agentStreamCaller },
-    approve: { route: '/agent/:agentName/approve', method: 'post', func: agentApproveCaller },
+    options: { route: '/rpc/agent/:agentName', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
+    call: { route: '/rpc/agent/:agentName', method: 'post', func: agentCaller },
+    streamOptions: { route: '/rpc/agent/:agentName/stream', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
+    stream: { route: '/rpc/agent/:agentName/stream', method: 'post', sse: true, func: agentStreamCaller },
+    approve: { route: '/rpc/agent/:agentName/approve', method: 'post', func: agentApproveCaller },
   },
 })
 `

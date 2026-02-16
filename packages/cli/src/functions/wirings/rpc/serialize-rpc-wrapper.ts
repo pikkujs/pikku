@@ -70,7 +70,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the agent's output
      */
     agent: TypedAgent = async (agentName, input) => {
-       return await this.pikkuFetch.post(\`/agent/\${agentName}\` as never, input) as any
+       return await this.pikkuFetch.post(\`/rpc/agent/\${agentName}\` as never, input) as any
     }
 }
 
