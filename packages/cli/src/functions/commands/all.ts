@@ -70,11 +70,6 @@ export const all = pikkuVoidFunc({
 
     const hasInternalRPCs = await rpc.invoke('pikkuRPC', null)
 
-    const schemas = await rpc.invoke('pikkuSchemas', null)
-    if (schemas) {
-      allImports.push(`${config.schemaDirectory}/register.gen.ts`)
-    }
-
     const agents = await rpc.invoke('pikkuAIAgent', null)
     if (agents) {
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
@@ -84,8 +79,6 @@ export const all = pikkuVoidFunc({
       }
     }
 
-    await rpc.invoke('pikkuRPCInternalMap', null)
-    await rpc.invoke('pikkuRPCExposedMap', null)
     await rpc.invoke('pikkuPublicRPC', null)
     await rpc.invoke('pikkuRPCClient', null)
 
@@ -104,6 +97,14 @@ export const all = pikkuVoidFunc({
     if (agents || !config.externalPackage) {
       await getInspectorState(true)
     }
+
+    const schemas = await rpc.invoke('pikkuSchemas', null)
+    if (schemas) {
+      allImports.push(`${config.schemaDirectory}/register.gen.ts`)
+    }
+
+    await rpc.invoke('pikkuRPCInternalMap', null)
+    await rpc.invoke('pikkuRPCExposedMap', null)
 
     if (!config.externalPackage) {
       const http = await rpc.invoke('pikkuHTTP', null)

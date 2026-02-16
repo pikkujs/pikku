@@ -17,18 +17,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/google@npm:^1.0.0":
-  version: 1.2.22
-  resolution: "@ai-sdk/google@npm:1.2.22"
-  dependencies:
-    "@ai-sdk/provider": "npm:1.1.3"
-    "@ai-sdk/provider-utils": "npm:2.2.8"
-  peerDependencies:
-    zod: ^3.0.0
-  checksum: 10/a00d74dcd37d190642a16e767085c0dc83aa44e06b81f28318fab6fa8eba398197bcb5c2da6d5b188981fefc7e2b61729a5bea595338d42d8e939c73cc29dbaf
-  languageName: node
-  linkType: hard
-
 "@ai-sdk/openai@npm:^1.0.0":
   version: 1.3.24
   resolution: "@ai-sdk/openai@npm:1.3.24"
@@ -3896,9 +3884,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/ai-vercel@workspace:packages/services/ai-vercel"
   dependencies:
-    "@ai-sdk/anthropic": "npm:^1.0.0"
-    "@ai-sdk/google": "npm:^1.0.0"
-    "@ai-sdk/openai": "npm:^1.0.0"
     ai: "npm:^4.0.0"
     typescript: "npm:^5.9"
   peerDependencies:
@@ -4259,6 +4244,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/templates-ai-postgres@workspace:templates/ai-postgres":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-ai-postgres@workspace:templates/ai-postgres"
+  dependencies:
+    "@ai-sdk/anthropic": "npm:^1.0.0"
+    "@ai-sdk/openai": "npm:^1.0.0"
+    "@pikku/ai-vercel": "npm:^0.11.0"
+    "@pikku/core": "npm:^0.11.2"
+    "@pikku/express": "npm:^0.11.1"
+    "@pikku/pg": "npm:^0.11.2"
+    "@pikku/schema-cfworker": "npm:^0.11.0"
+    "@types/node": "npm:^24"
+    postgres: "npm:^3.4.8"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/templates-aws-lambda-websocket@workspace:templates/aws-lambda-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-aws-lambda-websocket@workspace:templates/aws-lambda-websocket"
@@ -4449,12 +4452,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
-    "@pikku/ai-vercel": "npm:^0.11.0"
     "@pikku/cli": "npm:^0.11.3"
     "@pikku/core": "npm:^0.11.2"
     "@pikku/fetch": "npm:^0.11.1"
     "@pikku/jose": "npm:^0.11.1"
-    "@pikku/pg": "npm:^0.11.2"
     "@pikku/schema-cfworker": "npm:^0.11.0"
     "@pikku/templates-function-external": "workspace:*"
     "@pikku/websocket": "npm:^0.11.0"
@@ -4462,7 +4463,6 @@ __metadata:
     "@types/ws": "npm:^8"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
-    postgres: "npm:^3.4.8"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
     ws: "npm:^8.19.0"
