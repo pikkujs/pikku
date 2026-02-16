@@ -70,6 +70,7 @@ export const all = pikkuVoidFunc({
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
       if (config.agent?.publicAgentPath) {
         await rpc.invoke('pikkuPublicAgent', null)
+        allImports.push(config.agent.publicAgentPath)
       }
     }
 

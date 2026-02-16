@@ -81,14 +81,14 @@ export const DeleteResponseSchema = z.object({
 export const ListTodosWithUserInputSchema = ListTodosInputSchema.extend({
   userId: z
     .string()
-    .optional()
+    .nullish()
     .describe('User ID (uses demo user if not provided)'),
 })
 
 export const CreateTodoWithUserInputSchema = CreateTodoInputSchema.extend({
   userId: z
     .string()
-    .optional()
+    .nullish()
     .describe('User ID (uses demo user if not provided)'),
 })
 
@@ -148,18 +148,18 @@ export const UnsubscribeOutputSchema = z.object({
 export const UserIdInputSchema = z.object({
   userId: z
     .string()
-    .optional()
+    .nullish()
     .describe('User ID (uses demo user if not provided)'),
 })
 
 export const PrioritizePromptInputSchema = z.object({
   userId: z
     .string()
-    .optional()
+    .nullish()
     .describe('User ID (uses demo user if not provided)'),
   focus: z
     .enum(['urgency', 'importance', 'quick-wins'])
-    .optional()
+    .nullish()
     .describe('Prioritization focus'),
 })
 

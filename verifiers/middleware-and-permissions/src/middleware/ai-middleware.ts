@@ -6,7 +6,7 @@ export const testAIMiddleware = pikkuAIMiddleware<any, AIStreamEvent>({
     logger.info({ type: 'ai-middleware', name: 'modifyInput', phase: 'before' })
     return { messages, instructions }
   },
-  modifyOutputStream: async ({ logger }, { event, state }) => {
+  modifyOutputStream: async ({ logger }, { allEvents, event, state }) => {
     logger.info({
       type: 'ai-middleware',
       name: 'modifyOutputStream',
