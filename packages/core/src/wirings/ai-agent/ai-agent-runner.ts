@@ -61,7 +61,7 @@ export class ToolApprovalRequired extends PikkuError {
 
 export const addAIAgent = (
   agentName: string,
-  agent: CoreAIAgent,
+  agent: CoreAIAgent<any, any>,
   packageName: string | null = null
 ) => {
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
