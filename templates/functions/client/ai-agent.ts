@@ -1,103 +1,129 @@
-import '../.pikku/pikku-bootstrap.gen.js'
-import { runAIAgent, streamAIAgent } from '@pikku/core/ai-agent'
-import type { AIStreamChannel, AIStreamEvent } from '@pikku/core/ai-agent'
-import {
-  createConfig,
-  createSingletonServices,
-  createWireServices,
-} from '../src/services.js'
-import { randomUUID } from 'crypto'
+import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
 
-const config = await createConfig()
-const singletonServices = await createSingletonServices(config)
+const url = process.env.TODO_APP_URL || 'http://localhost:4002'
+pikkuRPC.setServerUrl(url)
+console.log('Starting AI agent test with url:', url)
 
-const threadId = 'memory-test'
-const params = { singletonServices, createWireServices }
+const TIMEOUT = 60000
+const RETRY_INTERVAL = 2000
+const start = Date.now()
 
-console.log('=== runAIAgent Tests ===\n')
+const runId = Math.random().toString(36).slice(2, 8)
+const threadId = `memory-test-${runId}`
 
-console.log('--- Turn 1: Create a todo ---')
-const r1 = await runAIAgent(
-  'todo-assistant',
-  {
+async function testRunAgent() {
+  console.log('--- Turn 1: Create a todo ---')
+  const r1 = await pikkuRPC.agent('todo-assistant', {
     message: 'Create a todo called "Buy milk" with high priority',
     threadId,
     resourceId: 'test-user',
-  },
-  params
-)
-console.log('Response:', JSON.stringify(r1.object ?? r1.text, null, 2))
+  })
+  console.log('Response:', JSON.stringify(r1.result, null, 2))
 
-console.log('\n--- Turn 2: Ask about it (should remember) ---')
-const r2 = await runAIAgent(
-  'todo-assistant',
-  {
+  console.log('\n--- Turn 2: Ask about it (should remember) ---')
+  const r2 = await pikkuRPC.agent('todo-assistant', {
     message: 'What did I just ask you to do?',
     threadId,
     resourceId: 'test-user',
-  },
-  params
-)
-console.log('Response:', JSON.stringify(r2.object ?? r2.text, null, 2))
+  })
+  console.log('Response:', JSON.stringify(r2.result, null, 2))
 
-console.log('\n--- Turn 3: Router delegation (fetch todos + plan day) ---')
-const r3 = await runAIAgent(
-  'main-router',
-  {
+  console.log('\n--- Turn 3: Router delegation (fetch todos + plan day) ---')
+  const r3 = await pikkuRPC.agent('main-router', {
     message: 'Get my todos and plan out my day, suggest tasks accordingly',
-    threadId: 'router-test',
+    threadId: `router-test-${runId}`,
     resourceId: 'test-user',
-  },
-  params
-)
-console.log('Response:', JSON.stringify(r3.object ?? r3.text, null, 2))
-
-console.log('\n=== streamAIAgent Tests ===\n')
-
-console.log('--- Stream: Ask daily-planner for advice ---')
-const events: AIStreamEvent[] = []
-const channel: AIStreamChannel = {
-  channelId: `test-${randomUUID()}`,
-  openingData: undefined,
-  get state() {
-    return 'open' as const
-  },
-  close: () => {},
-  send: (event: AIStreamEvent) => {
-    events.push(event)
-    if (event.type === 'text-delta') {
-      process.stdout.write(event.text)
-    } else if (event.type === 'tool-call') {
-      console.log(`\n  [tool-call] ${event.toolName}`)
-    } else if (event.type === 'tool-result') {
-      console.log(`  [tool-result] ${event.toolName}`)
-    } else if (event.type === 'usage') {
-      console.log(
-        `  [usage] in=${event.tokens.input} out=${event.tokens.output}`
-      )
-    } else if (event.type === 'done') {
-      console.log('\n  [done]')
-    } else if (event.type === 'error') {
-      console.log(`\n  [error] ${event.message}`)
-    }
-  },
+  })
+  console.log('Response:', JSON.stringify(r3.result, null, 2))
 }
 
-await streamAIAgent(
-  'daily-planner',
-  {
-    message: 'Plan my afternoon — I have 3 hours free',
-    threadId: 'stream-test',
-    resourceId: 'test-user',
-  },
-  channel,
-  params
-)
+async function testStreamAgent() {
+  console.log('\n--- Stream: Ask daily-planner for advice ---')
 
-console.log(`\nTotal events: ${events.length}`)
-const textDeltas = events.filter((e) => e.type === 'text-delta').length
-const usageEvents = events.filter((e) => e.type === 'usage')
-console.log(`Text deltas: ${textDeltas}`)
-console.log(`Usage events: ${usageEvents.length}`)
+  const response = await fetch(`${url}/rpc/agent/daily-planner/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    },
+    body: JSON.stringify({
+      message: 'Plan my afternoon — I have 3 hours free',
+      threadId: `stream-test-${runId}`,
+      resourceId: 'test-user',
+    }),
+  })
 
-process.exit(0)
+  if (!response.ok || !response.body) {
+    throw new Error(
+      `Stream failed: ${response.status} ${await response.text()}`
+    )
+  }
+
+  let eventCount = 0
+  let textDeltas = 0
+  let usageEvents = 0
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  for await (const chunk of response.body) {
+    buffer += decoder.decode(chunk, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const data = JSON.parse(line.slice(6))
+      eventCount++
+
+      switch (data.type) {
+        case 'text-delta':
+          textDeltas++
+          process.stdout.write(data.text)
+          break
+        case 'tool-call':
+          console.log(`\n  [tool-call] ${data.toolName}`)
+          break
+        case 'tool-result':
+          console.log(`  [tool-result] ${data.toolName}`)
+          break
+        case 'usage':
+          usageEvents++
+          console.log(
+            `\n  [usage] in=${data.tokens.input} out=${data.tokens.output}`
+          )
+          break
+        case 'done':
+          console.log('  [done]')
+          break
+        case 'error':
+          console.log(`\n  [error] ${data.message}`)
+          break
+      }
+    }
+  }
+
+  console.log(`Total events: ${eventCount}`)
+  console.log(`Text deltas: ${textDeltas}`)
+  console.log(`Usage events: ${usageEvents}`)
+}
+
+async function check() {
+  try {
+    await testRunAgent()
+    await testStreamAgent()
+    console.log('\n✅ AI agent test passed')
+    process.exit(0)
+  } catch (err: any) {
+    console.log(`Still failing (${err.message ?? err}), retrying...`)
+  }
+
+  if (Date.now() - start > TIMEOUT) {
+    console.error(`❌ AI agent test failed after ${TIMEOUT / 1000} seconds`)
+    process.exit(1)
+  } else {
+    setTimeout(check, RETRY_INTERVAL)
+  }
+}
+
+check()

@@ -15,6 +15,9 @@
   "externalPackages": {
     "ext": { "package": "@pikku/templates-function-external" }
   },
+  "agent": {
+    "publicAgentPath": ".pikku/agent/pikku-agent-public.gen.ts"
+  },
   "cli": {
     "entrypoints": {
       "todo-cli": "client/cli-local.gen.ts"

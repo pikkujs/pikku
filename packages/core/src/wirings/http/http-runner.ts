@@ -332,7 +332,13 @@ const executeRoute = async (
     throw new Error("Can't skip trying to get user session if auth is required")
   }
 
-  const data = () => http.request!.data()
+  let cachedData: unknown | undefined
+  const data = async () => {
+    if (cachedData === undefined) {
+      cachedData = await http.request!.data()
+    }
+    return cachedData
+  }
   let channel: PikkuChannel<unknown, unknown> | undefined
 
   if (matchedRoute.route.sse) {
@@ -387,17 +393,15 @@ const executeRoute = async (
       sessionService: userSession,
     }
   )
-
-  // Respond with either a binary or JSON response based on configuration
-  if (route.returnsJSON === false) {
+  if (matchedRoute.route.sse) {
+    channel?.close()
+  } else if (route.returnsJSON === false) {
     http?.response?.arrayBuffer(result)
   } else {
     http?.response?.json(result)
   }
 
   http?.response?.status(200)
-  // TODO: Evaluate if the response stream should be explicitly ended.
-  // http?.response?.end()
 
   return wireServices ? { result, wireServices } : { result }
 }

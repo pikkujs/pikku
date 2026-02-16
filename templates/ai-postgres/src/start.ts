@@ -26,16 +26,21 @@ async function main(): Promise<void> {
     const secrets = new LocalSecretService()
 
     const providers: Record<string, any> = {
-      openai: createOpenAI({
-        apiKey: await secrets.getSecret('OPENAI_API_KEY'),
-      }),
-      anthropic: createAnthropic({
-        apiKey: await secrets.getSecret('ANTHROPIC_API_KEY'),
-      }),
       ollama: createOpenAI({
         baseURL: 'http://localhost:11434/v1',
         apiKey: 'ollama',
       }),
+    }
+
+    if (await secrets.hasSecret('OPENAI_API_KEY')) {
+      providers.openai = createOpenAI({
+        apiKey: await secrets.getSecret('OPENAI_API_KEY'),
+      })
+    }
+    if (await secrets.hasSecret('ANTHROPIC_API_KEY')) {
+      providers.anthropic = createAnthropic({
+        apiKey: await secrets.getSecret('ANTHROPIC_API_KEY'),
+      })
     }
 
     const singletonServices = await createSingletonServices(config, {
