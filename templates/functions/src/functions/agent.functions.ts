@@ -1,6 +1,7 @@
 import { pikkuAIAgent } from '../../.pikku/agent/pikku-agent-types.gen.js'
 import { AgentOutputSchema } from '../schemas.js'
 import { appendModified, logAgentIO } from '../middleware.js'
+import { listTodos, createTodo } from './todos.functions.js'
 
 export const todoAssistant = pikkuAIAgent({
   name: 'todo-assistant',
@@ -8,7 +9,7 @@ export const todoAssistant = pikkuAIAgent({
   instructions:
     'You help users manage their todo lists. Always respond with a message and optionally include the todos array if relevant.',
   model: 'ollama/qwen2.5:7b',
-  tools: ['listTodos', 'createTodo'],
+  tools: [listTodos, createTodo],
   memory: { storage: 'aiStorage', lastMessages: 10 },
   maxSteps: 5,
   toolChoice: 'auto',
@@ -32,6 +33,6 @@ export const mainRouter = pikkuAIAgent({
   instructions:
     "You coordinate between agents. First fetch the user's todos, then pass them to the daily planner for scheduling advice.",
   model: 'ollama/qwen2.5:7b',
-  agents: ['todo-assistant', 'daily-planner'],
+  agents: [todoAssistant, dailyPlanner],
   maxSteps: 5,
 })

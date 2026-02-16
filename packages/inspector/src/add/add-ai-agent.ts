@@ -1,11 +1,10 @@
 import * as ts from 'typescript'
 import {
   getPropertyValue,
-  getArrayPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
-import { AddWiring, SchemaRef } from '../types.js'
+import { AddWiring, InspectorLogger, SchemaRef } from '../types.js'
 import {
   extractFunctionName,
   funcIdToTypeName,
@@ -18,6 +17,220 @@ import {
 import { resolvePermissions } from '../utils/permissions.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
+
+function resolveToolReferences(
+  obj: ts.ObjectLiteralExpression,
+  checker: ts.TypeChecker,
+  agentName: string,
+  logger: InspectorLogger
+): string[] | null {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'tools'
+  )
+
+  if (!property || !ts.isPropertyAssignment(property)) {
+    return null
+  }
+
+  const initializer = property.initializer
+  if (!ts.isArrayLiteralExpression(initializer)) {
+    return null
+  }
+
+  const resolved: string[] = []
+
+  for (const element of initializer.elements) {
+    if (ts.isStringLiteral(element)) {
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' tools array contains a string literal '${element.text}'. ` +
+          `Use a function reference instead (e.g., import the pikkuFunc variable).`
+      )
+      continue
+    }
+
+    if (ts.isCallExpression(element) && ts.isIdentifier(element.expression)) {
+      const calleeName = element.expression.text
+
+      if (calleeName === 'workflow') {
+        const [firstArg] = element.arguments
+        if (firstArg && ts.isStringLiteral(firstArg)) {
+          resolved.push(`workflow:${firstArg.text}`)
+          continue
+        }
+      }
+
+      if (calleeName === 'external') {
+        const [firstArg] = element.arguments
+        if (firstArg && ts.isStringLiteral(firstArg)) {
+          resolved.push(firstArg.text)
+          continue
+        }
+      }
+    }
+
+    if (ts.isIdentifier(element)) {
+      const rpcName = resolveIdentifierToRpcName(element, checker)
+      if (rpcName) {
+        resolved.push(rpcName)
+        continue
+      }
+
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' tools array contains identifier '${element.text}' ` +
+          `that could not be resolved to a pikkuFunc.`
+      )
+    }
+  }
+
+  return resolved.length > 0 ? resolved : null
+}
+
+function resolveAgentReferences(
+  obj: ts.ObjectLiteralExpression,
+  checker: ts.TypeChecker,
+  agentName: string,
+  logger: InspectorLogger
+): string[] | null {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'agents'
+  )
+
+  if (!property || !ts.isPropertyAssignment(property)) {
+    return null
+  }
+
+  const initializer = property.initializer
+  if (!ts.isArrayLiteralExpression(initializer)) {
+    return null
+  }
+
+  const resolved: string[] = []
+
+  for (const element of initializer.elements) {
+    if (ts.isStringLiteral(element)) {
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' agents array contains a string literal '${element.text}'. ` +
+          `Use an agent reference instead (e.g., import the pikkuAIAgent variable).`
+      )
+      continue
+    }
+
+    if (ts.isIdentifier(element)) {
+      const name = resolveIdentifierToAgentName(element, checker)
+      if (name) {
+        resolved.push(name)
+        continue
+      }
+
+      logger.critical(
+        ErrorCode.INVALID_VALUE,
+        `AI agent '${agentName}' agents array contains identifier '${element.text}' ` +
+          `that could not be resolved to a pikkuAIAgent.`
+      )
+    }
+  }
+
+  return resolved.length > 0 ? resolved : null
+}
+
+function resolveIdentifierToRpcName(
+  identifier: ts.Identifier,
+  checker: ts.TypeChecker
+): string | null {
+  const symbol = checker.getSymbolAtLocation(identifier)
+  if (!symbol) return null
+
+  let resolved = symbol
+  if (resolved.flags & ts.SymbolFlags.Alias) {
+    resolved = checker.getAliasedSymbol(resolved) ?? resolved
+  }
+
+  const decl = resolved.valueDeclaration ?? resolved.declarations?.[0]
+  if (!decl) return null
+
+  if (ts.isVariableDeclaration(decl) && decl.initializer) {
+    if (
+      ts.isCallExpression(decl.initializer) &&
+      ts.isIdentifier(decl.initializer.expression)
+    ) {
+      const callName = decl.initializer.expression.text
+      if (
+        callName === 'pikkuFunc' ||
+        callName === 'pikkuSessionlessFunc' ||
+        callName === 'pikkuVoidFunc'
+      ) {
+        const firstArg = decl.initializer.arguments[0]
+        if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
+          for (const prop of firstArg.properties) {
+            if (
+              ts.isPropertyAssignment(prop) &&
+              ts.isIdentifier(prop.name) &&
+              prop.name.text === 'override' &&
+              ts.isStringLiteral(prop.initializer)
+            ) {
+              return prop.initializer.text
+            }
+          }
+        }
+
+        if (ts.isIdentifier(decl.name)) {
+          return decl.name.text
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+function resolveIdentifierToAgentName(
+  identifier: ts.Identifier,
+  checker: ts.TypeChecker
+): string | null {
+  const symbol = checker.getSymbolAtLocation(identifier)
+  if (!symbol) return null
+
+  let resolved = symbol
+  if (resolved.flags & ts.SymbolFlags.Alias) {
+    resolved = checker.getAliasedSymbol(resolved) ?? resolved
+  }
+
+  const decl = resolved.valueDeclaration ?? resolved.declarations?.[0]
+  if (!decl) return null
+
+  if (ts.isVariableDeclaration(decl) && decl.initializer) {
+    if (
+      ts.isCallExpression(decl.initializer) &&
+      ts.isIdentifier(decl.initializer.expression) &&
+      decl.initializer.expression.text === 'pikkuAIAgent'
+    ) {
+      const firstArg = decl.initializer.arguments[0]
+      if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
+        for (const prop of firstArg.properties) {
+          if (
+            ts.isPropertyAssignment(prop) &&
+            ts.isIdentifier(prop.name) &&
+            prop.name.text === 'name' &&
+            ts.isStringLiteral(prop.initializer)
+          ) {
+            return prop.initializer.text
+          }
+        }
+      }
+    }
+  }
+
+  return null
+}
 
 export const addAIAgent: AddWiring = (
   logger,
@@ -62,7 +275,18 @@ export const addAIAgent: AddWiring = (
 
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
-    const agentsValue = getArrayPropertyValue(obj, 'agents')
+    const toolsValue = resolveToolReferences(
+      obj,
+      checker,
+      nameValue || '',
+      logger
+    )
+    const agentsValue = resolveAgentReferences(
+      obj,
+      checker,
+      nameValue || '',
+      logger
+    )
 
     if (!nameValue) {
       logger.critical(
@@ -196,6 +420,7 @@ export const addAIAgent: AddWiring = (
       ...(toolChoiceValue !== null && {
         toolChoice: toolChoiceValue as 'auto' | 'required' | 'none',
       }),
+      ...(toolsValue !== null && { tools: toolsValue }),
       ...(agentsValue !== null && { agents: agentsValue }),
       tags,
       inputSchema,
