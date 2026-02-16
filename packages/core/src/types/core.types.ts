@@ -25,8 +25,7 @@ import { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
 import { SchedulerService } from '../services/scheduler-service.js'
 import { DeploymentService } from '../services/deployment-service.js'
 import { AIStorageService } from '../services/ai-storage-service.js'
-import { AIVectorService } from '../services/ai-vector-service.js'
-import { AIEmbedderService } from '../services/ai-embedder-service.js'
+
 import { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
@@ -202,10 +201,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   deploymentService?: DeploymentService
   /** AI agent storage service (threads, messages, working memory) */
   aiStorage?: AIStorageService
-  /** AI vector store service (embeddings) */
-  aiVector?: AIVectorService
-  /** AI embedder service (text to vectors) */
-  aiEmbedder?: AIEmbedderService
+
   /** AI agent runner service (model calls + tool loop) */
   aiAgentRunner?: AIAgentRunnerService
   /** AI run state service (run lifecycle + approval persistence) */

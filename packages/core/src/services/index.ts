@@ -15,8 +15,7 @@ export * from './scheduler-service.js'
 export * from './trigger-service.js'
 export * from './deployment-service.js'
 export * from './ai-storage-service.js'
-export * from './ai-vector-service.js'
-export * from './ai-embedder-service.js'
+
 export * from './ai-agent-runner-service.js'
 export * from './ai-run-state-service.js'
 
