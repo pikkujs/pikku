@@ -3,14 +3,11 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/ai-vercel": "^0.11.0",
     "@pikku/core": "^0.11.2",
     "@pikku/jose": "^0.11.1",
-    "@pikku/pg": "^0.11.2",
     "@pikku/schema-cfworker": "^0.11.0",
     "@pikku/templates-function-external": "workspace:*",
     "eventsource": "^4.1.0",
-    "postgres": "^3.4.8",
     "ws": "^8.19.0",
     "zod": "^4"
   },

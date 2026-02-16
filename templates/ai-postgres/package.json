@@ -1,0 +1,30 @@
+{
+  "name": "@pikku/templates-ai-postgres",
+  "type": "module",
+  "main": "src/start.ts",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
+    "start": "tsx src/start.ts",
+    "dev": "tsx --watch src/start.ts",
+    "test:ai-agent": "npx tsx ../functions/client/ai-agent.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "@pikku/ai-vercel": "^0.11.0",
+    "@pikku/core": "^0.11.2",
+    "@pikku/express": "^0.11.1",
+    "@pikku/pg": "^0.11.2",
+    "@pikku/schema-cfworker": "^0.11.0",
+    "postgres": "^3.4.8",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  },
+  "devDependencies": {
+    "@types/node": "^24"
+  }
+}
