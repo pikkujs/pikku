@@ -12,7 +12,7 @@
   "dependencies": {
     "@inquirer/prompts": "^7.3.2",
     "chalk": "^5.4.1",
-    "commander": "^14.0.2",
+    "commander": "^14.0.3",
     "giget": "^1.2.4",
     "nanospinner": "^1.2.2"
   },
