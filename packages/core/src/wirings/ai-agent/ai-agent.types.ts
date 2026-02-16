@@ -102,7 +102,6 @@ export type AIAgentMemoryConfig = {
   embedder?: string
   lastMessages?: number
   workingMemory?: boolean
-  semanticRecall?: { topK?: number } | false
 }
 
 export type CoreAIAgent<
