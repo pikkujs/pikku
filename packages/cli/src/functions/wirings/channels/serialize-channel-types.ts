@@ -1,15 +1,19 @@
 /**
  * Generates type definitions for WebSocket channel wirings
  */
-export const serializeChannelTypes = (functionTypesImportPath: string) => {
-  return `/**
+export const serializeChannelTypes = (
+  functionTypesImportPath: string,
+  packageName?: string
+) => {
+  const packageNameValue = packageName ? `'${packageName}'` : 'null'
 
+  return `/**
  * Channel-specific type definitions for tree-shaking optimization
  */
 
-import { CoreChannel, wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore } from '@pikku/core/channel'
+import { CoreChannel, CorePikkuChannelMiddleware, CorePikkuChannelMiddlewareFactory, wireChannel as wireChannelCore, defineChannelRoutes as defineChannelRoutesCore, addChannelMiddleware as addChannelMiddlewareCore } from '@pikku/core/channel'
 import { AssertHTTPWiringParams } from '@pikku/core/http'
-import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuPermission, PikkuMiddleware, SingletonServices } from '${functionTypesImportPath}'
 import type { CorePermissionGroup } from '@pikku/core'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
@@ -160,5 +164,22 @@ export const wireChannel = <ChannelData, Channel extends string>(
 export function defineChannelRoutes<T extends Record<string, any>>(routes: T): T {
   return defineChannelRoutesCore(routes)
 }
+
+export type PikkuChannelMiddleware<RequiredServices extends SingletonServices = SingletonServices, Event = unknown> = CorePikkuChannelMiddleware<RequiredServices, Event>
+
+export const pikkuChannelMiddleware = <RequiredServices extends SingletonServices = SingletonServices, Event = unknown>(
+  middleware: PikkuChannelMiddleware<RequiredServices, Event>
+): PikkuChannelMiddleware<RequiredServices, Event> => {
+  return middleware
+}
+
+export const pikkuChannelMiddlewareFactory = <In = any>(
+  factory: CorePikkuChannelMiddlewareFactory<In>
+): CorePikkuChannelMiddlewareFactory<In> => {
+  return factory
+}
+
+export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddleware[]) =>
+  addChannelMiddlewareCore(tag, middleware, ${packageNameValue})
 `
 }

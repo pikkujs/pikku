@@ -28,7 +28,6 @@ export const serializeFunctionTypes = (
  */
 
 import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
-import { CorePikkuChannelMiddleware, CorePikkuChannelMiddlewareFactory, addChannelMiddleware as addChannelMiddlewareCore } from '@pikku/core/channel'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
@@ -177,23 +176,6 @@ export const pikkuMiddlewareFactory = <In = any>(
 ): ((input: In) => PikkuMiddleware) => {
   return factory
 }
-
-export type PikkuChannelMiddleware<RequiredServices extends SingletonServices = SingletonServices, Event = unknown> = CorePikkuChannelMiddleware<RequiredServices, Event>
-
-export const pikkuChannelMiddleware = <RequiredServices extends SingletonServices = SingletonServices, Event = unknown>(
-  middleware: PikkuChannelMiddleware<RequiredServices, Event>
-): PikkuChannelMiddleware<RequiredServices, Event> => {
-  return middleware
-}
-
-export const pikkuChannelMiddlewareFactory = <In = any>(
-  factory: CorePikkuChannelMiddlewareFactory<In>
-): CorePikkuChannelMiddlewareFactory<In> => {
-  return factory
-}
-
-export const addChannelMiddleware = (tag: string, middleware: PikkuChannelMiddleware[]) =>
-  addChannelMiddlewareCore(tag, middleware, ${packageNameValue})
 
 /**
  * Factory function for creating permission factories

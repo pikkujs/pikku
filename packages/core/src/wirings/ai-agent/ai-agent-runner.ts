@@ -965,6 +965,51 @@ function stripWorkingMemoryTags(text: string): string {
   return text.replace(/<working_memory>[\s\S]*?<\/working_memory>/g, '').trim()
 }
 
+export async function approveAIAgent(
+  runId: string,
+  approvals: { toolCallId: string; approved: boolean }[],
+  singletonServices: CoreSingletonServices
+): Promise<{
+  status: 'resumed' | 'suspended'
+  runId: string
+  approved: string[]
+  rejected: string[]
+  remainingApprovals: number
+}> {
+  const { aiRunState } = singletonServices
+  if (!aiRunState) throw new Error('AIRunStateService not available')
+
+  const run = await aiRunState.getRun(runId)
+  if (!run) throw new Error('Run not found: ' + runId)
+  if (run.status !== 'suspended')
+    throw new Error('Run is not suspended: ' + run.status)
+
+  const approvedIds = new Set(
+    approvals.filter((a) => a.approved).map((a) => a.toolCallId)
+  )
+  const rejectedIds = new Set(
+    approvals.filter((a) => !a.approved).map((a) => a.toolCallId)
+  )
+
+  const remaining = (run.pendingApprovals ?? []).filter(
+    (p) => !approvedIds.has(p.toolCallId) && !rejectedIds.has(p.toolCallId)
+  )
+
+  const hasApproved = approvedIds.size > 0
+  await aiRunState.updateRun(runId, {
+    status: hasApproved ? 'running' : 'suspended',
+    pendingApprovals: remaining.length > 0 ? remaining : undefined,
+  })
+
+  return {
+    status: hasApproved ? 'resumed' : 'suspended',
+    runId,
+    approved: [...approvedIds],
+    rejected: [...rejectedIds],
+    remainingApprovals: remaining.length,
+  }
+}
+
 export const getAIAgents = () => {
   return pikkuState(null, 'agent', 'agents')
 }

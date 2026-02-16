@@ -1,6 +1,6 @@
 export const serializePublicAgent = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
-import { streamAIAgent } from '@pikku/core/ai-agent'
+  return `import { pikkuSessionlessFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
+import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
 export const agentCaller = pikkuSessionlessFunc<
@@ -15,20 +15,6 @@ export const agentCaller = pikkuSessionlessFunc<
       resourceId: data.resourceId,
     })
   },
-})
-
-wireHTTP({
-  route: '/agent/:agentName',
-  method: 'options',
-  auth: false,
-  func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
-})
-
-wireHTTP({
-  route: '/agent/:agentName',
-  method: 'post',
-  auth: false,
-  func: agentCaller,
 })
 
 export const agentStreamCaller = pikkuSessionlessFunc<
@@ -47,48 +33,25 @@ export const agentStreamCaller = pikkuSessionlessFunc<
   },
 })
 
-wireHTTP({
-  route: '/agent/:agentName/stream',
-  method: 'options',
-  auth: false,
-  func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
-})
-
-wireHTTP({
-  route: '/agent/:agentName/stream',
-  method: 'post',
-  auth: false,
-  sse: true,
-  func: agentStreamCaller,
-})
-
 export const agentApproveCaller = pikkuSessionlessFunc<
   { agentName: string; runId: string; approvals: { toolCallId: string; approved: boolean }[] },
   unknown
 >({
   auth: false,
   func: async (services, data) => {
-    const aiRunState = services.aiRunState
-    if (!aiRunState) throw new Error('AIRunStateService not available')
-
-    const run = await aiRunState.getRun(data.runId)
-    if (!run) throw new Error('Run not found: ' + data.runId)
-    if (run.status !== 'suspended') throw new Error('Run is not suspended: ' + run.status)
-
-    await aiRunState.updateRun(data.runId, {
-      status: 'running',
-      pendingApprovals: undefined,
-    })
-
-    return { status: 'resumed', runId: data.runId }
+    return await approveAIAgent(data.runId, data.approvals, services)
   },
 })
 
-wireHTTP({
-  route: '/agent/:agentName/approve',
-  method: 'post',
+wireHTTPRoutes({
   auth: false,
-  func: agentApproveCaller,
+  routes: {
+    options: { route: '/agent/:agentName', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
+    call: { route: '/agent/:agentName', method: 'post', func: agentCaller },
+    streamOptions: { route: '/agent/:agentName/stream', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
+    stream: { route: '/agent/:agentName/stream', method: 'post', sse: true, func: agentStreamCaller },
+    approve: { route: '/agent/:agentName/approve', method: 'post', func: agentApproveCaller },
+  },
 })
 `
 }
