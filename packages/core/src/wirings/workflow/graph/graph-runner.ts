@@ -2,6 +2,7 @@ import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
+import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
 
 function buildTemplateRegex(nodeId: string): RegExp | null {
   if (!nodeId.includes('${')) return null
@@ -254,6 +255,11 @@ export async function continueGraph(
     return
   }
 
+  const currentRun = await workflowService.getRun(runId)
+  if (currentRun?.status === 'suspended') {
+    return
+  }
+
   const candidateNodes: string[] = []
 
   for (const nodeId of completedNodeIds) {
@@ -361,6 +367,13 @@ export async function executeGraphStep(
 
     return result
   } catch (error) {
+    if (error instanceof RPCNotFoundError) {
+      await workflowService.updateRunStatus(runId, 'suspended', undefined, {
+        message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+        code: 'RPC_NOT_FOUND',
+      })
+      return
+    }
     const meta = getWorkflowMeta(graphName)
     if (meta?.nodes) {
       const node = meta.nodes[nodeId]
@@ -456,6 +469,13 @@ async function executeGraphNodeInline(
 
     await workflowService.setStepResult(stepState.stepId, result)
   } catch (error) {
+    if (error instanceof RPCNotFoundError) {
+      await workflowService.updateRunStatus(runId, 'suspended', undefined, {
+        message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+        code: 'RPC_NOT_FOUND',
+      })
+      return
+    }
     await workflowService.setStepError(stepState.stepId, error as Error)
 
     if (node?.onError) {
