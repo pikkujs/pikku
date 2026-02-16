@@ -29,6 +29,7 @@ import { AIVectorService } from '../services/ai-vector-service.js'
 import { AIEmbedderService } from '../services/ai-embedder-service.js'
 import { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import { AIRunStateService } from '../services/ai-run-state-service.js'
+import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -374,7 +375,6 @@ export const pikkuChannelMiddlewareFactory = <In = any>(
   return factory
 }
 
-import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 export type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 
 export const pikkuAIMiddleware = <

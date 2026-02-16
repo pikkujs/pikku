@@ -52,6 +52,7 @@ export interface AIAgentInput {
 }
 
 export interface AIAgentOutput {
+  runId: string
   text: string
   object?: unknown
   threadId: string
