@@ -68,6 +68,9 @@ export const getPropertyValue = (
     }
 
     if (ts.isNumericLiteral(initializer)) {
+      if (propertyName === 'name' || propertyName === 'schedule') {
+        return initializer.text
+      }
       return Number(initializer.text)
     }
 

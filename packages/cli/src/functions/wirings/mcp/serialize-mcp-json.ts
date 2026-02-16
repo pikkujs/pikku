@@ -32,9 +32,16 @@ export const serializeMCPJson = async (
   ): Promise<JSONValue | undefined> => {
     if (
       !typeName ||
-      ['boolean', 'string', 'number', 'null', 'undefined', 'void'].includes(
-        typeName
-      )
+      [
+        'boolean',
+        'string',
+        'number',
+        'null',
+        'undefined',
+        'void',
+        'unknown',
+        'never',
+      ].includes(typeName)
     ) {
       return undefined
     }
