@@ -6,8 +6,17 @@ import {
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
+import { PikkuError } from '../../errors/error-handler.js'
 import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
+
+export class RPCNotFoundError extends PikkuError {
+  public readonly rpcName: string
+  constructor(rpcName: string) {
+    super(`RPC function not found: ${rpcName}`)
+    this.rpcName = rpcName
+  }
+}
 import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
 import { runAIAgent } from '../ai-agent/ai-agent-runner.js'
 
@@ -48,7 +57,7 @@ const getPikkuFunctionName = (rpcName: string): string => {
     }
   }
   if (!rpcMeta) {
-    throw new Error(`RPC function not found: ${rpcName}`)
+    throw new RPCNotFoundError(rpcName)
   }
   return rpcMeta
 }

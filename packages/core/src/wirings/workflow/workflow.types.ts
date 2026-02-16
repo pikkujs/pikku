@@ -46,7 +46,12 @@ export interface WorkflowServiceConfig {
 /**
  * Workflow run status
  */
-export type WorkflowStatus = 'running' | 'completed' | 'failed' | 'cancelled'
+export type WorkflowStatus =
+  | 'running'
+  | 'suspended'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
 
 /**
  * Workflow step status
@@ -57,6 +62,7 @@ export type StepStatus =
   | 'scheduled'
   | 'succeeded'
   | 'failed'
+  | 'suspended'
 
 /**
  * Workflow run representation

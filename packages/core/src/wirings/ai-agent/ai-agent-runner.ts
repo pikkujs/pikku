@@ -167,7 +167,7 @@ async function prepareAgentRun(
   const allMessages = [...contextMessages, ...messages, userMessage]
   const trimmedMessages = trimMessages(allMessages)
 
-  const tools = buildToolDefs(
+  const { tools, missingRpcs } = buildToolDefs(
     singletonServices,
     params,
     agentSessionMap,
@@ -208,6 +208,7 @@ async function prepareAgentRun(
     threadId,
     userMessage,
     runnerParams,
+    missingRpcs,
   }
 }
 
@@ -234,12 +235,30 @@ export async function streamAIAgent(
     threadId,
     userMessage,
     runnerParams,
+    missingRpcs,
   } = await prepareAgentRun(agentName, input, params, sessionMap, streamContext)
 
   const { singletonServices } = params
   const { aiRunState } = singletonServices
   if (!aiRunState) {
     throw new Error('AIRunStateService not available in singletonServices')
+  }
+
+  if (missingRpcs.length > 0) {
+    const runId = await aiRunState.createRun({
+      agentName,
+      threadId,
+      resourceId: input.resourceId,
+      status: 'suspended',
+      suspendReason: 'rpc-missing',
+      missingRpcs,
+      usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    channel.send({ type: 'suspended', reason: 'rpc-missing', missingRpcs })
+    channel.send({ type: 'done' })
+    return
   }
 
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
@@ -361,6 +380,7 @@ export async function streamAIAgent(
       if (aiRunState) {
         await aiRunState.updateRun(runId, {
           status: 'suspended',
+          suspendReason: 'approval',
           pendingApprovals: [
             {
               toolCallId: err.toolCallId,
@@ -410,6 +430,7 @@ export async function runAIAgent(
     threadId,
     userMessage,
     runnerParams,
+    missingRpcs,
   } = await prepareAgentRun(agentName, input, params, sessionMap)
 
   const { singletonServices } = params
@@ -417,6 +438,28 @@ export async function runAIAgent(
   if (!aiRunState) {
     throw new Error('AIRunStateService not available in singletonServices')
   }
+
+  if (missingRpcs.length > 0) {
+    const runId = await aiRunState.createRun({
+      agentName,
+      threadId,
+      resourceId: input.resourceId,
+      status: 'suspended',
+      suspendReason: 'rpc-missing',
+      missingRpcs,
+      usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    return {
+      runId,
+      text: '',
+      threadId,
+      steps: [],
+      usage: { inputTokens: 0, outputTokens: 0 },
+    }
+  }
+
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
 
   let modifiedMessages = runnerParams.messages
@@ -803,12 +846,13 @@ function buildToolDefs(
   agentName: string,
   packageName: string | null,
   streamContext?: StreamContext
-): AIAgentToolDef[] {
+): { tools: AIAgentToolDef[]; missingRpcs: string[] } {
   const tools: AIAgentToolDef[] = []
+  const missingRpcs: string[] = []
   const approvalPolicy = streamContext?.options?.requiresToolApproval ?? false
 
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
-  if (!meta) return tools
+  if (!meta) return { tools, missingRpcs }
 
   const metaTools = meta.tools
   const metaAgents = meta.agents
@@ -821,9 +865,7 @@ function buildToolDefs(
       const rpcMeta = pikkuState(null, 'rpc', 'meta')
       const pikkuFuncId = rpcMeta[toolName]
       if (!pikkuFuncId) {
-        singletonServices.logger.warn(
-          `AI agent tool '${toolName}' not found in RPC registry`
-        )
+        missingRpcs.push(toolName)
         continue
       }
 
@@ -939,7 +981,7 @@ function buildToolDefs(
     }
   }
 
-  return tools
+  return { tools, missingRpcs }
 }
 
 function trimMessages(

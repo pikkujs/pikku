@@ -174,6 +174,11 @@ export type AIStreamEvent =
       session?: string
     }
   | { type: 'error'; message: string; agent?: string; session?: string }
+  | {
+      type: 'suspended'
+      reason: 'rpc-missing'
+      missingRpcs: string[]
+    }
   | { type: 'done' }
 
 export interface AIStreamChannel extends PikkuChannel<unknown, AIStreamEvent> {}
@@ -184,6 +189,8 @@ export interface AgentRunState {
   threadId: string
   resourceId: string
   status: 'running' | 'suspended' | 'completed' | 'failed'
+  suspendReason?: 'approval' | 'rpc-missing'
+  missingRpcs?: string[]
   pendingApprovals?: {
     toolCallId: string
     toolName: string

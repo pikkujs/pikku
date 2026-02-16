@@ -25,6 +25,7 @@ import {
 } from './graph/graph-runner.js'
 import { WorkflowService } from '../../services/workflow-service.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
+import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 
 /**
  * Exception thrown when workflow needs to pause for async step
@@ -86,6 +87,7 @@ const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
   'completed',
   'failed',
   'cancelled',
+  'suspended',
 ])
 
 /**
@@ -696,6 +698,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         // Resume orchestrator to continue workflow
         await this.resumeWorkflow(runId)
       } catch (error: any) {
+        if (error instanceof RPCNotFoundError) {
+          await this.updateRunStatus(runId, 'suspended', undefined, {
+            message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+            code: 'RPC_NOT_FOUND',
+          })
+          return
+        }
+
         // Store error and mark failed
         await this.setStepError(stepState.stepId, error)
 
@@ -848,6 +858,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           await this.setStepResult(currentStepState.stepId, result)
           return result
         } catch (error: any) {
+          if (error instanceof RPCNotFoundError) {
+            await this.updateRunStatus(runId, 'suspended', undefined, {
+              message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+              code: 'RPC_NOT_FOUND',
+            })
+            throw error
+          }
+
           // Record the error (marks step as failed)
           await this.setStepError(currentStepState.stepId, error)
 
