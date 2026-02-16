@@ -6,21 +6,16 @@ import type {
   AIAgentRunnerResult,
 } from '@pikku/core/services'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
-import type { SecretService } from '@pikku/core/services'
 import {
   convertToSDKMessages,
   convertFromSDKStep,
 } from './message-converter.js'
 
 export class VercelAIAgentRunner implements AIAgentRunnerService {
-  private providers: Record<string, any> = {}
-  private secretService: SecretService
+  private providers: Record<string, any>
 
-  constructor(secretService: SecretService, providers?: Record<string, any>) {
-    this.secretService = secretService
-    if (providers) {
-      this.providers = providers
-    }
+  constructor(providers: Record<string, any>) {
+    this.providers = providers
   }
 
   private parseModel(model: string): { provider: string; modelName: string } {
@@ -36,43 +31,15 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     }
   }
 
-  private async getProvider(providerName: string) {
-    if (!this.providers[providerName]) {
-      switch (providerName) {
-        case 'openai': {
-          const { createOpenAI } = await import('@ai-sdk/openai')
-          this.providers[providerName] = createOpenAI({
-            apiKey: await this.secretService.getSecret('OPENAI_API_KEY'),
-          })
-          break
-        }
-        case 'anthropic': {
-          const { createAnthropic } = await import('@ai-sdk/anthropic')
-          this.providers[providerName] = createAnthropic({
-            apiKey: await this.secretService.getSecret('ANTHROPIC_API_KEY'),
-          })
-          break
-        }
-        case 'google': {
-          const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
-          this.providers[providerName] = createGoogleGenerativeAI({
-            apiKey: await this.secretService.getSecret('GOOGLE_API_KEY'),
-          })
-          break
-        }
-        case 'ollama': {
-          const { createOpenAI } = await import('@ai-sdk/openai')
-          this.providers[providerName] = createOpenAI({
-            baseURL: 'http://localhost:11434/v1',
-            apiKey: 'ollama',
-          })
-          break
-        }
-        default:
-          throw new Error(`Unknown AI provider: ${providerName}`)
-      }
+  private getProvider(providerName: string) {
+    const provider = this.providers[providerName]
+    if (!provider) {
+      const available = Object.keys(this.providers).join(', ')
+      throw new Error(
+        `Unknown AI provider: '${providerName}'. Available: ${available || 'none'}`
+      )
     }
-    return this.providers[providerName]
+    return provider
   }
 
   private buildTools(params: AIAgentRunnerParams) {
@@ -93,7 +60,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     channel: AIStreamChannel
   ): Promise<void> {
     const { provider: providerName, modelName } = this.parseModel(params.model)
-    const provider = await this.getProvider(providerName)
+    const provider = this.getProvider(providerName)
     const sdkModel = provider(modelName)
     const aiTools = this.buildTools(params)
     const messages = convertToSDKMessages(params.messages)
@@ -170,7 +137,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
   async run(params: AIAgentRunnerParams): Promise<AIAgentRunnerResult> {
     const { provider: providerName, modelName } = this.parseModel(params.model)
-    const provider = await this.getProvider(providerName)
+    const provider = this.getProvider(providerName)
     const sdkModel = provider(modelName)
     const aiTools = this.buildTools(params)
     const messages = convertToSDKMessages(params.messages)
