@@ -1,11 +1,12 @@
-export const serializeAIAgentTypes = (_functionTypesImportPath: string) => {
+export const serializeAIAgentTypes = (functionTypesImportPath: string) => {
   return `import {
   CoreAIAgent,
   PikkuAIMiddlewareHooks,
 } from '@pikku/core/ai-agent'
+import type { PikkuPermission, PikkuMiddleware } from '${functionTypesImportPath}'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-type AIAgentConfig = CoreAIAgent & {
+type AIAgentConfig = CoreAIAgent<PikkuPermission, PikkuMiddleware> & {
   input?: StandardSchemaV1
   output?: StandardSchemaV1
 }

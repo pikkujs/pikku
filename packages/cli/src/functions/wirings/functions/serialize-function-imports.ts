@@ -24,6 +24,8 @@ export const serializeFunctionImports = (
   // Third argument to addFunction is the package name (null for main package)
   const packageArg = externalPackageName ? `, '${externalPackageName}'` : ''
 
+  const usedAliases = new Set<string>()
+
   for (const [name, { path, exportedName }] of sortedEntries) {
     const filePath = getFileImportRelativePath(
       outputPath,
@@ -31,14 +33,19 @@ export const serializeFunctionImports = (
       packageMappings
     )
 
-    const safeAlias = name.replace(/[^a-zA-Z0-9_$]/g, '_')
-
     if (name === exportedName) {
+      usedAliases.add(exportedName)
       serializedImports.push(`import { ${exportedName} } from '${filePath}'`)
       serializedRegistrations.push(
         `addFunction('${name}', ${exportedName}${packageArg})`
       )
     } else {
+      let safeAlias = name.replace(/[^a-zA-Z0-9_$]/g, '_')
+      let suffix = 2
+      while (usedAliases.has(safeAlias)) {
+        safeAlias = `${name.replace(/[^a-zA-Z0-9_$]/g, '_')}_${suffix++}`
+      }
+      usedAliases.add(safeAlias)
       serializedImports.push(
         `import { ${exportedName} as ${safeAlias} } from '${filePath}'`
       )
