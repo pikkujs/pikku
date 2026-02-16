@@ -24,6 +24,8 @@ export async function runAIAgent(
     userMessage,
     runnerParams,
     missingRpcs,
+    workingMemoryJsonSchema,
+    workingMemorySchemaName,
   } = await prepareAgentRun(agentName, input, params, sessionMap)
 
   const { singletonServices } = params
@@ -88,7 +90,13 @@ export async function runAIAgent(
     input.resourceId,
     memoryConfig,
     userMessage,
-    result
+    result,
+    {
+      workingMemoryJsonSchema,
+      workingMemorySchemaName,
+      logger: singletonServices.logger,
+      schemaService: singletonServices.schema,
+    }
   )
 
   let outputText = responseText
