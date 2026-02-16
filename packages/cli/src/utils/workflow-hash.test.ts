@@ -28,8 +28,7 @@ describe('computeStepHashes', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'aaa',
-        outputsSchemaHash: 'bbb',
+        contractHash: 'abc123',
       },
     }
 
@@ -39,7 +38,7 @@ describe('computeStepHashes', () => {
     assert.strictEqual((graph.nodes['step2'] as any).stepHash, undefined)
   })
 
-  test('stepHash changes when inputsSchemaHash changes', () => {
+  test('stepHash changes when contractHash changes', () => {
     const graph1 = makeGraph({
       step1: { nodeId: 'step1', rpcName: 'myRpc' },
     })
@@ -52,8 +51,7 @@ describe('computeStepHashes', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'v1-input-hash',
-        outputsSchemaHash: 'same-output',
+        contractHash: 'v1-contract-hash',
       },
     }
     const meta2: FunctionsMeta = {
@@ -61,8 +59,7 @@ describe('computeStepHashes', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'v2-input-hash',
-        outputsSchemaHash: 'same-output',
+        contractHash: 'v2-contract-hash',
       },
     }
 
@@ -75,43 +72,7 @@ describe('computeStepHashes', () => {
     )
   })
 
-  test('stepHash changes when outputsSchemaHash changes', () => {
-    const graph1 = makeGraph({
-      step1: { nodeId: 'step1', rpcName: 'myRpc' },
-    })
-    const graph2 = makeGraph({
-      step1: { nodeId: 'step1', rpcName: 'myRpc' },
-    })
-
-    const meta1: FunctionsMeta = {
-      myRpc: {
-        pikkuFuncId: 'myRpc',
-        inputSchemaName: 'MyInput',
-        outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'same-input',
-        outputsSchemaHash: 'v1-output-hash',
-      },
-    }
-    const meta2: FunctionsMeta = {
-      myRpc: {
-        pikkuFuncId: 'myRpc',
-        inputSchemaName: 'MyInput',
-        outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'same-input',
-        outputsSchemaHash: 'v2-output-hash',
-      },
-    }
-
-    computeStepHashes(graph1, meta1)
-    computeStepHashes(graph2, meta2)
-
-    assert.notStrictEqual(
-      (graph1.nodes['step1'] as any).stepHash,
-      (graph2.nodes['step1'] as any).stepHash
-    )
-  })
-
-  test('stepHash is stable for identical schemas', () => {
+  test('stepHash is stable for identical contractHash', () => {
     const graph1 = makeGraph({
       step1: { nodeId: 'step1', rpcName: 'myRpc' },
     })
@@ -124,8 +85,7 @@ describe('computeStepHashes', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'stable-input',
-        outputsSchemaHash: 'stable-output',
+        contractHash: 'stable-hash',
       },
     }
 
@@ -153,8 +113,7 @@ describe('stepHash affects graphHash', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'v1-hash',
-        outputsSchemaHash: 'v1-hash',
+        contractHash: 'v1-hash',
       },
     }
     const metaV2: FunctionsMeta = {
@@ -162,8 +121,7 @@ describe('stepHash affects graphHash', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'v2-hash',
-        outputsSchemaHash: 'v2-hash',
+        contractHash: 'v2-hash',
       },
     }
 
@@ -191,14 +149,13 @@ describe('stepHash affects graphHash', () => {
         pikkuFuncId: 'myRpc',
         inputSchemaName: 'MyInput',
         outputSchemaName: 'MyOutput',
-        inputsSchemaHash: 'stable',
-        outputsSchemaHash: 'stable',
+        contractHash: 'stable',
       },
       otherRpc: {
         pikkuFuncId: 'otherRpc',
         inputSchemaName: 'OtherInput',
         outputSchemaName: null,
-        inputsSchemaHash: 'other-stable',
+        contractHash: 'other-stable',
       },
     }
 

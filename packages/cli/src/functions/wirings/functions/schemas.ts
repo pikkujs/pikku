@@ -3,8 +3,8 @@ import {
   saveSchemas,
   generateSchemas,
   generateZodSchemas,
-  computeSchemaHashes,
 } from '../../../utils/schema-generator.js'
+import { computeContractHashes } from '../../../utils/contract-versions.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
@@ -53,7 +53,7 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const allSchemas = { ...schemas, ...zodSchemas }
 
-    computeSchemaHashes(
+    computeContractHashes(
       allSchemas,
       visitState.functions.typesMap,
       visitState.functions.meta

@@ -1,5 +1,4 @@
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
-import { createHash } from 'crypto'
 import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { FunctionsMeta, JSONValue } from '@pikku/core'
@@ -258,49 +257,6 @@ export async function generateZodSchemas(
   }
 
   return schemas
-}
-
-export function computeSchemaHashes(
-  allSchemas: Record<string, JSONValue>,
-  typesMap: TypesMap,
-  functionsMeta: FunctionsMeta
-): void {
-  const resolveSchemaName = (name: string): string => {
-    try {
-      return typesMap.getUniqueName(name)
-    } catch {
-      return name
-    }
-  }
-
-  const hashSchema = (schemaNames: string[]): string | undefined => {
-    const parts: string[] = []
-    for (const name of schemaNames) {
-      const key = resolveSchemaName(name)
-      const schema = allSchemas[key]
-      if (schema) {
-        parts.push(JSON.stringify(schema))
-      }
-    }
-    if (parts.length === 0) {
-      return undefined
-    }
-    return createHash('sha256')
-      .update(parts.join(':'))
-      .digest('hex')
-      .slice(0, 12)
-  }
-
-  for (const meta of Object.values(functionsMeta)) {
-    const inputs = meta.inputs?.filter((n) => n !== 'void') ?? []
-    const outputs = meta.outputs?.filter((n) => n !== 'void') ?? []
-    if (inputs.length > 0) {
-      meta.inputsSchemaHash = hashSchema(inputs)
-    }
-    if (outputs.length > 0) {
-      meta.outputsSchemaHash = hashSchema(outputs)
-    }
-  }
 }
 
 export async function saveSchemas(

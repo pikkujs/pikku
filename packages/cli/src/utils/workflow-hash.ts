@@ -1,23 +1,7 @@
-import { createHash } from 'crypto'
 import type { SerializedWorkflowGraph } from '@pikku/inspector'
 import type { FunctionsMeta } from '@pikku/core'
 import { parseVersionedId } from '@pikku/core'
-
-function sortKeys(obj: unknown): unknown {
-  if (Array.isArray(obj)) return obj.map(sortKeys)
-  if (obj && typeof obj === 'object') {
-    const sorted: Record<string, unknown> = {}
-    for (const key of Object.keys(obj).sort()) {
-      sorted[key] = sortKeys((obj as Record<string, unknown>)[key])
-    }
-    return sorted
-  }
-  return obj
-}
-
-function hashString(input: string): string {
-  return createHash('sha256').update(input).digest('hex').slice(0, 12)
-}
+import { canonicalJSON, hashString } from './hash.js'
 
 export function computeStepHashes(
   graph: SerializedWorkflowGraph,
@@ -33,13 +17,10 @@ export function computeStepHashes(
       const { baseName } = parseVersionedId(rpcName)
       meta = functionsMeta[baseName]
     }
-    const parts = [
-      node.nodeId,
-      rpcName,
-      meta?.inputsSchemaHash ?? '',
-      meta?.outputsSchemaHash ?? '',
-    ]
-    ;(node as Record<string, unknown>).stepHash = hashString(parts.join(':'))
+    ;(node as Record<string, unknown>).stepHash = hashString(
+      `${node.nodeId}:${meta?.contractHash ?? ''}`,
+      12
+    )
   }
 }
 
@@ -57,5 +38,5 @@ export function computeGraphHash(graph: SerializedWorkflowGraph): string {
     }
     structural[key] = value
   }
-  return hashString(JSON.stringify(sortKeys(structural)))
+  return hashString(canonicalJSON(structural), 12)
 }
