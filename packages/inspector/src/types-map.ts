@@ -28,7 +28,18 @@ export class TypesMap {
     uniqueName: string
     path: string | null
   } {
-    if (['string', 'number', 'boolean', 'null'].includes(name)) {
+    if (
+      [
+        'string',
+        'number',
+        'boolean',
+        'null',
+        'undefined',
+        'void',
+        'unknown',
+        'never',
+      ].includes(name)
+    ) {
       return {
         originalName: name,
         uniqueName: name,

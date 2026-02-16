@@ -20,9 +20,16 @@ const generateArgumentsFromSchema = async (
   if (!inputSchema) return []
 
   if (
-    ['boolean', 'string', 'number', 'null', 'undefined', 'void'].includes(
-      inputSchema
-    )
+    [
+      'boolean',
+      'string',
+      'number',
+      'null',
+      'undefined',
+      'void',
+      'unknown',
+      'never',
+    ].includes(inputSchema)
   ) {
     return []
   }
