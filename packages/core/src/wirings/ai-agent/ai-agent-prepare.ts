@@ -307,6 +307,18 @@ export async function prepareAgentRun(
   const memoryConfig = agent.memory
   const threadId = input.threadId
 
+  const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
+  const meta = agentsMeta[resolvedName]
+  const outputSchemaName = meta?.outputSchema
+  const outputSchema = outputSchemaName
+    ? pikkuState(packageName, 'misc', 'schemas').get(outputSchemaName)
+    : undefined
+
+  const workingMemorySchemaName = meta?.workingMemorySchema ?? null
+  const workingMemoryJsonSchema = workingMemorySchemaName
+    ? pikkuState(packageName, 'misc', 'schemas').get(workingMemorySchemaName)
+    : undefined
+
   if (storage) {
     try {
       await storage.getThread(threadId)
@@ -325,7 +337,8 @@ export async function prepareAgentRun(
   const contextMessages = await loadContextMessages(
     memoryConfig,
     storage,
-    input
+    input,
+    workingMemoryJsonSchema
   )
 
   const userMessage: AIMessage = {
@@ -350,13 +363,6 @@ export async function prepareAgentRun(
 
   const instructions = buildInstructions(resolvedName, packageName)
 
-  const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
-  const meta = agentsMeta[resolvedName]
-  const outputSchemaName = meta?.outputSchema
-  const outputSchema = outputSchemaName
-    ? pikkuState(packageName, 'misc', 'schemas').get(outputSchemaName)
-    : undefined
-
   const runnerParams: AIAgentRunnerParams = {
     model: agent.model,
     instructions,
@@ -378,5 +384,7 @@ export async function prepareAgentRun(
     userMessage,
     runnerParams,
     missingRpcs,
+    workingMemoryJsonSchema,
+    workingMemorySchemaName,
   }
 }

@@ -7,6 +7,8 @@ import type {
   AIMessage,
 } from './ai-agent.types.js'
 import type { AIStorageService } from '../../services/ai-storage-service.js'
+import type { Logger } from '../../services/logger.js'
+import type { SchemaService } from '../../services/schema-service.js'
 
 export function resolveMemoryServices(
   agent: CoreAIAgent,
@@ -21,26 +23,85 @@ export function resolveMemoryServices(
   return { storage }
 }
 
+export function deepMergeWorkingMemory(
+  existing: Record<string, unknown>,
+  updates: Record<string, unknown>
+): Record<string, unknown> {
+  const result = { ...existing }
+  for (const key of Object.keys(updates)) {
+    const value = updates[key]
+    if (value === null) {
+      delete result[key]
+    } else if (
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      typeof result[key] === 'object' &&
+      result[key] !== null &&
+      !Array.isArray(result[key])
+    ) {
+      result[key] = deepMergeWorkingMemory(
+        result[key] as Record<string, unknown>,
+        value as Record<string, unknown>
+      )
+    } else {
+      result[key] = value
+    }
+  }
+  return result
+}
+
+export function buildWorkingMemoryPrompt(
+  currentState: Record<string, unknown> | null,
+  jsonSchema?: Record<string, unknown>
+): string {
+  const parts: string[] = []
+
+  if (jsonSchema?.properties) {
+    const props = jsonSchema.properties as Record<
+      string,
+      { type?: string; description?: string }
+    >
+    const fieldLines = Object.entries(props).map(([name, def]) => {
+      const type = def.type ?? 'unknown'
+      const desc = def.description ? ` - ${def.description}` : ''
+      return `  - ${name} (${type})${desc}`
+    })
+    if (fieldLines.length > 0) {
+      parts.push(`Working memory fields:\n${fieldLines.join('\n')}`)
+    }
+  }
+
+  if (currentState && Object.keys(currentState).length > 0) {
+    parts.push(`Current working memory:\n${JSON.stringify(currentState)}`)
+  } else {
+    parts.push('Current working memory: (empty)')
+  }
+
+  parts.push(
+    'When you learn new information, output a partial JSON update in <working_memory> tags. ' +
+      'Only include changed fields. Set a field to null to delete it.'
+  )
+
+  return parts.join('\n\n')
+}
+
 export async function loadContextMessages(
   memoryConfig: AIAgentMemoryConfig | undefined,
   storage: AIStorageService | undefined,
-  input: AIAgentInput
+  input: AIAgentInput,
+  workingMemoryJsonSchema?: Record<string, unknown>
 ): Promise<AIMessage[]> {
   const contextMessages: AIMessage[] = []
 
   if (memoryConfig?.workingMemory && storage) {
-    const workingMem = await storage.getWorkingMemory(
-      input.resourceId,
-      'resource'
-    )
-    if (workingMem) {
-      contextMessages.push({
-        id: `wm-${randomUUID()}`,
-        role: 'system',
-        content: `Current working memory:\n${JSON.stringify(workingMem)}\n\nWhen you learn new information about the user, output an updated working memory JSON at the end of your response in <working_memory> tags.`,
-        createdAt: new Date(),
-      })
-    }
+    const workingMem = await storage.getWorkingMemory(input.threadId, 'thread')
+    const prompt = buildWorkingMemoryPrompt(workingMem, workingMemoryJsonSchema)
+    contextMessages.push({
+      id: `wm-${randomUUID()}`,
+      role: 'system',
+      content: prompt,
+      createdAt: new Date(),
+    })
   }
 
   return contextMessages
@@ -61,6 +122,12 @@ export async function saveMessages(
         result: string
       }[]
     }[]
+  },
+  options?: {
+    workingMemoryJsonSchema?: Record<string, unknown>
+    workingMemorySchemaName?: string | null
+    logger?: Logger
+    schemaService?: SchemaService
   }
 ): Promise<string> {
   let responseText = result.text
@@ -105,7 +172,24 @@ export async function saveMessages(
     if (memoryConfig?.workingMemory) {
       const parsed = parseWorkingMemory(responseText)
       if (parsed) {
-        await storage.saveWorkingMemory(resourceId, 'resource', parsed)
+        const existing =
+          (await storage.getWorkingMemory(threadId, 'thread')) ?? {}
+        const merged = deepMergeWorkingMemory(existing, parsed)
+
+        if (options?.schemaService && options?.workingMemorySchemaName) {
+          try {
+            await options.schemaService.validateSchema(
+              options.workingMemorySchemaName,
+              merged
+            )
+          } catch (err) {
+            options.logger?.warn(
+              `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
+            )
+          }
+        }
+
+        await storage.saveWorkingMemory(threadId, 'thread', merged)
         responseText = stripWorkingMemoryTags(responseText)
       }
     }

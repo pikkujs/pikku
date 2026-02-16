@@ -351,6 +351,7 @@ export const addAIAgent: AddWiring = (
 
     let inputSchema: string | null = null
     let outputSchema: string | null = null
+    let workingMemorySchema: string | null = null
     const capitalizedName = funcIdToTypeName(nameValue)
 
     for (const prop of obj.properties) {
@@ -379,6 +380,31 @@ export const addAIAgent: AddWiring = (
                 `    export const ${schemaName} = ${prop.initializer.getText()}\n` +
                 `  Then use: ${propName}: ${schemaName}`
             )
+          }
+        } else if (
+          propName === 'memory' &&
+          ts.isObjectLiteralExpression(prop.initializer)
+        ) {
+          for (const memProp of prop.initializer.properties) {
+            if (
+              ts.isPropertyAssignment(memProp) &&
+              ts.isIdentifier(memProp.name) &&
+              memProp.name.text === 'workingMemory' &&
+              ts.isIdentifier(memProp.initializer)
+            ) {
+              const context = `AI agent '${nameValue}' workingMemory`
+              const ref = resolveSchemaRef(memProp.initializer, context)
+              if (ref) {
+                const schemaName = `${capitalizedName}WorkingMemory`
+                state.schemaLookup.set(schemaName, ref)
+                state.functions.typesMap.addCustomType(
+                  schemaName,
+                  'unknown',
+                  []
+                )
+                workingMemorySchema = schemaName
+              }
+            }
           }
         }
       }
@@ -425,6 +451,7 @@ export const addAIAgent: AddWiring = (
       tags,
       inputSchema,
       outputSchema,
+      workingMemorySchema,
       middleware,
       channelMiddleware,
       aiMiddleware,

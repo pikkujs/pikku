@@ -11,7 +11,10 @@ import {
 import { randomUUID } from 'crypto'
 import type { AIStorageService } from '../../services/ai-storage-service.js'
 
-import { parseWorkingMemory } from './ai-agent-memory.js'
+import {
+  parseWorkingMemory,
+  deepMergeWorkingMemory,
+} from './ai-agent-memory.js'
 import {
   prepareAgentRun,
   ToolApprovalRequired,
@@ -121,6 +124,7 @@ export async function streamAIAgent(
     userMessage,
     runnerParams,
     missingRpcs,
+    workingMemorySchemaName,
   } = await prepareAgentRun(agentName, input, params, sessionMap, streamContext)
 
   const { singletonServices } = params
@@ -243,7 +247,24 @@ export async function streamAIAgent(
     if (storage && memoryConfig?.workingMemory && outputText) {
       const parsed = parseWorkingMemory(outputText)
       if (parsed) {
-        await storage.saveWorkingMemory(input.resourceId, 'resource', parsed)
+        const existing =
+          (await storage.getWorkingMemory(threadId, 'thread')) ?? {}
+        const merged = deepMergeWorkingMemory(existing, parsed)
+
+        if (singletonServices.schema && workingMemorySchemaName) {
+          try {
+            await singletonServices.schema.validateSchema(
+              workingMemorySchemaName,
+              merged
+            )
+          } catch (err) {
+            singletonServices.logger.warn(
+              `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
+            )
+          }
+        }
+
+        await storage.saveWorkingMemory(threadId, 'thread', merged)
       }
     }
 

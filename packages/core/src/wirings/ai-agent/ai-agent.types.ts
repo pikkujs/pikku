@@ -101,7 +101,7 @@ export type AIAgentMemoryConfig = {
   vector?: string
   embedder?: string
   lastMessages?: number
-  workingMemory?: boolean
+  workingMemory?: unknown
 }
 
 export type CoreAIAgent<
@@ -217,6 +217,7 @@ export type AIAgentMeta = Record<
     agents?: string[]
     inputSchema: string | null
     outputSchema: string | null
+    workingMemorySchema: string | null
     middleware?: MiddlewareMetadata[]
     channelMiddleware?: MiddlewareMetadata[]
     aiMiddleware?: MiddlewareMetadata[]
