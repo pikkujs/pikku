@@ -1,97 +1,162 @@
-import { readFile } from 'fs/promises'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { streamAIAgent, runAIAgent } from '@pikku/core/ai-agent'
+import type { AIStreamEvent, AIStreamChannel } from '@pikku/core/ai-agent'
+import type {
+  AIAgentRunnerService,
+  AIAgentRunnerParams,
+  AIAgentRunnerResult,
+  AIRunStateService,
+  CreateRunInput,
+  AIStorageService,
+} from '@pikku/core/services'
+import type { AgentRunState, AIThread, AIMessage } from '@pikku/core/ai-agent'
+import {
+  assertMiddlewareAndPermissions,
+  type ExpectedEvent,
+} from '../assert-combined.js'
+import { randomUUID } from 'crypto'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+class MockAIAgentRunner implements AIAgentRunnerService {
+  async stream(
+    _params: AIAgentRunnerParams,
+    channel: AIStreamChannel
+  ): Promise<void> {
+    channel.send({ type: 'text-delta', text: 'Hello' })
+    channel.send({ type: 'text-delta', text: ' world' })
+    channel.send({ type: 'done' })
+  }
 
-export async function testAgentAIMiddleware(): Promise<boolean> {
-  console.log('\n--- Testing AI Agent Middleware Metadata ---')
+  async run(_params: AIAgentRunnerParams): Promise<AIAgentRunnerResult> {
+    return {
+      text: 'Hello world',
+      steps: [],
+      usage: { inputTokens: 10, outputTokens: 5 },
+    }
+  }
+}
 
-  const metaPath = join(
-    __dirname,
-    '../../.pikku/agent/pikku-agent-wirings-meta.gen.json'
+class MockAIRunState implements AIRunStateService {
+  async createRun(_run: CreateRunInput): Promise<string> {
+    return `run-${randomUUID()}`
+  }
+  async updateRun(
+    _runId: string,
+    _updates: Partial<AgentRunState>
+  ): Promise<void> {}
+  async getRun(_runId: string): Promise<AgentRunState | null> {
+    return null
+  }
+  async getRunsByThread(_threadId: string): Promise<AgentRunState[]> {
+    return []
+  }
+}
+
+class MockAIStorage implements AIStorageService {
+  async createThread(
+    _resourceId: string,
+    options?: { threadId?: string }
+  ): Promise<AIThread> {
+    return {
+      id: options?.threadId ?? randomUUID(),
+      resourceId: _resourceId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  }
+  async getThread(threadId: string): Promise<AIThread> {
+    return {
+      id: threadId,
+      resourceId: 'test',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  }
+  async getThreads(_resourceId: string): Promise<AIThread[]> {
+    return []
+  }
+  async deleteThread(_threadId: string): Promise<void> {}
+  async getMessages(_threadId: string): Promise<AIMessage[]> {
+    return []
+  }
+  async saveMessages(
+    _threadId: string,
+    _messages: AIMessage[]
+  ): Promise<void> {}
+  async getWorkingMemory(): Promise<Record<string, unknown> | null> {
+    return null
+  }
+  async saveWorkingMemory(): Promise<void> {}
+}
+
+export async function testAgentStreamWiring(
+  expected: ExpectedEvent[],
+  singletonServices: any
+): Promise<boolean> {
+  console.log('\n\nTest: Agent stream with AI middleware')
+  console.log('─────────────────────────')
+
+  const services = {
+    ...singletonServices,
+    aiAgentRunner: new MockAIAgentRunner(),
+    aiRunState: new MockAIRunState(),
+    aiStorage: new MockAIStorage(),
+  }
+
+  const events: AIStreamEvent[] = []
+  const channel: AIStreamChannel = {
+    channelId: 'test-channel',
+    openingData: undefined,
+    state: 'open',
+    close: () => {},
+    send: (event: AIStreamEvent) => {
+      events.push(event)
+    },
+  }
+
+  return await assertMiddlewareAndPermissions(
+    expected,
+    async () => {
+      await streamAIAgent(
+        'test-agent',
+        {
+          message: 'hello',
+          threadId: 'test-thread',
+          resourceId: 'test-resource',
+        },
+        channel,
+        { singletonServices: services }
+      )
+    },
+    services.logger
   )
-  const raw = await readFile(metaPath, 'utf-8')
-  const metaData = JSON.parse(raw)
+}
 
-  let passed = true
+export async function testAgentRunWiring(
+  expected: ExpectedEvent[],
+  singletonServices: any
+): Promise<boolean> {
+  console.log('\n\nTest: Agent run with AI middleware')
+  console.log('─────────────────────────')
 
-  const testAgentMeta = metaData.agentsMeta['test-agent']
-  if (!testAgentMeta) {
-    console.log('  ✗ test-agent not found in agentsMeta')
-    return false
+  const services = {
+    ...singletonServices,
+    aiAgentRunner: new MockAIAgentRunner(),
+    aiRunState: new MockAIRunState(),
+    aiStorage: new MockAIStorage(),
   }
 
-  if (!testAgentMeta.aiMiddleware) {
-    console.log('  ✗ test-agent missing aiMiddleware field')
-    return false
-  }
-
-  if (testAgentMeta.aiMiddleware.length !== 2) {
-    console.log(
-      `  ✗ test-agent should have 2 AI middleware, got ${testAgentMeta.aiMiddleware.length}`
-    )
-    passed = false
-  } else {
-    console.log('  ✓ test-agent has 2 AI middleware entries')
-  }
-
-  const first = testAgentMeta.aiMiddleware[0]
-  if (
-    first.type !== 'wire' ||
-    first.name !== 'testAIMiddleware' ||
-    first.inline !== false
-  ) {
-    console.log(
-      `  ✗ First AI middleware should be {type:'wire', name:'testAIMiddleware', inline:false}, got ${JSON.stringify(first)}`
-    )
-    passed = false
-  } else {
-    console.log(
-      '  ✓ First AI middleware is testAIMiddleware (wire, not inline)'
-    )
-  }
-
-  const second = testAgentMeta.aiMiddleware[1]
-  if (
-    second.type !== 'wire' ||
-    second.name !== 'secondAIMiddleware' ||
-    second.inline !== false
-  ) {
-    console.log(
-      `  ✗ Second AI middleware should be {type:'wire', name:'secondAIMiddleware', inline:false}, got ${JSON.stringify(second)}`
-    )
-    passed = false
-  } else {
-    console.log(
-      '  ✓ Second AI middleware is secondAIMiddleware (wire, not inline)'
-    )
-  }
-
-  if (testAgentMeta.channelMiddleware?.length !== 1) {
-    console.log(
-      `  ✗ test-agent should have 1 channel middleware, got ${testAgentMeta.channelMiddleware?.length}`
-    )
-    passed = false
-  } else {
-    console.log('  ✓ test-agent has 1 channel middleware entry')
-  }
-
-  const noAIMeta = metaData.agentsMeta['agent-no-ai-middleware']
-  if (!noAIMeta) {
-    console.log('  ✗ agent-no-ai-middleware not found in agentsMeta')
-    passed = false
-  } else if (noAIMeta.aiMiddleware) {
-    console.log(
-      `  ✗ agent-no-ai-middleware should have no aiMiddleware, got ${JSON.stringify(noAIMeta.aiMiddleware)}`
-    )
-    passed = false
-  } else {
-    console.log('  ✓ agent-no-ai-middleware correctly has no aiMiddleware')
-  }
-
-  console.log(
-    `\n  AI Middleware metadata test: ${passed ? 'PASSED' : 'FAILED'}`
+  return await assertMiddlewareAndPermissions(
+    expected,
+    async () => {
+      await runAIAgent(
+        'test-agent',
+        {
+          message: 'hello',
+          threadId: 'test-thread',
+          resourceId: 'test-resource',
+        },
+        { singletonServices: services }
+      )
+    },
+    services.logger
   )
-  return passed
 }

@@ -16,7 +16,10 @@ import { testQueueWiring } from './functions/queue.assert.js'
 import { testCLIWiring } from './functions/cli.assert.js'
 import { testChannelWiring } from './functions/channel-local.assert.js'
 import { testChannelWiringServerless } from './functions/channel-serverless.assert.js'
-import { testAgentAIMiddleware } from './functions/agent.assert.js'
+import {
+  testAgentStreamWiring,
+  testAgentRunWiring,
+} from './functions/agent.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -417,8 +420,35 @@ async function main(): Promise<void> {
       createWireServices
     )
 
-    // Test AI Agent middleware metadata
-    const agentAIMiddlewarePassed = await testAgentAIMiddleware()
+    // Test AI Agent stream with AI middleware
+    // modifyInput runs left→right, then per stream event: wire channel middleware
+    // runs before modifyOutputStream (converted to channel middleware),
+    // modifyOutput runs right→left after stream completes
+    const agentStreamPassed = await testAgentStreamWiring(
+      [
+        { name: 'modifyInput', type: 'ai-middleware', phase: 'before' },
+        { name: 'second-modifyInput', type: 'ai-middleware', phase: 'before' },
+        { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
+        { name: 'modifyOutputStream', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyOutput', type: 'ai-middleware', phase: 'before' },
+      ],
+      singletonServices
+    )
+
+    // Test AI Agent run (blocking) with AI middleware
+    // No modifyOutputStream since there's no channel in blocking mode
+    const agentRunPassed = await testAgentRunWiring(
+      [
+        { name: 'modifyInput', type: 'ai-middleware', phase: 'before' },
+        { name: 'second-modifyInput', type: 'ai-middleware', phase: 'before' },
+        { name: 'modifyOutput', type: 'ai-middleware', phase: 'before' },
+      ],
+      singletonServices
+    )
 
     // Test Internal RPC with external package call
     // Note: testExternalWithAuth only has 'function' tag (no 'session' tag)
@@ -464,7 +494,8 @@ async function main(): Promise<void> {
       channelServerlessTest4Passed &&
       channelServerlessTest5Passed &&
       rpcPassed &&
-      agentAIMiddlewarePassed
+      agentStreamPassed &&
+      agentRunPassed
 
     if (allPassed) {
       console.log('\n\n✓ All wiring types tested successfully!')

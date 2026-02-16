@@ -235,9 +235,11 @@ export async function streamAIAgent(
     runnerParams,
   } = await prepareAgentRun(agentName, input, params, sessionMap, streamContext)
 
-  const runId = `run-${randomUUID()}`
   const { singletonServices } = params
-  const aiRunState = singletonServices.aiRunState
+  const { aiRunState } = singletonServices
+  if (!aiRunState) {
+    throw new Error('AIRunStateService not available in singletonServices')
+  }
 
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
 
@@ -256,18 +258,15 @@ export async function streamAIAgent(
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
 
-  if (aiRunState) {
-    await aiRunState.createRun({
-      runId,
-      agentName,
-      threadId,
-      resourceId: input.resourceId,
-      status: 'running',
-      usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-  }
+  const runId = await aiRunState.createRun({
+    agentName,
+    threadId,
+    resourceId: input.resourceId,
+    status: 'running',
+    usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
 
   if (storage) {
     await storage.saveMessages(threadId, [userMessage])
@@ -413,6 +412,10 @@ export async function runAIAgent(
   } = await prepareAgentRun(agentName, input, params, sessionMap)
 
   const { singletonServices } = params
+  const { aiRunState } = singletonServices
+  if (!aiRunState) {
+    throw new Error('AIRunStateService not available in singletonServices')
+  }
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
 
   let modifiedMessages = runnerParams.messages
@@ -429,6 +432,16 @@ export async function runAIAgent(
   }
   runnerParams.messages = modifiedMessages
   runnerParams.instructions = modifiedInstructions
+
+  const runId = await aiRunState.createRun({
+    agentName,
+    threadId,
+    resourceId: input.resourceId,
+    status: 'running',
+    usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
 
   const result = await agentRunner.run(runnerParams)
 
@@ -466,7 +479,13 @@ export async function runAIAgent(
     outputText
   )
 
+  await aiRunState.updateRun(runId, {
+    status: 'completed',
+    usage: { ...result.usage, model: agent.model },
+  })
+
   return {
+    runId,
     text: outputText,
     object: result.object,
     threadId,

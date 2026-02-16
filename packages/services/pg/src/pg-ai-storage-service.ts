@@ -1,4 +1,8 @@
-import type { AIStorageService, AIRunStateService } from '@pikku/core/services'
+import type {
+  AIStorageService,
+  AIRunStateService,
+  CreateRunInput,
+} from '@pikku/core/services'
 import type { AIThread, AIMessage, AgentRunState } from '@pikku/core/ai-agent'
 import postgres from 'postgres'
 import { validateSchemaName } from './schema.js'
@@ -67,7 +71,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       );
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_run (
-        run_id TEXT PRIMARY KEY,
+        run_id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         agent_name TEXT NOT NULL,
         thread_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_threads(id) ON DELETE CASCADE,
         resource_id TEXT NOT NULL,
@@ -288,14 +292,14 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     )
   }
 
-  async createRun(run: AgentRunState): Promise<void> {
-    await this.sql.unsafe(
+  async createRun(run: CreateRunInput): Promise<string> {
+    const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.ai_run
-       (run_id, agent_name, thread_id, resource_id, status,
+       (agent_name, thread_id, resource_id, status,
         usage_input_tokens, usage_output_tokens, usage_model, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING run_id`,
       [
-        run.runId,
         run.agentName,
         run.threadId,
         run.resourceId,
@@ -308,9 +312,13 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       ]
     )
 
+    const runId = result[0]!.run_id as string
+
     if (run.pendingApprovals?.length) {
-      await this.insertApprovals(run.runId, run.pendingApprovals)
+      await this.insertApprovals(runId, run.pendingApprovals)
     }
+
+    return runId
   }
 
   async updateRun(

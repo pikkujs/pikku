@@ -107,58 +107,65 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       toolChoice: params.toolChoice,
       ...(params.outputSchema
         ? {
-            experimental_output: Output.object({
+            output: Output.object({
               schema: jsonSchema(params.outputSchema as any),
             }),
           }
         : {}),
     })
 
-    for await (const part of result.fullStream) {
-      switch (part.type) {
-        case 'text-delta':
-          channel.send({ type: 'text-delta', text: part.textDelta })
-          break
-        case 'reasoning':
-          channel.send({ type: 'reasoning-delta', text: part.textDelta })
-          break
-        case 'tool-call':
-          channel.send({
-            type: 'tool-call',
-            toolName: part.toolName,
-            args: part.args,
-          })
-          break
-        case 'tool-result':
-          channel.send({
-            type: 'tool-result',
-            toolName: part.toolName,
-            result: part.result,
-          })
-          break
-        case 'step-finish':
-          channel.send({
-            type: 'usage',
-            tokens: {
-              input: part.usage.promptTokens,
-              output: part.usage.completionTokens,
-            },
-            model: modelName,
-          })
-          break
-        case 'error':
-          channel.send({
-            type: 'error',
-            message:
-              part.error instanceof Error
-                ? part.error.message
-                : String(part.error),
-          })
-          break
+    try {
+      for await (const part of result.fullStream) {
+        switch (part.type) {
+          case 'text-delta':
+            channel.send({ type: 'text-delta', text: part.textDelta })
+            break
+          case 'reasoning':
+            channel.send({ type: 'reasoning-delta', text: part.textDelta })
+            break
+          case 'tool-call':
+            channel.send({
+              type: 'tool-call',
+              toolName: part.toolName,
+              args: part.args,
+            })
+            break
+          case 'tool-result':
+            channel.send({
+              type: 'tool-result',
+              toolName: part.toolName,
+              result: part.result,
+            })
+            break
+          case 'step-finish':
+            channel.send({
+              type: 'usage',
+              tokens: {
+                input: part.usage.promptTokens,
+                output: part.usage.completionTokens,
+              },
+              model: modelName,
+            })
+            break
+          case 'error':
+            channel.send({
+              type: 'error',
+              message:
+                part.error instanceof Error
+                  ? part.error.message
+                  : String(part.error),
+            })
+            break
+        }
       }
+    } catch (err) {
+      channel.send({
+        type: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      })
+    } finally {
+      channel.send({ type: 'done' })
     }
-
-    channel.send({ type: 'done' })
   }
 
   async run(params: AIAgentRunnerParams): Promise<AIAgentRunnerResult> {
@@ -177,7 +184,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       toolChoice: params.toolChoice,
       ...(params.outputSchema
         ? {
-            experimental_output: Output.object({
+            output: Output.object({
               schema: jsonSchema(params.outputSchema as any),
             }),
           }
@@ -186,9 +193,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
     return {
       text: result.text,
-      object: params.outputSchema
-        ? (result as any).experimental_output
-        : undefined,
+      object: params.outputSchema ? (result as any).output : undefined,
       steps: result.steps.map(convertFromSDKStep),
       usage: {
         inputTokens: result.usage?.promptTokens ?? 0,

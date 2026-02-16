@@ -10,7 +10,6 @@ import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
 import { runAIAgent } from '../ai-agent/ai-agent-runner.js'
-import { randomUUID } from 'crypto'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -227,12 +226,11 @@ export class ContextAwareRPCService {
     result: unknown
     usage: { inputTokens: number; outputTokens: number }
   }> {
-    const runId = randomUUID()
     const result = await runAIAgent(agentName, input, {
       singletonServices: this.services as CoreSingletonServices,
     })
     return {
-      runId,
+      runId: result.runId,
       result: result.object ?? result.text,
       usage: result.usage,
     }
