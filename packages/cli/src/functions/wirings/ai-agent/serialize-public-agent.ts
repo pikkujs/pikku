@@ -1,34 +1,7 @@
 export const serializePublicAgent = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc, pikkuChannelFunc, wireHTTPRoutes } from '${pathToPikkuTypes}'
-import { pikkuState } from '@pikku/core'
+  return `import { pikkuSessionlessFunc, pikkuChannelFunc, wireHTTP } from '${pathToPikkuTypes}'
 import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
-
-const agentRoutes = [
-  { pikkuFuncId: 'agentCaller', route: '/rpc/agent/:agentName', method: 'post' as const },
-  { pikkuFuncId: 'agentStreamCaller', route: '/rpc/agent/:agentName/stream', method: 'post' as const, sse: true as const },
-  { pikkuFuncId: 'agentApproveCaller', route: '/rpc/agent/:agentName/approve', method: 'post' as const },
-  { pikkuFuncId: 'http:options:/rpc/agent/:agentName', route: '/rpc/agent/:agentName', method: 'options' as const },
-  { pikkuFuncId: 'http:options:/rpc/agent/:agentName/stream', route: '/rpc/agent/:agentName/stream', method: 'options' as const },
-]
-
-const httpMeta = pikkuState(null, 'http', 'meta')
-for (const r of agentRoutes) {
-  if (!httpMeta[r.method]) httpMeta[r.method] = {}
-  httpMeta[r.method][r.route] = r
-}
-
-const funcMeta = pikkuState(null, 'function', 'meta')
-for (const r of agentRoutes) {
-  funcMeta[r.pikkuFuncId] = {
-    pikkuFuncId: r.pikkuFuncId,
-    functionType: 'inline',
-    sessionless: true,
-    name: r.pikkuFuncId,
-    inputSchemaName: null,
-    outputSchemaName: null,
-  }
-}
 
 export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
@@ -69,15 +42,40 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   },
 })
 
-wireHTTPRoutes({
+wireHTTP({
+  route: '/rpc/agent/:agentName',
+  method: 'options',
   auth: false,
-  routes: {
-    options: { route: '/rpc/agent/:agentName', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
-    call: { route: '/rpc/agent/:agentName', method: 'post', func: agentCaller },
-    streamOptions: { route: '/rpc/agent/:agentName/stream', method: 'options', func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0) },
-    stream: { route: '/rpc/agent/:agentName/stream', method: 'post', sse: true, func: agentStreamCaller },
-    approve: { route: '/rpc/agent/:agentName/approve', method: 'post', func: agentApproveCaller },
-  },
+  func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+})
+
+wireHTTP({
+  route: '/rpc/agent/:agentName',
+  method: 'post',
+  auth: false,
+  func: agentCaller,
+})
+
+wireHTTP({
+  route: '/rpc/agent/:agentName/stream',
+  method: 'options',
+  auth: false,
+  func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+})
+
+;(wireHTTP as any)({
+  route: '/rpc/agent/:agentName/stream',
+  method: 'post',
+  auth: false,
+  sse: true,
+  func: agentStreamCaller,
+})
+
+wireHTTP({
+  route: '/rpc/agent/:agentName/approve',
+  method: 'post',
+  auth: false,
+  func: agentApproveCaller,
 })
 `
 }

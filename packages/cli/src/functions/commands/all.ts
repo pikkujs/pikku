@@ -91,6 +91,10 @@ export const all = pikkuVoidFunc({
       allImports.push(config.rpcInternalWiringMetaFile)
     }
 
+    if (agents || !config.externalPackage) {
+      await getInspectorState(true)
+    }
+
     if (!config.externalPackage) {
       const http = await rpc.invoke('pikkuHTTP', null)
       if (http) {
