@@ -836,18 +836,18 @@ function buildToolDefs(
         (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
 
       tools.push({
-        name: toolName,
+        name: pikkuFuncId,
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema: inputSchema || {},
         execute: async (toolInput: unknown) => {
           if (needsApproval) {
-            throw new ToolApprovalRequired(randomUUID(), toolName, toolInput)
+            throw new ToolApprovalRequired(randomUUID(), pikkuFuncId, toolInput)
           }
           const sessionService = new PikkuSessionService()
           const wire: PikkuWire = {
             ...createMiddlewareSessionWireProps(sessionService),
           }
-          return runPikkuFunc('agent', `tool:${toolName}`, pikkuFuncId, {
+          return runPikkuFunc('agent', `tool:${pikkuFuncId}`, pikkuFuncId, {
             singletonServices,
             createWireServices: params.createWireServices,
             data: () => toolInput,
