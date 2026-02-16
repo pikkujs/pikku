@@ -6,9 +6,11 @@ export const serializeAIAgentTypes = (functionTypesImportPath: string) => {
 import type { PikkuPermission, PikkuMiddleware, Services } from '${functionTypesImportPath}'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
-type AIAgentConfig = CoreAIAgent<PikkuPermission, PikkuMiddleware> & {
+type AIAgentConfig = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware>, 'tools' | 'agents'> & {
   input?: StandardSchemaV1
   output?: StandardSchemaV1
+  tools?: object[]
+  agents?: AIAgentConfig[]
 }
 
 export const pikkuAIAgent = (

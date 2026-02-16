@@ -168,15 +168,16 @@ async function prepareAgentRun(
   const trimmedMessages = trimMessages(allMessages)
 
   const tools = buildToolDefs(
-    agent,
     singletonServices,
     params,
     agentSessionMap,
     input.resourceId,
+    resolvedName,
+    packageName,
     streamContext
   )
 
-  const instructions = buildInstructions(agent)
+  const instructions = buildInstructions(resolvedName, packageName)
 
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
   const meta = agentsMeta[resolvedName]
@@ -567,12 +568,17 @@ async function loadContextMessages(
   return contextMessages
 }
 
-function buildInstructions(agent: CoreAIAgent): string {
-  const baseInstructions = Array.isArray(agent.instructions)
-    ? agent.instructions.join('\n')
-    : agent.instructions
+function buildInstructions(
+  agentName: string,
+  packageName: string | null
+): string {
+  const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
+  const instructions = meta?.instructions ?? ''
+  const baseInstructions = Array.isArray(instructions)
+    ? instructions.join('\n')
+    : instructions
 
-  return agent.agents?.length
+  return meta?.agents?.length
     ? baseInstructions +
         '\n\nWhen calling a sub-agent, provide a short session name that describes the task. ' +
         'Use the same session name to continue a previous conversation with that agent. ' +
@@ -790,21 +796,28 @@ function createScopedChannel(
 }
 
 function buildToolDefs(
-  agent: CoreAIAgent,
   singletonServices: CoreSingletonServices,
   params: RunAIAgentParams,
   agentSessionMap: Map<string, string>,
   resourceId: string,
+  agentName: string,
+  packageName: string | null,
   streamContext?: StreamContext
 ): AIAgentToolDef[] {
   const tools: AIAgentToolDef[] = []
   const approvalPolicy = streamContext?.options?.requiresToolApproval ?? false
 
-  if (agent.tools?.length) {
+  const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
+  if (!meta) return tools
+
+  const metaTools = meta.tools
+  const metaAgents = meta.agents
+
+  if (metaTools?.length) {
     const functionMeta = pikkuState(null, 'function', 'meta')
     const schemas = pikkuState(null, 'misc', 'schemas')
 
-    for (const toolName of agent.tools) {
+    for (const toolName of metaTools) {
       const rpcMeta = pikkuState(null, 'rpc', 'meta')
       const pikkuFuncId = rpcMeta[toolName]
       if (!pikkuFuncId) {
@@ -846,11 +859,11 @@ function buildToolDefs(
     }
   }
 
-  if (agent.agents?.length) {
-    const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+  if (metaAgents?.length) {
+    const allAgentsMeta = pikkuState(null, 'agent', 'agentsMeta')
 
-    for (const subAgentName of agent.agents) {
-      const subMeta = agentsMeta[subAgentName]
+    for (const subAgentName of metaAgents) {
+      const subMeta = allAgentsMeta[subAgentName]
       if (!subMeta) {
         singletonServices.logger.warn(
           `Sub-agent '${subAgentName}' not found in agent registry`

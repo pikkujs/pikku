@@ -115,8 +115,8 @@ export type CoreAIAgent<
   errors?: string[]
   instructions: string | string[]
   model: string
-  tools?: string[]
-  agents?: string[]
+  tools?: unknown[]
+  agents?: unknown[]
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
@@ -200,11 +200,15 @@ export type AIAgentMeta = Record<
     CoreAIAgent,
     | 'input'
     | 'output'
+    | 'tools'
+    | 'agents'
     | 'middleware'
     | 'channelMiddleware'
     | 'aiMiddleware'
     | 'permissions'
   > & {
+    tools?: string[]
+    agents?: string[]
     inputSchema: string | null
     outputSchema: string | null
     middleware?: MiddlewareMetadata[]
