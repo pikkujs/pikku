@@ -14,6 +14,10 @@ import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta, JSONValue } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
+import type {
+  VersionManifest,
+  VersionValidateError,
+} from './utils/contract-hashes.js'
 import type { SerializedWorkflowGraphs } from './utils/workflow/graph/workflow-graph.types.js'
 
 export type PathToNameAndType = Map<
@@ -182,6 +186,7 @@ export type InspectorOptions = Partial<{
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
   }
+  manifest: VersionManifest
 }>
 
 export interface InspectorLogger {
@@ -316,6 +321,11 @@ export interface InspectorState {
   variables: {
     definitions: VariableDefinitions
     files: Set<string>
+  }
+  manifest: {
+    initial: VersionManifest | null
+    current: VersionManifest | null
+    errors: VersionValidateError[]
   }
   middleware: InspectorMiddlewareState
   channelMiddleware: InspectorChannelMiddlewareState

@@ -12,7 +12,13 @@ import {
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
-import { computeContractHashes } from './utils/contract-hashes.js'
+import {
+  computeContractHashes,
+  extractContractsFromMeta,
+  updateManifest,
+  createEmptyManifest,
+  validateContracts,
+} from './utils/contract-hashes.js'
 
 /**
  * Creates an initial/empty inspector state with all required properties initialized
@@ -115,6 +121,11 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     variables: {
       definitions: [],
       files: new Set(),
+    },
+    manifest: {
+      initial: null,
+      current: null,
+      errors: [],
     },
     middleware: {
       definitions: {},
@@ -223,6 +234,12 @@ export const inspect = async (
         state.functions.meta
       )
     }
+
+    state.manifest.initial = options.manifest ?? null
+    const contracts = extractContractsFromMeta(state.functions.meta)
+    const baseManifest = state.manifest.initial ?? createEmptyManifest()
+    state.manifest.current = updateManifest(baseManifest, contracts)
+    state.manifest.errors = validateContracts(baseManifest, contracts).errors
 
     finalizeWorkflows(state)
   }

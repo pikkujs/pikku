@@ -23,7 +23,7 @@ export {
 } from './utils/contract-hashes.js'
 export type {
   ContractEntry,
-  ValidationError,
+  VersionValidateError,
   VersionManifest,
   VersionManifestEntry,
 } from './utils/contract-hashes.js'
