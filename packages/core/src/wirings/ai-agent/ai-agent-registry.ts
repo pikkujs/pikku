@@ -1,6 +1,6 @@
-import type { CoreSingletonServices } from '../../types/core.types.js'
 import type { CoreAIAgent, AgentRunState } from './ai-agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
+import { AIRunStateService } from '../../services/ai-run-state-service.js'
 
 export const addAIAgent = (
   agentName: string,
@@ -20,9 +20,9 @@ export const addAIAgent = (
 }
 
 export async function approveAIAgent(
+  aiRunState: AIRunStateService,
   runId: string,
-  approvals: { toolCallId: string; approved: boolean }[],
-  singletonServices: CoreSingletonServices
+  approvals: { toolCallId: string; approved: boolean }[]
 ): Promise<{
   status: 'resumed' | 'suspended'
   runId: string
@@ -30,7 +30,6 @@ export async function approveAIAgent(
   rejected: string[]
   remainingApprovals: number
 }> {
-  const { aiRunState } = singletonServices
   if (!aiRunState) throw new Error('AIRunStateService not available')
 
   const run = await aiRunState.getRun(runId)
