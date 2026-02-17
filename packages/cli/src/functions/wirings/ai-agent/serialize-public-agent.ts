@@ -37,8 +37,8 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   unknown
 >({
   auth: false,
-  func: async (services, data) => {
-    return await approveAIAgent(data.runId, data.approvals, services)
+  func: async ({ aiRunState }, { runId, approvals }) => {
+    return await approveAIAgent(aiRunState, runId, approvals)
   },
 })
 
