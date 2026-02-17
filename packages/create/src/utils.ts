@@ -250,13 +250,14 @@ export function serverlessChanges(targetPath: string, appName: string): void {
  * Used for files in src/functions/ and src/wirings/ directories.
  */
 const FILE_FEATURE_MAPPING = {
-  'auth.': ['http', 'channel'], // Channel wirings use auth functions
+  'agent.': ['http'],
+  'auth.': ['http', 'channel'],
   'channel.': ['channel'],
   'mcp.': ['mcp'],
   'queue.': ['queue'],
   'scheduled.': ['scheduled'],
   'sse.': ['sse'],
-  'todos.': ['http', 'mcp', 'cli', 'channel'], // MCP, CLI, and Channel depend on todos
+  'todos.': ['http', 'mcp', 'cli', 'channel'],
   'workflow.': ['workflows'],
   'graph.': ['workflows'],
   'cli.': ['cli'],
@@ -267,9 +268,10 @@ const FILE_FEATURE_MAPPING = {
  * Maps client file names to feature types for filtering
  */
 const CLIENT_FEATURE_MAPPING = {
+  'ai-agent.ts': ['http'],
   'http-fetch.ts': ['http'],
   'http-sse.ts': ['sse'],
-  'rpc.ts': ['external'], // Requires external packages which aren't included in standalone templates
+  'rpc.ts': ['external'],
   'websocket.ts': ['channel'],
   'workflow.ts': ['workflows'],
 } as const

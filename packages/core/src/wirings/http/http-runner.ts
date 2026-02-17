@@ -393,15 +393,14 @@ const executeRoute = async (
       sessionService: userSession,
     }
   )
-  if (matchedRoute.route.sse) {
-    channel?.close()
-  } else if (route.returnsJSON === false) {
-    http?.response?.arrayBuffer(result)
-  } else {
-    http?.response?.json(result)
+  if (!matchedRoute.route.sse) {
+    if (route.returnsJSON === false) {
+      http?.response?.arrayBuffer(result)
+    } else {
+      http?.response?.json(result)
+    }
+    http?.response?.status(200)
   }
-
-  http?.response?.status(200)
 
   return wireServices ? { result, wireServices } : { result }
 }
