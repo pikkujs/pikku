@@ -5,7 +5,7 @@ import { serializeManifest } from '@pikku/inspector'
 
 export type {
   ContractEntry,
-  ValidationError,
+  VersionValidateError,
   VersionManifest,
   VersionManifestEntry,
 } from '@pikku/inspector'

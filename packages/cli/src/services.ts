@@ -35,6 +35,8 @@ import {
   ForwardedLogMessage,
 } from './services/cli-logger-forwarder.service.js'
 import { readFile, writeFile } from 'fs/promises'
+import { loadManifest } from './utils/contract-versions.js'
+import { join } from 'path'
 
 // Logger instance will be configured with log level from CLI flags in createConfig
 // Logo will be displayed conditionally in createConfig based on --silent flag
@@ -262,6 +264,10 @@ export const createSingletonServices: CreateSingletonServices<
           )
         )
       ).flat()
+      const manifest = !setupOnly
+        ? ((await loadManifest(join(config.outDir, 'versions.json'))) ??
+          undefined)
+        : undefined
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
@@ -280,6 +286,7 @@ export const createSingletonServices: CreateSingletonServices<
               schema: config.schema,
             }
           : undefined,
+        manifest,
       })
 
       // Save unfiltered inspector state to file if stateOutput is provided

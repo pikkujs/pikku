@@ -9,7 +9,7 @@ export type ContractEntry = {
   contractHash: string
 }
 
-export type ValidationError = {
+export type VersionValidateError = {
   code: ErrorCode
   message: string
 }
@@ -158,8 +158,8 @@ function groupByFunctionKey(
 export function validateContracts(
   manifest: VersionManifest,
   currentContracts: Map<string, ContractEntry>
-): { valid: boolean; errors: ValidationError[] } {
-  const errors: ValidationError[] = []
+): { valid: boolean; errors: VersionValidateError[] } {
+  const errors: VersionValidateError[] = []
   const grouped = groupByFunctionKey(currentContracts)
   const reportedKeys = new Set<string>()
 

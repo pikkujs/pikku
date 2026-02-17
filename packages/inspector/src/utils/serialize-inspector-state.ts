@@ -170,6 +170,7 @@ export interface SerializableInspectorState {
     definitions: InspectorState['variables']['definitions']
     files: string[]
   }
+  manifest: InspectorState['manifest']
   middleware: {
     definitions: InspectorState['middleware']['definitions']
     instances: InspectorState['middleware']['instances']
@@ -350,6 +351,7 @@ export function serializeInspectorState(
       definitions: state.variables.definitions,
       files: Array.from(state.variables.files),
     },
+    manifest: state.manifest,
     middleware: {
       definitions: state.middleware.definitions,
       instances: state.middleware.instances,
@@ -503,6 +505,7 @@ export function deserializeInspectorState(
       definitions: data.variables?.definitions || [],
       files: new Set(data.variables?.files || []),
     },
+    manifest: data.manifest || { initial: null, current: null, errors: [] },
     middleware: {
       definitions: data.middleware.definitions,
       instances: data.middleware.instances || {},
