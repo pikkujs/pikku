@@ -1,15 +1,5 @@
 import { existsSync } from 'fs'
-import { join } from 'path'
 import { pikkuVoidFunc } from '#pikku'
-import { createEmptyManifest } from '../../utils/contract-version.js'
-import { ErrorCode } from '@pikku/inspector'
-import {
-  loadManifest,
-  saveManifest,
-  extractContractsFromMeta,
-  validateContracts,
-  updateManifest,
-} from '../../utils/contract-versions.js'
 
 export const all = pikkuVoidFunc({
   internal: true,
@@ -43,8 +33,6 @@ export const all = pikkuVoidFunc({
       await rpc.invoke('pikkuCLITypes', null)
     }
 
-    const hasFunctionRegistrations = await rpc.invoke('pikkuFunctions', null)
-
     const middleware = await rpc.invoke('pikkuMiddleware', null)
     if (middleware) {
       allImports.push(config.middlewareFile)
@@ -53,12 +41,6 @@ export const all = pikkuVoidFunc({
     const permissions = await rpc.invoke('pikkuPermissions', null)
     if (permissions) {
       allImports.push(config.permissionsFile)
-    }
-
-    allImports.push(config.functionsMetaFile)
-
-    if (hasFunctionRegistrations) {
-      allImports.push(config.functionsFile)
     }
 
     await rpc.invoke('pikkuServices', null)
@@ -75,7 +57,6 @@ export const all = pikkuVoidFunc({
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
       if (config.agent?.publicAgentPath) {
         await rpc.invoke('pikkuPublicAgent', null)
-        allImports.push(config.agent.publicAgentPath)
       }
     }
 
@@ -144,6 +125,12 @@ export const all = pikkuVoidFunc({
       await rpc.invoke('pikkuSchemas', null)
     }
 
+    const hasFunctionRegistrations = await rpc.invoke('pikkuFunctions', null)
+    allImports.push(config.functionsMetaFile)
+    if (hasFunctionRegistrations) {
+      allImports.push(config.functionsFile)
+    }
+
     if (workflows) {
       allImports.push(config.workflowsWiringFile)
     }
@@ -196,26 +183,10 @@ export const all = pikkuVoidFunc({
       await rpc.invoke('pikkuOpenAPI', null)
     }
 
-    const manifestPath = join(config.outDir, 'versions.json')
-    let manifest = await loadManifest(manifestPath)
-    if (!manifest) {
-      manifest = createEmptyManifest()
-    }
-    const visitState = await getInspectorState()
-    const contracts = extractContractsFromMeta(visitState.functions.meta)
-    if (contracts.size > 0) {
-      const result = validateContracts(manifest, contracts)
-      const immutabilityErrors = result.errors.filter(
-        (e) => e.code === ErrorCode.FUNCTION_VERSION_MODIFIED
-      )
-      if (immutabilityErrors.length > 0) {
-        for (const error of immutabilityErrors) {
-          logger.error(`[${error.code}] ${error.message}`)
-        }
-        process.exit(1)
-      }
-      const updated = updateManifest(manifest, contracts)
-      await saveManifest(manifestPath, updated)
+    try {
+      await rpc.invoke('pikkuVersionsUpdate', null)
+    } catch {
+      logger.warn(`Run 'pikku init' to enable contract versioning.`)
     }
 
     await rpc.invoke('pikkuBootstrap', { allImports })

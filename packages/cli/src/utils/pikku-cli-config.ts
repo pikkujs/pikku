@@ -519,7 +519,11 @@ const _getPikkuCLIConfig = async (
     }
 
     for (const objectKey of Object.keys(result)) {
-      if (objectKey.endsWith('File') || objectKey.endsWith('Directory')) {
+      if (
+        objectKey.endsWith('File') ||
+        objectKey.endsWith('Directory') ||
+        objectKey.endsWith('Dir')
+      ) {
         const relativeTo = CONFIG_DIR_FILES.includes(objectKey)
           ? result.configDir
           : result.rootDir
