@@ -27,6 +27,7 @@ export type {
   VersionManifest,
   VersionManifestEntry,
 } from './utils/contract-hashes.js'
+export { serializeMCPJson } from './utils/serialize-mcp-json.js'
 export {
   deserializeDslWorkflow,
   deserializeGraphWorkflow,

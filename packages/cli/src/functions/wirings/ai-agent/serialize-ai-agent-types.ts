@@ -21,13 +21,12 @@ export const pikkuAIAgent = (
   return agent
 }
 
-//TODO: SWitch RequiredServices to be the second generic and default it to Services, and Event to be the first generic and default it to unknown, to match the order of generics in PikkuMiddlewareHooks. 
-// should also pass in state as a type here
 export const pikkuAIMiddleware = <
-  RequiredServices extends Services = Services,
   Event = unknown,
+  State extends Record<string, unknown> = Record<string, unknown>,
+  RequiredServices extends Services = Services,
 >(
-  hooks: PikkuAIMiddlewareHooks<RequiredServices, Event>
-): PikkuAIMiddlewareHooks<RequiredServices, Event> => hooks
+  hooks: PikkuAIMiddlewareHooks<Event, State, RequiredServices>
+): PikkuAIMiddlewareHooks<Event, State, RequiredServices> => hooks
 `
 }

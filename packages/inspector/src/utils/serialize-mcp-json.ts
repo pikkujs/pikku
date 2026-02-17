@@ -1,11 +1,8 @@
-import { readFile } from 'fs/promises'
-import { join } from 'path'
-import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
-import { FunctionsMeta, JSONValue } from '@pikku/core'
-import { TypesMap } from '@pikku/inspector'
-import { CLILogger } from '../../../services/cli-logger.service.js'
+import type { InspectorLogger, InspectorState } from '../types.js'
+import type { JSONValue } from '@pikku/core'
 
 interface MCPEndpoint {
+  uri?: string
   name: string
   description?: string
   parameters?: JSONValue
@@ -13,23 +10,19 @@ interface MCPEndpoint {
   streaming?: boolean
 }
 
-export const serializeMCPJson = async (
-  logger: CLILogger,
-  schemaDirectory: string,
-  functionsMeta: FunctionsMeta,
-  typesMap: TypesMap,
-  mcpResourceMeta: MCPResourceMeta,
-  mcpToolMeta: MCPToolMeta,
-  mcpPromptMeta: MCPPromptMeta
-): Promise<string> => {
+export const serializeMCPJson = (
+  logger: InspectorLogger,
+  state: InspectorState
+): string => {
+  const { mcpEndpoints, functions, schemas } = state
+  const { meta: functionsMeta, typesMap } = functions
+  const { resourcesMeta, toolsMeta, promptsMeta } = mcpEndpoints
+
   const tools: MCPEndpoint[] = []
   const resources: MCPEndpoint[] = []
   const prompts: any[] = []
 
-  // Helper function to load schema from file
-  const loadSchema = async (
-    typeName: string | undefined
-  ): Promise<JSONValue | undefined> => {
+  const loadSchema = (typeName: string | undefined): JSONValue | undefined => {
     if (
       !typeName ||
       [
@@ -51,26 +44,18 @@ export const serializeMCPJson = async (
       return undefined
     }
 
-    const schemaPath = join(
-      schemaDirectory,
-      'schemas',
-      `${uniqueName}.schema.json`
-    )
-
-    try {
-      const schemaContent = await readFile(schemaPath, 'utf-8')
-      return JSON.parse(schemaContent)
-    } catch (e) {
+    const schema = schemas[uniqueName]
+    if (!schema) {
       logger.warn(
-        `Serialize MCP: Could not load schema for type: ${uniqueName} from ${schemaPath}`
+        `Serialize MCP: Could not find schema for type: ${uniqueName}`
       )
-      console.error(e)
       return undefined
     }
+
+    return schema
   }
 
-  // Process MCP resources
-  for (const [name, endpointMeta] of Object.entries(mcpResourceMeta)) {
+  for (const [name, endpointMeta] of Object.entries(resourcesMeta)) {
     const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
     if (!functionMeta) {
       logger.warn(
@@ -82,23 +67,20 @@ export const serializeMCPJson = async (
     const inputType = functionMeta.inputs?.[0]
     const outputType = functionMeta.outputs?.[0]
 
-    const parameters = await loadSchema(inputType)
-    const returns = await loadSchema(outputType)
+    const parameters = loadSchema(inputType)
+    const returns = loadSchema(outputType)
 
-    const endpoint = {
+    resources.push({
       uri: name,
       name,
       description: endpointMeta.description,
       ...(parameters && { parameters }),
       ...(returns && { returns }),
       ...(endpointMeta.streaming && { streaming: true }),
-    }
-
-    resources.push(endpoint)
+    })
   }
 
-  // Process MCP tools
-  for (const [name, endpointMeta] of Object.entries(mcpToolMeta)) {
+  for (const [name, endpointMeta] of Object.entries(toolsMeta)) {
     const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
     if (!functionMeta) {
       logger.warn(
@@ -110,22 +92,19 @@ export const serializeMCPJson = async (
     const inputType = functionMeta.inputs?.[0]
     const outputType = functionMeta.outputs?.[0]
 
-    const parameters = await loadSchema(inputType)
-    const returns = await loadSchema(outputType)
+    const parameters = loadSchema(inputType)
+    const returns = loadSchema(outputType)
 
-    const endpoint = {
+    tools.push({
       name,
       description: endpointMeta.description,
       ...(parameters && { parameters }),
       ...(returns && { returns }),
       ...(endpointMeta.streaming && { streaming: true }),
-    }
-
-    tools.push(endpoint)
+    })
   }
 
-  // Process MCP prompts
-  for (const [name, endpointMeta] of Object.entries(mcpPromptMeta)) {
+  for (const [name, endpointMeta] of Object.entries(promptsMeta)) {
     const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
     if (!functionMeta) {
       logger.warn(
@@ -135,9 +114,8 @@ export const serializeMCPJson = async (
     }
 
     const inputType = functionMeta.inputs?.[0]
-    const inputSchema = await loadSchema(inputType)
+    const inputSchema = loadSchema(inputType)
 
-    // Generate arguments from input schema
     const argumentsArray: any[] = []
     if (
       inputSchema &&
@@ -156,13 +134,11 @@ export const serializeMCPJson = async (
       }
     }
 
-    const prompt = {
+    prompts.push({
       name,
       description: endpointMeta.description,
       arguments: argumentsArray,
-    }
-
-    prompts.push(prompt)
+    })
   }
 
   return JSON.stringify({ tools, resources, prompts }, null, 2)
