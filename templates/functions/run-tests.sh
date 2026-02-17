@@ -32,6 +32,7 @@ RUN_QUEUE_TESTS=false
 RUN_MCP_TESTS=false
 RUN_CLI_TESTS=false
 RUN_WORKFLOW_TESTS=false
+RUN_AGENT_TESTS=false
 IGNORE_SERVER_READY_CHECK=false
 WS_PATH=""
 
@@ -88,6 +89,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --workflow)
             RUN_WORKFLOW_TESTS=true
+            shift
+            ;;
+        --agent)
+            RUN_AGENT_TESTS=true
             shift
             ;;
         *)
@@ -195,6 +200,14 @@ fi
 if $RUN_WORKFLOW_TESTS; then
     echo "Running Workflow tests..."
     $PKG_MANAGER run test:workflows
+fi
+
+# -------- RUN AGENT TESTS IF REQUESTED --------
+if $RUN_AGENT_TESTS; then
+    echo "Running Agent HTTP tests..."
+    $PKG_MANAGER run test:agent-http
+    echo "Running Agent SSE tests..."
+    $PKG_MANAGER run test:agent-sse
 fi
 
 echo "✅ All tests completed successfully."

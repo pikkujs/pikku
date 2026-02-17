@@ -496,8 +496,8 @@ export function deserializeInspectorState(
       files: new Set(data.mcpEndpoints.files),
     },
     agents: {
-      agentsMeta: (data as any).agents?.agentsMeta || {},
-      files: new Map((data as any).agents?.files || []),
+      agentsMeta: data.agents?.agentsMeta || {},
+      files: new Map(data.agents?.files || []),
     },
     cli: {
       meta: data.cli.meta,
@@ -527,7 +527,7 @@ export function deserializeInspectorState(
       tagMiddleware: new Map(data.channelMiddleware?.tagMiddleware || []),
     },
     aiMiddleware: {
-      definitions: (data as any).aiMiddleware?.definitions || {},
+      definitions: data.aiMiddleware?.definitions || {},
     },
     permissions: {
       definitions: data.permissions.definitions,
