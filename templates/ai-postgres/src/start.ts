@@ -17,7 +17,7 @@ async function main(): Promise<void> {
     const config = await createConfig()
 
     const sql = postgres(
-      process.env.POSTGRES_URL ||
+      process.env.DATABASE_URL ||
         'postgres://postgres:password@localhost:5432/pikku_ai'
     )
     const pgAiStorage = new PgAIStorageService(sql)

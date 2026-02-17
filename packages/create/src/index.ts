@@ -149,6 +149,11 @@ const templates = [
     description: 'A BullMQ Redis-based workflow template',
     supports: ['http', 'workflows'],
   },
+  {
+    template: 'ai-postgres',
+    description: 'An AI agent template with PostgreSQL storage',
+    supports: ['http', 'sse'],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]

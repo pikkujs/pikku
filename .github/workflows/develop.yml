@@ -54,7 +54,15 @@ jobs:
       fail-fast: false
       matrix:
         verifier:
-          [middleware-and-permissions, treeshaking, types, secrets, workflows]
+          [
+            middleware-and-permissions,
+            treeshaking,
+            types,
+            secrets,
+            workflows,
+            variables,
+            functions,
+          ]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -121,6 +129,7 @@ jobs:
             workflows-pg-boss,
             remote-rpc-pg,
             remote-rpc-redis,
+            ai-postgres,
           ]
         package-manager: [yarn]
     steps:
@@ -146,6 +155,7 @@ jobs:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
       REDIS_URL: redis://localhost:6379
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
 
