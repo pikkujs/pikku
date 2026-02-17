@@ -68,7 +68,6 @@ export interface AIAgentToolDef {
 }
 
 export interface PikkuAIMiddlewareHooks<
-  Event = any,
   State extends Record<string, unknown> = Record<string, unknown>,
   Services = any,
 > {
@@ -82,11 +81,11 @@ export interface PikkuAIMiddlewareHooks<
   modifyOutputStream?: (
     services: Services,
     ctx: {
-      event: Event
-      allEvents: readonly Event[]
+      event: AIStreamEvent
+      allEvents: readonly AIStreamEvent[]
       state: State
     }
-  ) => Promise<Event | null> | Event | null
+  ) => Promise<AIStreamEvent | null> | AIStreamEvent | null
 
   modifyOutput?: (
     services: Services,
@@ -128,7 +127,7 @@ export type CoreAIAgent<
   tags?: string[]
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
-  aiMiddleware?: PikkuAIMiddlewareHooks<any, any, any>[]
+  aiMiddleware?: PikkuAIMiddlewareHooks<any, any>[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 

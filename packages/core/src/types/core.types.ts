@@ -373,12 +373,11 @@ export const pikkuChannelMiddlewareFactory = <In = any>(
 export type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 
 export const pikkuAIMiddleware = <
-  Event = unknown,
   State extends Record<string, unknown> = Record<string, unknown>,
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 >(
-  hooks: PikkuAIMiddlewareHooks<Event, State, SingletonServices>
-): PikkuAIMiddlewareHooks<Event, State, SingletonServices> => hooks
+  hooks: PikkuAIMiddlewareHooks<State, SingletonServices>
+): PikkuAIMiddlewareHooks<State, SingletonServices> => hooks
 
 /**
  * Represents the core services used by Pikku, including singleton services.

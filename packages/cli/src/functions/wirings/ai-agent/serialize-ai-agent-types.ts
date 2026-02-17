@@ -22,11 +22,10 @@ export const pikkuAIAgent = (
 }
 
 export const pikkuAIMiddleware = <
-  Event = unknown,
   State extends Record<string, unknown> = Record<string, unknown>,
   RequiredServices extends Services = Services,
 >(
-  hooks: PikkuAIMiddlewareHooks<Event, State, RequiredServices>
-): PikkuAIMiddlewareHooks<Event, State, RequiredServices> => hooks
+  hooks: PikkuAIMiddlewareHooks<State, RequiredServices>
+): PikkuAIMiddlewareHooks<State, RequiredServices> => hooks
 `
 }

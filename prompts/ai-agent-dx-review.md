@@ -171,7 +171,7 @@ export const appendModified = pikkuChannelMiddleware<any, AIStreamEvent>(
   }
 )
 
-export const logAgentIO = pikkuAIMiddleware<any, AIStreamEvent>({
+export const logAgentIO = pikkuAIMiddleware({
   modifyInput: async ({ logger }, { messages, instructions }) => {
     logger.info(`Agent input: ${messages.length} messages`)
     return { messages, instructions }

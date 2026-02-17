@@ -4060,6 +4060,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
+    "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.11.2"
     "@types/node": "npm:^24.10.12"
     path-to-regexp: "npm:^8.3.0"
