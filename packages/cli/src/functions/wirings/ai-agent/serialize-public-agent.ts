@@ -17,7 +17,7 @@ export const agentCaller = pikkuSessionlessFunc<
   },
 })
 
-export const agentStreamCaller = pikkuChannelFunc<
+export const agentStreamCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   void
 >({
@@ -63,9 +63,9 @@ wireHTTP({
   func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
 })
 
-;(wireHTTP as any)({
+wireHTTP({
   route: '/rpc/agent/:agentName/stream',
-  method: 'post',
+  method: 'get',
   auth: false,
   sse: true,
   func: agentStreamCaller,

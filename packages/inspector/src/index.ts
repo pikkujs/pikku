@@ -1,12 +1,8 @@
 export { inspect, getInitialInspectorState } from './inspector.js'
-export { getFilesAndMethods } from './utils/get-files-and-methods.js'
 export type { TypesMap } from './types-map.js'
 export type * from './types.js'
 export type { InspectorState } from './types.js'
-export type {
-  FilesAndMethods,
-  FilesAndMethodsErrors,
-} from './utils/get-files-and-methods.js'
+export type { FilesAndMethodsErrors } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
 export {
   serializeInspectorState,
@@ -19,9 +15,18 @@ export {
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'
 export {
-  convertAllDslToGraphs,
-  convertDslToGraph,
-} from './utils/workflow/graph/convert-dsl-to-graph.js'
+  validateContracts,
+  updateManifest,
+  extractContractsFromMeta,
+  createEmptyManifest,
+  serializeManifest,
+} from './utils/contract-hashes.js'
+export type {
+  ContractEntry,
+  ValidationError,
+  VersionManifest,
+  VersionManifestEntry,
+} from './utils/contract-hashes.js'
 export {
   deserializeDslWorkflow,
   deserializeGraphWorkflow,

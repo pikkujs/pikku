@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { saveSchemas } from '../../../utils/schema-generator.js'
+import { saveSchemas } from '../../../utils/serialize-schemas.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 
 export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({

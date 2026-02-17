@@ -11,8 +11,6 @@ import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
-import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
-import { pikkuVersionsNormalize } from './functions/commands/versions-normalize.js'
 // import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -112,9 +110,9 @@ wireCLI({
       func: pikkuNext,
       description: 'Generate Next.js backend and HTTP wrappers',
     }),
-    'versions-init': pikkuCLICommand({
+    init: pikkuCLICommand({
       func: pikkuVersionsInit,
-      description: 'Create an empty contract version manifest',
+      description: 'Initialize project',
       options: {
         force: {
           description: 'Overwrite existing manifest',
@@ -124,15 +122,6 @@ wireCLI({
     'versions-check': pikkuCLICommand({
       func: pikkuVersionsCheck,
       description: 'Validate function contracts against the version manifest',
-    }),
-    'versions-update': pikkuCLICommand({
-      func: pikkuVersionsUpdate,
-      description: 'Update the version manifest with current contracts',
-    }),
-    'versions-normalize': pikkuCLICommand({
-      func: pikkuVersionsNormalize,
-      description:
-        'Re-serialize the version manifest with canonical formatting',
     }),
   },
 })

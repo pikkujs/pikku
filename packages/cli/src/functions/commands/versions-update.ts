@@ -1,6 +1,5 @@
 import { join } from 'path'
 import { pikkuSessionlessFunc } from '#pikku'
-import { createEmptyManifest } from '../../utils/contract-version.js'
 import { ErrorCode } from '@pikku/inspector'
 import {
   loadManifest,
@@ -8,60 +7,21 @@ import {
   extractContractsFromMeta,
   validateContracts,
   updateManifest,
-  ContractEntry,
 } from '../../utils/contract-versions.js'
 
 export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const manifestPath = join(config.outDir, 'versions.json')
 
-    let manifest = await loadManifest(manifestPath)
+    const manifest = await loadManifest(manifestPath)
     if (!manifest) {
-      manifest = createEmptyManifest()
+      throw new Error(
+        `Version manifest not found at ${manifestPath}. Run 'pikku init' to create one.`
+      )
     }
 
     const visitState = await getInspectorState()
-    let contracts: Map<string, ContractEntry>
-
-    const hasPrecomputedHashes = Object.values(visitState.functions.meta).some(
-      (m) => m.contractHash
-    )
-
-    if (hasPrecomputedHashes) {
-      contracts = extractContractsFromMeta(visitState.functions.meta)
-    } else {
-      const { generateSchemas, generateZodSchemas } = await import(
-        '../../utils/schema-generator.js'
-      )
-      const { buildCurrentContracts } = await import(
-        '../../utils/contract-versions.js'
-      )
-
-      const zodSchemas = await generateZodSchemas(
-        logger,
-        visitState.schemaLookup,
-        visitState.functions.typesMap
-      )
-
-      const schemas = await generateSchemas(
-        logger,
-        config.tsconfig,
-        visitState.functions.typesMap,
-        visitState.functions.meta,
-        visitState.http.meta,
-        config.schemasFromTypes,
-        config.schema?.additionalProperties,
-        visitState.schemaLookup
-      )
-
-      const allSchemas = { ...schemas, ...zodSchemas }
-
-      contracts = buildCurrentContracts(
-        visitState.functions.meta,
-        allSchemas,
-        visitState.functions.typesMap
-      )
-    }
+    const contracts = extractContractsFromMeta(visitState.functions.meta)
 
     const result = validateContracts(manifest, contracts)
 
@@ -69,10 +29,8 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
       (e) => e.code === ErrorCode.FUNCTION_VERSION_MODIFIED
     )
     if (immutabilityErrors.length > 0) {
-      for (const error of immutabilityErrors) {
-        logger.error(`[${error.code}] ${error.message}`)
-      }
-      process.exit(1)
+      const messages = immutabilityErrors.map((e) => `[${e.code}] ${e.message}`)
+      throw new Error(messages.join('\n'))
     }
 
     const updated = updateManifest(manifest, contracts)

@@ -1,17 +1,17 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { pikkuSessionlessFunc } from '#pikku'
-import { createEmptyManifest } from '../../utils/contract-version.js'
-import { saveManifest } from '../../utils/contract-versions.js'
+import {
+  createEmptyManifest,
+  saveManifest,
+} from '../../utils/contract-versions.js'
 
 export const pikkuVersionsInit = pikkuSessionlessFunc<
-  { force?: boolean } | void,
+  { force?: boolean },
   void
 >({
-  func: async ({ logger, config }, data) => {
+  func: async ({ logger, config }, { force }) => {
     const manifestPath = join(config.outDir, 'versions.json')
-    const force =
-      data && typeof data === 'object' && 'force' in data ? data.force : false
 
     if (existsSync(manifestPath) && !force) {
       logger.error(

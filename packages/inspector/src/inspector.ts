@@ -10,6 +10,9 @@ import {
   validateSecretOverrides,
 } from './utils/post-process.js'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
+import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
+import { generateAllSchemas } from './utils/schema-generator.js'
+import { computeContractHashes } from './utils/contract-hashes.js'
 
 /**
  * Creates an initial/empty inspector state with all required properties initialized
@@ -142,11 +145,11 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
   }
 }
 
-export const inspect = (
+export const inspect = async (
   logger: InspectorLogger,
   routeFiles: string[],
   options: InspectorOptions = {}
-): InspectorState => {
+): Promise<InspectorState> => {
   const startProgram = performance.now()
   const program = ts.createProgram(routeFiles, {
     target: ts.ScriptTarget.ESNext,
@@ -207,6 +210,21 @@ export const inspect = (
     )
 
     resolveLatestVersions(state, logger)
+
+    if (options.schemaConfig) {
+      state.schemas = await generateAllSchemas(
+        logger,
+        options.schemaConfig,
+        state
+      )
+      computeContractHashes(
+        state.schemas,
+        state.functions.typesMap,
+        state.functions.meta
+      )
+    }
+
+    finalizeWorkflows(state)
   }
 
   // Populate filesAndMethods

@@ -177,6 +177,11 @@ export type InspectorOptions = Partial<{
     wireServicesFactoryType: string
   }>
   externalPackages: Record<string, ExternalPackageConfig>
+  schemaConfig: {
+    tsconfig: string
+    schemasFromTypes?: string[]
+    schema?: { additionalProperties?: boolean }
+  }
 }>
 
 export interface InspectorLogger {
