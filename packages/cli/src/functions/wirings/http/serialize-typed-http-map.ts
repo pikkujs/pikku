@@ -1,5 +1,6 @@
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { MetaInputTypes, TypesMap, generateCustomTypes } from '@pikku/inspector'
 import { Logger } from '@pikku/core'
 
@@ -10,7 +11,8 @@ export const serializeTypedHTTPWiringsMap = (
   typesMap: TypesMap,
   wiringsMeta: HTTPWiringsMeta,
   metaTypes: MetaInputTypes,
-  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
+  rpcInternalMapDeclarationFile: string
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
@@ -21,6 +23,17 @@ export const serializeTypedHTTPWiringsMap = (
     requiredTypes
   )
 
+  const needsFlattenedRPCMap = Array.from(requiredTypes).some((t) =>
+    t.includes('FlattenedRPCMap')
+  )
+  if (needsFlattenedRPCMap) {
+    for (const t of Array.from(requiredTypes)) {
+      if (t.includes('FlattenedRPCMap')) {
+        requiredTypes.delete(t)
+      }
+    }
+  }
+
   const serializedImportMap = serializeImportMap(
     logger,
     relativeToPath,
@@ -29,11 +42,16 @@ export const serializeTypedHTTPWiringsMap = (
     requiredTypes
   )
 
+  const rpcMapImport = needsFlattenedRPCMap
+    ? `import type { FlattenedRPCMap } from '${getFileImportRelativePath(relativeToPath, rpcInternalMapDeclarationFile, packageMappings)}'`
+    : ''
+
   return `/**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
 
 ${serializedImportMap}
+${rpcMapImport}
 ${serializedCustomTypes}
 ${serializedMetaTypes}
 
