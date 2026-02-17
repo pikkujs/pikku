@@ -90,7 +90,12 @@ ${generateExternalAgentImports(externalPackages)}
 ${generateMergedAgentMap(externalPackages)}
 
 import type { PikkuRPC } from '@pikku/core/rpc'
-import type { AIAgentInput } from '@pikku/core/ai-agent'
+
+interface AIAgentInput {
+  message: string
+  threadId: string
+  resourceId: string
+}
 
 type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   name: Name,

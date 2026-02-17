@@ -1,41 +1,11 @@
-import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
-
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
-pikkuRPC.setServerUrl(url)
-console.log('Starting AI agent test with url:', url)
+console.log('Starting agent SSE test with url:', url)
 
 const TIMEOUT = 60000
 const RETRY_INTERVAL = 2000
 const start = Date.now()
 
 const runId = Math.random().toString(36).slice(2, 8)
-const threadId = `memory-test-${runId}`
-
-async function testRunAgent() {
-  console.log('--- Turn 1: Create a todo ---')
-  const r1 = await pikkuRPC.agent('todo-assistant', {
-    message: 'Create a todo called "Buy milk" with high priority',
-    threadId,
-    resourceId: 'test-user',
-  })
-  console.log('Response:', JSON.stringify(r1.result, null, 2))
-
-  console.log('\n--- Turn 2: Ask about it (should remember) ---')
-  const r2 = await pikkuRPC.agent('todo-assistant', {
-    message: 'What did I just ask you to do?',
-    threadId,
-    resourceId: 'test-user',
-  })
-  console.log('Response:', JSON.stringify(r2.result, null, 2))
-
-  console.log('\n--- Turn 3: Router delegation (fetch todos + plan day) ---')
-  const r3 = await pikkuRPC.agent('main-router', {
-    message: 'Get my todos and plan out my day, suggest tasks accordingly',
-    threadId: `router-test-${runId}`,
-    resourceId: 'test-user',
-  })
-  console.log('Response:', JSON.stringify(r3.result, null, 2))
-}
 
 async function testStreamAgent() {
   console.log('\n--- Stream: Ask daily-planner for advice ---')
@@ -65,9 +35,13 @@ async function testStreamAgent() {
 
   const decoder = new TextDecoder()
   let buffer = ''
+  const reader = response.body.getReader()
 
-  for await (const chunk of response.body) {
-    buffer += decoder.decode(chunk, { stream: true })
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
     const lines = buffer.split('\n')
     buffer = lines.pop() || ''
 
@@ -110,16 +84,15 @@ async function testStreamAgent() {
 
 async function check() {
   try {
-    await testRunAgent()
     await testStreamAgent()
-    console.log('\n✅ AI agent test passed')
+    console.log('\n✅ Agent SSE test passed')
     process.exit(0)
   } catch (err: any) {
     console.log(`Still failing (${err.message ?? err}), retrying...`)
   }
 
   if (Date.now() - start > TIMEOUT) {
-    console.error(`❌ AI agent test failed after ${TIMEOUT / 1000} seconds`)
+    console.error(`❌ Agent SSE test failed after ${TIMEOUT / 1000} seconds`)
     process.exit(1)
   } else {
     setTimeout(check, RETRY_INTERVAL)
