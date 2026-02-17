@@ -1,4 +1,11 @@
-import { TypesMap } from '@pikku/inspector'
+import { TypesMap } from '../types-map.js'
+
+/**
+ * NOTE: Code generation normally belongs in @pikku/cli, not the inspector.
+ * This is here because the schema generator needs the custom types content
+ * as a virtual TypeScript source file (in-memory, no disk write) so that
+ * ts-json-schema-generator can discover inline/custom types from typesMap.
+ */
 
 export function sanitizeTypeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_$]/g, '_')

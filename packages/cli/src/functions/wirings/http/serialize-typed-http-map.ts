@@ -1,8 +1,7 @@
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { MetaInputTypes, TypesMap } from '@pikku/inspector'
+import { MetaInputTypes, TypesMap, generateCustomTypes } from '@pikku/inspector'
 import { FunctionsMeta, Logger } from '@pikku/core'
-import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
 
 export const serializeTypedHTTPWiringsMap = (

@@ -12,7 +12,7 @@ import { NodesMeta } from '@pikku/core/node'
 import { SecretDefinitions } from '@pikku/core/secret'
 import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
-import { FunctionsMeta, FunctionServicesMeta } from '@pikku/core'
+import { FunctionsMeta, FunctionServicesMeta, JSONValue } from '@pikku/core'
 import { ErrorCode } from './error-codes.js'
 import type { SerializedWorkflowGraphs } from './utils/workflow/graph/workflow-graph.types.js'
 
@@ -254,6 +254,7 @@ export interface InspectorState {
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
   schemaLookup: Map<string, SchemaRef> // Lookup for schemas by name for deferred JSON Schema conversion (supports Standard Schema vendors)
+  schemas: Record<string, JSONValue>
   http: InspectorHTTPState
   functions: InspectorFunctionState
   channels: InspectorChannelState
