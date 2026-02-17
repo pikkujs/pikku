@@ -1,5 +1,5 @@
 import { InspectorFilters } from '@pikku/inspector'
-import { OpenAPISpecInfo } from '../src/functions/wirings/http/openapi-spec-generator.ts'
+import { OpenAPISpecInfo } from '@pikku/inspector'
 import { PikkuWiringTypes } from '@pikku/core'
 
 export interface PikkuCLICoreOutputFiles {

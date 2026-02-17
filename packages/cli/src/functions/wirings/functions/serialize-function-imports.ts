@@ -1,5 +1,5 @@
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { FunctionsMeta, FunctionsRuntimeMeta } from '@pikku/core'
+import { FunctionsMeta } from '@pikku/core'
 
 export const serializeFunctionImports = (
   outputPath: string,
@@ -62,33 +62,4 @@ export const serializeFunctionImports = (
 
   // Combine the imports and registrations
   return [...serializedImports, ...serializedRegistrations].join('\n')
-}
-
-export const generateRuntimeMeta = (
-  functions: FunctionsMeta
-): FunctionsRuntimeMeta => {
-  const runtimeMeta: FunctionsRuntimeMeta = {}
-
-  for (const [
-    key,
-    {
-      pikkuFuncId,
-      inputSchemaName,
-      outputSchemaName,
-      expose,
-      version,
-      requiresApproval,
-    },
-  ] of Object.entries(functions)) {
-    runtimeMeta[key] = {
-      pikkuFuncId,
-      inputSchemaName,
-      outputSchemaName,
-      expose,
-      version,
-      requiresApproval,
-    }
-  }
-
-  return runtimeMeta
 }

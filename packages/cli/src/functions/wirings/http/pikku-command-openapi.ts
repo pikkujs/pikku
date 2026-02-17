@@ -1,7 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { generateOpenAPISpec } from './openapi-spec-generator.js'
 import { stringify } from 'yaml'
 
 export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
@@ -17,15 +16,15 @@ export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
       return
     }
 
-    const { http, functions, schemas } = await getInspectorState()
+    const { openAPISpec } = await getInspectorState()
 
-    const openAPISpec = await generateOpenAPISpec(
-      logger,
-      functions.meta,
-      http.meta,
-      schemas,
-      openAPI.additionalInfo
-    )
+    if (!openAPISpec) {
+      logger.debug({
+        message: 'Skipping creating OpenAPI spec since no spec was generated.',
+        type: 'skip',
+      })
+      return
+    }
 
     if (openAPI.outputFile.endsWith('.json')) {
       await writeFileInDir(

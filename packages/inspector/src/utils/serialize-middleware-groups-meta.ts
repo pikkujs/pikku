@@ -1,4 +1,4 @@
-import type { InspectorState, MiddlewareGroupMeta } from '@pikku/inspector'
+import type { InspectorState, MiddlewareGroupMeta } from '../types.js'
 
 const serializeGroupMap = (
   groupMap: Map<string, MiddlewareGroupMeta>

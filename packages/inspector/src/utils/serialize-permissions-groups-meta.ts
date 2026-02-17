@@ -1,4 +1,4 @@
-import type { InspectorState } from '@pikku/inspector'
+import type { InspectorState } from '../types.js'
 
 export const serializePermissionsGroupsMeta = (state: InspectorState) => {
   const httpGroups: Record<string, any> = {}

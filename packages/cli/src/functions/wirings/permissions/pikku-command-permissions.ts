@@ -2,7 +2,6 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePermissionsImports } from './serialize-permissions-imports.js'
-import { serializePermissionsGroupsMeta } from './serialize-permissions-groups-meta.js'
 
 export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
   {
@@ -19,7 +18,7 @@ export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
         Object.keys(state.permissions.definitions).length > 0
 
       if (hasHTTPGroups || hasTagGroups || hasIndividual) {
-        const metaData = serializePermissionsGroupsMeta(state)
+        const metaData = state.permissionsGroupsMeta
 
         await writeFileInDir(
           logger,

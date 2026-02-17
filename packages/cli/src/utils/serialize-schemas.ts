@@ -1,7 +1,6 @@
 import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
-import { FunctionsMeta, JSONValue } from '@pikku/core'
-import { TypesMap, SchemaRef } from '@pikku/inspector'
+import { JSONValue } from '@pikku/core'
 import { CLILogger } from '../services/cli-logger.service.js'
 
 function toValidIdentifier(name: string): string {
@@ -12,27 +11,12 @@ function toValidIdentifier(name: string): string {
   return result
 }
 
-const PRIMITIVE_TYPES = new Set([
-  'boolean',
-  'string',
-  'number',
-  'null',
-  'undefined',
-  'void',
-  'any',
-  'unknown',
-  'never',
-])
-
 export async function saveSchemas(
   logger: CLILogger,
   schemaParentDir: string,
   schemas: Record<string, JSONValue>,
-  typesMap: TypesMap,
-  functionsMeta: FunctionsMeta,
+  requiredSchemas: Set<string>,
   supportsImportAttributes: boolean,
-  additionalTypes?: string[],
-  schemaLookup?: Map<string, SchemaRef>,
   packageName?: string | null
 ) {
   await writeFileInDir(
@@ -41,34 +25,7 @@ export async function saveSchemas(
     'export const empty = null;'
   )
 
-  const desiredSchemas = new Set<string>([
-    ...Object.values(functionsMeta)
-      .map(({ inputs, outputs }) => {
-        const types: (string | undefined)[] = []
-        if (inputs?.[0]) {
-          try {
-            types.push(typesMap.getUniqueName(inputs[0]))
-          } catch {
-            types.push(inputs[0])
-          }
-        }
-        if (outputs?.[0]) {
-          try {
-            types.push(typesMap.getUniqueName(outputs[0]))
-          } catch {
-            types.push(outputs[0])
-          }
-        }
-        return types
-      })
-      .flat()
-      .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
-    ...typesMap.customTypes.keys(),
-    ...(additionalTypes || []),
-    ...(schemaLookup ? Array.from(schemaLookup.keys()) : []),
-  ])
-
-  if (desiredSchemas.size === 0) {
+  if (requiredSchemas.size === 0) {
     logger.info(`• Skipping schemas since none found.\x1b[0m`)
     return
   }
@@ -76,7 +33,7 @@ export async function saveSchemas(
   await mkdir(`${schemaParentDir}/schemas`, { recursive: true })
   await Promise.all(
     Object.entries(schemas).map(async ([schemaName, schema]) => {
-      if (desiredSchemas.has(schemaName)) {
+      if (requiredSchemas.has(schemaName)) {
         await writeFile(
           `${schemaParentDir}/schemas/${schemaName}.schema.json`,
           JSON.stringify(schema),
@@ -86,7 +43,7 @@ export async function saveSchemas(
     })
   )
 
-  const availableSchemas = Array.from(desiredSchemas).filter(
+  const availableSchemas = Array.from(requiredSchemas).filter(
     (schema) => schemas[schema]
   )
 

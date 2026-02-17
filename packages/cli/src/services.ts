@@ -286,6 +286,10 @@ export const createSingletonServices: CreateSingletonServices<
               schema: config.schema,
             }
           : undefined,
+        openAPI:
+          !setupOnly && config.openAPI
+            ? { additionalInfo: config.openAPI.additionalInfo }
+            : undefined,
         manifest,
       })
 

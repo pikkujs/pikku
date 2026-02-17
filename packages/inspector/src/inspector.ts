@@ -8,7 +8,13 @@ import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
   validateSecretOverrides,
+  computeResolvedIOTypes,
+  computeMiddlewareGroupsMeta,
+  computePermissionsGroupsMeta,
+  computeRequiredSchemas,
 } from './utils/post-process.js'
+import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
+import { pikkuState } from '@pikku/core'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
@@ -153,6 +159,25 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       allSingletonServices: [],
       allWireServices: [],
     },
+    resolvedIOTypes: {},
+    middlewareGroupsMeta: {
+      definitions: {},
+      instances: {},
+      httpGroups: {},
+      tagGroups: {},
+      channelMiddleware: {
+        definitions: {},
+        instances: {},
+        tagGroups: {},
+      },
+    },
+    permissionsGroupsMeta: {
+      definitions: {},
+      httpGroups: {},
+      tagGroups: {},
+    },
+    requiredSchemas: new Set(),
+    openAPISpec: null,
   }
 }
 
@@ -233,6 +258,7 @@ export const inspect = async (
         state.functions.typesMap,
         state.functions.meta
       )
+      computeRequiredSchemas(state, options)
     }
 
     state.manifest.initial = options.manifest ?? null
@@ -259,6 +285,21 @@ export const inspect = async (
     logger.debug(
       `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
     )
+
+    computeResolvedIOTypes(state)
+    computeMiddlewareGroupsMeta(state)
+    computePermissionsGroupsMeta(state)
+
+    if (options.openAPI) {
+      state.openAPISpec = await generateOpenAPISpec(
+        logger,
+        state.functions.meta,
+        state.http.meta,
+        state.schemas,
+        options.openAPI.additionalInfo,
+        pikkuState(null, 'misc', 'errors')
+      )
+    }
 
     validateSecretOverrides(logger, state, options.externalPackages)
   }

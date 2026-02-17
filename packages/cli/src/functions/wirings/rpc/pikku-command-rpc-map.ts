@@ -6,7 +6,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { functions, rpc } = await getInspectorState()
+    const { functions, rpc, resolvedIOTypes } = await getInspectorState()
     const {
       rpcInternalMapDeclarationFile,
       packageMappings,
@@ -32,8 +32,8 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
       rpcInternalMapDeclarationFile,
       packageMappings,
       functions.typesMap,
-      functions.meta,
       rpc.internalMeta,
+      resolvedIOTypes,
       externalPackages,
       workflowMapPath,
       agentMapPath
@@ -50,7 +50,7 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
 
 export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { functions, rpc } = await getInspectorState()
+    const { functions, rpc, resolvedIOTypes } = await getInspectorState()
     const {
       rpcMapDeclarationFile,
       packageMappings,
@@ -76,8 +76,8 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       rpcMapDeclarationFile,
       packageMappings,
       functions.typesMap,
-      functions.meta,
       rpc.exposedMeta,
+      resolvedIOTypes,
       externalPackages,
       workflowMapPath,
       agentMapPath

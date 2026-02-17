@@ -13,6 +13,7 @@ import { SecretDefinitions } from '@pikku/core/secret'
 import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
 import { FunctionsMeta, FunctionServicesMeta, JSONValue } from '@pikku/core'
+import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 import { ErrorCode } from './error-codes.js'
 import type {
   VersionManifest,
@@ -186,6 +187,9 @@ export type InspectorOptions = Partial<{
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
   }
+  openAPI: {
+    additionalInfo: OpenAPISpecInfo
+  }
   manifest: VersionManifest
 }>
 
@@ -332,11 +336,30 @@ export interface InspectorState {
   aiMiddleware: InspectorAIMiddlewareState
   permissions: InspectorPermissionState
   serviceAggregation: {
-    requiredServices: Set<string> // All services needed across the app
-    usedFunctions: Set<string> // Function names actually wired/exposed
-    usedMiddleware: Set<string> // Middleware names used by wired functions
-    usedPermissions: Set<string> // Permission names used by wired functions
-    allSingletonServices: string[] // All services available in SingletonServices type
-    allWireServices: string[] // All services available in Services type (excluding SingletonServices)
+    requiredServices: Set<string>
+    usedFunctions: Set<string>
+    usedMiddleware: Set<string>
+    usedPermissions: Set<string>
+    allSingletonServices: string[]
+    allWireServices: string[]
   }
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
+  middlewareGroupsMeta: {
+    definitions: Record<string, InspectorMiddlewareDefinition>
+    instances: Record<string, InspectorMiddlewareInstance>
+    httpGroups: Record<string, MiddlewareGroupMeta>
+    tagGroups: Record<string, MiddlewareGroupMeta>
+    channelMiddleware: {
+      definitions: Record<string, InspectorMiddlewareDefinition>
+      instances: Record<string, InspectorMiddlewareInstance>
+      tagGroups: Record<string, MiddlewareGroupMeta>
+    }
+  }
+  permissionsGroupsMeta: {
+    definitions: Record<string, InspectorPermissionDefinition>
+    httpGroups: Record<string, PermissionGroupMeta>
+    tagGroups: Record<string, PermissionGroupMeta>
+  }
+  requiredSchemas: Set<string>
+  openAPISpec: Record<string, any> | null
 }

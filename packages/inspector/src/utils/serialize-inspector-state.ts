@@ -227,6 +227,11 @@ export interface SerializableInspectorState {
     allSingletonServices: string[]
     allWireServices: string[]
   }
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
+  middlewareGroupsMeta: InspectorState['middlewareGroupsMeta']
+  permissionsGroupsMeta: InspectorState['permissionsGroupsMeta']
+  requiredSchemas: string[]
+  openAPISpec: Record<string, any> | null
 }
 
 /**
@@ -380,6 +385,11 @@ export function serializeInspectorState(
       allSingletonServices: state.serviceAggregation.allSingletonServices,
       allWireServices: state.serviceAggregation.allWireServices,
     },
+    resolvedIOTypes: state.resolvedIOTypes,
+    middlewareGroupsMeta: state.middlewareGroupsMeta,
+    permissionsGroupsMeta: state.permissionsGroupsMeta,
+    requiredSchemas: Array.from(state.requiredSchemas),
+    openAPISpec: state.openAPISpec,
   }
 }
 
@@ -532,5 +542,20 @@ export function deserializeInspectorState(
       allSingletonServices: data.serviceAggregation.allSingletonServices,
       allWireServices: data.serviceAggregation.allWireServices,
     },
+    resolvedIOTypes: data.resolvedIOTypes || {},
+    middlewareGroupsMeta: data.middlewareGroupsMeta || {
+      definitions: {},
+      instances: {},
+      httpGroups: {},
+      tagGroups: {},
+      channelMiddleware: { definitions: {}, instances: {}, tagGroups: {} },
+    },
+    permissionsGroupsMeta: data.permissionsGroupsMeta || {
+      definitions: {},
+      httpGroups: {},
+      tagGroups: {},
+    },
+    requiredSchemas: new Set(data.requiredSchemas || []),
+    openAPISpec: data.openAPISpec || null,
   }
 }

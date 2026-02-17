@@ -4,28 +4,22 @@ import {
   ExternalPackageConfig,
   generateCustomTypes,
 } from '@pikku/inspector'
-import { FunctionsMeta, Logger } from '@pikku/core'
-import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
+import { Logger } from '@pikku/core'
 
 export const serializeTypedRPCMap = (
   logger: Logger,
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
-  functionsMeta: FunctionsMeta,
   rpcMeta: Record<string, string>,
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
   externalPackages?: Record<string, ExternalPackageConfig>,
   workflowMapPath?: string,
   agentMapPath?: string
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
-  const serializedRPCs = generateRPCs(
-    rpcMeta,
-    functionsMeta,
-    typesMap,
-    requiredTypes
-  )
+  const serializedRPCs = generateRPCs(rpcMeta, resolvedIOTypes, requiredTypes)
 
   const mcpTypes = [
     'MCPResourceResponse',
@@ -202,19 +196,21 @@ type FlattenedAgentMap =
 
 function generateRPCs(
   rpcMeta: Record<string, string>,
-  functionsMeta: FunctionsMeta,
-  typesMap: TypesMap,
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
   requiredTypes: Set<string>
 ) {
   const rpcsObj: Record<string, { inputType: string; outputType: string }> = {}
 
   for (const [funcName, pikkuFuncId] of Object.entries(rpcMeta)) {
-    rpcsObj[funcName] = resolveFunctionIOTypes(
-      pikkuFuncId,
-      functionsMeta,
-      typesMap,
-      requiredTypes
-    )
+    const resolved = resolvedIOTypes[pikkuFuncId]
+    if (!resolved) {
+      throw new Error(
+        `Function ${pikkuFuncId} not found in resolvedIOTypes. Please check your configuration.`
+      )
+    }
+    requiredTypes.add(resolved.inputType)
+    requiredTypes.add(resolved.outputType)
+    rpcsObj[funcName] = resolved
   }
 
   // Build the RPCs object as a string
