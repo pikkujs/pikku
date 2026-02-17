@@ -10,7 +10,8 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "start": "tsx src/start.ts",
     "dev": "tsx --watch src/start.ts",
-    "test:ai-agent": "npx tsx ../functions/client/ai-agent.ts"
+    "test:agent-http": "npx tsx ../functions/client/agent-http.ts",
+    "test:agent-sse": "npx tsx ../functions/client/agent-sse.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.0.0",

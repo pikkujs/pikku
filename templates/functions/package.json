@@ -34,6 +34,7 @@
     "test:cli:local": "npx tsx client/cli-local.gen.ts",
     "test:workflows": "npx tsx client/workflow.ts",
     "test:triggers": "npx tsx client/trigger.ts",
-    "test:ai-agent": "npx tsx client/ai-agent.ts"
+    "test:agent-http": "npx tsx client/agent-http.ts",
+    "test:agent-sse": "npx tsx client/agent-sse.ts"
   }
 }

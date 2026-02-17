@@ -268,7 +268,8 @@ const FILE_FEATURE_MAPPING = {
  * Maps client file names to feature types for filtering
  */
 const CLIENT_FEATURE_MAPPING = {
-  'ai-agent.ts': ['http'],
+  'agent-http.ts': ['http'],
+  'agent-sse.ts': ['sse'],
   'http-fetch.ts': ['http'],
   'http-sse.ts': ['sse'],
   'rpc.ts': ['external'],
