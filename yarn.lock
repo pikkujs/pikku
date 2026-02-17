@@ -4063,7 +4063,11 @@ __metadata:
     "@pikku/core": "npm:^0.11.2"
     "@types/node": "npm:^24.10.12"
     path-to-regexp: "npm:^8.3.0"
+    ts-json-schema-generator: "npm:^2.5.0"
+    tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
+    zod: "npm:^4.3.6"
+    zod-to-ts: "npm:^2.0.0"
   languageName: unknown
   linkType: soft
 

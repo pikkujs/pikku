@@ -1,7 +1,10 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap, ExternalPackageConfig } from '@pikku/inspector'
+import {
+  TypesMap,
+  ExternalPackageConfig,
+  generateCustomTypes,
+} from '@pikku/inspector'
 import { FunctionsMeta, Logger } from '@pikku/core'
-import { generateCustomTypes } from '../../../utils/custom-types-generator.js'
 import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
 
 export const serializeTypedRPCMap = (

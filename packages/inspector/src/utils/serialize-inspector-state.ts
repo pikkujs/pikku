@@ -1,3 +1,4 @@
+import { JSONValue } from '@pikku/core'
 import { InspectorState } from '../types.js'
 import { TypesMap } from '../types-map.js'
 
@@ -72,6 +73,7 @@ export interface SerializableInspectorState {
       },
     ]
   >
+  schemas: Record<string, JSONValue>
   functions: {
     typesMap: {
       map: Array<[string, { originalName: string; path: string | null }]>
@@ -277,6 +279,7 @@ export function serializeInspectorState(
       state.filesAndMethodsErrors.entries()
     ).map(([key, mapValue]) => [key, Array.from(mapValue.entries())] as const),
     schemaLookup: Array.from(state.schemaLookup.entries()),
+    schemas: state.schemas,
     functions: {
       typesMap: serializeTypesMap(state.functions.typesMap),
       meta: state.functions.meta,
@@ -429,6 +432,7 @@ export function deserializeInspectorState(
       ])
     ),
     schemaLookup: new Map(data.schemaLookup || []),
+    schemas: data.schemas || {},
     functions: {
       typesMap: deserializeTypesMap(data.functions.typesMap),
       meta: data.functions.meta,

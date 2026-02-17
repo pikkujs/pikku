@@ -1,15 +1,13 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { generateSchemas } from '../../../utils/schema-generator.js'
 import { generateOpenAPISpec } from './openapi-spec-generator.js'
 import { stringify } from 'yaml'
 
 export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { tsconfig, openAPI, schemasFromTypes } = config
+    const { openAPI } = config
 
-    // If openAPI outputFile is not defined, clean up any existing file and return
     if (!openAPI?.outputFile) {
       logger.debug({
         message:
@@ -19,18 +17,8 @@ export const pikkuOpenAPI = pikkuSessionlessFunc<void, void>({
       return
     }
 
-    const { http, functions, schemaLookup } = await getInspectorState()
+    const { http, functions, schemas } = await getInspectorState()
 
-    const schemas = await generateSchemas(
-      logger,
-      tsconfig,
-      functions.typesMap,
-      functions.meta,
-      http.meta,
-      schemasFromTypes,
-      config.schema?.additionalProperties,
-      schemaLookup
-    )
     const openAPISpec = await generateOpenAPISpec(
       logger,
       functions.meta,

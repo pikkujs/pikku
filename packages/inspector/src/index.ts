@@ -15,6 +15,10 @@ export {
 export type { SerializableInspectorState } from './utils/serialize-inspector-state.js'
 export { filterInspectorState } from './utils/filter-inspector-state.js'
 export {
+  generateCustomTypes,
+  sanitizeTypeName,
+} from './utils/custom-types-generator.js'
+export {
   convertAllDslToGraphs,
   convertDslToGraph,
 } from './utils/workflow/graph/convert-dsl-to-graph.js'

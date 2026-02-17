@@ -35,6 +35,8 @@ import {
   ForwardedLogMessage,
 } from './services/cli-logger-forwarder.service.js'
 import { readFile, writeFile } from 'fs/promises'
+import { generateAllSchemas } from '@pikku/inspector/schema-generator'
+import { computeContractHashes } from './utils/contract-versions.js'
 
 // Logger instance will be configured with log level from CLI flags in createConfig
 // Logo will be displayed conditionally in createConfig based on --silent flag
@@ -274,6 +276,19 @@ export const createSingletonServices: CreateSingletonServices<
         },
         externalPackages: config.externalPackages,
       })
+
+      if (!setupOnly) {
+        unfilteredState.schemas = await generateAllSchemas(
+          logger,
+          config,
+          unfilteredState as InspectorState
+        )
+        computeContractHashes(
+          unfilteredState.schemas,
+          unfilteredState.functions.typesMap,
+          unfilteredState.functions.meta
+        )
+      }
 
       // Save unfiltered inspector state to file if stateOutput is provided
       if (stateOutput && 'typesLookup' in unfilteredState) {

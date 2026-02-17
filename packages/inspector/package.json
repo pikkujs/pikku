@@ -12,6 +12,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./schema-generator": {
+      "types": "./dist/schema-generator.d.ts",
+      "import": "./dist/schema-generator.js",
+      "default": "./dist/schema-generator.js"
+    },
     "./workflow-graph": {
       "types": "./dist/utils/workflow/graph/index.d.ts",
       "import": "./dist/utils/workflow/graph/index.js",
@@ -30,7 +35,11 @@
   "dependencies": {
     "@pikku/core": "^0.11.2",
     "path-to-regexp": "^8.3.0",
-    "typescript": "^5.9"
+    "ts-json-schema-generator": "^2.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9",
+    "zod": "^4.3.6",
+    "zod-to-ts": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.12"
