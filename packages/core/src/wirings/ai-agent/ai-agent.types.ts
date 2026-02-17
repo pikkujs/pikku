@@ -67,7 +67,11 @@ export interface AIAgentToolDef {
   execute: (input: unknown) => Promise<unknown>
 }
 
-export interface PikkuAIMiddlewareHooks<Services = any, Event = any> {
+export interface PikkuAIMiddlewareHooks<
+  Event = any,
+  State extends Record<string, unknown> = Record<string, unknown>,
+  Services = any,
+> {
   modifyInput?: (
     services: Services,
     ctx: { messages: AIMessage[]; instructions: string }
@@ -80,7 +84,7 @@ export interface PikkuAIMiddlewareHooks<Services = any, Event = any> {
     ctx: {
       event: Event
       allEvents: readonly Event[]
-      state: Record<string, unknown>
+      state: State
     }
   ) => Promise<Event | null> | Event | null
 
@@ -124,7 +128,7 @@ export type CoreAIAgent<
   tags?: string[]
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
-  aiMiddleware?: PikkuAIMiddlewareHooks[]
+  aiMiddleware?: PikkuAIMiddlewareHooks<any, any, any>[]
   permissions?: CorePermissionGroup<PikkuPermission>
 }
 

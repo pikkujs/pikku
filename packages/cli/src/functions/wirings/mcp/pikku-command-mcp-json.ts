@@ -1,24 +1,15 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeMCPJson } from './serialize-mcp-json.js'
+import { serializeMCPJson } from '@pikku/inspector'
 
 export const pikkuMCPJSON = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { mcpEndpoints, functions } = await getInspectorState()
-    const { mcpJsonFile, schemaDirectory } = config
+    const state = await getInspectorState()
+    const { mcpJsonFile } = config
 
-    // Generate MCP JSON file
     if (mcpJsonFile) {
-      const mcpJson = await serializeMCPJson(
-        logger,
-        schemaDirectory,
-        functions.meta,
-        functions.typesMap,
-        mcpEndpoints.resourcesMeta,
-        mcpEndpoints.toolsMeta,
-        mcpEndpoints.promptsMeta
-      )
+      const mcpJson = serializeMCPJson(logger, state)
       await writeFileInDir(logger, mcpJsonFile, mcpJson, {
         ignoreModifyComment: true,
       })

@@ -18,14 +18,17 @@ export const appendModified = pikkuChannelMiddleware<any, AIStreamEvent>(
   }
 )
 
-export const logAgentIO = pikkuAIMiddleware<any, AIStreamEvent>({
+export const logAgentIO = pikkuAIMiddleware<
+  AIStreamEvent,
+  { charCount: number }
+>({
   modifyInput: async ({ logger }, { messages, instructions }) => {
     logger.info(`Agent input: ${messages.length} messages`)
     return { messages, instructions }
   },
   modifyOutputStream: async (_services, { event, state }) => {
     if (event.type === 'text-delta') {
-      state.charCount = ((state.charCount as number) ?? 0) + event.text.length
+      state.charCount = (state.charCount ?? 0) + event.text.length
     }
     return event
   },
