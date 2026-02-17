@@ -1,7 +1,9 @@
 import {
   InspectorState,
   InspectorLogger,
+  InspectorOptions,
   ExternalPackageConfig,
+  MiddlewareGroupMeta,
 } from '../types.js'
 import {
   FunctionServicesMeta,
@@ -242,4 +244,145 @@ export function validateSecretOverrides(
       }
     }
   }
+}
+
+export function computeResolvedIOTypes(state: InspectorState): void {
+  const { functions } = state
+  for (const [pikkuFuncId, meta] of Object.entries(functions.meta)) {
+    const input = meta.inputs?.[0]
+    const output = meta.outputs?.[0]
+
+    let inputType = 'null'
+    if (input) {
+      try {
+        inputType = functions.typesMap.getTypeMeta(input).uniqueName
+      } catch {
+        inputType = input
+      }
+    }
+
+    let outputType = 'null'
+    if (output) {
+      try {
+        outputType = functions.typesMap.getTypeMeta(output).uniqueName
+      } catch {
+        outputType = output
+      }
+    }
+
+    state.resolvedIOTypes[pikkuFuncId] = { inputType, outputType }
+  }
+}
+
+const serializeGroupMap = (
+  groupMap: Map<string, MiddlewareGroupMeta>
+): Record<string, MiddlewareGroupMeta> => {
+  const result: Record<string, MiddlewareGroupMeta> = {}
+  for (const [key, meta] of groupMap.entries()) {
+    result[key] = {
+      exportName: meta.exportName,
+      sourceFile: meta.sourceFile,
+      position: meta.position,
+      services: meta.services,
+      count: meta.count,
+      instanceIds: meta.instanceIds,
+      isFactory: meta.isFactory,
+    }
+  }
+  return result
+}
+
+export function computeMiddlewareGroupsMeta(state: InspectorState): void {
+  state.middlewareGroupsMeta = {
+    definitions: state.middleware.definitions,
+    instances: state.middleware.instances,
+    httpGroups: serializeGroupMap(state.http.routeMiddleware),
+    tagGroups: serializeGroupMap(state.middleware.tagMiddleware),
+    channelMiddleware: {
+      definitions: state.channelMiddleware.definitions,
+      instances: state.channelMiddleware.instances,
+      tagGroups: serializeGroupMap(state.channelMiddleware.tagMiddleware),
+    },
+  }
+}
+
+export function computePermissionsGroupsMeta(state: InspectorState): void {
+  const httpGroups: Record<string, any> = {}
+  for (const [pattern, meta] of state.http.routePermissions.entries()) {
+    httpGroups[pattern] = {
+      exportName: meta.exportName,
+      sourceFile: meta.sourceFile,
+      position: meta.position,
+      services: meta.services,
+      count: meta.count,
+      instanceIds: meta.instanceIds,
+      isFactory: meta.isFactory,
+    }
+  }
+
+  const tagGroups: Record<string, any> = {}
+  for (const [tag, meta] of state.permissions.tagPermissions.entries()) {
+    tagGroups[tag] = {
+      exportName: meta.exportName,
+      sourceFile: meta.sourceFile,
+      position: meta.position,
+      services: meta.services,
+      count: meta.count,
+      instanceIds: meta.instanceIds,
+      isFactory: meta.isFactory,
+    }
+  }
+
+  state.permissionsGroupsMeta = {
+    definitions: state.permissions.definitions,
+    httpGroups,
+    tagGroups,
+  }
+}
+
+const PRIMITIVE_TYPES = new Set([
+  'boolean',
+  'string',
+  'number',
+  'null',
+  'undefined',
+  'void',
+  'any',
+  'unknown',
+  'never',
+])
+
+export function computeRequiredSchemas(
+  state: InspectorState,
+  options: InspectorOptions
+): void {
+  const { functions, schemaLookup } = state
+  const schemasFromTypes = options.schemaConfig?.schemasFromTypes
+
+  state.requiredSchemas = new Set<string>([
+    ...Object.values(functions.meta)
+      .map(({ inputs, outputs }) => {
+        const types: (string | undefined)[] = []
+        if (inputs?.[0]) {
+          try {
+            types.push(functions.typesMap.getUniqueName(inputs[0]))
+          } catch {
+            types.push(inputs[0])
+          }
+        }
+        if (outputs?.[0]) {
+          try {
+            types.push(functions.typesMap.getUniqueName(outputs[0]))
+          } catch {
+            types.push(outputs[0])
+          }
+        }
+        return types
+      })
+      .flat()
+      .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
+    ...functions.typesMap.customTypes.keys(),
+    ...(schemasFromTypes || []),
+    ...Array.from(schemaLookup.keys()),
+  ])
 }

@@ -2,7 +2,6 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeMiddlewareImports } from './serialize-middleware-imports.js'
-import { serializeMiddlewareGroupsMeta } from './serialize-middleware-groups-meta.js'
 
 export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
@@ -25,7 +24,7 @@ export const pikkuMiddleware = pikkuSessionlessFunc<void, boolean | undefined>({
       hasDefinitions ||
       hasChannelMiddleware
     ) {
-      const metaData = serializeMiddlewareGroupsMeta(state)
+      const metaData = state.middlewareGroupsMeta
 
       await writeFileInDir(
         logger,

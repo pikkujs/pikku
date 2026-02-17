@@ -1,20 +1,15 @@
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { dirname } from 'path'
 import type { VersionManifest } from '@pikku/inspector'
-import { serializeManifest } from '@pikku/inspector'
+import { serializeManifest, createEmptyManifest } from '@pikku/inspector'
+
+export { createEmptyManifest }
 
 export type {
   ContractEntry,
   VersionValidateError,
   VersionManifest,
   VersionManifestEntry,
-} from '@pikku/inspector'
-export {
-  validateContracts,
-  updateManifest,
-  extractContractsFromMeta,
-  createEmptyManifest,
-  serializeManifest,
 } from '@pikku/inspector'
 
 export async function loadManifest(

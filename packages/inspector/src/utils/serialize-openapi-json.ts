@@ -1,9 +1,14 @@
-import { FunctionsMeta, pikkuState } from '@pikku/core'
-import { HTTPWiringsMeta } from '@pikku/core/http'
+import type { FunctionsMeta } from '@pikku/core'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
+import type { InspectorLogger } from '../types.js'
 import _convertSchema from '@openapi-contrib/json-schema-to-openapi-schema'
-import { CLILogger } from '../../../services/cli-logger.service.js'
 const convertSchema =
   'default' in _convertSchema ? (_convertSchema.default as any) : _convertSchema
+
+interface ErrorDetails {
+  status: number
+  message: string
+}
 
 interface OpenAPISpec {
   openapi: string
@@ -67,9 +72,12 @@ export interface OpenAPISpecInfo {
   security?: { [key: string]: any[] }[]
 }
 
-const getErrorResponseForConstructorName = (constructorName: string) => {
-  const errors = Array.from(pikkuState(null, 'misc', 'errors').entries())
-  const foundError = errors.find(([e]) => e.name === constructorName)
+const getErrorResponseForConstructorName = (
+  constructorName: string,
+  errors: Map<any, ErrorDetails>
+) => {
+  const entries = Array.from(errors.entries())
+  const foundError = entries.find(([e]) => e.name === constructorName)
   if (foundError) {
     return foundError[1]
   }
@@ -110,13 +118,15 @@ const convertSchemasToBodyPayloads = async (
 }
 
 export async function generateOpenAPISpec(
-  logger: CLILogger,
+  logger: InspectorLogger,
   functionsMeta: FunctionsMeta,
   httpMeta: HTTPWiringsMeta,
   schemas: Record<string, any>,
-  additionalInfo: OpenAPISpecInfo
+  additionalInfo: OpenAPISpecInfo,
+  errors?: Map<any, ErrorDetails>
 ): Promise<OpenAPISpec> {
   const paths: Record<string, any> = {}
+  const errorsMap = errors ?? new Map()
 
   for (const routeMeta of Object.values(httpMeta)) {
     for (const meta of Object.values(routeMeta)) {
@@ -141,7 +151,7 @@ export async function generateOpenAPISpec(
 
       const output = functionMeta.outputs ? functionMeta.outputs[0] : undefined
 
-      const path = route.replace(/:(\w+)/g, '{$1}') // Convert ":param" to "{param}"
+      const path = route.replace(/:(\w+)/g, '{$1}')
 
       if (!paths[path]) {
         paths[path] = {}
@@ -149,7 +159,10 @@ export async function generateOpenAPISpec(
 
       const responses = {}
       errors?.forEach((error) => {
-        const errorResponse = getErrorResponseForConstructorName(error)
+        const errorResponse = getErrorResponseForConstructorName(
+          error,
+          errorsMap
+        )
         if (errorResponse) {
           responses[errorResponse.status] = {
             description: errorResponse.message,
@@ -260,6 +273,5 @@ export async function generateOpenAPISpec(
     ],
     tags: additionalInfo.tags,
     externalDocs: additionalInfo.externalDocs,
-    // definitions
   }
 }

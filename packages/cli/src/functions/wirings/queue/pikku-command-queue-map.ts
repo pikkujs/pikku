@@ -5,7 +5,8 @@ import { serializeQueueMap } from './serialize-queue-map.js'
 
 export const pikkuQueueMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { queueWorkers, functions } = await getInspectorState()
+    const { queueWorkers, functions, resolvedIOTypes } =
+      await getInspectorState()
     const { queueMapDeclarationFile, packageMappings } = config
 
     const content = serializeQueueMap(
@@ -13,8 +14,8 @@ export const pikkuQueueMap = pikkuSessionlessFunc<void, void>({
       queueMapDeclarationFile,
       packageMappings,
       functions.typesMap,
-      functions.meta,
-      queueWorkers.meta
+      queueWorkers.meta,
+      resolvedIOTypes
     )
     await writeFileInDir(logger, queueMapDeclarationFile, content)
   },

@@ -1,23 +1,21 @@
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { TypesMap, generateCustomTypes } from '@pikku/inspector'
-import { FunctionsMeta, Logger } from '@pikku/core'
-import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
+import { Logger } from '@pikku/core'
 
 export const serializeQueueMap = (
   logger: Logger,
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
-  functionsMeta: FunctionsMeta,
-  queueWorkersMeta: QueueWorkersMeta
+  queueWorkersMeta: QueueWorkersMeta,
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedQueues = generateQueues(
     queueWorkersMeta,
-    functionsMeta,
-    typesMap,
+    resolvedIOTypes,
     requiredTypes
   )
 
@@ -72,20 +70,22 @@ export type TypedPikkuQueue = {
 
 function generateQueues(
   queueWorkersMeta: QueueWorkersMeta,
-  functionsMeta: FunctionsMeta,
-  typesMap: TypesMap,
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
   requiredTypes: Set<string>
 ) {
   const queuesObj: Record<string, { inputType: string; outputType: string }> =
     {}
 
   for (const [queueName, { pikkuFuncId }] of Object.entries(queueWorkersMeta)) {
-    queuesObj[queueName] = resolveFunctionIOTypes(
-      pikkuFuncId,
-      functionsMeta,
-      typesMap,
-      requiredTypes
-    )
+    const resolved = resolvedIOTypes[pikkuFuncId]
+    if (!resolved) {
+      throw new Error(
+        `Function ${pikkuFuncId} not found in resolvedIOTypes. Please check your configuration.`
+      )
+    }
+    requiredTypes.add(resolved.inputType)
+    requiredTypes.add(resolved.outputType)
+    queuesObj[queueName] = resolved
   }
 
   // Build the Queues object as a string

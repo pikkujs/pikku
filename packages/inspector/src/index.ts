@@ -1,7 +1,6 @@
 export { inspect, getInitialInspectorState } from './inspector.js'
 export type { TypesMap } from './types-map.js'
 export type * from './types.js'
-export type { InspectorState } from './types.js'
 export type { FilesAndMethodsErrors } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
 export {
@@ -15,9 +14,6 @@ export {
   sanitizeTypeName,
 } from './utils/custom-types-generator.js'
 export {
-  validateContracts,
-  updateManifest,
-  extractContractsFromMeta,
   createEmptyManifest,
   serializeManifest,
 } from './utils/contract-hashes.js'
@@ -28,12 +24,13 @@ export type {
   VersionManifestEntry,
 } from './utils/contract-hashes.js'
 export { serializeMCPJson } from './utils/serialize-mcp-json.js'
+export type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 export {
   deserializeDslWorkflow,
   deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
-} from './utils/workflow/dsl/deserialize-dsl-workflow.js'
+} from './utils/workflow/dsl/index.js'
 export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,
-} from './utils/workflow/graph/workflow-graph.types.js'
+} from './utils/workflow/graph/index.js'

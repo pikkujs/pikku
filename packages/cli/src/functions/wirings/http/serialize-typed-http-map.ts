@@ -1,25 +1,23 @@
 import { HTTPWiringsMeta } from '@pikku/core/http'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { MetaInputTypes, TypesMap, generateCustomTypes } from '@pikku/inspector'
-import { FunctionsMeta, Logger } from '@pikku/core'
-import { resolveFunctionIOTypes } from '../../../utils/resolve-function-types.js'
+import { Logger } from '@pikku/core'
 
 export const serializeTypedHTTPWiringsMap = (
   logger: Logger,
   relativeToPath: string,
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
-  functionsMeta: FunctionsMeta,
   wiringsMeta: HTTPWiringsMeta,
-  metaTypes: MetaInputTypes
+  metaTypes: MetaInputTypes,
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
   const serializedMetaTypes = generateMetaTypes(metaTypes, typesMap)
   const serializedHTTPWirings = generateHTTPWirings(
     wiringsMeta,
-    functionsMeta,
-    typesMap,
+    resolvedIOTypes,
     requiredTypes
   )
 
@@ -59,8 +57,7 @@ export type HTTPWiringsWithMethod<Method extends string> = {
 
 function generateHTTPWirings(
   routesMeta: HTTPWiringsMeta,
-  functionsMeta: FunctionsMeta,
-  typesMap: TypesMap,
+  resolvedIOTypes: Record<string, { inputType: string; outputType: string }>,
   requiredTypes: Set<string>
 ) {
   const routesObj: Record<
@@ -76,17 +73,17 @@ function generateHTTPWirings(
         routesObj[route] = {}
       }
 
-      const { inputType, outputType } = resolveFunctionIOTypes(
-        pikkuFuncId,
-        functionsMeta,
-        typesMap,
-        requiredTypes
-      )
-
-      routesObj[route][method] = {
-        inputType,
-        outputType,
+      const resolved = resolvedIOTypes[pikkuFuncId]
+      if (!resolved) {
+        throw new Error(
+          `Function ${pikkuFuncId} not found in resolvedIOTypes. Please check your configuration.`
+        )
       }
+
+      requiredTypes.add(resolved.inputType)
+      requiredTypes.add(resolved.outputType)
+
+      routesObj[route][method] = resolved
     }
   }
 

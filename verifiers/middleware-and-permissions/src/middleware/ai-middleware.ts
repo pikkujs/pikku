@@ -1,7 +1,10 @@
 import { pikkuAIMiddleware } from '#pikku/agent/pikku-agent-types.gen.js'
 import type { AIStreamEvent } from '@pikku/core/ai-agent'
 
-export const testAIMiddleware = pikkuAIMiddleware<any, AIStreamEvent>({
+export const testAIMiddleware = pikkuAIMiddleware<
+  AIStreamEvent,
+  { count: number }
+>({
   modifyInput: async ({ logger }, { messages, instructions }) => {
     logger.info({ type: 'ai-middleware', name: 'modifyInput', phase: 'before' })
     return { messages, instructions }
@@ -25,7 +28,7 @@ export const testAIMiddleware = pikkuAIMiddleware<any, AIStreamEvent>({
   },
 })
 
-export const secondAIMiddleware = pikkuAIMiddleware<any, AIStreamEvent>({
+export const secondAIMiddleware = pikkuAIMiddleware<AIStreamEvent>({
   modifyInput: async ({ logger }, { messages, instructions }) => {
     logger.info({
       type: 'ai-middleware',

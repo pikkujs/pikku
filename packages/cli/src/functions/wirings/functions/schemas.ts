@@ -14,11 +14,8 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
       logger,
       config.schemaDirectory,
       visitState.schemas,
-      visitState.functions.typesMap,
-      visitState.functions.meta,
+      visitState.requiredSchemas,
       config.schema?.supportsImportAttributes ?? true,
-      config.schemasFromTypes,
-      visitState.schemaLookup,
       config.externalPackageName || null
     )
 
