@@ -15,7 +15,8 @@ function buildTemplateRegex(nodeId: string): RegExp | null {
 
 function remapStepNamesToNodeIds(
   stepNames: string[],
-  nodes: Record<string, any>
+  nodes: Record<string, any>,
+  graphName: string
 ): string[] {
   const templatePatterns = new Map<string, RegExp>()
   for (const nodeId of Object.keys(nodes)) {
@@ -25,8 +26,17 @@ function remapStepNamesToNodeIds(
   if (templatePatterns.size === 0) return stepNames
   return stepNames.map((name) => {
     if (nodes[name]) return name
+    const matches: string[] = []
     for (const [nodeId, regex] of templatePatterns) {
-      if (regex.test(name)) return nodeId
+      if (regex.test(name)) matches.push(nodeId)
+    }
+    if (matches.length > 1) {
+      throw new Error(
+        `Workflow graph '${graphName}': ambiguous template node match for '${name}' (${matches.join(', ')})`
+      )
+    }
+    if (matches.length === 1) {
+      return matches[0]!
     }
     return name
   })
@@ -34,7 +44,8 @@ function remapStepNamesToNodeIds(
 
 function remapBranchKeys(
   branchKeys: Record<string, string>,
-  nodes: Record<string, any>
+  nodes: Record<string, any>,
+  graphName: string
 ): Record<string, string> {
   const templatePatterns = new Map<string, RegExp>()
   for (const nodeId of Object.keys(nodes)) {
@@ -46,11 +57,17 @@ function remapBranchKeys(
   for (const [key, value] of Object.entries(branchKeys)) {
     let mappedKey = key
     if (!nodes[key]) {
+      const matches: string[] = []
       for (const [nodeId, regex] of templatePatterns) {
-        if (regex.test(key)) {
-          mappedKey = nodeId
-          break
-        }
+        if (regex.test(key)) matches.push(nodeId)
+      }
+      if (matches.length > 1) {
+        throw new Error(
+          `Workflow graph '${graphName}': ambiguous template branch key match for '${key}' (${matches.join(', ')})`
+        )
+      }
+      if (matches.length === 1) {
+        mappedKey = matches[0]!
       }
     }
     remapped[mappedKey] = value
@@ -305,9 +322,13 @@ export async function continueGraph(
     failedNodeIds: rawFailed,
     branchKeys: rawBranch,
   } = await workflowService.getCompletedGraphState(runId)
-  const completedNodeIds = remapStepNamesToNodeIds(rawCompleted, nodes)
-  const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes)
-  const branchKeys = remapBranchKeys(rawBranch, nodes)
+  const completedNodeIds = remapStepNamesToNodeIds(
+    rawCompleted,
+    nodes,
+    graphName
+  )
+  const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+  const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
   if (failedNodeIds.length > 0) {
     const failedNode = failedNodeIds[0]!
@@ -581,9 +602,13 @@ async function continueGraphInline(
       failedNodeIds: rawFailed,
       branchKeys: rawBranch,
     } = await workflowService.getCompletedGraphState(runId)
-    const completedNodeIds = remapStepNamesToNodeIds(rawCompleted, nodes)
-    const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes)
-    const branchKeys = remapBranchKeys(rawBranch, nodes)
+    const completedNodeIds = remapStepNamesToNodeIds(
+      rawCompleted,
+      nodes,
+      graphName
+    )
+    const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+    const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
     if (failedNodeIds.length > 0) {
       const failedNode = failedNodeIds[0]!
