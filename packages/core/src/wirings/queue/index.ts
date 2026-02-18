@@ -1,5 +1,16 @@
-// Queue types
-export type * from './queue.types.js'
+export type {
+  ConfigValidationResult,
+  CoreQueueWorker,
+  JobOptions,
+  PikkuJobConfig,
+  PikkuWorkerConfig,
+  PikkuQueue,
+  QueueJob,
+  QueueJobStatus,
+  QueueService,
+  QueueWorkers,
+  QueueWorkersMeta,
+} from './queue.types.js'
 
 // Queue processor management
 export {

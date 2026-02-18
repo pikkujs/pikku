@@ -1,6 +1,6 @@
-export * from './pikku-fetch-http-request.js'
-export * from './pikku-fetch-http-response.js'
-export * from './log-http-routes.js'
+export { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
+export { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
+export { logRoutes } from './log-http-routes.js'
 
 export {
   fetch,
@@ -12,4 +12,14 @@ export {
 
 export { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
 
-export type * from './http.types.js'
+export type {
+  AssertHTTPWiringParams,
+  CoreHTTPFunctionWiring,
+  HTTPMethod,
+  HTTPRouteBaseConfig,
+  HTTPWiringsMeta,
+  PikkuHTTPRequest,
+  PikkuHTTPResponse,
+  PikkuQuery,
+  RunHTTPWiringOptions,
+} from './http.types.js'

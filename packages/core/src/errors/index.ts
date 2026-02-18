@@ -1,2 +1,1 @@
-export * from './error-handler.js'
-export * from './errors.js'
+export { UnprocessableContentError } from './errors.js'

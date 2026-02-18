@@ -1,1 +1,5 @@
-export * from './serverless-channel-runner.js'
+export {
+  runChannelConnect,
+  runChannelDisconnect,
+  runChannelMessage,
+} from './serverless-channel-runner.js'

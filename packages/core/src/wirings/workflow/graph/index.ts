@@ -1,7 +1,12 @@
-export * from './workflow-graph.types.js'
-export * from './graph-node.js'
-export * from './graph-runner.js'
-export * from './template.js'
+export {
+  continueGraph,
+  executeGraphStep,
+  onGraphNodeComplete,
+  runFromMeta,
+  runWorkflowGraph,
+} from './graph-runner.js'
+export { template } from './template.js'
+export type { TemplateString } from './template.js'
 export {
   pikkuWorkflowGraph,
   type PikkuWorkflowGraphConfig,
