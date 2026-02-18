@@ -28,10 +28,12 @@ export class AWSSecrets implements SecretService {
       if (result.SecretString) {
         return result.SecretString as any
       }
+      throw new Error(`Secret '${SecretId}' has no string value`)
     } catch (e: any) {
-      console.error(e)
+      throw new Error(`FATAL: Error finding secret: ${SecretId}`, {
+        cause: e,
+      })
     }
-    throw `FATAL: Error finding secret: ${SecretId}`
   }
 
   public async hasSecret(SecretId: string): Promise<boolean> {
