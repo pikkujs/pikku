@@ -621,31 +621,30 @@ async function continueGraphInline(
       return
     }
 
-    const candidateNodes: string[] = []
+    const candidateNodes = new Set<string>()
 
     for (const nodeId of completedNodeIds) {
       const node = nodes[nodeId]
       if (!node?.next) continue
 
       const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
-      candidateNodes.push(...nextNodes)
-    }
-
-    for (const entryId of entryNodeIds) {
-      if (!candidateNodes.includes(entryId)) {
-        candidateNodes.push(entryId)
+      for (const nextNode of nextNodes) {
+        candidateNodes.add(nextNode)
       }
     }
 
-    if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
+    for (const entryId of entryNodeIds) {
+      candidateNodes.add(entryId)
+    }
+
+    if (candidateNodes.size === 0 && completedNodeIds.length > 0) {
       await workflowService.updateRunStatus(runId, 'completed')
       return
     }
 
-    const unstartedNodes = await workflowService.getNodesWithoutSteps(
-      runId,
-      candidateNodes
-    )
+    const unstartedNodes = await workflowService.getNodesWithoutSteps(runId, [
+      ...candidateNodes,
+    ])
 
     const nodesToExecute = unstartedNodes.filter((nodeId) => {
       const node = nodes[nodeId]
