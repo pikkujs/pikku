@@ -84,7 +84,9 @@ describe('wireQueueWorker', () => {
     assert.throws(
       () => wireQueueWorker(mockWorker),
       (error: any) => {
-        assert(error.message.includes('Queue processor metadata not found'))
+        assert(
+          error.message.includes('Missing generated metadata for queue worker')
+        )
         assert(error.message.includes('missing-meta-queue'))
         return true
       }
@@ -464,7 +466,9 @@ describe('runQueueJob', () => {
         })
       },
       (error: any) => {
-        assert(error.message.includes('Processor metadata not found'))
+        assert(
+          error.message.includes('Missing generated metadata for queue worker')
+        )
         assert(error.message.includes('missing-meta-queue'))
         return true
       }

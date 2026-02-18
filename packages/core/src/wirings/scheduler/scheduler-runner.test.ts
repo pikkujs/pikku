@@ -63,7 +63,10 @@ describe('wireScheduler', () => {
     assert.throws(
       () => wireScheduler(mockTask),
       (error: any) => {
-        assert.equal(error.message, 'Task metadata not found')
+        assert.equal(
+          error.message,
+          "Missing generated metadata for scheduled task 'missing-meta-task'"
+        )
         return true
       }
     )
