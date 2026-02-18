@@ -3,8 +3,8 @@ import type {
   DeploymentServiceConfig,
   DeploymentConfig,
   DeploymentInfo,
-} from '@pikku/core'
-import { getAllFunctionNames } from '@pikku/core'
+} from '@pikku/core/services'
+import { getAllFunctionNames } from '@pikku/core/function'
 import postgres from 'postgres'
 
 export class PgDeploymentService implements DeploymentService {
