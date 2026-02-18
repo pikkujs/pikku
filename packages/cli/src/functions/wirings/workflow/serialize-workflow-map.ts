@@ -5,7 +5,8 @@ import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
 import type { SerializedWorkflowGraphs } from '@pikku/inspector/workflow-graph'
-import { FunctionsMeta, Logger, parseVersionedId } from '@pikku/core'
+import { FunctionsMeta, parseVersionedId } from '@pikku/core'
+import { Logger } from '@pikku/core/services'
 
 export const serializeWorkflowMap = (
   logger: Logger,

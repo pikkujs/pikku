@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import * as assert from 'node:assert/strict'
-import { Logger } from '@pikku/core' // Mock Logger for testing
+import { Logger } from '@pikku/core/services' // Mock Logger for testing
 import { AjvSchemaService } from './ajv-schema-service.js'
 
 const mockLogger = {

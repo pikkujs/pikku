@@ -1,7 +1,7 @@
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import { type TypesMap, generateCustomTypes } from '@pikku/inspector'
-import { Logger } from '@pikku/core'
+import { Logger } from '@pikku/core/services'
 
 export const serializeAgentMap = (
   logger: Logger,
