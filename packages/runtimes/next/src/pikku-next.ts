@@ -1,5 +1,4 @@
 import { compile } from 'path-to-regexp'
-import { EventEmitter } from 'eventemitter3'
 
 import {
   CoreConfig,
@@ -21,8 +20,8 @@ const injectIntoUrl = (route: string, keys: Record<string, string>) => {
  * including support for SSR requests, API requests, and action requests.
  */
 export class PikkuNextJS {
-  private readyEmitter = new EventEmitter()
   private singletonServices: CoreSingletonServices | undefined
+  private singletonServicesPromise: Promise<CoreSingletonServices> | undefined
 
   /**
    * Constructs a new instance of the `PikkuNextJS` class.
@@ -124,20 +123,20 @@ export class PikkuNextJS {
       return this.singletonServices
     }
 
-    if (this.readyEmitter.listenerCount('ready') === 0) {
-      const config = this.createConfig
-        ? await this.createConfig()
-        : ({} as CoreConfig)
-      this.createSingletonServices(config).then((singletonServices) => {
+    if (!this.singletonServicesPromise) {
+      this.singletonServicesPromise = (async () => {
+        const config = this.createConfig
+          ? await this.createConfig()
+          : ({} as CoreConfig)
+        const singletonServices = await this.createSingletonServices(config)
         this.singletonServices = singletonServices
-        this.readyEmitter.emit('ready')
+        return singletonServices
+      })().catch((error) => {
+        this.singletonServicesPromise = undefined
+        throw error
       })
     }
 
-    return new Promise((resolve) => {
-      this.readyEmitter.once('ready', async () => {
-        resolve(this.singletonServices as CoreSingletonServices)
-      })
-    })
+    return this.singletonServicesPromise
   }
 }
