@@ -199,6 +199,69 @@ function extractReferencedNodeIds(
 
 const IGNORED_REFS = new Set(['trigger', '$item', 'unknown'])
 
+function normalizeNodeTargets(value: unknown): string[] {
+  if (!value) return []
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.filter((v) => typeof v === 'string')
+  if (typeof value === 'object') {
+    const targets: string[] = []
+    for (const branchTarget of Object.values(
+      value as Record<string, unknown>
+    )) {
+      targets.push(...normalizeNodeTargets(branchTarget))
+    }
+    return targets
+  }
+  return []
+}
+
+function validateGraphReferences(
+  graphName: string,
+  nodes: Record<string, any>,
+  entryNodes: string[]
+): void {
+  const nodeIds = new Set(Object.keys(nodes))
+
+  for (const entryId of entryNodes) {
+    if (!nodeIds.has(entryId)) {
+      throw new Error(
+        `Workflow graph '${graphName}': entry node '${entryId}' is not defined`
+      )
+    }
+  }
+
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    const inputRefs = extractReferencedNodeIds(node.input).filter(
+      (id) => !IGNORED_REFS.has(id)
+    )
+    for (const refId of inputRefs) {
+      if (!nodeIds.has(refId)) {
+        throw new Error(
+          `Workflow graph '${graphName}': node '${nodeId}' references unknown node '${refId}' in input`
+        )
+      }
+    }
+
+    const nextTargets = normalizeNodeTargets(node.next)
+    for (const nextId of nextTargets) {
+      if (!nodeIds.has(nextId)) {
+        throw new Error(
+          `Workflow graph '${graphName}': node '${nodeId}' routes to unknown node '${nextId}'`
+        )
+      }
+    }
+
+    const errorTargets = normalizeNodeTargets(node.onError)
+    for (const errorId of errorTargets) {
+      if (!nodeIds.has(errorId)) {
+        throw new Error(
+          `Workflow graph '${graphName}': node '${nodeId}' onError targets unknown node '${errorId}'`
+        )
+      }
+    }
+  }
+}
+
 function areDependenciesSatisfied(
   node: { input?: Record<string, unknown> },
   completedNodeIds: string[]
@@ -235,6 +298,7 @@ export async function continueGraph(
   }
 
   const nodes = meta.nodes
+  validateGraphReferences(graphName, nodes, meta.entryNodeIds ?? [])
 
   const {
     completedNodeIds: rawCompleted,
@@ -372,7 +436,7 @@ export async function executeGraphStep(
         message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
         code: 'RPC_NOT_FOUND',
       })
-      return
+      throw error
     }
     const meta = getWorkflowMeta(graphName)
     if (meta?.nodes) {
@@ -394,7 +458,7 @@ export async function executeGraphStep(
             )
           }
         }
-        return
+        throw error
       }
     }
     throw error
@@ -470,6 +534,7 @@ async function executeGraphNodeInline(
     await workflowService.setStepResult(stepState.stepId, result)
   } catch (error) {
     if (error instanceof RPCNotFoundError) {
+      await workflowService.setStepError(stepState.stepId, error as Error)
       await workflowService.updateRunStatus(runId, 'suspended', undefined, {
         message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
         code: 'RPC_NOT_FOUND',
@@ -615,6 +680,7 @@ export async function runWorkflowGraph(
   const entryNodes: string[] = startNode
     ? [startNode]
     : (meta.entryNodeIds ?? [])
+  validateGraphReferences(graphName, nodes, entryNodes)
 
   if (entryNodes.length === 0) {
     throw new Error(

@@ -699,6 +699,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         await this.resumeWorkflow(runId)
       } catch (error: any) {
         if (error instanceof RPCNotFoundError) {
+          await this.setStepError(stepState.stepId, error)
           await this.updateRunStatus(runId, 'suspended', undefined, {
             message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
             code: 'RPC_NOT_FOUND',
