@@ -33,6 +33,7 @@ export const runLocalChannel = async ({
   RunChannelOptions &
   RunChannelParams<unknown>): Promise<PikkuLocalChannelHandler | void> => {
   let wireServices: WireServices<typeof singletonServices> | undefined
+  let closedWireServices = false
 
   let channelHandler: PikkuLocalChannelHandler | undefined
   const userSession = new PikkuSessionService()
@@ -87,6 +88,14 @@ export const runLocalChannel = async ({
         wireServices = await createWireServices(singletonServices, wire)
       }
 
+      const closeServices = async () => {
+        if (!wireServices || closedWireServices) {
+          return
+        }
+        closedWireServices = true
+        await closeWireServices(singletonServices.logger, wireServices)
+      }
+
       const services = { ...singletonServices, ...wireServices }
 
       channelHandler.registerOnOpen(async () => {
@@ -130,9 +139,7 @@ export const runLocalChannel = async ({
           }
         }
 
-        if (wireServices) {
-          await closeWireServices(singletonServices.logger, wireServices)
-        }
+        await closeServices()
       })
 
       const onMessage = processMessageHandlers(
@@ -161,7 +168,8 @@ export const runLocalChannel = async ({
         bubbleErrors
       )
     } finally {
-      if (wireServices) {
+      if (!channelHandler && wireServices && !closedWireServices) {
+        closedWireServices = true
         await closeWireServices(singletonServices.logger, wireServices)
       }
     }
