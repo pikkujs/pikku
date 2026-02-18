@@ -171,13 +171,8 @@ describe('runPermissions', () => {
       data: {},
     })
 
-    // Order: wireInheritedPermissions (wiringTag) → wirePermissions → funcInheritedPermissions (funcTag) → funcPermissions
-    assert.deepEqual(executionOrder, [
-      'wiringTag',
-      'wiringPermission',
-      'funcTag',
-      'funcPermission',
-    ])
+    // Order: wireInheritedPermissions (wiringTag) only (short-circuit on first passing group)
+    assert.deepEqual(executionOrder, ['wiringTag'])
   })
 
   test('should implement "at least one must pass" logic for tag permissions', async () => {

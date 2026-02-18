@@ -152,14 +152,8 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'success')
-    // Order: wiringTags → wiringPermissions → funcTags → funcPermissions
-    assert.deepEqual(executionOrder, [
-      'wiringTag',
-      'wiringPermission',
-      'funcTag',
-      'funcPermission',
-      'main',
-    ])
+    // Order: wiringTags → main (short-circuit on first passing group)
+    assert.deepEqual(executionOrder, ['wiringTag', 'main'])
   })
 
   test('should throw specific error for wiring tag permission failures', async () => {
@@ -340,11 +334,10 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'success')
-    // Should execute tag permissions first, then function permissions
+    // Should execute tag permissions and short-circuit before function permissions
     assert.deepEqual(executionOrder, [
       'arrayPermission1',
       'arrayPermission2',
-      'objectPermission',
       'main',
     ])
   })
