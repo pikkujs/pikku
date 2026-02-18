@@ -1,4 +1,8 @@
-export const serializePublicAgent = (pathToPikkuTypes: string) => {
+export const serializePublicAgent = (
+  pathToPikkuTypes: string,
+  requireAuth: boolean = true
+) => {
+  const authFlag = requireAuth ? 'true' : 'false'
   return `import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
 import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
@@ -7,7 +11,7 @@ export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   unknown
 >({
-  auth: false,
+  auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     return await (rpc.agent as any)(data.agentName, {
       message: data.message,
@@ -21,7 +25,7 @@ export const agentStreamCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   void
 >({
-  auth: false,
+  auth: ${authFlag},
   func: async (services, data, { channel }) => {
     await streamAIAgent(
       data.agentName,
@@ -36,7 +40,7 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   { agentName: string; runId: string; approvals: { toolCallId: string; approved: boolean }[] },
   unknown
 >({
-  auth: false,
+  auth: ${authFlag},
   func: async ({ aiRunState }, { runId, approvals }) => {
     if (!aiRunState) {
       throw new Error('AIRunStateService not available')
@@ -48,28 +52,32 @@ export const agentApproveCaller = pikkuSessionlessFunc<
 wireHTTP({
   route: '/rpc/agent/:agentName',
   method: 'options',
-  auth: false,
+  tags: ['pikku:public'],
+  auth: ${authFlag},
   func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
 })
 
 wireHTTP({
   route: '/rpc/agent/:agentName',
   method: 'post',
-  auth: false,
+  tags: ['pikku:public'],
+  auth: ${authFlag},
   func: agentCaller,
 })
 
 wireHTTP({
   route: '/rpc/agent/:agentName/stream',
   method: 'options',
-  auth: false,
+  tags: ['pikku:public'],
+  auth: ${authFlag},
   func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
 })
 
 wireHTTP({
   route: '/rpc/agent/:agentName/stream',
   method: 'get',
-  auth: false,
+  tags: ['pikku:public'],
+  auth: ${authFlag},
   sse: true,
   func: agentStreamCaller,
 })
@@ -77,7 +85,8 @@ wireHTTP({
 wireHTTP({
   route: '/rpc/agent/:agentName/approve',
   method: 'post',
-  auth: false,
+  tags: ['pikku:public'],
+  auth: ${authFlag},
   func: agentApproveCaller,
 })
 `
