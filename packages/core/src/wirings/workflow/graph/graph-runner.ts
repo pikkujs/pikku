@@ -607,6 +607,7 @@ async function continueGraphInline(
       nodes,
       graphName
     )
+    const completedNodeIdSet = new Set(completedNodeIds)
     const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
     const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
@@ -648,7 +649,7 @@ async function continueGraphInline(
 
     const nodesToExecute = unstartedNodes.filter((nodeId) => {
       const node = nodes[nodeId]
-      return node && areDependenciesSatisfied(node, completedNodeIds)
+      return node && areDependenciesSatisfied(node, completedNodeIdSet)
     })
 
     if (nodesToExecute.length === 0) {
@@ -715,7 +716,7 @@ export async function runWorkflowGraph(
 
   const readyEntryNodes = entryNodes.filter((nodeId) => {
     const node = nodes[nodeId]
-    return node && areDependenciesSatisfied(node, [])
+    return node && areDependenciesSatisfied(node, new Set())
   })
 
   if (readyEntryNodes.length === 0) {
