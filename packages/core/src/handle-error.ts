@@ -57,17 +57,9 @@ export const handleHTTPError = (
     }
   }
 
-  // Handle 404 errors specifically
-  if (e instanceof NotFoundError) {
-    // TODO
-    // http?.response?.end()
-  }
-
-  // Either bubble up or end the response
   if (bubbleError) {
     throw e
-  } else {
-    // TODO
-    // http?.response?.end()
   }
+
+  http?.response?.close?.()
 }
