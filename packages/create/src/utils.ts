@@ -2,22 +2,33 @@ import chalk from 'chalk'
 import fs from 'fs'
 import path from 'path'
 
+const blockedMergeKeys = new Set(['__proto__', 'prototype', 'constructor'])
+
 export function deepMerge(target: any, source: any) {
   if (!target || typeof target !== 'object') return source
   if (!source || typeof source !== 'object') return target
 
   Object.keys(source).forEach((key) => {
+    if (blockedMergeKeys.has(key)) {
+      return
+    }
+
+    const sourceValue = source[key]
     if (
-      source[key] &&
-      typeof source[key] === 'object' &&
-      !Array.isArray(source[key])
+      sourceValue &&
+      typeof sourceValue === 'object' &&
+      !Array.isArray(sourceValue)
     ) {
-      if (!target[key] || typeof target[key] !== 'object') {
+      if (
+        !Object.hasOwn(target, key) ||
+        !target[key] ||
+        typeof target[key] !== 'object'
+      ) {
         target[key] = {}
       }
-      deepMerge(target[key], source[key])
+      deepMerge(target[key], sourceValue)
     } else {
-      target[key] = source[key]
+      target[key] = sourceValue
     }
   })
 
