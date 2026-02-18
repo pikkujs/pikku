@@ -48,6 +48,23 @@ describe('Functions Test Suite', () => {
     assert.deepStrictEqual(result, { a: 1 })
   })
 
+  test('deepMerge: ignores __proto__ keys', () => {
+    const source = JSON.parse('{"__proto__":{"polluted":"yes"},"safe":true}')
+    const result = deepMerge({}, source)
+    assert.deepStrictEqual(result, { safe: true })
+    assert.strictEqual(({} as any).polluted, undefined)
+  })
+
+  test('deepMerge: ignores constructor and prototype keys', () => {
+    const source = {
+      constructor: { prototype: { polluted: 'yes' } },
+      safe: { nested: true },
+    }
+    const result = deepMerge({}, source)
+    assert.deepStrictEqual(result, { safe: { nested: true } })
+    assert.strictEqual(({} as any).polluted, undefined)
+  })
+
   test('lazymkdir: creates a directory if it does not exist', async () => {
     const newDir = path.join(tempRoot, 'lazymkdir-subdir')
     await lazymkdir(newDir)
