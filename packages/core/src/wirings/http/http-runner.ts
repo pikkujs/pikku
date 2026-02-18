@@ -304,18 +304,14 @@ const executeRoute = async (
   http?.request?.setParams(params)
 
   // Validate request headers if schema is defined
-  if (
-    meta.headersSchemaName &&
-    http.request &&
-    singletonServices.schemaService
-  ) {
-    const headerKeys = singletonServices.schemaService.getSchemaKeys(
+  if (meta.headersSchemaName && http.request && singletonServices.schema) {
+    const headerKeys = singletonServices.schema.getSchemaKeys(
       meta.headersSchemaName
     )
     const rawHeaders = extractHeadersFromRequest(http.request, headerKeys)
     await validateSchema(
       singletonServices.logger,
-      singletonServices.schemaService,
+      singletonServices.schema,
       meta.headersSchemaName,
       rawHeaders
     )
