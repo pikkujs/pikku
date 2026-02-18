@@ -161,3 +161,48 @@ test('runChannel should return a channel handler if channel matches and no auth 
   // Simulate opening the channel
   result.open()
 })
+
+test('runChannel should close wire services once when channel closes', async () => {
+  resetPikkuState()
+  let closeCount = 0
+
+  pikkuState(null, 'channel', 'meta', {
+    test: {
+      name: 'test',
+      route: '/test-channel',
+    },
+  } as any)
+  wireChannel({
+    name: 'test',
+    route: '/test-channel',
+    auth: false,
+  })
+
+  httpRouter.initialize()
+
+  const result = await runLocalChannel({
+    singletonServices: mockSingletonServices,
+    channelId: 'test-channel-id',
+    request: new PikkuMockRequest('/test-channel', 'get'),
+    response: new PikkuMockResponse(),
+    route: '/test-channel',
+    createWireServices: async () => ({
+      tracked: {
+        close: async () => {
+          closeCount += 1
+        },
+      },
+    }),
+  })
+
+  assert.ok(result)
+  assert.equal(closeCount, 0)
+
+  result.close()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(closeCount, 1)
+
+  result.close()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(closeCount, 1)
+})
