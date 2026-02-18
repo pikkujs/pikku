@@ -1,5 +1,5 @@
 export const serializePublicAgent = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc, pikkuChannelFunc, wireHTTP } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
 import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
@@ -38,7 +38,7 @@ export const agentApproveCaller = pikkuSessionlessFunc<
 >({
   auth: false,
   func: async ({ aiRunState }, { runId, approvals }) => {
-    return await approveAIAgent(aiRunState, runId, approvals)
+    return await approveAIAgent(aiRunState!, runId, approvals)
   },
 })
 
