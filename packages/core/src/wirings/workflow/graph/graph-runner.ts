@@ -281,12 +281,12 @@ function validateGraphReferences(
 
 function areDependenciesSatisfied(
   node: { input?: Record<string, unknown> },
-  completedNodeIds: string[]
+  completedNodeIds: Set<string>
 ): boolean {
   const deps = extractReferencedNodeIds(node.input).filter(
     (id) => !IGNORED_REFS.has(id)
   )
-  return deps.every((dep) => completedNodeIds.includes(dep))
+  return deps.every((dep) => completedNodeIds.has(dep))
 }
 
 async function queueGraphNode(
@@ -327,6 +327,7 @@ export async function continueGraph(
     nodes,
     graphName
   )
+  const completedNodeIdSet = new Set(completedNodeIds)
   const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
   const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
@@ -345,35 +346,34 @@ export async function continueGraph(
     return
   }
 
-  const candidateNodes: string[] = []
+  const candidateNodes = new Set<string>()
 
   for (const nodeId of completedNodeIds) {
     const node = nodes[nodeId]
     if (!node?.next) continue
 
     const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
-    candidateNodes.push(...nextNodes)
-  }
-
-  for (const entryId of meta.entryNodeIds ?? []) {
-    if (!candidateNodes.includes(entryId)) {
-      candidateNodes.push(entryId)
+    for (const nextNode of nextNodes) {
+      candidateNodes.add(nextNode)
     }
   }
 
-  if (candidateNodes.length === 0 && completedNodeIds.length > 0) {
+  for (const entryId of meta.entryNodeIds ?? []) {
+    candidateNodes.add(entryId)
+  }
+
+  if (candidateNodes.size === 0 && completedNodeIds.length > 0) {
     await workflowService.updateRunStatus(runId, 'completed')
     return
   }
 
-  const unstartedNodes = await workflowService.getNodesWithoutSteps(
-    runId,
-    candidateNodes
-  )
+  const unstartedNodes = await workflowService.getNodesWithoutSteps(runId, [
+    ...candidateNodes,
+  ])
 
   const nodesToQueue = unstartedNodes.filter((nodeId) => {
     const node = nodes[nodeId]
-    return node && areDependenciesSatisfied(node, completedNodeIds)
+    return node && areDependenciesSatisfied(node, completedNodeIdSet)
   })
 
   if (nodesToQueue.length === 0) {
@@ -381,7 +381,7 @@ export async function continueGraph(
       .filter(([_, n]) => n.rpcName)
       .map(([id]) => id)
     const allRpcCompleted = allRpcNodes.every((id) =>
-      completedNodeIds.includes(id)
+      completedNodeIdSet.has(id)
     )
     if (allRpcCompleted) {
       await workflowService.updateRunStatus(runId, 'completed')
