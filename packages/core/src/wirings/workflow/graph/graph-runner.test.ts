@@ -240,6 +240,50 @@ describe('graph-runner bugs', () => {
     assert.deepEqual(queuedNodes, ['c'])
   })
 
+  test('inline graph should execute converging next node only once', async () => {
+    const ws = new InMemoryWorkflowService()
+    let cCalls = 0
+
+    const mockRpcService = {
+      rpcWithWire: async (rpcName: string) => {
+        if (rpcName === 'doA' || rpcName === 'doB') {
+          return { ok: true }
+        }
+        if (rpcName === 'doC') {
+          cCalls += 1
+          return { ok: true }
+        }
+        return {}
+      },
+    }
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testInlineConvergingSingleExecution'] = {
+      name: 'testInlineConvergingSingleExecution',
+      pikkuFuncId: 'testInlineConvergingSingleExecution',
+      source: 'graph',
+      entryNodeIds: ['a', 'b'],
+      graphHash: 'inline-converging-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'doA', next: 'c' },
+        b: { nodeId: 'b', rpcName: 'doB', next: 'c' },
+        c: { nodeId: 'c', rpcName: 'doC' },
+      },
+    }
+
+    await runWorkflowGraph(
+      ws,
+      'testInlineConvergingSingleExecution',
+      {},
+      mockRpcService,
+      true
+    )
+
+    assert.equal(cCalls, 1)
+
+    delete metaState['testInlineConvergingSingleExecution']
+  })
+
   test('inline graph node failure should mark workflow as failed', async () => {
     const ws = new InMemoryWorkflowService()
 
