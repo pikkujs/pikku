@@ -3,10 +3,10 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-  EventHubService,
-  JWTService,
-  QueueService,
 } from '@pikku/core'
+import type { EventHubService } from '@pikku/core/channel'
+import type { QueueService } from '@pikku/core/queue'
+import type { JWTService } from '@pikku/core/services'
 import type {
   AIStorageService,
   AIAgentRunnerService,
