@@ -60,16 +60,19 @@ export class PgWorkflowService extends PikkuWorkflowService {
       CREATE SCHEMA IF NOT EXISTS ${this.schemaName};
 
       DO $$ BEGIN
-        CREATE TYPE ${this.schemaName}.workflow_status_enum AS ENUM ('running', 'completed', 'failed', 'cancelled');
+        CREATE TYPE ${this.schemaName}.workflow_status_enum AS ENUM ('running', 'suspended', 'completed', 'failed', 'cancelled');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
 
       DO $$ BEGIN
-        CREATE TYPE ${this.schemaName}.step_status_enum AS ENUM ('pending', 'running', 'scheduled', 'succeeded', 'failed');
+        CREATE TYPE ${this.schemaName}.step_status_enum AS ENUM ('pending', 'running', 'scheduled', 'succeeded', 'failed', 'suspended');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
+
+      ALTER TYPE ${this.schemaName}.workflow_status_enum ADD VALUE IF NOT EXISTS 'suspended';
+      ALTER TYPE ${this.schemaName}.step_status_enum ADD VALUE IF NOT EXISTS 'suspended';
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_runs (
         workflow_run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
