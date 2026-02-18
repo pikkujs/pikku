@@ -17,7 +17,10 @@ export const pikkuPublicAgent = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         publicAgentPath,
-        serializePublicAgent(pathToPikkuTypes)
+        serializePublicAgent(
+          pathToPikkuTypes,
+          config.agent.publicAgentRequireAuth ?? true
+        )
       )
       return true
     }
