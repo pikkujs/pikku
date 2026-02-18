@@ -1,7 +1,3 @@
-export * from './cli.types.js'
-export * from './cli-runner.js'
-export * from './command-parser.js'
-
 export {
   wireCLI,
   runCLICommand,
@@ -13,3 +9,11 @@ export {
 export { parseCLIArguments, generateCommandHelp } from './command-parser.js'
 
 export { defineCLICommands } from './define-cli-commands.js'
+export type {
+  CLIMeta,
+  CLICommandMeta,
+  CLIProgramMeta,
+  CoreCLI,
+  CoreCLICommandConfig,
+  CorePikkuCLIRender,
+} from './cli.types.js'

@@ -40,8 +40,7 @@
     "./services": "./dist/services/index.js",
     "./services/local-content": "./dist/services/local-content.js",
     "./services/gopass-secrets": "./dist/services/gopass-secrets.js",
-    "./schema": "./dist/schema.js",
-    "./types": "./dist/types/index.d.ts"
+    "./schema": "./dist/schema.js"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
