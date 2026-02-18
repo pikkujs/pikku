@@ -38,7 +38,10 @@ export const agentApproveCaller = pikkuSessionlessFunc<
 >({
   auth: false,
   func: async ({ aiRunState }, { runId, approvals }) => {
-    return await approveAIAgent(aiRunState!, runId, approvals)
+    if (!aiRunState) {
+      throw new Error('AIRunStateService not available')
+    }
+    return await approveAIAgent(aiRunState, runId, approvals)
   },
 })
 
