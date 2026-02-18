@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../errors/errors.js'
+import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { CorePikkuMiddleware, CoreUserSession } from '../../types/core.types.js'
@@ -63,8 +63,8 @@ export const wireCLI = <
   const cliMeta = pikkuState(null, 'cli', 'meta') || {}
 
   if (!cliMeta.programs?.[cli.program]) {
-    throw new Error(
-      `CLI metadata not found for program '${cli.program}'. Did you run 'pikku all'?`
+    throw new PikkuMissingMetaError(
+      `CLI metadata not found for program '${cli.program}'`
     )
   }
 

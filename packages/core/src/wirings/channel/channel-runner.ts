@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../errors/errors.js'
+import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
 import { CorePikkuPermission } from '../../function/functions.types.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -36,7 +36,9 @@ export const wireChannel = <
   const channelsMeta = pikkuState(null, 'channel', 'meta')
   const channelMeta = channelsMeta[channel.name]
   if (!channelMeta) {
-    throw new Error(`Channel metadata not found for channel: ${channel.name}`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for channel '${channel.name}'`
+    )
   }
 
   pikkuState(null, 'channel', 'channels').set(channel.name, channel as any)

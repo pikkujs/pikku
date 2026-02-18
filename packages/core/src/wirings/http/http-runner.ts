@@ -22,7 +22,7 @@ import {
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { NotFoundError } from '../../errors/errors.js'
+import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
 import {
   closeWireServices,
   createWeakUID,
@@ -177,7 +177,9 @@ export const wireHTTP = <
   const httpMeta = pikkuState(null, 'http', 'meta')
   const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
-    throw new Error('Route metadata not found')
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for HTTP route '${httpWiring.method.toUpperCase()} ${httpWiring.route}'`
+    )
   }
   if (httpWiring.func) {
     addFunction(routeMeta.pikkuFuncId, httpWiring.func)

@@ -1,5 +1,6 @@
 import { pikkuState } from '../../../pikku-state.js'
 import { addFunction } from '../../../function/function-runner.js'
+import { PikkuMissingMetaError } from '../../../errors/errors.js'
 
 /**
  * Add a workflow to the system
@@ -10,8 +11,8 @@ export const addWorkflow = (workflowName: string, workflowFunc: any) => {
   const meta = pikkuState(null, 'workflows', 'meta')
   const workflowMeta = meta[workflowName]
   if (!workflowMeta) {
-    throw new Error(
-      `Workflow metadata not found for '${workflowName}'. Make sure to run the CLI to generate metadata.`
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for workflow '${workflowName}'`
     )
   }
 

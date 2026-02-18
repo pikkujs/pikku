@@ -9,6 +9,12 @@ addError(InvalidMiddlewareWireError, {
   message: 'The middleware wire is invalid for the current wiring type.',
 })
 
+export class PikkuMissingMetaError extends PikkuError {}
+addError(PikkuMissingMetaError, {
+  status: 500,
+  message: 'Required metadata is missing',
+})
+
 /**
  * The server cannot or will not process the request due to client error (e.g., malformed request syntax).
  * @group Error
