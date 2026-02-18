@@ -254,6 +254,9 @@ export class ContextAwareRPCService {
     data: In
   ): Promise<Out> {
     let endpoint: string | undefined
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
 
     const colonIndex = funcName.indexOf(':')
     if (colonIndex !== -1) {
@@ -278,13 +281,24 @@ export class ContextAwareRPCService {
       )
     }
 
+    if (await this.services.secrets?.hasSecret('PIKKU_REMOTE_SECRET')) {
+      if (!this.services.jwt) {
+        throw new Error(
+          'PIKKU_REMOTE_SECRET is set but JWT service is not available'
+        )
+      }
+      const token = await this.services.jwt.encode(
+        { value: 5, unit: 'minute' },
+        { aud: 'pikku-remote', fn: funcName, iat: Date.now() }
+      )
+      headers.Authorization = `Bearer ${token}`
+    }
+
     const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
     const timeoutMs = 30_000
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ data }),
       signal: AbortSignal.timeout(timeoutMs),
     })
