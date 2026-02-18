@@ -117,6 +117,78 @@ describe('graph-runner bugs', () => {
     delete metaState['testUnknownNextTarget']
   })
 
+  test('continueGraph should throw for ambiguous template step remapping', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const meta: WorkflowRuntimeMeta = {
+      name: 'testAmbiguousTemplateStepRemap',
+      pikkuFuncId: 'testAmbiguousTemplateStepRemap',
+      source: 'graph',
+      entryNodeIds: ['start'],
+      graphHash: 'ambiguous-step-remap-hash',
+      nodes: {
+        start: { nodeId: 'start', rpcName: 'doStart' },
+        'task-${id}': { nodeId: 'task-${id}', rpcName: 'doTaskById' },
+        'task-${name}': { nodeId: 'task-${name}', rpcName: 'doTaskByName' },
+      },
+    }
+
+    const runId = await ws.createRun(
+      'testAmbiguousTemplateStepRemap',
+      {},
+      false,
+      'ambiguous-step-remap-hash'
+    )
+
+    const step = await ws.insertStepState(runId, 'task-123', 'doTask', {})
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepResult(step.stepId, { ok: true })
+
+    await assert.rejects(
+      () => continueGraph(ws, runId, 'testAmbiguousTemplateStepRemap', meta),
+      {
+        message: /ambiguous template node match for 'task-123'/i,
+      }
+    )
+  })
+
+  test('continueGraph should throw for ambiguous template branch key remapping', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const meta: WorkflowRuntimeMeta = {
+      name: 'testAmbiguousTemplateBranchRemap',
+      pikkuFuncId: 'testAmbiguousTemplateBranchRemap',
+      source: 'graph',
+      entryNodeIds: ['start'],
+      graphHash: 'ambiguous-branch-remap-hash',
+      nodes: {
+        start: { nodeId: 'start', rpcName: 'doStart' },
+        'branch-${id}': { nodeId: 'branch-${id}', rpcName: 'doBranchById' },
+        'branch-${name}': {
+          nodeId: 'branch-${name}',
+          rpcName: 'doBranchByName',
+        },
+      },
+    }
+
+    const runId = await ws.createRun(
+      'testAmbiguousTemplateBranchRemap',
+      {},
+      false,
+      'ambiguous-branch-remap-hash'
+    )
+
+    const step = await ws.insertStepState(runId, 'branch-1', 'doBranch', {})
+    await ws.setBranchTaken(step.stepId, 'next')
+
+    await assert.rejects(
+      () => continueGraph(ws, runId, 'testAmbiguousTemplateBranchRemap', meta),
+      {
+        message: /ambiguous template branch key match for 'branch-1'/i,
+      }
+    )
+  })
+
   test('inline graph node failure should mark workflow as failed', async () => {
     const ws = new InMemoryWorkflowService()
 
