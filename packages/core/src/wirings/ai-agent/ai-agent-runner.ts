@@ -82,49 +82,56 @@ export async function runAIAgent(
     updatedAt: new Date(),
   })
 
-  const result = await agentRunner.run(runnerParams)
+  try {
+    const result = await agentRunner.run(runnerParams)
 
-  const responseText = await saveMessages(
-    storage,
-    threadId,
-    input.resourceId,
-    memoryConfig,
-    userMessage,
-    result,
-    {
-      workingMemoryJsonSchema,
-      workingMemorySchemaName,
-      logger: singletonServices.logger,
-      schemaService: singletonServices.schema,
+    const responseText = await saveMessages(
+      storage,
+      threadId,
+      input.resourceId,
+      memoryConfig,
+      userMessage,
+      result,
+      {
+        workingMemoryJsonSchema,
+        workingMemorySchemaName,
+        logger: singletonServices.logger,
+        schemaService: singletonServices.schema,
+      }
+    )
+
+    let outputText = responseText
+    let outputMessages = runnerParams.messages
+    for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
+      const mw = aiMiddlewares[i]
+      if (mw.modifyOutput) {
+        const modResult = await mw.modifyOutput(singletonServices, {
+          text: outputText,
+          messages: outputMessages,
+          usage: result.usage,
+        })
+        outputText = modResult.text
+        outputMessages = modResult.messages
+      }
     }
-  )
 
-  let outputText = responseText
-  let outputMessages = runnerParams.messages
-  for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
-    const mw = aiMiddlewares[i]
-    if (mw.modifyOutput) {
-      const modResult = await mw.modifyOutput(singletonServices, {
-        text: outputText,
-        messages: outputMessages,
-        usage: result.usage,
-      })
-      outputText = modResult.text
-      outputMessages = modResult.messages
+    await aiRunState.updateRun(runId, {
+      status: 'completed',
+      usage: { ...result.usage, model: agent.model },
+    })
+
+    return {
+      runId,
+      text: outputText,
+      object: result.object,
+      threadId,
+      steps: result.steps,
+      usage: result.usage,
     }
-  }
-
-  await aiRunState.updateRun(runId, {
-    status: 'completed',
-    usage: { ...result.usage, model: agent.model },
-  })
-
-  return {
-    runId,
-    text: outputText,
-    object: result.object,
-    threadId,
-    steps: result.steps,
-    usage: result.usage,
+  } catch (error) {
+    await aiRunState.updateRun(runId, {
+      status: 'failed',
+    })
+    throw error
   }
 }
