@@ -16,7 +16,7 @@
     "ext": { "package": "@pikku/templates-function-external" }
   },
   "agent": {
-    "publicAgentPath": ".pikku/agent/pikku-agent-public.gen.ts"
+    "publicAgentPath": "src/wirings/agent.wiring.gen.ts"
   },
   "cli": {
     "entrypoints": {
