@@ -10,6 +10,7 @@ import type {
 } from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { PikkuMissingMetaError } from '../../errors/errors.js'
 
 /**
  * Registers a trigger with the Pikku framework.
@@ -20,7 +21,9 @@ export const wireTrigger = (trigger: CoreTrigger) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]
   if (!triggerMeta) {
-    throw new Error(`Trigger metadata not found: ${trigger.name}`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for trigger '${trigger.name}'`
+    )
   }
 
   addFunction(triggerMeta.pikkuFuncId, trigger.func as any)
@@ -40,7 +43,9 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   const sourceMeta = pikkuState(null, 'trigger', 'sourceMeta')
   const triggerSourceMeta = sourceMeta[source.name]
   if (!triggerSourceMeta) {
-    throw new Error(`Trigger source metadata not found: ${source.name}`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for trigger source '${source.name}'`
+    )
   }
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')
@@ -90,7 +95,9 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     throw new Error(`Trigger source not found: ${name}`)
   }
   if (!sourceMeta) {
-    throw new Error(`Trigger source metadata not found: ${name}`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for trigger source '${name}'`
+    )
   }
 
   const wire: PikkuWire = {

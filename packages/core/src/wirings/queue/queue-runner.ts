@@ -5,6 +5,7 @@ import type {
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
+import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { CreateWireServices } from '../../types/core.types.js'
@@ -55,8 +56,8 @@ export const wireQueueWorker = <
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[queueWorker.name]
   if (!processorMeta) {
-    throw new Error(
-      `Queue processor metadata not found for '${queueWorker.name}'. Make sure to run the CLI to generate metadata.`
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for queue worker '${queueWorker.name}'`
     )
   }
 
@@ -114,7 +115,9 @@ export async function runQueueJob({
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
   if (!processorMeta) {
-    throw new Error(`Processor metadata not found for: ${job.queueName}`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for queue worker '${job.queueName}'`
+    )
   }
 
   // Get the queue worker registration to access middleware

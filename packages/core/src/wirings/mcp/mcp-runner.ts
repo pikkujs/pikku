@@ -22,7 +22,11 @@ import { getErrorResponse } from '../../errors/error-handler.js'
 import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { BadRequestError, NotFoundError } from '../../errors/errors.js'
+import {
+  BadRequestError,
+  NotFoundError,
+  PikkuMissingMetaError,
+} from '../../errors/errors.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
@@ -62,7 +66,9 @@ export const wireMCPResource = <
   const resourcesMeta = pikkuState(null, 'mcp', 'resourcesMeta')
   const mcpResourceMeta = resourcesMeta[mcpResource.uri]
   if (!mcpResourceMeta) {
-    throw new Error(`MCP resource metadata not found for '${mcpResource.uri}'`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for MCP resource '${mcpResource.uri}'`
+    )
   }
   addFunction(mcpResourceMeta.pikkuFuncId, mcpResource.func as any)
   const resources = pikkuState(null, 'mcp', 'resources')
@@ -82,7 +88,9 @@ export const wireMCPTool = <
   const toolsMeta = pikkuState(null, 'mcp', 'toolsMeta')
   const mcpToolMeta = toolsMeta[mcpTool.name]
   if (!mcpToolMeta) {
-    throw new Error(`MCP tool metadata not found for '${mcpTool.name}'`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for MCP tool '${mcpTool.name}'`
+    )
   }
   addFunction(mcpToolMeta.pikkuFuncId, mcpTool.func as any)
   const tools = pikkuState(null, 'mcp', 'tools')
@@ -102,7 +110,9 @@ export const wireMCPPrompt = <
   const promptsMeta = pikkuState(null, 'mcp', 'promptsMeta')
   const mcpPromptMeta = promptsMeta[mcpPrompt.name]
   if (!mcpPromptMeta) {
-    throw new Error(`MCP prompt metadata not found for '${mcpPrompt.name}'`)
+    throw new PikkuMissingMetaError(
+      `Missing generated metadata for MCP prompt '${mcpPrompt.name}'`
+    )
   }
   addFunction(mcpPromptMeta.pikkuFuncId, mcpPrompt.func as any)
   const prompts = pikkuState(null, 'mcp', 'prompts')
