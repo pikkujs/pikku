@@ -30,6 +30,7 @@ export {
   deserializeGraphWorkflow,
   deserializeAllDslWorkflows,
 } from './utils/workflow/dsl/index.js'
+export { getFilesAndMethods } from './utils/get-files-and-methods.js'
 export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,
