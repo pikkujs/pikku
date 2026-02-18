@@ -215,6 +215,7 @@ export type PikkuCLIInput = {
 
   agent?: {
     publicAgentPath?: string
+    publicAgentRequireAuth?: boolean
   }
 
   forceRequiredServices?: string[]
@@ -335,6 +336,7 @@ export type PikkuCLIConfig = {
 
   agent?: {
     publicAgentPath?: string
+    publicAgentRequireAuth?: boolean
   }
 
   forceRequiredServices?: string[]
