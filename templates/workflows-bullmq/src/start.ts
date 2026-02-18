@@ -2,6 +2,7 @@ import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisWorkflowService } from '@pikku/redis'
 import { InMemoryTriggerService } from '@pikku/core'
+import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import {
   createConfig,
   createWireServices,
@@ -26,7 +27,12 @@ async function main(): Promise<void> {
       workflowService,
     })
 
-    schedulerService.setServices(singletonServices, createWireServices)
+    schedulerService.setServices(
+      createSchedulerRuntimeHandlers({
+        singletonServices,
+        createWireServices,
+      })
+    )
     workflowService.setServices(singletonServices, createWireServices, config)
 
     const appServer = new PikkuExpressServer(

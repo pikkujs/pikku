@@ -1,15 +1,13 @@
 import { PgBoss } from 'pg-boss'
 import {
   SchedulerService,
+  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
-  CoreSingletonServices,
-  CoreServices,
-  CreateWireServices,
   parseDurationString,
 } from '@pikku/core'
-import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -27,12 +25,7 @@ interface ScheduledJobData {
  */
 export class PgBossSchedulerService extends SchedulerService {
   private scheduledCronNames: string[] = []
-  private singletonServices?: CoreSingletonServices
-  private createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices,
-    CoreUserSession
-  >
+  private handlers?: SchedulerRuntimeHandlers
 
   constructor(private pgBoss: PgBoss) {
     super()
@@ -43,16 +36,8 @@ export class PgBossSchedulerService extends SchedulerService {
    * Must be called before start() since the scheduler is typically
    * created before singletonServices are available.
    */
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      CoreUserSession
-    >
-  ): void {
-    this.singletonServices = singletonServices
-    this.createWireServices = createWireServices
+  setServices(handlers: SchedulerRuntimeHandlers): void {
+    this.handlers = handlers
   }
 
   /**
@@ -154,9 +139,9 @@ export class PgBossSchedulerService extends SchedulerService {
    * Registers a pg-boss worker to process recurring jobs via runScheduledTask.
    */
   async start(): Promise<void> {
-    if (!this.singletonServices) {
+    if (!this.handlers) {
       throw new Error(
-        'PgBossSchedulerService requires singletonServices to start recurring tasks'
+        'PgBossSchedulerService requires setServices() before start()'
       )
     }
 
@@ -173,14 +158,8 @@ export class PgBossSchedulerService extends SchedulerService {
       await this.pgBoss.work<ScheduledJobData>(cronName, async (jobs) => {
         for (const job of jobs) {
           const { rpcName } = job.data
-          this.singletonServices!.logger.info(
-            `Running scheduled task: ${rpcName}`
-          )
-          await runScheduledTask({
-            singletonServices: this.singletonServices!,
-            createWireServices: this.createWireServices as any,
-            name: rpcName,
-          })
+          this.handlers!.logger.info(`Running scheduled task: ${rpcName}`)
+          await this.handlers!.runScheduledTask(rpcName)
         }
       })
     }

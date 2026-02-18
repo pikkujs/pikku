@@ -19,6 +19,8 @@ import {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
+import { rpcService } from '../rpc/rpc-runner.js'
+import { SchedulerRuntimeHandlers } from '../../services/scheduler-service.js'
 
 export type RunScheduledTasksParams = {
   name: string
@@ -143,4 +145,35 @@ export async function runScheduledTask({
 
 export const getScheduledTasks = () => {
   return pikkuState(null, 'scheduler', 'tasks')
+}
+
+export const createSchedulerRuntimeHandlers = ({
+  singletonServices,
+  createWireServices,
+}: {
+  singletonServices: CoreSingletonServices
+  createWireServices?: CreateWireServices<
+    CoreSingletonServices,
+    CoreServices<CoreSingletonServices>,
+    CoreUserSession
+  >
+}): SchedulerRuntimeHandlers => {
+  return {
+    logger: singletonServices.logger,
+    invokeRPC: async (
+      rpcName: string,
+      data?: any,
+      session?: CoreUserSession
+    ) => {
+      const wire = session ? ({ session } as PikkuWire) : ({} as PikkuWire)
+      const rpc = rpcService.getContextRPCService(singletonServices, wire)
+      await rpc.invoke(rpcName, data)
+    },
+    runScheduledTask: async (name: string) =>
+      runScheduledTask({
+        name,
+        singletonServices,
+        createWireServices,
+      }),
+  }
 }

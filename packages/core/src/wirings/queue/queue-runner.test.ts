@@ -5,6 +5,7 @@ import {
   getQueueWorkers,
   removeQueueWorker,
   runQueueJob,
+  createQueueJobRunner,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from './queue-runner.js'
@@ -639,5 +640,44 @@ describe('runQueueJob', () => {
     const debugLogs = logs.filter((l) => l.level === 'debug')
     assert.equal(debugLogs.length, 1)
     assert(debugLogs[0].message.includes('Successfully processed job job-777'))
+  })
+})
+
+describe('createQueueJobRunner', () => {
+  test('delegates queue job execution using bound services', async () => {
+    const mockWorker: CoreQueueWorker = {
+      name: 'bound-runner-queue',
+      func: {
+        func: async (_services: any, data: any) => {
+          return data.value + 1
+        },
+        auth: false,
+      },
+    }
+
+    pikkuState(null, 'queue', 'meta')['bound-runner-queue'] = {
+      pikkuFuncId: 'queue_bound-runner-queue',
+      name: 'bound-runner-queue',
+    }
+    addTestQueueFunction('queue_bound-runner-queue')
+    wireQueueWorker(mockWorker)
+
+    const mockLogger = createMockLogger()
+    const runJob = createQueueJobRunner({
+      singletonServices: { logger: mockLogger } as any,
+    })
+
+    await runJob({
+      job: createMockJob('bound-runner-queue', 'job-888', { value: 41 }),
+    })
+
+    const logs = mockLogger.getLogs()
+    assert(
+      logs.some(
+        (log) =>
+          log.level === 'debug' &&
+          String(log.message).includes('Successfully processed job job-888')
+      )
+    )
   })
 })

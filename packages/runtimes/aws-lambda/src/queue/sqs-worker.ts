@@ -1,6 +1,6 @@
 import { SQSBatchResponse, SQSEvent, SQSRecord } from 'aws-lambda'
 import {
-  runQueueJob,
+  createQueueJobRunner,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
@@ -63,14 +63,16 @@ export const runSQSQueueWorker = async (
 ): Promise<SQSBatchResponse> => {
   console.log(JSON.stringify(event, null, 2))
   const jobs = event.Records.map(mapSQSRecordToQueueJob)
+  const runJob = createQueueJobRunner({
+    singletonServices,
+    createWireServices,
+  })
 
   // Process all jobs in parallel
   const results = await Promise.allSettled(
     jobs.map(async (job) => {
       try {
-        return await runQueueJob({
-          singletonServices,
-          createWireServices,
+        return await runJob({
           job,
         })
       } catch (error: unknown) {

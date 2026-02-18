@@ -4,6 +4,7 @@ import {
   wireScheduler,
   runScheduledTask,
   getScheduledTasks,
+  createSchedulerRuntimeHandlers,
 } from './scheduler-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { CoreScheduledTask } from './scheduler.types.js'
@@ -626,5 +627,45 @@ describe('getScheduledTasks', () => {
     const tasks = getScheduledTasks()
     assert.equal(tasks instanceof Map, true)
     assert.equal(tasks.size, 0)
+  })
+})
+
+describe('createSchedulerRuntimeHandlers', () => {
+  test('invokes RPC with optional session and runs scheduled task callback', async () => {
+    const calls: Array<{ type: string; value: any }> = []
+    const logger = createMockLogger()
+    const singletonServices = { logger } as any
+
+    const handlers = createSchedulerRuntimeHandlers({
+      singletonServices,
+    })
+
+    const originalGetContextRPCService = (await import('../rpc/rpc-runner.js'))
+      .rpcService.getContextRPCService
+    ;(await import('../rpc/rpc-runner.js')).rpcService.getContextRPCService = ((
+      _services: any,
+      wire: any
+    ) => {
+      calls.push({ type: 'wire', value: wire })
+      return {
+        invoke: async (rpcName: string, data: any) => {
+          calls.push({ type: 'invoke', value: { rpcName, data } })
+        },
+      } as any
+    }) as any
+
+    try {
+      await handlers.invokeRPC('testRpc', { value: 1 }, { userId: 'u1' } as any)
+    } finally {
+      ;(await import('../rpc/rpc-runner.js')).rpcService.getContextRPCService =
+        originalGetContextRPCService
+    }
+
+    assert.equal(calls[0]?.type, 'wire')
+    assert.deepEqual(calls[0]?.value, { session: { userId: 'u1' } })
+    assert.deepEqual(calls[1]?.value, {
+      rpcName: 'testRpc',
+      data: { value: 1 },
+    })
   })
 })

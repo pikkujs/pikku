@@ -1,16 +1,13 @@
 import { CronJob } from 'cron'
 import {
-  CoreServices,
-  CoreSingletonServices,
   CoreUserSession,
-  CreateWireServices,
   SchedulerService,
+  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   parseDurationString,
 } from '@pikku/core'
-import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
-import { rpcService } from '@pikku/core/rpc'
+import { getScheduledTasks } from '@pikku/core/scheduler'
 
 interface DelayedTask {
   taskId: string
@@ -29,28 +26,15 @@ export class InMemorySchedulerService extends SchedulerService {
   private cronJobs = new Map<string, CronJob>()
   private delayedTasks = new Map<string, DelayedTask>()
   private idCounter = 0
-  private singletonServices?: CoreSingletonServices
-  private createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices,
-    CoreUserSession
-  >
+  private handlers?: SchedulerRuntimeHandlers
 
   /**
    * Set services needed for processing recurring tasks.
    * Must be called before start() since the scheduler is typically
    * created before singletonServices are available.
    */
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      CoreUserSession
-    >
-  ): void {
-    this.singletonServices = singletonServices
-    this.createWireServices = createWireServices
+  setServices(handlers: SchedulerRuntimeHandlers): void {
+    this.handlers = handlers
   }
 
   async init(): Promise<void> {}
@@ -64,6 +48,12 @@ export class InMemorySchedulerService extends SchedulerService {
     data?: any,
     session?: CoreUserSession
   ): Promise<string> {
+    if (!this.handlers) {
+      throw new Error(
+        'InMemorySchedulerService requires setServices() before scheduling RPCs'
+      )
+    }
+
     const delayMs =
       typeof delay === 'string' ? parseDurationString(delay) : delay
     const taskId = `inmem-${++this.idCounter}-${Date.now()}`
@@ -71,11 +61,10 @@ export class InMemorySchedulerService extends SchedulerService {
 
     const timer = setTimeout(async () => {
       this.delayedTasks.delete(taskId)
-      const rpc = rpcService.getContextRPCService(this.singletonServices!, {})
       try {
-        await rpc.invoke(rpcName, data)
+        await this.handlers!.invokeRPC(rpcName, data, session)
       } catch (err: unknown) {
-        this.singletonServices!.logger.error(
+        this.handlers!.logger.error(
           `Failed to execute delayed RPC '${rpcName}': ${err}`
         )
       }
@@ -137,9 +126,9 @@ export class InMemorySchedulerService extends SchedulerService {
    * Start recurring scheduled tasks.
    */
   async start(): Promise<void> {
-    if (!this.singletonServices) {
+    if (!this.handlers) {
       throw new Error(
-        'InMemorySchedulerService requires singletonServices to start recurring tasks'
+        'InMemorySchedulerService requires setServices() before start()'
       )
     }
 
@@ -164,15 +153,9 @@ export class InMemorySchedulerService extends SchedulerService {
     const job = new CronJob(
       schedule,
       async () => {
-        this.singletonServices!.logger.info(`Running scheduled task: ${name}`)
-        await runScheduledTask({
-          singletonServices: this.singletonServices!,
-          createWireServices: this.createWireServices as any,
-          name,
-        })
-        this.singletonServices!.logger.debug(
-          `Completed scheduled task: ${name}`
-        )
+        this.handlers!.logger.info(`Running scheduled task: ${name}`)
+        await this.handlers!.runScheduledTask(name)
+        this.handlers!.logger.debug(`Completed scheduled task: ${name}`)
       },
       null,
       true
