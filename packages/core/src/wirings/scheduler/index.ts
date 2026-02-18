@@ -1,10 +1,12 @@
-export * from './scheduler.types.js'
-
 export {
   runScheduledTask,
   createSchedulerRuntimeHandlers,
   wireScheduler,
   getScheduledTasks,
 } from './scheduler-runner.js'
-
-export * from './log-schedulers.js'
+export { logSchedulers } from './log-schedulers.js'
+export type {
+  CoreScheduledTask,
+  ScheduledTasksMeta,
+  PikkuScheduledTask,
+} from './scheduler.types.js'

@@ -1,1 +1,1 @@
-export * from './cli-channel-runner.js'
+export { executeCLIViaChannel } from './cli-channel-runner.js'
