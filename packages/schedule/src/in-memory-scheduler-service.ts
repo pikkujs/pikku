@@ -71,17 +71,14 @@ export class InMemorySchedulerService extends SchedulerService {
 
     const timer = setTimeout(async () => {
       this.delayedTasks.delete(taskId)
-      const wireServices = await this.createWireServices?.(
-        this.singletonServices!,
-        {}
-      )
-      const services = { ...this.singletonServices!, ...wireServices }
-      const rpc = rpcService.getContextRPCService(services, {})
-      rpc.invoke(rpcName, data).catch((err: unknown) => {
+      const rpc = rpcService.getContextRPCService(this.singletonServices!, {})
+      try {
+        await rpc.invoke(rpcName, data)
+      } catch (err: unknown) {
         this.singletonServices!.logger.error(
           `Failed to execute delayed RPC '${rpcName}': ${err}`
         )
-      })
+      }
     }, delayMs)
 
     this.delayedTasks.set(taskId, {
