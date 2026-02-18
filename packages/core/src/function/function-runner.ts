@@ -301,7 +301,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
     )
     try {
       const services = { ...resolvedSingletonServices, ...wireServices }
-      const rpc = rpcService.getContextRPCService(services, wireWithSession)
+      const rpc = rpcService.getContextRPCService(services, wireWithSession, {
+        sessionService,
+      })
       return await funcConfig.func(services, actualData, {
         ...wireWithSession,
         rpc,
