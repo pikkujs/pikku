@@ -3,6 +3,8 @@ import {
   CoreSingletonServices,
   PikkuWire,
 } from '../../types/core.types.js'
+import type { SessionService } from '../../services/user-session-service.js'
+import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
@@ -69,6 +71,7 @@ export class ContextAwareRPCService {
     private wire: PikkuWire,
     private options: {
       requiresAuth?: boolean
+      sessionService?: SessionService<CoreUserSession>
     }
   ) {}
 
@@ -237,6 +240,7 @@ export class ContextAwareRPCService {
   }> {
     const result = await runAIAgent(agentName, input, {
       singletonServices: this.services as CoreSingletonServices,
+      sessionService: this.options.sessionService,
     })
     return {
       runId: result.runId,
@@ -317,12 +321,21 @@ export class PikkuRPCService<
   getContextRPCService(
     services: Services,
     wire: PikkuWire,
-    requiresAuth?: boolean | undefined,
+    requiresAuthOrOptions?:
+      | boolean
+      | {
+          requiresAuth?: boolean
+          sessionService?: SessionService<CoreUserSession>
+        }
+      | undefined,
     depth: number = 0
   ): TypedRPC {
-    const serviceRPC = new ContextAwareRPCService(services, wire, {
-      requiresAuth,
-    })
+    const options =
+      typeof requiresAuthOrOptions === 'object' &&
+      requiresAuthOrOptions !== null
+        ? requiresAuthOrOptions
+        : { requiresAuth: requiresAuthOrOptions }
+    const serviceRPC = new ContextAwareRPCService(services, wire, options)
     return {
       depth,
       global: false,

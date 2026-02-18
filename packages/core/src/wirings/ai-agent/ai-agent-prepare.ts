@@ -17,10 +17,8 @@ import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service
 import { PikkuError } from '../../errors/error-handler.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import {
-  PikkuSessionService,
-  createMiddlewareSessionWireProps,
-} from '../../services/user-session-service.js'
+import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
+import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from 'crypto'
 
 import {
@@ -31,6 +29,7 @@ import {
 
 export type RunAIAgentParams = {
   singletonServices: CoreSingletonServices
+  sessionService?: SessionService<CoreUserSession>
   createWireServices?: CreateWireServices<
     CoreSingletonServices,
     CoreServices<CoreSingletonServices>,
@@ -187,16 +186,15 @@ export function buildToolDefs(
           if (needsApproval) {
             throw new ToolApprovalRequired(randomUUID(), pikkuFuncId, toolInput)
           }
-          const sessionService = new PikkuSessionService()
-          const wire: PikkuWire = {
-            ...createMiddlewareSessionWireProps(sessionService),
-          }
+          const wire: PikkuWire = params.sessionService
+            ? { ...createMiddlewareSessionWireProps(params.sessionService) }
+            : {}
           return runPikkuFunc('agent', `tool:${pikkuFuncId}`, pikkuFuncId, {
             singletonServices,
             createWireServices: params.createWireServices,
             data: () => toolInput,
             wire,
-            sessionService,
+            sessionService: params.sessionService,
           })
         },
       })
