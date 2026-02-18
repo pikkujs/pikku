@@ -132,6 +132,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       })
     } finally {
       channel.send({ type: 'done' })
+      channel.close()
     }
   }
 

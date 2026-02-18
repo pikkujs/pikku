@@ -10,18 +10,21 @@ const runId = Math.random().toString(36).slice(2, 8)
 async function testStreamAgent() {
   console.log('\n--- Stream: Ask daily-planner for advice ---')
 
-  const response = await fetch(`${url}/rpc/agent/daily-planner/stream`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-    },
-    body: JSON.stringify({
-      message: 'Plan my afternoon — I have 3 hours free',
-      threadId: `stream-test-${runId}`,
-      resourceId: 'test-user',
-    }),
+  const params = new URLSearchParams({
+    message: 'Plan my afternoon — I have 3 hours free',
+    threadId: `stream-test-${runId}`,
+    resourceId: 'test-user',
   })
+
+  const response = await fetch(
+    `${url}/rpc/agent/daily-planner/stream?${params}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'text/event-stream',
+      },
+    }
+  )
 
   if (!response.ok || !response.body) {
     throw new Error(
