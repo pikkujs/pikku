@@ -189,6 +189,57 @@ describe('graph-runner bugs', () => {
     )
   })
 
+  test('continueGraph should queue converging next node only once', async () => {
+    const ws = new InMemoryWorkflowService()
+    const queuedNodes: string[] = []
+
+    ws.setServices(
+      {
+        queueService: {
+          add: async (_queueName: string, data: any) => {
+            if (data?.stepName) {
+              queuedNodes.push(data.stepName)
+            }
+          },
+        },
+      } as any,
+      (() => ({})) as any,
+      {} as any
+    )
+
+    const meta: WorkflowRuntimeMeta = {
+      name: 'testConvergingNextNode',
+      pikkuFuncId: 'testConvergingNextNode',
+      source: 'graph',
+      entryNodeIds: ['a', 'b'],
+      graphHash: 'converging-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'doA', next: 'c' },
+        b: { nodeId: 'b', rpcName: 'doB', next: 'c' },
+        c: { nodeId: 'c', rpcName: 'doC' },
+      },
+    }
+
+    const runId = await ws.createRun(
+      'testConvergingNextNode',
+      {},
+      false,
+      'converging-hash'
+    )
+
+    const stepA = await ws.insertStepState(runId, 'a', 'doA', {})
+    await ws.setStepRunning(stepA.stepId)
+    await ws.setStepResult(stepA.stepId, { ok: true })
+
+    const stepB = await ws.insertStepState(runId, 'b', 'doB', {})
+    await ws.setStepRunning(stepB.stepId)
+    await ws.setStepResult(stepB.stepId, { ok: true })
+
+    await continueGraph(ws, runId, 'testConvergingNextNode', meta)
+
+    assert.deepEqual(queuedNodes, ['c'])
+  })
+
   test('inline graph node failure should mark workflow as failed', async () => {
     const ws = new InMemoryWorkflowService()
 
