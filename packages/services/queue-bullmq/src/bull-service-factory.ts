@@ -3,6 +3,8 @@ import { BullQueueService } from './bull-queue-service.js'
 import { BullQueueWorkers } from './bull-queue-worker.js'
 import { BullSchedulerService } from './bull-scheduler-service.js'
 import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
+import { createQueueJobRunner } from '@pikku/core/queue'
+import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 
 /**
  * Factory class for BullMQ services
@@ -40,12 +42,12 @@ export class BullServiceFactory {
     createWireServices?: CreateWireServices
   ): BullQueueWorkers {
     if (!this.queueWorkers) {
-      this.queueWorkers = new BullQueueWorkers(
-        this.redisConnectionOptions,
-        singletonServices,
-        createWireServices
-      )
+      this.queueWorkers = new BullQueueWorkers(this.redisConnectionOptions)
     }
+    this.queueWorkers.setJobRunner(
+      createQueueJobRunner({ singletonServices, createWireServices }),
+      singletonServices.logger
+    )
     return this.queueWorkers
   }
 
@@ -59,6 +61,18 @@ export class BullServiceFactory {
       )
     }
     return this.schedulerService
+  }
+
+  setSchedulerRuntime(
+    singletonServices: CoreSingletonServices,
+    createWireServices?: CreateWireServices
+  ): void {
+    this.getSchedulerService().setServices(
+      createSchedulerRuntimeHandlers({
+        singletonServices,
+        createWireServices,
+      })
+    )
   }
 
   /**

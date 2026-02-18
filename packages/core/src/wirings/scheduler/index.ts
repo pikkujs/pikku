@@ -2,6 +2,7 @@ export * from './scheduler.types.js'
 
 export {
   runScheduledTask,
+  createSchedulerRuntimeHandlers,
   wireScheduler,
   getScheduledTasks,
 } from './scheduler-runner.js'

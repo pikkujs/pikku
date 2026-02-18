@@ -189,3 +189,26 @@ export async function runQueueJob({
     throw error
   }
 }
+
+export const createQueueJobRunner = ({
+  singletonServices,
+  createWireServices,
+}: {
+  singletonServices: CoreServices
+  createWireServices?: CreateWireServices
+}) => {
+  return async ({
+    job,
+    updateProgress,
+  }: {
+    job: QueueJob
+    updateProgress?: (progress: number | string | object) => Promise<void>
+  }) => {
+    await runQueueJob({
+      singletonServices,
+      createWireServices,
+      job,
+      updateProgress,
+    })
+  }
+}

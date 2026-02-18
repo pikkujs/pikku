@@ -5,6 +5,7 @@ export type * from './queue.types.js'
 export {
   wireQueueWorker,
   runQueueJob,
+  createQueueJobRunner,
   getQueueWorkers,
   removeQueueWorker,
   QueueJobDiscardedError,
