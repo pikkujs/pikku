@@ -25,6 +25,7 @@ export const rpcCaller = pikkuSessionlessFunc<
 wireHTTP({
   route: "/rpc/:rpcName",
   method: "options",
+  tags: ['pikku:public'],
   auth: false,
   func: pikkuSessionlessFunc<{ rpcName: string }>(async () => void 0),
 });
@@ -32,6 +33,7 @@ wireHTTP({
 wireHTTP({
   route: '/rpc/:rpcName',
   method: 'post',
+  tags: ['pikku:public'],
   auth: false,
   func: rpcCaller,
 })
