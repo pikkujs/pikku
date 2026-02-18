@@ -24,7 +24,10 @@ describe('serializePublicAgent', () => {
       serialized,
       /if \(!aiRunState\)\s*{\s*throw new Error\('AIRunStateService not available'\)/
     )
-    assert.match(serialized, /approveAIAgent\(aiRunState, runId, approvals\)/)
+    assert.match(
+      serialized,
+      /approveAIAgent\(aiRunState, runId, approvals, agentName\)/
+    )
     assert.doesNotMatch(
       serialized,
       /approveAIAgent\(aiRunState!, runId, approvals\)/
