@@ -9,4 +9,15 @@ describe('serializePublicRPC', () => {
     const matches = serialized.match(/tags:\s*\['pikku:public'\]/g)
     assert.equal(matches?.length, 2)
   })
+
+  test('defaults generated public rpc routes to auth enabled', () => {
+    const serialized = serializePublicRPC('#pikku')
+    assert.doesNotMatch(serialized, /auth:\s*false/)
+    assert.match(serialized, /auth:\s*true/)
+  })
+
+  test('supports explicitly generating public unauthenticated rpc routes', () => {
+    const serialized = serializePublicRPC('#pikku', false)
+    assert.match(serialized, /auth:\s*false/)
+  })
 })
