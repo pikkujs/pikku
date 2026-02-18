@@ -25,7 +25,8 @@ export const addAIAgent = (
 export async function approveAIAgent(
   aiRunState: AIRunStateService,
   runId: string,
-  approvals: { toolCallId: string; approved: boolean }[]
+  approvals: { toolCallId: string; approved: boolean }[],
+  expectedAgentName?: string
 ): Promise<{
   status: 'resumed' | 'suspended'
   runId: string
@@ -37,6 +38,11 @@ export async function approveAIAgent(
 
   const run = await aiRunState.getRun(runId)
   if (!run) throw new Error('Run not found: ' + runId)
+  if (expectedAgentName && run.agentName !== expectedAgentName) {
+    throw new Error(
+      `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
+    )
+  }
   if (run.status !== 'suspended')
     throw new Error('Run is not suspended: ' + run.status)
 
