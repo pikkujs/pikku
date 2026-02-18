@@ -211,6 +211,7 @@ export type PikkuCLIInput = {
   rpc?: {
     remoteRpcWorkersPath?: string
     publicRpcPath?: string
+    publicRpcRequireAuth?: boolean
   }
 
   agent?: {
@@ -332,6 +333,7 @@ export type PikkuCLIConfig = {
   rpc?: {
     remoteRpcWorkersPath?: string
     publicRpcPath?: string
+    publicRpcRequireAuth?: boolean
   }
 
   agent?: {
