@@ -301,7 +301,6 @@ export const runPermissions = async (
 
   // Check all combined permissions - at least one must pass if any exist
   if (allPermissions.length > 0) {
-    let permissioned = false
     for (const permission of allPermissions) {
       const result = await verifyPermissions(
         typeof permission === 'function' ? { permission } : permission,
@@ -310,13 +309,10 @@ export const runPermissions = async (
         wire
       )
       if (result) {
-        permissioned = true
-        // Continue executing all permissions (don't break early)
+        return
       }
     }
-    if (!permissioned) {
-      services.logger.debug('Permission denied - combined permissions')
-      throw new ForbiddenError('Permission denied')
-    }
+    services.logger.debug('Permission denied - combined permissions')
+    throw new ForbiddenError('Permission denied')
   }
 }
