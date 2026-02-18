@@ -34,6 +34,9 @@ files=($(find src -type f -name "*.test.ts"))
 # Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then
   echo "No test files found matching pattern: $pattern"
+  if [ "${STRICT_TEST_DISCOVERY}" = "1" ] || [ "${CI}" = "true" ]; then
+    exit 1
+  fi
   exit 0
 fi
 
