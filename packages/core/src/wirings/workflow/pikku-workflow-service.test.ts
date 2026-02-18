@@ -98,3 +98,35 @@ describe('pikku-workflow-service version mismatch fallback', () => {
     delete metaState[workflowName]
   })
 })
+
+describe('pikku-workflow-service executeWorkflowStep', () => {
+  test('should set pending step to running before succeeding', async () => {
+    const ws = new InMemoryWorkflowService()
+    ws.setServices(
+      {
+        queueService: {
+          add: async () => {},
+        },
+      } as any,
+      (() => ({})) as any,
+      {} as any
+    )
+
+    const runId = await ws.createRun('pending-step-running', {}, false, 'hash')
+    await ws.insertStepState(runId, 'stepA', 'doStepA', { a: 1 })
+
+    await ws.executeWorkflowStep(
+      runId,
+      'stepA',
+      'doStepA',
+      { a: 1 },
+      {
+        rpcWithWire: async () => ({ ok: true }),
+      }
+    )
+
+    const step = await ws.getStepState(runId, 'stepA')
+    assert.equal(step.status, 'succeeded')
+    assert.ok(step.runningAt instanceof Date)
+  })
+})

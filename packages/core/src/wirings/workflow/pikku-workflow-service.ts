@@ -655,8 +655,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepState = await this.createRetryAttempt(stepState.stepId, 'running')
       }
 
-      if (stepState.status !== 'pending') {
-        // Mark step as running (pending or failed status)
+      if (stepState.status === 'pending') {
+        // Mark pending step as running before execution
         await this.setStepRunning(stepState.stepId)
       }
 
