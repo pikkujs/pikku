@@ -1,7 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisWorkflowService } from '@pikku/redis'
-import { InMemoryTriggerService } from '@pikku/core'
+import { InMemoryTriggerService } from '@pikku/core/services'
 import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import {
   createConfig,

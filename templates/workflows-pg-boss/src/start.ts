@@ -1,7 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowService } from '@pikku/pg'
-import { InMemoryTriggerService } from '@pikku/core'
+import { InMemoryTriggerService } from '@pikku/core/services'
 import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import postgres from 'postgres'
 import {

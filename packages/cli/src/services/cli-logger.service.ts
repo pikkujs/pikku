@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import { Logger, LogLevel } from '@pikku/core'
+import { Logger, LogLevel } from '@pikku/core/services'
 import { ErrorCode } from '@pikku/inspector'
 
 const logo = `

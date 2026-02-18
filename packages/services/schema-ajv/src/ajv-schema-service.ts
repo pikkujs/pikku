@@ -1,4 +1,4 @@
-import { Logger, SchemaService } from '@pikku/core'
+import { Logger, SchemaService } from '@pikku/core/services'
 import { Ajv } from 'ajv'
 import addFormats from 'ajv-formats'
 import { ValidateFunction } from 'ajv'

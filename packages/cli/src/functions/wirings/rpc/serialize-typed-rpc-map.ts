@@ -4,7 +4,7 @@ import {
   ExternalPackageConfig,
   generateCustomTypes,
 } from '@pikku/inspector'
-import { Logger } from '@pikku/core'
+import { Logger } from '@pikku/core/services'
 
 export const serializeTypedRPCMap = (
   logger: Logger,

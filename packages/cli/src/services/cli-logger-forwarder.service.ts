@@ -1,4 +1,4 @@
-import { Logger, LogLevel } from '@pikku/core'
+import { Logger, LogLevel } from '@pikku/core/services'
 import { PikkuChannel } from '@pikku/core/channel'
 import { ErrorCode } from '@pikku/inspector'
 

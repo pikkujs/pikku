@@ -1,5 +1,5 @@
 import { TypesMap } from '@pikku/inspector'
-import { Logger } from '@pikku/core'
+import { Logger } from '@pikku/core/services'
 import { getFileImportRelativePath } from './file-import-path.js'
 
 export const serializeImportMap = (

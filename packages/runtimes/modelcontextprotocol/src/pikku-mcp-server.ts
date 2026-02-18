@@ -19,10 +19,9 @@ import {
   CoreConfig,
   CoreSingletonServices,
   CreateWireServices,
-  LogLevel,
-  Logger,
   stopSingletonServices,
 } from '@pikku/core'
+import { LogLevel, Logger } from '@pikku/core/services'
 
 import {
   MCPEndpointRegistry,
