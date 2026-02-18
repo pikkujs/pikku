@@ -1,0 +1,17 @@
+{
+  "runId": "6a785d82-ae71-40b4-9fe4-b061a76a4891",
+  "workers": [
+    {
+      "name": "workerV1",
+      "profile": "server-c-worker-v1",
+      "ready": true,
+      "logLines": 18
+    },
+    {
+      "name": "workerV2",
+      "profile": "server-c-worker-v2",
+      "ready": true,
+      "logLines": 20
+    }
+  ]
+}
