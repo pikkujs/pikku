@@ -1,15 +1,13 @@
 import { ConnectionOptions, Queue, Worker } from 'bullmq'
 import {
   SchedulerService,
+  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
-  CoreSingletonServices,
-  CoreServices,
   CoreUserSession,
-  CreateWireServices,
   parseDurationString,
 } from '@pikku/core'
-import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
+import { getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -27,12 +25,7 @@ export class BullSchedulerService extends SchedulerService {
   private recurringQueue: Queue
   private recurringWorker?: Worker
   private repeatJobKeys: string[] = []
-  private singletonServices?: CoreSingletonServices
-  private createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices,
-    CoreUserSession
-  >
+  private handlers?: SchedulerRuntimeHandlers
 
   constructor(private redisConnectionOptions: ConnectionOptions) {
     super()
@@ -49,16 +42,8 @@ export class BullSchedulerService extends SchedulerService {
    * Must be called before start() since the scheduler is typically
    * created before singletonServices are available.
    */
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      CoreUserSession
-    >
-  ): void {
-    this.singletonServices = singletonServices
-    this.createWireServices = createWireServices
+  setServices(handlers: SchedulerRuntimeHandlers): void {
+    this.handlers = handlers
   }
 
   /**
@@ -177,9 +162,9 @@ export class BullSchedulerService extends SchedulerService {
    * Creates a BullMQ Worker to process repeat jobs via runScheduledTask.
    */
   async start(): Promise<void> {
-    if (!this.singletonServices) {
+    if (!this.handlers) {
       throw new Error(
-        'BullSchedulerService requires singletonServices to start recurring tasks'
+        'BullSchedulerService requires setServices() before start()'
       )
     }
 
@@ -190,21 +175,13 @@ export class BullSchedulerService extends SchedulerService {
       RECURRING_QUEUE_NAME,
       async (job) => {
         const { rpcName } = job.data as ScheduledJobData
-        this.singletonServices!.logger.info(
-          `Running scheduled task: ${rpcName}`
-        )
-        await runScheduledTask({
-          singletonServices: this.singletonServices!,
-          createWireServices: this.createWireServices as any,
-          name: rpcName,
-        })
+        this.handlers!.logger.info(`Running scheduled task: ${rpcName}`)
+        await this.handlers!.runScheduledTask(rpcName)
       },
       { connection: this.redisConnectionOptions }
     )
     this.recurringWorker.on('error', (err) => {
-      this.singletonServices!.logger.error(
-        `Recurring task worker error: ${err}`
-      )
+      this.handlers!.logger.error(`Recurring task worker error: ${err}`)
     })
 
     for (const [name, task] of scheduledTasks) {

@@ -5,6 +5,7 @@ import {
   createConfig,
 } from '../../functions/src/services.js'
 import { InMemorySchedulerService } from '@pikku/schedule'
+import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import express from 'express'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 
@@ -26,7 +27,12 @@ async function main(): Promise<void> {
   )
 
   const scheduler = new InMemorySchedulerService()
-  scheduler.setServices(singletonServices)
+  scheduler.setServices(
+    createSchedulerRuntimeHandlers({
+      singletonServices,
+      createWireServices,
+    })
+  )
   await scheduler.start()
 }
 
