@@ -11,6 +11,7 @@ import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuError } from '../../errors/error-handler.js'
 import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
+import { encryptJSON } from '../../crypto-utils.js'
 
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
@@ -281,15 +282,33 @@ export class ContextAwareRPCService {
       )
     }
 
-    if (await this.services.secrets?.hasSecret('PIKKU_REMOTE_SECRET')) {
+    let secret: string | undefined
+    if (this.services.secrets) {
+      try {
+        secret = await this.services.secrets.getSecret('PIKKU_REMOTE_SECRET')
+      } catch {}
+    }
+    if (secret) {
       if (!this.services.jwt) {
         throw new Error(
           'PIKKU_REMOTE_SECRET is set but JWT service is not available'
         )
       }
+      const session =
+        this.wire.getSession && typeof this.wire.getSession === 'function'
+          ? await this.wire.getSession()
+          : (this.wire as any).session
+      const sessionEnc = session
+        ? await encryptJSON(secret, { session })
+        : undefined
       const token = await this.services.jwt.encode(
         { value: 5, unit: 'minute' },
-        { aud: 'pikku-remote', fn: funcName, iat: Date.now() }
+        {
+          aud: 'pikku-remote',
+          fn: funcName,
+          iat: Date.now(),
+          session: sessionEnc,
+        }
       )
       headers.Authorization = `Bearer ${token}`
     }
