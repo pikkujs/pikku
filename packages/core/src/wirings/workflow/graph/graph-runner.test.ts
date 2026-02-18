@@ -2,9 +2,14 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../../services/in-memory-workflow-service.js'
-import { continueGraph, runWorkflowGraph } from './graph-runner.js'
+import {
+  continueGraph,
+  executeGraphStep,
+  runWorkflowGraph,
+} from './graph-runner.js'
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 import { pikkuState } from '../../../pikku-state.js'
+import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
 
 describe('graph-runner bugs', () => {
   test('continueGraph should NOT mark workflow completed while nodes are still running', async () => {
@@ -47,7 +52,7 @@ describe('graph-runner bugs', () => {
     assert.equal(run?.status, 'running')
   })
 
-  test('runWorkflowGraph should throw and not create a run when no entry nodes are ready', async () => {
+  test('runWorkflowGraph should throw and not create a run for unknown input refs', async () => {
     const ws = new InMemoryWorkflowService()
 
     const metaState = pikkuState(null, 'workflows', 'meta')
@@ -67,7 +72,7 @@ describe('graph-runner bugs', () => {
     }
 
     await assert.rejects(() => runWorkflowGraph(ws, 'testOrphanedRun', {}), {
-      message: /no entry nodes have satisfied dependencies/,
+      message: /references unknown node 'someOtherNode' in input/,
     })
 
     const runs: string[] = [...(ws as any).runs.keys()]
@@ -78,6 +83,38 @@ describe('graph-runner bugs', () => {
     )
 
     delete metaState['testOrphanedRun']
+  })
+
+  test('runWorkflowGraph should throw and not create a run for unknown next targets', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testUnknownNextTarget'] = {
+      name: 'testUnknownNextTarget',
+      pikkuFuncId: 'testUnknownNextTarget',
+      source: 'graph',
+      entryNodeIds: ['a'],
+      graphHash: 'unknown-next-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'doA', next: 'missingNode' },
+      },
+    }
+
+    await assert.rejects(
+      () => runWorkflowGraph(ws, 'testUnknownNextTarget', {}),
+      {
+        message: /routes to unknown node 'missingNode'/,
+      }
+    )
+
+    const runs: string[] = [...(ws as any).runs.keys()]
+    assert.equal(
+      runs.length,
+      0,
+      'no run should be created for invalid next targets'
+    )
+
+    delete metaState['testUnknownNextTarget']
   })
 
   test('inline graph node failure should mark workflow as failed', async () => {
@@ -131,5 +168,155 @@ describe('graph-runner bugs', () => {
     )
 
     delete metaState['testInlineFailure']
+  })
+
+  test('executeGraphStep should throw after queueing onError nodes', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    ws.setServices(
+      {
+        queueService: {
+          add: async () => {},
+        },
+      } as any,
+      (() => ({})) as any,
+      {} as any
+    )
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testQueuedOnErrorThrow'] = {
+      name: 'testQueuedOnErrorThrow',
+      pikkuFuncId: 'testQueuedOnErrorThrow',
+      source: 'graph',
+      entryNodeIds: ['a'],
+      graphHash: 'queued-on-error-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'doA', onError: 'onErr' },
+        onErr: { nodeId: 'onErr', rpcName: 'handleErr' },
+      },
+    }
+
+    const runId = await ws.createRun(
+      'testQueuedOnErrorThrow',
+      {},
+      false,
+      'queued-on-error-hash'
+    )
+    const step = await ws.insertStepState(runId, 'a', 'doA', {})
+
+    const rpcService = {
+      rpcWithWire: async () => {
+        throw new Error('boom')
+      },
+    }
+
+    await assert.rejects(
+      () =>
+        executeGraphStep(
+          ws,
+          rpcService,
+          runId,
+          step.stepId,
+          'a',
+          'doA',
+          {},
+          'testQueuedOnErrorThrow'
+        ),
+      /boom/
+    )
+
+    const errorStep = await ws.getStepState(runId, 'onErr')
+    assert.notEqual(
+      errorStep.stepId,
+      '',
+      'onError node should be queued as a step'
+    )
+
+    delete metaState['testQueuedOnErrorThrow']
+  })
+
+  test('executeWorkflowStep should mark graph step failed and suspend run on RPCNotFoundError', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testQueuedRpcMissing'] = {
+      name: 'testQueuedRpcMissing',
+      pikkuFuncId: 'testQueuedRpcMissing',
+      source: 'graph',
+      entryNodeIds: ['a'],
+      graphHash: 'queued-rpc-missing-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'missingRpc' },
+      },
+    }
+
+    const runId = await ws.createRun(
+      'testQueuedRpcMissing',
+      {},
+      false,
+      'queued-rpc-missing-hash'
+    )
+    await ws.insertStepState(runId, 'a', 'missingRpc', {})
+
+    const rpcService = {
+      rpcWithWire: async () => {
+        throw new RPCNotFoundError('missingRpc')
+      },
+    }
+
+    await ws.executeWorkflowStep(runId, 'a', 'missingRpc', {}, rpcService)
+
+    const step = await ws.getStepState(runId, 'a')
+    const run = await ws.getRun(runId)
+
+    assert.equal(step.status, 'failed')
+    assert.equal(step.error?.message, 'RPC function not found: missingRpc')
+    assert.equal(run?.status, 'suspended')
+    assert.equal(run?.error?.code, 'RPC_NOT_FOUND')
+
+    delete metaState['testQueuedRpcMissing']
+  })
+
+  test('inline graph missing RPC should mark step failed and suspend run', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testInlineRpcMissing'] = {
+      name: 'testInlineRpcMissing',
+      pikkuFuncId: 'testInlineRpcMissing',
+      source: 'graph',
+      entryNodeIds: ['a'],
+      graphHash: 'inline-rpc-missing-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'missingInlineRpc' },
+      },
+    }
+
+    const rpcService = {
+      rpcWithWire: async () => {
+        throw new RPCNotFoundError('missingInlineRpc')
+      },
+    }
+
+    const { runId } = await runWorkflowGraph(
+      ws,
+      'testInlineRpcMissing',
+      {},
+      rpcService,
+      true
+    )
+
+    const step = await ws.getStepState(runId, 'a')
+    const run = await ws.getRun(runId)
+
+    assert.equal(step.status, 'failed')
+    assert.equal(
+      step.error?.message,
+      'RPC function not found: missingInlineRpc'
+    )
+    assert.equal(run?.status, 'suspended')
+    assert.equal(run?.error?.code, 'RPC_NOT_FOUND')
+
+    delete metaState['testInlineRpcMissing']
   })
 })
