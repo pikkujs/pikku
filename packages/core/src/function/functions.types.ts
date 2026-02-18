@@ -117,8 +117,8 @@ export type CorePikkuPermissionConfig<
  * ```typescript
  * // Direct function syntax
  * export const adminPermission = pikkuPermission(
- *   async ({ logger }, _data, { session }) => {
- *     const currentSession = await session.get()
+ *   async ({ logger }, _data, { getSession }) => {
+ *     const currentSession = await getSession()
  *     return currentSession?.role === 'admin'
  *   }
  * )
@@ -127,8 +127,8 @@ export type CorePikkuPermissionConfig<
  * export const adminPermission = pikkuPermission({
  *   title: 'Admin Permission',
  *   description: 'Checks if user has admin role',
- *   func: async ({ logger }, _data, { session }) => {
- *     const currentSession = await session.get()
+ *   func: async ({ logger }, _data, { getSession }) => {
+ *     const currentSession = await getSession()
  *     return currentSession?.role === 'admin'
  *   }
  * })
@@ -177,8 +177,8 @@ export type CorePikkuPermissionFactory<
  * export const requireRole = pikkuPermissionFactory<{ role: string }>(({
  *   role
  * }) => {
- *   return pikkuPermission(async ({ logger }, data, { session }) => {
- *      const currentSession = await session.get()
+ *   return pikkuPermission(async ({ logger }, data, { getSession }) => {
+ *      const currentSession = await getSession()
  *     if (!currentSession || currentSession.role !== role) {
  *       logger.warn(`Permission denied: required role '${role}'`)
  *       return false

@@ -238,9 +238,13 @@ export type PikkuWire<
   session: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined
+  /** Update and persist the current session */
   setSession: (session: CoreUserSession) => Promise<void> | void
+  /** Clear and persist the current session */
   clearSession: () => Promise<void> | void
+  /** Fetch the latest session (may read from backing store) */
   getSession: () => Promise<UserSession> | UserSession | undefined
+  /** Whether the session was modified during this run */
   hasSessionChanged: () => boolean
 }>
 
