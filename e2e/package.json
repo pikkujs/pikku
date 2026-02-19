@@ -9,7 +9,8 @@
     "build": "yarn pikku && tsc -p tsconfig.build.json",
     "start:api": "node dist/src/runtime/start-api.js",
     "start:worker": "node dist/src/runtime/start-worker.js",
-    "test": "yarn build && cucumber-js --import 'features/support/**/*.ts' --import 'features/step_definitions/**/*.ts' features/*.feature"
+    "test": "yarn build && cucumber-js --import 'features/support/**/*.ts' --import 'features/step_definitions/**/*.ts' features/*.feature",
+    "test:feature": "yarn build && cucumber-js --import 'features/support/**/*.ts' --import 'features/step_definitions/**/*.ts'"
   },
   "dependencies": {
     "@cucumber/cucumber": "^11.3.0",
