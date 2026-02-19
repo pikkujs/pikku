@@ -1,3 +1,11 @@
+## 0.12.0
+
+### New Features
+
+- `InMemorySchedulerService` replacing `PikkuTaskScheduler` with full `SchedulerService` interface
+- Recurring cron task support via `node-cron`
+- `setServices()`, `start()`, `stop()` lifecycle methods
+
 ## 0.11.0
 
 ## 0.11.1

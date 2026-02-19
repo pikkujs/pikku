@@ -1,3 +1,9 @@
+## 0.12.0
+
+### New Features
+
+- `createWireServices` and `createConfig` are now optional
+
 ## 0.11.0
 
 ## 0.11.1

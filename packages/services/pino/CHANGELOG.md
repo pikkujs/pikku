@@ -1,3 +1,7 @@
+## 0.12.0
+
+- Updated dependencies
+
 ## 0.11.0
 
 ### Minor Changes

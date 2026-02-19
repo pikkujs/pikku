@@ -1,3 +1,10 @@
+## 0.12.0
+
+### New Features
+
+- `createWireServices` and `createConfig` are now optional
+- SSE streaming support for agent responses
+
 ## 0.11.0
 
 ## 0.11.1

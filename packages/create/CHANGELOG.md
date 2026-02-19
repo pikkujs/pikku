@@ -1,3 +1,9 @@
+## 0.12.0
+
+### New Features
+
+- New templates for AI agents, workflows, and remote RPCs
+
 ## 0.11.0
 
 ## 0.11.2

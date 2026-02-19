@@ -1,3 +1,36 @@
+## 0.12.0
+
+### New Features
+
+- AI agents with `pikkuAIAgent()` — define agents with tools, sub-agents, memory, structured output, and streaming via SSE
+- AI middleware hooks (`pikkuAIMiddleware`) for input, stream, and output transformation
+- Tool approval flow — suspend agent execution pending human approval
+- Channel middleware (`pikkuChannelMiddleware`) for intercepting and transforming channel events
+- Remote RPC — call functions across servers with `rpc.remote()` and `DeploymentService`
+- HTTP route groups with `wireHTTPRoutes` for shared basePath, tags, and auth
+- Workflow graph engine with `createGraph()` type-safe builder
+- Workflow HTTP helpers: `workflow()`, `workflowStart()`, `workflowStatus()`, `graphStart()`
+- Workflow DSL with rich step types (branch, parallel, fanout, switch, filter)
+- Trigger system with `wireTrigger()` and `wireTriggerSource()`
+- OAuth2 support with `wireOAuth2Credential` and `OAuth2Client`
+- Secret and variable declarations with `wireSecret()` and `wireVariable()`
+- `TypedSecretService` and `TypedVariablesService` for compile-time validated access
+- `defineCLICommands` and `defineChannelRoutes` for external composition
+- Built-in CORS middleware
+- `disabled: true` support on all wirings and functions
+- `createWireServices` and `createConfig` are now optional
+- `InMemoryWorkflowService` and `InMemoryTriggerService` for testing
+
+### Breaking Changes
+
+- `PikkuInteraction` → `PikkuWire`, `CreateSessionServices` → `CreateWireServices`
+- `wireForgeCredential` → `wireCredential`
+- `startWorkflowByWire` → `startWorkflowByHTTPWire`
+- Renamed all `forge` → `node` naming
+- Renamed `credential` → `secret` across core types
+- `WorkflowService.createRun` signature changed (new `inline`, `graphHash` params)
+- Auth enforced by default for `pikkuFunc`
+
 ## 0.11.0
 
 ## 0.11.2

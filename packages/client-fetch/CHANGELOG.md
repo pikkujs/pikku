@@ -1,3 +1,9 @@
+## 0.12.0
+
+### New Features
+
+- Auto-remove `Content-Type` header for bodyless requests (GET/DELETE)
+
 ## 0.11.0
 
 ## 0.11.1

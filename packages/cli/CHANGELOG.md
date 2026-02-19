@@ -1,3 +1,17 @@
+## 0.12.0
+
+### New Features
+
+- AI agent code generation (types, public agent endpoints, streaming routes)
+- OAuth2 CLI commands: `oauth:connect`, `oauth:status`, `oauth:disconnect`
+- `TypedSecretService` and `TypedVariablesService` code generation
+- Contract versioning with `versions-check`, `versions-init`, `versions-update` commands
+- Trigger and trigger source code generation
+- Secret and variable declaration code generation
+- HTTP route groups support
+- Remote RPC worker generation
+- Node metadata generation for visual flow graphs
+
 ## 0.11.3
 
 ### Patch Changes

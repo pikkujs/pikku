@@ -1,3 +1,15 @@
+## 0.12.0
+
+### New Features
+
+- AI agent metadata extraction
+- HTTP route groups analysis
+- Trigger and trigger source analysis
+- Secret and variable declaration extraction
+- Workflow graph inspection and DSL extraction
+- Contract hashing for change detection
+- OpenAPI spec generation (moved from CLI)
+
 ## 0.11.2
 
 ### Patch Changes
