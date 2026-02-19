@@ -203,6 +203,34 @@ export interface AgentRunState {
   updatedAt: Date
 }
 
+export interface AgentRunRow {
+  runId: string
+  agentName: string
+  threadId: string
+  resourceId: string
+  status: string
+  suspendReason?: string
+  missingRpcs?: string[]
+  usageInputTokens: number
+  usageOutputTokens: number
+  usageModel: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AgentRunService {
+  listThreads(options?: {
+    agentName?: string
+    limit?: number
+    offset?: number
+  }): Promise<AIThread[]>
+  getThread(threadId: string): Promise<AIThread | null>
+  getThreadMessages(threadId: string): Promise<AIMessage[]>
+  getThreadRuns(threadId: string): Promise<AgentRunRow[]>
+  deleteThread(threadId: string): Promise<boolean>
+  getDistinctAgentNames(): Promise<string[]>
+}
+
 export type AIAgentMeta = Record<
   string,
   Omit<

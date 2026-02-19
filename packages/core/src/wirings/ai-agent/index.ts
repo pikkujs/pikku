@@ -15,6 +15,8 @@ export type {
   AIAgentMeta,
   AIAgentMemoryConfig,
   AIAgentStep,
+  AgentRunRow,
+  AgentRunService,
   AgentRunState,
   AIMessage,
   AIStreamChannel,
