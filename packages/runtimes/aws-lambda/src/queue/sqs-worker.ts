@@ -6,6 +6,7 @@ import {
 } from '@pikku/core/queue'
 import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
+import { createRunFunction } from '@pikku/core/function'
 
 /**
  * Enhanced version with additional SQS-specific features
@@ -63,9 +64,13 @@ export const runSQSQueueWorker = async (
 ): Promise<SQSBatchResponse> => {
   console.log(JSON.stringify(event, null, 2))
   const jobs = event.Records.map(mapSQSRecordToQueueJob)
-  const runJob = createQueueJobRunner({
+  const runFunction = createRunFunction({
     singletonServices,
     createWireServices,
+  })
+  const runJob = createQueueJobRunner({
+    runFunction,
+    logger: singletonServices.logger,
   })
 
   // Process all jobs in parallel
