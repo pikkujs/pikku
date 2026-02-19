@@ -229,12 +229,14 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('simple-queue', 'job-123', {
       message: 'test data',
     })
 
     const result = await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
     })
 
@@ -267,12 +269,14 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('fail-queue', 'job-fail-123')
 
     await assert.rejects(
       async () => {
         await runQueueJob({
-          singletonServices: { logger: mockLogger } as any,
+          runFunction,
+          logger: mockLogger as any,
           job,
         })
       },
@@ -305,12 +309,14 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('fail-no-reason-queue', 'job-456')
 
     await assert.rejects(
       async () => {
         await runQueueJob({
-          singletonServices: { logger: mockLogger } as any,
+          runFunction,
+          logger: mockLogger as any,
           job,
         })
       },
@@ -341,12 +347,14 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('discard-queue', 'job-discard-789')
 
     await assert.rejects(
       async () => {
         await runQueueJob({
-          singletonServices: { logger: mockLogger } as any,
+          runFunction,
+          logger: mockLogger as any,
           job,
         })
       },
@@ -384,10 +392,12 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('progress-queue', 'job-progress-999')
 
     await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
       updateProgress: async (progress) => {
         progressUpdates.push(progress)
@@ -417,10 +427,12 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('default-progress-queue', 'job-111')
 
     await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
     })
 
@@ -451,10 +463,12 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('wire-queue', 'job-int-123')
 
     await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
     })
 
@@ -467,12 +481,14 @@ describe('runQueueJob', () => {
 
   test('should throw error when processor metadata not found', async () => {
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('missing-meta-queue', 'job-222')
 
     await assert.rejects(
       async () => {
         await runQueueJob({
-          singletonServices: { logger: mockLogger } as any,
+          runFunction,
+          logger: mockLogger as any,
           job,
         })
       },
@@ -493,12 +509,14 @@ describe('runQueueJob', () => {
     }
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('no-registration-queue', 'job-333')
 
     await assert.rejects(
       async () => {
         await runQueueJob({
-          singletonServices: { logger: mockLogger } as any,
+          runFunction,
+          logger: mockLogger as any,
           job,
         })
       },
@@ -530,15 +548,16 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger, async () => {
+      createWireServicesCalled = true
+      return mockWireService as any
+    })
     const job = createMockJob('session-services-queue', 'job-444')
 
     await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
-      createWireServices: async () => {
-        createWireServicesCalled = true
-        return mockWireService as any
-      },
     })
 
     assert.equal(createWireServicesCalled, true)
@@ -563,12 +582,14 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('error-queue', 'job-555')
 
     await assert.rejects(
       async () => {
         await runQueueJob({
-          singletonServices: { logger: mockLogger } as any,
+          runFunction,
+          logger: mockLogger as any,
           job,
         })
       },
@@ -612,10 +633,12 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('middleware-queue', 'job-666')
 
     await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
     })
 
@@ -639,10 +662,12 @@ describe('runQueueJob', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const job = createMockJob('debug-queue', 'job-777')
 
     await runQueueJob({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
       job,
     })
 
@@ -673,8 +698,10 @@ describe('createQueueJobRunner', () => {
     wireQueueWorker(mockWorker)
 
     const mockLogger = createMockLogger()
+    const runFunction = createTestRunFunction(mockLogger)
     const runJob = createQueueJobRunner({
-      singletonServices: { logger: mockLogger } as any,
+      runFunction,
+      logger: mockLogger as any,
     })
 
     await runJob({

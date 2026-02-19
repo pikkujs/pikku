@@ -22,6 +22,7 @@ const createMockLogger = () =>
 const createWorkflowService = () =>
   new InMemoryWorkflowService({
     logger: createMockLogger(),
+    queueService: { add: async () => {} } as any,
   })
 
 describe('pikku-workflow-service version mismatch fallback', () => {

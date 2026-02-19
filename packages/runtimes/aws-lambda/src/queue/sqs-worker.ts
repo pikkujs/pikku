@@ -62,7 +62,6 @@ export const runSQSQueueWorker = async (
   createWireServices: CreateWireServices<any, any, any> | undefined,
   event: SQSEvent
 ): Promise<SQSBatchResponse> => {
-  console.log(JSON.stringify(event, null, 2))
   const jobs = event.Records.map(mapSQSRecordToQueueJob)
   const runFunction = createRunFunction({
     singletonServices,
