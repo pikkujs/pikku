@@ -6,6 +6,8 @@ import {
   type WorkflowStatus,
 } from '@pikku/core/workflow'
 import postgres from 'postgres'
+import type { QueueService } from '@pikku/core/queue'
+import type { SchedulerService, Logger } from '@pikku/core/services'
 
 /**
  * PostgreSQL-based implementation of WorkflowStateService
@@ -31,9 +33,26 @@ export class PgWorkflowService extends PikkuWorkflowService {
    */
   constructor(
     connectionOrConfig: postgres.Sql | postgres.Options<{}>,
-    schemaName = 'pikku'
+    schemaName = 'pikku',
+    params: {
+      queueService?: QueueService
+      schedulerService?: SchedulerService
+      logger: Logger
+      workflow?: {
+        retries?: number
+        retryDelay?: string | number
+        orchestratorQueueName?: string
+        stepWorkerQueueName?: string
+        sleeperRPCName?: string
+      }
+    }
   ) {
-    super()
+    super({
+      queueService: params.queueService,
+      schedulerService: params.schedulerService,
+      logger: params.logger,
+      workflow: params.workflow,
+    })
     this.schemaName = schemaName
 
     // Check if it's a postgres.Sql instance or config options
@@ -188,6 +207,14 @@ export class PgWorkflowService extends PikkuWorkflowService {
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }
+  }
+
+  async deleteRun(id: string): Promise<boolean> {
+    const result = await this.sql.unsafe(
+      `DELETE FROM ${this.schemaName}.workflow_runs WHERE workflow_run_id = $1`,
+      [id]
+    )
+    return result.count > 0
   }
 
   async updateRunStatus(

@@ -1,16 +1,12 @@
-import {
-  PikkuWire,
-  type CoreServices,
-  type CoreSingletonServices,
-  type CoreUserSession,
-  type CreateWireServices,
-} from '../../types/core.types.js'
+import { PikkuWire, type CoreUserSession } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
-import { closeWireServices } from '../../utils.js'
 import { pikkuState } from '../../pikku-state.js'
-import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import {
+  addFunction,
+  type RunFunction,
+} from '../../function/function-runner.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
@@ -19,18 +15,13 @@ import {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
-import { rpcService } from '../rpc/rpc-runner.js'
-import { SchedulerRuntimeHandlers } from '../../services/scheduler-service.js'
+import type { Logger } from '../../services/logger.js'
 
 export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices<CoreSingletonServices>,
-    CoreUserSession
-  >
+  runFunction: RunFunction
+  logger: Logger
 }
 
 export const wireScheduler = <
@@ -80,10 +71,9 @@ class ScheduledTaskSkippedError extends PikkuError {
 export async function runScheduledTask({
   name,
   session,
-  singletonServices,
-  createWireServices,
+  runFunction,
+  logger,
 }: RunScheduledTasksParams): Promise<void> {
-  let wireServices: any
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
@@ -115,13 +105,9 @@ export async function runScheduledTask({
   }
 
   try {
-    singletonServices.logger.info(
-      `Running schedule task: ${name} | schedule: ${task.schedule}`
-    )
+    logger.info(`Running schedule task: ${name} | schedule: ${task.schedule}`)
 
-    await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncId, {
-      singletonServices,
-      createWireServices,
+    await runFunction('scheduler', meta.name, meta.pikkuFuncId, {
       auth: false,
       data: () => undefined,
       inheritedMiddleware: meta.middleware,
@@ -133,47 +119,12 @@ export async function runScheduledTask({
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
     if (errorResponse != null) {
-      singletonServices.logger.error(e)
+      logger.error(e)
     }
     throw e
-  } finally {
-    if (wireServices) {
-      await closeWireServices(singletonServices.logger, wireServices)
-    }
   }
 }
 
 export const getScheduledTasks = () => {
   return pikkuState(null, 'scheduler', 'tasks')
-}
-
-export const createSchedulerRuntimeHandlers = ({
-  singletonServices,
-  createWireServices,
-}: {
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices<CoreSingletonServices>,
-    CoreUserSession
-  >
-}): SchedulerRuntimeHandlers => {
-  return {
-    logger: singletonServices.logger,
-    invokeRPC: async (
-      rpcName: string,
-      data?: any,
-      session?: CoreUserSession
-    ) => {
-      const wire = session ? ({ session } as PikkuWire) : ({} as PikkuWire)
-      const rpc = rpcService.getContextRPCService(singletonServices, wire)
-      await rpc.invoke(rpcName, data)
-    },
-    runScheduledTask: async (name: string) =>
-      runScheduledTask({
-        name,
-        singletonServices,
-        createWireServices,
-      }),
-  }
 }

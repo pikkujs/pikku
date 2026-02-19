@@ -1,5 +1,7 @@
-import type { CoreServices, PikkuWire } from '../../types/core.types.js'
+import type { PikkuWire } from '../../types/core.types.js'
 import type { CoreQueueWorker, QueueJob, PikkuQueue } from './queue.types.js'
+import type { Logger } from '../../services/logger.js'
+import type { RunFunction } from '../../function/function-runner.js'
 import type {
   CorePikkuFunctionConfig,
   CorePikkuFunctionSessionless,
@@ -7,8 +9,7 @@ import type {
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 import { pikkuState } from '../../pikku-state.js'
-import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { CreateWireServices } from '../../types/core.types.js'
+import { addFunction } from '../../function/function-runner.js'
 
 /**
  * Error class for queue processor not found
@@ -100,18 +101,16 @@ export async function removeQueueWorker(name: string): Promise<void> {
  * Process a single queue job - this function is called by queue consumers
  */
 export async function runQueueJob({
-  singletonServices,
-  createWireServices,
+  runFunction,
+  logger,
   job,
   updateProgress,
 }: {
-  singletonServices: CoreServices
-  createWireServices?: CreateWireServices
+  runFunction: RunFunction
+  logger: Logger
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
 }): Promise<void> {
-  const logger = singletonServices.logger
-
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
   if (!processorMeta) {
@@ -153,13 +152,11 @@ export async function runQueueJob({
     }
 
     // Execute the pikku function with the job data
-    const result = await runPikkuFunc(
+    const result = await runFunction(
       'queue',
       job.queueName,
       processorMeta.pikkuFuncId,
       {
-        singletonServices,
-        createWireServices,
         auth: false,
         data: () => job.data,
         inheritedMiddleware: processorMeta.middleware,
@@ -191,11 +188,11 @@ export async function runQueueJob({
 }
 
 export const createQueueJobRunner = ({
-  singletonServices,
-  createWireServices,
+  runFunction,
+  logger,
 }: {
-  singletonServices: CoreServices
-  createWireServices?: CreateWireServices
+  runFunction: RunFunction
+  logger: Logger
 }) => {
   return async ({
     job,
@@ -205,8 +202,8 @@ export const createQueueJobRunner = ({
     updateProgress?: (progress: number | string | object) => Promise<void>
   }) => {
     await runQueueJob({
-      singletonServices,
-      createWireServices,
+      runFunction,
+      logger,
       job,
       updateProgress,
     })

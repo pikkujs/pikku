@@ -1,5 +1,4 @@
-import { stopSingletonServices } from '@pikku/core'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
+import { createFunctionRunner, stopSingletonServices } from '@pikku/core'
 import {
   createConfig,
   createInfrastructure,
@@ -17,39 +16,45 @@ async function main(): Promise<void> {
 
   const config = await createConfig()
   const infrastructure = await createInfrastructure()
+  const queueService = infrastructure.queueService as any
   const singletonServices = await createSingletonServices(config, {
-    queueService: infrastructure.queueService as any,
-    schedulerService: infrastructure.schedulerService as any,
-    workflowService: infrastructure.workflowService as any,
+    queueService,
   })
-
-  infrastructure.schedulerService?.setServices(
-    createSchedulerRuntimeHandlers({
-      singletonServices,
-      createWireServices,
-    })
+  const schedulerService = infrastructure.createSchedulerService?.(
+    singletonServices.logger
   )
-  infrastructure.workflowService?.setServices(
-    singletonServices,
-    createWireServices,
-    config
-  )
-
-  const queueWorkers = infrastructure.createQueueWorkers?.(
+  const workflowService = infrastructure.createWorkflowService?.({
+    logger: singletonServices.logger,
+    queueService,
+    schedulerService,
+    workflow: config.workflow,
+  })
+  await workflowService?.init?.()
+  singletonServices.workflowService = workflowService as any
+  singletonServices.schedulerService = schedulerService as any
+  const runFunction = createFunctionRunner(
     singletonServices,
     createWireServices
+  )
+
+  schedulerService?.setPikkuFunctionRunner(runFunction)
+  workflowService?.setPikkuFunctionRunner(runFunction)
+
+  const queueWorkers = infrastructure.createQueueWorkers?.(
+    runFunction,
+    singletonServices.logger
   )
   if (!queueWorkers) {
     throw new Error('Queue workers are not configured')
   }
 
   await queueWorkers.registerQueues()
-  await infrastructure.schedulerService?.start?.()
+  await schedulerService?.start?.()
 
   singletonServices.logger.info('E2E_WORKER_READY')
 
   const shutdown = async () => {
-    await infrastructure.schedulerService?.stop?.()
+    await schedulerService?.stop?.()
     await infrastructure.close()
     await stopSingletonServices(singletonServices)
     process.exit(0)

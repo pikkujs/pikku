@@ -1,14 +1,10 @@
-import { runPikkuFunc } from '../../function/function-runner.js'
+import { type RunFunction } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CreateWireServices,
-  PikkuWire,
-  SerializedError,
-} from '../../types/core.types.js'
+import { PikkuWire, SerializedError } from '../../types/core.types.js'
 import { QueueService } from '../queue/queue.types.js'
+import type { SchedulerService } from '../../services/scheduler-service.js'
+import type { Logger } from '../../services/logger.js'
 import type {
   PikkuWorkflowWire,
   StepState,
@@ -110,11 +106,42 @@ const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
  */
 export abstract class PikkuWorkflowService implements WorkflowService {
   private config: WorkflowServiceConfig | undefined
-  private singletonServices: CoreSingletonServices | undefined
-  private createWireServices: CreateWireServices | undefined
+  private queueService: QueueService | undefined
+  private schedulerService: SchedulerService | undefined
+  private logger: Logger
+  private runFunction: RunFunction | undefined
   private inlineRuns = new Set<string>()
 
-  constructor() {}
+  constructor({
+    queueService,
+    schedulerService,
+    logger,
+    workflow,
+  }: {
+    queueService?: QueueService
+    schedulerService?: SchedulerService
+    logger: Logger
+    workflow?: {
+      retries?: number
+      retryDelay?: string | number
+      orchestratorQueueName?: string
+      stepWorkerQueueName?: string
+      sleeperRPCName?: string
+    }
+  }) {
+    this.queueService = queueService
+    this.schedulerService = schedulerService
+    this.logger = logger
+    this.config = {
+      retries: workflow?.retries ?? 0,
+      retryDelay: getDurationInMilliseconds(workflow?.retryDelay ?? 0),
+      orchestratorQueueName:
+        workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
+      stepWorkerQueueName:
+        workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
+      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
+    }
+  }
 
   /**
    * Check if a run is executing inline (without queues)
@@ -137,22 +164,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     this.inlineRuns.delete(runId)
   }
 
-  public setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices: CreateWireServices,
-    { workflow }: CoreConfig
-  ) {
-    this.singletonServices = singletonServices
-    this.createWireServices = createWireServices
-    this.config = {
-      retries: workflow?.retries ?? 0,
-      retryDelay: workflow?.retryDelay ?? 0,
-      orchestratorQueueName:
-        workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
-      stepWorkerQueueName:
-        workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
-      sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
-    }
+  public setPikkuFunctionRunner(runFunction: RunFunction): void {
+    this.runFunction = runFunction
   }
 
   public async registerWorkflowVersions(): Promise<void> {
@@ -450,8 +463,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     if (workflowMeta.source === 'graph') {
       // Graph workflows use the graph scheduler
       // Fall back to inline when no queue service (same as DSL path)
-      const shouldInline =
-        options?.inline || !this.singletonServices?.queueService
+      const shouldInline = options?.inline || !this.queueService
       return runWorkflowGraph(
         this,
         name,
@@ -489,7 +501,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     try {
       // If inline mode or no queue service, execute directly
       // Otherwise, use remote execution (queue-based)
-      if (options?.inline || !this.singletonServices?.queueService) {
+      if (options?.inline || !this.queueService) {
         await this.runWorkflowJob(runId, rpcService)
       } else {
         await this.resumeWorkflow(runId)
@@ -569,14 +581,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       )
       const wire: PikkuWire = { workflow: workflowWire }
       try {
-        const result = await runPikkuFunc(
+        const result = await this.getRunFunction()(
           'workflow',
           workflowMeta.name,
           workflowMeta.pikkuFuncId,
           {
-            singletonServices: this.singletonServices!,
             wire,
-            createWireServices: this.createWireServices,
             data: () => run.input,
           }
         )
@@ -777,13 +787,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private verifyQueueService(): QueueService {
-    if (!this.singletonServices?.queueService) {
+    if (!this.queueService) {
       throw new Error(
         'QueueService not configured. Remote workflows require a queue service.'
       )
     }
 
-    return this.singletonServices!.queueService
+    return this.queueService
   }
 
   private async rpcStep(
@@ -836,12 +846,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.setStepScheduled(stepState.stepId)
 
     // Enqueue step worker (unless inline mode)
-    if (!this.isInline(runId) && this.singletonServices!.queueService) {
+    if (!this.isInline(runId) && this.queueService) {
       // Map step retry options to queue job options
       const retries = stepOptions?.retries ?? 0
       const retryDelay = stepOptions?.retryDelay
 
-      await this.singletonServices!.queueService.add(
+      await this.queueService.add(
         this.getConfig().stepWorkerQueueName,
         {
           runId,
@@ -1037,9 +1047,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.setStepScheduled(stepState.stepId)
 
     // Check if inline mode or no scheduler service
-    if (!this.isInline(runId) && this.singletonServices!.schedulerService) {
+    if (!this.isInline(runId) && this.schedulerService) {
       // Remote mode - schedule sleep via scheduler service
-      await this.singletonServices!.schedulerService.scheduleRPC(
+      await this.schedulerService.scheduleRPC(
         duration,
         this.getConfig().sleeperRPCName,
         {
@@ -1170,9 +1180,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private getConfig() {
-    if (!this.singletonServices || !this.config) {
+    if (!this.config) {
       throw new WorkflowServiceNotInitialized()
     }
     return this.config
+  }
+
+  private getRunFunction(): RunFunction {
+    if (!this.runFunction) {
+      this.logger.error(
+        'WorkflowService requires setPikkuFunctionRunner() before execution'
+      )
+      throw new WorkflowServiceNotInitialized()
+    }
+    return this.runFunction
   }
 }

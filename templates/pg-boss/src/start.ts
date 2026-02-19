@@ -1,5 +1,5 @@
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { stopSingletonServices } from '@pikku/core'
+import { createFunctionRunner, stopSingletonServices } from '@pikku/core'
 import {
   createConfig,
   createSingletonServices,
@@ -19,10 +19,14 @@ async function main(): Promise<void> {
 
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
-
-    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
+    const runFunction = createFunctionRunner(
       singletonServices,
       createWireServices
+    )
+
+    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
+      runFunction,
+      singletonServices.logger
     )
 
     await pgBossQueueWorkers.registerQueues()

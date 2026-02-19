@@ -319,7 +319,10 @@ export const createSingletonServices: CreateSingletonServices<
     return filteredState as InspectorState
   }
 
-  const workflowService = new InMemoryWorkflowService()
+  const workflowService = new InMemoryWorkflowService({
+    logger,
+    workflow: config.workflow,
+  })
 
   return {
     config,

@@ -1,9 +1,5 @@
-import {
-  SerializedError,
-  CoreSingletonServices,
-  CreateWireServices,
-  CoreConfig,
-} from '../types/core.types.js'
+import { SerializedError } from '../types/core.types.js'
+import type { RunFunction } from '../function/function-runner.js'
 import {
   WorkflowRun,
   StepState,
@@ -35,11 +31,7 @@ export interface WorkflowService {
 
   // Orchestration operations
   resumeWorkflow(runId: string): Promise<void>
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices: CreateWireServices,
-    config: CoreConfig
-  ): void
+  setPikkuFunctionRunner(runFunction: RunFunction): void
   startWorkflow<I>(
     name: string,
     input: I,

@@ -7,6 +7,8 @@ import {
 } from '@pikku/core/workflow'
 import { Redis, type RedisOptions } from 'ioredis'
 import { randomUUID } from 'crypto'
+import type { QueueService } from '@pikku/core/queue'
+import type { SchedulerService, Logger } from '@pikku/core/services'
 
 /**
  * Redis-based implementation of WorkflowStateService
@@ -31,9 +33,26 @@ export class RedisWorkflowService extends PikkuWorkflowService {
    */
   constructor(
     connectionOrConfig: Redis | RedisOptions | string | undefined,
-    keyPrefix = 'workflows'
+    keyPrefix = 'workflows',
+    params: {
+      queueService?: QueueService
+      schedulerService?: SchedulerService
+      logger: Logger
+      workflow?: {
+        retries?: number
+        retryDelay?: string | number
+        orchestratorQueueName?: string
+        stepWorkerQueueName?: string
+        sleeperRPCName?: string
+      }
+    }
   ) {
-    super()
+    super({
+      queueService: params.queueService,
+      schedulerService: params.schedulerService,
+      logger: params.logger,
+      workflow: params.workflow,
+    })
     this.keyPrefix = keyPrefix
 
     // Check if it's a Redis instance or config options
@@ -255,6 +274,41 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
+  }
+
+  async deleteRun(id: string): Promise<boolean> {
+    const runKey = this.runKey(id)
+    const exists = await this.redis.exists(runKey)
+    if (!exists) return false
+
+    const pattern = `${this.keyPrefix}:step:${id}:*`
+    const stepKeys: string[] = []
+    let cursor = '0'
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = newCursor
+      stepKeys.push(...foundKeys)
+    } while (cursor !== '0')
+
+    const keysToDelete: string[] = [runKey]
+    for (const stepKey of stepKeys) {
+      const stepId = await this.redis.hget(stepKey, 'stepId')
+      if (stepId) {
+        keysToDelete.push(this.stepHistoryKey(stepId))
+      }
+      keysToDelete.push(stepKey)
+    }
+
+    if (keysToDelete.length > 0) {
+      await this.redis.del(...keysToDelete)
+    }
+    return true
   }
 
   async updateRunStatus(

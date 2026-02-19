@@ -11,6 +11,7 @@ import {
 } from './queue-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { CoreQueueWorker, QueueJob } from './queue.types.js'
+import { createRunFunction } from '../../function/function-runner.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -48,6 +49,15 @@ const addTestQueueFunction = (pikkuFuncId: string) => {
     permissions: undefined,
   }
 }
+
+const createTestRunFunction = (
+  logger: ReturnType<typeof createMockLogger>,
+  createWireServices?: (...args: any[]) => Promise<any>
+) =>
+  createRunFunction({
+    singletonServices: { logger } as any,
+    createWireServices: createWireServices as any,
+  })
 
 describe('wireQueueWorker', () => {
   test('should successfully wire a queue worker', () => {

@@ -2,7 +2,7 @@ import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowService } from '@pikku/pg'
 import { InMemoryTriggerService } from '@pikku/core/services'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
+import { createFunctionRunner } from '@pikku/core'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -24,24 +24,28 @@ async function main(): Promise<void> {
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
-    const schedulerService = pgBossFactory.getSchedulerService()
-
-    const workflowService = new PgWorkflowService(sql)
-    await workflowService.init()
-
     const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
-      schedulerService,
-      workflowService,
     })
-
-    schedulerService.setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
+    const schedulerService = pgBossFactory.getSchedulerService(
+      singletonServices.logger
     )
-    workflowService.setServices(singletonServices, createWireServices, config)
+    const workflowService = new PgWorkflowService(sql, 'pikku', {
+      queueService: pgBossFactory.getQueueService(),
+      schedulerService,
+      logger: singletonServices.logger,
+      workflow: config.workflow,
+    })
+    await workflowService.init()
+    singletonServices.workflowService = workflowService
+    singletonServices.schedulerService = schedulerService
+    const runFunction = createFunctionRunner(
+      singletonServices,
+      createWireServices
+    )
+
+    schedulerService.setPikkuFunctionRunner(runFunction)
+    workflowService.setPikkuFunctionRunner(runFunction)
 
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
@@ -55,8 +59,8 @@ async function main(): Promise<void> {
     singletonServices.logger.info('Starting workflow queue workers...')
 
     const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
-      singletonServices,
-      createWireServices
+      runFunction,
+      singletonServices.logger
     )
 
     singletonServices.logger.info('Registering workflow queue workers...')
@@ -67,8 +71,8 @@ async function main(): Promise<void> {
 
     await schedulerService.start()
 
-    const triggerService = new InMemoryTriggerService()
-    triggerService.setServices(singletonServices)
+    const triggerService = new InMemoryTriggerService(singletonServices.logger)
+    triggerService.setPikkuFunctionRunner(runFunction)
     await triggerService.start()
 
     singletonServices.logger.info('Trigger service started')

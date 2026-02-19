@@ -231,3 +231,33 @@ export type CorePikkuFunctionConfig<
   output?: OutputSchema
   node?: CoreNodeConfig
 }
+
+export interface PikkuFunctionRunner<
+  Input = unknown,
+  Output = unknown,
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<Input, Output, any, Session> = PikkuWire<
+    Input,
+    Output,
+    any,
+    Session
+  >,
+> {
+  setPikkuFunctionRunner(
+    runFunction: (
+      wireType: string,
+      wireId: string,
+      funcName: string,
+      params: {
+        data: () => Promise<Input> | Input
+        auth?: boolean
+        inheritedMiddleware?: Array<{ type: 'tag'; tag: string }>
+        wireMiddleware?: CorePikkuMiddleware[]
+        tags?: string[]
+        wire?: Wire
+        sessionService?: { get?: () => Session | undefined }
+        packageName?: string | null
+      }
+    ) => Promise<Output>
+  ): void
+}

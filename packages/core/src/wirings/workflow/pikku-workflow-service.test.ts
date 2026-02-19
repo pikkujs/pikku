@@ -3,27 +3,43 @@ import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState } from '../../pikku-state.js'
+import { createFunctionRunner } from '../../function/function-runner.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import {
   WorkflowSuspendedException,
   type PikkuWorkflowWire,
 } from './pikku-workflow-service.js'
 
+const createMockLogger = () =>
+  ({
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    debug: () => {},
+    setLevel: () => {},
+  }) as any
+
+const createWorkflowService = () =>
+  new InMemoryWorkflowService({
+    logger: createMockLogger(),
+  })
+
 describe('pikku-workflow-service version mismatch fallback', () => {
   test('should fall back to stored graph for dsl workflow version mismatch', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
     const workflowName = 'testDslVersionMismatch'
     const oldHash = 'old-hash'
     const newHash = 'new-hash'
 
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
+    const logger = createMockLogger()
+    ws.setPikkuFunctionRunner(
+      createFunctionRunner(
+        {
+          logger,
+          queueService: { add: async () => {} },
+        } as any,
+        (() => ({})) as any
+      )
     )
 
     const metaState = pikkuState(null, 'workflows', 'meta')
@@ -63,7 +79,7 @@ describe('pikku-workflow-service version mismatch fallback', () => {
   })
 
   test('should continue from stored graph version when hashes mismatch', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
     const workflowName = 'testGraphVersionMismatch'
     const oldHash = 'old-graph-hash'
     const newHash = 'new-graph-hash'
@@ -106,15 +122,19 @@ describe('pikku-workflow-service version mismatch fallback', () => {
 
 describe('pikku-workflow-service executeWorkflowStep', () => {
   test('should set pending step to running before succeeding', async () => {
-    const ws = new InMemoryWorkflowService()
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
+    const logger = createMockLogger()
+    const ws = new InMemoryWorkflowService({
+      logger,
+      queueService: { add: async () => {} } as any,
+    })
+    ws.setPikkuFunctionRunner(
+      createFunctionRunner(
+        {
+          logger,
+          queueService: { add: async () => {} },
+        } as any,
+        (() => ({})) as any
+      )
     )
 
     const runId = await ws.createRun('pending-step-running', {}, false, 'hash')
@@ -138,15 +158,19 @@ describe('pikku-workflow-service executeWorkflowStep', () => {
 
 describe('pikku-workflow-service suspend', () => {
   test('should set run status to suspended when workflow.suspend is called', async () => {
-    const ws = new InMemoryWorkflowService()
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
+    const logger = createMockLogger()
+    const ws = new InMemoryWorkflowService({
+      logger,
+      queueService: { add: async () => {} } as any,
+    })
+    ws.setPikkuFunctionRunner(
+      createFunctionRunner(
+        {
+          logger,
+          queueService: { add: async () => {} },
+        } as any,
+        (() => ({})) as any
+      )
     )
 
     const workflowName = 'testSuspendWorkflow'

@@ -43,6 +43,7 @@ export {
 export type {
   CorePikkuFunction,
   CorePikkuFunctionConfig,
+  PikkuFunctionRunner,
   CorePikkuPermission,
   CorePikkuPermissionConfig,
   CorePikkuPermissionFactory,
@@ -71,7 +72,15 @@ export {
   resetPikkuState,
   addPackageServiceFactories,
 } from './pikku-state.js'
-export { runPikkuFunc } from './function/function-runner.js'
+export {
+  runPikkuFunc,
+  createFunctionRunner,
+  createRunFunction,
+} from './function/function-runner.js'
+export type {
+  RunFunction,
+  RunFunctionInput,
+} from './function/function-runner.js'
 export { runCLICommand, pikkuCLIRender } from './wirings/cli/cli-runner.js'
 export { fetch } from './wirings/http/http-runner.js'
 export {
@@ -101,6 +110,5 @@ export { isSerializable, stopSingletonServices } from './utils.js'
 export {
   type ScheduledTaskInfo,
   type ScheduledTaskSummary,
-  type SchedulerRuntimeHandlers,
 } from './services/scheduler-service.js'
 export { SchedulerService } from './services/scheduler-service.js'

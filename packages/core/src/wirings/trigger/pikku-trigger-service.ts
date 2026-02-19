@@ -1,14 +1,9 @@
-import {
-  CoreSingletonServices,
-  CreateWireServices,
-  CoreServices,
-  CoreUserSession,
-} from '../../types/core.types.js'
-import { rpcService } from '../rpc/rpc-runner.js'
+import type { Logger } from '../../services/logger.js'
 import { setupTrigger } from './trigger-runner.js'
 import { TriggerInstance } from './trigger.types.js'
 import { TriggerService } from '../../services/trigger-service.js'
 import { pikkuState } from '../../pikku-state.js'
+import { type RunFunction } from '../../function/function-runner.js'
 
 export type TriggerTarget = {
   targetType: 'rpc' | 'workflow'
@@ -23,23 +18,15 @@ export type TriggerSourceInfo = {
 
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers = new Map<string, TriggerInstance>()
-  protected singletonServices?: CoreSingletonServices
-  protected createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices,
-    CoreUserSession
-  >
+  protected logger: Logger
+  protected runFunction?: RunFunction
 
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      CoreUserSession
-    >
-  ): void {
-    this.singletonServices = singletonServices
-    this.createWireServices = createWireServices
+  constructor(logger: Logger) {
+    this.logger = logger
+  }
+
+  setPikkuFunctionRunner(runFunction: RunFunction): void {
+    this.runFunction = runFunction
   }
 
   abstract start(): Promise<void>
@@ -48,11 +35,9 @@ export abstract class PikkuTriggerService implements TriggerService {
     for (const [name, instance] of this.activeTriggers) {
       try {
         await instance.teardown()
-        this.singletonServices!.logger.info(`Stopped trigger: ${name}`)
+        this.logger.info(`Stopped trigger: ${name}`)
       } catch (error) {
-        this.singletonServices!.logger.error(
-          `Error stopping trigger ${name}: ${error}`
-        )
+        this.logger.error(`Error stopping trigger ${name}: ${error}`)
       }
     }
     this.activeTriggers.clear()
@@ -90,8 +75,8 @@ export abstract class PikkuTriggerService implements TriggerService {
   ): Promise<TriggerInstance> {
     return setupTrigger({
       name,
-      singletonServices: this.singletonServices!,
-      createWireServices: this.createWireServices as any,
+      runFunction: this.getRunFunction(),
+      logger: this.logger,
       input,
       onTrigger,
     })
@@ -102,33 +87,37 @@ export abstract class PikkuTriggerService implements TriggerService {
     targets: TriggerTarget[],
     data: unknown
   ): Promise<void> {
-    const wireServices = await this.createWireServices?.(
-      this.singletonServices!,
-      {}
-    )
-    const services = { ...this.singletonServices!, ...wireServices }
-    const rpc = rpcService.getContextRPCService(services, {}, false)
+    const runFunction = this.getRunFunction()
 
     for (const target of targets) {
       try {
-        if (target.targetType === 'workflow') {
-          await rpc.startWorkflow(target.targetName, data, {
-            startNode: target.startNode,
-          })
-          this.singletonServices!.logger.info(
-            `Trigger '${triggerName}' started workflow '${target.targetName}'`
-          )
-        } else {
-          await rpc.invoke(target.targetName, data)
-          this.singletonServices!.logger.info(
-            `Trigger '${triggerName}' invoked RPC '${target.targetName}'`
-          )
-        }
+        await runFunction(
+          target.targetType === 'workflow' ? 'workflow' : 'rpc',
+          target.targetName,
+          target.targetName,
+          {
+            auth: false,
+            data: () => data,
+            wire: {},
+          }
+        )
+        this.logger.info(
+          `Trigger '${triggerName}' invoked ${target.targetType} '${target.targetName}'`
+        )
       } catch (error) {
-        this.singletonServices!.logger.error(
+        this.logger.error(
           `Error invoking ${target.targetType} '${target.targetName}' from trigger '${triggerName}': ${error}`
         )
       }
     }
+  }
+
+  protected getRunFunction(): RunFunction {
+    if (!this.runFunction) {
+      throw new Error(
+        'TriggerService requires setPikkuFunctionRunner() before start()'
+      )
+    }
+    return this.runFunction
   }
 }

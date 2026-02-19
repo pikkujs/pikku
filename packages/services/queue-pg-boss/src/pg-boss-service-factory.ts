@@ -2,9 +2,8 @@ import { PgBoss, type ConstructorOptions } from 'pg-boss'
 import { PgBossQueueService } from './pg-boss-queue-service.js'
 import { PgBossQueueWorkers } from './pg-boss-queue-worker.js'
 import { PgBossSchedulerService } from './pg-boss-scheduler-service.js'
-import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
-import { createQueueJobRunner } from '@pikku/core/queue'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
+import type { Logger } from '@pikku/core/services'
+import type { RunFunction } from '@pikku/core/function'
 
 /**
  * Factory class for pg-boss services
@@ -53,39 +52,28 @@ export class PgBossServiceFactory {
    * Get the queue workers for processing jobs
    */
   getQueueWorkers(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices
+    runFunction: RunFunction,
+    logger: Logger
   ): PgBossQueueWorkers {
     if (!this.queueWorkers) {
-      this.queueWorkers = new PgBossQueueWorkers(this.pgBoss)
+      this.queueWorkers = new PgBossQueueWorkers(this.pgBoss, logger)
     }
-    this.queueWorkers.setJobRunner(
-      createQueueJobRunner({ singletonServices, createWireServices }),
-      singletonServices.logger
-    )
+    this.queueWorkers.setPikkuFunctionRunner(runFunction)
     return this.queueWorkers
   }
 
   /**
    * Get the scheduler service for managing recurring tasks
    */
-  getSchedulerService(): PgBossSchedulerService {
+  getSchedulerService(logger: Logger): PgBossSchedulerService {
     if (!this.schedulerService) {
-      this.schedulerService = new PgBossSchedulerService(this.pgBoss)
+      this.schedulerService = new PgBossSchedulerService(this.pgBoss, logger)
     }
     return this.schedulerService
   }
 
-  setSchedulerRuntime(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices
-  ): void {
-    this.getSchedulerService().setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
-    )
+  setSchedulerRuntime(runFunction: RunFunction, logger: Logger): void {
+    this.getSchedulerService(logger).setPikkuFunctionRunner(runFunction)
   }
 
   /**

@@ -1,13 +1,15 @@
 import { PgBoss } from 'pg-boss'
 import {
   SchedulerService,
-  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
   parseDurationString,
 } from '@pikku/core'
 import { getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask } from '@pikku/core'
+import type { RunFunction } from '@pikku/core/function'
+import type { Logger } from '@pikku/core/services'
 
 /**
  * Data stored in scheduled job
@@ -25,9 +27,12 @@ interface ScheduledJobData {
  */
 export class PgBossSchedulerService extends SchedulerService {
   private scheduledCronNames: string[] = []
-  private handlers?: SchedulerRuntimeHandlers
+  private runFunction?: RunFunction
 
-  constructor(private pgBoss: PgBoss) {
+  constructor(
+    private pgBoss: PgBoss,
+    private logger: Logger
+  ) {
     super()
   }
 
@@ -36,8 +41,8 @@ export class PgBossSchedulerService extends SchedulerService {
    * Must be called before start() since the scheduler is typically
    * created before singletonServices are available.
    */
-  setServices(handlers: SchedulerRuntimeHandlers): void {
-    this.handlers = handlers
+  setPikkuFunctionRunner(runFunction: RunFunction): void {
+    this.runFunction = runFunction
   }
 
   /**
@@ -139,9 +144,9 @@ export class PgBossSchedulerService extends SchedulerService {
    * Registers a pg-boss worker to process recurring jobs via runScheduledTask.
    */
   async start(): Promise<void> {
-    if (!this.handlers) {
+    if (!this.runFunction) {
       throw new Error(
-        'PgBossSchedulerService requires setServices() before start()'
+        'PgBossSchedulerService requires setPikkuFunctionRunner() before start()'
       )
     }
 
@@ -158,8 +163,12 @@ export class PgBossSchedulerService extends SchedulerService {
       await this.pgBoss.work<ScheduledJobData>(cronName, async (jobs) => {
         for (const job of jobs) {
           const { rpcName } = job.data
-          this.handlers!.logger.info(`Running scheduled task: ${rpcName}`)
-          await this.handlers!.runScheduledTask(rpcName)
+          this.logger!.info(`Running scheduled task: ${rpcName}`)
+          await runScheduledTask({
+            name: rpcName,
+            runFunction: this.runFunction!,
+            logger: this.logger!,
+          })
         }
       })
     }

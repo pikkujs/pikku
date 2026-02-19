@@ -1,6 +1,9 @@
 import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import type { SerializedError } from '../types/core.types.js'
+import type { QueueService } from '../wirings/queue/queue.types.js'
+import type { SchedulerService } from './scheduler-service.js'
+import type { Logger } from './logger.js'
 import type {
   WorkflowRun,
   StepState,
@@ -25,7 +28,7 @@ interface InternalStepData {
  *
  * @example
  * ```typescript
- * const workflowService = new InMemoryWorkflowService()
+ * const workflowService = new InMemoryWorkflowService({ logger })
  * await workflowService.startWorkflow('myWorkflow', input, rpc, { inline: true })
  * ```
  */
@@ -40,6 +43,25 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   private runState = new Map<string, Record<string, unknown>>() // keyed by runId
   private branchKeys = new Map<string, string>() // keyed by stepId
   private workflowVersions = new Map<string, { graph: any; source: string }>() // keyed by `${name}:${graphHash}`
+  constructor(params: {
+    queueService?: QueueService
+    schedulerService?: SchedulerService
+    logger: Logger
+    workflow?: {
+      retries?: number
+      retryDelay?: string | number
+      orchestratorQueueName?: string
+      stepWorkerQueueName?: string
+      sleeperRPCName?: string
+    }
+  }) {
+    super({
+      queueService: params.queueService,
+      schedulerService: params.schedulerService,
+      logger: params.logger,
+      workflow: params.workflow,
+    })
+  }
 
   async createRun(
     workflowName: string,
@@ -80,6 +102,25 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {
     return this.stepHistory.get(runId) || []
+  }
+
+  async deleteRun(id: string): Promise<boolean> {
+    if (!this.runs.has(id)) return false
+    this.runs.delete(id)
+    this.stepHistory.delete(id)
+    this.runState.delete(id)
+    const prefix = `${id}:`
+    for (const key of this.steps.keys()) {
+      if (key.startsWith(prefix)) {
+        const step = this.steps.get(key)
+        if (step) {
+          this.stepData.delete(step.stepId)
+          this.branchKeys.delete(step.stepId)
+        }
+        this.steps.delete(key)
+      }
+    }
+    return true
   }
 
   async updateRunStatus(

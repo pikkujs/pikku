@@ -1,7 +1,7 @@
 import { CommonWireMeta } from '../../types/core.types.js'
 import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 import { QueueConfigMapping } from './validate-worker-config.js'
-import { Logger } from '../../services/logger.js'
+import { RunFunction } from '../../function/function-runner.js'
 
 /**
  * Configuration for queue workers - how jobs are processed
@@ -139,14 +139,8 @@ export interface QueueWorkers {
   /** Configuration mapping for validation */
   configMappings: QueueConfigMapping
 
-  /** Set runtime queue job runner callback and logger */
-  setJobRunner(
-    runJob: (params: {
-      job: QueueJob
-      updateProgress?: (progress: number | string | object) => Promise<void>
-    }) => Promise<void>,
-    logger: Logger
-  ): void
+  /** Set runtime dependencies needed to execute queue jobs */
+  setPikkuFunctionRunner(runFunction: RunFunction): void
 
   /** Scan state and register all compatible processors */
   registerQueues(): Promise<Record<string, ConfigValidationResult[]>>

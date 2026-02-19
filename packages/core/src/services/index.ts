@@ -26,7 +26,6 @@ export type { SessionService } from './user-session-service.js'
 export type {
   ScheduledTaskSummary,
   ScheduledTaskInfo,
-  SchedulerRuntimeHandlers,
   SchedulerService,
 } from './scheduler-service.js'
 export type { TriggerService } from './trigger-service.js'

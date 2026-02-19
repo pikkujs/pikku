@@ -23,9 +23,14 @@ const resolveDatabaseUrl = (): string =>
 
 type Infrastructure = {
   queueService?: any
-  schedulerService?: any
-  workflowService?: any
-  createQueueWorkers?: (singletonServices: any, createWireServices: any) => any
+  createWorkflowService?: (params: {
+    logger: any
+    queueService?: any
+    schedulerService?: any
+    workflow?: any
+  }) => any
+  createSchedulerService?: (logger: any) => any
+  createQueueWorkers?: (runFunction: any, logger: any) => any
   close: () => Promise<void>
 }
 
@@ -44,7 +49,7 @@ export const createSingletonServices = pikkuServices(
 
     return {
       config,
-      logger,
+      logger: existingServices?.logger || logger,
       variables,
       schema,
       secrets,
@@ -82,23 +87,26 @@ export const createInfrastructure = async (): Promise<Infrastructure> => {
   await pgBossFactory.init()
 
   const sql = postgres(databaseUrl)
-  const workflowService =
-    profile === 'profile-workflow-misconfig'
-      ? undefined
-      : new PgWorkflowService(sql)
-  if (workflowService) {
-    await workflowService.init()
-  }
+  let workflowService: PgWorkflowService | undefined
 
   return {
     queueService: pgBossFactory.getQueueService(),
-    schedulerService: pgBossFactory.getSchedulerService(),
-    workflowService,
-    createQueueWorkers: (singletonServices, runtimeWireServices) =>
-      pgBossFactory.getQueueWorkers(
-        singletonServices as any,
-        runtimeWireServices
-      ),
+    createWorkflowService:
+      profile === 'profile-workflow-misconfig'
+        ? undefined
+        : ({ logger, queueService, schedulerService, workflow }) => {
+            workflowService = new PgWorkflowService(sql, 'pikku', {
+              logger,
+              queueService,
+              schedulerService,
+              workflow,
+            })
+            return workflowService
+          },
+    createSchedulerService: (logger) =>
+      pgBossFactory.getSchedulerService(logger),
+    createQueueWorkers: (runFunction, logger) =>
+      pgBossFactory.getQueueWorkers(runFunction, logger),
     close: async () => {
       await pgBossFactory.close()
       await workflowService?.close?.()

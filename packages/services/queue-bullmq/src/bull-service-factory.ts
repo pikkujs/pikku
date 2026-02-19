@@ -2,9 +2,8 @@ import { ConnectionOptions } from 'bullmq'
 import { BullQueueService } from './bull-queue-service.js'
 import { BullQueueWorkers } from './bull-queue-worker.js'
 import { BullSchedulerService } from './bull-scheduler-service.js'
-import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
-import { createQueueJobRunner } from '@pikku/core/queue'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
+import type { Logger } from '@pikku/core/services'
+import type { RunFunction } from '@pikku/core/function'
 
 /**
  * Factory class for BullMQ services
@@ -37,42 +36,32 @@ export class BullServiceFactory {
   /**
    * Get the queue workers for processing jobs
    */
-  getQueueWorkers(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices
-  ): BullQueueWorkers {
+  getQueueWorkers(runFunction: RunFunction, logger: Logger): BullQueueWorkers {
     if (!this.queueWorkers) {
-      this.queueWorkers = new BullQueueWorkers(this.redisConnectionOptions)
+      this.queueWorkers = new BullQueueWorkers(
+        this.redisConnectionOptions,
+        logger
+      )
     }
-    this.queueWorkers.setJobRunner(
-      createQueueJobRunner({ singletonServices, createWireServices }),
-      singletonServices.logger
-    )
+    this.queueWorkers.setPikkuFunctionRunner(runFunction)
     return this.queueWorkers
   }
 
   /**
    * Get the scheduler service for managing delayed tasks
    */
-  getSchedulerService(): BullSchedulerService {
+  getSchedulerService(logger: Logger): BullSchedulerService {
     if (!this.schedulerService) {
       this.schedulerService = new BullSchedulerService(
-        this.redisConnectionOptions
+        this.redisConnectionOptions,
+        logger
       )
     }
     return this.schedulerService
   }
 
-  setSchedulerRuntime(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices
-  ): void {
-    this.getSchedulerService().setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
-    )
+  setSchedulerRuntime(runFunction: RunFunction, logger: Logger): void {
+    this.getSchedulerService(logger).setPikkuFunctionRunner(runFunction)
   }
 
   /**

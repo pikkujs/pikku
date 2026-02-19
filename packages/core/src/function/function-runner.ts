@@ -18,6 +18,7 @@ import {
   CreateWireServices,
   CoreConfig,
 } from '../types/core.types.js'
+import type { Logger } from '../services/logger.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
 import {
   CorePermissionGroup,
@@ -334,3 +335,86 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   return (await executeFunction()) as Out
 }
+
+export type RunFunctionInput<In = any> = {
+  data: () => Promise<In> | In
+  auth?: boolean
+  inheritedMiddleware?: MiddlewareMetadata[]
+  wireMiddleware?: CorePikkuMiddleware[]
+  inheritedChannelMiddleware?: MiddlewareMetadata[]
+  wireChannelMiddleware?: CorePikkuChannelMiddleware[]
+  inheritedPermissions?: PermissionMetadata[]
+  wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
+  coerceDataFromSchema?: boolean
+  tags?: string[]
+  wire?: PikkuWire
+  sessionService?: SessionService<CoreUserSession>
+  packageName?: string | null
+}
+
+export type RunFunction = <In = any, Out = any>(
+  wireType: PikkuWiringTypes,
+  wireId: string,
+  funcName: string,
+  input: RunFunctionInput<In>
+) => Promise<Out>
+
+export type PikkuFunctionRunner = RunFunction & {
+  logger: Logger
+}
+
+export const createFunctionRunner = (
+  singletonServices: CoreSingletonServices,
+  createWireServices?: CreateWireServices
+): PikkuFunctionRunner => {
+  const runFunction: RunFunction = async <In = any, Out = any>(
+    wireType,
+    wireId,
+    funcName,
+    {
+      data,
+      auth,
+      inheritedMiddleware,
+      wireMiddleware,
+      inheritedChannelMiddleware,
+      wireChannelMiddleware,
+      inheritedPermissions,
+      wirePermissions,
+      coerceDataFromSchema,
+      tags,
+      wire = {},
+      sessionService,
+      packageName,
+    }: RunFunctionInput<In>
+  ) =>
+    await runPikkuFunc<In, Out>(wireType, wireId, funcName, {
+      singletonServices,
+      createWireServices,
+      data,
+      auth,
+      inheritedMiddleware,
+      wireMiddleware,
+      inheritedChannelMiddleware,
+      wireChannelMiddleware,
+      inheritedPermissions,
+      wirePermissions,
+      coerceDataFromSchema,
+      tags,
+      wire,
+      sessionService,
+      packageName,
+    })
+
+  return Object.assign(runFunction, {
+    logger: singletonServices.logger,
+  })
+}
+
+export const createRunFunction = ({
+  singletonServices,
+  createWireServices,
+}: {
+  singletonServices: CoreSingletonServices
+  createWireServices?: CreateWireServices
+}): PikkuFunctionRunner =>
+  createFunctionRunner(singletonServices, createWireServices)

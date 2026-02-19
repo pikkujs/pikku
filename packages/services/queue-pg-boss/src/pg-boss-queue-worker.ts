@@ -8,10 +8,12 @@ import type {
 } from '@pikku/core/queue'
 import {
   registerQueueWorkers,
+  createQueueJobRunner,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
 import type { Logger } from '@pikku/core/services'
+import type { RunFunction } from '@pikku/core/function'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToPgBoss = (
@@ -126,30 +128,28 @@ export class PgBossQueueWorkers implements QueueWorkers {
         updateProgress?: (progress: number | string | object) => Promise<void>
       }) => Promise<void>)
     | undefined
-  private logger?: Logger
 
-  constructor(pgBoss: PgBoss) {
+  constructor(
+    pgBoss: PgBoss,
+    private logger: Logger
+  ) {
     this.pgBoss = pgBoss
   }
 
-  setJobRunner(
-    runJob: (params: {
-      job: QueueJob
-      updateProgress?: (progress: number | string | object) => Promise<void>
-    }) => Promise<void>,
-    logger: Logger
-  ): void {
-    this.runJob = runJob
-    this.logger = logger
+  setPikkuFunctionRunner(runFunction: RunFunction): void {
+    this.runJob = createQueueJobRunner({
+      runFunction,
+      logger: this.logger,
+    })
   }
 
   /**
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    if (!this.runJob || !this.logger) {
+    if (!this.runJob) {
       throw new Error(
-        'PgBossQueueWorkers requires setJobRunner() before registerQueues()'
+        'PgBossQueueWorkers requires setPikkuFunctionRunner() before registerQueues()'
       )
     }
 

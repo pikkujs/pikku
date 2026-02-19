@@ -11,8 +11,8 @@ import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js
  *
  * @example
  * ```typescript
- * const triggerService = new InMemoryTriggerService()
- * triggerService.setServices(singletonServices, createWireServices)
+ * const triggerService = new InMemoryTriggerService(singletonServices.logger)
+ * triggerService.setPikkuFunctionRunner(runFunction)
  * await triggerService.start()
  *
  * // On shutdown
@@ -21,11 +21,7 @@ import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js
  */
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void> {
-    if (!this.singletonServices) {
-      throw new Error(
-        'InMemoryTriggerService requires singletonServices to start triggers'
-      )
-    }
+    this.getRunFunction()
 
     const triggerTargets = this.getTriggerTargets()
     const triggerSources = this.getTriggerSources()
@@ -37,9 +33,7 @@ export class InMemoryTriggerService extends PikkuTriggerService {
 
       const targets = triggerTargets.get(name)
       if (!targets || targets.length === 0) {
-        this.singletonServices.logger.info(
-          `Trigger source '${name}' has no targets, skipping`
-        )
+        this.logger.info(`Trigger source '${name}' has no targets, skipping`)
         continue
       }
 
@@ -51,16 +45,14 @@ export class InMemoryTriggerService extends PikkuTriggerService {
         )
 
         this.activeTriggers.set(name, triggerInstance)
-        this.singletonServices.logger.info(`Started trigger: ${name}`)
+        this.logger.info(`Started trigger: ${name}`)
       } catch (error) {
-        this.singletonServices.logger.error(
-          `Failed to start trigger ${name}: ${error}`
-        )
+        this.logger.error(`Failed to start trigger ${name}: ${error}`)
       }
     }
 
     if (this.activeTriggers.size === 0) {
-      this.singletonServices.logger.info(
+      this.logger.info(
         'No triggers started (no matching sources and targets found)'
       )
     }

@@ -10,10 +10,25 @@ import {
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
+import { createFunctionRunner } from '../../../function/function-runner.js'
+
+const createMockLogger = () =>
+  ({
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+    debug: () => {},
+    setLevel: () => {},
+  }) as any
+
+const createWorkflowService = () =>
+  new InMemoryWorkflowService({
+    logger: createMockLogger(),
+  })
 
 describe('graph-runner bugs', () => {
   test('continueGraph should NOT mark workflow completed while nodes are still running', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const meta: WorkflowRuntimeMeta = {
       name: 'testPrematureCompletion',
@@ -53,7 +68,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('runWorkflowGraph should throw and not create a run for unknown input refs', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const metaState = pikkuState(null, 'workflows', 'meta')
     metaState['testOrphanedRun'] = {
@@ -86,7 +101,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('runWorkflowGraph should throw and not create a run for unknown next targets', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const metaState = pikkuState(null, 'workflows', 'meta')
     metaState['testUnknownNextTarget'] = {
@@ -118,7 +133,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('continueGraph should throw for ambiguous template step remapping', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const meta: WorkflowRuntimeMeta = {
       name: 'testAmbiguousTemplateStepRemap',
@@ -153,7 +168,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('continueGraph should throw for ambiguous template branch key remapping', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const meta: WorkflowRuntimeMeta = {
       name: 'testAmbiguousTemplateBranchRemap',
@@ -190,21 +205,25 @@ describe('graph-runner bugs', () => {
   })
 
   test('continueGraph should queue converging next node only once', async () => {
-    const ws = new InMemoryWorkflowService()
+    const logger = createMockLogger()
     const queuedNodes: string[] = []
+    const queueService = {
+      add: async (_queueName: string, data: any) => {
+        if (data?.stepName) {
+          queuedNodes.push(data.stepName)
+        }
+      },
+    }
+    const ws = new InMemoryWorkflowService({
+      logger,
+      queueService: queueService as any,
+    })
 
-    ws.setServices(
-      {
-        queueService: {
-          add: async (_queueName: string, data: any) => {
-            if (data?.stepName) {
-              queuedNodes.push(data.stepName)
-            }
-          },
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
+    ws.setPikkuFunctionRunner(
+      createFunctionRunner(
+        { logger, queueService: queueService as any } as any,
+        (() => ({})) as any
+      )
     )
 
     const meta: WorkflowRuntimeMeta = {
@@ -241,7 +260,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('inline graph should execute converging next node only once', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
     let cCalls = 0
 
     const mockRpcService = {
@@ -285,7 +304,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('inline graph node failure should mark workflow as failed', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const mockRpcService = {
       rpcWithWire: async (rpcName: string, _data: any, _wire: any) => {
@@ -338,16 +357,20 @@ describe('graph-runner bugs', () => {
   })
 
   test('executeGraphStep should throw after queueing onError nodes', async () => {
-    const ws = new InMemoryWorkflowService()
+    const logger = createMockLogger()
+    const queueService = {
+      add: async () => {},
+    }
+    const ws = new InMemoryWorkflowService({
+      logger,
+      queueService: queueService as any,
+    })
 
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
+    ws.setPikkuFunctionRunner(
+      createFunctionRunner(
+        { logger, queueService: queueService as any } as any,
+        (() => ({})) as any
+      )
     )
 
     const metaState = pikkuState(null, 'workflows', 'meta')
@@ -403,7 +426,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('executeWorkflowStep should mark graph step failed and suspend run on RPCNotFoundError', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const metaState = pikkuState(null, 'workflows', 'meta')
     metaState['testQueuedRpcMissing'] = {
@@ -445,7 +468,7 @@ describe('graph-runner bugs', () => {
   })
 
   test('inline graph missing RPC should mark step failed and suspend run', async () => {
-    const ws = new InMemoryWorkflowService()
+    const ws = createWorkflowService()
 
     const metaState = pikkuState(null, 'workflows', 'meta')
     metaState['testInlineRpcMissing'] = {

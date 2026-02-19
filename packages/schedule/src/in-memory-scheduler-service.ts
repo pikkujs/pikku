@@ -1,13 +1,18 @@
 import { CronJob } from 'cron'
 import {
+  parseVersionedId,
+  pikkuState,
+  runScheduledTask,
   CoreUserSession,
   SchedulerService,
-  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   parseDurationString,
 } from '@pikku/core'
 import { getScheduledTasks } from '@pikku/core/scheduler'
+import type { RunFunction } from '@pikku/core/function'
+import type { Logger } from '@pikku/core/services'
+import { PikkuSessionService } from '@pikku/core/services'
 
 interface DelayedTask {
   taskId: string
@@ -26,15 +31,18 @@ export class InMemorySchedulerService extends SchedulerService {
   private cronJobs = new Map<string, CronJob>()
   private delayedTasks = new Map<string, DelayedTask>()
   private idCounter = 0
-  private handlers?: SchedulerRuntimeHandlers
+  private runFunction?: RunFunction
+  constructor(private logger: Logger) {
+    super()
+  }
 
   /**
    * Set services needed for processing recurring tasks.
    * Must be called before start() since the scheduler is typically
    * created before singletonServices are available.
    */
-  setServices(handlers: SchedulerRuntimeHandlers): void {
-    this.handlers = handlers
+  setPikkuFunctionRunner(runFunction: RunFunction): void {
+    this.runFunction = runFunction
   }
 
   async init(): Promise<void> {}
@@ -48,9 +56,9 @@ export class InMemorySchedulerService extends SchedulerService {
     data?: any,
     session?: CoreUserSession
   ): Promise<string> {
-    if (!this.handlers) {
+    if (!this.runFunction) {
       throw new Error(
-        'InMemorySchedulerService requires setServices() before scheduling RPCs'
+        'InMemorySchedulerService requires setPikkuFunctionRunner() before scheduling RPCs'
       )
     }
 
@@ -62,11 +70,22 @@ export class InMemorySchedulerService extends SchedulerService {
     const timer = setTimeout(async () => {
       this.delayedTasks.delete(taskId)
       try {
-        await this.handlers!.invokeRPC(rpcName, data, session)
-      } catch (err: unknown) {
-        this.handlers!.logger.error(
-          `Failed to execute delayed RPC '${rpcName}': ${err}`
+        const sessionService = new PikkuSessionService()
+        if (session) {
+          sessionService.set(session)
+        }
+        await this.runFunction!(
+          'rpc',
+          rpcName,
+          this.resolveRpcFunctionId(rpcName),
+          {
+            auth: false,
+            data: () => data,
+            sessionService,
+          }
         )
+      } catch (err: unknown) {
+        this.logger!.error(`Failed to execute delayed RPC '${rpcName}': ${err}`)
       }
     }, delayMs)
 
@@ -126,9 +145,9 @@ export class InMemorySchedulerService extends SchedulerService {
    * Start recurring scheduled tasks.
    */
   async start(): Promise<void> {
-    if (!this.handlers) {
+    if (!this.runFunction) {
       throw new Error(
-        'InMemorySchedulerService requires setServices() before start()'
+        'InMemorySchedulerService requires setPikkuFunctionRunner() before start()'
       )
     }
 
@@ -153,13 +172,32 @@ export class InMemorySchedulerService extends SchedulerService {
     const job = new CronJob(
       schedule,
       async () => {
-        this.handlers!.logger.info(`Running scheduled task: ${name}`)
-        await this.handlers!.runScheduledTask(name)
-        this.handlers!.logger.debug(`Completed scheduled task: ${name}`)
+        this.logger!.info(`Running scheduled task: ${name}`)
+        await runScheduledTask({
+          name,
+          runFunction: this.runFunction!,
+          logger: this.logger!,
+        })
+        this.logger!.debug(`Completed scheduled task: ${name}`)
       },
       null,
       true
     )
     this.cronJobs.set(name, job)
+  }
+
+  private resolveRpcFunctionId(rpcName: string): string {
+    const rpcMeta = pikkuState(null, 'rpc', 'meta')
+    let funcId = rpcMeta[rpcName]
+    if (!funcId) {
+      const { baseName, version } = parseVersionedId(rpcName)
+      if (version !== null) {
+        funcId = rpcMeta[baseName]
+      }
+    }
+    if (!funcId) {
+      throw new Error(`RPC function not found: ${rpcName}`)
+    }
+    return funcId
   }
 }

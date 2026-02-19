@@ -13,10 +13,12 @@ import type {
 } from '@pikku/core/queue'
 import {
   registerQueueWorkers,
+  createQueueJobRunner,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
 import type { Logger } from '@pikku/core/services'
+import type { RunFunction } from '@pikku/core/function'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToBull = (
@@ -143,28 +145,26 @@ export class BullQueueWorkers implements QueueWorkers {
         updateProgress?: (progress: number | string | object) => Promise<void>
       }) => Promise<void>)
     | undefined
-  private logger?: Logger
 
-  constructor(private redisConnectionOptions: ConnectionOptions) {}
+  constructor(
+    private redisConnectionOptions: ConnectionOptions,
+    private logger: Logger
+  ) {}
 
-  setJobRunner(
-    runJob: (params: {
-      job: QueueJob
-      updateProgress?: (progress: number | string | object) => Promise<void>
-    }) => Promise<void>,
-    logger: Logger
-  ): void {
-    this.runJob = runJob
-    this.logger = logger
+  setPikkuFunctionRunner(runFunction: RunFunction): void {
+    this.runJob = createQueueJobRunner({
+      runFunction,
+      logger: this.logger,
+    })
   }
 
   /**
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    if (!this.runJob || !this.logger) {
+    if (!this.runJob) {
       throw new Error(
-        'BullQueueWorkers requires setJobRunner() before registerQueues()'
+        'BullQueueWorkers requires setPikkuFunctionRunner() before registerQueues()'
       )
     }
 

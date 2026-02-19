@@ -2,7 +2,7 @@ import { PikkuExpressServer } from '@pikku/express'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { RedisWorkflowService } from '@pikku/redis'
 import { InMemoryTriggerService } from '@pikku/core/services'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
+import { createFunctionRunner } from '@pikku/core'
 import {
   createConfig,
   createWireServices,
@@ -17,23 +17,27 @@ async function main(): Promise<void> {
     const bullFactory = new BullServiceFactory()
     await bullFactory.init()
 
-    const workflowService = new RedisWorkflowService(undefined)
-
-    const schedulerService = bullFactory.getSchedulerService()
-
     const singletonServices = await createSingletonServices(config, {
       queueService: bullFactory.getQueueService(),
-      schedulerService,
-      workflowService,
     })
-
-    schedulerService.setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
+    const schedulerService = bullFactory.getSchedulerService(
+      singletonServices.logger
     )
-    workflowService.setServices(singletonServices, createWireServices, config)
+    const workflowService = new RedisWorkflowService(undefined, 'workflows', {
+      queueService: bullFactory.getQueueService(),
+      schedulerService,
+      logger: singletonServices.logger,
+      workflow: config.workflow,
+    })
+    singletonServices.workflowService = workflowService
+    singletonServices.schedulerService = schedulerService
+    const runFunction = createFunctionRunner(
+      singletonServices,
+      createWireServices
+    )
+
+    schedulerService.setPikkuFunctionRunner(runFunction)
+    workflowService.setPikkuFunctionRunner(runFunction)
 
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
@@ -47,8 +51,8 @@ async function main(): Promise<void> {
     singletonServices.logger.info('Starting workflow queue workers...')
 
     const bullQueueWorkers = bullFactory.getQueueWorkers(
-      singletonServices,
-      createWireServices
+      runFunction,
+      singletonServices.logger
     )
 
     singletonServices.logger.info('Registering workflow queue workers...')
@@ -57,8 +61,8 @@ async function main(): Promise<void> {
       'Workflow workers ready and listening for jobs'
     )
 
-    const triggerService = new InMemoryTriggerService()
-    triggerService.setServices(singletonServices)
+    const triggerService = new InMemoryTriggerService(singletonServices.logger)
+    triggerService.setPikkuFunctionRunner(runFunction)
 
     await schedulerService.start()
     await triggerService.start()

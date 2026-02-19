@@ -1,5 +1,4 @@
-import { stopSingletonServices } from '@pikku/core'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
+import { createFunctionRunner, stopSingletonServices } from '@pikku/core'
 import { PikkuExpressServer } from '@pikku/express'
 import {
   createConfig,
@@ -20,23 +19,29 @@ async function main(): Promise<void> {
 
   const config = await createConfig()
   const infrastructure = await createInfrastructure()
+  const queueService = infrastructure.queueService as any
   const singletonServices = await createSingletonServices(config, {
-    queueService: infrastructure.queueService as any,
-    schedulerService: infrastructure.schedulerService as any,
-    workflowService: infrastructure.workflowService as any,
+    queueService,
   })
-
-  infrastructure.schedulerService?.setServices(
-    createSchedulerRuntimeHandlers({
-      singletonServices,
-      createWireServices,
-    })
+  const schedulerService = infrastructure.createSchedulerService?.(
+    singletonServices.logger
   )
-  infrastructure.workflowService?.setServices(
+  const workflowService = infrastructure.createWorkflowService?.({
+    logger: singletonServices.logger,
+    queueService,
+    schedulerService,
+    workflow: config.workflow,
+  })
+  await workflowService?.init?.()
+  singletonServices.workflowService = workflowService as any
+  singletonServices.schedulerService = schedulerService as any
+  const runFunction = createFunctionRunner(
     singletonServices,
-    createWireServices,
-    config
+    createWireServices
   )
+
+  schedulerService?.setPikkuFunctionRunner(runFunction)
+  workflowService?.setPikkuFunctionRunner(runFunction)
 
   const appServer = new PikkuExpressServer(
     { ...config, port, hostname },

@@ -1,6 +1,5 @@
 import {
   PikkuWire,
-  CreateWireServices,
   type CoreSingletonServices,
 } from '../../types/core.types.js'
 import type {
@@ -9,7 +8,10 @@ import type {
   TriggerInstance,
 } from './trigger.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import {
+  addFunction,
+  type RunFunction,
+} from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 
 /**
@@ -66,8 +68,8 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
  */
 export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices
+  runFunction: RunFunction
+  logger: CoreSingletonServices['logger']
   input?: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
@@ -83,8 +85,8 @@ export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
  */
 export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   name,
-  singletonServices,
-  createWireServices,
+  runFunction,
+  logger,
   input,
   onTrigger,
 }: SetupTriggerParams<TInput, TOutput>): Promise<TriggerInstance> {
@@ -103,17 +105,15 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   const wire: PikkuWire = {
     trigger: {
       invoke: (data: unknown) => {
-        singletonServices.logger.info(`Trigger fired: ${name}`)
+        logger.info(`Trigger fired: ${name}`)
         onTrigger(data as TOutput)
       },
     },
   }
 
-  singletonServices.logger.info(`Setting up trigger: ${name}`)
+  logger.info(`Setting up trigger: ${name}`)
 
-  const teardown = await runPikkuFunc('trigger', name, sourceMeta.pikkuFuncId, {
-    singletonServices,
-    createWireServices,
+  const teardown = await runFunction('trigger', name, sourceMeta.pikkuFuncId, {
     auth: false,
     data: () => input as any,
     wire,

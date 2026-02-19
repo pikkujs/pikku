@@ -1,6 +1,10 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
-import { addFunction, runPikkuFunc } from './function-runner.js'
+import {
+  addFunction,
+  createRunFunction,
+  runPikkuFunc,
+} from './function-runner.js'
 import { addMiddleware, addPermission } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
@@ -532,5 +536,29 @@ describe('runPikkuFunc - Integration Tests', () => {
       ...mockSingletonServices,
       ...wireServices,
     })
+  })
+})
+
+describe('createRunFunction', () => {
+  test('creates a bound runner that executes a function', async () => {
+    addTestFunction('runFunctionTest', {
+      func: async (_services: any, data: { value: number }) => data.value + 1,
+      auth: false,
+    })
+
+    const runFunction = createRunFunction({
+      singletonServices: mockSingletonServices,
+    })
+
+    const result = await runFunction(
+      'rpc',
+      'run-function-test',
+      'runFunctionTest',
+      {
+        data: () => ({ value: 41 }),
+      }
+    )
+
+    assert.equal(result, 42)
   })
 })

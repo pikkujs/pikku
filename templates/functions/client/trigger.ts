@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createFunctionRunner } from '@pikku/core'
 import { InMemoryTriggerService } from '@pikku/core/services'
 import { createConfig, createSingletonServices } from '../src/services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
@@ -10,8 +11,8 @@ async function main() {
   const config = await createConfig()
   const todoStore = new TodoStore()
   const singletonServices = await createSingletonServices(config, { todoStore })
-  const triggerService = new InMemoryTriggerService()
-  triggerService.setServices(singletonServices)
+  const triggerService = new InMemoryTriggerService(singletonServices.logger)
+  triggerService.setPikkuFunctionRunner(createFunctionRunner(singletonServices))
   const getTriggerTodos = () => todoStore.getTodosByUser('trigger')
 
   await triggerService.start()

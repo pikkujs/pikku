@@ -12,7 +12,15 @@ describe('PgWorkflowService init schema', () => {
       },
     })
 
-    const service = new PgWorkflowService(sql as any, 'pikku_test')
+    const service = new PgWorkflowService(sql as any, 'pikku_test', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+        setLevel: () => {},
+      } as any,
+    })
     await service.init()
 
     const query = calls.join('\n')

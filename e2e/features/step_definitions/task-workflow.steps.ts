@@ -70,6 +70,18 @@ const waitFor = async (
   throw new Error(`Condition not met within ${timeoutMs}ms`)
 }
 
+const streamLogs = (
+  stream: NodeJS.ReadableStream | null | undefined,
+  sink: string[],
+  prefix: string
+): void => {
+  stream?.on('data', (chunk: Buffer | string) => {
+    const text = chunk.toString()
+    sink.push(text)
+    process.stdout.write(`[${prefix}] ${text}`)
+  })
+}
+
 const processVersionFromProfile = (profile?: string): string =>
   profile && profile.includes('v2') ? 'v2' : 'v1'
 
@@ -104,8 +116,8 @@ const startProcess = async (
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     const logs: string[] = []
-    generate.stdout?.on('data', (chunk: Buffer) => logs.push(chunk.toString()))
-    generate.stderr?.on('data', (chunk: Buffer) => logs.push(chunk.toString()))
+    streamLogs(generate.stdout, logs, `${name}:${role}:generate`)
+    streamLogs(generate.stderr, logs, `${name}:${role}:generate`)
     generate.once('exit', (code) => {
       if (code === 0) {
         resolve()
@@ -137,12 +149,8 @@ const startProcess = async (
   })
 
   const logs: string[] = []
-  child.stdout?.on('data', (chunk: Buffer) => {
-    logs.push(chunk.toString())
-  })
-  child.stderr?.on('data', (chunk: Buffer) => {
-    logs.push(chunk.toString())
-  })
+  streamLogs(child.stdout, logs, `${name}:${role}`)
+  streamLogs(child.stderr, logs, `${name}:${role}`)
 
   const processInfo: ManagedProcess = { name, role, profile, port, child, logs }
   world.processes.set(name, processInfo)

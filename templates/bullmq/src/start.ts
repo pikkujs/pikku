@@ -1,5 +1,5 @@
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { stopSingletonServices } from '@pikku/core'
+import { createFunctionRunner, stopSingletonServices } from '@pikku/core'
 import {
   createConfig,
   createSingletonServices,
@@ -15,10 +15,14 @@ async function main(): Promise<void> {
 
     const bullFactory = new BullServiceFactory()
     await bullFactory.init()
-
-    const bullQueueWorkers = bullFactory.getQueueWorkers(
+    const runFunction = createFunctionRunner(
       singletonServices,
       createWireServices
+    )
+
+    const bullQueueWorkers = bullFactory.getQueueWorkers(
+      runFunction,
+      singletonServices.logger
     )
     await bullQueueWorkers.registerQueues()
 
