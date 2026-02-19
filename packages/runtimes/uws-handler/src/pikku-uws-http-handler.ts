@@ -47,12 +47,33 @@ export const pikkuHTTPHandler = ({
     compileAllSchemas(singletonServices.logger, singletonServices.schema)
   }
 
-  return async (res: uWS.HttpResponse, req: uWS.HttpRequest): Promise<void> => {
-    const request = await uwsToRequest(req, res)
-    const response = await fetch(request, {
-      singletonServices,
-      createWireServices,
+  return (res: uWS.HttpResponse, req: uWS.HttpRequest): void => {
+    let aborted = false
+    res.onAborted(() => {
+      aborted = true
     })
-    await sendPikkuResponseToUWS(response, res)
+
+    const run = async () => {
+      const request = await uwsToRequest(req, res)
+      const response = await fetch(request, {
+        singletonServices,
+        createWireServices,
+      })
+      if (!aborted) {
+        await sendPikkuResponseToUWS(response, res)
+      }
+    }
+
+    run().catch((err) => {
+      if (!aborted) {
+        try {
+          res.cork(() => {
+            res.writeStatus('500').end('Internal Server Error')
+          })
+        } catch {
+          // response already sent or aborted
+        }
+      }
+    })
   }
 }

@@ -70,6 +70,7 @@ export {
   initializePikkuState,
   resetPikkuState,
   addPackageServiceFactories,
+  getPikkuMetaDir,
 } from './pikku-state.js'
 export { runPikkuFunc } from './function/function-runner.js'
 export { runCLICommand, pikkuCLIRender } from './wirings/cli/cli-runner.js'

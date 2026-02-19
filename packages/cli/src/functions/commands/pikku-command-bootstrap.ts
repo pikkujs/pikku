@@ -63,7 +63,17 @@ ${Object.entries(usedExternalPackages)
 `
     }
 
+    const packageNameArg = config.externalPackageName
+      ? `'${config.externalPackageName}'`
+      : 'null'
+    const metaDirRegistration = `import { fileURLToPath as __fileURLToPath } from 'url'
+import { dirname as __dirname } from 'path'
+import { pikkuState as __pikkuState } from '@pikku/core'
+__pikkuState(${packageNameArg}, 'package', 'metaDir', __dirname(__fileURLToPath(import.meta.url)))
+`
+
     const allBootstrapImports =
+      metaDirRegistration +
       [...localImports, ...externalImports]
         .sort((a, b) => {
           const aMeta = a.includes('meta')
@@ -72,7 +82,8 @@ ${Object.entries(usedExternalPackages)
           if (!aMeta && bMeta) return 1
           return 0
         })
-        .join('\n') + externalPackagesRegistration
+        .join('\n') +
+      externalPackagesRegistration
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
   },

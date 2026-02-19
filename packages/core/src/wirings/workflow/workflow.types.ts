@@ -136,9 +136,7 @@ export interface WorkflowRunService {
   ): Promise<
     Array<StepState & { stepName: string; rpcName?: string; data?: any }>
   >
-  getRunHistory(
-    runId: string
-  ): Promise<Array<StepState & { stepName: string }>>
+  getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
   getDistinctWorkflowNames(): Promise<string[]>
   getWorkflowVersion(
     name: string,

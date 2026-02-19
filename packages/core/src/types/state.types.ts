@@ -152,5 +152,7 @@ export interface PikkuPackageState {
     } | null
     /** Cached singleton services for this package */
     singletonServices: CoreSingletonServices | null
+    /** Absolute path to this package's .pikku directory */
+    metaDir: string | null
   }
 }

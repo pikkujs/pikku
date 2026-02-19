@@ -6,6 +6,9 @@ import {
 } from './errors/errors.js'
 import { pikkuState } from './pikku-state.js'
 
+const schemaKey = (name: string, packageName: string | null): string =>
+  packageName ? `${packageName}:${name}` : name
+
 /**
  * Adds a schema to the schemas map for a specific package.
  * @param name - The name of the schema.
@@ -46,9 +49,11 @@ export const compileAllSchemas = (
   if (!schemaService) {
     throw new Error('SchemaService needs to be defined to load schemas')
   }
-  const schemas = pikkuState(null, 'misc', 'schemas')
-  for (const [name, schema] of schemas) {
-    schemaService.compileSchema(name, schema)
+  for (const [pkgName, packageState] of globalThis.pikkuState!) {
+    const resolvedPkgName = pkgName === '__main__' ? null : pkgName
+    for (const [name, schema] of packageState.misc.schemas) {
+      schemaService.compileSchema(schemaKey(name, resolvedPkgName), schema)
+    }
   }
   validateAllSchemasLoaded(logger, schemaService)
 }
@@ -124,10 +129,7 @@ export const validateSchema = async (
         return
       }
     }
-    logger.debug(
-      `[validateSchema] Validating schema '${schemaName}' for package '${packageName ?? 'main'}' with data:`,
-      JSON.stringify(data)
-    )
+    const key = schemaKey(schemaName, packageName)
     const schemas = pikkuState(packageName, 'misc', 'schemas')
     const schema = schemas.get(schemaName)
     if (schema === undefined) {
@@ -139,7 +141,7 @@ export const validateSchema = async (
         `Schema '${schemaName}' not found. Ensure schema generation has been run.`
       )
     }
-    await schemaService.compileSchema(schemaName, schema)
-    await schemaService.validateSchema(schemaName, data)
+    await schemaService.compileSchema(key, schema)
+    await schemaService.validateSchema(key, data)
   }
 }

@@ -31,10 +31,14 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
         ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
         : `import metaData from '${jsonImportPath}'`
 
+      const packageNameArg = config.externalPackageName
+        ? `'${config.externalPackageName}'`
+        : 'null'
+
       await writeFileInDir(
         logger,
         rpcInternalWiringMetaFile,
-        `import { pikkuState } from '@pikku/core'\n${importStatement}\npikkuState(null, 'rpc', 'meta', metaData as Record<string, string>)`
+        `import { pikkuState } from '@pikku/core'\n${importStatement}\npikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
       )
       return true
     }
