@@ -448,8 +448,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     // Check if this is a graph workflow (source === 'graph')
     if (workflowMeta.source === 'graph') {
-      // Graph workflows use the graph scheduler
-      // Fall back to inline when no queue service (same as DSL path)
       const shouldInline =
         options?.inline || !this.singletonServices?.queueService
       return runWorkflowGraph(
@@ -481,27 +479,23 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowMeta.graphHash
     )
 
-    // Register inline run for fast lookup
     if (options?.inline) {
       this.inlineRuns.add(runId)
     }
 
-    try {
-      // If inline mode or no queue service, execute directly
-      // Otherwise, use remote execution (queue-based)
-      if (options?.inline || !this.singletonServices?.queueService) {
-        await this.runWorkflowJob(runId, rpcService)
-      } else {
-        await this.resumeWorkflow(runId)
-      }
-
-      return { runId }
-    } finally {
-      // Clean up inline tracking
-      if (options?.inline) {
-        this.inlineRuns.delete(runId)
-      }
+    if (options?.inline || !this.singletonServices?.queueService) {
+      this.runWorkflowJob(runId, rpcService)
+        .catch(() => {})
+        .finally(() => {
+          if (options?.inline) {
+            this.inlineRuns.delete(runId)
+          }
+        })
+    } else {
+      await this.resumeWorkflow(runId)
     }
+
+    return { runId }
   }
 
   public async runToCompletion<I>(

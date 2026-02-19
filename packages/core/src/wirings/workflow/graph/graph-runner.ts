@@ -741,8 +741,8 @@ export async function runWorkflowGraph(
 
   const triggerNodeResults = { trigger: triggerInput }
 
-  try {
-    if (inline && rpcService) {
+  if (inline && rpcService) {
+    const executeInline = async () => {
       try {
         await Promise.all(
           readyEntryNodes.map(async (nodeId) => {
@@ -781,32 +781,34 @@ export async function runWorkflowGraph(
           stack: (error as Error).stack || '',
           code: 'GRAPH_NODE_FAILED',
         })
-      }
-    } else {
-      for (const nodeId of readyEntryNodes) {
-        const node = nodes[nodeId]
-        if (!node?.rpcName) continue
-
-        const resolvedInput =
-          node.input && Object.keys(node.input).length > 0
-            ? resolveSerializedInput(node.input, triggerNodeResults)
-            : triggerInput
-
-        await queueGraphNode(
-          workflowService,
-          runId,
-          graphName,
-          nodeId,
-          node.rpcName,
-          resolvedInput
-        )
+      } finally {
+        workflowService.unregisterInlineRun(runId)
       }
     }
+    executeInline().catch(() => {})
+  } else {
+    for (const nodeId of readyEntryNodes) {
+      const node = nodes[nodeId]
+      if (!node?.rpcName) continue
 
-    return { runId }
-  } finally {
+      const resolvedInput =
+        node.input && Object.keys(node.input).length > 0
+          ? resolveSerializedInput(node.input, triggerNodeResults)
+          : triggerInput
+
+      await queueGraphNode(
+        workflowService,
+        runId,
+        graphName,
+        nodeId,
+        node.rpcName,
+        resolvedInput
+      )
+    }
     if (inline) {
       workflowService.unregisterInlineRun(runId)
     }
   }
+
+  return { runId }
 }

@@ -142,6 +142,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   package: {
     factories: null,
     singletonServices: null,
+    metaDir: null,
   },
 })
 
@@ -173,6 +174,10 @@ export const resetPikkuState = () => {
 
 if (!globalThis.pikkuState) {
   resetPikkuState()
+}
+
+export const getPikkuMetaDir = (packageName?: string | null): string | null => {
+  return pikkuState(packageName ?? null, 'package', 'metaDir')
 }
 
 /**
