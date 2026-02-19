@@ -82,7 +82,7 @@ jobs:
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   e2e:
-    name: E2E
+    name: "E2E (${{ matrix.feature }})"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build
@@ -100,6 +100,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        feature:
+          [
+            task-workflow-handoff,
+            tree-shaking,
+            workflow-deployment-safety,
+            workflow-version-handoff,
+          ]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -115,7 +125,8 @@ jobs:
           name: built-packages
           path: packages
       - run: yarn install
-      - run: yarn workspace @pikku/e2e test
+      - name: Run E2E feature
+        run: yarn workspace @pikku/e2e test:feature features/${{ matrix.feature }}.feature
     env:
       E2E_DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_queue
 
