@@ -37,6 +37,23 @@ export const isSerializable = (data: any): boolean => {
   )
 }
 
+export const getTagGroups = <T>(
+  tagGroups: Record<string, T>,
+  tag: string
+): T[] => {
+  const results: T[] = []
+  const exact = tagGroups[tag]
+  if (exact) results.push(exact)
+  let colonIdx = tag.lastIndexOf(':')
+  while (colonIdx !== -1) {
+    const parent = tag.slice(0, colonIdx)
+    const group = tagGroups[parent]
+    if (group) results.push(group)
+    colonIdx = parent.lastIndexOf(':')
+  }
+  return results
+}
+
 const EMPTY_ARRAY = Object.freeze([])
 
 export const freezeDedupe = <T>(

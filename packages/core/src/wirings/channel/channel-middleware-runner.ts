@@ -5,7 +5,7 @@ import type {
 } from '../../types/core.types.js'
 import type { CorePikkuChannelMiddleware } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import { freezeDedupe } from '../../utils.js'
+import { freezeDedupe, getTagGroups } from '../../utils.js'
 
 export const addChannelMiddleware = (
   tag: string,
@@ -53,10 +53,11 @@ export const combineChannelMiddleware = (
   if (wireInheritedChannelMiddleware) {
     for (const meta of wireInheritedChannelMiddleware) {
       if (meta.type === 'tag') {
-        const group = pikkuState(packageName, 'channelMiddleware', 'tagGroup')[
+        const groups = getTagGroups(
+          pikkuState(packageName, 'channelMiddleware', 'tagGroup'),
           meta.tag
-        ]
-        if (group) {
+        )
+        for (const group of groups) {
           resolved.push(...group)
         }
       } else if (meta.type === 'wire') {
