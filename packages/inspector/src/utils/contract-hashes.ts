@@ -104,7 +104,7 @@ export function buildCurrentContracts(
   const result = new Map<string, ContractEntry>()
 
   for (const [funcId, meta] of Object.entries(functionsMeta)) {
-    if (meta.internal === true) {
+    if (meta.remote === true) {
       continue
     }
 
@@ -271,7 +271,7 @@ export function extractContractsFromMeta(
   const result = new Map<string, ContractEntry>()
 
   for (const [funcId, meta] of Object.entries(functionsMeta)) {
-    if (meta.internal === true || !meta.contractHash) {
+    if (meta.remote === true || !meta.contractHash) {
       continue
     }
 

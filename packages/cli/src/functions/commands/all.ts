@@ -2,7 +2,7 @@ import { existsSync } from 'fs'
 import { pikkuVoidFunc } from '#pikku'
 
 export const all = pikkuVoidFunc({
-  internal: true,
+  remote: true,
   func: async ({ logger, config, getInspectorState }, _data, { rpc }) => {
     const allImports: string[] = []
     let typesDeclarationFileExists = true

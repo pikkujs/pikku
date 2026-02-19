@@ -1,7 +1,7 @@
 import { pikkuVoidFunc } from '#pikku'
 
 export const bootstrap = pikkuVoidFunc({
-  internal: true,
+  remote: true,
   func: async ({ logger, getInspectorState }, _data, { rpc }) => {
     await getInspectorState(false, false, true)
 

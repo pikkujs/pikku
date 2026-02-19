@@ -23,7 +23,7 @@ export const testExternalHello = pikkuSessionlessFunc<
     // Call external package function via RPC namespace
     return await rpc.invoke('ext:hello', data)
   },
-  internal: true,
+  remote: true,
 })
 
 /**
@@ -34,5 +34,5 @@ export const testBrokenRPCCall = pikkuSessionlessFunc<void, void>({
     // @ts-expect-error Testing broken RPC call
     await rpc.invoke('notexisint:hello', data)
   },
-  internal: true,
+  remote: true,
 })

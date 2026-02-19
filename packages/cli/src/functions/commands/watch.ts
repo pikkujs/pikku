@@ -2,7 +2,7 @@ import { pikkuVoidFunc } from '#pikku'
 import chokidar from 'chokidar'
 
 export const watch = pikkuVoidFunc({
-  internal: true,
+  remote: true,
   func: async ({ logger, config }, _data, { rpc }) => {
     const configWatcher = chokidar.watch(config.srcDirectories, {
       ignoreInitial: true,
