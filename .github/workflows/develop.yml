@@ -85,7 +85,7 @@ jobs:
     name: "E2E (${{ matrix.feature }})"
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: build
+    needs: templates
     services:
       postgres:
         image: postgres
@@ -134,7 +134,7 @@ jobs:
     name: Templates
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build
+    needs: verifiers
     services:
       redis:
         image: redis
