@@ -54,6 +54,19 @@ export class WorkflowCancelledException extends Error {
 }
 
 /**
+ * Exception thrown when workflow is suspended
+ */
+export class WorkflowSuspendedException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly reason: string
+  ) {
+    super(reason || 'Workflow suspended')
+    this.name = 'WorkflowSuspendedException'
+  }
+}
+
+/**
  * Error class for workflow not found
  */
 export class WorkflowNotFoundError extends PikkuError {
@@ -583,6 +596,15 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw error
         }
 
+        if (error instanceof WorkflowSuspendedException) {
+          await this.updateRunStatus(runId, 'suspended', undefined, {
+            message: error.message || 'Workflow suspended',
+            stack: '',
+            code: 'WORKFLOW_SUSPENDED',
+          })
+          throw error
+        }
+
         await this.updateRunStatus(runId, 'failed', undefined, {
           message: error.message,
           stack: error.stack,
@@ -738,7 +760,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     } catch (error: any) {
       if (
         error.name === 'WorkflowAsyncException' ||
-        error.name === 'WorkflowCancelledException'
+        error.name === 'WorkflowCancelledException' ||
+        error.name === 'WorkflowSuspendedException'
       ) {
         return
       }
@@ -1036,6 +1059,56 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  private getSuspendStepName(reason: string): string {
+    if (!reason) {
+      return '__workflow_suspend'
+    }
+    return '__workflow_suspend'
+  }
+
+  private async suspendStep(runId: string, reason: string): Promise<void> {
+    const stepName = this.getSuspendStepName(reason)
+    await this.withStepLock(runId, stepName, async () => {
+      let stepState: StepState
+      try {
+        stepState = await this.getStepState(runId, stepName)
+      } catch {
+        stepState = await this.insertStepState(
+          runId,
+          stepName,
+          'pikkuWorkflowSuspend',
+          {
+            reason,
+          }
+        )
+      }
+      if (!stepState.stepId) {
+        stepState = await this.insertStepState(
+          runId,
+          stepName,
+          'pikkuWorkflowSuspend',
+          {
+            reason,
+          }
+        )
+      }
+
+      if (stepState.status === 'succeeded') {
+        return
+      }
+
+      if (stepState.status === 'pending') {
+        await this.setStepRunning(stepState.stepId)
+      }
+
+      await this.setStepResult(stepState.stepId, {
+        reason,
+        suspendedAt: new Date().toISOString(),
+      })
+      throw new WorkflowSuspendedException(runId, reason)
+    })
+  }
+
   private createWorkflowWire(
     name: string,
     runId: string,
@@ -1081,6 +1154,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           stepName,
           getDurationInMilliseconds(duration)
         )
+      },
+
+      suspend: async (reason: string) => {
+        await this.suspendStep(runId, reason || 'Workflow suspended')
       },
     }
     return workflowWire

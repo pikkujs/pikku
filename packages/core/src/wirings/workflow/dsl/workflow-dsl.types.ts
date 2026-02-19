@@ -46,6 +46,11 @@ export type WorkflowWireSleep = (
 ) => Promise<void>
 
 /**
+ * Type signature for workflow.suspend() - used by inspector
+ */
+export type WorkflowWireSuspend = (reason: string) => Promise<void>
+
+/**
  * Input source for step arguments in DSL workflows
  */
 export type InputSource =
@@ -309,4 +314,7 @@ export interface PikkuWorkflowWire {
 
   /** Sleep for a duration */
   sleep: WorkflowWireSleep
+
+  /** Suspend workflow until explicitly resumed */
+  suspend: WorkflowWireSuspend
 }

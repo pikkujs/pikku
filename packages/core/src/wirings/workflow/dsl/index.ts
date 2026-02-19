@@ -8,6 +8,7 @@ export type {
   WorkflowWireDoRPC,
   WorkflowWireDoInline,
   WorkflowWireSleep,
+  WorkflowWireSuspend,
   InputSource,
   OutputBinding,
   RpcStepMeta,

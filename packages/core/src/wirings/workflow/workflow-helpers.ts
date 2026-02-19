@@ -42,7 +42,7 @@ export function workflowStatus<
     data: { runId: string }
   ) => Promise<{
     id: string
-    status: 'running' | 'completed' | 'failed' | 'cancelled'
+    status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
     output?: any
     error?: { message?: string }
   }>

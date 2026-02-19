@@ -42,6 +42,12 @@ export type {
   AIAgentRunnerResult,
   AIAgentRunnerService,
 } from './ai-agent-runner-service.js'
-export type { CreateRunInput, AIRunStateService } from './ai-run-state-service.js'
-export type { CredentialStatus, CredentialMeta } from './typed-secret-service.js'
+export type {
+  CreateRunInput,
+  AIRunStateService,
+} from './ai-run-state-service.js'
+export type {
+  CredentialStatus,
+  CredentialMeta,
+} from './typed-secret-service.js'
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'

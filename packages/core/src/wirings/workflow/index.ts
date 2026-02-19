@@ -4,6 +4,7 @@
 export {
   PikkuWorkflowService,
   WorkflowCancelledException,
+  WorkflowSuspendedException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
 } from './pikku-workflow-service.js'
@@ -53,6 +54,7 @@ export type {
   WorkflowWireDoRPC,
   WorkflowWireDoInline,
   WorkflowWireSleep,
+  WorkflowWireSuspend,
   InputSource,
   OutputBinding,
   RpcStepMeta,
