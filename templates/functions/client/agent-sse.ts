@@ -1,4 +1,7 @@
+import { pikkuFetch } from '../.pikku/pikku-fetch.gen.js'
+
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
+pikkuFetch.setServerUrl(url)
 console.log('Starting agent SSE test with url:', url)
 
 const TIMEOUT = 60000
@@ -8,6 +11,11 @@ const start = Date.now()
 const runId = Math.random().toString(36).slice(2, 8)
 
 async function testStreamAgent() {
+  const loginResult = await pikkuFetch.post('/auth/login', {
+    username: 'demo',
+    password: 'password',
+  })
+
   console.log('\n--- Stream: Ask daily-planner for advice ---')
 
   const params = new URLSearchParams({
@@ -22,6 +30,7 @@ async function testStreamAgent() {
       method: 'GET',
       headers: {
         Accept: 'text/event-stream',
+        Authorization: `Bearer ${loginResult.token}`,
       },
     }
   )

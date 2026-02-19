@@ -1,7 +1,9 @@
 import { pikkuRPC } from '../.pikku/pikku-rpc.gen.js'
+import { pikkuFetch } from '../.pikku/pikku-fetch.gen.js'
 
 const url = process.env.TODO_APP_URL || 'http://localhost:4002'
 pikkuRPC.setServerUrl(url)
+pikkuFetch.setServerUrl(url)
 console.log('Starting agent HTTP test with url:', url)
 
 const TIMEOUT = 60000
@@ -12,6 +14,12 @@ const runId = Math.random().toString(36).slice(2, 8)
 const threadId = `memory-test-${runId}`
 
 async function testRunAgent() {
+  const loginResult = await pikkuFetch.post('/auth/login', {
+    username: 'demo',
+    password: 'password',
+  })
+  pikkuRPC.setAuthorizationJWT(loginResult.token)
+
   console.log('--- Turn 1: Create a todo ---')
   const r1 = await pikkuRPC.agent('todo-assistant', {
     message: 'Create a todo called "Buy milk" with high priority',
