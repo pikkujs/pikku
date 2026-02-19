@@ -1,3 +1,9 @@
+## 0.12.0
+
+### New Features
+
+- `RedisDeploymentService` for Redis-based service discovery with TTL heartbeats
+
 ## 0.11.2
 
 ### Features

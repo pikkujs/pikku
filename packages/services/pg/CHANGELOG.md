@@ -1,3 +1,11 @@
+## 0.12.0
+
+### New Features
+
+- `PgAIStorageService` for AI thread, message, and working memory persistence
+- `PgDeploymentService` for PostgreSQL-based service discovery
+- Workflow version tracking with `upsertWorkflowVersion` / `getWorkflowVersion`
+
 ## 0.11.2
 
 ### Patch Changes

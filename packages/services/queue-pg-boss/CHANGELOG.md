@@ -1,3 +1,9 @@
+## 0.12.0
+
+### New Features
+
+- `setServices()`, `start()`, `stop()` lifecycle methods on scheduler and queue workers
+
 ## 0.11.0
 
 ## 0.11.2
