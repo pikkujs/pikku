@@ -9,5 +9,5 @@ export const triggerTargetHandler = pikkuSessionlessFunc<{ payload: string }>({
     logger.info(`Trigger target received: ${data.payload}`)
     return data
   },
-  internal: true,
+  remote: true,
 })

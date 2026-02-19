@@ -16,7 +16,7 @@ export type PikkuRPC<
 export type RPCMeta = {
   pikkuFuncId: string
   expose: boolean
-  internal?: boolean
+  remote?: boolean
 }
 
 /**

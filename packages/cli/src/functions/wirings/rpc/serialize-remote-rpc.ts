@@ -22,7 +22,7 @@ export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<
   func: async (_services, { rpcName, data }, { rpc }) => {
     return await (rpc.invoke as any)(rpcName, data)
   },
-  internal: true,
+  remote: true,
 })
 
 wireQueueWorker({

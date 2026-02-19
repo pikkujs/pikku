@@ -336,7 +336,7 @@ export const addFunctions: AddWiring = (
   let description: string | undefined
   let errors: string[] | undefined
   let expose: boolean | undefined
-  let internal: boolean | undefined
+  let remote: boolean | undefined
   let requiresApproval: boolean | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
@@ -416,7 +416,7 @@ export const addFunctions: AddWiring = (
     description = metadata.description
     errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
-    internal = getPropertyValue(firstArg, 'internal') as boolean | undefined
+    remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     requiresApproval = getPropertyValue(firstArg, 'requiresApproval') as
       | boolean
       | undefined
@@ -746,7 +746,7 @@ export const addFunctions: AddWiring = (
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
-    internal: internal || undefined,
+    remote: remote || undefined,
     requiresApproval: requiresApproval || undefined,
     version,
     title,
@@ -808,8 +808,7 @@ export const addFunctions: AddWiring = (
       return
     }
 
-    // Mark internal functions as invoked to force bundling
-    if (internal) {
+    if (remote) {
       state.rpc.invokedFunctions.add(pikkuFuncId)
     }
 
@@ -833,7 +832,7 @@ export const addFunctions: AddWiring = (
 
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
-    if (state.rpc.invokedFunctions.has(pikkuFuncId) || expose || internal) {
+    if (state.rpc.invokedFunctions.has(pikkuFuncId) || expose || remote) {
       state.rpc.internalFiles.set(pikkuFuncId, {
         path: node.getSourceFile().fileName,
         exportedName,

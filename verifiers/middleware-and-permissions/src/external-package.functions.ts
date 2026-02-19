@@ -34,5 +34,5 @@ export const testExternalWithAuth = pikkuSessionlessFunc<
     functionLevel: functionPermission,
   },
   tags: ['function'],
-  internal: true,
+  remote: true,
 })

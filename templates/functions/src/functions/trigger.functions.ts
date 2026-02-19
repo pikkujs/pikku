@@ -41,5 +41,5 @@ export const onTestEvent = pikkuSessionlessFunc({
     })
     return data
   },
-  internal: true,
+  remote: true,
 })

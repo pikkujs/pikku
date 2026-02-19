@@ -500,13 +500,13 @@ describe('extractContractsFromMeta', () => {
     assert.strictEqual(result.get('createUser')!.version, 1)
   })
 
-  test('skips internal functions', () => {
+  test('skips remote functions', () => {
     const meta: FunctionsMeta = {
-      internalFunc: {
-        pikkuFuncId: 'internalFunc',
+      remoteFunc: {
+        pikkuFuncId: 'remoteFunc',
         inputSchemaName: null,
         outputSchemaName: null,
-        internal: true,
+        remote: true,
         contractHash: 'shouldskip',
       },
     }
