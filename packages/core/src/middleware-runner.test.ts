@@ -189,6 +189,128 @@ describe('combineMiddleware', () => {
     assert.equal(result[1], middleware2)
   })
 
+  test('should apply parent tag middleware to namespaced tag', () => {
+    const billingMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+
+    addMiddleware('billing', [billingMiddleware])
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'tag', tag: 'billing:read' }],
+    })
+
+    assert.equal(result.length, 1)
+    assert.equal(result[0], billingMiddleware)
+  })
+
+  test('should apply exact tag middleware for non-namespaced tag', () => {
+    const billingMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+
+    addMiddleware('billing', [billingMiddleware])
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'tag', tag: 'billing' }],
+    })
+
+    assert.equal(result.length, 1)
+    assert.equal(result[0], billingMiddleware)
+  })
+
+  test('should apply both exact and parent tag middleware (specific first)', () => {
+    const billingMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+    const billingReadMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+
+    addMiddleware('billing', [billingMiddleware])
+    addMiddleware('billing:read', [billingReadMiddleware])
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'tag', tag: 'billing:read' }],
+    })
+
+    assert.equal(result.length, 2)
+    assert.equal(result[0], billingReadMiddleware)
+    assert.equal(result[1], billingMiddleware)
+  })
+
+  test('should resolve multi-level namespace tags', () => {
+    const billingMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+    const billingReadMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+    const billingReadAdminMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+
+    addMiddleware('billing', [billingMiddleware])
+    addMiddleware('billing:read', [billingReadMiddleware])
+    addMiddleware('billing:read:admin', [billingReadAdminMiddleware])
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireInheritedMiddleware: [{ type: 'tag', tag: 'billing:read:admin' }],
+    })
+
+    assert.equal(result.length, 3)
+    assert.equal(result[0], billingReadAdminMiddleware)
+    assert.equal(result[1], billingReadMiddleware)
+    assert.equal(result[2], billingMiddleware)
+  })
+
+  test('should apply parent tag middleware via funcInheritedMiddleware', () => {
+    const billingMiddleware: CorePikkuMiddleware = async (
+      services,
+      wire,
+      next
+    ) => {
+      await next()
+    }
+
+    addMiddleware('billing', [billingMiddleware])
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      funcInheritedMiddleware: [{ type: 'tag', tag: 'billing:write' }],
+    })
+
+    assert.equal(result.length, 1)
+    assert.equal(result[0], billingMiddleware)
+  })
+
   test('should ignore non-existent tags', () => {
     const middleware: CorePikkuMiddleware = async (services, wire, next) => {
       await next()

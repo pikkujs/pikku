@@ -82,6 +82,85 @@ describe('addPermission', () => {
     assert.equal(permissions[0], mockPermissionGroup)
   })
 
+  test('should apply parent tag permission to namespaced tag via runPermissions', async () => {
+    const billingPermission = async () => true
+
+    addPermission('billing', [billingPermission])
+
+    await runPermissions('rpc', Math.random().toString(), {
+      wireInheritedPermissions: [{ type: 'tag', tag: 'billing:write' }],
+      services: mockServices,
+      wire: {},
+      data: {},
+    })
+  })
+
+  test('should apply both parent and exact tag permissions', async () => {
+    const executionOrder: string[] = []
+    const billingPermission = async () => {
+      executionOrder.push('billing')
+      return true
+    }
+    const billingReadPermission = async () => {
+      executionOrder.push('billing:read')
+      return true
+    }
+
+    addPermission('billing', [billingPermission])
+    addPermission('billing:read', [billingReadPermission])
+
+    await runPermissions('rpc', Math.random().toString(), {
+      wireInheritedPermissions: [{ type: 'tag', tag: 'billing:read' }],
+      services: mockServices,
+      wire: {},
+      data: {},
+    })
+
+    assert.deepEqual(executionOrder, ['billing:read'])
+  })
+
+  test('should resolve multi-level namespace permissions', async () => {
+    const executionOrder: string[] = []
+    const billingPermission = async () => {
+      executionOrder.push('billing')
+      return false
+    }
+    const billingReadPermission = async () => {
+      executionOrder.push('billing:read')
+      return false
+    }
+    const billingReadAdminPermission = async () => {
+      executionOrder.push('billing:read:admin')
+      return true
+    }
+
+    addPermission('billing', [billingPermission])
+    addPermission('billing:read', [billingReadPermission])
+    addPermission('billing:read:admin', [billingReadAdminPermission])
+
+    await runPermissions('rpc', Math.random().toString(), {
+      wireInheritedPermissions: [{ type: 'tag', tag: 'billing:read:admin' }],
+      services: mockServices,
+      wire: {},
+      data: {},
+    })
+
+    assert.deepEqual(executionOrder, ['billing:read:admin'])
+  })
+
+  test('should apply parent tag permission via funcInheritedPermissions', async () => {
+    const billingPermission = async () => true
+
+    addPermission('billing', [billingPermission])
+
+    await runPermissions('rpc', Math.random().toString(), {
+      funcInheritedPermissions: [{ type: 'tag', tag: 'billing:delete' }],
+      services: mockServices,
+      wire: {},
+      data: {},
+    })
+  })
+
   test('should throw error when tag already exists', () => {
     const mockPermission = async () => true
 

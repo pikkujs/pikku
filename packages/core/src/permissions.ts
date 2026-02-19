@@ -10,7 +10,7 @@ import {
 } from './function/functions.types.js'
 import { pikkuState } from './pikku-state.js'
 import { ForbiddenError } from './errors/errors.js'
-import { freezeDedupe } from './utils.js'
+import { freezeDedupe, getTagGroups } from './utils.js'
 
 /**
  * This function validates permissions by iterating over permission groups and executing the corresponding permission functions. If all functions in at least one group return true, the permission is considered valid.
@@ -195,11 +195,11 @@ const combinePermissions = (
           }
         }
       } else if (meta.type === 'tag') {
-        // Look up tag permission group from pikkuState
-        const group = pikkuState(packageName, 'permissions', 'tagGroup')[
+        const groups = getTagGroups(
+          pikkuState(packageName, 'permissions', 'tagGroup'),
           meta.tag
-        ]
-        if (group) {
+        )
+        for (const group of groups) {
           if (Array.isArray(group)) {
             resolved.push(...group)
           } else {
@@ -229,11 +229,11 @@ const combinePermissions = (
   if (funcInheritedPermissions) {
     for (const meta of funcInheritedPermissions) {
       if (meta.type === 'tag') {
-        // Look up tag permission group from pikkuState
-        const group = pikkuState(packageName, 'permissions', 'tagGroup')[
+        const groups = getTagGroups(
+          pikkuState(packageName, 'permissions', 'tagGroup'),
           meta.tag
-        ]
-        if (group) {
+        )
+        for (const group of groups) {
           if (Array.isArray(group)) {
             resolved.push(...group)
           } else {

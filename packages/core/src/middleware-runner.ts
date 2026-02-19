@@ -7,7 +7,7 @@ import {
   MiddlewareMetadata,
 } from './types/core.types.js'
 import { pikkuState } from './pikku-state.js'
-import { freezeDedupe } from './utils.js'
+import { freezeDedupe, getTagGroups } from './utils.js'
 
 /**
  * Runs a chain of middleware functions in sequence before executing the main function.
@@ -181,12 +181,11 @@ export const combineMiddleware = (
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       } else if (meta.type === 'tag') {
-        // Look up tag middleware group from pikkuState
-        const group = pikkuState(packageName, 'middleware', 'tagGroup')[
+        const groups = getTagGroups(
+          pikkuState(packageName, 'middleware', 'tagGroup'),
           meta.tag
-        ]
-        if (group) {
-          // At runtime, all factories should be resolved to middleware
+        )
+        for (const group of groups) {
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       } else if (meta.type === 'wire') {
@@ -208,12 +207,11 @@ export const combineMiddleware = (
   if (funcInheritedMiddleware) {
     for (const meta of funcInheritedMiddleware) {
       if (meta.type === 'tag') {
-        // Look up tag middleware group from pikkuState
-        const group = pikkuState(packageName, 'middleware', 'tagGroup')[
+        const groups = getTagGroups(
+          pikkuState(packageName, 'middleware', 'tagGroup'),
           meta.tag
-        ]
-        if (group) {
-          // At runtime, all factories should be resolved to middleware
+        )
+        for (const group of groups) {
           resolved.push(...(group as CorePikkuMiddleware[]))
         }
       }
