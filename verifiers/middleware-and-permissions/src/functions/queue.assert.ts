@@ -1,4 +1,5 @@
 import { runQueueJob } from '@pikku/core'
+import { createRunFunction } from '@pikku/core/function'
 import { assertMiddlewareAndPermissions } from '../assert-combined.js'
 import type { ExpectedEvent } from '../assert-combined.js'
 
@@ -12,13 +13,17 @@ export async function testQueueWiring(
 ): Promise<boolean> {
   console.log('\n\nTest: Run Queue Job')
   console.log('─────────────────────────')
+  const runFunction = createRunFunction({
+    singletonServices,
+    createWireServices,
+  })
 
   const passed = await assertMiddlewareAndPermissions(
     expected,
     async () => {
       await runQueueJob({
-        singletonServices,
-        createWireServices,
+        runFunction,
+        logger: singletonServices.logger,
         job: {
           id: 'test-job-1',
           queueName: 'test-queue',

@@ -1,5 +1,6 @@
 import { ScheduledHandler, SQSHandler } from 'aws-lambda'
 import { runScheduledTask } from '@pikku/core/scheduler'
+import { createRunFunction } from '@pikku/core/function'
 import { APIGatewayProxyEvent } from 'aws-lambda'
 import { runFetch } from '@pikku/lambda/http'
 import { runSQSQueueWorker } from '@pikku/lambda/queue'
@@ -16,9 +17,14 @@ export const httpRoute = async (event: APIGatewayProxyEvent) => {
 
 export const myScheduledTask: ScheduledHandler = async () => {
   const singletonServices = await coldStart()
+  const runFunction = createRunFunction({
+    singletonServices,
+    createWireServices,
+  })
   await runScheduledTask({
     name: 'myScheduledTask',
-    singletonServices,
+    runFunction,
+    logger: singletonServices.logger,
   })
 }
 
