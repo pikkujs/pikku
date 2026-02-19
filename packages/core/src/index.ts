@@ -71,6 +71,22 @@ export {
   resetPikkuState,
   addPackageServiceFactories,
 } from './pikku-state.js'
+export { runPikkuFunc } from './function/function-runner.js'
+export { runCLICommand, pikkuCLIRender } from './wirings/cli/cli-runner.js'
+export { fetch } from './wirings/http/http-runner.js'
+export {
+  runMCPTool,
+  runMCPResource,
+  runMCPPrompt,
+} from './wirings/mcp/mcp-runner.js'
+export type {
+  MCPToolResponse,
+  MCPResourceResponse,
+  MCPPromptResponse,
+} from './wirings/mcp/mcp.types.js'
+export { runQueueJob } from './wirings/queue/queue-runner.js'
+export { runScheduledTask } from './wirings/scheduler/scheduler-runner.js'
+export { NotFoundError } from './errors/errors.js'
 export type { EventHubService } from './wirings/channel/eventhub-service.js'
 export type { QueueService } from './wirings/queue/queue.types.js'
 export type { JWTService } from './services/jwt-service.js'
