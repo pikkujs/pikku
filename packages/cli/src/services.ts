@@ -278,6 +278,7 @@ export const createSingletonServices: CreateSingletonServices<
           singletonServicesFactoryType: config.singletonServicesFactoryType,
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
+        tags: config.tags,
         externalPackages: config.externalPackages,
         schemaConfig: !setupOnly
           ? {
