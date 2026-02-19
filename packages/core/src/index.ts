@@ -91,9 +91,7 @@ export type { EventHubService } from './wirings/channel/eventhub-service.js'
 export type { QueueService } from './wirings/queue/queue.types.js'
 export type { JWTService } from './services/jwt-service.js'
 export type { HTTPMethod } from './wirings/http/http.types.js'
-export type {
-  GraphNodeConfig,
-} from './wirings/workflow/graph/workflow-graph.types.js'
+export type { GraphNodeConfig } from './wirings/workflow/graph/workflow-graph.types.js'
 export { createGraph } from './wirings/workflow/graph/graph-node.js'
 export { workflow as wireWorkflow } from './wirings/workflow/workflow-helpers.js'
 export type { PikkuPackageState } from './types/state.types.js'
