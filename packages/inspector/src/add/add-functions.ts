@@ -291,7 +291,13 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
  * Inspect pikkuFunc calls, extract input/output and first-arg destructuring,
  * then push into state.functions.meta.
  */
-export const addFunctions: AddWiring = (logger, node, checker, state) => {
+export const addFunctions: AddWiring = (
+  logger,
+  node,
+  checker,
+  state,
+  options
+) => {
   if (!ts.isCallExpression(node)) return
 
   const { expression, arguments: args, typeArguments } = node
@@ -686,14 +692,44 @@ export const addFunctions: AddWiring = (logger, node, checker, state) => {
   }
 
   // --- resolve middleware ---
-  const middleware = objectNode
+  let middleware = objectNode
     ? resolveMiddleware(state, objectNode, tags, checker)
     : undefined
 
   // --- resolve permissions ---
-  const permissions = objectNode
+  let permissions = objectNode
     ? resolvePermissions(state, objectNode, tags, checker)
     : undefined
+
+  if (options.tags?.length) {
+    tags = [...new Set([...(tags || []), ...options.tags])]
+    const tagEntries = options.tags.map((tag) => ({
+      type: 'tag' as const,
+      tag,
+    }))
+    const existingMiddlewareTags = new Set(
+      (middleware || [])
+        .filter((m) => m.type === 'tag')
+        .map((m) => (m as any).tag)
+    )
+    const newMiddleware = tagEntries.filter(
+      (e) => !existingMiddlewareTags.has(e.tag)
+    )
+    if (newMiddleware.length > 0) {
+      middleware = [...(middleware || []), ...newMiddleware]
+    }
+    const existingPermissionTags = new Set(
+      (permissions || [])
+        .filter((p) => p.type === 'tag')
+        .map((p) => (p as any).tag)
+    )
+    const newPermissions = tagEntries.filter(
+      (e) => !existingPermissionTags.has(e.tag)
+    )
+    if (newPermissions.length > 0) {
+      permissions = [...(permissions || []), ...newPermissions]
+    }
+  }
 
   const sessionless = expression.text !== 'pikkuFunc'
 

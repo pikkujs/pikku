@@ -190,6 +190,7 @@ export type InspectorOptions = Partial<{
   openAPI: {
     additionalInfo: OpenAPISpecInfo
   }
+  tags: string[]
   manifest: VersionManifest
 }>
 
