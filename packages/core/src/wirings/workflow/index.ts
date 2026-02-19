@@ -36,6 +36,7 @@ export type {
   StepStatus,
   WorkflowRun,
   StepState,
+  WorkflowRunService,
   CoreWorkflow,
   PikkuWorkflow,
   ContextVariable,

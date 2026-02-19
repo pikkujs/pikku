@@ -6,6 +6,7 @@ import {
   type WorkflowStatus,
 } from '@pikku/core/workflow'
 import postgres from 'postgres'
+import { PgWorkflowRunService } from './pg-workflow-run-service.js'
 
 /**
  * PostgreSQL-based implementation of WorkflowStateService
@@ -24,6 +25,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
   private schemaName: string
   private initialized = false
   private ownsConnection: boolean
+  private runService: PgWorkflowRunService
 
   /**
    * @param connectionOrConfig - postgres.Sql connection instance or postgres.Options config
@@ -46,6 +48,8 @@ export class PgWorkflowService extends PikkuWorkflowService {
       this.sql = postgres(connectionOrConfig)
       this.ownsConnection = true
     }
+
+    this.runService = new PgWorkflowRunService(this.sql, this.schemaName)
   }
 
   /**
@@ -164,30 +168,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
   }
 
   async getRun(id: string): Promise<WorkflowRun | null> {
-    const result = await this.sql.unsafe(
-      `SELECT workflow_run_id, workflow, status, input, output, error, inline, graph_hash, created_at, updated_at
-      FROM ${this.schemaName}.workflow_runs
-      WHERE workflow_run_id = $1`,
-      [id]
-    )
-
-    if (result.length === 0) {
-      return null
-    }
-
-    const row = result[0]!
-    return {
-      id: row.workflow_run_id as string,
-      workflow: row.workflow as string,
-      status: row.status as WorkflowStatus,
-      input: row.input,
-      output: row.output,
-      error: row.error,
-      inline: row.inline as boolean | undefined,
-      graphHash: row.graph_hash as string | undefined,
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
-    }
+    return this.runService.getRun(id)
   }
 
   async updateRunStatus(
@@ -287,52 +268,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
   async getRunHistory(
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {
-    // Query from history table to get all attempts for each step in chronological order
-    const result = await this.sql.unsafe(
-      `SELECT
-        s.workflow_step_id,
-        s.step_name,
-        s.retries,
-        s.retry_delay,
-        h.status,
-        h.result,
-        h.error,
-        h.created_at,
-        h.running_at,
-        h.scheduled_at,
-        h.succeeded_at,
-        h.failed_at,
-        ROW_NUMBER() OVER (PARTITION BY s.workflow_step_id ORDER BY h.created_at ASC) as attempt_count
-      FROM ${this.schemaName}.workflow_step s
-      INNER JOIN ${this.schemaName}.workflow_step_history h
-        ON s.workflow_step_id = h.workflow_step_id
-      WHERE s.workflow_run_id = $1
-      ORDER BY h.created_at ASC`,
-      [runId]
-    )
-
-    return result.map((row) => ({
-      stepId: row.workflow_step_id as string,
-      stepName: row.step_name as string,
-      status: row.status as any,
-      result: row.result,
-      error: row.error,
-      attemptCount: Number(row.attempt_count),
-      retries: row.retries ? Number(row.retries) : undefined,
-      retryDelay: row.retry_delay ? String(row.retry_delay) : undefined,
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.created_at as string),
-      runningAt: row.running_at
-        ? new Date(row.running_at as string)
-        : undefined,
-      scheduledAt: row.scheduled_at
-        ? new Date(row.scheduled_at as string)
-        : undefined,
-      succeededAt: row.succeeded_at
-        ? new Date(row.succeeded_at as string)
-        : undefined,
-      failedAt: row.failed_at ? new Date(row.failed_at as string) : undefined,
-    }))
+    return this.runService.getRunHistory(runId)
   }
 
   async setStepRunning(stepId: string): Promise<void> {
@@ -686,17 +622,7 @@ export class PgWorkflowService extends PikkuWorkflowService {
     name: string,
     graphHash: string
   ): Promise<{ graph: any; source: string } | null> {
-    const result = await this.sql.unsafe(
-      `SELECT graph, source
-       FROM ${this.schemaName}.workflow_versions
-       WHERE workflow_name = $1 AND graph_hash = $2`,
-      [name, graphHash]
-    )
-    if (result.length === 0) return null
-    return {
-      graph: result[0]!.graph,
-      source: result[0]!.source as string,
-    }
+    return this.runService.getWorkflowVersion(name, graphHash)
   }
 
   async close(): Promise<void> {

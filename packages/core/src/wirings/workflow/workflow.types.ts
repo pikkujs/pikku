@@ -123,6 +123,30 @@ export interface StepState {
   failedAt?: Date
 }
 
+export interface WorkflowRunService {
+  listRuns(options?: {
+    workflowName?: string
+    status?: string
+    limit?: number
+    offset?: number
+  }): Promise<WorkflowRun[]>
+  getRun(id: string): Promise<WorkflowRun | null>
+  getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  >
+  getRunHistory(
+    runId: string
+  ): Promise<Array<StepState & { stepName: string }>>
+  getDistinctWorkflowNames(): Promise<string[]>
+  getWorkflowVersion(
+    name: string,
+    graphHash: string
+  ): Promise<{ graph: any; source: string } | null>
+  deleteRun(id: string): Promise<boolean>
+}
+
 /**
  * Core workflow definition
  */
