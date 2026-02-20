@@ -224,8 +224,14 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       id: row.id as string,
       role: row.role as AIMessage['role'],
       content: row.content as string | undefined,
-      toolCalls: row.tool_calls as AIMessage['toolCalls'],
-      toolResults: row.tool_results as AIMessage['toolResults'],
+      toolCalls:
+        typeof row.tool_calls === 'string'
+          ? JSON.parse(row.tool_calls)
+          : (row.tool_calls as AIMessage['toolCalls']),
+      toolResults:
+        typeof row.tool_results === 'string'
+          ? JSON.parse(row.tool_results)
+          : (row.tool_results as AIMessage['toolResults']),
       createdAt: new Date(row.created_at as string),
     }))
 

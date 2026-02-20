@@ -36,7 +36,9 @@ export class CFWorkerSchemaService implements SchemaService {
         json,
         result.errors
       )
-      throw new UnprocessableContentError(result.errors.join(', '))
+      throw new UnprocessableContentError(
+        result.errors.map((e) => e.error || JSON.stringify(e)).join(', ')
+      )
     }
   }
 

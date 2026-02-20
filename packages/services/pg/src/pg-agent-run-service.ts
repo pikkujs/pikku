@@ -73,8 +73,14 @@ export class PgAgentRunService implements AgentRunService {
       id: row.id as string,
       role: row.role as AIMessage['role'],
       content: row.content as string | undefined,
-      toolCalls: row.tool_calls,
-      toolResults: row.tool_results,
+      toolCalls:
+        typeof row.tool_calls === 'string'
+          ? JSON.parse(row.tool_calls)
+          : row.tool_calls,
+      toolResults:
+        typeof row.tool_results === 'string'
+          ? JSON.parse(row.tool_results)
+          : row.tool_results,
       createdAt: new Date(row.created_at as string),
     }))
   }
