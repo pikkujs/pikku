@@ -213,18 +213,8 @@ function resolveIdentifierToAgentName(
       ts.isIdentifier(decl.initializer.expression) &&
       decl.initializer.expression.text === 'pikkuAIAgent'
     ) {
-      const firstArg = decl.initializer.arguments[0]
-      if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-        for (const prop of firstArg.properties) {
-          if (
-            ts.isPropertyAssignment(prop) &&
-            ts.isIdentifier(prop.name) &&
-            prop.name.text === 'name' &&
-            ts.isStringLiteral(prop.initializer)
-          ) {
-            return prop.initializer.text
-          }
-        }
+      if (ts.isIdentifier(decl.name)) {
+        return decl.name.text
       }
     }
   }
@@ -296,6 +286,8 @@ export const addAIAgent: AddWiring = (
       return
     }
 
+    const agentKey = exportedName || nameValue
+
     if (!description) {
       logger.critical(
         ErrorCode.MISSING_DESCRIPTION,
@@ -352,7 +344,7 @@ export const addAIAgent: AddWiring = (
     let inputSchema: string | null = null
     let outputSchema: string | null = null
     let workingMemorySchema: string | null = null
-    const capitalizedName = funcIdToTypeName(nameValue)
+    const capitalizedName = funcIdToTypeName(agentKey)
 
     for (const prop of obj.properties) {
       if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
@@ -420,7 +412,7 @@ export const addAIAgent: AddWiring = (
     const aiMiddleware = resolveAIMiddleware(state, obj, checker)
     const permissions = resolvePermissions(state, obj, tags, checker)
 
-    state.serviceAggregation.usedFunctions.add(nameValue)
+    state.serviceAggregation.usedFunctions.add(agentKey)
     extractWireNames(middleware).forEach((name) =>
       state.serviceAggregation.usedMiddleware.add(name)
     )
@@ -429,13 +421,13 @@ export const addAIAgent: AddWiring = (
     )
 
     if (exportedName) {
-      state.agents.files.set(nameValue, {
+      state.agents.files.set(agentKey, {
         path: node.getSourceFile().fileName,
         exportedName,
       })
     }
 
-    state.agents.agentsMeta[nameValue] = {
+    state.agents.agentsMeta[agentKey] = {
       name: nameValue,
       description,
       instructions: instructionsValue || '',

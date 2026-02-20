@@ -2,28 +2,38 @@ import { HttpResponse } from 'uWebSockets.js'
 
 export async function sendPikkuResponseToUWS(
   response: Response,
-  uwsResponse: HttpResponse
+  uwsResponse: HttpResponse,
+  isAborted?: () => boolean
 ): Promise<void> {
-  // Use uWS's cork() to batch the writes (status and headers)
   uwsResponse.cork(() => {
-    // Set the status (as a string)
     uwsResponse.writeStatus(response.status.toString())
-
-    // Write each header to the uWS response
     response.headers.forEach((value, key) => {
       uwsResponse.writeHeader(key, value)
     })
   })
 
-  // Retrieve the full body as an ArrayBuffer
-  const arrayBuffer = await response.arrayBuffer()
-
-  // If there is a body, convert it to a Buffer and write it
-  if (arrayBuffer.byteLength > 0) {
-    const buffer = Buffer.from(arrayBuffer)
-    uwsResponse.write(buffer)
+  if (response.body) {
+    const reader = response.body.getReader()
+    try {
+      while (true) {
+        if (isAborted?.()) {
+          await reader.cancel()
+          return
+        }
+        const { done, value } = await reader.read()
+        if (done) break
+        if (isAborted?.()) {
+          await reader.cancel()
+          return
+        }
+        uwsResponse.cork(() => {
+          uwsResponse.write(value)
+        })
+      }
+    } catch {
+      return
+    }
   }
 
-  // End the uWS response
   uwsResponse.endWithoutBody()
 }

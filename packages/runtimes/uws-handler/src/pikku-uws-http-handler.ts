@@ -60,7 +60,7 @@ export const pikkuHTTPHandler = ({
         createWireServices,
       })
       if (!aborted) {
-        await sendPikkuResponseToUWS(response, res)
+        await sendPikkuResponseToUWS(response, res, () => aborted)
       }
     }
 

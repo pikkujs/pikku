@@ -5,25 +5,40 @@ export function convertToSDKMessages(messages: AIMessage[]): CoreMessage[] {
   return messages.map(convertToSDKMessage)
 }
 
+function parseIfString<T>(value: T | string | null | undefined): T | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return undefined
+    }
+  }
+  return value as T
+}
+
 function convertToSDKMessage(msg: AIMessage): CoreMessage {
+  const toolCalls = parseIfString(msg.toolCalls)
+  const toolResults = parseIfString(msg.toolResults)
+
   switch (msg.role) {
     case 'system':
       return { role: 'system', content: msg.content ?? '' }
     case 'user':
       return { role: 'user', content: msg.content ?? '' }
     case 'assistant':
-      if (msg.toolCalls?.length) {
+      if (Array.isArray(toolCalls) && toolCalls.length > 0) {
         return {
           role: 'assistant',
           content: [
             ...(msg.content
               ? [{ type: 'text' as const, text: msg.content }]
               : []),
-            ...msg.toolCalls.map((tc) => ({
+            ...toolCalls.map((tc) => ({
               type: 'tool-call' as const,
               toolCallId: tc.id,
               toolName: tc.name,
-              args: tc.args,
+              args: typeof tc.args === 'string' ? JSON.parse(tc.args) : tc.args,
             })),
           ],
         }
@@ -32,13 +47,17 @@ function convertToSDKMessage(msg: AIMessage): CoreMessage {
     case 'tool':
       return {
         role: 'tool',
-        content:
-          msg.toolResults?.map((tr) => ({
-            type: 'tool-result' as const,
-            toolCallId: tr.id,
-            toolName: tr.name,
-            result: tr.result,
-          })) ?? [],
+        content: Array.isArray(toolResults)
+          ? toolResults.map((tr) => ({
+              type: 'tool-result' as const,
+              toolCallId: tr.id,
+              toolName: tr.name,
+              result:
+                typeof tr.result === 'string'
+                  ? JSON.parse(tr.result)
+                  : tr.result,
+            }))
+          : [],
       }
   }
 }
