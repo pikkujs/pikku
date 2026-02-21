@@ -7,6 +7,7 @@ import {
 
 export type AIAgentRunnerParams = {
   model: string
+  temperature?: number
   instructions: string
   messages: AIMessage[]
   tools: AIAgentToolDef[]

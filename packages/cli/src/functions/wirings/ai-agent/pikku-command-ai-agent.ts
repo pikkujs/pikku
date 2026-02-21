@@ -96,13 +96,27 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
       : `import metaData from '${jsonImportPath}'`
 
+    const modelConfigLines: string[] = []
+    if (
+      !externalPackageName &&
+      (config.models || config.agentDefaults || config.agentOverrides)
+    ) {
+      modelConfigLines.push(
+        `\npikkuState(null, 'models', 'config', ${JSON.stringify({
+          models: config.models,
+          agentDefaults: config.agentDefaults,
+          agentOverrides: config.agentOverrides,
+        })} as any)`
+      )
+    }
+
     await writeFileInDir(
       logger,
       agentWiringMetaFile,
       `import { pikkuState } from '@pikku/core'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 ${importStatement}
-pikkuState(${externalPackageName ? `'${externalPackageName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)`
+pikkuState(${externalPackageName ? `'${externalPackageName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)${modelConfigLines.join('')}`
     )
 
     await writeFileInDir(

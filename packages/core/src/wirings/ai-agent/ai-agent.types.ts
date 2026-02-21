@@ -117,6 +117,7 @@ export type CoreAIAgent<
   errors?: string[]
   instructions: string | string[]
   model: string
+  temperature?: number
   tools?: unknown[]
   agents?: unknown[]
   memory?: AIAgentMemoryConfig

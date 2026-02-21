@@ -61,6 +61,10 @@ export enum ErrorCode {
   VERSION_GAP_NOT_ALLOWED = 'PKU864',
   MANIFEST_INTEGRITY_ERROR = 'PKU865',
 
+  // Model configuration errors
+  MISSING_MODEL = 'PKU145',
+  INVALID_MODEL = 'PKU146',
+
   // Feature Flag
   WORKFLOW_MULTI_QUEUE_NOT_SUPPORTED = 'PKU901',
 }

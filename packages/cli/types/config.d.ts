@@ -147,6 +147,16 @@ export type PikkuCLIInput = {
   externalPackage?: boolean
   externalPackageName?: string
 
+  models?: Record<
+    string,
+    string | { model: string; temperature?: number; maxSteps?: number }
+  >
+  agentDefaults?: { temperature?: number; maxSteps?: number }
+  agentOverrides?: Record<
+    string,
+    { model?: string; temperature?: number; maxSteps?: number }
+  >
+
   configDir: string
   tsconfig: string
 
@@ -260,6 +270,16 @@ export type PikkuCLIConfig = {
   >
   externalPackage?: boolean
   externalPackageName?: string
+
+  models?: Record<
+    string,
+    string | { model: string; temperature?: number; maxSteps?: number }
+  >
+  agentDefaults?: { temperature?: number; maxSteps?: number }
+  agentOverrides?: Record<
+    string,
+    { model?: string; temperature?: number; maxSteps?: number }
+  >
 
   configFile?: string
   tags?: string[]
