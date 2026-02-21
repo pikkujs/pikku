@@ -1,5 +1,4 @@
 import type {
-  AIMessage,
   AIStreamChannel,
   AIStreamEvent,
   PikkuAIMiddlewareHooks,
@@ -24,11 +23,7 @@ import {
   type StreamContext,
 } from './ai-agent-prepare.js'
 
-type PersistingChannel = AIStreamChannel & {
-  fullText: string
-  queueMessage: (msg: AIMessage) => void
-  flush: () => Promise<void>
-}
+type PersistingChannel = AIStreamChannel & { fullText: string }
 
 function createPersistingChannel(
   parent: AIStreamChannel,
@@ -36,9 +31,6 @@ function createPersistingChannel(
   threadId: string
 ): PersistingChannel {
   let fullText = ''
-  const pendingMessages: AIMessage[] = []
-  let seqOffset = 0
-
   const channel: PersistingChannel = {
     channelId: parent.channelId,
     openingData: parent.openingData,
@@ -49,15 +41,6 @@ function createPersistingChannel(
       return fullText
     },
     close: () => parent.close(),
-    queueMessage: (msg: AIMessage) => {
-      pendingMessages.push(msg)
-    },
-    flush: async () => {
-      if (storage && pendingMessages.length > 0) {
-        await storage.saveMessages(threadId, pendingMessages)
-        pendingMessages.length = 0
-      }
-    },
     send: (event: AIStreamEvent) => {
       if (storage) {
         switch (event.type) {
@@ -65,44 +48,50 @@ function createPersistingChannel(
             fullText += event.text
             break
           case 'tool-call':
-            pendingMessages.push({
-              id: randomUUID(),
-              role: 'assistant',
-              toolCalls: [
-                {
-                  id: event.toolCallId,
-                  name: event.toolName,
-                  args: event.args as Record<string, unknown>,
-                },
-              ],
-              createdAt: new Date(Date.now() + seqOffset++),
-            })
+            storage.saveMessages(threadId, [
+              {
+                id: randomUUID(),
+                role: 'assistant',
+                toolCalls: [
+                  {
+                    id: randomUUID(),
+                    name: event.toolName,
+                    args: event.args as Record<string, unknown>,
+                  },
+                ],
+                createdAt: new Date(),
+              },
+            ])
             break
           case 'tool-result':
-            pendingMessages.push({
-              id: randomUUID(),
-              role: 'tool',
-              toolResults: [
-                {
-                  id: event.toolCallId,
-                  name: event.toolName,
-                  result:
-                    typeof event.result === 'string'
-                      ? event.result
-                      : JSON.stringify(event.result),
-                },
-              ],
-              createdAt: new Date(Date.now() + seqOffset++),
-            })
+            storage.saveMessages(threadId, [
+              {
+                id: randomUUID(),
+                role: 'tool',
+                toolResults: [
+                  {
+                    id: randomUUID(),
+                    name: event.toolName,
+                    result:
+                      typeof event.result === 'string'
+                        ? event.result
+                        : JSON.stringify(event.result),
+                  },
+                ],
+                createdAt: new Date(),
+              },
+            ])
             break
           case 'done':
             if (fullText) {
-              pendingMessages.push({
-                id: randomUUID(),
-                role: 'assistant',
-                content: fullText,
-                createdAt: new Date(Date.now() + seqOffset++),
-              })
+              storage.saveMessages(threadId, [
+                {
+                  id: randomUUID(),
+                  role: 'assistant',
+                  content: fullText,
+                  createdAt: new Date(),
+                },
+              ])
             }
             break
         }
@@ -239,7 +228,6 @@ export async function streamAIAgent(
 
   try {
     await agentRunner.stream(runnerParams, persistingChannel)
-    await persistingChannel.flush()
 
     let outputText = persistingChannel.fullText
     let outputMessages = runnerParams.messages
@@ -285,22 +273,6 @@ export async function streamAIAgent(
     }
   } catch (err) {
     if (err instanceof ToolApprovalRequired) {
-      persistingChannel.queueMessage({
-        id: randomUUID(),
-        role: 'tool',
-        toolResults: [
-          {
-            id: err.toolCallId,
-            name: err.toolName,
-            result: JSON.stringify({
-              status: 'approval_required',
-              reason: err.reason,
-            }),
-          },
-        ],
-        createdAt: new Date(Date.now() + 999),
-      })
-      await persistingChannel.flush()
       if (aiRunState) {
         await aiRunState.updateRun(runId, {
           status: 'suspended',
@@ -319,14 +291,11 @@ export async function streamAIAgent(
         id: err.toolCallId,
         toolName: err.toolName,
         args: err.args,
-        reason: err.reason,
       })
       channel.send({ type: 'done' })
-      channel.close()
       return
     }
 
-    await persistingChannel.flush()
     if (aiRunState) {
       await aiRunState.updateRun(runId, { status: 'failed' })
     }
@@ -335,6 +304,5 @@ export async function streamAIAgent(
       message: err instanceof Error ? err.message : String(err),
     })
     channel.send({ type: 'done' })
-    channel.close()
   }
 }
