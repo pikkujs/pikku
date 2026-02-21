@@ -45,12 +45,19 @@ export class ToolApprovalRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string
   public readonly args: unknown
+  public readonly reason?: string
 
-  constructor(toolCallId: string, toolName: string, args: unknown) {
+  constructor(
+    toolCallId: string,
+    toolName: string,
+    args: unknown,
+    reason?: string
+  ) {
     super(`Tool '${toolName}' requires approval`)
     this.toolCallId = toolCallId
     this.toolName = toolName
     this.args = args
+    this.reason = reason
   }
 }
 
@@ -189,17 +196,31 @@ export function buildToolDefs(
         approvalPolicy === 'all' ||
         (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
 
+      if (needsApproval) {
+        inputSchema = {
+          ...inputSchema,
+          properties: {
+            ...((inputSchema.properties as Record<string, unknown>) || {}),
+            toolApprovalReason: {
+              type: 'string',
+              description: 'Brief explanation of why this action is needed',
+            },
+          },
+        }
+      }
+
       tools.push({
         name: pikkuFuncId,
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema,
         execute: async (toolInput: unknown) => {
           if (needsApproval) {
+            const { toolApprovalReason, ...cleanArgs } = toolInput as any
             return {
               __approvalRequired: true,
-              toolCallId: randomUUID(),
               toolName: pikkuFuncId,
-              args: toolInput,
+              args: cleanArgs,
+              reason: toolApprovalReason,
             }
           }
           const wire: PikkuWire = params.sessionService

@@ -149,7 +149,9 @@ describe('streamAIAgent', () => {
         id: 'tool-call-1',
         toolName: 'tool-x',
         args: { id: 1 },
+        reason: undefined,
       },
+      { type: 'done' },
     ])
   })
 })
