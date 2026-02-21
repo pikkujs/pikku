@@ -150,7 +150,8 @@ export function buildToolDefs(
 ): { tools: AIAgentToolDef[]; missingRpcs: string[] } {
   const tools: AIAgentToolDef[] = []
   const missingRpcs: string[] = []
-  const approvalPolicy = streamContext?.options?.requiresToolApproval ?? false
+  const approvalPolicy =
+    streamContext?.options?.requiresToolApproval ?? 'explicit'
 
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
   if (!meta) return { tools, missingRpcs }
@@ -172,7 +173,17 @@ export function buildToolDefs(
 
       const fnMeta = functionMeta[pikkuFuncId]
       const inputSchemaName = fnMeta?.inputSchemaName
-      const inputSchema = inputSchemaName ? schemas.get(inputSchemaName) : {}
+      let inputSchema = inputSchemaName
+        ? schemas.get(inputSchemaName)
+        : undefined
+      if (
+        !inputSchema ||
+        (typeof inputSchema === 'object' &&
+          inputSchema.type === 'object' &&
+          !inputSchema.properties)
+      ) {
+        inputSchema = { type: 'object', properties: {} }
+      }
 
       const needsApproval =
         approvalPolicy === 'all' ||
@@ -181,10 +192,15 @@ export function buildToolDefs(
       tools.push({
         name: pikkuFuncId,
         description: fnMeta?.description || fnMeta?.title || toolName,
-        inputSchema: inputSchema || {},
+        inputSchema,
         execute: async (toolInput: unknown) => {
           if (needsApproval) {
-            throw new ToolApprovalRequired(randomUUID(), pikkuFuncId, toolInput)
+            return {
+              __approvalRequired: true,
+              toolCallId: randomUUID(),
+              toolName: pikkuFuncId,
+              args: toolInput,
+            }
           }
           const wire: PikkuWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
