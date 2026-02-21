@@ -202,11 +202,13 @@ export function trimMessages(
   messages: AIMessage[],
   maxTokenBudget: number = 100000
 ): AIMessage[] {
+  const sanitized = sanitizeToolMessages(messages)
+
   let estimatedTokens = 0
   const result: AIMessage[] = []
 
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
+  for (let i = sanitized.length - 1; i >= 0; i--) {
+    const msg = sanitized[i]
     const msgTokens = estimateTokens(msg)
     if (estimatedTokens + msgTokens > maxTokenBudget && result.length > 0) {
       break
@@ -229,6 +231,48 @@ export function trimMessages(
   }
 
   return result
+}
+
+function sanitizeToolMessages(messages: AIMessage[]): AIMessage[] {
+  const result: AIMessage[] = []
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i]
+
+    if (msg.role === 'assistant' && msg.toolCalls?.length) {
+      const next = messages[i + 1]
+      if (!next || next.role !== 'tool' || !next.toolResults?.length) {
+        if (msg.content) {
+          result.push({ ...msg, toolCalls: undefined })
+        }
+        continue
+      }
+
+      const toolCallIds = new Set(msg.toolCalls.map((tc) => tc.id))
+      const resultIds = new Set(next.toolResults.map((tr) => tr.id))
+      const allMatched = [...toolCallIds].every((id) => resultIds.has(id))
+
+      if (!allMatched) {
+        if (msg.content) {
+          result.push({ ...msg, toolCalls: undefined })
+        }
+        result.push({
+          ...next,
+          toolResults:
+            next.toolResults.filter((tr) => !toolCallIds.has(tr.id)) ||
+            undefined,
+        })
+        i++
+        continue
+      }
+    }
+
+    result.push(msg)
+  }
+
+  return result.filter(
+    (m) => m.role !== 'tool' || (m.toolResults && m.toolResults.length > 0)
+  )
 }
 
 function estimateTokens(msg: AIMessage): number {

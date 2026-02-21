@@ -63,6 +63,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     const { provider: providerName, modelName } = this.parseModel(params.model)
     const provider = this.getProvider(providerName)
     const sdkModel = provider(modelName)
+    let approval: ToolApprovalRequired | null = null
+    const abortController = new AbortController()
     const aiTools = this.buildTools(params)
     const messages = convertToSDKMessages(params.messages)
 
@@ -73,6 +75,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       tools: aiTools,
       maxSteps: params.maxSteps,
       toolChoice: params.toolChoice,
+      abortSignal: abortController.signal,
       ...(params.outputSchema
         ? {
             output: Output.object({
@@ -82,9 +85,9 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         : {}),
     })
 
-    let rethrow: unknown = null
     try {
       for await (const part of result.fullStream) {
+        if (approval) break
         switch (part.type) {
           case 'text-delta':
             channel.send({ type: 'text-delta', text: part.textDelta })
@@ -95,6 +98,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
           case 'tool-call':
             channel.send({
               type: 'tool-call',
+              toolCallId: part.toolCallId,
               toolName: part.toolName,
               args: part.args,
             })
@@ -103,22 +107,25 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             if (
               part.result &&
               typeof part.result === 'object' &&
-              '__approvalRequired' in part.result
+              '__approvalRequired' in (part.result as object)
             ) {
               const r = part.result as unknown as {
-                toolCallId: string
                 toolName: string
                 args: unknown
+                reason?: string
               }
-              rethrow = new ToolApprovalRequired(
-                r.toolCallId,
+              approval = new ToolApprovalRequired(
+                part.toolCallId,
                 r.toolName,
-                r.args
+                r.args,
+                r.reason
               )
-              return
+              abortController.abort()
+              break
             }
             channel.send({
               type: 'tool-result',
+              toolCallId: part.toolCallId,
               toolName: part.toolName,
               result: part.result,
             })
@@ -134,40 +141,25 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             })
             break
           case 'error':
-            if (
-              part.error &&
-              typeof part.error === 'object' &&
-              'toolCallId' in part.error
-            ) {
-              rethrow = part.error
-              return
+            if (!approval) {
+              channel.send({
+                type: 'error',
+                message:
+                  part.error instanceof Error
+                    ? part.error.message
+                    : String(part.error),
+              })
             }
-            channel.send({
-              type: 'error',
-              message:
-                part.error instanceof Error
-                  ? part.error.message
-                  : String(part.error),
-            })
             break
         }
       }
-    } catch (err) {
-      if (err && typeof err === 'object' && 'toolCallId' in err) {
-        rethrow = err
-        return
-      }
-      channel.send({
-        type: 'error',
-        message: err instanceof Error ? err.message : String(err),
-      })
-    } finally {
-      if (rethrow) {
-        throw rethrow
-      }
-      channel.send({ type: 'done' })
-      channel.close()
+    } catch {}
+
+    if (approval) {
+      throw approval
     }
+    channel.send({ type: 'done' })
+    channel.close()
   }
 
   async run(params: AIAgentRunnerParams): Promise<AIAgentRunnerResult> {

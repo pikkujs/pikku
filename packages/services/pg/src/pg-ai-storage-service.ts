@@ -247,8 +247,8 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
 
     const values = messages
       .map((_, i) => {
-        const base = i * 6
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
+        const base = i * 7
+        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`
       })
       .join(', ')
 
@@ -259,10 +259,11 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       msg.content ?? null,
       msg.toolCalls ? JSON.stringify(msg.toolCalls) : null,
       msg.toolResults ? JSON.stringify(msg.toolResults) : null,
+      msg.createdAt ?? new Date(),
     ])
 
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.ai_messages (id, thread_id, role, content, tool_calls, tool_results)
+      `INSERT INTO ${this.schemaName}.ai_messages (id, thread_id, role, content, tool_calls, tool_results, created_at)
        VALUES ${values}`,
       params
     )

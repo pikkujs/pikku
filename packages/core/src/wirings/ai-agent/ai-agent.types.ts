@@ -136,6 +136,7 @@ export type AIStreamEvent =
   | { type: 'reasoning-delta'; text: string; agent?: string; session?: string }
   | {
       type: 'tool-call'
+      toolCallId: string
       toolName: string
       args: unknown
       agent?: string
@@ -143,6 +144,7 @@ export type AIStreamEvent =
     }
   | {
       type: 'tool-result'
+      toolCallId: string
       toolName: string
       result: unknown
       agent?: string
@@ -165,6 +167,7 @@ export type AIStreamEvent =
       id: string
       toolName: string
       args: unknown
+      reason?: string
       agent?: string
       session?: string
     }
