@@ -49,18 +49,33 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       CREATE INDEX IF NOT EXISTS idx_ai_threads_resource
         ON ${this.schemaName}.ai_threads (resource_id);
 
-      CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_messages (
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_message (
         id TEXT PRIMARY KEY,
         thread_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_threads(id) ON DELETE CASCADE,
         role TEXT NOT NULL,
         content TEXT,
-        tool_calls JSONB,
-        tool_results JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
 
-      CREATE INDEX IF NOT EXISTS idx_ai_messages_thread
-        ON ${this.schemaName}.ai_messages (thread_id, created_at);
+      CREATE INDEX IF NOT EXISTS idx_ai_message_thread
+        ON ${this.schemaName}.ai_message (thread_id, created_at);
+
+      CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_tool_call (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_threads(id) ON DELETE CASCADE,
+        message_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_message(id) ON DELETE CASCADE,
+        run_id TEXT,
+        tool_name TEXT NOT NULL,
+        args JSONB NOT NULL DEFAULT '{}',
+        result TEXT,
+        approval_status TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_tool_call_thread
+        ON ${this.schemaName}.ai_tool_call (thread_id);
+      CREATE INDEX IF NOT EXISTS idx_ai_tool_call_message
+        ON ${this.schemaName}.ai_tool_call (message_id);
 
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_working_memory (
         id TEXT NOT NULL,
@@ -88,17 +103,6 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       CREATE INDEX IF NOT EXISTS idx_ai_run_thread
         ON ${this.schemaName}.ai_run (thread_id, created_at);
 
-      CREATE TABLE IF NOT EXISTS ${this.schemaName}.ai_run_approval (
-        tool_call_id TEXT PRIMARY KEY,
-        run_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_run(run_id) ON DELETE CASCADE,
-        tool_name TEXT NOT NULL,
-        args JSONB NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_ai_run_approval_run
-        ON ${this.schemaName}.ai_run_approval (run_id);
     `)
 
     this.initialized = true
@@ -191,49 +195,89 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     threadId: string,
     options?: { lastN?: number; cursor?: string }
   ): Promise<AIMessage[]> {
-    let query: string
-    let params: any[]
+    let msgQuery: string
+    let msgParams: any[]
 
     if (options?.cursor) {
-      query = `SELECT id, role, content, tool_calls, tool_results, created_at
-               FROM ${this.schemaName}.ai_messages
+      msgQuery = `SELECT id, role, content, created_at
+               FROM ${this.schemaName}.ai_message
                WHERE thread_id = $1 AND created_at < (
-                 SELECT created_at FROM ${this.schemaName}.ai_messages WHERE id = $2
+                 SELECT created_at FROM ${this.schemaName}.ai_message WHERE id = $2
                )
                ORDER BY created_at DESC
                LIMIT $3`
-      params = [threadId, options.cursor, options.lastN ?? 50]
+      msgParams = [threadId, options.cursor, options.lastN ?? 50]
     } else if (options?.lastN) {
-      query = `SELECT id, role, content, tool_calls, tool_results, created_at
-               FROM ${this.schemaName}.ai_messages
+      msgQuery = `SELECT id, role, content, created_at
+               FROM ${this.schemaName}.ai_message
                WHERE thread_id = $1
                ORDER BY created_at DESC
                LIMIT $2`
-      params = [threadId, options.lastN]
+      msgParams = [threadId, options.lastN]
     } else {
-      query = `SELECT id, role, content, tool_calls, tool_results, created_at
-               FROM ${this.schemaName}.ai_messages
+      msgQuery = `SELECT id, role, content, created_at
+               FROM ${this.schemaName}.ai_message
                WHERE thread_id = $1
                ORDER BY created_at ASC`
-      params = [threadId]
+      msgParams = [threadId]
     }
 
-    const result = await this.sql.unsafe(query, params)
+    const [msgResult, tcResult] = await Promise.all([
+      this.sql.unsafe(msgQuery, msgParams),
+      this.sql.unsafe(
+        `SELECT id, message_id, tool_name, args, result
+         FROM ${this.schemaName}.ai_tool_call
+         WHERE thread_id = $1
+         ORDER BY created_at ASC`,
+        [threadId]
+      ),
+    ])
 
-    const messages = result.map((row) => ({
-      id: row.id as string,
-      role: row.role as AIMessage['role'],
-      content: row.content as string | undefined,
-      toolCalls:
-        typeof row.tool_calls === 'string'
-          ? JSON.parse(row.tool_calls)
-          : (row.tool_calls as AIMessage['toolCalls']),
-      toolResults:
-        typeof row.tool_results === 'string'
-          ? JSON.parse(row.tool_results)
-          : (row.tool_results as AIMessage['toolResults']),
-      createdAt: new Date(row.created_at as string),
-    }))
+    const tcByMessage = new Map<string, postgres.Row[]>()
+    for (const tc of tcResult) {
+      const msgId = tc.message_id as string
+      if (!tcByMessage.has(msgId)) tcByMessage.set(msgId, [])
+      tcByMessage.get(msgId)!.push(tc)
+    }
+
+    const messages: AIMessage[] = []
+    for (const row of msgResult) {
+      const msg: AIMessage = {
+        id: row.id as string,
+        role: row.role as AIMessage['role'],
+        content: row.content as string | undefined,
+        createdAt: new Date(row.created_at as string),
+      }
+
+      const tcs = tcByMessage.get(msg.id)
+      if (tcs?.length) {
+        msg.toolCalls = tcs.map((tc) => ({
+          id: tc.id as string,
+          name: tc.tool_name as string,
+          args: (typeof tc.args === 'string'
+            ? JSON.parse(tc.args)
+            : tc.args) as Record<string, unknown>,
+        }))
+
+        const completed = tcs.filter((tc) => tc.result != null)
+        if (completed.length) {
+          messages.push(msg)
+          messages.push({
+            id: `tool-results-${msg.id}`,
+            role: 'tool',
+            toolResults: completed.map((tc) => ({
+              id: tc.id as string,
+              name: tc.tool_name as string,
+              result: tc.result as string,
+            })),
+            createdAt: msg.createdAt,
+          })
+          continue
+        }
+      }
+
+      messages.push(msg)
+    }
 
     if (options?.cursor || options?.lastN) {
       messages.reverse()
@@ -245,28 +289,67 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
   async saveMessages(threadId: string, messages: AIMessage[]): Promise<void> {
     if (messages.length === 0) return
 
-    const values = messages
-      .map((_, i) => {
-        const base = i * 7
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`
-      })
-      .join(', ')
+    const toolMessages = messages.filter((m) => m.role === 'tool')
+    const nonToolMessages = messages.filter((m) => m.role !== 'tool')
 
-    const params = messages.flatMap((msg) => [
-      msg.id,
-      threadId,
-      msg.role,
-      msg.content ?? null,
-      msg.toolCalls ? JSON.stringify(msg.toolCalls) : null,
-      msg.toolResults ? JSON.stringify(msg.toolResults) : null,
-      msg.createdAt ?? new Date(),
-    ])
+    if (nonToolMessages.length > 0) {
+      const msgValues = nonToolMessages
+        .map((_, i) => {
+          const base = i * 5
+          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`
+        })
+        .join(', ')
 
-    await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.ai_messages (id, thread_id, role, content, tool_calls, tool_results, created_at)
-       VALUES ${values}`,
-      params
+      const msgParams = nonToolMessages.flatMap((msg) => [
+        msg.id,
+        threadId,
+        msg.role,
+        msg.content ?? null,
+        msg.createdAt ?? new Date(),
+      ])
+
+      await this.sql.unsafe(
+        `INSERT INTO ${this.schemaName}.ai_message (id, thread_id, role, content, created_at)
+         VALUES ${msgValues}`,
+        msgParams
+      )
+    }
+
+    const toolCalls = nonToolMessages.flatMap(
+      (msg) => msg.toolCalls?.map((tc) => ({ ...tc, messageId: msg.id })) ?? []
     )
+    if (toolCalls.length > 0) {
+      const tcValues = toolCalls
+        .map((_, i) => {
+          const base = i * 5
+          return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`
+        })
+        .join(', ')
+
+      const tcParams = toolCalls.flatMap((tc) => [
+        tc.id,
+        threadId,
+        tc.messageId,
+        tc.name,
+        JSON.stringify(tc.args),
+      ])
+
+      await this.sql.unsafe(
+        `INSERT INTO ${this.schemaName}.ai_tool_call (id, thread_id, message_id, tool_name, args)
+         VALUES ${tcValues}`,
+        tcParams
+      )
+    }
+
+    for (const toolMsg of toolMessages) {
+      if (!toolMsg.toolResults) continue
+      for (const tr of toolMsg.toolResults) {
+        await this.sql.unsafe(
+          `UPDATE ${this.schemaName}.ai_tool_call SET result = $1 WHERE id = $2`,
+          [tr.result, tr.id]
+        )
+      }
+    }
 
     await this.sql.unsafe(
       `UPDATE ${this.schemaName}.ai_threads SET updated_at = now() WHERE id = $1`,
@@ -326,7 +409,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     const runId = result[0]!.run_id as string
 
     if (run.pendingApprovals?.length) {
-      await this.insertApprovals(runId, run.pendingApprovals)
+      await this.setApprovals(runId, run.pendingApprovals)
     }
 
     return runId
@@ -369,11 +452,12 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
 
     if (updates.pendingApprovals !== undefined) {
       await this.sql.unsafe(
-        `DELETE FROM ${this.schemaName}.ai_run_approval WHERE run_id = $1`,
+        `UPDATE ${this.schemaName}.ai_tool_call SET approval_status = NULL, run_id = NULL
+         WHERE run_id = $1 AND approval_status IS NOT NULL`,
         [runId]
       )
       if (updates.pendingApprovals.length) {
-        await this.insertApprovals(runId, updates.pendingApprovals)
+        await this.setApprovals(runId, updates.pendingApprovals)
       }
     }
   }
@@ -390,9 +474,9 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     if (result.length === 0) return null
 
     const approvals = await this.sql.unsafe(
-      `SELECT tool_call_id, tool_name, args, status
-       FROM ${this.schemaName}.ai_run_approval
-       WHERE run_id = $1 AND status = 'pending'`,
+      `SELECT id, tool_name, args
+       FROM ${this.schemaName}.ai_tool_call
+       WHERE run_id = $1 AND approval_status = 'pending'`,
       [runId]
     )
 
@@ -413,9 +497,9 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     const runs: AgentRunState[] = []
     for (const row of result) {
       const approvals = await this.sql.unsafe(
-        `SELECT tool_call_id, tool_name, args, status
-         FROM ${this.schemaName}.ai_run_approval
-         WHERE run_id = $1 AND status = 'pending'`,
+        `SELECT id, tool_name, args
+         FROM ${this.schemaName}.ai_tool_call
+         WHERE run_id = $1 AND approval_status = 'pending'`,
         [row.run_id]
       )
       runs.push(this.mapRunRow(row, approvals))
@@ -423,35 +507,24 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     return runs
   }
 
-  private async insertApprovals(
+  private async setApprovals(
     runId: string,
     approvals: NonNullable<AgentRunState['pendingApprovals']>
   ): Promise<void> {
-    const values = approvals
-      .map((_, i) => {
-        const base = i * 4
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`
-      })
-      .join(', ')
-
-    const params = approvals.flatMap((a) => [
-      a.toolCallId,
-      runId,
-      a.toolName,
-      JSON.stringify(a.args),
-    ])
-
+    const ids = approvals.map((a) => a.toolCallId)
+    const placeholders = ids.map((_, i) => `$${i + 2}`).join(', ')
     await this.sql.unsafe(
-      `INSERT INTO ${this.schemaName}.ai_run_approval (tool_call_id, run_id, tool_name, args)
-       VALUES ${values}`,
-      params
+      `UPDATE ${this.schemaName}.ai_tool_call
+       SET approval_status = 'pending', run_id = $1
+       WHERE id IN (${placeholders})`,
+      [runId, ...ids]
     )
   }
 
   private mapRunRow(row: any, approvalRows?: any[]): AgentRunState {
     const pendingApprovals = approvalRows?.length
       ? approvalRows.map((a: any) => ({
-          toolCallId: a.tool_call_id as string,
+          toolCallId: a.id as string,
           toolName: a.tool_name as string,
           args: a.args as unknown,
         }))
