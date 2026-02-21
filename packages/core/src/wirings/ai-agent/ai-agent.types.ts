@@ -165,6 +165,7 @@ export type AIStreamEvent =
   | {
       type: 'approval-request'
       id: string
+      runId: string
       toolName: string
       args: unknown
       reason?: string
