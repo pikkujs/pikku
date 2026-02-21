@@ -199,20 +199,24 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     let msgParams: any[]
 
     if (options?.cursor) {
-      msgQuery = `SELECT id, role, content, created_at
-               FROM ${this.schemaName}.ai_message
-               WHERE thread_id = $1 AND created_at < (
-                 SELECT created_at FROM ${this.schemaName}.ai_message WHERE id = $2
-               )
-               ORDER BY created_at DESC
-               LIMIT $3`
+      msgQuery = `SELECT * FROM (
+                 SELECT id, role, content, created_at
+                 FROM ${this.schemaName}.ai_message
+                 WHERE thread_id = $1 AND created_at < (
+                   SELECT created_at FROM ${this.schemaName}.ai_message WHERE id = $2
+                 )
+                 ORDER BY created_at DESC
+                 LIMIT $3
+               ) sub ORDER BY created_at ASC`
       msgParams = [threadId, options.cursor, options.lastN ?? 50]
     } else if (options?.lastN) {
-      msgQuery = `SELECT id, role, content, created_at
-               FROM ${this.schemaName}.ai_message
-               WHERE thread_id = $1
-               ORDER BY created_at DESC
-               LIMIT $2`
+      msgQuery = `SELECT * FROM (
+                 SELECT id, role, content, created_at
+                 FROM ${this.schemaName}.ai_message
+                 WHERE thread_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT $2
+               ) sub ORDER BY created_at ASC`
       msgParams = [threadId, options.lastN]
     } else {
       msgQuery = `SELECT id, role, content, created_at
@@ -277,10 +281,6 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       }
 
       messages.push(msg)
-    }
-
-    if (options?.cursor || options?.lastN) {
-      messages.reverse()
     }
 
     return messages
@@ -547,6 +547,16 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }
+  }
+
+  async resolveApproval(
+    toolCallId: string,
+    status: 'approved' | 'denied'
+  ): Promise<void> {
+    await this.sql.unsafe(
+      `UPDATE ${this.schemaName}.ai_tool_call SET approval_status = $1 WHERE id = $2`,
+      [status, toolCallId]
+    )
   }
 
   public async close(): Promise<void> {

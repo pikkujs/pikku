@@ -1,5 +1,5 @@
 export { runAIAgent } from './ai-agent-runner.js'
-export { streamAIAgent } from './ai-agent-stream.js'
+export { streamAIAgent, resumeAIAgent } from './ai-agent-stream.js'
 export {
   type RunAIAgentParams,
   type StreamAIAgentOptions,

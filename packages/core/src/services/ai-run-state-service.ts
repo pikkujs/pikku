@@ -7,4 +7,8 @@ export interface AIRunStateService {
   updateRun(runId: string, updates: Partial<AgentRunState>): Promise<void>
   getRun(runId: string): Promise<AgentRunState | null>
   getRunsByThread(threadId: string): Promise<AgentRunState[]>
+  resolveApproval(
+    toolCallId: string,
+    status: 'approved' | 'denied'
+  ): Promise<void>
 }
