@@ -264,6 +264,9 @@ export const addAIAgent: AddWiring = (
       | null
 
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
+    const temperatureValue = getPropertyValue(obj, 'temperature') as
+      | number
+      | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
     const toolsValue = resolveToolReferences(
       obj,
@@ -446,6 +449,7 @@ export const addAIAgent: AddWiring = (
       summary,
       errors,
       ...(maxStepsValue !== null && { maxSteps: maxStepsValue }),
+      ...(temperatureValue !== null && { temperature: temperatureValue }),
       ...(toolChoiceValue !== null && {
         toolChoice: toolChoiceValue as 'auto' | 'required' | 'none',
       }),

@@ -292,6 +292,14 @@ export const createSingletonServices: CreateSingletonServices<
             ? { additionalInfo: config.openAPI.additionalInfo }
             : undefined,
         manifest,
+        modelConfig:
+          config.models || config.agentDefaults || config.agentOverrides
+            ? {
+                models: config.models,
+                agentDefaults: config.agentDefaults,
+                agentOverrides: config.agentOverrides,
+              }
+            : undefined,
       })
 
       // Save unfiltered inspector state to file if stateOutput is provided

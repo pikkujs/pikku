@@ -76,6 +76,9 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       maxSteps: params.maxSteps,
       toolChoice: params.toolChoice,
       abortSignal: abortController.signal,
+      ...(params.temperature !== undefined && {
+        temperature: params.temperature,
+      }),
       ...(params.outputSchema
         ? {
             output: Output.object({
@@ -176,6 +179,9 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       tools: aiTools,
       maxSteps: params.maxSteps,
       toolChoice: params.toolChoice,
+      ...(params.temperature !== undefined && {
+        temperature: params.temperature,
+      }),
       ...(params.outputSchema
         ? {
             output: Output.object({

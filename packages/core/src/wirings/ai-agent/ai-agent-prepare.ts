@@ -26,6 +26,7 @@ import {
   loadContextMessages,
   trimMessages,
 } from './ai-agent-memory.js'
+import { resolveModelConfig } from './ai-agent-model-config.js'
 
 export type RunAIAgentParams = {
   singletonServices: CoreSingletonServices
@@ -398,12 +399,15 @@ export async function prepareAgentRun(
 
   const instructions = buildInstructions(resolvedName, packageName)
 
+  const resolved = resolveModelConfig(resolvedName, agent)
+
   const runnerParams: AIAgentRunnerParams = {
-    model: agent.model,
+    model: resolved.model,
+    temperature: resolved.temperature,
     instructions,
     messages: trimmedMessages,
     tools,
-    maxSteps: agent.maxSteps ?? 10,
+    maxSteps: resolved.maxSteps ?? 10,
     toolChoice: agent.toolChoice ?? 'auto',
     outputSchema,
   }

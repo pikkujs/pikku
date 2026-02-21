@@ -2,6 +2,7 @@ import {
   InspectorState,
   InspectorLogger,
   InspectorOptions,
+  InspectorModelConfig,
   ExternalPackageConfig,
   MiddlewareGroupMeta,
 } from '../types.js'
@@ -385,4 +386,60 @@ export function computeRequiredSchemas(
     ...(schemasFromTypes || []),
     ...Array.from(schemaLookup.keys()),
   ])
+}
+
+export function validateAgentModels(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  modelConfig?: InspectorModelConfig
+): void {
+  const aliases = modelConfig?.models ?? {}
+
+  for (const [, meta] of Object.entries(state.agents.agentsMeta)) {
+    const model = meta.model
+    if (!model) {
+      logger.critical(
+        ErrorCode.MISSING_MODEL,
+        `AI agent '${meta.name}' is missing the 'model' property.`
+      )
+      continue
+    }
+    if (model.includes('/')) continue
+    if (!aliases[model]) {
+      const available = Object.keys(aliases)
+      logger.critical(
+        ErrorCode.INVALID_MODEL,
+        `AI agent '${meta.name}' uses model alias '${model}' which is not defined in pikku.config.json models. ` +
+          `Available aliases: ${available.join(', ') || 'none'}`
+      )
+    }
+  }
+}
+
+export function validateAgentOverrides(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
+  modelConfig?: InspectorModelConfig
+): void {
+  const overrides = modelConfig?.agentOverrides ?? {}
+  const aliases = modelConfig?.models ?? {}
+  const agentNames = new Set(
+    Object.values(state.agents.agentsMeta).map((m) => m.name)
+  )
+
+  for (const [agentName, override] of Object.entries(overrides)) {
+    if (!agentNames.has(agentName)) {
+      logger.warn(`agentOverrides references unknown agent '${agentName}'`)
+    }
+    if (
+      override.model &&
+      !override.model.includes('/') &&
+      !aliases[override.model]
+    ) {
+      logger.critical(
+        ErrorCode.INVALID_MODEL,
+        `agentOverrides['${agentName}'].model uses alias '${override.model}' which is not defined in models.`
+      )
+    }
+  }
 }

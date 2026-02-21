@@ -8,6 +8,8 @@ import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
   validateSecretOverrides,
+  validateAgentModels,
+  validateAgentOverrides,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
@@ -302,6 +304,8 @@ export const inspect = async (
     }
 
     validateSecretOverrides(logger, state, options.externalPackages)
+    validateAgentModels(logger, state, options.modelConfig)
+    validateAgentOverrides(logger, state, options.modelConfig)
   }
 
   return state
