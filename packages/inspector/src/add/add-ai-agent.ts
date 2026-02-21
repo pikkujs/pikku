@@ -271,6 +271,17 @@ export const addAIAgent: AddWiring = (
       nameValue || '',
       logger
     )
+
+    if (toolsValue) {
+      for (const toolName of toolsValue) {
+        if (toolName.startsWith('workflow:') || toolName.includes(':')) continue
+        const funcFile = state.functions.files.get(toolName)
+        if (funcFile && !state.rpc.internalFiles.has(toolName)) {
+          state.rpc.internalFiles.set(toolName, funcFile)
+        }
+      }
+    }
+
     const agentsValue = resolveAgentReferences(
       obj,
       checker,
