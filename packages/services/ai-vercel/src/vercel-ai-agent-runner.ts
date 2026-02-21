@@ -6,6 +6,7 @@ import type {
   AIAgentRunnerResult,
 } from '@pikku/core/services'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
+import { ToolApprovalRequired } from '@pikku/core/ai-agent'
 import {
   convertToSDKMessages,
   convertFromSDKStep,
@@ -81,6 +82,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         : {}),
     })
 
+    let rethrow: unknown = null
     try {
       for await (const part of result.fullStream) {
         switch (part.type) {
@@ -98,6 +100,23 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             })
             break
           case 'tool-result':
+            if (
+              part.result &&
+              typeof part.result === 'object' &&
+              '__approvalRequired' in part.result
+            ) {
+              const r = part.result as unknown as {
+                toolCallId: string
+                toolName: string
+                args: unknown
+              }
+              rethrow = new ToolApprovalRequired(
+                r.toolCallId,
+                r.toolName,
+                r.args
+              )
+              return
+            }
             channel.send({
               type: 'tool-result',
               toolName: part.toolName,
@@ -115,6 +134,14 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             })
             break
           case 'error':
+            if (
+              part.error &&
+              typeof part.error === 'object' &&
+              'toolCallId' in part.error
+            ) {
+              rethrow = part.error
+              return
+            }
             channel.send({
               type: 'error',
               message:
@@ -126,11 +153,18 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         }
       }
     } catch (err) {
+      if (err && typeof err === 'object' && 'toolCallId' in err) {
+        rethrow = err
+        return
+      }
       channel.send({
         type: 'error',
         message: err instanceof Error ? err.message : String(err),
       })
     } finally {
+      if (rethrow) {
+        throw rethrow
+      }
       channel.send({ type: 'done' })
       channel.close()
     }

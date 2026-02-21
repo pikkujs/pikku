@@ -292,6 +292,7 @@ export async function streamAIAgent(
         toolName: err.toolName,
         args: err.args,
       })
+      channel.send({ type: 'done' })
       return
     }
 
