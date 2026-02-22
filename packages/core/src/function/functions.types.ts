@@ -194,6 +194,37 @@ export const pikkuPermissionFactory = <In = any>(
   return factory
 }
 
+export type CorePikkuAuth<
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = (services: Services, session: Session) => Promise<boolean> | boolean
+
+export type CorePikkuAuthConfig<
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+> = {
+  func: CorePikkuAuth<Services, Session>
+  name?: string
+  description?: string
+}
+
+export const pikkuAuth = <
+  Services extends CoreSingletonServices = CoreServices,
+  Session extends CoreUserSession = CoreUserSession,
+>(
+  auth:
+    | CorePikkuAuth<Services, Session>
+    | CorePikkuAuthConfig<Services, Session>
+): CorePikkuPermission<any, Services, any> => {
+  const fn = typeof auth === 'function' ? auth : auth.func
+  const wrapper = async (services: Services, _data: any, wire: any) => {
+    const session = wire.session
+    if (!session) return false
+    return fn(services, session as Session)
+  }
+  return wrapper as any
+}
+
 export type CorePermissionGroup<PikkuPermission = CorePikkuPermission<any>> =
   | Record<string, PikkuPermission | PikkuPermission[]>
   | undefined

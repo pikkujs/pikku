@@ -27,7 +27,8 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
+import { pikkuAuth as pikkuAuthCore } from '@pikku/core'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
@@ -111,6 +112,46 @@ export const pikkuPermission = <In>(
   permission: PikkuPermission<In> | PikkuPermissionConfig<In>
 ): PikkuPermission<In> => {
   return typeof permission === 'function' ? permission : permission.func
+}
+
+/**
+ * Type-safe auth-only permission that only needs services and session.
+ * Use this for upfront authorization gates (MCP tools, AI agents, workflows)
+ * where request data isn't available yet.
+ *
+ * @template RequiredServices - The services required for this auth check
+ */
+export type PikkuAuth<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuAuth<RequiredServices, Session>
+
+/**
+ * Configuration object for creating an auth permission with metadata
+ */
+export type PikkuAuthConfig<RequiredServices extends SingletonServices = SingletonServices> = CorePikkuAuthConfig<RequiredServices, Session>
+
+/**
+ * Factory function for creating auth-only permissions with tree-shaking support.
+ * Auth permissions only receive services and session (no request data),
+ * making them evaluable before request data is available.
+ *
+ * @example
+ * \\\`\\\`\\\`typescript
+ * const isAuthenticated = pikkuAuth(async ({ logger }, session) => {
+ *   return !!session
+ * })
+ *
+ * const isAdmin = pikkuAuth({
+ *   name: 'Admin Auth',
+ *   description: 'Checks if user is an admin',
+ *   func: async ({ logger }, session) => {
+ *     return session?.role === 'admin'
+ *   }
+ * })
+ * \\\`\\\`\\\`
+ */
+export const pikkuAuth = <RequiredServices extends SingletonServices = SingletonServices>(
+  auth: PikkuAuth<RequiredServices> | PikkuAuthConfig<RequiredServices>
+): PikkuPermission<any, RequiredServices> => {
+  return pikkuAuthCore(auth as any) as any
 }
 
 /**

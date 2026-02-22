@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
 import {
+  pikkuAuth,
   pikkuPermission,
   pikkuMiddleware,
   pikkuPermissionFactory,
@@ -66,4 +67,43 @@ test('pikkuMiddlewareFactory returns the same factory', async () => {
     })
   const wrappedFactory = pikkuMiddlewareFactory(originalFactory)
   assert.strictEqual(wrappedFactory, originalFactory)
+})
+
+test('pikkuAuth returns a 3-arg wrapper function', async () => {
+  const authFn = async (_services, session) => !!session
+  const wrapped = pikkuAuth(authFn)
+  assert.strictEqual(typeof wrapped, 'function')
+  assert.strictEqual(wrapped.length, 3)
+})
+
+test('pikkuAuth wrapper extracts session from wire and calls auth function', async () => {
+  let receivedSession = null
+  const authFn = async (_services, session) => {
+    receivedSession = session
+    return session.role === 'admin'
+  }
+  const wrapped = pikkuAuth(authFn)
+  const result = await wrapped({}, null, { session: { role: 'admin' } })
+  assert.strictEqual(result, true)
+  assert.deepStrictEqual(receivedSession, { role: 'admin' })
+})
+
+test('pikkuAuth wrapper returns false when no session', async () => {
+  const authFn = async (_services, session) => !!session
+  const wrapped = pikkuAuth(authFn)
+  const result = await wrapped({}, null, { session: null })
+  assert.strictEqual(result, false)
+})
+
+test('pikkuAuth config object syntax works', async () => {
+  const authFn = async (_services, session) => !!session
+  const wrapped = pikkuAuth({
+    func: authFn,
+    name: 'Is Authenticated',
+    description: 'Checks if user has a session',
+  })
+  assert.strictEqual(typeof wrapped, 'function')
+  assert.strictEqual(wrapped.length, 3)
+  const result = await wrapped({}, null, { session: { id: '1' } })
+  assert.strictEqual(result, true)
 })

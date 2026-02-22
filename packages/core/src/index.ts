@@ -42,6 +42,8 @@ export {
   pikkuMiddlewareFactory,
 } from './types/core.types.js'
 export type {
+  CorePikkuAuth,
+  CorePikkuAuthConfig,
   CorePikkuFunction,
   CorePikkuFunctionConfig,
   CorePikkuPermission,
@@ -51,6 +53,7 @@ export type {
   ZodLike,
 } from './function/functions.types.js'
 export {
+  pikkuAuth,
   pikkuPermission,
   pikkuPermissionFactory,
 } from './function/functions.types.js'

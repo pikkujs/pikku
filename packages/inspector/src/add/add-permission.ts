@@ -133,18 +133,104 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
         return
       }
     }
+    const dataParam = actualHandler.parameters[1]
+    const dataParamName =
+      dataParam && ts.isIdentifier(dataParam.name) ? dataParam.name.text : null
+    const requiresData = !(dataParamName && dataParamName.startsWith('_'))
+
     state.permissions.definitions[pikkuFuncId] = {
       services,
-      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
+      wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
       name,
       description,
+      ...(requiresData ? {} : { requiresData: false }),
     }
 
     logger.debug(
-      `• Found permission with services: ${services.services.join(', ')}${name ? ` (name: ${name})` : ''}${description ? ` (description: ${description})` : ''}`
+      `• Found permission with services: ${services.services.join(', ')}${name ? ` (name: ${name})` : ''}${description ? ` (description: ${description})` : ''}${!requiresData ? ' (auth-only)' : ''}`
+    )
+    return
+  }
+
+  if (expression.text === 'pikkuAuth') {
+    if (isInsidePermissionFactory(node)) return
+
+    const arg = args[0]
+    if (!arg) return
+
+    let actualHandler: ts.ArrowFunction | ts.FunctionExpression
+    let name: string | undefined
+    let description: string | undefined
+
+    if (ts.isObjectLiteralExpression(arg)) {
+      const nameValue = getPropertyValue(arg, 'name')
+      const descValue = getPropertyValue(arg, 'description')
+      name = typeof nameValue === 'string' ? nameValue : undefined
+      description = typeof descValue === 'string' ? descValue : undefined
+
+      const fnProp = getPropertyAssignmentInitializer(
+        arg,
+        'func',
+        true,
+        checker
+      )
+      if (
+        !fnProp ||
+        (!ts.isArrowFunction(fnProp) && !ts.isFunctionExpression(fnProp))
+      ) {
+        logger.error(`• pikkuAuth object missing required 'func' property.`)
+        return
+      }
+      actualHandler = fnProp
+    } else if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) {
+      actualHandler = arg
+    } else {
+      logger.error(`• Handler for pikkuAuth is not a function.`)
+      return
+    }
+
+    const services = extractServicesFromFunction(actualHandler)
+    const wires = extractUsedWires(actualHandler, 1)
+    let { pikkuFuncId, exportedName } = extractFunctionName(
+      node,
+      checker,
+      state.rootDir
+    )
+    if (pikkuFuncId.startsWith('__temp_')) {
+      if (
+        ts.isVariableDeclaration(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else if (
+        ts.isPropertyAssignment(node.parent) &&
+        ts.isIdentifier(node.parent.name)
+      ) {
+        pikkuFuncId = node.parent.name.text
+      } else {
+        logger.error(
+          `• pikkuAuth() must be assigned to a variable or object property. ` +
+            `Extract it to a const: const myAuth = pikkuAuth(...)`
+        )
+        return
+      }
+    }
+    state.permissions.definitions[pikkuFuncId] = {
+      services,
+      wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
+      sourceFile: node.getSourceFile().fileName,
+      position: node.getStart(),
+      exportedName,
+      name,
+      description,
+      requiresData: false,
+    }
+
+    logger.debug(
+      `• Found auth permission with services: ${services.services.join(', ')}${name ? ` (name: ${name})` : ''}${description ? ` (description: ${description})` : ''}`
     )
     return
   }
@@ -166,7 +252,10 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // The factory should return pikkuPermission(...), so we need to find that call
     // If no wrapper is found, extract from the factory's returned function directly
     let services = { optimized: false, services: [] as string[] }
-    let wires: ReturnType<typeof extractUsedWires> = { optimized: true, wires: [] }
+    let wires: ReturnType<typeof extractUsedWires> = {
+      optimized: true,
+      wires: [],
+    }
 
     const findPikkuPermissionCall = (
       node: ts.Node
@@ -232,7 +321,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
     state.permissions.definitions[pikkuFuncId] = {
       services,
-      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
+      wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,

@@ -12,7 +12,12 @@ import { NodesMeta } from '@pikku/core/node'
 import { SecretDefinitions } from '@pikku/core/secret'
 import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
-import { FunctionsMeta, FunctionServicesMeta, FunctionWiresMeta, JSONValue } from '@pikku/core'
+import {
+  FunctionsMeta,
+  FunctionServicesMeta,
+  FunctionWiresMeta,
+  JSONValue,
+} from '@pikku/core'
 import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 import { ErrorCode } from './error-codes.js'
 import type {
@@ -140,6 +145,7 @@ export interface InspectorPermissionDefinition {
   name?: string
   description?: string
   package?: string
+  requiresData?: boolean
 }
 
 export interface InspectorPermissionInstance {
