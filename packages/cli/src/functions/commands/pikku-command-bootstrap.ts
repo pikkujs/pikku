@@ -20,7 +20,10 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     if (config.externalPackages) {
       for (const [namespace, externalPkg] of Object.entries(
         config.externalPackages
-      )) {
+      ) as [
+        string,
+        { package: string; rpcEndpoint?: string; forceInclude?: boolean },
+      ][]) {
         const isUsed =
           stateBeforeBootstrap.rpc?.usedExternalPackages?.has(namespace)
         if (isUsed || externalPkg.forceInclude) {

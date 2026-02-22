@@ -363,6 +363,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   tags?: string[]
   expose?: boolean
   internal?: boolean
+  remote?: boolean
   func: PikkuFunctionSessionless<
     InferSchemaOutput<InputSchema>,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,

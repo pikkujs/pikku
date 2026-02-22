@@ -297,23 +297,27 @@ export function buildToolDefs(
               subAgentName,
               session
             )
-            const approval = await streamAIAgent(
-              subAgentName,
-              { message, threadId, resourceId },
-              subChannel,
-              params,
-              agentSessionMap,
-              streamContext.options
-            )
-            if (approval instanceof ToolApprovalRequired) {
-              return {
-                __approvalRequired: true,
-                toolName: subAgentName,
-                args: toolInput,
-                displayToolName: approval.toolName,
-                displayArgs: approval.args,
-                reason: approval.reason,
+            try {
+              await streamAIAgent(
+                subAgentName,
+                { message, threadId, resourceId },
+                subChannel,
+                params,
+                agentSessionMap,
+                streamContext.options
+              )
+            } catch (err) {
+              if (err instanceof ToolApprovalRequired) {
+                return {
+                  __approvalRequired: true,
+                  toolName: subAgentName,
+                  args: toolInput,
+                  displayToolName: err.toolName,
+                  displayArgs: err.args,
+                  reason: err.reason,
+                }
               }
+              throw err
             }
             channel.send({
               type: 'agent-result',

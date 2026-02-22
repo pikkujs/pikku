@@ -223,6 +223,7 @@ export type CorePikkuFunctionConfig<
   tags?: string[]
   expose?: boolean
   remote?: boolean
+  requiresApproval?: boolean
   func: PikkuFunction
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>
