@@ -2,7 +2,6 @@ export { MCPEndpointRegistry } from './mcp-endpoint-registry.js'
 export {
   MCPError,
   wireMCPResource,
-  wireMCPTool,
   wireMCPPrompt,
   runMCPResource,
   runMCPTool,

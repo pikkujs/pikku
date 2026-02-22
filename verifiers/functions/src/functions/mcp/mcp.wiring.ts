@@ -1,38 +1,10 @@
-import { wireMCPTool, wireMCPResource, wireMCPPrompt } from '#pikku'
+import { wireMCPResource, wireMCPPrompt } from '#pikku'
 import {
-  sayHello,
-  disableTool,
-  calculate,
   getUserInfo,
   dynamicPromptGenerator,
   getStaticResource,
   staticPromptGenerator,
 } from './mcp.functions.js'
-
-// Register a simple greeting tool
-wireMCPTool({
-  name: 'sayHello',
-  description: 'Greet someone with a friendly hello message',
-  func: sayHello,
-  tags: ['greeting', 'hello', 'demo'],
-})
-
-// Disable tools
-wireMCPTool({
-  name: 'disableTool',
-  description: 'Disable a tool by name',
-  func: disableTool,
-  tags: [],
-})
-
-// Register a calculator tool
-wireMCPTool({
-  name: 'calculate',
-  description:
-    'Perform basic mathematical operations (add, subtract, multiply, divide)',
-  func: calculate,
-  tags: ['math', 'calculator', 'arithmetic'],
-})
 
 wireMCPResource({
   uri: 'getStaticResource',
@@ -55,7 +27,6 @@ wireMCPPrompt({
   func: staticPromptGenerator,
 })
 
-// Register a progressive enhancement example prompt
 wireMCPPrompt({
   name: 'dynamicPromptGenerator',
   description:

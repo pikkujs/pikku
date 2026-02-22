@@ -100,6 +100,7 @@ export type FunctionRuntimeMeta = {
   outputSchemaName: string | null
   expose?: boolean
   remote?: boolean
+  mcp?: boolean
   sessionless?: boolean
   version?: number
   requiresApproval?: boolean

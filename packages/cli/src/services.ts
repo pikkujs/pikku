@@ -40,7 +40,10 @@ import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { join } from 'path'
 
-const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<string, keyof NonNullable<PikkuCLIConfig['lint']>> = {
+const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
+  string,
+  keyof NonNullable<PikkuCLIConfig['lint']>
+> = {
   [ErrorCode.SERVICES_NOT_DESTRUCTURED]: 'servicesNotDestructured',
   [ErrorCode.WIRES_NOT_DESTRUCTURED]: 'wiresNotDestructured',
 }
@@ -51,7 +54,7 @@ function processDiagnostics(
 ): void {
   for (const diagnostic of diagnostics) {
     const lintKey = DIAGNOSTIC_CODE_TO_LINT_KEY[diagnostic.code]
-    const severity = lintKey ? lint?.[lintKey] ?? 'off' : 'off'
+    const severity = lintKey ? (lint?.[lintKey] ?? 'off') : 'off'
     if (severity === 'error') {
       logger.critical(diagnostic.code as ErrorCode, diagnostic.message)
     } else if (severity === 'warn') {
@@ -323,7 +326,10 @@ export const createSingletonServices: CreateSingletonServices<
             : undefined,
       })
 
-      if ('diagnostics' in unfilteredState && unfilteredState.diagnostics.length > 0) {
+      if (
+        'diagnostics' in unfilteredState &&
+        unfilteredState.diagnostics.length > 0
+      ) {
         processDiagnostics(unfilteredState.diagnostics, config.lint)
       }
 

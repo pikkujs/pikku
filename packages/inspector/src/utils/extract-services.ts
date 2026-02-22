@@ -26,7 +26,10 @@ export function extractServicesFromFunction(
           services.services.push(original)
         }
       }
-    } else if (ts.isIdentifier(firstParam.name) && !firstParam.name.text.startsWith('_')) {
+    } else if (
+      ts.isIdentifier(firstParam.name) &&
+      !firstParam.name.text.startsWith('_')
+    ) {
       services.optimized = false
     }
   }
@@ -54,7 +57,11 @@ export function extractUsedWires(
     }
     return { optimized: true, wires }
   }
-  if (param && ts.isIdentifier(param.name) && !param.name.text.startsWith('_')) {
+  if (
+    param &&
+    ts.isIdentifier(param.name) &&
+    !param.name.text.startsWith('_')
+  ) {
     return { optimized: false, wires: [] }
   }
   return { optimized: true, wires: [] }

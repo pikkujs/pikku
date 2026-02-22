@@ -26,7 +26,7 @@ export async function testMCPToolWiring(
           singletonServices,
           createWireServices,
         },
-        'test-tool'
+        'mcpToolFunction'
       )
     },
     singletonServices.logger

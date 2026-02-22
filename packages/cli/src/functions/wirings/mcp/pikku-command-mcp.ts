@@ -89,7 +89,7 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
       logger,
       mcpWiringsFile,
       serializeFileImports(
-        'wireMCPResource or wireMCPTool',
+        'wireMCPResource',
         mcpWiringsFile,
         mcpEndpoints.files,
         packageMappings

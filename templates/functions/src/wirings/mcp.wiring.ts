@@ -1,13 +1,6 @@
-import {
-  wireMCPTool,
-  wireMCPResource,
-  wireMCPPrompt,
-} from '../../.pikku/pikku-types.gen.js'
+import { wireMCPResource, wireMCPPrompt } from '../../.pikku/pikku-types.gen.js'
 import {
   getTodoResource,
-  createTodoTool,
-  completeTodoTool,
-  deleteTodoTool,
   planDayPrompt,
   prioritizePrompt,
 } from '../functions/mcp.functions.js'
@@ -18,28 +11,6 @@ wireMCPResource({
   description: 'Get details of a specific todo by ID',
   func: getTodoResource,
   tags: ['todos'],
-})
-
-wireMCPTool({
-  name: 'createTodo',
-  description:
-    'Create a new todo item with title, description, priority, dueDate, and tags',
-  func: createTodoTool,
-  tags: ['todos', 'create'],
-})
-
-wireMCPTool({
-  name: 'completeTodo',
-  description: 'Mark a todo as complete by ID',
-  func: completeTodoTool,
-  tags: ['todos', 'update'],
-})
-
-wireMCPTool({
-  name: 'deleteTodo',
-  description: 'Delete a todo by ID',
-  func: deleteTodoTool,
-  tags: ['todos', 'delete'],
 })
 
 wireMCPPrompt({

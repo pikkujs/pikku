@@ -188,15 +188,19 @@ async function main(): Promise<void> {
     )
 
     // Test MCP Tool
+    // Note: With mcp:true on function config, all middleware/permissions come from the function config.
+    // Tags are ordered as declared on the function: ['function', 'session', 'mcp'].
+    // Wire entries in inherited middleware don't resolve (misc.middleware not populated),
+    // so only funcConfig.middleware provides the actual middleware functions.
+    // For permissions: functionPermission returns true, short-circuiting mcpWirePermission.
     const mcpToolPassed = await testMCPToolWiring(
       [
+        { name: 'function', type: 'tag', phase: 'before' },
         { name: 'session', type: 'tag', phase: 'before' },
         { name: 'mcp', type: 'tag', phase: 'before' },
-        { name: 'mcp', type: 'wire', phase: 'before' },
-        { name: 'function', type: 'tag', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' },
+        { name: 'mcp', type: 'wire', phase: 'before' },
         { name: 'mcp', type: 'tag-permission' },
-        { name: 'mcp-wire', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
       singletonServices,

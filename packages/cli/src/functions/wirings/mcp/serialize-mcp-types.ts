@@ -8,10 +8,8 @@ export const serializeMCPTypes = (functionTypesImportPath: string) => {
 
 import {
   CoreMCPResource,
-  CoreMCPTool,
   CoreMCPPrompt,
   wireMCPResource as wireMCPResourceCore,
-  wireMCPTool as wireMCPToolCore,
   wireMCPPrompt as wireMCPPromptCore,
   MCPResourceResponse,
   MCPToolResponse,
@@ -19,7 +17,8 @@ import {
   AssertMCPResourceURIParams
 } from '@pikku/core/mcp'
 
-import type { PikkuFunctionConfig, PikkuFunctionSessionless, InferSchemaOutput } from '${functionTypesImportPath}'
+import type { PikkuFunctionConfig, PikkuFunctionSessionless, PikkuMiddleware, PikkuPermission, InferSchemaOutput } from '${functionTypesImportPath}'
+import type { CorePermissionGroup } from '@pikku/core'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
@@ -29,13 +28,6 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
  * @template URI - URI template string type for compile-time parameter validation
  */
 type MCPResourceWiring<In, URI extends string> = CoreMCPResource<PikkuFunctionConfig<In, MCPResourceResponse, 'rpc' | 'session' | 'mcp'>> & { uri: URI }
-
-/**
- * Type definition for MCP tools that AI models can invoke.
- *
- * @template In - Input type for the tool invocation
- */
-type MCPToolWiring<In> = CoreMCPTool<PikkuFunctionConfig<In, MCPToolResponse, 'rpc' | 'session' | 'mcp'>>
 
 /**
  * Type definition for MCP prompts that provide templates to AI models.
@@ -56,19 +48,6 @@ export const wireMCPResource = <In, URI extends string>(
   mcpResource: MCPResourceWiring<In, URI> & AssertMCPResourceURIParams<In, URI>
 ) => {
   wireMCPResourceCore(mcpResource as any)
-}
-
-/**
- * Registers an MCP tool with the Pikku framework.
- * Tools are functions that AI models can invoke.
- *
- * @template In - Input type for the tool invocation
- * @param mcpTool - MCP tool definition with action function
- */
-export const wireMCPTool = <In>(
-  mcpTool: MCPToolWiring<In>
-) => {
-  wireMCPToolCore(mcpTool as any)
 }
 
 /**
@@ -125,7 +104,13 @@ export function pikkuMCPPromptFunc(func: any): any {
  */
 type MCPToolFuncConfigWithSchema<InputSchema extends StandardSchemaV1> = {
   func: PikkuFunctionSessionless<InferSchemaOutput<InputSchema>, MCPToolResponse, 'mcp' | 'rpc'>
+  description?: string
+  tags?: string[]
+  title?: string
+  summary?: string
   name?: string
+  middleware?: PikkuMiddleware[]
+  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
   input: InputSchema
 }
 
@@ -149,7 +134,13 @@ export function pikkuMCPToolFunc<In>(
     | PikkuFunctionSessionless<In, MCPToolResponse, 'mcp' | 'rpc'>
     | {
       func: PikkuFunctionSessionless<In, MCPToolResponse, 'mcp' | 'rpc'>
+      description?: string
+      tags?: string[]
+      title?: string
+      summary?: string
       name?: string
+      middleware?: PikkuMiddleware[]
+      permissions?: CorePermissionGroup<PikkuPermission<In>>
     }
 ): PikkuFunctionConfig<In, MCPToolResponse, 'mcp' | 'rpc'>
 export function pikkuMCPToolFunc(func: any): any {
