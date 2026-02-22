@@ -5,7 +5,7 @@
  * Verbose fields are those used for UI/visualization but not needed at runtime:
  * - tags, description, summary, errors
  * - title, displayName
- * - usedWires, isDirectFunction, services
+ * - wires, isDirectFunction, services
  * - stepName (in workflow nodes)
  *
  * Note: middleware and permissions are NOT verbose - they're needed at runtime
@@ -26,7 +26,6 @@ const VERBOSE_FIELDS = new Set([
   'displayName',
   // Note: middleware and permissions are NOT verbose - they're needed at runtime
   // for resolving tag middleware and permissions in function-runner.ts
-  'usedWires',
   'isDirectFunction',
   'services',
   'wires',

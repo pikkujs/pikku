@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { FunctionServicesMeta } from '@pikku/core'
+import { FunctionServicesMeta, FunctionWiresMeta } from '@pikku/core'
 
 /**
  * Extract services from a function's first parameter destructuring pattern
@@ -26,7 +26,7 @@ export function extractServicesFromFunction(
           services.services.push(original)
         }
       }
-    } else if (ts.isIdentifier(firstParam.name)) {
+    } else if (ts.isIdentifier(firstParam.name) && !firstParam.name.text.startsWith('_')) {
       services.optimized = false
     }
   }
@@ -37,10 +37,10 @@ export function extractServicesFromFunction(
 export function extractUsedWires(
   handlerNode: ts.FunctionExpression | ts.ArrowFunction,
   paramIndex: number
-): string[] {
-  const usedWires: string[] = []
+): FunctionWiresMeta {
   const param = handlerNode.parameters[paramIndex]
   if (param && ts.isObjectBindingPattern(param.name)) {
+    const wires: string[] = []
     for (const elem of param.name.elements) {
       const propertyName =
         elem.propertyName && ts.isIdentifier(elem.propertyName)
@@ -49,9 +49,13 @@ export function extractUsedWires(
             ? elem.name.text
             : undefined
       if (propertyName) {
-        usedWires.push(propertyName)
+        wires.push(propertyName)
       }
     }
+    return { optimized: true, wires }
   }
-  return usedWires
+  if (param && ts.isIdentifier(param.name) && !param.name.text.startsWith('_')) {
+    return { optimized: false, wires: [] }
+  }
+  return { optimized: true, wires: [] }
 }

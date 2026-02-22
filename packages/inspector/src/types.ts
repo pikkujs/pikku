@@ -12,7 +12,7 @@ import { NodesMeta } from '@pikku/core/node'
 import { SecretDefinitions } from '@pikku/core/secret'
 import { VariableDefinitions } from '@pikku/core/variable'
 import { TypesMap } from './types-map.js'
-import { FunctionsMeta, FunctionServicesMeta, JSONValue } from '@pikku/core'
+import { FunctionsMeta, FunctionServicesMeta, FunctionWiresMeta, JSONValue } from '@pikku/core'
 import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
 import { ErrorCode } from './error-codes.js'
 import type {
@@ -97,7 +97,7 @@ export interface InspectorChannelState {
 
 export interface InspectorMiddlewareDefinition {
   services: FunctionServicesMeta
-  usedWires?: string[]
+  wires?: FunctionWiresMeta
   sourceFile: string
   position: number
   exportedName: string | null
@@ -132,7 +132,7 @@ export interface InspectorAIMiddlewareState {
 
 export interface InspectorPermissionDefinition {
   services: FunctionServicesMeta
-  usedWires?: string[]
+  wires?: FunctionWiresMeta
   sourceFile: string
   position: number
   exportedName: string | null
@@ -269,6 +269,13 @@ export interface InspectorFilesAndMethods {
   }
 }
 
+export interface InspectorDiagnostic {
+  code: string
+  message: string
+  sourceFile: string
+  position: number
+}
+
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -377,4 +384,5 @@ export interface InspectorState {
   }
   requiredSchemas: Set<string>
   openAPISpec: Record<string, any> | null
+  diagnostics: InspectorDiagnostic[]
 }

@@ -17,6 +17,7 @@ export type {
   FunctionMeta,
   FunctionRuntimeMeta,
   FunctionServicesMeta,
+  FunctionWiresMeta,
   FunctionsMeta,
   FunctionsRuntimeMeta,
   JSONPrimitive,

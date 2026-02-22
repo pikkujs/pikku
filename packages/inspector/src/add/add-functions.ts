@@ -555,12 +555,12 @@ export const addFunctions: AddWiring = (
           services.services.push(original)
         }
       }
-    } else if (ts.isIdentifier(firstParam.name)) {
+    } else if (ts.isIdentifier(firstParam.name) && !firstParam.name.text.startsWith('_')) {
       services.optimized = false
     }
   }
 
-  const usedWires = extractUsedWires(handler, 2)
+  const wires = extractUsedWires(handler, 2)
 
   // --- Generics → ts.Type[], unwrapped from Promise ---
   const genericTypes: ts.Type[] = (typeArguments ?? [])
@@ -740,7 +740,7 @@ export const addFunctions: AddWiring = (
     sessionless,
     name,
     services,
-    usedWires: usedWires.length > 0 ? usedWires : undefined,
+    wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
     inputSchemaName: inputNames[0] ?? null,
     outputSchemaName: outputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,

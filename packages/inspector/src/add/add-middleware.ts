@@ -86,7 +86,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
-    const usedWires = extractUsedWires(actualHandler, 1)
+    const wires = extractUsedWires(actualHandler, 1)
     let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
@@ -113,7 +113,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
-      usedWires: usedWires.length > 0 ? usedWires : undefined,
+      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
@@ -140,7 +140,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     let services = { optimized: false, services: [] as string[] }
-    let usedWires: string[] = []
+    let wires: ReturnType<typeof extractUsedWires> = { optimized: true, wires: [] }
     let name: string | undefined
     let description: string | undefined
 
@@ -176,14 +176,14 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
           (ts.isArrowFunction(fnProp) || ts.isFunctionExpression(fnProp))
         ) {
           services = extractServicesFromFunction(fnProp)
-          usedWires = extractUsedWires(fnProp, 1)
+          wires = extractUsedWires(fnProp, 1)
         }
       } else if (
         ts.isArrowFunction(middlewareArg) ||
         ts.isFunctionExpression(middlewareArg)
       ) {
         services = extractServicesFromFunction(middlewareArg)
-        usedWires = extractUsedWires(middlewareArg, 1)
+        wires = extractUsedWires(middlewareArg, 1)
       }
     } else {
       if (
@@ -196,7 +196,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
           ts.isFunctionExpression(factoryBody)
         ) {
           services = extractServicesFromFunction(factoryBody)
-          usedWires = extractUsedWires(factoryBody, 1)
+          wires = extractUsedWires(factoryBody, 1)
         }
       }
     }
@@ -227,7 +227,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
-      usedWires: usedWires.length > 0 ? usedWires : undefined,
+      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,

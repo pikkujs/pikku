@@ -5,6 +5,7 @@ import {
   InspectorModelConfig,
   ExternalPackageConfig,
   MiddlewareGroupMeta,
+  InspectorDiagnostic,
 } from '../types.js'
 import {
   FunctionServicesMeta,
@@ -442,4 +443,67 @@ export function validateAgentOverrides(
       )
     }
   }
+}
+
+export function computeDiagnostics(state: InspectorState): void {
+  const diagnostics: InspectorDiagnostic[] = []
+
+  for (const [id, meta] of Object.entries(state.functions.meta)) {
+    if (meta.services && !meta.services.optimized) {
+      diagnostics.push({
+        code: ErrorCode.SERVICES_NOT_DESTRUCTURED,
+        message: `Function '${id}' does not destructure its services parameter, preventing tree-shaking optimization.`,
+        sourceFile: meta.pikkuFuncId,
+        position: 0,
+      })
+    }
+    if (meta.wires && !meta.wires.optimized) {
+      diagnostics.push({
+        code: ErrorCode.WIRES_NOT_DESTRUCTURED,
+        message: `Function '${id}' does not destructure its wires parameter, preventing tree-shaking optimization.`,
+        sourceFile: meta.pikkuFuncId,
+        position: 0,
+      })
+    }
+  }
+
+  for (const [id, def] of Object.entries(state.middleware.definitions)) {
+    if (def.services && !def.services.optimized) {
+      diagnostics.push({
+        code: ErrorCode.SERVICES_NOT_DESTRUCTURED,
+        message: `Middleware '${id}' does not destructure its services parameter, preventing tree-shaking optimization.`,
+        sourceFile: def.sourceFile,
+        position: def.position,
+      })
+    }
+    if (def.wires && !def.wires.optimized) {
+      diagnostics.push({
+        code: ErrorCode.WIRES_NOT_DESTRUCTURED,
+        message: `Middleware '${id}' does not destructure its wires parameter, preventing tree-shaking optimization.`,
+        sourceFile: def.sourceFile,
+        position: def.position,
+      })
+    }
+  }
+
+  for (const [id, def] of Object.entries(state.permissions.definitions)) {
+    if (def.services && !def.services.optimized) {
+      diagnostics.push({
+        code: ErrorCode.SERVICES_NOT_DESTRUCTURED,
+        message: `Permission '${id}' does not destructure its services parameter, preventing tree-shaking optimization.`,
+        sourceFile: def.sourceFile,
+        position: def.position,
+      })
+    }
+    if (def.wires && !def.wires.optimized) {
+      diagnostics.push({
+        code: ErrorCode.WIRES_NOT_DESTRUCTURED,
+        message: `Permission '${id}' does not destructure its wires parameter, preventing tree-shaking optimization.`,
+        sourceFile: def.sourceFile,
+        position: def.position,
+      })
+    }
+  }
+
+  state.diagnostics = diagnostics
 }
