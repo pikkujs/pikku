@@ -103,8 +103,8 @@ export type CorePikkuPermissionConfig<
 > = {
   /** The permission function */
   func: CorePikkuPermission<In, Services, Wire>
-  /** Optional human-readable title for the permission */
-  title?: string
+  /** Optional human-readable name for the permission */
+  name?: string
   /** Optional description of what the permission checks */
   description?: string
 }
@@ -125,7 +125,7 @@ export type CorePikkuPermissionConfig<
  *
  * // Configuration object syntax with metadata
  * export const adminPermission = pikkuPermission({
- *   title: 'Admin Permission',
+ *   name: 'Admin Permission',
  *   description: 'Checks if user has admin role',
  *   func: async ({ logger }, _data, { getSession }) => {
  *     const currentSession = await getSession()
