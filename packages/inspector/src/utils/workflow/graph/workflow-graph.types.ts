@@ -200,6 +200,29 @@ export interface SerializedWorkflowGraph {
   entryNodeIds: string[]
   /** Hash of graph topology (nodes, edges, input mappings) */
   graphHash?: string
+  /** Wire entry points (HTTP, channel, queue, etc.) that trigger this workflow */
+  wires?: WorkflowWires
+}
+
+export interface WorkflowWires {
+  http?: Array<{ route: string; method: string; startNode: string }>
+  channel?: Array<{
+    name: string
+    route: string
+    onConnect?: string
+    onMessage?: string
+    onDisconnect?: string
+    onMessageRoute?: Record<string, string>
+  }>
+  queue?: Array<{ name: string; startNode: string }>
+  cli?: Array<{ command: string; startNode: string }>
+  mcp?: {
+    tool?: Array<{ name: string; startNode: string }>
+    prompt?: Array<{ name: string; startNode: string }>
+    resource?: Array<{ uri: string; startNode: string }>
+  }
+  schedule?: Array<{ cron: string; startNode: string }>
+  trigger?: Array<{ name: string; startNode: string }>
 }
 
 /**

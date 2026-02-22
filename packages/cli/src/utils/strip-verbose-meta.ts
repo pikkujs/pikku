@@ -29,6 +29,7 @@ const VERBOSE_FIELDS = new Set([
   'usedWires',
   'isDirectFunction',
   'services',
+  'wires',
 ])
 
 /**
