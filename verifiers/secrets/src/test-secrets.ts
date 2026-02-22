@@ -53,6 +53,18 @@ class EnvVariablesService implements VariablesService {
   getAll(): Record<string, string> {
     return process.env as Record<string, string>
   }
+  set(name: string, value: string): void {
+    process.env[name] = value
+  }
+  setJSON(name: string, value: unknown): void {
+    process.env[name] = JSON.stringify(value)
+  }
+  has(name: string): boolean {
+    return process.env[name] !== undefined
+  }
+  delete(name: string): void {
+    delete process.env[name]
+  }
 }
 
 // Runtime test
