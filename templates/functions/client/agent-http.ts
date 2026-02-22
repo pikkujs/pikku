@@ -21,7 +21,7 @@ async function testRunAgent() {
   pikkuRPC.setAuthorizationJWT(loginResult.token)
 
   console.log('--- Turn 1: Create a todo ---')
-  const r1 = await pikkuRPC.agent('todo-assistant', {
+  const r1 = await pikkuRPC.agent('todoAssistant', {
     message: 'Create a todo called "Buy milk" with high priority',
     threadId,
     resourceId: 'test-user',
@@ -29,7 +29,7 @@ async function testRunAgent() {
   console.log('Response:', JSON.stringify(r1.result, null, 2))
 
   console.log('\n--- Turn 2: Ask about it (should remember) ---')
-  const r2 = await pikkuRPC.agent('todo-assistant', {
+  const r2 = await pikkuRPC.agent('todoAssistant', {
     message: 'What did I just ask you to do?',
     threadId,
     resourceId: 'test-user',
@@ -37,7 +37,7 @@ async function testRunAgent() {
   console.log('Response:', JSON.stringify(r2.result, null, 2))
 
   console.log('\n--- Turn 3: Router delegation (fetch todos + plan day) ---')
-  const r3 = await pikkuRPC.agent('main-router', {
+  const r3 = await pikkuRPC.agent('mainRouter', {
     message: 'Get my todos and plan out my day, suggest tasks accordingly',
     threadId: `router-test-${runId}`,
     resourceId: 'test-user',

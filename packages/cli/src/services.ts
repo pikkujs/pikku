@@ -181,6 +181,7 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   return {
     ...cliConfig,
     ...data,
+    tags: cliConfig.tags,
     filters: parseCLIFilters(data),
     preloadedInspectorState,
   }

@@ -48,6 +48,10 @@ class MockAIRunState implements AIRunStateService {
   async getRunsByThread(_threadId: string): Promise<AgentRunState[]> {
     return []
   }
+  async resolveApproval(
+    _toolCallId: string,
+    _status: 'approved' | 'denied'
+  ): Promise<void> {}
 }
 
 class MockAIStorage implements AIStorageService {

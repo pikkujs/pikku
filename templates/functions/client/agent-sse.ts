@@ -25,7 +25,7 @@ async function testStreamAgent() {
   })
 
   const response = await fetch(
-    `${url}/rpc/agent/daily-planner/stream?${params}`,
+    `${url}/rpc/agent/dailyPlanner/stream?${params}`,
     {
       method: 'GET',
       headers: {

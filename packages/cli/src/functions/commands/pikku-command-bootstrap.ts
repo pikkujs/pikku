@@ -69,10 +69,12 @@ ${Object.entries(usedExternalPackages)
     const packageNameArg = config.externalPackageName
       ? `'${config.externalPackageName}'`
       : 'null'
-    const metaDirRegistration = `import { fileURLToPath as __fileURLToPath } from 'url'
-import { dirname as __dirname } from 'path'
-import { pikkuState as __pikkuState } from '@pikku/core'
-__pikkuState(${packageNameArg}, 'package', 'metaDir', __dirname(__fileURLToPath(import.meta.url)))
+    const metaDirRegistration = `import { pikkuState as __pikkuState } from '@pikku/core'
+try {
+  const { fileURLToPath: __fileURLToPath } = await import('url')
+  const { dirname: __dirname } = await import('path')
+  __pikkuState(${packageNameArg}, 'package', 'metaDir', __dirname(__fileURLToPath(import.meta.url)))
+} catch {}
 `
 
     const allBootstrapImports =
