@@ -19,6 +19,7 @@ import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
+import { finalizeWorkflowWires } from './utils/workflow/graph/finalize-workflow-wires.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
 import {
   computeContractHashes,
@@ -270,6 +271,7 @@ export const inspect = async (
     state.manifest.errors = validateContracts(baseManifest, contracts).errors
 
     finalizeWorkflows(state)
+    finalizeWorkflowWires(state)
   }
 
   // Populate filesAndMethods
