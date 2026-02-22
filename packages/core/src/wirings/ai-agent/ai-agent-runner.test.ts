@@ -24,6 +24,9 @@ const addTestAgent = (agentName: string) => {
     workingMemorySchema: null,
   }
   pikkuState(null, 'agent', 'agents').set(agentName, agent)
+  pikkuState(null, 'models', 'config', {
+    models: { 'test-model': 'test/test-model' },
+  })
 }
 
 describe('runAIAgent', () => {
