@@ -658,7 +658,12 @@ function defineTestSuite(
         status: 'suspended',
         suspendReason: 'approval',
         pendingApprovals: [
-          { toolCallId: 'approval-tc', toolName: 'dangerous-tool', args: {} },
+          {
+            type: 'tool-call',
+            toolCallId: 'approval-tc',
+            toolName: 'dangerous-tool',
+            args: {},
+          },
         ],
         usage: { inputTokens: 0, outputTokens: 0, model: 'test' },
         createdAt: now,

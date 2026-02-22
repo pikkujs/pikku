@@ -165,11 +165,9 @@ export type AIStreamEvent =
     }
   | {
       type: 'approval-request'
-      id: string
-      runId: string
+      toolCallId: string
       toolName: string
       args: unknown
-      reason?: string
       agent?: string
       session?: string
     }
@@ -190,6 +188,22 @@ export type AIStreamEvent =
 
 export interface AIStreamChannel extends PikkuChannel<unknown, AIStreamEvent> {}
 
+export type PendingApproval =
+  | {
+      type: 'tool-call'
+      toolCallId: string
+      toolName: string
+      args: unknown
+    }
+  | {
+      type: 'agent-call'
+      toolCallId: string
+      agentName: string
+      agentRunId: string
+      displayToolName: string
+      displayArgs: unknown
+    }
+
 export interface AgentRunState {
   runId: string
   agentName: string
@@ -198,11 +212,7 @@ export interface AgentRunState {
   status: 'running' | 'suspended' | 'completed' | 'failed'
   suspendReason?: 'approval' | 'rpc-missing'
   missingRpcs?: string[]
-  pendingApprovals?: {
-    toolCallId: string
-    toolName: string
-    args: unknown
-  }[]
+  pendingApprovals?: PendingApproval[]
   usage: { inputTokens: number; outputTokens: number; model: string }
   createdAt: Date
   updatedAt: Date

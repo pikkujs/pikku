@@ -92,6 +92,10 @@ export interface AIToolCallTable {
   args: string
   result: string | null
   approval_status: string | null
+  approval_type: string | null
+  agent_run_id: string | null
+  display_tool_name: string | null
+  display_args: string | null
   created_at: Generated<Date>
 }
 

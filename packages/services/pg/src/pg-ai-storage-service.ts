@@ -69,6 +69,10 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
         args JSONB NOT NULL DEFAULT '{}',
         result TEXT,
         approval_status TEXT,
+        approval_type TEXT,
+        agent_run_id TEXT,
+        display_tool_name TEXT,
+        display_args JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
 
@@ -452,7 +456,10 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
 
     if (updates.pendingApprovals !== undefined) {
       await this.sql.unsafe(
-        `UPDATE ${this.schemaName}.ai_tool_call SET approval_status = NULL, run_id = NULL
+        `UPDATE ${this.schemaName}.ai_tool_call
+         SET approval_status = NULL, run_id = NULL,
+             approval_type = NULL, agent_run_id = NULL,
+             display_tool_name = NULL, display_args = NULL
          WHERE run_id = $1 AND approval_status IS NOT NULL`,
         [runId]
       )
@@ -474,7 +481,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     if (result.length === 0) return null
 
     const approvals = await this.sql.unsafe(
-      `SELECT id, tool_name, args
+      `SELECT id, tool_name, args, approval_type, agent_run_id, display_tool_name, display_args
        FROM ${this.schemaName}.ai_tool_call
        WHERE run_id = $1 AND approval_status = 'pending'`,
       [runId]
@@ -497,7 +504,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     const runs: AgentRunState[] = []
     for (const row of result) {
       const approvals = await this.sql.unsafe(
-        `SELECT id, tool_name, args
+        `SELECT id, tool_name, args, approval_type, agent_run_id, display_tool_name, display_args
          FROM ${this.schemaName}.ai_tool_call
          WHERE run_id = $1 AND approval_status = 'pending'`,
         [row.run_id]
@@ -511,23 +518,54 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     runId: string,
     approvals: NonNullable<AgentRunState['pendingApprovals']>
   ): Promise<void> {
-    const ids = approvals.map((a) => a.toolCallId)
-    const placeholders = ids.map((_, i) => `$${i + 2}`).join(', ')
-    await this.sql.unsafe(
-      `UPDATE ${this.schemaName}.ai_tool_call
-       SET approval_status = 'pending', run_id = $1
-       WHERE id IN (${placeholders})`,
-      [runId, ...ids]
-    )
+    for (const a of approvals) {
+      if (a.type === 'agent-call') {
+        await this.sql.unsafe(
+          `UPDATE ${this.schemaName}.ai_tool_call
+           SET approval_status = 'pending', run_id = $1,
+               approval_type = 'agent-call', agent_run_id = $2,
+               display_tool_name = $3, display_args = $4
+           WHERE id = $5`,
+          [
+            runId,
+            a.agentRunId,
+            a.displayToolName,
+            JSON.stringify(a.displayArgs),
+            a.toolCallId,
+          ]
+        )
+      } else {
+        await this.sql.unsafe(
+          `UPDATE ${this.schemaName}.ai_tool_call
+           SET approval_status = 'pending', run_id = $1,
+               approval_type = 'tool-call'
+           WHERE id = $2`,
+          [runId, a.toolCallId]
+        )
+      }
+    }
   }
 
   private mapRunRow(row: any, approvalRows?: any[]): AgentRunState {
     const pendingApprovals = approvalRows?.length
-      ? approvalRows.map((a: any) => ({
-          toolCallId: a.id as string,
-          toolName: a.tool_name as string,
-          args: a.args as unknown,
-        }))
+      ? approvalRows.map((a: any) => {
+          if (a.approval_type === 'agent-call') {
+            return {
+              type: 'agent-call' as const,
+              toolCallId: a.id as string,
+              agentName: a.tool_name as string,
+              agentRunId: a.agent_run_id as string,
+              displayToolName: a.display_tool_name as string,
+              displayArgs: a.display_args as unknown,
+            }
+          }
+          return {
+            type: 'tool-call' as const,
+            toolCallId: a.id as string,
+            toolName: a.tool_name as string,
+            args: a.args as unknown,
+          }
+        })
       : undefined
 
     return {
@@ -547,6 +585,47 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }
+  }
+
+  async findRunByToolCallId(
+    toolCallId: string
+  ): Promise<{
+    run: AgentRunState
+    approval: NonNullable<AgentRunState['pendingApprovals']>[number]
+  } | null> {
+    const tcResult = await this.sql.unsafe(
+      `SELECT tc.id, tc.tool_name, tc.args, tc.run_id,
+              tc.approval_type, tc.agent_run_id, tc.display_tool_name, tc.display_args
+       FROM ${this.schemaName}.ai_tool_call tc
+       WHERE tc.id = $1 AND tc.approval_status = 'pending'`,
+      [toolCallId]
+    )
+    if (tcResult.length === 0) return null
+
+    const tc = tcResult[0]!
+    const run = await this.getRun(tc.run_id as string)
+    if (!run) return null
+
+    let approval: NonNullable<AgentRunState['pendingApprovals']>[number]
+    if (tc.approval_type === 'agent-call') {
+      approval = {
+        type: 'agent-call',
+        toolCallId: tc.id as string,
+        agentName: tc.tool_name as string,
+        agentRunId: tc.agent_run_id as string,
+        displayToolName: tc.display_tool_name as string,
+        displayArgs: tc.display_args as unknown,
+      }
+    } else {
+      approval = {
+        type: 'tool-call',
+        toolCallId: tc.id as string,
+        toolName: tc.tool_name as string,
+        args: tc.args as unknown,
+      }
+    }
+
+    return { run, approval }
   }
 
   async resolveApproval(

@@ -49,6 +49,7 @@ export class ToolApprovalRequired extends PikkuError {
   public readonly reason?: string
   public readonly displayToolName?: string
   public readonly displayArgs?: unknown
+  public readonly agentRunId?: string
 
   constructor(
     toolCallId: string,
@@ -56,7 +57,8 @@ export class ToolApprovalRequired extends PikkuError {
     args: unknown,
     reason?: string,
     displayToolName?: string,
-    displayArgs?: unknown
+    displayArgs?: unknown,
+    agentRunId?: string
   ) {
     super(`Tool '${displayToolName ?? toolName}' requires approval`)
     this.toolCallId = toolCallId
@@ -65,6 +67,7 @@ export class ToolApprovalRequired extends PikkuError {
     this.reason = reason
     this.displayToolName = displayToolName
     this.displayArgs = displayArgs
+    this.agentRunId = agentRunId
   }
 }
 
@@ -122,21 +125,43 @@ export function buildInstructions(
     : baseInstructions
 }
 
+export type ScopedChannel = AIStreamChannel & {
+  approval: {
+    toolCallId: string
+    toolName: string
+    args: unknown
+    runId: string
+  } | null
+}
+
 export function createScopedChannel(
   parent: AIStreamChannel,
   agentName: string,
   session: string
-): AIStreamChannel {
+): ScopedChannel {
+  let capturedApproval: ScopedChannel['approval'] = null
+
   return {
     channelId: `${parent.channelId}:${agentName}:${session}`,
     openingData: parent.openingData,
     get state() {
       return parent.state
     },
+    get approval() {
+      return capturedApproval
+    },
     close: () => {},
     send: (event: AIStreamEvent) => {
       if (event.type === 'done') return
-      if (event.type === 'approval-request') return
+      if (event.type === 'approval-request') {
+        capturedApproval = {
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: event.args,
+          runId: (event as any).runId,
+        }
+        return
+      }
       if (
         event.type === 'text-delta' ||
         event.type === 'reasoning-delta' ||
@@ -297,27 +322,23 @@ export function buildToolDefs(
               subAgentName,
               session
             )
-            try {
-              await streamAIAgent(
-                subAgentName,
-                { message, threadId, resourceId },
-                subChannel,
-                params,
-                agentSessionMap,
-                streamContext.options
-              )
-            } catch (err) {
-              if (err instanceof ToolApprovalRequired) {
-                return {
-                  __approvalRequired: true,
-                  toolName: subAgentName,
-                  args: toolInput,
-                  displayToolName: err.toolName,
-                  displayArgs: err.args,
-                  reason: err.reason,
-                }
+            await streamAIAgent(
+              subAgentName,
+              { message, threadId, resourceId },
+              subChannel,
+              params,
+              agentSessionMap,
+              streamContext.options
+            )
+            if (subChannel.approval) {
+              return {
+                __approvalRequired: true,
+                toolName: subAgentName,
+                args: toolInput,
+                displayToolName: subChannel.approval.toolName,
+                displayArgs: subChannel.approval.args,
+                agentRunId: subChannel.approval.runId,
               }
-              throw err
             }
             channel.send({
               type: 'agent-result',

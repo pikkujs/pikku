@@ -23,5 +23,6 @@ export type {
   AIStreamEvent,
   AIThread,
   CoreAIAgent,
+  PendingApproval,
   PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
