@@ -241,6 +241,11 @@ export type PikkuCLIInput = {
 
   verboseMeta?: boolean
 
+  lint?: {
+    servicesNotDestructured?: 'off' | 'warn' | 'error'
+    wiresNotDestructured?: 'off' | 'warn' | 'error'
+  }
+
   node?: {
     categories?: string[]
     icon?: string
@@ -372,6 +377,11 @@ export type PikkuCLIConfig = {
   stateInput?: string
 
   verboseMeta?: boolean
+
+  lint?: {
+    servicesNotDestructured?: 'off' | 'warn' | 'error'
+    wiresNotDestructured?: 'off' | 'warn' | 'error'
+  }
 
   node?: {
     categories?: string[]

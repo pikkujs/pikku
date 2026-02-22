@@ -21,11 +21,13 @@ import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import {
   inspect,
   InspectorState,
+  InspectorDiagnostic,
   InspectorFilters,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
   getInitialInspectorState,
+  ErrorCode,
 } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
@@ -38,8 +40,26 @@ import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { join } from 'path'
 
-// Logger instance will be configured with log level from CLI flags in createConfig
-// Logo will be displayed conditionally in createConfig based on --silent flag
+const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<string, keyof NonNullable<PikkuCLIConfig['lint']>> = {
+  [ErrorCode.SERVICES_NOT_DESTRUCTURED]: 'servicesNotDestructured',
+  [ErrorCode.WIRES_NOT_DESTRUCTURED]: 'wiresNotDestructured',
+}
+
+function processDiagnostics(
+  diagnostics: InspectorDiagnostic[],
+  lint?: PikkuCLIConfig['lint']
+): void {
+  for (const diagnostic of diagnostics) {
+    const lintKey = DIAGNOSTIC_CODE_TO_LINT_KEY[diagnostic.code]
+    const severity = lintKey ? lint?.[lintKey] ?? 'off' : 'off'
+    if (severity === 'error') {
+      logger.critical(diagnostic.code as ErrorCode, diagnostic.message)
+    } else if (severity === 'warn') {
+      logger.warn(`[${diagnostic.code}] ${diagnostic.message}`)
+    }
+  }
+}
+
 const logger = new CLILogger({ logLogo: false, silent: false })
 
 /**
@@ -303,7 +323,10 @@ export const createSingletonServices: CreateSingletonServices<
             : undefined,
       })
 
-      // Save unfiltered inspector state to file if stateOutput is provided
+      if ('diagnostics' in unfilteredState && unfilteredState.diagnostics.length > 0) {
+        processDiagnostics(unfilteredState.diagnostics, config.lint)
+      }
+
       if (stateOutput && 'typesLookup' in unfilteredState) {
         try {
           logger.info(`Saving inspector state to ${stateOutput}`)

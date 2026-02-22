@@ -47,6 +47,11 @@ export interface FunctionServicesMeta {
   services: string[]
 }
 
+export interface FunctionWiresMeta {
+  optimized: boolean
+  wires: string[]
+}
+
 /**
  * Metadata for middleware at any level
  * - type: 'http' = HTTP route middleware group (references httpGroup in pikkuState)
@@ -108,7 +113,7 @@ export type FunctionMeta = FunctionRuntimeMeta &
       functionType: 'user' | 'inline' | 'helper'
       funcWrapper: string
       services: FunctionServicesMeta
-      usedWires: string[]
+      wires: FunctionWiresMeta
       inputs: string[] | null
       outputs: string[] | null
       middleware: MiddlewareMetadata[]

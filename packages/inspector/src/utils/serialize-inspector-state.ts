@@ -1,5 +1,5 @@
 import { JSONValue } from '@pikku/core'
-import { InspectorState } from '../types.js'
+import { InspectorDiagnostic, InspectorState } from '../types.js'
 import { TypesMap } from '../types-map.js'
 
 /**
@@ -232,6 +232,7 @@ export interface SerializableInspectorState {
   permissionsGroupsMeta: InspectorState['permissionsGroupsMeta']
   requiredSchemas: string[]
   openAPISpec: Record<string, any> | null
+  diagnostics: InspectorDiagnostic[]
 }
 
 /**
@@ -390,6 +391,7 @@ export function serializeInspectorState(
     permissionsGroupsMeta: state.permissionsGroupsMeta,
     requiredSchemas: Array.from(state.requiredSchemas),
     openAPISpec: state.openAPISpec,
+    diagnostics: state.diagnostics,
   }
 }
 
@@ -557,5 +559,6 @@ export function deserializeInspectorState(
     },
     requiredSchemas: new Set(data.requiredSchemas || []),
     openAPISpec: data.openAPISpec || null,
+    diagnostics: data.diagnostics || [],
   }
 }

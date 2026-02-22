@@ -108,7 +108,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
-    const usedWires = extractUsedWires(actualHandler, 2)
+    const wires = extractUsedWires(actualHandler, 2)
     let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
@@ -135,7 +135,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
     state.permissions.definitions[pikkuFuncId] = {
       services,
-      usedWires: usedWires.length > 0 ? usedWires : undefined,
+      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
@@ -166,7 +166,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     // The factory should return pikkuPermission(...), so we need to find that call
     // If no wrapper is found, extract from the factory's returned function directly
     let services = { optimized: false, services: [] as string[] }
-    let usedWires: string[] = []
+    let wires: ReturnType<typeof extractUsedWires> = { optimized: true, wires: [] }
 
     const findPikkuPermissionCall = (
       node: ts.Node
@@ -188,7 +188,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
         ts.isFunctionExpression(permissionHandler)
       ) {
         services = extractServicesFromFunction(permissionHandler)
-        usedWires = extractUsedWires(permissionHandler, 2)
+        wires = extractUsedWires(permissionHandler, 2)
       }
     } else {
       if (
@@ -201,7 +201,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
           ts.isFunctionExpression(factoryBody)
         ) {
           services = extractServicesFromFunction(factoryBody)
-          usedWires = extractUsedWires(factoryBody, 2)
+          wires = extractUsedWires(factoryBody, 2)
         }
       }
     }
@@ -232,7 +232,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
     state.permissions.definitions[pikkuFuncId] = {
       services,
-      usedWires: usedWires.length > 0 ? usedWires : undefined,
+      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,

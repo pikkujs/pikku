@@ -14,6 +14,7 @@ import {
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
   computeRequiredSchemas,
+  computeDiagnostics,
 } from './utils/post-process.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core'
@@ -184,6 +185,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     },
     requiredSchemas: new Set(),
     openAPISpec: null,
+    diagnostics: [],
   }
 }
 
@@ -297,6 +299,7 @@ export const inspect = async (
     computeResolvedIOTypes(state)
     computeMiddlewareGroupsMeta(state)
     computePermissionsGroupsMeta(state)
+    computeDiagnostics(state)
 
     if (options.openAPI) {
       state.openAPISpec = await generateOpenAPISpec(
