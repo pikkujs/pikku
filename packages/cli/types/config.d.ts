@@ -124,6 +124,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Variables (typed wrapper for VariablesService)
   variablesFile: string
+
+  // Variables metadata JSON
+  variablesMetaJsonFile: string
 }
 
 export type PikkuCLIInput = {

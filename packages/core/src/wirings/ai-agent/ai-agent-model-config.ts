@@ -4,7 +4,10 @@ export function resolveModelConfig(
   agentName: string,
   agent: { model: string; temperature?: number; maxSteps?: number }
 ): { model: string; temperature?: number; maxSteps?: number } {
-  const config = pikkuState(null, 'models', 'config') ?? {}
+  let config: any = {}
+  try {
+    config = pikkuState(null, 'models', 'config') ?? {}
+  } catch {}
   const models = config.models ?? {}
   const defaults = config.agentDefaults
   const agentOverride = config.agentOverrides?.[agentName]

@@ -167,6 +167,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
     packageName?: string | null
   }
 ): Promise<Out> => {
+  if (!wire.wireType) {
+    wire.wireType = wireType
+    wire.wireId = wireId
+  }
+
   const funcMap = pikkuState(packageName, 'function', 'functions')
   let funcConfig = funcMap.get(funcName)
   const allMeta = pikkuState(packageName, 'function', 'meta')

@@ -197,6 +197,7 @@ export class RedisWorkflowRunService implements WorkflowRunService {
       error: data.error ? JSON.parse(data.error) : undefined,
       inline: data.inline === 'true' ? true : undefined,
       graphHash: data.graphHash || undefined,
+      wire: data.wire ? JSON.parse(data.wire) : { type: 'unknown' },
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }

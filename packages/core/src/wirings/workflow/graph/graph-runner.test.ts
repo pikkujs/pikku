@@ -31,7 +31,8 @@ describe('graph-runner bugs', () => {
       'testPrematureCompletion',
       {},
       false,
-      'test-hash'
+      'test-hash',
+      { type: 'test' }
     )
 
     const stepA = await ws.insertStepState(runId, 'a', 'doA', {})
@@ -137,7 +138,8 @@ describe('graph-runner bugs', () => {
       'testAmbiguousTemplateStepRemap',
       {},
       false,
-      'ambiguous-step-remap-hash'
+      'ambiguous-step-remap-hash',
+      { type: 'test' }
     )
 
     const step = await ws.insertStepState(runId, 'task-123', 'doTask', {})
@@ -175,7 +177,8 @@ describe('graph-runner bugs', () => {
       'testAmbiguousTemplateBranchRemap',
       {},
       false,
-      'ambiguous-branch-remap-hash'
+      'ambiguous-branch-remap-hash',
+      { type: 'test' }
     )
 
     const step = await ws.insertStepState(runId, 'branch-1', 'doBranch', {})
@@ -224,7 +227,8 @@ describe('graph-runner bugs', () => {
       'testConvergingNextNode',
       {},
       false,
-      'converging-hash'
+      'converging-hash',
+      { type: 'test' }
     )
 
     const stepA = await ws.insertStepState(runId, 'a', 'doA', {})
@@ -367,7 +371,8 @@ describe('graph-runner bugs', () => {
       'testQueuedOnErrorThrow',
       {},
       false,
-      'queued-on-error-hash'
+      'queued-on-error-hash',
+      { type: 'test' }
     )
     const step = await ws.insertStepState(runId, 'a', 'doA', {})
 
@@ -421,7 +426,8 @@ describe('graph-runner bugs', () => {
       'testQueuedRpcMissing',
       {},
       false,
-      'queued-rpc-missing-hash'
+      'queued-rpc-missing-hash',
+      { type: 'test' }
     )
     await ws.insertStepState(runId, 'a', 'missingRpc', {})
 

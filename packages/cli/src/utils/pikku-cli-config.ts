@@ -513,6 +513,12 @@ const _getPikkuCLIConfig = async (
     if (!result.variablesFile) {
       result.variablesFile = join(variablesDir, 'pikku-variables.gen.ts')
     }
+    if (!result.variablesMetaJsonFile) {
+      result.variablesMetaJsonFile = join(
+        variablesDir,
+        'pikku-variables-meta.gen.json'
+      )
+    }
 
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)

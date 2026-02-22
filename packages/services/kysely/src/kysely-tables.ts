@@ -24,6 +24,7 @@ export interface WorkflowRunsTable {
   state: Generated<string>
   inline: Generated<boolean>
   graph_hash: string | null
+  wire: string | null
   created_at: Generated<Date>
   updated_at: Generated<Date>
 }

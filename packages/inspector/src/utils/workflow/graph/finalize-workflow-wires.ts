@@ -40,6 +40,36 @@ function getOrCreateWires(graph: SerializedWorkflowGraph): WorkflowWires {
   return graph.wires
 }
 
+export function finalizeWorkflowHelperTypes(state: InspectorState): void {
+  const { functions, workflows } = state
+  const graphMeta = workflows.graphMeta
+
+  for (const meta of Object.values(functions.meta)) {
+    if (meta.functionType !== 'helper') continue
+    if (meta.pikkuFuncId.startsWith('workflowStatus:')) continue
+
+    const parsed = parseWorkflowFuncId(meta.pikkuFuncId)
+    if (!parsed) continue
+
+    const graph = graphMeta[parsed.workflowName]
+    if (!graph) continue
+
+    const startNodeId = resolveStartNode(parsed, graph)
+    const startNode = graph.nodes[startNodeId]
+    if (!startNode || !('rpcName' in startNode)) continue
+
+    const rpcMeta = functions.meta[startNode.rpcName as string]
+    if (!rpcMeta) continue
+
+    if (rpcMeta.inputSchemaName) {
+      meta.inputSchemaName = rpcMeta.inputSchemaName
+    }
+    if (rpcMeta.inputs && rpcMeta.inputs.length > 0) {
+      meta.inputs = rpcMeta.inputs
+    }
+  }
+}
+
 export function finalizeWorkflowWires(state: InspectorState): void {
   const { workflows } = state
   const graphMeta = workflows.graphMeta

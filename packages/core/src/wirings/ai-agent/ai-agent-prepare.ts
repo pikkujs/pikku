@@ -47,18 +47,24 @@ export class ToolApprovalRequired extends PikkuError {
   public readonly toolName: string
   public readonly args: unknown
   public readonly reason?: string
+  public readonly displayToolName?: string
+  public readonly displayArgs?: unknown
 
   constructor(
     toolCallId: string,
     toolName: string,
     args: unknown,
-    reason?: string
+    reason?: string,
+    displayToolName?: string,
+    displayArgs?: unknown
   ) {
-    super(`Tool '${toolName}' requires approval`)
+    super(`Tool '${displayToolName ?? toolName}' requires approval`)
     this.toolCallId = toolCallId
     this.toolName = toolName
     this.args = args
     this.reason = reason
+    this.displayToolName = displayToolName
+    this.displayArgs = displayArgs
   }
 }
 
@@ -127,15 +133,15 @@ export function createScopedChannel(
     get state() {
       return parent.state
     },
-    close: () => parent.close(),
+    close: () => {},
     send: (event: AIStreamEvent) => {
       if (event.type === 'done') return
+      if (event.type === 'approval-request') return
       if (
         event.type === 'text-delta' ||
         event.type === 'reasoning-delta' ||
         event.type === 'tool-call' ||
         event.type === 'tool-result' ||
-        event.type === 'approval-request' ||
         event.type === 'usage' ||
         event.type === 'error'
       ) {
@@ -291,7 +297,7 @@ export function buildToolDefs(
               subAgentName,
               session
             )
-            await streamAIAgent(
+            const approval = await streamAIAgent(
               subAgentName,
               { message, threadId, resourceId },
               subChannel,
@@ -299,6 +305,16 @@ export function buildToolDefs(
               agentSessionMap,
               streamContext.options
             )
+            if (approval instanceof ToolApprovalRequired) {
+              return {
+                __approvalRequired: true,
+                toolName: subAgentName,
+                args: toolInput,
+                displayToolName: approval.toolName,
+                displayArgs: approval.args,
+                reason: approval.reason,
+              }
+            }
             channel.send({
               type: 'agent-result',
               agentName: subAgentName,

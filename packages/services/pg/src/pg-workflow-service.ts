@@ -2,6 +2,7 @@ import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
   type WorkflowRun,
+  type WorkflowRunWire,
   type StepState,
   type WorkflowStatus,
 } from '@pikku/core/workflow'
@@ -104,6 +105,10 @@ export class PgWorkflowService extends PikkuWorkflowService {
       ALTER TABLE ${this.schemaName}.workflow_runs
         ADD COLUMN IF NOT EXISTS graph_hash TEXT;
 
+      -- Add wire column if it doesn't exist (for existing tables)
+      ALTER TABLE ${this.schemaName}.workflow_runs
+        ADD COLUMN IF NOT EXISTS wire JSONB;
+
       CREATE TABLE IF NOT EXISTS ${this.schemaName}.workflow_step (
         workflow_step_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         workflow_run_id UUID NOT NULL,
@@ -153,15 +158,16 @@ export class PgWorkflowService extends PikkuWorkflowService {
     workflowName: string,
     input: any,
     inline: boolean,
-    graphHash: string
+    graphHash: string,
+    wire: WorkflowRunWire
   ): Promise<string> {
     const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.workflow_runs
-        (workflow, status, input, inline, graph_hash)
+        (workflow, status, input, inline, graph_hash, wire)
       VALUES
-        ($1, $2, $3, $4, $5)
+        ($1, $2, $3, $4, $5, $6)
       RETURNING workflow_run_id`,
-      [workflowName, 'running', input, inline, graphHash]
+      [workflowName, 'running', input, inline, graphHash, wire]
     )
 
     return result[0]!.workflow_run_id
