@@ -139,7 +139,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   public setServices(
     singletonServices: CoreSingletonServices,
-    createWireServices: CreateWireServices,
+    createWireServices: CreateWireServices | undefined,
     { workflow }: CoreConfig
   ) {
     this.singletonServices = singletonServices

@@ -70,15 +70,6 @@ const getOrCreatePackageSingletonServices = async (
     parentServices
   )
 
-  // Auto-initialize workflow service if present
-  if (packageServices.workflowService) {
-    packageServices.workflowService.setServices(
-      packageServices,
-      factories.createWireServices as CreateWireServices,
-      config
-    )
-  }
-
   // Cache the services
   pikkuState(packageName, 'package', 'singletonServices', packageServices)
 
