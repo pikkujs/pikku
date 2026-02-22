@@ -113,7 +113,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
-      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
+      wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,
@@ -140,7 +140,10 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     let services = { optimized: false, services: [] as string[] }
-    let wires: ReturnType<typeof extractUsedWires> = { optimized: true, wires: [] }
+    let wires: ReturnType<typeof extractUsedWires> = {
+      optimized: true,
+      wires: [],
+    }
     let name: string | undefined
     let description: string | undefined
 
@@ -227,7 +230,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
     state.middleware.definitions[pikkuFuncId] = {
       services,
-      wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
+      wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
       sourceFile: node.getSourceFile().fileName,
       position: node.getStart(),
       exportedName,

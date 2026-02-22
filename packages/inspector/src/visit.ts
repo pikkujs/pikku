@@ -8,7 +8,6 @@ import { addTrigger } from './add/add-trigger.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
 import { addWorkflow } from './add/add-workflow.js'
 import { addMCPResource } from './add/add-mcp-resource.js'
-import { addMCPTool } from './add/add-mcp-tool.js'
 import { addMCPPrompt } from './add/add-mcp-prompt.js'
 import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { addFunctions } from './add/add-functions.js'
@@ -109,7 +108,6 @@ export const visitRoutes = (
   addCLI(logger, node, checker, state, options)
   addCLIRenderers(logger, node, checker, state, options)
   addMCPResource(logger, node, checker, state, options)
-  addMCPTool(logger, node, checker, state, options)
   addMCPPrompt(logger, node, checker, state, options)
   addWorkflowGraph(logger, node, checker, state, options)
   addAIAgent(logger, node, checker, state, options)

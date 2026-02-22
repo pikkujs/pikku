@@ -5,11 +5,10 @@ import {
   pikkuMCPToolFunc,
 } from '#pikku'
 
-/**
- * A simple hello world MCP tool that greets the user
- */
-export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
-  async (services, { name = 'World' }, {}) => {
+export const sayHello = pikkuMCPToolFunc<{ name?: string }>({
+  description: 'Greet someone with a friendly hello message',
+  tags: ['greeting', 'hello', 'demo'],
+  func: async (services, { name = 'World' }, {}) => {
     services.logger.info(`Saying hello to: ${name}`)
 
     return [
@@ -18,11 +17,12 @@ export const sayHello = pikkuMCPToolFunc<{ name?: string }>(
         text: `Hello, ${name}! This is a Pikku MCP tool.`,
       },
     ]
-  }
-)
+  },
+})
 
-export const disableTool = pikkuMCPToolFunc<{ name: string }>(
-  async (services, { name }, { mcp }) => {
+export const disableTool = pikkuMCPToolFunc<{ name: string }>({
+  description: 'Disable a tool by name',
+  func: async (services, { name }, { mcp }) => {
     const changed = await mcp.enableTools({ [name]: false })
     if (changed) {
       return [
@@ -39,52 +39,51 @@ export const disableTool = pikkuMCPToolFunc<{ name: string }>(
         },
       ]
     }
-  }
-)
+  },
+})
 
-/**
- * A simple calculator MCP tool that performs basic math operations
- */
 export const calculate = pikkuMCPToolFunc<{
   operation: 'add' | 'subtract' | 'multiply' | 'divide'
   a: number
   b: number
-}>(async ({ logger }, { operation, a, b }, wire) => {
-  logger.info(`Calculating: ${a} ${operation} ${b}`)
+}>({
+  description:
+    'Perform basic mathematical operations (add, subtract, multiply, divide)',
+  tags: ['math', 'calculator', 'arithmetic'],
+  func: async ({ logger }, { operation, a, b }, wire) => {
+    logger.info(`Calculating: ${a} ${operation} ${b}`)
 
-  let result: number
+    let result: number
 
-  switch (operation) {
-    case 'add':
-      result = a + b
-      break
-    case 'subtract':
-      result = a - b
-      break
-    case 'multiply':
-      result = a * b
-      break
-    case 'divide':
-      if (b === 0) {
-        throw new Error('Division by zero is not allowed')
-      }
-      result = a / b
-      break
-    default:
-      throw new Error(`Unknown operation: ${operation}`)
-  }
+    switch (operation) {
+      case 'add':
+        result = a + b
+        break
+      case 'subtract':
+        result = a - b
+        break
+      case 'multiply':
+        result = a * b
+        break
+      case 'divide':
+        if (b === 0) {
+          throw new Error('Division by zero is not allowed')
+        }
+        result = a / b
+        break
+      default:
+        throw new Error(`Unknown operation: ${operation}`)
+    }
 
-  return [
-    {
-      type: 'text',
-      text: `The result of ${a} ${operation} ${b} is ${result}.`,
-    },
-  ]
+    return [
+      {
+        type: 'text',
+        text: `The result of ${a} ${operation} ${b} is ${result}.`,
+      },
+    ]
+  },
 })
 
-/**
- * A static resource that returns predefined data
- */
 export const getStaticResource = pikkuMCPResourceFunc<unknown>(
   async ({}, _data, { mcp }) => {
     return [

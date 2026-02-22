@@ -70,26 +70,33 @@ export const createTodoTool = pikkuMCPToolFunc<{
   dueDate?: string
   tags?: string[]
   userId?: string
-}>(async (_services, data, { rpc }) => {
-  const result = await rpc.invoke('createTodo', {
-    ...data,
-    priority: data.priority ?? 'medium',
-    tags: data.tags ?? [],
-  })
+}>({
+  description:
+    'Create a new todo item with title, description, priority, dueDate, and tags',
+  tags: ['todos', 'create'],
+  func: async (_services, data, { rpc }) => {
+    const result = await rpc.invoke('createTodo', {
+      ...data,
+      priority: data.priority ?? 'medium',
+      tags: data.tags ?? [],
+    })
 
-  return [
-    {
-      type: 'text',
-      text: `Created todo: ${formatTodo(result.todo)}`,
-    },
-  ]
+    return [
+      {
+        type: 'text',
+        text: `Created todo: ${formatTodo(result.todo)}`,
+      },
+    ]
+  },
 })
 
 /**
  * MCP Tool: Mark a todo as complete
  */
-export const completeTodoTool = pikkuMCPToolFunc<{ id: string }>(
-  async (_services, { id }, { rpc }) => {
+export const completeTodoTool = pikkuMCPToolFunc<{ id: string }>({
+  description: 'Mark a todo as complete by ID',
+  tags: ['todos', 'update'],
+  func: async (_services, { id }, { rpc }) => {
     const result = await rpc.invoke('completeTodo', { id })
 
     if (!result.success || !result.todo) {
@@ -107,14 +114,16 @@ export const completeTodoTool = pikkuMCPToolFunc<{ id: string }>(
         text: `Completed: ${formatTodo(result.todo)}`,
       },
     ]
-  }
-)
+  },
+})
 
 /**
  * MCP Tool: Delete a todo
  */
-export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>(
-  async (_services, { id }, { rpc }) => {
+export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>({
+  description: 'Delete a todo by ID',
+  tags: ['todos', 'delete'],
+  func: async (_services, { id }, { rpc }) => {
     const result = await rpc.invoke('deleteTodo', { id })
 
     return [
@@ -125,8 +134,8 @@ export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>(
           : `Failed to delete todo "${id}". It may not exist.`,
       },
     ]
-  }
-)
+  },
+})
 
 /**
  * MCP Prompt: Plan the day based on pending todos

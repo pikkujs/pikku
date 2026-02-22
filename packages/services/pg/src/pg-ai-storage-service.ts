@@ -587,9 +587,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     }
   }
 
-  async findRunByToolCallId(
-    toolCallId: string
-  ): Promise<{
+  async findRunByToolCallId(toolCallId: string): Promise<{
     run: AgentRunState
     approval: NonNullable<AgentRunState['pendingApprovals']>[number]
   } | null> {

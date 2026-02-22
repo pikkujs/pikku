@@ -320,6 +320,7 @@ export type PikkuFunctionConfigWithSchema<
   name?: string
   tags?: string[]
   expose?: boolean
+  mcp?: boolean
   internal?: boolean
   func: PikkuFunction<
     InferSchemaOutput<InputSchema>,
@@ -403,6 +404,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   description?: string
   tags?: string[]
   expose?: boolean
+  mcp?: boolean
   internal?: boolean
   remote?: boolean
   func: PikkuFunctionSessionless<

@@ -15,7 +15,6 @@ import {
 import {
   CoreMCPResource,
   MCPResourceMeta,
-  CoreMCPTool,
   MCPToolMeta,
   CoreMCPPrompt,
   MCPPromptMeta,
@@ -105,7 +104,6 @@ export interface PikkuPackageState {
   mcp: {
     resources: Map<string, CoreMCPResource>
     resourcesMeta: MCPResourceMeta
-    tools: Map<string, CoreMCPTool>
     toolsMeta: MCPToolMeta
     prompts: Map<string, CoreMCPPrompt>
     promptsMeta: MCPPromptMeta

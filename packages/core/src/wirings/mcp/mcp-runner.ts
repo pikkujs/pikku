@@ -7,7 +7,6 @@ import {
 } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
-  CoreMCPTool,
   CoreMCPPrompt,
   JsonRpcRequest,
   JsonRpcResponse,
@@ -76,28 +75,6 @@ export const wireMCPResource = <
     throw new Error(`MCP resource already exists: ${mcpResource.uri}`)
   }
   resources.set(mcpResource.uri, mcpResource)
-}
-
-export const wireMCPTool = <
-  PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    CorePikkuFunctionSessionless<any, any>
-  > = CorePikkuFunctionConfig<CorePikkuFunctionSessionless<any, any>>,
->(
-  mcpTool: CoreMCPTool<PikkuFunctionConfig>
-) => {
-  const toolsMeta = pikkuState(null, 'mcp', 'toolsMeta')
-  const mcpToolMeta = toolsMeta[mcpTool.name]
-  if (!mcpToolMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for MCP tool '${mcpTool.name}'`
-    )
-  }
-  addFunction(mcpToolMeta.pikkuFuncId, mcpTool.func as any)
-  const tools = pikkuState(null, 'mcp', 'tools')
-  if (tools.has(mcpTool.name)) {
-    throw new Error(`MCP tool already exists: ${mcpTool.name}`)
-  }
-  tools.set(mcpTool.name, mcpTool)
 }
 
 export const wireMCPPrompt = <
@@ -183,13 +160,12 @@ export async function runMCPTool(
   params: RunMCPEndpointParams,
   name: string
 ) {
-  const endpoint = pikkuState(null, 'mcp', 'tools').get(name)
   const meta = pikkuState(null, 'mcp', 'toolsMeta')[name]
   return await runMCPPikkuFunc(
     request,
     'tool',
     name,
-    endpoint,
+    undefined,
     meta?.pikkuFuncId,
     params
   )
@@ -219,21 +195,20 @@ async function runMCPPikkuFunc(
   request: JsonRpcRequest,
   type: 'resource' | 'tool' | 'prompt',
   name: string,
-  mcp: CoreMCPResource | CoreMCPTool | CoreMCPPrompt | undefined,
+  mcp: CoreMCPResource | CoreMCPPrompt | undefined,
   pikkuFuncId: string | undefined,
   { singletonServices, createWireServices, mcp: mcpWire }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
   let wireServices: any
 
   try {
-    // Validate JSON-RPC request structure
     if (request.jsonrpc !== '2.0') {
       throw new BadRequestError(
         'Invalid JSON-RPC version, only supoorted version is 2.0'
       )
     }
 
-    if (!mcp) {
+    if (mcp === undefined && type !== 'tool') {
       throw new NotFoundError(
         `MCP '${type}' registration not found for '${name}'`
       )
@@ -262,18 +237,22 @@ async function runMCPPikkuFunc(
       meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
     }
 
-    const result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncId, {
+    let result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncId, {
       singletonServices,
       createWireServices,
       data: () => request.params,
       inheritedMiddleware: meta?.middleware,
-      wireMiddleware: mcp.middleware,
+      wireMiddleware: mcp?.middleware,
       inheritedPermissions: meta?.permissions,
-      wirePermissions: mcp.permissions,
-      tags: mcp.tags,
+      wirePermissions: mcp?.permissions,
+      tags: mcp?.tags,
       wire,
       sessionService: mcpSessionService,
     })
+
+    if (type === 'tool' && meta?.outputSchema !== 'MCPToolResponse') {
+      result = [{ type: 'text', text: JSON.stringify(result) }]
+    }
 
     return {
       id: request.id,
@@ -309,10 +288,6 @@ async function runMCPPikkuFunc(
       await closeWireServices(singletonServices.logger, wireServices)
     }
   }
-}
-
-export const getMCPTools = () => {
-  return pikkuState(null, 'mcp', 'tools')
 }
 
 export const getMCPResources = () => {

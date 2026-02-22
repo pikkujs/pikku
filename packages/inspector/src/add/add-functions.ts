@@ -15,6 +15,7 @@ import {
 } from '../utils/get-property-value.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
 import type { NodeType } from '@pikku/core/node'
 
@@ -337,6 +338,7 @@ export const addFunctions: AddWiring = (
   let errors: string[] | undefined
   let expose: boolean | undefined
   let remote: boolean | undefined
+  let mcp: boolean | undefined
   let requiresApproval: boolean | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
@@ -417,6 +419,7 @@ export const addFunctions: AddWiring = (
     errors = metadata.errors
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
+    mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
     requiresApproval = getPropertyValue(firstArg, 'requiresApproval') as
       | boolean
       | undefined
@@ -511,6 +514,9 @@ export const addFunctions: AddWiring = (
     pikkuFuncId = formatVersionedId(baseName, version)
   }
 
+  const isMCPToolFunc = expression.text === 'pikkuMCPToolFunc'
+  const mcpEnabled = mcp || isMCPToolFunc
+
   // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
   const handler =
     resolvedFunc &&
@@ -555,7 +561,10 @@ export const addFunctions: AddWiring = (
           services.services.push(original)
         }
       }
-    } else if (ts.isIdentifier(firstParam.name) && !firstParam.name.text.startsWith('_')) {
+    } else if (
+      ts.isIdentifier(firstParam.name) &&
+      !firstParam.name.text.startsWith('_')
+    ) {
       services.optimized = false
     }
   }
@@ -740,13 +749,14 @@ export const addFunctions: AddWiring = (
     sessionless,
     name,
     services,
-    wires: (wires.wires.length > 0 || !wires.optimized) ? wires : undefined,
+    wires: wires.wires.length > 0 || !wires.optimized ? wires : undefined,
     inputSchemaName: inputNames[0] ?? null,
     outputSchemaName: outputNames[0] ?? null,
     inputs: inputNames.filter((n) => n !== 'void') ?? null,
     outputs: outputNames.filter((n) => n !== 'void') ?? null,
     expose: expose || undefined,
     remote: remote || undefined,
+    mcp: mcpEnabled || undefined,
     requiresApproval: requiresApproval || undefined,
     version,
     title,
@@ -774,6 +784,37 @@ export const addFunctions: AddWiring = (
       outputSchemaName: outputNames[0] ?? null,
       tags,
     }
+  }
+
+  if (mcpEnabled) {
+    if (!description) {
+      logger.critical(
+        ErrorCode.MISSING_DESCRIPTION,
+        `MCP tool '${name}' is missing a description.`
+      )
+      return
+    }
+    state.mcpEndpoints.files.add(node.getSourceFile().fileName)
+    state.mcpEndpoints.toolsMeta[name] = {
+      pikkuFuncId,
+      name,
+      title: title || undefined,
+      description,
+      summary,
+      errors,
+      tags,
+      inputSchema: inputNames[0] ?? null,
+      outputSchema: outputNames[0] ?? null,
+      middleware,
+      permissions,
+    }
+    state.serviceAggregation.usedFunctions.add(pikkuFuncId)
+    extractWireNames(middleware).forEach((n) =>
+      state.serviceAggregation.usedMiddleware.add(n)
+    )
+    extractWireNames(permissions).forEach((n) =>
+      state.serviceAggregation.usedPermissions.add(n)
+    )
   }
 
   // Workflow functions don't get registered as RPC functions,
@@ -832,7 +873,12 @@ export const addFunctions: AddWiring = (
 
     // But we only import the actual function if it's actually invoked to keep
     // bundle size down
-    if (state.rpc.invokedFunctions.has(pikkuFuncId) || expose || remote) {
+    if (
+      state.rpc.invokedFunctions.has(pikkuFuncId) ||
+      expose ||
+      remote ||
+      mcpEnabled
+    ) {
       state.rpc.internalFiles.set(pikkuFuncId, {
         path: node.getSourceFile().fileName,
         exportedName,

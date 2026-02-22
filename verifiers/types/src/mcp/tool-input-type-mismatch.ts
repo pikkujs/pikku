@@ -2,90 +2,84 @@
  * Type constraint: MCP tool input types must match function signatures
  *
  * MCP tools accept input parameters that must be properly typed.
+ * Tools are defined using pikkuMCPToolFunc with description.
  */
 
-import { wireMCPTool, pikkuMCPToolFunc } from '#pikku'
+import { pikkuMCPToolFunc } from '#pikku'
 
 // Valid: Tool with properly typed input
-wireMCPTool({
-  name: 'greet',
+export const greet = pikkuMCPToolFunc<{ name: string }>({
   description: 'Greet a user',
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }, {}) => {
+  func: async ({}, { name }, {}) => {
     return [{ type: 'text', text: `Hello, ${name}!` }]
-  }),
+  },
 })
 
 // Valid: Tool with optional parameters
-wireMCPTool({
-  name: 'greetOptional',
+export const greetOptional = pikkuMCPToolFunc<{
+  name: string
+  greeting?: string
+}>({
   description: 'Greet a user with optional greeting',
-  func: pikkuMCPToolFunc<{ name: string; greeting?: string }>(
-    async ({}, data, {}) => {
-      return [
-        { type: 'text', text: `${data.greeting || 'Hello'}, ${data.name}!` },
-      ]
-    }
-  ),
+  func: async ({}, data, {}) => {
+    return [
+      { type: 'text', text: `${data.greeting || 'Hello'}, ${data.name}!` },
+    ]
+  },
 })
 
 // Valid: Tool with complex input type
-wireMCPTool({
-  name: 'calculate',
+export const calculate = pikkuMCPToolFunc<{
+  operation: 'add' | 'subtract' | 'multiply' | 'divide'
+  a: number
+  b: number
+}>({
   description: 'Perform calculation',
-  func: pikkuMCPToolFunc<{
-    operation: 'add' | 'subtract' | 'multiply' | 'divide'
-    a: number
-    b: number
-  }>(async ({}, { operation, a, b }, {}) => {
+  func: async ({}, { operation, a, b }, {}) => {
     const result = operation === 'add' ? a + b : a - b
     return [{ type: 'text', text: `Result: ${result}` }]
-  }),
+  },
 })
 
-wireMCPTool({
-  name: 'invalidAccess',
+export const invalidAccess = pikkuMCPToolFunc<{ name: string }>({
   description: 'Invalid property access',
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, data, {}) => {
+  func: async ({}, data, {}) => {
     // @ts-expect-error - Accessing property that doesn't exist in input type
     return [{ type: 'text', text: `Age: ${data.age}` }]
-  }),
+  },
 })
 
 // Valid: Tool with no input parameters
-wireMCPTool({
-  name: 'timestamp',
+export const timestamp = pikkuMCPToolFunc<unknown>({
   description: 'Get current timestamp',
-  func: pikkuMCPToolFunc<unknown>(async () => {
+  func: async () => {
     return [{ type: 'text', text: `Now: ${Date.now()}` }]
-  }),
+  },
 })
 
-wireMCPTool({
-  name: 'invalidReturn',
+export const invalidReturn = pikkuMCPToolFunc<{ name: string }>({
   description: 'Invalid return type',
   // @ts-expect-error - Return type must be array of content items
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }, {}) => {
+  func: async ({}, { name }, {}) => {
     return `Hello, ${name}!`
-  }),
+  },
 })
 
-wireMCPTool({
-  name: 'invalidContent',
+export const invalidContent = pikkuMCPToolFunc<{ name: string }>({
   description: 'Invalid content format',
   // @ts-expect-error - Content items must have type and text properties
-  func: pikkuMCPToolFunc<{ name: string }>(async ({}, { name }, {}) => {
+  func: async ({}, { name }, {}) => {
     return [{ message: `Hello, ${name}!` }]
-  }),
+  },
 })
 
 // Valid: Multiple content items
-wireMCPTool({
-  name: 'multiContent',
+export const multiContent = pikkuMCPToolFunc<{ count: number }>({
   description: 'Return multiple content items',
-  func: pikkuMCPToolFunc<{ count: number }>(async ({}, { count }, {}) => {
+  func: async ({}, { count }, {}) => {
     return Array.from({ length: count }, (_, i) => ({
       type: 'text',
       text: `Item ${i + 1}`,
     }))
-  }),
+  },
 })

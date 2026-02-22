@@ -108,7 +108,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   mcp: {
     resources: new Map(),
     resourcesMeta: {} as MCPResourceMeta,
-    tools: new Map(),
     toolsMeta: {} as MCPToolMeta,
     prompts: new Map(),
     promptsMeta: {} as MCPPromptMeta,

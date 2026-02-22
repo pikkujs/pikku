@@ -1,11 +1,11 @@
 /**
  * Type constraint: MCP wirings must have required properties
  *
- * Tools, resources, and prompts each have specific required properties.
+ * Resources and prompts each have specific required properties.
+ * Tools now use pikkuMCPToolFunc with description instead of wireMCPTool.
  */
 
 import {
-  wireMCPTool,
   wireMCPResource,
   wireMCPPrompt,
   pikkuMCPToolFunc,
@@ -13,40 +13,16 @@ import {
   pikkuMCPPromptFunc,
 } from '#pikku'
 
-const toolFunc = pikkuMCPToolFunc<unknown>(async () => [
-  { type: 'text', text: 'result' },
-])
+export const toolFunc = pikkuMCPToolFunc<unknown>({
+  description: 'A valid tool',
+  func: async () => [{ type: 'text', text: 'result' }],
+})
 const resourceFunc = pikkuMCPResourceFunc<unknown>(async ({}, _, { mcp }) => [
   { uri: mcp.uri!, text: 'data' },
 ])
 const promptFunc = pikkuMCPPromptFunc<unknown>(async () => [
   { role: 'user', content: { type: 'text', text: 'prompt' } },
 ])
-
-// Valid: Tool with all required properties
-wireMCPTool({
-  name: 'validTool',
-  description: 'A valid tool',
-  func: toolFunc,
-})
-
-// @ts-expect-error - Tool missing 'name' property
-wireMCPTool({
-  description: 'Tool without name',
-  func: toolFunc,
-})
-
-// @ts-expect-error - Tool missing 'description' property
-wireMCPTool({
-  name: 'noDescTool',
-  func: toolFunc,
-})
-
-// @ts-expect-error - Tool missing 'func' property
-wireMCPTool({
-  name: 'noFuncTool',
-  description: 'Tool without func',
-})
 
 // Valid: Resource with all required properties
 wireMCPResource({
@@ -109,22 +85,6 @@ wireMCPPrompt({
   description: 'Prompt without func',
 })
 
-// Valid: Tool with optional tags
-wireMCPTool({
-  name: 'taggedTool',
-  description: 'Tool with tags',
-  func: toolFunc,
-  tags: ['tag1', 'tag2'],
-})
-
-wireMCPTool({
-  name: 'invalidTags',
-  description: 'Tool with invalid tags',
-  func: toolFunc,
-  // @ts-expect-error - Tags must be array of strings
-  tags: 'not-an-array',
-})
-
 // Valid: Resource with optional tags
 wireMCPResource({
   uri: 'tagged-resource',
@@ -132,13 +92,6 @@ wireMCPResource({
   description: 'Resource with tags',
   func: resourceFunc,
   tags: ['data', 'api'],
-})
-
-wireMCPTool({
-  // @ts-expect-error - Name must be string
-  name: 123,
-  description: 'Invalid name type',
-  func: toolFunc,
 })
 
 wireMCPPrompt({
