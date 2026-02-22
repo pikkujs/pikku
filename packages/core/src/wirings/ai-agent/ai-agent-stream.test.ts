@@ -25,6 +25,9 @@ const addTestAgent = (agentName: string) => {
     workingMemorySchema: null,
   }
   pikkuState(null, 'agent', 'agents').set(agentName, agent)
+  pikkuState(null, 'models', 'config', {
+    models: { 'test-model': 'test/test-model' },
+  })
 }
 
 describe('streamAIAgent', () => {
@@ -106,25 +109,29 @@ describe('streamAIAgent', () => {
       },
     } as any
 
-    await streamAIAgent(
-      'approval-stream-agent',
-      {
-        message: 'hello',
-        threadId: 'thread-2',
-        resourceId: 'resource-2',
-      },
-      {
-        channelId: 'channel-2',
-        openingData: undefined,
-        state: 'open',
-        send: (event: AIStreamEvent) => {
-          events.push(event)
-        },
-        close: () => {},
-      },
-      { singletonServices },
-      undefined,
-      { requiresToolApproval: 'all' }
+    await assert.rejects(
+      () =>
+        streamAIAgent(
+          'approval-stream-agent',
+          {
+            message: 'hello',
+            threadId: 'thread-2',
+            resourceId: 'resource-2',
+          },
+          {
+            channelId: 'channel-2',
+            openingData: undefined,
+            state: 'open',
+            send: (event: AIStreamEvent) => {
+              events.push(event)
+            },
+            close: () => {},
+          },
+          { singletonServices },
+          undefined,
+          { requiresToolApproval: 'all' }
+        ),
+      (err: any) => err instanceof ToolApprovalRequired
     )
 
     assert.deepEqual(updates, [
@@ -147,9 +154,9 @@ describe('streamAIAgent', () => {
       {
         type: 'approval-request',
         id: 'tool-call-1',
+        runId: 'run-2',
         toolName: 'tool-x',
         args: { id: 1 },
-        reason: undefined,
       },
       { type: 'done' },
     ])

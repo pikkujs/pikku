@@ -787,7 +787,7 @@ export async function runWorkflowGraph(
         workflowService.unregisterInlineRun(runId)
       }
     }
-    executeInline().catch(() => {})
+    await executeInline()
   } else {
     for (const nodeId of readyEntryNodes) {
       const node = nodes[nodeId]
