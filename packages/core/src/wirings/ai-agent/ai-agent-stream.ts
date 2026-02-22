@@ -356,6 +356,7 @@ export async function streamAIAgent(
         toolCallId: err.toolCallId,
         toolName: err.displayToolName ?? err.toolName,
         args: err.displayArgs ?? err.args,
+        reason: err.reason,
         runId,
       }
       channel.send(approvalEvent as any)
@@ -753,6 +754,7 @@ async function continueAfterToolResult(
         toolCallId: err.toolCallId,
         toolName: err.displayToolName ?? err.toolName,
         args: err.displayArgs ?? err.args,
+        reason: err.reason,
         runId: run.runId,
       }
       channel.send(approvalEvent as any)

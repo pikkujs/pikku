@@ -168,6 +168,7 @@ export type AIStreamEvent =
       toolCallId: string
       toolName: string
       args: unknown
+      reason?: string
       agent?: string
       session?: string
     }
