@@ -42,6 +42,22 @@ export class TypedVariablesService<TMap = Record<string, unknown>>
     return this.variables.getAll()
   }
 
+  set(name: string, value: string): Promise<void> | void {
+    return this.variables.set(name, value)
+  }
+
+  setJSON(name: string, value: unknown): Promise<void> | void {
+    return this.variables.setJSON(name, value)
+  }
+
+  has(name: string): Promise<boolean> | boolean {
+    return this.variables.has(name)
+  }
+
+  delete(name: string): Promise<void> | void {
+    return this.variables.delete(name)
+  }
+
   async getAllStatus(): Promise<VariableStatus[]> {
     const results: VariableStatus[] = []
     const all = await this.variables.getAll()
