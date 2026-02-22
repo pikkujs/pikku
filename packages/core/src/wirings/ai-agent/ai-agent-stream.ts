@@ -345,7 +345,7 @@ export async function streamAIAgent(
       })
       channel.send({ type: 'done' })
       channel.close()
-      return
+      throw err
     }
 
     if (aiRunState) {
