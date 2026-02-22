@@ -37,7 +37,7 @@ export interface WorkflowService {
   resumeWorkflow(runId: string): Promise<void>
   setServices(
     singletonServices: CoreSingletonServices,
-    createWireServices: CreateWireServices,
+    createWireServices: CreateWireServices | undefined,
     config: CoreConfig
   ): void
   startWorkflow<I>(
