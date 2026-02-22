@@ -141,6 +141,8 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
     let services = { optimized: false, services: [] as string[] }
     let usedWires: string[] = []
+    let name: string | undefined
+    let description: string | undefined
 
     const findPikkuMiddlewareCall = (
       node: ts.Node
@@ -156,13 +158,32 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
 
     const pikkuMiddlewareCall = findPikkuMiddlewareCall(factoryNode)
     if (pikkuMiddlewareCall && pikkuMiddlewareCall.arguments[0]) {
-      const middlewareHandler = pikkuMiddlewareCall.arguments[0]
-      if (
-        ts.isArrowFunction(middlewareHandler) ||
-        ts.isFunctionExpression(middlewareHandler)
+      const middlewareArg = pikkuMiddlewareCall.arguments[0]
+      if (ts.isObjectLiteralExpression(middlewareArg)) {
+        const nameValue = getPropertyValue(middlewareArg, 'name')
+        const descValue = getPropertyValue(middlewareArg, 'description')
+        name = typeof nameValue === 'string' ? nameValue : undefined
+        description = typeof descValue === 'string' ? descValue : undefined
+
+        const fnProp = getPropertyAssignmentInitializer(
+          middlewareArg,
+          'func',
+          true,
+          checker
+        )
+        if (
+          fnProp &&
+          (ts.isArrowFunction(fnProp) || ts.isFunctionExpression(fnProp))
+        ) {
+          services = extractServicesFromFunction(fnProp)
+          usedWires = extractUsedWires(fnProp, 1)
+        }
+      } else if (
+        ts.isArrowFunction(middlewareArg) ||
+        ts.isFunctionExpression(middlewareArg)
       ) {
-        services = extractServicesFromFunction(middlewareHandler)
-        usedWires = extractUsedWires(middlewareHandler, 1)
+        services = extractServicesFromFunction(middlewareArg)
+        usedWires = extractUsedWires(middlewareArg, 1)
       }
     } else {
       if (
@@ -211,10 +232,12 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       position: node.getStart(),
       exportedName,
       factory: true,
+      name,
+      description,
     }
 
     logger.debug(
-      `• Found middleware factory with services: ${services.services.join(', ')}`
+      `• Found middleware factory with services: ${services.services.join(', ')}${name ? ` (name: ${name})` : ''}${description ? ` (description: ${description})` : ''}`
     )
     return
   }

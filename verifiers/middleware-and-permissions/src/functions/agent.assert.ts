@@ -120,7 +120,7 @@ export async function testAgentStreamWiring(
     expected,
     async () => {
       await streamAIAgent(
-        'test-agent',
+        'testAgent',
         {
           message: 'hello',
           threadId: 'test-thread',
@@ -152,7 +152,7 @@ export async function testAgentRunWiring(
     expected,
     async () => {
       await runAIAgent(
-        'test-agent',
+        'testAgent',
         {
           message: 'hello',
           threadId: 'test-thread',

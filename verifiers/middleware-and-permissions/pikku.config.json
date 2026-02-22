@@ -3,6 +3,9 @@
   "srcDirectories": ["src"],
   "outDir": ".pikku",
   "entrypoint": "src/index.ts",
+  "models": {
+    "test-model": "test-provider/test-model"
+  },
   "externalPackages": {
     "ext": { "package": "@pikku/templates-function-external" }
   }
