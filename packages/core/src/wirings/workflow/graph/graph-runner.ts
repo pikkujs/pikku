@@ -1,7 +1,7 @@
 import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState } from '../../../pikku-state.js'
-import type { WorkflowRuntimeMeta } from '../workflow.types.js'
+import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
 
 function buildTemplateRegex(nodeId: string): RegExp | null {
@@ -694,7 +694,8 @@ export async function runWorkflowGraph(
   triggerInput: any,
   rpcService?: any,
   inline?: boolean,
-  startNode?: string
+  startNode?: string,
+  wire?: WorkflowRunWire
 ): Promise<{ runId: string }> {
   const meta = getWorkflowMeta(graphName)
   if (!meta?.nodes) {
@@ -732,7 +733,8 @@ export async function runWorkflowGraph(
     graphName,
     triggerInput,
     inline ?? false,
-    meta.graphHash
+    meta.graphHash,
+    wire ?? { type: 'unknown' }
   )
 
   if (inline) {

@@ -30,6 +30,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
         'error',
         'inline',
         'graph_hash',
+        'wire',
         'created_at',
         'updated_at',
       ])
@@ -63,6 +64,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
         'error',
         'inline',
         'graph_hash',
+        'wire',
         'created_at',
         'updated_at',
       ])
@@ -232,6 +234,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       error: parseJson(row.error),
       inline: row.inline as boolean | undefined,
       graphHash: row.graph_hash as string | undefined,
+      wire: parseJson(row.wire) ?? { type: 'unknown' },
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }

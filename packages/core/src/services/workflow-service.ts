@@ -6,6 +6,7 @@ import {
 } from '../types/core.types.js'
 import {
   WorkflowRun,
+  WorkflowRunWire,
   StepState,
   WorkflowStatus,
 } from '../wirings/workflow/workflow.types.js'
@@ -20,7 +21,8 @@ export interface WorkflowService {
     workflowName: string,
     input: any,
     inline: boolean,
-    graphHash: string
+    graphHash: string,
+    wire: WorkflowRunWire
   ): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
   getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
@@ -44,7 +46,7 @@ export interface WorkflowService {
     name: string,
     input: I,
     rpcService: any,
-    options?: { inline?: boolean; startNode?: string }
+    options: { inline?: boolean; startNode?: string; wire: WorkflowRunWire }
   ): Promise<{ runId: string }>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
   orchestrateWorkflow(runId: string, rpcService: any): Promise<void>

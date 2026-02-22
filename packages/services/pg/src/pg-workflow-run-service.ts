@@ -41,7 +41,7 @@ export class PgWorkflowRunService implements WorkflowRunService {
     params.push(offset)
 
     const result = await this.sql.unsafe(
-      `SELECT workflow_run_id, workflow, status, input, output, error, inline, graph_hash, created_at, updated_at
+      `SELECT workflow_run_id, workflow, status, input, output, error, inline, graph_hash, wire, created_at, updated_at
        FROM ${this.schemaName}.workflow_runs
        ${where}
        ORDER BY created_at DESC
@@ -54,7 +54,7 @@ export class PgWorkflowRunService implements WorkflowRunService {
 
   async getRun(id: string): Promise<WorkflowRun | null> {
     const result = await this.sql.unsafe(
-      `SELECT workflow_run_id, workflow, status, input, output, error, inline, graph_hash, created_at, updated_at
+      `SELECT workflow_run_id, workflow, status, input, output, error, inline, graph_hash, wire, created_at, updated_at
        FROM ${this.schemaName}.workflow_runs
        WHERE workflow_run_id = $1`,
       [id]
@@ -198,6 +198,7 @@ export class PgWorkflowRunService implements WorkflowRunService {
       error: row.error,
       inline: row.inline as boolean | undefined,
       graphHash: row.graph_hash as string | undefined,
+      wire: row.wire ?? { type: 'unknown' },
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }

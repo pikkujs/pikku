@@ -78,7 +78,7 @@ jobs:
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   e2e:
-    name: "E2E (${{ matrix.feature }})"
+    name: 'E2E (${{ matrix.feature }})'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build

@@ -49,7 +49,9 @@ describe('pikku-workflow-service version mismatch fallback', () => {
       },
       'dsl'
     )
-    const runId = await ws.createRun(workflowName, {}, false, oldHash)
+    const runId = await ws.createRun(workflowName, {}, false, oldHash, {
+      type: 'test',
+    })
 
     await ws.runWorkflowJob(runId, {})
 
@@ -94,7 +96,9 @@ describe('pikku-workflow-service version mismatch fallback', () => {
       'graph'
     )
 
-    const runId = await ws.createRun(workflowName, {}, false, oldHash)
+    const runId = await ws.createRun(workflowName, {}, false, oldHash, {
+      type: 'test',
+    })
     await ws.runWorkflowJob(runId, {})
 
     const run = await ws.getRun(runId)
@@ -117,7 +121,13 @@ describe('pikku-workflow-service executeWorkflowStep', () => {
       {} as any
     )
 
-    const runId = await ws.createRun('pending-step-running', {}, false, 'hash')
+    const runId = await ws.createRun(
+      'pending-step-running',
+      {},
+      false,
+      'hash',
+      { type: 'test' }
+    )
     await ws.insertStepState(runId, 'stepA', 'doStepA', { a: 1 })
 
     await ws.executeWorkflowStep(
@@ -176,7 +186,9 @@ describe('pikku-workflow-service suspend', () => {
       },
     })
 
-    const runId = await ws.createRun(workflowName, {}, false, graphHash)
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
     await assert.rejects(
       ws.runWorkflowJob(runId, {}),
       (error: unknown) => error instanceof WorkflowSuspendedException

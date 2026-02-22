@@ -36,6 +36,12 @@ export type {
 
 import type { WorkflowStepMeta } from './dsl/workflow-dsl.types.js'
 
+export interface WorkflowRunWire {
+  type: string
+  id?: string
+  parentRunId?: string
+}
+
 export interface WorkflowServiceConfig {
   retries: number
   retryDelay: number
@@ -85,6 +91,8 @@ export interface WorkflowRun {
   inline?: boolean
   /** Graph hash of the workflow definition at run creation time */
   graphHash?: string
+  /** Wire origin info (how this run was started) */
+  wire: WorkflowRunWire
   /** Creation timestamp */
   createdAt: Date
   /** Last update timestamp */

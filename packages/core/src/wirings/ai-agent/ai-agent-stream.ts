@@ -31,6 +31,7 @@ import {
   type StreamAIAgentOptions,
   type StreamContext,
 } from './ai-agent-prepare.js'
+import { resolveModelConfig } from './ai-agent-model-config.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 
 type PersistingChannel = AIStreamChannel & {
@@ -339,8 +340,8 @@ export async function streamAIAgent(
         type: 'approval-request',
         id: err.toolCallId,
         runId,
-        toolName: err.toolName,
-        args: err.args,
+        toolName: err.displayToolName ?? err.toolName,
+        args: err.displayArgs ?? err.args,
       })
       channel.send({ type: 'done' })
       channel.close()
@@ -586,12 +587,15 @@ export async function resumeAIAgent(
     streamContext
   ).tools
 
+  const resolved = resolveModelConfig(resolvedName, agent)
+
   const runnerParams = {
-    model: agent.model,
+    model: resolved.model,
+    temperature: resolved.temperature,
     instructions: modifiedInstructions,
     messages: modifiedMessages,
     tools: resumeTools,
-    maxSteps: agent.maxSteps ?? 10,
+    maxSteps: resolved.maxSteps ?? 10,
     toolChoice: (agent.toolChoice ?? 'auto') as 'auto' | 'required' | 'none',
     outputSchema: meta?.outputSchema
       ? pikkuState(packageName, 'misc', 'schemas').get(meta.outputSchema)

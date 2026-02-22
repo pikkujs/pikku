@@ -218,16 +218,25 @@ export class ContextAwareRPCService {
   public async startWorkflow<In = any>(
     workflowName: string,
     input: In,
-    options?: { startNode?: string }
+    options?: {
+      startNode?: string
+      wire?: { type: string; id?: string; parentRunId?: string }
+    }
   ): Promise<{ runId: string }> {
     if (!this.services.workflowService) {
       throw new Error('WorkflowService service not available')
+    }
+    const parentRunId = this.wire.workflowStep?.runId ?? this.wire.graph?.runId
+    const wire = options?.wire ?? {
+      type: this.wire.wireType ?? 'unknown',
+      id: this.wire.wireId,
+      ...(parentRunId ? { parentRunId } : {}),
     }
     return this.services.workflowService.startWorkflow(
       workflowName,
       input,
       this,
-      options
+      { ...options, wire }
     )
   }
 

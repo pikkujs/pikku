@@ -2,6 +2,7 @@ import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
   type WorkflowRun,
+  type WorkflowRunWire,
   type StepState,
   type WorkflowStatus,
 } from '@pikku/core/workflow'
@@ -40,6 +41,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .addColumn('state', 'text', (col) => col.defaultTo('{}'))
       .addColumn('inline', 'boolean', (col) => col.defaultTo(false))
       .addColumn('graph_hash', 'text')
+      .addColumn('wire', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -132,7 +134,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     workflowName: string,
     input: any,
     inline: boolean,
-    graphHash: string
+    graphHash: string,
+    wire: WorkflowRunWire
   ): Promise<string> {
     const id = crypto.randomUUID()
     await this.db
@@ -144,6 +147,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         input: JSON.stringify(input),
         inline,
         graph_hash: graphHash,
+        wire: JSON.stringify(wire),
       })
       .execute()
 

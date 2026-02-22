@@ -61,28 +61,70 @@ export class PgAgentRunService implements AgentRunService {
   }
 
   async getThreadMessages(threadId: string): Promise<AIMessage[]> {
-    const result = await this.sql.unsafe(
-      `SELECT id, role, content, tool_calls, tool_results, created_at
-       FROM ${this.schemaName}.ai_messages
-       WHERE thread_id = $1
-       ORDER BY created_at ASC`,
-      [threadId]
-    )
+    const [msgResult, tcResult] = await Promise.all([
+      this.sql.unsafe(
+        `SELECT id, role, content, created_at
+         FROM ${this.schemaName}.ai_message
+         WHERE thread_id = $1
+         ORDER BY created_at ASC`,
+        [threadId]
+      ),
+      this.sql.unsafe(
+        `SELECT id, message_id, tool_name, args, result
+         FROM ${this.schemaName}.ai_tool_call
+         WHERE thread_id = $1
+         ORDER BY created_at ASC`,
+        [threadId]
+      ),
+    ])
 
-    return result.map((row) => ({
-      id: row.id as string,
-      role: row.role as AIMessage['role'],
-      content: row.content as string | undefined,
-      toolCalls:
-        typeof row.tool_calls === 'string'
-          ? JSON.parse(row.tool_calls)
-          : row.tool_calls,
-      toolResults:
-        typeof row.tool_results === 'string'
-          ? JSON.parse(row.tool_results)
-          : row.tool_results,
-      createdAt: new Date(row.created_at as string),
-    }))
+    const tcByMessage = new Map<string, postgres.Row[]>()
+    for (const tc of tcResult) {
+      const msgId = tc.message_id as string
+      if (!tcByMessage.has(msgId)) tcByMessage.set(msgId, [])
+      tcByMessage.get(msgId)!.push(tc)
+    }
+
+    const messages: AIMessage[] = []
+    for (const row of msgResult) {
+      const msg: AIMessage = {
+        id: row.id as string,
+        role: row.role as AIMessage['role'],
+        content: row.content as string | undefined,
+        createdAt: new Date(row.created_at as string),
+      }
+
+      const tcs = tcByMessage.get(msg.id)
+      if (tcs?.length) {
+        msg.toolCalls = tcs.map((tc) => ({
+          id: tc.id as string,
+          name: tc.tool_name as string,
+          args: (typeof tc.args === 'string'
+            ? JSON.parse(tc.args)
+            : tc.args) as Record<string, unknown>,
+        }))
+
+        const completed = tcs.filter((tc) => tc.result != null)
+        if (completed.length) {
+          messages.push(msg)
+          messages.push({
+            id: `tool-results-${msg.id}`,
+            role: 'tool',
+            toolResults: completed.map((tc) => ({
+              id: tc.id as string,
+              name: tc.tool_name as string,
+              result: tc.result as string,
+            })),
+            createdAt: msg.createdAt,
+          })
+          continue
+        }
+      }
+
+      messages.push(msg)
+    }
+
+    return messages
   }
 
   async getThreadRuns(threadId: string): Promise<AgentRunRow[]> {

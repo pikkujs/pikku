@@ -222,6 +222,8 @@ export type PikkuWire<
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
 > = Partial<{
+  wireType: PikkuWiringTypes
+  wireId: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   rpc: TypedRPC

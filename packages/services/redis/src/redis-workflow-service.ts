@@ -2,6 +2,7 @@ import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
   type WorkflowRun,
+  type WorkflowRunWire,
   type StepState,
   type WorkflowStatus,
 } from '@pikku/core/workflow'
@@ -205,7 +206,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     workflowName: string,
     input: any,
     inline: boolean,
-    graphHash: string
+    graphHash: string,
+    wire: WorkflowRunWire
   ): Promise<string> {
     const id = randomUUID()
     const now = Date.now()
@@ -226,6 +228,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       inline ? 'true' : 'false',
       'graphHash',
       graphHash,
+      'wire',
+      JSON.stringify(wire),
       'createdAt',
       now.toString(),
       'updatedAt',
@@ -252,6 +256,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       error: data.error ? JSON.parse(data.error) : undefined,
       inline: data.inline === 'true' ? true : undefined,
       graphHash: data.graphHash || undefined,
+      wire: data.wire ? JSON.parse(data.wire) : { type: 'unknown' },
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }

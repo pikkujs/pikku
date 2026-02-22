@@ -3,6 +3,7 @@ import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service
 import type { SerializedError } from '../types/core.types.js'
 import type {
   WorkflowRun,
+  WorkflowRunWire,
   StepState,
   WorkflowStatus,
   WorkflowStepOptions,
@@ -45,7 +46,8 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     workflowName: string,
     input: any,
     inline: boolean,
-    graphHash: string
+    graphHash: string,
+    wire: WorkflowRunWire
   ): Promise<string> {
     const runId = randomUUID()
     const now = new Date()
@@ -57,6 +59,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
       input,
       inline,
       graphHash,
+      wire,
       createdAt: now,
       updatedAt: now,
     }
