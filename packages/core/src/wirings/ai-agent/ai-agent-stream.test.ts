@@ -83,7 +83,7 @@ describe('streamAIAgent', () => {
     )
   })
 
-  test('suspends run and emits approval request when tool approval is required', async () => {
+  test('suspends run and emits approval request when tool approval is required (no throw)', async () => {
     addTestAgent('approval-stream-agent')
 
     const updates: Array<{ runId: string; patch: unknown }> = []
@@ -109,29 +109,25 @@ describe('streamAIAgent', () => {
       },
     } as any
 
-    await assert.rejects(
-      () =>
-        streamAIAgent(
-          'approval-stream-agent',
-          {
-            message: 'hello',
-            threadId: 'thread-2',
-            resourceId: 'resource-2',
-          },
-          {
-            channelId: 'channel-2',
-            openingData: undefined,
-            state: 'open',
-            send: (event: AIStreamEvent) => {
-              events.push(event)
-            },
-            close: () => {},
-          },
-          { singletonServices },
-          undefined,
-          { requiresToolApproval: 'all' }
-        ),
-      (err: any) => err instanceof ToolApprovalRequired
+    await streamAIAgent(
+      'approval-stream-agent',
+      {
+        message: 'hello',
+        threadId: 'thread-2',
+        resourceId: 'resource-2',
+      },
+      {
+        channelId: 'channel-2',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => {
+          events.push(event)
+        },
+        close: () => {},
+      },
+      { singletonServices },
+      undefined,
+      { requiresToolApproval: 'all' }
     )
 
     assert.deepEqual(updates, [
@@ -142,6 +138,7 @@ describe('streamAIAgent', () => {
           suspendReason: 'approval',
           pendingApprovals: [
             {
+              type: 'tool-call',
               toolCallId: 'tool-call-1',
               toolName: 'tool-x',
               args: { id: 1 },
@@ -150,15 +147,100 @@ describe('streamAIAgent', () => {
         },
       },
     ])
-    assert.deepEqual(events, [
-      {
-        type: 'approval-request',
-        id: 'tool-call-1',
-        runId: 'run-2',
-        toolName: 'tool-x',
-        args: { id: 1 },
+
+    const approvalEvent = events.find(
+      (e) => e.type === 'approval-request'
+    ) as any
+    assert.ok(approvalEvent)
+    assert.equal(approvalEvent.toolCallId, 'tool-call-1')
+    assert.equal(approvalEvent.toolName, 'tool-x')
+    assert.deepEqual(approvalEvent.args, { id: 1 })
+
+    assert.deepEqual(
+      events.map((event) => event.type),
+      ['approval-request', 'done']
+    )
+  })
+
+  test('suspends with agent-call type when agentRunId is present', async () => {
+    addTestAgent('parent-agent')
+
+    const updates: Array<{ runId: string; patch: unknown }> = []
+    const events: AIStreamEvent[] = []
+
+    const singletonServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
       },
-      { type: 'done' },
+      aiAgentRunner: {
+        stream: async () => {
+          throw new ToolApprovalRequired(
+            'tool-call-2',
+            'sub-agent',
+            { message: 'hi' },
+            undefined,
+            'deleteTodo',
+            { todoId: '2' },
+            'sub-run-1'
+          )
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-3',
+        updateRun: async (runId: string, patch: unknown) => {
+          updates.push({ runId, patch })
+        },
+      },
+    } as any
+
+    await streamAIAgent(
+      'parent-agent',
+      {
+        message: 'hello',
+        threadId: 'thread-3',
+        resourceId: 'resource-3',
+      },
+      {
+        channelId: 'channel-3',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => {
+          events.push(event)
+        },
+        close: () => {},
+      },
+      { singletonServices }
+    )
+
+    assert.deepEqual(updates, [
+      {
+        runId: 'run-3',
+        patch: {
+          status: 'suspended',
+          suspendReason: 'approval',
+          pendingApprovals: [
+            {
+              type: 'agent-call',
+              toolCallId: 'tool-call-2',
+              agentName: 'sub-agent',
+              agentRunId: 'sub-run-1',
+              displayToolName: 'deleteTodo',
+              displayArgs: { todoId: '2' },
+            },
+          ],
+        },
+      },
     ])
+
+    const approvalEvent = events.find(
+      (e) => e.type === 'approval-request'
+    ) as any
+    assert.ok(approvalEvent)
+    assert.equal(approvalEvent.toolCallId, 'tool-call-2')
+    assert.equal(approvalEvent.toolName, 'deleteTodo')
+    assert.deepEqual(approvalEvent.args, { todoId: '2' })
   })
 })

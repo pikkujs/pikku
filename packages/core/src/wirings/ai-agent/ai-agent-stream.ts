@@ -5,6 +5,9 @@ import type {
   AIToolCall,
   AIToolResult,
   PikkuAIMiddlewareHooks,
+  AgentRunState,
+  CoreAIAgent,
+  AIAgentMemoryConfig,
 } from './ai-agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import {
@@ -26,6 +29,7 @@ import {
   resolveAgent,
   buildInstructions,
   buildToolDefs,
+  createScopedChannel,
   ToolApprovalRequired,
   type RunAIAgentParams,
   type StreamAIAgentOptions,
@@ -33,6 +37,7 @@ import {
 } from './ai-agent-prepare.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
+import type { AIAgentRunnerService } from '../../services/ai-agent-runner-service.js'
 
 type PersistingChannel = AIStreamChannel & {
   fullText: string
@@ -323,34 +328,43 @@ export async function streamAIAgent(
   } catch (err) {
     if (err instanceof ToolApprovalRequired) {
       await persistingChannel.flush()
-      if (aiRunState) {
-        await aiRunState.updateRun(runId, {
-          status: 'suspended',
-          suspendReason: 'approval',
-          pendingApprovals: [
-            {
-              toolCallId: err.toolCallId,
-              toolName: err.toolName,
-              args: err.args,
-            },
-          ],
-        })
-      }
-      channel.send({
-        type: 'approval-request',
-        id: err.toolCallId,
-        runId,
+
+      const pendingApproval = err.agentRunId
+        ? {
+            type: 'agent-call' as const,
+            toolCallId: err.toolCallId,
+            agentName: err.toolName,
+            agentRunId: err.agentRunId,
+            displayToolName: err.displayToolName ?? err.toolName,
+            displayArgs: err.displayArgs ?? err.args,
+          }
+        : {
+            type: 'tool-call' as const,
+            toolCallId: err.toolCallId,
+            toolName: err.toolName,
+            args: err.args,
+          }
+
+      await aiRunState.updateRun(runId, {
+        status: 'suspended',
+        suspendReason: 'approval',
+        pendingApprovals: [pendingApproval],
+      })
+
+      const approvalEvent = {
+        type: 'approval-request' as const,
+        toolCallId: err.toolCallId,
         toolName: err.displayToolName ?? err.toolName,
         args: err.displayArgs ?? err.args,
-      })
+        runId,
+      }
+      channel.send(approvalEvent as any)
       channel.send({ type: 'done' })
       channel.close()
-      throw err
+      return
     }
 
-    if (aiRunState) {
-      await aiRunState.updateRun(runId, { status: 'failed' })
-    }
+    await aiRunState.updateRun(runId, { status: 'failed' })
     channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),
@@ -362,10 +376,6 @@ export async function streamAIAgent(
 
 export async function resumeAIAgent(
   input: {
-    agentName: string
-    threadId: string
-    resourceId: string
-    runId: string
     toolCallId: string
     approved: boolean
   },
@@ -379,24 +389,19 @@ export async function resumeAIAgent(
     throw new Error('AIRunStateService not available in singletonServices')
   }
 
-  const run = await aiRunState.getRun(input.runId)
-  if (!run) {
-    throw new Error(`Run not found: ${input.runId}`)
-  }
-  if (run.status !== 'suspended' || run.suspendReason !== 'approval') {
-    throw new Error(`Run ${input.runId} is not suspended for approval`)
+  const found = await aiRunState.findRunByToolCallId(input.toolCallId)
+  if (!found) {
+    throw new Error(`No suspended run found for toolCallId ${input.toolCallId}`)
   }
 
-  const pending = run.pendingApprovals?.find(
-    (a) => a.toolCallId === input.toolCallId
+  const { run, approval: pending } = found
+
+  await aiRunState.resolveApproval(
+    input.toolCallId,
+    input.approved ? 'approved' : 'denied'
   )
-  if (!pending) {
-    throw new Error(
-      `No pending approval for toolCallId ${input.toolCallId} on run ${input.runId}`
-    )
-  }
 
-  const { agent, packageName, resolvedName } = resolveAgent(input.agentName)
+  const { agent, packageName, resolvedName } = resolveAgent(run.agentName)
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
   const agentRunner = singletonServices.aiAgentRunner
@@ -404,15 +409,141 @@ export async function resumeAIAgent(
     throw new Error('AIAgentRunnerService not available in singletonServices')
   }
 
-  await aiRunState.resolveApproval(
-    input.toolCallId,
-    input.approved ? 'approved' : 'denied'
-  )
-
   if (!input.approved) {
-    await aiRunState.updateRun(input.runId, { status: 'completed' })
+    if (pending.type === 'agent-call') {
+      await aiRunState.updateRun(pending.agentRunId, { status: 'failed' })
+    }
+
+    const denialResult = 'Tool call was not approved by the user'
+
     if (storage) {
-      await storage.saveMessages(input.threadId, [
+      await storage.saveMessages(run.threadId, [
+        {
+          id: randomUUID(),
+          role: 'tool',
+          toolResults: [
+            {
+              id: input.toolCallId,
+              name:
+                pending.type === 'tool-call'
+                  ? pending.toolName
+                  : pending.agentName,
+              result: denialResult,
+            },
+          ],
+          createdAt: new Date(),
+        },
+      ])
+    }
+
+    await aiRunState.updateRun(run.runId, { status: 'running' })
+
+    await continueAfterToolResult(
+      run,
+      agent,
+      packageName,
+      resolvedName,
+      storage,
+      memoryConfig,
+      agentRunner,
+      channel,
+      params,
+      aiRunState,
+      options
+    )
+    return
+  }
+
+  if (pending.type === 'agent-call') {
+    const subRun = await aiRunState.getRun(pending.agentRunId)
+    if (!subRun) {
+      throw new Error(`Sub-agent run not found: ${pending.agentRunId}`)
+    }
+    const subPending = subRun.pendingApprovals?.[0]
+    if (!subPending) {
+      throw new Error(
+        `No pending approval on sub-agent run ${pending.agentRunId}`
+      )
+    }
+
+    const subChannel = createScopedChannel(channel, subRun.agentName, 'resume')
+    channel.send({
+      type: 'agent-call',
+      agentName: subRun.agentName,
+      session: 'resume',
+      input: null,
+    })
+
+    await resumeAIAgent(
+      { toolCallId: subPending.toolCallId, approved: true },
+      subChannel,
+      params,
+      options
+    )
+
+    channel.send({
+      type: 'agent-result',
+      agentName: subRun.agentName,
+      session: 'resume',
+      result: null,
+    })
+
+    if (storage) {
+      await storage.saveMessages(run.threadId, [
+        {
+          id: randomUUID(),
+          role: 'tool',
+          toolResults: [
+            {
+              id: input.toolCallId,
+              name: pending.agentName,
+              result: 'Sub-agent completed successfully',
+            },
+          ],
+          createdAt: new Date(),
+        },
+      ])
+    }
+  } else {
+    const streamContext: StreamContext = {
+      channel,
+      options: { ...options, requiresToolApproval: false },
+    }
+    const { tools } = buildToolDefs(
+      singletonServices,
+      params,
+      new Map<string, string>(),
+      run.resourceId,
+      resolvedName,
+      packageName,
+      streamContext
+    )
+
+    const matchingTool = tools.find((t) => t.name === pending.toolName)
+    if (!matchingTool) {
+      throw new Error(
+        `Tool "${pending.toolName}" not found in agent definition`
+      )
+    }
+
+    const toolArgs =
+      typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
+    const { toolApprovalReason: _ignored, ...cleanArgs } = toolArgs as Record<
+      string,
+      unknown
+    >
+
+    let toolResult: unknown
+    try {
+      toolResult = await matchingTool.execute(cleanArgs)
+    } catch (execErr) {
+      toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+    }
+
+    const resultStr =
+      typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult)
+    if (storage) {
+      await storage.saveMessages(run.threadId, [
         {
           id: randomUUID(),
           role: 'tool',
@@ -420,86 +551,59 @@ export async function resumeAIAgent(
             {
               id: input.toolCallId,
               name: pending.toolName,
-              result: 'Tool call denied by user',
+              result: resultStr,
             },
           ],
           createdAt: new Date(),
         },
       ])
     }
+
     channel.send({
-      type: 'text-delta',
-      text: `Tool "${pending.toolName}" was denied.`,
+      type: 'tool-result',
+      toolCallId: input.toolCallId,
+      toolName: pending.toolName,
+      result: toolResult,
     })
-    channel.send({ type: 'done' })
-    channel.close()
-    return
   }
 
-  const streamContext: StreamContext = { channel, options }
-  const { tools } = buildToolDefs(
-    singletonServices,
-    params,
-    new Map<string, string>(),
-    input.resourceId,
-    resolvedName,
+  await aiRunState.updateRun(run.runId, { status: 'running' })
+
+  await continueAfterToolResult(
+    run,
+    agent,
     packageName,
-    { channel, options: { ...options, requiresToolApproval: false } }
+    resolvedName,
+    storage,
+    memoryConfig,
+    agentRunner,
+    channel,
+    params,
+    aiRunState,
+    options
   )
+}
 
-  const matchingTool = tools.find((t) => t.name === pending.toolName)
-  if (!matchingTool) {
-    throw new Error(`Tool "${pending.toolName}" not found in agent definition`)
-  }
-
-  const toolArgs =
-    typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
-  const { toolApprovalReason: _ignored, ...cleanArgs } = toolArgs as Record<
-    string,
-    unknown
-  >
-
-  let toolResult: unknown
-  try {
-    toolResult = await matchingTool.execute(cleanArgs)
-  } catch (execErr) {
-    toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
-  }
-
-  const resultStr =
-    typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult)
-  if (storage) {
-    await storage.saveMessages(input.threadId, [
-      {
-        id: randomUUID(),
-        role: 'tool',
-        toolResults: [
-          {
-            id: input.toolCallId,
-            name: pending.toolName,
-            result: resultStr,
-          },
-        ],
-        createdAt: new Date(),
-      },
-    ])
-  }
-
-  channel.send({
-    type: 'tool-result',
-    toolCallId: input.toolCallId,
-    toolName: pending.toolName,
-    result: toolResult,
-  })
-
-  await aiRunState.updateRun(input.runId, { status: 'running' })
-
+async function continueAfterToolResult(
+  run: AgentRunState,
+  agent: CoreAIAgent,
+  packageName: string | null,
+  resolvedName: string,
+  storage: AIStorageService | undefined,
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  agentRunner: AIAgentRunnerService,
+  channel: AIStreamChannel,
+  params: RunAIAgentParams,
+  aiRunState: AIRunStateService,
+  options?: StreamAIAgentOptions
+): Promise<void> {
+  const { singletonServices } = params
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
   const meta = agentsMeta[resolvedName]
   const workingMemorySchemaName = meta?.workingMemorySchema ?? null
 
   const messages = storage
-    ? await storage.getMessages(input.threadId, {
+    ? await storage.getMessages(run.threadId, {
         lastN: memoryConfig?.lastMessages ?? 20,
       })
     : []
@@ -511,7 +615,7 @@ export async function resumeAIAgent(
   const contextMessages = await loadContextMessages(
     memoryConfig,
     storage,
-    { message: '', threadId: input.threadId, resourceId: input.resourceId },
+    { message: '', threadId: run.threadId, resourceId: run.resourceId },
     workingMemoryJsonSchema
   )
 
@@ -552,7 +656,7 @@ export async function resumeAIAgent(
 
   const allChannelMiddleware = combineChannelMiddleware(
     'agent',
-    `stream:${input.agentName}`,
+    `stream:${run.agentName}`,
     {
       wireInheritedChannelMiddleware: meta?.channelMiddleware,
       wireChannelMiddleware: [
@@ -574,14 +678,15 @@ export async function resumeAIAgent(
   const persistingChannel = createPersistingChannel(
     wrappedChannel,
     storage,
-    input.threadId
+    run.threadId
   )
 
+  const streamContext: StreamContext = { channel, options }
   const resumeTools = buildToolDefs(
     singletonServices,
     params,
     new Map<string, string>(),
-    input.resourceId,
+    run.resourceId,
     resolvedName,
     packageName,
     streamContext
@@ -611,39 +716,52 @@ export async function resumeAIAgent(
       singletonServices,
       storage,
       memoryConfig,
-      input.threadId,
+      run.threadId,
       workingMemorySchemaName,
       runnerParams.messages,
       aiRunState,
-      input.runId
+      run.runId
     )
   } catch (err) {
     if (err instanceof ToolApprovalRequired) {
       await persistingChannel.flush()
-      await aiRunState.updateRun(input.runId, {
-        status: 'suspended',
-        suspendReason: 'approval',
-        pendingApprovals: [
-          {
+
+      const pendingApproval = err.agentRunId
+        ? {
+            type: 'agent-call' as const,
+            toolCallId: err.toolCallId,
+            agentName: err.toolName,
+            agentRunId: err.agentRunId,
+            displayToolName: err.displayToolName ?? err.toolName,
+            displayArgs: err.displayArgs ?? err.args,
+          }
+        : {
+            type: 'tool-call' as const,
             toolCallId: err.toolCallId,
             toolName: err.toolName,
             args: err.args,
-          },
-        ],
+          }
+
+      await aiRunState.updateRun(run.runId, {
+        status: 'suspended',
+        suspendReason: 'approval',
+        pendingApprovals: [pendingApproval],
       })
-      channel.send({
-        type: 'approval-request',
-        id: err.toolCallId,
-        runId: input.runId,
-        toolName: err.toolName,
-        args: err.args,
-      })
+
+      const approvalEvent = {
+        type: 'approval-request' as const,
+        toolCallId: err.toolCallId,
+        toolName: err.displayToolName ?? err.toolName,
+        args: err.displayArgs ?? err.args,
+        runId: run.runId,
+      }
+      channel.send(approvalEvent as any)
       channel.send({ type: 'done' })
       channel.close()
       return
     }
 
-    await aiRunState.updateRun(input.runId, { status: 'failed' })
+    await aiRunState.updateRun(run.runId, { status: 'failed' })
     channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),

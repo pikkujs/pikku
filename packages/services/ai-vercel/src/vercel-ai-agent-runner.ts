@@ -118,6 +118,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
                 reason?: string
                 displayToolName?: string
                 displayArgs?: unknown
+                agentRunId?: string
               }
               approval = new ToolApprovalRequired(
                 part.toolCallId,
@@ -125,7 +126,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
                 r.args,
                 r.reason,
                 r.displayToolName,
-                r.displayArgs
+                r.displayArgs,
+                r.agentRunId
               )
               abortController.abort()
               break

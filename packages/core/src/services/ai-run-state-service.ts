@@ -1,4 +1,7 @@
-import { AgentRunState } from '../wirings/ai-agent/ai-agent.types.js'
+import {
+  AgentRunState,
+  PendingApproval,
+} from '../wirings/ai-agent/ai-agent.types.js'
 
 export type CreateRunInput = Omit<AgentRunState, 'runId'>
 
@@ -11,4 +14,7 @@ export interface AIRunStateService {
     toolCallId: string,
     status: 'approved' | 'denied'
   ): Promise<void>
+  findRunByToolCallId(
+    toolCallId: string
+  ): Promise<{ run: AgentRunState; approval: PendingApproval } | null>
 }

@@ -78,6 +78,10 @@ export class KyselyAIStorageService
       .addColumn('args', 'text', (col) => col.notNull().defaultTo('{}'))
       .addColumn('result', 'text')
       .addColumn('approval_status', 'text')
+      .addColumn('approval_type', 'text')
+      .addColumn('agent_run_id', 'text')
+      .addColumn('display_tool_name', 'text')
+      .addColumn('display_args', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -474,7 +478,14 @@ export class KyselyAIStorageService
     if (updates.pendingApprovals !== undefined) {
       await this.db
         .updateTable('ai_tool_call')
-        .set({ approval_status: null, run_id: null })
+        .set({
+          approval_status: null,
+          run_id: null,
+          approval_type: null,
+          agent_run_id: null,
+          display_tool_name: null,
+          display_args: null,
+        })
         .where('run_id', '=', runId)
         .where('approval_status', 'is not', null)
         .execute()
@@ -509,7 +520,15 @@ export class KyselyAIStorageService
 
     const approvals = await this.db
       .selectFrom('ai_tool_call')
-      .select(['id', 'tool_name', 'args'])
+      .select([
+        'id',
+        'tool_name',
+        'args',
+        'approval_type',
+        'agent_run_id',
+        'display_tool_name',
+        'display_args',
+      ])
       .where('run_id', '=', runId)
       .where('approval_status', '=', 'pending')
       .execute()
@@ -542,7 +561,15 @@ export class KyselyAIStorageService
     for (const row of result) {
       const approvals = await this.db
         .selectFrom('ai_tool_call')
-        .select(['id', 'tool_name', 'args'])
+        .select([
+          'id',
+          'tool_name',
+          'args',
+          'approval_type',
+          'agent_run_id',
+          'display_tool_name',
+          'display_args',
+        ])
         .where('run_id', '=', row.run_id)
         .where('approval_status', '=', 'pending')
         .execute()
@@ -555,23 +582,54 @@ export class KyselyAIStorageService
     runId: string,
     approvals: NonNullable<AgentRunState['pendingApprovals']>
   ): Promise<void> {
-    const ids = approvals.map((a) => a.toolCallId)
-    if (ids.length === 0) return
-
-    await this.db
-      .updateTable('ai_tool_call')
-      .set({ approval_status: 'pending', run_id: runId })
-      .where('id', 'in', ids)
-      .execute()
+    for (const a of approvals) {
+      if (a.type === 'agent-call') {
+        await this.db
+          .updateTable('ai_tool_call')
+          .set({
+            approval_status: 'pending',
+            run_id: runId,
+            approval_type: 'agent-call',
+            agent_run_id: a.agentRunId,
+            display_tool_name: a.displayToolName,
+            display_args: JSON.stringify(a.displayArgs),
+          })
+          .where('id', '=', a.toolCallId)
+          .execute()
+      } else {
+        await this.db
+          .updateTable('ai_tool_call')
+          .set({
+            approval_status: 'pending',
+            run_id: runId,
+            approval_type: 'tool-call',
+          })
+          .where('id', '=', a.toolCallId)
+          .execute()
+      }
+    }
   }
 
   private mapRunRow(row: any, approvalRows?: any[]): AgentRunState {
     const pendingApprovals = approvalRows?.length
-      ? approvalRows.map((a: any) => ({
-          toolCallId: a.id as string,
-          toolName: a.tool_name as string,
-          args: parseJson(a.args) as unknown,
-        }))
+      ? approvalRows.map((a: any) => {
+          if (a.approval_type === 'agent-call') {
+            return {
+              type: 'agent-call' as const,
+              toolCallId: a.id as string,
+              agentName: a.tool_name as string,
+              agentRunId: a.agent_run_id as string,
+              displayToolName: a.display_tool_name as string,
+              displayArgs: parseJson(a.display_args) as unknown,
+            }
+          }
+          return {
+            type: 'tool-call' as const,
+            toolCallId: a.id as string,
+            toolName: a.tool_name as string,
+            args: parseJson(a.args) as unknown,
+          }
+        })
       : undefined
 
     return {
@@ -591,6 +649,55 @@ export class KyselyAIStorageService
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
     }
+  }
+
+  async findRunByToolCallId(
+    toolCallId: string
+  ): Promise<{
+    run: AgentRunState
+    approval: NonNullable<AgentRunState['pendingApprovals']>[number]
+  } | null> {
+    const tc = await this.db
+      .selectFrom('ai_tool_call')
+      .select([
+        'id',
+        'tool_name',
+        'args',
+        'run_id',
+        'approval_type',
+        'agent_run_id',
+        'display_tool_name',
+        'display_args',
+      ])
+      .where('id', '=', toolCallId)
+      .where('approval_status', '=', 'pending')
+      .executeTakeFirst()
+
+    if (!tc || !tc.run_id) return null
+
+    const run = await this.getRun(tc.run_id)
+    if (!run) return null
+
+    let approval: NonNullable<AgentRunState['pendingApprovals']>[number]
+    if (tc.approval_type === 'agent-call') {
+      approval = {
+        type: 'agent-call',
+        toolCallId: tc.id,
+        agentName: tc.tool_name,
+        agentRunId: tc.agent_run_id!,
+        displayToolName: tc.display_tool_name!,
+        displayArgs: parseJson(tc.display_args) as unknown,
+      }
+    } else {
+      approval = {
+        type: 'tool-call',
+        toolCallId: tc.id,
+        toolName: tc.tool_name,
+        args: parseJson(tc.args) as unknown,
+      }
+    }
+
+    return { run, approval }
   }
 
   async resolveApproval(
