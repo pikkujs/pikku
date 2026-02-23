@@ -150,7 +150,7 @@ export type PikkuAuthConfig<RequiredServices extends SingletonServices = Singlet
  */
 export const pikkuAuth = <RequiredServices extends SingletonServices = SingletonServices>(
   auth: PikkuAuth<RequiredServices> | PikkuAuthConfig<RequiredServices>
-): PikkuPermission<any, RequiredServices> => {
+): PikkuPermission<any, any> => {
   return pikkuAuthCore(auth as any) as any
 }
 
