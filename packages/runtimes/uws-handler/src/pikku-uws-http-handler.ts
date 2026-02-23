@@ -49,12 +49,11 @@ export const pikkuHTTPHandler = ({
 
   return (res: uWS.HttpResponse, req: uWS.HttpRequest): void => {
     let aborted = false
-    res.onAborted(() => {
-      aborted = true
-    })
 
     const run = async () => {
-      const request = await uwsToRequest(req, res)
+      const request = await uwsToRequest(req, res, () => {
+        aborted = true
+      })
       const response = await fetch(request, {
         singletonServices,
         createWireServices,
@@ -65,6 +64,7 @@ export const pikkuHTTPHandler = ({
     }
 
     run().catch((err) => {
+      singletonServices.logger.error(`uWS HTTP error: ${err.message}`)
       if (!aborted) {
         try {
           res.cork(() => {

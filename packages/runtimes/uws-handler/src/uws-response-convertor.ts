@@ -31,6 +31,15 @@ export async function sendPikkuResponseToUWS(
         })
       }
     } catch {
+      if (!isAborted?.()) {
+        try {
+          uwsResponse.cork(() => {
+            uwsResponse.end()
+          })
+        } catch {
+          // response already closed or aborted
+        }
+      }
       return
     }
   }

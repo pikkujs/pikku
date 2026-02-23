@@ -167,9 +167,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     packageName?: string | null
   }
 ): Promise<Out> => {
-  if (!wire.wireType) {
-    wire.wireType = wireType
-    wire.wireId = wireId
+  wire = {
+    ...wire,
+    wireType: wire.wireType ?? wireType,
+    wireId: wire.wireId ?? wireId,
   }
 
   const funcMap = pikkuState(packageName, 'function', 'functions')
