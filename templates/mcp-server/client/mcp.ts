@@ -152,12 +152,15 @@ export class PikkuMCPTestClient {
       if (tools.tools && tools.tools.length > 0) {
         const firstTool = tools.tools[0]
         console.log(`\n🔧 Testing tool call: ${firstTool.name}`)
-        try {
-          const toolResult = await this.callTool(firstTool.name, {})
-          console.log('✅ Tool call successful:', toolResult)
-        } catch (error) {
-          console.log('❌ Tool call failed:', error)
+        const toolResult = await this.callTool(firstTool.name, {
+          title: 'Test todo',
+        })
+        if (toolResult.isError) {
+          throw new Error(
+            `Tool call returned error: ${toolResult.content?.[0]?.text}`
+          )
         }
+        console.log('✅ Tool call successful:', toolResult)
       }
 
       console.log('\n📚 Testing resources...')
@@ -171,12 +174,8 @@ export class PikkuMCPTestClient {
       if (resources.resources && resources.resources.length > 0) {
         const firstResource = resources.resources[0]
         console.log(`\n📚 Testing resource read: ${firstResource.uri}`)
-        try {
-          const resourceResult = await this.readResource(firstResource.uri, {})
-          console.log('✅ Resource read successful:', resourceResult)
-        } catch (error) {
-          console.log('❌ Resource read failed:', error)
-        }
+        const resourceResult = await this.readResource(firstResource.uri, {})
+        console.log('✅ Resource read successful:', resourceResult)
       }
 
       console.log('\n💭 Testing prompts...')
@@ -186,12 +185,10 @@ export class PikkuMCPTestClient {
       if (prompts.prompts && prompts.prompts.length > 0) {
         const firstPrompt = prompts.prompts[0]
         console.log(`\n💭 Testing prompt get: ${firstPrompt.name}`)
-        try {
-          const promptResult = await this.getPrompt(firstPrompt.name, {})
-          console.log('✅ Prompt get successful:', promptResult)
-        } catch (error) {
-          console.log('❌ Prompt get failed:', error)
-        }
+        const promptResult = await this.getPrompt(firstPrompt.name, {
+          userId: 'user1',
+        })
+        console.log('✅ Prompt get successful:', promptResult)
       }
 
       console.log('\n✅ All tests completed successfully!')
