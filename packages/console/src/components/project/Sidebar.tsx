@@ -209,7 +209,7 @@ export const Sidebar: React.FunctionComponent = () => {
         }}
       >
         <Tooltip
-          label="PikkuForge Alpha"
+          label="Pikku Console Alpha"
           position="right"
           disabled={!collapsed}
         >
@@ -224,14 +224,14 @@ export const Sidebar: React.FunctionComponent = () => {
             }}
           >
             <img
-              src="/pikkuforge-logo.png"
-              alt="Pikku Forge"
+              src="/pikku-console-logo.png"
+              alt="Pikku Console"
               width={28}
               height={28}
             />
             {!collapsed && (
               <Text size="lg" fw={500}>
-                Pikku Forge
+                Pikku Console
               </Text>
             )}
           </Link>

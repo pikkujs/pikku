@@ -27,14 +27,14 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
           <Box>
             <Center>
               <img
-                src="/pikkuforge-logo.png"
-                alt="Pikku Forge"
+                src="/pikku-console-logo.png"
+                alt="Pikku Console"
                 width={48}
                 height={48}
               />
             </Center>
             <Text size="xl" fw={500} ta="center" mt="xs" c="white">
-              Pikku Forge
+              Pikku Console
             </Text>
           </Box>
 

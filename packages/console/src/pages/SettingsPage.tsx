@@ -112,7 +112,7 @@ export const SettingsPage: React.FunctionComponent = () => {
             <Text fw={600}>About</Text>
             <Group gap="xs">
               <Text size="sm" c="dimmed">
-                Pikku Forge
+                Pikku Console
               </Text>
               <PikkuBadge type="label">Alpha</PikkuBadge>
             </Group>

@@ -33,7 +33,7 @@ const theme = createTheme({
   },
   colors: {
     primary: generateColors('#A83CE0'), // Magenta-ish Violet - creative, energetic
-    secondary: generateColors('#F5A623'), // Warm Amber-Gold - forge, heat, crafting
+    secondary: generateColors('#F5A623'), // Warm Amber-Gold
     success: generateColors('#10B981'),
     error: generateColors('#EF4444'),
     function: [
