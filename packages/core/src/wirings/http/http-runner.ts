@@ -397,8 +397,8 @@ const executeRoute = async (
     } else if (route.returnsJSON === false) {
       http?.response?.arrayBuffer(result)
     } else {
-      http?.response?.json(result)
       http?.response?.status(200)
+      http?.response?.json(result)
     }
   }
 

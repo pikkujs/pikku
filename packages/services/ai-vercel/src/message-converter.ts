@@ -38,7 +38,7 @@ function convertToSDKMessage(msg: AIMessage): CoreMessage {
               type: 'tool-call' as const,
               toolCallId: tc.id,
               toolName: tc.name,
-              args: typeof tc.args === 'string' ? JSON.parse(tc.args) : tc.args,
+              args: parseIfString(tc.args) ?? tc.args,
             })),
           ],
         }
@@ -52,10 +52,7 @@ function convertToSDKMessage(msg: AIMessage): CoreMessage {
               type: 'tool-result' as const,
               toolCallId: tr.id,
               toolName: tr.name,
-              result:
-                typeof tr.result === 'string'
-                  ? JSON.parse(tr.result)
-                  : tr.result,
+              result: parseIfString(tr.result) ?? tr.result,
             }))
           : [],
       }

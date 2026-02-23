@@ -2,7 +2,8 @@ import { HttpRequest, HttpResponse } from 'uWebSockets.js'
 
 export function uwsToRequest(
   req: HttpRequest,
-  res: HttpResponse
+  res: HttpResponse,
+  onAbort?: () => void
 ): Promise<Request> {
   return new Promise((resolve, reject) => {
     const method = req.getMethod().toUpperCase()
@@ -18,6 +19,11 @@ export function uwsToRequest(
     const headers = new Headers()
     req.forEach((key, value) => {
       headers.set(key, value)
+    })
+
+    res.onAborted(() => {
+      onAbort?.()
+      reject(new Error('Request aborted by client'))
     })
 
     // GET/HEAD requests should not have a body
@@ -40,7 +46,6 @@ export function uwsToRequest(
       if (isLast) {
         const body = buffer ?? Buffer.alloc(0)
 
-        // Build the full Request object
         const request = new Request(url, {
           method,
           headers,
@@ -49,10 +54,6 @@ export function uwsToRequest(
 
         resolve(request)
       }
-    })
-
-    res.onAborted(() => {
-      reject(new Error('Request aborted by client'))
     })
   })
 }

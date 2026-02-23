@@ -52,6 +52,9 @@ class MockAIRunState implements AIRunStateService {
     _toolCallId: string,
     _status: 'approved' | 'denied'
   ): Promise<void> {}
+  async findRunByToolCallId(_toolCallId: string): Promise<null> {
+    return null
+  }
 }
 
 class MockAIStorage implements AIStorageService {
