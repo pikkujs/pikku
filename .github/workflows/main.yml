@@ -26,6 +26,10 @@ jobs:
       - run: yarn prettier
       - run: yarn lint
       - run: cd templates/functions && yarn pikku && cd ../..
+      - run: cd packages/console && yarn generate && yarn tsc --noEmit
+      # Build console and bundle into CLI
+      - run: cd packages/console && yarn build
+      - run: rm -rf packages/cli/console-app && cp -r packages/console/dist packages/cli/console-app
       # - run: yarn typedoc
 
       - name: Save build output (for later jobs)
@@ -216,6 +220,8 @@ jobs:
       - run: yarn install
       - run: yarn build
       - run: cd templates/functions && yarn pikku && cd ../..
+      - run: cd packages/console && yarn generate && yarn build
+      - run: rm -rf packages/cli/console-app && cp -r packages/console/dist packages/cli/console-app
 
       - name: Create Release Pull Request
         uses: changesets/action@v1
