@@ -1,35 +1,39 @@
-import React, { useState, useMemo, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Box, Center, Text } from "@mantine/core";
-import { Terminal } from "lucide-react";
-import type { CLIMeta } from "@pikku/core/cli";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
-import { PanelProvider } from "@/context/PanelContext";
-import { ResizablePanelLayout } from "@/components/layout/ResizablePanelLayout";
-import { DetailPageHeader } from "@/components/layout/DetailPageHeader";
-import { CliCommandTree } from "@/components/cli/CliCommandTree";
-import { CliHelpView } from "@/components/cli/CliHelpView";
+import React, { useState, useMemo, useCallback } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Box, Center, Text } from '@mantine/core'
+import { Terminal } from 'lucide-react'
+import type { CLIMeta } from '@pikku/core/cli'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { PanelProvider } from '@/context/PanelContext'
+import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { CliCommandTree } from '@/components/cli/CliCommandTree'
+import { CliHelpView } from '@/components/cli/CliHelpView'
 
 export const CliPageClient: React.FunctionComponent = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const programId = searchParams.get("id") || "";
-  const { meta } = usePikkuMeta();
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const programId = searchParams.get('id') || ''
+  const { meta } = usePikkuMeta()
 
-  const [commandPath, setCommandPath] = useState<string[]>([]);
+  const [commandPath, setCommandPath] = useState<string[]>([])
 
   const program = useMemo(
     () => (meta.cliMeta || []).find((p) => p.wireId === programId),
     [meta.cliMeta, programId]
-  );
+  )
 
   const allPrograms = useMemo(
-    () => (meta.cliMeta || []).map((p) => ({ name: p.wireId, description: p.description })),
+    () =>
+      (meta.cliMeta || []).map((p) => ({
+        name: p.wireId,
+        description: p.description,
+      })),
     [meta.cliMeta]
-  );
+  )
 
   const cliMeta = useMemo((): CLIMeta => {
-    if (!program) return { programs: {}, renderers: {} };
+    if (!program) return { programs: {}, renderers: {} }
     return {
       programs: {
         [programId]: {
@@ -40,27 +44,27 @@ export const CliPageClient: React.FunctionComponent = () => {
         },
       },
       renderers: meta.cliRenderers || {},
-    };
-  }, [program, programId, meta.cliRenderers]);
+    }
+  }, [program, programId, meta.cliRenderers])
 
   const handleNavigate = useCallback((path: string[]) => {
-    setCommandPath(path);
-  }, []);
+    setCommandPath(path)
+  }, [])
 
   const handleProgramSwitch = useCallback(
     (name: string) => {
-      setCommandPath([]);
-      navigate(`/apis/cli?id=${encodeURIComponent(name)}`);
+      setCommandPath([])
+      navigate(`/apis/cli?id=${encodeURIComponent(name)}`)
     },
     [navigate]
-  );
+  )
 
   if (!program) {
     return (
       <Center h="100vh">
         <Text c="dimmed">CLI program &ldquo;{programId}&rdquo; not found.</Text>
       </Center>
-    );
+    )
   }
 
   return (
@@ -79,13 +83,13 @@ export const CliPageClient: React.FunctionComponent = () => {
         }
         hidePanel
       >
-        <Box style={{ display: "flex", height: "100%" }}>
+        <Box style={{ display: 'flex', height: '100%' }}>
           <Box
             style={{
               width: 260,
               minWidth: 200,
-              borderRight: "1px solid var(--mantine-color-gray-3)",
-              height: "100%",
+              borderRight: '1px solid var(--mantine-color-gray-3)',
+              height: '100%',
             }}
           >
             <CliCommandTree
@@ -94,7 +98,7 @@ export const CliPageClient: React.FunctionComponent = () => {
               onSelect={handleNavigate}
             />
           </Box>
-          <Box style={{ flex: 1, overflow: "hidden" }}>
+          <Box style={{ flex: 1, overflow: 'hidden' }}>
             <CliHelpView
               programId={programId}
               cliMeta={cliMeta}
@@ -106,5 +110,5 @@ export const CliPageClient: React.FunctionComponent = () => {
         </Box>
       </ResizablePanelLayout>
     </PanelProvider>
-  );
-};
+  )
+}

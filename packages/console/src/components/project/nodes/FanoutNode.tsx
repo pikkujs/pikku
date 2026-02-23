@@ -1,40 +1,40 @@
-import React from "react";
-import { Node, NodeProps } from "reactflow";
-import { FlowNode } from "./FlowNode";
-import { Repeat } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
-import { useWorkflowContextSafe } from "@/context/WorkflowContext";
+import React from 'react'
+import { Node, NodeProps } from 'reactflow'
+import { FlowNode } from './FlowNode'
+import { Repeat } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
+import { useWorkflowContextSafe } from '@/context/WorkflowContext'
 
 interface FanoutNodeData {
-  colorKey: string;
-  childRpc?: string;
-  stepName?: string;
+  colorKey: string
+  childRpc?: string
+  stepName?: string
 }
 
-type HighlightType = "focused" | "referenced" | null;
+type HighlightType = 'focused' | 'referenced' | null
 
 export const FanoutNode: React.FunctionComponent<NodeProps<FanoutNodeData>> = ({
   data,
   id,
 }) => {
-  const { openWorkflowStep } = usePanelContext();
-  const workflowContext = useWorkflowContextSafe();
+  const { openWorkflowStep } = usePanelContext()
+  const workflowContext = useWorkflowContextSafe()
 
   const highlightType: HighlightType = React.useMemo(() => {
-    if (!workflowContext) return null;
-    if (workflowContext.focusedNodeId === id) return "focused";
-    if (workflowContext.referencedNodeId === id) return "referenced";
-    return null;
-  }, [workflowContext, id]);
+    if (!workflowContext) return null
+    if (workflowContext.focusedNodeId === id) return 'focused'
+    if (workflowContext.referencedNodeId === id) return 'referenced'
+    return null
+  }, [workflowContext, id])
 
   const outputHandles = [
-    { id: "each", label: "each" },
-    { id: "done", label: "done" },
-  ];
+    { id: 'each', label: 'each' },
+    { id: 'done', label: 'done' },
+  ]
 
   const handleClick = React.useCallback(() => {
-    openWorkflowStep(id, "fanout");
-  }, [id, openWorkflowStep]);
+    openWorkflowStep(id, 'fanout')
+  }, [id, openWorkflowStep])
 
   return (
     <FlowNode
@@ -50,8 +50,8 @@ export const FanoutNode: React.FunctionComponent<NodeProps<FanoutNodeData>> = ({
       highlightType={highlightType}
       nodeId={id}
     />
-  );
-};
+  )
+}
 
 export const getFanoutNodeConfig = (
   id: string,
@@ -60,13 +60,13 @@ export const getFanoutNodeConfig = (
 ): Node => {
   return {
     id,
-    type: "fanoutNode",
+    type: 'fanoutNode',
     position,
     data: {
-      colorKey: "workflow",
+      colorKey: 'workflow',
       childRpc: step.childRpc || step.eachRpc,
       stepName: step.stepName,
-      nodeType: "flow",
+      nodeType: 'flow',
     },
-  };
-};
+  }
+}

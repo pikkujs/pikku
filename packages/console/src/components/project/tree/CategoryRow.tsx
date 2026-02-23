@@ -1,13 +1,13 @@
-import React from "react";
-import { Group, Stack, Text, ActionIcon } from "@mantine/core";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import React from 'react'
+import { Group, Stack, Text, ActionIcon } from '@mantine/core'
+import { ChevronRight, ChevronDown } from 'lucide-react'
 
 interface CategoryRowProps {
-  name: string;
-  childrenCount: number;
-  isCollapsed?: boolean;
-  hasChildren?: boolean;
-  onToggle?: () => void;
+  name: string
+  childrenCount: number
+  isCollapsed?: boolean
+  hasChildren?: boolean
+  onToggle?: () => void
 }
 
 export const CategoryRow: React.FunctionComponent<CategoryRowProps> = ({
@@ -44,5 +44,5 @@ export const CategoryRow: React.FunctionComponent<CategoryRowProps> = ({
         </Group>
       </Stack>
     </Group>
-  );
-};
+  )
+}

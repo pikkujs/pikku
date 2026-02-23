@@ -7,20 +7,20 @@ import {
   Tabs,
   Code,
   Title,
-} from "@mantine/core";
-import type { PikkuWiringTypes } from "@pikku/core";
+} from '@mantine/core'
+import type { PikkuWiringTypes } from '@pikku/core'
 
 interface SchedulerWireDetailsFormProps {
-  wireType: PikkuWiringTypes;
-  wireId: string;
-  metadata: any;
+  wireType: PikkuWiringTypes
+  wireId: string
+  metadata: any
 }
 
 export const SchedulerWireDetailsForm: React.FunctionComponent<
   SchedulerWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
-  const taskName = wireId;
-  const schedule = metadata.schedule || metadata.cron || "0 0 * * *";
+  const taskName = wireId
+  const schedule = metadata.schedule || metadata.cron || '0 0 * * *'
 
   return (
     <Box h="100%">
@@ -28,10 +28,10 @@ export const SchedulerWireDetailsForm: React.FunctionComponent<
         px="md"
         py="md"
         style={{
-          borderBottom: "1px solid var(--mantine-color-gray-3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          borderBottom: '1px solid var(--mantine-color-gray-3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
         <Title order={3} tt="uppercase">
@@ -63,13 +63,13 @@ export const SchedulerWireDetailsForm: React.FunctionComponent<
 
             <TextInput
               label="Summary"
-              value={metadata.docs?.summary || ""}
+              value={metadata.docs?.summary || ''}
               readOnly
             />
 
             <Textarea
               label="Description"
-              value={metadata.docs?.description || ""}
+              value={metadata.docs?.description || ''}
               minRows={3}
               readOnly
             />
@@ -81,5 +81,5 @@ export const SchedulerWireDetailsForm: React.FunctionComponent<
         </Tabs.Panel>
       </Tabs>
     </Box>
-  );
-};
+  )
+}

@@ -1,21 +1,21 @@
-import { Suspense } from "react";
-import { useSearchParams } from "react-router-dom";
-import { GitBranch } from "lucide-react";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
-import { WorkflowsList } from "@/components/project/WorkflowsList";
-import { WorkflowPageClient } from "@/components/pages/WorkflowPageClient";
-import { PanelProvider } from "@/context/PanelContext";
-import { ResizablePanelLayout } from "@/components/layout/ResizablePanelLayout";
-import { DetailPageHeader } from "@/components/layout/DetailPageHeader";
-import { Center, Loader } from "@mantine/core";
+import { Suspense } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { GitBranch } from 'lucide-react'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { WorkflowsList } from '@/components/project/WorkflowsList'
+import { WorkflowPageClient } from '@/components/pages/WorkflowPageClient'
+import { PanelProvider } from '@/context/PanelContext'
+import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { Center, Loader } from '@mantine/core'
 
 function WorkflowPageInner() {
-  const [searchParams] = useSearchParams();
-  const workflowId = searchParams.get("id");
-  const { meta, loading } = usePikkuMeta();
+  const [searchParams] = useSearchParams()
+  const workflowId = searchParams.get('id')
+  const { meta, loading } = usePikkuMeta()
 
   if (workflowId) {
-    return <WorkflowPageClient />;
+    return <WorkflowPageClient />
   }
 
   if (loading) {
@@ -23,19 +23,25 @@ function WorkflowPageInner() {
       <Center h="100vh">
         <Loader />
       </Center>
-    );
+    )
   }
 
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<DetailPageHeader icon={GitBranch} category="Workflows" docsHref="https://pikkujs.com/docs/workflows" />}
+        header={
+          <DetailPageHeader
+            icon={GitBranch}
+            category="Workflows"
+            docsHref="https://pikkujs.com/docs/workflows"
+          />
+        }
         hidePanel
       >
         <WorkflowsList workflows={meta.workflows || {}} />
       </ResizablePanelLayout>
     </PanelProvider>
-  );
+  )
 }
 
 export const WorkflowsPage: React.FunctionComponent = () => {
@@ -49,5 +55,5 @@ export const WorkflowsPage: React.FunctionComponent = () => {
     >
       <WorkflowPageInner />
     </Suspense>
-  );
-};
+  )
+}

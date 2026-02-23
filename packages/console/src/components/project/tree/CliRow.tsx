@@ -1,18 +1,23 @@
-import React from "react";
-import { Group, Stack, Text, ActionIcon } from "@mantine/core";
-import { Workflow } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
-import styles from "./Row.module.css";
+import React from 'react'
+import { Group, Stack, Text, ActionIcon } from '@mantine/core'
+import { Workflow } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
+import styles from './Row.module.css'
 
 interface CliRowProps {
-  name: string;
-  functionName?: string;
-  wireId: string;
-  data: any;
+  name: string
+  functionName?: string
+  wireId: string
+  data: any
 }
 
-export const CliRow: React.FunctionComponent<CliRowProps> = ({ name, functionName, wireId, data }) => {
-  const { openCLI, activePanel } = usePanelContext();
+export const CliRow: React.FunctionComponent<CliRowProps> = ({
+  name,
+  functionName,
+  wireId,
+  data,
+}) => {
+  const { openCLI, activePanel } = usePanelContext()
 
   return (
     <Group
@@ -22,7 +27,7 @@ export const CliRow: React.FunctionComponent<CliRowProps> = ({ name, functionNam
       className={`${styles.row} ${activePanel === `cli-${wireId}` ? styles.active : ''}`}
       style={{
         height: '100%',
-        cursor: "pointer",
+        cursor: 'pointer',
       }}
       onClick={() => openCLI(wireId, data)}
     >
@@ -40,5 +45,5 @@ export const CliRow: React.FunctionComponent<CliRowProps> = ({ name, functionNam
         <Workflow size={16} />
       </ActionIcon>
     </Group>
-  );
-};
+  )
+}

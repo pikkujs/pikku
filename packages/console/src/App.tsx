@@ -1,32 +1,38 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { NotFoundTitle } from "@/components/NotFoundTitle";
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { NotFoundTitle } from '@/components/NotFoundTitle'
 
-import { OverviewPage } from "@/pages/OverviewPage";
-import { FunctionsPage } from "@/pages/FunctionsPage";
-import { WorkflowsPage } from "@/pages/WorkflowPage";
-import { HttpPage } from "@/pages/HttpPage";
-import { ChannelsPage } from "@/pages/ChannelsPage";
-import { McpPage } from "@/pages/McpPage";
-import { CliPage } from "@/pages/CliPage";
-import { SchedulersPage } from "@/pages/SchedulersPage";
-import { QueuesPage } from "@/pages/QueuesPage";
-import { TriggersPage } from "@/pages/TriggersPage";
-import { ServicesPage } from "@/pages/ServicesPage";
-import { MiddlewarePage } from "@/pages/MiddlewarePage";
-import { PermissionsPage } from "@/pages/PermissionsPage";
-import { SecretsPage } from "@/pages/SecretsPage";
-import { VariablesPage } from "@/pages/VariablesPage";
-import { AgentsPage } from "@/pages/AgentsPage";
-import { AgentPlaygroundPage } from "@/pages/AgentPlaygroundPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { OAuthCallbackPage } from "@/pages/OAuthCallbackPage";
+import { OverviewPage } from '@/pages/OverviewPage'
+import { FunctionsPage } from '@/pages/FunctionsPage'
+import { WorkflowsPage } from '@/pages/WorkflowPage'
+import { HttpPage } from '@/pages/HttpPage'
+import { ChannelsPage } from '@/pages/ChannelsPage'
+import { McpPage } from '@/pages/McpPage'
+import { CliPage } from '@/pages/CliPage'
+import { SchedulersPage } from '@/pages/SchedulersPage'
+import { QueuesPage } from '@/pages/QueuesPage'
+import { TriggersPage } from '@/pages/TriggersPage'
+import { ServicesPage } from '@/pages/ServicesPage'
+import { MiddlewarePage } from '@/pages/MiddlewarePage'
+import { PermissionsPage } from '@/pages/PermissionsPage'
+import { SecretsPage } from '@/pages/SecretsPage'
+import { VariablesPage } from '@/pages/VariablesPage'
+import { AgentsPage } from '@/pages/AgentsPage'
+import { AgentPlaygroundPage } from '@/pages/AgentPlaygroundPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
 
 export const App: React.FunctionComponent = () => {
   return (
     <Routes>
       <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
-      <Route element={<AppLayout><Outlet /></AppLayout>}>
+      <Route
+        element={
+          <AppLayout>
+            <Outlet />
+          </AppLayout>
+        }
+      >
         <Route path="/" element={<Navigate to="/overview" replace />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/functions" element={<FunctionsPage />} />
@@ -49,5 +55,5 @@ export const App: React.FunctionComponent = () => {
         <Route path="*" element={<NotFoundTitle />} />
       </Route>
     </Routes>
-  );
-};
+  )
+}

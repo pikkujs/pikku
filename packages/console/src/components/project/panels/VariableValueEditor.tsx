@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react'
 import {
   Stack,
   Box,
@@ -11,82 +11,86 @@ import {
   Code,
   Group,
   ActionIcon,
-} from "@mantine/core";
-import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from "lucide-react";
-import { useVariableValue, useSetVariable } from "@/hooks/useVariables";
-import { useSchema } from "@/hooks/useWirings";
-import { SchemaForm } from "@/components/ui/SchemaForm";
-import { SectionLabel } from "@/components/project/panels/shared/SectionLabel";
+} from '@mantine/core'
+import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
+import { useVariableValue, useSetVariable } from '@/hooks/useVariables'
+import { useSchema } from '@/hooks/useWirings'
+import { SchemaForm } from '@/components/ui/SchemaForm'
+import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 
 interface VariableValueEditorProps {
-  variableId: string | undefined;
-  schemaName: string | undefined;
+  variableId: string | undefined
+  schemaName: string | undefined
 }
 
-export const VariableValueEditor: React.FunctionComponent<VariableValueEditorProps> = ({
-  variableId,
-  schemaName,
-}) => {
-  const [retrieved, setRetrieved] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [mode, setMode] = useState<string>("form");
-  const [jsonValue, setJsonValue] = useState<string>("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+export const VariableValueEditor: React.FunctionComponent<
+  VariableValueEditorProps
+> = ({ variableId, schemaName }) => {
+  const [retrieved, setRetrieved] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [mode, setMode] = useState<string>('form')
+  const [jsonValue, setJsonValue] = useState<string>('')
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const { data: variableData, isLoading: variableLoading } = useVariableValue(variableId, retrieved);
-  const { data: schema } = useSchema(schemaName);
-  const setVariableMutation = useSetVariable();
+  const { data: variableData, isLoading: variableLoading } = useVariableValue(
+    variableId,
+    retrieved
+  )
+  const { data: schema } = useSchema(schemaName)
+  const setVariableMutation = useSetVariable()
 
-  const hasSchema = !!schema;
-  const currentValue = variableData?.exists ? variableData.value : null;
+  const hasSchema = !!schema
+  const currentValue = variableData?.exists ? variableData.value : null
 
   useEffect(() => {
     if (variableData) {
-      setJsonValue(currentValue != null ? JSON.stringify(currentValue, null, 2) : "");
+      setJsonValue(
+        currentValue != null ? JSON.stringify(currentValue, null, 2) : ''
+      )
     }
-  }, [variableData, currentValue]);
+  }, [variableData, currentValue])
 
   if (!variableId) {
-    return null;
+    return null
   }
 
   const showSuccess = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
+    setSuccessMessage(msg)
+    setTimeout(() => setSuccessMessage(null), 3000)
+  }
 
   const handleFormSubmit = (formData: any) => {
     setVariableMutation.mutate(
       { variableId, value: formData },
       {
         onSuccess: () => {
-          showSuccess("Variable saved successfully");
-          setEditing(false);
+          showSuccess('Variable saved successfully')
+          setEditing(false)
         },
       }
-    );
-  };
+    )
+  }
 
   const handleJsonSubmit = () => {
-    setJsonError(null);
-    let parsed: unknown;
+    setJsonError(null)
+    let parsed: unknown
     try {
-      parsed = JSON.parse(jsonValue);
+      parsed = JSON.parse(jsonValue)
     } catch {
-      setJsonError("Invalid JSON");
-      return;
+      setJsonError('Invalid JSON')
+      return
     }
     setVariableMutation.mutate(
       { variableId, value: parsed },
       {
         onSuccess: () => {
-          showSuccess("Variable saved successfully");
-          setEditing(false);
+          showSuccess('Variable saved successfully')
+          setEditing(false)
         },
       }
-    );
-  };
+    )
+  }
 
   if (!retrieved) {
     return (
@@ -101,7 +105,7 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
           Retrieve variable value
         </Button>
       </Box>
-    );
+    )
   }
 
   if (variableLoading) {
@@ -110,10 +114,10 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
         <SectionLabel>Variable Value</SectionLabel>
         <Loader size="sm" />
       </Box>
-    );
+    )
   }
 
-  const effectiveMode = hasSchema ? mode : "json";
+  const effectiveMode = hasSchema ? mode : 'json'
 
   return (
     <Stack gap="sm">
@@ -135,11 +139,11 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
               value={effectiveMode}
               onChange={setMode}
               data={[
-                { label: "Form", value: "form" },
-                { label: "JSON", value: "json" },
+                { label: 'Form', value: 'form' },
+                { label: 'JSON', value: 'json' },
               ]}
               size="xs"
-              style={{ width: "auto" }}
+              style={{ width: 'auto' }}
             />
           )}
         </Group>
@@ -158,14 +162,16 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
       )}
 
       {!variableData?.exists && !editing && (
-        <Text size="sm" c="dimmed">No value set yet.</Text>
+        <Text size="sm" c="dimmed">
+          No value set yet.
+        </Text>
       )}
 
       {!editing ? (
         <Stack gap="xs">
-          {variableData?.exists && (
-            effectiveMode === "form" && hasSchema ? (
-              <Box style={{ pointerEvents: "none", opacity: 0.8 }}>
+          {variableData?.exists &&
+            (effectiveMode === 'form' && hasSchema ? (
+              <Box style={{ pointerEvents: 'none', opacity: 0.8 }}>
                 <SchemaForm
                   schema={schema as any}
                   onSubmit={() => {}}
@@ -175,15 +181,21 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
                 </SchemaForm>
               </Box>
             ) : (
-              <Code block style={{ whiteSpace: "pre-wrap", maxHeight: 300, overflow: "auto" }}>
+              <Code
+                block
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  maxHeight: 300,
+                  overflow: 'auto',
+                }}
+              >
                 {JSON.stringify(currentValue, null, 2)}
               </Code>
-            )
-          )}
+            ))}
         </Stack>
       ) : (
         <Stack gap="sm">
-          {effectiveMode === "form" && hasSchema ? (
+          {effectiveMode === 'form' && hasSchema ? (
             <SchemaForm
               schema={schema as any}
               onSubmit={handleFormSubmit}
@@ -209,17 +221,23 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
               <Textarea
                 value={jsonValue}
                 onChange={(e) => {
-                  setJsonValue(e.currentTarget.value);
-                  setJsonError(null);
+                  setJsonValue(e.currentTarget.value)
+                  setJsonError(null)
                 }}
                 placeholder='{"key": "value"}'
                 autosize
                 minRows={4}
                 maxRows={12}
-                styles={{ input: { fontFamily: "monospace", fontSize: "13px" } }}
+                styles={{
+                  input: { fontFamily: 'monospace', fontSize: '13px' },
+                }}
               />
               {jsonError && (
-                <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
+                <Alert
+                  icon={<AlertTriangle size={16} />}
+                  color="red"
+                  variant="light"
+                >
                   {jsonError}
                 </Alert>
               )}
@@ -240,5 +258,5 @@ export const VariableValueEditor: React.FunctionComponent<VariableValueEditorPro
         </Stack>
       )}
     </Stack>
-  );
-};
+  )
+}

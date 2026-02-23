@@ -1,34 +1,34 @@
-import React from "react";
-import { Stack, Text, Box, Group, Anchor } from "@mantine/core";
-import { Link } from "react-router-dom";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
-import { wiringTypeColor } from "@/components/ui/badge-defs";
+import React from 'react'
+import { Stack, Text, Box, Group, Anchor } from '@mantine/core'
+import { Link } from 'react-router-dom'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { wiringTypeColor } from '@/components/ui/badge-defs'
 
 const TYPE_HREF: Record<string, string> = {
-  http: "/apis/http",
-  channel: "/apis/channels",
-  mcp: "/apis/mcp",
-  cli: "/apis/cli",
-  rpc: "/apis/http",
-  scheduler: "/jobs/schedulers",
-  queue: "/jobs/queues",
-  trigger: "/jobs/triggers",
-  triggerSource: "/jobs/triggers",
-};
+  http: '/apis/http',
+  channel: '/apis/channels',
+  mcp: '/apis/mcp',
+  cli: '/apis/cli',
+  rpc: '/apis/http',
+  scheduler: '/jobs/schedulers',
+  queue: '/jobs/queues',
+  trigger: '/jobs/triggers',
+  triggerSource: '/jobs/triggers',
+}
 
 export const FunctionCrossLinks: React.FunctionComponent<{
-  pikkuFuncId: string;
+  pikkuFuncId: string
 }> = ({ pikkuFuncId }) => {
-  const { functionUsedBy, meta } = usePikkuMeta();
-  const usedBy = functionUsedBy.get(pikkuFuncId);
+  const { functionUsedBy, meta } = usePikkuMeta()
+  const usedBy = functionUsedBy.get(pikkuFuncId)
 
   const funcMeta = meta.functions?.find(
     (f: any) => f.pikkuFuncId === pikkuFuncId
-  );
-  const services = funcMeta?.services?.services as string[] | undefined;
+  )
+  const services = funcMeta?.services?.services as string[] | undefined
 
-  if (!usedBy && !services?.length) return null;
+  if (!usedBy && !services?.length) return null
 
   return (
     <Stack gap="md" p="md">
@@ -37,19 +37,19 @@ export const FunctionCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Wired To
           </Text>
-          <Group gap={4} style={{ flexWrap: "wrap" }}>
+          <Group gap={4} style={{ flexWrap: 'wrap' }}>
             {usedBy.transports.map((t) => (
               <Anchor
                 key={t.id}
                 component={Link}
-                to={TYPE_HREF[t.type] || "#"}
+                to={TYPE_HREF[t.type] || '#'}
                 underline="never"
               >
                 <PikkuBadge
                   type="label"
                   size="sm"
                   color={wiringTypeColor(t.type)}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                 >
                   {t.name}
                 </PikkuBadge>
@@ -63,19 +63,19 @@ export const FunctionCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Jobs
           </Text>
-          <Group gap={4} style={{ flexWrap: "wrap" }}>
+          <Group gap={4} style={{ flexWrap: 'wrap' }}>
             {usedBy.jobs.map((j) => (
               <Anchor
                 key={j.id}
                 component={Link}
-                to={TYPE_HREF[j.type] || "#"}
+                to={TYPE_HREF[j.type] || '#'}
                 underline="never"
               >
                 <PikkuBadge
                   type="label"
                   size="sm"
                   color={wiringTypeColor(j.type)}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                 >
                   {j.name}
                 </PikkuBadge>
@@ -89,7 +89,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Services
           </Text>
-          <Group gap={4} style={{ flexWrap: "wrap" }}>
+          <Group gap={4} style={{ flexWrap: 'wrap' }}>
             {services.map((svc) => (
               <Anchor
                 key={svc}
@@ -102,7 +102,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
                   size="sm"
                   variant="outline"
                   color="gray"
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                 >
                   {svc}
                 </PikkuBadge>
@@ -112,23 +112,23 @@ export const FunctionCrossLinks: React.FunctionComponent<{
         </Box>
       )}
     </Stack>
-  );
-};
+  )
+}
 
 export const WiringCrossLinks: React.FunctionComponent<{
-  pikkuFuncId?: string;
+  pikkuFuncId?: string
 }> = ({ pikkuFuncId }) => {
-  const { functionUsedBy, meta } = usePikkuMeta();
+  const { functionUsedBy, meta } = usePikkuMeta()
 
-  if (!pikkuFuncId) return null;
+  if (!pikkuFuncId) return null
 
-  const usedBy = functionUsedBy.get(pikkuFuncId);
+  const usedBy = functionUsedBy.get(pikkuFuncId)
   const funcMeta = meta.functions?.find(
     (f: any) => f.pikkuFuncId === pikkuFuncId
-  );
-  const services = funcMeta?.services?.services as string[] | undefined;
+  )
+  const services = funcMeta?.services?.services as string[] | undefined
 
-  if (!usedBy && !services?.length) return null;
+  if (!usedBy && !services?.length) return null
 
   return (
     <Stack gap="md" p="md">
@@ -146,7 +146,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Services Used
           </Text>
-          <Group gap={4} style={{ flexWrap: "wrap" }}>
+          <Group gap={4} style={{ flexWrap: 'wrap' }}>
             {services.map((svc) => (
               <Anchor
                 key={svc}
@@ -159,7 +159,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
                   size="sm"
                   variant="outline"
                   color="gray"
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                 >
                   {svc}
                 </PikkuBadge>
@@ -173,19 +173,19 @@ export const WiringCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Also Wired To
           </Text>
-          <Group gap={4} style={{ flexWrap: "wrap" }}>
+          <Group gap={4} style={{ flexWrap: 'wrap' }}>
             {usedBy.transports.map((t) => (
               <Anchor
                 key={t.id}
                 component={Link}
-                to={TYPE_HREF[t.type] || "#"}
+                to={TYPE_HREF[t.type] || '#'}
                 underline="never"
               >
                 <PikkuBadge
                   type="label"
                   size="sm"
                   color={wiringTypeColor(t.type)}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                 >
                   {t.name}
                 </PikkuBadge>
@@ -195,5 +195,5 @@ export const WiringCrossLinks: React.FunctionComponent<{
         </Box>
       )}
     </Stack>
-  );
-};
+  )
+}

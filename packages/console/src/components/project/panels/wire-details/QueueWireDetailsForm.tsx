@@ -7,20 +7,20 @@ import {
   Tabs,
   Code,
   Title,
-} from "@mantine/core";
-import type { PikkuWiringTypes } from "@pikku/core";
+} from '@mantine/core'
+import type { PikkuWiringTypes } from '@pikku/core'
 
 interface QueueWireDetailsFormProps {
-  wireType: PikkuWiringTypes;
-  wireId: string;
-  metadata: any;
+  wireType: PikkuWiringTypes
+  wireId: string
+  metadata: any
 }
 
 export const QueueWireDetailsForm: React.FunctionComponent<
   QueueWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
-  const queueName = wireId;
-  const concurrency = metadata.concurrency || 1;
+  const queueName = wireId
+  const concurrency = metadata.concurrency || 1
 
   return (
     <Box h="100%">
@@ -28,10 +28,10 @@ export const QueueWireDetailsForm: React.FunctionComponent<
         px="md"
         py="md"
         style={{
-          borderBottom: "1px solid var(--mantine-color-gray-3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          borderBottom: '1px solid var(--mantine-color-gray-3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
         <Title order={3} tt="uppercase">
@@ -63,13 +63,13 @@ export const QueueWireDetailsForm: React.FunctionComponent<
 
             <TextInput
               label="Summary"
-              value={metadata.docs?.summary || ""}
+              value={metadata.docs?.summary || ''}
               readOnly
             />
 
             <Textarea
               label="Description"
-              value={metadata.docs?.description || ""}
+              value={metadata.docs?.description || ''}
               minRows={3}
               readOnly
             />
@@ -81,5 +81,5 @@ export const QueueWireDetailsForm: React.FunctionComponent<
         </Tabs.Panel>
       </Tabs>
     </Box>
-  );
-};
+  )
+}

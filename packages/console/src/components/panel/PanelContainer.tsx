@@ -1,47 +1,60 @@
-import React, { useMemo } from "react";
-import { Box, Group, Text, CloseButton, Stack, Center, UnstyledButton } from "@mantine/core";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
-import { createPanelChildren } from "./PanelFactory";
+import React, { useMemo } from 'react'
+import {
+  Box,
+  Group,
+  Text,
+  CloseButton,
+  Stack,
+  Center,
+  UnstyledButton,
+} from '@mantine/core'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
+import { createPanelChildren } from './PanelFactory'
 
 interface PanelContainerProps {
-  showTabs?: boolean;
-  emptyMessage?: string;
+  showTabs?: boolean
+  emptyMessage?: string
 }
 
-export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({ showTabs = true, emptyMessage }) => {
+export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
+  showTabs = true,
+  emptyMessage,
+}) => {
   const { panels, activePanel, setActivePanel, closePanel, goBack, goBackTo } =
-    usePanelContext();
+    usePanelContext()
 
-  const panelArray = Array.from(panels.values());
-  const activePanelData = activePanel ? panels.get(activePanel) : null;
+  const panelArray = Array.from(panels.values())
+  const activePanelData = activePanel ? panels.get(activePanel) : null
 
   const children = useMemo(() => {
-    return activePanelData ? createPanelChildren(activePanelData.data) : [];
-  }, [activePanelData]);
+    return activePanelData ? createPanelChildren(activePanelData.data) : []
+  }, [activePanelData])
 
   if (!showTabs && (panelArray.length === 0 || children.length === 0)) {
     return (
       <Center h="100%" p="xl">
-        <Text c="dimmed" ta="center">{emptyMessage || "Select an item to view details"}</Text>
+        <Text c="dimmed" ta="center">
+          {emptyMessage || 'Select an item to view details'}
+        </Text>
       </Center>
-    );
+    )
   }
 
   if (panelArray.length === 0 || children.length === 0) {
-    return null;
+    return null
   }
 
   return (
-    <Stack gap={0} style={{ height: "100%", overflow: "hidden" }}>
+    <Stack gap={0} style={{ height: '100%', overflow: 'hidden' }}>
       {showTabs && (
         <Box
           style={{
-            borderBottom: "1px solid var(--mantine-color-gray-5)",
-            backgroundColor: "var(--mantine-color-gray-0)",
+            borderBottom: '1px solid var(--mantine-color-gray-5)',
+            backgroundColor: 'var(--mantine-color-gray-0)',
           }}
         >
-          <Group gap={0} wrap="nowrap" style={{ overflowX: "auto" }}>
+          <Group gap={0} wrap="nowrap" style={{ overflowX: 'auto' }}>
             {panelArray.map((panel) => (
               <Group
                 key={panel.id}
@@ -50,18 +63,18 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({ s
                 px="md"
                 py="xs"
                 style={{
-                  cursor: "pointer",
-                  borderLeft: "1px solid var(--mantine-color-gray-2)",
-                  borderRight: "1px solid var(--mantine-color-gray-2)",
+                  cursor: 'pointer',
+                  borderLeft: '1px solid var(--mantine-color-gray-2)',
+                  borderRight: '1px solid var(--mantine-color-gray-2)',
                   borderBottom:
                     activePanel === panel.id
-                      ? "2px solid var(--mantine-color-blue-6)"
-                      : "2px solid transparent",
+                      ? '2px solid var(--mantine-color-blue-6)'
+                      : '2px solid transparent',
                   backgroundColor:
                     activePanel === panel.id
-                      ? "var(--mantine-color-gray-1)"
-                      : "transparent",
-                  transition: "all 0.2s",
+                      ? 'var(--mantine-color-gray-1)'
+                      : 'transparent',
+                  transition: 'all 0.2s',
                   flexShrink: 0,
                 }}
                 onClick={() => setActivePanel(panel.id)}
@@ -72,8 +85,8 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({ s
                 <CloseButton
                   size="xs"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    closePanel(panel.id);
+                    e.stopPropagation()
+                    closePanel(panel.id)
                   }}
                 />
               </Group>
@@ -87,40 +100,41 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({ s
           px="md"
           py="xs"
           style={{
-            borderBottom: "1px solid var(--mantine-color-gray-3)",
-            backgroundColor: "var(--mantine-color-gray-0)",
+            borderBottom: '1px solid var(--mantine-color-gray-3)',
+            backgroundColor: 'var(--mantine-color-gray-0)',
           }}
         >
           <Group gap={6} wrap="nowrap" align="center">
-            <UnstyledButton onClick={goBack} style={{ display: "flex", alignItems: "center" }}>
+            <UnstyledButton
+              onClick={goBack}
+              style={{ display: 'flex', alignItems: 'center' }}
+            >
               <ChevronLeft size={18} color="var(--mantine-color-dimmed)" />
             </UnstyledButton>
             {activePanelData.history.map((entry, index) => (
               <React.Fragment key={index}>
                 <UnstyledButton onClick={() => goBackTo(index)}>
-                  <Text size="sm" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+                  <Text size="sm" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
                     {entry.title}
                   </Text>
                 </UnstyledButton>
                 <ChevronRight size={14} color="var(--mantine-color-dimmed)" />
               </React.Fragment>
             ))}
-            <Text size="sm" fw={600} style={{ whiteSpace: "nowrap" }}>
+            <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>
               {activePanelData.title}
             </Text>
           </Group>
         </Box>
       )}
 
-      <Box py="md" style={{ flex: 1, overflow: "auto" }}>
+      <Box py="md" style={{ flex: 1, overflow: 'auto' }}>
         <Stack gap="xl">
           {children.map((child) => (
-            <Box key={child.id}>
-              {child.content}
-            </Box>
+            <Box key={child.id}>{child.content}</Box>
           ))}
         </Stack>
       </Box>
     </Stack>
-  );
-};
+  )
+}

@@ -1,17 +1,25 @@
-import React, { useMemo } from "react";
-import { Box, Stack, Group, Paper, Breadcrumbs, Anchor, Divider } from "@mantine/core";
-import { Paintbrush } from "lucide-react";
-import type { CLIMeta, CLICommandMeta } from "@pikku/core/cli";
-import { FunctionLink } from "@/components/project/panels/shared/FunctionLink";
-import { SectionLabel } from "@/components/project/panels/shared/SectionLabel";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
-import { CliHelpText } from "./CliHelpText";
+import React, { useMemo } from 'react'
+import {
+  Box,
+  Stack,
+  Group,
+  Paper,
+  Breadcrumbs,
+  Anchor,
+  Divider,
+} from '@mantine/core'
+import { Paintbrush } from 'lucide-react'
+import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
+import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
+import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { CliHelpText } from './CliHelpText'
 
 interface RendererMeta {
-  name: string;
-  exportedName?: string;
-  filePath: string;
-  services: { optimized: boolean; services: string[] };
+  name: string
+  exportedName?: string
+  filePath: string
+  services: { optimized: boolean; services: string[] }
 }
 
 const getCommandAtPath = (
@@ -19,23 +27,23 @@ const getCommandAtPath = (
   programId: string,
   commandPath: string[]
 ): CLICommandMeta | null => {
-  const program = cliMeta.programs[programId];
-  if (!program || commandPath.length === 0) return null;
-  let current = program.commands[commandPath[0]];
-  if (!current) return null;
+  const program = cliMeta.programs[programId]
+  if (!program || commandPath.length === 0) return null
+  let current = program.commands[commandPath[0]]
+  if (!current) return null
   for (let i = 1; i < commandPath.length; i++) {
-    if (!current.subcommands?.[commandPath[i]]) return null;
-    current = current.subcommands[commandPath[i]];
+    if (!current.subcommands?.[commandPath[i]]) return null
+    current = current.subcommands[commandPath[i]]
   }
-  return current;
-};
+  return current
+}
 
 interface CliHelpViewProps {
-  programId: string;
-  cliMeta: CLIMeta;
-  cliRenderers: Record<string, RendererMeta>;
-  commandPath: string[];
-  onNavigate: (path: string[]) => void;
+  programId: string
+  cliMeta: CLIMeta
+  cliRenderers: Record<string, RendererMeta>
+  commandPath: string[]
+  onNavigate: (path: string[]) => void
 }
 
 export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
@@ -48,22 +56,22 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
   const command = useMemo(
     () => getCommandAtPath(cliMeta, programId, commandPath),
     [cliMeta, programId, commandPath]
-  );
-  const program = cliMeta.programs[programId];
+  )
+  const program = cliMeta.programs[programId]
 
-  const rendererName = command?.renderName || program?.defaultRenderName;
-  const renderer = rendererName ? cliRenderers[rendererName] : undefined;
+  const rendererName = command?.renderName || program?.defaultRenderName
+  const renderer = rendererName ? cliRenderers[rendererName] : undefined
 
-  const pikkuFuncId = command?.pikkuFuncId || undefined;
-  const hasImpl = !!(pikkuFuncId || renderer);
+  const pikkuFuncId = command?.pikkuFuncId || undefined
+  const hasImpl = !!(pikkuFuncId || renderer)
 
   return (
-    <Stack gap="md" p="md" style={{ height: "100%", overflow: "auto" }}>
+    <Stack gap="md" p="md" style={{ height: '100%', overflow: 'auto' }}>
       <Breadcrumbs>
         <Anchor
           size="sm"
           onClick={() => onNavigate([])}
-          style={{ cursor: "pointer" }}
+          style={{ cursor: 'pointer' }}
         >
           {programId}
         </Anchor>
@@ -72,7 +80,9 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
             key={i}
             size="sm"
             onClick={() => onNavigate(commandPath.slice(0, i + 1))}
-            style={{ cursor: i === commandPath.length - 1 ? "default" : "pointer" }}
+            style={{
+              cursor: i === commandPath.length - 1 ? 'default' : 'pointer',
+            }}
             fw={i === commandPath.length - 1 ? 600 : 400}
           >
             {part}
@@ -93,9 +103,7 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
         <>
           <Divider />
           <Stack gap="sm">
-            {pikkuFuncId && (
-              <FunctionLink pikkuFuncId={pikkuFuncId} />
-            )}
+            {pikkuFuncId && <FunctionLink pikkuFuncId={pikkuFuncId} />}
 
             {renderer && (
               <Box>
@@ -110,9 +118,14 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
                   >
                     {renderer.name}
                   </PikkuBadge>
-                  {renderer.exportedName && renderer.exportedName !== renderer.name && (
-                    <PikkuBadge type="dynamic" badge="exportedName" value={renderer.exportedName} />
-                  )}
+                  {renderer.exportedName &&
+                    renderer.exportedName !== renderer.name && (
+                      <PikkuBadge
+                        type="dynamic"
+                        badge="exportedName"
+                        value={renderer.exportedName}
+                      />
+                    )}
                 </Group>
               </Box>
             )}
@@ -122,7 +135,12 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
                 <SectionLabel>Renderer Services</SectionLabel>
                 <Group gap={6}>
                   {renderer.services.services.map((svc) => (
-                    <PikkuBadge key={svc} type="dynamic" badge="service" value={svc} />
+                    <PikkuBadge
+                      key={svc}
+                      type="dynamic"
+                      badge="service"
+                      value={svc}
+                    />
                   ))}
                 </Group>
               </Box>
@@ -131,5 +149,5 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
         </>
       )}
     </Stack>
-  );
-};
+  )
+}

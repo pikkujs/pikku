@@ -1,13 +1,13 @@
-import { Button, Container, Group, Text, Title } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
-import classes from "./NotFoundTitle.module.css";
+import { Button, Container, Group, Text, Title } from '@mantine/core'
+import { useNavigate } from 'react-router-dom'
+import classes from './NotFoundTitle.module.css'
 
 export const NotFoundTitle: React.FunctionComponent = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const handleGoHome = () => {
-    navigate("/");
-  };
+    navigate('/')
+  }
 
   return (
     <Container className={classes.root}>
@@ -23,5 +23,5 @@ export const NotFoundTitle: React.FunctionComponent = () => {
         </Button>
       </Group>
     </Container>
-  );
-};
+  )
+}

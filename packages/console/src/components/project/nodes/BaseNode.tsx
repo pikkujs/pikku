@@ -1,39 +1,32 @@
-import React from "react";
-import {
-  Box,
-  Group,
-  Paper,
-  Stack,
-  Text,
-  useMantineTheme,
-} from "@mantine/core";
-import { Handle, Position } from "reactflow";
-import { Lock, LockOpen, Shield, Layers } from "lucide-react";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
+import React from 'react'
+import { Box, Group, Paper, Stack, Text, useMantineTheme } from '@mantine/core'
+import { Handle, Position } from 'reactflow'
+import { Lock, LockOpen, Shield, Layers } from 'lucide-react'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
 
 interface OutputHandle {
-  id: string;
-  label?: string;
+  id: string
+  label?: string
 }
 
 interface BaseNodeProps {
   data: {
-    colorKey: string;
-    title: string;
-    description?: string;
-    tags?: string[];
-    auth?: boolean;
-    permissionsCount?: number;
-    middlewareCount?: number;
-    onClick?: () => void;
-  };
-  hasInput?: boolean;
-  hasOutput?: boolean;
-  outputHandles?: OutputHandle[];
-  additionalBody?: React.ReactNode;
-  width?: number;
-  hideMetadataIndicators?: boolean;
-  inFlow?: boolean;
+    colorKey: string
+    title: string
+    description?: string
+    tags?: string[]
+    auth?: boolean
+    permissionsCount?: number
+    middlewareCount?: number
+    onClick?: () => void
+  }
+  hasInput?: boolean
+  hasOutput?: boolean
+  outputHandles?: OutputHandle[]
+  additionalBody?: React.ReactNode
+  width?: number
+  hideMetadataIndicators?: boolean
+  inFlow?: boolean
 }
 
 export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
@@ -46,7 +39,7 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
   hideMetadataIndicators = false,
   inFlow = true,
 }) => {
-  const theme = useMantineTheme();
+  const theme = useMantineTheme()
 
   return (
     <Paper shadow="md" radius="md" w={width} pos="relative">
@@ -54,15 +47,14 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
         <Handle
           type="target"
           position={Position.Left}
-          style={{ cursor: "default" }}
+          style={{ cursor: 'default' }}
         />
       )}
-
 
       <Box
         p="sm"
         className="nodrag"
-        style={{ cursor: data.onClick ? "pointer" : "default" }}
+        style={{ cursor: data.onClick ? 'pointer' : 'default' }}
         onClick={data.onClick}
       >
         <Stack gap={4}>
@@ -132,12 +124,13 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
       {inFlow &&
         (outputHandles && outputHandles.length > 0
           ? outputHandles.map((handle, index) => {
-              const total = outputHandles.length;
-              const minTop = 25;
-              const maxTop = 75;
-              const topPercent = total === 1
-                ? 50
-                : minTop + ((maxTop - minTop) / (total - 1)) * index;
+              const total = outputHandles.length
+              const minTop = 25
+              const maxTop = 75
+              const topPercent =
+                total === 1
+                  ? 50
+                  : minTop + ((maxTop - minTop) / (total - 1)) * index
 
               return (
                 <Box
@@ -146,10 +139,10 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
                   right={-12}
                   style={{
                     top: `${topPercent}%`,
-                    transform: "translateY(-50%)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                   }}
                 >
                   <Text size="xs" c="dimmed" ff="monospace" fw={500}>
@@ -160,22 +153,22 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
                     position={Position.Right}
                     id={handle.id}
                     style={{
-                      position: "relative",
+                      position: 'relative',
                       right: 0,
-                      transform: "none",
-                      cursor: "default",
+                      transform: 'none',
+                      cursor: 'default',
                     }}
                   />
                 </Box>
-              );
+              )
             })
           : hasOutput && (
               <Handle
                 type="source"
                 position={Position.Right}
-                style={{ cursor: "default" }}
+                style={{ cursor: 'default' }}
               />
             ))}
     </Paper>
-  );
-};
+  )
+}

@@ -46,4 +46,10 @@ yarn tsc -b
 echo "Copying schema file..."
 cp .pikku/schemas/schemas/PikkuCLIConfig.schema.json cli.schema.json
 
+echo "Copying console app..."
+rm -rf console-app
+if [ -d "../console/dist" ]; then
+  cp -r ../console/dist console-app
+fi
+
 echo "Build complete! ✓"

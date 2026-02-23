@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React from 'react'
+import { Link } from 'react-router-dom'
 import {
   Box,
   Container,
@@ -10,7 +10,7 @@ import {
   Stack,
   Center,
   Loader,
-} from "@mantine/core";
+} from '@mantine/core'
 import {
   FunctionSquare,
   GitBranch,
@@ -21,15 +21,15 @@ import {
   Terminal,
   Clock,
   ListOrdered,
-} from "lucide-react";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
+} from 'lucide-react'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
 interface StatCardProps {
-  label: string;
-  count: number;
-  icon: React.ComponentType<{ size?: number }>;
-  href: string;
-  color: string;
+  label: string
+  count: number
+  icon: React.ComponentType<{ size?: number }>
+  href: string
+  color: string
 }
 
 const StatCard: React.FunctionComponent<StatCardProps> = ({
@@ -46,18 +46,18 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
     radius="md"
     withBorder
     style={{
-      textDecoration: "none",
-      color: "inherit",
-      transition: "box-shadow 150ms ease, transform 150ms ease",
-      cursor: "pointer",
+      textDecoration: 'none',
+      color: 'inherit',
+      transition: 'box-shadow 150ms ease, transform 150ms ease',
+      cursor: 'pointer',
     }}
     onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.boxShadow = "var(--mantine-shadow-md)";
-      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.boxShadow = 'var(--mantine-shadow-md)'
+      e.currentTarget.style.transform = 'translateY(-2px)'
     }}
     onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.boxShadow = "";
-      e.currentTarget.style.transform = "";
+      e.currentTarget.style.boxShadow = ''
+      e.currentTarget.style.transform = ''
     }}
   >
     <Group gap="md" wrap="nowrap">
@@ -67,9 +67,9 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
           height: 40,
           borderRadius: 8,
           backgroundColor: `var(--mantine-color-${color}-0)`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           color: `var(--mantine-color-${color}-6)`,
         }}
       >
@@ -85,84 +85,84 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
       </Stack>
     </Group>
   </Paper>
-);
+)
 
 export const OverviewPage: React.FunctionComponent = () => {
-  const { counts, loading } = usePikkuMeta();
+  const { counts, loading } = usePikkuMeta()
 
   if (loading) {
     return (
       <Center h="100vh">
         <Loader />
       </Center>
-    );
+    )
   }
 
   const stats: StatCardProps[] = [
     {
-      label: "Functions",
+      label: 'Functions',
       count: counts.functions,
       icon: FunctionSquare,
-      href: "/functions",
-      color: "blue",
+      href: '/functions',
+      color: 'blue',
     },
     {
-      label: "Workflows",
+      label: 'Workflows',
       count: counts.workflows,
       icon: GitBranch,
-      href: "/workflow",
-      color: "violet",
+      href: '/workflow',
+      color: 'violet',
     },
     {
-      label: "Agents",
+      label: 'Agents',
       count: counts.agents,
       icon: Bot,
-      href: "/agents",
-      color: "grape",
+      href: '/agents',
+      color: 'grape',
     },
     {
-      label: "HTTP Routes",
+      label: 'HTTP Routes',
       count: counts.httpRoutes,
       icon: Globe,
-      href: "/apis/http",
-      color: "green",
+      href: '/apis/http',
+      color: 'green',
     },
     {
-      label: "Channels",
+      label: 'Channels',
       count: counts.channels,
       icon: Radio,
-      href: "/apis/channels",
-      color: "cyan",
+      href: '/apis/channels',
+      color: 'cyan',
     },
     {
-      label: "MCP Tools",
+      label: 'MCP Tools',
       count: counts.mcpTools,
       icon: Cpu,
-      href: "/apis/mcp",
-      color: "orange",
+      href: '/apis/mcp',
+      color: 'orange',
     },
     {
-      label: "CLI Commands",
+      label: 'CLI Commands',
       count: counts.cliCommands,
       icon: Terminal,
-      href: "/apis/cli",
-      color: "teal",
+      href: '/apis/cli',
+      color: 'teal',
     },
     {
-      label: "Schedulers",
+      label: 'Schedulers',
       count: counts.schedulers,
       icon: Clock,
-      href: "/jobs/schedulers",
-      color: "yellow",
+      href: '/jobs/schedulers',
+      color: 'yellow',
     },
     {
-      label: "Queues",
+      label: 'Queues',
       count: counts.queues,
       icon: ListOrdered,
-      href: "/jobs/queues",
-      color: "pink",
+      href: '/jobs/queues',
+      color: 'pink',
     },
-  ];
+  ]
 
   return (
     <Container size="md" py="xl">
@@ -182,5 +182,5 @@ export const OverviewPage: React.FunctionComponent = () => {
         </SimpleGrid>
       </Stack>
     </Container>
-  );
-};
+  )
+}

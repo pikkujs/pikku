@@ -1,4 +1,4 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link } from 'react-router-dom'
 import {
   Stack,
   Box,
@@ -8,8 +8,8 @@ import {
   NavLink,
   Divider,
   ActionIcon,
-} from "@mantine/core";
-import { useLocalStorage } from "@mantine/hooks";
+} from '@mantine/core'
+import { useLocalStorage } from '@mantine/hooks'
 import {
   FunctionSquare,
   GitBranch,
@@ -30,155 +30,155 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
-} from "lucide-react";
-import { spotlight } from "@mantine/spotlight";
+} from 'lucide-react'
+import { spotlight } from '@mantine/spotlight'
 
 interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ size?: number }>;
-  matchPrefix: string;
+  label: string
+  href: string
+  icon: React.ComponentType<{ size?: number }>
+  matchPrefix: string
 }
 
 interface NavSection {
-  title?: string;
-  items: NavItem[];
+  title?: string
+  items: NavItem[]
 }
 
 const NAV_SECTIONS: NavSection[] = [
   {
     items: [
       {
-        label: "Functions",
-        href: "/functions",
+        label: 'Functions',
+        href: '/functions',
         icon: FunctionSquare,
-        matchPrefix: "/functions",
+        matchPrefix: '/functions',
       },
       {
-        label: "Workflows",
-        href: "/workflow",
+        label: 'Workflows',
+        href: '/workflow',
         icon: GitBranch,
-        matchPrefix: "/workflow",
+        matchPrefix: '/workflow',
       },
       {
-        label: "Agents",
-        href: "/agents",
+        label: 'Agents',
+        href: '/agents',
         icon: Bot,
-        matchPrefix: "/agents",
+        matchPrefix: '/agents',
       },
     ],
   },
   {
-    title: "Config",
+    title: 'Config',
     items: [
       {
-        label: "Secrets",
-        href: "/config/secrets",
+        label: 'Secrets',
+        href: '/config/secrets',
         icon: KeyRound,
-        matchPrefix: "/config/secrets",
+        matchPrefix: '/config/secrets',
       },
       {
-        label: "Variables",
-        href: "/config/variables",
+        label: 'Variables',
+        href: '/config/variables',
         icon: Settings2,
-        matchPrefix: "/config/variables",
+        matchPrefix: '/config/variables',
       },
     ],
   },
   {
-    title: "APIs",
+    title: 'APIs',
     items: [
       {
-        label: "HTTP",
-        href: "/apis/http",
+        label: 'HTTP',
+        href: '/apis/http',
         icon: Globe,
-        matchPrefix: "/apis/http",
+        matchPrefix: '/apis/http',
       },
       {
-        label: "Channels",
-        href: "/apis/channels",
+        label: 'Channels',
+        href: '/apis/channels',
         icon: Radio,
-        matchPrefix: "/apis/channels",
+        matchPrefix: '/apis/channels',
       },
       {
-        label: "MCP",
-        href: "/apis/mcp",
+        label: 'MCP',
+        href: '/apis/mcp',
         icon: Cpu,
-        matchPrefix: "/apis/mcp",
+        matchPrefix: '/apis/mcp',
       },
       {
-        label: "CLI",
-        href: "/apis/cli",
+        label: 'CLI',
+        href: '/apis/cli',
         icon: Terminal,
-        matchPrefix: "/apis/cli",
+        matchPrefix: '/apis/cli',
       },
     ],
   },
   {
-    title: "Jobs",
+    title: 'Jobs',
     items: [
       {
-        label: "Schedulers",
-        href: "/jobs/schedulers",
+        label: 'Schedulers',
+        href: '/jobs/schedulers',
         icon: Clock,
-        matchPrefix: "/jobs/schedulers",
+        matchPrefix: '/jobs/schedulers',
       },
       {
-        label: "Queues",
-        href: "/jobs/queues",
+        label: 'Queues',
+        href: '/jobs/queues',
         icon: ListOrdered,
-        matchPrefix: "/jobs/queues",
+        matchPrefix: '/jobs/queues',
       },
       {
-        label: "Triggers",
-        href: "/jobs/triggers",
+        label: 'Triggers',
+        href: '/jobs/triggers',
         icon: Zap,
-        matchPrefix: "/jobs/triggers",
+        matchPrefix: '/jobs/triggers',
       },
     ],
   },
   {
-    title: "Runtime",
+    title: 'Runtime',
     items: [
       {
-        label: "Services",
-        href: "/runtime/services",
+        label: 'Services',
+        href: '/runtime/services',
         icon: Server,
-        matchPrefix: "/runtime/services",
+        matchPrefix: '/runtime/services',
       },
       {
-        label: "Middleware",
-        href: "/runtime/middleware",
+        label: 'Middleware',
+        href: '/runtime/middleware',
         icon: Layers,
-        matchPrefix: "/runtime/middleware",
+        matchPrefix: '/runtime/middleware',
       },
       {
-        label: "Permissions",
-        href: "/runtime/permissions",
+        label: 'Permissions',
+        href: '/runtime/permissions',
         icon: Shield,
-        matchPrefix: "/runtime/permissions",
+        matchPrefix: '/runtime/permissions',
       },
     ],
   },
-];
+]
 
-const COLLAPSED_WIDTH = 60;
-const EXPANDED_WIDTH = 210;
+const COLLAPSED_WIDTH = 60
+const EXPANDED_WIDTH = 210
 
-export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH;
-export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH;
+export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
+export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 
 export const Sidebar: React.FunctionComponent = () => {
-  const theme = useMantineTheme();
-  const { pathname } = useLocation();
+  const theme = useMantineTheme()
+  const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useLocalStorage({
-    key: "sidebar-collapsed",
+    key: 'sidebar-collapsed',
     defaultValue: false,
-  });
+  })
 
-  const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
+  const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
-  const isActive = (item: NavItem) => pathname.includes(item.matchPrefix);
+  const isActive = (item: NavItem) => pathname.includes(item.matchPrefix)
 
   return (
     <Box
@@ -190,33 +190,37 @@ export const Sidebar: React.FunctionComponent = () => {
       style={{
         borderRight: `1px solid var(--mantine-color-default-border)`,
         backgroundColor: `var(--mantine-color-body)`,
-        display: "flex",
-        flexDirection: "column",
-        transition: "width 200ms ease",
-        overflow: "hidden",
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 200ms ease',
+        overflow: 'hidden',
         zIndex: 100,
       }}
     >
       <Box
-        px={collapsed ? "xs" : "sm"}
+        px={collapsed ? 'xs' : 'sm'}
         py="xs"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
           height: 50,
           flexShrink: 0,
         }}
       >
-        <Tooltip label="PikkuForge Alpha" position="right" disabled={!collapsed}>
+        <Tooltip
+          label="PikkuForge Alpha"
+          position="right"
+          disabled={!collapsed}
+        >
           <Link
             to="/"
             style={{
-              display: "flex",
-              alignItems: "center",
+              display: 'flex',
+              alignItems: 'center',
               gap: 8,
-              textDecoration: "none",
-              color: "inherit",
+              textDecoration: 'none',
+              color: 'inherit',
             }}
           >
             <img
@@ -225,7 +229,11 @@ export const Sidebar: React.FunctionComponent = () => {
               width={28}
               height={28}
             />
-            {!collapsed && <Text size="lg" fw={500}>Pikku Forge</Text>}
+            {!collapsed && (
+              <Text size="lg" fw={500}>
+                Pikku Forge
+              </Text>
+            )}
           </Link>
         </Tooltip>
         {!collapsed && (
@@ -242,12 +250,12 @@ export const Sidebar: React.FunctionComponent = () => {
         )}
       </Box>
 
-      <Box style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }} py={4}>
+      <Box style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} py={4}>
         {NAV_SECTIONS.map((section, sectionIndex) => (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
             {section.items.map((item) => {
-              const active = isActive(item);
+              const active = isActive(item)
 
               if (collapsed) {
                 return (
@@ -261,17 +269,17 @@ export const Sidebar: React.FunctionComponent = () => {
                         variant="light"
                         style={{
                           borderRadius: theme.radius.sm,
-                          justifyContent: "center",
-                          padding: "8px 0",
+                          justifyContent: 'center',
+                          padding: '8px 0',
                         }}
                         styles={{
                           section: { marginRight: 0 },
-                          body: { display: "none" },
+                          body: { display: 'none' },
                         }}
                       />
                     </Box>
                   </Tooltip>
-                );
+                )
               }
 
               return (
@@ -289,7 +297,7 @@ export const Sidebar: React.FunctionComponent = () => {
                     }}
                   />
                 </Box>
-              );
+              )
             })}
           </Box>
         ))}
@@ -304,17 +312,17 @@ export const Sidebar: React.FunctionComponent = () => {
                 <NavLink
                   component={Link}
                   to="/settings"
-                  active={pathname.includes("/settings")}
+                  active={pathname.includes('/settings')}
                   leftSection={<Settings size={18} />}
                   variant="light"
                   style={{
                     borderRadius: theme.radius.sm,
-                    justifyContent: "center",
-                    padding: "8px 0",
+                    justifyContent: 'center',
+                    padding: '8px 0',
                   }}
                   styles={{
                     section: { marginRight: 0 },
-                    body: { display: "none" },
+                    body: { display: 'none' },
                   }}
                 />
               </Tooltip>
@@ -330,14 +338,20 @@ export const Sidebar: React.FunctionComponent = () => {
               </Tooltip>
             </Stack>
           ) : (
-            <Box style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <Box style={{ flex: 1 }}>
                 <NavLink
                   component={Link}
                   to="/settings"
                   label="Settings"
                   leftSection={<Settings size={16} />}
-                  active={pathname.includes("/settings")}
+                  active={pathname.includes('/settings')}
                   variant="light"
                   style={{
                     borderRadius: theme.radius.sm,
@@ -360,5 +374,5 @@ export const Sidebar: React.FunctionComponent = () => {
         </Box>
       </Box>
     </Box>
-  );
-};
+  )
+}

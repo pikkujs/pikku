@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react'
 import {
   Stack,
   Box,
@@ -11,94 +11,98 @@ import {
   Code,
   Group,
   ActionIcon,
-} from "@mantine/core";
-import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from "lucide-react";
-import { useSecretValue, useSetSecret } from "@/hooks/useSecrets";
-import { useSchema } from "@/hooks/useWirings";
-import { SchemaForm } from "@/components/ui/SchemaForm";
-import { SectionLabel } from "@/components/project/panels/shared/SectionLabel";
+} from '@mantine/core'
+import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
+import { useSecretValue, useSetSecret } from '@/hooks/useSecrets'
+import { useSchema } from '@/hooks/useWirings'
+import { SchemaForm } from '@/components/ui/SchemaForm'
+import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 
 const OAUTH2_CLIENT_SCHEMA = {
-  type: "object",
+  type: 'object',
   properties: {
-    clientId: { type: "string", title: "Client ID" },
-    clientSecret: { type: "string", title: "Client Secret" },
+    clientId: { type: 'string', title: 'Client ID' },
+    clientSecret: { type: 'string', title: 'Client Secret' },
   },
-  required: ["clientId"],
-};
-
-interface SecretValueEditorProps {
-  secretId: string | undefined;
-  schemaName: string | undefined;
-  isOAuth2?: boolean;
+  required: ['clientId'],
 }
 
-export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> = ({
-  secretId,
-  schemaName,
-  isOAuth2,
-}) => {
-  const [retrieved, setRetrieved] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [mode, setMode] = useState<string>("form");
-  const [jsonValue, setJsonValue] = useState<string>("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+interface SecretValueEditorProps {
+  secretId: string | undefined
+  schemaName: string | undefined
+  isOAuth2?: boolean
+}
 
-  const { data: secretData, isLoading: secretLoading } = useSecretValue(secretId, retrieved);
-  const { data: schema } = useSchema(schemaName);
-  const setSecretMutation = useSetSecret();
+export const SecretValueEditor: React.FunctionComponent<
+  SecretValueEditorProps
+> = ({ secretId, schemaName, isOAuth2 }) => {
+  const [retrieved, setRetrieved] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [mode, setMode] = useState<string>('form')
+  const [jsonValue, setJsonValue] = useState<string>('')
+  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const effectiveSchema = schema || (isOAuth2 ? OAUTH2_CLIENT_SCHEMA : undefined);
-  const hasSchema = !!effectiveSchema;
-  const currentValue = secretData?.exists ? secretData.value : null;
+  const { data: secretData, isLoading: secretLoading } = useSecretValue(
+    secretId,
+    retrieved
+  )
+  const { data: schema } = useSchema(schemaName)
+  const setSecretMutation = useSetSecret()
+
+  const effectiveSchema =
+    schema || (isOAuth2 ? OAUTH2_CLIENT_SCHEMA : undefined)
+  const hasSchema = !!effectiveSchema
+  const currentValue = secretData?.exists ? secretData.value : null
 
   useEffect(() => {
     if (secretData) {
-      setJsonValue(currentValue != null ? JSON.stringify(currentValue, null, 2) : "");
+      setJsonValue(
+        currentValue != null ? JSON.stringify(currentValue, null, 2) : ''
+      )
     }
-  }, [secretData, currentValue]);
+  }, [secretData, currentValue])
 
   if (!secretId) {
-    return null;
+    return null
   }
 
   const showSuccess = (msg: string) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(null), 3000);
-  };
+    setSuccessMessage(msg)
+    setTimeout(() => setSuccessMessage(null), 3000)
+  }
 
   const handleFormSubmit = (formData: any) => {
     setSecretMutation.mutate(
       { secretId, value: formData },
       {
         onSuccess: () => {
-          showSuccess("Secret saved successfully");
-          setEditing(false);
+          showSuccess('Secret saved successfully')
+          setEditing(false)
         },
       }
-    );
-  };
+    )
+  }
 
   const handleJsonSubmit = () => {
-    setJsonError(null);
-    let parsed: unknown;
+    setJsonError(null)
+    let parsed: unknown
     try {
-      parsed = JSON.parse(jsonValue);
+      parsed = JSON.parse(jsonValue)
     } catch {
-      setJsonError("Invalid JSON");
-      return;
+      setJsonError('Invalid JSON')
+      return
     }
     setSecretMutation.mutate(
       { secretId, value: parsed },
       {
         onSuccess: () => {
-          showSuccess("Secret saved successfully");
-          setEditing(false);
+          showSuccess('Secret saved successfully')
+          setEditing(false)
         },
       }
-    );
-  };
+    )
+  }
 
   if (!retrieved) {
     return (
@@ -113,7 +117,7 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
           Retrieve secret value
         </Button>
       </Box>
-    );
+    )
   }
 
   if (secretLoading) {
@@ -122,10 +126,10 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
         <SectionLabel>Secret Value</SectionLabel>
         <Loader size="sm" />
       </Box>
-    );
+    )
   }
 
-  const effectiveMode = hasSchema ? mode : "json";
+  const effectiveMode = hasSchema ? mode : 'json'
 
   return (
     <Stack gap="sm">
@@ -147,11 +151,11 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
               value={effectiveMode}
               onChange={setMode}
               data={[
-                { label: "Form", value: "form" },
-                { label: "JSON", value: "json" },
+                { label: 'Form', value: 'form' },
+                { label: 'JSON', value: 'json' },
               ]}
               size="xs"
-              style={{ width: "auto" }}
+              style={{ width: 'auto' }}
             />
           )}
         </Group>
@@ -170,14 +174,16 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
       )}
 
       {!secretData?.exists && !editing && (
-        <Text size="sm" c="dimmed">No value set yet.</Text>
+        <Text size="sm" c="dimmed">
+          No value set yet.
+        </Text>
       )}
 
       {!editing ? (
         <Stack gap="xs">
-          {secretData?.exists && (
-            effectiveMode === "form" && hasSchema ? (
-              <Box style={{ pointerEvents: "none", opacity: 0.8 }}>
+          {secretData?.exists &&
+            (effectiveMode === 'form' && hasSchema ? (
+              <Box style={{ pointerEvents: 'none', opacity: 0.8 }}>
                 <SchemaForm
                   schema={effectiveSchema as any}
                   onSubmit={() => {}}
@@ -187,15 +193,21 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
                 </SchemaForm>
               </Box>
             ) : (
-              <Code block style={{ whiteSpace: "pre-wrap", maxHeight: 300, overflow: "auto" }}>
+              <Code
+                block
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  maxHeight: 300,
+                  overflow: 'auto',
+                }}
+              >
                 {JSON.stringify(currentValue, null, 2)}
               </Code>
-            )
-          )}
+            ))}
         </Stack>
       ) : (
         <Stack gap="sm">
-          {effectiveMode === "form" && hasSchema ? (
+          {effectiveMode === 'form' && hasSchema ? (
             <SchemaForm
               schema={effectiveSchema as any}
               onSubmit={handleFormSubmit}
@@ -221,17 +233,23 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
               <Textarea
                 value={jsonValue}
                 onChange={(e) => {
-                  setJsonValue(e.currentTarget.value);
-                  setJsonError(null);
+                  setJsonValue(e.currentTarget.value)
+                  setJsonError(null)
                 }}
                 placeholder='{"key": "value"}'
                 autosize
                 minRows={4}
                 maxRows={12}
-                styles={{ input: { fontFamily: "monospace", fontSize: "13px" } }}
+                styles={{
+                  input: { fontFamily: 'monospace', fontSize: '13px' },
+                }}
               />
               {jsonError && (
-                <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
+                <Alert
+                  icon={<AlertTriangle size={16} />}
+                  color="red"
+                  variant="light"
+                >
                   {jsonError}
                 </Alert>
               )}
@@ -252,5 +270,5 @@ export const SecretValueEditor: React.FunctionComponent<SecretValueEditorProps> 
         </Stack>
       )}
     </Stack>
-  );
-};
+  )
+}

@@ -1,40 +1,46 @@
-import React from "react";
-import { Node, NodeProps, Handle, Position } from "reactflow";
-import { Box, Paper, Text, Stack, useMantineTheme } from "@mantine/core";
-import { ArrowRight } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
+import React from 'react'
+import { Node, NodeProps, Handle, Position } from 'reactflow'
+import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
+import { ArrowRight } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
 
 interface ChannelWiringNodeData {
-  colorKey: string;
-  channelName: string;
-  onConnect?: string;
-  onDisconnect?: string;
-  onMessage?: string;
-  onMessageRoute?: Record<string, string>;
+  colorKey: string
+  channelName: string
+  onConnect?: string
+  onDisconnect?: string
+  onMessage?: string
+  onMessageRoute?: Record<string, string>
 }
 
 interface HandlerRowProps {
-  label: string;
-  handleId: string;
-  hasTarget: boolean;
+  label: string
+  handleId: string
+  hasTarget: boolean
 }
 
-const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({ label, handleId, hasTarget }) => {
+const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({
+  label,
+  handleId,
+  hasTarget,
+}) => {
   return (
     <Box
       px="xs"
       pl="md"
       py={4}
       style={{
-        position: "relative",
+        position: 'relative',
         opacity: hasTarget ? 1 : 0.4,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         gap: 8,
       }}
     >
-      <Text size="xs" c="dimmed">{label}</Text>
+      <Text size="xs" c="dimmed">
+        {label}
+      </Text>
       {hasTarget && (
         <>
           <ArrowRight size={12} />
@@ -43,7 +49,7 @@ const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({ label, handleId,
             position={Position.Right}
             id={handleId}
             style={{
-              background: "var(--mantine-color-teal-6)",
+              background: 'var(--mantine-color-teal-6)',
               width: 8,
               height: 8,
               right: -4,
@@ -52,21 +58,22 @@ const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({ label, handleId,
         </>
       )}
     </Box>
-  );
-};
+  )
+}
 
-export const ChannelWiringNode: React.FunctionComponent<NodeProps<ChannelWiringNodeData>> = ({
-  data,
-  id,
-}) => {
-  const { openWorkflowStep } = usePanelContext();
-  const theme = useMantineTheme();
+export const ChannelWiringNode: React.FunctionComponent<
+  NodeProps<ChannelWiringNodeData>
+> = ({ data, id }) => {
+  const { openWorkflowStep } = usePanelContext()
+  const theme = useMantineTheme()
 
   const handleClick = React.useCallback(() => {
-    openWorkflowStep(id, "trigger");
-  }, [id, openWorkflowStep]);
+    openWorkflowStep(id, 'trigger')
+  }, [id, openWorkflowStep])
 
-  const routeEntries = data.onMessageRoute ? Object.entries(data.onMessageRoute) : [];
+  const routeEntries = data.onMessageRoute
+    ? Object.entries(data.onMessageRoute)
+    : []
 
   return (
     <Paper
@@ -74,9 +81,9 @@ export const ChannelWiringNode: React.FunctionComponent<NodeProps<ChannelWiringN
       radius="md"
       w={180}
       style={{
-        cursor: "pointer",
-        overflow: "hidden",
-        position: "relative",
+        cursor: 'pointer',
+        overflow: 'hidden',
+        position: 'relative',
       }}
       onClick={handleClick}
     >
@@ -119,32 +126,32 @@ export const ChannelWiringNode: React.FunctionComponent<NodeProps<ChannelWiringN
         />
       </Stack>
     </Paper>
-  );
-};
+  )
+}
 
 export const getChannelWiringNodeConfig = (
   id: string,
   position: { x: number; y: number },
   wire: {
-    name?: string;
-    onConnect?: string;
-    onDisconnect?: string;
-    onMessage?: string;
-    onMessageRoute?: Record<string, string>;
+    name?: string
+    onConnect?: string
+    onDisconnect?: string
+    onMessage?: string
+    onMessageRoute?: Record<string, string>
   }
 ): Node => {
   return {
     id,
-    type: "channelWiringNode",
+    type: 'channelWiringNode',
     position,
     data: {
-      colorKey: "teal",
-      channelName: wire.name || "Channel",
+      colorKey: 'teal',
+      channelName: wire.name || 'Channel',
       onConnect: wire.onConnect,
       onDisconnect: wire.onDisconnect,
       onMessage: wire.onMessage,
       onMessageRoute: wire.onMessageRoute,
-      nodeType: "wiring",
+      nodeType: 'wiring',
     },
-  };
-};
+  }
+}

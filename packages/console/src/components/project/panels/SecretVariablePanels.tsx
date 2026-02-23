@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef } from 'react'
 import {
   Stack,
   Text,
@@ -8,44 +8,65 @@ import {
   Button,
   Alert,
   Loader,
-} from "@mantine/core";
-import { KeyRound, Settings, Link, Unlink, AlertTriangle, CheckCircle, ShieldCheck } from "lucide-react";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
-import { SectionLabel } from "@/components/project/panels/shared/SectionLabel";
-import { SchemaSection } from "@/components/project/panels/shared/SchemaSection";
-import { SecretValueEditor } from "@/components/project/panels/SecretValueEditor";
-import { VariableValueEditor } from "@/components/project/panels/VariableValueEditor";
-import { useOAuthStatus, useOAuthConnect, useOAuthDisconnect, useOAuthTestToken } from "@/hooks/useSecrets";
-import { useQueryClient } from "@tanstack/react-query";
+} from '@mantine/core'
+import {
+  KeyRound,
+  Settings,
+  Link,
+  Unlink,
+  AlertTriangle,
+  CheckCircle,
+  ShieldCheck,
+} from 'lucide-react'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
+import { SecretValueEditor } from '@/components/project/panels/SecretValueEditor'
+import { VariableValueEditor } from '@/components/project/panels/VariableValueEditor'
+import {
+  useOAuthStatus,
+  useOAuthConnect,
+  useOAuthDisconnect,
+  useOAuthTestToken,
+} from '@/hooks/useSecrets'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface SecretPanelProps {
-  secretId: string;
-  metadata?: any;
+  secretId: string
+  metadata?: any
 }
 
 export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
   secretId,
   metadata = {},
 }) => {
-  const isOAuth2 = !!metadata?.oauth2;
+  const isOAuth2 = !!metadata?.oauth2
 
   return (
     <Stack gap="lg">
       <Box>
         <Group gap="xs">
           <KeyRound size={20} />
-          <Text size="lg" ff="monospace" fw={600}>{metadata?.displayName || secretId}</Text>
+          <Text size="lg" ff="monospace" fw={600}>
+            {metadata?.displayName || secretId}
+          </Text>
         </Group>
         {metadata?.description && (
-          <Text size="sm" c="dimmed" mt={4}>{metadata.description}</Text>
+          <Text size="sm" c="dimmed" mt={4}>
+            {metadata.description}
+          </Text>
         )}
       </Box>
 
       <Group gap="xs">
         {isOAuth2 ? (
-          <PikkuBadge type="label" color="violet">OAuth2</PikkuBadge>
+          <PikkuBadge type="label" color="violet">
+            OAuth2
+          </PikkuBadge>
         ) : (
-          <PikkuBadge type="label" color="blue">Secret</PikkuBadge>
+          <PikkuBadge type="label" color="blue">
+            Secret
+          </PikkuBadge>
         )}
       </Group>
 
@@ -65,13 +86,17 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
           {metadata.oauth2.authorizationUrl && (
             <Box>
               <SectionLabel>Authorization URL</SectionLabel>
-              <Text size="sm" ff="monospace">{metadata.oauth2.authorizationUrl}</Text>
+              <Text size="sm" ff="monospace">
+                {metadata.oauth2.authorizationUrl}
+              </Text>
             </Box>
           )}
           {metadata.oauth2.tokenUrl && (
             <Box>
               <SectionLabel>Token URL</SectionLabel>
-              <Text size="sm" ff="monospace">{metadata.oauth2.tokenUrl}</Text>
+              <Text size="sm" ff="monospace">
+                {metadata.oauth2.tokenUrl}
+              </Text>
             </Box>
           )}
           {metadata.oauth2.scopes?.length > 0 && (
@@ -79,7 +104,9 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
               <SectionLabel>Scopes</SectionLabel>
               <Group gap={6}>
                 {metadata.oauth2.scopes.map((scope: string) => (
-                  <PikkuBadge key={scope} type="label" color="gray">{scope}</PikkuBadge>
+                  <PikkuBadge key={scope} type="label" color="gray">
+                    {scope}
+                  </PikkuBadge>
                 ))}
               </Group>
             </Box>
@@ -89,54 +116,66 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
 
       <SchemaSection label="Fields" schemaName={metadata?.schema} />
 
-      <SecretValueEditor secretId={metadata?.secretId} schemaName={metadata?.schema} isOAuth2={isOAuth2} />
+      <SecretValueEditor
+        secretId={metadata?.secretId}
+        schemaName={metadata?.schema}
+        isOAuth2={isOAuth2}
+      />
 
-      {isOAuth2 && (
-        <OAuthConnectionSection credentialName={metadata.name} />
-      )}
+      {isOAuth2 && <OAuthConnectionSection credentialName={metadata.name} />}
     </Stack>
-  );
-};
+  )
+}
 
-const OAuthConnectionSection: React.FunctionComponent<{ credentialName: string }> = ({ credentialName }) => {
-  const queryClient = useQueryClient();
-  const popupRef = useRef<Window | null>(null);
-  const { data: status, isLoading: statusLoading } = useOAuthStatus(credentialName, true);
-  const connectMutation = useOAuthConnect();
-  const disconnectMutation = useOAuthDisconnect();
-  const testTokenMutation = useOAuthTestToken();
+const OAuthConnectionSection: React.FunctionComponent<{
+  credentialName: string
+}> = ({ credentialName }) => {
+  const queryClient = useQueryClient()
+  const popupRef = useRef<Window | null>(null)
+  const { data: status, isLoading: statusLoading } = useOAuthStatus(
+    credentialName,
+    true
+  )
+  const connectMutation = useOAuthConnect()
+  const disconnectMutation = useOAuthDisconnect()
+  const testTokenMutation = useOAuthTestToken()
 
-  const handleMessage = useCallback((event: MessageEvent) => {
-    if (event.data?.type === "oauth-callback-success") {
-      queryClient.invalidateQueries({ queryKey: ["oauth-status", credentialName] });
-      window.removeEventListener("message", handleMessage);
-    }
-  }, [credentialName, queryClient]);
+  const handleMessage = useCallback(
+    (event: MessageEvent) => {
+      if (event.data?.type === 'oauth-callback-success') {
+        queryClient.invalidateQueries({
+          queryKey: ['oauth-status', credentialName],
+        })
+        window.removeEventListener('message', handleMessage)
+      }
+    },
+    [credentialName, queryClient]
+  )
 
   const handleConnect = useCallback(() => {
-    const callbackUrl = `${window.location.origin}/oauth/callback`;
+    const callbackUrl = `${window.location.origin}/oauth/callback`
     connectMutation.mutate(
       { credentialName, callbackUrl },
       {
         onSuccess: (data) => {
-          window.addEventListener("message", handleMessage);
+          window.addEventListener('message', handleMessage)
           popupRef.current = window.open(
             (data as any).authUrl,
-            "oauth-popup",
-            "width=600,height=700,popup=yes"
-          );
+            'oauth-popup',
+            'width=600,height=700,popup=yes'
+          )
         },
       }
-    );
-  }, [credentialName, connectMutation, handleMessage]);
+    )
+  }, [credentialName, connectMutation, handleMessage])
 
   const handleDisconnect = useCallback(() => {
-    disconnectMutation.mutate({ credentialName });
-  }, [credentialName, disconnectMutation]);
+    disconnectMutation.mutate({ credentialName })
+  }, [credentialName, disconnectMutation])
 
   const handleTestToken = useCallback(() => {
-    testTokenMutation.mutate({ credentialName });
-  }, [credentialName, testTokenMutation]);
+    testTokenMutation.mutate({ credentialName })
+  }, [credentialName, testTokenMutation])
 
   return (
     <Box>
@@ -147,9 +186,13 @@ const OAuthConnectionSection: React.FunctionComponent<{ credentialName: string }
         ) : status?.connected ? (
           <Stack gap="xs">
             <Group gap="xs">
-              <PikkuBadge type="label" color="green">Connected</PikkuBadge>
+              <PikkuBadge type="label" color="green">
+                Connected
+              </PikkuBadge>
               {status.hasRefreshToken && (
-                <PikkuBadge type="label" color="gray">Has Refresh Token</PikkuBadge>
+                <PikkuBadge type="label" color="gray">
+                  Has Refresh Token
+                </PikkuBadge>
               )}
             </Group>
             {status.expiresAt && (
@@ -161,7 +204,9 @@ const OAuthConnectionSection: React.FunctionComponent<{ credentialName: string }
             )}
           </Stack>
         ) : (
-          <PikkuBadge type="label" color="gray">Not Connected</PikkuBadge>
+          <PikkuBadge type="label" color="gray">
+            Not Connected
+          </PikkuBadge>
         )}
 
         {connectMutation.isError && (
@@ -178,13 +223,19 @@ const OAuthConnectionSection: React.FunctionComponent<{ credentialName: string }
 
         {testTokenMutation.isSuccess && (
           <Alert
-            icon={((testTokenMutation.data as any)?.valid ? <CheckCircle size={16} /> : <AlertTriangle size={16} />)}
-            color={(testTokenMutation.data as any)?.valid ? "green" : "red"}
+            icon={
+              (testTokenMutation.data as any)?.valid ? (
+                <CheckCircle size={16} />
+              ) : (
+                <AlertTriangle size={16} />
+              )
+            }
+            color={(testTokenMutation.data as any)?.valid ? 'green' : 'red'}
             variant="light"
           >
             {(testTokenMutation.data as any)?.valid
-              ? "Token is valid"
-              : `Token invalid: ${(testTokenMutation.data as any)?.error || "unknown error"}`}
+              ? 'Token is valid'
+              : `Token invalid: ${(testTokenMutation.data as any)?.error || 'unknown error'}`}
           </Alert>
         )}
 
@@ -233,32 +284,37 @@ const OAuthConnectionSection: React.FunctionComponent<{ credentialName: string }
         </Group>
       </Stack>
     </Box>
-  );
-};
-
-interface VariablePanelProps {
-  variableId: string;
-  metadata?: any;
+  )
 }
 
-export const VariableConfiguration: React.FunctionComponent<VariablePanelProps> = ({
-  variableId,
-  metadata = {},
-}) => {
+interface VariablePanelProps {
+  variableId: string
+  metadata?: any
+}
+
+export const VariableConfiguration: React.FunctionComponent<
+  VariablePanelProps
+> = ({ variableId, metadata = {} }) => {
   return (
     <Stack gap="lg">
       <Box>
         <Group gap="xs">
           <Settings size={20} />
-          <Text size="lg" ff="monospace" fw={600}>{metadata?.displayName || variableId}</Text>
+          <Text size="lg" ff="monospace" fw={600}>
+            {metadata?.displayName || variableId}
+          </Text>
         </Group>
         {metadata?.description && (
-          <Text size="sm" c="dimmed" mt={4}>{metadata.description}</Text>
+          <Text size="sm" c="dimmed" mt={4}>
+            {metadata.description}
+          </Text>
         )}
       </Box>
 
       <Group gap="xs">
-        <PikkuBadge type="label" color="teal">Variable</PikkuBadge>
+        <PikkuBadge type="label" color="teal">
+          Variable
+        </PikkuBadge>
       </Group>
 
       <Box>
@@ -268,7 +324,10 @@ export const VariableConfiguration: React.FunctionComponent<VariablePanelProps> 
 
       <SchemaSection label="Fields" schemaName={metadata?.schema} />
 
-      <VariableValueEditor variableId={metadata?.variableId} schemaName={metadata?.schema} />
+      <VariableValueEditor
+        variableId={metadata?.variableId}
+        schemaName={metadata?.schema}
+      />
     </Stack>
-  );
-};
+  )
+}

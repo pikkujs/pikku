@@ -1,37 +1,33 @@
-import React from "react";
-import {
-  Stack,
-  Text,
-  Box,
-  Group,
-  Divider,
-  Table,
-} from "@mantine/core";
-import { Layers, Shield } from "lucide-react";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
-import { usePanelContext } from "@/context/PanelContext";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
-import { SectionLabel } from "@/components/project/panels/shared/SectionLabel";
+import React from 'react'
+import { Stack, Text, Box, Group, Divider, Table } from '@mantine/core'
+import { Layers, Shield } from 'lucide-react'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePanelContext } from '@/context/PanelContext'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 
 interface PermissionPanelProps {
-  permissionId: string;
-  metadata?: any;
+  permissionId: string
+  metadata?: any
 }
 
-const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({ defId, def }) => {
-  const { meta } = usePikkuMeta();
-  const httpGroups = meta.permissionsGroupsMeta?.httpGroups || {};
-  const tagGroups = meta.permissionsGroupsMeta?.tagGroups || {};
+const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
+  defId,
+  def,
+}) => {
+  const { meta } = usePikkuMeta()
+  const httpGroups = meta.permissionsGroupsMeta?.httpGroups || {}
+  const tagGroups = meta.permissionsGroupsMeta?.tagGroups || {}
 
-  const usedByGroups: Array<{ type: string; key: string; group: any }> = [];
+  const usedByGroups: Array<{ type: string; key: string; group: any }> = []
   for (const [pattern, group] of Object.entries(httpGroups) as any[]) {
     if (group.instanceIds?.includes(defId)) {
-      usedByGroups.push({ type: "http", key: pattern, group });
+      usedByGroups.push({ type: 'http', key: pattern, group })
     }
   }
   for (const [tag, group] of Object.entries(tagGroups) as any[]) {
     if (group.instanceIds?.includes(defId)) {
-      usedByGroups.push({ type: "tag", key: tag, group });
+      usedByGroups.push({ type: 'tag', key: tag, group })
     }
   }
 
@@ -40,22 +36,26 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
       <Box>
         <Group gap="xs">
           <Shield size={20} />
-          <Text size="lg" fw={600}>{def.name || def.exportedName || defId}</Text>
+          <Text size="lg" fw={600}>
+            {def.name || def.exportedName || defId}
+          </Text>
         </Group>
         {def.description && (
-          <Text size="sm" c="dimmed" mt={4}>{def.description}</Text>
+          <Text size="sm" c="dimmed" mt={4}>
+            {def.description}
+          </Text>
         )}
       </Box>
 
       <Group gap={4}>
-        {def.factory && (
-          <PikkuBadge type="flag" flag="factory" />
-        )}
-        {def.exportedName === null && (
-          <PikkuBadge type="flag" flag="local" />
-        )}
+        {def.factory && <PikkuBadge type="flag" flag="factory" />}
+        {def.exportedName === null && <PikkuBadge type="flag" flag="local" />}
         {def.exportedName && (
-          <PikkuBadge type="dynamic" badge="exportedName" value={def.exportedName} />
+          <PikkuBadge
+            type="dynamic"
+            badge="exportedName"
+            value={def.exportedName}
+          />
         )}
         {def.package && (
           <PikkuBadge type="dynamic" badge="package" value={def.package} />
@@ -67,7 +67,12 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
           <SectionLabel>Services</SectionLabel>
           <Group gap={4}>
             {def.services.services.map((svc: string) => (
-              <PikkuBadge key={svc} type="dynamic" badge="service" value={svc} />
+              <PikkuBadge
+                key={svc}
+                type="dynamic"
+                badge="service"
+                value={svc}
+              />
             ))}
           </Group>
         </Box>
@@ -78,15 +83,34 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
           <SectionLabel>Wires</SectionLabel>
           {def.wires.wires?.length > 0 ? (
             <Group gap={4}>
-              {def.wires.wires.some((w: string) => ["session", "setSession", "clearSession", "getSession", "hasSessionChanged"].includes(w)) && (
-                <PikkuBadge type="flag" flag="session" />
-              )}
-              {def.wires.wires.filter((w: string) => !["session", "setSession", "clearSession", "getSession", "hasSessionChanged"].includes(w)).map((w: string) => (
-                <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
-              ))}
+              {def.wires.wires.some((w: string) =>
+                [
+                  'session',
+                  'setSession',
+                  'clearSession',
+                  'getSession',
+                  'hasSessionChanged',
+                ].includes(w)
+              ) && <PikkuBadge type="flag" flag="session" />}
+              {def.wires.wires
+                .filter(
+                  (w: string) =>
+                    ![
+                      'session',
+                      'setSession',
+                      'clearSession',
+                      'getSession',
+                      'hasSessionChanged',
+                    ].includes(w)
+                )
+                .map((w: string) => (
+                  <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
+                ))}
             </Group>
           ) : (
-            <Text size="sm" c="dimmed">None</Text>
+            <Text size="sm" c="dimmed">
+              None
+            </Text>
           )}
         </Box>
       )}
@@ -101,10 +125,10 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
                 <PikkuBadge
                   key={`${g.type}::${g.key}`}
                   type="label"
-                  color={g.type === "http" ? "blue" : "green"}
+                  color={g.type === 'http' ? 'blue' : 'green'}
                   leftSection={<Layers size={10} />}
                 >
-                  {g.type === "http" ? `HTTP ${g.key}` : `Tag: ${g.key}`}
+                  {g.type === 'http' ? `HTTP ${g.key}` : `Tag: ${g.key}`}
                 </PikkuBadge>
               ))}
             </Group>
@@ -112,39 +136,48 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
         </>
       )}
     </Stack>
-  );
-};
+  )
+}
 
-const GroupPanel: React.FunctionComponent<{ groupType: string; groupKey: string }> = ({ groupType, groupKey }) => {
-  const { meta } = usePikkuMeta();
-  const { openPermission } = usePanelContext();
-  const groups = groupType === "http"
-    ? meta.permissionsGroupsMeta?.httpGroups || {}
-    : meta.permissionsGroupsMeta?.tagGroups || {};
-  const group = groups[groupKey];
-  const definitions = meta.permissionsGroupsMeta?.definitions || {};
+const GroupPanel: React.FunctionComponent<{
+  groupType: string
+  groupKey: string
+}> = ({ groupType, groupKey }) => {
+  const { meta } = usePikkuMeta()
+  const { openPermission } = usePanelContext()
+  const groups =
+    groupType === 'http'
+      ? meta.permissionsGroupsMeta?.httpGroups || {}
+      : meta.permissionsGroupsMeta?.tagGroups || {}
+  const group = groups[groupKey]
+  const definitions = meta.permissionsGroupsMeta?.definitions || {}
 
-  const resolvedDefs: Array<{ defId: string; def: any }> = [];
-  const seen = new Set<string>();
+  const resolvedDefs: Array<{ defId: string; def: any }> = []
+  const seen = new Set<string>()
   for (const instanceId of group?.instanceIds || []) {
     if (!seen.has(instanceId) && definitions[instanceId]) {
-      seen.add(instanceId);
-      resolvedDefs.push({ defId: instanceId, def: definitions[instanceId] });
+      seen.add(instanceId)
+      resolvedDefs.push({ defId: instanceId, def: definitions[instanceId] })
     }
   }
 
   return (
     <Stack gap="lg">
       <Box>
-        <PikkuBadge type="label" color={groupType === "http" ? "blue" : "green"}>
-          {groupType === "http" ? `HTTP ${groupKey}` : `Tag: ${groupKey}`}
+        <PikkuBadge
+          type="label"
+          color={groupType === 'http' ? 'blue' : 'green'}
+        >
+          {groupType === 'http' ? `HTTP ${groupKey}` : `Tag: ${groupKey}`}
         </PikkuBadge>
       </Box>
 
       {group?.exportName && (
         <Box>
           <SectionLabel>Export</SectionLabel>
-          <Text size="sm" ff="monospace">{group.exportName}</Text>
+          <Text size="sm" ff="monospace">
+            {group.exportName}
+          </Text>
         </Box>
       )}
 
@@ -162,14 +195,14 @@ const GroupPanel: React.FunctionComponent<{ groupType: string; groupKey: string 
               {resolvedDefs.map(({ defId, def }) => (
                 <Table.Tr
                   key={defId}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: 'pointer' }}
                   onClick={() => openPermission(defId, { ...def, _id: defId })}
                 >
-                  <Table.Td ff="monospace" fz="sm">{def?.name || def?.exportedName || defId}</Table.Td>
+                  <Table.Td ff="monospace" fz="sm">
+                    {def?.name || def?.exportedName || defId}
+                  </Table.Td>
                   <Table.Td>
-                    {def?.factory && (
-                      <PikkuBadge type="flag" flag="factory" />
-                    )}
+                    {def?.factory && <PikkuBadge type="flag" flag="factory" />}
                   </Table.Td>
                 </Table.Tr>
               ))}
@@ -178,15 +211,19 @@ const GroupPanel: React.FunctionComponent<{ groupType: string; groupKey: string 
         </Box>
       )}
     </Stack>
-  );
-};
+  )
+}
 
-export const PermissionConfiguration: React.FunctionComponent<PermissionPanelProps> = ({
-  permissionId,
-  metadata = {},
-}) => {
+export const PermissionConfiguration: React.FunctionComponent<
+  PermissionPanelProps
+> = ({ permissionId, metadata = {} }) => {
   if (metadata._groupType) {
-    return <GroupPanel groupType={metadata._groupType} groupKey={metadata._groupKey} />;
+    return (
+      <GroupPanel
+        groupType={metadata._groupType}
+        groupKey={metadata._groupKey}
+      />
+    )
   }
-  return <DefinitionPanel defId={metadata._id || permissionId} def={metadata} />;
-};
+  return <DefinitionPanel defId={metadata._id || permissionId} def={metadata} />
+}

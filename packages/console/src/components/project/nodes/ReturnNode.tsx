@@ -1,34 +1,34 @@
-import React from "react";
-import { Node, NodeProps } from "reactflow";
-import { FlowNode } from "./FlowNode";
-import { Reply } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
-import { useWorkflowContextSafe } from "@/context/WorkflowContext";
+import React from 'react'
+import { Node, NodeProps } from 'reactflow'
+import { FlowNode } from './FlowNode'
+import { Reply } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
+import { useWorkflowContextSafe } from '@/context/WorkflowContext'
 
 interface ReturnNodeData {
-  colorKey: string;
-  stepName?: string;
+  colorKey: string
+  stepName?: string
 }
 
-type HighlightType = "focused" | "referenced" | null;
+type HighlightType = 'focused' | 'referenced' | null
 
 export const ReturnNode: React.FunctionComponent<NodeProps<ReturnNodeData>> = ({
   data,
   id,
 }) => {
-  const { openWorkflowStep } = usePanelContext();
-  const workflowContext = useWorkflowContextSafe();
+  const { openWorkflowStep } = usePanelContext()
+  const workflowContext = useWorkflowContextSafe()
 
   const highlightType: HighlightType = React.useMemo(() => {
-    if (!workflowContext) return null;
-    if (workflowContext.focusedNodeId === id) return "focused";
-    if (workflowContext.referencedNodeId === id) return "referenced";
-    return null;
-  }, [workflowContext, id]);
+    if (!workflowContext) return null
+    if (workflowContext.focusedNodeId === id) return 'focused'
+    if (workflowContext.referencedNodeId === id) return 'referenced'
+    return null
+  }, [workflowContext, id])
 
   const handleClick = React.useCallback(() => {
-    openWorkflowStep(id, "return");
-  }, [id, openWorkflowStep]);
+    openWorkflowStep(id, 'return')
+  }, [id, openWorkflowStep])
 
   return (
     <FlowNode
@@ -43,8 +43,8 @@ export const ReturnNode: React.FunctionComponent<NodeProps<ReturnNodeData>> = ({
       highlightType={highlightType}
       nodeId={id}
     />
-  );
-};
+  )
+}
 
 export const getReturnNodeConfig = (
   id: string,
@@ -53,12 +53,12 @@ export const getReturnNodeConfig = (
 ): Node => {
   return {
     id,
-    type: "returnNode",
+    type: 'returnNode',
     position,
     data: {
-      colorKey: "workflow",
+      colorKey: 'workflow',
       stepName: step.stepName,
-      nodeType: "flow",
+      nodeType: 'flow',
     },
-  };
-};
+  }
+}

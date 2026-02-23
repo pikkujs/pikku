@@ -5,9 +5,9 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-} from "react";
-import { usePikkuRPC } from "@/context/PikkuRpcProvider";
-import type { FlattenedRPCMap } from "@/pikku/rpc-map.gen.d";
+} from 'react'
+import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import type { FlattenedRPCMap } from '@/pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
 type MetaCounts = AllMeta['counts']
@@ -15,25 +15,25 @@ type FunctionUsedBy = AllMeta['functionUsedBy'][string]
 type PikkuMetaState = Omit<AllMeta, 'counts' | 'functionUsedBy'>
 
 interface PikkuMetaContextType {
-  meta: PikkuMetaState;
-  counts: MetaCounts;
-  functionUsedBy: Map<string, FunctionUsedBy>;
-  loading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
+  meta: PikkuMetaState
+  counts: MetaCounts
+  functionUsedBy: Map<string, FunctionUsedBy>
+  loading: boolean
+  error: string | null
+  refresh: () => Promise<void>
 }
 
 const PikkuMetaContext = createContext<PikkuMetaContextType | undefined>(
   undefined
-);
+)
 
 export const usePikkuMeta = () => {
-  const context = useContext(PikkuMetaContext);
+  const context = useContext(PikkuMetaContext)
   if (!context) {
-    throw new Error("usePikkuMeta must be used within PikkuMetaProvider");
+    throw new Error('usePikkuMeta must be used within PikkuMetaProvider')
   }
-  return context;
-};
+  return context
+}
 
 const EMPTY_META: PikkuMetaState = {
   functions: [],
@@ -48,12 +48,17 @@ const EMPTY_META: PikkuMetaState = {
   workflows: {},
   triggerMeta: {},
   triggerSourceMeta: {},
-  middlewareGroupsMeta: { definitions: {}, instances: {}, httpGroups: {}, tagGroups: {} },
+  middlewareGroupsMeta: {
+    definitions: {},
+    instances: {},
+    httpGroups: {},
+    tagGroups: {},
+  },
   permissionsGroupsMeta: { definitions: {}, httpGroups: {}, tagGroups: {} },
   agentsMeta: {},
   secretsMeta: {},
   variablesMeta: {},
-};
+}
 
 const EMPTY_COUNTS: MetaCounts = {
   functions: 0,
@@ -70,25 +75,25 @@ const EMPTY_COUNTS: MetaCounts = {
   agents: 0,
   secrets: 0,
   variables: 0,
-};
+}
 
 export const PikkuMetaProvider: React.FunctionComponent<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }> = ({ children }) => {
-  const rpc = usePikkuRPC();
-  const [meta, setMeta] = useState<PikkuMetaState>(EMPTY_META);
-  const [counts, setCounts] = useState<MetaCounts>(EMPTY_COUNTS);
+  const rpc = usePikkuRPC()
+  const [meta, setMeta] = useState<PikkuMetaState>(EMPTY_META)
+  const [counts, setCounts] = useState<MetaCounts>(EMPTY_COUNTS)
   const [serverFunctionUsedBy, setServerFunctionUsedBy] = useState<
     Record<string, FunctionUsedBy>
-  >({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  >({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const loadMeta = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
     try {
-      const allMeta = await rpc("console:getAllMeta", null);
+      const allMeta = await rpc('console:getAllMeta', null)
       setMeta({
         functions: allMeta.functions,
         httpMeta: allMeta.httpMeta,
@@ -107,33 +112,40 @@ export const PikkuMetaProvider: React.FunctionComponent<{
         agentsMeta: allMeta.agentsMeta,
         secretsMeta: allMeta.secretsMeta,
         variablesMeta: allMeta.variablesMeta,
-      });
-      setCounts(allMeta.counts);
-      setServerFunctionUsedBy(allMeta.functionUsedBy);
+      })
+      setCounts(allMeta.counts)
+      setServerFunctionUsedBy(allMeta.functionUsedBy)
     } catch (e: any) {
-      setError(e.message || "Failed to load metadata");
+      setError(e.message || 'Failed to load metadata')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [rpc]);
+  }, [rpc])
 
   useEffect(() => {
-    loadMeta();
-  }, [loadMeta]);
+    loadMeta()
+  }, [loadMeta])
 
   const functionUsedBy = useMemo(() => {
-    const map = new Map<string, FunctionUsedBy>();
+    const map = new Map<string, FunctionUsedBy>()
     for (const [funcName, data] of Object.entries(serverFunctionUsedBy)) {
-      map.set(funcName, data);
+      map.set(funcName, data)
     }
-    return map;
-  }, [serverFunctionUsedBy]);
+    return map
+  }, [serverFunctionUsedBy])
 
   return (
     <PikkuMetaContext.Provider
-      value={{ meta, counts, functionUsedBy, loading, error, refresh: loadMeta }}
+      value={{
+        meta,
+        counts,
+        functionUsedBy,
+        loading,
+        error,
+        refresh: loadMeta,
+      }}
     >
       {children}
     </PikkuMetaContext.Provider>
-  );
-};
+  )
+}

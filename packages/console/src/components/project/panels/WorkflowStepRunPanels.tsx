@@ -1,37 +1,45 @@
-import React from "react";
-import { Stack, Text, Group, Card, Code, Table, Timeline, Box } from "@mantine/core";
-import { Clock, AlertTriangle, CheckCircle, Play } from "lucide-react";
-import { useWorkflowRunContextSafe } from "@/context/WorkflowRunContext";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
-import { statusDefs } from "@/components/ui/badge-defs";
-import { useWorkflowRunHistory } from "@/hooks/useWorkflowRuns";
-import { SectionLabel } from "@/components/project/panels/shared/SectionLabel";
-import { EmptyState } from "@/components/project/panels/shared/EmptyState";
+import React from 'react'
+import {
+  Stack,
+  Text,
+  Group,
+  Card,
+  Code,
+  Table,
+  Timeline,
+  Box,
+} from '@mantine/core'
+import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
+import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { statusDefs } from '@/components/ui/badge-defs'
+import { useWorkflowRunHistory } from '@/hooks/useWorkflowRuns'
+import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { EmptyState } from '@/components/project/panels/shared/EmptyState'
 
 interface StepRunPanelProps {
-  stepId: string;
+  stepId: string
 }
 
-
 const formatTimestamp = (ts: string | undefined) => {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleString();
-};
+  if (!ts) return '—'
+  return new Date(ts).toLocaleString()
+}
 
 const formatDuration = (start: string | undefined, end: string | undefined) => {
-  if (!start || !end) return null;
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
-};
+  if (!start || !end) return null
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
+}
 
-export const WorkflowStepExecution: React.FunctionComponent<StepRunPanelProps> = ({
-  stepId,
-}) => {
-  const runContext = useWorkflowRunContextSafe();
-  const stepStates = runContext?.stepStates;
-  const step = stepStates?.get(stepId);
+export const WorkflowStepExecution: React.FunctionComponent<
+  StepRunPanelProps
+> = ({ stepId }) => {
+  const runContext = useWorkflowRunContextSafe()
+  const stepStates = runContext?.stepStates
+  const step = stepStates?.get(stepId)
 
   if (!step) {
     return (
@@ -43,11 +51,11 @@ export const WorkflowStepExecution: React.FunctionComponent<StepRunPanelProps> =
           </Card.Section>
         </Card>
       </Stack>
-    );
+    )
   }
 
-  const endTime = step.succeededAt || step.failedAt;
-  const duration = formatDuration(step.runningAt || step.createdAt, endTime);
+  const endTime = step.succeededAt || step.failedAt
+  const duration = formatDuration(step.runningAt || step.createdAt, endTime)
 
   return (
     <Stack gap="md">
@@ -63,36 +71,84 @@ export const WorkflowStepExecution: React.FunctionComponent<StepRunPanelProps> =
             <Table verticalSpacing={4} horizontalSpacing="xs">
               <Table.Tbody>
                 <Table.Tr>
-                  <Table.Td><Text size="sm" c="dimmed">Created</Text></Table.Td>
-                  <Table.Td><Text size="sm" ff="monospace">{formatTimestamp(step.createdAt)}</Text></Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed">
+                      Created
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" ff="monospace">
+                      {formatTimestamp(step.createdAt)}
+                    </Text>
+                  </Table.Td>
                 </Table.Tr>
                 {step.runningAt && (
                   <Table.Tr>
-                    <Table.Td><Text size="sm" c="dimmed">Started</Text></Table.Td>
-                    <Table.Td><Text size="sm" ff="monospace">{formatTimestamp(step.runningAt)}</Text></Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        Started
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" ff="monospace">
+                        {formatTimestamp(step.runningAt)}
+                      </Text>
+                    </Table.Td>
                   </Table.Tr>
                 )}
                 {step.succeededAt && (
                   <Table.Tr>
-                    <Table.Td><Text size="sm" c="dimmed">Succeeded</Text></Table.Td>
-                    <Table.Td><Text size="sm" ff="monospace">{formatTimestamp(step.succeededAt)}</Text></Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        Succeeded
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" ff="monospace">
+                        {formatTimestamp(step.succeededAt)}
+                      </Text>
+                    </Table.Td>
                   </Table.Tr>
                 )}
                 {step.failedAt && (
                   <Table.Tr>
-                    <Table.Td><Text size="sm" c="dimmed">Failed</Text></Table.Td>
-                    <Table.Td><Text size="sm" ff="monospace">{formatTimestamp(step.failedAt)}</Text></Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        Failed
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" ff="monospace">
+                        {formatTimestamp(step.failedAt)}
+                      </Text>
+                    </Table.Td>
                   </Table.Tr>
                 )}
                 {duration && (
                   <Table.Tr>
-                    <Table.Td><Text size="sm" c="dimmed">Duration</Text></Table.Td>
-                    <Table.Td><Text size="sm" ff="monospace" fw={500}>{duration}</Text></Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        Duration
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" ff="monospace" fw={500}>
+                        {duration}
+                      </Text>
+                    </Table.Td>
                   </Table.Tr>
                 )}
                 <Table.Tr>
-                  <Table.Td><Text size="sm" c="dimmed">Attempts</Text></Table.Td>
-                  <Table.Td><Text size="sm" ff="monospace">{step.attemptCount}</Text></Table.Td>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed">
+                      Attempts
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" ff="monospace">
+                      {step.attemptCount}
+                    </Text>
+                  </Table.Td>
                 </Table.Tr>
               </Table.Tbody>
             </Table>
@@ -100,15 +156,15 @@ export const WorkflowStepExecution: React.FunctionComponent<StepRunPanelProps> =
         </Card>
       </Stack>
     </Stack>
-  );
-};
+  )
+}
 
-export const WorkflowStepInputData: React.FunctionComponent<StepRunPanelProps> = ({
-  stepId,
-}) => {
-  const runContext = useWorkflowRunContextSafe();
-  const stepStates = runContext?.stepStates;
-  const step = stepStates?.get(stepId);
+export const WorkflowStepInputData: React.FunctionComponent<
+  StepRunPanelProps
+> = ({ stepId }) => {
+  const runContext = useWorkflowRunContextSafe()
+  const stepStates = runContext?.stepStates
+  const step = stepStates?.get(stepId)
 
   return (
     <Stack gap={6}>
@@ -123,15 +179,15 @@ export const WorkflowStepInputData: React.FunctionComponent<StepRunPanelProps> =
         </Card.Section>
       </Card>
     </Stack>
-  );
-};
+  )
+}
 
-export const WorkflowStepOutputData: React.FunctionComponent<StepRunPanelProps> = ({
-  stepId,
-}) => {
-  const runContext = useWorkflowRunContextSafe();
-  const stepStates = runContext?.stepStates;
-  const step = stepStates?.get(stepId);
+export const WorkflowStepOutputData: React.FunctionComponent<
+  StepRunPanelProps
+> = ({ stepId }) => {
+  const runContext = useWorkflowRunContextSafe()
+  const stepStates = runContext?.stepStates
+  const step = stepStates?.get(stepId)
 
   return (
     <Stack gap={6}>
@@ -146,15 +202,15 @@ export const WorkflowStepOutputData: React.FunctionComponent<StepRunPanelProps> 
         </Card.Section>
       </Card>
     </Stack>
-  );
-};
+  )
+}
 
 export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
   stepId,
 }) => {
-  const runContext = useWorkflowRunContextSafe();
-  const stepStates = runContext?.stepStates;
-  const step = stepStates?.get(stepId);
+  const runContext = useWorkflowRunContextSafe()
+  const stepStates = runContext?.stepStates
+  const step = stepStates?.get(stepId)
 
   if (!step?.error) {
     return (
@@ -166,7 +222,7 @@ export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
           </Card.Section>
         </Card>
       </Stack>
-    );
+    )
   }
 
   return (
@@ -177,7 +233,11 @@ export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
         <SectionLabel>Message</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
-            <Text size="sm" ff="monospace" c="red">{typeof step.error.message === 'string' ? step.error.message : JSON.stringify(step.error.message, null, 2)}</Text>
+            <Text size="sm" ff="monospace" c="red">
+              {typeof step.error.message === 'string'
+                ? step.error.message
+                : JSON.stringify(step.error.message, null, 2)}
+            </Text>
           </Card.Section>
         </Card>
       </Stack>
@@ -187,7 +247,9 @@ export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
           <SectionLabel>Code</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <PikkuBadge type="label" color="red">{step.error.code}</PikkuBadge>
+              <PikkuBadge type="label" color="red">
+                {step.error.code}
+              </PikkuBadge>
             </Card.Section>
           </Card>
         </Stack>
@@ -204,20 +266,20 @@ export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
         </Stack>
       )}
     </Stack>
-  );
-};
+  )
+}
 
-export const WorkflowStepRetryHistory: React.FunctionComponent<StepRunPanelProps> = ({
-  stepId,
-}) => {
-  const runContext = useWorkflowRunContextSafe();
-  const selectedRunId = runContext?.selectedRunId ?? null;
-  const { data: history } = useWorkflowRunHistory(selectedRunId);
+export const WorkflowStepRetryHistory: React.FunctionComponent<
+  StepRunPanelProps
+> = ({ stepId }) => {
+  const runContext = useWorkflowRunContextSafe()
+  const selectedRunId = runContext?.selectedRunId ?? null
+  const { data: history } = useWorkflowRunHistory(selectedRunId)
 
   const stepHistory = React.useMemo(() => {
-    if (!history || !Array.isArray(history)) return [];
-    return history.filter((h: any) => h.stepName === stepId);
-  }, [history, stepId]);
+    if (!history || !Array.isArray(history)) return []
+    return history.filter((h: any) => h.stepName === stepId)
+  }, [history, stepId])
 
   if (stepHistory.length <= 1) {
     return (
@@ -225,11 +287,13 @@ export const WorkflowStepRetryHistory: React.FunctionComponent<StepRunPanelProps
         <SectionLabel>Retry History</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
-            <Text c="dimmed" size="sm" ta="center">No retries</Text>
+            <Text c="dimmed" size="sm" ta="center">
+              No retries
+            </Text>
           </Card.Section>
         </Card>
       </Stack>
-    );
+    )
   }
 
   return (
@@ -241,32 +305,41 @@ export const WorkflowStepRetryHistory: React.FunctionComponent<StepRunPanelProps
 
       <Timeline active={stepHistory.length - 1} bulletSize={24} lineWidth={2}>
         {stepHistory.map((attempt: any, index: number) => {
-          const icon = attempt.status === "succeeded"
-            ? <CheckCircle size={14} />
-            : attempt.status === "failed"
-            ? <AlertTriangle size={14} />
-            : attempt.status === "running"
-            ? <Play size={14} />
-            : <Clock size={14} />;
+          const icon =
+            attempt.status === 'succeeded' ? (
+              <CheckCircle size={14} />
+            ) : attempt.status === 'failed' ? (
+              <AlertTriangle size={14} />
+            ) : attempt.status === 'running' ? (
+              <Play size={14} />
+            ) : (
+              <Clock size={14} />
+            )
 
           return (
             <Timeline.Item
               key={index}
               bullet={icon}
-              color={statusDefs[attempt.status]?.color || "gray"}
+              color={statusDefs[attempt.status]?.color || 'gray'}
               title={`Attempt ${attempt.attemptCount}`}
             >
               <Group gap="xs">
                 <PikkuBadge type="status" value={attempt.status} />
-                <Text size="xs" c="dimmed">{formatTimestamp(attempt.createdAt)}</Text>
+                <Text size="xs" c="dimmed">
+                  {formatTimestamp(attempt.createdAt)}
+                </Text>
               </Group>
               {attempt.error && (
-                <Text size="xs" c="red" mt={4}>{typeof attempt.error.message === 'string' ? attempt.error.message : JSON.stringify(attempt.error.message, null, 2)}</Text>
+                <Text size="xs" c="red" mt={4}>
+                  {typeof attempt.error.message === 'string'
+                    ? attempt.error.message
+                    : JSON.stringify(attempt.error.message, null, 2)}
+                </Text>
               )}
             </Timeline.Item>
-          );
+          )
         })}
       </Timeline>
     </Stack>
-  );
-};
+  )
+}

@@ -1,48 +1,46 @@
-import React, { useEffect, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Center, Loader, Text } from "@mantine/core";
-import { Bot } from "lucide-react";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
-import { PanelProvider, usePanelContext } from "@/context/PanelContext";
-import { AgentPlaygroundProvider, useAgentPlayground } from "@/context/AgentPlaygroundContext";
-import { ThreePaneLayout } from "@/components/layout/ThreePaneLayout";
-import { RunsPanel } from "@/components/layout/RunsPanel";
-import { DetailPageHeader } from "@/components/layout/DetailPageHeader";
-import { AgentChat } from "@/components/project/AgentChat";
-import { useDeleteAgentThread } from "@/hooks/useAgentRuns";
+import React, { useEffect, useMemo } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Center, Loader, Text } from '@mantine/core'
+import { Bot } from 'lucide-react'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { PanelProvider, usePanelContext } from '@/context/PanelContext'
+import {
+  AgentPlaygroundProvider,
+  useAgentPlayground,
+} from '@/context/AgentPlaygroundContext'
+import { ThreePaneLayout } from '@/components/layout/ThreePaneLayout'
+import { RunsPanel } from '@/components/layout/RunsPanel'
+import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { AgentChat } from '@/components/project/AgentChat'
+import { useDeleteAgentThread } from '@/hooks/useAgentRuns'
 
 const AgentPlaygroundInner: React.FunctionComponent<{
-  agentId: string;
-  agentData: any;
-  agentItems: { name: string; description?: string }[];
-  onAgentSelect: (name: string) => void;
+  agentId: string
+  agentData: any
+  agentItems: { name: string; description?: string }[]
+  onAgentSelect: (name: string) => void
 }> = ({ agentId, agentData, agentItems, onAgentSelect }) => {
-  const { openAgent } = usePanelContext();
-  const {
-    threadId,
-    setThreadId,
-    threads,
-    createNewThread,
-    refetchThreads,
-  } = useAgentPlayground();
-  const deleteThread = useDeleteAgentThread();
+  const { openAgent } = usePanelContext()
+  const { threadId, setThreadId, threads, createNewThread, refetchThreads } =
+    useAgentPlayground()
+  const deleteThread = useDeleteAgentThread()
 
   useEffect(() => {
     if (agentData) {
-      openAgent(agentId, agentData);
+      openAgent(agentId, agentData)
     }
-  }, [agentId, agentData, openAgent]);
+  }, [agentId, agentData, openAgent])
 
   const handleDelete = (id: string) => {
     deleteThread.mutate(id, {
       onSuccess: () => {
         if (threadId === id) {
-          setThreadId(null);
+          setThreadId(null)
         }
-        refetchThreads();
+        refetchThreads()
       },
-    });
-  };
+    })
+  }
 
   const runsPanel = (
     <RunsPanel
@@ -57,7 +55,7 @@ const AgentPlaygroundInner: React.FunctionComponent<{
       statusFilters={[]}
       onDelete={handleDelete}
     />
-  );
+  )
 
   const header = (
     <DetailPageHeader
@@ -69,7 +67,7 @@ const AgentPlaygroundInner: React.FunctionComponent<{
       items={agentItems}
       onItemSelect={onAgentSelect}
     />
-  );
+  )
 
   return (
     <ThreePaneLayout
@@ -80,35 +78,37 @@ const AgentPlaygroundInner: React.FunctionComponent<{
     >
       <AgentChat />
     </ThreePaneLayout>
-  );
-};
+  )
+}
 
 export const AgentPlaygroundPage: React.FunctionComponent = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const agentId = searchParams.get("id") || "";
-  const { meta, loading } = usePikkuMeta();
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const agentId = searchParams.get('id') || ''
+  const { meta, loading } = usePikkuMeta()
 
-  const agentData = meta.agentsMeta?.[agentId];
+  const agentData = meta.agentsMeta?.[agentId]
 
   const agentItems = useMemo(() => {
-    if (!meta.agentsMeta) return [];
-    return Object.entries(meta.agentsMeta).map(([name, data]: [string, any]) => ({
-      name,
-      description: data?.summary,
-    }));
-  }, [meta.agentsMeta]);
+    if (!meta.agentsMeta) return []
+    return Object.entries(meta.agentsMeta).map(
+      ([name, data]: [string, any]) => ({
+        name,
+        description: data?.summary,
+      })
+    )
+  }, [meta.agentsMeta])
 
   const handleAgentSelect = (name: string) => {
-    navigate(`/agents/playground?id=${encodeURIComponent(name)}`);
-  };
+    navigate(`/agents/playground?id=${encodeURIComponent(name)}`)
+  }
 
   if (loading) {
     return (
       <Center h="100vh">
         <Loader />
       </Center>
-    );
+    )
   }
 
   if (!agentId || !agentData) {
@@ -116,7 +116,7 @@ export const AgentPlaygroundPage: React.FunctionComponent = () => {
       <Center h="100vh">
         <Text c="dimmed">Agent &quot;{agentId}&quot; not found.</Text>
       </Center>
-    );
+    )
   }
 
   return (
@@ -130,5 +130,5 @@ export const AgentPlaygroundPage: React.FunctionComponent = () => {
         />
       </AgentPlaygroundProvider>
     </PanelProvider>
-  );
-};
+  )
+}

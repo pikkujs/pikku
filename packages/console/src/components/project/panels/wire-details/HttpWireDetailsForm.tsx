@@ -7,23 +7,23 @@ import {
   Tabs,
   Code,
   Title,
-} from "@mantine/core";
-import type { PikkuWiringTypes } from "@pikku/core";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
+} from '@mantine/core'
+import type { PikkuWiringTypes } from '@pikku/core'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
 
 interface HttpWireDetailsFormProps {
-  wireType: PikkuWiringTypes;
-  wireId: string;
-  metadata: any;
+  wireType: PikkuWiringTypes
+  wireId: string
+  metadata: any
 }
 
 export const HttpWireDetailsForm: React.FunctionComponent<
   HttpWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
-  const route = metadata.route || wireId;
-  const method = metadata.method?.toUpperCase() || "GET";
-  const isPublic = metadata.auth === false;
-  const isSSE = metadata.sse === true;
+  const route = metadata.route || wireId
+  const method = metadata.method?.toUpperCase() || 'GET'
+  const isPublic = metadata.auth === false
+  const isSSE = metadata.sse === true
 
   return (
     <Box h="100%">
@@ -31,10 +31,10 @@ export const HttpWireDetailsForm: React.FunctionComponent<
         px="md"
         py="md"
         style={{
-          borderBottom: "1px solid var(--mantine-color-gray-3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          borderBottom: '1px solid var(--mantine-color-gray-3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
         <Title order={3} tt="uppercase">
@@ -68,18 +68,18 @@ export const HttpWireDetailsForm: React.FunctionComponent<
               <Text size="sm" fw={500} mb={4}>
                 Server-Sent Events (SSE)
               </Text>
-              <Text size="md">{isSSE ? "Enabled" : "Disabled"}</Text>
+              <Text size="md">{isSSE ? 'Enabled' : 'Disabled'}</Text>
             </Box>
 
             <TextInput
               label="Summary"
-              value={metadata.docs?.summary || ""}
+              value={metadata.docs?.summary || ''}
               readOnly
             />
 
             <Textarea
               label="Description"
-              value={metadata.docs?.description || ""}
+              value={metadata.docs?.description || ''}
               minRows={3}
               readOnly
             />
@@ -88,7 +88,7 @@ export const HttpWireDetailsForm: React.FunctionComponent<
               <Text size="sm" fw={500} mb={4}>
                 Public
               </Text>
-              <Text size="md">{isPublic ? "Yes" : "No"}</Text>
+              <Text size="md">{isPublic ? 'Yes' : 'No'}</Text>
             </Box>
           </Stack>
         </Tabs.Panel>
@@ -98,5 +98,5 @@ export const HttpWireDetailsForm: React.FunctionComponent<
         </Tabs.Panel>
       </Tabs>
     </Box>
-  );
-};
+  )
+}

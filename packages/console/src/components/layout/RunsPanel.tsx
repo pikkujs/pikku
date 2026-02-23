@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from 'react'
 import {
   Stack,
   Text,
@@ -10,52 +10,52 @@ import {
   Group,
   ActionIcon,
   Button,
-} from "@mantine/core";
-import { Check, Plus, X } from "lucide-react";
+} from '@mantine/core'
+import { Check, Plus, X } from 'lucide-react'
 
 const statusColors: Record<string, string> = {
-  running: "blue",
-  completed: "green",
-  failed: "red",
-  cancelled: "gray",
-};
+  running: 'blue',
+  completed: 'green',
+  failed: 'red',
+  cancelled: 'gray',
+}
 
 const formatDateTime = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return date.toLocaleString();
-};
+  const date = new Date(dateStr)
+  return date.toLocaleString()
+}
 
 export interface RunItem {
-  id: string;
-  status: string;
-  createdAt: string;
-  label?: string;
-  wire?: { type: string; id?: string };
+  id: string
+  status: string
+  createdAt: string
+  label?: string
+  wire?: { type: string; id?: string }
 }
 
 interface RunsPanelProps {
-  runs: RunItem[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onClear: () => void;
-  loading?: boolean;
-  statusFilters?: string[];
-  title: string;
-  emptyMessage?: string;
-  onNewClick?: () => void;
-  newButtonLabel?: string;
-  onStatusFilterChange?: (status: string | undefined) => void;
-  onDelete?: (id: string) => void;
+  runs: RunItem[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onClear: () => void
+  loading?: boolean
+  statusFilters?: string[]
+  title: string
+  emptyMessage?: string
+  onNewClick?: () => void
+  newButtonLabel?: string
+  onStatusFilterChange?: (status: string | undefined) => void
+  onDelete?: (id: string) => void
 }
 
 const RunRow: React.FunctionComponent<{
-  run: RunItem;
-  selected: boolean;
-  onSelect: () => void;
-  onDelete?: (id: string) => void;
+  run: RunItem
+  selected: boolean
+  onSelect: () => void
+  onDelete?: (id: string) => void
 }> = ({ run, selected, onSelect, onDelete }) => {
-  const [confirming, setConfirming] = useState(false);
-  const [hovered, setHovered] = useState(false);
+  const [confirming, setConfirming] = useState(false)
+  const [hovered, setHovered] = useState(false)
 
   if (confirming) {
     return (
@@ -63,19 +63,21 @@ const RunRow: React.FunctionComponent<{
         py="sm"
         px="sm"
         style={{
-          borderBottom: "1px solid var(--mantine-color-default-border)",
-          backgroundColor: "var(--mantine-color-red-light)",
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+          backgroundColor: 'var(--mantine-color-red-light)',
         }}
       >
-        <Text size="sm" fw={500} mb={6}>Delete this run? This can't be undone.</Text>
+        <Text size="sm" fw={500} mb={6}>
+          Delete this run? This can't be undone.
+        </Text>
         <Group gap="xs">
           <Button
             size="compact-xs"
             color="red"
             leftSection={<Check size={12} />}
             onClick={() => {
-              onDelete?.(run.id);
-              setConfirming(false);
+              onDelete?.(run.id)
+              setConfirming(false)
             }}
           >
             Yes
@@ -90,7 +92,7 @@ const RunRow: React.FunctionComponent<{
           </Button>
         </Group>
       </Box>
-    );
+    )
   }
 
   return (
@@ -98,9 +100,11 @@ const RunRow: React.FunctionComponent<{
       py="sm"
       px="sm"
       style={{
-        backgroundColor: selected ? "var(--mantine-color-blue-light)" : undefined,
-        borderBottom: "1px solid var(--mantine-color-default-border)",
-        cursor: "pointer",
+        backgroundColor: selected
+          ? 'var(--mantine-color-blue-light)'
+          : undefined,
+        borderBottom: '1px solid var(--mantine-color-default-border)',
+        cursor: 'pointer',
       }}
       onClick={onSelect}
       onMouseEnter={() => setHovered(true)}
@@ -111,11 +115,11 @@ const RunRow: React.FunctionComponent<{
           <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
             <Badge
               size="xs"
-              color={statusColors[run.status] || "gray"}
+              color={statusColors[run.status] || 'gray'}
               variant="filled"
               circle
             >
-              {" "}
+              {' '}
             </Badge>
             <Text size="sm" ff="monospace" truncate>
               {run.label || run.id.slice(0, 8)}
@@ -136,8 +140,8 @@ const RunRow: React.FunctionComponent<{
             size="md"
             color="gray"
             onClick={(e) => {
-              e.stopPropagation();
-              setConfirming(true);
+              e.stopPropagation()
+              setConfirming(true)
             }}
             title="Delete run"
           >
@@ -146,8 +150,8 @@ const RunRow: React.FunctionComponent<{
         )}
       </Group>
     </Box>
-  );
-};
+  )
+}
 
 export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
   runs,
@@ -155,38 +159,44 @@ export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
   onSelect,
   onClear,
   loading = false,
-  statusFilters = ["running", "completed", "failed"],
+  statusFilters = ['running', 'completed', 'failed'],
   title,
-  emptyMessage = "No runs found",
+  emptyMessage = 'No runs found',
   onNewClick,
-  newButtonLabel = "New",
+  newButtonLabel = 'New',
   onStatusFilterChange,
   onDelete,
 }) => {
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const filteredRuns = useMemo(() => {
-    if (statusFilter === "all") return runs;
-    return runs.filter((r) => r.status === statusFilter);
-  }, [runs, statusFilter]);
+    if (statusFilter === 'all') return runs
+    return runs.filter((r) => r.status === statusFilter)
+  }, [runs, statusFilter])
 
   const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    onStatusFilterChange?.(value === "all" ? undefined : value);
-  };
+    setStatusFilter(value)
+    onStatusFilterChange?.(value === 'all' ? undefined : value)
+  }
 
   const segmentData = [
-    { value: "all", label: "All" },
+    { value: 'all', label: 'All' },
     ...statusFilters.map((s) => ({
       value: s,
       label: s.charAt(0).toUpperCase() + s.slice(1),
     })),
-  ];
+  ]
 
   return (
-    <Stack gap={0} style={{ height: "100%" }}>
+    <Stack gap={0} style={{ height: '100%' }}>
       {statusFilters.length > 0 && (
-        <Box px="sm" py="xs" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+        <Box
+          px="sm"
+          py="xs"
+          style={{
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+          }}
+        >
           <SegmentedControl
             size="xs"
             fullWidth
@@ -203,14 +213,16 @@ export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
             py="sm"
             px="sm"
             style={{
-              borderBottom: "1px solid var(--mantine-color-default-border)",
-              cursor: "pointer",
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+              cursor: 'pointer',
             }}
             onClick={onNewClick}
           >
             <Group gap="xs">
               <Plus size={16} color="var(--mantine-color-primary-6)" />
-              <Text size="sm" fw={500} c="primary">{newButtonLabel}</Text>
+              <Text size="sm" fw={500} c="primary">
+                {newButtonLabel}
+              </Text>
             </Group>
           </Box>
         )}
@@ -237,5 +249,5 @@ export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
         )}
       </ScrollArea>
     </Stack>
-  );
-};
+  )
+}

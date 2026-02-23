@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react'
 import {
   Box,
   Container,
@@ -8,15 +8,15 @@ import {
   Group,
   Button,
   SegmentedControl,
-} from "@mantine/core";
-import { PikkuBadge } from "@/components/ui/PikkuBadge";
-import { useMantineColorScheme } from "@mantine/core";
-import { Sun, Moon, Monitor, RefreshCw } from "lucide-react";
-import { usePikkuMeta } from "@/context/PikkuMetaContext";
+} from '@mantine/core'
+import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { useMantineColorScheme } from '@mantine/core'
+import { Sun, Moon, Monitor, RefreshCw } from 'lucide-react'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
 export const SettingsPage: React.FunctionComponent = () => {
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
-  const { counts, loading, error, refresh } = usePikkuMeta();
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+  const { counts, loading, error, refresh } = usePikkuMeta()
 
   return (
     <Container size="md" py="xl">
@@ -38,7 +38,7 @@ export const SettingsPage: React.FunctionComponent = () => {
               <SegmentedControl
                 value={colorScheme}
                 onChange={(value) =>
-                  setColorScheme(value as "light" | "dark" | "auto")
+                  setColorScheme(value as 'light' | 'dark' | 'auto')
                 }
                 data={[
                   {
@@ -48,7 +48,7 @@ export const SettingsPage: React.FunctionComponent = () => {
                         <span>Light</span>
                       </Group>
                     ),
-                    value: "light",
+                    value: 'light',
                   },
                   {
                     label: (
@@ -57,7 +57,7 @@ export const SettingsPage: React.FunctionComponent = () => {
                         <span>Dark</span>
                       </Group>
                     ),
-                    value: "dark",
+                    value: 'dark',
                   },
                   {
                     label: (
@@ -66,7 +66,7 @@ export const SettingsPage: React.FunctionComponent = () => {
                         <span>Auto</span>
                       </Group>
                     ),
-                    value: "auto",
+                    value: 'auto',
                   },
                 ]}
               />
@@ -93,7 +93,7 @@ export const SettingsPage: React.FunctionComponent = () => {
                 {error}
               </Text>
             )}
-            <Group gap="lg" style={{ flexWrap: "wrap" }}>
+            <Group gap="lg" style={{ flexWrap: 'wrap' }}>
               <MetaStat label="Functions" count={counts.functions} />
               <MetaStat label="Workflows" count={counts.workflows} />
               <MetaStat label="HTTP Routes" count={counts.httpRoutes} />
@@ -114,9 +114,7 @@ export const SettingsPage: React.FunctionComponent = () => {
               <Text size="sm" c="dimmed">
                 Pikku Forge
               </Text>
-              <PikkuBadge type="label">
-                Alpha
-              </PikkuBadge>
+              <PikkuBadge type="label">Alpha</PikkuBadge>
             </Group>
             <Text size="xs" c="dimmed">
               A visual explorer for Pikku project metadata. Browse functions,
@@ -126,12 +124,12 @@ export const SettingsPage: React.FunctionComponent = () => {
         </Paper>
       </Stack>
     </Container>
-  );
-};
+  )
+}
 
 const MetaStat: React.FunctionComponent<{
-  label: string;
-  count: number;
+  label: string
+  count: number
 }> = ({ label, count }) => (
   <Box>
     <Text size="lg" fw={700}>
@@ -141,4 +139,4 @@ const MetaStat: React.FunctionComponent<{
       {label}
     </Text>
   </Box>
-);
+)

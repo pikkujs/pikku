@@ -1,14 +1,24 @@
-import { useState } from "react";
-import { Center, Stack, TextInput, Button, Text, Paper, Box } from "@mantine/core";
-import { getServerUrl, setServerUrl } from "@/context/PikkuRpcProvider";
+import { useState } from 'react'
+import {
+  Center,
+  Stack,
+  TextInput,
+  Button,
+  Text,
+  Paper,
+  Box,
+} from '@mantine/core'
+import { getServerUrl, setServerUrl } from '@/context/PikkuRpcProvider'
 
-export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({ error }) => {
-  const [url, setUrl] = useState(getServerUrl);
+export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
+  error,
+}) => {
+  const [url, setUrl] = useState(getServerUrl)
 
   const handleReconnect = () => {
-    setServerUrl(url.trim());
-    window.location.reload();
-  };
+    setServerUrl(url.trim())
+    window.location.reload()
+  }
 
   return (
     <Center h="100vh" bg="dark.9">
@@ -38,7 +48,7 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({ e
             onChange={(e) => setUrl(e.currentTarget.value)}
             w="100%"
             styles={{
-              label: { color: "var(--mantine-color-gray-4)" },
+              label: { color: 'var(--mantine-color-gray-4)' },
             }}
           />
 
@@ -48,5 +58,5 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({ e
         </Stack>
       </Paper>
     </Center>
-  );
-};
+  )
+}

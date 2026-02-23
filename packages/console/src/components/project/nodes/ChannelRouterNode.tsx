@@ -1,53 +1,58 @@
-import React from "react";
-import { NodeProps, Handle, Position } from "reactflow";
-import { Box, Paper, Text, Stack, useMantineTheme } from "@mantine/core";
-import { ArrowRight } from "lucide-react";
+import React from 'react'
+import { NodeProps, Handle, Position } from 'reactflow'
+import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
+import { ArrowRight } from 'lucide-react'
 
 interface ActionRowProps {
-  label: string;
-  handleId: string;
+  label: string
+  handleId: string
 }
 
-const ActionRow: React.FunctionComponent<ActionRowProps> = ({ label, handleId }) => {
+const ActionRow: React.FunctionComponent<ActionRowProps> = ({
+  label,
+  handleId,
+}) => {
   return (
     <Box
       px="xs"
       pl="md"
       py={4}
       style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         gap: 8,
       }}
     >
-      <Text size="sm" c="dimmed">{label}</Text>
+      <Text size="sm" c="dimmed">
+        {label}
+      </Text>
       <ArrowRight size={14} />
       <Handle
         type="source"
         position={Position.Right}
         id={handleId}
         style={{
-          background: "var(--mantine-color-violet-6)",
+          background: 'var(--mantine-color-violet-6)',
           width: 8,
           height: 8,
           right: -4,
         }}
       />
     </Box>
-  );
-};
-
-interface ChannelRouterNodeData {
-  category: string;
-  actions: string[];
+  )
 }
 
-export const ChannelRouterNode: React.FunctionComponent<NodeProps<ChannelRouterNodeData>> = ({
-  data,
-}) => {
-  const theme = useMantineTheme();
+interface ChannelRouterNodeData {
+  category: string
+  actions: string[]
+}
+
+export const ChannelRouterNode: React.FunctionComponent<
+  NodeProps<ChannelRouterNodeData>
+> = ({ data }) => {
+  const theme = useMantineTheme()
 
   return (
     <Paper
@@ -55,14 +60,14 @@ export const ChannelRouterNode: React.FunctionComponent<NodeProps<ChannelRouterN
       radius="md"
       w={200}
       style={{
-        overflow: "visible",
-        position: "relative",
+        overflow: 'visible',
+        position: 'relative',
       }}
     >
       <Handle
         type="target"
         position={Position.Left}
-        style={{ cursor: "default" }}
+        style={{ cursor: 'default' }}
       />
 
       <Box
@@ -80,13 +85,19 @@ export const ChannelRouterNode: React.FunctionComponent<NodeProps<ChannelRouterN
 
       <Stack gap={0} py="xs">
         <Box px="md" pb={4}>
-          <Text size="sm" fw={600}>{data.category}</Text>
+          <Text size="sm" fw={600}>
+            {data.category}
+          </Text>
         </Box>
 
         {data.actions.map((action) => (
-          <ActionRow key={action} label={action} handleId={`action-${action}`} />
+          <ActionRow
+            key={action}
+            label={action}
+            handleId={`action-${action}`}
+          />
         ))}
       </Stack>
     </Paper>
-  );
-};
+  )
+}

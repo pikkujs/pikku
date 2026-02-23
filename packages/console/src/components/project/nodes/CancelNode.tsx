@@ -1,23 +1,23 @@
-import React from "react";
-import { Node, NodeProps } from "reactflow";
-import { FlowNode } from "./FlowNode";
-import { XCircle } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
+import React from 'react'
+import { Node, NodeProps } from 'reactflow'
+import { FlowNode } from './FlowNode'
+import { XCircle } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
 
 interface CancelNodeData {
-  colorKey: string;
-  stepName?: string;
+  colorKey: string
+  stepName?: string
 }
 
 export const CancelNode: React.FunctionComponent<NodeProps<CancelNodeData>> = ({
   data,
   id,
 }) => {
-  const { openWorkflowStep } = usePanelContext();
+  const { openWorkflowStep } = usePanelContext()
 
   const handleClick = React.useCallback(() => {
-    openWorkflowStep(id, "cancel");
-  }, [id, openWorkflowStep]);
+    openWorkflowStep(id, 'cancel')
+  }, [id, openWorkflowStep])
 
   return (
     <FlowNode
@@ -31,8 +31,8 @@ export const CancelNode: React.FunctionComponent<NodeProps<CancelNodeData>> = ({
       onClick={handleClick}
       nodeId={id}
     />
-  );
-};
+  )
+}
 
 export const getCancelNodeConfig = (
   id: string,
@@ -41,12 +41,12 @@ export const getCancelNodeConfig = (
 ): Node => {
   return {
     id,
-    type: "cancelNode",
+    type: 'cancelNode',
     position,
     data: {
-      colorKey: "workflow",
+      colorKey: 'workflow',
       stepName: step.stepName,
-      nodeType: "flow",
+      nodeType: 'flow',
     },
-  };
-};
+  }
+}

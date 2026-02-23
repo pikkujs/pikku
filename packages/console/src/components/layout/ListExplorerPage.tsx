@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from 'react'
 import {
   Box,
   Stack,
@@ -8,79 +8,78 @@ import {
   SegmentedControl,
   Center,
   Loader,
-} from "@mantine/core";
-import { Search } from "lucide-react";
-import { Tree } from "@/components/ui/Tree";
-import { CategoryRow } from "@/components/project/tree/CategoryRow";
-import { PanelProvider } from "@/context/PanelContext";
-import { ResizablePanelLayout } from "@/components/layout/ResizablePanelLayout";
+} from '@mantine/core'
+import { Search } from 'lucide-react'
+import { Tree } from '@/components/ui/Tree'
+import { CategoryRow } from '@/components/project/tree/CategoryRow'
+import { PanelProvider } from '@/context/PanelContext'
+import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
 
 interface TreeNode {
-  id: string;
-  name: string;
-  children?: TreeNode[];
-  type: "category" | "function" | "wiring";
-  data?: any;
-  functionName?: string;
-  wireType?: string;
+  id: string
+  name: string
+  children?: TreeNode[]
+  type: 'category' | 'function' | 'wiring'
+  data?: any
+  functionName?: string
+  wireType?: string
 }
 
 interface FilterOption {
-  value: string;
-  label: string;
+  value: string
+  label: string
 }
 
 interface ListExplorerPageProps {
-  header?: React.ReactNode;
-  title: string;
-  totalCount?: number;
-  searchPlaceholder?: string;
-  emptyMessage?: string;
-  data: TreeNode[];
-  loading?: boolean;
-  filters?: FilterOption[];
-  filterKey?: string;
-  filterValue?: string;
-  onFilterChange?: (value: string) => void;
-  renderRow: (node: any) => React.ReactNode;
-  rowHeight?: number;
-  nestedIndent?: number;
-  useStickyCategories?: boolean;
-  panelMessage?: string;
+  header?: React.ReactNode
+  title: string
+  totalCount?: number
+  searchPlaceholder?: string
+  emptyMessage?: string
+  data: TreeNode[]
+  loading?: boolean
+  filters?: FilterOption[]
+  filterKey?: string
+  filterValue?: string
+  onFilterChange?: (value: string) => void
+  renderRow: (node: any) => React.ReactNode
+  rowHeight?: number
+  nestedIndent?: number
+  useStickyCategories?: boolean
+  panelMessage?: string
 }
 
-const filterTreeNode = (
-  node: TreeNode,
-  query: string
-): TreeNode | null => {
-  if (!query) return node;
+const filterTreeNode = (node: TreeNode, query: string): TreeNode | null => {
+  if (!query) return node
 
-  const nameMatches = node.name.toLowerCase().includes(query);
-  const functionNameMatches = node.functionName?.toLowerCase().includes(query);
+  const nameMatches = node.name.toLowerCase().includes(query)
+  const functionNameMatches = node.functionName?.toLowerCase().includes(query)
 
   if (node.children) {
     const filteredChildren = node.children
       .map((child) => filterTreeNode(child, query))
-      .filter((child): child is TreeNode => child !== null);
+      .filter((child): child is TreeNode => child !== null)
 
     if (filteredChildren.length > 0 || nameMatches) {
-      return { ...node, children: filteredChildren };
+      return { ...node, children: filteredChildren }
     }
   }
 
   if (nameMatches || functionNameMatches) {
-    return node;
+    return node
   }
 
-  return null;
-};
+  return null
+}
 
-export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = ({
+export const ListExplorerPage: React.FunctionComponent<
+  ListExplorerPageProps
+> = ({
   header,
   title,
   totalCount,
-  searchPlaceholder = "Search...",
-  emptyMessage = "No items found.",
+  searchPlaceholder = 'Search...',
+  emptyMessage = 'No items found.',
   data,
   loading = false,
   filters,
@@ -92,22 +91,22 @@ export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = 
   useStickyCategories = true,
   panelMessage,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
   const filteredData = useMemo(() => {
-    const query = searchQuery.toLowerCase();
-    if (!query) return data;
+    const query = searchQuery.toLowerCase()
+    if (!query) return data
     return data
       .map((node) => filterTreeNode(node, query))
-      .filter((node): node is TreeNode => node !== null);
-  }, [data, searchQuery]);
+      .filter((node): node is TreeNode => node !== null)
+  }, [data, searchQuery])
 
   if (loading) {
     return (
       <Center h="100vh">
         <Loader />
       </Center>
-    );
+    )
   }
 
   return (
@@ -116,11 +115,14 @@ export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = 
         header={header}
         emptyPanelMessage={panelMessage || `Select an item to see its details`}
       >
-        <Stack
-          gap={0}
-          style={{ height: "100%" }}
-        >
-          <Box px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+        <Stack gap={0} style={{ height: '100%' }}>
+          <Box
+            px="md"
+            py="sm"
+            style={{
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+            }}
+          >
             <Group gap="md" wrap="nowrap">
               <TextInput
                 placeholder={searchPlaceholder}
@@ -132,14 +134,14 @@ export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = 
               {filters && filters.length > 0 && onFilterChange && (
                 <SegmentedControl
                   data={filters}
-                  value={filterValue || "all"}
+                  value={filterValue || 'all'}
                   onChange={onFilterChange}
                   size="xs"
                 />
               )}
             </Group>
           </Box>
-          <Box style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          <Box style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
             {filteredData.length === 0 ? (
               <Box p="xl">
                 <Text c="dimmed" ta="center">
@@ -156,11 +158,11 @@ export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = 
                 defaultCollapsed
                 isSticky={(item) =>
                   useStickyCategories &&
-                  item.node.type === "category" &&
+                  item.node.type === 'category' &&
                   item.depth === 0
                 }
                 renderRow={(node, isCollapsed, hasChildren, toggle) => {
-                  if (node.type === "category") {
+                  if (node.type === 'category') {
                     return (
                       <CategoryRow
                         name={node.name}
@@ -169,9 +171,9 @@ export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = 
                         hasChildren={hasChildren}
                         onToggle={toggle}
                       />
-                    );
+                    )
                   }
-                  return renderRow(node);
+                  return renderRow(node)
                 }}
               />
             )}
@@ -179,5 +181,5 @@ export const ListExplorerPage: React.FunctionComponent<ListExplorerPageProps> = 
         </Stack>
       </ResizablePanelLayout>
     </PanelProvider>
-  );
-};
+  )
+}

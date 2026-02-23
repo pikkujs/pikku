@@ -1,51 +1,51 @@
-import React from "react";
-import { Node, NodeProps } from "reactflow";
-import { FlowNode } from "./FlowNode";
-import { GitCompare } from "lucide-react";
-import { usePanelContext } from "@/context/PanelContext";
-import { useWorkflowContextSafe } from "@/context/WorkflowContext";
+import React from 'react'
+import { Node, NodeProps } from 'reactflow'
+import { FlowNode } from './FlowNode'
+import { GitCompare } from 'lucide-react'
+import { usePanelContext } from '@/context/PanelContext'
+import { useWorkflowContextSafe } from '@/context/WorkflowContext'
 
 interface SwitchNodeData {
-  colorKey: string;
-  expression?: string;
-  cases?: Array<{ value: string }>;
-  stepName?: string;
+  colorKey: string
+  expression?: string
+  cases?: Array<{ value: string }>
+  stepName?: string
 }
 
-type HighlightType = "focused" | "referenced" | null;
+type HighlightType = 'focused' | 'referenced' | null
 
 export const SwitchNode: React.FunctionComponent<NodeProps<SwitchNodeData>> = ({
   data,
   id,
 }) => {
-  const { openWorkflowStep } = usePanelContext();
-  const workflowContext = useWorkflowContextSafe();
+  const { openWorkflowStep } = usePanelContext()
+  const workflowContext = useWorkflowContextSafe()
 
   const highlightType: HighlightType = React.useMemo(() => {
-    if (!workflowContext) return null;
-    if (workflowContext.focusedNodeId === id) return "focused";
-    if (workflowContext.referencedNodeId === id) return "referenced";
-    return null;
-  }, [workflowContext, id]);
+    if (!workflowContext) return null
+    if (workflowContext.focusedNodeId === id) return 'focused'
+    if (workflowContext.referencedNodeId === id) return 'referenced'
+    return null
+  }, [workflowContext, id])
 
   const outputHandles = React.useMemo(() => {
-    const handles = [];
+    const handles = []
 
     if (data.cases && data.cases.length > 0) {
       data.cases.forEach((caseItem) => {
-        handles.push({ id: `case-${caseItem.value}`, label: caseItem.value });
-      });
+        handles.push({ id: `case-${caseItem.value}`, label: caseItem.value })
+      })
     }
 
-    handles.push({ id: "default", label: "default" });
-    handles.push({ id: "after", label: "after" });
+    handles.push({ id: 'default', label: 'default' })
+    handles.push({ id: 'after', label: 'after' })
 
-    return handles;
-  }, [data.cases]);
+    return handles
+  }, [data.cases])
 
   const handleClick = React.useCallback(() => {
-    openWorkflowStep(id, "switch");
-  }, [id, openWorkflowStep]);
+    openWorkflowStep(id, 'switch')
+  }, [id, openWorkflowStep])
 
   return (
     <FlowNode
@@ -61,8 +61,8 @@ export const SwitchNode: React.FunctionComponent<NodeProps<SwitchNodeData>> = ({
       highlightType={highlightType}
       nodeId={id}
     />
-  );
-};
+  )
+}
 
 export const getSwitchNodeConfig = (
   id: string,
@@ -71,14 +71,14 @@ export const getSwitchNodeConfig = (
 ): Node => {
   return {
     id,
-    type: "switchNode",
+    type: 'switchNode',
     position,
     data: {
-      colorKey: "workflow",
+      colorKey: 'workflow',
       expression: step.expression,
       cases: step.cases,
       stepName: step.stepName,
-      nodeType: "flow",
+      nodeType: 'flow',
     },
-  };
-};
+  }
+}

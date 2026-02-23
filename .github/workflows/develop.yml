@@ -22,6 +22,7 @@ jobs:
           node-version: 24
           cache: yarn
       - run: yarn install
+      - run: cd packages/console && yarn generate && yarn build
       - run: yarn build
       # Run pikku again to regenerate schemas after initial bootstrap
       - run: yarn pikku
@@ -29,6 +30,7 @@ jobs:
       - run: yarn prettier
       - run: yarn lint
       - run: cd templates/functions && yarn pikku && cd ../..
+      - run: cd packages/console && yarn generate && yarn tsc --noEmit
       # - run: yarn typedoc
 
       - name: Save build output (for later jobs)
