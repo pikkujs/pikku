@@ -235,8 +235,9 @@ export class ContextAwareRPCService {
     return this.services.workflowService.startWorkflow(
       workflowName,
       input,
+      wire,
       this,
-      { ...options, wire }
+      options
     )
   }
 

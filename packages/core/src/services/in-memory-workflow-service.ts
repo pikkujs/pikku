@@ -27,7 +27,7 @@ interface InternalStepData {
  * @example
  * ```typescript
  * const workflowService = new InMemoryWorkflowService()
- * await workflowService.startWorkflow('myWorkflow', input, rpc, { inline: true })
+ * await workflowService.startWorkflow('myWorkflow', input, { type: 'cli' }, rpc, { inline: true })
  * ```
  */
 export class InMemoryWorkflowService extends PikkuWorkflowService {

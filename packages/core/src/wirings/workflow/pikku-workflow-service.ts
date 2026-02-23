@@ -437,8 +437,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public async startWorkflow<I>(
     name: string,
     input: I,
+    wire: WorkflowRunWire,
     rpcService: any,
-    options: { inline?: boolean; startNode?: string; wire: WorkflowRunWire }
+    options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }> {
     // Check meta to determine workflow type
     const meta = pikkuState(null, 'workflows', 'meta')
@@ -459,7 +460,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         rpcService,
         shouldInline,
         options?.startNode,
-        options?.wire
+        wire
       )
     }
 
@@ -480,7 +481,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       input,
       options?.inline ?? false,
       workflowMeta.graphHash,
-      options.wire
+      wire
     )
 
     if (options?.inline) {
@@ -509,10 +510,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
   ): Promise<any> {
     const pollInterval = options?.pollIntervalMs ?? 1000
-    const { runId } = await this.startWorkflow(name, input, rpcService, {
-      inline: true,
-      wire: options?.wire ?? { type: 'internal' },
-    })
+    const { runId } = await this.startWorkflow(
+      name,
+      input,
+      options?.wire ?? { type: 'internal' },
+      rpcService,
+      { inline: true }
+    )
     while (true) {
       const run = await this.getRun(runId)
       if (!run) {
