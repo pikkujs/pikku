@@ -16,7 +16,11 @@ export const serializeTypedHTTPWiringsMap = (
 ) => {
   const requiredTypes = new Set<string>()
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
-  const serializedMetaTypes = generateMetaTypes(metaTypes, typesMap)
+  const serializedMetaTypes = generateMetaTypes(
+    metaTypes,
+    typesMap,
+    requiredTypes
+  )
   const serializedHTTPWirings = generateHTTPWirings(
     wiringsMeta,
     resolvedIOTypes,
@@ -46,13 +50,18 @@ export const serializeTypedHTTPWiringsMap = (
     ? `import type { FlattenedRPCMap } from '${getFileImportRelativePath(relativeToPath, rpcInternalMapDeclarationFile, packageMappings)}'`
     : ''
 
+  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
+    .split('\n')
+    .filter((line) => !line.startsWith('import '))
+    .join('\n')
+
   return `/**
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
 
 ${serializedImportMap}
 ${rpcMapImport}
-${serializedCustomTypes}
+${serializedCustomTypesDeclarationsOnly}
 ${serializedMetaTypes}
 
 interface HTTPWiringHandler<I, O> {
@@ -121,7 +130,11 @@ function generateHTTPWirings(
   return routesStr
 }
 
-const generateMetaTypes = (metaTypes: MetaInputTypes, typesMap: TypesMap) => {
+const generateMetaTypes = (
+  metaTypes: MetaInputTypes,
+  typesMap: TypesMap,
+  requiredTypes: Set<string>
+) => {
   const nameToTypeMap = Array.from(metaTypes.entries()).reduce<
     Map<string, string>
   >((result, [_name, { query, body, params }]) => {
@@ -132,6 +145,7 @@ const generateMetaTypes = (metaTypes: MetaInputTypes, typesMap: TypesMap) => {
       // Zod-derived schema - use the name directly
       uniqueName = _name
     }
+    requiredTypes.add(uniqueName)
     const queryType =
       query && query.length > 0
         ? `Pick<${uniqueName}, '${query?.join("' | '")}'>`

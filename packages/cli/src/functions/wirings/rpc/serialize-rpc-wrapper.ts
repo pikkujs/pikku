@@ -59,7 +59,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the function's return value
      */
     invoke: RPCInvoke = async (rpcName, data) => {
-       return await this.pikkuFetch.post(\`/rpc/\${rpcName}\` as never, { rpcName: String(rpcName), data }) as any
+       return await this.pikkuFetch.post(\`/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
     }
 
     /**
@@ -70,7 +70,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the agent's output
      */
     agent: TypedAgent = async (agentName, input) => {
-       return await this.pikkuFetch.post(\`/rpc/agent/\${agentName}\` as never, input) as any
+       return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}\` as never, input) as any
     }
 }
 

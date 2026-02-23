@@ -9,6 +9,7 @@ import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
+import { consoleCommand } from './functions/commands/console.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 // import { clientCLIRenderer } from './services.js'
@@ -81,6 +82,17 @@ wireCLI({
     watch: pikkuCLICommand({
       func: watch,
       description: 'Watch for file changes and regenerate automatically',
+    }),
+    console: pikkuCLICommand({
+      func: consoleCommand,
+      description: 'Start the Pikku Console UI with live file watching',
+      options: {
+        port: {
+          description: 'Port for the console server',
+          default: '51442',
+          short: 'p',
+        },
+      },
     }),
     schemas: pikkuCLICommand({
       func: pikkuSchemas,

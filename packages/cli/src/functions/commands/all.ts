@@ -62,7 +62,7 @@ export const all = pikkuVoidFunc({
 
     await rpc.invoke('pikkuPublicRPC', null)
     await rpc.invoke('pikkuRPCClient', null)
-
+    await rpc.invoke('pikkuConsoleFunctions', null)
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
     await rpc.invoke('pikkuSecrets', null)

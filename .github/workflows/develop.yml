@@ -29,6 +29,8 @@ jobs:
       - run: yarn prettier
       - run: yarn lint
       - run: cd templates/functions && yarn pikku && cd ../..
+      - run: cd packages/console && yarn generate && yarn tsc --noEmit
+      - run: yarn build:console
       # - run: yarn typedoc
 
       - name: Save build output (for later jobs)

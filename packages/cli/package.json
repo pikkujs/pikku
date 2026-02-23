@@ -45,6 +45,11 @@
   "devDependencies": {
     "@types/node": "^24.10.12"
   },
+  "files": [
+    "dist",
+    "console-app",
+    "cli.schema.json"
+  ],
   "engines": {
     "node": ">=18"
   }

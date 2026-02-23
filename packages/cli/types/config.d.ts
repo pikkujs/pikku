@@ -232,6 +232,10 @@ export type PikkuCLIInput = {
     publicAgentRequireAuth?: boolean
   }
 
+  console?: {
+    functionsPath?: string
+  }
+
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
@@ -367,6 +371,10 @@ export type PikkuCLIConfig = {
   agent?: {
     publicAgentPath?: string
     publicAgentRequireAuth?: boolean
+  }
+
+  console?: {
+    functionsPath?: string
   }
 
   forceRequiredServices?: string[]

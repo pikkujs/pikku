@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src"],
+  "outDir": ".pikku",
+  "rpcMapDeclarationFile": "../src/pikku/rpc-map.gen.d.ts",
+  "httpMapDeclarationFile": "../src/pikku/http-map.gen.d.ts",
+  "fetchFile": "../src/pikku/pikku-fetch.gen.ts",
+  "rpcWiringsFile": "../src/pikku/pikku-rpc.gen.ts",
+  "externalPackages": {
+    "console": { "package": "@pikku/external-console", "forceInclude": true }
+  },
+  "verboseMeta": true,
+  "console": {
+    "functionsPath": "src/functions/pikku.console.gen.ts"
+  }
+}
