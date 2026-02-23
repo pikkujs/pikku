@@ -49,12 +49,17 @@ export const serializeWorkflowMap = (
       )
     : ''
 
+  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
+    .split('\n')
+    .filter((line) => !line.startsWith('import '))
+    .join('\n')
+
   return `/**
  * Workflow type map with input/output types for each workflow
  */
 
 ${serializedImportMap}
-${serializedCustomTypes}
+${serializedCustomTypesDeclarationsOnly}
 
 interface WorkflowHandler<I, O> {
     input: I;

@@ -43,6 +43,11 @@ export const serializeTypedRPCMap = (
     requiredTypes
   )
 
+  const serializedCustomTypesDeclarationsOnly = serializedCustomTypes
+    .split('\n')
+    .filter((line) => !line.startsWith('import '))
+    .join('\n')
+
   const externalPackageImports = generateExternalPackageImports(
     externalPackages,
     relativeToPath
@@ -56,7 +61,7 @@ export const serializeTypedRPCMap = (
 
 ${mcpImport}
 ${serializedImportMap}
-${serializedCustomTypes}
+${serializedCustomTypesDeclarationsOnly}
 
 interface RPCHandler<I, O> {
     input: I;
