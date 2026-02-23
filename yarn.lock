@@ -4729,7 +4729,7 @@ __metadata:
     postcss: "npm:^8"
     react: "npm:^19"
     react-dom: "npm:^19"
-    tailwindcss: "npm:^4.1.18"
+    tailwindcss: "npm:^4.2.0"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5"
@@ -12996,10 +12996,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:^4.1.18":
-  version: 4.1.18
-  resolution: "tailwindcss@npm:4.1.18"
-  checksum: 10/16a51bf972dce3871fec66aba7bffa02cd6fccc5a330180be3dcf297e48aae2d64d965df48fda851f65924ef61d7d2c6c8e6d7a05a09f454244475b7dab93464
+"tailwindcss@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "tailwindcss@npm:4.2.0"
+  checksum: 10/5bd8f9685ec0546404b141b0b9d8a98af3005c0253ae139c5245b4b9008bd36128c8bf5e23ec2f7ed3a7738901f491cfeebf8f0fb28b64a889b5f07729c376a2
   languageName: node
   linkType: hard
 
