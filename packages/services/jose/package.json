@@ -1,6 +1,6 @@
 {
   "name": "@pikku/jose",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",
@@ -13,7 +13,7 @@
     "release": "npm run build && npm test"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.11.1"
+    "@pikku/core": "^0.12.0"
   },
   "dependencies": {
     "jose": "^6.1.3"

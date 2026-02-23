@@ -18,12 +18,12 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
   "dependencies": {
-    "@pikku/core": "^0.11.2",
-    "@pikku/uws": "^0.11.1",
-    "@pikku/websocket": "^0.11.0"
+    "@pikku/core": "^0.12.0",
+    "@pikku/uws": "^0.12.0",
+    "@pikku/websocket": "^0.12.0"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.11.3",
+    "@pikku/cli": "^0.12.0",
     "@types/node": "^24",
     "tsx": "^4.21.0",
     "typescript": "^5.9"
