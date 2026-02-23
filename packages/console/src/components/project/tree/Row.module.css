@@ -1,0 +1,24 @@
+.row {
+  transition: background-color 0.15s ease;
+}
+
+.row:hover {
+  background-color: var(--mantine-color-gray-0);
+}
+
+.active {
+  background-color: var(--mantine-color-blue-0);
+}
+
+.active:hover {
+  background-color: var(--mantine-color-blue-0);
+}
+
+.row .workflowIcon {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.row:hover .workflowIcon {
+  opacity: 1;
+}

@@ -1,5 +1,5 @@
 export const serializeConsoleFunctions = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, external } from '${pathToPikkuTypes}'
 import { streamAIAgent, resumeAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
@@ -126,5 +126,104 @@ export const setVariable = pikkuSessionlessFunc<
     return { success: true }
   },
 })
+
+export interface GetSecretInput {
+  secretId: string
+}
+
+export interface GetSecretOutput {
+  exists: boolean
+  value: unknown | null
+}
+
+export const getSecret = pikkuSessionlessFunc<
+  GetSecretInput,
+  GetSecretOutput
+>({
+  description: 'Get the current value of a secret',
+  expose: true,
+  auth: false,
+  func: async ({ secrets }, { secretId }) => {
+    const exists = await secrets.hasSecret(secretId)
+    if (!exists) {
+      return { exists: false, value: null }
+    }
+    const value = await secrets.getSecretJSON(secretId)
+    return { exists: true, value }
+  },
+})
+
+export interface StartWorkflowRunInput {
+  workflowName: string
+  input?: any
+}
+
+export interface StartWorkflowRunOutput {
+  runId: string
+}
+
+export const startWorkflowRun = pikkuSessionlessFunc<
+  StartWorkflowRunInput,
+  StartWorkflowRunOutput
+>({
+  title: 'Start Workflow Run',
+  description: 'Starts a new workflow run by name with optional input.',
+  expose: true,
+  auth: false,
+  func: async (_services, { workflowName, input }, { rpc }) => {
+    return await (rpc as any).startWorkflow(workflowName, input || {})
+  },
+})
+
+export const consoleRoutes = defineHTTPRoutes({
+  auth: false,
+  routes: {
+    externalIconOptions: {
+      route: '/external/icon/:alias',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ alias: string }>(async () => void 0),
+    },
+    externalIcon: {
+      route: '/external/icon/:alias',
+      method: 'get',
+      func: external('console:getExternalIcon'),
+    },
+    agentStreamOptions: {
+      route: '/api/agents/:agentName/stream',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+    },
+    agentStream: {
+      route: '/api/agents/:agentName/stream',
+      method: 'post',
+      sse: true,
+      func: streamAgentRun,
+    },
+    agentResumeOptions: {
+      route: '/api/agents/:agentName/resume',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+    },
+    agentResume: {
+      route: '/api/agents/:agentName/resume',
+      method: 'post',
+      sse: true,
+      func: resumeAgentRun,
+    },
+    workflowRunStreamOptions: {
+      route: '/api/workflow-run/:runId/stream',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ runId: string }>(async () => void 0),
+    },
+    workflowRunStream: {
+      route: '/api/workflow-run/:runId/stream',
+      method: 'get',
+      sse: true,
+      func: external('console:streamWorkflowRun'),
+    },
+  },
+})
+
+wireHTTPRoutes({ routes: { console: consoleRoutes } })
 `
 }

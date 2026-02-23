@@ -1,3 +1,9 @@
+export type {
+  AllMeta,
+  PikkuMetaState,
+  MetaCounts,
+  FunctionUsedBy,
+} from './services/wiring.service.js'
 export { getAllMeta } from './functions/get-all-meta.function.js'
 export { getChannelSnippets } from './functions/get-channel-snippets.function.js'
 export { getExternalIcon } from './functions/get-external-icon.function.js'
