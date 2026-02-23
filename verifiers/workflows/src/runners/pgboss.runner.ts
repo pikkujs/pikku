@@ -86,6 +86,7 @@ async function main(): Promise<void> {
       const { runId } = await workflowService.startWorkflow(
         workflowName,
         testData,
+        { type: 'test' },
         null
       )
 

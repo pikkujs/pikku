@@ -21,7 +21,8 @@
 
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
-import { pikkuState, rpcService } from '@pikku/core'
+import { pikkuState } from '@pikku/core'
+import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
 
 import {
@@ -139,6 +140,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'taskCrudWorkflow',
       workflowTestData['taskCrudWorkflow'],
+      { type: 'test' },
       rpc,
       { inline: true }
     )
@@ -152,6 +154,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'graphOnboarding',
       workflowTestData['graphOnboarding'],
+      { type: 'test' },
       rpc,
       { inline: true }
     )
@@ -194,6 +197,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'taskCrudWorkflow',
       workflowTestData['taskCrudWorkflow'],
+      { type: 'test' },
       rpc
     )
     dslRunId = runId
@@ -207,6 +211,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'graphOnboarding',
       workflowTestData['graphOnboarding'],
+      { type: 'test' },
       rpc
     )
     graphRunId = runId
@@ -284,6 +289,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'graphOnboarding',
       workflowTestData['graphOnboarding'],
+      { type: 'test' },
       rpc
     )
     meta.graphOnboarding!.graphHash = 'completely-unknown-hash'
@@ -309,6 +315,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'taskCrudWorkflow',
       workflowTestData['taskCrudWorkflow'],
+      { type: 'test' },
       rpc,
       { inline: true }
     )
@@ -322,6 +329,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'graphOnboarding',
       workflowTestData['graphOnboarding'],
+      { type: 'test' },
       rpc,
       { inline: true }
     )

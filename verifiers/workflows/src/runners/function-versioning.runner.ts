@@ -1,6 +1,7 @@
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
-import { pikkuState, rpcService } from '@pikku/core'
+import { pikkuState } from '@pikku/core'
+import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
 
 import {
@@ -199,6 +200,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'versionedItemWorkflow',
       workflowTestData['versionedItemWorkflow'],
+      { type: 'test' },
       rpc,
       { inline: true }
     )
@@ -262,6 +264,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'versionedItemWorkflow',
       workflowTestData['versionedItemWorkflow'],
+      { type: 'test' },
       rpc
     )
     queuedRunId = runId
@@ -291,6 +294,7 @@ async function main(): Promise<void> {
     const { runId } = await workflowService.startWorkflow(
       'versionedItemWorkflow',
       workflowTestData['versionedItemWorkflow'],
+      { type: 'test' },
       rpc,
       { inline: true }
     )

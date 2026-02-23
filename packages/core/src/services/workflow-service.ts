@@ -45,8 +45,9 @@ export interface WorkflowService {
   startWorkflow<I>(
     name: string,
     input: I,
+    wire: WorkflowRunWire,
     rpcService: any,
-    options: { inline?: boolean; startNode?: string; wire: WorkflowRunWire }
+    options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
   orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
