@@ -30,6 +30,14 @@ done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 echo "Building TypeScript to dist..."
 yarn tsc -b || true
 
+# Patch stale wireMCPTool import in compiled output (removed in current version)
+if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
+  tmp=$(mktemp)
+  sed -e 's/wireMCPTool as wireMCPToolCore, //g' \
+      -e 's/wireMCPToolCore(mcpTool);//g' \
+      dist/.pikku/mcp/pikku-mcp-types.gen.js > "$tmp" && mv "$tmp" dist/.pikku/mcp/pikku-mcp-types.gen.js
+fi
+
 # Rebuild Pikku using the local CLI and recompile
 yarn pikku
 yarn tsc -b
