@@ -38,7 +38,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
             Wired To
           </Text>
           <Group gap={4} style={{ flexWrap: 'wrap' }}>
-            {usedBy.transports.map((t) => (
+            {usedBy.transports.map((t: any) => (
               <Anchor
                 key={t.id}
                 component={Link}
@@ -64,7 +64,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
             Jobs
           </Text>
           <Group gap={4} style={{ flexWrap: 'wrap' }}>
-            {usedBy.jobs.map((j) => (
+            {usedBy.jobs.map((j: any) => (
               <Anchor
                 key={j.id}
                 component={Link}
@@ -174,7 +174,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
             Also Wired To
           </Text>
           <Group gap={4} style={{ flexWrap: 'wrap' }}>
-            {usedBy.transports.map((t) => (
+            {usedBy.transports.map((t: any) => (
               <Anchor
                 key={t.id}
                 component={Link}

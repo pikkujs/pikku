@@ -19,13 +19,13 @@ export const CliPageClient: React.FunctionComponent = () => {
   const [commandPath, setCommandPath] = useState<string[]>([])
 
   const program = useMemo(
-    () => (meta.cliMeta || []).find((p) => p.wireId === programId),
+    () => (meta.cliMeta || []).find((p: any) => p.wireId === programId),
     [meta.cliMeta, programId]
   )
 
   const allPrograms = useMemo(
     () =>
-      (meta.cliMeta || []).map((p) => ({
+      (meta.cliMeta || []).map((p: any) => ({
         name: p.wireId,
         description: p.description,
       })),
