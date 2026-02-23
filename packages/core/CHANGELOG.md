@@ -1,5 +1,159 @@
 ## 0.12.0
 
+## 0.12.0
+
+### Minor Changes
+
+- 7c1f909: Add wireHTTPRoutes API for grouping HTTP routes
+
+  **@pikku/core:**
+
+  - Added `wireHTTPRoutes` for defining groups of HTTP routes with shared configuration
+  - Routes can inherit `basePath`, `tags`, and `auth` settings from their group
+  - Supports nested route contracts via `defineHTTPRoutes` for reusable route definitions
+  - Added `groupBasePath` to route metadata for tracking inherited paths
+  - Added `getSchemaKeys()` to `SchemaService` interface for runtime schema property extraction
+
+  **@pikku/inspector:**
+
+  - Added `add-http-routes.ts` to process `wireHTTPRoutes` calls
+  - Extracts and merges group configuration (basePath, tags, auth) with individual routes
+  - Resolves route contracts from `defineHTTPRoutes` variables
+  - Refactored shared route registration logic into `registerHTTPRoute` function
+  - Renamed `zodLookup` to `schemaLookup` with vendor detection for Standard Schema support
+
+  **@pikku/cli:**
+
+  - Updated serialization to include `groupBasePath` in HTTP metadata
+
+  **@pikku/next:**
+
+  - Return `null` instead of throwing when reading headers/cookies in static context
+  - Allows auth middleware to gracefully skip during Next.js static page generation
+
+- 6cb7e98: Add OAuth2 support with CLI commands for credential management
+
+  **@pikku/core:**
+
+  - Added `@pikku/core/oauth2` module with `OAuth2Client`, `OAuth2Config`, and related types
+  - Added `wireOAuth2Credential` for wiring OAuth2 credentials
+  - Extended `SecretService` interface with `setSecretJSON`, `deleteSecret`, and `hasSecret` methods
+  - `LocalSecretService` now supports in-memory secret storage and `hasSecret` checking
+  - `ScopedSecretService` implements `hasSecret` with access control
+  - Added `CredentialDefinitions` type for credential validation
+  - `OAuth2Client` now properly refreshes expired tokens loaded from secrets
+
+  **@pikku/cli:**
+
+  - Added `oauth:connect <credential>` command to authorize OAuth2 credentials
+    - Starts a temporary HTTP callback server
+    - Opens browser for authorization flow
+    - Supports `--url` option for custom callback URL
+    - Supports `--output` option (console or secret)
+  - Added `oauth:status <credential>` command to check token status
+  - Added `oauth:disconnect <credential>` command to remove stored tokens
+  - Added `TypedSecretService` wrapper generation for compile-time validated secret access
+    - Generates `CredentialsMap` interface mapping secretIds to their TypeScript types
+    - Provides `getSecretJSON()`, `setSecretJSON()`, `hasSecret()`, `getAllStatus()`, and `getMissing()` methods
+    - Type inference works with both Zod schemas (`wireCredential`) and OAuth2 types (`wireOAuth2Credential`)
+  - CLI now validates credentials sharing the same secretId have identical schemas
+    - Multiple credentials can reference the same secretId (useful for shared secrets across packages)
+    - Errors only if same secretId is defined with different schemas
+
+  **@pikku/inspector:**
+
+  - Credential definitions now stored as array for validation
+  - Added `sourceFile` tracking to credential metadata
+
+- 7dd13cc: Remote RPCs, deployment service, workflow improvements, and credential-to-secret rename
+
+  **@pikku/core:**
+
+  - Added `DeploymentService` interface and `rpc.remote()` for cross-server RPC calls
+  - Added `workflow()`, `workflowStart()`, `workflowStatus()`, and `graphStart()` HTTP helpers for wiring workflows to routes
+  - Added `WorkflowRunNotFoundError` with 404 status mapping
+  - Added `defineCLICommands` and `defineChannelRoutes` for external composition
+  - Renamed all `forge` naming to `node` across the codebase
+  - Renamed `credential` to `secret` across core types
+  - Added variable wiring system with `pikkuExternalConfig`
+  - Made `createWireServices` and `createConfig` optional across all runtimes
+  - Enforced auth by default for `pikkuFunc` based on sessionless metadata
+  - Merged `wireForgeNode` into `pikkuFunc`/`pikkuSessionlessFunc` as inline `node` config
+  - Added `disabled: true` support to all wirings and functions
+  - Excluded trigger/channel functions from `addFunction` registration
+  - Removed precomputed workflow wires index from state
+
+  **@pikku/inspector:**
+
+  - Fixed `workflow()` helper generating wrong `pikkuFuncId` (used raw name instead of `workflow_` prefix)
+  - Added support for extracting `disabled`, `node` config, and workflow helper function names
+  - Split trigger meta into separate meta and sourceMeta structures
+
+  **@pikku/cli:**
+
+  - Added remote-rpc workers generation
+  - Extracted external types into `external/pikku-external-types.gen.ts`
+  - Removed service metadata generation (`.pikku/services/`)
+  - Added `TypedVariablesService`/`TypedSecretService` generation
+  - Fixed optional `existingServices` handling in `pikkuExternalConfig`/`pikkuExternalServices`
+  - Handled `z.date()` in Zod JSON Schema generation
+
+  **@pikku/pg:**
+
+  - Added `PgDeploymentService` for PostgreSQL-based service discovery
+  - Retry init on failure
+
+  **@pikku/redis:**
+
+  - Added `RedisDeploymentService` with sorted-set-based function indexing and heartbeat TTL
+
+  **Runtimes (all):**
+
+  - Made `createWireServices` and `createConfig` optional
+
+- 581fe3c: Refactor trigger system and remove precomputed workflow wires index
+
+  **@pikku/core:**
+
+  - `TriggerMeta` now extends `CommonWireMeta` (consistent with `ScheduledTasksMeta` and `QueueWorkersMeta`)
+  - Removed runtime `function.meta` mutation from `wireTriggerSource` — source function meta is now generated at build time
+  - Removed precomputed `workflows.wires` index from state — HTTP and trigger wire lookups now iterate `workflows.meta` directly
+  - Renamed `startWorkflowByWire` to `startWorkflowByHTTPWire`
+  - `TriggerService` reads workflow trigger wires from `workflows.meta` instead of the removed index
+
+  **@pikku/inspector:**
+
+  - `addTrigger` now extracts full `CommonWireMeta` fields (middleware, errors, summary) matching the `addSchedule` pattern
+  - Added `wireTriggerSource` visitor to generate source function meta at build time
+
+  **@pikku/cli:**
+
+  - Removed wires index generation from `serializeWorkflowMeta`
+
+### Patch Changes
+
+- 6cb7e98: Move credential wiring to separate module and output directory
+
+  - Created new `@pikku/core/credential` module with `wireCredential`, `CoreCredential`, `CredentialMeta`, `CredentialsMeta`
+  - Removed credential types from `@pikku/core/forge-node`
+  - Updated inspector to use `credentials` state instead of `forgeCredentials`
+  - CLI now outputs package files to `.pikku/package/` directory instead of `.pikku/forge/`
+  - Renamed `wireForgeCredential` to `wireCredential`
+
+- 6cb7e98: Security hardening for OAuth2Client and unit tests
+
+  **@pikku/core:**
+
+  - Added 30-second timeout to token refresh and code exchange HTTP requests
+  - Added validation that `access_token` exists and is a string in token responses
+  - Sanitized error messages to not leak response body contents
+  - Added comprehensive unit tests for OAuth2Client (28 tests)
+
+  **@pikku/cli:**
+
+  - OAuth state now uses `crypto.randomUUID()` instead of `Math.random()` for CSRF protection
+  - Token output now masks sensitive values and warns about shell history exposure
+
 ### New Features
 
 - AI agents with `pikkuAIAgent()` — define agents with tools, sub-agents, memory, structured output, and streaming via SSE

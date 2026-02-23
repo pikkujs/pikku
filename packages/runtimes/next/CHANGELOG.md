@@ -1,5 +1,90 @@
 ## 0.12.0
 
+## 1.0.0
+
+### Patch Changes
+
+- 7c1f909: Add wireHTTPRoutes API for grouping HTTP routes
+
+  **@pikku/core:**
+
+  - Added `wireHTTPRoutes` for defining groups of HTTP routes with shared configuration
+  - Routes can inherit `basePath`, `tags`, and `auth` settings from their group
+  - Supports nested route contracts via `defineHTTPRoutes` for reusable route definitions
+  - Added `groupBasePath` to route metadata for tracking inherited paths
+  - Added `getSchemaKeys()` to `SchemaService` interface for runtime schema property extraction
+
+  **@pikku/inspector:**
+
+  - Added `add-http-routes.ts` to process `wireHTTPRoutes` calls
+  - Extracts and merges group configuration (basePath, tags, auth) with individual routes
+  - Resolves route contracts from `defineHTTPRoutes` variables
+  - Refactored shared route registration logic into `registerHTTPRoute` function
+  - Renamed `zodLookup` to `schemaLookup` with vendor detection for Standard Schema support
+
+  **@pikku/cli:**
+
+  - Updated serialization to include `groupBasePath` in HTTP metadata
+
+  **@pikku/next:**
+
+  - Return `null` instead of throwing when reading headers/cookies in static context
+  - Allows auth middleware to gracefully skip during Next.js static page generation
+
+- 7dd13cc: Remote RPCs, deployment service, workflow improvements, and credential-to-secret rename
+
+  **@pikku/core:**
+
+  - Added `DeploymentService` interface and `rpc.remote()` for cross-server RPC calls
+  - Added `workflow()`, `workflowStart()`, `workflowStatus()`, and `graphStart()` HTTP helpers for wiring workflows to routes
+  - Added `WorkflowRunNotFoundError` with 404 status mapping
+  - Added `defineCLICommands` and `defineChannelRoutes` for external composition
+  - Renamed all `forge` naming to `node` across the codebase
+  - Renamed `credential` to `secret` across core types
+  - Added variable wiring system with `pikkuExternalConfig`
+  - Made `createWireServices` and `createConfig` optional across all runtimes
+  - Enforced auth by default for `pikkuFunc` based on sessionless metadata
+  - Merged `wireForgeNode` into `pikkuFunc`/`pikkuSessionlessFunc` as inline `node` config
+  - Added `disabled: true` support to all wirings and functions
+  - Excluded trigger/channel functions from `addFunction` registration
+  - Removed precomputed workflow wires index from state
+
+  **@pikku/inspector:**
+
+  - Fixed `workflow()` helper generating wrong `pikkuFuncId` (used raw name instead of `workflow_` prefix)
+  - Added support for extracting `disabled`, `node` config, and workflow helper function names
+  - Split trigger meta into separate meta and sourceMeta structures
+
+  **@pikku/cli:**
+
+  - Added remote-rpc workers generation
+  - Extracted external types into `external/pikku-external-types.gen.ts`
+  - Removed service metadata generation (`.pikku/services/`)
+  - Added `TypedVariablesService`/`TypedSecretService` generation
+  - Fixed optional `existingServices` handling in `pikkuExternalConfig`/`pikkuExternalServices`
+  - Handled `z.date()` in Zod JSON Schema generation
+
+  **@pikku/pg:**
+
+  - Added `PgDeploymentService` for PostgreSQL-based service discovery
+  - Retry init on failure
+
+  **@pikku/redis:**
+
+  - Added `RedisDeploymentService` with sorted-set-based function indexing and heartbeat TTL
+
+  **Runtimes (all):**
+
+  - Made `createWireServices` and `createConfig` optional
+
+- Updated dependencies [6cb7e98]
+- Updated dependencies [7c1f909]
+- Updated dependencies [6cb7e98]
+- Updated dependencies [6cb7e98]
+- Updated dependencies [7dd13cc]
+- Updated dependencies [581fe3c]
+  - @pikku/core@0.12.0
+
 ### New Features
 
 - `createWireServices` and `createConfig` are now optional
