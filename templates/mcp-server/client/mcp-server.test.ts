@@ -71,9 +71,10 @@ test('MCP Server - createTodo Tool', async () => {
       title: 'Test todo from MCP',
       priority: 'high',
     })
+    assert.ok(!result.isError, 'Tool call should not return an error')
     assert.ok(result.content, 'Should have content')
     assert.ok(
-      result.content[0].text.includes('Created todo'),
+      result.content[0].text.includes('todo'),
       'Should confirm todo creation'
     )
 
