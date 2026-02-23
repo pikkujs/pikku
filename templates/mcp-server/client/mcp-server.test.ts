@@ -18,12 +18,18 @@ test('MCP Server - Basic Connection and Capabilities', async () => {
     assert.ok(Array.isArray(tools.tools), 'Tools should be an array')
 
     const toolNames = tools.tools.map((tool: any) => tool.name)
-    assert.ok(toolNames.includes('createTodo'), 'Should have createTodo tool')
     assert.ok(
-      toolNames.includes('completeTodo'),
-      'Should have completeTodo tool'
+      toolNames.includes('createTodoTool'),
+      'Should have createTodoTool tool'
     )
-    assert.ok(toolNames.includes('deleteTodo'), 'Should have deleteTodo tool')
+    assert.ok(
+      toolNames.includes('completeTodoTool'),
+      'Should have completeTodoTool tool'
+    )
+    assert.ok(
+      toolNames.includes('deleteTodoTool'),
+      'Should have deleteTodoTool tool'
+    )
 
     const resourceTemplates = await client.listResourceTemplates()
     assert.ok(
@@ -67,7 +73,7 @@ test('MCP Server - createTodo Tool', async () => {
   try {
     await client.connect()
 
-    const result = await client.callTool('createTodo', {
+    const result = await client.callTool('createTodoTool', {
       title: 'Test todo from MCP',
       priority: 'high',
     })

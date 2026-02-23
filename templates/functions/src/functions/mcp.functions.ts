@@ -63,7 +63,7 @@ export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
 /**
  * MCP Tool: Create a new todo
  */
-export const createTodo = pikkuMCPToolFunc<{
+export const createTodoTool = pikkuMCPToolFunc<{
   title: string
   description?: string
   priority?: 'low' | 'medium' | 'high'
@@ -93,7 +93,7 @@ export const createTodo = pikkuMCPToolFunc<{
 /**
  * MCP Tool: Mark a todo as complete
  */
-export const completeTodo = pikkuMCPToolFunc<{ id: string }>({
+export const completeTodoTool = pikkuMCPToolFunc<{ id: string }>({
   description: 'Mark a todo as complete by ID',
   tags: ['todos', 'update'],
   func: async (_services, { id }, { rpc }) => {
@@ -120,7 +120,7 @@ export const completeTodo = pikkuMCPToolFunc<{ id: string }>({
 /**
  * MCP Tool: Delete a todo
  */
-export const deleteTodo = pikkuMCPToolFunc<{ id: string }>({
+export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>({
   description: 'Delete a todo by ID',
   tags: ['todos', 'delete'],
   func: async (_services, { id }, { rpc }) => {
