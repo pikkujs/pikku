@@ -1,7 +1,6 @@
 import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,
-  pikkuMCPToolFunc,
 } from '../../.pikku/pikku-types.gen.js'
 import {
   UserIdInputSchema,
@@ -9,9 +8,6 @@ import {
   type Todo,
 } from '../schemas.js'
 
-/**
- * Helper to format a todo for display
- */
 const formatTodo = (todo: Todo): string => {
   const status = todo.completed ? '[x]' : '[ ]'
   const priority = `[${todo.priority.toUpperCase()}]`
@@ -20,9 +16,6 @@ const formatTodo = (todo: Todo): string => {
   return `${status} ${priority} ${todo.id}: ${todo.title}${due}${tags}`
 }
 
-/**
- * MCP Resource: Get a specific todo
- */
 export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
   async (_services, { id }, { rpc, mcp }) => {
     const result = await rpc.invoke('getTodo', { id })
@@ -60,86 +53,6 @@ export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
   }
 )
 
-/**
- * MCP Tool: Create a new todo
- */
-export const createTodoTool = pikkuMCPToolFunc<{
-  title: string
-  description?: string
-  priority?: 'low' | 'medium' | 'high'
-  dueDate?: string
-  tags?: string[]
-  userId?: string
-}>({
-  description:
-    'Create a new todo item with title, description, priority, dueDate, and tags',
-  tags: ['todos', 'create'],
-  func: async (_services, data, { rpc }) => {
-    const result = await rpc.invoke('createTodo', {
-      ...data,
-      priority: data.priority ?? 'medium',
-      tags: data.tags ?? [],
-    })
-
-    return [
-      {
-        type: 'text',
-        text: `Created todo: ${formatTodo(result.todo)}`,
-      },
-    ]
-  },
-})
-
-/**
- * MCP Tool: Mark a todo as complete
- */
-export const completeTodoTool = pikkuMCPToolFunc<{ id: string }>({
-  description: 'Mark a todo as complete by ID',
-  tags: ['todos', 'update'],
-  func: async (_services, { id }, { rpc }) => {
-    const result = await rpc.invoke('completeTodo', { id })
-
-    if (!result.success || !result.todo) {
-      return [
-        {
-          type: 'text',
-          text: `Failed to complete todo "${id}". It may not exist.`,
-        },
-      ]
-    }
-
-    return [
-      {
-        type: 'text',
-        text: `Completed: ${formatTodo(result.todo)}`,
-      },
-    ]
-  },
-})
-
-/**
- * MCP Tool: Delete a todo
- */
-export const deleteTodoTool = pikkuMCPToolFunc<{ id: string }>({
-  description: 'Delete a todo by ID',
-  tags: ['todos', 'delete'],
-  func: async (_services, { id }, { rpc }) => {
-    const result = await rpc.invoke('deleteTodo', { id })
-
-    return [
-      {
-        type: 'text',
-        text: result.success
-          ? `Deleted todo "${id}".`
-          : `Failed to delete todo "${id}". It may not exist.`,
-      },
-    ]
-  },
-})
-
-/**
- * MCP Prompt: Plan the day based on pending todos
- */
 export const planDayPrompt = pikkuMCPPromptFunc({
   input: UserIdInputSchema,
   func: async (_services, { userId }, { rpc }) => {
@@ -183,9 +96,6 @@ export const planDayPrompt = pikkuMCPPromptFunc({
   },
 })
 
-/**
- * MCP Prompt: Help prioritize todos
- */
 export const prioritizePrompt = pikkuMCPPromptFunc({
   input: PrioritizePromptInputSchema,
   func: async (_services, { userId, focus }, { rpc }) => {

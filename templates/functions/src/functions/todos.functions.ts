@@ -42,6 +42,9 @@ export const getTodo = pikkuSessionlessFunc({
  * Create a new todo.
  */
 export const createTodo = pikkuSessionlessFunc({
+  description:
+    'Create a new todo item with title, description, priority, dueDate, and tags',
+  mcp: true,
   input: CreateTodoWithUserInputSchema,
   output: CreateTodoOutputSchema,
   func: async (
@@ -101,6 +104,8 @@ export const updateTodo = pikkuSessionlessFunc({
  * Delete a todo.
  */
 export const deleteTodo = pikkuSessionlessFunc({
+  description: 'Delete a todo by ID',
+  mcp: true,
   input: TodoIdInputSchema,
   output: DeleteResponseSchema,
   func: async ({ logger, eventHub, todoStore }, { id }) => {
@@ -119,6 +124,8 @@ export const deleteTodo = pikkuSessionlessFunc({
  * Mark a todo as complete.
  */
 export const completeTodo = pikkuSessionlessFunc({
+  description: 'Mark a todo as complete by ID',
+  mcp: true,
   input: TodoIdInputSchema,
   output: TodoSuccessOutputSchema,
   func: async ({ logger, eventHub, todoStore }, { id }) => {
