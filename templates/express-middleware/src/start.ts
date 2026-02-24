@@ -1,11 +1,9 @@
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
-  createWireServices,
   createSingletonServices,
   createConfig,
 } from '../../functions/src/services.js'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import express from 'express'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 
@@ -17,7 +15,8 @@ async function main(): Promise<void> {
   app.use(express.json())
 
   app.use(
-    pikkuExpressMiddleware(singletonServices, createWireServices, {
+    pikkuExpressMiddleware({
+      logger: singletonServices.logger,
       logRoutes: true,
     })
   )
@@ -27,12 +26,6 @@ async function main(): Promise<void> {
   )
 
   const scheduler = new InMemorySchedulerService()
-  scheduler.setServices(
-    createSchedulerRuntimeHandlers({
-      singletonServices,
-      createWireServices,
-    })
-  )
   await scheduler.start()
 }
 

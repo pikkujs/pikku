@@ -1,11 +1,7 @@
 import * as uWS from 'uWebSockets.js'
 
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CreateWireServices,
-  stopSingletonServices,
-} from '@pikku/core'
+import { CoreConfig, stopSingletonServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 
 import { pikkuHTTPHandler, pikkuWebsocketHandler } from '@pikku/uws-handler'
 
@@ -33,13 +29,11 @@ export class PikkuUWSServer {
    * Constructs a new PikkuUWSServer.
    *
    * @param config - The configuration for the server.
-   * @param singletonServices - The singleton services used by the server.
-   * @param createWireServices - Function to create wire services for each request.
+   * @param logger - The logger instance.
    */
   constructor(
     private readonly config: UWSCoreConfig,
-    private readonly singletonServices: CoreSingletonServices,
-    private readonly createWireServices?: CreateWireServices<any, any, any>
+    private readonly logger: Logger
   ) {}
 
   /**
@@ -56,18 +50,16 @@ export class PikkuUWSServer {
     this.app.any(
       '/*',
       pikkuHTTPHandler({
+        logger: this.logger,
         logRoutes: true,
-        singletonServices: this.singletonServices,
-        createWireServices: this.createWireServices,
       })
     )
 
     this.app.ws(
       '/*',
       pikkuWebsocketHandler({
+        logger: this.logger,
         logRoutes: true,
-        singletonServices: this.singletonServices,
-        createWireServices: this.createWireServices,
       })
     )
   }
@@ -81,7 +73,7 @@ export class PikkuUWSServer {
     return await new Promise<void>((resolve) => {
       this.app.listen(this.config.hostname, this.config.port, (token) => {
         this.listenSocket = token
-        this.singletonServices.logger.info(
+        this.logger.info(
           `listening on port ${this.config.port} and host: ${this.config.hostname}`
         )
         resolve()
@@ -113,10 +105,10 @@ export class PikkuUWSServer {
    */
   public async enableExitOnSigInt() {
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
-      this.singletonServices.logger.info('Stopping server...')
-      await stopSingletonServices(this.singletonServices)
+      this.logger.info('Stopping server...')
+      await stopSingletonServices()
       await this.stop()
-      this.singletonServices.logger.info('Server stopped')
+      this.logger.info('Server stopped')
       process.exit(0)
     })
   }

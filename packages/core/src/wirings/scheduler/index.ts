@@ -1,6 +1,5 @@
 export {
   runScheduledTask,
-  createSchedulerRuntimeHandlers,
   wireScheduler,
   getScheduledTasks,
 } from './scheduler-runner.js'

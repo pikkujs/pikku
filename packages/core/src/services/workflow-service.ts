@@ -1,9 +1,4 @@
-import {
-  SerializedError,
-  CoreSingletonServices,
-  CreateWireServices,
-  CoreConfig,
-} from '../types/core.types.js'
+import { SerializedError } from '../types/core.types.js'
 import {
   WorkflowRun,
   WorkflowRunWire,
@@ -37,11 +32,6 @@ export interface WorkflowService {
 
   // Orchestration operations
   resumeWorkflow(runId: string): Promise<void>
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices: CreateWireServices | undefined,
-    config: CoreConfig
-  ): void
   startWorkflow<I>(
     name: string,
     input: I,

@@ -3,13 +3,12 @@ import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import { runFetch, runScheduled } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
 import { ExportedHandler, Response } from '@cloudflare/workers-types'
-import { createWireServices } from '../../functions/src/services.js'
 export { WebSocketHibernationServer } from './websocket-hibernation-server.js'
 
 export default {
   async scheduled(controller, env) {
-    const singletonServices = await setupServices(env)
-    await runScheduled(controller, singletonServices)
+    await setupServices(env)
+    await runScheduled(controller)
   },
 
   async fetch(request, env): Promise<Response> {
@@ -21,8 +20,6 @@ export default {
     const webSocketHibernationServer = websocketServerDurableObject.get(id)
     return await runFetch(
       request as unknown as Request,
-      singletonServices,
-      createWireServices,
       webSocketHibernationServer
     )
   },

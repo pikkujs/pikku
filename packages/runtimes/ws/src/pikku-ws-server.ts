@@ -8,7 +8,7 @@ import {
 } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { PikkuFetchHTTPRequest, RunHTTPWiringOptions } from '@pikku/core/http'
-import { CoreSingletonServices, CreateWireServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'
 import crypto from 'crypto'
@@ -16,19 +16,11 @@ import { incomingMessageToRequestConvertor } from './incoming-message-to-request
 
 /**
  * Options for configuring the `pikkuHandler`.
- *
- * @typedef {Object} PikkuuWSHandlerOptions
- * @property {CoreSingletonServices} singletonServices - The singleton services used by the handler.
- * @property {CreateWireServices<any, any, any>} createWireServices - A function to create wire services.
- * @property {boolean} [logRoutes] - Whether to log the routes.
- * @property {boolean} [loadSchemas] - Whether to load all schemas.
- * @property {RunHTTPWiringOptions} - Additional options for running the route.
  */
 export type PikkuWSHandlerOptions = {
   server: Server
   wss: WebSocketServer
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices<any, any, any>
+  logger?: Logger
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions
@@ -60,29 +52,24 @@ const isSerializable = (data: any): boolean => {
 /**
  * Creates a WebSocket handler for handling requests using the `@pikku/core` framework.
  *
- * @param {PikkuuWSHandlerOptions} options - The options to configure the handler.
- * @returns {Function} - The WebSocket request handler function.
+ * @param options - The options to configure the handler.
+ * @returns The WebSocket request handler function.
  */
 export const pikkuWebsocketHandler = ({
   server,
   wss,
-  singletonServices,
-  createWireServices,
+  logger,
   loadSchemas,
   logRoutes,
 }: PikkuWSHandlerOptions) => {
-  if (logRoutes) {
-    logChannels(singletonServices.logger)
+  if (logRoutes && logger) {
+    logChannels(logger)
   }
-  if (loadSchemas) {
-    compileAllSchemas(singletonServices.logger)
+  if (loadSchemas && logger) {
+    compileAllSchemas(logger)
   }
 
   const eventHub = new LocalEventHubService()
-  const singletonServicesWithEventHub = {
-    ...singletonServices,
-    eventHub,
-  }
 
   wss.on(
     'connection',
@@ -131,8 +118,6 @@ export const pikkuWebsocketHandler = ({
       channelId: crypto.randomUUID().toString(),
       request,
       response,
-      singletonServices: singletonServicesWithEventHub,
-      createWireServices: createWireServices as any,
     })
 
     if (!channelHandler) {

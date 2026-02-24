@@ -1,6 +1,6 @@
 import { Logger } from './services/logger.js'
-import { CoreSingletonServices, WireServices } from './types/core.types.js'
-import { getAllPackageStates } from './pikku-state.js'
+import { WireServices } from './types/core.types.js'
+import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
 
 export const closeWireServices = async (
   logger: Logger,
@@ -99,9 +99,8 @@ const stopService = async (
  *
  * @param singletonServices - The parent singleton services to stop
  */
-export const stopSingletonServices = async (
-  singletonServices: CoreSingletonServices
-): Promise<void> => {
+export const stopSingletonServices = async (): Promise<void> => {
+  const singletonServices = getSingletonServices()
   const logger = singletonServices.logger
 
   // First, stop all external package singleton services

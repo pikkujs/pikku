@@ -11,11 +11,7 @@ import { RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
 import { pikkuState } from '@pikku/core/internal'
 
-import {
-  createConfig,
-  createSingletonServices,
-  createWireServices,
-} from '../services.js'
+import { createConfig, createSingletonServices } from '../services.js'
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
@@ -43,16 +39,7 @@ async function main(): Promise<void> {
     workflowService,
   })
 
-  workflowService.setServices(
-    singletonServices,
-    createWireServices as any,
-    config
-  )
-
-  const queueWorkers = bullFactory.getQueueWorkers(
-    singletonServices,
-    createWireServices as any
-  )
+  const queueWorkers = bullFactory.getQueueWorkers()
   await queueWorkers.registerQueues()
 
   // Get registered workflows

@@ -29,33 +29,27 @@ const isSerializable = (data: any): boolean => {
 /**
  * Creates a uWebSockets handler for handling requests using the `@pikku/core` framework.
  *
- * @param {PikkuuWSHandlerOptions} options - The options to configure the handler.
- * @returns {Function} - The request handler function.
+ * @param options - The options to configure the handler.
+ * @returns The request handler function.
  */
 export const pikkuWebsocketHandler = ({
-  singletonServices,
-  createWireServices,
+  logger,
   loadSchemas,
   logRoutes,
 }: PikkuuWSHandlerOptions) => {
-  if (logRoutes) {
-    logChannels(singletonServices.logger)
+  if (logRoutes && logger) {
+    logChannels(logger)
   }
-  if (loadSchemas) {
-    compileAllSchemas(singletonServices.logger, singletonServices.schema)
+  if (loadSchemas && logger) {
+    compileAllSchemas(logger)
   }
 
   const eventHub = new UWSEventHubService()
-  const singletonServicesWithEventHub = {
-    ...singletonServices,
-    eventHub,
-  }
 
   const decoder = new TextDecoder('utf-8')
 
   return {
     upgrade: async (res, req, context) => {
-      /* Keep track of abortions */
       const upgradeAborted = { aborted: false }
 
       res.onAborted(() => {
@@ -63,7 +57,6 @@ export const pikkuWebsocketHandler = ({
       })
 
       try {
-        /* You MUST copy data out of req here, as req is only valid within this immediate callback */
         const url = req.getUrl()
         const secWebSocketKey = req.getHeader('sec-websocket-key')
         const secWebSocketProtocol = req.getHeader('sec-websocket-protocol')
@@ -76,8 +69,6 @@ export const pikkuWebsocketHandler = ({
           channelId: crypto.randomUUID().toString(),
           request,
           response,
-          singletonServices: singletonServicesWithEventHub,
-          createWireServices,
           route: req.getUrl() as string,
         })
 

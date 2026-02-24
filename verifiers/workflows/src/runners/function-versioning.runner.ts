@@ -4,11 +4,7 @@ import { pikkuState } from '@pikku/core/internal'
 import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
 
-import {
-  createConfig,
-  createSingletonServices,
-  createWireServices,
-} from '../services.js'
+import { createConfig, createSingletonServices } from '../services.js'
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
@@ -81,12 +77,6 @@ async function main(): Promise<void> {
     queueService: noopQueueService,
     workflowService,
   })
-
-  workflowService.setServices(
-    singletonServices,
-    createWireServices as any,
-    config
-  )
 
   const rpc = rpcService.getContextRPCService(singletonServices, {})
   const functionMeta = pikkuState(null, 'function', 'meta')!

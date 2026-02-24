@@ -1,4 +1,5 @@
 import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js'
+import { getSingletonServices } from '../pikku-state.js'
 
 /**
  * In-memory TriggerService implementation.
@@ -12,7 +13,6 @@ import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js
  * @example
  * ```typescript
  * const triggerService = new InMemoryTriggerService()
- * triggerService.setServices(singletonServices, createWireServices)
  * await triggerService.start()
  *
  * // On shutdown
@@ -21,11 +21,7 @@ import { PikkuTriggerService } from '../wirings/trigger/pikku-trigger-service.js
  */
 export class InMemoryTriggerService extends PikkuTriggerService {
   async start(): Promise<void> {
-    if (!this.singletonServices) {
-      throw new Error(
-        'InMemoryTriggerService requires singletonServices to start triggers'
-      )
-    }
+    const singletonServices = getSingletonServices()
 
     const triggerTargets = this.getTriggerTargets()
     const triggerSources = this.getTriggerSources()
@@ -37,7 +33,7 @@ export class InMemoryTriggerService extends PikkuTriggerService {
 
       const targets = triggerTargets.get(name)
       if (!targets || targets.length === 0) {
-        this.singletonServices.logger.info(
+        singletonServices.logger.info(
           `Trigger source '${name}' has no targets, skipping`
         )
         continue
@@ -51,16 +47,16 @@ export class InMemoryTriggerService extends PikkuTriggerService {
         )
 
         this.activeTriggers.set(name, triggerInstance)
-        this.singletonServices.logger.info(`Started trigger: ${name}`)
+        singletonServices.logger.info(`Started trigger: ${name}`)
       } catch (error) {
-        this.singletonServices.logger.error(
+        singletonServices.logger.error(
           `Failed to start trigger ${name}: ${error}`
         )
       }
     }
 
     if (this.activeTriggers.size === 0) {
-      this.singletonServices.logger.info(
+      singletonServices.logger.info(
         'No triggers started (no matching sources and targets found)'
       )
     }

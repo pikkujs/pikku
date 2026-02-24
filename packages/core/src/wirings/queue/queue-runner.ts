@@ -1,4 +1,4 @@
-import type { CoreServices, PikkuWire } from '../../types/core.types.js'
+import type { PikkuWire } from '../../types/core.types.js'
 import type { CoreQueueWorker, QueueJob, PikkuQueue } from './queue.types.js'
 import type {
   CorePikkuFunctionConfig,
@@ -6,9 +6,12 @@ import type {
 } from '../../function/functions.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  getSingletonServices,
+  getCreateWireServices,
+  pikkuState,
+} from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import { CreateWireServices } from '../../types/core.types.js'
 
 /**
  * Error class for queue processor not found
@@ -100,16 +103,14 @@ export async function removeQueueWorker(name: string): Promise<void> {
  * Process a single queue job - this function is called by queue consumers
  */
 export async function runQueueJob({
-  singletonServices,
-  createWireServices,
   job,
   updateProgress,
 }: {
-  singletonServices: CoreServices
-  createWireServices?: CreateWireServices
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
 }): Promise<void> {
+  const singletonServices = getSingletonServices()
+  const createWireServices = getCreateWireServices()
   const logger = singletonServices.logger
 
   const meta = pikkuState(null, 'queue', 'meta')
@@ -187,28 +188,5 @@ export async function runQueueJob({
 
     // Re-throw the error so the queue service can handle retries/DLQ
     throw error
-  }
-}
-
-export const createQueueJobRunner = ({
-  singletonServices,
-  createWireServices,
-}: {
-  singletonServices: CoreServices
-  createWireServices?: CreateWireServices
-}) => {
-  return async ({
-    job,
-    updateProgress,
-  }: {
-    job: QueueJob
-    updateProgress?: (progress: number | string | object) => Promise<void>
-  }) => {
-    await runQueueJob({
-      singletonServices,
-      createWireServices,
-      job,
-      updateProgress,
-    })
   }
 }

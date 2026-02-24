@@ -7,12 +7,8 @@ import getRawBody from 'raw-body'
 import contentType from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
 
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CreateWireServices,
-  stopSingletonServices,
-} from '@pikku/core'
+import { CoreConfig, stopSingletonServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import { LocalContentConfig } from '@pikku/core/services/local-content'
 
@@ -38,8 +34,7 @@ export class PikkuExpressServer {
 
   constructor(
     private readonly config: ExpressCoreConfig,
-    private readonly singletonServices: CoreSingletonServices,
-    private readonly createWireServices?: CreateWireServices<any, any, any>
+    private readonly logger: Logger
   ) {
     this.app.get(
       this.config.healthCheckPath || '/health-check',
@@ -113,7 +108,8 @@ export class PikkuExpressServer {
     )
     this.app.use(cookieParser())
     this.app.use(
-      pikkuExpressMiddleware(this.singletonServices, this.createWireServices, {
+      pikkuExpressMiddleware({
+        logger: this.logger,
         logRoutes: true,
         loadSchemas: true,
       })
@@ -126,7 +122,7 @@ export class PikkuExpressServer {
         this.config.port,
         this.config.hostname,
         () => {
-          this.singletonServices.logger.info(
+          this.logger.info(
             `listening on port ${this.config.port} and host: ${this.config.hostname}`
           )
           resolve()
@@ -148,10 +144,10 @@ export class PikkuExpressServer {
 
   public async enableExitOnSigInt() {
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
-      this.singletonServices.logger.info('Stopping server...')
-      await stopSingletonServices(this.singletonServices)
+      this.logger.info('Stopping server...')
+      await stopSingletonServices()
       await this.stop()
-      this.singletonServices.logger.info('Server stopped')
+      this.logger.info('Server stopped')
       process.exit(0)
     })
   }

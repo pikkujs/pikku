@@ -7,8 +7,7 @@ import type { ExpectedEvent } from '../assert-combined.js'
  */
 export async function testMCPToolWiring(
   expected: ExpectedEvent[],
-  singletonServices: any,
-  createWireServices: any
+  singletonServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run MCP Tool')
   console.log('─────────────────────────')
@@ -22,10 +21,7 @@ export async function testMCPToolWiring(
           id: 1,
           params: {},
         },
-        {
-          singletonServices,
-          createWireServices,
-        },
+        {},
         'mcpToolFunction'
       )
     },
@@ -46,8 +42,7 @@ export async function testMCPToolWiring(
  */
 export async function testMCPResourceWiring(
   expected: ExpectedEvent[],
-  singletonServices: any,
-  createWireServices: any
+  singletonServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run MCP Resource')
   console.log('─────────────────────────')
@@ -62,8 +57,6 @@ export async function testMCPResourceWiring(
           params: {},
         },
         {
-          singletonServices,
-          createWireServices,
           mcp: {
             uri: 'test-resource',
             sendResourceUpdated: async () => {},
@@ -94,8 +87,7 @@ export async function testMCPResourceWiring(
  */
 export async function testMCPPromptWiring(
   expected: ExpectedEvent[],
-  singletonServices: any,
-  createWireServices: any
+  singletonServices: any
 ): Promise<boolean> {
   console.log('\n\nTest: Run MCP Prompt')
   console.log('─────────────────────────')
@@ -109,10 +101,7 @@ export async function testMCPPromptWiring(
           id: 1,
           params: {},
         },
-        {
-          singletonServices,
-          createWireServices,
-        },
+        {},
         'test-prompt'
       )
     },

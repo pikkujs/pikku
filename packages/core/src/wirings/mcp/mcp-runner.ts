@@ -1,10 +1,4 @@
-import {
-  PikkuWire,
-  type CoreServices,
-  type CoreSingletonServices,
-  type CoreUserSession,
-  type CreateWireServices,
-} from '../../types/core.types.js'
+import { PikkuWire } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
   CoreMCPPrompt,
@@ -19,7 +13,11 @@ import type {
 } from '../../function/functions.types.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { closeWireServices } from '../../utils.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  pikkuState,
+  getSingletonServices,
+  getCreateWireServices,
+} from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import {
   BadRequestError,
@@ -40,13 +38,7 @@ export class MCPError extends Error {
 }
 
 export type RunMCPEndpointParams<Tools extends string = any> = {
-  singletonServices: CoreSingletonServices
   mcp?: PikkuMCP<Tools>
-  createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices<CoreSingletonServices>,
-    CoreUserSession
-  >
 }
 
 export type JsonRpcError = {
@@ -197,8 +189,10 @@ async function runMCPPikkuFunc(
   name: string,
   mcp: CoreMCPResource | CoreMCPPrompt | undefined,
   pikkuFuncId: string | undefined,
-  { singletonServices, createWireServices, mcp: mcpWire }: RunMCPEndpointParams
+  { mcp: mcpWire }: RunMCPEndpointParams
 ): Promise<JsonRpcResponse> {
+  const singletonServices = getSingletonServices()
+  const createWireServices = getCreateWireServices()
   let wireServices: any
 
   try {

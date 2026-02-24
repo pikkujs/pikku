@@ -1,14 +1,12 @@
-import {
-  CoreSingletonServices,
-  CreateWireServices,
-  CoreServices,
-  CoreUserSession,
-} from '../../types/core.types.js'
 import { rpcService } from '../rpc/rpc-runner.js'
 import { setupTrigger } from './trigger-runner.js'
 import { TriggerInstance } from './trigger.types.js'
 import { TriggerService } from '../../services/trigger-service.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  getSingletonServices,
+  getCreateWireServices,
+  pikkuState,
+} from '../../pikku-state.js'
 
 export type TriggerTarget = {
   targetType: 'rpc' | 'workflow'
@@ -23,34 +21,17 @@ export type TriggerSourceInfo = {
 
 export abstract class PikkuTriggerService implements TriggerService {
   protected activeTriggers = new Map<string, TriggerInstance>()
-  protected singletonServices?: CoreSingletonServices
-  protected createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices,
-    CoreUserSession
-  >
-
-  setServices(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices<
-      CoreSingletonServices,
-      CoreServices,
-      CoreUserSession
-    >
-  ): void {
-    this.singletonServices = singletonServices
-    this.createWireServices = createWireServices
-  }
 
   abstract start(): Promise<void>
 
   async stop(): Promise<void> {
+    const singletonServices = getSingletonServices()
     for (const [name, instance] of this.activeTriggers) {
       try {
         await instance.teardown()
-        this.singletonServices!.logger.info(`Stopped trigger: ${name}`)
+        singletonServices.logger.info(`Stopped trigger: ${name}`)
       } catch (error) {
-        this.singletonServices!.logger.error(
+        singletonServices.logger.error(
           `Error stopping trigger ${name}: ${error}`
         )
       }
@@ -90,8 +71,8 @@ export abstract class PikkuTriggerService implements TriggerService {
   ): Promise<TriggerInstance> {
     return setupTrigger({
       name,
-      singletonServices: this.singletonServices!,
-      createWireServices: this.createWireServices as any,
+      singletonServices: getSingletonServices(),
+      createWireServices: getCreateWireServices() as any,
       input,
       onTrigger,
     })
@@ -102,11 +83,10 @@ export abstract class PikkuTriggerService implements TriggerService {
     targets: TriggerTarget[],
     data: unknown
   ): Promise<void> {
-    const wireServices = await this.createWireServices?.(
-      this.singletonServices!,
-      {}
-    )
-    const services = { ...this.singletonServices!, ...wireServices }
+    const singletonServices = getSingletonServices()
+    const createWireServices = getCreateWireServices()
+    const wireServices = await createWireServices?.(singletonServices, {})
+    const services = { ...singletonServices, ...wireServices }
     const rpc = rpcService.getContextRPCService(services, {}, false)
 
     for (const target of targets) {
@@ -115,17 +95,17 @@ export abstract class PikkuTriggerService implements TriggerService {
           await rpc.startWorkflow(target.targetName, data, {
             startNode: target.startNode,
           })
-          this.singletonServices!.logger.info(
+          singletonServices.logger.info(
             `Trigger '${triggerName}' started workflow '${target.targetName}'`
           )
         } else {
           await rpc.invoke(target.targetName, data)
-          this.singletonServices!.logger.info(
+          singletonServices.logger.info(
             `Trigger '${triggerName}' invoked RPC '${target.targetName}'`
           )
         }
       } catch (error) {
-        this.singletonServices!.logger.error(
+        singletonServices.logger.error(
           `Error invoking ${target.targetType} '${target.targetName}' from trigger '${triggerName}': ${error}`
         )
       }

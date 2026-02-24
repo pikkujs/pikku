@@ -1,13 +1,13 @@
 import { ConnectionOptions, Queue, Worker } from 'bullmq'
 import {
   SchedulerService,
-  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
   parseDurationString,
+  pikkuState,
 } from '@pikku/core'
-import { getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -25,7 +25,6 @@ export class BullSchedulerService extends SchedulerService {
   private recurringQueue: Queue
   private recurringWorker?: Worker
   private repeatJobKeys: string[] = []
-  private handlers?: SchedulerRuntimeHandlers
 
   constructor(private redisConnectionOptions: ConnectionOptions) {
     super()
@@ -35,15 +34,6 @@ export class BullSchedulerService extends SchedulerService {
     this.recurringQueue = new Queue(RECURRING_QUEUE_NAME, {
       connection: redisConnectionOptions,
     })
-  }
-
-  /**
-   * Set services needed for processing recurring tasks.
-   * Must be called before start() since the scheduler is typically
-   * created before singletonServices are available.
-   */
-  setServices(handlers: SchedulerRuntimeHandlers): void {
-    this.handlers = handlers
   }
 
   /**
@@ -162,12 +152,7 @@ export class BullSchedulerService extends SchedulerService {
    * Creates a BullMQ Worker to process repeat jobs via runScheduledTask.
    */
   async start(): Promise<void> {
-    if (!this.handlers) {
-      throw new Error(
-        'BullSchedulerService requires setServices() before start()'
-      )
-    }
-
+    const logger = pikkuState(null, 'package', 'singletonServices')!.logger
     const scheduledTasks = getScheduledTasks()
 
     // Create a worker to process recurring scheduled task jobs
@@ -175,13 +160,13 @@ export class BullSchedulerService extends SchedulerService {
       RECURRING_QUEUE_NAME,
       async (job) => {
         const { rpcName } = job.data as ScheduledJobData
-        this.handlers!.logger.info(`Running scheduled task: ${rpcName}`)
-        await this.handlers!.runScheduledTask(rpcName)
+        logger.info(`Running scheduled task: ${rpcName}`)
+        await runScheduledTask({ name: rpcName })
       },
       { connection: this.redisConnectionOptions }
     )
     this.recurringWorker.on('error', (err) => {
-      this.handlers!.logger.error(`Recurring task worker error: ${err}`)
+      logger.error(`Recurring task worker error: ${err}`)
     })
 
     for (const [name, task] of scheduledTasks) {

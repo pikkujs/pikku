@@ -7,7 +7,6 @@ import { WebSocketServer } from 'ws'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
-  createWireServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
 
@@ -20,8 +19,7 @@ async function main(): Promise<void> {
     pikkuWebsocketHandler({
       server,
       wss,
-      singletonServices,
-      createWireServices,
+      logger: singletonServices.logger,
     })
 
     server.on('request', (req, res) => {
@@ -39,7 +37,7 @@ async function main(): Promise<void> {
 
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
       console.log('Stopping server...')
-      await stopSingletonServices(singletonServices)
+      await stopSingletonServices()
       wss.close()
       server.close()
       console.log('Server stopped')

@@ -1,11 +1,7 @@
 import Fastify from 'fastify'
 
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CreateWireServices,
-  stopSingletonServices,
-} from '@pikku/core'
+import { CoreConfig, stopSingletonServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
 
 export type FastifyCoreConfig = CoreConfig & {
@@ -30,13 +26,11 @@ export class PikkuFastifyServer {
    * Constructs a new instance of the `PikkuFastifyServer` class.
    *
    * @param config - The configuration for the server.
-   * @param singletonServices - The singleton services used by the server.
-   * @param createWireServices - Function to create wire services for each request.
+   * @param logger - The logger instance.
    */
   constructor(
     private readonly config: FastifyCoreConfig,
-    private readonly singletonServices: CoreSingletonServices,
-    private readonly createWireServices?: CreateWireServices<any, any, any>
+    private readonly logger: Logger
   ) {}
 
   /**
@@ -59,8 +53,7 @@ export class PikkuFastifyServer {
 
     this.app.register(pikkuFastifyPlugin, {
       pikku: {
-        singletonServices: this.singletonServices,
-        createWireServices: this.createWireServices,
+        logger: this.logger,
         logRoutes: true,
         loadSchemas: true,
       },
@@ -75,7 +68,7 @@ export class PikkuFastifyServer {
       port: this.config.port,
       host: this.config.hostname,
     })
-    this.singletonServices.logger.info(
+    this.logger.info(
       `listening on port ${this.config.port} and host: ${this.config.hostname}`
     )
   }
@@ -84,9 +77,9 @@ export class PikkuFastifyServer {
    * Stops the server and closes all connections.
    */
   public async stop(): Promise<void> {
-    this.singletonServices.logger.info('Stopping server...')
+    this.logger.info('Stopping server...')
     await this.app.close()
-    this.singletonServices.logger.info('Server stopped')
+    this.logger.info('Server stopped')
   }
 
   /**
@@ -94,7 +87,7 @@ export class PikkuFastifyServer {
    */
   public async enableExitOnSigInt() {
     process.removeAllListeners('SIGINT').on('SIGINT', async () => {
-      await stopSingletonServices(this.singletonServices)
+      await stopSingletonServices()
       await this.stop()
       process.exit(0)
     })

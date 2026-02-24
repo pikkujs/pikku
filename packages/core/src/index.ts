@@ -99,6 +99,5 @@ export { isSerializable, stopSingletonServices } from './utils.js'
 export {
   type ScheduledTaskInfo,
   type ScheduledTaskSummary,
-  type SchedulerRuntimeHandlers,
 } from './services/scheduler-service.js'
 export { SchedulerService } from './services/scheduler-service.js'

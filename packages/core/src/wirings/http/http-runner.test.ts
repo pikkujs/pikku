@@ -42,8 +42,6 @@ const setHTTPFunctionMap = (func: any) => {
 }
 
 describe('fetch', () => {
-  let singletonServices: any
-  let createWireServices: any
   let request: any
   let response: any
 
@@ -51,7 +49,7 @@ describe('fetch', () => {
     resetPikkuState()
     httpRouter.reset()
 
-    singletonServices = {
+    const singletonServices = {
       logger: {
         info: () => {},
         warn: () => {},
@@ -59,7 +57,11 @@ describe('fetch', () => {
       },
     }
 
-    createWireServices = async () => ({})
+    const createWireServices = async () => ({})
+
+    pikkuState(null, 'package', 'singletonServices', singletonServices as any)
+    pikkuState(null, 'package', 'factories', { createWireServices } as any)
+
     request = new PikkuMockRequest('/test', 'get')
     response = new PikkuMockResponse()
 
@@ -76,8 +78,6 @@ describe('fetch', () => {
     await assert.rejects(
       async () =>
         fetch(request, {
-          singletonServices,
-          createWireServices,
           bubbleErrors: true,
         }),
       NotFoundError
@@ -97,10 +97,7 @@ describe('fetch', () => {
     // Initialize router after adding route (for tests)
     httpRouter.initialize()
 
-    const result = await fetch(request, {
-      singletonServices,
-      createWireServices,
-    })
+    const result = await fetch(request)
 
     assert.deepStrictEqual(await result.json(), { success: true })
   })
@@ -120,10 +117,7 @@ describe('fetch', () => {
       },
     })
 
-    await fetch(request, {
-      singletonServices,
-      createWireServices,
-    })
+    await fetch(request)
 
     assert.strictEqual(await permissions.test(), true)
   })
@@ -142,8 +136,6 @@ describe('fetch', () => {
     await assert.rejects(
       async () =>
         fetch(request, {
-          singletonServices,
-          createWireServices,
           bubbleErrors: true,
         }),
       error

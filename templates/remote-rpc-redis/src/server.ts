@@ -3,7 +3,6 @@ import { RedisDeploymentService } from '@pikku/redis'
 import {
   createConfig,
   createSingletonServices,
-  createWireServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -28,8 +27,7 @@ async function main(): Promise<void> {
 
     const appServer = new PikkuExpressServer(
       { ...config, port: PORT, hostname: 'localhost' },
-      singletonServices,
-      createWireServices
+      singletonServices.logger
     )
     appServer.enableExitOnSigInt()
     await appServer.init()

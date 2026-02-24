@@ -4,7 +4,6 @@ import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
   createConfig,
   createSingletonServices,
-  createWireServices,
 } from '../../functions/src/services.js'
 
 async function main(): Promise<void> {
@@ -13,8 +12,7 @@ async function main(): Promise<void> {
     const singletonServices = await createSingletonServices(config)
     const appServer = new PikkuFastifyServer(
       { ...config, hostname: 'localhost', port: 4002 },
-      singletonServices,
-      createWireServices
+      singletonServices.logger
     )
     appServer.enableExitOnSigInt()
     await appServer.init()

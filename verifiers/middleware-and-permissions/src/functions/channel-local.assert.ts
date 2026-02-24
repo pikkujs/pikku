@@ -11,8 +11,7 @@ export async function testChannelWiring(
   command: string,
   data: any,
   expected: ExpectedEvent[],
-  singletonServices: any,
-  createWireServices: any
+  singletonServices: any
 ): Promise<boolean> {
   console.log(`\n\nTest: ${route} - command: ${command}`)
   console.log('─────────────────────────')
@@ -32,8 +31,6 @@ export async function testChannelWiring(
         request,
         response,
         route,
-        singletonServices,
-        createWireServices,
       })
 
       if (!channelHandler) {

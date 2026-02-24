@@ -4,7 +4,6 @@ import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
 import {
   createSingletonServices,
   createConfig,
-  createWireServices,
 } from '../../functions/src/services.js'
 
 import mcpJSON from '../../functions/.pikku/mcp/mcp.gen.json' with { type: 'json' }
@@ -28,8 +27,7 @@ async function main() {
           prompts: {},
         },
       },
-      singletonServices,
-      createWireServices
+      singletonServices.logger
     )
 
     await server.init()
@@ -37,7 +35,7 @@ async function main() {
     try {
       const transport = new StdioServerTransport()
       await server.connect(transport)
-      server.wrapLogger()
+      singletonServices.logger = server.createMCPLogger()
       process.on('SIGINT', async () => {
         await server.stop()
         process.exit(0)

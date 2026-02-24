@@ -2,11 +2,7 @@ import { openChannel } from '../channel-runner.js'
 import { createHTTPWire } from '../../http/http-runner.js'
 import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
-import {
-  CoreChannel,
-  RunChannelOptions,
-  RunChannelParams,
-} from '../channel.types.js'
+import { CoreChannel, RunChannelOptions } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import { PikkuWire, WireServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
@@ -14,24 +10,35 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../../services/user-session-service.js'
-import { PikkuHTTP } from '../../http/http.types.js'
+import {
+  PikkuHTTP,
+  PikkuHTTPRequest,
+  PikkuHTTPResponse,
+} from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
+import {
+  getSingletonServices,
+  getCreateWireServices,
+} from '../../../pikku-state.js'
 
 export const runLocalChannel = async ({
-  singletonServices,
   channelId,
   request,
   response,
   route,
-  createWireServices,
   skipUserSession = false,
   respondWith404 = true,
   coerceDataFromSchema = true,
   logWarningsForStatusCodes = [],
   bubbleErrors = false,
 }: Partial<Pick<CoreChannel<unknown, any>, 'route'>> &
-  RunChannelOptions &
-  RunChannelParams<unknown>): Promise<PikkuLocalChannelHandler | void> => {
+  RunChannelOptions & {
+    channelId: string
+    request?: PikkuHTTPRequest
+    response?: PikkuHTTPResponse
+  }): Promise<PikkuLocalChannelHandler | void> => {
+  const singletonServices = getSingletonServices()
+  const createWireServices = getCreateWireServices()
   let wireServices: WireServices<typeof singletonServices> | undefined
   let closedWireServices = false
 

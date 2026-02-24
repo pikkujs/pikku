@@ -1,5 +1,4 @@
 import type { CoreUserSession } from '../types/core.types.js'
-import type { Logger } from './logger.js'
 
 /**
  * Minimal metadata for listing scheduled tasks
@@ -23,16 +22,6 @@ export interface ScheduledTaskInfo extends ScheduledTaskSummary {
   session?: CoreUserSession
   /** Task status */
   status?: 'scheduled' | 'active' | 'completed' | 'failed'
-}
-
-export interface SchedulerRuntimeHandlers {
-  logger: Logger
-  invokeRPC: (
-    rpcName: string,
-    data?: any,
-    session?: CoreUserSession
-  ) => Promise<void>
-  runScheduledTask: (name: string) => Promise<void>
 }
 
 /**
@@ -84,13 +73,6 @@ export abstract class SchedulerService {
    * Close any open connections
    */
   abstract close(): Promise<void>
-
-  /**
-   * Set services needed for processing recurring tasks.
-   * Called after construction since the scheduler is created before
-   * singletonServices are fully assembled.
-   */
-  setServices(_handlers: SchedulerRuntimeHandlers): void {}
 
   /**
    * Start recurring scheduled tasks

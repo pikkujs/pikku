@@ -2,9 +2,6 @@ import { PgBoss, type ConstructorOptions } from 'pg-boss'
 import { PgBossQueueService } from './pg-boss-queue-service.js'
 import { PgBossQueueWorkers } from './pg-boss-queue-worker.js'
 import { PgBossSchedulerService } from './pg-boss-scheduler-service.js'
-import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
-import { createQueueJobRunner } from '@pikku/core/queue'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 
 /**
  * Factory class for pg-boss services
@@ -52,17 +49,10 @@ export class PgBossServiceFactory {
   /**
    * Get the queue workers for processing jobs
    */
-  getQueueWorkers(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices
-  ): PgBossQueueWorkers {
+  getQueueWorkers(): PgBossQueueWorkers {
     if (!this.queueWorkers) {
       this.queueWorkers = new PgBossQueueWorkers(this.pgBoss)
     }
-    this.queueWorkers.setJobRunner(
-      createQueueJobRunner({ singletonServices, createWireServices }),
-      singletonServices.logger
-    )
     return this.queueWorkers
   }
 
@@ -74,18 +64,6 @@ export class PgBossServiceFactory {
       this.schedulerService = new PgBossSchedulerService(this.pgBoss)
     }
     return this.schedulerService
-  }
-
-  setSchedulerRuntime(
-    singletonServices: CoreSingletonServices,
-    createWireServices?: CreateWireServices
-  ): void {
-    this.getSchedulerService().setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
-    )
   }
 
   /**

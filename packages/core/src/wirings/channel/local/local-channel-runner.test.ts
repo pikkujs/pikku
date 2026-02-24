@@ -102,6 +102,10 @@ const mockCreateWireServices = async () => ({
 beforeEach(() => {
   resetPikkuState()
   httpRouter.reset()
+  pikkuState(null, 'package', 'singletonServices', mockSingletonServices as any)
+  pikkuState(null, 'package', 'factories', {
+    createWireServices: mockCreateWireServices,
+  } as any)
 })
 
 afterEach(() => {
@@ -113,11 +117,9 @@ test('runChannel should return undefined and 404 if no matching channel is found
   const mockResponse = new PikkuMockResponse()
 
   const result = await runLocalChannel({
-    singletonServices: mockSingletonServices,
     channelId: 'test-channel-id',
     request: new PikkuMockRequest('/non-existent-channel', 'get'),
     response: mockResponse,
-    createWireServices: mockCreateWireServices,
   })
 
   assert.equal(
@@ -131,6 +133,10 @@ test('runChannel should return undefined and 404 if no matching channel is found
 
 test('runChannel should return a channel handler if channel matches and no auth required', async () => {
   resetPikkuState()
+  pikkuState(null, 'package', 'singletonServices', mockSingletonServices as any)
+  pikkuState(null, 'package', 'factories', {
+    createWireServices: mockCreateWireServices,
+  } as any)
 
   pikkuState(null, 'channel', 'meta', {
     test: {
@@ -148,12 +154,10 @@ test('runChannel should return a channel handler if channel matches and no auth 
   httpRouter.initialize()
 
   const result = await runLocalChannel({
-    singletonServices: mockSingletonServices,
     channelId: 'test-channel-id',
     request: new PikkuMockRequest('/test-channel', 'get'),
     response: new PikkuMockResponse(),
     route: '/test-channel',
-    createWireServices: mockCreateWireServices,
   })
 
   assert.ok(result, 'Should return a PikkuChannelHandler instance')
@@ -164,6 +168,7 @@ test('runChannel should return a channel handler if channel matches and no auth 
 
 test('runChannel should close wire services once when channel closes', async () => {
   resetPikkuState()
+  pikkuState(null, 'package', 'singletonServices', mockSingletonServices as any)
   let closeCount = 0
 
   pikkuState(null, 'channel', 'meta', {
@@ -180,12 +185,7 @@ test('runChannel should close wire services once when channel closes', async () 
 
   httpRouter.initialize()
 
-  const result = await runLocalChannel({
-    singletonServices: mockSingletonServices,
-    channelId: 'test-channel-id',
-    request: new PikkuMockRequest('/test-channel', 'get'),
-    response: new PikkuMockResponse(),
-    route: '/test-channel',
+  pikkuState(null, 'package', 'factories', {
     createWireServices: async () => ({
       tracked: {
         close: async () => {
@@ -193,6 +193,13 @@ test('runChannel should close wire services once when channel closes', async () 
         },
       },
     }),
+  } as any)
+
+  const result = await runLocalChannel({
+    channelId: 'test-channel-id',
+    request: new PikkuMockRequest('/test-channel', 'get'),
+    response: new PikkuMockResponse(),
+    route: '/test-channel',
   })
 
   assert.ok(result)

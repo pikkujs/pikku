@@ -1,10 +1,8 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import {
   createConfig,
   createSingletonServices,
-  createWireServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -15,20 +13,13 @@ async function main(): Promise<void> {
 
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
-      singletonServices,
-      createWireServices
+      singletonServices.logger
     )
     appServer.enableExitOnSigInt()
     await appServer.init()
     await appServer.start()
 
     const scheduler = new InMemorySchedulerService()
-    scheduler.setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
-    )
     await scheduler.start()
   } catch (e: any) {
     console.error(e.toString())

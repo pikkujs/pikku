@@ -73,8 +73,7 @@ async function main(): Promise<void> {
         { name: 'inline', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     const httpTest2Passed = await testHTTPWiring(
@@ -87,8 +86,7 @@ async function main(): Promise<void> {
         { name: 'global', type: 'http-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test wireHTTPRoutes - direct route with group config cascading
@@ -109,8 +107,7 @@ async function main(): Promise<void> {
         { name: 'inline', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test wireHTTPRoutes - nested contract with merged tags (session from top + api from contract)
@@ -128,8 +125,7 @@ async function main(): Promise<void> {
         { name: 'read', type: 'tag-permission' }, // From 'api' tag
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Scheduler
@@ -143,8 +139,7 @@ async function main(): Promise<void> {
         { name: 'scheduler', type: 'tag-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Queue
@@ -158,8 +153,7 @@ async function main(): Promise<void> {
         { name: 'queue', type: 'tag-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test CLI
@@ -203,8 +197,7 @@ async function main(): Promise<void> {
         { name: 'mcp', type: 'tag-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test MCP Resource
@@ -219,8 +212,7 @@ async function main(): Promise<void> {
         { name: 'mcp-wire', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test MCP Prompt
@@ -235,8 +227,7 @@ async function main(): Promise<void> {
         { name: 'mcp-wire', type: 'wire-permission' },
         { name: 'function', type: 'function-permission' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Channel (Local Runner)
@@ -255,8 +246,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Channel - with message middleware
@@ -273,8 +263,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Channel - with wire middleware
@@ -291,8 +280,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Channel - with both types of middleware
@@ -310,8 +298,7 @@ async function main(): Promise<void> {
         { name: 'function', type: 'function-permission' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Channel - with channel middleware (fires on channel.send())
@@ -330,8 +317,7 @@ async function main(): Promise<void> {
         { name: 'wire-cm', type: 'channel-middleware', phase: 'before' },
         { name: 'onDisconnect', type: 'lifecycle', phase: 'execute' },
       ],
-      singletonServices,
-      createWireServices
+      singletonServices
     )
 
     // Test Channel (Serverless Runner)
