@@ -27,7 +27,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
+import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices, pikkuState as __pikkuState } from '@pikku/core'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -575,7 +575,13 @@ export const pikkuConfig = (
  */
 export const pikkuServices = (
   func: (config: Config, existingServices?: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
-) => func
+) => {
+  return async (config: Config, existingServices?: Partial<SingletonServices>) => {
+    const services = await func(config, existingServices)
+    __pikkuState(null, 'package', 'singletonServices', services as any)
+    return services
+  }
+}
 
 /**
  * Creates a Pikku wire services factory.
@@ -599,7 +605,11 @@ export const pikkuWireServices = (
     services: SingletonServices,
     wire: any
   ) => Promise<RequiredWireServices>
-): CreateWireServices => func as unknown as CreateWireServices
+): CreateWireServices => {
+  const factories = __pikkuState(null, 'package', 'factories')
+  __pikkuState(null, 'package', 'factories', { ...factories, createWireServices: func as any })
+  return func as unknown as CreateWireServices
+}
 
 /**
  * Adds global middleware for a specific tag.

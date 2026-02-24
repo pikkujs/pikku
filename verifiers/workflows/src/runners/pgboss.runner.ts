@@ -8,11 +8,7 @@ import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { pikkuState } from '@pikku/core/internal'
 import postgres from 'postgres'
 
-import {
-  createConfig,
-  createSingletonServices,
-  createWireServices,
-} from '../services.js'
+import { createConfig, createSingletonServices } from '../services.js'
 import { workflowTestData } from './workflow-test-data.js'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
@@ -35,22 +31,13 @@ async function main(): Promise<void> {
   const workflowService = new PgWorkflowService(postgres(connectionString))
   await workflowService.init()
 
-  const singletonServices = await createSingletonServices(config, {
+  await createSingletonServices(config, {
     queueService: pgBossFactory.getQueueService(),
     schedulerService: pgBossFactory.getSchedulerService(),
     workflowService,
   })
 
-  workflowService.setServices(
-    singletonServices,
-    createWireServices as any,
-    config
-  )
-
-  const queueWorkers = pgBossFactory.getQueueWorkers(
-    singletonServices,
-    createWireServices as any
-  )
+  const queueWorkers = pgBossFactory.getQueueWorkers()
   await queueWorkers.registerQueues()
 
   // Get registered workflows

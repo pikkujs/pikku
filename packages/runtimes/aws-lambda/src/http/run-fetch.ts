@@ -1,23 +1,9 @@
-import {
-  CoreSingletonServices,
-  CoreServices,
-  CreateWireServices,
-  CoreUserSession,
-} from '@pikku/core'
 import { PikkuFetchHTTPResponse, fetchData } from '@pikku/core/http'
 import { APIGatewayEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { responseToLambdaResult } from '../response-converter.js'
 import { lambdaEventToRequest } from '../request-converter.js'
 
-export const runFetch = async <
-  SingletonServices extends CoreSingletonServices,
-  Services extends CoreServices<SingletonServices>,
-  UserSession extends CoreUserSession,
->(
-  singletonServices: SingletonServices,
-  createWireServices:
-    | CreateWireServices<SingletonServices, Services, UserSession>
-    | undefined,
+export const runFetch = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
   const request = lambdaEventToRequest(event)
@@ -37,10 +23,7 @@ export const runFetch = async <
   }
 
   try {
-    await fetchData(request, response, {
-      singletonServices,
-      createWireServices: createWireServices as any,
-    })
+    await fetchData(request, response)
   } catch {
     // Error should have already been handled by fetch
   }

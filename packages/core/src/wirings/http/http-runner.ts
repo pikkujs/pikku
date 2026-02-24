@@ -29,6 +29,10 @@ import {
   isSerializable,
 } from '../../utils.js'
 import {
+  getSingletonServices,
+  getCreateWireServices,
+} from '../../pikku-state.js'
+import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
@@ -422,7 +426,7 @@ const executeRoute = async (
  */
 export const fetch = async <In, Out>(
   request: Request,
-  params: RunHTTPWiringOptions & RunHTTPWiringParams
+  params: RunHTTPWiringOptions & RunHTTPWiringParams = {}
 ): Promise<Response> => {
   const pikkuResponse = new PikkuFetchHTTPResponse()
   await fetchData<In, Out>(request, pikkuResponse, params)
@@ -443,7 +447,7 @@ export const fetch = async <In, Out>(
  */
 export const pikkuFetch = async <In, Out>(
   request: Request | PikkuHTTPRequest,
-  params: RunHTTPWiringOptions & RunHTTPWiringParams
+  params: RunHTTPWiringOptions & RunHTTPWiringParams = {}
 ): Promise<PikkuFetchHTTPResponse> => {
   const pikkuResponse = new PikkuFetchHTTPResponse()
   await fetchData<In, Out>(request, pikkuResponse, params)
@@ -472,16 +476,16 @@ export const fetchData = async <In, Out>(
   request: Request | PikkuHTTPRequest,
   response: PikkuHTTPResponse,
   {
-    singletonServices,
-    createWireServices,
     skipUserSession = false,
     respondWith404 = true,
     logWarningsForStatusCodes = [],
     coerceDataFromSchema = true,
     bubbleErrors = false,
     generateRequestId,
-  }: RunHTTPWiringOptions & RunHTTPWiringParams
+  }: RunHTTPWiringOptions & RunHTTPWiringParams = {}
 ): Promise<Out | void> => {
+  const singletonServices = getSingletonServices()
+  const createWireServices = getCreateWireServices()
   const requestId =
     (request as any).getHeader?.('x-request-id') ||
     generateRequestId?.() ||

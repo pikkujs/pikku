@@ -16,15 +16,11 @@ describe('pikku-workflow-service version mismatch fallback', () => {
     const oldHash = 'old-hash'
     const newHash = 'new-hash'
 
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
-    )
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {},
+      },
+    } as any)
 
     const metaState = pikkuState(null, 'workflows', 'meta')
     metaState[workflowName] = {
@@ -111,15 +107,11 @@ describe('pikku-workflow-service version mismatch fallback', () => {
 describe('pikku-workflow-service executeWorkflowStep', () => {
   test('should set pending step to running before succeeding', async () => {
     const ws = new InMemoryWorkflowService()
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
-    )
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {},
+      },
+    } as any)
 
     const runId = await ws.createRun(
       'pending-step-running',
@@ -149,15 +141,11 @@ describe('pikku-workflow-service executeWorkflowStep', () => {
 describe('pikku-workflow-service suspend', () => {
   test('should set run status to suspended when workflow.suspend is called', async () => {
     const ws = new InMemoryWorkflowService()
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
-    )
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {},
+      },
+    } as any)
 
     const workflowName = 'testSuspendWorkflow'
     const graphHash = 'suspend-hash'

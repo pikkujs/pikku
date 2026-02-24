@@ -197,13 +197,15 @@ This is a Yarn workspace monorepo with:
 
 ### Comments
 
-**DO NOT add inline comments** when writing or modifying code. The code should be self-documenting through:
+**DO NOT add new inline comments** when writing or modifying code. The code should be self-documenting through:
 
 - Clear, descriptive variable and function names
 - Well-structured TypeScript types and interfaces
 - Proper function and class organization
 
-Only add comments when absolutely necessary to explain:
+**DO NOT remove existing comments or JSDoc blocks.** When refactoring or modifying code, preserve all existing comments and JSDoc. If a comment references something that changed (e.g., a renamed parameter), update the comment to match — do not delete it.
+
+Only add new comments when absolutely necessary to explain:
 
 - Complex algorithms or business logic that cannot be made clearer through refactoring
 - Why a particular approach was chosen (when it's not obvious)

@@ -47,6 +47,9 @@ export const compileAllSchemas = (
   schemaService?: SchemaService
 ) => {
   if (!schemaService) {
+    schemaService = pikkuState(null, 'package', 'singletonServices')?.schema
+  }
+  if (!schemaService) {
     throw new Error('SchemaService needs to be defined to load schemas')
   }
   for (const [pkgName, packageState] of getAllPackageStates()) {

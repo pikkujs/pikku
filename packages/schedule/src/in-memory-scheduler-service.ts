@@ -2,12 +2,12 @@ import { CronJob } from 'cron'
 import {
   CoreUserSession,
   SchedulerService,
-  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   parseDurationString,
+  pikkuState,
 } from '@pikku/core'
-import { getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 interface DelayedTask {
   taskId: string
@@ -18,6 +18,10 @@ interface DelayedTask {
   timer: ReturnType<typeof setTimeout>
 }
 
+const getLogger = () => {
+  return pikkuState(null, 'package', 'singletonServices')!.logger
+}
+
 /**
  * In-memory SchedulerService implementation.
  * Uses CronJob for recurring tasks and setTimeout for delayed RPCs.
@@ -26,16 +30,6 @@ export class InMemorySchedulerService extends SchedulerService {
   private cronJobs = new Map<string, CronJob>()
   private delayedTasks = new Map<string, DelayedTask>()
   private idCounter = 0
-  private handlers?: SchedulerRuntimeHandlers
-
-  /**
-   * Set services needed for processing recurring tasks.
-   * Must be called before start() since the scheduler is typically
-   * created before singletonServices are available.
-   */
-  setServices(handlers: SchedulerRuntimeHandlers): void {
-    this.handlers = handlers
-  }
 
   async init(): Promise<void> {}
 
@@ -48,12 +42,6 @@ export class InMemorySchedulerService extends SchedulerService {
     data?: any,
     session?: CoreUserSession
   ): Promise<string> {
-    if (!this.handlers) {
-      throw new Error(
-        'InMemorySchedulerService requires setServices() before scheduling RPCs'
-      )
-    }
-
     const delayMs =
       typeof delay === 'string' ? parseDurationString(delay) : delay
     const taskId = `inmem-${++this.idCounter}-${Date.now()}`
@@ -62,11 +50,9 @@ export class InMemorySchedulerService extends SchedulerService {
     const timer = setTimeout(async () => {
       this.delayedTasks.delete(taskId)
       try {
-        await this.handlers!.invokeRPC(rpcName, data, session)
+        await runScheduledTask({ name: rpcName, session })
       } catch (err: unknown) {
-        this.handlers!.logger.error(
-          `Failed to execute delayed RPC '${rpcName}': ${err}`
-        )
+        getLogger().error(`Failed to execute delayed RPC '${rpcName}': ${err}`)
       }
     }, delayMs)
 
@@ -126,14 +112,7 @@ export class InMemorySchedulerService extends SchedulerService {
    * Start recurring scheduled tasks.
    */
   async start(): Promise<void> {
-    if (!this.handlers) {
-      throw new Error(
-        'InMemorySchedulerService requires setServices() before start()'
-      )
-    }
-
     const scheduledTasks = getScheduledTasks()
-
     for (const [, task] of scheduledTasks) {
       this.startCronJob(task.name, task.schedule)
     }
@@ -153,9 +132,9 @@ export class InMemorySchedulerService extends SchedulerService {
     const job = new CronJob(
       schedule,
       async () => {
-        this.handlers!.logger.info(`Running scheduled task: ${name}`)
-        await this.handlers!.runScheduledTask(name)
-        this.handlers!.logger.debug(`Completed scheduled task: ${name}`)
+        getLogger().info(`Running scheduled task: ${name}`)
+        await runScheduledTask({ name })
+        getLogger().debug(`Completed scheduled task: ${name}`)
       },
       null,
       true

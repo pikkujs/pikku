@@ -11,7 +11,6 @@ async function main() {
   const todoStore = new TodoStore()
   const singletonServices = await createSingletonServices(config, { todoStore })
   const triggerService = new InMemoryTriggerService()
-  triggerService.setServices(singletonServices)
   const getTriggerTodos = () => todoStore.getTodosByUser('trigger')
 
   await triggerService.start()

@@ -1,4 +1,8 @@
 import { PikkuPackageState } from './index.js'
+import type {
+  CoreSingletonServices,
+  CreateWireServices,
+} from './types/core.types.js'
 import { HTTPWiringsMeta } from './wirings/http/http.types.js'
 import {
   MCPResourceMeta,
@@ -178,6 +182,16 @@ if (!getAllPackageStates().has('__main__')) {
 
 export const getPikkuMetaDir = (packageName?: string | null): string | null => {
   return pikkuState(packageName ?? null, 'package', 'metaDir')
+}
+
+export const getSingletonServices = (): CoreSingletonServices => {
+  const services = pikkuState(null, 'package', 'singletonServices')
+  if (!services) throw new Error('Singleton services not initialized')
+  return services
+}
+
+export const getCreateWireServices = (): CreateWireServices | undefined => {
+  return pikkuState(null, 'package', 'factories')?.createWireServices
 }
 
 /**

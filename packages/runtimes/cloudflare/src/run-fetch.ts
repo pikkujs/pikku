@@ -1,23 +1,9 @@
-import {
-  CoreServices,
-  CoreSingletonServices,
-  CoreUserSession,
-  CreateWireServices,
-} from '@pikku/core'
 import { fetch } from '@pikku/core/http'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 
-export const runFetch = async <
-  SingletonServices extends CoreSingletonServices,
-  Services extends CoreServices<SingletonServices>,
-  UserSession extends CoreUserSession,
->(
+export const runFetch = async (
   request: Request,
-  singletonServices: SingletonServices,
-  createWireServices:
-    | CreateWireServices<SingletonServices, Services, UserSession>
-    | undefined,
-  websocketHibernationServer?: CloudflareWebSocketHibernationServer<SingletonServices>
+  websocketHibernationServer?: CloudflareWebSocketHibernationServer
 ) => {
   const isWebsocketUpgradeRequest =
     request.method === 'GET' && request.headers.get('Upgrade') === 'websocket'
@@ -34,9 +20,6 @@ export const runFetch = async <
     return websocketHibernationServer.fetch(request as any)
   }
 
-  const response = await fetch(request, {
-    singletonServices,
-    createWireServices: createWireServices as any,
-  })
+  const response = await fetch(request)
   return response
 }

@@ -1,13 +1,13 @@
 import { PgBoss } from 'pg-boss'
 import {
   SchedulerService,
-  SchedulerRuntimeHandlers,
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
   parseDurationString,
+  pikkuState,
 } from '@pikku/core'
-import { getScheduledTasks } from '@pikku/core/scheduler'
+import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
  * Data stored in scheduled job
@@ -25,19 +25,9 @@ interface ScheduledJobData {
  */
 export class PgBossSchedulerService extends SchedulerService {
   private scheduledCronNames: string[] = []
-  private handlers?: SchedulerRuntimeHandlers
 
   constructor(private pgBoss: PgBoss) {
     super()
-  }
-
-  /**
-   * Set services needed for processing recurring tasks.
-   * Must be called before start() since the scheduler is typically
-   * created before singletonServices are available.
-   */
-  setServices(handlers: SchedulerRuntimeHandlers): void {
-    this.handlers = handlers
   }
 
   /**
@@ -139,12 +129,7 @@ export class PgBossSchedulerService extends SchedulerService {
    * Registers a pg-boss worker to process recurring jobs via runScheduledTask.
    */
   async start(): Promise<void> {
-    if (!this.handlers) {
-      throw new Error(
-        'PgBossSchedulerService requires setServices() before start()'
-      )
-    }
-
+    const logger = pikkuState(null, 'package', 'singletonServices')!.logger
     const scheduledTasks = getScheduledTasks()
 
     for (const [name, task] of scheduledTasks) {
@@ -158,8 +143,8 @@ export class PgBossSchedulerService extends SchedulerService {
       await this.pgBoss.work<ScheduledJobData>(cronName, async (jobs) => {
         for (const job of jobs) {
           const { rpcName } = job.data
-          this.handlers!.logger.info(`Running scheduled task: ${rpcName}`)
-          await this.handlers!.runScheduledTask(rpcName)
+          logger.info(`Running scheduled task: ${rpcName}`)
+          await runScheduledTask({ name: rpcName })
         }
       })
     }

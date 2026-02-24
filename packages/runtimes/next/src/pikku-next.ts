@@ -1,11 +1,6 @@
 import { compile } from 'path-to-regexp'
 
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CreateConfig,
-  CreateWireServices,
-} from '@pikku/core'
+import { CoreConfig, CoreSingletonServices, CreateConfig } from '@pikku/core'
 import { HTTPMethod, fetchData, fetch } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
@@ -28,14 +23,12 @@ export class PikkuNextJS {
    *
    * @param createConfig - A function that creates/gets the config used in pikku for the application.
    * @param createSingletonServices - A function that creates singleton services for the application.
-   * @param createWireServices - A function that creates session-specific services for each request.
    */
   constructor(
     private readonly createConfig: CreateConfig<CoreConfig> | undefined,
     private readonly createSingletonServices: (
       config: CoreConfig
-    ) => Promise<CoreSingletonServices>,
-    private readonly createWireServices?: CreateWireServices<any, any, any>
+    ) => Promise<CoreSingletonServices>
   ) {}
 
   /**
@@ -51,7 +44,7 @@ export class PikkuNextJS {
     method: unknown,
     data: In
   ): Promise<Out> {
-    const singletonServices = await this.getSingletonServices()
+    await this.getSingletonServices()
     const request = new PikkuActionNextRequest(
       injectIntoUrl(route as string, data),
       method as HTTPMethod,
@@ -64,8 +57,6 @@ export class PikkuNextJS {
     await response.init()
 
     return (await fetchData<In, Out>(request, response, {
-      singletonServices,
-      createWireServices: this.createWireServices,
       bubbleErrors: true,
     })) as Out
   }
@@ -83,7 +74,7 @@ export class PikkuNextJS {
     method: unknown,
     data: In
   ): Promise<Out> {
-    const singletonServices = await this.getSingletonServices()
+    await this.getSingletonServices()
     const request = new PikkuActionNextRequest(
       injectIntoUrl(route as string, data),
       method as HTTPMethod,
@@ -92,8 +83,6 @@ export class PikkuNextJS {
     )
     const response = new PikkuActionNextResponse(false)
     return (await fetchData<In, Out>(request, response, {
-      singletonServices,
-      createWireServices: this.createWireServices,
       skipUserSession: true,
       bubbleErrors: true,
     })) as Out
@@ -106,11 +95,8 @@ export class PikkuNextJS {
    * @returns A promise that resolves to a Response object.
    */
   public async apiRequest(req: Request): Promise<Response> {
-    const singletonServices = await this.getSingletonServices()
-    return fetch(req, {
-      singletonServices,
-      createWireServices: this.createWireServices,
-    })
+    await this.getSingletonServices()
+    return fetch(req)
   }
 
   /**

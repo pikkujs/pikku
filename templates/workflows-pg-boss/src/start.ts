@@ -2,11 +2,9 @@ import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { PgWorkflowService } from '@pikku/pg'
 import { InMemoryTriggerService } from '@pikku/core/services'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import postgres from 'postgres'
 import {
   createConfig,
-  createWireServices,
   createSingletonServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
@@ -35,18 +33,9 @@ async function main(): Promise<void> {
       workflowService,
     })
 
-    schedulerService.setServices(
-      createSchedulerRuntimeHandlers({
-        singletonServices,
-        createWireServices,
-      })
-    )
-    workflowService.setServices(singletonServices, createWireServices, config)
-
     const appServer = new PikkuExpressServer(
       { ...config, port: 4002, hostname: 'localhost' },
-      singletonServices,
-      createWireServices
+      singletonServices.logger
     )
     appServer.enableExitOnSigInt()
     await appServer.init()
@@ -54,10 +43,7 @@ async function main(): Promise<void> {
 
     singletonServices.logger.info('Starting workflow queue workers...')
 
-    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
-      singletonServices,
-      createWireServices
-    )
+    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers()
 
     singletonServices.logger.info('Registering workflow queue workers...')
     await pgBossQueueWorkers.registerQueues()
@@ -68,7 +54,6 @@ async function main(): Promise<void> {
     await schedulerService.start()
 
     const triggerService = new InMemoryTriggerService()
-    triggerService.setServices(singletonServices)
     await triggerService.start()
 
     singletonServices.logger.info('Trigger service started')

@@ -1,10 +1,10 @@
 import { SQSBatchResponse, SQSEvent, SQSRecord } from 'aws-lambda'
 import {
-  createQueueJobRunner,
+  runQueueJob,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import type { CoreSingletonServices, CreateWireServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 
 /**
@@ -57,34 +57,25 @@ export function mapSQSRecordToQueueJob(
  * Create an SQS handler that processes queue jobs using Pikku
  */
 export const runSQSQueueWorker = async (
-  singletonServices: CoreSingletonServices,
-  createWireServices: CreateWireServices<any, any, any> | undefined,
+  logger: Logger,
   event: SQSEvent
 ): Promise<SQSBatchResponse> => {
   console.log(JSON.stringify(event, null, 2))
   const jobs = event.Records.map(mapSQSRecordToQueueJob)
-  const runJob = createQueueJobRunner({
-    singletonServices,
-    createWireServices,
-  })
 
   // Process all jobs in parallel
   const results = await Promise.allSettled(
     jobs.map(async (job) => {
       try {
-        return await runJob({
-          job,
-        })
+        return await runQueueJob({ job })
       } catch (error: unknown) {
         if (error instanceof QueueJobFailedError) {
           // Let SQS handle this as a failed job (will go to retry or DLQ)
           throw error
         } else if (error instanceof QueueJobDiscardedError) {
           // For SQS, discarding means completing successfully (no retry)
-          singletonServices.logger.info(
-            `SQS job ${job.id} discarded: ${error.message}`
-          )
-          return // Successfully "completed" by discarding
+          logger.info(`SQS job ${job.id} discarded: ${error.message}`)
+          return
         }
         throw error
       }
@@ -94,7 +85,7 @@ export const runSQSQueueWorker = async (
   // Log any failures but don't throw (SQS will handle retries)
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
-      singletonServices.logger.error(
+      logger.error(
         `Failed to process SQS message ${jobs[index]!.id}:`,
         result.reason
       )

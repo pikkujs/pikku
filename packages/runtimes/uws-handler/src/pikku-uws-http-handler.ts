@@ -1,6 +1,6 @@
 import * as uWS from 'uWebSockets.js'
 
-import { CoreSingletonServices, CreateWireServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 import { fetch } from '@pikku/core/http'
 
 import { uwsToRequest } from './uws-request-convertor.js'
@@ -13,17 +13,9 @@ import { compileAllSchemas } from '@pikku/core/schema'
 
 /**
  * Options for configuring the `pikkuHandler`.
- *
- * @typedef {Object} PikkuuWSHandlerOptions
- * @property {CoreSingletonServices} singletonServices - The singleton services used by the handler.
- * @property {CreateWireServices<any, any, any>} createWireServices - A function to create wire services.
- * @property {boolean} [logRoutes] - Whether to log the routes.
- * @property {boolean} [loadSchemas] - Whether to load all schemas.
- * @property {RunHTTPWiringOptions} - Additional options for running the route.
  */
 export type PikkuuWSHandlerOptions = {
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices<any, any, any>
+  logger?: Logger
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions
@@ -31,20 +23,19 @@ export type PikkuuWSHandlerOptions = {
 /**
  * Creates a uWebSockets handler for handling requests using the `@pikku/core` framework.
  *
- * @param {PikkuuWSHandlerOptions} options - The options to configure the handler.
- * @returns {Function} - The request handler function.
+ * @param options - The options to configure the handler.
+ * @returns The request handler function.
  */
 export const pikkuHTTPHandler = ({
   logRoutes,
-  singletonServices,
-  createWireServices,
+  logger,
   loadSchemas,
 }: PikkuuWSHandlerOptions) => {
-  if (logRoutes) {
-    logRegisterRoutes(singletonServices.logger)
+  if (logRoutes && logger) {
+    logRegisterRoutes(logger)
   }
-  if (loadSchemas) {
-    compileAllSchemas(singletonServices.logger, singletonServices.schema)
+  if (loadSchemas && logger) {
+    compileAllSchemas(logger)
   }
 
   return (res: uWS.HttpResponse, req: uWS.HttpRequest): void => {
@@ -54,17 +45,14 @@ export const pikkuHTTPHandler = ({
       const request = await uwsToRequest(req, res, () => {
         aborted = true
       })
-      const response = await fetch(request, {
-        singletonServices,
-        createWireServices,
-      })
+      const response = await fetch(request)
       if (!aborted) {
         await sendPikkuResponseToUWS(response, res, () => aborted)
       }
     }
 
     run().catch((err) => {
-      singletonServices.logger.error(`uWS HTTP error: ${err.message}`)
+      logger?.error(`uWS HTTP error: ${err.message}`)
       if (!aborted) {
         try {
           res.cork(() => {

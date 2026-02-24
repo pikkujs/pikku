@@ -8,8 +8,7 @@ import type { ExpectedEvent } from '../assert-combined.js'
 export async function testHTTPWiring(
   url: string,
   expected: ExpectedEvent[],
-  singletonServices: any,
-  createWireServices: any
+  singletonServices: any
 ): Promise<boolean> {
   console.log(`\n\nTest: ${url}`)
   console.log('─────────────────────────')
@@ -17,10 +16,7 @@ export async function testHTTPWiring(
   const passed = await assertMiddlewareAndPermissions(
     expected,
     async () => {
-      await fetch(new Request(`http://localhost${url}`), {
-        singletonServices,
-        createWireServices,
-      })
+      await fetch(new Request(`http://localhost${url}`))
     },
     singletonServices.logger
   )

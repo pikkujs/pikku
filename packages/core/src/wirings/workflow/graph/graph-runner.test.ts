@@ -196,19 +196,15 @@ describe('graph-runner bugs', () => {
     const ws = new InMemoryWorkflowService()
     const queuedNodes: string[] = []
 
-    ws.setServices(
-      {
-        queueService: {
-          add: async (_queueName: string, data: any) => {
-            if (data?.stepName) {
-              queuedNodes.push(data.stepName)
-            }
-          },
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async (_queueName: string, data: any) => {
+          if (data?.stepName) {
+            queuedNodes.push(data.stepName)
+          }
         },
-      } as any,
-      (() => ({})) as any,
-      {} as any
-    )
+      },
+    } as any)
 
     const meta: WorkflowRuntimeMeta = {
       name: 'testConvergingNextNode',
@@ -344,15 +340,11 @@ describe('graph-runner bugs', () => {
   test('executeGraphStep should throw after queueing onError nodes', async () => {
     const ws = new InMemoryWorkflowService()
 
-    ws.setServices(
-      {
-        queueService: {
-          add: async () => {},
-        },
-      } as any,
-      (() => ({})) as any,
-      {} as any
-    )
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {},
+      },
+    } as any)
 
     const metaState = pikkuState(null, 'workflows', 'meta')
     metaState['testQueuedOnErrorThrow'] = {

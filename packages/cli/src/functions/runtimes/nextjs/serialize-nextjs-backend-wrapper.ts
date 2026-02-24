@@ -6,7 +6,6 @@ export const serializeNextJsBackendWrapper = (
   singleServicesFactoryImport: string,
   wireServicesImport: string | undefined
 ) => {
-  const hasWireServices = !!wireServicesImport
   return `'server-only'
 
 /**
@@ -22,7 +21,6 @@ type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
 ${configImport}
 ${singleServicesFactoryImport}
-${wireServicesImport ? wireServicesImport : ''}
 
 import '${bootstrapPath}'
 
@@ -38,7 +36,6 @@ export const pikku = (_options?: any) => {
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      ${hasWireServices ? 'createWireServices' : 'undefined'}
     )
   }
 
@@ -255,7 +252,6 @@ export const pikkuAPIRequest = (
     _pikku = new PikkuNextJS(
       createConfig as any,
       createSingletonServices as any,
-      ${hasWireServices ? 'createWireServices' : 'undefined'}
     )
   }
   if (_removeAPIPrefix) {

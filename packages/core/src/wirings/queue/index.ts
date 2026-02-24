@@ -16,7 +16,6 @@ export type {
 export {
   wireQueueWorker,
   runQueueJob,
-  createQueueJobRunner,
   getQueueWorkers,
   removeQueueWorker,
   QueueJobDiscardedError,

@@ -4,14 +4,14 @@ import type {
   PikkuWorkerConfig,
   QueueConfigMapping,
   ConfigValidationResult,
-  QueueJob,
 } from '@pikku/core/queue'
 import {
   registerQueueWorkers,
+  runQueueJob,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import type { Logger } from '@pikku/core/services'
+import { pikkuState } from '@pikku/core'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToPgBoss = (
@@ -120,42 +120,20 @@ export class PgBossQueueWorkers implements QueueWorkers {
 
   private pgBoss: PgBoss
   private activeWorkers = new Map<string, string>()
-  private runJob?:
-    | ((params: {
-        job: QueueJob
-        updateProgress?: (progress: number | string | object) => Promise<void>
-      }) => Promise<void>)
-    | undefined
-  private logger?: Logger
 
   constructor(pgBoss: PgBoss) {
     this.pgBoss = pgBoss
-  }
-
-  setJobRunner(
-    runJob: (params: {
-      job: QueueJob
-      updateProgress?: (progress: number | string | object) => Promise<void>
-    }) => Promise<void>,
-    logger: Logger
-  ): void {
-    this.runJob = runJob
-    this.logger = logger
   }
 
   /**
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    if (!this.runJob || !this.logger) {
-      throw new Error(
-        'PgBossQueueWorkers requires setJobRunner() before registerQueues()'
-      )
-    }
+    const logger = pikkuState(null, 'package', 'singletonServices')!.logger
 
     return await registerQueueWorkers(
       this.configMappings,
-      this.logger,
+      logger,
       async (queueName, processor) => {
         await this.pgBoss.createQueue(queueName)
         const workerId = await this.pgBoss.work<any>(
@@ -166,14 +144,14 @@ export class PgBossQueueWorkers implements QueueWorkers {
           },
           async (jobs) => {
             if (!jobs || jobs.length === 0) {
-              this.logger!.warn(`No jobs received for queue ${queueName}`)
+              logger.warn(`No jobs received for queue ${queueName}`)
               return
             }
             // Process all jobs in parallel
             await Promise.all(
               jobs.map(async (job) => {
                 try {
-                  await this.runJob!({
+                  await runQueueJob({
                     job: mapPgBossJobToQueueJob(job, this.pgBoss),
                   })
                 } catch (error: unknown) {
@@ -184,7 +162,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
                     })
                   } else if (error instanceof QueueJobDiscardedError) {
                     // For pg-boss, complete the job successfully to discard it
-                    this.logger!.info(
+                    logger.info(
                       `PgBoss job ${job.id} discarded: ${error.message}`
                     )
                     await this.pgBoss.complete(queueName, job.id)

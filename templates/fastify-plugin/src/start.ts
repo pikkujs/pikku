@@ -1,12 +1,10 @@
 import Fastify from 'fastify'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 import {
-  createWireServices,
   createSingletonServices,
   createConfig,
 } from '../../functions/src/services.js'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import { createSchedulerRuntimeHandlers } from '@pikku/core/scheduler'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
 
 async function main(): Promise<void> {
@@ -18,8 +16,7 @@ async function main(): Promise<void> {
 
   app.register(pikkuFastifyPlugin, {
     pikku: {
-      singletonServices,
-      createWireServices,
+      logger: singletonServices.logger,
     },
   })
 
@@ -27,12 +24,6 @@ async function main(): Promise<void> {
   singletonServices.logger.info(`server started`)
 
   const scheduler = new InMemorySchedulerService()
-  scheduler.setServices(
-    createSchedulerRuntimeHandlers({
-      singletonServices,
-      createWireServices,
-    })
-  )
   await scheduler.start()
 }
 

@@ -2,10 +2,6 @@ import type { SerializeOptions } from 'cookie'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { PikkuError } from '../../errors/error-handler.js'
 import type {
-  CoreServices,
-  CoreSingletonServices,
-  CoreUserSession,
-  CreateWireServices,
   CorePikkuMiddleware,
   CommonWireMeta,
 } from '../../types/core.types.js'
@@ -43,14 +39,7 @@ export type RunHTTPWiringOptions = Partial<{
   generateRequestId: () => string
 }>
 
-export type RunHTTPWiringParams = {
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices<CoreSingletonServices>,
-    CoreUserSession
-  >
-}
+export type RunHTTPWiringParams = {}
 
 /**
  * Represents the HTTP methods supported for API HTTP wirings.

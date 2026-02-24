@@ -9,14 +9,14 @@ import type {
   PikkuWorkerConfig,
   QueueConfigMapping,
   ConfigValidationResult,
-  QueueJob,
 } from '@pikku/core/queue'
 import {
   registerQueueWorkers,
+  runQueueJob,
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import type { Logger } from '@pikku/core/services'
+import { pikkuState } from '@pikku/core'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToBull = (
@@ -137,46 +137,24 @@ export class BullQueueWorkers implements QueueWorkers {
 
   private workers = new Map<string, Bull.Worker>()
   private queueEvents = new Map<string, QueueEvents>()
-  private runJob?:
-    | ((params: {
-        job: QueueJob
-        updateProgress?: (progress: number | string | object) => Promise<void>
-      }) => Promise<void>)
-    | undefined
-  private logger?: Logger
 
   constructor(private redisConnectionOptions: ConnectionOptions) {}
-
-  setJobRunner(
-    runJob: (params: {
-      job: QueueJob
-      updateProgress?: (progress: number | string | object) => Promise<void>
-    }) => Promise<void>,
-    logger: Logger
-  ): void {
-    this.runJob = runJob
-    this.logger = logger
-  }
 
   /**
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    if (!this.runJob || !this.logger) {
-      throw new Error(
-        'BullQueueWorkers requires setJobRunner() before registerQueues()'
-      )
-    }
+    const logger = pikkuState(null, 'package', 'singletonServices')!.logger
 
     return await registerQueueWorkers(
       this.configMappings,
-      this.logger,
+      logger,
       async (queueName, processor) => {
         const worker = new Worker(
           processor.name,
           async (job: Bull.Job) => {
             try {
-              return await this.runJob!({
+              return await runQueueJob({
                 job: await mapBullJobToQueueJob(
                   job,
                   this.redisConnectionOptions,

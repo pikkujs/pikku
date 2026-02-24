@@ -4,7 +4,6 @@ import {
   wireScheduler,
   runScheduledTask,
   getScheduledTasks,
-  createSchedulerRuntimeHandlers,
 } from './scheduler-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { CoreScheduledTask } from './scheduler.types.js'
@@ -168,9 +167,11 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
     await runScheduledTask({
       name: 'simple-task',
-      singletonServices: { logger: mockLogger } as any,
     })
 
     assert.equal(taskExecuted, true)
@@ -208,12 +209,14 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
     const session: CoreUserSession = { userId: 'user123' }
 
     await runScheduledTask({
       name: 'task-with-session',
       session,
-      singletonServices: { logger: mockLogger } as any,
     })
 
     assert.deepEqual(receivedSession, session)
@@ -221,12 +224,14 @@ describe('runScheduledTask', () => {
 
   test('should throw ScheduledTaskNotFoundError when task not found', async () => {
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await assert.rejects(
       async () => {
         await runScheduledTask({
           name: 'non-existent-task',
-          singletonServices: { logger: mockLogger } as any,
         })
       },
       (error: any) => {
@@ -250,12 +255,14 @@ describe('runScheduledTask', () => {
     pikkuState(null, 'scheduler', 'tasks').set('task-without-meta', mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await assert.rejects(
       async () => {
         await runScheduledTask({
           name: 'task-without-meta',
-          singletonServices: { logger: mockLogger } as any,
         })
       },
       (error: any) => {
@@ -290,12 +297,14 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await assert.rejects(
       async () => {
         await runScheduledTask({
           name: 'skipped-task',
-          singletonServices: { logger: mockLogger } as any,
         })
       },
       (error: any) => {
@@ -333,12 +342,14 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await assert.rejects(
       async () => {
         await runScheduledTask({
           name: 'skipped-task-no-reason',
-          singletonServices: { logger: mockLogger } as any,
         })
       },
       (error: any) => {
@@ -379,10 +390,12 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await runScheduledTask({
       name: 'wire-task',
-      singletonServices: { logger: mockLogger } as any,
     })
 
     assert.equal(capturedWire.scheduledTask.name, 'wire-task')
@@ -417,14 +430,18 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
-
-    await runScheduledTask({
-      name: 'session-services-task',
-      singletonServices: { logger: mockLogger } as any,
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
+    pikkuState(null, 'package', 'factories', {
       createWireServices: async () => {
         createWireServicesCalled = true
         return mockWireService as any
       },
+    } as any)
+
+    await runScheduledTask({
+      name: 'session-services-task',
     })
 
     assert.equal(createWireServicesCalled, true)
@@ -462,11 +479,15 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
+    pikkuState(null, 'package', 'factories', {
+      createWireServices: async () => mockWireService as any,
+    } as any)
 
     await runScheduledTask({
       name: 'cleanup-task',
-      singletonServices: { logger: mockLogger } as any,
-      createWireServices: async () => mockWireService as any,
     })
 
     assert.equal(closeCalled, true)
@@ -506,12 +527,16 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
+    pikkuState(null, 'package', 'factories', {
+      createWireServices: async () => mockWireService as any,
+    } as any)
 
     await assert.rejects(async () => {
       await runScheduledTask({
         name: 'error-cleanup-task',
-        singletonServices: { logger: mockLogger } as any,
-        createWireServices: async () => mockWireService as any,
       })
     })
 
@@ -543,11 +568,13 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await assert.rejects(async () => {
       await runScheduledTask({
         name: 'error-task',
-        singletonServices: { logger: mockLogger } as any,
       })
     })
 
@@ -590,10 +617,12 @@ describe('runScheduledTask', () => {
     wireScheduler(mockTask)
 
     const mockLogger = createMockLogger()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: mockLogger,
+    } as any)
 
     await runScheduledTask({
       name: 'middleware-task',
-      singletonServices: { logger: mockLogger } as any,
     })
 
     assert.deepEqual(executionOrder, ['middleware', 'task'])
@@ -627,45 +656,5 @@ describe('getScheduledTasks', () => {
     const tasks = getScheduledTasks()
     assert.equal(tasks instanceof Map, true)
     assert.equal(tasks.size, 0)
-  })
-})
-
-describe('createSchedulerRuntimeHandlers', () => {
-  test('invokes RPC with optional session and runs scheduled task callback', async () => {
-    const calls: Array<{ type: string; value: any }> = []
-    const logger = createMockLogger()
-    const singletonServices = { logger } as any
-
-    const handlers = createSchedulerRuntimeHandlers({
-      singletonServices,
-    })
-
-    const originalGetContextRPCService = (await import('../rpc/rpc-runner.js'))
-      .rpcService.getContextRPCService
-    ;(await import('../rpc/rpc-runner.js')).rpcService.getContextRPCService = ((
-      _services: any,
-      wire: any
-    ) => {
-      calls.push({ type: 'wire', value: wire })
-      return {
-        invoke: async (rpcName: string, data: any) => {
-          calls.push({ type: 'invoke', value: { rpcName, data } })
-        },
-      } as any
-    }) as any
-
-    try {
-      await handlers.invokeRPC('testRpc', { value: 1 }, { userId: 'u1' } as any)
-    } finally {
-      ;(await import('../rpc/rpc-runner.js')).rpcService.getContextRPCService =
-        originalGetContextRPCService
-    }
-
-    assert.equal(calls[0]?.type, 'wire')
-    assert.deepEqual(calls[0]?.value, { session: { userId: 'u1' } })
-    assert.deepEqual(calls[1]?.value, {
-      rpcName: 'testRpc',
-      data: { value: 1 },
-    })
   })
 })

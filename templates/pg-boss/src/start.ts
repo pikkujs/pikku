@@ -3,7 +3,6 @@ import { stopSingletonServices } from '@pikku/core'
 import {
   createConfig,
   createSingletonServices,
-  createWireServices,
 } from '../../functions/src/services.js'
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
 
@@ -20,10 +19,7 @@ async function main(): Promise<void> {
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
-    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers(
-      singletonServices,
-      createWireServices
-    )
+    const pgBossQueueWorkers = pgBossFactory.getQueueWorkers()
 
     await pgBossQueueWorkers.registerQueues()
 
@@ -32,7 +28,7 @@ async function main(): Promise<void> {
         `Received ${signal}, shutting down gracefully...`
       )
       await pgBossFactory.close()
-      await stopSingletonServices(singletonServices)
+      await stopSingletonServices()
       process.exit(0)
     }
 

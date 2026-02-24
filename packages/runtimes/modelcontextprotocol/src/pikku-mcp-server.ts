@@ -15,13 +15,8 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import {
-  CoreConfig,
-  CoreSingletonServices,
-  CreateWireServices,
-  stopSingletonServices,
-} from '@pikku/core'
-import { LogLevel, Logger } from '@pikku/core/services'
+import { CoreConfig, stopSingletonServices } from '@pikku/core'
+import { Logger } from '@pikku/core/services'
 
 import {
   MCPEndpointRegistry,
@@ -53,10 +48,7 @@ export class PikkuMCPServer {
 
   constructor(
     private config: MCPServerConfig,
-    private singletonServices: CoreSingletonServices,
-    private createWireServices:
-      | CreateWireServices<any, any, any>
-      | undefined = undefined
+    private logger: Logger
   ) {
     this.server = new Server(
       {
@@ -93,16 +85,13 @@ export class PikkuMCPServer {
         this.setupPrompts()
       }
     } catch (error) {
-      this.singletonServices.logger.error(
-        'Failed to initialize MCP server:',
-        error
-      )
+      this.logger.error('Failed to initialize MCP server:', error)
       throw error
     }
   }
 
   public async stop(): Promise<void> {
-    await stopSingletonServices(this.singletonServices)
+    await stopSingletonServices()
     await this.server.close()
   }
 
@@ -110,7 +99,7 @@ export class PikkuMCPServer {
     await this.server.connect(transport)
   }
 
-  public async wrapLogger(): Promise<void> {
+  public createMCPLogger(): Logger {
     const server = this.server
     const logger: Logger = {
       info: function (
@@ -161,15 +150,11 @@ export class PikkuMCPServer {
           data: meta.length > 0 ? { message, meta } : message,
         })
       },
-      setLevel: function (_level: LogLevel): void {
+      setLevel: function (_level: any): void {
         throw new Error('Function not implemented.')
       },
     }
-
-    this.singletonServices = {
-      ...this.singletonServices,
-      logger,
-    }
+    return logger
   }
 
   private createMCPService(): PikkuMCP {
@@ -229,11 +214,7 @@ export class PikkuMCPServer {
             id: Date.now().toString(),
             params: args || {},
           },
-          {
-            singletonServices: this.singletonServices,
-            createWireServices: this.createWireServices,
-            mcp,
-          },
+          { mcp },
           name
         )
         return {
@@ -306,11 +287,7 @@ export class PikkuMCPServer {
               id: Date.now().toString(),
               params: {},
             },
-            {
-              singletonServices: this.singletonServices,
-              createWireServices: this.createWireServices,
-              mcp,
-            },
+            { mcp },
             uri
           )
           return {
@@ -364,11 +341,7 @@ export class PikkuMCPServer {
           id: Date.now().toString(),
           params: args || {},
         },
-        {
-          singletonServices: this.singletonServices,
-          createWireServices: this.createWireServices,
-          mcp,
-        },
+        { mcp },
         name
       )
 
