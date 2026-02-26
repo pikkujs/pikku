@@ -26,7 +26,7 @@
     "@aws-sdk/client-sqs": "^3.985.0",
     "@aws-sdk/cloudfront-signer": "^3.985.0",
     "@aws-sdk/s3-request-presigner": "^3.985.0",
-    "@types/aws-lambda": "^8.10.160",
+    "@types/aws-lambda": "^8.10.161",
     "@types/node": "^24",
     "esbuild": "0.27.3",
     "serverless": "^4.31.2",
