@@ -1,13 +1,15 @@
 import { pikkuSessionlessFunc } from '#pikku'
 
-export const getExternalIcon = pikkuSessionlessFunc<{ alias: string }, string>({
+export const getExternalIcon = pikkuSessionlessFunc<
+  { alias: string },
+  string | null
+>({
   title: 'Get External Icon',
-  description:
-    'Given an alias string, reads and returns the SVG icon content for the corresponding external package by calling externalService.readExternalPackageIcon(alias)',
+  description: 'Returns the icon for an external package from its metadata',
   expose: true,
   auth: false,
-  func: async ({ externalService }, { alias }, { http }) => {
-    // http?.response?.header("Content-Type", "image/svg+xml");
-    return await externalService.readExternalPackageIcon(alias)
+  func: async ({ externalService }, { alias }) => {
+    const pkg = await externalService.readExternalPackage(alias)
+    return pkg?.icon ?? null
   },
 })

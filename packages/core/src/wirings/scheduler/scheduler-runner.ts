@@ -2,7 +2,6 @@ import { PikkuWire, type CoreUserSession } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
-import { closeWireServices } from '../../utils.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -73,7 +72,6 @@ export async function runScheduledTask({
 }: RunScheduledTasksParams): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  let wireServices: any
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
@@ -126,10 +124,6 @@ export async function runScheduledTask({
       singletonServices.logger.error(e)
     }
     throw e
-  } finally {
-    if (wireServices) {
-      await closeWireServices(singletonServices.logger, wireServices)
-    }
   }
 }
 

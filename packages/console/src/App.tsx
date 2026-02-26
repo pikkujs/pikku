@@ -21,6 +21,7 @@ import { AgentsPage } from '@/pages/AgentsPage'
 import { AgentPlaygroundPage } from '@/pages/AgentPlaygroundPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
+import { PackagesPage } from '@/pages/PackagesPage'
 
 export const App: React.FunctionComponent = () => {
   return (
@@ -51,6 +52,7 @@ export const App: React.FunctionComponent = () => {
         <Route path="/runtime/permissions" element={<PermissionsPage />} />
         <Route path="/config/secrets" element={<SecretsPage />} />
         <Route path="/config/variables" element={<VariablesPage />} />
+        <Route path="/registry/packages" element={<PackagesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundTitle />} />
       </Route>

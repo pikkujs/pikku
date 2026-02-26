@@ -1,7 +1,6 @@
 import {
   CoreHTTPFunctionWiring,
   RunHTTPWiringOptions,
-  RunHTTPWiringParams,
   PikkuHTTP,
   PikkuHTTPRequest,
   PikkuHTTPResponse,
@@ -421,12 +420,12 @@ const executeRoute = async (
  * @template In Expected input data type.
  * @template Out Expected output data type.
  * @param {Request} request - The native Fetch API Request object.
- * @param {RunHTTPWiringOptions & RunHTTPWiringParams} params - Additional options including services and session management.
+ * @param {RunHTTPWiringOptions} params - Additional options including services and session management.
  * @returns {Promise<Response>} A promise that resolves to a Fetch API Response object.
  */
 export const fetch = async <In, Out>(
   request: Request,
-  params: RunHTTPWiringOptions & RunHTTPWiringParams = {}
+  params: RunHTTPWiringOptions = {}
 ): Promise<Response> => {
   const pikkuResponse = new PikkuFetchHTTPResponse()
   await fetchData<In, Out>(request, pikkuResponse, params)
@@ -442,12 +441,12 @@ export const fetch = async <In, Out>(
  * @template In Expected input data type.
  * @template Out Expected output data type.
  * @param {Request | PikkuHTTPRequest} request - The request object.
- * @param {RunHTTPWiringOptions & RunHTTPWiringParams} params - Execution options including services and session configuration.
+ * @param {RunHTTPWiringOptions} params - Execution options including services and session configuration.
  * @returns {Promise<PikkuFetchHTTPResponse>} A promise that resolves to a PikkuFetchHTTPResponse object.
  */
 export const pikkuFetch = async <In, Out>(
   request: Request | PikkuHTTPRequest,
-  params: RunHTTPWiringOptions & RunHTTPWiringParams = {}
+  params: RunHTTPWiringOptions = {}
 ): Promise<PikkuFetchHTTPResponse> => {
   const pikkuResponse = new PikkuFetchHTTPResponse()
   await fetchData<In, Out>(request, pikkuResponse, params)
@@ -469,7 +468,7 @@ export const pikkuFetch = async <In, Out>(
  * @template Out Expected output data type.
  * @param {Request | PikkuHTTPRequest} request - The incoming HTTP request.
  * @param {PikkuHTTPResponse} response - The response object to be populated.
- * @param {RunHTTPWiringOptions & RunHTTPWiringParams} options - Options such as singleton services, session handling, and error configuration.
+ * @param {RunHTTPWiringOptions} options - Options such as singleton services, session handling, and error configuration.
  * @returns {Promise<Out | void>} The output from the route handler or void if an error occurred.
  */
 export const fetchData = async <In, Out>(
@@ -482,7 +481,7 @@ export const fetchData = async <In, Out>(
     coerceDataFromSchema = true,
     bubbleErrors = false,
     generateRequestId,
-  }: RunHTTPWiringOptions & RunHTTPWiringParams = {}
+  }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()

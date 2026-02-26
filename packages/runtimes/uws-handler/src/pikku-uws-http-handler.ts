@@ -15,7 +15,7 @@ import { compileAllSchemas } from '@pikku/core/schema'
  * Options for configuring the `pikkuHandler`.
  */
 export type PikkuuWSHandlerOptions = {
-  logger?: Logger
+  logger: Logger
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions
@@ -31,10 +31,10 @@ export const pikkuHTTPHandler = ({
   logger,
   loadSchemas,
 }: PikkuuWSHandlerOptions) => {
-  if (logRoutes && logger) {
+  if (logRoutes) {
     logRegisterRoutes(logger)
   }
-  if (loadSchemas && logger) {
+  if (loadSchemas) {
     compileAllSchemas(logger)
   }
 
@@ -52,7 +52,7 @@ export const pikkuHTTPHandler = ({
     }
 
     run().catch((err) => {
-      logger?.error(`uWS HTTP error: ${err.message}`)
+      logger.error(`uWS HTTP error: ${err.message}`)
       if (!aborted) {
         try {
           res.cork(() => {

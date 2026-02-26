@@ -308,10 +308,7 @@ async function setupTemplate(cliOptions: CliOptions) {
       } catch {
         // File doesn't exist, ignore
       }
-      writeFileSync(
-        path.join(targetPath, '.stackblitzrc'),
-        JSON.stringify({ env: { NODE_VERSION: '22' } }, null, 2)
-      )
+      writeFileSync(path.join(targetPath, '.nvmrc'), '22\n')
     }
 
     if (packageManager === 'yarn') {

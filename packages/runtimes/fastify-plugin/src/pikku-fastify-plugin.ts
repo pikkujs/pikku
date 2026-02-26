@@ -13,7 +13,7 @@ import { sendResponseToFastify } from './fastify-response-convertor.js'
  */
 export type PikkuFastifyPluginOptions = {
   pikku: {
-    logger?: Logger
+    logger: Logger
     logRoutes?: boolean
     loadSchemas?: boolean
   } & RunHTTPWiringOptions
@@ -30,10 +30,10 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
   fastify,
   { pikku }
 ) => {
-  if (pikku.logRoutes && pikku.logger) {
+  if (pikku.logRoutes) {
     logRoutes(pikku.logger)
   }
-  if (pikku.loadSchemas && pikku.logger) {
+  if (pikku.loadSchemas) {
     compileAllSchemas(pikku.logger)
   }
   fastify.all('/*', async (req, res) => {

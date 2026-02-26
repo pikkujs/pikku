@@ -30,6 +30,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  Package,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 
@@ -134,6 +135,17 @@ const NAV_SECTIONS: NavSection[] = [
         href: '/jobs/triggers',
         icon: Zap,
         matchPrefix: '/jobs/triggers',
+      },
+    ],
+  },
+  {
+    title: 'Registry',
+    items: [
+      {
+        label: 'Packages',
+        href: '/registry/packages',
+        icon: Package,
+        matchPrefix: '/registry/packages',
       },
     ],
   },
