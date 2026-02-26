@@ -39,8 +39,6 @@ export type RunHTTPWiringOptions = Partial<{
   generateRequestId: () => string
 }>
 
-export type RunHTTPWiringParams = {}
-
 /**
  * Represents the HTTP methods supported for API HTTP wirings.
  */

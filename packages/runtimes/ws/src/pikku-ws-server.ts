@@ -20,7 +20,7 @@ import { incomingMessageToRequestConvertor } from './incoming-message-to-request
 export type PikkuWSHandlerOptions = {
   server: Server
   wss: WebSocketServer
-  logger?: Logger
+  logger: Logger
   logRoutes?: boolean
   loadSchemas?: boolean
 } & RunHTTPWiringOptions
@@ -62,10 +62,10 @@ export const pikkuWebsocketHandler = ({
   loadSchemas,
   logRoutes,
 }: PikkuWSHandlerOptions) => {
-  if (logRoutes && logger) {
+  if (logRoutes) {
     logChannels(logger)
   }
-  if (loadSchemas && logger) {
+  if (loadSchemas) {
     compileAllSchemas(logger)
   }
 

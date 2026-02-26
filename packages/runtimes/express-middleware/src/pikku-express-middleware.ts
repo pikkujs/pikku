@@ -11,7 +11,7 @@ import { sendResponseToExpress } from './express-response-convertor.js'
  * Arguments for configuring the Pikku middleware.
  */
 type PikkuMiddlewareArgs = RunHTTPWiringOptions & {
-  logger?: Logger
+  logger: Logger
   logRoutes?: boolean
   loadSchemas?: boolean
   coerceDataFromSchema?: boolean
@@ -29,11 +29,11 @@ export const pikkuExpressMiddleware = ({
   logRoutes,
   loadSchemas,
   coerceDataFromSchema,
-}: PikkuMiddlewareArgs = {}): RequestHandler => {
-  if (logRoutes && logger) {
+}: PikkuMiddlewareArgs): RequestHandler => {
+  if (logRoutes) {
     logRegisterRoutes(logger)
   }
-  if (loadSchemas && logger) {
+  if (loadSchemas) {
     compileAllSchemas(logger)
   }
 

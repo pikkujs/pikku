@@ -22,5 +22,5 @@ export const myScheduledTask: ScheduledHandler = async () => {
 
 export const mySQSWorker: SQSHandler = async (event) => {
   const { logger } = await coldStart()
-  await runSQSQueueWorker(logger, event)
+  return runSQSQueueWorker(logger, event)
 }

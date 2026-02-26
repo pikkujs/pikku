@@ -1,172 +1,58 @@
-import { readFile, readdir } from 'fs/promises'
-import { join } from 'path'
-
-export interface ExternalNode {
+export interface FunctionMeta {
+  pikkuFuncId: string
+  functionType: string
+  funcWrapper: string
+  sessionless: boolean
   name: string
-  displayName: string
-  category: string
-  type: string
-  rpc: string
-  description: string
-  errorOutput: boolean
-  inputSchemaName: string
-  outputSchemaName: string
+  inputSchemaName: string | null
+  outputSchemaName: string | null
+  inputs: string[]
+  outputs: string[]
+  expose: boolean
+  contractHash: string
 }
 
-export interface ExternalCredential {
+export interface PackageRegistryEntry {
+  id: string
   name: string
   displayName: string
   description: string
-  secretId: string
-  schema: string
-}
-
-export interface ExternalPackageMeta {
-  package: string
-  alias: string
-  displayName: string
-  description: string
+  version: string
+  author: string
+  repository?: string
+  license?: string
+  readme?: string
+  icon?: string
+  publishedAt: string
+  updatedAt: string
+  tags: string[]
   categories: string[]
-  nodes: Record<string, ExternalNode[]>
-  credentials: Record<string, ExternalCredential>
+  functions: Record<string, FunctionMeta>
+  rpcWirings: Record<string, string>
+  agents: Record<string, unknown>
+  secrets: Record<string, unknown>
+  variables: Record<string, unknown>
+  schemas: Record<string, unknown>
 }
 
-interface NodesMeta {
-  nodes: Record<string, ExternalNode>
-  credentials: Record<string, ExternalCredential>
-  package: {
-    displayName: string
-    description: string
-    categories: string[]
-  }
-}
+export type ExternalPackageMeta = PackageRegistryEntry
+export type ExternalPackageDetail = PackageRegistryEntry
 
 export class ExternalService {
-  private externalMetaCache: ExternalPackageMeta[] | null = null
-  private iconCache: Map<string, string> = new Map()
-  private packagePathMap: Map<string, string> = new Map()
-
-  constructor(private externalPackagesBasePath: string) {}
-
-  private async discoverPackages(): Promise<
-    { category: string; packageName: string; packagePath: string }[]
-  > {
-    const packages: {
-      category: string
-      packageName: string
-      packagePath: string
-    }[] = []
-
-    try {
-      const categories = await readdir(this.externalPackagesBasePath, {
-        withFileTypes: true,
-      })
-
-      for (const category of categories) {
-        if (!category.isDirectory()) continue
-
-        const categoryPath = join(this.externalPackagesBasePath, category.name)
-        const packageDirs = await readdir(categoryPath, {
-          withFileTypes: true,
-        })
-
-        for (const pkg of packageDirs) {
-          if (!pkg.isDirectory()) continue
-
-          const packagePath = join(categoryPath, pkg.name)
-          packages.push({
-            category: category.name,
-            packageName: pkg.name,
-            packagePath,
-          })
-        }
-      }
-    } catch (error) {
-      console.error('Error discovering packages:', error)
-    }
-
-    return packages
-  }
+  constructor(private registryUrl: string) {}
 
   async readExternalPackagesMeta(): Promise<ExternalPackageMeta[]> {
-    if (this.externalMetaCache) {
-      return this.externalMetaCache
-    }
-
-    const results: ExternalPackageMeta[] = []
-    const discoveredPackages = await this.discoverPackages()
-
-    for (const { packageName, packagePath } of discoveredPackages) {
-      try {
-        const nodesMetaPath = join(
-          packagePath,
-          '.pikku',
-          'node',
-          'pikku-nodes-meta.gen.json'
-        )
-
-        const metaContent = await readFile(nodesMetaPath, 'utf-8')
-        const meta: NodesMeta = JSON.parse(metaContent)
-
-        const nodesByCategory: Record<string, ExternalNode[]> = {}
-        for (const node of Object.values(meta.nodes)) {
-          const category = node.category
-          if (!nodesByCategory[category]) {
-            nodesByCategory[category] = []
-          }
-          nodesByCategory[category].push(node)
-        }
-
-        this.packagePathMap.set(packageName, packagePath)
-
-        results.push({
-          package: packageName,
-          alias: packageName,
-          displayName: meta.package.displayName,
-          description: meta.package.description,
-          categories: meta.package.categories,
-          nodes: nodesByCategory,
-          credentials: meta.credentials,
-        })
-      } catch {
-        // Package doesn't have forge metadata, skip it
-      }
-    }
-
-    this.externalMetaCache = results
-    return results
+    const response = await fetch(`${this.registryUrl}/api/packages`)
+    const result = await response.json()
+    return result.packages ?? []
   }
 
-  clearCache(): void {
-    this.externalMetaCache = null
-    this.packagePathMap.clear()
+  async readExternalPackage(id: string): Promise<ExternalPackageDetail | null> {
+    const response = await fetch(
+      `${this.registryUrl}/api/packages/${encodeURIComponent(id)}`
+    )
+    return response.json()
   }
 
-  async readExternalPackageIcon(alias: string): Promise<string> {
-    if (this.iconCache.has(alias)) {
-      return this.iconCache.get(alias)!
-    }
-
-    const packagePath = this.packagePathMap.get(alias)
-    if (!packagePath) {
-      this.iconCache.set(alias, '')
-      return ''
-    }
-
-    try {
-      const iconPath = join(packagePath, 'icons', `${alias}.svg`)
-      const result = await readFile(iconPath, 'utf-8')
-      this.iconCache.set(alias, result)
-      return result
-    } catch (error) {
-      console.error(`Error reading icon for external package ${alias}:`, error)
-      this.iconCache.set(alias, '')
-      return ''
-    }
-  }
-
-  async init(): Promise<void> {
-    const meta = await this.readExternalPackagesMeta()
-    await Promise.all(meta.map((m) => this.readExternalPackageIcon(m.alias)))
-  }
+  async init(): Promise<void> {}
 }
