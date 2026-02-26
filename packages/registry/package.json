@@ -1,0 +1,31 @@
+{
+  "name": "@pikku/registry",
+  "version": "0.12.0",
+  "description": "Pikku community package registry",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "bin/start.ts",
+  "scripts": {
+    "tsc": "tsc",
+    "start": "tsx bin/start.ts",
+    "dev": "tsx --watch bin/start.ts",
+    "pikku": "pikku all"
+  },
+  "imports": {
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/core": "^0.12.0",
+    "@pikku/schema-cfworker": "^0.12.0",
+    "@pikku/uws": "^0.12.0",
+    "tar": "^7.0.0",
+    "tslib": "^2.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  },
+  "devDependencies": {
+    "@pikku/cli": "*",
+    "@types/node": "^24"
+  }
+}

@@ -15,7 +15,7 @@
       "templates/*",
       "verifiers/*",
       "e2e",
-      "test-workflow-app"
+      "packages/registry"
     ]
   },
   "scripts": {

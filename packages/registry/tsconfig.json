@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": ".",
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "noImplicitAny": false,
+    "types": ["node"],
+    "paths": {
+      "#pikku/*": ["./.pikku/*"]
+    }
+  },
+  "include": [".pikku/**/*.ts", "src/**/*.ts", "bin/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
