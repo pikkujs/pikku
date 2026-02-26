@@ -10,7 +10,7 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
 
     if (!visitState.manifest.initial) {
       throw new Error(
-        `Version manifest not found at ${manifestPath}. Run 'pikku init' to create one.`
+        `Version manifest not found at ${manifestPath}. Run 'pikku versions init' to create one.`
       )
     }
 

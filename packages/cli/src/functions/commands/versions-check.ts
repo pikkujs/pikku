@@ -18,7 +18,7 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
     if (!visitState.manifest.initial) {
       const manifestPath = join(config.outDir, 'versions.json')
       throw new Error(
-        `[${ErrorCode.MANIFEST_MISSING}] Version manifest not found at ${manifestPath}. Run 'pikku init' to create one.`
+        `[${ErrorCode.MANIFEST_MISSING}] Version manifest not found at ${manifestPath}. Run 'pikku versions init' to create one.`
       )
     }
 
