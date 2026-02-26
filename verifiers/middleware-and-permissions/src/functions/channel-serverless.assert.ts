@@ -109,8 +109,6 @@ export async function testChannelWiringServerless(
         route,
         request,
         response,
-        singletonServices,
-        createWireServices,
         channelStore,
         channelHandlerFactory,
       })
@@ -119,8 +117,6 @@ export async function testChannelWiringServerless(
       await runChannelMessage(
         {
           channelId,
-          singletonServices,
-          createWireServices,
           channelStore,
           channelHandlerFactory,
         },
@@ -133,8 +129,6 @@ export async function testChannelWiringServerless(
       // Disconnect
       await runChannelDisconnect({
         channelId,
-        singletonServices,
-        createWireServices,
         channelStore,
         channelHandlerFactory,
       })
