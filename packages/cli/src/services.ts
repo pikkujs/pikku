@@ -4,11 +4,11 @@ import type {
   SingletonServices,
   UserSession,
 } from '../types/application-types.js'
-import {
-  CreateConfig,
+import { CreateConfig } from '@pikku/core'
+import type {
   CreateWireServices,
   CreateSingletonServices,
-} from '@pikku/core'
+} from '@pikku/core/internal'
 import { pikkuCLIRender } from '@pikku/core/cli'
 import {
   LocalVariablesService,
