@@ -126,7 +126,7 @@ export const dynamicDefs: Record<string, DynamicBadgeDef> = {
   steps: { variant: 'outline', suffix: ' step', pluralSuffix: ' steps' },
   wirings: {
     color: 'gray',
-    variant: 'outline',
+    variant: 'light',
     suffix: ' wiring',
     pluralSuffix: ' wirings',
   },
@@ -136,7 +136,7 @@ export const dynamicDefs: Record<string, DynamicBadgeDef> = {
     pluralSuffix: ' functions',
   },
   tag: { variant: 'dot' },
-  service: { color: 'gray', variant: 'outline', icon: Server },
+  service: { color: 'gray', variant: 'light', icon: Server },
   package: { color: 'teal', variant: 'light', icon: Package },
   exportedName: { color: 'gray', variant: 'outline' },
   nodes: { variant: 'light', suffix: ' node', pluralSuffix: ' nodes' },

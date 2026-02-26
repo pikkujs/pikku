@@ -55,7 +55,7 @@ const PropertyRow: React.FunctionComponent<{
           style={{
             paddingLeft: depth * 20 + 8,
             paddingRight: 8,
-            borderBottom: '1px solid var(--mantine-color-gray-2)',
+            borderBottom: '1px solid var(--mantine-color-default-border)',
           }}
         >
           {isExpandable ? (

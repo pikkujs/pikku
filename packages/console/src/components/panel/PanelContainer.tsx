@@ -50,8 +50,7 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
       {showTabs && (
         <Box
           style={{
-            borderBottom: '1px solid var(--mantine-color-gray-5)',
-            backgroundColor: 'var(--mantine-color-gray-0)',
+            borderBottom: '1px solid var(--mantine-color-default-border)',
           }}
         >
           <Group gap={0} wrap="nowrap" style={{ overflowX: 'auto' }}>
@@ -64,8 +63,8 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
                 py="xs"
                 style={{
                   cursor: 'pointer',
-                  borderLeft: '1px solid var(--mantine-color-gray-2)',
-                  borderRight: '1px solid var(--mantine-color-gray-2)',
+                  borderLeft: '1px solid var(--mantine-color-default-border)',
+                  borderRight: '1px solid var(--mantine-color-default-border)',
                   borderBottom:
                     activePanel === panel.id
                       ? '2px solid var(--mantine-color-blue-6)'
@@ -100,8 +99,7 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
           px="md"
           py="xs"
           style={{
-            borderBottom: '1px solid var(--mantine-color-gray-3)',
-            backgroundColor: 'var(--mantine-color-gray-0)',
+            borderBottom: '1px solid var(--mantine-color-default-border)',
           }}
         >
           <Group gap={6} wrap="nowrap" align="center">

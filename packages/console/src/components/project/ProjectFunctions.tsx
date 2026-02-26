@@ -61,6 +61,7 @@ export const ProjectFunctions: React.FunctionComponent<
       {
         key: 'type',
         header: 'TYPE',
+        width: 160,
         render: (func: any) => (
           <Group gap={6} wrap="nowrap">
             {funcWrapperDefs[func.funcWrapper] && (
@@ -76,6 +77,7 @@ export const ProjectFunctions: React.FunctionComponent<
       {
         key: 'auth',
         header: 'AUTH',
+        width: 70,
         render: (func: any) =>
           func.sessionless !== true ? (
             <PikkuBadge type="flag" flag="auth" />
@@ -84,6 +86,7 @@ export const ProjectFunctions: React.FunctionComponent<
       {
         key: 'permissions',
         header: 'PERMISSIONS',
+        width: 110,
         render: (func: any) =>
           func.permissions?.length > 0 ? (
             <PikkuBadge type="flag" flag="permissioned" />
@@ -92,6 +95,7 @@ export const ProjectFunctions: React.FunctionComponent<
       {
         key: 'wirings',
         header: 'WIRINGS',
+        width: 90,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
           const usedBy = functionUsedBy.get(funcId)
