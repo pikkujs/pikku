@@ -60,9 +60,6 @@ const PermissionsTable: React.FunctionComponent<{
                 <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
               ))}
               {item.data?.factory && <PikkuBadge type="flag" flag="factory" />}
-              {item.data?.exportedName === null && (
-                <PikkuBadge type="flag" flag="local" />
-              )}
             </Group>
           )
         },
@@ -97,38 +94,15 @@ export const PermissionsPage: React.FunctionComponent = () => {
   const items = useMemo((): PermissionItem[] => {
     if (!meta.permissionsGroupsMeta) return []
     const definitions = meta.permissionsGroupsMeta.definitions || {}
-    const httpGroups = meta.permissionsGroupsMeta.httpGroups || {}
-    const tagGroups = meta.permissionsGroupsMeta.tagGroups || {}
-    const seen = new Set<string>()
     const result: PermissionItem[] = []
 
     for (const [defId, def] of Object.entries(definitions) as [string, any][]) {
-      seen.add(defId)
+      if (def.exportedName === null) continue
       result.push({
         id: `permission::def::${defId}`,
         name: def.name || def.exportedName || defId,
         data: { ...def, _id: defId },
       })
-    }
-
-    for (const group of [
-      ...Object.values(httpGroups),
-      ...Object.values(tagGroups),
-    ] as any[]) {
-      for (const instanceId of group.instanceIds || []) {
-        if (!seen.has(instanceId)) {
-          seen.add(instanceId)
-          result.push({
-            id: `permission::def::${instanceId}`,
-            name: instanceId,
-            data: {
-              _id: instanceId,
-              name: instanceId,
-              sourceFile: group.sourceFile,
-            },
-          })
-        }
-      }
     }
 
     return result

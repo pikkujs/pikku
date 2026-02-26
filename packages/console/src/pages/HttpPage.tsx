@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text, Stack } from '@mantine/core'
 import { Globe } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { PanelProvider } from '@/context/PanelContext'
@@ -63,6 +63,14 @@ const HttpTable: React.FunctionComponent<{
       }
       emptyMessage="No HTTP routes found."
       loading={loading}
+      description={
+        <Stack gap={2}>
+          <Text size="sm" fw={500}>See every route at a glance</Text>
+          <Text size="xs" c="dimmed">
+            Pikku prints your full route table at startup. Every method, route, function, and flag — visible in one place.
+          </Text>
+        </Stack>
+      }
     />
   )
 }

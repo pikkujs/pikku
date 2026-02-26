@@ -60,9 +60,6 @@ const MiddlewareTable: React.FunctionComponent<{
                 <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
               ))}
               {item.data?.factory && <PikkuBadge type="flag" flag="factory" />}
-              {item.data?.exportedName === null && (
-                <PikkuBadge type="flag" flag="local" />
-              )}
             </Group>
           )
         },
@@ -97,34 +94,14 @@ export const MiddlewarePage: React.FunctionComponent = () => {
   const items = useMemo((): MiddlewareItem[] => {
     if (!meta.middlewareGroupsMeta) return []
     const definitions = meta.middlewareGroupsMeta.definitions || {}
-    const instances = meta.middlewareGroupsMeta.instances || {}
-    const seen = new Set<string>()
     const result: MiddlewareItem[] = []
-
     for (const [defId, def] of Object.entries(definitions) as [string, any][]) {
-      seen.add(defId)
+      if (def.exportedName === null) continue
       result.push({
         id: `middleware::def::${defId}`,
         name: def.name || def.exportedName || defId,
         data: { ...def, _id: defId },
       })
-    }
-
-    for (const [, inst] of Object.entries(instances) as [string, any][]) {
-      const defId = inst.definitionId
-      if (defId && !seen.has(defId)) {
-        seen.add(defId)
-        result.push({
-          id: `middleware::def::${defId}`,
-          name: defId,
-          data: {
-            _id: defId,
-            name: defId,
-            sourceFile: inst.sourceFile,
-            isFactoryCall: inst.isFactoryCall,
-          },
-        })
-      }
     }
 
     return result
