@@ -16,7 +16,7 @@ import {
   QueueJobFailedError,
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
-import { pikkuState } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import { mapBullJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToBull = (

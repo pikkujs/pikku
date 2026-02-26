@@ -5,8 +5,8 @@ import {
   ScheduledTaskSummary,
   CoreUserSession,
   parseDurationString,
-  pikkuState,
 } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 
 /**
