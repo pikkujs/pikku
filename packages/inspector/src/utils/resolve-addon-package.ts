@@ -12,7 +12,15 @@ import * as ts from 'typescript'
 export const resolveAddonName = (
   identifier: ts.Identifier,
   checker: ts.TypeChecker,
-  wireAddonDeclarations?: Map<string, { package: string; rpcEndpoint?: string }>
+  wireAddonDeclarations?: Map<
+    string,
+    {
+      package: string
+      rpcEndpoint?: string
+      secretOverrides?: Record<string, string>
+      variableOverrides?: Record<string, string>
+    }
+  >
 ): string | null => {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return null

@@ -328,7 +328,12 @@ export interface InspectorState {
     usedAddons: Set<string>
     wireAddonDeclarations: Map<
       string,
-      { package: string; rpcEndpoint?: string }
+      {
+        package: string
+        rpcEndpoint?: string
+        secretOverrides?: Record<string, string>
+        variableOverrides?: Record<string, string>
+      }
     >
   }
   mcpEndpoints: {

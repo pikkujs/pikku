@@ -144,7 +144,15 @@ export interface SerializableInspectorState {
     invokedFunctions: string[]
     usedAddons: string[]
     wireAddonDeclarations: Array<
-      [string, { package: string; rpcEndpoint?: string }]
+      [
+        string,
+        {
+          package: string
+          rpcEndpoint?: string
+          secretOverrides?: Record<string, string>
+          variableOverrides?: Record<string, string>
+        },
+      ]
     >
   }
   mcpEndpoints: {
