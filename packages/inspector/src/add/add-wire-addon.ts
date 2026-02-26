@@ -1,6 +1,25 @@
 import * as ts from 'typescript'
 import { InspectorState, InspectorLogger } from '../types.js'
 
+function parseStringRecord(
+  obj: ts.ObjectLiteralExpression
+): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const prop of obj.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue
+    const keyNode = prop.name
+    const key = ts.isIdentifier(keyNode)
+      ? keyNode.text
+      : ts.isStringLiteral(keyNode)
+        ? keyNode.text
+        : undefined
+    if (key && ts.isStringLiteral(prop.initializer)) {
+      result[key] = prop.initializer.text
+    }
+  }
+  return result
+}
+
 /**
  * Detect wireAddon({ name: '...', package: '...' }) call expressions and
  * populate state.rpc.wireAddonDeclarations and state.rpc.usedAddons.
@@ -21,6 +40,8 @@ export function addWireAddon(
   let name: string | undefined
   let pkg: string | undefined
   let rpcEndpoint: string | undefined
+  let secretOverrides: Record<string, string> | undefined
+  let variableOverrides: Record<string, string> | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -32,12 +53,27 @@ export function addWireAddon(
       pkg = prop.initializer.text
     } else if (key === 'rpcEndpoint' && ts.isStringLiteral(prop.initializer)) {
       rpcEndpoint = prop.initializer.text
+    } else if (
+      key === 'secretOverrides' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      secretOverrides = parseStringRecord(prop.initializer)
+    } else if (
+      key === 'variableOverrides' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      variableOverrides = parseStringRecord(prop.initializer)
     }
   }
 
   if (!name || !pkg) return
 
   logger.debug(`• Found wireAddon: ${name} → ${pkg}`)
-  state.rpc.wireAddonDeclarations.set(name, { package: pkg, rpcEndpoint })
+  state.rpc.wireAddonDeclarations.set(name, {
+    package: pkg,
+    rpcEndpoint,
+    secretOverrides,
+    variableOverrides,
+  })
   state.rpc.usedAddons.add(name)
 }

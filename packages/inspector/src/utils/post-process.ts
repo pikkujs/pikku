@@ -3,7 +3,6 @@ import {
   InspectorLogger,
   InspectorOptions,
   InspectorModelConfig,
-  AddonConfig,
   MiddlewareGroupMeta,
   InspectorDiagnostic,
 } from '../types.js'
@@ -226,22 +225,46 @@ export function aggregateRequiredServices(
 
 export function validateSecretOverrides(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  addons?: Record<string, AddonConfig>
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
 ): void {
-  if (!addons) return
+  const { wireAddonDeclarations } = state.rpc
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
 
   const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
 
-  for (const [namespace, pkgConfig] of Object.entries(addons)) {
-    if (!pkgConfig.secretOverrides) continue
+  for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
+    if (!addonDecl.secretOverrides) continue
 
-    for (const secretKey of Object.keys(pkgConfig.secretOverrides)) {
+    for (const secretKey of Object.keys(addonDecl.secretOverrides)) {
       if (!secretNames.has(secretKey)) {
         const availableSecrets = Array.from(secretNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Secret override '${secretKey}' in addon '${namespace}' (${pkgConfig.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
+          `Secret override '${secretKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
+        )
+      }
+    }
+  }
+}
+
+export function validateVariableOverrides(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const { wireAddonDeclarations } = state.rpc
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+
+  const variableNames = new Set(state.variables.definitions.map((d) => d.name))
+
+  for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
+    if (!addonDecl.variableOverrides) continue
+
+    for (const variableKey of Object.keys(addonDecl.variableOverrides)) {
+      if (!variableNames.has(variableKey)) {
+        const availableVariables = Array.from(variableNames)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Variable override '${variableKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
         )
       }
     }

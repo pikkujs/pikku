@@ -6,6 +6,8 @@ export type WireAddonConfig = {
   rpcEndpoint?: string
   auth?: boolean
   tags?: string[]
+  secretOverrides?: Record<string, string>
+  variableOverrides?: Record<string, string>
 }
 
 export const wireAddon = (config: WireAddonConfig): void => {
