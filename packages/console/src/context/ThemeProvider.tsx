@@ -181,15 +181,12 @@ const theme = createTheme({
       },
     }),
     Anchor: Anchor.extend({
-      styles: (theme) => ({
+      styles: {
         root: {
           textDecoration: 'none',
-          color: theme.colors.gray[9],
-          '&:hover, &:focusVisible': {
-            color: `${theme.colors.blue[1]} !important`,
-          },
+          color: 'var(--mantine-color-text)',
         },
-      }),
+      },
     }),
     List: List.extend({
       styles: (theme) => {
