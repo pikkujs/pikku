@@ -1,5 +1,5 @@
-import { pikkuConfig } from '#pikku'
+import { pikkuAddonConfig } from '#pikku'
 
-export const createConfig = pikkuConfig(async () => {
+export const createConfig = pikkuAddonConfig(async () => {
   return {}
 })
