@@ -28,7 +28,7 @@ export const QueueWireDetailsForm: React.FunctionComponent<
         px="md"
         py="md"
         style={{
-          borderBottom: '1px solid var(--mantine-color-gray-3)',
+          borderBottom: '1px solid var(--mantine-color-default-border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
