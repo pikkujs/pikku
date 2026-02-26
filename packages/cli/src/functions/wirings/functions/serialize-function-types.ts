@@ -27,8 +27,8 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired, CreateWireServices } from '@pikku/core'
-import { pikkuState as __pikkuState } from '@pikku/core/internal'
+import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired } from '@pikku/core'
+import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -575,9 +575,9 @@ export const pikkuConfig = (
  * \`\`\`
  */
 export const pikkuServices = (
-  func: (config: Config, existingServices?: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
+  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
 ) => {
-  return async (config: Config, existingServices?: Partial<SingletonServices>) => {
+  return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const services = await func(config, existingServices)
     __pikkuState(null, 'package', 'singletonServices', services as any)
     return services

@@ -12,8 +12,6 @@ export type {
   CoreSingletonServices,
   CoreUserSession,
   CreateConfig,
-  CreateSingletonServices,
-  CreateWireServices,
   FunctionMeta,
   FunctionRuntimeMeta,
   FunctionServicesMeta,
