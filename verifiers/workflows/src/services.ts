@@ -1,14 +1,4 @@
-import type {
-  Config,
-  Services,
-  SingletonServices,
-  UserSession,
-} from '../types/application-types.d.js'
-import {
-  CreateConfig,
-  CreateWireServices,
-  CreateSingletonServices,
-} from '@pikku/core'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
 import {
   ConsoleLogger,
   JWTService,
@@ -21,63 +11,58 @@ import {
   requiredSingletonServices,
 } from '#pikku/pikku-services.gen.js'
 
-export const createConfig: CreateConfig<Config> = async () => {
+export const createConfig = pikkuConfig(async () => {
   return {}
-}
+})
 
 /**
  * This function creates the singleton services used by the application and is created once on start.
  * It's important to use the types here, as the pikku CLI uses them to improve the development experience!
  */
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  RequiredSingletonServices
-> = async (
-  config: Config,
-  existingServices?: Partial<SingletonServices>
-): Promise<RequiredSingletonServices> => {
-  const variables = existingServices?.variables || new LocalVariablesService()
-  const secrets = existingServices?.secrets || new LocalSecretService(variables)
-  const logger = new ConsoleLogger()
+export const createSingletonServices = pikkuServices(
+  async (config, existingServices): Promise<RequiredSingletonServices> => {
+    const variables = existingServices?.variables || new LocalVariablesService()
+    const secrets =
+      existingServices?.secrets || new LocalSecretService(variables)
+    const logger = new ConsoleLogger()
 
-  const schema = new CFWorkerSchemaService(logger)
+    const schema = new CFWorkerSchemaService(logger)
 
-  // Only create JWT service if it's actually needed
-  let jwt: JWTService | undefined
-  if (requiredSingletonServices.jwt) {
-    const { JoseJWTService } = await import('@pikku/jose')
-    jwt = new JoseJWTService(
-      async () => [
-        {
-          id: 'my-key',
-          value: 'the-yellow-puppet',
-        },
-      ],
-      logger
-    )
+    // Only create JWT service if it's actually needed
+    let jwt: JWTService | undefined
+    if (requiredSingletonServices.jwt) {
+      const { JoseJWTService } = await import('@pikku/jose')
+      jwt = new JoseJWTService(
+        async () => [
+          {
+            id: 'my-key',
+            value: 'the-yellow-puppet',
+          },
+        ],
+        logger
+      )
+    }
+
+    return {
+      config,
+      secrets,
+      logger,
+      variables,
+      schema,
+      jwt,
+      workflowService: existingServices?.workflowService,
+      queueService: existingServices?.queueService,
+      schedulerService: existingServices?.schedulerService,
+    }
   }
-
-  return {
-    config,
-    secrets,
-    logger,
-    variables,
-    schema,
-    jwt,
-    workflowService: existingServices?.workflowService,
-    queueService: existingServices?.queueService,
-    schedulerService: existingServices?.schedulerService,
-  }
-}
+)
 
 /**
  * This function creates the wire services on each request.
  * It's important to use the type CreateWireServices here, as the pikku CLI uses them to improve the development experience!
  */
-export const createWireServices: CreateWireServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async (_singletonServices, _session) => {
-  return {}
-}
+export const createWireServices = pikkuWireServices(
+  async (_singletonServices, _session) => {
+    return {}
+  }
+)

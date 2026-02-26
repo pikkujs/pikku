@@ -1,14 +1,4 @@
-import type {
-  Config,
-  Services,
-  SingletonServices,
-  UserSession,
-} from './types/application-types.d.js'
-import {
-  CreateConfig,
-  CreateWireServices,
-  CreateSingletonServices,
-} from '@pikku/core'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
 import {
   ConsoleLogger,
   LocalVariablesService,
@@ -22,14 +12,11 @@ import { StorageService } from './services/storage.service.js'
 import { UserContextService } from './services/user-context.service.js'
 import { UserPreferencesService } from './services/user-preferences.service.js'
 
-export const createConfig: CreateConfig<Config> = async () => {
-  return {} as Config
-}
+export const createConfig = pikkuConfig(async () => {
+  return {}
+})
 
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  SingletonServices
-> = async (_config) => {
+export const createSingletonServices = pikkuServices(async (_config) => {
   const variables = new LocalVariablesService()
 
   return {
@@ -44,17 +31,14 @@ export const createSingletonServices: CreateSingletonServices<
     analytics: new AnalyticsService(),
     storage: new StorageService(),
   }
-}
+})
 
-export const createWireServices: CreateWireServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async ({ email, logger }) => {
-  // Destructure services to test session service aggregation
-  logger.info('Creating wire services with email')
-  return {
-    userContext: new UserContextService(),
-    userPreferences: new UserPreferencesService(),
+export const createWireServices = pikkuWireServices(
+  async ({ email, logger }) => {
+    logger.info('Creating wire services with email')
+    return {
+      userContext: new UserContextService(),
+      userPreferences: new UserPreferencesService(),
+    }
   }
-}
+)
