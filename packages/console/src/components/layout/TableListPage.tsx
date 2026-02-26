@@ -34,6 +34,7 @@ interface TableListPageProps<T> {
   emptyDescription?: string
   loading?: boolean
   headerRight?: React.ReactNode
+  description?: React.ReactNode
 }
 
 export const TableListPage = <T,>({
@@ -50,6 +51,7 @@ export const TableListPage = <T,>({
   emptyTitle,
   emptyDescription,
   loading = false,
+  description,
 }: TableListPageProps<T>) => {
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -82,6 +84,17 @@ export const TableListPage = <T,>({
 
   return (
     <Stack gap={0} style={{ height: '100%' }}>
+      {description && (
+        <Box
+          px="md"
+          py="sm"
+          style={{
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+          }}
+        >
+          {description}
+        </Box>
+      )}
       <Box
         px="md"
         py="sm"
