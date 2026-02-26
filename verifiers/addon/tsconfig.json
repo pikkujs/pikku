@@ -6,5 +6,5 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["src/*", ".pikku/**/*", "src/function/external.functions.ts"]
+  "include": ["src/*", ".pikku/**/*", "src/function/addon.functions.ts"]
 }
