@@ -273,7 +273,7 @@ const MenuButton: React.FunctionComponent<{
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderBottom: '1px solid var(--mantine-color-gray-2)',
+        borderBottom: '1px solid var(--mantine-color-default-border)',
         transition: 'background-color 0.15s',
         width: '100%',
         backgroundColor: hovered ? 'var(--mantine-color-gray-1)' : undefined,
@@ -294,7 +294,7 @@ const MenuButton: React.FunctionComponent<{
           </Box>
         </Group>
         {showArrow && (
-          <ChevronRight size={16} color="var(--mantine-color-gray-5)" />
+          <ChevronRight size={16} color="var(--mantine-color-default-border)" />
         )}
       </Group>
     </UnstyledButton>
@@ -310,7 +310,7 @@ const BackButton: React.FunctionComponent<{
     onClick={onClick}
     p="md"
     style={{
-      borderBottom: '1px solid var(--mantine-color-gray-3)',
+      borderBottom: '1px solid var(--mantine-color-default-border)',
       width: '100%',
     }}
   >
@@ -338,7 +338,7 @@ const NodeItem: React.FunctionComponent<{
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderBottom: '1px solid var(--mantine-color-gray-2)',
+        borderBottom: '1px solid var(--mantine-color-default-border)',
         transition: 'background-color 0.15s',
         width: '100%',
         backgroundColor: hovered ? 'var(--mantine-color-gray-1)' : undefined,
@@ -568,7 +568,7 @@ const IntegrationItem: React.FunctionComponent<{
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderBottom: '1px solid var(--mantine-color-gray-2)',
+        borderBottom: '1px solid var(--mantine-color-default-border)',
         transition: 'background-color 0.15s',
         width: '100%',
         backgroundColor: hovered ? 'var(--mantine-color-gray-1)' : undefined,
@@ -589,7 +589,7 @@ const IntegrationItem: React.FunctionComponent<{
             </Text>
           </Box>
         </Group>
-        <ChevronRight size={16} color="var(--mantine-color-gray-5)" />
+        <ChevronRight size={16} color="var(--mantine-color-default-border)" />
       </Group>
     </UnstyledButton>
   )
@@ -658,7 +658,7 @@ const IntegrationDetailView: React.FunctionComponent<{
       />
       <Box
         p="md"
-        style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}
+        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
       >
         <Text size="xs" c="dimmed">
           {integration.description}
@@ -671,7 +671,7 @@ const IntegrationDetailView: React.FunctionComponent<{
             <Stack gap="xs">
               {Object.values(integration.credentials).map((cred) => (
                 <Group key={cred.name} gap="xs" wrap="nowrap">
-                  <Key size={14} color="var(--mantine-color-gray-5)" />
+                  <Key size={14} color="var(--mantine-color-default-border)" />
                   <Text size="xs">{cred.displayName}</Text>
                 </Group>
               ))}
@@ -748,7 +748,7 @@ const AddStepContent: React.FunctionComponent = () => {
     <Box>
       <Box
         p="md"
-        style={{ borderBottom: '1px solid var(--mantine-color-gray-3)' }}
+        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
       >
         <Text size="sm" fw={600}>
           Add a node

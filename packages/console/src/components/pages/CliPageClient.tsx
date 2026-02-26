@@ -88,7 +88,7 @@ export const CliPageClient: React.FunctionComponent = () => {
             style={{
               width: 260,
               minWidth: 200,
-              borderRight: '1px solid var(--mantine-color-gray-3)',
+              borderRight: '1px solid var(--mantine-color-default-border)',
               height: '100%',
             }}
           >
