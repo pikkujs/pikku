@@ -5,7 +5,7 @@ import { ExternalLink } from 'lucide-react'
 interface EmptyStatePlaceholderProps {
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
   title: string
-  description: string
+  description?: string
   docsHref: string
 }
 
@@ -24,9 +24,11 @@ export const EmptyStatePlaceholder: React.FunctionComponent<
       <Text size="xl" fw={600}>
         {title}
       </Text>
-      <Text c="dimmed" ta="center" maw={500}>
-        {description}
-      </Text>
+      {description && (
+        <Text c="dimmed" ta="center" maw={500}>
+          {description}
+        </Text>
+      )}
       <Button
         component="a"
         href={docsHref}
