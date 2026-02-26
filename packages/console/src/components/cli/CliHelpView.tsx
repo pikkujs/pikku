@@ -70,6 +70,7 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
       <Breadcrumbs>
         <Anchor
           size="sm"
+
           onClick={() => onNavigate([])}
           style={{ cursor: 'pointer' }}
         >
@@ -79,6 +80,7 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
           <Anchor
             key={i}
             size="sm"
+  
             onClick={() => onNavigate(commandPath.slice(0, i + 1))}
             style={{
               cursor: i === commandPath.length - 1 ? 'default' : 'pointer',
@@ -90,7 +92,11 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
         ))}
       </Breadcrumbs>
 
-      <Paper p="md" radius="sm" style={{ border: '1px solid var(--mantine-color-default-border)' }}>
+      <Paper
+        p="md"
+        radius="sm"
+        style={{ border: '1px solid var(--mantine-color-default-border)' }}
+      >
         <CliHelpText
           programId={programId}
           cliMeta={cliMeta}
