@@ -78,7 +78,6 @@ const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
                   underline="never"
                   size="sm"
                   ff="monospace"
-
                 >
                   {w.name}
                 </Anchor>

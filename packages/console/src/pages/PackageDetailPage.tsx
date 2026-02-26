@@ -286,7 +286,9 @@ export const PackageDetailPage: React.FunctionComponent<{
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', id],
     queryFn: async () => {
-      const result = await (rpc('console:getAddonPackage', { id }) as Promise<PackageRegistryEntry | null>)
+      const result = await (rpc('console:getAddonPackage', {
+        id,
+      }) as Promise<PackageRegistryEntry | null>)
       if (result?.schemas) {
         for (const [schemaName, schema] of Object.entries(result.schemas)) {
           queryClient.setQueryData(['schema', schemaName], schema)
@@ -594,13 +596,19 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {secretList.length > 0 && (
               <Tabs.Panel value="secrets">
-                <ProjectSecrets secrets={secretList.map(([, s]) => s)} installed={false} />
+                <ProjectSecrets
+                  secrets={secretList.map(([, s]) => s)}
+                  installed={false}
+                />
               </Tabs.Panel>
             )}
 
             {variableList.length > 0 && (
               <Tabs.Panel value="variables">
-                <ProjectVariables variables={variableList.map(([, v]) => v)} installed={false} />
+                <ProjectVariables
+                  variables={variableList.map(([, v]) => v)}
+                  installed={false}
+                />
               </Tabs.Panel>
             )}
           </Tabs>
