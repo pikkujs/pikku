@@ -69,7 +69,7 @@ const ChannelPageInner: React.FunctionComponent<{
           currentItem={channelName}
           items={channelItems}
           onItemSelect={handleChannelSwitch}
-          docsHref="https://pikkujs.com/docs/channels"
+          docsHref="https://pikku.dev/docs/wiring/channels"
         />
       }
     >

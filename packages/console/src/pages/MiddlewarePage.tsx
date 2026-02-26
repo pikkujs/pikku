@@ -72,7 +72,7 @@ const MiddlewareTable: React.FunctionComponent<{
     <TableListPage
       title="Middleware"
       icon={Layers}
-      docsHref="https://pikkujs.com/docs/middleware"
+      docsHref="https://pikku.dev/docs/core-features/middleware"
       data={items}
       columns={columns}
       getKey={(item) => item.id}
@@ -114,7 +114,7 @@ export const MiddlewarePage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Layers}
             category="Middleware"
-            docsHref="https://pikkujs.com/docs/middleware"
+            docsHref="https://pikku.dev/docs/core-features/middleware"
           />
         }
         showTabs={false}

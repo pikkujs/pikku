@@ -69,7 +69,7 @@ export const ProjectSecrets: React.FunctionComponent<ProjectSecretsProps> = ({
     <TableListPage
       title="Secrets"
       icon={KeyRound}
-      docsHref="https://pikkujs.com/docs/secrets"
+      docsHref="https://pikku.dev/docs/core-features/secrets"
       data={secrets}
       columns={columns}
       getKey={(s) => s.name}

@@ -58,7 +58,7 @@ export const ProjectVariables: React.FunctionComponent<
     <TableListPage
       title="Variables"
       icon={Settings2}
-      docsHref="https://pikkujs.com/docs/variables"
+      docsHref="https://pikku.dev/docs/core-features/variables"
       data={variables}
       columns={columns}
       getKey={(v) => v.name}

@@ -78,7 +78,7 @@ export const CliPageClient: React.FunctionComponent = () => {
             currentItem={programId}
             items={allPrograms}
             onItemSelect={handleProgramSwitch}
-            docsHref="https://pikkujs.com/docs/cli"
+            docsHref="https://pikku.dev/docs/wiring/cli"
           />
         }
         hidePanel

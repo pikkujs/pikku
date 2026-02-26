@@ -113,7 +113,7 @@ const PackagesList: React.FunctionComponent<{
         <DetailPageHeader
           icon={Package}
           category="Addons"
-          docsHref="https://pikkujs.com/docs/packages"
+          docsHref="https://pikku.dev/docs/external-packages"
         />
       }
       hidePanel
@@ -121,7 +121,7 @@ const PackagesList: React.FunctionComponent<{
       <TableListPage
         title="Addons"
         icon={Package}
-        docsHref="https://pikkujs.com/docs/packages"
+        docsHref="https://pikku.dev/docs/external-packages"
         data={data ?? []}
         columns={columns}
         getKey={(item) => item.id}

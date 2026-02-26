@@ -82,7 +82,7 @@ const CliList: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Terminal}
             category="CLI"
-            docsHref="https://pikkujs.com/docs/cli"
+            docsHref="https://pikku.dev/docs/wiring/cli"
           />
         }
         hidePanel
@@ -90,7 +90,7 @@ const CliList: React.FunctionComponent = () => {
         <TableListPage
           title="CLI"
           icon={Terminal}
-          docsHref="https://pikkujs.com/docs/cli"
+          docsHref="https://pikku.dev/docs/wiring/cli"
           data={programs}
           columns={COLUMNS}
           getKey={(entry) => entry.wireId}

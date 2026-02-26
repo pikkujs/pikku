@@ -28,7 +28,7 @@ const VariablesPageContent: React.FunctionComponent = () => {
         <DetailPageHeader
           icon={Variable}
           category="Variables"
-          docsHref="https://pikkujs.com/docs/variables"
+          docsHref="https://pikku.dev/docs/core-features/variables"
         />
       }
     >

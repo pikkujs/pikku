@@ -33,7 +33,7 @@ function WorkflowPageInner() {
           <DetailPageHeader
             icon={GitBranch}
             category="Workflows"
-            docsHref="https://pikkujs.com/docs/workflows"
+            docsHref="https://pikku.dev/docs/wiring/workflows"
           />
         }
         hidePanel

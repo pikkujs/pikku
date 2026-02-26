@@ -56,7 +56,7 @@ const SchedulersTable: React.FunctionComponent<{
     <TableListPage
       title="Schedulers"
       icon={Clock}
-      docsHref="https://pikkujs.com/docs/schedulers"
+      docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
       data={items}
       columns={columns}
       getKey={(item) => item.name}
@@ -96,7 +96,7 @@ export const SchedulersPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Clock}
             category="Schedulers"
-            docsHref="https://pikkujs.com/docs/schedulers"
+            docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
           />
         }
         showTabs={false}

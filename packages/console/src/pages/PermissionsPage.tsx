@@ -72,7 +72,7 @@ const PermissionsTable: React.FunctionComponent<{
     <TableListPage
       title="Permissions"
       icon={Shield}
-      docsHref="https://pikkujs.com/docs/permissions"
+      docsHref="https://pikku.dev/docs/core-features/permission-guards"
       data={items}
       columns={columns}
       getKey={(item) => item.id}
@@ -115,7 +115,7 @@ export const PermissionsPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Shield}
             category="Permissions"
-            docsHref="https://pikkujs.com/docs/permissions"
+            docsHref="https://pikku.dev/docs/core-features/permission-guards"
           />
         }
         showTabs={false}

@@ -56,7 +56,7 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
     <TableListPage
       title="Workflows"
       icon={GitBranch}
-      docsHref="https://pikkujs.com/docs/workflows"
+      docsHref="https://pikku.dev/docs/wiring/workflows"
       data={filteredByType}
       columns={COLUMNS}
       getKey={(w) => w.name}

@@ -60,7 +60,7 @@ const QueuesTable: React.FunctionComponent<{
     <TableListPage
       title="Queues"
       icon={ListOrdered}
-      docsHref="https://pikkujs.com/docs/queues"
+      docsHref="https://pikku.dev/docs/wiring/queue"
       data={items}
       columns={columns}
       getKey={(item) => item.name}
@@ -99,7 +99,7 @@ export const QueuesPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={ListOrdered}
             category="Queues"
-            docsHref="https://pikkujs.com/docs/queues"
+            docsHref="https://pikku.dev/docs/wiring/queue"
           />
         }
         showTabs={false}
