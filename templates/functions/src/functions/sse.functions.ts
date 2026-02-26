@@ -3,6 +3,7 @@ import {
   pikkuSessionlessFunc,
 } from '../../.pikku/pikku-types.gen.js'
 import {
+  EmptyInputSchema,
   UserIdInputSchema,
   TodoStreamOutputSchema,
   TodoProgressOutputSchema,
@@ -12,7 +13,8 @@ import {
  * SSE stream that processes the authenticated user's todos and reports progress.
  * Sends started/processing events over SSE, returns complete when done.
  */
-export const processTodosProgress = pikkuFunc<void>({
+export const processTodosProgress = pikkuFunc({
+  input: EmptyInputSchema,
   output: TodoProgressOutputSchema,
   func: async ({ logger, todoStore }, _input, { session, channel }) => {
     const todos = todoStore.getTodosByUser(session.userId, { completed: false })
@@ -22,12 +24,12 @@ export const processTodosProgress = pikkuFunc<void>({
     if (channel) {
       channel.send({ status: 'started', processed: 0, total })
       for (let i = 0; i < todos.length; i++) {
-        logger.info(`Processing todo: ${todos[i].title}`)
+        logger.info(`Processing todo: ${todos[i]!.title}`)
         channel.send({ status: 'processing', processed: i + 1, total })
       }
     }
 
-    return { status: 'complete', processed: total, total }
+    return { status: 'complete' as const, processed: total, total }
   },
 })
 
