@@ -17,7 +17,7 @@ import {
   computeDiagnostics,
 } from './utils/post-process.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
-import { pikkuState } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import { resolveLatestVersions } from './utils/resolve-versions.js'
 import { finalizeWorkflows } from './utils/workflow/graph/finalize-workflows.js'
 import {

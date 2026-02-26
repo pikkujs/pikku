@@ -1,5 +1,6 @@
 import { Logger } from './services/logger.js'
 import { CoreSingletonServices, WireServices } from './types/core.types.js'
+import { getAllPackageStates } from './pikku-state.js'
 
 export const closeWireServices = async (
   logger: Logger,
@@ -104,8 +105,9 @@ export const stopSingletonServices = async (
   const logger = singletonServices.logger
 
   // First, stop all external package singleton services
-  if (globalThis.pikkuState) {
-    for (const [packageName, packageState] of globalThis.pikkuState) {
+  const stateMap = getAllPackageStates()
+  if (stateMap.size > 0) {
+    for (const [packageName, packageState] of stateMap) {
       // Skip main package - we handle it separately
       if (packageName === '__main__') continue
 

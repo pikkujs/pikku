@@ -18,7 +18,7 @@ export function serializeMetaTS({
     : `import metaData from '${jsonImportPath}'`
 
   const serializedOutput: string[] = []
-  serializedOutput.push("import { pikkuState } from '@pikku/core'")
+  serializedOutput.push("import { pikkuState } from '@pikku/core/internal'")
   serializedOutput.push(`import { ${metaTypeName} } from '${metaTypeImport}'`)
   serializedOutput.push(importStatement)
   serializedOutput.push('')

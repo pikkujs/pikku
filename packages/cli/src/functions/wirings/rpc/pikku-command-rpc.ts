@@ -38,7 +38,7 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         rpcInternalWiringMetaFile,
-        `import { pikkuState } from '@pikku/core'\n${importStatement}\npikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
+        `import { pikkuState } from '@pikku/core/internal'\n${importStatement}\npikkuState(${packageNameArg}, 'rpc', 'meta', metaData as Record<string, string>)`
       )
       return true
     }

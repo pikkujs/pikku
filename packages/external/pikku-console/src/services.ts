@@ -1,5 +1,5 @@
 import { pikkuExternalServices } from '#pikku'
-import { getPikkuMetaDir } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import { WiringService } from './services/wiring.service.js'
 import { ExternalService } from './services/external.service.js'
 import { SchemaService } from './services/schema.service.js'
@@ -16,13 +16,13 @@ import postgres from 'postgres'
 
 export const createSingletonServices = pikkuExternalServices(
   async (_config, { variables, aiAgentRunner, schedulerService }) => {
-    const pikkuMetaPath = getPikkuMetaDir() ?? ''
-    const externalPackagesPath =
-      (await variables.get('EXTERNAL_PACKAGES_PATH')) ?? ''
+    const pikkuMetaPath = pikkuState(null, 'package', 'metaDir') ?? ''
+    const registryUrl =
+      (await variables.get('REGISTRY_URL')) ?? 'http://localhost:4003'
 
     const wiringService = new WiringService(pikkuMetaPath)
     const schemaService = new SchemaService(pikkuMetaPath)
-    const externalService = new ExternalService(externalPackagesPath)
+    const externalService = new ExternalService(registryUrl)
     await externalService.init()
     const oauthService = new OAuthService()
     const fileWatcherService = new FileWatcherService(

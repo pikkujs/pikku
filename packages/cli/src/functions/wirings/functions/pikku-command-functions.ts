@@ -58,7 +58,7 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       functionsMetaFile,
-      `import { pikkuState, FunctionsMeta } from '@pikku/core'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
+      `import { pikkuState } from '@pikku/core/internal'\nimport type { FunctionsMeta } from '@pikku/core'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
     )
 
     // For external packages, register ALL functions (they'll be invoked by consumers)

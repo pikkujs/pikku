@@ -4,7 +4,7 @@ import {
   MissingSchemaError,
   UnprocessableContentError,
 } from './errors/errors.js'
-import { pikkuState } from './pikku-state.js'
+import { pikkuState, getAllPackageStates } from './pikku-state.js'
 
 const schemaKey = (name: string, packageName: string | null): string =>
   packageName ? `${packageName}:${name}` : name
@@ -49,7 +49,7 @@ export const compileAllSchemas = (
   if (!schemaService) {
     throw new Error('SchemaService needs to be defined to load schemas')
   }
-  for (const [pkgName, packageState] of globalThis.pikkuState!) {
+  for (const [pkgName, packageState] of getAllPackageStates()) {
     const resolvedPkgName = pkgName === '__main__' ? null : pkgName
     for (const [name, schema] of packageState.misc.schemas) {
       schemaService.compileSchema(schemaKey(name, resolvedPkgName), schema)

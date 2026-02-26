@@ -9,7 +9,7 @@
 
 import { RedisWorkflowService } from '@pikku/redis'
 import { BullServiceFactory } from '@pikku/queue-bullmq'
-import { pikkuState } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 
 import {
   createConfig,
