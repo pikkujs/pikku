@@ -84,7 +84,7 @@ const ChannelsList: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Radio}
             category="Channels"
-            docsHref="https://pikkujs.com/docs/channels"
+            docsHref="https://pikku.dev/docs/wiring/channels"
           />
         }
         hidePanel
@@ -92,7 +92,7 @@ const ChannelsList: React.FunctionComponent = () => {
         <TableListPage
           title="Channels"
           icon={Radio}
-          docsHref="https://pikkujs.com/docs/channels"
+          docsHref="https://pikku.dev/docs/wiring/channels"
           data={channels}
           columns={COLUMNS}
           getKey={(ch) => ch.name}

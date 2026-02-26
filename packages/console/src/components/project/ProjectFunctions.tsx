@@ -116,7 +116,7 @@ export const ProjectFunctions: React.FunctionComponent<
     <TableListPage
       title="Functions"
       icon={FunctionSquare}
-      docsHref="https://pikkujs.com/docs/functions"
+      docsHref="https://pikku.dev/docs/core-features/functions"
       data={filtered}
       columns={columns}
       getKey={(func) => func.pikkuFuncName || func.pikkuFuncId}

@@ -63,7 +63,7 @@ const McpTable: React.FunctionComponent<{
     <TableListPage
       title="MCP"
       icon={Cpu}
-      docsHref="https://pikkujs.com/docs/mcp"
+      docsHref="https://pikku.dev/docs/wiring/mcp"
       data={filtered}
       columns={columns}
       getKey={(item) => `${item.method}::${item.wireId || item.name}`}
@@ -99,7 +99,7 @@ export const McpPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Cpu}
             category="MCP"
-            docsHref="https://pikkujs.com/docs/mcp"
+            docsHref="https://pikku.dev/docs/wiring/mcp"
           />
         }
         showTabs={false}

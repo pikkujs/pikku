@@ -48,7 +48,7 @@ const HttpTable: React.FunctionComponent<{
     <TableListPage
       title="HTTP Routes"
       icon={Globe}
-      docsHref="https://pikkujs.com/docs/http"
+      docsHref="https://pikku.dev/docs/wiring/http"
       data={routes}
       columns={columns}
       getKey={(route) => `${route.method}::${route.route}`}
@@ -93,7 +93,7 @@ export const HttpPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Globe}
             category="HTTP Routes"
-            docsHref="https://pikkujs.com/docs/http"
+            docsHref="https://pikku.dev/docs/wiring/http"
           />
         }
         showTabs={false}

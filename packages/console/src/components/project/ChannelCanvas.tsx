@@ -101,7 +101,7 @@ export const ChannelCanvas: React.FunctionComponent<ChannelCanvasProps> = ({
         <DetailPageHeader
           icon={Radio}
           category="Channels"
-          docsHref="https://pikkujs.com/docs/channels"
+          docsHref="https://pikku.dev/docs/wiring/channels"
           categoryPath="/apis/channels"
           currentItem={channelName}
           items={items}

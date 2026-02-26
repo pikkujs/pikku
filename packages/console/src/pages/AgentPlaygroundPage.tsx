@@ -61,7 +61,7 @@ const AgentPlaygroundInner: React.FunctionComponent<{
     <DetailPageHeader
       icon={Bot}
       category="Agents"
-      docsHref="https://pikkujs.com/docs/agents"
+      docsHref="https://pikku.dev/docs/wiring/ai-agents"
       categoryPath="/agents"
       currentItem={agentId}
       items={agentItems}

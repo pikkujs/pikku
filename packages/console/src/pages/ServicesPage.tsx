@@ -63,7 +63,7 @@ export const ServicesPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Server}
             category="Services"
-            docsHref="https://pikkujs.com/docs/services"
+            docsHref="https://pikku.dev/docs/core-features/services"
           />
         }
         hidePanel
@@ -71,7 +71,7 @@ export const ServicesPage: React.FunctionComponent = () => {
         <TableListPage
           title="Services"
           icon={Server}
-          docsHref="https://pikkujs.com/docs/services"
+          docsHref="https://pikku.dev/docs/core-features/services"
           data={services}
           columns={COLUMNS}
           getKey={(item) => item.name}

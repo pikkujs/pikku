@@ -85,7 +85,7 @@ const AgentsList: React.FunctionComponent = () => {
     <TableListPage
       title="Agents"
       icon={Bot}
-      docsHref="https://pikkujs.com/docs/agents"
+      docsHref="https://pikku.dev/docs/wiring/ai-agents"
       data={items}
       columns={columns}
       getKey={(item) => item.name}
@@ -132,7 +132,7 @@ export const AgentsPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Bot}
             category="Agents"
-            docsHref="https://pikkujs.com/docs/agents"
+            docsHref="https://pikku.dev/docs/wiring/ai-agents"
           />
         }
         hidePanel={!agentId}

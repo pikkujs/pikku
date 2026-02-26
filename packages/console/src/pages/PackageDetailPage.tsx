@@ -314,7 +314,7 @@ export const PackageDetailPage: React.FunctionComponent<{
             icon={Package}
             category="Addons"
             categoryPath="/addons"
-            docsHref="https://pikkujs.com/docs/packages"
+            docsHref="https://pikku.dev/docs/external-packages"
           />
         }
         hidePanel
@@ -380,7 +380,7 @@ export const PackageDetailPage: React.FunctionComponent<{
           icon={Package}
           category="Addons"
           categoryPath="/addons"
-          docsHref="https://pikkujs.com/docs/packages"
+          docsHref="https://pikku.dev/docs/external-packages"
           subtitle={
             <Group gap="xs">
               <Text size="md" c="dimmed">

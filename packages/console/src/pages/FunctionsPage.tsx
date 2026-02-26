@@ -30,7 +30,7 @@ export const FunctionsPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={FunctionSquare}
             category="Functions"
-            docsHref="https://pikkujs.com/docs/functions"
+            docsHref="https://pikku.dev/docs/core-features/functions"
           />
         }
         showTabs={false}

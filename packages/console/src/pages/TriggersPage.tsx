@@ -78,7 +78,7 @@ const TriggersTable: React.FunctionComponent<{
     <TableListPage
       title="Triggers"
       icon={Zap}
-      docsHref="https://pikkujs.com/docs/triggers"
+      docsHref="https://pikku.dev/docs/wiring/triggers"
       data={pairs}
       columns={columns}
       getKey={(pair) => pair.name}
@@ -123,7 +123,7 @@ export const TriggersPage: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Zap}
             category="Triggers"
-            docsHref="https://pikkujs.com/docs/triggers"
+            docsHref="https://pikku.dev/docs/wiring/triggers"
           />
         }
         showTabs={false}

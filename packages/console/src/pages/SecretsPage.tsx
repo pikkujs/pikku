@@ -29,7 +29,7 @@ const SecretsPageContent: React.FunctionComponent = () => {
         <DetailPageHeader
           icon={KeyRound}
           category="Secrets"
-          docsHref="https://pikkujs.com/docs/secrets"
+          docsHref="https://pikku.dev/docs/core-features/secrets"
         />
       }
     >
