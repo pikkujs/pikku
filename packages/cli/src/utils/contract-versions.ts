@@ -7,6 +7,7 @@ export { createEmptyManifest }
 
 export type {
   ContractEntry,
+  VersionHashEntry,
   VersionValidateError,
   VersionManifest,
   VersionManifestEntry,

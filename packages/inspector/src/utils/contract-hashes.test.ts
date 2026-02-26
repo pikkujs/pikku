@@ -16,12 +16,22 @@ import { ErrorCode } from '../error-codes.js'
 function makeContracts(
   entries: Record<
     string,
-    { functionKey: string; version: number; contractHash: string }
+    {
+      functionKey: string
+      version: number
+      contractHash: string
+      inputHash?: string
+      outputHash?: string
+    }
   >
 ): Map<string, ContractEntry> {
   const map = new Map<string, ContractEntry>()
   for (const [id, entry] of Object.entries(entries)) {
-    map.set(id, entry)
+    map.set(id, {
+      ...entry,
+      inputHash: entry.inputHash ?? entry.contractHash.slice(0, 8),
+      outputHash: entry.outputHash ?? entry.contractHash.slice(0, 8),
+    })
   }
   return map
 }
@@ -414,11 +424,16 @@ describe('updateManifest', () => {
         functionKey: 'createUser',
         version: 1,
         contractHash: 'abc',
+        inputHash: 'in123456',
+        outputHash: 'out1234',
       },
     })
     const result = updateManifest(manifest, contracts)
     assert.strictEqual(result.contracts.createUser.latest, 1)
-    assert.strictEqual(result.contracts.createUser.versions['1'], 'abc')
+    assert.deepStrictEqual(result.contracts.createUser.versions['1'], {
+      inputHash: 'in123456',
+      outputHash: 'out1234',
+    })
   })
 
   test('adds new version to existing function and updates latest', () => {
@@ -433,17 +448,27 @@ describe('updateManifest', () => {
         functionKey: 'createUser',
         version: 1,
         contractHash: 'aaa',
+        inputHash: 'inaaa123',
+        outputHash: 'outaaa12',
       },
       'createUser@v2': {
         functionKey: 'createUser',
         version: 2,
         contractHash: 'bbb',
+        inputHash: 'inbbb123',
+        outputHash: 'outbbb12',
       },
     })
     const result = updateManifest(manifest, contracts)
     assert.strictEqual(result.contracts.createUser.latest, 2)
-    assert.strictEqual(result.contracts.createUser.versions['2'], 'bbb')
-    assert.strictEqual(result.contracts.createUser.versions['1'], 'aaa')
+    assert.deepStrictEqual(result.contracts.createUser.versions['2'], {
+      inputHash: 'inbbb123',
+      outputHash: 'outbbb12',
+    })
+    assert.deepStrictEqual(result.contracts.createUser.versions['1'], {
+      inputHash: 'inaaa123',
+      outputHash: 'outaaa12',
+    })
   })
 
   test('preserves deleted functions', () => {

@@ -105,6 +105,8 @@ export type FunctionRuntimeMeta = {
   version?: number
   requiresApproval?: boolean
   contractHash?: string
+  inputHash?: string
+  outputHash?: string
 }
 
 export type FunctionMeta = FunctionRuntimeMeta &

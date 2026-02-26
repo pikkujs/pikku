@@ -19,6 +19,7 @@ export {
 } from './utils/contract-hashes.js'
 export type {
   ContractEntry,
+  VersionHashEntry,
   VersionValidateError,
   VersionManifest,
   VersionManifestEntry,
