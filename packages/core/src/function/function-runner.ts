@@ -257,7 +257,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
         resolvedSingletonServices.logger.warn(
           `Function '${funcName}' requires a session but auth was explicitly disabled — use pikkuSessionlessFunc instead.`
         )
-      } else if (!session) {
+      }
+      if (!session) {
         throw new ForbiddenError('Authentication required')
       }
     } else {
