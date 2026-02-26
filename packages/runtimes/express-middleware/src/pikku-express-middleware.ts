@@ -1,11 +1,11 @@
 import { RequestHandler } from 'express'
 
 import type { Logger } from '@pikku/core/services'
-import { fetch, RunHTTPWiringOptions } from '@pikku/core/http'
+import { fetchData, RunHTTPWiringOptions } from '@pikku/core/http'
 import { logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { expressToRequest } from './express-request-convertor.js'
-import { sendResponseToExpress } from './express-response-convertor.js'
+import { ExpressPikkuHTTPRequest } from './express-pikku-http-request.js'
+import { ExpressPikkuHTTPResponse } from './express-pikku-http-response.js'
 
 /**
  * Arguments for configuring the Pikku middleware.
@@ -29,6 +29,7 @@ export const pikkuExpressMiddleware = ({
   logRoutes,
   loadSchemas,
   coerceDataFromSchema,
+  ...runOptions
 }: PikkuMiddlewareArgs): RequestHandler => {
   if (logRoutes) {
     logRegisterRoutes(logger)
@@ -38,12 +39,14 @@ export const pikkuExpressMiddleware = ({
   }
 
   return async (req, res, next) => {
-    const request = await expressToRequest(req)
-    const response = await fetch(request, {
+    const request = new ExpressPikkuHTTPRequest(req)
+    const response = new ExpressPikkuHTTPResponse(res)
+    await fetchData(request, response, {
       respondWith404,
       coerceDataFromSchema,
+      ...runOptions,
     })
-    await sendResponseToExpress(res, response)
+    response.flush()
     next()
   }
 }
