@@ -96,6 +96,7 @@ export type { PikkuPackageState } from './types/state.types.js'
 export { runMiddleware, addMiddleware } from './middleware-runner.js'
 export { addPermission } from './permissions.js'
 export { isSerializable, stopSingletonServices } from './utils.js'
+export { getSingletonServices, getCreateWireServices } from './pikku-state.js'
 export {
   type ScheduledTaskInfo,
   type ScheduledTaskSummary,

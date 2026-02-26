@@ -3,6 +3,7 @@ import {
   PostToConnectionCommand,
 } from '@aws-sdk/client-apigatewaymanagementapi'
 import { Logger } from '@pikku/core/services'
+import { getSingletonServices } from '@pikku/core'
 import { APIGatewayEvent } from 'aws-lambda'
 import { createLambdaChannelHandlerFactory } from './lambda-channel-handler.js'
 import { ChannelStore } from '@pikku/core/channel'
@@ -77,10 +78,10 @@ export const getApiGatewayManagementApiClient = (
 }
 
 export const getServerlessDependencies = (
-  logger: Logger,
   channelStore: ChannelStore,
   event: APIGatewayEvent
 ) => {
+  const { logger } = getSingletonServices()
   const channelId = event.requestContext.connectionId
   if (!channelId) {
     throw new Error('No connectionId found in requestContext')
