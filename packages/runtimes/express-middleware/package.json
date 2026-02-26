@@ -33,6 +33,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "raw-body": "^3.0.2"
+    "cookie": "^1.1.1"
   }
 }

@@ -1,11 +1,11 @@
 import type { Logger } from '@pikku/core/services'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { fetch, RunHTTPWiringOptions } from '@pikku/core/http'
+import { fetchData, RunHTTPWiringOptions } from '@pikku/core/http'
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import { logRoutes } from '@pikku/core/http'
-import { fastifyToRequest } from './fastify-request-convertor.js'
-import { sendResponseToFastify } from './fastify-response-convertor.js'
+import { FastifyPikkuHTTPRequest } from './fastify-pikku-http-request.js'
+import { FastifyPikkuHTTPResponse } from './fastify-pikku-http-response.js'
 
 /**
  * The `PikkuFastifyPlugin` is a Fastify plugin that integrates the Pikku framework with Fastify,
@@ -36,11 +36,17 @@ const pikkuPlugin: FastifyPluginAsync<PikkuFastifyPluginOptions> = async (
   if (pikku.loadSchemas) {
     compileAllSchemas(pikku.logger)
   }
+  const {
+    logger,
+    logRoutes: _logRoutes,
+    loadSchemas: _loadSchemas,
+    ...runOptions
+  } = pikku
   fastify.all('/*', async (req, res) => {
-    const response = await fetch(fastifyToRequest(req), {
-      respondWith404: pikku.respondWith404,
-    })
-    await sendResponseToFastify(res, response)
+    const request = new FastifyPikkuHTTPRequest(req)
+    const response = new FastifyPikkuHTTPResponse(res)
+    await fetchData(request, response, runOptions)
+    response.flush()
   })
 }
 
