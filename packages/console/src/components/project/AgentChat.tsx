@@ -312,7 +312,10 @@ export const AgentChat: React.FunctionComponent = () => {
                   <ThreadPrimitive.Empty>
                     <Center style={{ flex: 1, minHeight: 300 }}>
                       <Stack align="center" gap="xs">
-                        <Bot size={40} color="var(--mantine-color-default-border)" />
+                        <Bot
+                          size={40}
+                          color="var(--mantine-color-default-border)"
+                        />
                         <Text c="dimmed" ta="center">
                           {threadId
                             ? 'Send a message to start the conversation.'

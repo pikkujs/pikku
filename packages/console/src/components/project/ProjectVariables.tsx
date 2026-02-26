@@ -62,7 +62,9 @@ export const ProjectVariables: React.FunctionComponent<
       data={variables}
       columns={columns}
       getKey={(v) => v.name}
-      onRowClick={(v) => openVariable(v.name, { ...(v.rawData ?? v), installed })}
+      onRowClick={(v) =>
+        openVariable(v.name, { ...(v.rawData ?? v), installed })
+      }
       searchPlaceholder="Search variables..."
       searchFilter={(v, q) =>
         v.name.toLowerCase().includes(q) ||

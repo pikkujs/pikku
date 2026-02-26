@@ -65,9 +65,12 @@ const HttpTable: React.FunctionComponent<{
       loading={loading}
       description={
         <Stack gap={2}>
-          <Text size="sm" fw={500}>See every route at a glance</Text>
+          <Text size="sm" fw={500}>
+            See every route at a glance
+          </Text>
           <Text size="xs" c="dimmed">
-            Pikku prints your full route table at startup. Every method, route, function, and flag — visible in one place.
+            Pikku prints your full route table at startup. Every method, route,
+            function, and flag — visible in one place.
           </Text>
         </Stack>
       }

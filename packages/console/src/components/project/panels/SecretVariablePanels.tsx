@@ -123,7 +123,9 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
             schemaName={metadata?.schema}
             isOAuth2={isOAuth2}
           />
-          {isOAuth2 && <OAuthConnectionSection credentialName={metadata.name} />}
+          {isOAuth2 && (
+            <OAuthConnectionSection credentialName={metadata.name} />
+          )}
         </>
       )}
     </Stack>

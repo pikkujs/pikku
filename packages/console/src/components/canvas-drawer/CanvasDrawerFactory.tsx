@@ -658,7 +658,9 @@ const IntegrationDetailView: React.FunctionComponent<{
       />
       <Box
         p="md"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+        style={{
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+        }}
       >
         <Text size="xs" c="dimmed">
           {integration.description}
@@ -748,7 +750,9 @@ const AddStepContent: React.FunctionComponent = () => {
     <Box>
       <Box
         p="md"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+        style={{
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+        }}
       >
         <Text size="sm" fw={600}>
           Add a node

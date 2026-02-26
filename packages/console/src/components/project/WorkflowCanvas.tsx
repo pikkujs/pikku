@@ -317,7 +317,9 @@ const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
           radius={0}
           py="xs"
           styles={{
-            root: { borderBottom: '1px solid var(--mantine-color-default-border)' },
+            root: {
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+            },
           }}
         >
           <Group justify="space-between" align="center">
@@ -342,7 +344,9 @@ const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
           radius={0}
           py="xs"
           styles={{
-            root: { borderBottom: '1px solid var(--mantine-color-default-border)' },
+            root: {
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+            },
           }}
         >
           <Text size="sm">

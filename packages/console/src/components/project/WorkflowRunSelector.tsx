@@ -122,7 +122,9 @@ export const WorkflowRunSelector: React.FunctionComponent<
           <Box
             px="sm"
             py="xs"
-            style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+            style={{
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+            }}
           >
             <SegmentedControl
               size="xs"

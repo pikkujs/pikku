@@ -69,7 +69,9 @@ export const ChannelNavTree: React.FunctionComponent<ChannelNavTreeProps> = ({
       <Box
         px="sm"
         py="xs"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+        style={{
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+        }}
       >
         <TextInput
           placeholder="Search handlers..."

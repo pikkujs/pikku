@@ -11,13 +11,15 @@ const VariablesPageContent: React.FunctionComponent = () => {
 
   const variables = useMemo(() => {
     if (!meta.variablesMeta) return []
-    return Object.entries(meta.variablesMeta).map(([name, data]: [string, any]) => ({
-      name,
-      displayName: data.displayName,
-      description: data.description,
-      variableId: data.variableId,
-      rawData: data,
-    }))
+    return Object.entries(meta.variablesMeta).map(
+      ([name, data]: [string, any]) => ({
+        name,
+        displayName: data.displayName,
+        description: data.description,
+        variableId: data.variableId,
+        rawData: data,
+      })
+    )
   }, [meta.variablesMeta])
 
   return (
