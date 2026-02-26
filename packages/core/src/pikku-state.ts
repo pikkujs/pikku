@@ -9,10 +9,17 @@ import { AIAgentMeta } from './wirings/ai-agent/ai-agent.types.js'
 import { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 import { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
-declare global {
-  // eslint-disable-next-line no-var
-  var pikkuState: Map<string, PikkuPackageState> | undefined
+const PIKKU_STATE_KEY = Symbol.for('@pikku/core/state')
+
+const getStateMap = (): Map<string, PikkuPackageState> => {
+  if (!(globalThis as any)[PIKKU_STATE_KEY]) {
+    ;(globalThis as any)[PIKKU_STATE_KEY] = new Map<string, PikkuPackageState>()
+  }
+  return (globalThis as any)[PIKKU_STATE_KEY] as Map<string, PikkuPackageState>
 }
+
+export const getAllPackageStates = (): Map<string, PikkuPackageState> =>
+  getStateMap()
 
 /**
  * Get or set package-scoped pikku state
@@ -42,14 +49,11 @@ export const pikkuState = <
   const resolvedPackageName = packageName ?? '__main__'
 
   // Initialize package state if it doesn't exist
-  if (
-    !globalThis.pikkuState ||
-    !globalThis.pikkuState.has(resolvedPackageName)
-  ) {
+  if (!getStateMap().has(resolvedPackageName)) {
     initializePikkuState(resolvedPackageName)
   }
 
-  const packageState = globalThis.pikkuState!.get(resolvedPackageName)!
+  const packageState = getStateMap().get(resolvedPackageName)!
 
   if (value !== undefined) {
     packageState[type][content] = value
@@ -152,29 +156,26 @@ const createEmptyPackageState = (): PikkuPackageState => ({
  * Initialize state for a new package
  */
 export const initializePikkuState = (packageName: string): void => {
-  if (!globalThis.pikkuState) {
-    globalThis.pikkuState = new Map()
-  }
-  if (!globalThis.pikkuState.has(packageName)) {
-    globalThis.pikkuState.set(packageName, createEmptyPackageState())
+  if (!getStateMap().has(packageName)) {
+    getStateMap().set(packageName, createEmptyPackageState())
   }
 }
 
 export const resetPikkuState = () => {
   // Preserve the errors map before resetting
-  const existingErrors = globalThis.pikkuState?.get('__main__')?.misc.errors
+  const existingErrors = getStateMap().get('__main__')?.misc.errors
 
-  globalThis.pikkuState = new Map()
+  ;(globalThis as any)[PIKKU_STATE_KEY] = new Map<string, PikkuPackageState>()
   initializePikkuState('__main__')
 
   // Restore the errors map if it existed
   if (existingErrors) {
-    const mainState = globalThis.pikkuState.get('__main__')!
+    const mainState = getStateMap().get('__main__')!
     mainState.misc.errors = existingErrors
   }
 }
 
-if (!globalThis.pikkuState) {
+if (!getStateMap().has('__main__')) {
   resetPikkuState()
 }
 
