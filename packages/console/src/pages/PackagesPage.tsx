@@ -95,13 +95,14 @@ const PackagesList: React.FunctionComponent<{
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['addons'],
     queryFn: async () => {
       const result = await rpc('console:getAddonMeta', null)
       return ((result as any)?.packages ?? result ?? []) as PackageMeta[]
     },
     staleTime: 60 * 1000,
+    retry: false,
   })
 
   const columns = useMemo(() => COLUMNS(), [])
@@ -132,6 +133,8 @@ const PackagesList: React.FunctionComponent<{
           item.description?.toLowerCase().includes(q) ||
           false
         }
+        emptyTitle={isError ? 'Addon Service Not Running' : undefined}
+        emptyDescription={isError ? '' : undefined}
         emptyMessage="No addons found."
         loading={isLoading}
       />

@@ -73,7 +73,7 @@ export const TableListPage = <T,>({
         icon={icon}
         title={emptyTitle || `Configure ${title}`}
         description={
-          emptyDescription || `No ${title.toLowerCase()} are configured yet.`
+          emptyDescription ?? `No ${title.toLowerCase()} are configured yet.`
         }
         docsHref={docsHref}
       />
