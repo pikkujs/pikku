@@ -116,13 +116,16 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
 
       <SchemaSection label="Fields" schemaName={metadata?.schema} />
 
-      <SecretValueEditor
-        secretId={metadata?.secretId}
-        schemaName={metadata?.schema}
-        isOAuth2={isOAuth2}
-      />
-
-      {isOAuth2 && <OAuthConnectionSection credentialName={metadata.name} />}
+      {metadata?.installed !== false && (
+        <>
+          <SecretValueEditor
+            secretId={metadata?.secretId}
+            schemaName={metadata?.schema}
+            isOAuth2={isOAuth2}
+          />
+          {isOAuth2 && <OAuthConnectionSection credentialName={metadata.name} />}
+        </>
+      )}
     </Stack>
   )
 }
@@ -324,10 +327,12 @@ export const VariableConfiguration: React.FunctionComponent<
 
       <SchemaSection label="Fields" schemaName={metadata?.schema} />
 
-      <VariableValueEditor
-        variableId={metadata?.variableId}
-        schemaName={metadata?.schema}
-      />
+      {metadata?.installed !== false && (
+        <VariableValueEditor
+          variableId={metadata?.variableId}
+          schemaName={metadata?.schema}
+        />
+      )}
     </Stack>
   )
 }

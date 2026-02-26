@@ -13,6 +13,7 @@ import {
   Tabs,
   Text,
   ThemeIcon,
+  TypographyStylesProvider,
 } from '@mantine/core'
 import {
   Package,
@@ -27,11 +28,15 @@ import {
   Cpu,
   BookOpen,
 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
 import { ProjectFunctions } from '@/components/project/ProjectFunctions'
+import { ProjectSecrets } from '@/components/project/ProjectSecrets'
+import { ProjectVariables } from '@/components/project/ProjectVariables'
 import type { FunctionsMeta } from '@pikku/core'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ChannelsMeta } from '@pikku/core/channel'
@@ -48,6 +53,20 @@ interface McpMeta {
   promptsMeta: MCPPromptMeta
 }
 
+interface SecretEntry {
+  name: string
+  displayName: string
+  description?: string
+  secretId: string
+}
+
+interface VariableEntry {
+  name: string
+  displayName: string
+  description?: string
+  variableId: string
+}
+
 interface PackageRegistryEntry {
   id: string
   name: string
@@ -62,12 +81,13 @@ interface PackageRegistryEntry {
   tags: string[]
   functions: FunctionsMeta
   agents: Record<string, unknown>
-  secrets: Record<string, unknown>
-  variables: Record<string, unknown>
+  secrets: Record<string, SecretEntry>
+  variables: Record<string, VariableEntry>
   httpRoutes: HTTPWiringsMeta
   channels: ChannelsMeta
   cli: Record<string, CLIProgramMeta>
   mcp: McpMeta | null
+  schemas: Record<string, unknown>
 }
 
 const PackageIcon: React.FunctionComponent<{
@@ -261,13 +281,19 @@ export const PackageDetailPage: React.FunctionComponent<{
   onBack: () => void
 }> = ({ id, onBack }) => {
   const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
 
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', id],
-    queryFn: () =>
-      rpc('console:getAddonPackage', {
-        id,
-      }) as Promise<PackageRegistryEntry | null>,
+    queryFn: async () => {
+      const result = await (rpc('console:getAddonPackage', { id }) as Promise<PackageRegistryEntry | null>)
+      if (result?.schemas) {
+        for (const [schemaName, schema] of Object.entries(result.schemas)) {
+          queryClient.setQueryData(['schema', schemaName], schema)
+        }
+      }
+      return result
+    },
   })
 
   if (isLoading) {
@@ -502,18 +528,18 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {pkg.readme && (
               <Tabs.Panel value="readme">
-                <Box px="md" py="md">
-                  <Code
-                    block
-                    style={{
-                      whiteSpace: 'pre-wrap',
-                      maxHeight: 'calc(100vh - 300px)',
-                      overflow: 'auto',
-                    }}
-                  >
+                <TypographyStylesProvider
+                  px="xl"
+                  py="md"
+                  style={{
+                    maxHeight: 'calc(100vh - 280px)',
+                    overflow: 'auto',
+                  }}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {pkg.readme}
-                  </Code>
-                </Box>
+                  </ReactMarkdown>
+                </TypographyStylesProvider>
               </Tabs.Panel>
             )}
 
@@ -568,27 +594,13 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {secretList.length > 0 && (
               <Tabs.Panel value="secrets">
-                <ReadOnlyTable
-                  headers={['KEY']}
-                  rows={secretList.map(([key]) => [
-                    <Text key={key} size="sm" fw={500}>
-                      {key}
-                    </Text>,
-                  ])}
-                />
+                <ProjectSecrets secrets={secretList.map(([, s]) => s)} installed={false} />
               </Tabs.Panel>
             )}
 
             {variableList.length > 0 && (
               <Tabs.Panel value="variables">
-                <ReadOnlyTable
-                  headers={['KEY']}
-                  rows={variableList.map(([key]) => [
-                    <Text key={key} size="sm" fw={500}>
-                      {key}
-                    </Text>,
-                  ])}
-                />
+                <ProjectVariables variables={variableList.map(([, v]) => v)} installed={false} />
               </Tabs.Panel>
             )}
           </Tabs>
