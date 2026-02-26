@@ -206,8 +206,8 @@ export function cleanPikkuConfig(
     delete pikkuConfig.mcpJsonFile
   }
 
-  // We remove external packages as we can't yet test them
-  delete pikkuConfig.externalPackages
+  // We remove addons as we can't yet test them
+  delete pikkuConfig.addons
 
   fs.writeFileSync(pikkuConfigFile, JSON.stringify(pikkuConfig, null, 2))
 }
@@ -283,7 +283,7 @@ const CLIENT_FEATURE_MAPPING = {
   'agent-sse.ts': ['sse'],
   'http-fetch.ts': ['http'],
   'http-sse.ts': ['sse'],
-  'rpc.ts': ['external'],
+  'rpc.ts': ['addon'],
   'websocket.ts': ['channel'],
   'workflow.ts': ['workflows'],
 } as const
@@ -477,10 +477,10 @@ export function updatePackageJSONScripts(
     }
   }
 
-  // Remove external package dependency unless 'external' is supported
-  if (!supportedFeatures.includes('external')) {
-    if (packageJson.dependencies?.['@pikku/templates-function-external']) {
-      delete packageJson.dependencies['@pikku/templates-function-external']
+  // Remove addon dependency unless 'addon' is supported
+  if (!supportedFeatures.includes('addon')) {
+    if (packageJson.dependencies?.['@pikku/templates-function-addon']) {
+      delete packageJson.dependencies['@pikku/templates-function-addon']
     }
   }
 

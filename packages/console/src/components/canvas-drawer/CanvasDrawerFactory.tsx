@@ -26,7 +26,7 @@ import {
   Cable,
   User,
 } from 'lucide-react'
-import { useExternalMeta, useFunctionsMeta } from '@/hooks/useWirings'
+import { useAddonMeta, useFunctionsMeta } from '@/hooks/useWirings'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { Code2 } from 'lucide-react'
 
@@ -50,7 +50,7 @@ interface ExternalCredential {
   schema: string
 }
 
-interface ExternalPackageMeta {
+interface AddonMeta {
   package: string
   alias: string
   displayName: string
@@ -66,8 +66,8 @@ const IntegrationIcon: React.FunctionComponent<{
 }> = ({ alias, size = 20 }) => {
   const rpc = usePikkuRPC()
   const { data: svgContent } = useQuery({
-    queryKey: ['external', 'icon', alias],
-    queryFn: () => rpc('console:getExternalIcon', { alias }),
+    queryKey: ['addon', 'icon', alias],
+    queryFn: () => rpc('console:getAddonIcon', { alias }),
   })
 
   if (!svgContent) {
@@ -95,7 +95,7 @@ type AddStepView =
   | 'wire'
   | 'transform'
   | 'integrations'
-  | { type: 'integrationDetail'; integration: ExternalPackageMeta }
+  | { type: 'integrationDetail'; integration: AddonMeta }
 
 const flowNodes = [
   {
@@ -435,12 +435,12 @@ const WireView: React.FunctionComponent<{ onBack: () => void }> = ({
 const TransformView: React.FunctionComponent<{
   onBack: () => void
 }> = ({ onBack }) => {
-  const { data: externalMeta, isLoading, isError } = useExternalMeta()
+  const { data: addonMeta, isLoading, isError } = useAddonMeta()
 
   const pikkuPackage = React.useMemo(() => {
-    if (!externalMeta) return null
-    return externalMeta.find((pkg: any) => pkg.alias === 'pikku')
-  }, [externalMeta])
+    if (!addonMeta) return null
+    return addonMeta.find((pkg: any) => pkg.alias === 'pikku')
+  }, [addonMeta])
 
   const categories = pikkuPackage
     ? (Object.entries(pikkuPackage.nodes) as [string, ExternalNode[]][])
@@ -496,26 +496,26 @@ const FunctionsView: React.FunctionComponent<{
   onBack: () => void
 }> = ({ onBack }) => {
   const { data: functions, isLoading, isError } = useFunctionsMeta()
-  const { data: externalMeta } = useExternalMeta()
+  const { data: addonMeta } = useAddonMeta()
 
   const internalFunctions = React.useMemo(() => {
     if (!functions) return []
 
-    const externalRpcNames = new Set<string>()
-    if (externalMeta) {
-      for (const pkg of externalMeta as ExternalPackageMeta[]) {
+    const addonRpcNames = new Set<string>()
+    if (addonMeta) {
+      for (const pkg of addonMeta as AddonMeta[]) {
         for (const nodes of Object.values(pkg.nodes)) {
           for (const node of nodes) {
-            externalRpcNames.add(node.rpc)
+            addonRpcNames.add(node.rpc)
           }
         }
       }
     }
 
     return (Object.values(functions) as any[]).filter(
-      (fn: any) => !externalRpcNames.has(fn.name)
+      (fn: any) => !addonRpcNames.has(fn.name)
     )
-  }, [functions, externalMeta])
+  }, [functions, addonMeta])
 
   return (
     <Box>
@@ -556,7 +556,7 @@ const FunctionsView: React.FunctionComponent<{
 }
 
 const IntegrationItem: React.FunctionComponent<{
-  integration: ExternalPackageMeta
+  integration: AddonMeta
   onSelect: () => void
 }> = ({ integration, onSelect }) => {
   const [hovered, setHovered] = useState(false)
@@ -597,14 +597,14 @@ const IntegrationItem: React.FunctionComponent<{
 
 const IntegrationsView: React.FunctionComponent<{
   onBack: () => void
-  onSelectIntegration: (integration: ExternalPackageMeta) => void
+  onSelectIntegration: (integration: AddonMeta) => void
 }> = ({ onBack, onSelectIntegration }) => {
-  const { data: integrations, isLoading, isError } = useExternalMeta()
+  const { data: integrations, isLoading, isError } = useAddonMeta()
 
   const filteredIntegrations = React.useMemo(() => {
     if (!integrations) return []
     return integrations.filter(
-      (pkg: ExternalPackageMeta) => pkg.alias !== 'pikku'
+      (pkg: AddonMeta) => pkg.alias !== 'pikku'
     )
   }, [integrations])
 
@@ -632,7 +632,7 @@ const IntegrationsView: React.FunctionComponent<{
       )}
       {filteredIntegrations.length > 0 && (
         <Stack gap={0}>
-          {filteredIntegrations.map((integration: ExternalPackageMeta) => (
+          {filteredIntegrations.map((integration: AddonMeta) => (
             <IntegrationItem
               key={integration.alias}
               integration={integration}
@@ -646,7 +646,7 @@ const IntegrationsView: React.FunctionComponent<{
 }
 
 const IntegrationDetailView: React.FunctionComponent<{
-  integration: ExternalPackageMeta
+  integration: AddonMeta
   onBack: () => void
 }> = ({ integration, onBack }) => {
   const categories = Object.entries(integration.nodes)

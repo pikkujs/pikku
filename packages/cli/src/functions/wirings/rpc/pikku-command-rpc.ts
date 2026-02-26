@@ -31,9 +31,7 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
         ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
         : `import metaData from '${jsonImportPath}'`
 
-      const packageNameArg = config.externalPackageName
-        ? `'${config.externalPackageName}'`
-        : 'null'
+      const packageNameArg = config.addonName ? `'${config.addonName}'` : 'null'
 
       await writeFileInDir(
         logger,

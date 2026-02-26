@@ -52,7 +52,7 @@ export const App: React.FunctionComponent = () => {
         <Route path="/runtime/permissions" element={<PermissionsPage />} />
         <Route path="/config/secrets" element={<SecretsPage />} />
         <Route path="/config/variables" element={<VariablesPage />} />
-        <Route path="/registry/packages" element={<PackagesPage />} />
+        <Route path="/addons" element={<PackagesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundTitle />} />
       </Route>

@@ -170,7 +170,7 @@ export type InspectorFilters = {
   httpMethods?: string[] // HTTP methods: "GET", "POST", "DELETE", etc.
 }
 
-export type ExternalPackageConfig = {
+export type AddonConfig = {
   package: string
   rpcEndpoint?: string
   secretOverrides?: Record<string, string>
@@ -193,14 +193,14 @@ export type InspectorModelConfig = {
 export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
-  isExternalPackage: boolean
+  isAddon: boolean
   types: Partial<{
     configFileType: string
     userSessionType: string
     singletonServicesFactoryType: string
     wireServicesFactoryType: string
   }>
-  externalPackages: Record<string, ExternalPackageConfig>
+  addons: Record<string, AddonConfig>
   schemaConfig: {
     tsconfig: string
     schemasFromTypes?: string[]
@@ -326,7 +326,7 @@ export interface InspectorState {
     exposedMeta: Record<string, string>
     exposedFiles: Map<string, { path: string; exportedName: string }>
     invokedFunctions: Set<string>
-    usedExternalPackages: Set<string>
+    usedAddons: Set<string>
   }
   mcpEndpoints: {
     resourcesMeta: MCPResourceMeta

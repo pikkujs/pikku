@@ -12,7 +12,7 @@ const INSPECTOR_STATE_FILE = join(
 )
 
 /**
- * Check if external package bootstrap is imported
+ * Check if addon bootstrap is imported
  */
 function hasExternalPackageBootstrap(): boolean {
   try {
@@ -23,7 +23,7 @@ function hasExternalPackageBootstrap(): boolean {
     )
     const content = readFileSync(bootstrapFilePath, 'utf-8')
 
-    // Check if the external package bootstrap import exists
+    // Check if the addon bootstrap import exists
     // External packages are imported using package names, not relative paths
     return content.includes(
       '@pikku/templates-function-external/.pikku/pikku-bootstrap.gen.js'
@@ -230,7 +230,7 @@ async function runTests() {
         scenario.expectedWireServices
       )
 
-      const externalBootstrapMatch =
+      const addonBootstrapMatch =
         scenario.expectedExternalBootstrap === undefined ||
         actualServices.hasExternalBootstrap ===
           scenario.expectedExternalBootstrap
@@ -238,7 +238,7 @@ async function runTests() {
       const allMatch =
         singletonComparison.match &&
         sessionComparison.match &&
-        externalBootstrapMatch
+        addonBootstrapMatch
 
       if (allMatch) {
         console.log(`   ✅ PASS`)
@@ -269,7 +269,7 @@ async function runTests() {
             )
           }
         }
-        if (!externalBootstrapMatch) {
+        if (!addonBootstrapMatch) {
           console.log(
             `   External Bootstrap: Expected ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}, got ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
           )

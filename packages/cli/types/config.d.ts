@@ -101,11 +101,11 @@ export interface PikkuCLICoreOutputFiles {
   // Application bootstrap
   bootstrapFile: string
 
-  // Package service factories (for external packages)
+  // Package service factories (for addon packages)
   packageFile: string
 
-  // External package types (pikkuExternalConfig, pikkuExternalServices, etc.)
-  externalTypesFile: string
+  // Addon types (pikkuAddonConfig, pikkuAddonServices, etc.)
+  addonTypesFile: string
 
   // Node
   nodeTypesFile: string
@@ -138,7 +138,7 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  externalPackages?: Record<
+  addons?: Record<
     string,
     {
       package: string
@@ -147,8 +147,8 @@ export type PikkuCLIInput = {
       forceInclude?: boolean
     }
   >
-  externalPackage?: boolean
-  externalPackageName?: string
+  addon?: boolean
+  addonName?: string
 
   models?: Record<
     string,
@@ -271,7 +271,7 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  externalPackages?: Record<
+  addons?: Record<
     string,
     {
       package: string
@@ -280,8 +280,8 @@ export type PikkuCLIConfig = {
       forceInclude?: boolean
     }
   >
-  externalPackage?: boolean
-  externalPackageName?: string
+  addon?: boolean
+  addonName?: string
 
   models?: Record<
     string,

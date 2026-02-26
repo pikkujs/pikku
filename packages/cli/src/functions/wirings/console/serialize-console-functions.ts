@@ -1,5 +1,5 @@
 export const serializeConsoleFunctions = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, external } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon } from '${pathToPikkuTypes}'
 import { streamAIAgent, resumeAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
@@ -178,16 +178,6 @@ export const startWorkflowRun = pikkuSessionlessFunc<
 export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   routes: {
-    externalIconOptions: {
-      route: '/external/icon/:alias',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ alias: string }>(async () => void 0),
-    },
-    externalIcon: {
-      route: '/external/icon/:alias',
-      method: 'get',
-      func: external('console:getExternalIcon'),
-    },
     agentStreamOptions: {
       route: '/api/agents/:agentName/stream',
       method: 'options',
@@ -219,7 +209,7 @@ export const consoleRoutes = defineHTTPRoutes({
       route: '/api/workflow-run/:runId/stream',
       method: 'get',
       sse: true,
-      func: external('console:streamWorkflowRun'),
+      func: addon('console:streamWorkflowRun'),
     },
   },
 })

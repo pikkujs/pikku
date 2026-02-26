@@ -6,7 +6,7 @@
   "models": {
     "test-model": "test-provider/test-model"
   },
-  "externalPackages": {
-    "ext": { "package": "@pikku/templates-function-external" }
+  "addons": {
+    "ext": { "package": "@pikku/templates-function-addon" }
   }
 }

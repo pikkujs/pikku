@@ -88,8 +88,8 @@ export const resolveAgent = (
   if (colonIndex !== -1) {
     const namespace = agentName.substring(0, colonIndex)
     const localName = agentName.substring(colonIndex + 1)
-    const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
-    const pkgConfig = externalPackages.get(namespace)
+    const addons = pikkuState(null, 'rpc', 'addons')
+    const pkgConfig = addons.get(namespace)
     if (pkgConfig) {
       const extAgent = pikkuState(pkgConfig.package, 'agent', 'agents').get(
         localName

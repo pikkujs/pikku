@@ -104,7 +104,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       exposedMeta: {},
       exposedFiles: new Map(),
       invokedFunctions: new Set(),
-      usedExternalPackages: new Set(),
+      usedAddons: new Set(),
     },
     mcpEndpoints: {
       resourcesMeta: {},
@@ -312,7 +312,7 @@ export const inspect = async (
       )
     }
 
-    validateSecretOverrides(logger, state, options.externalPackages)
+    validateSecretOverrides(logger, state, options.addons)
     validateAgentModels(logger, state, options.modelConfig)
     validateAgentOverrides(logger, state, options.modelConfig)
   }

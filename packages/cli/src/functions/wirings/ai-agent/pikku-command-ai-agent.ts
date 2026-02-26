@@ -18,7 +18,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       agentMapDeclarationFile,
       packageMappings,
       schema,
-      externalPackageName,
+      addonName,
     } = config
 
     const lines: string[] = []
@@ -55,7 +55,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
 
     lines.push('')
 
-    const packageArg = externalPackageName ? `, '${externalPackageName}'` : ''
+    const packageArg = addonName ? `, '${addonName}'` : ''
     for (const [agentName, { exportedName }] of sortedAgents) {
       lines.push(`addAIAgent('${agentName}', ${exportedName}${packageArg})`)
     }
@@ -98,7 +98,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const modelConfigLines: string[] = []
     if (
-      !externalPackageName &&
+      !addonName &&
       (config.models || config.agentDefaults || config.agentOverrides)
     ) {
       modelConfigLines.push(
@@ -116,7 +116,7 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       `import { pikkuState } from '@pikku/core/internal'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 ${importStatement}
-pikkuState(${externalPackageName ? `'${externalPackageName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)${modelConfigLines.join('')}`
+pikkuState(${addonName ? `'${addonName}'` : 'null'}, 'agent', 'agentsMeta', metaData.agentsMeta as AIAgentMeta)${modelConfigLines.join('')}`
     )
 
     await writeFileInDir(

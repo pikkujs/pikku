@@ -10,7 +10,7 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
     const {
       rpcInternalMapDeclarationFile,
       packageMappings,
-      externalPackages,
+      addons,
       workflowMapDeclarationFile,
       agentMapDeclarationFile,
     } = config
@@ -34,7 +34,7 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       rpc.internalMeta,
       resolvedIOTypes,
-      externalPackages,
+      addons,
       workflowMapPath,
       agentMapPath
     )
@@ -54,7 +54,7 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
     const {
       rpcMapDeclarationFile,
       packageMappings,
-      externalPackages,
+      addons,
       workflowMapDeclarationFile,
       agentMapDeclarationFile,
     } = config
@@ -78,7 +78,7 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       functions.typesMap,
       rpc.exposedMeta,
       resolvedIOTypes,
-      externalPackages,
+      addons,
       workflowMapPath,
       agentMapPath
     )
@@ -86,8 +86,8 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Creating RPC external map',
-      commandEnd: 'Created RPC external map',
+      commandStart: 'Creating RPC addon map',
+      commandEnd: 'Created RPC addon map',
     }),
   ],
 })

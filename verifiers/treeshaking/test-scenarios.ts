@@ -269,13 +269,13 @@ export const scenarios: TestScenario[] = [
 
   // External package tests
   {
-    name: 'External Package: testExternal included',
-    filter: '--names=testExternal',
+    name: 'Addon: testAddon included',
+    filter: '--names=testAddon',
     expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: [],
     expectedExternalBootstrap: true,
     description:
-      'When external package function is called via RPC, external bootstrap should be bundled but NOT external services (noop is internal to external package)',
+      'When addon function is called via RPC, addon bootstrap should be bundled but NOT addon services (noop is internal to addon)',
   },
   {
     name: 'External Package: not called - excluded',
@@ -284,7 +284,7 @@ export const scenarios: TestScenario[] = [
     expectedWireServices: ['userContext'],
     expectedExternalBootstrap: true,
     description:
-      'External bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when external RPC methods are invoked)',
+      'Addon bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when addon RPC methods are invoked)',
   },
 
   // wireHTTPRoutes group tests

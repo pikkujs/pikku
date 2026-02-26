@@ -6,7 +6,7 @@ export type BootstrapInput = {
   allImports: string[]
 }
 
-type ExternalPackageRuntime = {
+type AddonRuntime = {
   package: string
   rpcEndpoint?: string
 }
@@ -14,28 +14,25 @@ type ExternalPackageRuntime = {
 export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   func: async ({ logger, config, getInspectorState }, { allImports }) => {
     const stateBeforeBootstrap = await getInspectorState()
-    const externalPackageBootstraps: string[] = []
-    const usedExternalPackages: Record<string, ExternalPackageRuntime> = {}
+    const addonBootstraps: string[] = []
+    const usedAddons: Record<string, AddonRuntime> = {}
 
-    if (config.externalPackages) {
-      for (const [namespace, externalPkg] of Object.entries(
-        config.externalPackages
-      ) as [
+    if (config.addons) {
+      for (const [namespace, addon] of Object.entries(config.addons) as [
         string,
         { package: string; rpcEndpoint?: string; forceInclude?: boolean },
       ][]) {
-        const isUsed =
-          stateBeforeBootstrap.rpc?.usedExternalPackages?.has(namespace)
-        if (isUsed || externalPkg.forceInclude) {
-          const packageName = externalPkg.package
+        const isUsed = stateBeforeBootstrap.rpc?.usedAddons?.has(namespace)
+        if (isUsed || addon.forceInclude) {
+          const packageName = addon.package
           const packageBootstrap = `${packageName}/.pikku/pikku-bootstrap.gen.js`
-          externalPackageBootstraps.push(packageBootstrap)
-          usedExternalPackages[namespace] = {
+          addonBootstraps.push(packageBootstrap)
+          usedAddons[namespace] = {
             package: packageName,
-            rpcEndpoint: externalPkg.rpcEndpoint,
+            rpcEndpoint: addon.rpcEndpoint,
           }
           logger.debug(
-            `• External package ${externalPkg.forceInclude && !isUsed ? 'force-included' : 'detected'}: ${namespace} (${packageName})`
+            `• Addon ${addon.forceInclude && !isUsed ? 'force-included' : 'detected'}: ${namespace} (${packageName})`
           )
         }
       }
@@ -45,30 +42,28 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       (to) =>
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
     )
-    const externalImports = externalPackageBootstraps.map(
+    const addonImports = addonBootstraps.map(
       (packagePath) => `import '${packagePath}'`
     )
 
-    let externalPackagesRegistration = ''
-    if (Object.keys(usedExternalPackages).length > 0) {
-      externalPackagesRegistration = `
-// Register external package mappings
+    let addonsRegistration = ''
+    if (Object.keys(usedAddons).length > 0) {
+      addonsRegistration = `
+// Register addon mappings
 import { pikkuState } from '@pikku/core/internal'
-const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
-${Object.entries(usedExternalPackages)
+const addons = pikkuState(null, 'rpc', 'addons')
+${Object.entries(usedAddons)
   .map(([ns, cfg]) => {
     const rpcEndpointPart = cfg.rpcEndpoint
       ? `, rpcEndpoint: '${cfg.rpcEndpoint}'`
       : ''
-    return `externalPackages.set('${ns}', { package: '${cfg.package}'${rpcEndpointPart} })`
+    return `addons.set('${ns}', { package: '${cfg.package}'${rpcEndpointPart} })`
   })
   .join('\n')}
 `
     }
 
-    const packageNameArg = config.externalPackageName
-      ? `'${config.externalPackageName}'`
-      : 'null'
+    const packageNameArg = config.addonName ? `'${config.addonName}'` : 'null'
     const metaDirRegistration = `import { pikkuState as __pikkuState } from '@pikku/core/internal'
 try {
   const { fileURLToPath: __fileURLToPath } = await import('url')
@@ -79,7 +74,7 @@ try {
 
     const allBootstrapImports =
       metaDirRegistration +
-      [...localImports, ...externalImports]
+      [...localImports, ...addonImports]
         .sort((a, b) => {
           const aMeta = a.includes('meta')
           const bMeta = b.includes('meta')
@@ -88,7 +83,7 @@ try {
           return 0
         })
         .join('\n') +
-      externalPackagesRegistration
+      addonsRegistration
 
     await writeFileInDir(logger, config.bootstrapFile, allBootstrapImports)
   },

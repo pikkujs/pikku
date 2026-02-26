@@ -5,13 +5,13 @@ import { serializePackageFactories } from './serialize-package.js'
 
 export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { externalPackageName, packageMappings, packageFile } = config
+    const { addonName, packageMappings, packageFile } = config
 
     // Only generate for external packages
-    if (!externalPackageName) {
+    if (!addonName) {
       logger.debug({
         message:
-          'Skipping package factories - not an external package (externalPackageName not set)',
+          'Skipping package factories - not an addon package (addonName not set)',
         type: 'skip',
       })
       return false
@@ -36,7 +36,7 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const content = serializePackageFactories(
       packageFile,
-      externalPackageName,
+      addonName,
       pikkuConfigFactory
         ? {
             file: pikkuConfigFactory.file,

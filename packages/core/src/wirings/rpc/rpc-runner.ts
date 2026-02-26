@@ -38,8 +38,8 @@ const resolveNamespace = (
   const namespace = namespacedFunction.substring(0, colonIndex)
   const functionName = namespacedFunction.substring(colonIndex + 1)
 
-  const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
-  const pkgConfig = externalPackages.get(namespace)
+  const addons = pikkuState(null, 'rpc', 'addons')
+  const pkgConfig = addons.get(namespace)
   if (!pkgConfig) {
     return null
   }
@@ -152,7 +152,7 @@ export class ContextAwareRPCService {
     if (!resolved) {
       throw new Error(
         `Unknown namespace in function reference: ${namespacedFunction}. ` +
-          `Make sure the package is registered in externalPackages config.`
+          `Make sure the package is registered in addons config.`
       )
     }
 
@@ -272,8 +272,8 @@ export class ContextAwareRPCService {
     const colonIndex = funcName.indexOf(':')
     if (colonIndex !== -1) {
       const namespace = funcName.substring(0, colonIndex)
-      const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
-      const pkgConfig = externalPackages.get(namespace)
+      const addons = pikkuState(null, 'rpc', 'addons')
+      const pkgConfig = addons.get(namespace)
       endpoint = pkgConfig?.rpcEndpoint
     }
 
@@ -288,7 +288,7 @@ export class ContextAwareRPCService {
     if (!endpoint) {
       throw new Error(
         `No endpoint configured for remote RPC: ${funcName}. ` +
-          `Configure rpcEndpoint in externalPackages config or set up a DeploymentService.`
+          `Configure rpcEndpoint in addons config or set up a DeploymentService.`
       )
     }
 

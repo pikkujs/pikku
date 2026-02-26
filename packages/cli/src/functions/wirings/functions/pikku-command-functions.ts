@@ -51,9 +51,7 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
       : `import metaData from '${jsonImportPath}'`
 
-    const packageName = config.externalPackageName
-      ? `'${config.externalPackageName}'`
-      : 'null'
+    const packageName = config.addonName ? `'${config.addonName}'` : 'null'
 
     await writeFileInDir(
       logger,
@@ -61,21 +59,17 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       `import { pikkuState } from '@pikku/core/internal'\nimport type { FunctionsMeta } from '@pikku/core'\n${importStatement}\npikkuState(${packageName}, 'function', 'meta', metaData as FunctionsMeta)`
     )
 
-    // For external packages, register ALL functions (they'll be invoked by consumers)
+    // For addon packages, register ALL functions (they'll be invoked by consumers)
     // For main packages, only register functions that are invoked via internal RPCs
-    const isExternalPackage = !!config.externalPackageName
+    const isAddon = !!config.addonName
     const hasRPCs = rpc.exposedFiles.size > 0 || rpc.internalFiles.size > 0
     const hasFunctions = functions.files.size > 0
 
-    const shouldGenerateFunctionsFile = isExternalPackage
-      ? hasFunctions
-      : hasRPCs
+    const shouldGenerateFunctionsFile = isAddon ? hasFunctions : hasRPCs
 
     if (shouldGenerateFunctionsFile) {
-      // For external packages, use all function files; for main packages, use internal RPC files
-      const filesToRegister = isExternalPackage
-        ? functions.files
-        : rpc.internalFiles
+      // For addon packages, use all function files; for main packages, use internal RPC files
+      const filesToRegister = isAddon ? functions.files : rpc.internalFiles
 
       await writeFileInDir(
         logger,
@@ -85,7 +79,7 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
           filesToRegister,
           functions.meta,
           packageMappings,
-          config.externalPackageName
+          config.addonName
         )
       )
     }

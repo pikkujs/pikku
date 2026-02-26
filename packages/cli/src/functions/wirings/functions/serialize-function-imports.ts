@@ -6,8 +6,8 @@ export const serializeFunctionImports = (
   functionsMap: Map<string, { path: string; exportedName: string }>,
   functionsMeta: FunctionsMeta,
   packageMappings: Record<string, string> = {},
-  /** Package name for external packages (e.g., '@pikku/templates-function-external') */
-  externalPackageName?: string
+  /** Package name for external packages (e.g., '@pikku/templates-function-addon') */
+  addonName?: string
 ) => {
   const serializedImports: string[] = [
     `/* Import and register functions used by RPCs */`,
@@ -22,7 +22,7 @@ export const serializeFunctionImports = (
   )
 
   // Third argument to addFunction is the package name (null for main package)
-  const packageArg = externalPackageName ? `, '${externalPackageName}'` : ''
+  const packageArg = addonName ? `, '${addonName}'` : ''
 
   const usedAliases = new Set<string>()
 

@@ -216,8 +216,15 @@ export const ThemeProvider: React.FunctionComponent<{
   return (
     <MantineProvider
       theme={theme}
-      defaultColorScheme="light"
+      defaultColorScheme={initial}
       colorSchemeManager={manager}
+      cssVariablesResolver={() => ({
+        variables: {},
+        light: {},
+        dark: {
+          '--mantine-color-body': '#0a0a0f',
+        },
+      })}
     >
       <DatesProvider settings={{ locale: dateLocale }}>
         {children}

@@ -47,7 +47,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
       `import type { TypedPikkuRPC, FlattenedRPCMap } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
       `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
       configTypeImport,
-      config.externalPackageName,
+      config.addonName,
       undefined,
       config.node?.categories
     )
