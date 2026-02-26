@@ -1,10 +1,12 @@
 import {
   pikkuMCPPromptFunc,
   pikkuMCPResourceFunc,
+  pikkuMCPToolFunc,
 } from '../../.pikku/pikku-types.gen.js'
 import {
   UserIdInputSchema,
   PrioritizePromptInputSchema,
+  CreateTodoWithUserInputSchema,
   type Todo,
 } from '../schemas.js'
 
@@ -15,6 +17,22 @@ const formatTodo = (todo: Todo): string => {
   const tags = todo.tags.length > 0 ? ` #${todo.tags.join(' #')}` : ''
   return `${status} ${priority} ${todo.id}: ${todo.title}${due}${tags}`
 }
+
+/**
+ * MCP Tool: Create a new todo item.
+ */
+export const createTodoTool = pikkuMCPToolFunc({
+  input: CreateTodoWithUserInputSchema,
+  func: async (_services, input, { rpc }) => {
+    const result = await rpc.invoke('createTodo', input)
+    return [
+      {
+        type: 'text' as const,
+        text: `Created todo: "${result.todo.title}" (ID: ${result.todo.id})`,
+      },
+    ]
+  },
+})
 
 export const getTodoResource = pikkuMCPResourceFunc<{ id: string }>(
   async (_services, { id }, { rpc, mcp }) => {
