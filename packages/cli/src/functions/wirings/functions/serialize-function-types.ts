@@ -496,27 +496,27 @@ export const pikkuVoidFunc = (
 }
 
 /**
- * Creates a wrapper function for external package functions that are exposed via RPC.
- * This allows you to wire external functions to any wiring type (HTTP, queue, etc.)
+ * Creates a wrapper function for addon package functions that are exposed via RPC.
+ * This allows you to wire addon functions to any wiring type (HTTP, queue, etc.)
  * without type compatibility issues.
  *
  * @template Name - The RPC method name (must be a key in FlattenedRPCMap)
  * @param rpcName - The name of the RPC method to invoke
- * @returns A Pikku function that proxies calls to the external RPC method
+ * @returns A Pikku function that proxies calls to the addon RPC method
  *
  * @example
  * \`\`\`typescript
- * // Wire an external function via HTTP
+ * // Wire an addon function via HTTP
  * wireHTTP({
  *   auth: false,
  *   method: 'get',
  *   route: '/external/hello',
- *   func: external('ext:hello'),
+ *   func: addon('ext:hello'),
  *   tags: ['external'],
  * })
  * \`\`\`
  */
-export const external = <Name extends keyof FlattenedRPCMap>(
+export const addon = <Name extends keyof FlattenedRPCMap>(
   rpcName: Name
 ): PikkuFunctionConfig<
   FlattenedRPCMap[Name]['input'],

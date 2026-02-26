@@ -139,17 +139,6 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Registry',
-    items: [
-      {
-        label: 'Packages',
-        href: '/registry/packages',
-        icon: Package,
-        matchPrefix: '/registry/packages',
-      },
-    ],
-  },
-  {
     title: 'Runtime',
     items: [
       {
@@ -169,6 +158,17 @@ const NAV_SECTIONS: NavSection[] = [
         href: '/runtime/permissions',
         icon: Shield,
         matchPrefix: '/runtime/permissions',
+      },
+    ],
+  },
+  {
+    title: 'Addons',
+    items: [
+      {
+        label: 'Addons',
+        href: '/addons',
+        icon: Package,
+        matchPrefix: '/addons',
       },
     ],
   },

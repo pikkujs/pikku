@@ -49,8 +49,8 @@
   },
   "devDependencies": {
     "@mantine/colors-generator": "^8.3.8",
+    "@pikku/addon-console": "workspace:*",
     "@pikku/cli": "workspace:*",
-    "@pikku/external-console": "workspace:*",
     "@types/chroma-js": "^3",
     "@types/lodash": "^4",
     "@types/node": "^24",

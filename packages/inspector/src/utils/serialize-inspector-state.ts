@@ -142,7 +142,7 @@ export interface SerializableInspectorState {
     exposedMeta: InspectorState['rpc']['exposedMeta']
     exposedFiles: Array<[string, { path: string; exportedName: string }]>
     invokedFunctions: string[]
-    usedExternalPackages: string[]
+    usedAddons: string[]
   }
   mcpEndpoints: {
     resourcesMeta: InspectorState['mcpEndpoints']['resourcesMeta']
@@ -329,7 +329,7 @@ export function serializeInspectorState(
       exposedMeta: state.rpc.exposedMeta,
       exposedFiles: Array.from(state.rpc.exposedFiles.entries()),
       invokedFunctions: Array.from(state.rpc.invokedFunctions),
-      usedExternalPackages: Array.from(state.rpc.usedExternalPackages),
+      usedAddons: Array.from(state.rpc.usedAddons),
     },
     mcpEndpoints: {
       resourcesMeta: state.mcpEndpoints.resourcesMeta,
@@ -489,7 +489,7 @@ export function deserializeInspectorState(
       exposedMeta: data.rpc.exposedMeta,
       exposedFiles: new Map(data.rpc.exposedFiles),
       invokedFunctions: new Set(data.rpc.invokedFunctions),
-      usedExternalPackages: new Set(data.rpc.usedExternalPackages || []),
+      usedAddons: new Set(data.rpc.usedAddons || []),
     },
     mcpEndpoints: {
       resourcesMeta: data.mcpEndpoints.resourcesMeta,

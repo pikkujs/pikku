@@ -83,7 +83,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
           allWorkflowNames,
           packageMappings,
           schema?.supportsImportAttributes ?? false,
-          config.externalPackageName
+          config.addonName
         )
       )
     }
@@ -104,7 +104,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
         workflows.files,
         workflows.graphFiles,
         packageMappings,
-        config.externalPackageName
+        config.addonName
       )
     )
 

@@ -5,7 +5,7 @@ import {
   processPayment,
   saveData,
 } from './internal.functions.js'
-import { testExternal } from './external.functions.js'
+import { testAddon } from './addon.functions.js'
 import { logRequest, trackAnalytics, rateLimiter } from './middleware.js'
 import {
   canSendEmail,
@@ -52,9 +52,9 @@ wireHTTP({
 // External package test
 wireHTTP({
   method: 'post',
-  route: '/api/external/test',
-  tags: ['external'],
-  func: testExternal,
+  route: '/api/addon/test',
+  tags: ['addon'],
+  func: testAddon,
 })
 
 // Grouped routes via wireHTTPRoutes

@@ -295,7 +295,7 @@ export const createSingletonServices: CreateSingletonServices<
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
-        isExternalPackage: config.externalPackage,
+        isAddon: config.addon,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,
@@ -303,7 +303,7 @@ export const createSingletonServices: CreateSingletonServices<
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
         tags: config.tags,
-        externalPackages: config.externalPackages,
+        addons: config.addons,
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,

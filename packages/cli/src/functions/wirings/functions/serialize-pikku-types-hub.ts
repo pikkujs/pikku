@@ -12,7 +12,7 @@ export const serializePikkuTypesHub = (
   cliTypesImportPath: string | null,
   nodeTypesImportPath: string | null,
   secretTypesImportPath: string | null,
-  externalTypesImportPath: string | null
+  addonTypesImportPath: string | null
 ) => {
   const exports = [
     {
@@ -28,7 +28,7 @@ export const serializePikkuTypesHub = (
     { comment: 'CLI wiring types', path: cliTypesImportPath },
     { comment: 'Node wiring types', path: nodeTypesImportPath },
     { comment: 'Secret definition types', path: secretTypesImportPath },
-    { comment: 'External package types', path: externalTypesImportPath },
+    { comment: 'Addon types', path: addonTypesImportPath },
   ]
 
   const exportStatements = exports

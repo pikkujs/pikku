@@ -11,7 +11,7 @@ import {
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
-import { resolveExternalPackageName } from '../utils/resolve-external-package.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 
 import { ErrorCode } from '../error-codes.js'
 export const addTrigger: AddWiring = (
@@ -138,10 +138,10 @@ const addWireTriggerSource: (
   }
 
   if (ts.isIdentifier(funcInitializer)) {
-    const packageName = resolveExternalPackageName(
+    const packageName = resolveAddonName(
       funcInitializer,
       checker,
-      options.externalPackages
+      options.addons
     )
     state.triggers.sourceMeta[nameValue] = {
       name: nameValue,

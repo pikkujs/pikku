@@ -38,13 +38,13 @@ export function useFunctionMeta(pikkuFuncId: string) {
   }
 }
 
-export function useExternalMeta() {
+export function useAddonMeta() {
   const rpc = usePikkuRPC()
 
   return useQuery({
-    queryKey: ['external', 'meta'],
+    queryKey: ['addon', 'meta'],
     queryFn: async () => {
-      const x = await rpc('console:getExternalMeta', null)
+      const x = await rpc('console:getAddonMeta', null)
       return x
     },
   })

@@ -2,7 +2,7 @@
  * Test file to verify TypedSecretService type inference works correctly.
  * This test validates both compile-time types and runtime behavior.
  *
- * This validates the same pattern used in templates/function-external:
+ * This validates the same pattern used in templates/function-addon:
  * - wireSecret with Zod schema for type-safe secrets
  * - wireOAuth2Credential for OAuth2 flows
  * - TypedSecretService provides compile-time validated access

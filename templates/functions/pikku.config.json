@@ -12,8 +12,8 @@
   "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
   "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
   "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
-  "externalPackages": {
-    "ext": { "package": "@pikku/templates-function-external" }
+  "addons": {
+    "ext": { "package": "@pikku/templates-function-addon" }
   },
   "agent": {
     "publicAgentPath": "src/wirings/agent.wiring.gen.ts"

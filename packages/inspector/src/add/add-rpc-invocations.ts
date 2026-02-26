@@ -14,31 +14,31 @@ function extractNamespace(functionRef: string): string | null {
 
 /**
  * Scan for rpc.invoke() calls to track which functions are actually being invoked
- * Also detects external package usage via:
+ * Also detects addon usage via:
  * - Namespaced calls: rpc.invoke('namespace:function')
- * - External helper: external('namespace:function')
+ * - Addon helper: addon('namespace:function')
  */
 export function addRPCInvocations(
   node: ts.Node,
   state: InspectorState,
   logger: InspectorLogger
 ) {
-  // Look for call expressions: external('ext:hello') or rpc.invoke('...')
+  // Look for call expressions: addon('ext:hello') or rpc.invoke('...')
   if (ts.isCallExpression(node)) {
     const { expression, arguments: args } = node
 
-    // Check for external('namespace:function') calls
-    if (ts.isIdentifier(expression) && expression.text === 'external') {
+    // Check for addon('namespace:function') calls
+    if (ts.isIdentifier(expression) && expression.text === 'addon') {
       const [firstArg] = args
       if (firstArg && ts.isStringLiteral(firstArg)) {
         const functionRef = firstArg.text
-        logger.debug(`• Found external() call: ${functionRef}`)
+        logger.debug(`• Found addon() call: ${functionRef}`)
         state.rpc.invokedFunctions.add(functionRef)
 
         const namespace = extractNamespace(functionRef)
         if (namespace) {
-          logger.debug(`  → External package detected: ${namespace}`)
-          state.rpc.usedExternalPackages.add(namespace)
+          logger.debug(`  → Addon detected: ${namespace}`)
+          state.rpc.usedAddons.add(namespace)
         }
       }
     }
@@ -76,8 +76,8 @@ export function addRPCInvocations(
 
           const namespace = extractNamespace(functionRef)
           if (namespace) {
-            logger.debug(`  → External package detected: ${namespace}`)
-            state.rpc.usedExternalPackages.add(namespace)
+            logger.debug(`  → Addon detected: ${namespace}`)
+            state.rpc.usedAddons.add(namespace)
           }
         }
         // Handle template literals like `function-${name}`

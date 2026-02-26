@@ -9,7 +9,7 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "packages/external/*",
+      "packages/addon/*",
       "packages/services/*",
       "packages/runtimes/*",
       "templates/*",
@@ -25,7 +25,7 @@
     "pre-commit": "yarn test && yarn prettier && yarn lint && yarn typedoc",
     "pre-push": "yarn pre-commit",
     "tsc": "yarn workspaces foreach -A -p run tsc",
-    "build:packages": "yarn workspaces foreach -p -A --include 'packages/**' --exclude '@pikku/console' --exclude '@pikku/external-console' run build",
+    "build:packages": "yarn workspaces foreach -p -A --include 'packages/**' --exclude '@pikku/console' --exclude '@pikku/addon-console' run build",
     "build:console": "cd packages/console && yarn generate && yarn build && rm -rf ../cli/console-app && cp -r dist ../cli/console-app",
     "build:templates": "yarn workspaces foreach -p -A --include 'templates/**' run build",
     "build:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run build",
@@ -43,8 +43,8 @@
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
     "changeset": "npx changeset",
     "pikku:functions": "cd templates/functions && yarn pikku",
-    "pikku:functions:external": "cd templates/function-external && yarn pikku",
-    "pikku": "yarn run pikku:functions:external && yarn run pikku:functions"
+    "pikku:functions:addon": "cd templates/function-addon && yarn pikku",
+    "pikku": "yarn run pikku:functions:addon && yarn run pikku:functions"
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {

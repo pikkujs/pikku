@@ -5,9 +5,9 @@ import { extractServicesFromFunction } from '../utils/extract-services.js'
 // Mapping of wrapper function names to their corresponding types
 const wrapperFunctionMap: Record<string, string> = {
   pikkuConfig: 'CreateConfig',
-  pikkuExternalConfig: 'CreateConfig',
+  pikkuAddonConfig: 'CreateConfig',
   pikkuServices: 'CreateSingletonServices',
-  pikkuExternalServices: 'CreateSingletonServices',
+  pikkuAddonServices: 'CreateSingletonServices',
   pikkuWireServices: 'CreateWireServices',
 }
 

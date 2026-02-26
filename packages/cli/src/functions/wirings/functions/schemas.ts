@@ -16,7 +16,7 @@ export const pikkuSchemas = pikkuSessionlessFunc<void, boolean | undefined>({
       visitState.schemas,
       visitState.requiredSchemas,
       config.schema?.supportsImportAttributes ?? true,
-      config.externalPackageName || null
+      config.addonName || null
     )
 
     return true

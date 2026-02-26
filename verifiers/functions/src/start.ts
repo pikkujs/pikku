@@ -13,7 +13,7 @@ async function main(): Promise<void> {
     )
     console.log('\nWiring types verified:')
     console.log(
-      '  - HTTP: Basic routes, SSE, progressive enhancement, external, Zod'
+      '  - HTTP: Basic routes, SSE, progressive enhancement, addon, Zod'
     )
     console.log('  - Channel: WebSocket channels with message handlers')
     console.log('  - CLI: Command-line interface with commands and subcommands')

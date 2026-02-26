@@ -3,7 +3,7 @@ import {
   InspectorLogger,
   InspectorOptions,
   InspectorModelConfig,
-  ExternalPackageConfig,
+  AddonConfig,
   MiddlewareGroupMeta,
   InspectorDiagnostic,
 } from '../types.js'
@@ -227,13 +227,13 @@ export function aggregateRequiredServices(
 export function validateSecretOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  externalPackages?: Record<string, ExternalPackageConfig>
+  addons?: Record<string, AddonConfig>
 ): void {
-  if (!externalPackages) return
+  if (!addons) return
 
   const secretNames = new Set(state.secrets.definitions.map((d) => d.name))
 
-  for (const [namespace, pkgConfig] of Object.entries(externalPackages)) {
+  for (const [namespace, pkgConfig] of Object.entries(addons)) {
     if (!pkgConfig.secretOverrides) continue
 
     for (const secretKey of Object.keys(pkgConfig.secretOverrides)) {
@@ -241,7 +241,7 @@ export function validateSecretOverrides(
         const availableSecrets = Array.from(secretNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Secret override '${secretKey}' in external package '${namespace}' (${pkgConfig.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
+          `Secret override '${secretKey}' in addon '${namespace}' (${pkgConfig.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
         )
       }
     }

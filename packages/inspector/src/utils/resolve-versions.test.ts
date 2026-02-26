@@ -22,7 +22,7 @@ function makeState(
       exposedMeta: {},
       exposedFiles: new Map(),
       invokedFunctions: new Set(),
-      usedExternalPackages: new Set(),
+      usedAddons: new Set(),
     },
     serviceAggregation: {
       usedFunctions: new Set(),

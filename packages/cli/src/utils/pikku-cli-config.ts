@@ -64,9 +64,9 @@ const _getPikkuCLIConfig = async (
           ...extendedConfig.packageMappings,
           ...config.packageMappings,
         },
-        externalPackages: {
-          ...extendedConfig.externalPackages,
-          ...config.externalPackages,
+        addons: {
+          ...extendedConfig.addons,
+          ...config.addons,
         },
         ignoreFiles: config.ignoreFiles ??
           extendedConfig.ignoreFiles ?? [
@@ -87,7 +87,7 @@ const _getPikkuCLIConfig = async (
         ...config,
         configDir,
         packageMappings: config.packageMappings || {},
-        externalPackages: config.externalPackages || {},
+        addons: config.addons || {},
         rootDir: config.rootDir
           ? resolve(configDir, config.rootDir)
           : configDir,
@@ -476,16 +476,12 @@ const _getPikkuCLIConfig = async (
       result.nodeTypesFile = join(consoleDir, 'pikku-node-types.gen.ts')
     }
 
-    // External (for wireSecret, external service factories, and external meta)
-    const externalDir = join(result.outDir, 'external')
+    const addonDir = join(result.outDir, 'addon')
     if (!result.packageFile) {
-      result.packageFile = join(externalDir, 'pikku-package.gen.ts')
+      result.packageFile = join(addonDir, 'pikku-package.gen.ts')
     }
-    if (!result.externalTypesFile) {
-      result.externalTypesFile = join(
-        externalDir,
-        'pikku-external-types.gen.ts'
-      )
+    if (!result.addonTypesFile) {
+      result.addonTypesFile = join(addonDir, 'pikku-addon-types.gen.ts')
     }
     // Secrets (typed wrapper for SecretService)
     const secretsDir = join(result.outDir, 'secrets')
@@ -546,7 +542,7 @@ const _getPikkuCLIConfig = async (
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
 
-    if (result.externalPackage) {
+    if (result.addon) {
       const packageJsonPath = join(result.rootDir, 'package.json')
       try {
         const packageJsonContent = await readFile(packageJsonPath, 'utf-8')
@@ -562,10 +558,10 @@ const _getPikkuCLIConfig = async (
           )
         }
 
-        result.externalPackageName = packageJson.name
+        result.addonName = packageJson.name
       } catch (e: any) {
         throw new Error(
-          `externalPackage is true but could not read or parse package.json at ${packageJsonPath}: ${e.message}`
+          `addon is true but could not read or parse package.json at ${packageJsonPath}: ${e.message}`
         )
       }
     }

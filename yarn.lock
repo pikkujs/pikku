@@ -4645,6 +4645,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@pikku/addon-console@workspace:*, @pikku/addon-console@workspace:packages/addon/pikku-console":
+  version: 0.0.0-use.local
+  resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
+  dependencies:
+    "@pikku/cli": "npm:^0.12.0"
+    "@pikku/core": "npm:^0.12.0"
+    "@pikku/pg": "npm:^0.12.0"
+    json-schema: "npm:^0.4.0"
+    oauth2-mock-server: "npm:^7.1.1"
+    open: "npm:^10.0.0"
+    postgres: "npm:^3.4.5"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@pikku/core": ^0.12.0
+  languageName: unknown
+  linkType: soft
+
 "@pikku/ai-vercel@npm:^0.12.0, @pikku/ai-vercel@workspace:packages/services/ai-vercel":
   version: 0.0.0-use.local
   resolution: "@pikku/ai-vercel@workspace:packages/services/ai-vercel"
@@ -4745,9 +4762,9 @@ __metadata:
     "@mantine/hooks": "npm:^8.3.8"
     "@mantine/notifications": "npm:^8.3.8"
     "@mantine/spotlight": "npm:^8.3.8"
+    "@pikku/addon-console": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
-    "@pikku/external-console": "workspace:*"
     "@pikku/fetch": "workspace:*"
     "@pikku/websocket": "workspace:*"
     "@rjsf/core": "npm:^6.3.1"
@@ -4835,23 +4852,6 @@ __metadata:
     express: "npm:^5"
     raw-body: "npm:^3.0.2"
     typescript: "npm:^5.9.3"
-  peerDependencies:
-    "@pikku/core": ^0.12.0
-  languageName: unknown
-  linkType: soft
-
-"@pikku/external-console@workspace:*, @pikku/external-console@workspace:packages/external/pikku-console":
-  version: 0.0.0-use.local
-  resolution: "@pikku/external-console@workspace:packages/external/pikku-console"
-  dependencies:
-    "@pikku/cli": "npm:^0.12.0"
-    "@pikku/core": "npm:^0.12.0"
-    "@pikku/pg": "npm:^0.12.0"
-    json-schema: "npm:^0.4.0"
-    oauth2-mock-server: "npm:^7.1.1"
-    open: "npm:^10.0.0"
-    postgres: "npm:^3.4.5"
-    typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.12.0
   languageName: unknown
@@ -5279,9 +5279,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-function-external@workspace:*, @pikku/templates-function-external@workspace:templates/function-external":
+"@pikku/templates-function-addon@workspace:*, @pikku/templates-function-addon@workspace:templates/function-addon":
   version: 0.0.0-use.local
-  resolution: "@pikku/templates-function-external@workspace:templates/function-external"
+  resolution: "@pikku/templates-function-addon@workspace:templates/function-addon"
   dependencies:
     "@pikku/cli": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.0"
@@ -5302,7 +5302,7 @@ __metadata:
     "@pikku/fetch": "npm:^0.12.0"
     "@pikku/jose": "npm:^0.12.0"
     "@pikku/schema-cfworker": "npm:^0.12.0"
-    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
     "@pikku/websocket": "npm:^0.12.0"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -5493,13 +5493,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/verifiers-external@workspace:verifiers/external":
+"@pikku/verifiers-addon@workspace:verifiers/addon":
   version: 0.0.0-use.local
-  resolution: "@pikku/verifiers-external@workspace:verifiers/external"
+  resolution: "@pikku/verifiers-addon@workspace:verifiers/addon"
   dependencies:
     "@pikku/cli": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.0"
-    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -5514,7 +5514,7 @@ __metadata:
     "@pikku/fetch": "npm:^0.12.0"
     "@pikku/jose": "npm:^0.12.0"
     "@pikku/schema-cfworker": "npm:^0.12.0"
-    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
     "@pikku/websocket": "npm:^0.12.0"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -5533,7 +5533,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "workspace:*"
     "@pikku/core": "npm:^0.12.0"
-    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -5563,7 +5563,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.0"
-    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -5589,7 +5589,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.0"
-    "@pikku/templates-function-external": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown

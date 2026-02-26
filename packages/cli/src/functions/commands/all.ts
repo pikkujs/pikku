@@ -24,7 +24,7 @@ export const all = pikkuVoidFunc({
 
     await rpc.invoke('pikkuAIAgentTypes', null)
 
-    if (!config.externalPackage) {
+    if (!config.addon) {
       await rpc.invoke('pikkuHTTPTypes', null)
       await rpc.invoke('pikkuChannelTypes', null)
       await rpc.invoke('pikkuSchedulerTypes', null)
@@ -69,13 +69,13 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuVariableDefinitionTypes', null)
     await rpc.invoke('pikkuVariables', null)
 
-    await rpc.invoke('pikkuExternalTypes', null)
+    await rpc.invoke('pikkuAddonTypes', null)
 
     if (hasInternalRPCs) {
       allImports.push(config.rpcInternalWiringMetaFile)
     }
 
-    if (agents || !config.externalPackage) {
+    if (agents || !config.addon) {
       await getInspectorState(true)
     }
 
@@ -87,7 +87,7 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuRPCInternalMap', null)
     await rpc.invoke('pikkuRPCExposedMap', null)
 
-    if (!config.externalPackage) {
+    if (!config.addon) {
       const http = await rpc.invoke('pikkuHTTP', null)
       if (http) {
         await rpc.invoke('pikkuHTTPMap', null)
@@ -116,7 +116,7 @@ export const all = pikkuVoidFunc({
     const workflows = await rpc.invoke('pikkuWorkflow', null)
 
     let remoteRPC = false
-    if (!config.externalPackage) {
+    if (!config.addon) {
       remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
     }
 
@@ -135,7 +135,7 @@ export const all = pikkuVoidFunc({
       allImports.push(config.workflowsWiringFile)
     }
 
-    if (!config.externalPackage) {
+    if (!config.addon) {
       const queues = await rpc.invoke('pikkuQueue', null)
       if (queues) {
         await rpc.invoke('pikkuQueueMap', null)

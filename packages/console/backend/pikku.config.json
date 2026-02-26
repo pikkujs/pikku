@@ -7,8 +7,8 @@
   "httpMapDeclarationFile": "../src/pikku/http-map.gen.d.ts",
   "fetchFile": "../src/pikku/pikku-fetch.gen.ts",
   "rpcWiringsFile": "../src/pikku/pikku-rpc.gen.ts",
-  "externalPackages": {
-    "console": { "package": "@pikku/external-console", "forceInclude": true }
+  "addons": {
+    "console": { "package": "@pikku/addon-console", "forceInclude": true }
   },
   "verboseMeta": true,
   "console": {

@@ -17,7 +17,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider>
-        <ThemeProvider initial="light" locale="en">
+        <ThemeProvider initial="dark" locale="en">
           <PikkuHTTPProvider>
             <PikkuRPCProvider>
               <App />

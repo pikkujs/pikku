@@ -63,7 +63,7 @@ function resolveToolReferences(
         }
       }
 
-      if (calleeName === 'external') {
+      if (calleeName === 'addon') {
         const [firstArg] = element.arguments
         if (firstArg && ts.isStringLiteral(firstArg)) {
           resolved.push(firstArg.text)

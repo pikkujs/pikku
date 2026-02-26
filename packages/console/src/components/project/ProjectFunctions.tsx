@@ -9,13 +9,15 @@ import { funcWrapperDefs } from '@/components/ui/badge-defs'
 
 interface ProjectFunctionsProps {
   functions: any[]
+  functionUsedBy?: Map<string, any>
 }
 
 export const ProjectFunctions: React.FunctionComponent<
   ProjectFunctionsProps
-> = ({ functions }) => {
+> = ({ functions, functionUsedBy: functionUsedByProp }) => {
   const { openFunction } = usePanelContext()
-  const { functionUsedBy } = usePikkuMeta()
+  const { functionUsedBy: functionUsedByMeta } = usePikkuMeta()
+  const functionUsedBy = functionUsedByProp ?? functionUsedByMeta
 
   const filtered = useMemo(() => {
     if (!functions) return []

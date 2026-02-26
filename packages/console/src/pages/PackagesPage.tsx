@@ -24,13 +24,22 @@ export interface PackageMeta {
   agents: Record<string, unknown>
 }
 
-const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({ icon, name }) => {
+const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
+  icon,
+  name,
+}) => {
   if (icon) {
     const src = icon.startsWith('<')
       ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(icon)}`
       : icon
     return (
-      <img src={src} width={28} height={28} alt={name} style={{ objectFit: 'contain', display: 'block', borderRadius: 4 }} />
+      <img
+        src={src}
+        width={28}
+        height={28}
+        alt={name}
+        style={{ objectFit: 'contain', display: 'block', borderRadius: 4 }}
+      />
     )
   }
   return (
@@ -49,8 +58,12 @@ const COLUMNS = () => [
         <PackageIcon icon={item.icon} name={item.displayName} />
         <div>
           <Group gap="xs" wrap="nowrap">
-            <Text fw={500} size="sm">{item.displayName || item.name}</Text>
-            <Badge size="xs" variant="light" color="gray">v{item.version}</Badge>
+            <Text fw={500} size="sm">
+              {item.displayName || item.name}
+            </Text>
+            <Badge size="xs" variant="light" color="gray">
+              v{item.version}
+            </Badge>
           </Group>
           {item.description && (
             <Text size="xs" c="dimmed" truncate style={{ maxWidth: 400 }}>
@@ -77,13 +90,15 @@ const COLUMNS = () => [
   },
 ]
 
-const PackagesList: React.FunctionComponent<{ onSelect: (id: string) => void }> = ({ onSelect }) => {
+const PackagesList: React.FunctionComponent<{
+  onSelect: (id: string) => void
+}> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['external-packages'],
+    queryKey: ['addons'],
     queryFn: async () => {
-      const result = await rpc('console:getExternalMeta', null)
+      const result = await rpc('console:getAddonMeta', null)
       return ((result as any)?.packages ?? result ?? []) as PackageMeta[]
     },
     staleTime: 60 * 1000,
@@ -96,28 +111,28 @@ const PackagesList: React.FunctionComponent<{ onSelect: (id: string) => void }> 
       header={
         <DetailPageHeader
           icon={Package}
-          category="Packages"
+          category="Addons"
           docsHref="https://pikkujs.com/docs/packages"
         />
       }
       hidePanel
     >
       <TableListPage
-        title="Packages"
+        title="Addons"
         icon={Package}
         docsHref="https://pikkujs.com/docs/packages"
         data={data ?? []}
         columns={columns}
         getKey={(item) => item.id}
         onRowClick={(item) => onSelect(item.id)}
-        searchPlaceholder="Search packages..."
+        searchPlaceholder="Search addons..."
         searchFilter={(item, q) =>
           item.displayName?.toLowerCase().includes(q) ||
           item.name?.toLowerCase().includes(q) ||
           item.description?.toLowerCase().includes(q) ||
           false
         }
-        emptyMessage="No packages found in registry."
+        emptyMessage="No addons found."
         loading={isLoading}
       />
     </ResizablePanelLayout>
@@ -129,7 +144,9 @@ const PackagesPageContent: React.FunctionComponent = () => {
   const selectedId = searchParams.get('id')
 
   if (selectedId) {
-    return <PackageDetailPage id={selectedId} onBack={() => setSearchParams({})} />
+    return (
+      <PackageDetailPage id={selectedId} onBack={() => setSearchParams({})} />
+    )
   }
 
   return <PackagesList onSelect={(id) => setSearchParams({ id })} />

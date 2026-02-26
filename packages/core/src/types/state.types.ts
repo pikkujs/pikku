@@ -70,7 +70,7 @@ export interface PikkuPackageState {
       }
     >
     /** Maps namespace aliases to package config (e.g., 'ext' -> { package: '@pikku/...', rpcEndpoint: '...' }) */
-    externalPackages: Map<string, { package: string; rpcEndpoint?: string }>
+    addons: Map<string, { package: string; rpcEndpoint?: string }>
   }
   http: {
     middleware: Map<string, CorePikkuMiddleware<any, any>[]>

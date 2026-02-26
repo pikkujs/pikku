@@ -71,7 +71,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   rpc: {
     meta: {},
     files: new Map(),
-    externalPackages: new Map(),
+    addons: new Map(),
   },
   http: {
     middleware: new Map(),
@@ -198,7 +198,7 @@ export const getCreateWireServices = (): CreateWireServices | undefined => {
  * Register service factories for an external package.
  * These factories are used to create services when the package's functions are invoked.
  *
- * @param packageName - The package name (e.g., '@pikku/templates-function-external')
+ * @param packageName - The package name (e.g., '@pikku/templates-function-addon')
  * @param factories - The service factory functions
  */
 export const addPackageServiceFactories = (
