@@ -76,7 +76,11 @@ export const consoleCommand = pikkuSessionlessFunc<{ port?: string }, void>({
       open(`http://localhost:${resolvedPort}`)
     })
 
-    const configWatcher = chokidar.watch(config.srcDirectories, {
+    const resolvedSrcDirs = config.srcDirectories.map((dir) =>
+      join(config.rootDir, dir)
+    )
+
+    const configWatcher = chokidar.watch(resolvedSrcDirs, {
       ignoreInitial: true,
       ignored: /.*\.gen\.tsx?/,
     })
@@ -87,9 +91,9 @@ export const consoleCommand = pikkuSessionlessFunc<{ port?: string }, void>({
       watcher.close()
 
       logger.info(
-        `• Watching directories: \n  - ${config.srcDirectories.join('\n  - ')}`
+        `• Watching directories: \n  - ${resolvedSrcDirs.join('\n  - ')}`
       )
-      watcher = chokidar.watch(config.srcDirectories, {
+      watcher = chokidar.watch(resolvedSrcDirs, {
         ignoreInitial: true,
         ignored: /.*\.gen\.ts/,
       })
