@@ -13,6 +13,7 @@ import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
 import { addFunctions } from './add/add-functions.js'
 import { addChannel } from './add/add-channel.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
+import { addWireAddon } from './add/add-wire-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
@@ -78,6 +79,7 @@ export const visitSetup = (
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
 
   addRPCInvocations(node, state, logger)
+  addWireAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
   addWorkflow(logger, node, checker, state, options)

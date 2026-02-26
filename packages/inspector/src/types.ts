@@ -200,7 +200,6 @@ export type InspectorOptions = Partial<{
     singletonServicesFactoryType: string
     wireServicesFactoryType: string
   }>
-  addons: Record<string, AddonConfig>
   schemaConfig: {
     tsconfig: string
     schemasFromTypes?: string[]
@@ -327,6 +326,10 @@ export interface InspectorState {
     exposedFiles: Map<string, { path: string; exportedName: string }>
     invokedFunctions: Set<string>
     usedAddons: Set<string>
+    wireAddonDeclarations: Map<
+      string,
+      { package: string; rpcEndpoint?: string }
+    >
   }
   mcpEndpoints: {
     resourcesMeta: MCPResourceMeta

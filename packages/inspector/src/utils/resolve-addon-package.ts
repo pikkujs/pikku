@@ -1,5 +1,4 @@
 import * as ts from 'typescript'
-import { AddonConfig } from '../types.js'
 
 /**
  * Resolve the external package name from an imported identifier.
@@ -13,9 +12,9 @@ import { AddonConfig } from '../types.js'
 export const resolveAddonName = (
   identifier: ts.Identifier,
   checker: ts.TypeChecker,
-  addons?: Record<string, AddonConfig>
+  wireAddonDeclarations?: Map<string, { package: string; rpcEndpoint?: string }>
 ): string | null => {
-  if (!addons || Object.keys(addons).length === 0) {
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return null
   }
 
@@ -32,9 +31,9 @@ export const resolveAddonName = (
 
   const moduleSpecifier = importDecl.moduleSpecifier.text
 
-  for (const config of Object.values(addons)) {
-    if (config.package === moduleSpecifier) {
-      return config.package
+  for (const addonDecl of wireAddonDeclarations.values()) {
+    if (addonDecl.package === moduleSpecifier) {
+      return addonDecl.package
     }
   }
 

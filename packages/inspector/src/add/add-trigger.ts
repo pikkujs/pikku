@@ -141,7 +141,7 @@ const addWireTriggerSource: (
     const packageName = resolveAddonName(
       funcInitializer,
       checker,
-      options.addons
+      state.rpc.wireAddonDeclarations
     )
     state.triggers.sourceMeta[nameValue] = {
       name: nameValue,

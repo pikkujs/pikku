@@ -26,17 +26,6 @@ export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
           JSON.stringify(metaData, null, 2)
         )
 
-        filesGenerated = true
-      }
-
-      const hasHTTPFactories = Array.from(
-        state.http.routePermissions.values()
-      ).some((meta: any) => meta.exportName && meta.isFactory)
-      const hasTagFactories = Array.from(
-        state.permissions.tagPermissions.values()
-      ).some((meta: any) => meta.exportName && meta.isFactory)
-
-      if (hasHTTPFactories || hasTagFactories) {
         await writeFileInDir(
           logger,
           permissionsFile,
@@ -47,6 +36,7 @@ export const pikkuPermissions = pikkuSessionlessFunc<void, boolean | undefined>(
             packageMappings
           )
         )
+
         filesGenerated = true
       }
 

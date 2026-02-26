@@ -303,7 +303,6 @@ export const createSingletonServices: CreateSingletonServices<
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
         tags: config.tags,
-        addons: config.addons,
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,

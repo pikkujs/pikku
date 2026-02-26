@@ -64,10 +64,6 @@ const _getPikkuCLIConfig = async (
           ...extendedConfig.packageMappings,
           ...config.packageMappings,
         },
-        addons: {
-          ...extendedConfig.addons,
-          ...config.addons,
-        },
         ignoreFiles: config.ignoreFiles ??
           extendedConfig.ignoreFiles ?? [
             '**/*.test.ts',
@@ -87,7 +83,6 @@ const _getPikkuCLIConfig = async (
         ...config,
         configDir,
         packageMappings: config.packageMappings || {},
-        addons: config.addons || {},
         rootDir: config.rootDir
           ? resolve(configDir, config.rootDir)
           : configDir,

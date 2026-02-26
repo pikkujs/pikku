@@ -7,7 +7,6 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
-  validateSecretOverrides,
   validateAgentModels,
   validateAgentOverrides,
   computeResolvedIOTypes,
@@ -105,6 +104,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       exposedFiles: new Map(),
       invokedFunctions: new Set(),
       usedAddons: new Set(),
+      wireAddonDeclarations: new Map(),
     },
     mcpEndpoints: {
       resourcesMeta: {},
@@ -312,7 +312,6 @@ export const inspect = async (
       )
     }
 
-    validateSecretOverrides(logger, state, options.addons)
     validateAgentModels(logger, state, options.modelConfig)
     validateAgentOverrides(logger, state, options.modelConfig)
   }

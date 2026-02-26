@@ -1,12 +1,11 @@
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
+  "srcDirectories": [
+    "src"
+  ],
   "outDir": ".pikku",
   "entrypoint": "src/index.ts",
   "models": {
     "test-model": "test-provider/test-model"
-  },
-  "addons": {
-    "ext": { "package": "@pikku/templates-function-addon" }
   }
 }
