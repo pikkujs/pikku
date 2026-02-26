@@ -15,6 +15,7 @@ interface Column<T> {
   key: string
   header: string
   align?: 'left' | 'right'
+  width?: string | number
   render: (item: T, index: number) => React.ReactNode
 }
 
@@ -112,9 +113,9 @@ export const TableListPage = <T,>({
                   key={col.key}
                   pl={i === 0 ? 'md' : undefined}
                   pr={i === columns.length - 1 ? 'md' : undefined}
-                  c="dimmed"
-                  fw={500}
+                  fw={600}
                   fz="xs"
+                  style={col.width ? { width: col.width } : undefined}
                 >
                   {col.header}
                 </Table.Th>
@@ -125,14 +126,7 @@ export const TableListPage = <T,>({
             {filtered.map((item, index) => (
               <Table.Tr
                 key={getKey(item, index)}
-                style={{
-                  cursor: 'pointer',
-                  height: '3.75rem',
-                  borderBottom:
-                    index === filtered.length - 1
-                      ? '1px solid var(--table-border-color, var(--mantine-color-default-border))'
-                      : undefined,
-                }}
+                style={{ cursor: 'pointer', height: '3.75rem' }}
                 onClick={() => onRowClick(item)}
               >
                 {columns.map((col, i) => (
@@ -140,6 +134,7 @@ export const TableListPage = <T,>({
                     key={col.key}
                     pl={i === 0 ? 'md' : undefined}
                     pr={i === columns.length - 1 ? 'md' : undefined}
+                    style={col.width ? { width: col.width } : undefined}
                   >
                     {col.render(item, index)}
                   </Table.Td>

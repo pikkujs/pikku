@@ -223,6 +223,9 @@ export const ThemeProvider: React.FunctionComponent<{
         light: {},
         dark: {
           '--mantine-color-body': '#0a0a0f',
+          '--mantine-color-gray-light': 'rgba(255,255,255,0.11)',
+          '--mantine-color-gray-light-color': 'rgba(255,255,255,0.72)',
+          '--mantine-color-gray-light-hover': 'rgba(255,255,255,0.16)',
         },
       })}
     >
