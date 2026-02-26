@@ -90,7 +90,7 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
         ))}
       </Breadcrumbs>
 
-      <Paper withBorder p="md" radius="sm" bg="var(--mantine-color-gray-0)">
+      <Paper p="md" radius="sm" style={{ border: '1px solid var(--mantine-color-default-border)' }}>
         <CliHelpText
           programId={programId}
           cliMeta={cliMeta}
