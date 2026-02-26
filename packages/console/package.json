@@ -43,9 +43,11 @@
     "react-arborist": "^3.4.3",
     "react-dom": "^19",
     "react-hook-form": "^7.66.1",
+    "react-markdown": "^10.1.0",
     "react-medium-image-zoom": "^5.4.0",
     "react-router-dom": "^7",
-    "reactflow": "^11.11.4"
+    "reactflow": "^11.11.4",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@mantine/colors-generator": "^8.3.8",
