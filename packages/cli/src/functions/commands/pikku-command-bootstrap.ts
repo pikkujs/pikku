@@ -53,7 +53,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
     if (Object.keys(usedExternalPackages).length > 0) {
       externalPackagesRegistration = `
 // Register external package mappings
-import { pikkuState } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 const externalPackages = pikkuState(null, 'rpc', 'externalPackages')
 ${Object.entries(usedExternalPackages)
   .map(([ns, cfg]) => {
@@ -69,7 +69,7 @@ ${Object.entries(usedExternalPackages)
     const packageNameArg = config.externalPackageName
       ? `'${config.externalPackageName}'`
       : 'null'
-    const metaDirRegistration = `import { pikkuState as __pikkuState } from '@pikku/core'
+    const metaDirRegistration = `import { pikkuState as __pikkuState } from '@pikku/core/internal'
 try {
   const { fileURLToPath: __fileURLToPath } = await import('url')
   const { dirname: __dirname } = await import('path')

@@ -20,10 +20,17 @@ if [ -f .pikku/pikku-types.gen.ts ]; then
 fi
 mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
 
-# Patch legacy field names in bootstrapped files
+# Patch legacy field names and stale imports in bootstrapped files
 while IFS= read -r -d '' f; do
   tmp=$(mktemp)
-  sed -e 's/pikkuFuncName/pikkuFuncId/g' -e 's/queueName:/name:/g' "$f" > "$tmp" && mv "$tmp" "$f"
+  sed -e 's/pikkuFuncName/pikkuFuncId/g' \
+      -e 's/queueName:/name:/g' \
+      -e "s|import { pikkuState, FunctionsMeta } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'\nimport type { FunctionsMeta } from '@pikku/core'|g" \
+      -e "s|import { pikkuState } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'|g" \
+      -e "s|import { pikkuState as __pikkuState } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/internal'|g" \
+      -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'|g" \
+      -e "s|addPackageServiceFactories('\([^']*\)', {|pikkuState('\1', 'package', 'factories', {|g" \
+      "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)

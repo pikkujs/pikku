@@ -14,7 +14,7 @@ export const serializeTriggerMetaTS = (
     : `import metaData from '${jsonImportPath}'`
 
   const serializedOutput: string[] = []
-  serializedOutput.push("import { pikkuState } from '@pikku/core'")
+  serializedOutput.push("import { pikkuState } from '@pikku/core/internal'")
   serializedOutput.push("import { TriggerMeta } from '@pikku/core/trigger'")
   serializedOutput.push(importStatement)
   serializedOutput.push('')
@@ -46,7 +46,7 @@ export const serializeTriggerSourceMetaTS = (
     : `import metaData from '${jsonImportPath}'`
 
   const serializedOutput: string[] = []
-  serializedOutput.push("import { pikkuState } from '@pikku/core'")
+  serializedOutput.push("import { pikkuState } from '@pikku/core/internal'")
   serializedOutput.push(
     "import { TriggerSourceMeta } from '@pikku/core/trigger'"
   )

@@ -21,7 +21,7 @@
 
 import { InMemoryWorkflowService } from '@pikku/core/services'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
-import { pikkuState } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
 

@@ -5,7 +5,7 @@
 
 import { PgWorkflowService } from '@pikku/pg'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { pikkuState } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import postgres from 'postgres'
 
 import {

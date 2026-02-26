@@ -40,6 +40,7 @@
     "./services": "./dist/services/index.js",
     "./services/local-content": "./dist/services/local-content.js",
     "./services/gopass-secrets": "./dist/services/gopass-secrets.js",
+    "./internal": "./dist/internal.js",
     "./schema": "./dist/schema.js"
   },
   "dependencies": {

@@ -14,7 +14,7 @@ export const serializePackageFactories = (
   packageMappings: Record<string, string> = {}
 ) => {
   const imports: string[] = [
-    `import { addPackageServiceFactories } from '@pikku/core'`,
+    `import { pikkuState } from '@pikku/core/internal'`,
   ]
 
   const factoryEntries: string[] = []
@@ -62,7 +62,7 @@ export const serializePackageFactories = (
 
   return `${imports.join('\n')}
 
-addPackageServiceFactories('${packageName}', {
+pikkuState('${packageName}', 'package', 'factories', {
 ${factoryEntries.join('\n')}
 })
 `
