@@ -10,6 +10,7 @@ export const serializeAddonTypes = (
  * External package types for pikkuAddonConfig and pikkuAddonServices
  */
 
+import type { CreateConfig } from '@pikku/core'
 ${singletonServicesTypeImport}
 ${configTypeImport}
 ${requiredServicesTypeImport}
@@ -36,11 +37,11 @@ export type AddonBaseServices = {
  */
 export const pikkuAddonConfig = <ExistingServices extends Omit<Partial<SingletonServices>, 'variables' | 'secrets'> & AddonBaseServices>(
   func: (services: ExistingServices) => Promise<Config>
-) => {
-  return async (_variables: any, existingServices?: Partial<SingletonServices>): Promise<Config> => {
+): CreateConfig<Config> => {
+  return (async (_variables: any, existingServices?: Partial<SingletonServices>): Promise<Config> => {
     const { secrets, variables, ...rest } = (existingServices ?? {}) as unknown as SingletonServices
     return func({ ...rest, secrets: new TypedSecretService(secrets), variables: new TypedVariablesService(variables) } as ExistingServices)
-  }
+  }) as unknown as CreateConfig<Config>
 }
 
 /**
