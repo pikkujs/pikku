@@ -5,8 +5,5 @@
   "tsconfig": "./tsconfig.json",
   "schema": {
     "supportsImportAttributes": true
-  },
-  "addons": {
-    "ext": { "package": "@pikku/templates-function-addon" }
   }
 }

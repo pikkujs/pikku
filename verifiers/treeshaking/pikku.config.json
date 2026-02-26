@@ -1,9 +1,8 @@
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
+  "srcDirectories": [
+    "src"
+  ],
   "outDir": ".pikku",
-  "entrypoint": "src/index.ts",
-  "addons": {
-    "ext": { "package": "@pikku/templates-function-addon" }
-  }
+  "entrypoint": "src/index.ts"
 }

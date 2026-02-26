@@ -1,6 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
-  "srcDirectories": ["./src", "./types"],
+  "srcDirectories": [
+    "./src",
+    "./types"
+  ],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "schema": {
@@ -12,9 +15,6 @@
   "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts",
   "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
   "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
-  "addons": {
-    "ext": { "package": "@pikku/templates-function-addon" }
-  },
   "agent": {
     "publicAgentPath": "src/wirings/agent.wiring.gen.ts"
   },

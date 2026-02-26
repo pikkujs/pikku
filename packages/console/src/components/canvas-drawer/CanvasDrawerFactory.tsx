@@ -603,9 +603,7 @@ const IntegrationsView: React.FunctionComponent<{
 
   const filteredIntegrations = React.useMemo(() => {
     if (!integrations) return []
-    return integrations.filter(
-      (pkg: AddonMeta) => pkg.alias !== 'pikku'
-    )
+    return integrations.filter((pkg: AddonMeta) => pkg.alias !== 'pikku')
   }, [integrations])
 
   return (

@@ -524,9 +524,9 @@ export const addon = <Name extends keyof FlattenedRPCMap>(
   'session' | 'rpc'
 > => {
   return {
-    func: (async (_services: any, data: any, { rpc }: any) => {
+    func: async (_services: any, data: FlattenedRPCMap[Name]['input'], { rpc }: any) => {
       return rpc.invoke(rpcName, data)
-    }) as any
+    }
   } as PikkuFunctionConfig<
     FlattenedRPCMap[Name]['input'],
     FlattenedRPCMap[Name]['output'],
@@ -665,5 +665,8 @@ export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
 export const addPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
   addPermissionCore(tag, permissions as any, ${packageNameValue})
 }
+
+export { wireAddon } from '@pikku/core'
+export type { WireAddonConfig } from '@pikku/core'
 `
 }

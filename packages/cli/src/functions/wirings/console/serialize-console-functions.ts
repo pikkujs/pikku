@@ -1,5 +1,6 @@
 export const serializeConsoleFunctions = (pathToPikkuTypes: string) => {
-  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon, wireAddon } from '${pathToPikkuTypes}'
+
 import { streamAIAgent, resumeAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
@@ -214,6 +215,7 @@ export const consoleRoutes = defineHTTPRoutes({
   },
 })
 
+wireAddon({ name: 'console', package: '@pikku/addon-console' })
 wireHTTPRoutes({ routes: { console: consoleRoutes } })
 `
 }

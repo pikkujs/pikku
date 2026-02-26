@@ -31,6 +31,7 @@ export interface RPCHandler<Input, Output> {
  * Resolved function reference from namespace
  */
 export interface ResolvedFunction {
+  namespace: string
   package: string
   function: string
 }

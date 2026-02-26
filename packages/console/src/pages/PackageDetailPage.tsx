@@ -593,7 +593,6 @@ export const PackageDetailPage: React.FunctionComponent<{
             )}
           </Tabs>
         )}
-
       </Stack>
     </ResizablePanelLayout>
   )

@@ -138,15 +138,6 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  addons?: Record<
-    string,
-    {
-      package: string
-      rpcEndpoint?: string
-      secretOverrides?: Record<string, string>
-      forceInclude?: boolean
-    }
-  >
   addon?: boolean
   addonName?: string
 
@@ -271,15 +262,6 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  addons?: Record<
-    string,
-    {
-      package: string
-      rpcEndpoint?: string
-      secretOverrides?: Record<string, string>
-      forceInclude?: boolean
-    }
-  >
   addon?: boolean
   addonName?: string
 

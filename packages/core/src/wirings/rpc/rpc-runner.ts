@@ -45,6 +45,7 @@ const resolveNamespace = (
   }
 
   return {
+    namespace,
     package: pkgConfig.package,
     function: functionName,
   }
@@ -172,16 +173,22 @@ export class ContextAwareRPCService {
     }
     const funcName = funcMeta.pikkuFuncId || resolved.function
 
+    const addonConfig = pikkuState(null, 'rpc', 'addons').get(
+      resolved.namespace
+    )
+    const auth = addonConfig?.auth ?? this.options.requiresAuth
+    const tags = [...(addonConfig?.tags ?? []), ...(funcMeta.tags ?? [])]
+
     // Execute the function using runPikkuFunc with the external package's state
     // We use the parent services (this.services) since external packages share services
     // Pass the function's tags so tag-based middleware/permissions are applied
     return runPikkuFunc<In, Out>('rpc', namespacedFunction, funcName, {
-      auth: this.options.requiresAuth,
+      auth,
       singletonServices: this.services,
       data: () => data,
       wire,
       packageName: resolved.package,
-      tags: funcMeta.tags,
+      tags,
     })
   }
 
