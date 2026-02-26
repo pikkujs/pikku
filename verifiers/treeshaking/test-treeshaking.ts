@@ -26,7 +26,7 @@ function hasExternalPackageBootstrap(): boolean {
     // Check if the addon bootstrap import exists
     // External packages are imported using package names, not relative paths
     return content.includes(
-      '@pikku/templates-function-external/.pikku/pikku-bootstrap.gen.js'
+      '@pikku/templates-function-addon/.pikku/pikku-bootstrap.gen.js'
     )
   } catch (error) {
     console.error('Error checking bootstrap file:', error)
