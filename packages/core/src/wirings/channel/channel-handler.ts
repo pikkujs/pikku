@@ -81,7 +81,7 @@ export const processMessageHandlers = (
     routingProperty?: string,
     routerValue?: string
   ): Promise<unknown> => {
-    if (!validateAuth(requiresSession, channelHandler, onMessage)) {
+    if (!validateAuth(requiresSession, userSession?.get(), onMessage)) {
       const routeMessage = routingProperty
         ? `route '${routingProperty}:${routerValue}'`
         : 'the default message route'
@@ -201,7 +201,7 @@ export const processMessageHandlers = (
       logger.error(
         `No handler found for message in channel ${channelConfig.name} for ${JSON.stringify(rawData)}`
       )
-      logger.error(`Channel ${JSON.stringify(channelConfig)}`)
+      logger.error(`Channel config name: ${channelConfig.name}`)
     }
 
     return result
