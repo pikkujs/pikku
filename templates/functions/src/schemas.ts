@@ -179,6 +179,12 @@ export const TodoStreamOutputSchema = z.object({
   count: z.number(),
 })
 
+export const TodoProgressOutputSchema = z.object({
+  status: z.enum(['started', 'processing', 'complete']),
+  processed: z.number(),
+  total: z.number(),
+})
+
 export const OnTestEventInputSchema = z.object({
   payload: z.string(),
 })

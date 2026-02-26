@@ -1,5 +1,35 @@
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
-import { UserIdInputSchema, TodoStreamOutputSchema } from '../schemas.js'
+import {
+  pikkuFunc,
+  pikkuSessionlessFunc,
+} from '../../.pikku/pikku-types.gen.js'
+import {
+  UserIdInputSchema,
+  TodoStreamOutputSchema,
+  TodoProgressOutputSchema,
+} from '../schemas.js'
+
+/**
+ * SSE stream that processes the authenticated user's todos and reports progress.
+ * Sends started/processing events over SSE, returns complete when done.
+ */
+export const processTodosProgress = pikkuFunc<void>({
+  output: TodoProgressOutputSchema,
+  func: async ({ logger, todoStore }, _input, { session, channel }) => {
+    const todos = todoStore.getTodosByUser(session.userId, { completed: false })
+    const total = todos.length
+    logger.info(`Processing ${total} todos for user ${session.userId}`)
+
+    if (channel) {
+      channel.send({ status: 'started', processed: 0, total })
+      for (let i = 0; i < todos.length; i++) {
+        logger.info(`Processing todo: ${todos[i].title}`)
+        channel.send({ status: 'processing', processed: i + 1, total })
+      }
+    }
+
+    return { status: 'complete', processed: total, total }
+  },
+})
 
 /**
  * SSE stream that sends todo updates periodically.
