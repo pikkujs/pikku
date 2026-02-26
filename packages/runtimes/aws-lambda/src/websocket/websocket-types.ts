@@ -2,8 +2,8 @@ import {
   CoreSingletonServices,
   CoreServices,
   CoreUserSession,
-  CreateWireServices,
 } from '@pikku/core'
+import type { CreateWireServices } from '@pikku/core/internal'
 import { ChannelStore } from '@pikku/core/channel'
 
 export type WebsocketParams<

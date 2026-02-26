@@ -1,14 +1,4 @@
-import type {
-  Config,
-  Services,
-  SingletonServices,
-  UserSession,
-} from '../types/application-types.js'
-import {
-  CreateConfig,
-  CreateWireServices,
-  CreateSingletonServices,
-} from '@pikku/core'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
 import {
   ConsoleLogger,
   LocalVariablesService,
@@ -17,14 +7,11 @@ import {
 
 import '../.pikku/pikku-bootstrap.gen.js'
 
-export const createConfig: CreateConfig<Config> = async () => {
-  return {} as Config
-}
+export const createConfig = pikkuConfig(async () => {
+  return {}
+})
 
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  SingletonServices
-> = async (config) => {
+export const createSingletonServices = pikkuServices(async (config) => {
   const variables = new LocalVariablesService()
 
   return {
@@ -33,12 +20,8 @@ export const createSingletonServices: CreateSingletonServices<
     variables,
     secrets: new LocalSecretService(variables),
   }
-}
+})
 
-export const createWireServices: CreateWireServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async ({ logger }) => {
-  return {} as Services
-}
+export const createWireServices = pikkuWireServices(async ({ logger }) => {
+  return {} as any
+})

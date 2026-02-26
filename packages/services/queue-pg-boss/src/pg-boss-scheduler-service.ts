@@ -133,7 +133,7 @@ export class PgBossSchedulerService extends SchedulerService {
     const scheduledTasks = getScheduledTasks()
 
     for (const [name, task] of scheduledTasks) {
-      const cronName = `pikku-recurring-scheduled-task:${name}`
+      const cronName = `pikku-recurring-scheduled-task_${name}`
       await this.pgBoss.createQueue(cronName)
       await this.pgBoss.schedule(cronName, task.schedule, {
         rpcName: name,
