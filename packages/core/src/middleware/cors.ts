@@ -48,8 +48,11 @@ export const cors = pikkuMiddlewareFactory<{
     headers = ['Content-Type', 'Authorization', 'x-api-key'],
     credentials = false,
     maxAge = 86400,
-  } = {}) =>
-    pikkuMiddleware({
+  } = {}) => {
+    if (origin === '*' && credentials) {
+      throw new Error('CORS misconfiguration: wildcard origin (*) cannot be used with credentials: true')
+    }
+    return pikkuMiddleware({
       name: 'CORS',
       description: 'Handles cross-origin requests including OPTIONS preflight',
       func: async (_services, wires, next) => {
@@ -93,4 +96,5 @@ export const cors = pikkuMiddlewareFactory<{
         return next()
       },
     })
+  }
 )

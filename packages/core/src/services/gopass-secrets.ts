@@ -13,6 +13,9 @@ export class GopassSecretService implements SecretService {
   constructor(private prefix: string = '') {}
 
   private getFullKey(key: string): string {
+    if (!/^[\w.\-\/]+$/.test(key)) {
+      throw new Error(`Invalid secret key format: ${key}`)
+    }
     return this.prefix ? `${this.prefix}${key}` : key
   }
 

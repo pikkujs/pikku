@@ -44,11 +44,11 @@ export const handleHTTPError = (
       if (trackerId) {
         logger.warn(`Warning id: ${trackerId}`)
       }
-      logger.warn(e)
+      logger.warn(e instanceof Error ? e.message : e)
     }
   } else {
     // Handle unexpected errors
-    logger.error(e)
+    logger.error(e instanceof Error ? e.message : e)
     http?.response?.status(500)
 
     if (trackerId) {
