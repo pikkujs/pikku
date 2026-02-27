@@ -1,4 +1,4 @@
-import { pikkuFunc } from '../../.pikku/pikku-types.gen.js'
+import { pikkuFunc, pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import {
   LoginInputSchema,
   LoginResponseSchema,
@@ -12,7 +12,7 @@ import {
  * Returns a JWT token for subsequent authenticated requests.
  * Demo: any password works, just validates username exists.
  */
-export const login = pikkuFunc({
+export const login = pikkuSessionlessFunc({
   input: LoginInputSchema,
   output: LoginResponseSchema,
   func: async ({ jwt, todoStore }, { username, password }) => {
