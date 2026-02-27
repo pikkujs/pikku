@@ -21,7 +21,8 @@ export const addSchema = (
   value: any,
   packageName: string | null = null
 ) => {
-  pikkuState(packageName, 'misc', 'schemas').set(name, value)
+  const schema = value?.default ?? value
+  pikkuState(packageName, 'misc', 'schemas').set(name, schema)
 }
 
 /**

@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.12.11",
+    "@assistant-ui/react": "^0.12.12",
+    "@assistant-ui/react-data-stream": "^0.12.5",
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^8.3.8",
     "@mantine/dates": "^8.3.8",

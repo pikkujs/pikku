@@ -1,5 +1,11 @@
-import { generateText, streamText, tool as aiTool, Output } from 'ai'
-import { jsonSchema } from 'ai'
+import {
+  generateText,
+  streamText,
+  tool as aiTool,
+  Output,
+  jsonSchema,
+  stepCountIs,
+} from 'ai'
 import type {
   AIAgentRunnerService,
   AIAgentRunnerParams,
@@ -7,6 +13,22 @@ import type {
 } from '@pikku/core/services'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 import { convertToSDKMessages } from './message-converter.js'
+
+function cleanSchema(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema
+  const { $schema, ...rest } = schema
+  if (rest.type === 'object' && rest.properties) {
+    rest.required = Object.keys(rest.properties)
+    rest.additionalProperties = false
+    for (const key of Object.keys(rest.properties)) {
+      rest.properties[key] = cleanSchema(rest.properties[key])
+    }
+  }
+  if (rest.type === 'array' && rest.items) {
+    rest.items = cleanSchema(rest.items)
+  }
+  return rest
+}
 
 export class VercelAIAgentRunner implements AIAgentRunnerService {
   private providers: Record<string, any>
@@ -41,19 +63,22 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
   private buildTools(params: AIAgentRunnerParams) {
     return Object.fromEntries(
-      params.tools.map((t) => [
-        t.name,
-        t.needsApproval
-          ? aiTool({
-              description: t.description,
-              parameters: jsonSchema(t.inputSchema as any),
-            })
-          : aiTool({
-              description: t.description,
-              parameters: jsonSchema(t.inputSchema as any),
-              execute: async (input: any) => t.execute(input),
-            }),
-      ])
+      params.tools.map((t) => {
+        const cleaned = cleanSchema(t.inputSchema)
+        return [
+          t.name,
+          t.needsApproval
+            ? aiTool({
+                description: t.description,
+                inputSchema: jsonSchema(cleaned),
+              })
+            : aiTool({
+                description: t.description,
+                inputSchema: jsonSchema(cleaned),
+                execute: async (input: any) => t.execute(input),
+              }),
+        ]
+      })
     )
   }
 
@@ -65,7 +90,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     const provider = this.getProvider(providerName)
     const sdkModel = provider(modelName)
     const aiTools = this.buildTools(params)
-    const messages = convertToSDKMessages(params.messages)
+    const messages = await convertToSDKMessages(params.messages)
 
     const stepResult: AIAgentStepResult = {
       text: '',
@@ -80,68 +105,64 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       system: params.instructions,
       messages,
       tools: aiTools,
-      maxSteps: 1,
+      stopWhen: stepCountIs(1),
       toolChoice: params.toolChoice,
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
       }),
-      ...(params.outputSchema
-        ? {
-            output: Output.object({
-              schema: jsonSchema(params.outputSchema as any),
-            }),
-          }
-        : {}),
     })
 
     try {
       for await (const part of result.fullStream) {
         switch (part.type) {
           case 'text-delta':
-            stepResult.text += part.textDelta
-            channel.send({ type: 'text-delta', text: part.textDelta })
+            stepResult.text += part.text
+            channel.send({ type: 'text-delta', text: part.text })
             break
-          case 'reasoning':
-            channel.send({ type: 'reasoning-delta', text: part.textDelta })
+          case 'reasoning-delta':
+            channel.send({
+              type: 'reasoning-delta',
+              text: (part as any).delta ?? '',
+            })
             break
           case 'tool-call':
             stepResult.toolCalls.push({
               toolCallId: part.toolCallId,
               toolName: part.toolName,
-              args: part.args,
+              args: part.input,
             })
             channel.send({
               type: 'tool-call',
               toolCallId: part.toolCallId,
               toolName: part.toolName,
-              args: part.args,
+              args: part.input,
             })
             break
           case 'tool-result':
             stepResult.toolResults.push({
               toolCallId: part.toolCallId,
               toolName: part.toolName,
-              result: part.result,
+              result: part.output,
             })
             channel.send({
               type: 'tool-result',
               toolCallId: part.toolCallId,
               toolName: part.toolName,
-              result: part.result,
+              result: part.output,
             })
             break
-          case 'step-finish':
+          case 'finish-step':
             stepResult.usage = {
-              inputTokens: part.usage.promptTokens,
-              outputTokens: part.usage.completionTokens,
+              inputTokens: part.usage.inputTokens ?? 0,
+              outputTokens: part.usage.outputTokens ?? 0,
             }
             stepResult.finishReason =
               part.finishReason as AIAgentStepResult['finishReason']
             channel.send({
               type: 'usage',
               tokens: {
-                input: part.usage.promptTokens,
-                output: part.usage.completionTokens,
+                input: part.usage.inputTokens ?? 0,
+                output: part.usage.outputTokens ?? 0,
               },
               model: modelName,
             })
@@ -159,13 +180,6 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       }
     } catch {}
 
-    if (params.outputSchema) {
-      try {
-        const awaited = await result
-        stepResult.object = (awaited as any).output
-      } catch {}
-    }
-
     return stepResult
   }
 
@@ -174,14 +188,14 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     const provider = this.getProvider(providerName)
     const sdkModel = provider(modelName)
     const aiTools = this.buildTools(params)
-    const messages = convertToSDKMessages(params.messages)
+    const messages = await convertToSDKMessages(params.messages)
 
     const result = await generateText({
       model: sdkModel,
       system: params.instructions,
       messages,
       tools: aiTools,
-      maxSteps: 1,
+      stopWhen: stepCountIs(1),
       toolChoice: params.toolChoice,
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
@@ -189,7 +203,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       ...(params.outputSchema
         ? {
             output: Output.object({
-              schema: jsonSchema(params.outputSchema as any),
+              schema: jsonSchema(cleanSchema(params.outputSchema)),
             }),
           }
         : {}),
@@ -204,17 +218,17 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         step?.toolCalls?.map((tc: any) => ({
           toolCallId: tc.toolCallId,
           toolName: tc.toolName,
-          args: tc.args,
+          args: tc.input,
         })) ?? [],
       toolResults:
         step?.toolResults?.map((tr: any) => ({
           toolCallId: tr.toolCallId,
           toolName: tr.toolName,
-          result: tr.result,
+          result: tr.output,
         })) ?? [],
       usage: {
-        inputTokens: step?.usage?.promptTokens ?? 0,
-        outputTokens: step?.usage?.completionTokens ?? 0,
+        inputTokens: step?.usage?.inputTokens ?? 0,
+        outputTokens: step?.usage?.outputTokens ?? 0,
       },
       finishReason:
         (step?.finishReason as AIAgentStepResult['finishReason']) ?? 'unknown',

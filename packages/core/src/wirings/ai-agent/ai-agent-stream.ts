@@ -395,9 +395,13 @@ export async function streamAIAgent(
   const sessionMap = agentSessionMap ?? new Map<string, string>()
 
   const { agent: resolvedAgentForProtocol } = resolveAgent(agentName)
+  const inputRecord = input as Record<string, unknown>
+  const useUIMessageStream =
+    resolvedAgentForProtocol.protocol === 'ui-message-stream' ||
+    Array.isArray(inputRecord.messages)
   let normalizedInput: { message: string; threadId: string; resourceId: string }
-  if (resolvedAgentForProtocol.protocol === 'ui-message-stream') {
-    normalizedInput = parseAssistantUIInput(input as Record<string, unknown>)
+  if (useUIMessageStream) {
+    normalizedInput = parseAssistantUIInput(inputRecord)
     channel = createAssistantUIChannel(channel)
   } else {
     normalizedInput = input as {

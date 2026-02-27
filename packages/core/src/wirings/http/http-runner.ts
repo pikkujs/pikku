@@ -528,7 +528,6 @@ export const fetchData = async <In, Out>(
 
     return result
   } catch (e: any) {
-    // Handle errors and, depending on configuration, bubble them up or respond with an error
     handleHTTPError(
       e,
       http,

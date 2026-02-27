@@ -1,6 +1,10 @@
 export { runAIAgent } from './ai-agent-runner.js'
 export { streamAIAgent, resumeAIAgent } from './ai-agent-stream.js'
 export {
+  createAssistantUIChannel,
+  parseAssistantUIInput,
+} from './ai-agent-assistant-ui.js'
+export {
   type RunAIAgentParams,
   type StreamAIAgentOptions,
   ToolApprovalRequired,
