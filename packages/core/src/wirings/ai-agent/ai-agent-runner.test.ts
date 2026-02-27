@@ -36,7 +36,7 @@ describe('runAIAgent', () => {
     const updates: unknown[] = []
     const expectedError = new Error('runner failed')
 
-    const singletonServices = {
+    const mockServices = {
       logger: {
         info: () => {},
         warn: () => {},
@@ -56,6 +56,8 @@ describe('runAIAgent', () => {
       },
     } as any
 
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
     await assert.rejects(
       () =>
         runAIAgent(
@@ -65,7 +67,7 @@ describe('runAIAgent', () => {
             threadId: 'thread-1',
             resourceId: 'resource-1',
           },
-          { singletonServices }
+          {}
         ),
       expectedError
     )

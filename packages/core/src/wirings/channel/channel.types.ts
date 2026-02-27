@@ -5,8 +5,6 @@ import type {
   PikkuHTTPResponse,
 } from '../http/http.types.js'
 import type {
-  CoreSingletonServices,
-  CreateWireServices,
   CorePikkuMiddleware,
   MiddlewareMetadata,
   PermissionMetadata,
@@ -41,10 +39,8 @@ export type RunChannelOptions = Partial<{
 
 export type RunChannelParams<ChannelData> = {
   channelId: string
-  singletonServices: CoreSingletonServices
   request?: PikkuHTTPRequest<ChannelData>
   response?: PikkuHTTPResponse
-  createWireServices?: CreateWireServices
 }
 
 export interface ChannelMessageMeta {

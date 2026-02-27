@@ -55,12 +55,10 @@ export const runLocalChannel = async ({
   try {
     ;({ openingData, channelConfig, meta } = await openChannel({
       channelId,
-      createWireServices,
       respondWith404,
       request,
       response,
       route,
-      singletonServices,
       skipUserSession,
       coerceDataFromSchema,
       userSession,

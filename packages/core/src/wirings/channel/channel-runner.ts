@@ -1,7 +1,7 @@
 import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
 import type { CorePikkuPermission } from '../../function/functions.types.js'
-import { pikkuState } from '../../pikku-state.js'
+import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CorePikkuMiddleware } from '../../types/core.types.js'
@@ -122,7 +122,6 @@ const getMatchingChannelConfig = (path: string) => {
 
 export const openChannel = async ({
   route,
-  singletonServices,
   coerceDataFromSchema = true,
   request,
 }: Pick<CoreChannel<unknown, string>, 'route'> &
@@ -133,6 +132,7 @@ export const openChannel = async ({
   channelConfig: CoreChannel<unknown, any>
   meta: ChannelMeta
 }> => {
+  const singletonServices = getSingletonServices()
   const matchingChannel = getMatchingChannelConfig(route)
   if (!matchingChannel) {
     singletonServices.logger.info(`Channel not found: ${route}`)

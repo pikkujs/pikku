@@ -37,7 +37,7 @@ describe('streamAIAgent', () => {
     const updates: Array<{ runId: string; patch: unknown }> = []
     const events: AIStreamEvent[] = []
 
-    const singletonServices = {
+    const mockServices = {
       logger: {
         info: () => {},
         warn: () => {},
@@ -57,6 +57,8 @@ describe('streamAIAgent', () => {
       },
     } as any
 
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
     await streamAIAgent(
       'failing-stream-agent',
       {
@@ -73,7 +75,7 @@ describe('streamAIAgent', () => {
         },
         close: () => {},
       },
-      { singletonServices }
+      {}
     )
 
     assert.deepEqual(updates, [{ runId: 'run-1', patch: { status: 'failed' } }])
@@ -89,7 +91,7 @@ describe('streamAIAgent', () => {
     const updates: Array<{ runId: string; patch: unknown }> = []
     const events: AIStreamEvent[] = []
 
-    const singletonServices = {
+    const mockServices = {
       logger: {
         info: () => {},
         warn: () => {},
@@ -109,6 +111,8 @@ describe('streamAIAgent', () => {
       },
     } as any
 
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
     await streamAIAgent(
       'approval-stream-agent',
       {
@@ -125,7 +129,7 @@ describe('streamAIAgent', () => {
         },
         close: () => {},
       },
-      { singletonServices },
+      {},
       undefined,
       { requiresToolApproval: 'all' }
     )
@@ -168,7 +172,7 @@ describe('streamAIAgent', () => {
     const updates: Array<{ runId: string; patch: unknown }> = []
     const events: AIStreamEvent[] = []
 
-    const singletonServices = {
+    const mockServices = {
       logger: {
         info: () => {},
         warn: () => {},
@@ -196,6 +200,8 @@ describe('streamAIAgent', () => {
       },
     } as any
 
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
     await streamAIAgent(
       'parent-agent',
       {
@@ -212,7 +218,7 @@ describe('streamAIAgent', () => {
         },
         close: () => {},
       },
-      { singletonServices }
+      {}
     )
 
     assert.deepEqual(updates, [

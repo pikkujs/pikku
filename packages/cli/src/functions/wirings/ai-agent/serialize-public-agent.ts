@@ -31,7 +31,7 @@ export const agentStreamCaller = pikkuSessionlessFunc<
       data.agentName,
       { message: data.message, threadId: data.threadId, resourceId: data.resourceId },
       channel as unknown as AIStreamChannel,
-      { singletonServices: services }
+      {}
     )
   },
 })

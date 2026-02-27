@@ -1,9 +1,6 @@
 import type {
   PikkuWire,
-  CoreSingletonServices,
-  CoreServices,
   CoreUserSession,
-  CreateWireServices,
 } from '../../types/core.types.js'
 import type {
   CoreAIAgent,
@@ -15,7 +12,11 @@ import type {
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  pikkuState,
+  getSingletonServices,
+  getCreateWireServices,
+} from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
@@ -29,13 +30,7 @@ import {
 import { resolveModelConfig } from './ai-agent-model-config.js'
 
 export type RunAIAgentParams = {
-  singletonServices: CoreSingletonServices
   sessionService?: SessionService<CoreUserSession>
-  createWireServices?: CreateWireServices<
-    CoreSingletonServices,
-    CoreServices<CoreSingletonServices>,
-    CoreUserSession
-  >
 }
 
 export type StreamAIAgentOptions = {
@@ -179,7 +174,6 @@ export function createScopedChannel(
 }
 
 export function buildToolDefs(
-  singletonServices: CoreSingletonServices,
   params: RunAIAgentParams,
   agentSessionMap: Map<string, string>,
   resourceId: string,
@@ -187,6 +181,7 @@ export function buildToolDefs(
   packageName: string | null,
   streamContext?: StreamContext
 ): { tools: AIAgentToolDef[]; missingRpcs: string[] } {
+  const singletonServices = getSingletonServices()
   const tools: AIAgentToolDef[] = []
   const missingRpcs: string[] = []
   const approvalPolicy =
@@ -260,7 +255,7 @@ export function buildToolDefs(
             : {}
           return runPikkuFunc('agent', `tool:${pikkuFuncId}`, pikkuFuncId, {
             singletonServices,
-            createWireServices: params.createWireServices,
+            createWireServices: getCreateWireServices(),
             data: () => toolInput,
             wire,
             sessionService: params.sessionService,
@@ -372,7 +367,7 @@ export async function prepareAgentRun(
   agentSessionMap: Map<string, string>,
   streamContext?: StreamContext
 ) {
-  const { singletonServices } = params
+  const singletonServices = getSingletonServices()
   const { agent, packageName, resolvedName } = resolveAgent(agentName)
 
   const agentRunner = singletonServices.aiAgentRunner
@@ -429,7 +424,6 @@ export async function prepareAgentRun(
   const trimmedMessages = trimMessages(allMessages)
 
   const { tools, missingRpcs } = buildToolDefs(
-    singletonServices,
     params,
     agentSessionMap,
     input.resourceId,

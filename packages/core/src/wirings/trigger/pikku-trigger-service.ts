@@ -71,8 +71,6 @@ export abstract class PikkuTriggerService implements TriggerService {
   ): Promise<TriggerInstance> {
     return setupTrigger({
       name,
-      singletonServices: getSingletonServices(),
-      createWireServices: getCreateWireServices() as any,
       input,
       onTrigger,
     })

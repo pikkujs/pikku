@@ -22,7 +22,7 @@ export const streamAgentRun = pikkuSessionlessFunc<
         resourceId: data.resourceId || 'console-playground',
       },
       channel as unknown as AIStreamChannel,
-      { singletonServices: services }
+      {}
     )
   },
 })
@@ -47,7 +47,7 @@ export const resumeAgentRun = pikkuSessionlessFunc<
         approved: data.approved,
       },
       channel as unknown as AIStreamChannel,
-      { singletonServices: services }
+      {}
     )
   },
 })

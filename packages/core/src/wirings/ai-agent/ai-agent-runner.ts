@@ -6,6 +6,7 @@ import type {
 
 import { saveMessages } from './ai-agent-memory.js'
 import { prepareAgentRun, type RunAIAgentParams } from './ai-agent-prepare.js'
+import { getSingletonServices } from '../../pikku-state.js'
 
 export async function runAIAgent(
   agentName: string,
@@ -28,7 +29,7 @@ export async function runAIAgent(
     workingMemorySchemaName,
   } = await prepareAgentRun(agentName, input, params, sessionMap)
 
-  const { singletonServices } = params
+  const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
   if (!aiRunState) {
     throw new Error('AIRunStateService not available in singletonServices')
