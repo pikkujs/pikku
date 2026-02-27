@@ -20,7 +20,7 @@ export const streamAgentRun = pikkuSessionlessFunc<
         resourceId: data.resourceId || 'forge-playground',
       },
       channel as unknown as AIStreamChannel,
-      { singletonServices: services }
+      {}
     )
   },
 })

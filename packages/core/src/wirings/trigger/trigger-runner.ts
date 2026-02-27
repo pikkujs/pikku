@@ -1,14 +1,14 @@
-import type {
-  PikkuWire,
-  CreateWireServices,
-  CoreSingletonServices,
-} from '../../types/core.types.js'
+import type { PikkuWire } from '../../types/core.types.js'
 import type {
   CoreTrigger,
   CoreTriggerSource,
   TriggerInstance,
 } from './trigger.types.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  pikkuState,
+  getSingletonServices,
+  getCreateWireServices,
+} from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 
@@ -66,8 +66,6 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
  */
 export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
   name: string
-  singletonServices: CoreSingletonServices
-  createWireServices?: CreateWireServices
   input?: TInput
   onTrigger: (data: TOutput) => void | Promise<void>
 }
@@ -77,17 +75,16 @@ export type SetupTriggerParams<TInput = unknown, TOutput = unknown> = {
  * Returns a TriggerInstance with a teardown function.
  *
  * @param name - The trigger name (must be registered via wireTrigger)
- * @param singletonServices - The singleton services
  * @param input - The input to pass to the trigger function
  * @param onTrigger - Callback invoked when the trigger fires
  */
 export async function setupTrigger<TInput = unknown, TOutput = unknown>({
   name,
-  singletonServices,
-  createWireServices,
   input,
   onTrigger,
 }: SetupTriggerParams<TInput, TOutput>): Promise<TriggerInstance> {
+  const singletonServices = getSingletonServices()
+  const createWireServices = getCreateWireServices()
   const source = pikkuState(null, 'trigger', 'triggerSources').get(name)
   const sourceMeta = pikkuState(null, 'trigger', 'sourceMeta')[name]
 

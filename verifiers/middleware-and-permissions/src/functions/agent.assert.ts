@@ -14,6 +14,7 @@ import {
   type ExpectedEvent,
 } from '../assert-combined.js'
 import { randomUUID } from 'crypto'
+import { pikkuState } from '@pikku/core/internal'
 
 class MockAIAgentRunner implements AIAgentRunnerService {
   async stream(
@@ -119,6 +120,8 @@ export async function testAgentStreamWiring(
     },
   }
 
+  pikkuState(null, 'package', 'singletonServices', services)
+
   return await assertMiddlewareAndPermissions(
     expected,
     async () => {
@@ -130,7 +133,7 @@ export async function testAgentStreamWiring(
           resourceId: 'test-resource',
         },
         channel,
-        { singletonServices: services }
+        {}
       )
     },
     services.logger
@@ -151,6 +154,8 @@ export async function testAgentRunWiring(
     aiStorage: new MockAIStorage(),
   }
 
+  pikkuState(null, 'package', 'singletonServices', services)
+
   return await assertMiddlewareAndPermissions(
     expected,
     async () => {
@@ -161,7 +166,7 @@ export async function testAgentRunWiring(
           threadId: 'test-thread',
           resourceId: 'test-resource',
         },
-        { singletonServices: services }
+        {}
       )
     },
     services.logger

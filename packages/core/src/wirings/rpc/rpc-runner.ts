@@ -1,6 +1,5 @@
 import type {
   CoreServices,
-  CoreSingletonServices,
   PikkuWire,
 } from '../../types/core.types.js'
 import type { SessionService } from '../../services/user-session-service.js'
@@ -249,7 +248,6 @@ export class ContextAwareRPCService {
     usage: { inputTokens: number; outputTokens: number }
   }> {
     const result = await runAIAgent(agentName, input, {
-      singletonServices: this.services as CoreSingletonServices,
       sessionService: this.options.sessionService,
     })
     return {

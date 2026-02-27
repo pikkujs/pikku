@@ -25,10 +25,7 @@ import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
 export interface RunServerlessChannelParams<ChannelData>
-  extends Omit<
-    RunChannelParams<ChannelData>,
-    'singletonServices' | 'createWireServices'
-  > {
+  extends RunChannelParams<ChannelData> {
   channelStore: ChannelStore
   channelHandlerFactory: PikkuChannelHandlerFactory
   channelObject?: unknown
@@ -96,10 +93,8 @@ export const runChannelConnect = async ({
 
   const { channelConfig, openingData, meta } = await openChannel({
     channelId,
-    createWireServices,
     request,
     route,
-    singletonServices,
     coerceDataFromSchema,
     userSession,
   })

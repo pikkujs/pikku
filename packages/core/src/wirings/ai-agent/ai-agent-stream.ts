@@ -9,7 +9,10 @@ import type {
   CoreAIAgent,
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
-import { pikkuState } from '../../pikku-state.js'
+import {
+  pikkuState,
+  getSingletonServices,
+} from '../../pikku-state.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
@@ -211,7 +214,7 @@ export async function streamAIAgent(
     workingMemorySchemaName,
   } = await prepareAgentRun(agentName, input, params, sessionMap, streamContext)
 
-  const { singletonServices } = params
+  const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
   if (!aiRunState) {
     throw new Error('AIRunStateService not available in singletonServices')
@@ -384,7 +387,7 @@ export async function resumeAIAgent(
   params: RunAIAgentParams,
   options?: StreamAIAgentOptions
 ): Promise<void> {
-  const { singletonServices } = params
+  const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
   if (!aiRunState) {
     throw new Error('AIRunStateService not available in singletonServices')
@@ -511,7 +514,6 @@ export async function resumeAIAgent(
       options: { ...options, requiresToolApproval: false },
     }
     const { tools } = buildToolDefs(
-      singletonServices,
       params,
       new Map<string, string>(),
       run.resourceId,
@@ -598,7 +600,7 @@ async function continueAfterToolResult(
   aiRunState: AIRunStateService,
   options?: StreamAIAgentOptions
 ): Promise<void> {
-  const { singletonServices } = params
+  const singletonServices = getSingletonServices()
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
   const meta = agentsMeta[resolvedName]
   const workingMemorySchemaName = meta?.workingMemorySchema ?? null
@@ -684,7 +686,6 @@ async function continueAfterToolResult(
 
   const streamContext: StreamContext = { channel, options }
   const resumeTools = buildToolDefs(
-    singletonServices,
     params,
     new Map<string, string>(),
     run.resourceId,
