@@ -10,6 +10,7 @@ import { refresh } from './commands/refresh'
 import { newFunction } from './commands/new-function'
 import { newWiring } from './commands/new-wiring'
 import { showInfo } from './commands/info'
+import { RPCDefinitionProvider } from './definitions/rpc-definition'
 
 export async function activate(
   context: vscode.ExtensionContext
@@ -19,18 +20,7 @@ export async function activate(
 
   const inspector = new PikkuInspector(workspaceRoot)
 
-  // Initial inspection with progress
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Window,
-      title: 'Pikku: Inspecting project...',
-    },
-    async () => {
-      await inspector.inspect()
-    }
-  )
-
-  // Register tree views
+  // Register tree views (they'll be empty until inspection completes)
   const functionsTree = new FunctionsTreeProvider(inspector)
   const wiringsTree = new WiringsTreeProvider(inspector)
   const middlewareTree = new MiddlewareTreeProvider(inspector)
@@ -45,7 +35,7 @@ export async function activate(
       permissionsTree
     ),
 
-    // Register commands
+    // Register commands — these work even before inspection
     vscode.commands.registerCommand('pikku.prebuild', () => prebuild()),
     vscode.commands.registerCommand('pikku.refresh', () => refresh(inspector)),
     vscode.commands.registerCommand('pikku.newFunction', () => newFunction()),
@@ -58,8 +48,25 @@ export async function activate(
       new WiringCodeLensProvider(inspector)
     ),
 
-    // Disposable inspector
+    // Register Go to Definition for RPC names (cmd+click)
+    vscode.languages.registerDefinitionProvider(
+      { language: 'typescript' },
+      new RPCDefinitionProvider(inspector)
+    ),
+
     inspector
+  )
+
+  // Try initial inspection — shows QuickPick if multiple configs found
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: 'Pikku: Inspecting project...',
+      cancellable: false,
+    },
+    async () => {
+      await inspector.inspect()
+    }
   )
 }
 

@@ -23,20 +23,74 @@ export interface PikkuConfig {
 }
 
 export async function findConfigFile(
-  workspaceRoot: string
+  _workspaceRoot: string
 ): Promise<string | undefined> {
-  const patterns = ['pikku.config.json', 'pikku.config.js', 'pikku.config.ts']
-  for (const pattern of patterns) {
-    const files = await vscode.workspace.findFiles(
-      `**/${pattern}`,
-      '**/node_modules/**',
-      1
-    )
-    if (files.length > 0) {
-      return files[0].fsPath
+  // Use null for exclude to bypass VS Code's files.exclude / search.exclude
+  const files = await vscode.workspace.findFiles(
+    '**/pikku.config.{json,js,ts}',
+    null,
+    500
+  )
+
+  // Filter out node_modules and dist ourselves
+  const filtered = files.filter((f) => {
+    const p = f.fsPath
+    return !p.includes('/node_modules/') && !p.includes('/dist/')
+  })
+
+  if (filtered.length === 0) return undefined
+  if (filtered.length === 1) return filtered[0].fsPath
+
+  // Auto-detect: find the config nearest to the active editor file
+  const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath
+  if (activeFilePath) {
+    const nearest = findNearestConfig(activeFilePath, filtered)
+    if (nearest) return nearest
+  }
+
+  // Fallback: let the user pick
+  const items = filtered
+    .map((f) => ({
+      label: vscode.workspace.asRelativePath(f),
+      fsPath: f.fsPath,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+  const picked = await vscode.window.showQuickPick(items, {
+    placeHolder: `Select pikku.config (${filtered.length} found)`,
+  })
+
+  return picked?.fsPath
+}
+
+/**
+ * Walk up from `filePath` and return the config whose directory
+ * is the closest ancestor (i.e. longest matching prefix).
+ */
+function findNearestConfig(
+  filePath: string,
+  configs: vscode.Uri[]
+): string | undefined {
+  const configDirs = configs.map((f) => ({
+    dir: dirname(f.fsPath),
+    fsPath: f.fsPath,
+  }))
+
+  let best: { dir: string; fsPath: string } | undefined
+  for (const entry of configDirs) {
+    // The config's directory must be an ancestor of (or equal to) the file
+    if (
+      filePath.startsWith(entry.dir + '/') ||
+      filePath.startsWith(entry.dir + '\\')
+    ) {
+      // Pick the deepest (longest) matching ancestor
+      if (!best || entry.dir.length > best.dir.length) {
+        best = entry
+      }
     }
   }
-  return undefined
+
+  return best?.fsPath
 }
 
 export async function loadConfig(configPath: string): Promise<PikkuConfig> {
