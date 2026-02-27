@@ -1,5 +1,5 @@
 import React from 'react'
-import { Node, NodeProps } from 'reactflow'
+import type { Node, NodeProps } from 'reactflow'
 import { useFunctionMeta } from '@/hooks/useWirings'
 import { FunctionIcon } from '@/components/ui/icons/FunctionIcon'
 import { usePanelContext } from '@/context/PanelContext'

@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { PathToNameAndType, InspectorState } from '../types.js'
+import type { PathToNameAndType, InspectorState } from '../types.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 
 // Mapping of wrapper function names to their corresponding types

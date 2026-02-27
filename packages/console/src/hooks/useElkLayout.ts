@@ -154,7 +154,7 @@ export function useElkLayout(nodes: Node[], edges: Edge[]): ElkLayoutResult {
         })
 
         setResult({ nodes: newNodes, edges: newEdges })
-      } catch (error) {
+      } catch {
         setResult({ nodes, edges })
       } finally {
         setIsLayouting(false)

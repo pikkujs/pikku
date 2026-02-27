@@ -6,7 +6,7 @@ import {
 import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
-import {
+import type {
   CoreServices,
   CoreUserSession,
   CorePikkuMiddleware,
@@ -19,16 +19,14 @@ import {
   CoreConfig,
 } from '../types/core.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
-import {
+import type {
   CorePermissionGroup,
   CorePikkuFunctionConfig,
   CorePikkuPermission,
 } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
-import {
-  SessionService,
-  createFunctionSessionWireProps,
-} from '../services/user-session-service.js'
+import type { SessionService } from '../services/user-session-service.js'
+import { createFunctionSessionWireProps } from '../services/user-session-service.js'
 import { ForbiddenError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'

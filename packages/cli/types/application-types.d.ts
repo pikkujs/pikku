@@ -5,8 +5,8 @@ import type {
   CoreUserSession,
 } from '@pikku/core'
 import type { CLILogger } from '../src/services/cli-logger.service.js'
-import { PikkuCLIConfig } from '../types/config.d.ts'
-import { InspectorState } from '@pikku/inspector'
+import type { PikkuCLIConfig } from '../types/config.d.ts'
+import type { InspectorState } from '@pikku/inspector'
 
 export interface Config extends CoreConfig<PikkuCLIConfig> {
   // Preloaded inspector state from stateInput file (if provided)

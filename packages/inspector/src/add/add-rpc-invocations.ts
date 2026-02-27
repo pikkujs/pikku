@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { InspectorState, InspectorLogger } from '../types.js'
+import type { InspectorState, InspectorLogger } from '../types.js'
 
 /**
  * Helper to extract namespace from a namespaced function reference like 'ext:hello'

@@ -1,7 +1,8 @@
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap, generateCustomTypes } from '@pikku/inspector'
-import { Logger } from '@pikku/core/services'
+import type { TypesMap } from '@pikku/inspector'
+import { generateCustomTypes } from '@pikku/inspector'
+import type { Logger } from '@pikku/core/services'
 
 export const serializeQueueMap = (
   logger: Logger,

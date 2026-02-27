@@ -1,5 +1,5 @@
 import { PikkuWebSocket } from '../.pikku/pikku-websocket.gen.js'
-import { EventHubTopics } from '../types/eventhub-topics.js'
+import type { EventHubTopics } from '../types/eventhub-topics.js'
 import WSWebsocket from 'ws'
 
 export const check = async (serverUrl: string, testUserId: string) => {

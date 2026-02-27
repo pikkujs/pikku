@@ -5,10 +5,10 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl as getS3SignedUrl } from '@aws-sdk/s3-request-presigner'
-import { ContentService, Logger } from '@pikku/core/services'
+import type { ContentService, Logger } from '@pikku/core/services'
 import { readFile } from 'fs/promises'
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer'
-import { Readable } from 'stream'
+import type { Readable } from 'stream'
 
 export interface S3ContentConfig {
   bucketName: string

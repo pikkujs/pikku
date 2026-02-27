@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { InspectorState } from '../types.js'
+import type { InspectorState } from '../types.js'
 import { funcIdToTypeName } from './extract-function-name.js'
 import { getCommonWireMetaData } from './get-property-value.js'
 import { resolveMiddleware } from './middleware.js'

@@ -318,7 +318,7 @@ describe('graph-runner bugs', () => {
         true
       )
       runId = result.runId
-    } catch (_) {
+    } catch {
       const runs = (ws as any).runs as Map<string, any>
       for (const [id] of runs) {
         runId = id

@@ -5,7 +5,7 @@ import {
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
-import { AddWiring } from '../types.js'
+import type { AddWiring } from '../types.js'
 import {
   extractFunctionName,
   makeContextBasedId,

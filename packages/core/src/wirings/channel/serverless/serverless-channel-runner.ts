@@ -1,4 +1,4 @@
-import { PikkuWire, WireServices } from '../../../types/core.types.js'
+import type { PikkuWire, WireServices } from '../../../types/core.types.js'
 import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
@@ -9,7 +9,7 @@ import type {
   PikkuChannelHandlerFactory,
 } from '../channel.types.js'
 import { createHTTPWire } from '../../http/http-runner.js'
-import { ChannelStore } from '../channel-store.js'
+import type { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
   PikkuSessionService,
@@ -21,7 +21,7 @@ import {
   pikkuState,
 } from '../../../pikku-state.js'
 import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
-import { PikkuHTTP } from '../../http/http.types.js'
+import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
 export interface RunServerlessChannelParams<ChannelData>
@@ -177,7 +177,7 @@ export const runChannelDisconnect = async ({
   let channelData
   try {
     channelData = await channelStore.getChannelAndSession(channelId)
-  } catch (error) {
+  } catch {
     singletonServices.logger.info(
       `Channel ${channelId} not found during disconnect - already cleaned up`
     )

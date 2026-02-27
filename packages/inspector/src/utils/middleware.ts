@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
-import { MiddlewareMetadata } from '@pikku/core'
+import type { MiddlewareMetadata } from '@pikku/core'
 import { extractFunctionName } from './extract-function-name.js'
-import { InspectorState } from '../types.js'
+import type { InspectorState } from '../types.js'
 
 export interface MiddlewareRef {
   definitionId: string

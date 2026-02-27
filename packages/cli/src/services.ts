@@ -4,7 +4,7 @@ import type {
   SingletonServices,
   UserSession,
 } from '../types/application-types.js'
-import { CreateConfig } from '@pikku/core'
+import type { CreateConfig } from '@pikku/core'
 import type {
   CreateWireServices,
   CreateSingletonServices,
@@ -18,11 +18,13 @@ import {
 } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
-import {
-  inspect,
+import type {
   InspectorState,
   InspectorDiagnostic,
   InspectorFilters,
+} from '@pikku/inspector'
+import {
+  inspect,
   serializeInspectorState,
   deserializeInspectorState,
   filterInspectorState,
@@ -31,11 +33,9 @@ import {
 } from '@pikku/inspector'
 import { glob } from 'tinyglobby'
 import path from 'path'
-import { PikkuCLIConfig } from '../types/config.js'
-import {
-  CLILoggerForwarder,
-  ForwardedLogMessage,
-} from './services/cli-logger-forwarder.service.js'
+import type { PikkuCLIConfig } from '../types/config.js'
+import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
+import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { join } from 'path'

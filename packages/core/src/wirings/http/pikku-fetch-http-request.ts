@@ -1,6 +1,6 @@
 import { parse as parseQuery } from 'picoquery'
 import { parse as parseCookie } from 'cookie'
-import { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from './http.types.js'
+import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from './http.types.js'
 import { UnprocessableContentError } from '../../errors/errors.js'
 
 /**

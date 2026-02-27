@@ -1,4 +1,5 @@
-import { Logger, LogLevel } from './logger.js'
+import type { Logger } from './logger.js'
+import { LogLevel } from './logger.js'
 
 /**
  * A logger implementation that logs messages to the console.

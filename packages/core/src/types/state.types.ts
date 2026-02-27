@@ -1,44 +1,50 @@
-import { PikkuError, ErrorDetails } from '../errors/error-handler.js'
-import {
+import type { PikkuError, ErrorDetails } from '../errors/error-handler.js'
+import type {
   CorePikkuFunctionConfig,
   CorePermissionGroup,
   CorePikkuPermission,
 } from '../function/functions.types.js'
-import { CorePikkuTriggerFunctionConfig } from '../wirings/trigger/trigger.types.js'
-import { CoreChannel, ChannelsMeta } from '../wirings/channel/channel.types.js'
-import { CLIMeta, CLIProgramState } from '../wirings/cli/cli.types.js'
-import {
+import type { CorePikkuTriggerFunctionConfig } from '../wirings/trigger/trigger.types.js'
+import type {
+  CoreChannel,
+  ChannelsMeta,
+} from '../wirings/channel/channel.types.js'
+import type { CLIMeta, CLIProgramState } from '../wirings/cli/cli.types.js'
+import type {
   HTTPMethod,
   CoreHTTPFunctionWiring,
   HTTPWiringsMeta,
 } from '../wirings/http/http.types.js'
-import {
+import type {
   CoreMCPResource,
   MCPResourceMeta,
   MCPToolMeta,
   CoreMCPPrompt,
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
-import { CoreAIAgent, AIAgentMeta } from '../wirings/ai-agent/ai-agent.types.js'
-import {
+import type {
+  CoreAIAgent,
+  AIAgentMeta,
+} from '../wirings/ai-agent/ai-agent.types.js'
+import type {
   CoreQueueWorker,
   QueueWorkersMeta,
 } from '../wirings/queue/queue.types.js'
-import {
+import type {
   CoreScheduledTask,
   ScheduledTasksMeta,
 } from '../wirings/scheduler/scheduler.types.js'
-import {
+import type {
   CoreWorkflow,
   WorkflowsRuntimeMeta,
 } from '../wirings/workflow/workflow.types.js'
-import {
+import type {
   CoreTrigger,
   CoreTriggerSource,
   TriggerMeta,
   TriggerSourceMeta,
 } from '../wirings/trigger/trigger.types.js'
-import {
+import type {
   FunctionsMeta,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,

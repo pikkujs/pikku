@@ -1,4 +1,4 @@
-import { EventHubStore } from '@pikku/core/channel'
+import type { EventHubStore } from '@pikku/core/channel'
 import { Redis, type RedisOptions } from 'ioredis'
 
 /**

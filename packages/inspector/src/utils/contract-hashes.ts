@@ -1,5 +1,6 @@
-import { FunctionsMeta, JSONValue, parseVersionedId } from '@pikku/core'
-import { TypesMap } from '../types-map.js'
+import type { FunctionsMeta, JSONValue } from '@pikku/core'
+import { parseVersionedId } from '@pikku/core'
+import type { TypesMap } from '../types-map.js'
 import { ErrorCode } from '../error-codes.js'
 import { canonicalJSON, hashString } from './hash.js'
 

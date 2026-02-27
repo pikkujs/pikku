@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { InspectorFilters } from '../types'
+import type { InspectorFilters } from '../types'
 import { matchesFilters, matchesWildcard } from './filter-utils'
 
 describe('matchesFilters', () => {

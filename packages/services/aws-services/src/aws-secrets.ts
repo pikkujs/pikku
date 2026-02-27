@@ -2,9 +2,9 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager'
-import { SecretService } from '@pikku/core/services'
+import type { SecretService } from '@pikku/core/services'
 
-import { AWSConfig } from './aws-config.js'
+import type { AWSConfig } from './aws-config.js'
 
 export class AWSSecrets implements SecretService {
   private readonly client: SecretsManagerClient

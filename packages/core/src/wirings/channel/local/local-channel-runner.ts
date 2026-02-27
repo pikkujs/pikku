@@ -2,15 +2,15 @@ import { openChannel } from '../channel-runner.js'
 import { createHTTPWire } from '../../http/http-runner.js'
 import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
-import { CoreChannel, RunChannelOptions } from '../channel.types.js'
+import type { CoreChannel, RunChannelOptions } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import { PikkuWire, WireServices } from '../../../types/core.types.js'
+import type { PikkuWire, WireServices } from '../../../types/core.types.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../../services/user-session-service.js'
-import {
+import type {
   PikkuHTTP,
   PikkuHTTPRequest,
   PikkuHTTPResponse,

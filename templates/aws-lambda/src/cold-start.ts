@@ -1,5 +1,5 @@
 import { AWSSecrets } from '@pikku/aws-services'
-import {
+import type {
   Config,
   SingletonServices,
 } from '../../functions/types/application-types.d.js'

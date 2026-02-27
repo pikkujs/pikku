@@ -1,4 +1,4 @@
-import { ChannelStore } from '@pikku/core/channel'
+import type { ChannelStore } from '@pikku/core/channel'
 
 export type WebsocketParams = {
   channelStore: ChannelStore

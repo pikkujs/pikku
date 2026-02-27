@@ -1,9 +1,9 @@
+import type { PikkuWire } from '../../types/core.types.js'
 import {
   type CoreSingletonServices,
   type CoreServices,
   type CoreUserSession,
   type CreateWireServices,
-  PikkuWire,
 } from '../../types/core.types.js'
 import type {
   CoreAIAgent,

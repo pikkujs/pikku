@@ -4,7 +4,7 @@ import type {
   WorkflowStatus,
   WorkflowRunService,
 } from '@pikku/core/workflow'
-import postgres from 'postgres'
+import type postgres from 'postgres'
 
 export class PgWorkflowRunService implements WorkflowRunService {
   constructor(

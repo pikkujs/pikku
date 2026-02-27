@@ -1,10 +1,8 @@
 import type { ConfigValidationResult, CoreQueueWorker } from './queue.types.js'
 import { getQueueWorkers } from './queue-runner.js'
-import {
-  QueueConfigMapping,
-  validateWorkerConfig,
-} from './validate-worker-config.js'
-import { Logger } from '../../services/logger.js'
+import type { QueueConfigMapping } from './validate-worker-config.js'
+import { validateWorkerConfig } from './validate-worker-config.js'
+import type { Logger } from '../../services/logger.js'
 
 /**
  * Queue processor registration callback

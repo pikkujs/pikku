@@ -1,6 +1,7 @@
 import chalk from 'chalk'
-import { Logger, LogLevel } from '@pikku/core/services'
-import { ErrorCode } from '@pikku/inspector'
+import type { Logger } from '@pikku/core/services'
+import { LogLevel } from '@pikku/core/services'
+import type { ErrorCode } from '@pikku/inspector'
 
 const logo = `
  ______ _ _     _

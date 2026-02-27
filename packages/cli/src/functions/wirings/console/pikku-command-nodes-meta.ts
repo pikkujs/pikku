@@ -29,7 +29,7 @@ const loadIcon = async (
     }
 
     return trimmed.replace(/<\?xml[^?]*\?>\s*/g, '').trim()
-  } catch (e) {
+  } catch {
     logger.warn(`Could not load icon: ${fullPath}`)
     return undefined
   }

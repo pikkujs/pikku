@@ -4,7 +4,7 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { pathToRegexp } from 'path-to-regexp'
-import { HTTPMethod } from '@pikku/core/http'
+import type { HTTPMethod } from '@pikku/core/http'
 import {
   extractFunctionName,
   makeContextBasedId,
@@ -13,7 +13,7 @@ import {
   getPropertyAssignmentInitializer,
   extractTypeKeys,
 } from '../utils/type-utils.js'
-import { AddWiring, InspectorState } from '../types.js'
+import type { AddWiring, InspectorState } from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'

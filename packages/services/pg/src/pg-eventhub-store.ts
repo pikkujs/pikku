@@ -1,4 +1,4 @@
-import { EventHubStore } from '@pikku/core/channel'
+import type { EventHubStore } from '@pikku/core/channel'
 import postgres from 'postgres'
 import { initializeSchema, validateSchemaName } from './schema.js'
 
@@ -82,7 +82,7 @@ export class PgEventHubStore implements EventHubStore {
         [channelId, topic]
       )
       return true
-    } catch (error) {
+    } catch {
       // If the channel doesn't exist (foreign key violation), return false
       return false
     }

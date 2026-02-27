@@ -1,4 +1,4 @@
-import {
+import type {
   CoreHTTPFunctionWiring,
   RunHTTPWiringOptions,
   PikkuHTTP,
@@ -7,13 +7,13 @@ import {
   HTTPWiringMeta,
   HTTPMethod,
 } from './http.types.js'
-import {
+import type {
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
   CorePikkuPermission,
   CorePermissionGroup,
 } from '../../function/functions.types.js'
-import {
+import type {
   CoreUserSession,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
@@ -36,7 +36,7 @@ import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
-import { PikkuChannel } from '../channel/channel.types.js'
+import type { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 import { validateSchema } from '../../schema.js'

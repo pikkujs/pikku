@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
-import { CorePikkuMiddleware } from '../../types/core.types.js'
+import type { CorePikkuMiddleware } from '../../types/core.types.js'
 import { wireCLI, runCLICommand, pikkuCLIRender } from './cli-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'

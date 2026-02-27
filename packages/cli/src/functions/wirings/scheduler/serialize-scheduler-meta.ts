@@ -1,4 +1,4 @@
-import { ScheduledTasksMeta } from '@pikku/core/scheduler'
+import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import { serializeMetaTS } from '../../../utils/serialize-meta-ts.js'
 
 export const serializeSchedulerMeta = (

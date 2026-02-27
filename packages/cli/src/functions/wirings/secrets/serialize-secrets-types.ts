@@ -1,6 +1,6 @@
-import { SecretDefinitions } from '@pikku/core/secret'
+import type { SecretDefinitions } from '@pikku/core/secret'
 import { validateAndBuildSecretDefinitionsMeta } from '@pikku/core/secret'
-import { SchemaRef } from '@pikku/inspector'
+import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export interface SerializeSecretsOptions {

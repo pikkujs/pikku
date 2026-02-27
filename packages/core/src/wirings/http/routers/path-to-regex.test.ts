@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test'
 import * as assert from 'node:assert/strict'
 import { PathToRegexRouter } from './path-to-regex.js'
 import { resetPikkuState, pikkuState } from '../../../pikku-state.js'
-import { HTTPMethod } from '../http.types.js'
+import type { HTTPMethod } from '../http.types.js'
 
 describe('PathToRegexRouter', () => {
   let router: PathToRegexRouter

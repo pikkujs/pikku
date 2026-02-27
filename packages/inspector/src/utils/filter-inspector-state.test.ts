@@ -1,11 +1,9 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
 import { filterInspectorState } from './filter-inspector-state.js'
-import { InspectorState, InspectorFilters } from '../types.js'
-import {
-  deserializeInspectorState,
-  SerializableInspectorState,
-} from './serialize-inspector-state.js'
+import type { InspectorState, InspectorFilters } from '../types.js'
+import type { SerializableInspectorState } from './serialize-inspector-state.js'
+import { deserializeInspectorState } from './serialize-inspector-state.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'

@@ -1,8 +1,11 @@
 import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
-import { CorePikkuMiddleware, CoreUserSession } from '../../types/core.types.js'
-import {
+import type {
+  CorePikkuMiddleware,
+  CoreUserSession,
+} from '../../types/core.types.js'
+import type {
   CoreCLI,
   CLICommandMeta,
   CLIOption,
@@ -19,7 +22,7 @@ import type {
   CreateConfig,
   CreateSingletonServices,
 } from '../../types/core.types.js'
-import { PikkuChannel } from '../channel/channel.types.js'
+import type { PikkuChannel } from '../channel/channel.types.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,

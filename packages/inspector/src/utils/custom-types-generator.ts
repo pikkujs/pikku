@@ -1,4 +1,4 @@
-import { TypesMap } from '../types-map.js'
+import type { TypesMap } from '../types-map.js'
 
 /**
  * NOTE: Code generation normally belongs in @pikku/cli, not the inspector.

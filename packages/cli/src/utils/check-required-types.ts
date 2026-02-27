@@ -1,4 +1,4 @@
-import { FilesAndMethodsErrors } from '@pikku/inspector'
+import type { FilesAndMethodsErrors } from '@pikku/inspector'
 
 export type RequiredTypes = Partial<{
   config: boolean

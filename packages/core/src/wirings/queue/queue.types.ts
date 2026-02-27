@@ -1,6 +1,6 @@
-import { CommonWireMeta } from '../../types/core.types.js'
-import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
-import { QueueConfigMapping } from './validate-worker-config.js'
+import type { CommonWireMeta } from '../../types/core.types.js'
+import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type { QueueConfigMapping } from './validate-worker-config.js'
 
 /**
  * Configuration for queue workers - how jobs are processed

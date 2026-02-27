@@ -1,6 +1,6 @@
+import type { JWTService } from '@pikku/core/services'
 import {
   ConsoleLogger,
-  JWTService,
   LocalSecretService,
   LocalVariablesService,
 } from '@pikku/core/services'

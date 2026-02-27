@@ -1,4 +1,4 @@
-import {
+import type {
   AgentRunState,
   PendingApproval,
 } from '../wirings/ai-agent/ai-agent.types.js'

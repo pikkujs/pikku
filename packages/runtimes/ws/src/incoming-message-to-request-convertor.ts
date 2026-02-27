@@ -1,4 +1,4 @@
-import { IncomingMessage } from 'http'
+import type { IncomingMessage } from 'http'
 import { Readable } from 'stream'
 
 export function incomingMessageToRequestConvertor(

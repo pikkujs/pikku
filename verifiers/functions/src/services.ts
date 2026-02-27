@@ -1,15 +1,10 @@
 import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
-import {
-  JWTService,
-  LocalSecretService,
-  LocalVariablesService,
-} from '@pikku/core/services'
+import type { JWTService } from '@pikku/core/services'
+import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 import { CustomLogger } from './services/custom-logger.service.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import {
-  RequiredSingletonServices,
-  requiredSingletonServices,
-} from '#pikku/pikku-services.gen.js'
+import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
+import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {}

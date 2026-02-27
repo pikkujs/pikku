@@ -1,10 +1,10 @@
-import {
+import type {
   CoreServices,
   PikkuWiringTypes,
   PermissionMetadata,
   PikkuWire,
 } from './types/core.types.js'
-import {
+import type {
   CorePermissionGroup,
   CorePikkuPermission,
 } from './function/functions.types.js'

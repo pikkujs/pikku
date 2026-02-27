@@ -1,25 +1,29 @@
-import * as ts from 'typescript'
-import { ChannelsMeta } from '@pikku/core/channel'
-import { HTTPWiringsMeta } from '@pikku/core/http'
-import { ScheduledTasksMeta } from '@pikku/core/scheduler'
-import { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
-import { QueueWorkersMeta } from '@pikku/core/queue'
-import { WorkflowsMeta } from '@pikku/core/workflow'
-import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
-import { AIAgentMeta } from '@pikku/core/ai-agent'
-import { CLIMeta } from '@pikku/core/cli'
-import { NodesMeta } from '@pikku/core/node'
-import { SecretDefinitions } from '@pikku/core/secret'
-import { VariableDefinitions } from '@pikku/core/variable'
-import { TypesMap } from './types-map.js'
-import {
+import type * as ts from 'typescript'
+import type { ChannelsMeta } from '@pikku/core/channel'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
+import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
+import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
+import type { QueueWorkersMeta } from '@pikku/core/queue'
+import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type {
+  MCPResourceMeta,
+  MCPToolMeta,
+  MCPPromptMeta,
+} from '@pikku/core/mcp'
+import type { AIAgentMeta } from '@pikku/core/ai-agent'
+import type { CLIMeta } from '@pikku/core/cli'
+import type { NodesMeta } from '@pikku/core/node'
+import type { SecretDefinitions } from '@pikku/core/secret'
+import type { VariableDefinitions } from '@pikku/core/variable'
+import type { TypesMap } from './types-map.js'
+import type {
   FunctionsMeta,
   FunctionServicesMeta,
   FunctionWiresMeta,
   JSONValue,
 } from '@pikku/core'
 import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
-import { ErrorCode } from './error-codes.js'
+import type { ErrorCode } from './error-codes.js'
 import type {
   VersionManifest,
   VersionValidateError,

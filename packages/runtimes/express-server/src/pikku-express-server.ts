@@ -1,16 +1,18 @@
-import express, { Express } from 'express'
-import { Server } from 'http'
+import type { Express } from 'express'
+import express from 'express'
+import type { Server } from 'http'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import { CorsOptions, CorsOptionsDelegate } from 'cors'
+import type { CorsOptions, CorsOptionsDelegate } from 'cors'
 import getRawBody from 'raw-body'
 import contentType from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
 
-import { CoreConfig, stopSingletonServices } from '@pikku/core'
+import type { CoreConfig } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
-import { LocalContentConfig } from '@pikku/core/services/local-content'
+import type { LocalContentConfig } from '@pikku/core/services/local-content'
 
 /**
  * Interface for server-specific configuration settings that extend `CoreConfig`.

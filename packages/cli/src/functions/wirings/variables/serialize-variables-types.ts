@@ -1,6 +1,6 @@
-import { VariableDefinitions } from '@pikku/core/variable'
+import type { VariableDefinitions } from '@pikku/core/variable'
 import { validateAndBuildVariableDefinitionsMeta } from '@pikku/core/variable'
-import { SchemaRef } from '@pikku/inspector'
+import type { SchemaRef } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export interface SerializeVariablesOptions {

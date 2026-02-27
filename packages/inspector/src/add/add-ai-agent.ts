@@ -4,7 +4,7 @@ import {
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
 import { extractWireNames } from '../utils/post-process.js'
-import { AddWiring, InspectorLogger, SchemaRef } from '../types.js'
+import type { AddWiring, InspectorLogger, SchemaRef } from '../types.js'
 import {
   extractFunctionName,
   funcIdToTypeName,

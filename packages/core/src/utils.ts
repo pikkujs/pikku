@@ -1,5 +1,5 @@
-import { Logger } from './services/logger.js'
-import { WireServices } from './types/core.types.js'
+import type { Logger } from './services/logger.js'
+import type { WireServices } from './types/core.types.js'
 import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
 
 export const closeWireServices = async (

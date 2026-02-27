@@ -1,7 +1,7 @@
 import { rpcService } from '../rpc/rpc-runner.js'
 import { setupTrigger } from './trigger-runner.js'
-import { TriggerInstance } from './trigger.types.js'
-import { TriggerService } from '../../services/trigger-service.js'
+import type { TriggerInstance } from './trigger.types.js'
+import type { TriggerService } from '../../services/trigger-service.js'
 import {
   getSingletonServices,
   getCreateWireServices,

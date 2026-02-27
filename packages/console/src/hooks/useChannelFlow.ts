@@ -1,4 +1,4 @@
-import { Node, Edge } from 'reactflow'
+import type { Node, Edge } from 'reactflow'
 import type { ChannelMeta } from '@pikku/core/channel'
 
 interface ChannelFlowResult {

@@ -1,6 +1,7 @@
-import { Logger, LogLevel } from '@pikku/core/services'
-import { PikkuChannel } from '@pikku/core/channel'
-import { ErrorCode } from '@pikku/inspector'
+import type { Logger } from '@pikku/core/services'
+import { LogLevel } from '@pikku/core/services'
+import type { PikkuChannel } from '@pikku/core/channel'
+import type { ErrorCode } from '@pikku/inspector'
 
 /**
  * Log message structure sent through the channel

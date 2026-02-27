@@ -1,4 +1,4 @@
-import {
+import type {
   InspectorState,
   InspectorLogger,
   InspectorOptions,
@@ -6,7 +6,7 @@ import {
   MiddlewareGroupMeta,
   InspectorDiagnostic,
 } from '../types.js'
-import {
+import type {
   FunctionServicesMeta,
   MiddlewareMetadata,
   PermissionMetadata,
@@ -386,7 +386,7 @@ export function computeRequiredSchemas(
 
   state.requiredSchemas = new Set<string>([
     ...Object.values(functions.meta)
-      .map(({ inputs, outputs }) => {
+      .flatMap(({ inputs, outputs }) => {
         const types: (string | undefined)[] = []
         if (inputs?.[0]) {
           try {
@@ -404,7 +404,6 @@ export function computeRequiredSchemas(
         }
         return types
       })
-      .flat()
       .filter((s): s is string => !!s && !PRIMITIVE_TYPES.has(s)),
     ...functions.typesMap.customTypes.keys(),
     ...(schemasFromTypes || []),

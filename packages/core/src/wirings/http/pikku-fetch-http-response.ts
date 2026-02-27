@@ -1,8 +1,6 @@
-import { PikkuHTTPResponse } from './http.types.js'
-import {
-  SerializeOptions as CookieSerializeOptions,
-  serialize as serializeCookie,
-} from 'cookie'
+import type { PikkuHTTPResponse } from './http.types.js'
+import type { SerializeOptions as CookieSerializeOptions } from 'cookie'
+import { serialize as serializeCookie } from 'cookie'
 
 export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   #statusCode: number = 200

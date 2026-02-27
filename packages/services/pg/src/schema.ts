@@ -1,4 +1,4 @@
-import postgres from 'postgres'
+import type postgres from 'postgres'
 
 /**
  * Validates that a schema name is a valid PostgreSQL identifier

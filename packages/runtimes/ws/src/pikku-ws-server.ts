@@ -1,13 +1,14 @@
-import { Server } from 'http'
-import { WebSocket, WebSocketServer } from 'ws'
+import type { Server } from 'http'
+import type { WebSocket, WebSocketServer } from 'ws'
 import { logChannels } from '@pikku/core/channel'
+import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
 import {
   LocalEventHubService,
   runLocalChannel,
-  PikkuLocalChannelHandler,
 } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { PikkuFetchHTTPRequest, RunHTTPWiringOptions } from '@pikku/core/http'
+import type { RunHTTPWiringOptions } from '@pikku/core/http'
+import { PikkuFetchHTTPRequest } from '@pikku/core/http'
 import type { Logger } from '@pikku/core/services'
 
 import { PikkuDuplexResponse } from './pikku-duplex-response.js'

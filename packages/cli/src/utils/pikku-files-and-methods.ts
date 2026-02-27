@@ -1,8 +1,5 @@
-import {
-  InspectorState,
-  InspectorOptions,
-  getFilesAndMethods,
-} from '@pikku/inspector'
+import type { InspectorState, InspectorOptions } from '@pikku/inspector'
+import { getFilesAndMethods } from '@pikku/inspector'
 
 interface Meta {
   file: string

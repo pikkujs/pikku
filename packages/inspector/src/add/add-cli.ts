@@ -1,11 +1,12 @@
-import ts, { TypeChecker } from 'typescript'
-import {
+import type { TypeChecker } from 'typescript'
+import ts from 'typescript'
+import type {
   AddWiring,
   InspectorLogger,
   InspectorOptions,
   InspectorState,
 } from '../types.js'
-import { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
+import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'

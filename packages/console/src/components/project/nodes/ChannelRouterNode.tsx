@@ -1,5 +1,6 @@
 import React from 'react'
-import { NodeProps, Handle, Position } from 'reactflow'
+import type { NodeProps } from 'reactflow'
+import { Handle, Position } from 'reactflow'
 import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
 import { ArrowRight } from 'lucide-react'
 

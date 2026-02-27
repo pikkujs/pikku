@@ -141,7 +141,7 @@ export class PikkuMCPTestClient {
       try {
         const pingResult = await this.ping()
         console.log('✅ Ping successful:', pingResult)
-      } catch (error) {
+      } catch {
         console.log('ℹ️  Ping not supported (expected for some servers)')
       }
 

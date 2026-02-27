@@ -1,9 +1,7 @@
-import { SerializeOptions } from 'cookie'
+import type { SerializeOptions } from 'cookie'
 import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
-import {
-  getRelativeTimeOffsetFromNow,
-  RelativeTimeInput,
-} from '../time-utils.js'
+import type { RelativeTimeInput } from '../time-utils.js'
+import { getRelativeTimeOffsetFromNow } from '../time-utils.js'
 
 /**
  * Cookie-based session middleware that uses JWT for encoding/decoding session data.

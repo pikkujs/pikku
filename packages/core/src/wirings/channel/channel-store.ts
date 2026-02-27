@@ -1,4 +1,4 @@
-import { CoreUserSession } from '../../types/core.types.js'
+import type { CoreUserSession } from '../../types/core.types.js'
 
 export type Channel<ChannelType = unknown, OpeningData = unknown> = {
   channelId: string

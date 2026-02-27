@@ -5,8 +5,8 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import { PikkuWire, SerializedError } from '../../types/core.types.js'
-import { QueueService } from '../queue/queue.types.js'
+import type { PikkuWire, SerializedError } from '../../types/core.types.js'
+import type { QueueService } from '../queue/queue.types.js'
 import type {
   PikkuWorkflowWire,
   StepState,
@@ -22,7 +22,7 @@ import {
   runWorkflowGraph,
   runFromMeta,
 } from './graph/graph-runner.js'
-import { WorkflowService } from '../../services/workflow-service.js'
+import type { WorkflowService } from '../../services/workflow-service.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 

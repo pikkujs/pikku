@@ -1,8 +1,9 @@
-import { ChannelsMeta } from '@pikku/core/channel'
+import type { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
-import { TypesMap, generateCustomTypes } from '@pikku/inspector'
-import { FunctionsMeta } from '@pikku/core'
-import { Logger } from '@pikku/core/services'
+import type { TypesMap } from '@pikku/inspector'
+import { generateCustomTypes } from '@pikku/inspector'
+import type { FunctionsMeta } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 
 export const serializeTypedChannelsMap = (
   logger: Logger,

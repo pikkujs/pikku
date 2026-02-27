@@ -1,5 +1,5 @@
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
-import { APIGatewayEvent, APIGatewayProxyHandler } from 'aws-lambda'
+import type { APIGatewayEvent, APIGatewayProxyHandler } from 'aws-lambda'
 
 import {
   connectWebsocket,
@@ -8,9 +8,9 @@ import {
   processWebsocketMessage,
 } from '@pikku/lambda/websocket'
 
-import { ChannelStore } from '@pikku/core/channel'
+import type { ChannelStore } from '@pikku/core/channel'
 import { LocalVariablesService } from '@pikku/core/services'
-import {
+import type {
   Config,
   SingletonServices,
 } from '../../functions/types/application-types.d.js'

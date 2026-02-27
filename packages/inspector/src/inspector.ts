@@ -2,7 +2,11 @@ import * as ts from 'typescript'
 import { performance } from 'perf_hooks'
 import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
-import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
+import type {
+  InspectorState,
+  InspectorLogger,
+  InspectorOptions,
+} from './types.js'
 import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import {

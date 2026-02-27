@@ -1,5 +1,11 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+import type {
+  ListResourceTemplatesResult,
+  ListResourcesResult,
+  ListPromptsResult,
+  ListToolsResult,
+} from '@modelcontextprotocol/sdk/types.js'
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -8,19 +14,16 @@ import {
   ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
-  ListResourceTemplatesResult,
-  ListResourcesResult,
-  ListPromptsResult,
-  ListToolsResult,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import { CoreConfig, stopSingletonServices } from '@pikku/core'
-import { Logger } from '@pikku/core/services'
+import type { CoreConfig } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core'
+import type { Logger } from '@pikku/core/services'
 
+import type { PikkuMCP } from '@pikku/core/mcp'
 import {
   MCPEndpointRegistry,
-  PikkuMCP,
   MCPError,
   runMCPTool,
   runMCPResource,

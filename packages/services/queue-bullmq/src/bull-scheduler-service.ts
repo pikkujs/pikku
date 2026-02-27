@@ -1,11 +1,11 @@
-import { ConnectionOptions, Queue, Worker } from 'bullmq'
-import {
-  SchedulerService,
+import type { ConnectionOptions } from 'bullmq'
+import { Queue, Worker } from 'bullmq'
+import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
-  parseDurationString,
 } from '@pikku/core'
+import { SchedulerService, parseDurationString } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 

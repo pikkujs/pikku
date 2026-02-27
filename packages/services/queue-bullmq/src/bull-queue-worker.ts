@@ -1,9 +1,6 @@
-import Bull, {
-  ConnectionOptions,
-  WorkerOptions,
-  Worker,
-  QueueEvents,
-} from 'bullmq'
+import type { ConnectionOptions, WorkerOptions, QueueEvents } from 'bullmq'
+import type Bull from 'bullmq'
+import { Worker } from 'bullmq'
 import type {
   QueueWorkers,
   PikkuWorkerConfig,

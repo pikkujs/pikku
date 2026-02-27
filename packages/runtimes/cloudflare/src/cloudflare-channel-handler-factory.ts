@@ -1,11 +1,12 @@
-import { CoreUserSession, isSerializable } from '@pikku/core'
-import {
+import type { CoreUserSession } from '@pikku/core'
+import { isSerializable } from '@pikku/core'
+import type {
   ChannelStore,
-  PikkuAbstractChannelHandler,
   PikkuChannelHandlerFactory,
 } from '@pikku/core/channel'
-import { Logger } from '@pikku/core/services'
-import { WebSocket } from '@cloudflare/workers-types'
+import { PikkuAbstractChannelHandler } from '@pikku/core/channel'
+import type { Logger } from '@pikku/core/services'
+import type { WebSocket } from '@cloudflare/workers-types'
 class CloudflareChannelHandler<
   UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,

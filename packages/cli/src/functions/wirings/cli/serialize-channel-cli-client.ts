@@ -1,6 +1,6 @@
-import { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
+import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { Config } from '../../../../types/application-types.js'
+import type { Config } from '../../../../types/application-types.js'
 
 /**
  * Collect all unique renderer names from CLI metadata (populated by inspector)

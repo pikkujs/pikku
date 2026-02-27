@@ -1,11 +1,10 @@
-import { PgBoss } from 'pg-boss'
-import {
-  SchedulerService,
+import type { PgBoss } from 'pg-boss'
+import type {
   ScheduledTaskInfo,
   ScheduledTaskSummary,
   CoreUserSession,
-  parseDurationString,
 } from '@pikku/core'
+import { SchedulerService, parseDurationString } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
 import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 

@@ -4,7 +4,7 @@ import type {
   AgentRunRow,
   AgentRunService,
 } from '@pikku/core/ai-agent'
-import { Kysely } from 'kysely'
+import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 

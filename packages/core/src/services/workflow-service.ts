@@ -1,5 +1,5 @@
-import { SerializedError } from '../types/core.types.js'
-import {
+import type { SerializedError } from '../types/core.types.js'
+import type {
   WorkflowRun,
   WorkflowRunWire,
   StepState,
