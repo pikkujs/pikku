@@ -229,7 +229,7 @@ jobs:
           path: packages
       - run: yarn install
       - name: Run benchmark
-        run: tsx benchmarks/run-benchmarks.ts --single ${{ matrix.bench }}
+        run: yarn tsx benchmarks/run-benchmarks.ts --single ${{ matrix.bench }}
         continue-on-error: ${{ contains(matrix.bench, 'uws') }}
       - name: Upload result
         if: always()
@@ -263,4 +263,4 @@ jobs:
           merge-multiple: true
       - run: yarn install
       - name: Verify benchmarks
-        run: tsx benchmarks/run-benchmarks.ts --merge --verify --threshold 80
+        run: yarn tsx benchmarks/run-benchmarks.ts --merge --verify --threshold 80
