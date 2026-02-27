@@ -5,7 +5,7 @@ import { streamAIAgent, resumeAIAgent } from '@pikku/core/ai-agent'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
 export const streamAgentRun = pikkuSessionlessFunc<
-  { agentName: string; message: string; threadId: string; resourceId?: string },
+  { agentName: string } & Record<string, unknown>,
   any
 >({
   title: 'Stream Agent Run',
@@ -14,13 +14,10 @@ export const streamAgentRun = pikkuSessionlessFunc<
   auth: false,
   func: async (services, data, { channel }) => {
     if (!channel) return
+    const { agentName, ...rest } = data
     await streamAIAgent(
-      data.agentName,
-      {
-        message: data.message,
-        threadId: data.threadId,
-        resourceId: data.resourceId || 'console-playground',
-      },
+      agentName,
+      { ...rest, resourceId: (rest.resourceId as string) || 'console-playground' },
       channel as unknown as AIStreamChannel,
       {}
     )

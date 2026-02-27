@@ -1,7 +1,9 @@
 import type { AIMessage, AIAgentStep } from '@pikku/core/ai-agent'
-import type { CoreMessage } from 'ai'
+import type { ModelMessage } from 'ai'
 
-export function convertToSDKMessages(messages: AIMessage[]): CoreMessage[] {
+export async function convertToSDKMessages(
+  messages: AIMessage[]
+): Promise<ModelMessage[]> {
   return messages.map(convertToSDKMessage)
 }
 
@@ -17,7 +19,7 @@ function parseIfString<T>(value: T | string | null | undefined): T | undefined {
   return value as T
 }
 
-function convertToSDKMessage(msg: AIMessage): CoreMessage {
+function convertToSDKMessage(msg: AIMessage): ModelMessage {
   const toolCalls = parseIfString(msg.toolCalls)
   const toolResults = parseIfString(msg.toolResults)
 
@@ -38,7 +40,7 @@ function convertToSDKMessage(msg: AIMessage): CoreMessage {
               type: 'tool-call' as const,
               toolCallId: tc.id,
               toolName: tc.name,
-              args: parseIfString(tc.args) ?? tc.args,
+              input: parseIfString(tc.args) ?? tc.args,
             })),
           ],
         }
@@ -48,12 +50,15 @@ function convertToSDKMessage(msg: AIMessage): CoreMessage {
       return {
         role: 'tool',
         content: Array.isArray(toolResults)
-          ? toolResults.map((tr) => ({
-              type: 'tool-result' as const,
-              toolCallId: tr.id,
-              toolName: tr.name,
-              result: parseIfString(tr.result) ?? tr.result,
-            }))
+          ? toolResults.map((tr) => {
+              const parsed = parseIfString(tr.result) ?? tr.result
+              return {
+                type: 'tool-result' as const,
+                toolCallId: tr.id,
+                toolName: tr.name,
+                output: { type: 'json' as const, value: parsed },
+              }
+            })
           : [],
       }
   }
@@ -62,15 +67,15 @@ function convertToSDKMessage(msg: AIMessage): CoreMessage {
 export function convertFromSDKStep(step: any): AIAgentStep {
   return {
     usage: {
-      inputTokens: step.usage?.promptTokens ?? 0,
-      outputTokens: step.usage?.completionTokens ?? 0,
+      inputTokens: step.usage?.inputTokens ?? 0,
+      outputTokens: step.usage?.outputTokens ?? 0,
     },
     toolCalls: step.toolCalls?.map((tc: any) => ({
       name: tc.toolName,
-      args: tc.args,
+      args: tc.input,
       result: JSON.stringify(
         step.toolResults?.find((tr: any) => tr.toolCallId === tc.toolCallId)
-          ?.result ?? ''
+          ?.output ?? ''
       ),
     })),
   }

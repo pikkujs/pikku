@@ -1,286 +1,11 @@
-import { useMemo, useEffect, useRef } from 'react'
-import {
-  useLocalRuntime,
-  type ChatModelAdapter,
-  type ThreadMessageLike,
-} from '@assistant-ui/react'
+import { useMemo, useEffect, useRef, useCallback } from 'react'
+import { type ThreadMessageLike } from '@assistant-ui/react'
+import { useDataStreamRuntime } from '@assistant-ui/react-data-stream'
 import { getServerUrl } from '@/context/PikkuRpcProvider'
-
-type ToolCallPart = {
-  type: 'tool-call'
-  toolCallId: string
-  toolName: string
-  args: Record<string, unknown>
-  result?: unknown
-}
 
 type PendingApproval = {
   toolCallId: string
 }
-
-const parseSSEStream = async function* (
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  abortSignal?: AbortSignal
-): AsyncGenerator<any> {
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    if (abortSignal?.aborted) break
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const data = line.slice(6)
-      if (data === '[DONE]') continue
-
-      try {
-        yield JSON.parse(data)
-      } catch {
-        continue
-      }
-    }
-  }
-}
-
-const processSSEEvents = async function* (
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  pendingApprovalRef: React.MutableRefObject<PendingApproval | null>,
-  abortSignal?: AbortSignal
-) {
-  let text = ''
-  const toolCalls: ToolCallPart[] = []
-  let hasApproval = false
-  const agentToolCallIds = new Set<string>()
-
-  for await (const event of parseSSEStream(reader, abortSignal)) {
-    switch (event.type) {
-      case 'text-delta':
-        text += event.text || event.textDelta || event.delta || ''
-        break
-
-      case 'tool-call':
-        toolCalls.push({
-          type: 'tool-call',
-          toolCallId: event.toolCallId,
-          toolName: event.toolName,
-          args: event.args || {},
-        })
-        break
-
-      case 'tool-result': {
-        if (agentToolCallIds.has(event.toolCallId)) break
-        const idx = toolCalls.findIndex(
-          (tc) => tc.toolCallId === event.toolCallId
-        )
-        if (idx !== -1) {
-          toolCalls[idx] = { ...toolCalls[idx], result: event.result }
-        }
-        break
-      }
-
-      case 'agent-call': {
-        const agentToolIdx = toolCalls.findIndex(
-          (tc) => tc.toolName === event.agentName && !tc.result
-        )
-        if (agentToolIdx !== -1) {
-          agentToolCallIds.add(toolCalls[agentToolIdx].toolCallId)
-          toolCalls.splice(agentToolIdx, 1)
-        }
-        break
-      }
-
-      case 'agent-result':
-        break
-
-      case 'approval-request': {
-        const approvalArgs: Record<string, unknown> = { ...event.args }
-        if (event.reason) {
-          approvalArgs.__approvalReason = event.reason
-        }
-        const approvalIdx = toolCalls.findIndex(
-          (tc) => tc.toolCallId === event.toolCallId
-        )
-        const approvalTc: ToolCallPart = {
-          type: 'tool-call',
-          toolCallId: event.toolCallId,
-          toolName: event.toolName,
-          args: approvalArgs,
-        }
-        if (approvalIdx !== -1) {
-          toolCalls[approvalIdx] = approvalTc
-        } else {
-          toolCalls.push(approvalTc)
-        }
-        hasApproval = true
-        pendingApprovalRef.current = {
-          toolCallId: event.toolCallId,
-        }
-        break
-      }
-
-      case 'error':
-        text += `\n\n**Error:** ${event.error || event.message}`
-        break
-
-      case 'done':
-        break
-    }
-
-    const contentParts: any[] = []
-    if (text) {
-      contentParts.push({ type: 'text' as const, text })
-    }
-    for (const tc of toolCalls) {
-      contentParts.push(tc)
-    }
-
-    if (contentParts.length > 0) {
-      yield {
-        content: contentParts,
-        status: hasApproval
-          ? { type: 'requires-action' as const, reason: 'tool-calls' as const }
-          : undefined,
-      }
-    }
-  }
-}
-
-const createAdapter = (
-  agentId: string,
-  threadIdRef: React.RefObject<string | null>,
-  pendingApprovalRef: React.MutableRefObject<PendingApproval | null>,
-  onThreadCreated: (id: string) => void,
-  onStreamDone: () => void
-): ChatModelAdapter => ({
-  async *run({ abortSignal }) {
-    const pending = pendingApprovalRef.current
-
-    if (pending) {
-      pendingApprovalRef.current = null
-
-      const lastMessage = arguments[0].messages.at(-1)
-      let approved = true
-      if (lastMessage?.role === 'assistant') {
-        const toolParts =
-          lastMessage.content?.filter(
-            (p: any) =>
-              p.type === 'tool-call' && p.toolCallId === pending.toolCallId
-          ) ?? []
-        for (const tp of toolParts) {
-          if (tp.result != null) {
-            const r =
-              typeof tp.result === 'string' ? JSON.parse(tp.result) : tp.result
-            if (r?.approved === false) {
-              approved = false
-            }
-          }
-        }
-      }
-
-      const serverUrl = getServerUrl()
-      const response = await fetch(
-        `${serverUrl}/api/agents/${encodeURIComponent(agentId)}/resume`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            toolCallId: pending.toolCallId,
-            approved,
-          }),
-          signal: abortSignal,
-        }
-      )
-
-      if (!response.ok) {
-        yield {
-          content: [
-            {
-              type: 'text' as const,
-              text: `Error: Resume responded with ${response.status}`,
-            },
-          ],
-        }
-        return
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) {
-        yield {
-          content: [{ type: 'text' as const, text: 'Error: No response body' }],
-        }
-        return
-      }
-
-      try {
-        yield* processSSEEvents(reader, pendingApprovalRef, abortSignal)
-      } finally {
-        onStreamDone()
-      }
-      return
-    }
-
-    let currentThreadId = threadIdRef.current
-    if (!currentThreadId) {
-      currentThreadId = crypto.randomUUID()
-      onThreadCreated(currentThreadId)
-    }
-
-    const lastUserMessage = arguments[0].messages
-      .filter((m: any) => m.role === 'user')
-      .at(-1)
-    const messageText =
-      lastUserMessage?.content
-        ?.filter((p: any) => p.type === 'text')
-        .map((p: any) => p.text)
-        .join('') || ''
-
-    const serverUrl = getServerUrl()
-    const response = await fetch(
-      `${serverUrl}/api/agents/${encodeURIComponent(agentId)}/stream`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          threadId: currentThreadId,
-          message: messageText,
-        }),
-        signal: abortSignal,
-      }
-    )
-
-    if (!response.ok) {
-      yield {
-        content: [
-          {
-            type: 'text' as const,
-            text: `Error: Agent responded with ${response.status}`,
-          },
-        ],
-      }
-      return
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      yield {
-        content: [{ type: 'text' as const, text: 'Error: No response body' }],
-      }
-      return
-    }
-
-    try {
-      yield* processSSEEvents(reader, pendingApprovalRef, abortSignal)
-    } finally {
-      onStreamDone()
-    }
-  },
-})
 
 const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
   const result: ThreadMessageLike[] = []
@@ -404,31 +129,61 @@ export const useAgentRuntime = (
   threadIdRef.current = threadId
 
   const pendingApprovalRef = useRef<PendingApproval | null>(null)
+  const justCreatedThreadRef = useRef(false)
 
-  const adapter = useMemo(
-    () =>
-      createAdapter(
-        agentId,
-        threadIdRef,
-        pendingApprovalRef,
-        onThreadCreated,
-        onStreamDone
-      ),
-    [agentId, onThreadCreated, onStreamDone]
+  const serverUrl = getServerUrl()
+  const api = `${serverUrl}/api/agents/${encodeURIComponent(agentId)}/stream`
+
+  const bodyFn = useCallback(() => {
+    let currentThreadId = threadIdRef.current
+    if (!currentThreadId) {
+      currentThreadId = crypto.randomUUID()
+      justCreatedThreadRef.current = true
+      onThreadCreated(currentThreadId)
+    }
+    return { threadId: currentThreadId }
+  }, [onThreadCreated])
+
+  const onData = useCallback(
+    (event: { type: string; name: string; data: unknown }) => {
+      if (event.name === 'approval-request') {
+        const approval = event.data as any
+        pendingApprovalRef.current = {
+          toolCallId: approval.toolCallId,
+        }
+      }
+    },
+    []
   )
+
+  const onFinishCb = useCallback(() => {
+    onStreamDone()
+  }, [onStreamDone])
 
   const initialMessages = useMemo(
     () => (dbMessages ? convertDbMessages(dbMessages) : []),
     [dbMessages]
   )
 
-  const runtime = useLocalRuntime(adapter, { initialMessages })
+  const runtime = useDataStreamRuntime({
+    api,
+    protocol: 'ui-message-stream',
+    body: bodyFn,
+    onData,
+    onFinish: onFinishCb,
+    initialMessages,
+  })
 
   const prevThreadIdRef = useRef(threadId)
   const hasResetRef = useRef(false)
   useEffect(() => {
     if (prevThreadIdRef.current !== threadId) {
       prevThreadIdRef.current = threadId
+      if (justCreatedThreadRef.current) {
+        justCreatedThreadRef.current = false
+        hasResetRef.current = true
+        return
+      }
       hasResetRef.current = false
       if (dbMessages) {
         ;(runtime as any).thread.reset(convertDbMessages(dbMessages))

@@ -7,6 +7,8 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   #headers: [string, string][] = []
   #body: string | ArrayBuffer | Buffer | undefined
   #ended = false
+  #streaming = false
+  #headersSent = false
 
   constructor(
     private res: HttpResponse,
@@ -42,14 +44,22 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public json(data: unknown): this {
-    this.#body = JSON.stringify(data)
-    this.header('Content-Type', 'application/json')
+    if (this.#streaming) {
+      this.#sendStreamChunk(JSON.stringify(data))
+    } else {
+      this.#body = JSON.stringify(data)
+      this.header('Content-Type', 'application/json')
+    }
     return this
   }
 
   public arrayBuffer(data: any): this {
-    this.#body = data
-    this.header('Content-Type', 'application/octet-stream')
+    if (this.#streaming) {
+      this.#sendStreamChunk(data)
+    } else {
+      this.#body = data
+      this.header('Content-Type', 'application/octet-stream')
+    }
     return this
   }
 
@@ -77,11 +87,31 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
     }
   }
 
-  public setMode(_mode: 'stream'): void {
-    // Streaming not yet supported in native uWS path
+  public setMode(mode: 'stream'): void {
+    if (mode === 'stream') {
+      this.#streaming = true
+    }
+  }
+
+  #sendStreamChunk(data: string | ArrayBuffer | Buffer): void {
+    if (this.#ended || this.isAborted()) return
+
+    this.res.cork(() => {
+      if (!this.#headersSent) {
+        this.#headersSent = true
+        this.res.writeStatus(this.#statusCode.toString())
+        for (const [name, value] of this.#headers) {
+          this.res.writeHeader(name, value)
+        }
+      }
+
+      const chunk = typeof data === 'string' ? data : data.toString()
+      this.res.write(`data: ${chunk}\n\n`)
+    })
   }
 
   public flush(): void {
+    if (this.#streaming) return
     if (this.#ended || this.isAborted()) return
     this.#ended = true
     this.res.cork(() => {

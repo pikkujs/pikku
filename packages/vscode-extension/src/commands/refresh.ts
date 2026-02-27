@@ -9,7 +9,7 @@ export async function refresh(inspector: PikkuInspector): Promise<void> {
       cancellable: false,
     },
     async () => {
-      await inspector.refresh()
+      await inspector.refresh(true)
     }
   )
 }

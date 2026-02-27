@@ -9,6 +9,7 @@ export class PikkuInspector implements vscode.Disposable {
   private state: InspectorState | undefined
   private config: PikkuConfig | undefined
   private configPath: string | undefined
+  private configSearched = false
   private watcher: vscode.FileSystemWatcher | undefined
   private debounceTimer: NodeJS.Timeout | undefined
 
@@ -43,6 +44,8 @@ export class PikkuInspector implements vscode.Disposable {
     try {
       // Reuse cached config path on refreshes to avoid repeated QuickPick prompts
       if (!this.configPath) {
+        if (this.configSearched) return undefined
+        this.configSearched = true
         this.configPath = await findConfigFile(this.workspaceRoot)
       }
       const configPath = this.configPath
@@ -119,7 +122,11 @@ export class PikkuInspector implements vscode.Disposable {
     return this.config
   }
 
-  async refresh(): Promise<void> {
+  async refresh(resetConfig = false): Promise<void> {
+    if (resetConfig) {
+      this.configPath = undefined
+      this.configSearched = false
+    }
     await this.inspect()
     this._onDidChange.fire()
   }
