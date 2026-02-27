@@ -1,12 +1,16 @@
 import type {
   AIAgentInput,
   AIAgentOutput,
+  AIAgentStep,
+  AIMessage,
   PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
+import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
 
 import { saveMessages } from './ai-agent-memory.js'
 import { prepareAgentRun, type RunAIAgentParams } from './ai-agent-prepare.js'
 import { getSingletonServices } from '../../pikku-state.js'
+import { randomUUID } from 'crypto'
 
 export async function runAIAgent(
   agentName: string,
@@ -24,6 +28,7 @@ export async function runAIAgent(
     threadId,
     userMessage,
     runnerParams,
+    maxSteps,
     missingRpcs,
     workingMemoryJsonSchema,
     workingMemorySchemaName,
@@ -84,7 +89,89 @@ export async function runAIAgent(
   })
 
   try {
-    const result = await agentRunner.run(runnerParams)
+    const accumulatedSteps: AIAgentStep[] = []
+    const totalUsage = { inputTokens: 0, outputTokens: 0 }
+    let lastStepResult: AIAgentStepResult | null = null
+
+    for (let step = 0; step < maxSteps; step++) {
+      if (agent.prepareStep) {
+        let stopped = false
+        await agent.prepareStep({
+          stepNumber: step,
+          messages: runnerParams.messages,
+          tools: runnerParams.tools,
+          toolChoice: runnerParams.toolChoice,
+          model: runnerParams.model,
+          stop: () => {
+            stopped = true
+          },
+        })
+        if (stopped) break
+      }
+
+      const stepResult = await agentRunner.run(runnerParams)
+      lastStepResult = stepResult
+
+      totalUsage.inputTokens += stepResult.usage.inputTokens
+      totalUsage.outputTokens += stepResult.usage.outputTokens
+
+      accumulatedSteps.push({
+        usage: stepResult.usage,
+        toolCalls: stepResult.toolCalls.map((tc) => {
+          const tr = stepResult.toolResults.find(
+            (r) => r.toolCallId === tc.toolCallId
+          )
+          return {
+            name: tc.toolName,
+            args: tc.args as Record<string, unknown>,
+            result:
+              typeof tr?.result === 'string'
+                ? tr.result
+                : JSON.stringify(tr?.result ?? ''),
+          }
+        }),
+      })
+
+      if (stepResult.toolCalls.length === 0) break
+
+      const assistantMsg: AIMessage = {
+        id: randomUUID(),
+        role: 'assistant',
+        content: stepResult.text || undefined,
+        toolCalls: stepResult.toolCalls.map((tc) => ({
+          id: tc.toolCallId,
+          name: tc.toolName,
+          args: tc.args as Record<string, unknown>,
+        })),
+        createdAt: new Date(),
+      }
+      runnerParams.messages.push(assistantMsg)
+
+      if (stepResult.toolResults.length > 0) {
+        const toolMsg: AIMessage = {
+          id: randomUUID(),
+          role: 'tool',
+          toolResults: stepResult.toolResults.map((tr) => ({
+            id: tr.toolCallId,
+            name: tr.toolName,
+            result:
+              typeof tr.result === 'string'
+                ? tr.result
+                : JSON.stringify(tr.result),
+          })),
+          createdAt: new Date(),
+        }
+        runnerParams.messages.push(toolMsg)
+      }
+    }
+
+    const finalText = lastStepResult?.text ?? ''
+    const finalObject = lastStepResult?.object
+
+    const result = {
+      text: finalText,
+      steps: accumulatedSteps,
+    }
 
     const responseText = await saveMessages(
       storage,
@@ -109,7 +196,7 @@ export async function runAIAgent(
         const modResult = await mw.modifyOutput(singletonServices, {
           text: outputText,
           messages: outputMessages,
-          usage: result.usage,
+          usage: totalUsage,
         })
         outputText = modResult.text
         outputMessages = modResult.messages
@@ -118,16 +205,16 @@ export async function runAIAgent(
 
     await aiRunState.updateRun(runId, {
       status: 'completed',
-      usage: { ...result.usage, model: agent.model },
+      usage: { ...totalUsage, model: agent.model },
     })
 
     return {
       runId,
       text: outputText,
-      object: result.object,
+      object: finalObject,
       threadId,
-      steps: result.steps,
-      usage: result.usage,
+      steps: accumulatedSteps,
+      usage: totalUsage,
     }
   } catch (error) {
     await aiRunState.updateRun(runId, {

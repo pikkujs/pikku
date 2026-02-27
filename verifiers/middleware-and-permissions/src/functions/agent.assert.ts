@@ -3,7 +3,7 @@ import type { AIStreamEvent, AIStreamChannel } from '@pikku/core/ai-agent'
 import type {
   AIAgentRunnerService,
   AIAgentRunnerParams,
-  AIAgentRunnerResult,
+  AIAgentStepResult,
   AIRunStateService,
   CreateRunInput,
   AIStorageService,
@@ -20,17 +20,30 @@ class MockAIAgentRunner implements AIAgentRunnerService {
   async stream(
     _params: AIAgentRunnerParams,
     channel: AIStreamChannel
-  ): Promise<void> {
+  ): Promise<AIAgentStepResult> {
     channel.send({ type: 'text-delta', text: 'Hello' })
     channel.send({ type: 'text-delta', text: ' world' })
-    channel.send({ type: 'done' })
-  }
-
-  async run(_params: AIAgentRunnerParams): Promise<AIAgentRunnerResult> {
+    channel.send({
+      type: 'usage',
+      tokens: { input: 10, output: 5 },
+      model: 'test',
+    })
     return {
       text: 'Hello world',
-      steps: [],
+      toolCalls: [],
+      toolResults: [],
       usage: { inputTokens: 10, outputTokens: 5 },
+      finishReason: 'stop',
+    }
+  }
+
+  async run(_params: AIAgentRunnerParams): Promise<AIAgentStepResult> {
+    return {
+      text: 'Hello world',
+      toolCalls: [],
+      toolResults: [],
+      usage: { inputTokens: 10, outputTokens: 5 },
+      finishReason: 'stop',
     }
   }
 }

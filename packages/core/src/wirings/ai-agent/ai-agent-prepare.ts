@@ -1,7 +1,4 @@
-import type {
-  PikkuWire,
-  CoreUserSession,
-} from '../../types/core.types.js'
+import type { PikkuWire, CoreUserSession } from '../../types/core.types.js'
 import type {
   CoreAIAgent,
   AIAgentInput,
@@ -158,6 +155,7 @@ export function createScopedChannel(
         return
       }
       if (
+        event.type === 'step-start' ||
         event.type === 'text-delta' ||
         event.type === 'reasoning-delta' ||
         event.type === 'tool-call' ||
@@ -223,33 +221,12 @@ export function buildToolDefs(
         approvalPolicy === 'all' ||
         (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
 
-      if (needsApproval) {
-        inputSchema = {
-          ...inputSchema,
-          properties: {
-            ...(inputSchema.properties as Record<string, unknown>),
-            toolApprovalReason: {
-              type: 'string',
-              description: 'Brief explanation of why this action is needed',
-            },
-          },
-        }
-      }
-
       tools.push({
         name: pikkuFuncId,
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema,
+        needsApproval: needsApproval || undefined,
         execute: async (toolInput: unknown) => {
-          if (needsApproval) {
-            const { toolApprovalReason, ...cleanArgs } = toolInput as any
-            return {
-              __approvalRequired: true,
-              toolName: pikkuFuncId,
-              args: cleanArgs,
-              reason: toolApprovalReason,
-            }
-          }
           const wire: PikkuWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
@@ -435,6 +412,7 @@ export async function prepareAgentRun(
   const instructions = buildInstructions(resolvedName, packageName)
 
   const resolved = resolveModelConfig(resolvedName, agent)
+  const maxSteps = resolved.maxSteps ?? 10
 
   const runnerParams: AIAgentRunnerParams = {
     model: resolved.model,
@@ -442,7 +420,7 @@ export async function prepareAgentRun(
     instructions,
     messages: trimmedMessages,
     tools,
-    maxSteps: resolved.maxSteps ?? 10,
+    maxSteps: 1,
     toolChoice: agent.toolChoice ?? 'auto',
     outputSchema,
   }
@@ -457,6 +435,7 @@ export async function prepareAgentRun(
     threadId,
     userMessage,
     runnerParams,
+    maxSteps,
     missingRpcs,
     workingMemoryJsonSchema,
     workingMemorySchemaName,

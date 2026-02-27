@@ -65,6 +65,7 @@ export interface AIAgentToolDef {
   description: string
   inputSchema: Record<string, unknown>
   execute: (input: unknown) => Promise<unknown>
+  needsApproval?: boolean
 }
 
 export interface PikkuAIMiddlewareHooks<
@@ -126,6 +127,15 @@ export type CoreAIAgent<
   input?: unknown
   output?: unknown
   tags?: string[]
+  protocol?: 'ui-message-stream'
+  prepareStep?: (ctx: {
+    stepNumber: number
+    messages: AIMessage[]
+    tools: AIAgentToolDef[]
+    toolChoice: 'auto' | 'required' | 'none'
+    model: string
+    stop: () => void
+  }) => void | Promise<void>
   middleware?: PikkuMiddleware[]
   channelMiddleware?: CorePikkuChannelMiddleware<any, any>[]
   aiMiddleware?: PikkuAIMiddlewareHooks<any, any>[]
@@ -133,6 +143,7 @@ export type CoreAIAgent<
 }
 
 export type AIStreamEvent =
+  | { type: 'step-start'; stepNumber: number; agent?: string; session?: string }
   | { type: 'text-delta'; text: string; agent?: string; session?: string }
   | { type: 'reasoning-delta'; text: string; agent?: string; session?: string }
   | {

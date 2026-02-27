@@ -39,6 +39,7 @@ export type { AIStorageService } from './ai-storage-service.js'
 export type {
   AIAgentRunnerParams,
   AIAgentRunnerResult,
+  AIAgentStepResult,
   AIAgentRunnerService,
 } from './ai-agent-runner-service.js'
 export type {
