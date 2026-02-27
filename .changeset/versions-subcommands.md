@@ -1,5 +1,5 @@
 ---
-"@pikku/cli": minor
+'@pikku/cli': minor
 ---
 
 Version management commands are now grouped under `pikku versions <subcommand>`:

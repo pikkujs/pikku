@@ -1,7 +1,7 @@
 ---
-"@pikku/cli": minor
-"@pikku/inspector": minor
-"@pikku/core": patch
+'@pikku/cli': minor
+'@pikku/inspector': minor
+'@pikku/core': patch
 ---
 
 `pikku versions check` now prints rich, human-readable output for all contract version errors instead of raw error codes. Each error type (PKU861–PKU865) shows the function name, separate input/output schema hashes with a `prev → current` arrow, and clear next-step instructions.

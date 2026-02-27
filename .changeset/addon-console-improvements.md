@@ -1,5 +1,5 @@
 ---
-"@pikku/addon-console": patch
+'@pikku/addon-console': patch
 ---
 
 Console UI improvements:
