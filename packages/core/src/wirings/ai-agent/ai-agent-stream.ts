@@ -50,6 +50,7 @@ import type { AIAgentRunnerService } from '../../services/ai-agent-runner-servic
 type PersistingChannel = AIStreamChannel & {
   fullText: string
   flush: () => Promise<void>
+  totalUsage: { inputTokens: number; outputTokens: number; model?: string }
 }
 
 function createPersistingChannel(
@@ -61,6 +62,14 @@ function createPersistingChannel(
   let stepText = ''
   let stepToolCalls: AIToolCall[] = []
   let stepToolResults: AIToolResult[] = []
+  const totalUsage: {
+    inputTokens: number
+    outputTokens: number
+    model?: string
+  } = {
+    inputTokens: 0,
+    outputTokens: 0,
+  }
 
   const flushStep = async () => {
     if (!storage) return
@@ -100,6 +109,9 @@ function createPersistingChannel(
     get fullText() {
       return fullText
     },
+    get totalUsage() {
+      return totalUsage
+    },
     flush: flushStep,
     close: () => parent.close(),
     send: (event: AIStreamEvent) => {
@@ -127,6 +139,9 @@ function createPersistingChannel(
             })
             break
           case 'usage':
+            totalUsage.inputTokens += event.tokens.input
+            totalUsage.outputTokens += event.tokens.output
+            if (event.model) totalUsage.model = event.model
             flushStep()
             break
           case 'done':
@@ -152,6 +167,7 @@ async function postStreamCleanup(
   aiRunState: AIRunStateService,
   runId: string
 ): Promise<void> {
+  const usage = persistingChannel.totalUsage
   let outputText = persistingChannel.fullText
   let outputMessages = messages
   for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
@@ -160,7 +176,10 @@ async function postStreamCleanup(
       const result = await mw.modifyOutput(singletonServices, {
         text: outputText,
         messages: outputMessages,
-        usage: { inputTokens: 0, outputTokens: 0 },
+        usage: {
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+        },
       })
       outputText = result.text
       outputMessages = result.messages
@@ -191,7 +210,18 @@ async function postStreamCleanup(
     }
   }
 
-  await aiRunState.updateRun(runId, { status: 'completed' })
+  await aiRunState.updateRun(runId, {
+    status: 'completed',
+    ...(usage.model
+      ? {
+          usage: {
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            model: usage.model,
+          },
+        }
+      : {}),
+  })
 }
 
 type StepLoopParams = {
