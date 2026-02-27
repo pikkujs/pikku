@@ -1,4 +1,4 @@
-import { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
+import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
 
 export const serializeTriggerMeta = (triggerMeta: TriggerMeta) => {
   return triggerMeta

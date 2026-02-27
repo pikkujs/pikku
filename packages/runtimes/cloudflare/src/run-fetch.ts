@@ -1,5 +1,5 @@
 import { fetch } from '@pikku/core/http'
-import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
+import type { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 
 export const runFetch = async (
   request: Request,

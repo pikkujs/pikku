@@ -1,7 +1,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
-import { JSONValue, CorePikkuMiddleware } from '../../types/core.types.js'
+import type { JSONValue, CorePikkuMiddleware } from '../../types/core.types.js'
 import { fetch, wireHTTP } from './http-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import {

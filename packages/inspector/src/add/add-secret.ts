@@ -3,7 +3,7 @@ import {
   getPropertyValue,
   getArrayPropertyValue,
 } from '../utils/get-property-value.js'
-import { AddWiring } from '../types.js'
+import type { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { createAddKeyedWiring } from './add-keyed-wiring.js'
 

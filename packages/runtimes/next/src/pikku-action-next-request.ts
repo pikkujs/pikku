@@ -1,4 +1,4 @@
-import { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
+import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
 import { cookies, headers } from 'next/headers.js'
 
 /**

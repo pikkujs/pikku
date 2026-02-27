@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Spotlight, SpotlightActionData, spotlight } from '@mantine/spotlight'
+import type { SpotlightActionData } from '@mantine/spotlight'
+import { Spotlight, spotlight } from '@mantine/spotlight'
 import {
   FunctionSquare,
   GitBranch,

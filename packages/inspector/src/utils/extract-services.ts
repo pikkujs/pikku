@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { FunctionServicesMeta, FunctionWiresMeta } from '@pikku/core'
+import type { FunctionServicesMeta, FunctionWiresMeta } from '@pikku/core'
 
 /**
  * Extract services from a function's first parameter destructuring pattern

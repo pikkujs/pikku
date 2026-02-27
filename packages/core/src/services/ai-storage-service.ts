@@ -1,4 +1,4 @@
-import { AIThread, AIMessage } from '../wirings/ai-agent/ai-agent.types.js'
+import type { AIThread, AIMessage } from '../wirings/ai-agent/ai-agent.types.js'
 
 export interface AIStorageService {
   createThread(

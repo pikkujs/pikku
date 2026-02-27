@@ -99,7 +99,7 @@ const processSSEEvents = async function* (
         break
 
       case 'approval-request': {
-        const approvalArgs: Record<string, unknown> = { ...(event.args || {}) }
+        const approvalArgs: Record<string, unknown> = { ...event.args }
         if (event.reason) {
           approvalArgs.__approvalReason = event.reason
         }

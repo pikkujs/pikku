@@ -1,13 +1,11 @@
-import * as uWS from 'uWebSockets.js'
+import type * as uWS from 'uWebSockets.js'
 import { logChannels } from '@pikku/core/channel'
-import {
-  runLocalChannel,
-  PikkuLocalChannelHandler,
-} from '@pikku/core/channel/local'
+import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
+import { runLocalChannel } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
 
 import { uwsToRequest } from './uws-request-convertor.js'
-import { PikkuuWSHandlerOptions } from './pikku-uws-http-handler.js'
+import type { PikkuuWSHandlerOptions } from './pikku-uws-http-handler.js'
 import { UWSEventHubService } from './uws-event-hub-service.js'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 
@@ -90,7 +88,7 @@ export const pikkuWebsocketHandler = ({
             context
           )
         })
-      } catch (e: any) {
+      } catch {
         // Error should have already been handled by fetch
       }
     },

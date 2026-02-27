@@ -1,7 +1,7 @@
 import { writeFileInDir } from './file-writer.js'
 import { mkdir, writeFile } from 'fs/promises'
-import { JSONValue } from '@pikku/core'
-import { CLILogger } from '../services/cli-logger.service.js'
+import type { JSONValue } from '@pikku/core'
+import type { CLILogger } from '../services/cli-logger.service.js'
 
 function toValidIdentifier(name: string): string {
   let result = name.replace(/[-./]/g, '_')

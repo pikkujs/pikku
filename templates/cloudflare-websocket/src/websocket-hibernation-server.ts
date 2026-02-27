@@ -1,7 +1,7 @@
 import { CloudflareWebSocketHibernationServer } from '@pikku/cloudflare'
 import { setupServices } from './setup-services.js'
 import { CloudflareEventHubService } from '@pikku/cloudflare'
-import { SingletonServices } from '../../functions/types/application-types.d.js'
+import type { SingletonServices } from '../../functions/types/application-types.d.js'
 import { createWireServices } from '../../functions/src/services.js'
 
 export class WebSocketHibernationServer extends CloudflareWebSocketHibernationServer {

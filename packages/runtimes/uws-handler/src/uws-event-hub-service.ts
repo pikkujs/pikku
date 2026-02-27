@@ -1,5 +1,5 @@
-import { EventHubService } from '@pikku/core/channel'
-import * as uWS from 'uWebSockets.js'
+import type { EventHubService } from '@pikku/core/channel'
+import type * as uWS from 'uWebSockets.js'
 
 export class UWSEventHubService<Mappings extends Record<string, unknown> = {}>
   implements EventHubService<Mappings>

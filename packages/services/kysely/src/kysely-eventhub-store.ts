@@ -1,5 +1,5 @@
 import { EventHubStore } from '@pikku/core/channel'
-import { Kysely } from 'kysely'
+import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 
 export class KyselyEventHubStore extends EventHubStore {

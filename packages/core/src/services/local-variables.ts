@@ -1,4 +1,4 @@
-import { VariablesService } from './variables-service.js'
+import type { VariablesService } from './variables-service.js'
 
 export class LocalVariablesService implements VariablesService {
   constructor(

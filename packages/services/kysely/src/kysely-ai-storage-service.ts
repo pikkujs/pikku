@@ -4,7 +4,8 @@ import type {
   CreateRunInput,
 } from '@pikku/core/services'
 import type { AIThread, AIMessage, AgentRunState } from '@pikku/core/ai-agent'
-import { Kysely, sql } from 'kysely'
+import type { Kysely } from 'kysely'
+import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 

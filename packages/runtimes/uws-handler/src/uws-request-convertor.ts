@@ -1,4 +1,4 @@
-import { HttpRequest, HttpResponse } from 'uWebSockets.js'
+import type { HttpRequest, HttpResponse } from 'uWebSockets.js'
 
 export function uwsToRequest(
   req: HttpRequest,

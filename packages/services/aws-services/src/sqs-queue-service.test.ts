@@ -1,7 +1,8 @@
 import { test, describe, afterEach } from 'node:test'
 import * as assert from 'node:assert/strict'
 import * as sinon from 'sinon'
-import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs'
+import type { SendMessageCommand } from '@aws-sdk/client-sqs'
+import { SQSClient } from '@aws-sdk/client-sqs'
 import { SQSQueueService } from './sqs-queue-service.js'
 
 let sendStub: sinon.SinonStub

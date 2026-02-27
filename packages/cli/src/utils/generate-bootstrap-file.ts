@@ -1,5 +1,5 @@
-import { Config } from '../../types/application-types.js'
-import { CLILogger } from '../services/cli-logger.service.js'
+import type { Config } from '../../types/application-types.js'
+import type { CLILogger } from '../services/cli-logger.service.js'
 import { getFileImportRelativePath } from './file-import-path.js'
 import { writeFileInDir } from './file-writer.js'
 

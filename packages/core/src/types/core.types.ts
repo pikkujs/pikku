@@ -1,33 +1,33 @@
 import type { Logger, LogLevel } from '../services/logger.js'
-import { VariablesService } from '../services/variables-service.js'
-import { SecretService } from '../services/secret-service.js'
-import { SchemaService } from '../services/schema-service.js'
-import { JWTService } from '../services/jwt-service.js'
-import { PikkuHTTP } from '../wirings/http/http.types.js'
-import {
+import type { VariablesService } from '../services/variables-service.js'
+import type { SecretService } from '../services/secret-service.js'
+import type { SchemaService } from '../services/schema-service.js'
+import type { JWTService } from '../services/jwt-service.js'
+import type { PikkuHTTP } from '../wirings/http/http.types.js'
+import type {
   PikkuChannel,
   CorePikkuChannelMiddleware,
   CorePikkuChannelMiddlewareFactory,
 } from '../wirings/channel/channel.types.js'
-import { PikkuRPC } from '../wirings/rpc/rpc-types.js'
-import { PikkuMCP } from '../wirings/mcp/mcp.types.js'
-import { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
-import { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
-import { PikkuCLI } from '../wirings/cli/cli.types.js'
-import {
+import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
+import type { PikkuMCP } from '../wirings/mcp/mcp.types.js'
+import type { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
+import type { PikkuQueue, QueueService } from '../wirings/queue/queue.types.js'
+import type { PikkuCLI } from '../wirings/cli/cli.types.js'
+import type {
   PikkuWorkflowWire,
   WorkflowService,
   WorkflowServiceConfig,
   WorkflowStepWire,
 } from '../wirings/workflow/workflow.types.js'
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
-import { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
-import { SchedulerService } from '../services/scheduler-service.js'
-import { DeploymentService } from '../services/deployment-service.js'
-import { AIStorageService } from '../services/ai-storage-service.js'
+import type { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
+import type { SchedulerService } from '../services/scheduler-service.js'
+import type { DeploymentService } from '../services/deployment-service.js'
+import type { AIStorageService } from '../services/ai-storage-service.js'
 
-import { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
-import { AIRunStateService } from '../services/ai-run-state-service.js'
+import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
+import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 
 export type PikkuWiringTypes =

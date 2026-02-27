@@ -1,4 +1,4 @@
-import { ConnectionOptions } from 'bullmq'
+import type { ConnectionOptions } from 'bullmq'
 import { BullQueueService } from './bull-queue-service.js'
 import { BullQueueWorkers } from './bull-queue-worker.js'
 import { BullSchedulerService } from './bull-scheduler-service.js'

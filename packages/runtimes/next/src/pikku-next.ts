@@ -1,7 +1,12 @@
 import { compile } from 'path-to-regexp'
 
-import { CoreConfig, CoreSingletonServices, CreateConfig } from '@pikku/core'
-import { HTTPMethod, fetchData, fetch } from '@pikku/core/http'
+import type {
+  CoreConfig,
+  CoreSingletonServices,
+  CreateConfig,
+} from '@pikku/core'
+import type { HTTPMethod } from '@pikku/core/http'
+import { fetchData, fetch } from '@pikku/core/http'
 import { PikkuActionNextRequest } from './pikku-action-next-request.js'
 import { PikkuActionNextResponse } from './pikku-action-next-response.js'
 

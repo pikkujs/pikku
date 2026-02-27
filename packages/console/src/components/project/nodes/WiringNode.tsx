@@ -1,6 +1,7 @@
 import React from 'react'
-import { Node, NodeProps } from 'reactflow'
+import type { Node, NodeProps } from 'reactflow'
 import { FlowNode } from './FlowNode'
+import type { LucideIcon } from 'lucide-react'
 import {
   Webhook,
   ListTodo,
@@ -10,7 +11,6 @@ import {
   FolderOpen,
   Clock,
   Zap,
-  LucideIcon,
 } from 'lucide-react'
 import { usePanelContext } from '@/context/PanelContext'
 import { useWorkflowContextSafe } from '@/context/WorkflowContext'

@@ -4,7 +4,7 @@ import type {
   AgentRunRow,
   AgentRunService,
 } from '@pikku/core/ai-agent'
-import postgres from 'postgres'
+import type postgres from 'postgres'
 
 export class PgAgentRunService implements AgentRunService {
   constructor(

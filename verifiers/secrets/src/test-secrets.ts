@@ -8,11 +8,10 @@
  * - TypedSecretService provides compile-time validated access
  */
 
-import { LocalSecretService, VariablesService } from '@pikku/core/services'
-import {
-  TypedSecretService,
-  CredentialsMap,
-} from '../.pikku/secrets/pikku-secrets.gen.js'
+import type { VariablesService } from '@pikku/core/services'
+import { LocalSecretService } from '@pikku/core/services'
+import type { CredentialsMap } from '../.pikku/secrets/pikku-secrets.gen.js'
+import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 
 // ============================================================================
 // Compile-time type assertions (these ensure the generated types are correct)

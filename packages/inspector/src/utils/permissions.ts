@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
-import { PermissionMetadata } from '@pikku/core'
+import type { PermissionMetadata } from '@pikku/core'
 import { extractFunctionName } from './extract-function-name.js'
-import { InspectorState } from '../types.js'
+import type { InspectorState } from '../types.js'
 
 /**
  * Extract permission pikkuFuncIds from an expression (array or object literal)

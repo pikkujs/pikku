@@ -1,4 +1,4 @@
-import { Logger, SchemaService } from '@pikku/core/services'
+import type { Logger, SchemaService } from '@pikku/core/services'
 import { UnprocessableContentError } from '@pikku/core/errors'
 import { Validator } from '@cfworker/json-schema'
 

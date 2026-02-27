@@ -1,5 +1,5 @@
-import { InspectorFilters } from '@pikku/inspector'
-import { OpenAPISpecInfo } from '@pikku/inspector'
+import type { InspectorFilters } from '@pikku/inspector'
+import type { OpenAPISpecInfo } from '@pikku/inspector'
 import { PikkuWiringTypes } from '@pikku/core'
 
 export interface PikkuCLICoreOutputFiles {

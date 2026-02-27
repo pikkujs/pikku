@@ -1,9 +1,6 @@
 import { InvalidSessionError } from '../errors/errors.js'
-import {
-  CoreUserSession,
-  pikkuMiddleware,
-  pikkuMiddlewareFactory,
-} from '../types/core.types.js'
+import type { CoreUserSession } from '../types/core.types.js'
+import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
 /**
  * Bearer token middleware that extracts and validates tokens from the Authorization header.

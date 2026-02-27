@@ -1,4 +1,4 @@
-import {
+import type {
   CorePikkuMiddleware,
   CoreSingletonServices,
   CoreUserSession,
@@ -6,13 +6,13 @@ import {
   MiddlewareMetadata,
   PermissionMetadata,
 } from '../../types/core.types.js'
-import {
+import type {
   CorePikkuFunctionConfig,
   CorePikkuPermission,
   CorePikkuFunction,
   CorePikkuFunctionSessionless,
 } from '../../function/functions.types.js'
-import { PikkuChannel } from '../channel/channel.types.js'
+import type { PikkuChannel } from '../channel/channel.types.js'
 
 /**
  * CLI option definition

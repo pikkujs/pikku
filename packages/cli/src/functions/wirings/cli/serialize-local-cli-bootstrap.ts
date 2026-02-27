@@ -1,5 +1,5 @@
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
-import { Config } from '../../../../types/application-types.js'
+import type { Config } from '../../../../types/application-types.js'
 
 /**
  * Serializes the local (in-program) CLI bootstrap code

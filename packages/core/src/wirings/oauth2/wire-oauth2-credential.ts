@@ -1,4 +1,4 @@
-import { CoreOAuth2Credential } from './oauth2.types.js'
+import type { CoreOAuth2Credential } from './oauth2.types.js'
 
 /**
  * No-op function for declaring OAuth2 credentials.

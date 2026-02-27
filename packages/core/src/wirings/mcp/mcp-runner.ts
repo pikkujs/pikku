@@ -1,4 +1,4 @@
-import { PikkuWire } from '../../types/core.types.js'
+import type { PikkuWire } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
   CoreMCPPrompt,

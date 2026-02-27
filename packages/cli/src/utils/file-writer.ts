@@ -1,7 +1,7 @@
 import { dirname } from 'path'
 import { mkdir, readFile, writeFile, rm } from 'fs/promises'
 import { existsSync } from 'fs'
-import { CLILogger } from '../services/cli-logger.service.js'
+import type { CLILogger } from '../services/cli-logger.service.js'
 import { getCLIVersion } from './get-cli-version.js'
 
 export const DO_NOT_MODIFY_COMMENT = `/**

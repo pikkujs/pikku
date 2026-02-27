@@ -1,10 +1,8 @@
 import { test, describe, afterEach } from 'node:test'
 import * as assert from 'node:assert/strict'
 import * as sinon from 'sinon'
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager'
+import type { GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
+import { SecretsManagerClient } from '@aws-sdk/client-secrets-manager'
 
 import { AWSSecrets } from './aws-secrets.js'
 

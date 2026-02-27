@@ -1,4 +1,4 @@
-import {
+import type {
   DurableObjectState,
   DurableObject,
   Request as CloudflareRequest,
@@ -12,7 +12,7 @@ import {
 import { CloudflareWebsocketStore } from './cloudflare-channel-store.js'
 import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-handler-factory.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
-import { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
@@ -52,7 +52,7 @@ export abstract class CloudflareWebSocketHibernationServer<
         response,
         bubbleErrors: true,
       })
-    } catch (e) {
+    } catch {
       // Something went wrong, the cloudflare response will deal with it.
     }
 

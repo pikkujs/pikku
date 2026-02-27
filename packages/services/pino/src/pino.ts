@@ -1,6 +1,7 @@
 import * as pino from 'pino'
 
-import { Logger, LogLevel } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/services'
+import { LogLevel } from '@pikku/core/services'
 
 export class PinoLogger implements Logger {
   public pino: pino.Logger

@@ -1,10 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react'
 import { Box, useMantineTheme } from '@mantine/core'
-import {
-  useVirtualizer,
-  defaultRangeExtractor,
-  Range,
-} from '@tanstack/react-virtual'
+import type { Range } from '@tanstack/react-virtual'
+import { useVirtualizer, defaultRangeExtractor } from '@tanstack/react-virtual'
 
 interface TreeNode {
   id: string

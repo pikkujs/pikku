@@ -1,7 +1,7 @@
-import { Duplex } from 'stream' // Assuming `Duplex` is from Node.js' 'stream' module
-import { type JSONValue } from '@pikku/core'
-import { PikkuHTTPResponse } from '@pikku/core/http'
-import { SerializeOptions } from 'cookie'
+import type { Duplex } from 'stream' // Assuming `Duplex` is from Node.js' 'stream' module
+import type { JSONValue } from '@pikku/core'
+import type { PikkuHTTPResponse } from '@pikku/core/http'
+import type { SerializeOptions } from 'cookie'
 
 export class PikkuDuplexResponse implements PikkuHTTPResponse {
   private aborted = false

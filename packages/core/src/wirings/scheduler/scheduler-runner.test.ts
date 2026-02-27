@@ -6,8 +6,8 @@ import {
   getScheduledTasks,
 } from './scheduler-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
-import { CoreScheduledTask } from './scheduler.types.js'
-import { CoreUserSession } from '../../types/core.types.js'
+import type { CoreScheduledTask } from './scheduler.types.js'
+import type { CoreUserSession } from '../../types/core.types.js'
 
 beforeEach(() => {
   resetPikkuState()

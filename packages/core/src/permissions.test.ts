@@ -2,8 +2,8 @@ import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
 import { addPermission, runPermissions } from './permissions.js'
 import { pikkuState, resetPikkuState } from './pikku-state.js'
-import { CoreServices, CoreUserSession } from './types/core.types.js'
-import {
+import type { CoreServices, CoreUserSession } from './types/core.types.js'
+import type {
   CorePermissionGroup,
   CorePikkuPermission,
 } from './function/functions.types.js'

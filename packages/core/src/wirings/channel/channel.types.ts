@@ -1,10 +1,10 @@
-import { PikkuError } from '../../errors/error-handler.js'
-import {
+import type { PikkuError } from '../../errors/error-handler.js'
+import type {
   HTTPFunctionMetaInputTypes,
   PikkuHTTPRequest,
   PikkuHTTPResponse,
 } from '../http/http.types.js'
-import {
+import type {
   CoreSingletonServices,
   CreateWireServices,
   CorePikkuMiddleware,
@@ -23,7 +23,7 @@ export type CorePikkuChannelMiddlewareFactory<
   Services = any,
   Event = unknown,
 > = (input: In) => CorePikkuChannelMiddleware<Services, Event>
-import {
+import type {
   CorePermissionGroup,
   CorePikkuFunction,
   CorePikkuFunctionConfig,

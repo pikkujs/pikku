@@ -1,4 +1,4 @@
-import { SQSBatchResponse, SQSEvent, SQSRecord } from 'aws-lambda'
+import type { SQSBatchResponse, SQSEvent, SQSRecord } from 'aws-lambda'
 import {
   runQueueJob,
   QueueJobFailedError,

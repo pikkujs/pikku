@@ -1,4 +1,4 @@
-import { PgBoss, Request as PgBossRequest } from 'pg-boss'
+import type { PgBoss, Request as PgBossRequest } from 'pg-boss'
 import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
 import { mapPgBossJobToQueueJob } from './utils.js'
 

@@ -1,5 +1,5 @@
-import { ChannelStore } from '../wirings/channel/channel-store.js'
-import { CoreUserSession } from '../types/core.types.js'
+import type { ChannelStore } from '../wirings/channel/channel-store.js'
+import type { CoreUserSession } from '../types/core.types.js'
 
 export interface SessionService<UserSession extends CoreUserSession> {
   sessionChanged: boolean

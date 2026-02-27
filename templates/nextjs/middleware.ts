@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server.js'
+import type { NextRequest } from 'next/server.js'
+import { NextResponse } from 'next/server.js'
 import { getSession } from '@pikku/next/pikku-session'
-import { CoreSingletonServices } from '@pikku/core'
+import type { CoreSingletonServices } from '@pikku/core'
 
 const protectedRoutes = ['/admin']
 const publicRoutes = ['/login']

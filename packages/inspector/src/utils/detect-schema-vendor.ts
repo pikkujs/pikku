@@ -1,4 +1,4 @@
-import * as ts from 'typescript'
+import type * as ts from 'typescript'
 import type { SchemaVendor, InspectorLogger } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 

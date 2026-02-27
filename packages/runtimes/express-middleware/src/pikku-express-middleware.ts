@@ -1,7 +1,8 @@
-import { RequestHandler } from 'express'
+import type { RequestHandler } from 'express'
 
 import type { Logger } from '@pikku/core/services'
-import { fetchData, RunHTTPWiringOptions } from '@pikku/core/http'
+import type { RunHTTPWiringOptions } from '@pikku/core/http'
+import { fetchData } from '@pikku/core/http'
 import { logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { ExpressPikkuHTTPRequest } from './express-pikku-http-request.js'

@@ -1,6 +1,6 @@
 import type { CoreAIAgent, AgentRunState } from './ai-agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
-import { AIRunStateService } from '../../services/ai-run-state-service.js'
+import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 
 export const addAIAgent = (

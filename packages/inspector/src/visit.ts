@@ -9,7 +9,11 @@ import { addQueueWorker } from './add/add-queue-worker.js'
 import { addWorkflow } from './add/add-workflow.js'
 import { addMCPResource } from './add/add-mcp-resource.js'
 import { addMCPPrompt } from './add/add-mcp-prompt.js'
-import { InspectorState, InspectorLogger, InspectorOptions } from './types.js'
+import type {
+  InspectorState,
+  InspectorLogger,
+  InspectorOptions,
+} from './types.js'
 import { addFunctions } from './add/add-functions.js'
 import { addChannel } from './add/add-channel.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'

@@ -1,4 +1,7 @@
-import { PikkuWorkerConfig, ConfigValidationResult } from './queue.types.js'
+import type {
+  PikkuWorkerConfig,
+  ConfigValidationResult,
+} from './queue.types.js'
 
 /**
  * Configuration mapping structure for queue implementations

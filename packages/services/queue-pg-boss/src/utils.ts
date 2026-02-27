@@ -1,5 +1,6 @@
-import { QueueJob, QueueJobStatus } from '@pikku/core/queue'
-import { PgBoss, type JobWithMetadata } from 'pg-boss'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
+import type { PgBoss } from 'pg-boss'
+import { type JobWithMetadata } from 'pg-boss'
 
 /**
  * Map pg-boss job state to our queue job status

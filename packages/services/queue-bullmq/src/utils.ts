@@ -1,5 +1,6 @@
-import { QueueJob, QueueJobStatus } from '@pikku/core/queue'
-import { ConnectionOptions, Job, QueueEvents } from 'bullmq'
+import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
+import type { ConnectionOptions, Job } from 'bullmq'
+import { QueueEvents } from 'bullmq'
 
 /**
  * Map Bull job state to our queue job status

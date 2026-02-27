@@ -1,6 +1,6 @@
-import { OAuth2Token, OAuth2AppCredential } from './oauth2.types.js'
-import { OAuth2CredentialConfig } from '../secret/secret.types.js'
-import { SecretService } from '../../services/secret-service.js'
+import type { OAuth2Token, OAuth2AppCredential } from './oauth2.types.js'
+import type { OAuth2CredentialConfig } from '../secret/secret.types.js'
+import type { SecretService } from '../../services/secret-service.js'
 
 /**
  * OAuth2 client that acts as a service.

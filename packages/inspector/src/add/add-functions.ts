@@ -1,14 +1,15 @@
 import * as ts from 'typescript'
-import { AddWiring, SchemaRef } from '../types.js'
+import type { AddWiring, SchemaRef } from '../types.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
-import { TypesMap } from '../types-map.js'
+import type { TypesMap } from '../types-map.js'
 import {
   extractFunctionName,
   funcIdToTypeName,
 } from '../utils/extract-function-name.js'
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
-import { FunctionServicesMeta, formatVersionedId } from '@pikku/core'
+import type { FunctionServicesMeta } from '@pikku/core'
+import { formatVersionedId } from '@pikku/core'
 import {
   getPropertyValue,
   getCommonWireMetaData,
@@ -216,9 +217,9 @@ const getNamesAndTypes = (
     const aliasName = funcIdToTypeName(funcName) + direction
 
     // record the alias in your TypesMap
-    const references = rawTypes
-      .map((t) => resolveTypeImports(t, typesMap, true, checker))
-      .flat()
+    const references = rawTypes.flatMap((t) =>
+      resolveTypeImports(t, typesMap, true, checker)
+    )
 
     typesMap.addCustomType(aliasName, aliasType, references)
 
@@ -229,19 +230,17 @@ const getNamesAndTypes = (
   }
 
   // 4) Single, valid name → inline it
-  const uniqueNames = rawNames
-    .map((name, i) => {
-      const t = rawTypes[i]
-      if (!t) {
-        throw new Error(`Expected type for name "${name}" in ${funcName}`)
-      }
-      if (isPrimitiveType(t)) {
-        return name
-      }
-      // non-primitive: import/alias it inline
-      return resolveTypeImports(t, typesMap, false, checker)
-    })
-    .flat()
+  const uniqueNames = rawNames.flatMap((name, i) => {
+    const t = rawTypes[i]
+    if (!t) {
+      throw new Error(`Expected type for name "${name}" in ${funcName}`)
+    }
+    if (isPrimitiveType(t)) {
+      return name
+    }
+    // non-primitive: import/alias it inline
+    return resolveTypeImports(t, typesMap, false, checker)
+  })
 
   return {
     names: uniqueNames,

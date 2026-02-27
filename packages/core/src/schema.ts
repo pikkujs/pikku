@@ -1,5 +1,5 @@
-import { Logger } from './services/logger.js'
-import { SchemaService } from './services/schema-service.js'
+import type { Logger } from './services/logger.js'
+import type { SchemaService } from './services/schema-service.js'
 import {
   MissingSchemaError,
   UnprocessableContentError,

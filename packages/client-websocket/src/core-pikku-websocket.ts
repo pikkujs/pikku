@@ -81,7 +81,7 @@ export class CorePikkuWebsocket {
         }
         this.subscriptions.forEach((subscription) => subscription(json))
       }
-    } catch (error) {
+    } catch {
       // Error parsing means we'll just bubble it to the normal onmessage handler
     }
 

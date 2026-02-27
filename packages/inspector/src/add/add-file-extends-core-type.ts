@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { PathToNameAndType, InspectorState } from '../types.js'
+import type { PathToNameAndType, InspectorState } from '../types.js'
 
 export const addFileExtendsCoreType = (
   node: ts.Node,

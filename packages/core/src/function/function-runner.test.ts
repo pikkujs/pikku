@@ -3,8 +3,8 @@ import * as assert from 'node:assert'
 import { addFunction, runPikkuFunc } from './function-runner.js'
 import { addMiddleware, addPermission } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
-import { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
-import { CorePermissionGroup } from './functions.types.js'
+import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
+import type { CorePermissionGroup } from './functions.types.js'
 
 beforeEach(() => {
   resetPikkuState()

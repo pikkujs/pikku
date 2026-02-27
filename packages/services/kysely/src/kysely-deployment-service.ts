@@ -5,7 +5,8 @@ import type {
   DeploymentInfo,
 } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
-import { Kysely, sql } from 'kysely'
+import type { Kysely } from 'kysely'
+import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 
 export class KyselyDeploymentService implements DeploymentService {

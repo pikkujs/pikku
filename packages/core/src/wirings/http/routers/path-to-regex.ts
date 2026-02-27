@@ -1,6 +1,7 @@
-import { match, MatchFunction } from 'path-to-regexp'
-import { MatchResult, Router } from './http-router.js'
-import { HTTPMethod } from '../http.types.js'
+import type { MatchFunction } from 'path-to-regexp'
+import { match } from 'path-to-regexp'
+import type { MatchResult, Router } from './http-router.js'
+import type { HTTPMethod } from '../http.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 
 interface CompiledRoute {

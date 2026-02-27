@@ -1,9 +1,8 @@
 import React, { useMemo, useEffect } from 'react'
+import type { NodeTypes, EdgeTypes } from 'reactflow'
 import ReactFlow, {
   useNodesState,
   useEdgesState,
-  NodeTypes,
-  EdgeTypes,
   Background,
   BackgroundVariant,
   useReactFlow,

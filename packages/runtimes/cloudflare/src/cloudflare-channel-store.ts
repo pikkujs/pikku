@@ -1,5 +1,6 @@
-import { DurableObjectState, WebSocket } from '@cloudflare/workers-types'
-import { Channel, ChannelStore } from '@pikku/core/channel'
+import type { DurableObjectState, WebSocket } from '@cloudflare/workers-types'
+import type { Channel } from '@pikku/core/channel'
+import { ChannelStore } from '@pikku/core/channel'
 
 export class CloudflareWebsocketStore extends ChannelStore {
   constructor(private ctx: DurableObjectState) {

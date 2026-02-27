@@ -1,4 +1,4 @@
-import { Node, Edge } from 'reactflow'
+import type { Node, Edge } from 'reactflow'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { getBranchNodeConfig } from '@/components/project/nodes/BranchNode'
 import { getFunctionNodeConfig } from '@/components/project/nodes/FunctionNode'

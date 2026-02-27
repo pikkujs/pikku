@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { getPropertyValue } from '../utils/get-property-value.js'
-import { AddWiring, InspectorState, InspectorLogger } from '../types.js'
+import type { AddWiring, InspectorState, InspectorLogger } from '../types.js'
 import { registerHTTPRoute } from './add-http-route.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
 

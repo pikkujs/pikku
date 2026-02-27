@@ -1,19 +1,17 @@
-import {
+import type {
   CoreServices,
   JSONValue,
   CoreUserSession,
 } from '../../types/core.types.js'
-import {
+import type {
   ChannelMessageMeta,
   CoreChannel,
   PikkuChannelHandler,
 } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
-import {
-  SessionService,
-  createMiddlewareSessionWireProps,
-} from '../../services/user-session-service.js'
+import type { SessionService } from '../../services/user-session-service.js'
+import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 
 const getChannelMeta = (channelName: string) => {
   return pikkuState(null, 'channel', 'meta')[channelName]
@@ -159,7 +157,7 @@ export const processMessageHandlers = (
       let messageData: any
       try {
         messageData = JSON.parse(rawData)
-      } catch (error) {
+      } catch {
         // Most likely a json error.. ignore
       }
 

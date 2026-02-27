@@ -1,4 +1,8 @@
-import { MCPResourceMeta, MCPToolMeta, MCPPromptMeta } from '@pikku/core/mcp'
+import type {
+  MCPResourceMeta,
+  MCPToolMeta,
+  MCPPromptMeta,
+} from '@pikku/core/mcp'
 
 export interface MCPToolEndpoint {
   name: string

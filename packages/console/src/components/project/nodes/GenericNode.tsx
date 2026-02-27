@@ -1,5 +1,5 @@
 import React from 'react'
-import { Node, NodeProps } from 'reactflow'
+import type { Node, NodeProps } from 'reactflow'
 import { Code } from 'lucide-react'
 import { BaseNode } from './BaseNode'
 import { usePanelContext } from '@/context/PanelContext'

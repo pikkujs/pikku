@@ -1,8 +1,8 @@
 import { PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { runChannelMessage } from '@pikku/core/channel/serverless'
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
+import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { getServerlessDependencies } from './utils.js'
-import { WebsocketParams } from './websocket-types.js'
+import type { WebsocketParams } from './websocket-types.js'
 import { responseToLambdaResult } from '../response-converter.js'
 
 export const processWebsocketMessage = async (

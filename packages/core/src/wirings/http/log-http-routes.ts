@@ -1,5 +1,5 @@
 import { pikkuState } from '../../pikku-state.js'
-import { Logger } from '../../services/index.js'
+import type { Logger } from '../../services/index.js'
 
 /**
  * Logs all the loaded routes.

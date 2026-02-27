@@ -1,6 +1,6 @@
 import { LocalVariablesService } from './local-variables.js'
-import { SecretService } from './secret-service.js'
-import { VariablesService } from './variables-service.js'
+import type { SecretService } from './secret-service.js'
+import type { VariablesService } from './variables-service.js'
 
 /**
  * Service for retrieving secrets from environment variables.

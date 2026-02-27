@@ -1,9 +1,6 @@
-import Bull, {
-  ConnectionOptions,
-  JobsOptions,
-  Queue,
-  RedisConnection,
-} from 'bullmq'
+import type { ConnectionOptions, JobsOptions } from 'bullmq'
+import type Bull from 'bullmq'
+import { Queue, RedisConnection } from 'bullmq'
 import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
 import { mapBullJobToQueueJob } from './utils.js'
 

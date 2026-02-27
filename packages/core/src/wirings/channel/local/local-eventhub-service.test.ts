@@ -1,7 +1,7 @@
 import * as assert from 'assert'
 import { test } from 'node:test'
-import { PikkuChannelHandler } from '../channel.types.js'
-import { CoreUserSession } from '../../../types/core.types.js'
+import type { PikkuChannelHandler } from '../channel.types.js'
+import type { CoreUserSession } from '../../../types/core.types.js'
 import { LocalEventHubService } from './local-eventhub-service.js'
 
 class MockChannelHandler implements PikkuChannelHandler {

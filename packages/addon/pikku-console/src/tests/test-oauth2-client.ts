@@ -5,7 +5,8 @@
 
 import { OAuth2Server } from 'oauth2-mock-server'
 import { OAuth2Client } from '@pikku/core/oauth2'
-import { LocalSecretService, VariablesService } from '@pikku/core/services'
+import type { VariablesService } from '@pikku/core/services'
+import { LocalSecretService } from '@pikku/core/services'
 
 // Inline VariablesService for testing
 class TestVariablesService implements VariablesService {

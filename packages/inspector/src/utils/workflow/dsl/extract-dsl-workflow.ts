@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import {
+import type {
   WorkflowStepMeta,
   RpcStepMeta,
   BranchStepMeta,
@@ -33,11 +33,11 @@ import {
   isArrayType,
   getSourceText,
 } from './patterns.js'
+import type { ValidationError } from './validation.js'
 import {
   validateNoDisallowedPatterns,
   validateAwaitedCalls,
   formatValidationErrors,
-  ValidationError,
 } from './validation.js'
 import {
   extractStringLiteral,

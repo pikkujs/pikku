@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process'
-import { SecretService } from './secret-service.js'
+import type { SecretService } from './secret-service.js'
 
 /**
  * Service for retrieving secrets from gopass.
@@ -13,7 +13,7 @@ export class GopassSecretService implements SecretService {
   constructor(private prefix: string = '') {}
 
   private getFullKey(key: string): string {
-    if (!/^[\w.\-\/]+$/.test(key)) {
+    if (!/^[\w.\-/]+$/.test(key)) {
       throw new Error(`Invalid secret key format: ${key}`)
     }
     return this.prefix ? `${this.prefix}${key}` : key

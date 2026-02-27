@@ -1,4 +1,4 @@
-import { SecretService } from './secret-service.js'
+import type { SecretService } from './secret-service.js'
 
 /**
  * A read-only wrapper around SecretService that restricts access

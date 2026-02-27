@@ -12,8 +12,8 @@ import type {
   AIAgentRunnerService,
   AIRunStateService,
 } from '@pikku/core/services'
-import { EventHubTopics } from './eventhub-topics.js'
-import { TodoStore } from '../src/services/store.service.ts'
+import type { EventHubTopics } from './eventhub-topics.js'
+import type { TodoStore } from '../src/services/store.service.ts'
 
 export interface Config extends CoreConfig {
   awsRegion: string

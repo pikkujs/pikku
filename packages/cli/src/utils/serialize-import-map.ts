@@ -1,5 +1,5 @@
-import { TypesMap } from '@pikku/inspector'
-import { Logger } from '@pikku/core/services'
+import type { TypesMap } from '@pikku/inspector'
+import type { Logger } from '@pikku/core/services'
 import { getFileImportRelativePath } from './file-import-path.js'
 
 export const serializeImportMap = (
@@ -18,7 +18,7 @@ export const serializeImportMap = (
       originalName = typeMeta.originalName
       uniqueName = typeMeta.uniqueName
       path = typeMeta.path
-    } catch (e) {
+    } catch {
       logger.warn(
         `Type '${requiredType}' not found in typesMap - skipping import`
       )

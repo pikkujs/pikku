@@ -1,4 +1,4 @@
-import {
+import type {
   AIMessage,
   AIAgentStep,
   AIAgentToolDef,

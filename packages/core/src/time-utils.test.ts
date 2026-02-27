@@ -1,10 +1,10 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
+import type { RelativeTimeInput } from './time-utils'
 import {
   getRelativeTimeOffset,
   getRelativeTimeOffsetFromNow,
-  RelativeTimeInput,
 } from './time-utils'
 
 const approxEqual = (a: number, b: number, delta: number = 10): boolean =>

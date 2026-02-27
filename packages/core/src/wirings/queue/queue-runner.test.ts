@@ -9,7 +9,7 @@ import {
   QueueJobDiscardedError,
 } from './queue-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
-import { CoreQueueWorker, QueueJob } from './queue.types.js'
+import type { CoreQueueWorker, QueueJob } from './queue.types.js'
 
 beforeEach(() => {
   resetPikkuState()

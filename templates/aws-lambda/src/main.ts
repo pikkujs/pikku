@@ -1,6 +1,6 @@
-import { ScheduledHandler, SQSHandler } from 'aws-lambda'
+import type { ScheduledHandler, SQSHandler } from 'aws-lambda'
 import { runScheduledTask } from '@pikku/core/scheduler'
-import { APIGatewayProxyEvent } from 'aws-lambda'
+import type { APIGatewayProxyEvent } from 'aws-lambda'
 import { runFetch } from '@pikku/lambda/http'
 import { runSQSQueueWorker } from '@pikku/lambda/queue'
 import { coldStart } from './cold-start.js'

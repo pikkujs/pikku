@@ -1,4 +1,4 @@
-import { HTTPMethod } from '../http.types.js'
+import type { HTTPMethod } from '../http.types.js'
 import { PathToRegexRouter } from './path-to-regex.js'
 
 export type MatchResult = {

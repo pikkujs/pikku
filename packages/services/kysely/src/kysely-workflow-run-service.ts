@@ -4,7 +4,7 @@ import type {
   WorkflowStatus,
   WorkflowRunService,
 } from '@pikku/core/workflow'
-import { Kysely } from 'kysely'
+import type { Kysely } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 

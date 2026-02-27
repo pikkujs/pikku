@@ -1,17 +1,17 @@
-import { PikkuPackageState } from './index.js'
+import type { PikkuPackageState } from './index.js'
 import type {
   CoreSingletonServices,
   CreateWireServices,
 } from './types/core.types.js'
-import { HTTPWiringsMeta } from './wirings/http/http.types.js'
-import {
+import type { HTTPWiringsMeta } from './wirings/http/http.types.js'
+import type {
   MCPResourceMeta,
   MCPToolMeta,
   MCPPromptMeta,
 } from './wirings/mcp/mcp.types.js'
-import { AIAgentMeta } from './wirings/ai-agent/ai-agent.types.js'
-import { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
-import { TriggerMeta } from './wirings/trigger/trigger.types.js'
+import type { AIAgentMeta } from './wirings/ai-agent/ai-agent.types.js'
+import type { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
+import type { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
 const PIKKU_STATE_KEY = Symbol.for('@pikku/core/state')
 

@@ -1,6 +1,7 @@
 import * as uWS from 'uWebSockets.js'
 
-import { CoreConfig, stopSingletonServices } from '@pikku/core'
+import type { CoreConfig } from '@pikku/core'
+import { stopSingletonServices } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
 import { pikkuHTTPHandler, pikkuWebsocketHandler } from '@pikku/uws-handler'

@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
 import { pikkuWorkflowFunc } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
-import { type Todo, type Priority } from '../schemas.js'
+import type { Todo, Priority } from '../schemas.js'
 
 /**
  * Helper function: Send notification (mocked).

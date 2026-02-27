@@ -1,5 +1,5 @@
-import { PikkuChannelHandler } from '../channel.types.js'
-import { EventHubService } from '../eventhub-service.js'
+import type { PikkuChannelHandler } from '../channel.types.js'
+import type { EventHubService } from '../eventhub-service.js'
 
 /**
  * Implementation of the SubscriptionService interface.

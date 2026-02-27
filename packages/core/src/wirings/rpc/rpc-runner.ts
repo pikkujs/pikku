@@ -1,4 +1,4 @@
-import {
+import type {
   CoreServices,
   CoreSingletonServices,
   PikkuWire,
@@ -9,7 +9,7 @@ import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuError } from '../../errors/error-handler.js'
-import { PikkuRPC, ResolvedFunction } from './rpc-types.js'
+import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { encryptJSON } from '../../crypto-utils.js'
 

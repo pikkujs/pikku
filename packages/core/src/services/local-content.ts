@@ -1,8 +1,8 @@
 import { createReadStream, createWriteStream, promises } from 'fs'
 import { mkdir } from 'fs/promises'
-import { ContentService, Logger } from '@pikku/core/services'
+import type { ContentService, Logger } from '@pikku/core/services'
 import { pipeline } from 'stream/promises'
-import { Readable } from 'stream'
+import type { Readable } from 'stream'
 
 export interface LocalContentConfig {
   localFileUploadPath: string

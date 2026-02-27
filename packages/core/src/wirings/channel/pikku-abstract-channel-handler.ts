@@ -1,4 +1,4 @@
-import { PikkuChannel, PikkuChannelHandler } from './channel.types.js'
+import type { PikkuChannel, PikkuChannelHandler } from './channel.types.js'
 
 export abstract class PikkuAbstractChannelHandler<
   OpeningData = unknown,

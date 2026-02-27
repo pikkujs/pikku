@@ -2,11 +2,11 @@ import {
   ApiGatewayManagementApiClient,
   PostToConnectionCommand,
 } from '@aws-sdk/client-apigatewaymanagementapi'
-import { Logger } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/services'
 import { getSingletonServices } from '@pikku/core'
-import { APIGatewayEvent } from 'aws-lambda'
+import type { APIGatewayEvent } from 'aws-lambda'
 import { createLambdaChannelHandlerFactory } from './lambda-channel-handler.js'
-import { ChannelStore } from '@pikku/core/channel'
+import type { ChannelStore } from '@pikku/core/channel'
 
 export const sendMessage = async (
   logger: Logger,

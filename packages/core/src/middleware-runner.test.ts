@@ -6,7 +6,7 @@ import {
   runMiddleware,
 } from './middleware-runner.js'
 import { resetPikkuState } from './pikku-state.js'
-import { CorePikkuMiddleware } from './types/core.types.js'
+import type { CorePikkuMiddleware } from './types/core.types.js'
 
 beforeEach(() => {
   resetPikkuState()

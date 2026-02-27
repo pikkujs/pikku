@@ -3,7 +3,7 @@ import {
   getPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
-import { AddWiring } from '../types.js'
+import type { AddWiring } from '../types.js'
 import {
   extractFunctionName,
   makeContextBasedId,

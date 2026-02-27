@@ -1,6 +1,8 @@
-import { CoreUserSession } from '@pikku/core'
-import { Channel, ChannelStore } from '@pikku/core/channel'
-import { Kysely, sql } from 'kysely'
+import type { CoreUserSession } from '@pikku/core'
+import type { Channel } from '@pikku/core/channel'
+import { ChannelStore } from '@pikku/core/channel'
+import type { Kysely } from 'kysely'
+import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 

@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import * as assert from 'assert'
 import { parseCLIArguments, generateCommandHelp } from './command-parser.js'
-import { CLIMeta } from './cli.types.js'
+import type { CLIMeta } from './cli.types.js'
 
 const testMeta: CLIMeta = {
   programs: {

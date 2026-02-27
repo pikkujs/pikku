@@ -1,7 +1,7 @@
 import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
-import { PikkuCLIConfig } from '../../types/config.js'
-import { CLILogger } from '../services/cli-logger.service.js'
+import type { PikkuCLIConfig } from '../../types/config.js'
+import type { CLILogger } from '../services/cli-logger.service.js'
 
 const CONFIG_DIR_FILES = [
   'nextBackendFile',

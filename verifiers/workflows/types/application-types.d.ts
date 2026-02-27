@@ -8,7 +8,7 @@ import type {
   QueueService,
   SecretService,
 } from '@pikku/core'
-import { EventHubTopics } from './eventhub-topics.js'
+import type { EventHubTopics } from './eventhub-topics.js'
 
 export interface Config extends CoreConfig {}
 

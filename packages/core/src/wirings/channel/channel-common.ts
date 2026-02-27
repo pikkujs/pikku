@@ -1,10 +1,10 @@
-import {
+import type {
   CoreSingletonServices,
   CorePikkuMiddleware,
   PikkuWire,
   MiddlewareMetadata,
 } from '../../types/core.types.js'
-import { CoreChannel, ChannelMessageMeta } from './channel.types.js'
+import type { CoreChannel, ChannelMessageMeta } from './channel.types.js'
 import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
 import { runPikkuFuncDirectly } from '../../function/function-runner.js'
 import {

@@ -1,5 +1,10 @@
-import { InspectorState, InspectorFilters, InspectorLogger } from '../types.js'
-import { PikkuWiringTypes, parseVersionedId } from '@pikku/core'
+import type {
+  InspectorState,
+  InspectorFilters,
+  InspectorLogger,
+} from '../types.js'
+import type { PikkuWiringTypes } from '@pikku/core'
+import { parseVersionedId } from '@pikku/core'
 import { aggregateRequiredServices } from './post-process.js'
 
 // Module-level Set to track warned groups across multiple filter calls

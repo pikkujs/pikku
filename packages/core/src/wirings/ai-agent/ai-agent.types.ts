@@ -1,8 +1,8 @@
-import {
+import type {
   CorePermissionGroup,
   CorePikkuPermission,
 } from '../../function/functions.types.js'
-import {
+import type {
   CorePikkuMiddleware,
   MiddlewareMetadata,
   PermissionMetadata,

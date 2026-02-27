@@ -1,5 +1,5 @@
-import { SerializedError, CommonWireMeta } from '../../types/core.types.js'
-import { CorePikkuFunctionConfig } from '../../function/functions.types.js'
+import type { SerializedError, CommonWireMeta } from '../../types/core.types.js'
+import type { CorePikkuFunctionConfig } from '../../function/functions.types.js'
 
 // Re-export WorkflowService from services module
 export type { WorkflowService } from '../../services/workflow-service.js'

@@ -1,5 +1,5 @@
-import { JSONValue } from '@pikku/core'
-import { InspectorDiagnostic, InspectorState } from '../types.js'
+import type { JSONValue } from '@pikku/core'
+import type { InspectorDiagnostic, InspectorState } from '../types.js'
 import { TypesMap } from '../types-map.js'
 
 /**

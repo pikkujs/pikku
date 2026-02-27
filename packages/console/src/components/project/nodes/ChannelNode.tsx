@@ -1,5 +1,5 @@
 import React from 'react'
-import { NodeProps } from 'reactflow'
+import type { NodeProps } from 'reactflow'
 import { BaseNode } from './BaseNode'
 
 interface ChannelNodeData {

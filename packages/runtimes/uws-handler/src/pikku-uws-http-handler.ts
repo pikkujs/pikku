@@ -1,12 +1,8 @@
-import * as uWS from 'uWebSockets.js'
+import type * as uWS from 'uWebSockets.js'
 
 import type { Logger } from '@pikku/core/services'
-import type { HTTPMethod } from '@pikku/core/http'
-import {
-  fetchData,
-  logRoutes as logRegisterRoutes,
-  RunHTTPWiringOptions,
-} from '@pikku/core/http'
+import type { HTTPMethod, RunHTTPWiringOptions } from '@pikku/core/http'
+import { fetchData, logRoutes as logRegisterRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 
 import { UWSPikkuHTTPRequest } from './uws-pikku-http-request.js'

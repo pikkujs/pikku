@@ -1,12 +1,12 @@
 import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
-import { CorePikkuPermission } from '../../function/functions.types.js'
+import type { CorePikkuPermission } from '../../function/functions.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../../schema.js'
-import { SessionService } from '../../services/user-session-service.js'
-import { CorePikkuMiddleware } from '../../types/core.types.js'
+import type { SessionService } from '../../services/user-session-service.js'
+import type { CorePikkuMiddleware } from '../../types/core.types.js'
 import { httpRouter } from '../http/routers/http-router.js'
-import {
+import type {
   ChannelMeta,
   CoreChannel,
   RunChannelOptions,

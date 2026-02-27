@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { authAPIKey } from './auth-apikey.js'
 import { resetPikkuState } from '../pikku-state.js'
-import { CoreUserSession } from '../types/core.types.js'
+import type { CoreUserSession } from '../types/core.types.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Node, NodeProps } from 'reactflow'
+import type { Node, NodeProps } from 'reactflow'
 import { FlowNode } from './FlowNode'
 import { Filter } from 'lucide-react'
 import { usePanelContext } from '@/context/PanelContext'
