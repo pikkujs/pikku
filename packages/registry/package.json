@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@pikku/core": "^0.12.0",
-    "@pikku/schema-cfworker": "^0.12.0",
     "@pikku/fastify": "^0.12.0",
+    "@pikku/schema-cfworker": "^0.12.0",
     "fastify": "^5.7.4",
     "tar": "^7.0.0",
     "tslib": "^2.8.1",
