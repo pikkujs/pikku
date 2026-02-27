@@ -9,6 +9,8 @@ import {
 const WARMUP = 10_000
 const ITERATIONS = 500_000
 
+const jsonMode = process.argv.includes('--json')
+
 async function benchmarkScenario(scenario: Scenario) {
   for (let i = 0; i < WARMUP; i++) {
     const req = createRequest(scenario)
@@ -46,20 +48,40 @@ async function benchmarkScenario(scenario: Scenario) {
 async function main() {
   setupBenchmarkRoutes()
 
-  console.log(
-    `\nPikku fetch() benchmark — ${WARMUP} warmup, ${ITERATIONS} iterations\n`
-  )
+  if (!jsonMode) {
+    console.log(
+      `\nPikku fetch() benchmark — ${WARMUP} warmup, ${ITERATIONS} iterations\n`
+    )
+  }
 
   const results = []
   for (const scenario of scenarios) {
-    process.stdout.write(`  Running ${scenario.name}...`)
+    if (!jsonMode) {
+      process.stdout.write(`  Running ${scenario.name}...`)
+    }
     const result = await benchmarkScenario(scenario)
-    process.stdout.write(` done\n`)
+    if (!jsonMode) {
+      process.stdout.write(` done\n`)
+    }
     results.push(result)
   }
 
-  console.log('')
-  console.table(results)
+  if (jsonMode) {
+    const collected: Record<string, any> = {}
+    for (const r of results) {
+      collected[r.scenario] = {
+        requests_per_sec: r['req/s'],
+        latency_avg_ms: r['avg (ms)'],
+        latency_p99_ms: r['p99 (ms)'],
+      }
+    }
+    console.log(
+      JSON.stringify({ runtime: 'pikku-fetch', scenarios: collected })
+    )
+  } else {
+    console.log('')
+    console.table(results)
+  }
 }
 
 main().catch((err) => {

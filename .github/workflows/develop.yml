@@ -32,6 +32,7 @@ jobs:
       - run: cd packages/console && yarn generate && yarn tsc --noEmit
       - run: yarn build:console
       # - run: yarn typedoc
+      - run: yarn benchmark:verify
 
       - name: Save build output (for later jobs)
         uses: actions/upload-artifact@v4

@@ -7,6 +7,8 @@ const CONNECTIONS = 100
 const DURATION = 10
 const PIPELINING = 10
 
+const jsonMode = process.argv.includes('--json')
+
 function readBody(res: uWS.HttpResponse, cb: (body: string) => void) {
   let buffer = ''
   res.onData((chunk, isLast) => {
@@ -103,18 +105,38 @@ async function main() {
     })
   })
 
-  console.log(`\nBaseline uWS server on :${PORT}`)
-  console.log(
-    `  autocannon: ${CONNECTIONS} connections, ${DURATION}s, pipelining ${PIPELINING}\n`
-  )
+  if (!jsonMode) {
+    console.log(`\nBaseline uWS server on :${PORT}`)
+    console.log(
+      `  autocannon: ${CONNECTIONS} connections, ${DURATION}s, pipelining ${PIPELINING}\n`
+    )
+  }
+
+  const collected: Record<string, any> = {}
 
   for (const scenario of scenarios) {
-    console.log(
-      `--- ${scenario.name} (${scenario.method.toUpperCase()} ${scenario.url}) ---`
-    )
+    if (!jsonMode) {
+      console.log(
+        `--- ${scenario.name} (${scenario.method.toUpperCase()} ${scenario.url}) ---`
+      )
+    }
     const result = await runAutocannonScenario(scenario)
-    process.stdout.write(autocannon.printResult(result))
-    console.log('')
+    if (jsonMode) {
+      collected[scenario.name] = {
+        requests_per_sec: result.requests.average,
+        latency_avg_ms: result.latency.average,
+        latency_p99_ms: result.latency.p99,
+      }
+    } else {
+      process.stdout.write(autocannon.printResult(result))
+      console.log('')
+    }
+  }
+
+  if (jsonMode) {
+    console.log(
+      JSON.stringify({ runtime: 'baseline-uws', scenarios: collected })
+    )
   }
 
   process.exit(0)

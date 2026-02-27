@@ -1,0 +1,195 @@
+{
+  "timestamp": "2026-02-27T00:20:09.702Z",
+  "node": "v24.11.1",
+  "results": {
+    "pikku-fetch": {
+      "bare": {
+        "requests_per_sec": 184640,
+        "latency_avg_ms": 0.0054,
+        "latency_p99_ms": 0.011
+      },
+      "schema": {
+        "requests_per_sec": 116443,
+        "latency_avg_ms": 0.0086,
+        "latency_p99_ms": 0.0182
+      },
+      "middleware": {
+        "requests_per_sec": 158030,
+        "latency_avg_ms": 0.0063,
+        "latency_p99_ms": 0.0127
+      },
+      "full": {
+        "requests_per_sec": 100086,
+        "latency_avg_ms": 0.01,
+        "latency_p99_ms": 0.0197
+      },
+      "param": {
+        "requests_per_sec": 148568,
+        "latency_avg_ms": 0.0067,
+        "latency_p99_ms": 0.0133
+      }
+    },
+    "pikku-express": {
+      "bare": {
+        "requests_per_sec": 43001.6,
+        "latency_avg_ms": 22.89,
+        "latency_p99_ms": 35
+      },
+      "schema": {
+        "requests_per_sec": 32052.8,
+        "latency_avg_ms": 30.89,
+        "latency_p99_ms": 44
+      },
+      "middleware": {
+        "requests_per_sec": 38851.2,
+        "latency_avg_ms": 25.36,
+        "latency_p99_ms": 35
+      },
+      "full": {
+        "requests_per_sec": 29702.4,
+        "latency_avg_ms": 33.4,
+        "latency_p99_ms": 48
+      },
+      "param": {
+        "requests_per_sec": 37651.2,
+        "latency_avg_ms": 26.22,
+        "latency_p99_ms": 39
+      }
+    },
+    "pikku-fastify": {
+      "bare": {
+        "requests_per_sec": 51139.2,
+        "latency_avg_ms": 19.11,
+        "latency_p99_ms": 36
+      },
+      "schema": {
+        "requests_per_sec": 35848.81,
+        "latency_avg_ms": 27.55,
+        "latency_p99_ms": 43
+      },
+      "middleware": {
+        "requests_per_sec": 51449.6,
+        "latency_avg_ms": 19,
+        "latency_p99_ms": 33
+      },
+      "full": {
+        "requests_per_sec": 35305.6,
+        "latency_avg_ms": 28.07,
+        "latency_p99_ms": 42
+      },
+      "param": {
+        "requests_per_sec": 50700.8,
+        "latency_avg_ms": 19.33,
+        "latency_p99_ms": 33
+      }
+    },
+    "pikku-uws": {
+      "bare": {
+        "requests_per_sec": 88307.2,
+        "latency_avg_ms": 10.92,
+        "latency_p99_ms": 19
+      },
+      "schema": {
+        "requests_per_sec": 73998.4,
+        "latency_avg_ms": 13.08,
+        "latency_p99_ms": 24
+      },
+      "middleware": {
+        "requests_per_sec": 85395.2,
+        "latency_avg_ms": 11.19,
+        "latency_p99_ms": 19
+      },
+      "full": {
+        "requests_per_sec": 71801.61,
+        "latency_avg_ms": 13.51,
+        "latency_p99_ms": 23
+      },
+      "param": {
+        "requests_per_sec": 83910.4,
+        "latency_avg_ms": 11.52,
+        "latency_p99_ms": 18
+      }
+    },
+    "baseline-express": {
+      "bare": {
+        "requests_per_sec": 51955.2,
+        "latency_avg_ms": 18.82,
+        "latency_p99_ms": 27
+      },
+      "schema": {
+        "requests_per_sec": 40953.6,
+        "latency_avg_ms": 24.05,
+        "latency_p99_ms": 32
+      },
+      "middleware": {
+        "requests_per_sec": 51254.4,
+        "latency_avg_ms": 19.12,
+        "latency_p99_ms": 30
+      },
+      "full": {
+        "requests_per_sec": 40355.2,
+        "latency_avg_ms": 24.45,
+        "latency_p99_ms": 35
+      },
+      "param": {
+        "requests_per_sec": 49552,
+        "latency_avg_ms": 19.77,
+        "latency_p99_ms": 28
+      }
+    },
+    "baseline-fastify": {
+      "bare": {
+        "requests_per_sec": 81452.8,
+        "latency_avg_ms": 11.77,
+        "latency_p99_ms": 17
+      },
+      "schema": {
+        "requests_per_sec": 47900.8,
+        "latency_avg_ms": 20.48,
+        "latency_p99_ms": 31
+      },
+      "middleware": {
+        "requests_per_sec": 80454.4,
+        "latency_avg_ms": 11.93,
+        "latency_p99_ms": 18
+      },
+      "full": {
+        "requests_per_sec": 47955.2,
+        "latency_avg_ms": 20.46,
+        "latency_p99_ms": 31
+      },
+      "param": {
+        "requests_per_sec": 80966.4,
+        "latency_avg_ms": 11.84,
+        "latency_p99_ms": 17
+      }
+    },
+    "baseline-uws": {
+      "bare": {
+        "requests_per_sec": 175078.4,
+        "latency_avg_ms": 5.28,
+        "latency_p99_ms": 9
+      },
+      "schema": {
+        "requests_per_sec": 156070.4,
+        "latency_avg_ms": 5.91,
+        "latency_p99_ms": 9
+      },
+      "middleware": {
+        "requests_per_sec": 182054.4,
+        "latency_avg_ms": 5.03,
+        "latency_p99_ms": 9
+      },
+      "full": {
+        "requests_per_sec": 155852.8,
+        "latency_avg_ms": 5.93,
+        "latency_p99_ms": 10
+      },
+      "param": {
+        "requests_per_sec": 184460.8,
+        "latency_avg_ms": 4.94,
+        "latency_p99_ms": 8
+      }
+    }
+  }
+}
