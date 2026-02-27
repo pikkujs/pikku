@@ -19,9 +19,9 @@ export const closeWireServices = async (
   )
 }
 
-export const createWeakUID = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
-}
+const _uidPrefix = Date.now().toString(36)
+let _uidCounter = 0
+export const createWeakUID = () => `${_uidPrefix}-${++_uidCounter}`
 
 export const isSerializable = (data: any): boolean => {
   return !(

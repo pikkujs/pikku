@@ -50,7 +50,9 @@ export const cors = pikkuMiddlewareFactory<{
     maxAge = 86400,
   } = {}) => {
     if (origin === '*' && credentials) {
-      throw new Error('CORS misconfiguration: wildcard origin (*) cannot be used with credentials: true')
+      throw new Error(
+        'CORS misconfiguration: wildcard origin (*) cannot be used with credentials: true'
+      )
     }
     return pikkuMiddleware({
       name: 'CORS',

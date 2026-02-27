@@ -31,10 +31,7 @@ import {
   getSingletonServices,
   getCreateWireServices,
 } from '../../pikku-state.js'
-import {
-  PikkuSessionService,
-  createMiddlewareSessionWireProps,
-} from '../../services/user-session-service.js'
+import { PikkuSessionService } from '../../services/user-session-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -372,7 +369,10 @@ const executeRoute = async (
   const wire: PikkuWire = {
     http,
     channel,
-    ...createMiddlewareSessionWireProps(userSession),
+    session: userSession.get(),
+    setSession: (s: any) => userSession.setInitial(s),
+    getSession: () => userSession.get(),
+    hasSessionChanged: () => userSession.sessionChanged,
   }
 
   result = await runPikkuFunc(
@@ -485,18 +485,18 @@ export const fetchData = async <In, Out>(
 ): Promise<Out | void> => {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  const requestId =
-    (request as any).getHeader?.('x-request-id') ||
-    generateRequestId?.() ||
-    createWeakUID()
   let wireServices: WireServices<typeof singletonServices> | undefined
   let result: Out
 
   // Combine the request and response into one wire object
-  const http = createHTTPWire(
-    request instanceof Request ? new PikkuFetchHTTPRequest(request) : request,
-    response
-  )
+  const pikkuRequest =
+    request instanceof Request ? new PikkuFetchHTTPRequest(request) : request
+  let requestId: string | null = null
+  try {
+    requestId = pikkuRequest.header('x-request-id')
+  } catch {}
+  requestId = requestId || generateRequestId?.() || createWeakUID()
+  const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
 

@@ -91,8 +91,14 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
   // }
 
   public redirect(location: string, status: number = 302): this {
-    if (!location.startsWith('/') && !location.startsWith('https://') && !location.startsWith('http://')) {
-      throw new Error('Invalid redirect location: must be a relative path or absolute URL')
+    if (
+      !location.startsWith('/') &&
+      !location.startsWith('https://') &&
+      !location.startsWith('http://')
+    ) {
+      throw new Error(
+        'Invalid redirect location: must be a relative path or absolute URL'
+      )
     }
     this.#statusCode = status
     this.header('Location', location)

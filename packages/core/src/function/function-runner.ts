@@ -167,11 +167,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
     packageName?: string | null
   }
 ): Promise<Out> => {
-  wire = {
-    ...wire,
-    wireType: wire.wireType ?? wireType,
-    wireId: wire.wireId ?? wireId,
-  }
+  wire.wireType ??= wireType
+  wire.wireId ??= wireId
 
   const funcMap = pikkuState(packageName, 'function', 'functions')
   let funcConfig = funcMap.get(funcName)
@@ -228,23 +225,27 @@ export const runPikkuFunc = async <In = any, Out = any>(
       : wire
 
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
-  const mergedInheritedPermissions: PermissionMetadata[] = [
-    ...(inheritedPermissions || []),
-    ...(tags?.map((tag) => ({ type: 'tag' as const, tag })) || []),
-  ]
+  let mergedInheritedPermissions: PermissionMetadata[]
+  if (tags && tags.length > 0) {
+    mergedInheritedPermissions = [
+      ...(inheritedPermissions || []),
+      ...tags.map((tag) => ({ type: 'tag' as const, tag })),
+    ]
+  } else {
+    mergedInheritedPermissions = inheritedPermissions || []
+  }
 
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
-    const functionWireProps = sessionService
-      ? createFunctionSessionWireProps(sessionService)
-      : undefined
-
-    const wireWithSession: PikkuWire = {
-      ...resolvedWire,
-      ...functionWireProps,
+    if (sessionService) {
+      resolvedWire.session = sessionService.freezeInitial()
+      resolvedWire.setSession = (s: any) => sessionService.set(s)
+      resolvedWire.clearSession = () => sessionService.clear()
+      resolvedWire.getSession = () => sessionService.get()
+      resolvedWire.hasSessionChanged = () => sessionService.sessionChanged
     }
 
-    const session = wireWithSession.session
+    const session = resolvedWire.session
 
     if (funcMeta.sessionless) {
       if (wiringAuth === true || funcConfig.auth === true) {
@@ -291,32 +292,51 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
-    await runPermissions(wireType, wireId, {
-      wireInheritedPermissions: mergedInheritedPermissions,
-      wirePermissions: wirePermissions,
-      funcInheritedPermissions: funcMeta.permissions,
-      funcPermissions: funcConfig.permissions,
-      services: resolvedSingletonServices,
-      wire: { ...wireWithSession, rpc: undefined } as any,
-      data: actualData,
-      packageName,
-    })
+    if (
+      mergedInheritedPermissions.length > 0 ||
+      wirePermissions ||
+      funcMeta.permissions ||
+      funcConfig.permissions
+    ) {
+      await runPermissions(wireType, wireId, {
+        wireInheritedPermissions: mergedInheritedPermissions,
+        wirePermissions: wirePermissions,
+        funcInheritedPermissions: funcMeta.permissions,
+        funcPermissions: funcConfig.permissions,
+        services: resolvedSingletonServices,
+        wire: resolvedWire as any,
+        data: actualData,
+        packageName,
+      })
+    }
 
     const wireServices = await resolvedCreateWireServices?.(
       resolvedSingletonServices,
-      wireWithSession
+      resolvedWire
     )
     try {
-      const services = { ...resolvedSingletonServices, ...wireServices }
-      const rpc = rpcService.getContextRPCService(services, wireWithSession, {
-        sessionService,
+      const services =
+        wireServices && Object.keys(wireServices).length > 0
+          ? { ...resolvedSingletonServices, ...wireServices }
+          : resolvedSingletonServices
+      Object.defineProperty(resolvedWire, 'rpc', {
+        get() {
+          const rpc = rpcService.getContextRPCService(services, resolvedWire, {
+            sessionService,
+          })
+          Object.defineProperty(resolvedWire, 'rpc', {
+            value: rpc,
+            writable: true,
+            configurable: true,
+          })
+          return rpc
+        },
+        configurable: true,
+        enumerable: true,
       })
-      return await funcConfig.func(services, actualData, {
-        ...wireWithSession,
-        rpc,
-      })
+      return await funcConfig.func(services, actualData, resolvedWire)
     } finally {
-      if (wireServices) {
+      if (wireServices && Object.keys(wireServices).length > 0) {
         await closeWireServices(resolvedSingletonServices.logger, wireServices)
       }
     }
