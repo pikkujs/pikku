@@ -27,7 +27,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
         ? null
         : getFileImportRelativePath(typesFile, file, packageMappings)
 
-    // Node and trigger types are included for external packages
+    // Node and trigger types are included for addon packages
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
 

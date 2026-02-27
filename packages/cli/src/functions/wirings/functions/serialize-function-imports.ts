@@ -6,7 +6,7 @@ export const serializeFunctionImports = (
   functionsMap: Map<string, { path: string; exportedName: string }>,
   functionsMeta: FunctionsMeta,
   packageMappings: Record<string, string> = {},
-  /** Package name for external packages (e.g., '@pikku/templates-function-addon') */
+  /** Package name for addon packages (e.g., '@pikku/templates-function-addon') */
   addonName?: string
 ) => {
   const serializedImports: string[] = [

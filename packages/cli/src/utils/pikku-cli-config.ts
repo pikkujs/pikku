@@ -196,7 +196,7 @@ const _getPikkuCLIConfig = async (
       result.channelsTypesFile = join(channelDir, 'pikku-channel-types.gen.ts')
     }
 
-    // RPC (internal and external)
+    // RPC (internal and addon)
     if (!result.rpcInternalWiringMetaFile) {
       result.rpcInternalWiringMetaFile = join(
         rpcDir,

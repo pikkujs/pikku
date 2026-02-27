@@ -7,7 +7,7 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const { addonName, packageMappings, packageFile } = config
 
-    // Only generate for external packages
+    // Only generate for addon packages
     if (!addonName) {
       logger.debug({
         message:

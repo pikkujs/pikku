@@ -1,13 +1,13 @@
 import * as ts from 'typescript'
 
 /**
- * Resolve the external package name from an imported identifier.
+ * Resolve the addon package name from an imported identifier.
  * Checks if the identifier's import module specifier matches any
- * configured external package.
+ * configured addon package.
  *
  * This is a general utility — any wire handler that processes a `func`
  * property can use it to detect when the function comes from an
- * external package.
+ * addon package.
  */
 export const resolveAddonName = (
   identifier: ts.Identifier,

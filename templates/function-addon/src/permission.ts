@@ -1,34 +1,33 @@
 import { pikkuPermission, addPermission } from '../.pikku/pikku-types.gen.js'
 
 /**
- * External package permission that logs permission checks
+ * Addon package permission that logs permission checks
  */
-export const externalPermission = pikkuPermission(
+export const addonPermission = pikkuPermission(
   async ({ logger }, _data, _wire) => {
     logger.info({
-      type: 'external-function-permission',
-      name: 'external',
+      type: 'addon-function-permission',
+      name: 'addon',
     })
     return true // Always allow for testing
   }
 )
 
 /**
- * Tag permission for external functions
+ * Tag permission for addon functions
  */
 export const tagPermission = pikkuPermission(
   async ({ logger }, _data, _wire) => {
     logger.info({
-      type: 'external-tag-permission',
-      name: 'external',
+      type: 'addon-tag-permission',
+      name: 'addon',
     })
     return true // Always allow for testing
   }
 )
 
 /**
- * Register 'external' tag permission
- * This will apply to all functions with the 'external' tag
+ * Register 'addon' tag permission
+ * This will apply to all functions with the 'addon' tag
  */
-export const externalTagPermission = () =>
-  addPermission('external', [tagPermission])
+export const addonTagPermission = () => addPermission('addon', [tagPermission])

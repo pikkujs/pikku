@@ -157,7 +157,7 @@ export interface PikkuPackageState {
     } | null
   }
   package: {
-    /** Service factory functions for external packages */
+    /** Service factory functions for addon packages */
     factories: {
       createConfig?: CreateConfig<CoreConfig>
       createSingletonServices?: CreateSingletonServices<
