@@ -1,6 +1,6 @@
 ---
 name: pikku-websocket
-description: "Use when adding real-time features, WebSocket channels, live updates, chat, or pub/sub to a Pikku app. Covers wireChannel, action routing, auth, EventHub pub/sub, channel middleware, and generated WebSocket client."
+description: 'Use when adding real-time features, WebSocket channels, live updates, chat, or pub/sub to a Pikku app. Covers wireChannel, action routing, auth, EventHub pub/sub, channel middleware, and generated WebSocket client.'
 ---
 
 # Pikku WebSocket Wiring
@@ -43,12 +43,10 @@ wireChannel({
 ```typescript
 import { pikkuChannelMiddleware } from '@pikku/core'
 
-const middleware = pikkuChannelMiddleware(
-  async (services, event, next) => {
-    // Transform or filter events before/after
-    await next(event)  // Pass modified event, or next(null) to drop
-  }
-)
+const middleware = pikkuChannelMiddleware(async (services, event, next) => {
+  // Transform or filter events before/after
+  await next(event) // Pass modified event, or next(null) to drop
+})
 ```
 
 ### `addChannelMiddleware(domain, middlewares)`
@@ -68,7 +66,7 @@ wireChannel({
   onDisconnect: async () => {},
   onMessageWiring: {
     create: { func: createTodo },
-    list:   { func: listTodos, auth: false },
+    list: { func: listTodos, auth: false },
   },
 })
 ```
@@ -92,9 +90,9 @@ wireChannel({
   onConnect: async () => {},
   onDisconnect: async () => {},
   onMessageWiring: {
-    auth:      { func: authenticate, auth: false },  // No session required
-    subscribe: { func: subscribeTodos },              // Session required
-    create:    { func: createTodo },
+    auth: { func: authenticate, auth: false }, // No session required
+    subscribe: { func: subscribeTodos }, // Session required
+    create: { func: createTodo },
   },
 })
 ```
@@ -221,8 +219,8 @@ wireChannel({
   },
   onDisconnect: async () => {},
   onMessageWiring: {
-    auth:    { func: authenticate, auth: false },
-    send:    { func: sendMessage },
+    auth: { func: authenticate, auth: false },
+    send: { func: sendMessage },
     history: { func: listMessages, auth: false },
   },
 })

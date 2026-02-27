@@ -1,6 +1,6 @@
 ---
 name: pikku-queue
-description: "Use when adding background job processing, async task queues, or distributed workers to a Pikku app. Covers wireQueueWorker, job enqueuing, progress tracking, retries, BullMQ and PgBoss adapters."
+description: 'Use when adding background job processing, async task queues, or distributed workers to a Pikku app. Covers wireQueueWorker, job enqueuing, progress tracking, retries, BullMQ and PgBoss adapters.'
 ---
 
 # Pikku Queue Wiring
@@ -50,6 +50,7 @@ const jobId = await queue.add(queueName, data, options?)
 ```
 
 Options:
+
 ```typescript
 {
   priority?: number,       // Higher = processed first
@@ -120,15 +121,19 @@ wireQueueWorker({
 })
 
 // Enqueue with retry options
-const jobId = await queue.add('todo-reminders', {
-  todoId: 'abc-123',
-  userId: 'user-456',
-}, {
-  priority: 10,
-  delay: 5000,
-  attempts: 3,
-  backoff: { type: 'exponential', delay: 1000 },
-})
+const jobId = await queue.add(
+  'todo-reminders',
+  {
+    todoId: 'abc-123',
+    userId: 'user-456',
+  },
+  {
+    priority: 10,
+    delay: 5000,
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 1000 },
+  }
+)
 ```
 
 ### Type-Safe Queue Publishing
@@ -146,13 +151,14 @@ const jobId = await queue.add('todo-reminders', {
 })
 
 const job = await queue.getJob('todo-reminders', jobId)
-const status = await job.status()  // 'waiting' | 'active' | 'completed' | 'failed'
+const status = await job.status() // 'waiting' | 'active' | 'completed' | 'failed'
 const result = await job.waitForCompletion(30_000)
 ```
 
 ### Queue Adapters
 
 **BullMQ** (Redis-based):
+
 ```typescript
 import { BullMQQueueService } from '@pikku/queue-bullmq'
 
@@ -162,6 +168,7 @@ const queueService = new BullMQQueueService({
 ```
 
 **PgBoss** (PostgreSQL-based):
+
 ```typescript
 import { PgBossQueueService } from '@pikku/queue-pg-boss'
 

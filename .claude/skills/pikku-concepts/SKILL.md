@@ -8,6 +8,7 @@ description: 'Foundational guide to Pikku framework concepts. Use this skill whe
 Pikku is a TypeScript framework that separates business logic from transport mechanisms. You define a function once, then wire it to HTTP, WebSocket, queues, schedulers, MCP, CLI, or RPC — without the function knowing how it's being called.
 
 For deep-dive on each topic, see the dedicated skills:
+
 - **Wiring**: `pikku-http`, `pikku-websocket`, `pikku-rpc`, `pikku-mcp`, `pikku-queue`, `pikku-cron`, `pikku-trigger`, `pikku-cli`, `pikku-ai-agent`, `pikku-workflow`
 - **Infrastructure**: `pikku-services`, `pikku-security`, `pikku-config`
 - **Project introspection**: `pikku-info`
@@ -39,22 +40,22 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 
 ## Concept Mapping: Generic Backend → Pikku
 
-| Generic Backend Concept                 | Pikku Equivalent                                                | Skill               |
-| --------------------------------------- | --------------------------------------------------------------- | -------------------- |
-| **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | (this skill)         |
-| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-http`         |
-| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-security`     |
-| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-security`     |
-| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-security`     |
-| **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | (this skill)         |
-| **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`     |
-| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-websocket`    |
-| **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-queue`        |
-| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-cron`         |
-| **Module / Feature grouping**           | Tags + wiring files                                             | (this skill)         |
-| **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | (this skill)         |
-| **Type-safe API client**                | `npx pikku prebuild` generates clients                          | (this skill)         |
-| **Secrets / Config**                    | `wireSecret`, `wireVariable`, `services.variables`              | `pikku-config`       |
+| Generic Backend Concept                 | Pikku Equivalent                                                | Skill             |
+| --------------------------------------- | --------------------------------------------------------------- | ----------------- |
+| **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | (this skill)      |
+| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-http`      |
+| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-security`  |
+| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-security`  |
+| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-security`  |
+| **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | (this skill)      |
+| **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`  |
+| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-websocket` |
+| **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-queue`     |
+| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-cron`      |
+| **Module / Feature grouping**           | Tags + wiring files                                             | (this skill)      |
+| **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | (this skill)      |
+| **Type-safe API client**                | `npx pikku prebuild` generates clients                          | (this skill)      |
+| **Secrets / Config**                    | `wireSecret`, `wireVariable`, `services.variables`              | `pikku-config`    |
 
 ## Functions
 
@@ -145,7 +146,11 @@ const config = await createConfig()
 const singletonServices = await createSingletonServices(config)
 
 // Pick your runtime:
-const server = new PikkuFastifyServer(config, singletonServices, createWireServices)
+const server = new PikkuFastifyServer(
+  config,
+  singletonServices,
+  createWireServices
+)
 // or: new PikkuExpressServer(config, singletonServices, createWireServices)
 // or: pikkuAWSLambdaHandler(singletonServices)
 // or: PikkuCloudflareHandler(singletonServices)
@@ -230,7 +235,7 @@ expect(result.todos).toHaveLength(3)
 | Package                       | Use Case                              |
 | ----------------------------- | ------------------------------------- |
 | `@pikku/express-server`       | Express standalone server             |
-| `@pikku/express-middleware`    | Express as middleware in existing app  |
+| `@pikku/express-middleware`   | Express as middleware in existing app |
 | `@pikku/fastify-server`       | Fastify standalone                    |
 | `@pikku/fastify-plugin`       | Fastify plugin                        |
 | `@pikku/next`                 | Next.js API routes                    |

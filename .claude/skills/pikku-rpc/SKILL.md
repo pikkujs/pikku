@@ -1,6 +1,6 @@
 ---
 name: pikku-rpc
-description: "Use when making internal function-to-function calls within a Pikku app, composing functions, or exposing RPC endpoints. Covers rpc.invoke, rpc.remote, rpc.exposed, and generated RPC client."
+description: 'Use when making internal function-to-function calls within a Pikku app, composing functions, or exposing RPC endpoints. Covers rpc.invoke, rpc.remote, rpc.exposed, and generated RPC client.'
 ---
 
 # Pikku RPC Wiring
@@ -22,12 +22,12 @@ See `pikku-concepts` for the core mental model.
 
 Four ways to call functions via RPC:
 
-| Method | Purpose |
-|--------|---------|
-| `rpc.invoke(name, data)` | Internal call to any wired function |
-| `rpc.remote(name, data)` | Remote call via DeploymentService |
-| `rpc.exposed(name, data)` | Call functions marked with `expose: true` |
-| `rpc.startWorkflow(name, input)` | Start a workflow |
+| Method                           | Purpose                                   |
+| -------------------------------- | ----------------------------------------- |
+| `rpc.invoke(name, data)`         | Internal call to any wired function       |
+| `rpc.remote(name, data)`         | Remote call via DeploymentService         |
+| `rpc.exposed(name, data)`        | Call functions marked with `expose: true` |
+| `rpc.startWorkflow(name, input)` | Start a workflow                          |
 
 ### Exposed Functions
 
@@ -36,7 +36,7 @@ Mark a function as externally callable via RPC:
 ```typescript
 const greet = pikkuSessionlessFunc({
   title: 'Greet',
-  expose: true,  // ← callable via rpc.exposed()
+  expose: true, // ← callable via rpc.exposed()
   func: async ({}, { name }) => {
     return { message: `Hello, ${name}!` }
   },
@@ -86,10 +86,10 @@ const processOrder = pikkuFunc({
 
 ### When to Use RPC vs Direct Imports
 
-| Approach | Use When |
-|----------|----------|
+| Approach       | Use When                                                                                     |
+| -------------- | -------------------------------------------------------------------------------------------- |
 | `rpc.invoke()` | Cross-domain calls, maintaining separation of concerns, function may be in different package |
-| Direct import | Same module, tightly coupled logic, performance critical |
+| Direct import  | Same module, tightly coupled logic, performance critical                                     |
 
 RPC calls go through Pikku's middleware and permission pipeline. Direct imports skip them.
 

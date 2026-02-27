@@ -1,6 +1,6 @@
 ---
 name: pikku-mcp
-description: "Use when exposing Pikku functions as MCP tools, resources, or prompts for AI assistants. Covers mcp: true flag, pikkuMCPResourceFunc, pikkuMCPPromptFunc, and MCP wire object."
+description: 'Use when exposing Pikku functions as MCP tools, resources, or prompts for AI assistants. Covers mcp: true flag, pikkuMCPResourceFunc, pikkuMCPPromptFunc, and MCP wire object.'
 ---
 
 # Pikku MCP Wiring
@@ -58,10 +58,12 @@ const prompt = pikkuMCPPromptFunc({
   description: string,
   func: async (services, data) => {
     // Must return array of MCP messages
-    return [{
-      role: 'user',
-      content: { type: 'text', text: '...' },
-    }]
+    return [
+      {
+        role: 'user',
+        content: { type: 'text', text: '...' },
+      },
+    ]
   },
 })
 ```
@@ -71,9 +73,9 @@ const prompt = pikkuMCPPromptFunc({
 Inside MCP-enabled functions, `wire.mcp` provides:
 
 ```typescript
-mcp.uri              // Current resource URI (for resources)
-mcp.sendResourceUpdated(uri)   // Notify clients a resource changed
-mcp.enableTools({ toolName: true })  // Dynamically enable/disable tools
+mcp.uri // Current resource URI (for resources)
+mcp.sendResourceUpdated(uri) // Notify clients a resource changed
+mcp.enableTools({ toolName: true }) // Dynamically enable/disable tools
 ```
 
 ## Usage Patterns
@@ -115,13 +117,15 @@ export const codeReview = pikkuMCPPromptFunc({
   name: 'codeReview',
   description: 'Generate a code review prompt',
   func: async ({}, { filePath, context }) => {
-    return [{
-      role: 'user',
-      content: {
-        type: 'text',
-        text: `Review ${filePath}. Context: ${context}`,
+    return [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Review ${filePath}. Context: ${context}`,
+        },
       },
-    }]
+    ]
   },
 })
 ```
@@ -206,13 +210,15 @@ export const planDayPrompt = pikkuMCPPromptFunc({
   description: 'Create a daily plan based on pending todos',
   func: async ({ db }, {}) => {
     const { todos } = await db.listTodos('pending')
-    return [{
-      role: 'user',
-      content: {
-        type: 'text',
-        text: `Plan my day. Here are my pending todos:\n${todos.map(t => `- ${t.text} (${t.priority})`).join('\n')}`,
+    return [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Plan my day. Here are my pending todos:\n${todos.map((t) => `- ${t.text} (${t.priority})`).join('\n')}`,
+        },
       },
-    }]
+    ]
   },
 })
 ```

@@ -1,6 +1,6 @@
 ---
 name: pikku-http
-description: "Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers wireHTTP, defineHTTPRoutes, route groups, auth, middleware, permissions, SSE, and generated fetch client."
+description: 'Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers wireHTTP, defineHTTPRoutes, route groups, auth, middleware, permissions, SSE, and generated fetch client.'
 ---
 
 # Pikku HTTP Wiring
@@ -75,6 +75,7 @@ wireHTTPRoutes({
 ```
 
 Config cascading rules:
+
 - `basePath` — concatenates down the chain
 - `tags` — merge (union)
 - `auth` — child overrides parent
@@ -82,8 +83,8 @@ Config cascading rules:
 ### `addHTTPMiddleware(pattern, middlewares)`
 
 ```typescript
-addHTTPMiddleware('*', [authBearer()])           // All routes
-addHTTPMiddleware('/api/*', [rateLimit()])        // Pattern match
+addHTTPMiddleware('*', [authBearer()]) // All routes
+addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
 ```
 
 ### `addHTTPPermission(pattern, permissions)`
@@ -120,10 +121,10 @@ wireHTTP({
 const booksRoutes = defineHTTPRoutes({
   tags: ['books'],
   routes: {
-    list:   { method: 'get',    route: '/books',          func: listBooks, auth: false },
-    get:    { method: 'get',    route: '/books/:bookId',  func: getBook },
-    create: { method: 'post',   route: '/books',          func: createBook },
-    delete: { method: 'delete', route: '/books/:bookId',  func: deleteBook },
+    list: { method: 'get', route: '/books', func: listBooks, auth: false },
+    get: { method: 'get', route: '/books/:bookId', func: getBook },
+    create: { method: 'post', route: '/books', func: createBook },
+    delete: { method: 'delete', route: '/books/:bookId', func: deleteBook },
   },
 })
 
@@ -131,9 +132,9 @@ const todosRoutes = defineHTTPRoutes({
   auth: false,
   tags: ['todos'],
   routes: {
-    list:   { method: 'get',  route: '/todos',     func: listTodos },
-    create: { method: 'post', route: '/todos',     func: createTodo },
-    get:    { method: 'get',  route: '/todos/:id', func: getTodo },
+    list: { method: 'get', route: '/todos', func: listTodos },
+    create: { method: 'post', route: '/todos', func: createTodo },
+    get: { method: 'get', route: '/todos/:id', func: getTodo },
   },
 })
 
@@ -178,9 +179,7 @@ addHTTPMiddleware('*', [
 ])
 
 // Scoped middleware
-addHTTPMiddleware('/api/*', [
-  rateLimit({ maxRequests: 100, windowMs: 60_000 }),
-])
+addHTTPMiddleware('/api/*', [rateLimit({ maxRequests: 100, windowMs: 60_000 })])
 
 // Per-route middleware
 wireHTTP({
@@ -286,10 +285,10 @@ import { cors, authBearer } from '@pikku/core/middleware'
 const booksRoutes = defineHTTPRoutes({
   tags: ['books'],
   routes: {
-    list:   { method: 'get',    route: '/books',          func: listBooks, auth: false },
-    get:    { method: 'get',    route: '/books/:bookId',  func: getBook },
-    create: { method: 'post',   route: '/books',          func: createBook },
-    delete: { method: 'delete', route: '/books/:bookId',  func: deleteBook },
+    list: { method: 'get', route: '/books', func: listBooks, auth: false },
+    get: { method: 'get', route: '/books/:bookId', func: getBook },
+    create: { method: 'post', route: '/books', func: createBook },
+    delete: { method: 'delete', route: '/books/:bookId', func: deleteBook },
   },
 })
 

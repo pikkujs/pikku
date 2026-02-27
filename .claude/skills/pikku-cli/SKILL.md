@@ -1,6 +1,6 @@
 ---
 name: pikku-cli
-description: "Use when building CLI commands with Pikku. Covers wireCLI, pikkuCLICommand, subcommands, options, parameters, custom renderers, and nested command groups."
+description: 'Use when building CLI commands with Pikku. Covers wireCLI, pikkuCLICommand, subcommands, options, parameters, custom renderers, and nested command groups.'
 ---
 
 # Pikku CLI Wiring
@@ -68,12 +68,10 @@ pikkuCLICommand({
 ```typescript
 import { pikkuCLIRender } from '@pikku/core/cli'
 
-const renderer = pikkuCLIRender<OutputType>(
-  (services, data) => {
-    // Format and print output to terminal
-    console.log(data)
-  }
-)
+const renderer = pikkuCLIRender<OutputType>((services, data) => {
+  // Format and print output to terminal
+  console.log(data)
+})
 ```
 
 ## Usage Patterns
@@ -162,11 +160,9 @@ wireCLI({
 ### Custom Renderers
 
 ```typescript
-const todoRenderer = pikkuCLIRender<{ todo: Todo }>(
-  (_services, { todo }) => {
-    console.log(`✓ Created: ${todo.text} (priority: ${todo.priority})`)
-  }
-)
+const todoRenderer = pikkuCLIRender<{ todo: Todo }>((_services, { todo }) => {
+  console.log(`✓ Created: ${todo.text} (priority: ${todo.priority})`)
+})
 
 const todosRenderer = pikkuCLIRender<{ todos: Todo[] }>(
   (_services, { todos }) => {
@@ -184,7 +180,7 @@ wireCLI({
   commands: {
     add: pikkuCLICommand({
       func: createTodo,
-      render: todoRenderer,  // Overrides jsonRenderer
+      render: todoRenderer, // Overrides jsonRenderer
     }),
   },
 })
@@ -197,7 +193,11 @@ wireCLI({
 export const createUser = pikkuFunc({
   title: 'Create User',
   func: async ({ db }, { username, email, admin }) => {
-    const user = await db.createUser({ username, email, role: admin ? 'admin' : 'user' })
+    const user = await db.createUser({
+      username,
+      email,
+      role: admin ? 'admin' : 'user',
+    })
     return { user }
   },
 })
@@ -218,16 +218,16 @@ export const deleteUser = pikkuFunc({
 })
 
 // wirings/cli.wiring.ts
-const userRenderer = pikkuCLIRender<{ user: User }>(
-  (_services, { user }) => {
-    console.log(`Created user: ${user.username} (${user.email}) [${user.role}]`)
-  }
-)
+const userRenderer = pikkuCLIRender<{ user: User }>((_services, { user }) => {
+  console.log(`Created user: ${user.username} (${user.email}) [${user.role}]`)
+})
 
 const usersRenderer = pikkuCLIRender<{ users: User[] }>(
   (_services, { users }) => {
     console.log(`Users (${users.length}):`)
-    users.forEach(u => console.log(`  ${u.username} <${u.email}> [${u.role}]`))
+    users.forEach((u) =>
+      console.log(`  ${u.username} <${u.email}> [${u.role}]`)
+    )
   }
 )
 
@@ -242,7 +242,11 @@ wireCLI({
           func: createUser,
           render: userRenderer,
           options: {
-            admin: { description: 'Create as admin', short: 'a', default: false },
+            admin: {
+              description: 'Create as admin',
+              short: 'a',
+              default: false,
+            },
           },
         }),
         list: pikkuCLICommand({

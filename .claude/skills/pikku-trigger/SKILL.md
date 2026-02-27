@@ -1,6 +1,6 @@
 ---
 name: pikku-trigger
-description: "Use when adding event-driven functions that respond to system events like Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or custom event sources. Covers wireTrigger, wireTriggerSource, and pikkuTriggerFunc."
+description: 'Use when adding event-driven functions that respond to system events like Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or custom event sources. Covers wireTrigger, wireTriggerSource, and pikkuTriggerFunc.'
 ---
 
 # Pikku Trigger Wiring
@@ -26,8 +26,8 @@ Define the target function that handles trigger events:
 import { wireTrigger } from '@pikku/core/trigger'
 
 wireTrigger({
-  name: string,            // Trigger name (matches source)
-  func: PikkuFunc,         // Function to call when event fires
+  name: string, // Trigger name (matches source)
+  func: PikkuFunc, // Function to call when event fires
 })
 ```
 
@@ -39,9 +39,9 @@ Define the event source that fires triggers:
 import { wireTriggerSource } from '@pikku/core/trigger'
 
 wireTriggerSource({
-  name: string,            // Must match wireTrigger name
-  func: PikkuTriggerFunc,  // Source function (sets up listener)
-  input: object,           // Configuration for the source
+  name: string, // Must match wireTrigger name
+  func: PikkuTriggerFunc, // Source function (sets up listener)
+  input: object, // Configuration for the source
 })
 ```
 
@@ -53,14 +53,16 @@ Define a trigger source function. Returns a cleanup function.
 import { pikkuTriggerFunc } from '#pikku'
 
 const source = pikkuTriggerFunc<
-  InputType,    // Configuration input
-  EventType     // Shape of events it emits
+  InputType, // Configuration input
+  EventType // Shape of events it emits
 >(async (services, input, { trigger }) => {
   // Set up listener...
-  trigger.invoke(eventData)  // Fire the trigger
+  trigger.invoke(eventData) // Fire the trigger
 
   // Return cleanup function
-  return async () => { /* teardown */ }
+  return async () => {
+    /* teardown */
+  }
 })
 ```
 
@@ -111,12 +113,12 @@ wireTriggerSource({
 
 ### Triggers vs Queues
 
-| Feature | Trigger | Queue |
-|---------|---------|-------|
-| Execution | Synchronous, in-process | Async, distributed |
-| Reliability | At-most-once | At-least-once (with retries) |
-| Use case | React to events immediately | Reliable background processing |
-| Source | External systems (Redis, PG, etc.) | Enqueued programmatically |
+| Feature     | Trigger                            | Queue                          |
+| ----------- | ---------------------------------- | ------------------------------ |
+| Execution   | Synchronous, in-process            | Async, distributed             |
+| Reliability | At-most-once                       | At-least-once (with retries)   |
+| Use case    | React to events immediately        | Reliable background processing |
+| Source      | External systems (Redis, PG, etc.) | Enqueued programmatically      |
 
 Use triggers for real-time reactions. Use queues for reliable, retryable background work.
 
@@ -124,23 +126,22 @@ Use triggers for real-time reactions. Use queues for reliable, retryable backgro
 
 ```typescript
 // functions/triggers.functions.ts
-const pgListen = pikkuTriggerFunc<
-  { channel: string },
-  { payload: any }
->(async ({ db }, { channel }, { trigger }) => {
-  const client = await db.pool.connect()
+const pgListen = pikkuTriggerFunc<{ channel: string }, { payload: any }>(
+  async ({ db }, { channel }, { trigger }) => {
+    const client = await db.pool.connect()
 
-  client.on('notification', (msg) => {
-    trigger.invoke({ payload: JSON.parse(msg.payload) })
-  })
+    client.on('notification', (msg) => {
+      trigger.invoke({ payload: JSON.parse(msg.payload) })
+    })
 
-  await client.query(`LISTEN ${channel}`)
+    await client.query(`LISTEN ${channel}`)
 
-  return async () => {
-    await client.query(`UNLISTEN ${channel}`)
-    client.release()
+    return async () => {
+      await client.query(`UNLISTEN ${channel}`)
+      client.release()
+    }
   }
-})
+)
 
 const onUserCreated = pikkuSessionlessFunc({
   title: 'On User Created',
