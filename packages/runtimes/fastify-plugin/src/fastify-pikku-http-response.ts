@@ -7,6 +7,7 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
   #headers: [string, string][] = []
   #body: string | Buffer | ArrayBuffer | undefined
   #ended = false
+  #streaming = false
 
   constructor(private reply: FastifyReply) {}
 
@@ -45,6 +46,10 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public arrayBuffer(data: any): this {
+    if (this.#streaming) {
+      this.reply.raw.write(`data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
+      return this
+    }
     this.#body = data
     this.header('Content-Type', 'application/octet-stream')
     return this
@@ -73,11 +78,27 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public setMode(_mode: 'stream'): void {
-    // Streaming not yet supported in native Fastify path
+    this.#streaming = true
+  }
+
+  public get isStreaming(): boolean {
+    return this.#streaming
   }
 
   public flush(): void {
     if (this.#ended) return
+    if (this.#streaming) {
+      this.reply.raw.writeHead(this.#statusCode, this.#headers.reduce((acc, [name, value]) => {
+        const existing = acc[name]
+        if (existing) {
+          acc[name] = Array.isArray(existing) ? [...existing, value] : [existing, value]
+        } else {
+          acc[name] = value
+        }
+        return acc
+      }, {} as Record<string, string | string[]>))
+      return
+    }
     this.#ended = true
     this.reply.status(this.#statusCode)
     for (const [name, value] of this.#headers) {

@@ -7,6 +7,7 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   #headers: [string, string][] = []
   #body: string | Buffer | ArrayBuffer | undefined
   #ended = false
+  #streaming = false
 
   constructor(private res: ExpressResponse) {}
 
@@ -45,6 +46,10 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public arrayBuffer(data: any): this {
+    if (this.#streaming) {
+      this.res.write(`data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
+      return this
+    }
     this.#body = data
     this.header('Content-Type', 'application/octet-stream')
     return this
@@ -73,11 +78,23 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public setMode(_mode: 'stream'): void {
-    // Streaming not yet supported in native Express path
+    this.#streaming = true
+  }
+
+  public get isStreaming(): boolean {
+    return this.#streaming
   }
 
   public flush(): void {
     if (this.#ended) return
+    if (this.#streaming) {
+      this.res.status(this.#statusCode)
+      for (const [name, value] of this.#headers) {
+        this.res.append(name, value)
+      }
+      this.res.flushHeaders()
+      return
+    }
     this.#ended = true
     this.res.status(this.#statusCode)
     for (const [name, value] of this.#headers) {

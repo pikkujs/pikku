@@ -339,6 +339,7 @@ export interface InspectorState {
         variableOverrides?: Record<string, string>
       }
     >
+    wireAddonFiles: Set<string>
   }
   mcpEndpoints: {
     resourcesMeta: MCPResourceMeta

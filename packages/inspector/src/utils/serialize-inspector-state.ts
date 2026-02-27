@@ -154,6 +154,7 @@ export interface SerializableInspectorState {
         },
       ]
     >
+    wireAddonFiles: string[]
   }
   mcpEndpoints: {
     resourcesMeta: InspectorState['mcpEndpoints']['resourcesMeta']
@@ -344,6 +345,7 @@ export function serializeInspectorState(
       wireAddonDeclarations: Array.from(
         state.rpc.wireAddonDeclarations.entries()
       ),
+      wireAddonFiles: Array.from(state.rpc.wireAddonFiles),
     },
     mcpEndpoints: {
       resourcesMeta: state.mcpEndpoints.resourcesMeta,
@@ -505,6 +507,7 @@ export function deserializeInspectorState(
       invokedFunctions: new Set(data.rpc.invokedFunctions),
       usedAddons: new Set(data.rpc.usedAddons || []),
       wireAddonDeclarations: new Map(data.rpc.wireAddonDeclarations || []),
+      wireAddonFiles: new Set(data.rpc.wireAddonFiles || []),
     },
     mcpEndpoints: {
       resourcesMeta: data.mcpEndpoints.resourcesMeta,

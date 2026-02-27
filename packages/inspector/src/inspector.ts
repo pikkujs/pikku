@@ -111,6 +111,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       invokedFunctions: new Set(),
       usedAddons: new Set(),
       wireAddonDeclarations: new Map(),
+      wireAddonFiles: new Set(),
     },
     mcpEndpoints: {
       resourcesMeta: {},
