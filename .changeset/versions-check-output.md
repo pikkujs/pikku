@@ -1,6 +1,6 @@
 ---
-'@pikku/cli': minor
-'@pikku/inspector': minor
+'@pikku/cli': patch
+'@pikku/inspector': patch
 '@pikku/core': patch
 ---
 
