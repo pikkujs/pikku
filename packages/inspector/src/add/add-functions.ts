@@ -338,6 +338,7 @@ export const addFunctions: AddWiring = (
   let expose: boolean | undefined
   let remote: boolean | undefined
   let mcp: boolean | undefined
+  let readonly_: boolean | undefined
   let requiresApproval: boolean | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
@@ -419,6 +420,7 @@ export const addFunctions: AddWiring = (
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
+    readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
     requiresApproval = getPropertyValue(firstArg, 'requiresApproval') as
       | boolean
       | undefined
@@ -756,6 +758,7 @@ export const addFunctions: AddWiring = (
     expose: expose || undefined,
     remote: remote || undefined,
     mcp: mcpEnabled || undefined,
+    readonly: readonly_ || undefined,
     requiresApproval: requiresApproval || undefined,
     version,
     title,

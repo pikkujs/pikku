@@ -77,6 +77,16 @@ addError(ForbiddenError, {
 })
 
 /**
+ * The session is readonly and cannot access a non-readonly function.
+ * @group Error
+ */
+export class ReadonlySessionError extends PikkuError {}
+addError(ReadonlySessionError, {
+  status: 403,
+  message: 'The session is readonly and cannot access this function.',
+})
+
+/**
  * The request was made from an origin that is not permitted to access this resource.
  * @group Error
  */
