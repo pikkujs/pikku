@@ -20,13 +20,9 @@ export class AjvSchemaService implements SchemaService {
   public compileSchema(schema: string, value: any) {
     if (!this.validators.has(schema)) {
       this.logger.debug(`Adding json schema for ${schema}`)
-      try {
-        const validator = ajv.compile(value)
-        this.validators.set(schema, validator)
-        this.schemas.set(schema, value)
-      } catch (e: any) {
-        throw e
-      }
+      const validator = ajv.compile(value)
+      this.validators.set(schema, validator)
+      this.schemas.set(schema, value)
     }
   }
 

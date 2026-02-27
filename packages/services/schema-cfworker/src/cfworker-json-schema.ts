@@ -18,8 +18,8 @@ export class CFWorkerSchemaService implements SchemaService {
         const validator = new Validator(clonedValue)
         this.validators.set(schema, validator)
         this.schemas.set(schema, value)
-      } catch (e: any) {
-        throw e
+      } catch {
+        throw new Error(`Failed to compile schema: ${schema}`)
       }
     }
   }

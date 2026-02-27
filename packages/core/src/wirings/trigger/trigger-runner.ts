@@ -1,5 +1,8 @@
-import type { PikkuWire, CreateWireServices } from '../../types/core.types.js'
-import { type CoreSingletonServices } from '../../types/core.types.js'
+import type {
+  PikkuWire,
+  CreateWireServices,
+  CoreSingletonServices,
+} from '../../types/core.types.js'
 import type {
   CoreTrigger,
   CoreTriggerSource,

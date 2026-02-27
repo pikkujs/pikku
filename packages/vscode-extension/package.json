@@ -1,0 +1,91 @@
+{
+  "name": "pikku-vscode",
+  "displayName": "Pikku",
+  "description": "IDE-level project introspection, code generation, and navigation for Pikku projects",
+  "version": "0.1.0",
+  "publisher": "pikku",
+  "license": "BUSL-1.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/pikku.config.json"
+  ],
+  "main": "./dist/extension.js",
+  "icon": "resources/pikku-icon.svg",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pikku-explorer",
+          "title": "Pikku Explorer",
+          "icon": "resources/pikku-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "pikku-explorer": [
+        {
+          "id": "pikku-functions",
+          "name": "Functions"
+        },
+        {
+          "id": "pikku-wirings",
+          "name": "Wirings"
+        },
+        {
+          "id": "pikku-middleware",
+          "name": "Middleware"
+        },
+        {
+          "id": "pikku-permissions",
+          "name": "Permissions"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "pikku.prebuild",
+        "title": "Pikku: Prebuild"
+      },
+      {
+        "command": "pikku.refresh",
+        "title": "Pikku: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "pikku.newFunction",
+        "title": "Pikku: New Function"
+      },
+      {
+        "command": "pikku.newWiring",
+        "title": "Pikku: New Wiring"
+      },
+      {
+        "command": "pikku.info",
+        "title": "Pikku: Info"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "pikku.refresh",
+          "when": "view =~ /^pikku-/",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/inspector": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.9.0"
+  }
+}

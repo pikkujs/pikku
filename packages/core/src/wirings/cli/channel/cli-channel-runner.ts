@@ -1,6 +1,5 @@
 import { pikkuState } from '../../../pikku-state.js'
-import type { CorePikkuCLIRender } from '../cli.types.js'
-import { type CLIMeta } from '../cli.types.js'
+import type { CorePikkuCLIRender, CLIMeta } from '../cli.types.js'
 import { generateCommandHelp, parseCLIArguments } from '../command-parser.js'
 
 /**

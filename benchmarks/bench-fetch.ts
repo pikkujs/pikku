@@ -17,7 +17,7 @@ async function benchmarkScenario(scenario: Scenario) {
     await fetch(req)
   }
 
-  const latencies: number[] = new Array(ITERATIONS)
+  const latencies: number[] = Array.from({ length: ITERATIONS })
 
   for (let i = 0; i < ITERATIONS; i++) {
     const req = createRequest(scenario)

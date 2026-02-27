@@ -1,5 +1,4 @@
-import type { PikkuWire } from '../../types/core.types.js'
-import { type CoreUserSession } from '../../types/core.types.js'
+import type { PikkuWire, CoreUserSession } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'

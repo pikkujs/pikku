@@ -262,15 +262,16 @@ export class KyselyAIStorageService
       }
     }
 
+    let msgResult
     if (options?.cursor || options?.lastN) {
       const innerResult = await msgQuery
         .orderBy('created_at', 'desc')
         .limit(options?.lastN ?? 50)
         .execute()
       innerResult.reverse()
-      var msgResult = innerResult
+      msgResult = innerResult
     } else {
-      var msgResult = await msgQuery.orderBy('created_at', 'asc').execute()
+      msgResult = await msgQuery.orderBy('created_at', 'asc').execute()
     }
 
     const tcResult = await this.db

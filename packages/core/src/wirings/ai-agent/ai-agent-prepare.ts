@@ -1,9 +1,9 @@
-import type { PikkuWire } from '../../types/core.types.js'
-import {
-  type CoreSingletonServices,
-  type CoreServices,
-  type CoreUserSession,
-  type CreateWireServices,
+import type {
+  PikkuWire,
+  CoreSingletonServices,
+  CoreServices,
+  CoreUserSession,
+  CreateWireServices,
 } from '../../types/core.types.js'
 import type {
   CoreAIAgent,
@@ -232,7 +232,7 @@ export function buildToolDefs(
         inputSchema = {
           ...inputSchema,
           properties: {
-            ...((inputSchema.properties as Record<string, unknown>) || {}),
+            ...(inputSchema.properties as Record<string, unknown>),
             toolApprovalReason: {
               type: 'string',
               description: 'Brief explanation of why this action is needed',
