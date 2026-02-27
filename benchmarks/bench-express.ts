@@ -13,6 +13,7 @@ const DURATION = 10
 const PIPELINING = 10
 
 const flameMode = process.argv.includes('--flame')
+const jsonMode = process.argv.includes('--json')
 
 async function runAutocannonScenario(scenario: Scenario) {
   const url = `http://localhost:${PORT}${scenario.url}`
@@ -60,7 +61,9 @@ async function main() {
     const s = app.listen(PORT, () => resolve(s))
   })
 
-  console.log(`\nExpress server on :${PORT}`)
+  if (!jsonMode) {
+    console.log(`\nExpress server on :${PORT}`)
+  }
 
   if (flameMode) {
     console.log(
@@ -70,17 +73,37 @@ async function main() {
     return
   }
 
-  console.log(
-    `  autocannon: ${CONNECTIONS} connections, ${DURATION}s, pipelining ${PIPELINING}\n`
-  )
+  if (!jsonMode) {
+    console.log(
+      `  autocannon: ${CONNECTIONS} connections, ${DURATION}s, pipelining ${PIPELINING}\n`
+    )
+  }
+
+  const collected: Record<string, any> = {}
 
   for (const scenario of scenarios) {
-    console.log(
-      `--- ${scenario.name} (${scenario.method.toUpperCase()} ${scenario.url}) ---`
-    )
+    if (!jsonMode) {
+      console.log(
+        `--- ${scenario.name} (${scenario.method.toUpperCase()} ${scenario.url}) ---`
+      )
+    }
     const result = await runAutocannonScenario(scenario)
-    process.stdout.write(autocannon.printResult(result))
-    console.log('')
+    if (jsonMode) {
+      collected[scenario.name] = {
+        requests_per_sec: result.requests.average,
+        latency_avg_ms: result.latency.average,
+        latency_p99_ms: result.latency.p99,
+      }
+    } else {
+      process.stdout.write(autocannon.printResult(result))
+      console.log('')
+    }
+  }
+
+  if (jsonMode) {
+    console.log(
+      JSON.stringify({ runtime: 'pikku-express', scenarios: collected })
+    )
   }
 
   server.close()
