@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxlint-config/refs/heads/main/schema.json",
+  "rules": {
+    "no-var": "warn",
+    "no-accumulating-spread": "warn",
+    "node/no-process-env": "warn",
+    "import/no-cycle": "warn",
+    "typescript/consistent-type-imports": "warn",
+    "typescript/no-import-type-side-effects": "warn",
+    "typescript/prefer-optional-chain": "warn",
+    "unicorn/prefer-array-flat-map": "warn",
+    "unicorn/prefer-includes": "warn",
+    "unicorn/prefer-optional-catch-binding": "warn",
+    "unicorn/throw-new-error": "warn"
+  }
+}

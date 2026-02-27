@@ -78,8 +78,8 @@
   },
   "lint-staged": {
     "*.ts": [
-      "yarn lint",
-      "yarn prettier"
+      "oxlint",
+      "prettier --write"
     ]
   }
 }
