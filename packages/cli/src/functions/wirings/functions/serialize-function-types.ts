@@ -510,9 +510,9 @@ export const pikkuVoidFunc = (
  * wireHTTP({
  *   auth: false,
  *   method: 'get',
- *   route: '/external/hello',
+ *   route: '/addon/hello',
  *   func: addon('ext:hello'),
- *   tags: ['external'],
+ *   tags: ['addon'],
  * })
  * \`\`\`
  */

@@ -4,34 +4,34 @@ import {
 } from '../.pikku/pikku-types.gen.js'
 
 /**
- * External package middleware that logs when external functions are called
+ * Addon package middleware that logs when addon functions are called
  */
-export const externalMiddleware = pikkuMiddlewareFactory(
+export const addonMiddleware = pikkuMiddlewareFactory(
   (name: string) =>
     async ({ logger }, _data, next) => {
-      logger.info({ type: 'external-function', name, phase: 'before' })
+      logger.info({ type: 'addon-function', name, phase: 'before' })
       const result = await next()
-      logger.info({ type: 'external-function', name, phase: 'after' })
+      logger.info({ type: 'addon-function', name, phase: 'after' })
       return result
     }
 )
 
 /**
- * Tag middleware for external functions
+ * Tag middleware for addon functions
  */
 export const tagMiddleware = pikkuMiddlewareFactory(
   (name: string) =>
     async ({ logger }, _data, next) => {
-      logger.info({ type: 'external-tag', name, phase: 'before' })
+      logger.info({ type: 'addon-tag', name, phase: 'before' })
       const result = await next()
-      logger.info({ type: 'external-tag', name, phase: 'after' })
+      logger.info({ type: 'addon-tag', name, phase: 'after' })
       return result
     }
 )
 
 /**
- * Register 'external' tag middleware
- * This will apply to all functions with the 'external' tag
+ * Register 'addon' tag middleware
+ * This will apply to all functions with the 'addon' tag
  */
-export const externalTagMiddleware = () =>
-  addMiddleware('external', [tagMiddleware('external')])
+export const addonTagMiddleware = () =>
+  addMiddleware('addon', [tagMiddleware('addon')])

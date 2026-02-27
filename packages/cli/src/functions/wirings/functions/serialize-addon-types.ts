@@ -7,7 +7,7 @@ export const serializeAddonTypes = (
   typedVariablesServiceImport: string
 ) => {
   return `/**
- * External package types for pikkuAddonConfig and pikkuAddonServices
+ * Addon package types for pikkuAddonConfig and pikkuAddonServices
  */
 
 import type { CreateConfig } from '@pikku/core'

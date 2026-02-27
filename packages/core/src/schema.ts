@@ -13,7 +13,7 @@ const schemaKey = (name: string, packageName: string | null): string =>
  * Adds a schema to the schemas map for a specific package.
  * @param name - The name of the schema.
  * @param value - The schema value.
- * @param packageName - The package name (null for main package, '@scope/package' for external packages).
+ * @param packageName - The package name (null for main package, '@scope/package' for addon packages).
  * @ignore
  */
 export const addSchema = (
@@ -27,7 +27,7 @@ export const addSchema = (
 /**
  * Retrieves a schema from the schemas map for a specific package.
  * @param name - The name of the schema.
- * @param packageName - The package name (null for main package, '@scope/package' for external packages).
+ * @param packageName - The package name (null for main package, '@scope/package' for addon packages).
  * @returns The schema value or undefined if not found.
  * @ignore
  */

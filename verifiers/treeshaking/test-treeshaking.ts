@@ -14,7 +14,7 @@ const INSPECTOR_STATE_FILE = join(
 /**
  * Check if addon bootstrap is imported
  */
-function hasExternalPackageBootstrap(): boolean {
+function hasAddonBootstrap(): boolean {
   try {
     const bootstrapFilePath = join(
       process.cwd(),
@@ -24,7 +24,7 @@ function hasExternalPackageBootstrap(): boolean {
     const content = readFileSync(bootstrapFilePath, 'utf-8')
 
     // Check if the addon bootstrap import exists
-    // External packages are imported using package names, not relative paths
+    // Addon packages are imported using package names, not relative paths
     return content.includes(
       '@pikku/templates-function-addon/.pikku/pikku-bootstrap.gen.js'
     )
@@ -40,7 +40,7 @@ function hasExternalPackageBootstrap(): boolean {
 function parseGeneratedServices(): {
   singletonServices: string[]
   wireServices: string[]
-  hasExternalBootstrap: boolean
+  hasAddonBootstrap: boolean
 } {
   try {
     const servicesFilePath = join(
@@ -89,14 +89,14 @@ function parseGeneratedServices(): {
     return {
       singletonServices: singletonServices.sort(),
       wireServices: wireServices.sort(),
-      hasExternalBootstrap: hasExternalPackageBootstrap(),
+      hasAddonBootstrap: hasAddonBootstrap(),
     }
   } catch (error) {
     console.error('Error parsing services file:', error)
     return {
       singletonServices: [],
       wireServices: [],
-      hasExternalBootstrap: false,
+      hasAddonBootstrap: false,
     }
   }
 }
@@ -126,7 +126,7 @@ function createInspectorState(): void {
 function runPikkuWithFilter(filter: string): {
   singletonServices: string[]
   wireServices: string[]
-  hasExternalBootstrap: boolean
+  hasAddonBootstrap: boolean
 } {
   try {
     // Run pikku all with the filter, loading from the cached state
@@ -201,9 +201,9 @@ async function runTests() {
       console.log(
         `   Expected Session:   [${scenario.expectedWireServices.join(', ')}]`
       )
-      if (scenario.expectedExternalBootstrap !== undefined) {
+      if (scenario.expectedAddonBootstrap !== undefined) {
         console.log(
-          `   Expected External:  ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}`
+          `   Expected Addon:  ${scenario.expectedAddonBootstrap ? 'included' : 'excluded'}`
         )
       }
 
@@ -214,9 +214,9 @@ async function runTests() {
       console.log(
         `   Actual Session:     [${actualServices.wireServices.join(', ')}]`
       )
-      if (scenario.expectedExternalBootstrap !== undefined) {
+      if (scenario.expectedAddonBootstrap !== undefined) {
         console.log(
-          `   Actual External:    ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
+          `   Actual Addon:    ${actualServices.hasAddonBootstrap ? 'included' : 'excluded'}`
         )
       }
 
@@ -231,9 +231,8 @@ async function runTests() {
       )
 
       const addonBootstrapMatch =
-        scenario.expectedExternalBootstrap === undefined ||
-        actualServices.hasExternalBootstrap ===
-          scenario.expectedExternalBootstrap
+        scenario.expectedAddonBootstrap === undefined ||
+        actualServices.hasAddonBootstrap === scenario.expectedAddonBootstrap
 
       const allMatch =
         singletonComparison.match &&
@@ -271,7 +270,7 @@ async function runTests() {
         }
         if (!addonBootstrapMatch) {
           console.log(
-            `   External Bootstrap: Expected ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}, got ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
+            `   Addon Bootstrap: Expected ${scenario.expectedAddonBootstrap ? 'included' : 'excluded'}, got ${actualServices.hasAddonBootstrap ? 'included' : 'excluded'}`
           )
         }
         failed++
@@ -304,13 +303,13 @@ async function runTests() {
           `Actual:   [${actualServices.wireServices.join(', ')}]`
       )
 
-      if (scenario.expectedExternalBootstrap !== undefined) {
+      if (scenario.expectedAddonBootstrap !== undefined) {
         assert.strictEqual(
-          actualServices.hasExternalBootstrap,
-          scenario.expectedExternalBootstrap,
-          `External bootstrap mismatch for scenario: ${scenario.name}\n` +
-            `Expected: ${scenario.expectedExternalBootstrap ? 'included' : 'excluded'}\n` +
-            `Actual:   ${actualServices.hasExternalBootstrap ? 'included' : 'excluded'}`
+          actualServices.hasAddonBootstrap,
+          scenario.expectedAddonBootstrap,
+          `Addon bootstrap mismatch for scenario: ${scenario.name}\n` +
+            `Expected: ${scenario.expectedAddonBootstrap ? 'included' : 'excluded'}\n` +
+            `Actual:   ${actualServices.hasAddonBootstrap ? 'included' : 'excluded'}`
         )
       }
     })

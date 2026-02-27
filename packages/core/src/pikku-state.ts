@@ -25,7 +25,7 @@ export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
 /**
  * Get or set package-scoped pikku state
  *
- * @param packageName - Package name (null for main package, '@scope/package' for external packages)
+ * @param packageName - Package name (null for main package, '@scope/package' for addon packages)
  * @param type - State category (function, rpc, http, etc.)
  * @param content - Content key within the category
  * @param value - Optional value to set
@@ -35,7 +35,7 @@ export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
  * // Main package
  * pikkuState(null, 'function', 'functions').get(funcName)
  *
- * // External package
+ * // Addon package
  * pikkuState('@acme/stripe-functions', 'rpc', 'meta')
  */
 export const pikkuState = <
@@ -195,7 +195,7 @@ export const getCreateWireServices = (): CreateWireServices | undefined => {
 }
 
 /**
- * Register service factories for an external package.
+ * Register service factories for an addon package.
  * These factories are used to create services when the package's functions are invoked.
  *
  * @param packageName - The package name (e.g., '@pikku/templates-function-addon')

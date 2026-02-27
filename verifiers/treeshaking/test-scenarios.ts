@@ -3,7 +3,7 @@ export interface TestScenario {
   filter: string
   expectedSingletonServices: string[]
   expectedWireServices: string[]
-  expectedExternalBootstrap?: boolean
+  expectedAddonBootstrap?: boolean
   description: string
 }
 
@@ -267,22 +267,22 @@ export const scenarios: TestScenario[] = [
     description: 'Routes using saveData function',
   },
 
-  // External package tests
+  // Addon package tests
   {
     name: 'Addon: testAddon included',
     filter: '--names=testAddon',
     expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: [],
-    expectedExternalBootstrap: true,
+    expectedAddonBootstrap: true,
     description:
       'When addon function is called via RPC, addon bootstrap should be bundled but NOT addon services (noop is internal to addon)',
   },
   {
-    name: 'External Package: not called - excluded',
+    name: 'Addon: not called - excluded',
     filter: '--names=sendEmail',
     expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: ['userContext'],
-    expectedExternalBootstrap: true,
+    expectedAddonBootstrap: true,
     description:
       'Addon bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when addon RPC methods are invoked)',
   },

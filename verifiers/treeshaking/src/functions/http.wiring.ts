@@ -49,7 +49,7 @@ wireHTTP({
   func: saveData,
 })
 
-// External package test
+// Addon test
 wireHTTP({
   method: 'post',
   route: '/api/addon/test',

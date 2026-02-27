@@ -121,9 +121,9 @@ function generateAddonImports(
     return ''
   }
 
-  let imports = '\n// External package RPC maps\n'
+  let imports = '\n// Addon package RPC maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    // Import the RPCMap from each external package's internal RPC map
+    // Import the RPCMap from each addon package's internal RPC map
     // Use .js extension - package.json exports will resolve to .d.ts for types
     imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${decl.package}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
   }
@@ -135,7 +135,7 @@ function generateMergedRPCMap(
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return `
-// No external packages, use RPCMap directly
+// No addon packages, use RPCMap directly
 export type FlattenedRPCMap = RPCMap
 `
   }
@@ -174,7 +174,7 @@ function generateAddonAgentImports(
     return ''
   }
 
-  let imports = '\n// External package Agent maps\n'
+  let imports = '\n// Addon package Agent maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
     imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${decl.package}/.pikku/agent/pikku-agent-map.gen.d.js'\n`
   }

@@ -32,10 +32,10 @@ import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
 /**
- * Get or create singleton services for an external package.
+ * Get or create singleton services for an addon package.
  * Services are cached in pikkuState to avoid recreation on each call.
  *
- * @param packageName - The external package name
+ * @param packageName - The addon package name
  * @param parentServices - The parent/caller's singleton services (used as base)
  * @returns The package's singleton services
  */
@@ -193,7 +193,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     throw new Error(`Function meta not found: ${funcName}`)
   }
 
-  // For external packages, get or create their singleton services
+  // For addon packages, get or create their singleton services
   const resolvedSingletonServices = packageName
     ? await getOrCreatePackageSingletonServices(packageName, singletonServices)
     : singletonServices

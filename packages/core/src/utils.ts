@@ -94,8 +94,8 @@ const stopService = async (
 }
 
 /**
- * Stop all singleton services, including external package services.
- * External package services are stopped first, then the parent services.
+ * Stop all singleton services, including addon package services.
+ * Addon package services are stopped first, then the parent services.
  *
  * @param singletonServices - The parent singleton services to stop
  */
@@ -103,7 +103,7 @@ export const stopSingletonServices = async (): Promise<void> => {
   const singletonServices = getSingletonServices()
   const logger = singletonServices.logger
 
-  // First, stop all external package singleton services
+  // First, stop all addon package singleton services
   const stateMap = getAllPackageStates()
   if (stateMap.size > 0) {
     for (const [packageName, packageState] of stateMap) {

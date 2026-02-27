@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
-import { externalMiddleware } from '../middleware.js'
-import { externalPermission } from '../permission.js'
+import { addonMiddleware } from '../middleware.js'
+import { addonPermission } from '../permission.js'
 
 export const hello = pikkuSessionlessFunc<
   { name: string; greeting?: string },
@@ -11,7 +11,7 @@ export const hello = pikkuSessionlessFunc<
     const greeting = data.greeting || 'Hello'
     const message = `${greeting}, ${data.name}!`
 
-    logger.info(`External package: ${message}`)
+    logger.info(`Addon: ${message}`)
 
     const noopResult = noop.execute()
 
@@ -21,11 +21,11 @@ export const hello = pikkuSessionlessFunc<
       noopCalls: noopResult.callCount,
     }
   },
-  middleware: [externalMiddleware('hello')],
+  middleware: [addonMiddleware('hello')],
   permissions: {
-    functionLevel: externalPermission,
+    functionLevel: addonPermission,
   },
-  tags: ['external'],
+  tags: ['addon'],
   node: {
     displayName: 'Say Hello',
     category: 'Communication',

@@ -116,11 +116,7 @@ export class ContextAwareRPCService {
 
     // Check if it's a namespaced function call (e.g., 'stripe:createCharge')
     if (funcName.includes(':')) {
-      return this.invokeExternalPackageFunction<In, Out>(
-        funcName,
-        data,
-        updatedWire
-      )
+      return this.invokeAddonFunction<In, Out>(funcName, data, updatedWire)
     }
 
     // Main package function
@@ -138,12 +134,12 @@ export class ContextAwareRPCService {
   }
 
   /**
-   * Invoke a function from an external package
-   * External packages register their functions in pikkuState under their package name.
+   * Invoke a function from an addon package
+   * Addon packages register their functions in pikkuState under their package name.
    * The function is executed using the parent services (shared singleton services).
    * @private
    */
-  private async invokeExternalPackageFunction<In = any, Out = any>(
+  private async invokeAddonFunction<In = any, Out = any>(
     namespacedFunction: string,
     data: In,
     wire: PikkuWire
@@ -157,18 +153,14 @@ export class ContextAwareRPCService {
       )
     }
 
-    // Get the function meta from the external package
-    // External packages use function meta, not RPC meta
-    const externalFunctionMeta = pikkuState(
-      resolved.package,
-      'function',
-      'meta'
-    )
-    const funcMeta = externalFunctionMeta[resolved.function]
+    // Get the function meta from the addon package
+    // Addon packages use function meta, not RPC meta
+    const addonFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
+    const funcMeta = addonFunctionMeta[resolved.function]
     if (!funcMeta) {
       throw new Error(
         `Function '${resolved.function}' not found in package '${resolved.package}'. ` +
-          `Available functions: ${Object.keys(externalFunctionMeta).join(', ') || '(none)'}`
+          `Available functions: ${Object.keys(addonFunctionMeta).join(', ') || '(none)'}`
       )
     }
     const funcName = funcMeta.pikkuFuncId || resolved.function
@@ -179,8 +171,8 @@ export class ContextAwareRPCService {
     const auth = addonConfig?.auth ?? this.options.requiresAuth
     const tags = [...(addonConfig?.tags ?? []), ...(funcMeta.tags ?? [])]
 
-    // Execute the function using runPikkuFunc with the external package's state
-    // We use the parent services (this.services) since external packages share services
+    // Execute the function using runPikkuFunc with the addon package's state
+    // We use the parent services (this.services) since addon packages share services
     // Pass the function's tags so tag-based middleware/permissions are applied
     return runPikkuFunc<In, Out>('rpc', namespacedFunction, funcName, {
       auth,
