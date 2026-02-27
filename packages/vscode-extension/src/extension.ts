@@ -9,6 +9,8 @@ import { prebuild } from './commands/prebuild'
 import { refresh } from './commands/refresh'
 import { newFunction } from './commands/new-function'
 import { newWiring } from './commands/new-wiring'
+import { newMiddleware } from './commands/new-middleware'
+import { newPermission } from './commands/new-permission'
 import { showInfo } from './commands/info'
 import { RPCDefinitionProvider } from './definitions/rpc-definition'
 
@@ -40,6 +42,12 @@ export async function activate(
     vscode.commands.registerCommand('pikku.refresh', () => refresh(inspector)),
     vscode.commands.registerCommand('pikku.newFunction', () => newFunction()),
     vscode.commands.registerCommand('pikku.newWiring', () => newWiring()),
+    vscode.commands.registerCommand('pikku.newMiddleware', () =>
+      newMiddleware()
+    ),
+    vscode.commands.registerCommand('pikku.newPermission', () =>
+      newPermission()
+    ),
     vscode.commands.registerCommand('pikku.info', () => showInfo(inspector)),
 
     // Register CodeLens

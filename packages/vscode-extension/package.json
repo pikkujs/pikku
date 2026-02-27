@@ -17,7 +17,9 @@
     "onCommand:pikku.prebuild",
     "onCommand:pikku.info",
     "onCommand:pikku.newFunction",
-    "onCommand:pikku.newWiring"
+    "onCommand:pikku.newWiring",
+    "onCommand:pikku.newMiddleware",
+    "onCommand:pikku.newPermission"
   ],
   "main": "./dist/extension.js",
   "icon": "resources/pikku-icon.png",
@@ -68,6 +70,14 @@
       {
         "command": "pikku.newWiring",
         "title": "Pikku: New Wiring"
+      },
+      {
+        "command": "pikku.newMiddleware",
+        "title": "Pikku: New Middleware"
+      },
+      {
+        "command": "pikku.newPermission",
+        "title": "Pikku: New Permission"
       },
       {
         "command": "pikku.info",

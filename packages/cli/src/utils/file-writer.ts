@@ -1,4 +1,4 @@
-import { dirname } from 'path'
+import { dirname, join } from 'path'
 import { mkdir, readFile, writeFile, rm } from 'fs/promises'
 import { existsSync } from 'fs'
 import type { CLILogger } from '../services/cli-logger.service.js'
@@ -54,6 +54,28 @@ export const writeFileInDir = async (
       logger.debug({ message: `✓ File written to ${path}`, type: 'success' })
     }
   }
+}
+
+export function kebabCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+    .toLowerCase()
+}
+
+export function scaffoldFilePath(
+  config: { rootDir: string; srcDirectories: string[] },
+  subdir: string,
+  name: string,
+  suffix: string
+): string {
+  const fileName = kebabCase(name)
+  return join(
+    config.rootDir,
+    config.srcDirectories[0],
+    subdir,
+    `${fileName}${suffix}`
+  )
 }
 
 export const removeFileInDir = async (

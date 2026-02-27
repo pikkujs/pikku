@@ -1,86 +1,19 @@
 import * as vscode from 'vscode'
+import { runPikkuCLI } from '../utils/run-cli'
 
 const TRANSPORT_TYPES = [
-  { label: 'HTTP', description: 'HTTP route wiring' },
-  { label: 'WebSocket', description: 'WebSocket channel wiring' },
-  { label: 'Queue', description: 'Queue worker wiring' },
-  { label: 'Cron', description: 'Scheduled task wiring' },
-  { label: 'MCP', description: 'Model Context Protocol wiring' },
-  { label: 'CLI', description: 'CLI command wiring' },
-  { label: 'Trigger', description: 'Event trigger wiring' },
+  { label: 'HTTP', description: 'HTTP route wiring', value: 'http' },
+  {
+    label: 'WebSocket',
+    description: 'WebSocket channel wiring',
+    value: 'channel',
+  },
+  { label: 'Queue', description: 'Queue worker wiring', value: 'queue' },
+  { label: 'Cron', description: 'Scheduled task wiring', value: 'scheduler' },
+  { label: 'MCP', description: 'Model Context Protocol wiring', value: 'mcp' },
+  { label: 'CLI', description: 'CLI command wiring', value: 'cli' },
+  { label: 'Trigger', description: 'Event trigger wiring', value: 'trigger' },
 ]
-
-const TEMPLATES: Record<string, string> = {
-  HTTP: `import { addRoute } from '@pikku/core/http'
-// import { myFunction } from '../functions/my-function'
-
-addRoute({
-  method: 'get',
-  route: '/api/example',
-  func: myFunction,
-})
-`,
-
-  WebSocket: `import { addChannel } from '@pikku/core/channel'
-// import { onConnect, onMessage, onDisconnect } from '../functions/my-channel'
-
-addChannel({
-  name: 'example',
-  route: '/ws/example',
-  onConnect,
-  onMessage,
-  onDisconnect,
-})
-`,
-
-  Queue: `import { addQueueWorker } from '@pikku/core/queue'
-// import { processItem } from '../functions/my-worker'
-
-addQueueWorker({
-  name: 'example-queue',
-  func: processItem,
-})
-`,
-
-  Cron: `import { addScheduledTask } from '@pikku/core/scheduler'
-// import { cleanupOldData } from '../functions/my-task'
-
-addScheduledTask({
-  name: 'cleanup',
-  schedule: '0 0 * * *', // daily at midnight
-  func: cleanupOldData,
-})
-`,
-
-  MCP: `import { addMCPTool } from '@pikku/core/mcp'
-// import { myTool } from '../functions/my-tool'
-
-addMCPTool({
-  name: 'example-tool',
-  description: 'An example MCP tool',
-  func: myTool,
-})
-`,
-
-  CLI: `import { addCLI } from '@pikku/core/cli'
-// import { myCommand } from '../functions/my-command'
-
-addCLI({
-  name: 'example',
-  description: 'An example CLI command',
-  func: myCommand,
-})
-`,
-
-  Trigger: `import { addTrigger } from '@pikku/core/trigger'
-// import { handleEvent } from '../functions/my-trigger'
-
-addTrigger({
-  name: 'example-trigger',
-  func: handleEvent,
-})
-`,
-}
 
 export async function newWiring(): Promise<void> {
   const transport = await vscode.window.showQuickPick(TRANSPORT_TYPES, {
@@ -88,11 +21,46 @@ export async function newWiring(): Promise<void> {
   })
   if (!transport) return
 
-  const content = TEMPLATES[transport.label] || `// ${transport.label} wiring\n`
-
-  const doc = await vscode.workspace.openTextDocument({
-    content,
-    language: 'typescript',
+  const name = await vscode.window.showInputBox({
+    prompt: 'Wiring name (e.g. todos)',
+    validateInput: (value) => {
+      if (!value) return 'Name is required'
+      if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(value))
+        return 'Must be a valid identifier (letters, numbers, hyphens)'
+      return undefined
+    },
   })
-  await vscode.window.showTextDocument(doc)
+  if (!name) return
+
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+  if (!workspaceRoot) {
+    vscode.window.showErrorMessage('No workspace folder open')
+    return
+  }
+
+  try {
+    const output = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Creating ${transport.label} wiring...`,
+      },
+      () =>
+        runPikkuCLI(workspaceRoot, [
+          'new',
+          'wiring',
+          name,
+          '--type',
+          transport.value,
+        ])
+    )
+
+    // Last line of stdout is the file path
+    const filePath = output.split('\n').pop()?.trim()
+    if (filePath) {
+      const doc = await vscode.workspace.openTextDocument(filePath)
+      await vscode.window.showTextDocument(doc)
+    }
+  } catch (err: any) {
+    vscode.window.showErrorMessage(`Pikku: ${err.message}`)
+  }
 }
