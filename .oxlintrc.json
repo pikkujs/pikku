@@ -1,6 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxlint-config/refs/heads/main/schema.json",
   "rules": {
+    "no-unused-vars": "off",
+    "no-empty-pattern": "off",
     "no-var": "warn",
     "no-accumulating-spread": "warn",
     "node/no-process-env": "warn",
