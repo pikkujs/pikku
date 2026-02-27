@@ -1,32 +1,23 @@
 import * as vscode from 'vscode'
 import { runPikkuCLI } from '../utils/run-cli'
 
-const FUNCTION_TYPES = [
+const MIDDLEWARE_TYPES = [
+  { label: 'Simple', description: 'Standard middleware', value: 'simple' },
   {
-    label: 'pikkuSessionlessFunc',
-    description: 'Function without session requirement',
-    value: 'sessionless',
-  },
-  {
-    label: 'pikkuFunc',
-    description: 'Standard function with session',
-    value: 'func',
-  },
-  {
-    label: 'pikkuVoidFunc',
-    description: 'Fire-and-forget function',
-    value: 'void',
+    label: 'Factory',
+    description: 'Parameterized middleware factory',
+    value: 'factory',
   },
 ]
 
-export async function newFunction(): Promise<void> {
-  const funcType = await vscode.window.showQuickPick(FUNCTION_TYPES, {
-    placeHolder: 'Select function type',
+export async function newMiddleware(): Promise<void> {
+  const middlewareType = await vscode.window.showQuickPick(MIDDLEWARE_TYPES, {
+    placeHolder: 'Select middleware type',
   })
-  if (!funcType) return
+  if (!middlewareType) return
 
   const name = await vscode.window.showInputBox({
-    prompt: 'Function name (e.g. getBooks)',
+    prompt: 'Middleware name (e.g. authMiddleware)',
     validateInput: (value) => {
       if (!value) return 'Name is required'
       if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(value))
@@ -46,19 +37,18 @@ export async function newFunction(): Promise<void> {
     const output = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Creating ${funcType.label}...`,
+        title: `Creating middleware...`,
       },
       () =>
         runPikkuCLI(workspaceRoot, [
           'new',
-          'function',
+          'middleware',
           name,
           '--type',
-          funcType.value,
+          middlewareType.value,
         ])
     )
 
-    // Last line of stdout is the file path
     const filePath = output.split('\n').pop()?.trim()
     if (filePath) {
       const doc = await vscode.workspace.openTextDocument(filePath)

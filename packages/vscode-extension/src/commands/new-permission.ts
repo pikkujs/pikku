@@ -1,32 +1,27 @@
 import * as vscode from 'vscode'
 import { runPikkuCLI } from '../utils/run-cli'
 
-const FUNCTION_TYPES = [
+const PERMISSION_TYPES = [
   {
-    label: 'pikkuSessionlessFunc',
-    description: 'Function without session requirement',
-    value: 'sessionless',
+    label: 'Simple',
+    description: 'Standard permission check',
+    value: 'simple',
   },
   {
-    label: 'pikkuFunc',
-    description: 'Standard function with session',
-    value: 'func',
-  },
-  {
-    label: 'pikkuVoidFunc',
-    description: 'Fire-and-forget function',
-    value: 'void',
+    label: 'Factory',
+    description: 'Parameterized permission factory',
+    value: 'factory',
   },
 ]
 
-export async function newFunction(): Promise<void> {
-  const funcType = await vscode.window.showQuickPick(FUNCTION_TYPES, {
-    placeHolder: 'Select function type',
+export async function newPermission(): Promise<void> {
+  const permType = await vscode.window.showQuickPick(PERMISSION_TYPES, {
+    placeHolder: 'Select permission type',
   })
-  if (!funcType) return
+  if (!permType) return
 
   const name = await vscode.window.showInputBox({
-    prompt: 'Function name (e.g. getBooks)',
+    prompt: 'Permission name (e.g. canEditPost)',
     validateInput: (value) => {
       if (!value) return 'Name is required'
       if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(value))
@@ -46,19 +41,18 @@ export async function newFunction(): Promise<void> {
     const output = await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Creating ${funcType.label}...`,
+        title: `Creating permission...`,
       },
       () =>
         runPikkuCLI(workspaceRoot, [
           'new',
-          'function',
+          'permission',
           name,
           '--type',
-          funcType.value,
+          permType.value,
         ])
     )
 
-    // Last line of stdout is the file path
     const filePath = output.split('\n').pop()?.trim()
     if (filePath) {
       const doc = await vscode.workspace.openTextDocument(filePath)

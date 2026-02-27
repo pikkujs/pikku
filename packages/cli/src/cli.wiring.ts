@@ -13,6 +13,10 @@ import { consoleCommand } from './functions/commands/console.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
+import { pikkuNewFunction } from './functions/commands/new-function.js'
+import { pikkuNewWiring } from './functions/commands/new-wiring.js'
+import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
+import { pikkuNewPermission } from './functions/commands/new-permission.js'
 // import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -123,6 +127,61 @@ wireCLI({
       func: pikkuNext,
       description: 'Generate Next.js backend and HTTP wrappers',
     }),
+    new: {
+      description: 'Scaffold new functions and wirings',
+      subcommands: {
+        function: pikkuCLICommand({
+          func: pikkuNewFunction,
+          description: 'Create a new Pikku function file',
+          parameters: '<name>',
+          options: {
+            type: {
+              description:
+                'Function type: func, sessionless (default), or void',
+              short: 't',
+              default: 'sessionless',
+            },
+          },
+        }),
+        wiring: pikkuCLICommand({
+          func: pikkuNewWiring,
+          description: 'Create a new wiring file',
+          parameters: '<name>',
+          options: {
+            type: {
+              description:
+                'Wiring type: http (default), channel, scheduler, queue, mcp, cli, or trigger',
+              short: 't',
+              default: 'http',
+            },
+          },
+        }),
+        middleware: pikkuCLICommand({
+          func: pikkuNewMiddleware,
+          description: 'Create a new middleware file',
+          parameters: '<name>',
+          options: {
+            type: {
+              description: 'Middleware type: simple (default) or factory',
+              short: 't',
+              default: 'simple',
+            },
+          },
+        }),
+        permission: pikkuCLICommand({
+          func: pikkuNewPermission,
+          description: 'Create a new permission file',
+          parameters: '<name>',
+          options: {
+            type: {
+              description: 'Permission type: simple (default) or factory',
+              short: 't',
+              default: 'simple',
+            },
+          },
+        }),
+      },
+    },
     versions: {
       description: 'Manage function contract versions',
       subcommands: {
