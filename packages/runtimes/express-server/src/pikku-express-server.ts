@@ -134,11 +134,13 @@ export class PikkuExpressServer {
   }
 
   public async stop(): Promise<void> {
-    return await new Promise<void>(async (resolve) => {
-      if (this.server == null) {
-        throw 'Unable to stop server as it hasn`t been correctly started'
-      }
-      this.server.close(() => {
+    if (this.server == null) {
+      throw new Error(
+        'Unable to stop server as it hasn`t been correctly started'
+      )
+    }
+    return await new Promise<void>((resolve) => {
+      this.server!.close(() => {
         resolve()
       })
     })

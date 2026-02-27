@@ -32,17 +32,13 @@ async function main() {
 
     await server.init()
 
-    try {
-      const transport = new StdioServerTransport()
-      await server.connect(transport)
-      singletonServices.logger = server.createMCPLogger()
-      process.on('SIGINT', async () => {
-        await server.stop()
-        process.exit(0)
-      })
-    } catch (error) {
-      throw error
-    }
+    const transport = new StdioServerTransport()
+    await server.connect(transport)
+    singletonServices.logger = server.createMCPLogger()
+    process.on('SIGINT', async () => {
+      await server.stop()
+      process.exit(0)
+    })
   } catch (error) {
     console.error('Failed to start MCP server:', error)
     process.exit(1)

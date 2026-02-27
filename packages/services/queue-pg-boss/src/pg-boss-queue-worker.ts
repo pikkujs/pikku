@@ -1,5 +1,4 @@
-import type { PgBoss } from 'pg-boss'
-import { type WorkOptions } from 'pg-boss'
+import type { PgBoss, WorkOptions } from 'pg-boss'
 import type {
   QueueWorkers,
   PikkuWorkerConfig,

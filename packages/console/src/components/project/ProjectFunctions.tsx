@@ -22,7 +22,7 @@ export const ProjectFunctions: React.FunctionComponent<
   const filtered = useMemo(() => {
     if (!functions) return []
     return functions.filter((func) => {
-      const id = func.pikkuFuncId || func.pikkuFuncId
+      const id = func.pikkuFuncId
       return (
         (!func.functionType || func.functionType === 'user') &&
         !id?.startsWith('pikku')
