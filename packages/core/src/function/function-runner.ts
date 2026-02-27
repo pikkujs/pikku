@@ -27,7 +27,7 @@ import type {
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
 import { createFunctionSessionWireProps } from '../services/user-session-service.js'
-import { ForbiddenError } from '../errors/errors.js'
+import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -268,6 +268,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
           throw new ForbiddenError('Authentication required')
         }
       }
+    }
+
+    if ((session as any)?.readonly && !funcMeta.readonly) {
+      throw new ReadonlySessionError()
     }
 
     // Evaluate the data from the lazy function

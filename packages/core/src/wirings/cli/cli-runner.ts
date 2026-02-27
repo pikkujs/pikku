@@ -360,7 +360,11 @@ export async function runCLICommand({
     // Skip if result is undefined (void functions handle their own output)
     if (renderer && result !== undefined) {
       await Promise.resolve(
-        renderer(singletonServices, result, userSession.get())
+        renderer(
+          singletonServices,
+          result,
+          userSession.get() as CoreUserSession | undefined
+        )
       )
     }
 

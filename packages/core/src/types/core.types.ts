@@ -101,6 +101,7 @@ export type FunctionRuntimeMeta = {
   expose?: boolean
   remote?: boolean
   mcp?: boolean
+  readonly?: boolean
   sessionless?: boolean
   version?: number
   requiresApproval?: boolean

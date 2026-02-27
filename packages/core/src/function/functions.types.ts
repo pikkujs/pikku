@@ -255,6 +255,7 @@ export type CorePikkuFunctionConfig<
   expose?: boolean
   remote?: boolean
   mcp?: boolean
+  readonly?: boolean
   requiresApproval?: boolean
   func: PikkuFunction
   auth?: boolean

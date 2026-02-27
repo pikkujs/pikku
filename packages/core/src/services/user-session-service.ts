@@ -66,7 +66,7 @@ export function createMiddlewareSessionWireProps<
   UserSession extends CoreUserSession,
 >(session: SessionService<UserSession>) {
   return {
-    session: session.get(),
+    session: session.get() as UserSession | undefined,
     setSession: (s: UserSession) => session.setInitial(s),
     getSession: () => session.get(),
     hasSessionChanged: () => session.sessionChanged,

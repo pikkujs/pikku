@@ -369,7 +369,7 @@ const executeRoute = async (
   const wire: PikkuWire = {
     http,
     channel,
-    session: userSession.get(),
+    session: userSession.get() as CoreUserSession | undefined,
     setSession: (s: any) => userSession.setInitial(s),
     getSession: () => userSession.get(),
     hasSessionChanged: () => userSession.sessionChanged,
