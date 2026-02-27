@@ -17,6 +17,13 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       logger.debug(`• Addon bootstrap: ${decl.package}`)
     }
 
+    const wireAddonFileImports = Array.from(
+      stateBeforeBootstrap.rpc?.wireAddonFiles ?? []
+    ).map(
+      (to) =>
+        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
+    )
+
     const localImports = allImports.map(
       (to) =>
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
@@ -36,7 +43,7 @@ try {
 
     const allBootstrapImports =
       metaDirRegistration +
-      [...localImports, ...addonImports]
+      [...localImports, ...wireAddonFileImports, ...addonImports]
         .sort((a, b) => {
           const aMeta = a.includes('meta')
           const bMeta = b.includes('meta')

@@ -76,4 +76,5 @@ export function addWireAddon(
     variableOverrides,
   })
   state.rpc.usedAddons.add(name)
+  state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)
 }

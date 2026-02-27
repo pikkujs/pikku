@@ -48,6 +48,8 @@ export const pikkuExpressMiddleware = ({
       ...runOptions,
     })
     response.flush()
-    next()
+    if (!response.isStreaming) {
+      next()
+    }
   }
 }
