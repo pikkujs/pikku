@@ -12,6 +12,7 @@ import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
+import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
 const configTypeWarningShown = new Set<string>()
@@ -454,12 +455,25 @@ function processCommand(
     }
   }
 
+  // --- validate auth/sessionless ---
+  if (
+    meta.pikkuFuncId &&
+    !validateAuthSessionless(
+      logger,
+      node,
+      inspectorState,
+      meta.pikkuFuncId,
+      `CLI command '${name}'`
+    )
+  ) {
+    return null
+  }
+
   // --- track used functions/middleware for service aggregation ---
   inspectorState.serviceAggregation.usedFunctions.add(meta.pikkuFuncId)
   extractWireNames(meta.middleware).forEach((name) =>
     inspectorState.serviceAggregation.usedMiddleware.add(name)
   )
-  // Note: subcommands are tracked recursively when they're processed
 
   return meta
 }

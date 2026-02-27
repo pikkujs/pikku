@@ -224,5 +224,6 @@ function processRoute(
     sourceFile,
     basePath: groupConfig.basePath,
     inheritedTags: groupConfig.tags,
+    inheritedAuth: groupConfig.auth,
   })
 }
