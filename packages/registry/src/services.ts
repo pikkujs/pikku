@@ -20,7 +20,8 @@ export const createSingletonServices = pikkuServices(
       existingServices?.secrets ?? new LocalSecretService(variables)
     const schema = new CFWorkerSchemaService(logger)
 
-    const dataDir = join(process.cwd(), 'data', 'packages')
+    const dataDir =
+      process.env.DATA_DIR ?? join(process.cwd(), 'data', 'packages')
     const storage = new JsonFileStorage(dataDir)
     await storage.init()
 

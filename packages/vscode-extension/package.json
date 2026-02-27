@@ -2,7 +2,7 @@
   "name": "pikku-vscode",
   "displayName": "Pikku",
   "description": "IDE-level project introspection, code generation, and navigation for Pikku projects",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "pikku",
   "license": "BUSL-1.1",
   "engines": {
@@ -12,10 +12,15 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/pikku.config.json"
+    "workspaceContains:**/pikku.config.json",
+    "onCommand:pikku.refresh",
+    "onCommand:pikku.prebuild",
+    "onCommand:pikku.info",
+    "onCommand:pikku.newFunction",
+    "onCommand:pikku.newWiring"
   ],
   "main": "./dist/extension.js",
-  "icon": "resources/pikku-icon.svg",
+  "icon": "resources/pikku-icon.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [

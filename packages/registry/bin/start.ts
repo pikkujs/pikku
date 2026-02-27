@@ -1,4 +1,4 @@
-import { PikkuUWSServer } from '@pikku/uws'
+import { PikkuFastifyServer } from '@pikku/fastify'
 
 import { createConfig } from '../src/config.js'
 import { createSingletonServices } from '../src/services.js'
@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
     const singletonServices = await createSingletonServices(config)
-    const appServer = new PikkuUWSServer(config, singletonServices.logger)
+    const appServer = new PikkuFastifyServer(config, singletonServices.logger)
 
     appServer.enableExitOnSigInt()
     await appServer.init()
