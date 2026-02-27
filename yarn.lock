@@ -55,15 +55,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/openai@npm:^1.0.0":
-  version: 1.3.24
-  resolution: "@ai-sdk/openai@npm:1.3.24"
+"@ai-sdk/openai@npm:^3.0.36":
+  version: 3.0.36
+  resolution: "@ai-sdk/openai@npm:3.0.36"
   dependencies:
-    "@ai-sdk/provider": "npm:1.1.3"
-    "@ai-sdk/provider-utils": "npm:2.2.8"
+    "@ai-sdk/provider": "npm:3.0.8"
+    "@ai-sdk/provider-utils": "npm:4.0.15"
   peerDependencies:
-    zod: ^3.0.0
-  checksum: 10/1ec406cd3840cbfff824bbcf5e7ceeaf99e7c440bc807cc8cfb56e254e8ebd837bea6f1d4590e261f26972062953146940642303bc5c94ee949bac116f3cc473
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 10/c23465e56e6d7400c9cc9ba37bba7af0c53f364d7cff6c99ccabfbba9ab67838f9bb37e32b55034ee44f9cc6183acd1556a6cbd3bcb9dfbfd379fb2104031d3b
   languageName: node
   linkType: hard
 
@@ -80,12 +80,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ai-sdk/provider-utils@npm:4.0.15":
+  version: 4.0.15
+  resolution: "@ai-sdk/provider-utils@npm:4.0.15"
+  dependencies:
+    "@ai-sdk/provider": "npm:3.0.8"
+    "@standard-schema/spec": "npm:^1.1.0"
+    eventsource-parser: "npm:^3.0.6"
+  peerDependencies:
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 10/6c80e03e604ad6f1a3c0a3f02a0265ae2b063987d2fa6b313aaf23cee45f337e1d21c459da8fabbcffe4b7e9150495406912590b37e90ff8ed433e1ed2110ea8
+  languageName: node
+  linkType: hard
+
 "@ai-sdk/provider@npm:1.1.3":
   version: 1.1.3
   resolution: "@ai-sdk/provider@npm:1.1.3"
   dependencies:
     json-schema: "npm:^0.4.0"
   checksum: 10/b094ca2f08001d4d34a0dcdf9fbe1b6eeedeaf0cf1568ce148d67b04333fd959cca60f888a24522b6d74114eabbc469f762d290d08096adec992a3c6de23756a
+  languageName: node
+  linkType: hard
+
+"@ai-sdk/provider@npm:3.0.8":
+  version: 3.0.8
+  resolution: "@ai-sdk/provider@npm:3.0.8"
+  dependencies:
+    json-schema: "npm:^0.4.0"
+  checksum: 10/85fb7b9c7cd9ea1aa9840aa57a9517a7ecec8c25a33a31e4615f4eceede9fe61f072b2a2915e4713f2b78c8b94a8c25a79ddbcf998f0d537c02ba47442402542
   languageName: node
   linkType: hard
 
@@ -5487,7 +5509,7 @@ __metadata:
   resolution: "@pikku/templates-ai-postgres@workspace:templates/ai-postgres"
   dependencies:
     "@ai-sdk/anthropic": "npm:^1.0.0"
-    "@ai-sdk/openai": "npm:^1.0.0"
+    "@ai-sdk/openai": "npm:^3.0.36"
     "@pikku/ai-vercel": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.0"
     "@pikku/express": "npm:^0.12.0"
@@ -12224,7 +12246,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eventsource-parser@npm:^3.0.0, eventsource-parser@npm:^3.0.1":
+"eventsource-parser@npm:^3.0.0, eventsource-parser@npm:^3.0.1, eventsource-parser@npm:^3.0.6":
   version: 3.0.6
   resolution: "eventsource-parser@npm:3.0.6"
   checksum: 10/febf7058b9c2168ecbb33e92711a1646e06bd1568f60b6eb6a01a8bf9f8fcd29cc8320d57247059cacf657a296280159f21306d2e3ff33309a9552b2ef889387
