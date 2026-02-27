@@ -17,6 +17,12 @@ import { pikkuNewFunction } from './functions/commands/new-function.js'
 import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
+import {
+  pikkuInfoFunctions,
+  pikkuInfoTags,
+  pikkuInfoMiddleware,
+  pikkuInfoPermissions,
+} from './functions/commands/info.js'
 // import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -206,5 +212,78 @@ wireCLI({
         }),
       },
     },
+    info: pikkuCLICommand({
+      func: pikkuInfoFunctions,
+      description: 'Show information about Pikku project resources',
+      options: {
+        limit: {
+          description: 'Maximum number of rows to display',
+          default: '50',
+        },
+        verbose: {
+          description: 'Show additional details (file paths, services, etc.)',
+          default: false,
+        },
+      },
+      subcommands: {
+        functions: pikkuCLICommand({
+          func: pikkuInfoFunctions,
+          description: 'List all registered functions',
+          options: {
+            limit: {
+              description: 'Maximum number of rows to display',
+              default: '50',
+            },
+            verbose: {
+              description: 'Show additional details (type, middleware, file)',
+              default: false,
+            },
+          },
+        }),
+        tags: pikkuCLICommand({
+          func: pikkuInfoTags,
+          description:
+            'List all tags with associated functions, middleware, and permissions',
+          options: {
+            limit: {
+              description: 'Maximum number of rows to display',
+              default: '50',
+            },
+            verbose: {
+              description: 'Show names instead of counts',
+              default: false,
+            },
+          },
+        }),
+        middleware: pikkuCLICommand({
+          func: pikkuInfoMiddleware,
+          description: 'List all middleware definitions',
+          options: {
+            limit: {
+              description: 'Maximum number of rows to display',
+              default: '50',
+            },
+            verbose: {
+              description: 'Show additional details (sourceFile, services)',
+              default: false,
+            },
+          },
+        }),
+        permissions: pikkuCLICommand({
+          func: pikkuInfoPermissions,
+          description: 'List all permission definitions',
+          options: {
+            limit: {
+              description: 'Maximum number of rows to display',
+              default: '50',
+            },
+            verbose: {
+              description: 'Show additional details (sourceFile, services)',
+              default: false,
+            },
+          },
+        }),
+      },
+    }),
   },
 })
