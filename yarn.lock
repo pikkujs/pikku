@@ -5463,7 +5463,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/schema-ajv@workspace:packages/services/schema-ajv"
   dependencies:
-    ajv: "npm:^8.17.1"
+    ajv: "npm:^8.18.0"
     ajv-formats: "npm:^3.0.1"
     typescript: "npm:^5.9.3"
   peerDependencies:
@@ -8959,7 +8959,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv@npm:^8.8.2":
+"ajv@npm:^8.18.0, ajv@npm:^8.8.2":
   version: 8.18.0
   resolution: "ajv@npm:8.18.0"
   dependencies:
