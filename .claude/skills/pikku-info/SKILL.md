@@ -2,7 +2,7 @@
 name: pikku-info
 description: Discover what exists in a Pikku project — functions, tags, middleware, permissions, HTTP routes, channels, schedulers, queues, and more. Use when you need to understand the project structure, find existing functions, or check what middleware and permissions are defined.
 allowed-tools: Bash(yarn pikku info *)
-argument-hint: "[functions|tags|middleware|permissions] [--verbose] [--limit N]"
+argument-hint: '[functions|tags|middleware|permissions] [--verbose] [--limit N]'
 ---
 
 # Pikku Project Discovery
@@ -14,41 +14,57 @@ Use the `pikku info` CLI commands to inspect this Pikku project. Run the command
 Always use `--silent` to suppress the banner and inspector logs.
 
 ### Functions
+
 List all registered pikku functions:
+
 ```
 yarn pikku info functions --silent
 ```
+
 For full details including transport type (http/channel/scheduler/queue/workflow/mcp/cli/trigger), middleware, permissions, and source file:
+
 ```
 yarn pikku info functions --verbose --silent
 ```
 
 ### Tags
+
 List all tags with counts of associated functions, middleware, and permissions:
+
 ```
 yarn pikku info tags --silent
 ```
+
 For full names instead of counts:
+
 ```
 yarn pikku info tags --verbose --silent
 ```
 
 ### Middleware
+
 List all middleware definitions:
+
 ```
 yarn pikku info middleware --silent
 ```
+
 For full details including source file, required services, and description:
+
 ```
 yarn pikku info middleware --verbose --silent
 ```
 
 ### Permissions
+
 List all permission definitions:
+
 ```
 yarn pikku info permissions --silent
 ```
+
 For full details including source file, required services, and description:
+
 ```
 yarn pikku info permissions --verbose --silent
 ```

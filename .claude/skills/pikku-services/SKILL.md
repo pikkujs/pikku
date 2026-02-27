@@ -1,6 +1,6 @@
 ---
 name: pikku-services
-description: "Use when setting up dependency injection, creating custom services, or configuring the service layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service typing, built-in services, and tree-shaking."
+description: 'Use when setting up dependency injection, creating custom services, or configuring the service layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service typing, built-in services, and tree-shaking.'
 ---
 
 # Pikku Services (Dependency Injection)
@@ -67,15 +67,17 @@ After `npx pikku prebuild`, Pikku generates a manifest of which services are act
 ```typescript
 // .pikku/pikku-services.gen.ts (auto-generated)
 export const requiredSingletonServices = {
-  'database': true,     // used by getUser, deleteUser
-  'audit': true,        // used by deleteUser
-  'cache': false,       // not used by any wired function
-  'jwt': true,          // used by auth middleware
+  database: true, // used by getUser, deleteUser
+  audit: true, // used by deleteUser
+  cache: false, // not used by any wired function
+  jwt: true, // used by auth middleware
 } as const
 
-export type RequiredSingletonServices =
-  Pick<SingletonServices, 'database' | 'audit' | 'jwt'>
-  & Partial<Omit<SingletonServices, 'database' | 'audit' | 'jwt'>>
+export type RequiredSingletonServices = Pick<
+  SingletonServices,
+  'database' | 'audit' | 'jwt'
+> &
+  Partial<Omit<SingletonServices, 'database' | 'audit' | 'jwt'>>
 ```
 
 ## Usage Patterns
@@ -112,9 +114,7 @@ const createWireServices = pikkuWireServices(
   async (singletonServices, wire) => {
     return {
       userSession: createUserSessionService(wire),
-      dbTransaction: new DatabaseTransaction(
-        singletonServices.database
-      ),
+      dbTransaction: new DatabaseTransaction(singletonServices.database),
     }
   }
 )
@@ -142,35 +142,33 @@ Use the generated manifest to conditionally import heavy dependencies:
 ```typescript
 import { requiredSingletonServices } from '.pikku/pikku-services.gen.js'
 
-const createSingletonServices = pikkuServices(
-  async (config) => {
-    const logger = new ConsoleLogger()
+const createSingletonServices = pikkuServices(async (config) => {
+  const logger = new ConsoleLogger()
 
-    let jwt: JWTService | undefined
-    if (requiredSingletonServices.jwt) {
-      const { JoseJWTService } = await import('@pikku/jose')
-      jwt = new JoseJWTService(keys, logger)
-    }
-
-    let database: Database | undefined
-    if (requiredSingletonServices.database) {
-      database = await createDatabase(config.databaseUrl)
-    }
-
-    return { config, logger, jwt, database }
+  let jwt: JWTService | undefined
+  if (requiredSingletonServices.jwt) {
+    const { JoseJWTService } = await import('@pikku/jose')
+    jwt = new JoseJWTService(keys, logger)
   }
-)
+
+  let database: Database | undefined
+  if (requiredSingletonServices.database) {
+    database = await createDatabase(config.databaseUrl)
+  }
+
+  return { config, logger, jwt, database }
+})
 ```
 
 ### Built-in Services
 
-| Service | Package | Purpose |
-|---------|---------|---------|
-| `ConsoleLogger` | `@pikku/core` | Console-based logging |
-| `JoseJWTService` | `@pikku/jose` | JWT sign/verify via jose |
-| `LocalSecretService` | `@pikku/core` | Local development secrets |
+| Service                 | Package       | Purpose                     |
+| ----------------------- | ------------- | --------------------------- |
+| `ConsoleLogger`         | `@pikku/core` | Console-based logging       |
+| `JoseJWTService`        | `@pikku/jose` | JWT sign/verify via jose    |
+| `LocalSecretService`    | `@pikku/core` | Local development secrets   |
 | `LocalVariablesService` | `@pikku/core` | Local environment variables |
-| `PinoLogger` | `@pikku/pino` | Structured logging via Pino |
+| `PinoLogger`            | `@pikku/pino` | Structured logging via Pino |
 
 ## Complete Example
 
@@ -190,29 +188,33 @@ class TodoStore {
     return todo
   }
 
-  async get(id: string) { return this.todos.get(id) }
-  async list() { return [...this.todos.values()] }
-  async delete(id: string) { this.todos.delete(id) }
+  async get(id: string) {
+    return this.todos.get(id)
+  }
+  async list() {
+    return [...this.todos.values()]
+  }
+  async delete(id: string) {
+    this.todos.delete(id)
+  }
 }
 
-export const createSingletonServices = pikkuServices(
-  async (config) => {
-    const logger = new ConsoleLogger()
-    const jwt = new JoseJWTService(
-      async () => [{ id: 'my-key', value: config.jwtSecret }],
-      logger
-    )
+export const createSingletonServices = pikkuServices(async (config) => {
+  const logger = new ConsoleLogger()
+  const jwt = new JoseJWTService(
+    async () => [{ id: 'my-key', value: config.jwtSecret }],
+    logger
+  )
 
-    return {
-      config,
-      logger,
-      jwt,
-      secrets: new LocalSecretService(),
-      variables: new LocalVariablesService(),
-      todoStore: new TodoStore(),
-    }
+  return {
+    config,
+    logger,
+    jwt,
+    secrets: new LocalSecretService(),
+    variables: new LocalVariablesService(),
+    todoStore: new TodoStore(),
   }
-)
+})
 
 export const createWireServices = pikkuWireServices(
   async (singletonServices, wire) => ({

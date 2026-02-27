@@ -1,6 +1,6 @@
 ---
 name: pikku-cron
-description: "Use when adding scheduled tasks, recurring jobs, or cron-based automation to a Pikku app. Covers wireScheduler, cron expressions, scheduled task wire object, and scheduler middleware."
+description: 'Use when adding scheduled tasks, recurring jobs, or cron-based automation to a Pikku app. Covers wireScheduler, cron expressions, scheduled task wire object, and scheduler middleware.'
 ---
 
 # Pikku Cron/Scheduler Wiring
@@ -36,10 +36,10 @@ wireScheduler({
 Inside scheduled functions:
 
 ```typescript
-wire.scheduledTask.name           // Scheduler name
-wire.scheduledTask.schedule       // Cron expression string
-wire.scheduledTask.executionTime  // When this execution was triggered
-wire.scheduledTask.skip(reason)   // Skip this execution (no error)
+wire.scheduledTask.name // Scheduler name
+wire.scheduledTask.schedule // Cron expression string
+wire.scheduledTask.executionTime // When this execution was triggered
+wire.scheduledTask.skip(reason) // Skip this execution (no error)
 ```
 
 ### Cron Expression Reference
@@ -56,14 +56,14 @@ wire.scheduledTask.skip(reason)   // Skip this execution (no error)
 
 Common patterns:
 
-| Expression | Meaning |
-|-----------|---------|
-| `*/5 * * * *` | Every 5 minutes |
-| `0 9 * * *` | Daily at 9:00 AM |
-| `0 9 * * 1` | Every Monday at 9:00 AM |
-| `0 0 1 * *` | First of month at midnight |
-| `0 */6 * * *` | Every 6 hours |
-| `30 2 * * 0` | Sundays at 2:30 AM |
+| Expression    | Meaning                    |
+| ------------- | -------------------------- |
+| `*/5 * * * *` | Every 5 minutes            |
+| `0 9 * * *`   | Daily at 9:00 AM           |
+| `0 9 * * 1`   | Every Monday at 9:00 AM    |
+| `0 0 1 * *`   | First of month at midnight |
+| `0 */6 * * *` | Every 6 hours              |
+| `30 2 * * 0`  | Sundays at 2:30 AM         |
 
 ## Usage Patterns
 
@@ -181,7 +181,19 @@ export const syncInventory = pikkuVoidFunc({
 })
 
 // wirings/scheduler.wiring.ts
-wireScheduler({ name: 'dailySummary',    schedule: '0 9 * * *',   func: dailySummary })
-wireScheduler({ name: 'cleanupExpired',  schedule: '0 */6 * * *', func: cleanupExpired })
-wireScheduler({ name: 'syncInventory',   schedule: '*/15 * * * *', func: syncInventory })
+wireScheduler({
+  name: 'dailySummary',
+  schedule: '0 9 * * *',
+  func: dailySummary,
+})
+wireScheduler({
+  name: 'cleanupExpired',
+  schedule: '0 */6 * * *',
+  func: cleanupExpired,
+})
+wireScheduler({
+  name: 'syncInventory',
+  schedule: '*/15 * * * *',
+  func: syncInventory,
+})
 ```

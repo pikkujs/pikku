@@ -1,6 +1,6 @@
 ---
 name: pikku-security
-description: "Use when adding authentication, authorization, permissions, middleware, or security to a Pikku app. Covers pikkuAuth, pikkuPermission, pikkuMiddleware, built-in auth strategies (bearer, cookie, API key), and permission scoping."
+description: 'Use when adding authentication, authorization, permissions, middleware, or security to a Pikku app. Covers pikkuAuth, pikkuPermission, pikkuMiddleware, built-in auth strategies (bearer, cookie, API key), and permission scoping.'
 ---
 
 # Pikku Security (Auth, Permissions, Middleware)
@@ -104,13 +104,11 @@ export const hasBookAccess = pikkuPermission(
 ```typescript
 import { pikkuMiddleware } from '#pikku'
 
-const logRequest = pikkuMiddleware(
-  async ({ logger }, wire, next) => {
-    logger.info('Before')
-    await next()
-    logger.info('After')
-  }
-)
+const logRequest = pikkuMiddleware(async ({ logger }, wire, next) => {
+  logger.info('Before')
+  await next()
+  logger.info('After')
+})
 ```
 
 ### Built-in Auth Middleware
@@ -198,15 +196,13 @@ export const isBookOwner = pikkuPermission(
 // middleware.ts
 import { pikkuMiddleware } from '#pikku'
 
-export const auditLog = pikkuMiddleware(
-  async ({ logger, db }, wire, next) => {
-    const start = Date.now()
-    await next()
-    await db.createAuditLog({
-      duration: Date.now() - start,
-    })
-  }
-)
+export const auditLog = pikkuMiddleware(async ({ logger, db }, wire, next) => {
+  const start = Date.now()
+  await next()
+  await db.createAuditLog({
+    duration: Date.now() - start,
+  })
+})
 
 // wirings/security.wiring.ts
 import { authBearer } from '@pikku/core/middleware'

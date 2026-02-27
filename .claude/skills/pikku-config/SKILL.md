@@ -1,6 +1,6 @@
 ---
 name: pikku-config
-description: "Use when managing secrets, environment variables, config, OAuth2 credentials, or API versioning in a Pikku app. Covers wireSecret, wireVariable, wireOAuth2Credential, typed config access, and contract versioning."
+description: 'Use when managing secrets, environment variables, config, OAuth2 credentials, or API versioning in a Pikku app. Covers wireSecret, wireVariable, wireOAuth2Credential, typed config access, and contract versioning.'
 ---
 
 # Pikku Config, Secrets & Versioning
@@ -24,8 +24,8 @@ Declare a secret with a Zod schema for type-safe access:
 
 ```typescript
 wireSecret({
-  name: string,           // Secret identifier
-  schema: ZodSchema,      // Shape and validation
+  name: string, // Secret identifier
+  schema: ZodSchema, // Shape and validation
 })
 ```
 
@@ -59,7 +59,7 @@ const apiKey = services.variables.get('API_KEY')
 import { LocalSecretService, LocalVariablesService } from '@pikku/core'
 
 const createSingletonServices = pikkuServices(async (config) => ({
-  secrets: new LocalSecretService(),      // Reads from .env or local files
+  secrets: new LocalSecretService(), // Reads from .env or local files
   variables: new LocalVariablesService(), // Reads from environment
 }))
 ```

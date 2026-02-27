@@ -1,6 +1,6 @@
 ---
 name: pikku-workflow
-description: "Use when building multi-step workflows, state machines, or orchestration pipelines with Pikku. Covers pikkuWorkflowFunc, workflow steps (do, sleep, suspend), graph workflows, and HTTP wiring."
+description: 'Use when building multi-step workflows, state machines, or orchestration pipelines with Pikku. Covers pikkuWorkflowFunc, workflow steps (do, sleep, suspend), graph workflows, and HTTP wiring.'
 ---
 
 # Pikku Workflow Wiring
@@ -23,13 +23,12 @@ See `pikku-concepts` for the core mental model.
 ```typescript
 import { pikkuWorkflowFunc } from '#pikku'
 
-const myWorkflow = pikkuWorkflowFunc<
-  InputType,
-  OutputType
->(async (services, data, { workflow }) => {
-  // workflow.do(), workflow.sleep(), workflow.suspend()
-  return result
-})
+const myWorkflow = pikkuWorkflowFunc<InputType, OutputType>(
+  async (services, data, { workflow }) => {
+    // workflow.do(), workflow.sleep(), workflow.suspend()
+    return result
+  }
+)
 ```
 
 ### Workflow Step Types
@@ -110,11 +109,10 @@ const onboardUser = pikkuWorkflowFunc<
   { email: string; userId: string },
   { success: boolean }
 >(async ({}, data, { workflow }) => {
-  const user = await workflow.do(
-    'Create profile',
-    'createUserProfile',
-    { email: data.email, userId: data.userId }
-  )
+  const user = await workflow.do('Create profile', 'createUserProfile', {
+    email: data.email,
+    userId: data.userId,
+  })
 
   const message = await workflow.do(
     'Generate welcome',
@@ -137,8 +135,9 @@ const onboardUser = pikkuWorkflowFunc<
 
 ```typescript
 const users = await Promise.all(
-  data.userIds.map(async (userId) =>
-    await workflow.do(`Get user ${userId}`, 'userGet', { userId })
+  data.userIds.map(
+    async (userId) =>
+      await workflow.do(`Get user ${userId}`, 'userGet', { userId })
   )
 )
 ```
@@ -184,12 +183,12 @@ const userOnboarding = pikkuWorkflowGraph({
   description: 'Onboard a new user',
   nodes: {
     createProfile: 'createUserProfile',
-    sendWelcome:   'sendEmail',
+    sendWelcome: 'sendEmail',
     setupDefaults: 'createDefaultTodos',
   },
   config: {
     createProfile: {
-      next: ['sendWelcome', 'setupDefaults'],  // Run in parallel
+      next: ['sendWelcome', 'setupDefaults'], // Run in parallel
     },
     sendWelcome: {
       input: (ref) => ({
@@ -210,11 +209,10 @@ export const onboardUser = pikkuWorkflowFunc<
   { success: boolean }
 >(async ({}, data, { workflow }) => {
   // Step 1: Create user profile
-  const user = await workflow.do(
-    'Create profile',
-    'createUserProfile',
-    { email: data.email, userId: data.userId }
-  )
+  const user = await workflow.do('Create profile', 'createUserProfile', {
+    email: data.email,
+    userId: data.userId,
+  })
 
   // Step 2: Set up defaults based on plan
   if (data.plan === 'pro') {

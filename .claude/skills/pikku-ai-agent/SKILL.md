@@ -1,6 +1,6 @@
 ---
 name: pikku-ai-agent
-description: "Use when building AI agents, chatbots, or LLM-powered assistants with Pikku. Covers pikkuAIAgent, tool registration, memory, streaming, and agent invocation."
+description: 'Use when building AI agents, chatbots, or LLM-powered assistants with Pikku. Covers pikkuAIAgent, tool registration, memory, streaming, and agent invocation.'
 ---
 
 # Pikku AI Agent Wiring
@@ -41,25 +41,34 @@ pikkuAIAgent({
 ### `runAIAgent(name, input, options)` — Non-streaming
 
 ```typescript
-const result = await runAIAgent(agentName, {
-  message: string,               // User message
-  threadId: string,              // Conversation thread ID
-  resourceId: string,            // User/resource identifier
-}, { singletonServices })
+const result = await runAIAgent(
+  agentName,
+  {
+    message: string, // User message
+    threadId: string, // Conversation thread ID
+    resourceId: string, // User/resource identifier
+  },
+  { singletonServices }
+)
 
-result.text      // Agent's text response
-result.steps     // Array of tool calls made
-result.usage     // Token usage { input, output }
+result.text // Agent's text response
+result.steps // Array of tool calls made
+result.usage // Token usage { input, output }
 ```
 
 ### `streamAIAgent(name, input, channel, options)` — Streaming
 
 ```typescript
-await streamAIAgent(agentName, {
-  message: string,
-  threadId: string,
-  resourceId: string,
-}, channel, { singletonServices })
+await streamAIAgent(
+  agentName,
+  {
+    message: string,
+    threadId: string,
+    resourceId: string,
+  },
+  channel,
+  { singletonServices }
+)
 
 // Channel receives events:
 // { type: 'text-delta', text: '...' }
@@ -77,7 +86,8 @@ await streamAIAgent(agentName, {
 const todoAssistant = pikkuAIAgent({
   name: 'todo-assistant',
   description: 'A helpful assistant that manages todos',
-  instructions: 'You help users manage their todo lists. Be concise and helpful.',
+  instructions:
+    'You help users manage their todo lists. Be concise and helpful.',
   model: 'openai/gpt-4o-mini',
   tools: [listTodos, createTodo, completeTodo],
   memory: {
@@ -92,25 +102,34 @@ const todoAssistant = pikkuAIAgent({
 ### Invoke Non-Streaming
 
 ```typescript
-const result = await runAIAgent('todo-assistant', {
-  message: 'Create a task for tomorrow: buy groceries',
-  threadId: 'thread-123',
-  resourceId: 'user-456',
-}, { singletonServices })
+const result = await runAIAgent(
+  'todo-assistant',
+  {
+    message: 'Create a task for tomorrow: buy groceries',
+    threadId: 'thread-123',
+    resourceId: 'user-456',
+  },
+  { singletonServices }
+)
 
-console.log(result.text)     // "I've created a task 'buy groceries' for tomorrow."
-console.log(result.steps)    // [{ tool: 'createTodo', args: {...}, result: {...} }]
-console.log(result.usage)    // { input: 150, output: 42 }
+console.log(result.text) // "I've created a task 'buy groceries' for tomorrow."
+console.log(result.steps) // [{ tool: 'createTodo', args: {...}, result: {...} }]
+console.log(result.usage) // { input: 150, output: 42 }
 ```
 
 ### Stream Responses
 
 ```typescript
-await streamAIAgent('todo-assistant', {
-  message: 'Create a task for tomorrow',
-  threadId: 'thread-123',
-  resourceId: 'user-456',
-}, channel, { singletonServices })
+await streamAIAgent(
+  'todo-assistant',
+  {
+    message: 'Create a task for tomorrow',
+    threadId: 'thread-123',
+    resourceId: 'user-456',
+  },
+  channel,
+  { singletonServices }
+)
 ```
 
 ## Complete Example
@@ -164,11 +183,15 @@ wireHTTP({
     title: 'Chat',
     func: async (services, { message, threadId }, wire) => {
       const session = await wire.session.get()
-      return await runAIAgent('todo-assistant', {
-        message,
-        threadId,
-        resourceId: session.userId,
-      }, { singletonServices: services })
+      return await runAIAgent(
+        'todo-assistant',
+        {
+          message,
+          threadId,
+          resourceId: session.userId,
+        },
+        { singletonServices: services }
+      )
     },
   }),
 })
