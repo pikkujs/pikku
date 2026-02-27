@@ -67,8 +67,8 @@ async function main() {
 
   if (flameMode) {
     console.log(
-      '\n  --flame mode: server is running. Use clinic flame to profile.\n' +
-        '  Press Ctrl+C to stop.\n'
+      '\n  --flame mode: server is running. 0x is profiling.\n' +
+        '  Press Ctrl+C to stop and generate flamegraph.\n'
     )
     return
   }

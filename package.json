@@ -54,14 +54,14 @@
     "benchmark:baseline:express": "tsx benchmarks/bench-baseline-express.ts",
     "benchmark:baseline:fastify": "tsx benchmarks/bench-baseline-fastify.ts",
     "benchmark:baseline:uws": "tsx benchmarks/bench-baseline-uws.ts",
-    "benchmark:flame": "npx clinic flame -- npx tsx benchmarks/bench-express.ts --flame"
+    "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame"
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {
+    "0x": "^5.7.0",
     "@types/autocannon": "^7.12.0",
     "@types/node": "^20.11.30",
     "autocannon": "^8.0.0",
-    "clinic": "^13.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.0.0",
     "oxlint": "^1.50.0",
