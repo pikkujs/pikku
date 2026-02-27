@@ -15,6 +15,7 @@ import {
   Code,
   Container,
   Button,
+  TypographyStylesProvider,
 } from '@mantine/core'
 import {
   AssistantRuntimeProvider,
@@ -31,6 +32,8 @@ import {
   User,
   ShieldAlert,
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { useAgentPlayground } from '@/context/AgentPlaygroundContext'
 import { useAgentRuntime } from '@/hooks/useAgentRuntime'
@@ -67,7 +70,7 @@ const ToolCallDisplay: React.FunctionComponent<{
         radius="sm"
         p="sm"
         my={4}
-        bg="var(--mantine-color-yellow-0)"
+        bg="var(--mantine-color-yellow-light)"
       >
         <Group gap="xs" mb="xs">
           <ShieldAlert size={14} color="var(--mantine-color-orange-6)" />
@@ -208,14 +211,16 @@ const AssistantMessage: React.FunctionComponent = () => (
       <Paper
         p="sm"
         radius="md"
-        style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}
+        bg="var(--mantine-color-default-hover)"
       >
         <MessagePrimitive.Content
           components={{
             Text: ({ text }) => (
-              <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                {text}
-              </Text>
+              <TypographyStylesProvider p={0} m={0} fz="sm">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {text}
+                </ReactMarkdown>
+              </TypographyStylesProvider>
             ),
             tools: {
               Fallback: (props) => (
@@ -304,9 +309,9 @@ export const AgentChat: React.FunctionComponent = () => {
         gap={0}
         style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
       >
-        <ThreadPrimitive.Root>
+        <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <ThreadPrimitive.Viewport asChild>
-            <ScrollArea style={{ flex: 1 }} type="auto">
+            <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto">
               <Container size="md" p="md" pb="xl">
                 <Stack gap="md">
                   <ThreadPrimitive.Empty>
