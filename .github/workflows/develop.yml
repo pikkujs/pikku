@@ -201,7 +201,7 @@ jobs:
     name: Benchmark (${{ matrix.bench }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [verifiers, templates]
+    needs: build
     strategy:
       fail-fast: false
       matrix:
