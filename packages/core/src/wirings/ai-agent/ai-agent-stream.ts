@@ -9,16 +9,17 @@ import type {
   CoreAIAgent,
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
-import {
-  pikkuState,
-  getSingletonServices,
-} from '../../pikku-state.js'
+import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
 } from '../channel/channel-middleware-runner.js'
 import { randomUUID } from 'crypto'
 import type { AIStorageService } from '../../services/ai-storage-service.js'
+import type {
+  AIAgentRunnerParams,
+  AIAgentStepResult,
+} from '../../services/ai-agent-runner-service.js'
 
 import {
   parseWorkingMemory,
@@ -38,6 +39,10 @@ import {
   type StreamAIAgentOptions,
   type StreamContext,
 } from './ai-agent-prepare.js'
+import {
+  createAssistantUIChannel,
+  parseAssistantUIInput,
+} from './ai-agent-assistant-ui.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 import type { AIAgentRunnerService } from '../../services/ai-agent-runner-service.js'
@@ -189,15 +194,219 @@ async function postStreamCleanup(
   await aiRunState.updateRun(runId, { status: 'completed' })
 }
 
+type StepLoopParams = {
+  agent: CoreAIAgent
+  runnerParams: AIAgentRunnerParams
+  maxSteps: number
+  agentRunner: AIAgentRunnerService
+  persistingChannel: PersistingChannel
+  channel: AIStreamChannel
+  runId: string
+}
+
+type StepLoopResult =
+  | { outcome: 'done' }
+  | { outcome: 'approval'; approval: ToolApprovalRequired }
+
+async function runStreamStepLoop(
+  params: StepLoopParams
+): Promise<StepLoopResult> {
+  const {
+    agent,
+    runnerParams,
+    maxSteps,
+    agentRunner,
+    persistingChannel,
+    channel,
+    runId,
+  } = params
+
+  for (let step = 0; step < maxSteps; step++) {
+    if (agent.prepareStep) {
+      let stopped = false
+      await agent.prepareStep({
+        stepNumber: step,
+        messages: runnerParams.messages,
+        tools: runnerParams.tools,
+        toolChoice: runnerParams.toolChoice,
+        model: runnerParams.model,
+        stop: () => {
+          stopped = true
+        },
+      })
+      if (stopped) break
+    }
+
+    channel.send({ type: 'step-start', stepNumber: step })
+
+    const stepResult = await agentRunner.stream(runnerParams, persistingChannel)
+
+    if (stepResult.toolCalls.length === 0) break
+
+    const approvalNeeded = checkForApproval(
+      stepResult,
+      runnerParams.tools,
+      runId
+    )
+    if (approvalNeeded) {
+      return { outcome: 'approval', approval: approvalNeeded }
+    }
+
+    appendStepMessages(runnerParams, stepResult)
+  }
+
+  return { outcome: 'done' }
+}
+
+function checkForApproval(
+  stepResult: AIAgentStepResult,
+  tools: AIAgentRunnerParams['tools'],
+  runId: string
+): ToolApprovalRequired | null {
+  for (const tc of stepResult.toolCalls) {
+    const toolDef = tools.find((t) => t.name === tc.toolName)
+
+    if (toolDef?.needsApproval) {
+      return new ToolApprovalRequired(tc.toolCallId, tc.toolName, tc.args)
+    }
+
+    const tr = stepResult.toolResults.find(
+      (r) => r.toolCallId === tc.toolCallId
+    )
+    if (
+      tr?.result &&
+      typeof tr.result === 'object' &&
+      '__approvalRequired' in (tr.result as object)
+    ) {
+      const r = tr.result as {
+        toolName: string
+        args: unknown
+        reason?: string
+        displayToolName?: string
+        displayArgs?: unknown
+        agentRunId?: string
+      }
+      return new ToolApprovalRequired(
+        tc.toolCallId,
+        r.toolName,
+        r.args,
+        r.reason,
+        r.displayToolName,
+        r.displayArgs,
+        r.agentRunId
+      )
+    }
+  }
+  return null
+}
+
+function appendStepMessages(
+  runnerParams: AIAgentRunnerParams,
+  stepResult: AIAgentStepResult
+): void {
+  const assistantMsg: AIMessage = {
+    id: randomUUID(),
+    role: 'assistant',
+    content: stepResult.text || undefined,
+    toolCalls:
+      stepResult.toolCalls.length > 0
+        ? stepResult.toolCalls.map((tc) => ({
+            id: tc.toolCallId,
+            name: tc.toolName,
+            args: tc.args as Record<string, unknown>,
+          }))
+        : undefined,
+    createdAt: new Date(),
+  }
+  runnerParams.messages.push(assistantMsg)
+
+  if (stepResult.toolResults.length > 0) {
+    const toolMsg: AIMessage = {
+      id: randomUUID(),
+      role: 'tool',
+      toolResults: stepResult.toolResults.map((tr) => ({
+        id: tr.toolCallId,
+        name: tr.toolName,
+        result:
+          typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
+      })),
+      createdAt: new Date(),
+    }
+    runnerParams.messages.push(toolMsg)
+  }
+}
+
+function handleApproval(
+  err: ToolApprovalRequired,
+  runId: string,
+  channel: AIStreamChannel,
+  aiRunState: AIRunStateService,
+  persistingChannel: PersistingChannel
+): Promise<void> {
+  return (async () => {
+    await persistingChannel.flush()
+
+    const pendingApproval = err.agentRunId
+      ? {
+          type: 'agent-call' as const,
+          toolCallId: err.toolCallId,
+          agentName: err.toolName,
+          agentRunId: err.agentRunId,
+          displayToolName: err.displayToolName ?? err.toolName,
+          displayArgs: err.displayArgs ?? err.args,
+        }
+      : {
+          type: 'tool-call' as const,
+          toolCallId: err.toolCallId,
+          toolName: err.toolName,
+          args: err.args,
+        }
+
+    await aiRunState.updateRun(runId, {
+      status: 'suspended',
+      suspendReason: 'approval',
+      pendingApprovals: [pendingApproval],
+    })
+
+    const approvalEvent = {
+      type: 'approval-request' as const,
+      toolCallId: err.toolCallId,
+      toolName: err.displayToolName ?? err.toolName,
+      args: err.displayArgs ?? err.args,
+      reason: err.reason,
+      runId,
+    }
+    channel.send(approvalEvent as any)
+    channel.send({ type: 'done' })
+    channel.close()
+  })()
+}
+
 export async function streamAIAgent(
   agentName: string,
-  input: { message: string; threadId: string; resourceId: string },
+  input:
+    | { message: string; threadId: string; resourceId: string }
+    | Record<string, unknown>,
   channel: AIStreamChannel,
   params: RunAIAgentParams,
   agentSessionMap?: Map<string, string>,
   options?: StreamAIAgentOptions
 ): Promise<void> {
   const sessionMap = agentSessionMap ?? new Map<string, string>()
+
+  const { agent: resolvedAgentForProtocol } = resolveAgent(agentName)
+  let normalizedInput: { message: string; threadId: string; resourceId: string }
+  if (resolvedAgentForProtocol.protocol === 'ui-message-stream') {
+    normalizedInput = parseAssistantUIInput(input as Record<string, unknown>)
+    channel = createAssistantUIChannel(channel)
+  } else {
+    normalizedInput = input as {
+      message: string
+      threadId: string
+      resourceId: string
+    }
+  }
+
   const streamContext: StreamContext = { channel, options }
 
   const {
@@ -210,9 +419,16 @@ export async function streamAIAgent(
     threadId,
     userMessage,
     runnerParams,
+    maxSteps,
     missingRpcs,
     workingMemorySchemaName,
-  } = await prepareAgentRun(agentName, input, params, sessionMap, streamContext)
+  } = await prepareAgentRun(
+    agentName,
+    normalizedInput,
+    params,
+    sessionMap,
+    streamContext
+  )
 
   const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
@@ -224,7 +440,7 @@ export async function streamAIAgent(
     await aiRunState.createRun({
       agentName,
       threadId,
-      resourceId: input.resourceId,
+      resourceId: normalizedInput.resourceId,
       status: 'suspended',
       suspendReason: 'rpc-missing',
       missingRpcs,
@@ -257,7 +473,7 @@ export async function streamAIAgent(
   const runId = await aiRunState.createRun({
     agentName,
     threadId,
-    resourceId: input.resourceId,
+    resourceId: normalizedInput.resourceId,
     status: 'running',
     usage: { inputTokens: 0, outputTokens: 0, model: agent.model },
     createdAt: new Date(),
@@ -314,7 +530,26 @@ export async function streamAIAgent(
   )
 
   try {
-    await agentRunner.stream(runnerParams, persistingChannel)
+    const loopResult = await runStreamStepLoop({
+      agent,
+      runnerParams,
+      maxSteps,
+      agentRunner,
+      persistingChannel,
+      channel,
+      runId,
+    })
+
+    if (loopResult.outcome === 'approval') {
+      await handleApproval(
+        loopResult.approval,
+        runId,
+        channel,
+        aiRunState,
+        persistingChannel
+      )
+      return
+    }
 
     await postStreamCleanup(
       persistingChannel,
@@ -328,46 +563,10 @@ export async function streamAIAgent(
       aiRunState,
       runId
     )
+
+    channel.send({ type: 'done' })
+    channel.close()
   } catch (err) {
-    if (err instanceof ToolApprovalRequired) {
-      await persistingChannel.flush()
-
-      const pendingApproval = err.agentRunId
-        ? {
-            type: 'agent-call' as const,
-            toolCallId: err.toolCallId,
-            agentName: err.toolName,
-            agentRunId: err.agentRunId,
-            displayToolName: err.displayToolName ?? err.toolName,
-            displayArgs: err.displayArgs ?? err.args,
-          }
-        : {
-            type: 'tool-call' as const,
-            toolCallId: err.toolCallId,
-            toolName: err.toolName,
-            args: err.args,
-          }
-
-      await aiRunState.updateRun(runId, {
-        status: 'suspended',
-        suspendReason: 'approval',
-        pendingApprovals: [pendingApproval],
-      })
-
-      const approvalEvent = {
-        type: 'approval-request' as const,
-        toolCallId: err.toolCallId,
-        toolName: err.displayToolName ?? err.toolName,
-        args: err.displayArgs ?? err.args,
-        reason: err.reason,
-        runId,
-      }
-      channel.send(approvalEvent as any)
-      channel.send({ type: 'done' })
-      channel.close()
-      return
-    }
-
     await aiRunState.updateRun(runId, { status: 'failed' })
     channel.send({
       type: 'error',
@@ -531,14 +730,10 @@ export async function resumeAIAgent(
 
     const toolArgs =
       typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
-    const { toolApprovalReason: _ignored, ...cleanArgs } = toolArgs as Record<
-      string,
-      unknown
-    >
 
     let toolResult: unknown
     try {
-      toolResult = await matchingTool.execute(cleanArgs)
+      toolResult = await matchingTool.execute(toolArgs)
     } catch (execErr) {
       toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
     }
@@ -695,14 +890,15 @@ async function continueAfterToolResult(
   ).tools
 
   const resolved = resolveModelConfig(resolvedName, agent)
+  const maxSteps = resolved.maxSteps ?? 10
 
-  const runnerParams = {
+  const runnerParams: AIAgentRunnerParams = {
     model: resolved.model,
     temperature: resolved.temperature,
     instructions: modifiedInstructions,
     messages: modifiedMessages,
     tools: resumeTools,
-    maxSteps: resolved.maxSteps ?? 10,
+    maxSteps: 1,
     toolChoice: (agent.toolChoice ?? 'auto') as 'auto' | 'required' | 'none',
     outputSchema: meta?.outputSchema
       ? pikkuState(packageName, 'misc', 'schemas').get(meta.outputSchema)
@@ -710,7 +906,26 @@ async function continueAfterToolResult(
   }
 
   try {
-    await agentRunner.stream(runnerParams, persistingChannel)
+    const loopResult = await runStreamStepLoop({
+      agent,
+      runnerParams,
+      maxSteps,
+      agentRunner,
+      persistingChannel,
+      channel,
+      runId: run.runId,
+    })
+
+    if (loopResult.outcome === 'approval') {
+      await handleApproval(
+        loopResult.approval,
+        run.runId,
+        channel,
+        aiRunState,
+        persistingChannel
+      )
+      return
+    }
 
     await postStreamCleanup(
       persistingChannel,
@@ -724,46 +939,10 @@ async function continueAfterToolResult(
       aiRunState,
       run.runId
     )
+
+    channel.send({ type: 'done' })
+    channel.close()
   } catch (err) {
-    if (err instanceof ToolApprovalRequired) {
-      await persistingChannel.flush()
-
-      const pendingApproval = err.agentRunId
-        ? {
-            type: 'agent-call' as const,
-            toolCallId: err.toolCallId,
-            agentName: err.toolName,
-            agentRunId: err.agentRunId,
-            displayToolName: err.displayToolName ?? err.toolName,
-            displayArgs: err.displayArgs ?? err.args,
-          }
-        : {
-            type: 'tool-call' as const,
-            toolCallId: err.toolCallId,
-            toolName: err.toolName,
-            args: err.args,
-          }
-
-      await aiRunState.updateRun(run.runId, {
-        status: 'suspended',
-        suspendReason: 'approval',
-        pendingApprovals: [pendingApproval],
-      })
-
-      const approvalEvent = {
-        type: 'approval-request' as const,
-        toolCallId: err.toolCallId,
-        toolName: err.displayToolName ?? err.toolName,
-        args: err.displayArgs ?? err.args,
-        reason: err.reason,
-        runId: run.runId,
-      }
-      channel.send(approvalEvent as any)
-      channel.send({ type: 'done' })
-      channel.close()
-      return
-    }
-
     await aiRunState.updateRun(run.runId, { status: 'failed' })
     channel.send({
       type: 'error',

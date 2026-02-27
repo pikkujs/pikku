@@ -23,7 +23,19 @@ export type AIAgentRunnerResult = {
   usage: { inputTokens: number; outputTokens: number }
 }
 
+export type AIAgentStepResult = {
+  text: string
+  object?: unknown
+  toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
+  toolResults: { toolCallId: string; toolName: string; result: unknown }[]
+  usage: { inputTokens: number; outputTokens: number }
+  finishReason: 'stop' | 'tool-calls' | 'length' | 'error' | 'unknown'
+}
+
 export interface AIAgentRunnerService {
-  stream(params: AIAgentRunnerParams, channel: AIStreamChannel): Promise<void>
-  run(params: AIAgentRunnerParams): Promise<AIAgentRunnerResult>
+  stream(
+    params: AIAgentRunnerParams,
+    channel: AIStreamChannel
+  ): Promise<AIAgentStepResult>
+  run(params: AIAgentRunnerParams): Promise<AIAgentStepResult>
 }
