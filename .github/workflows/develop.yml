@@ -31,8 +31,6 @@ jobs:
       - run: cd templates/functions && yarn pikku && cd ../..
       - run: cd packages/console && yarn generate && yarn tsc --noEmit
       - run: yarn build:console
-      # - run: yarn typedoc
-      - run: yarn benchmark:verify
 
       - name: Save build output (for later jobs)
         uses: actions/upload-artifact@v4
@@ -198,3 +196,25 @@ jobs:
   #     - run: cd packages/create/my-app && bun run test
   #   env:
   #     SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [verifiers, templates]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: yarn install
+      - run: yarn benchmark:verify
