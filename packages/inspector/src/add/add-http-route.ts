@@ -19,6 +19,7 @@ import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { ErrorCode } from '../error-codes.js'
+import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 
 import type { InspectorLogger } from '../types.js'
@@ -34,6 +35,7 @@ export interface RegisterHTTPRouteParams {
   sourceFile: ts.SourceFile
   basePath?: string
   inheritedTags?: string[]
+  inheritedAuth?: boolean
 }
 
 /**
@@ -140,6 +142,7 @@ export function registerHTTPRoute({
   sourceFile,
   basePath = '',
   inheritedTags = [],
+  inheritedAuth,
 }: RegisterHTTPRouteParams): void {
   // Extract route path
   const routePath = getPropertyValue(obj, 'route') as string | null
@@ -218,6 +221,20 @@ export function registerHTTPRoute({
     )
     return
   }
+
+  if (
+    !validateAuthSessionless(
+      logger,
+      obj,
+      state,
+      funcName,
+      `Route '${fullRoute}'`,
+      inheritedAuth
+    )
+  ) {
+    return
+  }
+
   const input = fnMeta.inputs?.[0] || null
 
   // Validate that route params and query params exist in function input type

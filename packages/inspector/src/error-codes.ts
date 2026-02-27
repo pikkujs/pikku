@@ -39,6 +39,7 @@ export enum ErrorCode {
   // HTTP Route errors
   ROUTE_PARAM_MISMATCH = 'PKU571',
   ROUTE_QUERY_MISMATCH = 'PKU572',
+  AUTH_DISABLED_REQUIRES_SESSIONLESS = 'PKU573',
 
   // Middleware/Permission errors
   MIDDLEWARE_HANDLER_INVALID = 'PKU685',

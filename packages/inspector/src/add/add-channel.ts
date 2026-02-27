@@ -18,6 +18,7 @@ import {
 } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
+import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -610,6 +611,26 @@ export const addChannel: AddWiring = (
   extractWireNames(middleware).forEach((name) =>
     state.serviceAggregation.usedMiddleware.add(name)
   )
+
+  // --- validate auth/sessionless ---
+  const handlersToValidate = [
+    connectFuncId,
+    disconnectFuncId,
+    message?.pikkuFuncId,
+  ].filter(Boolean) as string[]
+  for (const funcId of handlersToValidate) {
+    if (
+      !validateAuthSessionless(
+        logger,
+        obj,
+        state,
+        funcId,
+        `Channel '${name}'`
+      )
+    ) {
+      return
+    }
+  }
 
   state.channels.files.add(node.getSourceFile().fileName)
   state.channels.meta[name] = {
