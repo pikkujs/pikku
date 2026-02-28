@@ -43,7 +43,7 @@ describe('agent helpers', () => {
       assert.strictEqual(typeof a.func, 'function')
     })
 
-    test('func should call rpc.agent.stream', async () => {
+    test('func should call rpc.agent.stream with bound name', async () => {
       const a = agentStream('myAgent')
       let calledWith: any
       const rpc = {
@@ -57,6 +57,40 @@ describe('agent helpers', () => {
       await a.func({}, input, { rpc })
       assert.strictEqual(calledWith[0], 'myAgent')
       assert.deepStrictEqual(calledWith[1], input)
+    })
+
+    test('func should extract agentName from data when no name bound', async () => {
+      const a = agentStream()
+      let calledWith: any
+      const rpc = {
+        agent: {
+          stream: async (...args: any[]) => {
+            calledWith = args
+          },
+        },
+      }
+      const input = {
+        agentName: 'dynamicAgent',
+        message: 'hello',
+        threadId: 't1',
+        resourceId: 'r1',
+      }
+      await a.func({}, input, { rpc })
+      assert.strictEqual(calledWith[0], 'dynamicAgent')
+      assert.deepStrictEqual(calledWith[1], {
+        message: 'hello',
+        threadId: 't1',
+        resourceId: 'r1',
+      })
+    })
+
+    test('func should throw when no name bound and no agentName in data', async () => {
+      const a = agentStream()
+      const rpc = { agent: { stream: async () => {} } }
+      await assert.rejects(() => a.func({}, { message: 'hello' }, { rpc }), {
+        message:
+          'agentStream requires an agentName either as a parameter or in the input data',
+      })
     })
   })
 

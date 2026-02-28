@@ -3,7 +3,7 @@ export const serializeConsoleFunctions = (
   pathToAgentTypes: string
 ) => {
   return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon, wireAddon } from '${pathToPikkuTypes}'
-import { agentResume } from '${pathToAgentTypes}'
+import { agentStream, agentResume } from '${pathToAgentTypes}'
 
 export const setSecret = pikkuSessionlessFunc<{
   secretId: string
@@ -79,35 +79,17 @@ export const getSecret = pikkuSessionlessFunc<
 export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   routes: {
-    agentStreamOptions: {
-      route: '/api/agents/:agentName/stream',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
-    },
     agentStream: {
       route: '/api/agents/:agentName/stream',
       method: 'post',
       sse: true,
-      func: pikkuSessionlessFunc<{ agentName: string } & Record<string, unknown>>(async (_services, data, { rpc }) => {
-        const { agentName, ...rest } = data
-        await rpc.agent.stream(agentName as any, { ...rest, resourceId: (rest.resourceId as string) || 'console-playground' })
-      }),
-    },
-    agentResumeOptions: {
-      route: '/api/agents/:agentName/resume',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+      func: agentStream(),
     },
     agentResume: {
       route: '/api/agents/:agentName/resume',
       method: 'post',
       sse: true,
       func: agentResume(),
-    },
-    workflowRunStreamOptions: {
-      route: '/api/workflow-run/:runId/stream',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ runId: string }>(async () => void 0),
     },
     workflowRunStream: {
       route: '/api/workflow-run/:runId/stream',
