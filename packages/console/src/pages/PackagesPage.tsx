@@ -98,7 +98,7 @@ const PackagesList: React.FunctionComponent<{
   const { data, isLoading, isError } = useQuery({
     queryKey: ['addons'],
     queryFn: async () => {
-      const result = await rpc('console:getAddonMeta', null)
+      const result = await rpc.invoke('console:getAddonMeta', null)
       return ((result as any)?.packages ?? result ?? []) as PackageMeta[]
     },
     staleTime: 60 * 1000,

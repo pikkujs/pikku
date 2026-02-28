@@ -297,7 +297,7 @@ export const AgentChat: React.FunctionComponent = () => {
   }, [refetchThreads])
 
   const serverUrl = getServerUrl()
-  const api = `${serverUrl}/api/agents/${encodeURIComponent(agentId)}/stream`
+  const api = `${serverUrl}/rpc/agent/${encodeURIComponent(agentId)}/stream`
 
   const runtime = usePikkuAgentRuntime({
     api,

@@ -7,7 +7,7 @@ export function useSecretValue(secretId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['secret-value', secretId],
     queryFn: async () => {
-      return await rpc('getSecret', { secretId: secretId! })
+      return await rpc.invoke('getSecret', { secretId: secretId! })
     },
     enabled: !!secretId && enabled,
   })
@@ -19,7 +19,7 @@ export function useSetSecret() {
 
   return useMutation({
     mutationFn: ({ secretId, value }: { secretId: string; value: unknown }) =>
-      rpc('setSecret', { secretId, value }),
+      rpc.invoke('setSecret', { secretId, value }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['secret-value', variables.secretId],
@@ -37,7 +37,7 @@ export function useOAuthStatus(
   return useQuery({
     queryKey: ['oauth-status', credentialName],
     queryFn: async () => {
-      return await rpc('console:oauthStatus', {
+      return await rpc.invoke('console:oauthStatus', {
         credentialName: credentialName!,
       })
     },
@@ -55,7 +55,7 @@ export function useOAuthConnect() {
     }: {
       credentialName: string
       callbackUrl?: string
-    }) => rpc('console:oauthConnect', { credentialName, callbackUrl }),
+    }) => rpc.invoke('console:oauthConnect', { credentialName, callbackUrl }),
   })
 }
 
@@ -65,7 +65,7 @@ export function useOAuthDisconnect() {
 
   return useMutation({
     mutationFn: ({ credentialName }: { credentialName: string }) =>
-      rpc('console:oauthDisconnect', { credentialName }),
+      rpc.invoke('console:oauthDisconnect', { credentialName }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['oauth-status', variables.credentialName],
@@ -79,7 +79,7 @@ export function useOAuthExchangeTokens() {
 
   return useMutation({
     mutationFn: ({ code, state }: { code: string; state: string }) =>
-      rpc('console:oauthExchangeTokens', { code, state }),
+      rpc.invoke('console:oauthExchangeTokens', { code, state }),
   })
 }
 
@@ -88,7 +88,7 @@ export function useOAuthTestToken() {
 
   return useMutation({
     mutationFn: ({ credentialName }: { credentialName: string }) =>
-      rpc('console:oauthTestToken', { credentialName }),
+      rpc.invoke('console:oauthTestToken', { credentialName }),
   })
 }
 
@@ -98,7 +98,7 @@ export function useOAuthRefreshToken() {
 
   return useMutation({
     mutationFn: ({ credentialName }: { credentialName: string }) =>
-      rpc('console:oauthRefreshToken', { credentialName }),
+      rpc.invoke('console:oauthRefreshToken', { credentialName }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['oauth-status', variables.credentialName],

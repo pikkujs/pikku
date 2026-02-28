@@ -7,7 +7,7 @@ export function useAgentThreads(agentName?: string, polling = true) {
   return useQuery({
     queryKey: ['agent-threads', agentName],
     queryFn: async () => {
-      return await rpc('console:getAgentThreads', {
+      return await rpc.invoke('console:getAgentThreads', {
         agentName,
         limit: 50,
         offset: 0,
@@ -27,7 +27,7 @@ export function useAgentThreadMessages(
   return useQuery({
     queryKey: ['agent-thread-messages', threadId],
     queryFn: async () => {
-      return await rpc('console:getAgentThreadMessages', {
+      return await rpc.invoke('console:getAgentThreadMessages', {
         threadId: threadId!,
       })
     },
@@ -42,7 +42,9 @@ export function useAgentThreadRuns(threadId: string | null) {
   return useQuery({
     queryKey: ['agent-thread-runs', threadId],
     queryFn: async () => {
-      return await rpc('console:getAgentThreadRuns', { threadId: threadId! })
+      return await rpc.invoke('console:getAgentThreadRuns', {
+        threadId: threadId!,
+      })
     },
     enabled: !!threadId,
   })
@@ -54,7 +56,7 @@ export function useDeleteAgentThread() {
 
   return useMutation({
     mutationFn: async (threadId: string) => {
-      return await rpc('console:deleteAgentThread', { threadId })
+      return await rpc.invoke('console:deleteAgentThread', { threadId })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-threads'] })

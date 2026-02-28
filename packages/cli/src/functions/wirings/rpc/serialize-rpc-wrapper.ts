@@ -62,14 +62,51 @@ export class PikkuRPC {
        return await this.pikkuFetch.post(\`/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
     }
 
+    /**
+     * Starts a workflow by name with the given input.
+     * Posts to \\\`/rpc/workflow/:workflowName\\\`.
+     *
+     * @param workflowName - The registered workflow name
+     * @param input - The workflow input data
+     * @returns A promise that resolves with the new run ID
+     */
     startWorkflow: TypedStartWorkflow = async (workflowName, input) => {
         return await this.pikkuFetch.post(\`/rpc/workflow/\${String(workflowName)}\` as never, { workflowName: String(workflowName), input }) as any
     }
 
+    /**
+     * Agent namespace — methods for running, streaming, and approving AI agents.
+     * All methods post to \\\`/rpc/agent/:agentName/*\\\`.
+     */
     agent = {
+        /**
+         * Runs an agent to completion and returns the result.
+         *
+         * @param agentName - The registered agent name
+         * @param input - The agent input (message, threadId, resourceId)
+         * @returns A promise with runId, result, and token usage
+         */
         run: (async (agentName, input) => {
             return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}\` as never, input) as any
         }) as TypedAgentRun,
+        /**
+         * Streams agent responses via SSE. Used for real-time chat interfaces.
+         *
+         * @param agentName - The registered agent name
+         * @param input - The agent input (message, threadId, resourceId)
+         */
+        stream: async (agentName: string, input: Record<string, unknown>) => {
+            return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}/stream\` as never, input) as any
+        },
+        /**
+         * Approves or denies pending tool calls for an agent run.
+         *
+         * @param agentName - The registered agent name
+         * @param input - The approval payload (runId, approvals array)
+         */
+        approve: async (agentName: string, input: Record<string, unknown>) => {
+            return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}/approve\` as never, input) as any
+        },
     }
 }
 

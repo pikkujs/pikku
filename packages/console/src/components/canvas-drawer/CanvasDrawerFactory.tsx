@@ -67,7 +67,7 @@ const IntegrationIcon: React.FunctionComponent<{
   const rpc = usePikkuRPC()
   const { data: svgContent } = useQuery({
     queryKey: ['addon', 'icon', alias],
-    queryFn: () => rpc('console:getAddonIcon', { alias }),
+    queryFn: () => rpc.invoke('console:getAddonIcon', { alias }),
   })
 
   if (!svgContent) {
