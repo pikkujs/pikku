@@ -36,20 +36,10 @@ export const rpcRoutes = defineHTTPRoutes({
   auth: ${authFlag},
   tags: ['pikku:public'],
   routes: {
-    rpcOptions: {
-      route: '/rpc/:rpcName',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ rpcName: string }>(async () => void 0),
-    },
     rpc: {
       route: '/rpc/:rpcName',
       method: 'post',
       func: rpcCaller,
-    },
-    workflowOptions: {
-      route: '/rpc/workflow/:workflowName',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ workflowName: string }>(async () => void 0),
     },
     workflow: {
       route: '/rpc/workflow/:workflowName',

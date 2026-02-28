@@ -47,20 +47,10 @@ export const agentRoutes = defineHTTPRoutes({
   auth: ${authFlag},
   tags: ['pikku:public'],
   routes: {
-    agentOptions: {
-      route: '/rpc/agent/:agentName',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
-    },
     agentRun: {
       route: '/rpc/agent/:agentName',
       method: 'post',
       func: agentCaller,
-    },
-    agentStreamOptions: {
-      route: '/rpc/agent/:agentName/stream',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
     },
     agentStream: {
       route: '/rpc/agent/:agentName/stream',

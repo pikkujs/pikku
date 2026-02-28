@@ -49,10 +49,10 @@ export const agent = <Name extends keyof AgentMap>(
 }
 
 export const agentStream = <Name extends keyof AgentMap>(
-  agentName: Name
+  agentName?: Name
 ) => {
   return coreAgentStream<AgentMap>(agentName as string & keyof AgentMap) as PikkuFunctionConfig<
-    AIAgentInput,
+    AIAgentInput & { agentName?: string },
     void,
     'session' | 'rpc'
   >

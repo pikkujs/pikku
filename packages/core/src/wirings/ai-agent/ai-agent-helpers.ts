@@ -9,11 +9,21 @@ export function agent<TAgentMap extends Record<string, { output: any }>>(
 }
 
 export function agentStream<TAgentMap extends Record<string, { output: any }>>(
-  agentName: string & keyof TAgentMap
+  agentName?: string & keyof TAgentMap
 ): { func: (services: any, data: any, wire: any) => Promise<void> } {
   return {
     func: async (_services: any, data: any, { rpc }: any) => {
-      await rpc.agent.stream(agentName, data)
+      if (agentName) {
+        await rpc.agent.stream(agentName, data)
+      } else {
+        const { agentName: name, ...rest } = data
+        if (!name) {
+          throw new Error(
+            'agentStream requires an agentName either as a parameter or in the input data'
+          )
+        }
+        await rpc.agent.stream(name, rest)
+      }
     },
   }
 }
