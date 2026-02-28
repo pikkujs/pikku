@@ -6,6 +6,7 @@ import type {
   AIMessage,
   AIStreamChannel,
   AIStreamEvent,
+  PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
@@ -177,7 +178,8 @@ export function buildToolDefs(
   resourceId: string,
   agentName: string,
   packageName: string | null,
-  streamContext?: StreamContext
+  streamContext?: StreamContext,
+  aiMiddlewares?: PikkuAIMiddlewareHooks[]
 ): { tools: AIAgentToolDef[]; missingRpcs: string[] } {
   const singletonServices = getSingletonServices()
   const tools: AIAgentToolDef[] = []
@@ -334,6 +336,62 @@ export function buildToolDefs(
     }
   }
 
+  const hasToolHooks = aiMiddlewares?.some(
+    (mw) => mw.beforeToolCall || mw.afterToolCall
+  )
+  if (hasToolHooks) {
+    for (const tool of tools) {
+      const originalExecute = tool.execute
+      tool.execute = async (toolInput: unknown) => {
+        const toolCallId = randomUUID()
+        let args = (toolInput ?? {}) as Record<string, unknown>
+
+        for (const mw of aiMiddlewares!) {
+          if (mw.beforeToolCall) {
+            const beforeResult = await mw.beforeToolCall(singletonServices, {
+              toolName: tool.name,
+              toolCallId,
+              args,
+            })
+            if (beforeResult && 'args' in beforeResult) {
+              args = beforeResult.args
+            }
+          }
+        }
+
+        const startTime = Date.now()
+        let result: unknown
+        let execError: unknown
+        try {
+          result = await originalExecute(args)
+        } catch (err) {
+          execError = err
+          result = err instanceof Error ? err.message : String(err)
+        }
+        const durationMs = Date.now() - startTime
+
+        for (let i = aiMiddlewares!.length - 1; i >= 0; i--) {
+          const mw = aiMiddlewares![i]
+          if (mw.afterToolCall) {
+            const afterResult = await mw.afterToolCall(singletonServices, {
+              toolName: tool.name,
+              toolCallId,
+              args,
+              result,
+              durationMs,
+            })
+            if (afterResult && 'result' in afterResult) {
+              result = afterResult.result
+            }
+          }
+        }
+
+        if (execError) throw execError
+        return result
+      }
+    }
+  }
+
   return { tools, missingRpcs }
 }
 
@@ -400,13 +458,16 @@ export async function prepareAgentRun(
   const allMessages = [...contextMessages, ...messages, userMessage]
   const trimmedMessages = trimMessages(allMessages)
 
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+
   const { tools, missingRpcs } = buildToolDefs(
     params,
     agentSessionMap,
     input.resourceId,
     resolvedName,
     packageName,
-    streamContext
+    streamContext,
+    aiMiddlewares
   )
 
   const instructions = buildInstructions(resolvedName, packageName)

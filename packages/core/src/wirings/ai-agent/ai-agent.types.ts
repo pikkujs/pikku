@@ -98,6 +98,50 @@ export interface PikkuAIMiddlewareHooks<
   ) =>
     | Promise<{ text: string; messages: AIMessage[] }>
     | { text: string; messages: AIMessage[] }
+
+  beforeToolCall?: (
+    services: Services,
+    ctx: {
+      toolName: string
+      toolCallId: string
+      args: Record<string, unknown>
+    }
+  ) =>
+    | Promise<{ args: Record<string, unknown> } | void>
+    | { args: Record<string, unknown> }
+    | void
+
+  afterToolCall?: (
+    services: Services,
+    ctx: {
+      toolName: string
+      toolCallId: string
+      args: Record<string, unknown>
+      result: unknown
+      durationMs: number
+    }
+  ) => Promise<{ result: unknown } | void> | { result: unknown } | void
+
+  afterStep?: (
+    services: Services,
+    ctx: {
+      stepNumber: number
+      text: string
+      toolCalls: { toolCallId: string; toolName: string; args: unknown }[]
+      toolResults: { toolCallId: string; toolName: string; result: unknown }[]
+      usage: { inputTokens: number; outputTokens: number }
+      finishReason: string
+    }
+  ) => Promise<void> | void
+
+  onError?: (
+    services: Services,
+    ctx: {
+      error: Error
+      stepNumber: number
+      messages: AIMessage[]
+    }
+  ) => Promise<void> | void
 }
 
 export type AIAgentMemoryConfig = {
