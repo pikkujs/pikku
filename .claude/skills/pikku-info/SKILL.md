@@ -17,13 +17,13 @@ Always use `--silent` to suppress the banner and inspector logs.
 
 List all registered pikku functions:
 
-```
+```bash
 yarn pikku info functions --silent
 ```
 
 For full details including transport type (http/channel/scheduler/queue/workflow/mcp/cli/trigger), middleware, permissions, and source file:
 
-```
+```bash
 yarn pikku info functions --verbose --silent
 ```
 
@@ -31,13 +31,13 @@ yarn pikku info functions --verbose --silent
 
 List all tags with counts of associated functions, middleware, and permissions:
 
-```
+```bash
 yarn pikku info tags --silent
 ```
 
 For full names instead of counts:
 
-```
+```bash
 yarn pikku info tags --verbose --silent
 ```
 
@@ -45,13 +45,13 @@ yarn pikku info tags --verbose --silent
 
 List all middleware definitions:
 
-```
+```bash
 yarn pikku info middleware --silent
 ```
 
 For full details including source file, required services, and description:
 
-```
+```bash
 yarn pikku info middleware --verbose --silent
 ```
 
@@ -59,13 +59,13 @@ yarn pikku info middleware --verbose --silent
 
 List all permission definitions:
 
-```
+```bash
 yarn pikku info permissions --silent
 ```
 
 For full details including source file, required services, and description:
 
-```
+```bash
 yarn pikku info permissions --verbose --silent
 ```
 

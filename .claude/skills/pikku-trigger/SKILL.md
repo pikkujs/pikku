@@ -128,6 +128,9 @@ Use triggers for real-time reactions. Use queues for reliable, retryable backgro
 // functions/triggers.functions.ts
 const pgListen = pikkuTriggerFunc<{ channel: string }, { payload: any }>(
   async ({ db }, { channel }, { trigger }) => {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(channel)) {
+      throw new Error(`Invalid channel name: ${channel}`)
+    }
     const client = await db.pool.connect()
 
     client.on('notification', (msg) => {
