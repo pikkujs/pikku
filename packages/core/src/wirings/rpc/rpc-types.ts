@@ -3,6 +3,7 @@ export type PikkuRPC<
   Remote extends Function = any,
   startWorkflow extends Function = any,
   AgentRun extends Function = any,
+  AgentStream extends Function = any,
 > = {
   depth: number
   global: boolean
@@ -12,7 +13,7 @@ export type PikkuRPC<
   startWorkflow: startWorkflow
   agent: {
     run: AgentRun
-    stream: (agentName: string, input: any, options?: any) => Promise<void>
+    stream: AgentStream
     resume: (
       runId: string,
       input: { toolCallId: string; approved: boolean },

@@ -11,7 +11,7 @@ export const streamAgentRun = pikkuSessionlessFunc<
   auth: false,
   func: async (_services, data, { rpc }) => {
     const { agentName, ...rest } = data
-    await rpc.agent.stream(agentName, { ...rest, resourceId: (rest.resourceId as string) || 'console-playground' })
+    await rpc.agent.stream(agentName as any, { ...rest, resourceId: (rest.resourceId as string) || 'console-playground' })
   },
 })
 
