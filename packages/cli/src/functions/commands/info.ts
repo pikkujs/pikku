@@ -1,3 +1,5 @@
+import path from 'path'
+
 import { pikkuSessionlessFunc } from '#pikku'
 import type { InspectorState } from '@pikku/inspector'
 import type { FunctionMeta } from '@pikku/core'
@@ -81,8 +83,7 @@ const getFunctionTypes = (funcId: string, state: InspectorState): string[] => {
 const getFilePath = (funcId: string, state: InspectorState): string => {
   const entry = state.functions.files.get(funcId)
   if (entry) {
-    const relative = entry.path.replace(state.rootDir + '/', '')
-    return relative
+    return path.relative(state.rootDir, entry.path)
   }
   return ''
 }

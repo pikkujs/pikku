@@ -410,7 +410,7 @@ export class TodoModule {}
 
 **Pikku:**
 
-```
+```text
 // No module system. Organize by convention:
 src/
 ├── functions/

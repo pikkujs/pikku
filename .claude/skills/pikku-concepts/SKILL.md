@@ -15,7 +15,7 @@ For deep-dive on each topic, see the dedicated skills:
 
 ## Core Mental Model
 
-```
+```text
 pikkuFunc (pure business logic)
     │
     ├── wireHTTP        → Express, Fastify, Next.js, Lambda, Cloudflare...
@@ -182,7 +182,7 @@ Config lives in `pikku.config.json`:
 
 ## Project Structure Convention
 
-```
+```text
 src/
 ├── functions/           # Business logic (pikkuFunc definitions)
 │   ├── todos.functions.ts

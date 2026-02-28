@@ -35,25 +35,22 @@ const myWorkflow = pikkuWorkflowFunc<InputType, OutputType>(
 
 ```typescript
 // RPC step — execute a Pikku function as a queue job
-const result = await workflow.do(
-  stepName: string,        // Human-readable step name
-  funcName: string,        // Pikku function to call
-  data: object,            // Input data
-  options?: { retries?: number, retryDelay?: string }
-)
+// workflow.do(stepName, funcName, data, options?)
+const result = await workflow.do('Create profile', 'createUserProfile', {
+  email: data.email,
+}, { retries: 3, retryDelay: '1s' })
 
 // Inline step — immediate execution, cached for replay
-const result = await workflow.do(
-  stepName: string,
-  asyncFn: () => Promise<T>
-)
+// workflow.do(stepName, asyncFn)
+const result = await workflow.do('Generate message', async () => {
+  return `Welcome, ${data.email}!`
+})
 
-// Sleep — durable pause
-await workflow.sleep(stepName: string, duration: string)
-// Duration: '5min', '1h', '30s', '1d'
+// Sleep — durable pause (duration: '5min', '1h', '30s', '1d')
+await workflow.sleep('Wait 5 minutes', '5min')
 
 // Suspend — pause until externally resumed
-await workflow.suspend(stepName: string)
+await workflow.suspend('Awaiting approval')
 ```
 
 ### `pikkuWorkflowGraph(config)` — DAG Workflows
