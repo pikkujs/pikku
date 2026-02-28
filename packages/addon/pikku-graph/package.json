@@ -21,8 +21,7 @@
     ".pikku"
   ],
   "scripts": {
-    "prebuild": "pikku all",
-    "build": "tsc && cp -r .pikku dist/",
+    "build": "pikku all && tsc && cp -r .pikku dist/",
     "pikku": "pikku all",
     "ncu": "npx npm-check-updates",
     "test": "tsc --noEmit"
