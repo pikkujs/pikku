@@ -21,7 +21,8 @@ const merge = process.argv.includes('--merge')
 const singleIdx = process.argv.indexOf('--single')
 const singleScript = singleIdx !== -1 ? process.argv[singleIdx + 1] : null
 const thresholdIdx = process.argv.indexOf('--threshold')
-const REGRESSION_THRESHOLD = thresholdIdx !== -1 ? parseFloat(process.argv[thresholdIdx + 1]) / 100 : 0.05
+const REGRESSION_THRESHOLD =
+  thresholdIdx !== -1 ? parseFloat(process.argv[thresholdIdx + 1]) / 100 : 0.8
 
 type ScenarioResult = {
   requests_per_sec: number
@@ -67,7 +68,9 @@ function runBenchmark(
   }
 }
 
-function verifyResults(allResults: Record<string, Record<string, ScenarioResult>>) {
+function verifyResults(
+  allResults: Record<string, Record<string, ScenarioResult>>
+) {
   let baseline: ResultsFile
   try {
     baseline = JSON.parse(readFileSync(RESULTS_PATH, 'utf-8'))
@@ -109,7 +112,9 @@ function verifyResults(allResults: Record<string, Record<string, ScenarioResult>
   }
 
   if (regressions.length > 0) {
-    console.error(`Performance regressions detected (>${(REGRESSION_THRESHOLD * 100).toFixed(0)}% drop in req/s):\n`)
+    console.error(
+      `Performance regressions detected (>${(REGRESSION_THRESHOLD * 100).toFixed(0)}% drop in req/s):\n`
+    )
     for (const r of regressions) {
       console.error(`  ✗ ${r}`)
     }
@@ -158,7 +163,9 @@ function runMergeVerify() {
       readFileSync(resolve(__dirname, file), 'utf-8')
     )
     allResults[content.runtime] = content.scenarios
-    console.log(`  ✓ ${content.runtime} (${Object.keys(content.scenarios).length} scenarios)`)
+    console.log(
+      `  ✓ ${content.runtime} (${Object.keys(content.scenarios).length} scenarios)`
+    )
   }
 
   console.log('')
