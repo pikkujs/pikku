@@ -12,8 +12,6 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.12.12",
-    "@assistant-ui/react-data-stream": "^0.12.5",
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^8.3.8",
     "@mantine/dates": "^8.3.8",
@@ -21,6 +19,7 @@
     "@mantine/hooks": "^8.3.8",
     "@mantine/notifications": "^8.3.8",
     "@mantine/spotlight": "^8.3.8",
+    "@pikku/assistant-ui": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/fetch": "workspace:*",
     "@pikku/websocket": "workspace:*",
