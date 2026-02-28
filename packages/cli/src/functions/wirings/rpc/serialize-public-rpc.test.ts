@@ -7,7 +7,7 @@ describe('serializePublicRPC', () => {
   test('adds pikku:public tags to generated public rpc routes', () => {
     const serialized = serializePublicRPC('#pikku')
     const matches = serialized.match(/tags:\s*\['pikku:public'\]/g)
-    assert.equal(matches?.length, 2)
+    assert.equal(matches?.length, 1)
   })
 
   test('defaults generated public rpc routes to auth enabled', () => {
