@@ -26,6 +26,7 @@ import type { SchedulerService } from '../services/scheduler-service.js'
 import type { DeploymentService } from '../services/deployment-service.js'
 import type { AIStorageService } from '../services/ai-storage-service.js'
 
+import type { ContentService } from '../services/content-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
@@ -211,6 +212,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** AI agent storage service (threads, messages, working memory) */
   aiStorage?: AIStorageService
 
+  /** Content service for file storage and retrieval */
+  content?: ContentService
   /** AI agent runner service (model calls + tool loop) */
   aiAgentRunner?: AIAgentRunnerService
   /** AI run state service (run lifecycle + approval persistence) */

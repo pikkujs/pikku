@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream, promises } from 'fs'
-import { mkdir } from 'fs/promises'
+import { mkdir, readFile } from 'fs/promises'
 import type { ContentService, Logger } from '@pikku/core/services'
 import { pipeline } from 'stream/promises'
 import type { Readable } from 'stream'
@@ -94,6 +94,12 @@ export class LocalContent implements ContentService {
       this.logger.error(`Error setting up stream for ${assetKey}`, e)
       throw e
     }
+  }
+
+  public async readFileAsBuffer(assetKey: string): Promise<Buffer> {
+    const filePath = `${this.config.localFileUploadPath}/${assetKey}`
+    this.logger.debug(`Reading file as buffer: ${assetKey}`)
+    return readFile(filePath)
   }
 
   public async deleteFile(assetKey: string): Promise<boolean> {

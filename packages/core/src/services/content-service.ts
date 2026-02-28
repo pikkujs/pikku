@@ -66,4 +66,11 @@ export interface ContentService {
    * @returns A readable file stream.
    */
   readFile(assetKey: string): Promise<ReadableStream | NodeJS.ReadableStream>
+
+  /**
+   * Reads an entire file from storage into a Buffer.
+   * @param assetKey - The key of the file to read.
+   * @returns The file contents as a Buffer.
+   */
+  readFileAsBuffer(assetKey: string): Promise<Buffer>
 }
