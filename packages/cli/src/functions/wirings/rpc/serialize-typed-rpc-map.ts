@@ -104,16 +104,20 @@ export type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-type TypedAgentRun = <Name extends keyof FlattenedAgentMap>(
-  name: Name,
-  input: AIAgentInput
-) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
+type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
+  ? (name: string, input: AIAgentInput) => Promise<any>
+  : <Name extends keyof FlattenedAgentMap>(
+      name: Name,
+      input: AIAgentInput
+    ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
 
-type TypedAgentStream = <Name extends keyof FlattenedAgentMap>(
-  name: Name,
-  input: AIAgentInput,
-  options?: { requiresToolApproval?: 'all' | 'explicit' | false }
-) => Promise<void>
+type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
+  ? (name: string, input: AIAgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
+  : <Name extends keyof FlattenedAgentMap>(
+      name: Name,
+      input: AIAgentInput,
+      options?: { requiresToolApproval?: 'all' | 'explicit' | false }
+    ) => Promise<void>
 
 export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
   `
