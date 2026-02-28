@@ -8,7 +8,7 @@ export function useChannelSnippets(channelName: string) {
   return useQuery({
     queryKey: ['channel', 'snippets', channelName],
     queryFn: async () => {
-      return await rpc('console:getChannelSnippets', { channelName })
+      return await rpc.invoke('console:getChannelSnippets', { channelName })
     },
     enabled: !!channelName,
   })
@@ -19,7 +19,7 @@ export function useFunctionsMeta() {
   return useQuery({
     queryKey: ['functions', 'meta'],
     queryFn: async () => {
-      return await rpc('console:getFunctionsMeta', null)
+      return await rpc.invoke('console:getFunctionsMeta', null)
     },
   })
 }
@@ -44,7 +44,7 @@ export function useAddonMeta() {
   return useQuery({
     queryKey: ['addon', 'meta'],
     queryFn: async () => {
-      const x = await rpc('console:getAddonMeta', null)
+      const x = await rpc.invoke('console:getAddonMeta', null)
       return x
     },
   })
@@ -58,7 +58,7 @@ export function useSchema(schemaName: string | null | undefined) {
     queryFn: async () => {
       if (!schemaName) return null
 
-      return await rpc('console:getSchema', { schemaName })
+      return await rpc.invoke('console:getSchema', { schemaName })
     },
     enabled: !!schemaName,
   })

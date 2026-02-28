@@ -218,7 +218,7 @@ const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
 
   const handleDelete = useCallback(
     async (runId: string) => {
-      await rpc('console:deleteWorkflowRun', { runId })
+      await rpc.invoke('console:deleteWorkflowRun', { runId })
       if (selectedRunId === runId) {
         setSelectedRunId(null)
       }

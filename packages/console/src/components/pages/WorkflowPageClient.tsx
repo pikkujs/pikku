@@ -15,7 +15,7 @@ export const WorkflowPageClient: React.FunctionComponent = () => {
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({
     queryKey: ['workflow-meta-by-id', workflowId],
-    queryFn: () => rpc('console:getWorkflowMetaById', { workflowId }),
+    queryFn: () => rpc.invoke('console:getWorkflowMetaById', { workflowId }),
     enabled: !!workflowId,
   })
 

@@ -93,7 +93,7 @@ export const PikkuMetaProvider: React.FunctionComponent<{
     setLoading(true)
     setError(null)
     try {
-      const allMeta = await rpc('console:getAllMeta', null)
+      const allMeta = await rpc.invoke('console:getAllMeta', null)
       setMeta({
         functions: allMeta.functions,
         httpMeta: allMeta.httpMeta,

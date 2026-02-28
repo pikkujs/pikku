@@ -18,19 +18,6 @@ import type {
   StartWorkflowRunOutput,
 } from '../../backend/src/functions/pikku.console.gen.js'
 
-export type StreamAgentRunInput = {
-  agentName: string
-  message: string
-  threadId: string
-  resourceId?: string
-}
-export type ResumeAgentRunInput = {
-  agentName: string
-  toolCallId: string
-  approved: boolean
-}
-export type HttpOptionsApiAgentsAgentNameStreamInput = { agentName: string }
-export type HttpOptionsApiAgentsAgentNameResumeInput = { agentName: string }
 export type HttpOptionsApiWorkflowRunRunIdStreamInput = { runId: string }
 
 interface RPCHandler<I, O> {
@@ -87,13 +74,13 @@ interface AIAgentInput {
   resourceId: string
 }
 
-type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
+export type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   name: Name,
   input: WorkflowMap[Name]['input'],
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-type TypedAgent = <Name extends keyof FlattenedAgentMap>(
+export type TypedAgentRun = <Name extends keyof FlattenedAgentMap>(
   name: Name,
   input: AIAgentInput
 ) => Promise<{
@@ -106,5 +93,5 @@ export type TypedPikkuRPC = PikkuRPC<
   RPCInvoke,
   RPCRemote,
   TypedStartWorkflow,
-  TypedAgent
+  TypedAgentRun
 >

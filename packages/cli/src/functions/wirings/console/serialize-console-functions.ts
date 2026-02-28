@@ -1,11 +1,10 @@
 export const serializeConsoleFunctions = (
   pathToPikkuTypes: string,
-  pathToAgentTypes: string
+  _pathToAgentTypes: string
 ) => {
   return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon, wireAddon } from '${pathToPikkuTypes}'
-import { agentStream, agentResume } from '${pathToAgentTypes}'
 
-export const setSecret = pikkuSessionlessFunc<{
+export const pikkuConsoleSetSecret = pikkuSessionlessFunc<{
   secretId: string
   value: unknown
 }, {
@@ -20,7 +19,7 @@ export const setSecret = pikkuSessionlessFunc<{
   },
 })
 
-export const getVariable = pikkuSessionlessFunc<
+export const pikkuConsoleGetVariable = pikkuSessionlessFunc<
   { variableId: string },
   { exists: boolean; value: unknown | null }
 >({
@@ -42,7 +41,7 @@ export const getVariable = pikkuSessionlessFunc<
   },
 })
 
-export const setVariable = pikkuSessionlessFunc<
+export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
   { variableId: string; value: unknown },
   { success: boolean }
 >({
@@ -59,7 +58,7 @@ export const setVariable = pikkuSessionlessFunc<
   },
 })
 
-export const getSecret = pikkuSessionlessFunc<
+export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
   { secretId: string },
   { exists: boolean; value: unknown | null }
 >({
@@ -79,18 +78,6 @@ export const getSecret = pikkuSessionlessFunc<
 export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   routes: {
-    agentStream: {
-      route: '/agents/:agentName/stream',
-      method: 'post',
-      sse: true,
-      func: agentStream(),
-    },
-    agentResume: {
-      route: '/agents/resume',
-      method: 'post',
-      sse: true,
-      func: agentResume(),
-    },
     workflowRunStream: {
       route: '/workflow-run/:runId/stream',
       method: 'get',

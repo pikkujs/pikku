@@ -54,7 +54,7 @@ export const agentRoutes = defineHTTPRoutes({
     },
     agentStream: {
       route: '/rpc/agent/:agentName/stream',
-      method: 'get',
+      method: 'post',
       sse: true,
       func: agentStreamCaller,
     },

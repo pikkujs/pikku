@@ -19,11 +19,11 @@ export const setServerUrl = (url: string) => {
 
 type PikkuInstance = ReturnType<typeof pikku>
 type PikkuHTTP = PikkuInstance['fetch']
-type PikkuRPCInvoke = PikkuInstance['rpc']['invoke']
+type PikkuRPCInstance = PikkuInstance['rpc']
 
 const PikkuInstanceContext = createContext<PikkuInstance | null>(null)
 const PikkuHTTPContext = createContext<PikkuHTTP | null>(null)
-const PikkuRPCContext = createContext<PikkuRPCInvoke | null>(null)
+const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
 
 export const PikkuHTTPProvider: React.FunctionComponent<{
   children: React.ReactNode
@@ -51,7 +51,7 @@ export const PikkuRPCProvider: React.FunctionComponent<{
     throw new Error('PikkuRPCProvider must be used within PikkuHTTPProvider')
   }
   return (
-    <PikkuRPCContext.Provider value={pikkuInstance.rpc.invoke}>
+    <PikkuRPCContext.Provider value={pikkuInstance.rpc}>
       {children}
     </PikkuRPCContext.Provider>
   )

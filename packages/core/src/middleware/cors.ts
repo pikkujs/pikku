@@ -6,7 +6,7 @@ import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
  * Sets appropriate CORS headers on all responses and short-circuits OPTIONS
  * preflight requests with a 204 No Content response.
  *
- * @param options.origin - Allowed origin(s). Use `'*'` for any origin, a string for a single origin, or an array for multiple origins. Defaults to `'*'`.
+ * @param options.origin - Allowed origin(s). Use `'*'` for any origin, `true` to reflect the request origin, a string for a single origin, or an array for multiple origins. Defaults to `'*'`.
  * @param options.methods - Allowed HTTP methods. Defaults to common methods.
  * @param options.headers - Allowed request headers. Defaults to common headers.
  * @param options.credentials - Whether to allow credentials. Defaults to `false`.
@@ -36,7 +36,7 @@ import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
  * ```
  */
 export const cors = pikkuMiddlewareFactory<{
-  origin?: string | string[]
+  origin?: string | string[] | true
   methods?: string[]
   headers?: string[]
   credentials?: boolean
@@ -68,7 +68,9 @@ export const cors = pikkuMiddlewareFactory<{
         const requestOrigin = request.header('origin')
 
         let allowedOrigin: string
-        if (Array.isArray(origin)) {
+        if (origin === true) {
+          allowedOrigin = requestOrigin || '*'
+        } else if (Array.isArray(origin)) {
           allowedOrigin =
             requestOrigin && origin.includes(requestOrigin)
               ? requestOrigin
@@ -85,7 +87,7 @@ export const cors = pikkuMiddlewareFactory<{
           response.header('Access-Control-Allow-Credentials', 'true')
         }
 
-        if (Array.isArray(origin)) {
+        if (origin === true || Array.isArray(origin)) {
           response.header('Vary', 'Origin')
         }
 

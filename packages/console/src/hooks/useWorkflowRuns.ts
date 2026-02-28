@@ -7,7 +7,7 @@ export function useWorkflowRuns(workflowName?: string, status?: string) {
   return useQuery({
     queryKey: ['workflow-runs', workflowName, status],
     queryFn: async () => {
-      return await rpc('console:getWorkflowRuns', {
+      return await rpc.invoke('console:getWorkflowRuns', {
         workflowName,
         status,
         limit: 50,
@@ -29,7 +29,7 @@ export function useWorkflowRun(runId: string | null) {
   return useQuery({
     queryKey: ['workflow-run', runId],
     queryFn: async () => {
-      return await rpc('console:getWorkflowRun', { runId: runId! })
+      return await rpc.invoke('console:getWorkflowRun', { runId: runId! })
     },
     enabled: !!runId,
     refetchInterval: (query) => {
@@ -45,7 +45,7 @@ export function useWorkflowRunSteps(runId: string | null) {
   return useQuery({
     queryKey: ['workflow-run-steps', runId],
     queryFn: async () => {
-      return await rpc('console:getWorkflowRunSteps', { runId: runId! })
+      return await rpc.invoke('console:getWorkflowRunSteps', { runId: runId! })
     },
     enabled: !!runId,
     refetchInterval: (query) => {
@@ -64,7 +64,9 @@ export function useWorkflowRunHistory(runId: string | null) {
   return useQuery({
     queryKey: ['workflow-run-history', runId],
     queryFn: async () => {
-      return await rpc('console:getWorkflowRunHistory', { runId: runId! })
+      return await rpc.invoke('console:getWorkflowRunHistory', {
+        runId: runId!,
+      })
     },
     enabled: !!runId,
   })
@@ -79,7 +81,7 @@ export function useWorkflowVersion(
   return useQuery({
     queryKey: ['workflow-version', name, graphHash],
     queryFn: async () => {
-      return await rpc('console:getWorkflowVersion', {
+      return await rpc.invoke('console:getWorkflowVersion', {
         name: name!,
         graphHash: graphHash!,
       })
@@ -99,7 +101,7 @@ export function useStartWorkflowRun() {
     }: {
       workflowName: string
       input?: any
-    }) => rpc('startWorkflowRun', { workflowName, input }),
+    }) => (rpc.startWorkflow as any)(workflowName, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflow-runs'] })
     },
@@ -112,7 +114,7 @@ export function useWorkflowRunNames() {
   return useQuery({
     queryKey: ['workflow-run-names'],
     queryFn: async () => {
-      return await rpc('console:getWorkflowRunNames', null)
+      return await rpc.invoke('console:getWorkflowRunNames', null)
     },
   })
 }

@@ -286,7 +286,7 @@ export const PackageDetailPage: React.FunctionComponent<{
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', id],
     queryFn: async () => {
-      const result = await (rpc('console:getAddonPackage', {
+      const result = await (rpc.invoke('console:getAddonPackage', {
         id,
       }) as Promise<PackageRegistryEntry | null>)
       if (result?.schemas) {
