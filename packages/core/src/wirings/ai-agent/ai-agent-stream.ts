@@ -644,6 +644,7 @@ export async function streamAIAgent(
 
 export async function resumeAIAgent(
   input: {
+    runId: string
     toolCallId: string
     approved: boolean
   },
@@ -657,12 +658,19 @@ export async function resumeAIAgent(
     throw new Error('AIRunStateService not available in singletonServices')
   }
 
-  const found = await aiRunState.findRunByToolCallId(input.toolCallId)
-  if (!found) {
-    throw new Error(`No suspended run found for toolCallId ${input.toolCallId}`)
+  const run = await aiRunState.getRun(input.runId)
+  if (!run) {
+    throw new Error(`No run found for runId ${input.runId}`)
   }
 
-  const { run, approval: pending } = found
+  const pending = run.pendingApprovals?.find(
+    (p) => p.toolCallId === input.toolCallId
+  )
+  if (!pending) {
+    throw new Error(
+      `No pending approval for toolCallId ${input.toolCallId} on run ${input.runId}`
+    )
+  }
 
   await aiRunState.resolveApproval(
     input.toolCallId,
@@ -743,7 +751,11 @@ export async function resumeAIAgent(
     })
 
     await resumeAIAgent(
-      { toolCallId: subPending.toolCallId, approved: true },
+      {
+        runId: pending.agentRunId,
+        toolCallId: subPending.toolCallId,
+        approved: true,
+      },
       subChannel,
       params,
       options

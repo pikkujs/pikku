@@ -1,7 +1,4 @@
-import type {
-  CoreServices,
-  PikkuWire,
-} from '../../types/core.types.js'
+import type { CoreServices, PikkuWire } from '../../types/core.types.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
@@ -20,7 +17,11 @@ export class RPCNotFoundError extends PikkuError {
   }
 }
 import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
+import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
+import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
 import { runAIAgent } from '../ai-agent/ai-agent-runner.js'
+import { streamAIAgent, resumeAIAgent } from '../ai-agent/ai-agent-stream.js'
+import { approveAIAgent } from '../ai-agent/ai-agent-registry.js'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -239,21 +240,64 @@ export class ContextAwareRPCService {
     )
   }
 
-  public async agent(
-    agentName: string,
-    input: AIAgentInput
-  ): Promise<{
-    runId: string
-    result: unknown
-    usage: { inputTokens: number; outputTokens: number }
-  }> {
-    const result = await runAIAgent(agentName, input, {
-      sessionService: this.options.sessionService,
-    })
+  public get agent() {
     return {
-      runId: result.runId,
-      result: result.object ?? result.text,
-      usage: result.usage,
+      run: async (agentName: string, input: AIAgentInput) => {
+        const result = await runAIAgent(agentName, input, {
+          sessionService: this.options.sessionService,
+        })
+        return {
+          runId: result.runId,
+          result: result.object ?? result.text,
+          usage: result.usage,
+        }
+      },
+      stream: async (
+        agentName: string,
+        input:
+          | { message: string; threadId: string; resourceId: string }
+          | Record<string, unknown>,
+        options?: StreamAIAgentOptions
+      ) => {
+        const channel = this.wire.channel as unknown as AIStreamChannel
+        if (!channel) throw new Error('No channel available for streaming')
+        await streamAIAgent(
+          agentName,
+          input,
+          channel,
+          { sessionService: this.options.sessionService },
+          undefined,
+          options
+        )
+      },
+      resume: async (
+        runId: string,
+        input: { toolCallId: string; approved: boolean },
+        options?: StreamAIAgentOptions
+      ) => {
+        const channel = this.wire.channel as unknown as AIStreamChannel
+        if (!channel) throw new Error('No channel available for streaming')
+        await resumeAIAgent(
+          { runId, ...input },
+          channel,
+          { sessionService: this.options.sessionService },
+          options
+        )
+      },
+      approve: async (
+        runId: string,
+        approvals: { toolCallId: string; approved: boolean }[],
+        expectedAgentName?: string
+      ) => {
+        if (!this.services.aiRunState)
+          throw new Error('AIRunStateService not available')
+        return approveAIAgent(
+          this.services.aiRunState,
+          runId,
+          approvals,
+          expectedAgentName
+        )
+      },
     }
   }
 
@@ -383,7 +427,9 @@ export class PikkuRPCService<
       remote: serviceRPC.remote.bind(serviceRPC),
       exposed: serviceRPC.rpcExposed.bind(serviceRPC),
       startWorkflow: serviceRPC.startWorkflow.bind(serviceRPC),
-      agent: serviceRPC.agent.bind(serviceRPC),
+      get agent() {
+        return serviceRPC.agent
+      },
       rpcWithWire: serviceRPC.rpcWithWire.bind(serviceRPC),
     } as any
   }

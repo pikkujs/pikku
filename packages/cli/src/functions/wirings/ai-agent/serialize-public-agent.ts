@@ -4,8 +4,6 @@ export const serializePublicAgent = (
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
   return `import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
-import { streamAIAgent, approveAIAgent } from '@pikku/core/ai-agent'
-import type { AIStreamChannel } from '@pikku/core/ai-agent'
 
 export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
@@ -13,7 +11,7 @@ export const agentCaller = pikkuSessionlessFunc<
 >({
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
-    return await (rpc.agent as any)(data.agentName, {
+    return await rpc.agent.run(data.agentName, {
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
@@ -26,13 +24,12 @@ export const agentStreamCaller = pikkuSessionlessFunc<
   void
 >({
   auth: ${authFlag},
-  func: async (services, data, { channel }) => {
-    await streamAIAgent(
-      data.agentName,
-      { message: data.message, threadId: data.threadId, resourceId: data.resourceId },
-      channel as unknown as AIStreamChannel,
-      {}
-    )
+  func: async (_services, data, { rpc }) => {
+    await rpc.agent.stream(data.agentName, {
+      message: data.message,
+      threadId: data.threadId,
+      resourceId: data.resourceId,
+    })
   },
 })
 
@@ -41,11 +38,8 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   unknown
 >({
   auth: ${authFlag},
-  func: async ({ aiRunState }, { runId, approvals, agentName }) => {
-    if (!aiRunState) {
-      throw new Error('AIRunStateService not available')
-    }
-    return await approveAIAgent(aiRunState, runId, approvals, agentName)
+  func: async (_services, { runId, approvals, agentName }, { rpc }) => {
+    return await rpc.agent.approve(runId, approvals, agentName)
   },
 })
 

@@ -2,7 +2,6 @@ export type PikkuRPC<
   Invoke extends Function = any,
   Remote extends Function = any,
   startWorkflow extends Function = any,
-  Agent extends Function = any,
 > = {
   depth: number
   global: boolean
@@ -10,7 +9,27 @@ export type PikkuRPC<
   remote: Remote
   exposed: (name: string, data: any) => Promise<any>
   startWorkflow: startWorkflow
-  agent: Agent
+  agent: {
+    run: (
+      agentName: string,
+      input: any
+    ) => Promise<{
+      runId: string
+      result: unknown
+      usage: { inputTokens: number; outputTokens: number }
+    }>
+    stream: (agentName: string, input: any, options?: any) => Promise<void>
+    resume: (
+      runId: string,
+      input: { toolCallId: string; approved: boolean },
+      options?: any
+    ) => Promise<void>
+    approve: (
+      runId: string,
+      approvals: { toolCallId: string; approved: boolean }[],
+      expectedAgentName?: string
+    ) => Promise<any>
+  }
 }
 
 export type RPCMeta = {
