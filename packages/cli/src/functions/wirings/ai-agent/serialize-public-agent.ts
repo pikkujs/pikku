@@ -3,7 +3,7 @@ export const serializePublicAgent = (
   requireAuth: boolean = true
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
-  return `import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
 
 export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
@@ -43,45 +43,39 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   },
 })
 
-wireHTTP({
-  route: '/rpc/agent/:agentName',
-  method: 'options',
-  tags: ['pikku:public'],
+export const agentRoutes = defineHTTPRoutes({
   auth: ${authFlag},
-  func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+  tags: ['pikku:public'],
+  routes: {
+    agentOptions: {
+      route: '/rpc/agent/:agentName',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+    },
+    agentRun: {
+      route: '/rpc/agent/:agentName',
+      method: 'post',
+      func: agentCaller,
+    },
+    agentStreamOptions: {
+      route: '/rpc/agent/:agentName/stream',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
+    },
+    agentStream: {
+      route: '/rpc/agent/:agentName/stream',
+      method: 'get',
+      sse: true,
+      func: agentStreamCaller,
+    },
+    agentApprove: {
+      route: '/rpc/agent/:agentName/approve',
+      method: 'post',
+      func: agentApproveCaller,
+    },
+  },
 })
 
-wireHTTP({
-  route: '/rpc/agent/:agentName',
-  method: 'post',
-  tags: ['pikku:public'],
-  auth: ${authFlag},
-  func: agentCaller,
-})
-
-wireHTTP({
-  route: '/rpc/agent/:agentName/stream',
-  method: 'options',
-  tags: ['pikku:public'],
-  auth: ${authFlag},
-  func: pikkuSessionlessFunc<{ agentName: string }>(async () => void 0),
-})
-
-wireHTTP({
-  route: '/rpc/agent/:agentName/stream',
-  method: 'get',
-  tags: ['pikku:public'],
-  auth: ${authFlag},
-  sse: true,
-  func: agentStreamCaller,
-})
-
-wireHTTP({
-  route: '/rpc/agent/:agentName/approve',
-  method: 'post',
-  tags: ['pikku:public'],
-  auth: ${authFlag},
-  func: agentApproveCaller,
-})
+wireHTTPRoutes({ routes: { agent: agentRoutes } })
 `
 }

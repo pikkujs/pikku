@@ -1,3 +1,9 @@
+export {
+  agent,
+  agentStream,
+  agentResume,
+  agentApprove,
+} from './ai-agent-helpers.js'
 export { runAIAgent } from './ai-agent-runner.js'
 export { streamAIAgent, resumeAIAgent } from './ai-agent-stream.js'
 export {
@@ -16,6 +22,7 @@ export {
   getAIAgentsMeta,
 } from './ai-agent-registry.js'
 export type {
+  AIAgentInput,
   AIAgentMeta,
   AIAgentMemoryConfig,
   AIAgentStep,

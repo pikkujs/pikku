@@ -1,7 +1,7 @@
 export const serializeRPCWrapper = (rpcMapPath: string) => {
   return `
 import { PikkuFetch } from "./pikku-fetch.gen.js"
-import type { RPCInvoke, TypedAgent } from '${rpcMapPath}'
+import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow } from '${rpcMapPath}'
 
 /**
  * PikkuRPC provides a type-safe client for making Remote Procedure Calls (RPC)
@@ -62,15 +62,14 @@ export class PikkuRPC {
        return await this.pikkuFetch.post(\`/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
     }
 
-    /**
-     * Invokes an AI agent on the server.
-     *
-     * @param agentName - The name of the agent to invoke
-     * @param input - The agent input (message, threadId, resourceId)
-     * @returns A promise that resolves with the agent's output
-     */
-    agent: TypedAgent = async (agentName, input) => {
-       return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}\` as never, input) as any
+    startWorkflow: TypedStartWorkflow = async (workflowName, input) => {
+        return await this.pikkuFetch.post(\`/rpc/workflow/\${String(workflowName)}\` as never, { workflowName: String(workflowName), input }) as any
+    }
+
+    agent = {
+        run: (async (agentName, input) => {
+            return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}\` as never, input) as any
+        }) as TypedAgentRun,
     }
 }
 

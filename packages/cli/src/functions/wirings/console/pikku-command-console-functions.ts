@@ -17,10 +17,15 @@ export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
         config.typesDeclarationFile,
         config.packageMappings
       )
+      const pathToAgentTypes = getFileImportRelativePath(
+        consoleFunctionsPath,
+        config.agentTypesFile,
+        config.packageMappings
+      )
       await writeFileInDir(
         logger,
         consoleFunctionsPath,
-        serializeConsoleFunctions(pathToPikkuTypes)
+        serializeConsoleFunctions(pathToPikkuTypes, pathToAgentTypes)
       )
       return true
     }
