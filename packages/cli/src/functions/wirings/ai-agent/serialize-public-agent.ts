@@ -11,7 +11,7 @@ export const agentCaller = pikkuSessionlessFunc<
 >({
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
-    return await rpc.agent.run(data.agentName, {
+    return await rpc.agent.run(data.agentName as any, {
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
@@ -25,7 +25,7 @@ export const agentStreamCaller = pikkuSessionlessFunc<
 >({
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.stream(data.agentName, {
+    await rpc.agent.stream(data.agentName as any, {
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
