@@ -1,10 +1,16 @@
 import { useMemo, useEffect, useRef, useCallback } from 'react'
 import { type ThreadMessageLike } from '@assistant-ui/react'
 import { useDataStreamRuntime } from '@assistant-ui/react-data-stream'
-import { getServerUrl } from '@/context/PikkuRpcProvider'
 
-type PendingApproval = {
-  toolCallId: string
+export interface PikkuAgentRuntimeOptions {
+  api: string
+  threadId?: string | null
+  initialMessages?: any[]
+  onThreadCreated?: (id: string) => void
+  onFinish?: () => void
+  onApprovalRequest?: (data: { toolCallId: string }) => void
+  credentials?: RequestCredentials
+  headers?: Record<string, string>
 }
 
 const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
@@ -118,28 +124,29 @@ const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
   return result
 }
 
-export const useAgentRuntime = (
-  agentId: string,
-  threadId: string | null,
-  dbMessages: any[] | undefined,
-  onThreadCreated: (id: string) => void,
-  onStreamDone: () => void
-) => {
+export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
+  const {
+    api,
+    threadId = null,
+    initialMessages: rawInitialMessages,
+    onThreadCreated,
+    onFinish,
+    onApprovalRequest,
+    credentials,
+    headers,
+  } = options
+
   const threadIdRef = useRef(threadId)
   threadIdRef.current = threadId
 
-  const pendingApprovalRef = useRef<PendingApproval | null>(null)
   const justCreatedThreadRef = useRef(false)
-
-  const serverUrl = getServerUrl()
-  const api = `${serverUrl}/api/agents/${encodeURIComponent(agentId)}/stream`
 
   const bodyFn = useCallback(() => {
     let currentThreadId = threadIdRef.current
     if (!currentThreadId) {
       currentThreadId = crypto.randomUUID()
       justCreatedThreadRef.current = true
-      onThreadCreated(currentThreadId)
+      onThreadCreated?.(currentThreadId)
     }
     return { threadId: currentThreadId }
   }, [onThreadCreated])
@@ -148,21 +155,21 @@ export const useAgentRuntime = (
     (event: { type: string; name: string; data: unknown }) => {
       if (event.name === 'approval-request') {
         const approval = event.data as any
-        pendingApprovalRef.current = {
+        onApprovalRequest?.({
           toolCallId: approval.toolCallId,
-        }
+        })
       }
     },
-    []
+    [onApprovalRequest]
   )
 
   const onFinishCb = useCallback(() => {
-    onStreamDone()
-  }, [onStreamDone])
+    onFinish?.()
+  }, [onFinish])
 
   const initialMessages = useMemo(
-    () => (dbMessages ? convertDbMessages(dbMessages) : []),
-    [dbMessages]
+    () => (rawInitialMessages ? convertDbMessages(rawInitialMessages) : []),
+    [rawInitialMessages]
   )
 
   const runtime = useDataStreamRuntime({
@@ -172,6 +179,8 @@ export const useAgentRuntime = (
     onData,
     onFinish: onFinishCb,
     initialMessages,
+    credentials,
+    headers,
   })
 
   const prevThreadIdRef = useRef(threadId)
@@ -185,17 +194,17 @@ export const useAgentRuntime = (
         return
       }
       hasResetRef.current = false
-      if (dbMessages) {
-        ;(runtime as any).thread.reset(convertDbMessages(dbMessages))
+      if (rawInitialMessages) {
+        ;(runtime as any).thread.reset(convertDbMessages(rawInitialMessages))
         hasResetRef.current = true
       } else {
         ;(runtime as any).thread.reset([])
       }
-    } else if (!hasResetRef.current && dbMessages) {
-      ;(runtime as any).thread.reset(convertDbMessages(dbMessages))
+    } else if (!hasResetRef.current && rawInitialMessages) {
+      ;(runtime as any).thread.reset(convertDbMessages(rawInitialMessages))
       hasResetRef.current = true
     }
-  }, [threadId, dbMessages, runtime])
+  }, [threadId, rawInitialMessages, runtime])
 
   return runtime
 }

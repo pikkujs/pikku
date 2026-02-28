@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "module": "Node18",
+    "outDir": "dist/esm",
+    "target": "esnext",
+    "declaration": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "ES2020"]
+  },
+  "include": ["src/*.ts", "src/*.tsx"],
+  "exclude": ["**/*.test.ts", "node_modules"]
+}

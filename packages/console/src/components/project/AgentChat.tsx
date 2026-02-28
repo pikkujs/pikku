@@ -23,6 +23,7 @@ import {
   MessagePrimitive,
   ComposerPrimitive,
 } from '@assistant-ui/react'
+import { usePikkuAgentRuntime } from '@pikku/assistant-ui'
 import {
   Send,
   ChevronDown,
@@ -36,7 +37,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { useAgentPlayground } from '@/context/AgentPlaygroundContext'
-import { useAgentRuntime } from '@/hooks/useAgentRuntime'
+import { getServerUrl } from '@/context/PikkuRpcProvider'
 
 const ToolCallDisplay: React.FunctionComponent<{
   toolName: string
@@ -295,13 +296,16 @@ export const AgentChat: React.FunctionComponent = () => {
     refetchThreads()
   }, [refetchThreads])
 
-  const runtime = useAgentRuntime(
-    agentId,
+  const serverUrl = getServerUrl()
+  const api = `${serverUrl}/api/agents/${encodeURIComponent(agentId)}/stream`
+
+  const runtime = usePikkuAgentRuntime({
+    api,
     threadId,
-    dbMessages,
+    initialMessages: dbMessages,
     onThreadCreated,
-    onStreamDone
-  )
+    onFinish: onStreamDone,
+  })
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
