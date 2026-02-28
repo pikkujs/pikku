@@ -6,14 +6,27 @@ import { serializeAIAgentTypes } from './serialize-ai-agent-types.js'
 
 export const pikkuAIAgentTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { agentTypesFile, functionTypesFile, packageMappings } = config
+    const {
+      agentTypesFile,
+      functionTypesFile,
+      agentMapDeclarationFile,
+      packageMappings,
+    } = config
 
     const functionTypesImportPath = getFileImportRelativePath(
       agentTypesFile,
       functionTypesFile,
       packageMappings
     )
-    const content = serializeAIAgentTypes(functionTypesImportPath)
+    const agentMapImportPath = getFileImportRelativePath(
+      agentTypesFile,
+      agentMapDeclarationFile,
+      packageMappings
+    )
+    const content = serializeAIAgentTypes(
+      functionTypesImportPath,
+      agentMapImportPath
+    )
     await writeFileInDir(logger, agentTypesFile, content)
   },
   middleware: [

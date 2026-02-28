@@ -98,7 +98,7 @@ interface AIAgentInput {
   resourceId: string
 }
 
-type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
+export type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   name: Name,
   input: WorkflowMap[Name]['input'],
   options?: { startNode?: string }

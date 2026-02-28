@@ -10,12 +10,8 @@ export const serializePublicRPC = (
  * Auto-generated public RPC HTTP endpoint
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
+import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
 
-/**
- * Public RPC endpoint that invokes any exposed RPC by name
- * This is used for public HTTP access to exposed server functions
- */
 export const rpcCaller = pikkuSessionlessFunc<
   { rpcName: string; data?: unknown },
   unknown
@@ -26,20 +22,43 @@ export const rpcCaller = pikkuSessionlessFunc<
   },
 })
 
-wireHTTP({
-  route: "/rpc/:rpcName",
-  method: "options",
-  tags: ['pikku:public'],
+export const workflowCaller = pikkuSessionlessFunc<
+  { workflowName: string; input?: unknown },
+  { runId: string }
+>({
   auth: ${authFlag},
-  func: pikkuSessionlessFunc<{ rpcName: string }>(async () => void 0),
-});
-
-wireHTTP({
-  route: '/rpc/:rpcName',
-  method: 'post',
-  tags: ['pikku:public'],
-  auth: ${authFlag},
-  func: rpcCaller,
+  func: async (_services, { workflowName, input }, { rpc }) => {
+    return await rpc.startWorkflow(workflowName, input || {})
+  },
 })
+
+export const rpcRoutes = defineHTTPRoutes({
+  auth: ${authFlag},
+  tags: ['pikku:public'],
+  routes: {
+    rpcOptions: {
+      route: '/rpc/:rpcName',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ rpcName: string }>(async () => void 0),
+    },
+    rpc: {
+      route: '/rpc/:rpcName',
+      method: 'post',
+      func: rpcCaller,
+    },
+    workflowOptions: {
+      route: '/rpc/workflow/:workflowName',
+      method: 'options',
+      func: pikkuSessionlessFunc<{ workflowName: string }>(async () => void 0),
+    },
+    workflow: {
+      route: '/rpc/workflow/:workflowName',
+      method: 'post',
+      func: workflowCaller,
+    },
+  },
+})
+
+wireHTTPRoutes({ routes: { rpc: rpcRoutes } })
 `
 }
