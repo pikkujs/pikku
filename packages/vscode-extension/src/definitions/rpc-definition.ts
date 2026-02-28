@@ -5,7 +5,7 @@ import type { PikkuInspector } from '../inspector'
  * All patterns where Pikku function/workflow/agent names appear as string literals:
  *
  * RPC:       rpc.invoke('name')  rpc.remote('name')  rpc.exposed('name')
- * Agent:     rpc.agent('name')
+ * Agent:     rpc.agent.run('name')  rpc.agent.stream('name')
  * Workflow:  rpc.startWorkflow('name')
  * Helpers:   workflow('name')  workflowStart('name')  workflowRun('name')  workflowStatus('name')
  * Graph:     graphStart('name', 'startNode')
@@ -17,10 +17,15 @@ const PATTERNS: Array<{
   /** Which capture group holds the function name (1-indexed) */
   nameGroup: number
 }> = [
-  // rpc.invoke / remote / exposed / agent / startWorkflow
+  // rpc.invoke / remote / exposed / startWorkflow
   {
     regex:
-      /\brpc\s*\.\s*(?:invoke|remote|exposed|agent|startWorkflow)\s*\(\s*(['"])([^'"]+)\1/g,
+      /\brpc\s*\.\s*(?:invoke|remote|exposed|startWorkflow)\s*\(\s*(['"])([^'"]+)\1/g,
+    nameGroup: 2,
+  },
+  // rpc.agent.run / stream
+  {
+    regex: /\brpc\s*\.\s*agent\s*\.\s*(?:run|stream)\s*\(\s*(['"])([^'"]+)\1/g,
     nameGroup: 2,
   },
   // Standalone helpers: workflow(), workflowStart(), workflowRun(), workflowStatus()

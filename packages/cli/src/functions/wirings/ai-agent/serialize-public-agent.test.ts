@@ -17,20 +17,12 @@ describe('serializePublicAgent', () => {
     assert.match(serialized, /auth:\s*false/)
   })
 
-  test('guards missing aiRunState before approveAIAgent call', () => {
+  test('approve caller delegates to rpc.agent.approve', () => {
     const serialized = serializePublicAgent('#pikku')
 
     assert.match(
       serialized,
-      /if \(!aiRunState\)\s*{\s*throw new Error\('AIRunStateService not available'\)/
-    )
-    assert.match(
-      serialized,
-      /approveAIAgent\(aiRunState, runId, approvals, agentName\)/
-    )
-    assert.doesNotMatch(
-      serialized,
-      /approveAIAgent\(aiRunState!, runId, approvals\)/
+      /rpc\.agent\.approve\(runId, approvals, agentName\)/
     )
   })
 })

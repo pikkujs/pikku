@@ -1,9 +1,6 @@
 export const serializeConsoleFunctions = (pathToPikkuTypes: string) => {
   return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon, wireAddon } from '${pathToPikkuTypes}'
 
-import { streamAIAgent, resumeAIAgent } from '@pikku/core/ai-agent'
-import type { AIStreamChannel } from '@pikku/core/ai-agent'
-
 export const streamAgentRun = pikkuSessionlessFunc<
   { agentName: string } & Record<string, unknown>,
   any
@@ -12,21 +9,16 @@ export const streamAgentRun = pikkuSessionlessFunc<
   description: 'SSE stream of agent conversation responses.',
   expose: false,
   auth: false,
-  func: async (services, data, { channel }) => {
-    if (!channel) return
+  func: async (_services, data, { rpc }) => {
     const { agentName, ...rest } = data
-    await streamAIAgent(
-      agentName,
-      { ...rest, resourceId: (rest.resourceId as string) || 'console-playground' },
-      channel as unknown as AIStreamChannel,
-      {}
-    )
+    await rpc.agent.stream(agentName, { ...rest, resourceId: (rest.resourceId as string) || 'console-playground' })
   },
 })
 
 export const resumeAgentRun = pikkuSessionlessFunc<
   {
     agentName: string
+    runId: string
     toolCallId: string
     approved: boolean
   },
@@ -36,16 +28,8 @@ export const resumeAgentRun = pikkuSessionlessFunc<
   description: 'Resume an agent run after tool approval/denial.',
   expose: false,
   auth: false,
-  func: async (services, data, { channel }) => {
-    if (!channel) return
-    await resumeAIAgent(
-      {
-        toolCallId: data.toolCallId,
-        approved: data.approved,
-      },
-      channel as unknown as AIStreamChannel,
-      {}
-    )
+  func: async (_services, data, { rpc }) => {
+    await rpc.agent.resume(data.runId, { toolCallId: data.toolCallId, approved: data.approved })
   },
 })
 
