@@ -43,15 +43,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/anthropic@npm:^1.0.0":
-  version: 1.2.12
-  resolution: "@ai-sdk/anthropic@npm:1.2.12"
+"@ai-sdk/anthropic@npm:^3.0.0":
+  version: 3.0.50
+  resolution: "@ai-sdk/anthropic@npm:3.0.50"
   dependencies:
-    "@ai-sdk/provider": "npm:1.1.3"
-    "@ai-sdk/provider-utils": "npm:2.2.8"
+    "@ai-sdk/provider": "npm:3.0.8"
+    "@ai-sdk/provider-utils": "npm:4.0.16"
   peerDependencies:
-    zod: ^3.0.0
-  checksum: 10/ee09f00328c88954fba8d00795f6c379091f95b7717bb90292acf32f41b072b2c89b178c1c18dfc23fcec7532e04fcd13233b9a813ce4881e0a16cae20a878c8
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 10/c8bd3925d3a312d280316c2fe766cf009fcffd506fb77148eca7da01f7a7998966983583ee10563b969b3cc97f0b392f461906574f4f89ef59b1884683fc533b
   languageName: node
   linkType: hard
 
@@ -68,28 +68,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/openai@npm:^1.0.0":
-  version: 1.3.24
-  resolution: "@ai-sdk/openai@npm:1.3.24"
+"@ai-sdk/openai@npm:^3.0.0":
+  version: 3.0.37
+  resolution: "@ai-sdk/openai@npm:3.0.37"
   dependencies:
-    "@ai-sdk/provider": "npm:1.1.3"
-    "@ai-sdk/provider-utils": "npm:2.2.8"
+    "@ai-sdk/provider": "npm:3.0.8"
+    "@ai-sdk/provider-utils": "npm:4.0.16"
   peerDependencies:
-    zod: ^3.0.0
-  checksum: 10/1ec406cd3840cbfff824bbcf5e7ceeaf99e7c440bc807cc8cfb56e254e8ebd837bea6f1d4590e261f26972062953146940642303bc5c94ee949bac116f3cc473
-  languageName: node
-  linkType: hard
-
-"@ai-sdk/provider-utils@npm:2.2.8":
-  version: 2.2.8
-  resolution: "@ai-sdk/provider-utils@npm:2.2.8"
-  dependencies:
-    "@ai-sdk/provider": "npm:1.1.3"
-    nanoid: "npm:^3.3.8"
-    secure-json-parse: "npm:^2.7.0"
-  peerDependencies:
-    zod: ^3.23.8
-  checksum: 10/3aa8fce97c78d1c78e0c35e82425d4634957dfd16d5d8228994eef5ada71b9d5a1b0b9c2edb81db8cca106d90607c1798970e2e5ec74730cb8058bd7d900144a
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 10/56fda4da618c20caeacb9bd252d0aedd68d3741577090e5b3330260a4a0969ed16497ea63a3f27c7e0f9da89ce5398cbd2dc0eefe79163242a5f21e4cbd0c37c
   languageName: node
   linkType: hard
 
@@ -106,12 +93,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ai-sdk/provider@npm:1.1.3":
-  version: 1.1.3
-  resolution: "@ai-sdk/provider@npm:1.1.3"
+"@ai-sdk/provider-utils@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@ai-sdk/provider-utils@npm:4.0.16"
   dependencies:
-    json-schema: "npm:^0.4.0"
-  checksum: 10/b094ca2f08001d4d34a0dcdf9fbe1b6eeedeaf0cf1568ce148d67b04333fd959cca60f888a24522b6d74114eabbc469f762d290d08096adec992a3c6de23756a
+    "@ai-sdk/provider": "npm:3.0.8"
+    "@standard-schema/spec": "npm:^1.1.0"
+    eventsource-parser: "npm:^3.0.6"
+  peerDependencies:
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 10/89cf9888339c3bcd2663bd962107be7214cdb8c1347a9237e6eec16367d79fbd4ccb54f346696179f707aac99f2e4f35cda1d40732f7089ba5f4203a89adbc42
   languageName: node
   linkType: hard
 
@@ -5516,8 +5507,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-ai-postgres@workspace:templates/ai-postgres"
   dependencies:
-    "@ai-sdk/anthropic": "npm:^1.0.0"
-    "@ai-sdk/openai": "npm:^1.0.0"
+    "@ai-sdk/anthropic": "npm:^3.0.0"
+    "@ai-sdk/openai": "npm:^3.0.0"
     "@pikku/ai-vercel": "npm:^0.12.0"
     "@pikku/core": "npm:^0.12.0"
     "@pikku/express": "npm:^0.12.0"
@@ -16525,7 +16516,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:^3.3.11, nanoid@npm:^3.3.6, nanoid@npm:^3.3.8":
+"nanoid@npm:^3.3.11, nanoid@npm:^3.3.6":
   version: 3.3.11
   resolution: "nanoid@npm:3.3.11"
   bin:
@@ -19044,13 +19035,6 @@ __metadata:
   version: 0.27.0
   resolution: "scheduler@npm:0.27.0"
   checksum: 10/eab3c3a8373195173e59c147224fc30dabe6dd453f248f5e610e8458512a5a2ee3a06465dc400ebfe6d35c9f5b7f3bb6b2e41c88c86fd177c25a73e7286a1e06
-  languageName: node
-  linkType: hard
-
-"secure-json-parse@npm:^2.7.0":
-  version: 2.7.0
-  resolution: "secure-json-parse@npm:2.7.0"
-  checksum: 10/974386587060b6fc5b1ac06481b2f9dbbb0d63c860cc73dc7533f27835fdb67b0ef08762dbfef25625c15bc0a0c366899e00076cb0d556af06b71e22f1dede4c
   languageName: node
   linkType: hard
 
