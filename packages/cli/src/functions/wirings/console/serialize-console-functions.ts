@@ -80,19 +80,19 @@ export const consoleRoutes = defineHTTPRoutes({
   auth: false,
   routes: {
     agentStream: {
-      route: '/api/agents/:agentName/stream',
+      route: '/agents/:agentName/stream',
       method: 'post',
       sse: true,
       func: agentStream(),
     },
     agentResume: {
-      route: '/api/agents/:agentName/resume',
+      route: '/agents/resume',
       method: 'post',
       sse: true,
       func: agentResume(),
     },
     workflowRunStream: {
-      route: '/api/workflow-run/:runId/stream',
+      route: '/workflow-run/:runId/stream',
       method: 'get',
       sse: true,
       func: addon('console:streamWorkflowRun'),
@@ -101,6 +101,6 @@ export const consoleRoutes = defineHTTPRoutes({
 })
 
 wireAddon({ name: 'console', package: '@pikku/addon-console' })
-wireHTTPRoutes({ routes: { console: consoleRoutes } })
+wireHTTPRoutes({ baseRoute: '/api', routes: { console: consoleRoutes } })
 `
 }

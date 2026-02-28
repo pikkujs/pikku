@@ -40,6 +40,7 @@ import type { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { httpRouter } from './routers/http-router.js'
 import { validateSchema } from '../../schema.js'
+import { runMiddleware } from '../../middleware-runner.js'
 
 /**
  * Extract headers from a PikkuHTTPRequest based on the schema keys
@@ -503,8 +504,21 @@ export const fetchData = async <In, Out>(
   // Locate the matching route based on the HTTP method and path
   const matchedRoute = getMatchingRoute(apiType, apiRoute)
   try {
-    // If no route matches, log the occurrence and throw a NotFoundError
     if (!matchedRoute) {
+      if (apiType.toLowerCase() === 'options') {
+        const httpGroups = pikkuState(null, 'middleware', 'httpGroup')
+        const globalMiddleware = httpGroups['*']
+        const wire: PikkuWire = { http: http! }
+        if (globalMiddleware) {
+          await runMiddleware(
+            singletonServices,
+            wire,
+            globalMiddleware as CorePikkuMiddleware[]
+          )
+        }
+        response.status(204).json(undefined as any)
+        return
+      }
       singletonServices.logger.info({
         message: 'Route not found',
         apiRoute,
