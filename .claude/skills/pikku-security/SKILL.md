@@ -96,7 +96,7 @@ export const hasBookAccess = pikkuPermission(
   owner: isOwner,                          // OR: owners can access
   reviewer: [isAuthenticated, hasBookAccess],  // AND: both must pass
 }
-// Logic: admin OR owner OR (isAuthenticated AND hasAccess)
+// Logic: admin OR owner OR (isAuthenticated AND hasBookAccess)
 ```
 
 ### `pikkuMiddleware(fn)` — Before/After Wrapping

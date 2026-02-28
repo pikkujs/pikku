@@ -59,14 +59,20 @@ await workflow.suspend('Awaiting approval')
 import { pikkuWorkflowGraph } from '#pikku'
 
 pikkuWorkflowGraph({
-  description: string,
+  description: 'Onboard a new user',
   nodes: {
-    [nodeName: string]: string,  // Maps to Pikku function name
+    createProfile: 'createUserProfile',  // nodeName → Pikku function name
+    sendWelcome: 'sendEmail',
   },
   config: {
-    [nodeName: string]: {
-      next?: string[],           // Nodes to run after this one (parallel)
-      input?: (ref) => object,   // Transform input using refs to prior node outputs
+    createProfile: {
+      next: ['sendWelcome'],             // Nodes to run after this one (parallel)
+    },
+    sendWelcome: {
+      input: (ref) => ({                 // Transform input using refs to prior node outputs
+        to: ref('createProfile', 'email'),
+        subject: 'Welcome!',
+      }),
     },
   },
 })
