@@ -133,6 +133,23 @@ export class S3Content implements ContentService {
     }
   }
 
+  public async readFileAsBuffer(Key: string): Promise<Buffer> {
+    this.logger.debug(`Getting file as buffer, key: ${Key}`)
+
+    const response = await this.s3.send(
+      new GetObjectCommand({
+        Bucket: this.config.bucketName,
+        Key,
+      })
+    )
+
+    if (!response.Body) {
+      throw new Error('No body returned from S3')
+    }
+
+    return Buffer.from(await response.Body.transformToByteArray())
+  }
+
   public async deleteFile(Key: string) {
     try {
       this.logger.debug(`Deleting file, key: ${Key}`)
