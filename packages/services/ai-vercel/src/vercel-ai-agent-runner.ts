@@ -200,7 +200,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
       }),
-      ...(params.outputSchema
+      ...(params.outputSchema && params.tools.length === 0
         ? {
             output: Output.object({
               schema: jsonSchema(cleanSchema(params.outputSchema)),
@@ -213,7 +213,10 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
     return {
       text: result.text,
-      object: params.outputSchema ? (result as any).output : undefined,
+      object:
+        params.outputSchema && params.tools.length === 0
+          ? (result as any).output
+          : undefined,
       toolCalls:
         step?.toolCalls?.map((tc: any) => ({
           toolCallId: tc.toolCallId,
