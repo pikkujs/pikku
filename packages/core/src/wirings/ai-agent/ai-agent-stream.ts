@@ -232,6 +232,7 @@ type StepLoopParams = {
   persistingChannel: PersistingChannel
   channel: AIStreamChannel
   runId: string
+  aiMiddlewares: PikkuAIMiddlewareHooks[]
 }
 
 type StepLoopResult =
@@ -249,7 +250,10 @@ async function runStreamStepLoop(
     persistingChannel,
     channel,
     runId,
+    aiMiddlewares,
   } = params
+
+  const singletonServices = getSingletonServices()
 
   for (let step = 0; step < maxSteps; step++) {
     if (agent.prepareStep) {
@@ -270,6 +274,19 @@ async function runStreamStepLoop(
     channel.send({ type: 'step-start', stepNumber: step })
 
     const stepResult = await agentRunner.stream(runnerParams, persistingChannel)
+
+    for (const mw of aiMiddlewares) {
+      if (mw.afterStep) {
+        await mw.afterStep(singletonServices, {
+          stepNumber: step,
+          text: stepResult.text,
+          toolCalls: stepResult.toolCalls,
+          toolResults: stepResult.toolResults,
+          usage: stepResult.usage,
+          finishReason: stepResult.finishReason,
+        })
+      }
+    }
 
     if (stepResult.toolCalls.length === 0) break
 
@@ -572,6 +589,7 @@ export async function streamAIAgent(
       persistingChannel,
       channel,
       runId,
+      aiMiddlewares,
     })
 
     if (loopResult.outcome === 'approval') {
@@ -601,6 +619,19 @@ export async function streamAIAgent(
     channel.send({ type: 'done' })
     channel.close()
   } catch (err) {
+    for (const mw of aiMiddlewares) {
+      if (mw.onError) {
+        try {
+          await mw.onError(singletonServices, {
+            error: err instanceof Error ? err : new Error(String(err)),
+            stepNumber: -1,
+            messages: runnerParams.messages,
+          })
+        } catch {
+          // onError hooks must not affect error flow
+        }
+      }
+    }
     await aiRunState.updateRun(runId, { status: 'failed' })
     channel.send({
       type: 'error',
@@ -746,13 +777,16 @@ export async function resumeAIAgent(
       channel,
       options: { ...options, requiresToolApproval: false },
     }
+    const aiMiddlewaresForResume: PikkuAIMiddlewareHooks[] =
+      agent.aiMiddleware ?? []
     const { tools } = buildToolDefs(
       params,
       new Map<string, string>(),
       run.resourceId,
       resolvedName,
       packageName,
-      streamContext
+      streamContext,
+      aiMiddlewaresForResume
     )
 
     const matchingTool = tools.find((t) => t.name === pending.toolName)
@@ -920,7 +954,8 @@ async function continueAfterToolResult(
     run.resourceId,
     resolvedName,
     packageName,
-    streamContext
+    streamContext,
+    aiMiddlewares
   ).tools
 
   const resolved = resolveModelConfig(resolvedName, agent)
@@ -948,6 +983,7 @@ async function continueAfterToolResult(
       persistingChannel,
       channel,
       runId: run.runId,
+      aiMiddlewares,
     })
 
     if (loopResult.outcome === 'approval') {
@@ -977,6 +1013,19 @@ async function continueAfterToolResult(
     channel.send({ type: 'done' })
     channel.close()
   } catch (err) {
+    for (const mw of aiMiddlewares) {
+      if (mw.onError) {
+        try {
+          await mw.onError(singletonServices, {
+            error: err instanceof Error ? err : new Error(String(err)),
+            stepNumber: -1,
+            messages: runnerParams.messages,
+          })
+        } catch {
+          // onError hooks must not affect error flow
+        }
+      }
+    }
     await aiRunState.updateRun(run.runId, { status: 'failed' })
     channel.send({
       type: 'error',

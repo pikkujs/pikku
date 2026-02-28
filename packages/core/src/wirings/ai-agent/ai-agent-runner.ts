@@ -115,6 +115,19 @@ export async function runAIAgent(
       totalUsage.inputTokens += stepResult.usage.inputTokens
       totalUsage.outputTokens += stepResult.usage.outputTokens
 
+      for (const mw of aiMiddlewares) {
+        if (mw.afterStep) {
+          await mw.afterStep(singletonServices, {
+            stepNumber: step,
+            text: stepResult.text,
+            toolCalls: stepResult.toolCalls,
+            toolResults: stepResult.toolResults,
+            usage: stepResult.usage,
+            finishReason: stepResult.finishReason,
+          })
+        }
+      }
+
       accumulatedSteps.push({
         usage: stepResult.usage,
         toolCalls: stepResult.toolCalls.map((tc) => {
@@ -217,6 +230,19 @@ export async function runAIAgent(
       usage: totalUsage,
     }
   } catch (error) {
+    for (const mw of aiMiddlewares) {
+      if (mw.onError) {
+        try {
+          await mw.onError(singletonServices, {
+            error: error instanceof Error ? error : new Error(String(error)),
+            stepNumber: -1,
+            messages: runnerParams.messages,
+          })
+        } catch {
+          // onError hooks must not affect error flow
+        }
+      }
+    }
     await aiRunState.updateRun(runId, {
       status: 'failed',
     })

@@ -4,7 +4,11 @@ import assert from 'node:assert/strict'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { streamAIAgent } from './ai-agent-stream.js'
 import { ToolApprovalRequired } from './ai-agent-prepare.js'
-import type { CoreAIAgent, AIStreamEvent } from './ai-agent.types.js'
+import type {
+  CoreAIAgent,
+  AIStreamEvent,
+  PikkuAIMiddlewareHooks,
+} from './ai-agent.types.js'
 import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
 
 beforeEach(() => {
@@ -424,5 +428,225 @@ describe('streamAIAgent', () => {
       { runId: 'run-multi', patch: { status: 'completed' } },
     ])
     assert.ok(events.some((e) => e.type === 'done'))
+  })
+
+  test('afterStep hook is called for each stream step', async () => {
+    addTestAgent('afterstep-stream-agent')
+
+    const afterStepCalls: unknown[] = []
+    const middleware: PikkuAIMiddlewareHooks = {
+      afterStep: async (_services, ctx) => {
+        afterStepCalls.push(ctx)
+      },
+    }
+    const agent = pikkuState(null, 'agent', 'agents').get(
+      'afterstep-stream-agent'
+    )!
+    agent.aiMiddleware = [middleware] as any
+    pikkuState(null, 'agent', 'agents').set('afterstep-stream-agent', agent)
+
+    let callCount = 0
+    const events: AIStreamEvent[] = []
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (): Promise<AIAgentStepResult> => {
+          callCount++
+          if (callCount === 1) {
+            return makeStepResult({
+              text: 'step1',
+              toolCalls: [
+                { toolCallId: 'tc-1', toolName: 'myTool', args: { q: 'x' } },
+              ],
+              toolResults: [
+                { toolCallId: 'tc-1', toolName: 'myTool', result: 'ok' },
+              ],
+              usage: { inputTokens: 10, outputTokens: 5 },
+              finishReason: 'tool-calls',
+            })
+          }
+          return makeStepResult({
+            text: 'final',
+            finishReason: 'stop',
+          })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-as',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await streamAIAgent(
+      'afterstep-stream-agent',
+      { message: 'hi', threadId: 't-as', resourceId: 'r-as' },
+      {
+        channelId: 'c-as',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.equal(afterStepCalls.length, 2)
+    assert.equal((afterStepCalls[0] as any).stepNumber, 0)
+    assert.equal((afterStepCalls[0] as any).finishReason, 'tool-calls')
+    assert.equal((afterStepCalls[1] as any).stepNumber, 1)
+    assert.equal((afterStepCalls[1] as any).text, 'final')
+  })
+
+  test('onError hook is called when stream throws', async () => {
+    addTestAgent('onerror-stream-agent')
+
+    const onErrorCalls: unknown[] = []
+    const middleware: PikkuAIMiddlewareHooks = {
+      onError: async (_services, ctx) => {
+        onErrorCalls.push(ctx)
+      },
+    }
+    const agent = pikkuState(null, 'agent', 'agents').get(
+      'onerror-stream-agent'
+    )!
+    agent.aiMiddleware = [middleware] as any
+    pikkuState(null, 'agent', 'agents').set('onerror-stream-agent', agent)
+
+    const events: AIStreamEvent[] = []
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async () => {
+          throw new Error('stream boom')
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-oe',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await streamAIAgent(
+      'onerror-stream-agent',
+      { message: 'hi', threadId: 't-oe', resourceId: 'r-oe' },
+      {
+        channelId: 'c-oe',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.equal(onErrorCalls.length, 1)
+    assert.equal((onErrorCalls[0] as any).error.message, 'stream boom')
+    assert.ok(events.some((e) => e.type === 'error'))
+    assert.ok(events.some((e) => e.type === 'done'))
+  })
+
+  test('beforeToolCall and afterToolCall hooks fire for tool executions', async () => {
+    addTestAgent('toolhooks-stream-agent')
+
+    const hookCalls: { hook: string; ctx: any }[] = []
+    const middleware: PikkuAIMiddlewareHooks = {
+      beforeToolCall: async (_services, ctx) => {
+        hookCalls.push({ hook: 'before', ctx })
+        return { args: { ...ctx.args, injected: true } }
+      },
+      afterToolCall: async (_services, ctx) => {
+        hookCalls.push({ hook: 'after', ctx })
+        return { result: `modified:${ctx.result}` }
+      },
+    }
+    const agentName = 'toolhooks-stream-agent'
+    const agent = pikkuState(null, 'agent', 'agents').get(agentName)!
+    agent.aiMiddleware = [middleware] as any
+    agent.tools = ['myTool']
+    pikkuState(null, 'agent', 'agents').set(agentName, agent)
+    pikkuState(null, 'agent', 'agentsMeta')[agentName].tools = ['myTool']
+    pikkuState(null, 'rpc', 'meta')['myTool'] = 'myTool'
+    pikkuState(null, 'function', 'meta')['myTool'] = {
+      description: 'test tool',
+    }
+
+    const events: AIStreamEvent[] = []
+    let callCount = 0
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (
+          params: any,
+          _channel: any
+        ): Promise<AIAgentStepResult> => {
+          callCount++
+          if (callCount === 1) {
+            const tool = params.tools.find((t: any) => t.name === 'myTool')
+            if (tool) {
+              try {
+                await tool.execute({ q: 'test' })
+              } catch {
+                // runPikkuFunc not fully mocked; hooks still fire
+              }
+            }
+            return makeStepResult({
+              text: 'done',
+              finishReason: 'stop',
+            })
+          }
+          return makeStepResult({ text: 'done', finishReason: 'stop' })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-th',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+    pikkuState(null, 'package', 'createWireServices', () => ({}))
+
+    await streamAIAgent(
+      agentName,
+      { message: 'hi', threadId: 't-th', resourceId: 'r-th' },
+      {
+        channelId: 'c-th',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.equal(hookCalls.length, 2)
+    assert.equal(hookCalls[0].hook, 'before')
+    assert.equal(hookCalls[0].ctx.toolName, 'myTool')
+    assert.deepEqual(hookCalls[0].ctx.args, { q: 'test' })
+    assert.equal(hookCalls[1].hook, 'after')
+    assert.equal(hookCalls[1].ctx.toolName, 'myTool')
+    assert.deepEqual(hookCalls[1].ctx.args, { q: 'test', injected: true })
+    assert.ok(hookCalls[1].ctx.durationMs >= 0)
   })
 })
