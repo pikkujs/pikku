@@ -7,7 +7,10 @@ import type {
   InspectorState,
 } from '../types.js'
 import type { CLIProgramMeta, CLICommandMeta } from '@pikku/core/cli'
-import { extractFunctionName } from '../utils/extract-function-name.js'
+import {
+  extractFunctionName,
+  makeContextBasedId,
+} from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
@@ -153,14 +156,18 @@ function processCLIConfig(
         }
         break
 
-      case 'render':
-        // Extract the actual renderer function name
-        programMeta.defaultRenderName = extractFunctionName(
+      case 'render': {
+        let renderFuncId = extractFunctionName(
           prop.initializer,
           typeChecker,
           inspectorState.rootDir
         ).pikkuFuncId
+        if (renderFuncId.startsWith('__temp_')) {
+          renderFuncId = makeContextBasedId('cli-render', programName)
+        }
+        programMeta.defaultRenderName = renderFuncId
         break
+      }
     }
   }
 
@@ -273,12 +280,16 @@ function processCommand(
     ts.isArrowFunction(node) ||
     ts.isFunctionExpression(node)
   ) {
+    let pikkuFuncId = extractFunctionName(
+      node,
+      typeChecker,
+      inspectorState.rootDir
+    ).pikkuFuncId
+    if (pikkuFuncId.startsWith('__temp_')) {
+      pikkuFuncId = makeContextBasedId('cli', programName, ...fullPath)
+    }
     return {
-      pikkuFuncId: extractFunctionName(
-        node,
-        typeChecker,
-        inspectorState.rootDir
-      ).pikkuFuncId,
+      pikkuFuncId,
       positionals: [],
       options: {},
     }
@@ -338,6 +349,9 @@ function processCommand(
         typeChecker,
         inspectorState.rootDir
       ).pikkuFuncId
+      if (pikkuFuncId.startsWith('__temp_')) {
+        pikkuFuncId = makeContextBasedId('cli', programName, ...fullPath)
+      }
       meta.pikkuFuncId = pikkuFuncId
     } else if (
       propName === 'options' &&
@@ -393,13 +407,22 @@ function processCommand(
         // Already handled in first pass
         break
 
-      case 'render':
-        meta.renderName = extractFunctionName(
+      case 'render': {
+        let renderFuncId = extractFunctionName(
           prop.initializer,
           typeChecker,
           inspectorState.rootDir
         ).pikkuFuncId
+        if (renderFuncId.startsWith('__temp_')) {
+          renderFuncId = makeContextBasedId(
+            'cli-render',
+            programName,
+            ...fullPath
+          )
+        }
+        meta.renderName = renderFuncId
         break
+      }
 
       case 'options':
         // Process with pikkuFuncId from first pass
