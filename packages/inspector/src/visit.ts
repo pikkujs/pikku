@@ -16,6 +16,7 @@ import type {
 } from './types.js'
 import { addFunctions } from './add/add-functions.js'
 import { addChannel } from './add/add-channel.js'
+import { addGateway } from './add/add-gateway.js'
 import { addRPCInvocations } from './add/add-rpc-invocations.js'
 import { addWireAddon } from './add/add-wire-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
@@ -111,6 +112,7 @@ export const visitRoutes = (
   addTrigger(logger, node, checker, state, options)
   addQueueWorker(logger, node, checker, state, options)
   addChannel(logger, node, checker, state, options)
+  addGateway(logger, node, checker, state, options)
   addCLI(logger, node, checker, state, options)
   addCLIRenderers(logger, node, checker, state, options)
   addMCPResource(logger, node, checker, state, options)

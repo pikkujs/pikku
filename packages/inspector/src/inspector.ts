@@ -83,6 +83,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       files: new Set(),
       meta: {},
     },
+    gateways: {
+      meta: {},
+      files: new Set(),
+    },
     triggers: {
       meta: {},
       sourceMeta: {},

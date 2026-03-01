@@ -66,7 +66,7 @@ export const pikkuHTTPHandler = ({
       }
     }
 
-    if (method === 'get' || method === 'head') {
+    if (method === 'get' || method === 'head' || method === 'options') {
       const request = new UWSPikkuHTTPRequest(method, path, query, headers)
       const response = new UWSPikkuHTTPResponse(res, isAborted)
 
