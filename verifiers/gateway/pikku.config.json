@@ -1,0 +1,6 @@
+{
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src"],
+  "outDir": ".pikku",
+  "entrypoint": "src/index.ts"
+}
