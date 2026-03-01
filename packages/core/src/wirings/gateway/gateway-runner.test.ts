@@ -1,6 +1,6 @@
 import { test, describe, beforeEach } from 'node:test'
 import * as assert from 'assert'
-import { wireGateway, startListenerGateway } from './gateway-runner.js'
+import { wireGateway, createListenerMessageHandler } from './gateway-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { httpRouter } from '../http/routers/http-router.js'
 import { fetch } from '../http/http-runner.js'
@@ -21,11 +21,14 @@ const createMockAdapter = (
   } = {}
 ): GatewayAdapter & {
   sentMessages: Array<{ senderId: string; message: GatewayOutboundMessage }>
+  simulateMessage: (data: unknown) => Promise<void>
 } => {
   const sentMessages: Array<{
     senderId: string
     message: GatewayOutboundMessage
   }> = []
+
+  let onMessage: ((data: unknown) => Promise<void>) | undefined
 
   return {
     name: opts.name ?? 'mock',
@@ -42,6 +45,15 @@ const createMockAdapter = (
     },
     send: async (senderId, message) => {
       sentMessages.push({ senderId, message })
+    },
+    init: async (cb) => {
+      onMessage = cb
+    },
+    close: async () => {
+      onMessage = undefined
+    },
+    async simulateMessage(data: unknown) {
+      if (onMessage) await onMessage(data)
     },
     ...(opts.verifyResult
       ? {
@@ -320,13 +332,30 @@ describe('wireGateway', () => {
   })
 
   describe('type: listener', () => {
-    test('stores gateway config and starts listener', async () => {
+    test('stores gateway config in pikkuState', () => {
       const adapter = createMockAdapter()
-      const funcCalls: any[] = []
 
       wireGateway({
         name: 'test-listener',
         type: 'listener',
+        adapter,
+        func: { func: async () => {} },
+      })
+
+      const gateways = pikkuState(null, 'gateway', 'gateways')
+      assert.ok(gateways.has('test-listener'))
+      assert.equal(gateways.get('test-listener').type, 'listener')
+    })
+  })
+
+  describe('createListenerMessageHandler', () => {
+    test('creates handler that processes messages', async () => {
+      const adapter = createMockAdapter()
+      const funcCalls: any[] = []
+
+      const config = {
+        name: 'test-listener',
+        type: 'listener' as const,
         adapter,
         func: {
           func: async (_services: any, data: any, wire: any) => {
@@ -334,20 +363,19 @@ describe('wireGateway', () => {
             return { text: 'listener-reply' }
           },
         },
-      })
+      }
 
-      // Verify gateway is stored
-      const gateways = pikkuState(null, 'gateway', 'gateways')
-      assert.ok(gateways.has('test-listener'))
+      wireGateway(config)
 
-      // Start the listener
-      const handleMessage = await startListenerGateway(
+      const singletonServices = pikkuState(null, 'package', 'singletonServices')
+      const handleMessage = createListenerMessageHandler(
         'test-listener',
-        pikkuState(null, 'package', 'singletonServices')! as any
+        config,
+        singletonServices
       )
 
       // Simulate incoming message
-      await (handleMessage as any)({
+      await handleMessage({
         senderId: 'listener-user',
         text: 'hello from listener',
       })
@@ -362,40 +390,33 @@ describe('wireGateway', () => {
       assert.equal(adapter.sentMessages[0].message.text, 'listener-reply')
     })
 
-    test('listener ignores events when adapter returns null', async () => {
+    test('handler ignores events when adapter returns null', async () => {
       const adapter = createMockAdapter({ parseResult: null })
       const funcCalls: any[] = []
 
-      wireGateway({
+      const config = {
         name: 'test-listener-ignore',
-        type: 'listener',
+        type: 'listener' as const,
         adapter,
         func: {
           func: async () => {
             funcCalls.push(true)
           },
         },
-      })
+      }
 
-      const handleMessage = await startListenerGateway(
+      wireGateway(config)
+
+      const singletonServices = pikkuState(null, 'package', 'singletonServices')
+      const handleMessage = createListenerMessageHandler(
         'test-listener-ignore',
-        pikkuState(null, 'package', 'singletonServices')! as any
+        config,
+        singletonServices
       )
 
-      await (handleMessage as any)({ type: 'delivery_receipt' })
+      await handleMessage({ type: 'delivery_receipt' })
 
       assert.equal(funcCalls.length, 0)
-    })
-
-    test('throws for non-existent gateway name', async () => {
-      await assert.rejects(
-        () =>
-          startListenerGateway(
-            'nonexistent',
-            pikkuState(null, 'package', 'singletonServices')! as any
-          ),
-        /not found/
-      )
     })
   })
 

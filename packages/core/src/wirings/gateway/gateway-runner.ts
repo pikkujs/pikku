@@ -355,28 +355,21 @@ const wireListenerGateway = (config: CoreGateway): void => {
 }
 
 /**
- * Start a listener gateway's event loop.
+ * Create the message handler callback for a listener gateway.
  *
- * This is called at application startup for gateways with `type: 'listener'`.
- * The adapter is responsible for connecting to the platform and delivering
- * messages via the returned callback.
+ * Returns a function `(rawData: unknown) => Promise<void>` that can be
+ * passed to `adapter.init()`.  Used by `LocalGatewayService` (and any
+ * other GatewayService implementation) to wire up listener gateways.
  *
- * @param name - The gateway name (must match a registered listener gateway)
- * @param singletonServices - The application's singleton services
- * @returns A teardown function to stop the listener
+ * @param name   - Gateway name (for wire.gateway metadata)
+ * @param config - The gateway configuration (adapter, func, middleware)
+ * @param singletonServices - Singleton services to pass to handler/middleware
  */
-export const startListenerGateway = async (
+export const createListenerMessageHandler = (
   name: string,
+  config: CoreGateway,
   singletonServices: CoreSingletonServices
-): Promise<() => void | Promise<void>> => {
-  const config = pikkuState(null, 'gateway', 'gateways').get(name)
-  if (!config) {
-    throw new Error(`Gateway '${name}' not found`)
-  }
-  if (config.type !== 'listener') {
-    throw new Error(`Gateway '${name}' is not a listener gateway`)
-  }
-
+): ((rawData: unknown) => Promise<void>) => {
   const { adapter } = config
   const userFuncConfig = config.func as {
     func: Function
@@ -384,11 +377,7 @@ export const startListenerGateway = async (
   }
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
 
-  /**
-   * Process an incoming message from the listener's event loop.
-   * Called by the adapter whenever a new message arrives.
-   */
-  const handleMessage = async (rawData: unknown): Promise<void> => {
+  return async (rawData: unknown): Promise<void> => {
     const parsed = adapter.parse(rawData)
     if (!parsed) return
 
@@ -419,8 +408,4 @@ export const startListenerGateway = async (
       await exec()
     }
   }
-
-  // Return the handleMessage callback — the adapter's event loop calls this
-  // The adapter itself manages connection/reconnection outside pikku
-  return handleMessage as any
 }

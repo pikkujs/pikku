@@ -1,4 +1,4 @@
-export { wireGateway, startListenerGateway } from './gateway-runner.js'
+export { wireGateway, createListenerMessageHandler } from './gateway-runner.js'
 export type {
   GatewayAdapter,
   GatewayAttachment,

@@ -103,7 +103,7 @@ export const stopSingletonServices = async (): Promise<void> => {
   const singletonServices = getSingletonServices()
   const logger = singletonServices.logger
 
-  // First, stop all addon package singleton services
+  // Stop all addon package singleton services
   const stateMap = getAllPackageStates()
   if (stateMap.size > 0) {
     for (const [packageName, packageState] of stateMap) {
