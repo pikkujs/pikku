@@ -1,6 +1,6 @@
 import type { ConnectionOptions, JobsOptions } from 'bullmq'
 import type Bull from 'bullmq'
-import { Queue, RedisConnection } from 'bullmq'
+import { Queue, QueueEvents, RedisConnection } from 'bullmq'
 import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
 import { mapBullJobToQueueJob } from './utils.js'
 
@@ -70,6 +70,18 @@ export class BullQueueService implements QueueService {
     await queue.waitUntilReady()
 
     this.queues.set(queueName, queue)
+
+    if (!this.queueEvents.has(queueName)) {
+      const queueEvents = new QueueEvents(
+        queueName,
+        this.redisConnectionOptions
+          ? { connection: this.redisConnectionOptions }
+          : undefined
+      )
+      await queueEvents.waitUntilReady()
+      this.queueEvents.set(queueName, queueEvents)
+    }
+
     return queue
   }
 
