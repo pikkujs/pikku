@@ -248,16 +248,13 @@ export class IngestionService {
 
   private async readIcon(packageDir: string): Promise<string | undefined> {
     try {
-      const iconsDir = join(packageDir, 'icons')
-      const files = await readdir(iconsDir)
-      const svg = files.find((f) => f.endsWith('.svg'))
-      if (svg) {
-        return await readFile(join(iconsDir, svg), 'utf-8')
-      }
+      const nodesMeta = await this.readJsonFile<{
+        package?: { icon?: string }
+      }>(join(packageDir, '.pikku', 'console', 'pikku-nodes-meta.gen.json'))
+      return nodesMeta?.package?.icon ?? undefined
     } catch {
-      // No icons directory
+      return undefined
     }
-    return undefined
   }
 
   private deriveId(packageName: string): string {

@@ -8,6 +8,6 @@
     "displayName": "Addon Functions",
     "description": "Example addon functions",
     "categories": ["Communication", "Utility"],
-    "icon": "./src/icons/package.svg"
+    "icon": "./package.svg"
   }
 }

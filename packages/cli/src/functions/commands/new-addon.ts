@@ -30,7 +30,15 @@ function getAddonFiles(
   vars: AddonVars,
   flags: { secret: boolean; variable: boolean; oauth: boolean }
 ): Record<string, string> {
-  const { name, camelName, pascalName, screamingName, displayName, description, category } = vars
+  const {
+    name,
+    camelName,
+    pascalName,
+    screamingName,
+    displayName,
+    description,
+    category,
+  } = vars
   const files: Record<string, string> = {}
 
   // package.json
@@ -48,8 +56,7 @@ function getAddonFiles(
           import: './dist/src/index.js',
         },
         './.pikku/*': './.pikku/*',
-        './.pikku/pikku-metadata.gen.json':
-          './.pikku/pikku-metadata.gen.json',
+        './.pikku/pikku-metadata.gen.json': './.pikku/pikku-metadata.gen.json',
         './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js': {
           types: './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
         },
@@ -88,8 +95,7 @@ function getAddonFiles(
         displayName,
         description,
         categories: [category],
-        iconsDir: './icons',
-        icon: `${name}.svg`,
+        icon: `./${name}.svg`,
       },
     },
     null,
@@ -130,7 +136,7 @@ ${description}
 
 ## Setup
 
-1. Add icon SVG to \`icons/${name}.svg\`
+1. Add icon SVG at \`${name}.svg\`
 2. Update secret schema with required fields
 3. Implement API service methods
 4. Create function files for each operation
@@ -145,7 +151,8 @@ ${description}
 
   // src/services.ts
   if (flags.oauth) {
-    files['src/services.ts'] = `import { ${pascalName}Service } from './${name}-api.service.js'
+    files['src/services.ts'] =
+      `import { ${pascalName}Service } from './${name}-api.service.js'
 import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(async (
@@ -158,7 +165,8 @@ export const createSingletonServices = pikkuAddonServices(async (
 })
 `
   } else if (flags.secret) {
-    files['src/services.ts'] = `import { ${pascalName}Service } from './${name}-api.service.js'
+    files['src/services.ts'] =
+      `import { ${pascalName}Service } from './${name}-api.service.js'
 import type { ${pascalName}Secrets } from './${name}.secret.js'
 import { pikkuAddonServices } from '#pikku'
 
@@ -173,7 +181,8 @@ export const createSingletonServices = pikkuAddonServices(async (
 })
 `
   } else {
-    files['src/services.ts'] = `import { ${pascalName}Service } from './${name}-api.service.js'
+    files['src/services.ts'] =
+      `import { ${pascalName}Service } from './${name}-api.service.js'
 import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(async (
@@ -188,7 +197,8 @@ export const createSingletonServices = pikkuAddonServices(async (
 
   // src/{name}-api.service.ts
   if (flags.oauth) {
-    files[`src/${name}-api.service.ts`] = `import { OAuth2Client } from '@pikku/core/oauth2'
+    files[`src/${name}-api.service.ts`] =
+      `import { OAuth2Client } from '@pikku/core/oauth2'
 import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'
 
 const BASE_URL = 'https://api.example.com/v1'
@@ -253,7 +263,8 @@ export class ${pascalName}Service {
 }
 `
   } else if (flags.secret) {
-    files[`src/${name}-api.service.ts`] = `import type { ${pascalName}Secrets } from './${name}.secret.js'
+    files[`src/${name}-api.service.ts`] =
+      `import type { ${pascalName}Secrets } from './${name}.secret.js'
 
 const BASE_URL = 'https://api.example.com/v1'
 
@@ -299,7 +310,8 @@ export class ${pascalName}Service {
 }
 `
   } else {
-    files[`src/${name}-api.service.ts`] = `const BASE_URL = 'https://api.example.com/v1'
+    files[`src/${name}-api.service.ts`] =
+      `const BASE_URL = 'https://api.example.com/v1'
 
 export interface RequestOptions {
   body?: unknown
@@ -377,7 +389,8 @@ export interface Services extends CoreServices<SingletonServices> {}
 
   // Conditional: secret file
   if (flags.oauth) {
-    files[`src/${name}.secret.ts`] = `import { wireOAuth2Credential } from '@pikku/core/oauth2'
+    files[`src/${name}.secret.ts`] =
+      `import { wireOAuth2Credential } from '@pikku/core/oauth2'
 
 wireOAuth2Credential({
   name: '${camelName}OAuth',
@@ -539,7 +552,8 @@ export const createSingletonServices: CreateSingletonServices<
 `
 
   // test/src/{name}-tests.function.ts
-  files[`src/${name}-tests.function.ts`] = `import assert from 'node:assert/strict'
+  files[`src/${name}-tests.function.ts`] =
+    `import assert from 'node:assert/strict'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export type Test${pascalName}Input = {}
@@ -702,9 +716,6 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     })
 
     const written = await writeFiles(addonDir, addonFiles)
-
-    // Create empty icons directory
-    await mkdir(join(addonDir, 'icons'), { recursive: true })
 
     // Test harness
     if (test) {
