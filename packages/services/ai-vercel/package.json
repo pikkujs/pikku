@@ -20,7 +20,7 @@
     "ai": "^6.0.0"
   },
   "devDependencies": {
-    "ai": "^6.0.0",
+    "ai": "^6.0.105",
     "typescript": "^5.9"
   }
 }
