@@ -5293,7 +5293,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fastify@npm:^0.12.0, @pikku/fastify@npm:^0.12.1, @pikku/fastify@workspace:packages/runtimes/fastify-server":
+"@pikku/fastify@npm:^0.12.1, @pikku/fastify@workspace:packages/runtimes/fastify-server":
   version: 0.0.0-use.local
   resolution: "@pikku/fastify@workspace:packages/runtimes/fastify-server"
   dependencies:
@@ -5484,12 +5484,12 @@ __metadata:
   resolution: "@pikku/registry@workspace:packages/registry"
   dependencies:
     "@pikku/cli": "npm:*"
-    "@pikku/core": "npm:^0.12.0"
-    "@pikku/fastify": "npm:^0.12.0"
-    "@pikku/schema-cfworker": "npm:^0.12.0"
-    "@types/node": "npm:^24"
+    "@pikku/core": "npm:^0.12.1"
+    "@pikku/fastify": "npm:^0.12.1"
+    "@pikku/schema-cfworker": "npm:^0.12.1"
+    "@types/node": "npm:^25"
     fastify: "npm:^5.7.4"
-    tar: "npm:^7.0.0"
+    tar: "npm:^7.5.9"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -5521,7 +5521,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schema-cfworker@npm:^0.12.0, @pikku/schema-cfworker@npm:^0.12.1, @pikku/schema-cfworker@workspace:*, @pikku/schema-cfworker@workspace:packages/services/schema-cfworker":
+"@pikku/schema-cfworker@npm:^0.12.1, @pikku/schema-cfworker@workspace:*, @pikku/schema-cfworker@workspace:packages/services/schema-cfworker":
   version: 0.0.0-use.local
   resolution: "@pikku/schema-cfworker@workspace:packages/services/schema-cfworker"
   dependencies:
@@ -9429,6 +9429,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~7.16.0"
   checksum: 10/94231e8ff4151a97719d9f996a67e8eee01041f337d710762cafbbab2d15290da91c4a0d27b9577fa95d85ce678524d53e1b193f2270850b0746a6e9a43932d4
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^25":
+  version: 25.3.3
+  resolution: "@types/node@npm:25.3.3"
+  dependencies:
+    undici-types: "npm:~7.18.0"
+  checksum: 10/883e8942b0ddf89f9aae56c4205af8d9a368acd6cab83aa052447a6c5e69ce2bc8ab3f54e549233ada160ba9216dad7f30c62c35867c584fe844ae99f7dea2e0
   languageName: node
   linkType: hard
 
@@ -20115,19 +20124,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tar@npm:^7.0.0":
-  version: 7.5.9
-  resolution: "tar@npm:7.5.9"
-  dependencies:
-    "@isaacs/fs-minipass": "npm:^4.0.0"
-    chownr: "npm:^3.0.0"
-    minipass: "npm:^7.1.2"
-    minizlib: "npm:^3.1.0"
-    yallist: "npm:^5.0.0"
-  checksum: 10/1213cdde9c22d6acf8809ba5d2a025212ce3517bc99c4a4c6981b7dc0489bf3b164db9c826c9517680889194c9ba57448c8ff0da35eca9a60bb7689bf0b3897d
-  languageName: node
-  linkType: hard
-
 "tar@npm:^7.5.4":
   version: 7.5.7
   resolution: "tar@npm:7.5.7"
@@ -20138,6 +20134,19 @@ __metadata:
     minizlib: "npm:^3.1.0"
     yallist: "npm:^5.0.0"
   checksum: 10/0d6938dd32fe5c0f17c8098d92bd9889ee0ed9d11f12381b8146b6e8c87bb5aa49feec7abc42463f0597503d8e89e4c4c0b42bff1a5a38444e918b4878b7fd21
+  languageName: node
+  linkType: hard
+
+"tar@npm:^7.5.9":
+  version: 7.5.9
+  resolution: "tar@npm:7.5.9"
+  dependencies:
+    "@isaacs/fs-minipass": "npm:^4.0.0"
+    chownr: "npm:^3.0.0"
+    minipass: "npm:^7.1.2"
+    minizlib: "npm:^3.1.0"
+    yallist: "npm:^5.0.0"
+  checksum: 10/1213cdde9c22d6acf8809ba5d2a025212ce3517bc99c4a4c6981b7dc0489bf3b164db9c826c9517680889194c9ba57448c8ff0da35eca9a60bb7689bf0b3897d
   languageName: node
   linkType: hard
 
@@ -20592,6 +20601,13 @@ __metadata:
   version: 7.16.0
   resolution: "undici-types@npm:7.16.0"
   checksum: 10/db43439f69c2d94cc29f75cbfe9de86df87061d6b0c577ebe9bb3255f49b22c50162a7d7eb413b0458b6510b8ca299ac7cff38c3a29fbd31af9f504bcf7fbc0d
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~7.18.0":
+  version: 7.18.2
+  resolution: "undici-types@npm:7.18.2"
+  checksum: 10/e61a5918f624d68420c3ca9d301e9f15b61cba6e97be39fe2ce266dd6151e4afe424d679372638826cb506be33952774e0424141200111a9857e464216c009af
   languageName: node
   linkType: hard
 
