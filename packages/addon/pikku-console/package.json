@@ -24,6 +24,7 @@
     "prebuild": "pikku all",
     "build": "tsc && cp -r .pikku dist/",
     "pikku": "pikku all",
+    "pretest": "pikku all",
     "test": "tsc --noEmit"
   },
   "peerDependencies": {
