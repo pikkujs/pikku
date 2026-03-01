@@ -66,7 +66,7 @@ export interface ChannelMeta {
   disconnect: ChannelMessageMeta | null
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
-  binary?: boolean
+  binary?: boolean | null
   summary?: string
   description?: string
   errors?: string[]
@@ -135,7 +135,7 @@ export type CoreChannel<
   >
   permissions?: CorePermissionGroup<PikkuPermission>
   auth?: boolean
-  binary?: boolean
+  binary?: boolean | null
   onBinaryMessage?: (
     services: any,
     data: BinaryData,
