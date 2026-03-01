@@ -104,7 +104,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [20, 24]
+        version: [24]
         template:
           [
             express,
