@@ -226,6 +226,10 @@ wireCLI({
               description: 'Include test harness (default: true)',
               default: true,
             },
+            openapi: {
+              description:
+                'Path to OpenAPI YAML/JSON spec to generate functions from',
+            },
           },
         }),
       },
