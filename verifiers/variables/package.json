@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verify-variables",
+  "name": "@pikku/verifiers-variables",
   "type": "module",
   "private": true,
   "imports": {

@@ -5970,6 +5970,44 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
+  dependencies:
+    "@pikku/cli": "npm:^0.12.0"
+    "@pikku/core": "npm:^0.12.0"
+    "@pikku/templates-function-addon": "workspace:*"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-secrets@workspace:verifiers/secrets":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-secrets@workspace:verifiers/secrets"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+    zod: "npm:^4"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-treeshaking@workspace:verifiers/treeshaking":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-treeshaking@workspace:verifiers/treeshaking"
+  dependencies:
+    "@pikku/cli": "npm:^0.12.0"
+    "@pikku/core": "npm:^0.12.0"
+    "@pikku/templates-function-addon": "workspace:*"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-types@workspace:verifiers/types":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
@@ -5979,6 +6017,20 @@ __metadata:
     "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-variables@workspace:verifiers/variables":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-variables@workspace:verifiers/variables"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.20.6"
+    typescript: "npm:^5.9"
+    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 
@@ -5997,58 +6049,6 @@ __metadata:
     postgres: "npm:^3.4.7"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/verify-middleware-and-permissions@workspace:verifiers/middleware-and-permissions":
-  version: 0.0.0-use.local
-  resolution: "@pikku/verify-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
-  dependencies:
-    "@pikku/cli": "npm:^0.12.0"
-    "@pikku/core": "npm:^0.12.0"
-    "@pikku/templates-function-addon": "workspace:*"
-    "@types/node": "npm:^24"
-    typescript: "npm:^5.9"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/verify-secrets@workspace:verifiers/secrets":
-  version: 0.0.0-use.local
-  resolution: "@pikku/verify-secrets@workspace:verifiers/secrets"
-  dependencies:
-    "@pikku/cli": "workspace:*"
-    "@pikku/core": "workspace:*"
-    "@pikku/schema-cfworker": "workspace:*"
-    "@types/node": "npm:^24"
-    tsx: "npm:^4.20.6"
-    typescript: "npm:^5.9"
-    zod: "npm:^4"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/verify-treeshaking@workspace:verifiers/treeshaking":
-  version: 0.0.0-use.local
-  resolution: "@pikku/verify-treeshaking@workspace:verifiers/treeshaking"
-  dependencies:
-    "@pikku/cli": "npm:^0.12.0"
-    "@pikku/core": "npm:^0.12.0"
-    "@pikku/templates-function-addon": "workspace:*"
-    "@types/node": "npm:^24"
-    typescript: "npm:^5.9"
-  languageName: unknown
-  linkType: soft
-
-"@pikku/verify-variables@workspace:verifiers/variables":
-  version: 0.0.0-use.local
-  resolution: "@pikku/verify-variables@workspace:verifiers/variables"
-  dependencies:
-    "@pikku/cli": "workspace:*"
-    "@pikku/core": "workspace:*"
-    "@pikku/schema-cfworker": "workspace:*"
-    "@types/node": "npm:^24"
-    tsx: "npm:^4.20.6"
-    typescript: "npm:^5.9"
-    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 

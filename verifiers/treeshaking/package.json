@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verify-treeshaking",
+  "name": "@pikku/verifiers-treeshaking",
   "type": "module",
   "private": true,
   "imports": {

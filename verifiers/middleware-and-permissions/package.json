@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verify-middleware-and-permissions",
+  "name": "@pikku/verifiers-middleware-and-permissions",
   "type": "module",
   "private": true,
   "imports": {
