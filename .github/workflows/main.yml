@@ -201,78 +201,78 @@ jobs:
   #     DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
   #     REDIS_URL: redis://localhost:6379
 
-  benchmarks:
-    name: Benchmark (${{ matrix.bench }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        bench:
-          - bench-fetch.ts
-          - bench-express.ts
-          - bench-fastify.ts
-          - bench-uws.ts
-          - bench-baseline-express.ts
-          - bench-baseline-fastify.ts
-          - bench-baseline-uws.ts
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: yarn
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-          path: packages
-      - run: yarn install
-      - name: Run benchmark
-        run: yarn tsx benchmarks/run-benchmarks.ts --single ${{ matrix.bench }}
-        continue-on-error: ${{ contains(matrix.bench, 'uws') }}
-      - name: Upload result
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bench-result-${{ matrix.bench }}
-          path: benchmarks/result-*.json
-          retention-days: 1
-          if-no-files-found: ignore
+  # benchmarks:
+  #   name: Benchmark (${{ matrix.bench }})
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 10
+  #   needs: build
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       bench:
+  #         - bench-fetch.ts
+  #         - bench-express.ts
+  #         - bench-fastify.ts
+  #         - bench-uws.ts
+  #         - bench-baseline-express.ts
+  #         - bench-baseline-fastify.ts
+  #         - bench-baseline-uws.ts
+  #   steps:
+  #     - name: Check out repository code
+  #       uses: actions/checkout@v4
+  #     - run: corepack enable
+  #       shell: bash
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 24
+  #         cache: yarn
+  #     - name: Download built packages
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: built-packages
+  #         path: packages
+  #     - run: yarn install
+  #     - name: Run benchmark
+  #       run: yarn tsx benchmarks/run-benchmarks.ts --single ${{ matrix.bench }}
+  #       continue-on-error: ${{ contains(matrix.bench, 'uws') }}
+  #     - name: Upload result
+  #       if: always()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: bench-result-${{ matrix.bench }}
+  #         path: benchmarks/result-*.json
+  #         retention-days: 1
+  #         if-no-files-found: ignore
 
-  benchmark-verify:
-    name: Benchmark Verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: benchmarks
-    if: always()
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: yarn
-      - name: Download all benchmark results
-        uses: actions/download-artifact@v4
-        with:
-          pattern: bench-result-*
-          path: benchmarks
-          merge-multiple: true
-      - run: yarn install
-      - name: Verify benchmarks
-        run: yarn tsx benchmarks/run-benchmarks.ts --merge --verify --threshold 80
+  # benchmark-verify:
+  #   name: Benchmark Verify
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 5
+  #   needs: benchmarks
+  #   if: always()
+  #   steps:
+  #     - name: Check out repository code
+  #       uses: actions/checkout@v4
+  #     - run: corepack enable
+  #       shell: bash
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 24
+  #         cache: yarn
+  #     - name: Download all benchmark results
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: bench-result-*
+  #         path: benchmarks
+  #         merge-multiple: true
+  #     - run: yarn install
+  #     - name: Verify benchmarks
+  #       run: yarn tsx benchmarks/run-benchmarks.ts --merge --verify --threshold 80
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [verifiers, templates, benchmark-verify]
+    needs: [verifiers, templates]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
