@@ -9,7 +9,7 @@ export const pikkuNewMiddleware = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config }, { name, type = 'simple' }) => {
-    const filePath = scaffoldFilePath(config, 'middleware', name, '.ts')
+    const filePath = scaffoldFilePath(config, 'middleware', name, '.ts', config.scaffold?.middlewareDir)
 
     if (existsSync(filePath)) {
       logger.error(`File already exists: ${filePath}`)

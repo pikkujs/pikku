@@ -67,9 +67,13 @@ export function scaffoldFilePath(
   config: { rootDir: string; srcDirectories: string[] },
   subdir: string,
   name: string,
-  suffix: string
+  suffix: string,
+  overrideDir?: string
 ): string {
   const fileName = kebabCase(name)
+  if (overrideDir) {
+    return join(overrideDir, subdir, `${fileName}${suffix}`)
+  }
   return join(
     config.rootDir,
     config.srcDirectories[0],

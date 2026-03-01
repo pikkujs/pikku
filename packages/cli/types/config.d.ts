@@ -227,6 +227,14 @@ export type PikkuCLIInput = {
     functionsPath?: string
   }
 
+  scaffold?: {
+    addonDir?: string
+    functionDir?: string
+    wiringDir?: string
+    middlewareDir?: string
+    permissionDir?: string
+  }
+
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
@@ -357,6 +365,14 @@ export type PikkuCLIConfig = {
 
   console?: {
     functionsPath?: string
+  }
+
+  scaffold?: {
+    addonDir?: string
+    functionDir?: string
+    wiringDir?: string
+    middlewareDir?: string
+    permissionDir?: string
   }
 
   forceRequiredServices?: string[]
