@@ -257,6 +257,8 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
           const parsed = JSON.parse(rawContent)
           if (Array.isArray(parsed)) {
             parsedContent = parsed
+          } else if (typeof parsed === 'string') {
+            parsedContent = parsed
           }
         } catch {
           // Not JSON, use raw string
