@@ -56,6 +56,7 @@ jobs:
       matrix:
         verifier:
           [
+            addon,
             middleware-and-permissions,
             treeshaking,
             types,

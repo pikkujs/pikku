@@ -52,6 +52,7 @@ jobs:
       matrix:
         verifier:
           [
+            addon,
             middleware-and-permissions,
             treeshaking,
             types,
@@ -283,9 +284,6 @@ jobs:
           node-version: 24
           cache: yarn
       - run: yarn install
-      - run: yarn build
-      - run: cd templates/functions && yarn pikku && cd ../..
-      - run: yarn build:console
 
       - name: Create Release Pull Request
         uses: changesets/action@v1
@@ -296,6 +294,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HUSKY: '0'
 
   sync-templates-stackblitz:
     name: Sync Templates
