@@ -1,5 +1,56 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- 62a8725: Rename 'external' to 'addon' throughout the codebase. All types, functions, config keys, and CLI options previously named `external` or `External` are now named `addon` or `Addon` (e.g. `ExternalPackageConfig` → `AddonConfig`, `externalPackages` → `addons`, `function-external` → `function-addon`).
+- 588f52f: Add `pikku new addon <name>` CLI subcommand for scaffolding addon packages:
+
+  - Generates full addon structure: package.json, pikku.config.json, tsconfig.json, API service, types, and README
+  - `--secret` flag generates wireSecret with API key schema
+  - `--oauth` flag generates wireOAuth2Credential + OAuth2Client-based API service
+  - `--variable` flag generates wireVariable definition
+  - `--no-test` flag skips test harness generation
+  - `--displayName`, `--description`, `--category`, `--dir` options for customization
+  - Test harness includes wireAddon, services, test function, and runner
+
+  Also adds `scaffold` config section to pikku.config.json for config-driven default directories across all `new` commands (addonDir, functionDir, wiringDir, middlewareDir, permissionDir).
+
+- ba88295: Add `pikku new` scaffold commands for bootstrapping project files:
+
+  - `pikku new function <name> --type func|sessionless|void`
+  - `pikku new wiring <name> --type http|channel|scheduler|queue|mcp|cli|trigger`
+  - `pikku new middleware <name> --type simple|factory`
+  - `pikku new permission <name> --type simple|factory`
+
+  Templates use correct `#pikku` imports and function signatures. VS Code extension now delegates to the CLI instead of using inline templates.
+
+- a83efb8: Handle OPTIONS preflight requests automatically in fetchData when no explicit OPTIONS route is matched. Runs global HTTP middleware (e.g. CORS) and returns 204. Remove redundant startWorkflowRun and streamAgentRun pass-through functions from addon-console.
+- 62a8725: `pikku versions check` now prints rich, human-readable output for all contract version errors instead of raw error codes. Each error type (PKU861–PKU865) shows the function name, separate input/output schema hashes with a `prev → current` arrow, and clear next-step instructions.
+
+  The version manifest now stores separate `inputHash` and `outputHash` per version entry (backward-compatible — old string-hash manifests still load and validate correctly). `VersionValidateError` gains optional detail fields (`functionKey`, `version`, `previousInputHash`, `currentInputHash`, `previousOutputHash`, `currentOutputHash`, `nextVersion`, `latestVersion`, `expectedNextVersion`) for use by tooling.
+
+- 62a8725: Version management commands are now grouped under `pikku versions <subcommand>`:
+
+  - `pikku versions init` — initialise the version manifest (was `pikku init`)
+  - `pikku versions check` — validate contracts against the manifest (was `pikku versions-check`)
+  - `pikku versions update` — update the manifest with current hashes (newly exposed as a CLI command)
+
+- Updated dependencies [62a8725]
+- Updated dependencies [a3bdb0d]
+- Updated dependencies [e0349ff]
+- Updated dependencies [62a8725]
+- Updated dependencies [e04531f]
+- Updated dependencies [62a8725]
+- Updated dependencies [a83efb8]
+- Updated dependencies [8eed717]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+  - @pikku/core@0.12.1
+  - @pikku/inspector@0.12.1
+
 ### New Features
 
 - AI agent code generation (types, public agent endpoints, streaming routes)

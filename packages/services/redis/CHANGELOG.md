@@ -1,5 +1,23 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- e04531f: Code quality improvements: resolve oxlint warnings and apply autofixes across the codebase (unused bindings, unnecessary constructors, prefer `const` over `let`, etc.). No behaviour changes.
+- Updated dependencies [62a8725]
+- Updated dependencies [a3bdb0d]
+- Updated dependencies [e0349ff]
+- Updated dependencies [62a8725]
+- Updated dependencies [e04531f]
+- Updated dependencies [62a8725]
+- Updated dependencies [a83efb8]
+- Updated dependencies [8eed717]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+  - @pikku/core@0.12.1
+
 ### New Features
 
 - `RedisDeploymentService` for Redis-based service discovery with TTL heartbeats

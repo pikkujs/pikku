@@ -1,5 +1,29 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- 62a8725: Rename 'external' to 'addon' throughout the codebase. All types, functions, config keys, and CLI options previously named `external` or `External` are now named `addon` or `Addon` (e.g. `ExternalPackageConfig` → `AddonConfig`, `externalPackages` → `addons`, `function-external` → `function-addon`).
+- a3bdb0d: Add AI middleware hooks for per-tool-call lifecycle and post-step observability:
+
+  - `beforeToolCall` / `afterToolCall`: per-tool-call hooks for logging, caching, input sanitization, and result transformation
+  - `afterStep`: post-step observation hook with full step context (text, toolCalls, toolResults, usage, finishReason)
+  - `onError`: error-specific hook for alerting and diagnostics (non-throwing, won't affect error flow)
+
+- e0349ff: Fix critical security vulnerability in channel message handler: `validateAuth` was being called with `channelHandler` (always truthy) instead of the actual user session, meaning auth checks always passed and unauthenticated clients could send messages to protected channels. Also fix an information disclosure issue where the full channel config object was being logged on unhandled messages.
+- 62a8725: Internalize singleton services management in the serverless channel runner, consistent with how other runners handle it. `createWireServices` and `singletonServices` no longer need to be passed explicitly to serverless channel runner calls.
+- e04531f: Security hardening: improve CORS handling, redirect validation, and error logging in the HTTP runner. Export additional internal utilities needed by native runtime adapters.
+- 62a8725: Fix security issue in `function-runner`: functions declared with `pikkuFunc` (which always require a session) now always throw `ForbiddenError` when called without a session, even if the wiring has `auth: false`. Previously a misconfigured wiring could bypass authentication entirely — the runner only logged a warning instead of blocking the call.
+- a83efb8: Handle OPTIONS preflight requests automatically in fetchData when no explicit OPTIONS route is matched. Runs global HTTP middleware (e.g. CORS) and returns 204. Remove redundant startWorkflowRun and streamAgentRun pass-through functions from addon-console.
+- 8eed717: Add `readonly` flag to function config and runtime enforcement. Functions can be marked `readonly: true` in their config. At runtime, if a session has `readonly: true`, only functions marked as readonly can be called — otherwise a `ReadonlySessionError` (403) is thrown.
+- 62a8725: `pikku versions check` now prints rich, human-readable output for all contract version errors instead of raw error codes. Each error type (PKU861–PKU865) shows the function name, separate input/output schema hashes with a `prev → current` arrow, and clear next-step instructions.
+
+  The version manifest now stores separate `inputHash` and `outputHash` per version entry (backward-compatible — old string-hash manifests still load and validate correctly). `VersionValidateError` gains optional detail fields (`functionKey`, `version`, `previousInputHash`, `currentInputHash`, `previousOutputHash`, `currentOutputHash`, `nextVersion`, `latestVersion`, `expectedNextVersion`) for use by tooling.
+
+- 62a8725: Replace config-based addon declarations with the new `wireAddon()` code-based API. Addons are now declared directly in wiring files using `wireAddon({ name, package, rpcEndpoint?, auth?, tags? })` instead of the `addons` field in `pikku.config.json`. The inspector reads these declarations from the TypeScript AST at build time.
+- 62a8725: Add `secretOverrides` and `variableOverrides` support to `wireAddon()`. These optional maps allow an app to remap an addon's secret/variable keys to its own names (e.g. `secretOverrides: { SENDGRID_API_KEY: 'MY_EMAIL_API_KEY' }`). The inspector validates that all override keys exist in the app's own secrets/variables definitions.
+
 ### New Features
 
 - AI agents with `pikkuAIAgent()` — define agents with tools, sub-agents, memory, structured output, and streaming via SSE

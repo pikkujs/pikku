@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- e04531f: Code quality improvements: resolve oxlint warnings and apply autofixes across the codebase (unused bindings, unnecessary constructors, prefer `const` over `let`, etc.). No behaviour changes.
+
 - Updated dependencies
 
 ## 0.11.0
