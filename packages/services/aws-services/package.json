@@ -29,11 +29,11 @@
     "@pikku/core": "^0.12.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.985.0",
-    "@aws-sdk/client-secrets-manager": "^3.985.0",
-    "@aws-sdk/client-sqs": "^3.985.0",
-    "@aws-sdk/cloudfront-signer": "^3.985.0",
-    "@aws-sdk/s3-request-presigner": "^3.985.0",
+    "@aws-sdk/client-s3": "^3.1000.0",
+    "@aws-sdk/client-secrets-manager": "^3.1000.0",
+    "@aws-sdk/client-sqs": "^3.1000.0",
+    "@aws-sdk/cloudfront-signer": "^3.999.0",
+    "@aws-sdk/s3-request-presigner": "^3.1000.0",
     "@types/sinon": "^21.0.0",
     "sinon": "^21.0.1",
     "typescript": "^5.9"

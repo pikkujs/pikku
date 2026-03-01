@@ -50,7 +50,7 @@
     "picoquery": "^2.5.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.12",
+    "@types/node": "^25.3.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9"
   },

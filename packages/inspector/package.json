@@ -43,7 +43,7 @@
     "zod-to-ts": "^2.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.12"
+    "@types/node": "^25.3.3"
   },
   "engines": {
     "node": ">=18"

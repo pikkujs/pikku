@@ -15,7 +15,7 @@
     "@pikku/cli": "^0.12.0",
     "@pikku/fetch": "^0.12.0",
     "@pikku/websocket": "^0.12.0",
-    "@types/node": "^24",
+    "@types/node": "^25",
     "@types/ws": "^8",
     "concurrently": "^9.2.1",
     "tsx": "^4.21.0",

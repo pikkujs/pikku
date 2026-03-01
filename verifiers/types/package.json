@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
-    "@types/node": "^24",
+    "@types/node": "^25",
     "typescript": "^5.9"
   },
   "scripts": {
