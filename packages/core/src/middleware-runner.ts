@@ -121,6 +121,7 @@ const middlewareCache: Record<
   agent: {},
   cli: {},
   workflow: {},
+  gateway: {},
 }
 
 /**

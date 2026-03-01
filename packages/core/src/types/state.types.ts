@@ -27,6 +27,10 @@ import type {
   AIAgentMeta,
 } from '../wirings/ai-agent/ai-agent.types.js'
 import type {
+  CoreGateway,
+  GatewaysMeta,
+} from '../wirings/gateway/gateway.types.js'
+import type {
   CoreQueueWorker,
   QueueWorkersMeta,
 } from '../wirings/queue/queue.types.js'
@@ -120,6 +124,10 @@ export interface PikkuPackageState {
   agent: {
     agents: Map<string, CoreAIAgent>
     agentsMeta: AIAgentMeta
+  }
+  gateway: {
+    gateways: Map<string, CoreGateway>
+    meta: GatewaysMeta
   }
   cli: {
     meta: CLIMeta | Record<string, any> // Backward compatible with old published CLI format
