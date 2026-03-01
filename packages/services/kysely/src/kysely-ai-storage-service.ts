@@ -16,6 +16,18 @@ export class KyselyAIStorageService
 
   constructor(private db: Kysely<KyselyPikkuDB>) {}
 
+  private async createIndexSafe(builder: {
+    execute(): Promise<void>
+  }): Promise<void> {
+    try {
+      await builder.execute()
+    } catch (e: any) {
+      // Ignore "index already exists" errors (MySQL doesn't support IF NOT EXISTS for indexes)
+      if (e?.code === 'ER_DUP_KEYNAME' || e?.errno === 1061) return
+      throw e
+    }
+  }
+
   public async init(): Promise<void> {
     if (this.initialized) {
       return
@@ -24,8 +36,8 @@ export class KyselyAIStorageService
     await this.db.schema
       .createTable('ai_threads')
       .ifNotExists()
-      .addColumn('id', 'text', (col) => col.primaryKey())
-      .addColumn('resource_id', 'text', (col) => col.notNull())
+      .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
+      .addColumn('resource_id', 'varchar(255)', (col) => col.notNull())
       .addColumn('title', 'text')
       .addColumn('metadata', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
@@ -36,77 +48,77 @@ export class KyselyAIStorageService
       )
       .execute()
 
-    await this.db.schema
-      .createIndex('idx_ai_threads_resource')
-      .ifNotExists()
-      .on('ai_threads')
-      .column('resource_id')
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_ai_threads_resource')
+        .on('ai_threads')
+        .column('resource_id')
+    )
 
     await this.db.schema
       .createTable('ai_message')
       .ifNotExists()
-      .addColumn('id', 'text', (col) => col.primaryKey())
-      .addColumn('thread_id', 'text', (col) =>
+      .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
+      .addColumn('thread_id', 'varchar(36)', (col) =>
         col.notNull().references('ai_threads.id').onDelete('cascade')
       )
-      .addColumn('role', 'text', (col) => col.notNull())
+      .addColumn('role', 'varchar(50)', (col) => col.notNull())
       .addColumn('content', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
       .execute()
 
-    await this.db.schema
-      .createIndex('idx_ai_message_thread')
-      .ifNotExists()
-      .on('ai_message')
-      .columns(['thread_id', 'created_at'])
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_ai_message_thread')
+        .on('ai_message')
+        .columns(['thread_id', 'created_at'])
+    )
 
     await this.db.schema
       .createTable('ai_tool_call')
       .ifNotExists()
-      .addColumn('id', 'text', (col) => col.primaryKey())
-      .addColumn('thread_id', 'text', (col) =>
+      .addColumn('id', 'varchar(36)', (col) => col.primaryKey())
+      .addColumn('thread_id', 'varchar(36)', (col) =>
         col.notNull().references('ai_threads.id').onDelete('cascade')
       )
-      .addColumn('message_id', 'text', (col) =>
+      .addColumn('message_id', 'varchar(36)', (col) =>
         col.notNull().references('ai_message.id').onDelete('cascade')
       )
-      .addColumn('run_id', 'text')
-      .addColumn('tool_name', 'text', (col) => col.notNull())
-      .addColumn('args', 'text', (col) => col.notNull().defaultTo('{}'))
+      .addColumn('run_id', 'varchar(36)')
+      .addColumn('tool_name', 'varchar(255)', (col) => col.notNull())
+      .addColumn('args', 'text', (col) => col.notNull())
       .addColumn('result', 'text')
-      .addColumn('approval_status', 'text')
-      .addColumn('approval_type', 'text')
-      .addColumn('agent_run_id', 'text')
-      .addColumn('display_tool_name', 'text')
+      .addColumn('approval_status', 'varchar(50)')
+      .addColumn('approval_type', 'varchar(50)')
+      .addColumn('agent_run_id', 'varchar(36)')
+      .addColumn('display_tool_name', 'varchar(255)')
       .addColumn('display_args', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
       .execute()
 
-    await this.db.schema
-      .createIndex('idx_ai_tool_call_thread')
-      .ifNotExists()
-      .on('ai_tool_call')
-      .column('thread_id')
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_ai_tool_call_thread')
+        .on('ai_tool_call')
+        .column('thread_id')
+    )
 
-    await this.db.schema
-      .createIndex('idx_ai_tool_call_message')
-      .ifNotExists()
-      .on('ai_tool_call')
-      .column('message_id')
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_ai_tool_call_message')
+        .on('ai_tool_call')
+        .column('message_id')
+    )
 
     await this.db.schema
       .createTable('ai_working_memory')
       .ifNotExists()
-      .addColumn('id', 'text', (col) => col.notNull())
-      .addColumn('scope', 'text', (col) => col.notNull())
+      .addColumn('id', 'varchar(255)', (col) => col.notNull())
+      .addColumn('scope', 'varchar(50)', (col) => col.notNull())
       .addColumn('data', 'text', (col) => col.notNull())
       .addColumn('updated_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
@@ -117,13 +129,15 @@ export class KyselyAIStorageService
     await this.db.schema
       .createTable('ai_run')
       .ifNotExists()
-      .addColumn('run_id', 'text', (col) => col.primaryKey())
-      .addColumn('agent_name', 'text', (col) => col.notNull())
-      .addColumn('thread_id', 'text', (col) =>
+      .addColumn('run_id', 'varchar(36)', (col) => col.primaryKey())
+      .addColumn('agent_name', 'varchar(255)', (col) => col.notNull())
+      .addColumn('thread_id', 'varchar(36)', (col) =>
         col.notNull().references('ai_threads.id').onDelete('cascade')
       )
-      .addColumn('resource_id', 'text', (col) => col.notNull())
-      .addColumn('status', 'text', (col) => col.notNull().defaultTo('running'))
+      .addColumn('resource_id', 'varchar(255)', (col) => col.notNull())
+      .addColumn('status', 'varchar(50)', (col) =>
+        col.notNull().defaultTo('running')
+      )
       .addColumn('suspend_reason', 'text')
       .addColumn('missing_rpcs', 'text')
       .addColumn('usage_input_tokens', 'integer', (col) =>
@@ -132,7 +146,9 @@ export class KyselyAIStorageService
       .addColumn('usage_output_tokens', 'integer', (col) =>
         col.notNull().defaultTo(0)
       )
-      .addColumn('usage_model', 'text', (col) => col.notNull().defaultTo(''))
+      .addColumn('usage_model', 'varchar(255)', (col) =>
+        col.notNull().defaultTo('')
+      )
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -141,12 +157,12 @@ export class KyselyAIStorageService
       )
       .execute()
 
-    await this.db.schema
-      .createIndex('idx_ai_run_thread')
-      .ifNotExists()
-      .on('ai_run')
-      .columns(['thread_id', 'created_at'])
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_ai_run_thread')
+        .on('ai_run')
+        .columns(['thread_id', 'created_at'])
+    )
 
     this.initialized = true
   }
