@@ -1,8 +1,9 @@
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 
-import { wireGateway, startListenerGateway } from '@pikku/core/gateway'
+import { wireGateway } from '@pikku/core/gateway'
 import { fetch } from '@pikku/core'
+import { LocalGatewayService } from '@pikku/core/services'
 import { runLocalChannel } from '@pikku/core/channel/local'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import { MockGatewayAdapter } from './mock-adapter.js'
@@ -251,15 +252,14 @@ async function main(): Promise<void> {
 
   console.log('\n── Listener Gateway ──')
 
-  await runTest('processes messages via handleMessage callback', async () => {
+  const gatewayService = new LocalGatewayService()
+
+  await runTest('processes messages via adapter.init callback', async () => {
     listenerAdapter.clear()
 
-    const handleMessage = await startListenerGateway(
-      'test-listener',
-      singletonServices as any
-    )
+    await gatewayService.start()
 
-    await (handleMessage as any)({
+    await listenerAdapter.simulateMessage({
       senderId: 'listener-user',
       text: 'hello from listener',
     })
@@ -280,12 +280,7 @@ async function main(): Promise<void> {
   await runTest('ignores events when adapter returns null', async () => {
     listenerAdapter.clear()
 
-    const handleMessage = await startListenerGateway(
-      'test-listener',
-      singletonServices as any
-    )
-
-    await (handleMessage as any)({ type: 'delivery_receipt' })
+    await listenerAdapter.simulateMessage({ type: 'delivery_receipt' })
 
     assertEqual(listenerAdapter.sentMessages.length, 0, 'no messages sent')
   })
@@ -295,12 +290,7 @@ async function main(): Promise<void> {
     const logger = singletonServices.logger as any
     logger.clear()
 
-    const handleMessage = await startListenerGateway(
-      'test-listener',
-      singletonServices as any
-    )
-
-    await (handleMessage as any)({ senderId: 'ctx-user', text: 'context test' })
+    await listenerAdapter.simulateMessage({ senderId: 'ctx-user', text: 'context test' })
 
     const logs = logger.getLogs()
     const handlerLog = logs.find(
@@ -310,15 +300,6 @@ async function main(): Promise<void> {
     assert(!!handlerLog, 'handler log exists')
     assertEqual(handlerLog.senderId, 'ctx-user', 'senderId')
     assertEqual(handlerLog.platform, 'mock', 'platform')
-  })
-
-  await runTest('throws for non-existent gateway name', async () => {
-    try {
-      await startListenerGateway('nonexistent', singletonServices as any)
-      throw new Error('should have thrown')
-    } catch (e: any) {
-      assert(e.message.includes('not found'), 'error mentions not found')
-    }
   })
 
   // =========================================================================

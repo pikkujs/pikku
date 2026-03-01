@@ -154,6 +154,11 @@ const templates = [
     description: 'An AI agent template with PostgreSQL storage',
     supports: ['http', 'sse'],
   },
+  {
+    template: 'gateway-whatsapp',
+    description: 'A WhatsApp gateway template using Baileys (listener)',
+    supports: [],
+  },
 ] as const
 
 type PackageManager = (typeof packageManagers)[number]

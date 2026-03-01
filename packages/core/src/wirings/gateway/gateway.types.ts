@@ -70,6 +70,11 @@ export interface GatewayAdapter {
   parse(data: unknown): GatewayInboundMessage | null
   /** Send a message to a specific sender via the platform's API */
   send(senderId: string, message: GatewayOutboundMessage): Promise<void>
+  /** Initialize the adapter (connect to platform, start listening).
+   *  Called by GatewayService.start() — the adapter should call onMessage for each incoming event. */
+  init(onMessage: (data: unknown) => Promise<void>): Promise<void>
+  /** Tear down the adapter (disconnect, release resources). */
+  close(): Promise<void>
   /** Handle webhook verification challenges (only for webhook type).
    *  Receives the data (body or query params) and the Pikku HTTP request for additional inspection. */
   verifyWebhook?(

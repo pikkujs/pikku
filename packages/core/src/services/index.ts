@@ -17,6 +17,7 @@ export { ConsoleLogger } from './logger-console.js'
 export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
+export { LocalGatewayService } from './local-gateway-service.js'
 export type { ContentService } from './content-service.js'
 export type { JWTService } from './jwt-service.js'
 export type { Logger } from './logger.js'
@@ -30,6 +31,7 @@ export type {
   SchedulerService,
 } from './scheduler-service.js'
 export type { TriggerService } from './trigger-service.js'
+export type { GatewayService } from './gateway-service.js'
 export type {
   DeploymentService,
   DeploymentConfig,

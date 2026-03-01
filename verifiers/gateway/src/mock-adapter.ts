@@ -43,9 +43,27 @@ export class MockGatewayAdapter implements GatewayAdapter {
     return { verified: false }
   }
 
+  async init(onMessage: (data: unknown) => Promise<void>): Promise<void> {
+    // Mock: store onMessage for manual invocation in tests
+    this._onMessage = onMessage
+  }
+
+  async close(): Promise<void> {
+    this._onMessage = undefined
+  }
+
+  /** Simulate an incoming message (for listener tests) */
+  async simulateMessage(data: unknown): Promise<void> {
+    if (this._onMessage) {
+      await this._onMessage(data)
+    }
+  }
+
   clear() {
     this.sentMessages = []
   }
+
+  private _onMessage?: (data: unknown) => Promise<void>
 }
 
 function tryParseJSON(str: string): any {
