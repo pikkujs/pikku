@@ -64,6 +64,7 @@ export interface ChannelMeta {
   disconnect: ChannelMessageMeta | null
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
+  binary?: boolean | null
   summary?: string
   description?: string
   errors?: string[]
