@@ -36,9 +36,7 @@
     "typescript": "^5.9"
   },
   "dependencies": {
-    "@pikku/pg": "^0.12.1",
     "json-schema": "^0.4.0",
-    "open": "^10.0.0",
-    "postgres": "^3.4.5"
+    "open": "^10.0.0"
   }
 }

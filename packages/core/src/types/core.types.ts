@@ -30,7 +30,9 @@ import type { AIStorageService } from '../services/ai-storage-service.js'
 import type { ContentService } from '../services/content-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
+import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
+import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -220,6 +222,10 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   aiAgentRunner?: AIAgentRunnerService
   /** AI run state service (run lifecycle + approval persistence) */
   aiRunState?: AIRunStateService
+  /** Agent run service (listing threads, runs, steps) */
+  agentRunService?: AgentRunService
+  /** Workflow run service (listing workflow runs) */
+  workflowRunService?: WorkflowRunService
 }
 
 /**

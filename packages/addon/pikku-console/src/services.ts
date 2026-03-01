@@ -5,17 +5,21 @@ import { AddonService } from './services/addon.service.js'
 import { SchemaService } from './services/schema.service.js'
 import { OAuthService } from './services/oauth.service.js'
 import { FileWatcherService } from './services/file-watcher.service.js'
-import {
-  PgWorkflowService,
-  PgWorkflowRunService,
-  PgAgentRunService,
-  PgAIStorageService,
-  PgDeploymentService,
-} from '@pikku/pg'
-import postgres from 'postgres'
 
 export const createSingletonServices = pikkuAddonServices(
-  async (_config, { variables, aiAgentRunner, schedulerService }) => {
+  async (
+    _config,
+    {
+      variables,
+      aiAgentRunner,
+      schedulerService,
+      agentRunService,
+      workflowRunService,
+      aiStorage,
+      aiRunState,
+      deploymentService,
+    }
+  ) => {
     const pikkuMetaPath = pikkuState(null, 'package', 'metaDir') ?? ''
     const registryUrl =
       (await variables.get('REGISTRY_URL')) ?? 'http://localhost:4003'
@@ -32,35 +36,16 @@ export const createSingletonServices = pikkuAddonServices(
     )
     fileWatcherService.start()
 
-    const workflowDbUrl = await variables.get('WORKFLOW_DB_URL')
-    let workflowService: PgWorkflowService | undefined
-    let workflowRunService: PgWorkflowRunService | undefined
-    let agentRunService: PgAgentRunService | undefined
-    let aiStorage: PgAIStorageService | undefined
-    let deploymentService: PgDeploymentService | undefined
-    if (workflowDbUrl) {
-      const sql = postgres(workflowDbUrl)
-      workflowService = new PgWorkflowService(sql)
-      await workflowService.init()
-      workflowRunService = new PgWorkflowRunService(sql)
-      agentRunService = new PgAgentRunService(sql)
-      aiStorage = new PgAIStorageService(sql)
-      await aiStorage.init()
-      deploymentService = new PgDeploymentService({}, sql)
-      await deploymentService.init()
-    }
-
     return {
       wiringService,
       addonService,
       schemaService,
       oauthService,
       fileWatcherService,
-      workflowService,
       workflowRunService,
       agentRunService,
       aiStorage,
-      aiRunState: aiStorage,
+      aiRunState,
       deploymentService,
       aiAgentRunner,
       schedulerService,
