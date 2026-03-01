@@ -638,7 +638,7 @@ export const addChannel: AddWiring = (
     disconnect: disconnectFuncId ? { pikkuFuncId: disconnectFuncId } : null,
     message,
     messageWirings,
-    binary: binary || undefined,
+    binary: binary === undefined ? undefined : binary,
     summary,
     description,
     errors,

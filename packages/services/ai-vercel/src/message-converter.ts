@@ -38,25 +38,29 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
       }
     case 'user':
       if (Array.isArray(msg.content)) {
-        const parts = (msg.content as AIContentPart[]).map((part) => {
-          switch (part.type) {
-            case 'text':
-              return { type: 'text' as const, text: part.text }
-            case 'image':
-              return {
-                type: 'image' as const,
-                image: part.url ? new URL(part.url) : part.data!,
-                mediaType: part.mediaType,
-              }
-            case 'file':
-              return {
-                type: 'file' as const,
-                data: part.url ? new URL(part.url) : part.data!,
-                mediaType: part.mediaType!,
-                filename: part.filename,
-              }
-          }
-        })
+        const parts = (msg.content as AIContentPart[])
+          .map((part) => {
+            switch (part.type) {
+              case 'text':
+                return { type: 'text' as const, text: part.text }
+              case 'image':
+                return {
+                  type: 'image' as const,
+                  image: part.url ? new URL(part.url) : part.data!,
+                  mediaType: part.mediaType,
+                }
+              case 'file':
+                return {
+                  type: 'file' as const,
+                  data: part.url ? new URL(part.url) : part.data!,
+                  mediaType: part.mediaType!,
+                  filename: part.filename,
+                }
+              default:
+                return undefined
+            }
+          })
+          .filter((p) => p != null)
         return { role: 'user', content: parts as any }
       }
       return { role: 'user', content: (msg.content as string) ?? '' }

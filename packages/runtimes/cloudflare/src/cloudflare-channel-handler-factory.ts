@@ -1,4 +1,3 @@
-import type { CoreUserSession } from '@pikku/core'
 import { isSerializable } from '@pikku/core'
 import type {
   BinaryData,
@@ -9,7 +8,6 @@ import { PikkuAbstractChannelHandler } from '@pikku/core/channel'
 import type { Logger } from '@pikku/core/services'
 import type { WebSocket } from '@cloudflare/workers-types'
 class CloudflareChannelHandler<
-  UserSession extends CoreUserSession = CoreUserSession,
   OpeningData = unknown,
   Out = unknown,
 > extends PikkuAbstractChannelHandler<OpeningData, Out> {

@@ -88,6 +88,16 @@ export function createAssistantUIChannel(
           sendChunk({ type: 'reasoning-delta', delta: event.text })
           break
 
+        case 'audio-delta':
+          ensureStarted()
+          sendChunk({ type: 'audio-delta', data: event } as any)
+          break
+
+        case 'audio-done':
+          ensureStarted()
+          sendChunk({ type: 'audio-done', data: event } as any)
+          break
+
         case 'tool-call':
           ensureStarted()
           hasToolCalls = true

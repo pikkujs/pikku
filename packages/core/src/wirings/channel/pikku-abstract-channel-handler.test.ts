@@ -11,9 +11,7 @@ class TestChannelHandler extends PikkuAbstractChannelHandler<
     // Mock send implementation
   }
 
-  public sendBinary(_data: ArrayBuffer | Uint8Array): void {
-    // Mock sendBinary implementation
-  }
+  public sendBinary(_data: ArrayBuffer | Uint8Array): void {}
 }
 
 let handler: TestChannelHandler

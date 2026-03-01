@@ -167,7 +167,7 @@ export const runLocalChannel = async ({
           try {
             const result = await onBinaryMessage(data)
             if (result) {
-              channel.sendBinary(result)
+              await channel.sendBinary(result)
             }
           } catch (e) {
             singletonServices.logger.error(

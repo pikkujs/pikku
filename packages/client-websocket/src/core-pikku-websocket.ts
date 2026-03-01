@@ -86,7 +86,9 @@ export class CorePikkuWebsocket {
     }
 
     if (event.data instanceof ArrayBuffer) {
-      this.binarySubscriptions.forEach((cb) => cb(event.data as ArrayBuffer))
+      this.binarySubscriptions.forEach((cb) => {
+        cb(event.data as ArrayBuffer)
+      })
       if (this.onmessage) {
         this.onmessage.call(this.ws, event)
       }

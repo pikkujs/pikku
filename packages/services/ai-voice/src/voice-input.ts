@@ -41,6 +41,11 @@ export const voiceInput = (config?: {
     if (audioParts.length === 0) return { messages, instructions }
 
     const textParts = parts.filter((p) => p.type === 'text')
+    const otherParts = parts.filter(
+      (p) =>
+        p.type !== 'text' &&
+        !(p.type === 'file' && p.mediaType?.startsWith('audio/'))
+    )
     const transcriptions = await Promise.all(
       audioParts.map(async (p) => {
         const audioData = p.data
@@ -55,6 +60,7 @@ export const voiceInput = (config?: {
 
     const updatedContent: AIContentPart[] = [
       ...textParts,
+      ...otherParts,
       ...transcriptions.map((t) => ({ type: 'text' as const, text: t })),
     ]
     const updatedMessages = [

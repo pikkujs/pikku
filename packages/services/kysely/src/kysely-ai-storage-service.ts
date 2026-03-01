@@ -307,12 +307,21 @@ export class KyselyAIStorageService
     const messages: AIMessage[] = []
     for (const row of msgResult) {
       const rawContent = row.content as string | undefined
+      let parsedContent: AIMessage['content'] = rawContent ?? undefined
+      if (rawContent) {
+        try {
+          const parsed = JSON.parse(rawContent)
+          if (Array.isArray(parsed)) {
+            parsedContent = parsed
+          }
+        } catch {
+          // Not JSON, use raw string
+        }
+      }
       const msg: AIMessage = {
         id: row.id,
         role: row.role as AIMessage['role'],
-        content: rawContent?.startsWith('[')
-          ? JSON.parse(rawContent)
-          : (rawContent ?? undefined),
+        content: parsedContent,
         createdAt: new Date(row.created_at),
       }
 
@@ -361,12 +370,7 @@ export class KyselyAIStorageService
             id: msg.id,
             thread_id: threadId,
             role: msg.role,
-            content:
-              typeof msg.content === 'string'
-                ? msg.content
-                : msg.content != null
-                  ? JSON.stringify(msg.content)
-                  : null,
+            content: msg.content != null ? JSON.stringify(msg.content) : null,
             created_at: msg.createdAt ?? new Date(),
           }))
         )

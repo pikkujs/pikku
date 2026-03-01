@@ -20,10 +20,31 @@ export const voiceOutput = (config?: {
   voice?: string
 }): PikkuAIMiddlewareHooks => ({
   modifyOutputStream: async (services, { event, state }) => {
-    if (event.type !== 'text-delta') return event
-
     const tts = (services as { tts?: TTSService }).tts
     if (!tts) return event
+
+    if (event.type === 'done') {
+      const remaining = (state.textBuffer as string) || ''
+      if (remaining) {
+        state.textBuffer = ''
+        const audio = await tts.synthesize(remaining, {
+          voice: config?.voice,
+          format: config?.format,
+        })
+        return [
+          {
+            type: 'audio-delta' as const,
+            data: bufferToBase64(audio),
+            format: config?.format ?? 'pcm16',
+          },
+          { type: 'audio-done' as const },
+          event,
+        ]
+      }
+      return [{ type: 'audio-done' as const }, event]
+    }
+
+    if (event.type !== 'text-delta') return event
 
     state.textBuffer = ((state.textBuffer as string) || '') + event.text
     if (!isSentenceBoundary(state.textBuffer as string)) return event

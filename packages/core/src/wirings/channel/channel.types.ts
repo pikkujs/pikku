@@ -158,7 +158,6 @@ export interface PikkuChannel<OpeningData, out Out> {
   openingData: OpeningData
   // The data to send. This will fail is the stream has been closed.
   send(data: Out, isBinary?: boolean): Promise<void> | void
-  // Send raw binary data (for audio/video frames).
   sendBinary(data: BinaryData): Promise<void> | void
   // This will close the channel.
   close(): Promise<void> | void

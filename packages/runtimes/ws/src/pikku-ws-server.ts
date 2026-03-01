@@ -108,7 +108,7 @@ export const pikkuWebsocketHandler = ({
         } else {
           const result = await channelHandler.message(message.toString())
           if (result) {
-            channelHandler.send(JSON.stringify(result))
+            channelHandler.send(result)
           }
         }
       })
