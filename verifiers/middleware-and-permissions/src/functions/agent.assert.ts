@@ -128,6 +128,7 @@ export async function testAgentStreamWiring(
     openingData: undefined,
     state: 'open',
     close: () => {},
+    sendBinary: () => {},
     send: (event: AIStreamEvent) => {
       events.push(event)
     },

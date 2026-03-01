@@ -527,6 +527,7 @@ export const addChannel: AddWiring = (
   if (disabled) return
 
   const query = getPropertyValue(obj, 'query') as string[] | []
+  const binary = getPropertyValue(obj, 'binary') as boolean | undefined
 
   const connect = getPropertyAssignmentInitializer(
     obj,
@@ -620,13 +621,7 @@ export const addChannel: AddWiring = (
   ].filter(Boolean) as string[]
   for (const funcId of handlersToValidate) {
     if (
-      !validateAuthSessionless(
-        logger,
-        obj,
-        state,
-        funcId,
-        `Channel '${name}'`
-      )
+      !validateAuthSessionless(logger, obj, state, funcId, `Channel '${name}'`)
     ) {
       return
     }
@@ -643,6 +638,7 @@ export const addChannel: AddWiring = (
     disconnect: disconnectFuncId ? { pikkuFuncId: disconnectFuncId } : null,
     message,
     messageWirings,
+    binary: binary === undefined ? undefined : binary,
     summary,
     description,
     errors,

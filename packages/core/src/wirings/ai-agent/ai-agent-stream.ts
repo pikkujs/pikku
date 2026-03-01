@@ -114,6 +114,7 @@ function createPersistingChannel(
     },
     flush: flushStep,
     close: () => parent.close(),
+    sendBinary: (data) => parent.sendBinary(data),
     send: (event: AIStreamEvent) => {
       if (storage) {
         switch (event.type) {
@@ -547,7 +548,12 @@ export async function streamAIAgent(
           allEvents,
           state,
         })
-        if (result != null) await next(result)
+        if (result == null) return
+        if (Array.isArray(result)) {
+          for (const r of result) await next(r)
+        } else {
+          await next(result)
+        }
       }
     })
 
@@ -928,7 +934,12 @@ async function continueAfterToolResult(
           allEvents,
           state,
         })
-        if (result != null) await next(result)
+        if (result == null) return
+        if (Array.isArray(result)) {
+          for (const r of result) await next(r)
+        } else {
+          await next(result)
+        }
       }
     })
 

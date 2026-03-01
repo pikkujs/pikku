@@ -101,16 +101,26 @@ export const pikkuWebsocketHandler = ({
           ws.send(data as any)
         }
       })
+      channelHandler.registerOnSendBinary((data) => {
+        ws.send(data, true)
+      })
       eventHub.onChannelOpened(channelHandler.channelId, ws)
       channelHandler.open()
     },
     message: async (ws, message, isBinary) => {
       const { channelHandler } = ws.getUserData()
-      const data = isBinary ? message : decoder.decode(message)
-      const result = await channelHandler.message(data)
-      if (result) {
-        // TODO: This doesn't deal with binary results
-        ws.send(JSON.stringify(result))
+      if (isBinary) {
+        const copied = new Uint8Array((message as ArrayBuffer).slice(0))
+        const result = await channelHandler.binaryMessage(copied)
+        if (result) {
+          channelHandler.sendBinary(result)
+        }
+      } else {
+        const data = decoder.decode(message)
+        const result = await channelHandler.message(data)
+        if (result) {
+          ws.send(JSON.stringify(result))
+        }
       }
     },
     close: (ws) => {

@@ -114,6 +114,7 @@ export function wrapChannelWithMiddleware<Out>(
     channel: {
       ...channel,
       send: ((data: Out) => dispatch(0, data)) as typeof channel.send,
+      sendBinary: channel.sendBinary,
     },
   }
 }

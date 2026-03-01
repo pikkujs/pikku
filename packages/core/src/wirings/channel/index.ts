@@ -11,6 +11,7 @@ export { ChannelStore } from './channel-store.js'
 export type { Channel } from './channel-store.js'
 export { EventHubStore } from './eventhub-store.js'
 export type {
+  BinaryData,
   ChannelsMeta,
   CoreChannel,
   CorePikkuChannelMiddleware,

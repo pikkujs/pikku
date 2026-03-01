@@ -4,6 +4,7 @@ import type {
   CoreUserSession,
 } from '../../types/core.types.js'
 import type {
+  BinaryData,
   ChannelMessageMeta,
   CoreChannel,
   PikkuChannelHandler,
@@ -154,7 +155,7 @@ export const processMessageHandlers = (
     })
   }
 
-  return async (rawData): Promise<unknown> => {
+  const onMessage = async (rawData: unknown): Promise<unknown> => {
     let result: unknown
     let processed = false
 
@@ -198,7 +199,10 @@ export const processMessageHandlers = (
     // Default handler if no routes matched and json data wasn't parsed
     if (!processed && channelConfig.onMessage) {
       processed = true
-      result = await processMessage(rawData, channelConfig.onMessage)
+      result = await processMessage(
+        rawData as JSONValue,
+        channelConfig.onMessage
+      )
     }
 
     if (!processed) {
@@ -210,4 +214,28 @@ export const processMessageHandlers = (
 
     return result
   }
+
+  const onBinaryMessage = channelConfig.onBinaryMessage
+    ? async (data: BinaryData): Promise<BinaryData | void> => {
+        if (
+          !validateAuth(
+            requiresSession,
+            userSession?.get() as CoreUserSession | undefined,
+            channelConfig
+          )
+        ) {
+          logger.error(
+            `Channel ${channelConfig.name} with id ${channelHandler.getChannel().channelId} requires a session for binary message`
+          )
+          return
+        }
+        return channelConfig.onBinaryMessage!(
+          services,
+          data,
+          channelHandler.getChannel()
+        )
+      }
+    : undefined
+
+  return { onMessage, onBinaryMessage }
 }

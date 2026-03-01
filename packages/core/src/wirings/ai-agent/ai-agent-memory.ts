@@ -277,7 +277,16 @@ function sanitizeToolMessages(messages: AIMessage[]): AIMessage[] {
 
 function estimateTokens(msg: AIMessage): number {
   let chars = 0
-  if (msg.content) chars += msg.content.length
+  if (msg.content) {
+    if (typeof msg.content === 'string') {
+      chars += msg.content.length
+    } else {
+      for (const part of msg.content) {
+        if (part.type === 'text') chars += part.text.length
+        else chars += 1000
+      }
+    }
+  }
   if (msg.toolCalls) chars += JSON.stringify(msg.toolCalls).length
   if (msg.toolResults) chars += JSON.stringify(msg.toolResults).length
   return Math.ceil(chars / 4)

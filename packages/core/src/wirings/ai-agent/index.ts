@@ -23,9 +23,11 @@ export {
 } from './ai-agent-registry.js'
 export type {
   AIAgentInput,
+  AIAgentInputAttachment,
   AIAgentMeta,
   AIAgentMemoryConfig,
   AIAgentStep,
+  AIContentPart,
   AgentRunRow,
   AgentRunService,
   AgentRunState,
