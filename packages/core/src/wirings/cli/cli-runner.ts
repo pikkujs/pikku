@@ -321,6 +321,9 @@ export async function runCLICommand({
         await Promise.resolve(renderer(singletonServices, data, undefined))
       }
     },
+    sendBinary: () => {
+      throw new Error('Binary data is not supported on CLI channels')
+    },
     close: () => {
       if (channel) {
         channel.state = 'closed'

@@ -250,10 +250,13 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
 
     const messages: AIMessage[] = []
     for (const row of msgResult) {
+      const rawContent = row.content as string | undefined
       const msg: AIMessage = {
         id: row.id as string,
         role: row.role as AIMessage['role'],
-        content: row.content as string | undefined,
+        content: rawContent?.startsWith('[')
+          ? JSON.parse(rawContent)
+          : rawContent,
         createdAt: new Date(row.created_at as string),
       }
 
@@ -308,7 +311,11 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
         msg.id,
         threadId,
         msg.role,
-        msg.content ?? null,
+        typeof msg.content === 'string'
+          ? msg.content
+          : msg.content != null
+            ? JSON.stringify(msg.content)
+            : null,
         msg.createdAt ?? new Date(),
       ])
 

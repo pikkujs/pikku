@@ -85,16 +85,31 @@ export const pikkuWebsocketHandler = ({
         }
       })
 
+      channelHandler.registerOnSendBinary((data) => {
+        ws.send(data)
+      })
+
       ws.on('message', async (message, isBinary) => {
-        let result
         if (isBinary) {
-          result = await channelHandler.message(message)
+          const result = await channelHandler.binaryMessage(
+            new Uint8Array(
+              message instanceof ArrayBuffer
+                ? message
+                : (message as Buffer).buffer.slice(
+                    (message as Buffer).byteOffset,
+                    (message as Buffer).byteOffset +
+                      (message as Buffer).byteLength
+                  )
+            )
+          )
+          if (result) {
+            channelHandler.sendBinary(result)
+          }
         } else {
-          result = await channelHandler.message(message.toString())
-        }
-        if (result) {
-          // TODO: We don't support binary results as returns just yet
-          channelHandler.send(JSON.stringify(result))
+          const result = await channelHandler.message(message.toString())
+          if (result) {
+            channelHandler.send(JSON.stringify(result))
+          }
         }
       })
 

@@ -3,6 +3,7 @@ import type {
   CoreAIAgent,
   AIAgentInput,
   AIAgentToolDef,
+  AIContentPart,
   AIMessage,
   AIStreamChannel,
   AIStreamEvent,
@@ -144,6 +145,7 @@ export function createScopedChannel(
       return capturedApproval
     },
     close: () => {},
+    sendBinary: (data) => parent.sendBinary(data),
     send: (event: AIStreamEvent) => {
       if (event.type === 'done') return
       if (event.type === 'approval-request') {
@@ -448,10 +450,26 @@ export async function prepareAgentRun(
     workingMemoryJsonSchema
   )
 
+  const userContent: AIMessage['content'] = input.attachments?.length
+    ? [
+        { type: 'text' as const, text: input.message },
+        ...input.attachments.map(
+          (a) =>
+            ({
+              type: a.type,
+              data: a.data,
+              url: a.url,
+              mediaType: a.mediaType,
+              ...(a.filename ? { filename: a.filename } : {}),
+            }) as AIContentPart
+        ),
+      ]
+    : input.message
+
   const userMessage: AIMessage = {
     id: randomUUID(),
     role: 'user',
-    content: input.message,
+    content: userContent,
     createdAt: new Date(),
   }
 

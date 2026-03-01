@@ -75,6 +75,7 @@ export function createAssistantUIChannel(
       return parent.state
     },
     close: () => parent.close(),
+    sendBinary: (data) => parent.sendBinary(data),
     send: (event: AIStreamEvent) => {
       switch (event.type) {
         case 'text-delta':
@@ -190,18 +191,31 @@ export function parseAssistantUIInput(
   }
 
   let messageText: string
+  let attachments: AIAgentInput['attachments']
+
+  const extractFromParts = (parts: Array<Record<string, unknown>>) => {
+    const textParts = parts.filter((p) => p.type === 'text')
+    messageText = textParts.map((p) => String(p.text)).join(' ') || ''
+    const nonTextParts = parts.filter(
+      (p) => p.type === 'image' || p.type === 'file'
+    )
+    if (nonTextParts.length > 0) {
+      attachments = nonTextParts.map((p) => ({
+        type: p.type as 'image' | 'file',
+        data: p.data as string | undefined,
+        url: p.url as string | undefined,
+        mediaType: p.mediaType as string | undefined,
+        filename: p.filename as string | undefined,
+      }))
+    }
+  }
+
   if (typeof lastUserMessage.content === 'string') {
     messageText = lastUserMessage.content
   } else if (Array.isArray(lastUserMessage.parts)) {
-    const textPart = (
-      lastUserMessage.parts as Array<Record<string, unknown>>
-    ).find((p) => p.type === 'text')
-    messageText = textPart ? String(textPart.text) : ''
+    extractFromParts(lastUserMessage.parts as Array<Record<string, unknown>>)
   } else if (Array.isArray(lastUserMessage.content)) {
-    const textPart = (
-      lastUserMessage.content as Array<Record<string, unknown>>
-    ).find((p) => p.type === 'text')
-    messageText = textPart ? String(textPart.text) : ''
+    extractFromParts(lastUserMessage.content as Array<Record<string, unknown>>)
   } else {
     messageText = ''
   }
@@ -210,5 +224,5 @@ export function parseAssistantUIInput(
     (input.threadId as string) ?? (input.id as string) ?? randomUUID()
   const resourceId = defaults?.resourceId ?? 'default'
 
-  return { message: messageText, threadId, resourceId }
+  return { message: messageText!, threadId, resourceId, attachments }
 }

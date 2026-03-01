@@ -1,6 +1,7 @@
 import type { CoreUserSession } from '@pikku/core'
 import { isSerializable } from '@pikku/core'
 import type {
+  BinaryData,
   ChannelStore,
   PikkuChannelHandlerFactory,
 } from '@pikku/core/channel'
@@ -31,6 +32,10 @@ class CloudflareChannelHandler<
     } else {
       this.websocket.send(message as any)
     }
+  }
+
+  public sendBinary(_data: BinaryData): void {
+    throw new Error('Binary data is not supported on serverless')
   }
 }
 

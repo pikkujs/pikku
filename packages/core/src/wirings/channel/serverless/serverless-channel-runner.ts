@@ -265,7 +265,7 @@ export const runChannelMessage = async (
 
   let response: unknown
   try {
-    const onMessage = processMessageHandlers(
+    const { onMessage } = processMessageHandlers(
       services,
       channelConfig,
       channelHandler,

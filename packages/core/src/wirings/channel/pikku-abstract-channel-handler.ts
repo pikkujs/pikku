@@ -1,4 +1,8 @@
-import type { PikkuChannel, PikkuChannelHandler } from './channel.types.js'
+import type {
+  BinaryData,
+  PikkuChannel,
+  PikkuChannelHandler,
+} from './channel.types.js'
 
 export abstract class PikkuAbstractChannelHandler<
   OpeningData = unknown,
@@ -15,12 +19,15 @@ export abstract class PikkuAbstractChannelHandler<
 
   public abstract send(message: Out, isBinary?: boolean): Promise<void> | void
 
+  public abstract sendBinary(data: BinaryData): Promise<void> | void
+
   public getChannel(): PikkuChannel<OpeningData, Out> {
     if (!this.channel) {
       this.channel = {
         channelId: this.channelId,
         openingData: this.openingData,
         send: this.send.bind(this),
+        sendBinary: this.sendBinary.bind(this),
         close: this.close.bind(this),
         state: 'initial',
       }

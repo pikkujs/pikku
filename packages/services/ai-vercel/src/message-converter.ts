@@ -1,4 +1,8 @@
-import type { AIMessage, AIAgentStep } from '@pikku/core/ai-agent'
+import type {
+  AIMessage,
+  AIAgentStep,
+  AIContentPart,
+} from '@pikku/core/ai-agent'
 import type { ModelMessage } from 'ai'
 
 export async function convertToSDKMessages(
@@ -25,16 +29,56 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
 
   switch (msg.role) {
     case 'system':
-      return { role: 'system', content: msg.content ?? '' }
+      return {
+        role: 'system',
+        content:
+          typeof msg.content === 'string'
+            ? msg.content
+            : ((msg.content ?? '') as string),
+      }
     case 'user':
-      return { role: 'user', content: msg.content ?? '' }
-    case 'assistant':
+      if (Array.isArray(msg.content)) {
+        const parts = (msg.content as AIContentPart[]).map((part) => {
+          switch (part.type) {
+            case 'text':
+              return { type: 'text' as const, text: part.text }
+            case 'image':
+              return {
+                type: 'image' as const,
+                image: part.url ? new URL(part.url) : part.data!,
+                mediaType: part.mediaType,
+              }
+            case 'file':
+              return {
+                type: 'file' as const,
+                data: part.url ? new URL(part.url) : part.data!,
+                mediaType: part.mediaType!,
+                filename: part.filename,
+              }
+          }
+        })
+        return { role: 'user', content: parts as any }
+      }
+      return { role: 'user', content: (msg.content as string) ?? '' }
+    case 'assistant': {
+      const textContent =
+        typeof msg.content === 'string'
+          ? msg.content
+          : Array.isArray(msg.content)
+            ? msg.content
+                .filter(
+                  (p): p is Extract<AIContentPart, { type: 'text' }> =>
+                    p.type === 'text'
+                )
+                .map((p) => p.text)
+                .join('')
+            : undefined
       if (Array.isArray(toolCalls) && toolCalls.length > 0) {
         return {
           role: 'assistant',
           content: [
-            ...(msg.content
-              ? [{ type: 'text' as const, text: msg.content }]
+            ...(textContent
+              ? [{ type: 'text' as const, text: textContent }]
               : []),
             ...toolCalls.map((tc) => ({
               type: 'tool-call' as const,
@@ -45,7 +89,8 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
           ],
         }
       }
-      return { role: 'assistant', content: msg.content ?? '' }
+      return { role: 'assistant', content: textContent ?? '' }
+    }
     case 'tool':
       return {
         role: 'tool',

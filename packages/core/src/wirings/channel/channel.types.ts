@@ -10,6 +10,8 @@ import type {
   PermissionMetadata,
 } from '../../types/core.types.js'
 
+export type BinaryData = ArrayBuffer | Uint8Array
+
 export type CorePikkuChannelMiddleware<Services = any, Event = unknown> = (
   services: Services,
   event: Event,
@@ -64,6 +66,7 @@ export interface ChannelMeta {
   disconnect: ChannelMessageMeta | null
   message: ChannelMessageMeta | null
   messageWirings: Record<string, Record<string, ChannelMessageMeta>>
+  binary?: boolean
   summary?: string
   description?: string
   errors?: string[]
@@ -132,6 +135,12 @@ export type CoreChannel<
   >
   permissions?: CorePermissionGroup<PikkuPermission>
   auth?: boolean
+  binary?: boolean
+  onBinaryMessage?: (
+    services: any,
+    data: BinaryData,
+    channel: PikkuChannel<ChannelData, any>
+  ) => Promise<BinaryData | void> | BinaryData | void
   docs?: Partial<{
     description: string
     response: string
@@ -149,6 +158,8 @@ export interface PikkuChannel<OpeningData, out Out> {
   openingData: OpeningData
   // The data to send. This will fail is the stream has been closed.
   send(data: Out, isBinary?: boolean): Promise<void> | void
+  // Send raw binary data (for audio/video frames).
+  sendBinary(data: BinaryData): Promise<void> | void
   // This will close the channel.
   close(): Promise<void> | void
   // The current state of the channel
@@ -157,6 +168,7 @@ export interface PikkuChannel<OpeningData, out Out> {
 
 export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {
   send(message: Out, isBinary?: boolean): Promise<void> | void
+  sendBinary(data: BinaryData): Promise<void> | void
   getChannel(): PikkuChannel<OpeningData, Out>
 }
 

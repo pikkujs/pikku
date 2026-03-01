@@ -1,5 +1,6 @@
 import type { CoreUserSession } from '@pikku/core'
 import type {
+  BinaryData,
   ChannelStore,
   PikkuChannelHandlerFactory,
 } from '@pikku/core/channel'
@@ -29,6 +30,10 @@ class LambdaChannelHandler<
     }
     const data = JSON.stringify(message)
     await sendMessage(this.logger, this.callbackAPI, this.channelId, data)
+  }
+
+  public sendBinary(_data: BinaryData): void {
+    throw new Error('Binary data is not supported on serverless lambdas')
   }
 }
 

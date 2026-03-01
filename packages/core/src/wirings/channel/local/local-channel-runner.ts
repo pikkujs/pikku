@@ -147,7 +147,7 @@ export const runLocalChannel = async ({
         await closeServices()
       })
 
-      const onMessage = processMessageHandlers(
+      const { onMessage, onBinaryMessage } = processMessageHandlers(
         services,
         channelConfig as any,
         channelHandler,
@@ -162,6 +162,20 @@ export const runLocalChannel = async ({
           channel.send({ error: e.message || 'Unknown error' })
         }
       })
+      if (onBinaryMessage) {
+        channelHandler.registerOnBinaryMessage(async (data) => {
+          try {
+            const result = await onBinaryMessage(data)
+            if (result) {
+              channel.sendBinary(result)
+            }
+          } catch (e) {
+            singletonServices.logger.error(
+              `Error handling binary message: ${e.message}`
+            )
+          }
+        })
+      }
     } catch (e: any) {
       handleHTTPError(
         e,

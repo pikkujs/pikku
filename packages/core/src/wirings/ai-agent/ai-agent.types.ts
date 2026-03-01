@@ -19,6 +19,17 @@ export interface AIThread {
   updatedAt: Date
 }
 
+export type AIContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; data?: string; url?: string; mediaType?: string }
+  | {
+      type: 'file'
+      data?: string
+      url?: string
+      mediaType: string
+      filename?: string
+    }
+
 export interface AIToolCall {
   id: string
   name: string
@@ -34,7 +45,7 @@ export interface AIToolResult {
 export interface AIMessage {
   id: string
   role: 'system' | 'user' | 'assistant' | 'tool'
-  content?: string
+  content?: string | AIContentPart[]
   toolCalls?: AIToolCall[]
   toolResults?: AIToolResult[]
   createdAt: Date
@@ -45,10 +56,19 @@ export interface AIAgentStep {
   toolCalls?: { name: string; args: Record<string, unknown>; result: string }[]
 }
 
+export interface AIAgentInputAttachment {
+  type: 'image' | 'file'
+  data?: string
+  url?: string
+  mediaType?: string
+  filename?: string
+}
+
 export interface AIAgentInput {
   message: string
   threadId: string
   resourceId: string
+  attachments?: AIAgentInputAttachment[]
 }
 
 export interface AIAgentOutput {
@@ -86,7 +106,11 @@ export interface PikkuAIMiddlewareHooks<
       allEvents: readonly AIStreamEvent[]
       state: State
     }
-  ) => Promise<AIStreamEvent | null> | AIStreamEvent | null
+  ) =>
+    | Promise<AIStreamEvent | AIStreamEvent[] | null>
+    | AIStreamEvent
+    | AIStreamEvent[]
+    | null
 
   modifyOutput?: (
     services: Services,
@@ -235,6 +259,14 @@ export type AIStreamEvent =
       session?: string
     }
   | { type: 'error'; message: string; agent?: string; session?: string }
+  | {
+      type: 'audio-delta'
+      data: string
+      format: string
+      agent?: string
+      session?: string
+    }
+  | { type: 'audio-done'; agent?: string; session?: string }
   | {
       type: 'suspended'
       reason: 'rpc-missing'

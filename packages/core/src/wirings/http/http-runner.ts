@@ -359,6 +359,9 @@ const executeRoute = async (
       send: (data: any) => {
         response.arrayBuffer(isSerializable(data) ? JSON.stringify(data) : data)
       },
+      sendBinary: (data) => {
+        response.arrayBuffer(data)
+      },
       close: () => {
         channel!.state = 'closed'
         response.close?.()

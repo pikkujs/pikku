@@ -80,6 +80,7 @@ export async function testChannelWiringServerless(
               sendCallback(message)
             }
           },
+          sendBinary: () => {},
           close: () => {
             // no-op for tests
           },
@@ -91,6 +92,7 @@ export async function testChannelWiringServerless(
               sendCallback(message)
             }
           },
+          sendBinary: () => {},
           getChannel: () => channel,
           registerOnSend: (callback: (message: any) => void) => {
             sendCallback = callback

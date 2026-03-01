@@ -306,10 +306,13 @@ export class KyselyAIStorageService
 
     const messages: AIMessage[] = []
     for (const row of msgResult) {
+      const rawContent = row.content as string | undefined
       const msg: AIMessage = {
         id: row.id,
         role: row.role as AIMessage['role'],
-        content: row.content ?? undefined,
+        content: rawContent?.startsWith('[')
+          ? JSON.parse(rawContent)
+          : (rawContent ?? undefined),
         createdAt: new Date(row.created_at),
       }
 
@@ -358,7 +361,12 @@ export class KyselyAIStorageService
             id: msg.id,
             thread_id: threadId,
             role: msg.role,
-            content: msg.content ?? null,
+            content:
+              typeof msg.content === 'string'
+                ? msg.content
+                : msg.content != null
+                  ? JSON.stringify(msg.content)
+                  : null,
             created_at: msg.createdAt ?? new Date(),
           }))
         )

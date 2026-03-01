@@ -8,6 +8,7 @@ import { CorePikkuRouteHandler } from './core-pikku-route-handler.js'
 export class CorePikkuWebsocket {
   private routes = new Map<string, CorePikkuRouteHandler>()
   private subscriptions = new Set<(data: unknown) => void>()
+  private binarySubscriptions = new Set<(data: ArrayBuffer) => void>()
 
   /**
    * Constructs a new instance of the `CorePikkuWebsocket` class.
@@ -26,6 +27,7 @@ export class CorePikkuWebsocket {
    * const pikkuWS = new CorePikkuWebsocket(ws)
    */
   constructor(protected ws: WebSocket) {
+    ws.binaryType = 'arraybuffer'
     ws.onmessage = this.handleMessage.bind(this)
   }
 
@@ -46,6 +48,22 @@ export class CorePikkuWebsocket {
     this.ws.send(JSON.stringify(data))
   }
 
+  public sendBinary(data: ArrayBuffer | Uint8Array) {
+    this.ws.send(data)
+  }
+
+  public onBinaryMessage(callback: (data: ArrayBuffer) => void) {
+    this.binarySubscriptions.add(callback)
+  }
+
+  public offBinaryMessage(callback?: (data: ArrayBuffer) => void) {
+    if (callback) {
+      this.binarySubscriptions.delete(callback)
+    } else {
+      this.binarySubscriptions.clear()
+    }
+  }
+
   public onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null = null
 
   public subscribe(callback: (data: any) => void) {
@@ -61,13 +79,21 @@ export class CorePikkuWebsocket {
   }
 
   private handleMessage(event: MessageEvent) {
-    let parsed = false
-
     if (!event.data) {
       // This occurs because aws seems to be returning
       // a message with no data
       return
     }
+
+    if (event.data instanceof ArrayBuffer) {
+      this.binarySubscriptions.forEach((cb) => cb(event.data as ArrayBuffer))
+      if (this.onmessage) {
+        this.onmessage.call(this.ws, event)
+      }
+      return
+    }
+
+    let parsed = false
 
     try {
       if (typeof event.data === 'string') {

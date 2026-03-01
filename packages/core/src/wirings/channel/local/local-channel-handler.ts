@@ -1,3 +1,4 @@
+import type { BinaryData } from '../channel.types.js'
 import { PikkuAbstractChannelHandler } from '../pikku-abstract-channel-handler.js'
 
 export class PikkuLocalChannelHandler<
@@ -5,9 +6,11 @@ export class PikkuLocalChannelHandler<
   Out = unknown,
 > extends PikkuAbstractChannelHandler<OpeningData, Out> {
   private onMessageCallback?: (message: unknown) => void
+  private onBinaryMessageCallback?: (data: BinaryData) => void
   private openCallBack?: () => void
   private closeCallback?: () => void
   private sendCallback?: (message: Out, isBinary?: boolean) => void
+  private sendBinaryCallback?: (data: BinaryData) => void
 
   public registerOnOpen(callback: () => void): void {
     this.openCallBack = callback
@@ -26,6 +29,18 @@ export class PikkuLocalChannelHandler<
 
   public async message(data: unknown): Promise<unknown> {
     return this.onMessageCallback?.(data)
+  }
+
+  public registerOnBinaryMessage(
+    callback: (
+      data: BinaryData
+    ) => Promise<BinaryData | void> | BinaryData | void
+  ): void {
+    this.onBinaryMessageCallback = callback
+  }
+
+  public async binaryMessage(data: BinaryData): Promise<BinaryData | void> {
+    return this.onBinaryMessageCallback?.(data)
   }
 
   public registerOnClose(callback: () => void): void {
@@ -49,5 +64,16 @@ export class PikkuLocalChannelHandler<
       throw new Error('No send callback registered')
     }
     return this.sendCallback?.(message, isBinary)
+  }
+
+  public registerOnSendBinary(send: (data: BinaryData) => void) {
+    this.sendBinaryCallback = send
+  }
+
+  public sendBinary(data: BinaryData): void {
+    if (!this.sendBinaryCallback) {
+      throw new Error('No sendBinary callback registered')
+    }
+    this.sendBinaryCallback(data)
   }
 }
