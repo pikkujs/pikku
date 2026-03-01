@@ -2,6 +2,8 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { pikkuSessionlessFunc } from '#pikku'
+import { parseOpenAPISpec } from '../../utils/openapi/parse-openapi.js'
+import { generateAddonFromOpenAPI } from '../../utils/openapi/codegen.js'
 
 function toCamelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
@@ -49,6 +51,7 @@ function getAddonFiles(
       type: 'module',
       imports: {
         '#pikku': './.pikku/pikku-types.gen.ts',
+        '#pikku/*': './.pikku/*',
       },
       exports: {
         '.': {
@@ -109,6 +112,7 @@ function getAddonFiles(
         target: 'ES2021',
         module: 'NodeNext',
         moduleResolution: 'NodeNext',
+        rootDir: '.',
         outDir: './dist',
         declaration: true,
         declarationMap: true,
@@ -660,6 +664,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     variable?: boolean
     oauth?: boolean
     test?: boolean
+    openapi?: string
   },
   void
 >({
@@ -675,6 +680,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       variable = false,
       oauth = false,
       test = true,
+      openapi,
     }
   ) => {
     if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
@@ -715,6 +721,16 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       oauth,
     })
 
+    // If openapi spec provided, generate typed files and merge over scaffold
+    if (openapi) {
+      const spec = await parseOpenAPISpec(openapi)
+      const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
+        oauth,
+        secret: secret || oauth,
+      })
+      Object.assign(addonFiles, openapiFiles)
+    }
+
     const written = await writeFiles(addonDir, addonFiles)
 
     // Test harness
@@ -728,6 +744,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     for (const f of written) {
       logger.debug({ message: `  ${f}`, type: 'success' })
     }
+
     console.log(addonDir)
   },
 })
