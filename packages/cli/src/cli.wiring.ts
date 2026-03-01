@@ -17,6 +17,7 @@ import { pikkuNewFunction } from './functions/commands/new-function.js'
 import { pikkuNewWiring } from './functions/commands/new-wiring.js'
 import { pikkuNewMiddleware } from './functions/commands/new-middleware.js'
 import { pikkuNewPermission } from './functions/commands/new-permission.js'
+import { pikkuNewAddon } from './functions/commands/new-addon.js'
 import {
   pikkuInfoFunctions,
   pikkuInfoTags,
@@ -183,6 +184,47 @@ wireCLI({
               description: 'Permission type: simple (default) or factory',
               short: 't',
               default: 'simple',
+            },
+          },
+        }),
+        addon: pikkuCLICommand({
+          func: pikkuNewAddon,
+          description: 'Scaffold a new addon package',
+          parameters: '<name>',
+          options: {
+            displayName: {
+              description:
+                'Human-readable display name (defaults to PascalCase of name)',
+            },
+            description: {
+              description:
+                'Package description (defaults to "{displayName} integration for Pikku")',
+            },
+            category: {
+              description: 'Forge category (defaults to "General")',
+              default: 'General',
+            },
+            dir: {
+              description:
+                'Override output directory (defaults to scaffold.addonDir or cwd)',
+              short: 'd',
+            },
+            secret: {
+              description: 'Include secret schema file',
+              default: false,
+            },
+            variable: {
+              description: 'Include variable definition file',
+              default: false,
+            },
+            oauth: {
+              description:
+                'Include OAuth2 credential wiring and OAuth2Client-based API service',
+              default: false,
+            },
+            test: {
+              description: 'Include test harness (default: true)',
+              default: true,
             },
           },
         }),

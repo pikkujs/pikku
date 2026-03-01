@@ -17,7 +17,8 @@ export const pikkuNewFunction = pikkuSessionlessFunc<
       config,
       'functions',
       name,
-      '.functions.ts'
+      '.functions.ts',
+      config.scaffold?.functionDir
     )
 
     if (existsSync(filePath)) {
