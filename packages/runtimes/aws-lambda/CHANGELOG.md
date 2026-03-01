@@ -1,5 +1,23 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- 62a8725: Update `@types/aws-lambda` peer and dev dependency to `^8.10.161` to resolve a `Duplicate identifier 'HttpResponseStream'` TypeScript error that appeared when bundling alongside other AWS SDK packages.
+- Updated dependencies [62a8725]
+- Updated dependencies [a3bdb0d]
+- Updated dependencies [e0349ff]
+- Updated dependencies [62a8725]
+- Updated dependencies [e04531f]
+- Updated dependencies [62a8725]
+- Updated dependencies [a83efb8]
+- Updated dependencies [8eed717]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+  - @pikku/core@0.12.1
+
 ### New Features
 
 - `createWireServices` and `createConfig` are now optional

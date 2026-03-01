@@ -1,5 +1,23 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- 62a8725: Fix pg-boss queue initialisation: create the queue before registering a worker to avoid a race condition on first startup. Also sanitise scheduler names to meet pg-boss naming constraints.
+- Updated dependencies [62a8725]
+- Updated dependencies [a3bdb0d]
+- Updated dependencies [e0349ff]
+- Updated dependencies [62a8725]
+- Updated dependencies [e04531f]
+- Updated dependencies [62a8725]
+- Updated dependencies [a83efb8]
+- Updated dependencies [8eed717]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+- Updated dependencies [62a8725]
+  - @pikku/core@0.12.1
+
 ### New Features
 
 - `setServices()`, `start()`, `stop()` lifecycle methods on scheduler and queue workers
