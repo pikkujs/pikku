@@ -6,7 +6,7 @@
   "scripts": {
     "ncu": "ncu",
     "dev": "vite --port 7070",
-    "build": "vite build",
+    "build": "yarn generate && vite build",
     "preview": "vite preview",
     "generate": "cd backend && pikku all",
     "lint": "tsc --noEmit"

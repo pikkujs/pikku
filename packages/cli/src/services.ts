@@ -36,6 +36,7 @@ import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
 import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
+import { existsSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { join } from 'path'
@@ -288,6 +289,19 @@ export const createSingletonServices: CreateSingletonServices<
           )
         )
       ).flat()
+
+      const scaffoldFiles = [
+        config.consoleFunctionsFile,
+        config.publicRpcFile,
+        config.publicAgentFile,
+        config.workflowWorkersFile,
+      ]
+      for (const file of scaffoldFiles) {
+        if (file && !wiringFiles.includes(file) && existsSync(file)) {
+          wiringFiles.push(file)
+        }
+      }
+
       const manifest = !setupOnly
         ? ((await loadManifest(join(config.outDir, 'versions.json'))) ??
           undefined)
