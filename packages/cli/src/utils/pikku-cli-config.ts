@@ -2,6 +2,7 @@ import { join, dirname, resolve, isAbsolute } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
+import { setExtensionless } from './file-import-path.js'
 
 const CONFIG_DIR_FILES = [
   'nextBackendFile',
@@ -536,6 +537,8 @@ const _getPikkuCLIConfig = async (
     if (!isAbsolute(result.tsconfig)) {
       result.tsconfig = join(result.rootDir, result.tsconfig)
     }
+
+    setExtensionless(result.extensionless ?? false)
 
     if (result.addon) {
       const packageJsonPath = join(result.rootDir, 'package.json')

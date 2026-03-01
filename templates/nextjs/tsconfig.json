@@ -5,7 +5,7 @@
       "dom.iterable",
       "esnext"
     ],
-    "module": "NodeNext",
+    "module": "ESNext",
     "target": "ESNext",
     "allowJs": true,
     "skipLibCheck": true,
@@ -31,7 +31,7 @@
       "./node_modules/@types",
       "./types"
     ],
-    "moduleResolution": "Node16",
+    "moduleResolution": "bundler",
     "incremental": true
   },
   "include": [

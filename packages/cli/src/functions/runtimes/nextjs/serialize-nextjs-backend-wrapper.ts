@@ -1,3 +1,5 @@
+import { jsImport } from '../../../utils/file-import-path.js'
+
 export const serializeNextJsBackendWrapper = (
   bootstrapPath: string,
   routesMapPath: string,
@@ -13,7 +15,7 @@ export const serializeNextJsBackendWrapper = (
  * It ensures type safety for route handling methods when integrating with the @pikku/core framework.
  */
 import { PikkuNextJS } from '@pikku/next'
-import { NextRequest } from 'next/server.js'
+import { NextRequest } from '${jsImport('next/server.js')}'
 import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '${routesMapPath}'
 import type { FlattenedRPCMap } from '${rpcMapPath}'
 

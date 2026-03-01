@@ -138,6 +138,7 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
+  extensionless?: boolean
   addon?: boolean
   addonName?: string
 
@@ -262,6 +263,7 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
+  extensionless?: boolean
   addon?: boolean
   addonName?: string
 

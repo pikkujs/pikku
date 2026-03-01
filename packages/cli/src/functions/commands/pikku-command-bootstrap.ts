@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { getFileImportRelativePath } from '../../utils/file-import-path.js'
+import { getFileImportRelativePath, jsImport } from '../../utils/file-import-path.js'
 import { writeFileInDir } from '../../utils/file-writer.js'
 
 export type BootstrapInput = {
@@ -13,7 +13,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
 
     for (const [, decl] of stateBeforeBootstrap.rpc?.wireAddonDeclarations ??
       []) {
-      addonBootstraps.push(`${decl.package}/.pikku/pikku-bootstrap.gen.js`)
+      addonBootstraps.push(jsImport(`${decl.package}/.pikku/pikku-bootstrap.gen.js`))
       logger.debug(`• Addon bootstrap: ${decl.package}`)
     }
 

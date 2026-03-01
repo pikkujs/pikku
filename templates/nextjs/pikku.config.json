@@ -1,4 +1,5 @@
 {
   "extends": "../functions/pikku.config.json",
+  "extensionless": true,
   "nextBackendFile": "./pikku-nextjs.gen.ts"
 }

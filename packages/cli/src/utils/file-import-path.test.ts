@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
-import { describe, test } from 'node:test'
-import { getFileImportRelativePath } from './file-import-path.js'
+import { describe, test, afterEach } from 'node:test'
+import { getFileImportRelativePath, setExtensionless, jsImport } from './file-import-path.js'
 
 describe('getFileImportRelativePath', () => {
   test('should return relative path for files in same directory', () => {
@@ -171,5 +171,112 @@ describe('getFileImportRelativePath', () => {
     const result = getFileImportRelativePath(from, to, packageMappings)
 
     assert.strictEqual(result, '@pikku/core/dist/types/core.types')
+  })
+})
+
+describe('getFileImportRelativePath (extensionless)', () => {
+  afterEach(() => {
+    setExtensionless(false)
+  })
+
+  test('should return relative path without .js extension', () => {
+    setExtensionless(true)
+    const from = '/project/src/file1.ts'
+    const to = '/project/src/file2.ts'
+    const packageMappings = {}
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, './file2')
+  })
+
+  test('should return relative path without extension for different directories', () => {
+    setExtensionless(true)
+    const from = '/project/src/file1.ts'
+    const to = '/project/lib/file2.ts'
+    const packageMappings = {}
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, '../lib/file2')
+  })
+
+  test('should strip .d.ts extension completely', () => {
+    setExtensionless(true)
+    const from =
+      '/Users/user/project/workspace-starter/packages/sdk/.pikku/pikku-fetch.gen.ts'
+    const to =
+      '/Users/user/project/workspace-starter/packages/functions/.pikku/http/pikku-http-routes-map.gen.d.ts'
+    const packageMappings = {
+      'packages/sdk': '@workspace/sdk',
+      'packages/functions': '@workspace/functions',
+    }
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(
+      result,
+      '@workspace/functions/.pikku/http/pikku-http-routes-map.gen'
+    )
+  })
+
+  test('should use package mapping without extension', () => {
+    setExtensionless(true)
+    const from = '/project/packages/app/src/file1.ts'
+    const to = '/project/packages/sdk/src/file2.ts'
+    const packageMappings = {
+      'packages/sdk': '@myorg/sdk',
+    }
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, '@myorg/sdk/src/file2')
+  })
+
+  test('should handle node_modules .ts path without .js extension', () => {
+    setExtensionless(true)
+    const from =
+      '/project/packages/functions/.pikku/http/pikku-http-routes-map.gen.d.ts'
+    const to =
+      '/project/packages/functions/../../../../node_modules/@pikku/core/dist/types/core.types.d.ts'
+    const packageMappings = {}
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, '@pikku/core/dist/types/core.types')
+  })
+})
+
+describe('jsImport', () => {
+  afterEach(() => {
+    setExtensionless(false)
+  })
+
+  test('should return path unchanged when extensionless is false', () => {
+    setExtensionless(false)
+    assert.strictEqual(jsImport('./pikku-fetch.gen.js'), './pikku-fetch.gen.js')
+  })
+
+  test('should strip .js extension when extensionless is true', () => {
+    setExtensionless(true)
+    assert.strictEqual(jsImport('./pikku-fetch.gen.js'), './pikku-fetch.gen')
+  })
+
+  test('should strip .d.js extension when extensionless is true', () => {
+    setExtensionless(true)
+    assert.strictEqual(
+      jsImport('@pkg/.pikku/agent/pikku-agent-map.gen.d.js'),
+      '@pkg/.pikku/agent/pikku-agent-map.gen'
+    )
+  })
+
+  test('should strip .js from package paths when extensionless is true', () => {
+    setExtensionless(true)
+    assert.strictEqual(jsImport('next/server.js'), 'next/server')
+  })
+
+  test('should not modify paths without .js extension', () => {
+    setExtensionless(true)
+    assert.strictEqual(jsImport('@pikku/core'), '@pikku/core')
   })
 })

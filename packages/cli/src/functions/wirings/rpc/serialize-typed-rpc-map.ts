@@ -1,4 +1,5 @@
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
+import { jsImport } from '../../../utils/file-import-path.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes } from '@pikku/inspector'
 import type { Logger } from '@pikku/core/services'
@@ -135,7 +136,7 @@ function generateAddonImports(
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
     // Import the RPCMap from each addon package's internal RPC map
     // Use .js extension - package.json exports will resolve to .d.ts for types
-    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${decl.package}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'\n`
+    imports += `import type { RPCMap as ${toPascalCase(namespace)}RPCMap } from '${jsImport(`${decl.package}/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js`)}'\n`
   }
   return imports
 }
@@ -186,7 +187,7 @@ function generateAddonAgentImports(
 
   let imports = '\n// Addon package Agent maps\n'
   for (const [namespace, decl] of wireAddonDeclarations.entries()) {
-    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${decl.package}/.pikku/agent/pikku-agent-map.gen.d.js'\n`
+    imports += `import type { AgentMap as ${toPascalCase(namespace)}AgentMap } from '${jsImport(`${decl.package}/.pikku/agent/pikku-agent-map.gen.d.js`)}'\n`
   }
   return imports
 }

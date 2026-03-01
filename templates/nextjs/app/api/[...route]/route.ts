@@ -1,4 +1,4 @@
-import { pikkuAPIRequest } from '@/pikku-nextjs.gen.js'
+import { pikkuAPIRequest } from '@/pikku-nextjs.gen'
 
 export const GET = pikkuAPIRequest
 export const POST = pikkuAPIRequest

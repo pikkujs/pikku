@@ -1,3 +1,5 @@
+import { jsImport } from '../../../utils/file-import-path.js'
+
 /**
  * Generates core function, middleware, and permission type definitions
  */
@@ -21,7 +23,7 @@ export const serializeFunctionTypes = (
     : 'string'
   const workflowImport =
     workflowTypesImport ||
-    `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'`
+    `import type { TypedWorkflow } from '${jsImport('../workflow/pikku-workflow-types.gen.js')}'`
 
   return `/**
  * Core function, middleware, and permission types for all wirings

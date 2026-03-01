@@ -1,5 +1,18 @@
 import { relative, dirname, resolve } from 'path'
 
+let _extensionless = false
+
+export const setExtensionless = (value: boolean) => {
+  _extensionless = value
+}
+
+export const jsImport = (path: string): string => {
+  if (_extensionless) {
+    return path.replace(/\.d\.js$|\.js$/, '')
+  }
+  return path
+}
+
 export const getFileImportRelativePath = (
   from: string,
   to: string,
@@ -29,7 +42,7 @@ export const getFileImportRelativePath = (
     if (filePath.endsWith('.d.ts')) {
       filePath = filePath.slice(0, -5)
     } else if (filePath.endsWith('.ts')) {
-      filePath = filePath.slice(0, -3) + '.js'
+      filePath = _extensionless ? filePath.slice(0, -3) : filePath.slice(0, -3) + '.js'
     }
 
     filePath = filePath.replace(/\/index$/, '').replace(/\/index\.js$/, '')
@@ -66,5 +79,8 @@ export const getFileImportRelativePath = (
   // if (usesPackageName) {
   //   return filePath.replace('.ts', '')
   // }
+  if (_extensionless) {
+    return filePath.replace(/\.d\.ts$|\.ts$/, '')
+  }
   return filePath.replace('.ts', '.js')
 }

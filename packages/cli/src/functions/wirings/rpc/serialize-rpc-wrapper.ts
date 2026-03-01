@@ -1,6 +1,8 @@
+import { jsImport } from '../../../utils/file-import-path.js'
+
 export const serializeRPCWrapper = (rpcMapPath: string) => {
   return `
-import { PikkuFetch } from "./pikku-fetch.gen.js"
+import { PikkuFetch } from "${jsImport('./pikku-fetch.gen.js')}"
 import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow } from '${rpcMapPath}'
 
 /**

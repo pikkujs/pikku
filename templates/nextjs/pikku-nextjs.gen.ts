@@ -10,16 +10,16 @@
  * It ensures type safety for route handling methods when integrating with the @pikku/core framework.
  */
 import { PikkuNextJS } from '@pikku/next'
-import { NextRequest } from 'next/server.js'
-import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '../functions/.pikku/http/pikku-http-wirings-map.gen.d.js'
-import type { FlattenedRPCMap } from '../functions/.pikku/rpc/pikku-rpc-wirings-map.gen.d.js'
+import { NextRequest } from 'next/server'
+import type { HTTPWiringsMap, HTTPWiringHandlerOf, HTTPWiringsWithMethod } from '../functions/.pikku/http/pikku-http-wirings-map.gen'
+import type { FlattenedRPCMap } from '../functions/.pikku/rpc/pikku-rpc-wirings-map.gen'
 
 type RouteContext = { params: Promise<Record<string, string | string[]>> }
 
-import { createConfig as createConfig } from '../functions/src/services.js'
-import { createSingletonServices as createSingletonServices } from '../functions/src/services.js'
+import { createConfig as createConfig } from '../functions/src/services'
+import { createSingletonServices as createSingletonServices } from '../functions/src/services'
 
-import '../functions/.pikku/pikku-bootstrap.gen.js'
+import '../functions/.pikku/pikku-bootstrap.gen'
 
 let _pikku: PikkuNextJS | undefined
 let _removeAPIPrefix = true
