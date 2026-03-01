@@ -272,7 +272,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [templates, benchmark-verify]
+    needs: [verifiers, templates, benchmark-verify]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
