@@ -22,6 +22,7 @@ import type {
 } from '../wirings/workflow/workflow.types.js'
 import type { PikkuGraphWire } from '../wirings/workflow/graph/workflow-graph.types.js'
 import type { PikkuTrigger } from '../wirings/trigger/trigger.types.js'
+import type { PikkuGateway } from '../wirings/gateway/gateway.types.js'
 import type { SchedulerService } from '../services/scheduler-service.js'
 import type { DeploymentService } from '../services/deployment-service.js'
 import type { AIStorageService } from '../services/ai-storage-service.js'
@@ -42,6 +43,7 @@ export type PikkuWiringTypes =
   | 'cli'
   | 'workflow'
   | 'agent'
+  | 'gateway'
 
 export interface FunctionServicesMeta {
   optimized: boolean
@@ -249,6 +251,7 @@ export type PikkuWire<
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
   trigger: PikkuTrigger<TriggerOutput>
+  gateway: PikkuGateway
   session: HasInitialSession extends true
     ? UserSession
     : UserSession | undefined

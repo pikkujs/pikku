@@ -130,6 +130,7 @@ const combinedPermissionsCache: Record<
   agent: {},
   cli: {},
   workflow: {},
+  gateway: {},
 }
 
 /**
