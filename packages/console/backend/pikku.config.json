@@ -12,8 +12,5 @@
   "addons": {
     "console": { "package": "@pikku/addon-console", "forceInclude": true }
   },
-  "verboseMeta": true,
-  "scaffold": {
-    "console": "no-auth"
-  }
+  "verboseMeta": true
 }
