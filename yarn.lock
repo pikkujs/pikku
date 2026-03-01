@@ -5970,6 +5970,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-gateway@workspace:verifiers/gateway":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-gateway@workspace:verifiers/gateway"
+  dependencies:
+    "@pikku/cli": "npm:^0.12.0"
+    "@pikku/core": "npm:^0.12.0"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"

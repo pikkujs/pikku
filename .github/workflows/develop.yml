@@ -57,6 +57,7 @@ jobs:
         verifier:
           [
             addon,
+            gateway,
             middleware-and-permissions,
             treeshaking,
             types,
