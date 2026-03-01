@@ -6,7 +6,8 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 
 export const pikkuFetch = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { fetchFile, httpMapDeclarationFile, packageMappings } = config
+    const fetchFile = config.clientFiles?.fetchFile
+    const { httpMapDeclarationFile, packageMappings } = config
 
     // If fetchFile is not set, clean up any existing file and return
     if (!fetchFile) {

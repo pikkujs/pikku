@@ -14,7 +14,9 @@
     "../inspector/src": "@pikku/inspector"
   },
   "schemasFromTypes": ["PikkuCLIConfig"],
-  "websocketFile": ".pikku/pikku-websocket.gen.ts",
+  "clientFiles": {
+    "websocketFile": ".pikku/pikku-websocket.gen.ts"
+  },
   "supportsImportAttributes": true,
   "schema": {
     "supportsImportAttributes": true

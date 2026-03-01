@@ -5,13 +5,15 @@
   "outDir": ".pikku",
   "rpcMapDeclarationFile": "../src/pikku/rpc-map.gen.d.ts",
   "httpMapDeclarationFile": "../src/pikku/http-map.gen.d.ts",
-  "fetchFile": "../src/pikku/pikku-fetch.gen.ts",
-  "rpcWiringsFile": "../src/pikku/pikku-rpc.gen.ts",
+  "clientFiles": {
+    "fetchFile": "../src/pikku/pikku-fetch.gen.ts",
+    "rpcWiringsFile": "../src/pikku/pikku-rpc.gen.ts"
+  },
   "addons": {
     "console": { "package": "@pikku/addon-console", "forceInclude": true }
   },
   "verboseMeta": true,
-  "console": {
-    "functionsPath": "src/functions/pikku.console.gen.ts"
+  "scaffold": {
+    "console": "no-auth"
   }
 }

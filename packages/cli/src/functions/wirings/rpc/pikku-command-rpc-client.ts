@@ -6,7 +6,8 @@ import { serializeRPCWrapper } from './serialize-rpc-wrapper.js'
 
 export const pikkuRPCClient = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { rpcWiringsFile, rpcMapDeclarationFile, packageMappings } = config
+    const rpcWiringsFile = config.clientFiles?.rpcWiringsFile
+    const { rpcMapDeclarationFile, packageMappings } = config
 
     // If rpcWiringsFile is not set, clean up any existing file and return
     if (!rpcWiringsFile) {

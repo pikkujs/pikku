@@ -1,6 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "extends": "../functions/pikku.config.json",
-  "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
-  "rpcWiringsFile": null
+  "clientFiles": {
+    "mcpJsonFile": ".pikku/mcp/mcp.gen.json",
+    "rpcWiringsFile": null
+  }
 }

@@ -55,7 +55,7 @@ export const all = pikkuVoidFunc({
     const agents = await rpc.invoke('pikkuAIAgent', null)
     if (agents) {
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
-      if (config.agent?.publicAgentPath) {
+      if (config.scaffold?.agent) {
         await rpc.invoke('pikkuPublicAgent', null)
       }
     }
@@ -156,6 +156,11 @@ export const all = pikkuVoidFunc({
         )
       }
 
+      const gateways = await rpc.invoke('pikkuGateway', null)
+      if (gateways) {
+        allImports.push(config.gatewaysWiringFile)
+      }
+
       const mcp = await rpc.invoke('pikkuMCP', null)
       if (mcp) {
         await rpc.invoke('pikkuMCPJSON', null)
@@ -171,7 +176,10 @@ export const all = pikkuVoidFunc({
 
     await rpc.invoke('pikkuNodesMeta', null)
 
-    if (config.nextBackendFile || config.nextHTTPFile) {
+    if (
+      config.clientFiles?.nextBackendFile ||
+      config.clientFiles?.nextHTTPFile
+    ) {
       await rpc.invoke('pikkuNext', null)
     }
 

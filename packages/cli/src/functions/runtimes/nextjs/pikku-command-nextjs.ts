@@ -8,14 +8,11 @@ import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from './serial
 
 export const pikkuNext = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const {
-      nextBackendFile,
-      nextHTTPFile,
-      httpMapDeclarationFile,
-      rpcMapDeclarationFile,
-      packageMappings,
-      fetchFile,
-    } = config
+    const nextBackendFile = config.clientFiles?.nextBackendFile
+    const nextHTTPFile = config.clientFiles?.nextHTTPFile
+    const fetchFile = config.clientFiles?.fetchFile
+    const { httpMapDeclarationFile, rpcMapDeclarationFile, packageMappings } =
+      config
 
     // If both files are undefined, clean up any existing files and return
     if (!nextBackendFile && !nextHTTPFile) {
