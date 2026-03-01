@@ -116,6 +116,10 @@ export interface SerializableInspectorState {
     files: string[]
     meta: InspectorState['channels']['meta']
   }
+  gateways: {
+    meta: InspectorState['gateways']['meta']
+    files: string[]
+  }
   triggers: {
     meta: InspectorState['triggers']['meta']
     sourceMeta: InspectorState['triggers']['sourceMeta']
@@ -315,6 +319,10 @@ export function serializeInspectorState(
       files: Array.from(state.channels.files),
       meta: state.channels.meta,
     },
+    gateways: {
+      meta: state.gateways.meta,
+      files: Array.from(state.gateways.files),
+    },
     triggers: {
       meta: state.triggers.meta,
       sourceMeta: state.triggers.sourceMeta,
@@ -478,6 +486,10 @@ export function deserializeInspectorState(
     channels: {
       files: new Set(data.channels.files),
       meta: data.channels.meta,
+    },
+    gateways: {
+      meta: data.gateways?.meta ?? {},
+      files: new Set(data.gateways?.files ?? []),
     },
     triggers: {
       meta: data.triggers?.meta ?? {},

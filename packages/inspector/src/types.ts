@@ -1,5 +1,6 @@
 import type * as ts from 'typescript'
 import type { ChannelsMeta } from '@pikku/core/channel'
+import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
@@ -303,6 +304,10 @@ export interface InspectorState {
   http: InspectorHTTPState
   functions: InspectorFunctionState
   channels: InspectorChannelState
+  gateways: {
+    meta: GatewaysMeta
+    files: Set<string>
+  }
   triggers: {
     meta: TriggerMeta
     sourceMeta: TriggerSourceMeta
