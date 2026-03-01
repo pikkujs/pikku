@@ -2,6 +2,8 @@ import type { InspectorFilters } from '@pikku/inspector'
 import type { OpenAPISpecInfo } from '@pikku/inspector'
 import { PikkuWiringTypes } from '@pikku/core'
 
+export type PikkuScaffoldFeature = 'auth' | 'no-auth' | false
+
 export interface PikkuCLICoreOutputFiles {
   // Base directory
   outDir: string
@@ -23,6 +25,9 @@ export interface PikkuCLICoreOutputFiles {
   httpMapDeclarationFile: string
   httpTypesFile: string
 
+  // Gateways
+  gatewaysWiringFile: string
+
   // Channels
   channelsWiringFile: string
   channelsWiringMetaFile: string
@@ -37,6 +42,15 @@ export interface PikkuCLICoreOutputFiles {
 
   // RPC Exposed
   rpcMapDeclarationFile: string
+
+  // Remote RPC workers (auto-derived)
+  remoteRpcWorkersFile: string
+
+  // Feature-generated files (derived from scaffold.pikkuDir when enabled)
+  publicRpcFile: string
+  publicAgentFile: string
+  consoleFunctionsFile: string
+  workflowWorkersFile: string
 
   // Triggers
   triggersTypesFile: string
@@ -154,13 +168,15 @@ export type PikkuCLIInput = {
   configDir: string
   tsconfig: string
 
-  nextBackendFile?: string
-  nextHTTPFile?: string
-  fetchFile?: string
-  websocketFile?: string
-  rpcWiringsFile?: string
-  queueWiringsFile?: string
-  mcpJsonFile?: string
+  clientFiles?: {
+    fetchFile?: string
+    websocketFile?: string
+    rpcWiringsFile?: string
+    queueWiringsFile?: string
+    mcpJsonFile?: string
+    nextBackendFile?: string
+    nextHTTPFile?: string
+  }
 
   openAPI?: {
     outputFile: string
@@ -198,33 +214,9 @@ export type PikkuCLIInput = {
     >
   }
 
-  workflows?:
-    | {
-        singleQueue: true
-        path: string
-        orchestratorQueue?: string
-        workerQueue?: string
-      }
-    | {
-        singleQueue: false
-        dir: string
-        orchestratorQueuePrefix?: string
-        workerQueuePrefix?: string
-      }
-
-  rpc?: {
-    remoteRpcWorkersPath?: string
-    publicRpcPath?: string
-    publicRpcRequireAuth?: boolean
-  }
-
-  agent?: {
-    publicAgentPath?: string
-    publicAgentRequireAuth?: boolean
-  }
-
-  console?: {
-    functionsPath?: string
+  workflows?: {
+    orchestratorQueue?: string
+    workerQueue?: string
   }
 
   scaffold?: {
@@ -233,6 +225,11 @@ export type PikkuCLIInput = {
     wiringDir?: string
     middlewareDir?: string
     permissionDir?: string
+    pikkuDir?: string
+    rpc?: PikkuScaffoldFeature
+    console?: PikkuScaffoldFeature
+    agent?: PikkuScaffoldFeature
+    workflow?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]
@@ -294,13 +291,15 @@ export type PikkuCLIConfig = {
   configDir: string
   tsconfig: string
 
-  nextBackendFile?: string
-  nextHTTPFile?: string
-  fetchFile?: string
-  websocketFile?: string
-  rpcWiringsFile?: string
-  queueWiringsFile?: string
-  mcpJsonFile?: string
+  clientFiles?: {
+    fetchFile?: string
+    websocketFile?: string
+    rpcWiringsFile?: string
+    queueWiringsFile?: string
+    mcpJsonFile?: string
+    nextBackendFile?: string
+    nextHTTPFile?: string
+  }
 
   openAPI?: {
     outputFile: string
@@ -338,33 +337,9 @@ export type PikkuCLIConfig = {
     >
   }
 
-  workflows?:
-    | {
-        singleQueue: true
-        path: string
-        orchestratorQueue?: string
-        workerQueue?: string
-      }
-    | {
-        singleQueue: false
-        dir: string
-        orchestratorQueuePrefix?: string
-        workerQueuePrefix?: string
-      }
-
-  rpc?: {
-    remoteRpcWorkersPath?: string
-    publicRpcPath?: string
-    publicRpcRequireAuth?: boolean
-  }
-
-  agent?: {
-    publicAgentPath?: string
-    publicAgentRequireAuth?: boolean
-  }
-
-  console?: {
-    functionsPath?: string
+  workflows?: {
+    orchestratorQueue?: string
+    workerQueue?: string
   }
 
   scaffold?: {
@@ -373,6 +348,11 @@ export type PikkuCLIConfig = {
     wiringDir?: string
     middlewareDir?: string
     permissionDir?: string
+    pikkuDir?: string
+    rpc?: PikkuScaffoldFeature
+    console?: PikkuScaffoldFeature
+    agent?: PikkuScaffoldFeature
+    workflow?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]

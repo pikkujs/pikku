@@ -24,6 +24,12 @@ import {
   pikkuInfoMiddleware,
   pikkuInfoPermissions,
 } from './functions/commands/info.js'
+import {
+  enableRpc,
+  enableConsole,
+  enableAgent,
+  enableWorkflow,
+} from './functions/commands/enable.js'
 // import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -134,6 +140,51 @@ wireCLI({
       func: pikkuNext,
       description: 'Generate Next.js backend and HTTP wrappers',
     }),
+    enable: {
+      description: 'Enable Pikku features',
+      subcommands: {
+        rpc: pikkuCLICommand({
+          func: enableRpc,
+          description: 'Enable public RPC endpoint',
+          options: {
+            'no-auth': {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        console: pikkuCLICommand({
+          func: enableConsole,
+          description: 'Enable console functions',
+          options: {
+            'no-auth': {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        agent: pikkuCLICommand({
+          func: enableAgent,
+          description: 'Enable public agent endpoints',
+          options: {
+            'no-auth': {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        workflow: pikkuCLICommand({
+          func: enableWorkflow,
+          description: 'Enable workflow workers',
+          options: {
+            'no-auth': {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
     new: {
       description: 'Scaffold new functions and wirings',
       subcommands: {

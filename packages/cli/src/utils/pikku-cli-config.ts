@@ -3,15 +3,15 @@ import { readdir, readFile } from 'fs/promises'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 
-const CONFIG_DIR_FILES = [
-  'nextBackendFile',
-  'nextHTTPFile',
+const CLIENT_FILE_KEYS = [
   'fetchFile',
   'websocketFile',
   'rpcWiringsFile',
   'queueWiringsFile',
   'mcpJsonFile',
-]
+  'nextBackendFile',
+  'nextHTTPFile',
+] as const
 
 export const getPikkuCLIConfig = async (
   logger: CLILogger,
@@ -170,6 +170,15 @@ const _getPikkuCLIConfig = async (
       result.httpTypesFile = join(httpDir, 'pikku-http-types.gen.ts')
     }
 
+    // Gateways
+    const gatewayDir = join(result.outDir, 'gateway')
+    if (!result.gatewaysWiringFile) {
+      result.gatewaysWiringFile = join(
+        gatewayDir,
+        'pikku-gateway-wirings.gen.ts'
+      )
+    }
+
     // Channels/WebSocket
     if (!result.channelsWiringFile) {
       result.channelsWiringFile = join(channelDir, 'pikku-channels.gen.ts')
@@ -225,15 +234,37 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // RPC config defaults
-    if (!result.rpc) {
-      result.rpc = {}
-    }
-    if (!result.rpc.remoteRpcWorkersPath) {
-      result.rpc.remoteRpcWorkersPath = join(
+    // Remote RPC workers file (auto-derived)
+    if (!result.remoteRpcWorkersFile) {
+      result.remoteRpcWorkersFile = join(
         rpcDir,
         'pikku-remote-rpc-workers.gen.ts'
       )
+    }
+
+    // Derive feature file paths from scaffold.pikkuDir when enabled
+    if (
+      result.scaffold?.rpc ||
+      result.scaffold?.agent ||
+      result.scaffold?.console ||
+      result.scaffold?.workflow
+    ) {
+      const pikkuDir = result.scaffold.pikkuDir ?? 'pikku'
+      const resolvedPikkuDir = isAbsolute(pikkuDir)
+        ? pikkuDir
+        : join(result.rootDir, pikkuDir)
+      if (result.scaffold.rpc && !result.publicRpcFile) {
+        result.publicRpcFile = join(resolvedPikkuDir, 'rpc.wiring.gen.ts')
+      }
+      if (result.scaffold.agent && !result.publicAgentFile) {
+        result.publicAgentFile = join(resolvedPikkuDir, 'agent.wiring.gen.ts')
+      }
+      if (result.scaffold.console && !result.consoleFunctionsFile) {
+        result.consoleFunctionsFile = join(resolvedPikkuDir, 'console.gen.ts')
+      }
+      if (result.scaffold.workflow && !result.workflowWorkersFile) {
+        result.workflowWorkersFile = join(resolvedPikkuDir, 'workflows.gen.ts')
+      }
     }
 
     const triggerDir = join(result.outDir, 'trigger')
@@ -409,9 +440,6 @@ const _getPikkuCLIConfig = async (
     if (!result.mcpWiringsFile) {
       result.mcpWiringsFile = join(mcpDir, 'pikku-mcp-wirings.gen.ts')
     }
-    if (!result.mcpJsonFile) {
-      result.mcpJsonFile = join(mcpDir, 'pikku-mcp.gen.json')
-    }
     if (!result.mcpTypesFile) {
       result.mcpTypesFile = join(mcpDir, 'pikku-mcp-types.gen.ts')
     }
@@ -521,14 +549,21 @@ const _getPikkuCLIConfig = async (
         objectKey.endsWith('Directory') ||
         objectKey.endsWith('Dir')
       ) {
-        const relativeTo = CONFIG_DIR_FILES.includes(objectKey)
-          ? result.configDir
-          : result.rootDir
         // Only normalize string values to avoid corrupting nested objects
         if (result[objectKey] && typeof result[objectKey] === 'string') {
           if (!isAbsolute(result[objectKey])) {
-            result[objectKey] = join(relativeTo, result[objectKey])
+            result[objectKey] = join(result.rootDir, result[objectKey])
           }
+        }
+      }
+    }
+
+    // Resolve clientFiles paths relative to configDir
+    if (result.clientFiles) {
+      for (const key of CLIENT_FILE_KEYS) {
+        const val = result.clientFiles[key]
+        if (val && typeof val === 'string' && !isAbsolute(val)) {
+          result.clientFiles[key] = join(result.configDir, val)
         }
       }
     }

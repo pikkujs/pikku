@@ -6,7 +6,7 @@ import { serializeMCPJson } from '@pikku/inspector'
 export const pikkuMCPJSON = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
-    const { mcpJsonFile } = config
+    const mcpJsonFile = config.clientFiles?.mcpJsonFile
 
     if (mcpJsonFile) {
       const mcpJson = serializeMCPJson(logger, state)

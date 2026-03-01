@@ -88,7 +88,7 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
       },
     }
 
-    if (nodesMetaJsonFile) {
+    if (nodesMetaJsonFile && config.scaffold?.console) {
       const minimalMeta = stripVerboseFields(metaData)
       await writeFileInDir(
         logger,

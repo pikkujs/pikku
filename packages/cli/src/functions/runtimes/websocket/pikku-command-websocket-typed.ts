@@ -6,8 +6,8 @@ import { serializeWebsocketWrapper } from './serialize-websocket-wrapper.js'
 
 export const pikkuWebSocketTyped = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { websocketFile, channelsMapDeclarationFile, packageMappings } =
-      config
+    const websocketFile = config.clientFiles?.websocketFile
+    const { channelsMapDeclarationFile, packageMappings } = config
 
     // If websocketFile is not set, clean up any existing file and return
     if (!websocketFile) {

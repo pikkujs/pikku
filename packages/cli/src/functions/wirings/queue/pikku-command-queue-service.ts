@@ -6,8 +6,8 @@ import { serializeQueueWrapper } from './serialize-queue-wrapper.js'
 
 export const pikkuQueueService = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
-    const { queueWiringsFile, queueMapDeclarationFile, packageMappings } =
-      config
+    const queueWiringsFile = config.clientFiles?.queueWiringsFile
+    const { queueMapDeclarationFile, packageMappings } = config
 
     // If queueWiringsFile is not set, clean up any existing file and return
     if (!queueWiringsFile) {

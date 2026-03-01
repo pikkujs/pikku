@@ -148,26 +148,17 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
       )
     )
 
-    if (config.workflows) {
-      if (config.workflows.singleQueue) {
-        const workflowPath = join(config.rootDir, config.workflows.path)
-        const pathToPikkuTypes = getFileImportRelativePath(
-          workflowPath,
-          typesDeclarationFile,
-          packageMappings
-        )
-        await writeFileInDir(
-          logger,
-          workflowPath,
-          serializeWorkflowWorkers(pathToPikkuTypes)
-        )
-      } else if (workflows.files.size > 0) {
-        logger.critical(
-          ErrorCode.WORKFLOW_MULTI_QUEUE_NOT_SUPPORTED,
-          'Multi-queue workflows are not supported when workflows.singleQueue is false. Please enable singleQueue in your configuration.'
-        )
-        return false
-      }
+    if (config.scaffold?.workflow) {
+      const pathToPikkuTypes = getFileImportRelativePath(
+        config.workflowWorkersFile,
+        typesDeclarationFile,
+        packageMappings
+      )
+      await writeFileInDir(
+        logger,
+        config.workflowWorkersFile,
+        serializeWorkflowWorkers(pathToPikkuTypes)
+      )
     }
 
     return hasWorkflows
