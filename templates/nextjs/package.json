@@ -3,11 +3,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "next build --webpack",
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "pikku": "pikku",
     "start": "next build && next start",
     "test": "bash ../functions/run-tests.sh --url http://localhost:3000/api --http",
