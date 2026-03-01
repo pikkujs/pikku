@@ -157,7 +157,7 @@ export const createSingletonServices = pikkuAddonServices(async (
   return { ${camelName} }
 })
 `
-  } else {
+  } else if (flags.secret) {
     files['src/services.ts'] = `import { ${pascalName}Service } from './${name}-api.service.js'
 import type { ${pascalName}Secrets } from './${name}.secret.js'
 import { pikkuAddonServices } from '#pikku'
@@ -168,6 +168,18 @@ export const createSingletonServices = pikkuAddonServices(async (
 ) => {
   const creds = await secrets.getSecretJSON<${pascalName}Secrets>('${screamingName}_CREDENTIALS')
   const ${camelName} = new ${pascalName}Service(creds)
+
+  return { ${camelName} }
+})
+`
+  } else {
+    files['src/services.ts'] = `import { ${pascalName}Service } from './${name}-api.service.js'
+import { pikkuAddonServices } from '#pikku'
+
+export const createSingletonServices = pikkuAddonServices(async (
+  config,
+) => {
+  const ${camelName} = new ${pascalName}Service()
 
   return { ${camelName} }
 })
@@ -240,7 +252,7 @@ export class ${pascalName}Service {
   }
 }
 `
-  } else {
+  } else if (flags.secret) {
     files[`src/${name}-api.service.ts`] = `import type { ${pascalName}Secrets } from './${name}.secret.js'
 
 const BASE_URL = 'https://api.example.com/v1'
@@ -286,6 +298,47 @@ export class ${pascalName}Service {
   }
 }
 `
+  } else {
+    files[`src/${name}-api.service.ts`] = `const BASE_URL = 'https://api.example.com/v1'
+
+export interface RequestOptions {
+  body?: unknown
+  qs?: Record<string, string | number | boolean | undefined>
+}
+
+export class ${pascalName}Service {
+  async request<T>(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+    endpoint: string,
+    options?: RequestOptions
+  ): Promise<T> {
+    const url = new URL(endpoint, BASE_URL)
+
+    if (options?.qs) {
+      for (const [key, value] of Object.entries(options.qs)) {
+        if (value !== undefined) {
+          url.searchParams.set(key, String(value))
+        }
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: options?.body ? JSON.stringify(options.body) : undefined,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
+    }
+
+    return response.json() as Promise<T>
+  }
+}
+`
   }
 
   // src/{name}.types.ts
@@ -303,8 +356,7 @@ export type ${pascalName}Resource = z.infer<typeof ${pascalName}ResourceSchema>
 `
 
   // types/application-types.d.ts
-  if (flags.oauth) {
-    files['types/application-types.d.ts'] = `import type {
+  files['types/application-types.d.ts'] = `import type {
   CoreConfig,
   CoreServices,
   CoreSingletonServices,
@@ -322,26 +374,6 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
 
 export interface Services extends CoreServices<SingletonServices> {}
 `
-  } else {
-    files['types/application-types.d.ts'] = `import type {
-  CoreConfig,
-  CoreServices,
-  CoreSingletonServices,
-  CoreUserSession,
-} from '@pikku/core'
-import type { ${pascalName}Service } from '../src/${name}-api.service.js'
-
-export interface Config extends CoreConfig {}
-
-export interface UserSession extends CoreUserSession {}
-
-export interface SingletonServices extends CoreSingletonServices<Config> {
-  ${camelName}: ${pascalName}Service
-}
-
-export interface Services extends CoreServices<SingletonServices> {}
-`
-  }
 
   // Conditional: secret file
   if (flags.oauth) {
@@ -631,6 +663,13 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       test = true,
     }
   ) => {
+    if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
+      logger.error(
+        `Invalid addon name "${name}": must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores`
+      )
+      process.exit(1)
+    }
+
     const pascalName = toPascalCase(name)
     const resolvedDisplayName = displayName || pascalName
     const resolvedDescription =
