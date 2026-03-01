@@ -2,7 +2,7 @@
   "name": "pikku-vscode",
   "displayName": "Pikku",
   "description": "IDE-level project introspection, code generation, and navigation for Pikku projects",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "pikku",
   "license": "BUSL-1.1",
   "engines": {

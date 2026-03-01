@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- ce961b5: fix: improve MySQL compatibility in AI storage service by using varchar columns with explicit lengths instead of text for primary keys, foreign keys, and indexed columns, and handle duplicate index errors gracefully
+- Updated dependencies [cc4c9e9]
+  - @pikku/core@0.12.2
+
 ## 0.12.1
 
 ### Patch Changes

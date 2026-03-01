@@ -14,7 +14,7 @@
     "test": "bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.1",
+    "@pikku/core": "^0.12.2",
     "@pikku/express": "^0.12.1",
     "@pikku/pg": "^0.12.1",
     "@pikku/queue-pg-boss": "^0.12.1",
