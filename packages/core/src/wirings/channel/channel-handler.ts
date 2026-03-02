@@ -100,6 +100,7 @@ export const processMessageHandlers = (
 
     const {
       pikkuFuncId,
+      packageName,
       middleware: routeInheritedMiddleware,
       permissions: inheritedPermissions,
     } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
@@ -152,6 +153,7 @@ export const processMessageHandlers = (
         channel: channelHandler.getChannel(),
         ...(userSession && createMiddlewareSessionWireProps(userSession)),
       },
+      packageName,
     })
   }
 

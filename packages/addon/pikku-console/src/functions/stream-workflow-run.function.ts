@@ -6,7 +6,8 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
   expose: false,
   auth: false,
   func: async ({ workflowRunService }, { runId }, { channel }) => {
-    if (!channel || !workflowRunService) return
+    if (!workflowRunService) throw new Error('workflowRunService is not available')
+    if (!channel) return
 
     let lastHash = ''
     const poll = async () => {

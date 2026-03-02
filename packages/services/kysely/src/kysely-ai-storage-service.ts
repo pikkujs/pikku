@@ -138,6 +138,7 @@ export class KyselyAIStorageService
       .addColumn('status', 'varchar(50)', (col) =>
         col.notNull().defaultTo('running')
       )
+      .addColumn('error_message', 'text')
       .addColumn('suspend_reason', 'text')
       .addColumn('missing_rpcs', 'text')
       .addColumn('usage_input_tokens', 'integer', (col) =>
@@ -463,6 +464,7 @@ export class KyselyAIStorageService
         thread_id: run.threadId,
         resource_id: run.resourceId,
         status: run.status,
+        error_message: run.errorMessage ?? null,
         suspend_reason: run.suspendReason ?? null,
         missing_rpcs: run.missingRpcs ? JSON.stringify(run.missingRpcs) : null,
         usage_input_tokens: run.usage.inputTokens,
@@ -488,6 +490,9 @@ export class KyselyAIStorageService
 
     if (updates.status !== undefined) {
       setValues.status = updates.status
+    }
+    if (updates.errorMessage !== undefined) {
+      setValues.error_message = updates.errorMessage
     }
     if (updates.suspendReason !== undefined) {
       setValues.suspend_reason = updates.suspendReason
@@ -537,6 +542,7 @@ export class KyselyAIStorageService
         'thread_id',
         'resource_id',
         'status',
+        'error_message',
         'suspend_reason',
         'missing_rpcs',
         'usage_input_tokens',
@@ -577,6 +583,7 @@ export class KyselyAIStorageService
         'thread_id',
         'resource_id',
         'status',
+        'error_message',
         'suspend_reason',
         'missing_rpcs',
         'usage_input_tokens',
@@ -670,6 +677,7 @@ export class KyselyAIStorageService
       threadId: row.thread_id as string,
       resourceId: row.resource_id as string,
       status: row.status as AgentRunState['status'],
+      errorMessage: row.error_message ?? undefined,
       suspendReason: row.suspend_reason as AgentRunState['suspendReason'],
       missingRpcs: parseJson(row.missing_rpcs),
       pendingApprovals,

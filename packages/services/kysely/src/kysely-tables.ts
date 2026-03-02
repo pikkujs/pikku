@@ -112,6 +112,7 @@ export interface AIRunTable {
   thread_id: string
   resource_id: string
   status: Generated<string>
+  error_message: string | null
   suspend_reason: string | null
   missing_rpcs: string | null
   usage_input_tokens: Generated<number>

@@ -47,6 +47,7 @@ export type RunChannelParams<ChannelData> = {
 
 export interface ChannelMessageMeta {
   pikkuFuncId: string
+  packageName?: string
   summary?: string
   description?: string
   errors?: string[]

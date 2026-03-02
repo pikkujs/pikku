@@ -218,7 +218,7 @@ function pluckCLIData(
   const funcMeta = pikkuState(null, 'function', 'meta')[funcName]
   const schemaName = funcMeta?.inputSchemaName
   const schema = schemaName
-    ? pikkuState(null, 'misc', 'schemas').get(schemaName)
+    ? pikkuState(funcMeta?.packageName ?? null, 'misc', 'schemas').get(schemaName)
     : null
 
   if (schema && schema.properties) {
@@ -357,6 +357,7 @@ export async function runCLICommand({
       tags: programData?.tags,
       wire,
       sessionService: userSession,
+      packageName: currentCommand.packageName,
     })
 
     // Apply renderer one final time with the final output (if renderer exists)

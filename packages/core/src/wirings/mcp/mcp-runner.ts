@@ -242,6 +242,7 @@ async function runMCPPikkuFunc(
       tags: mcp?.tags,
       wire,
       sessionService: mcpSessionService,
+      packageName: meta?.packageName,
     })
 
     if (type === 'tool' && meta?.outputSchema !== 'MCPToolResponse') {

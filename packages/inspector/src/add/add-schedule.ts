@@ -11,6 +11,7 @@ import {
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 
 import { ErrorCode } from '../error-codes.js'
 export const addSchedule: AddWiring = (
@@ -71,6 +72,10 @@ export const addSchedule: AddWiring = (
       pikkuFuncId = makeContextBasedId('scheduler', nameValue)
     }
 
+    const packageName = ts.isIdentifier(funcInitializer)
+      ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+      : null
+
     if (!nameValue || !scheduleValue) {
       return
     }
@@ -87,6 +92,7 @@ export const addSchedule: AddWiring = (
     state.scheduledTasks.files.add(node.getSourceFile().fileName)
     state.scheduledTasks.meta[nameValue] = {
       pikkuFuncId,
+      ...(packageName && { packageName }),
       name: nameValue,
       schedule: scheduleValue,
       summary,

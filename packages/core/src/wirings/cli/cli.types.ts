@@ -70,6 +70,7 @@ export interface CLIProgramState {
 export interface CLICommandMeta {
   parameters?: string
   pikkuFuncId: string
+  packageName?: string
   positionals: CLIPositional[]
   options: Record<string, CLIOption>
   renderName?: string

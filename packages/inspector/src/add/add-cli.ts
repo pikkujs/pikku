@@ -15,6 +15,7 @@ import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
@@ -353,6 +354,12 @@ function processCommand(
         pikkuFuncId = makeContextBasedId('cli', programName, ...fullPath)
       }
       meta.pikkuFuncId = pikkuFuncId
+      const cliPackageName = ts.isIdentifier(prop.initializer)
+        ? resolveAddonName(prop.initializer, typeChecker, inspectorState.rpc.wireAddonDeclarations)
+        : null
+      if (cliPackageName) {
+        meta.packageName = cliPackageName
+      }
     } else if (
       propName === 'options' &&
       ts.isObjectLiteralExpression(prop.initializer)

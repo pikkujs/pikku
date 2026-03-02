@@ -10,11 +10,11 @@ export const getAgentThreads = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) return []
+    if (!agentRunService) throw new Error('agentRunService is not available')
     return await agentRunService.listThreads({
-      agentName: input.agentName,
-      limit: input.limit,
-      offset: input.offset,
+      agentName: input?.agentName,
+      limit: input?.limit,
+      offset: input?.offset,
     })
   },
 })

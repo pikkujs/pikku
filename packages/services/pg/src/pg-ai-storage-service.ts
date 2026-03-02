@@ -95,6 +95,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
         thread_id TEXT NOT NULL REFERENCES ${this.schemaName}.ai_threads(id) ON DELETE CASCADE,
         resource_id TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'running',
+        error_message TEXT,
         suspend_reason TEXT,
         missing_rpcs JSONB,
         usage_input_tokens INTEGER NOT NULL DEFAULT 0,
@@ -405,15 +406,16 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
   async createRun(run: CreateRunInput): Promise<string> {
     const result = await this.sql.unsafe(
       `INSERT INTO ${this.schemaName}.ai_run
-       (agent_name, thread_id, resource_id, status, suspend_reason, missing_rpcs,
+       (agent_name, thread_id, resource_id, status, error_message, suspend_reason, missing_rpcs,
         usage_input_tokens, usage_output_tokens, usage_model, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING run_id`,
       [
         run.agentName,
         run.threadId,
         run.resourceId,
         run.status,
+        run.errorMessage ?? null,
         run.suspendReason ?? null,
         run.missingRpcs ? JSON.stringify(run.missingRpcs) : null,
         run.usage.inputTokens,
@@ -444,6 +446,10 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
     if (updates.status !== undefined) {
       setClauses.push(`status = $${paramIdx++}`)
       params.push(updates.status)
+    }
+    if (updates.errorMessage !== undefined) {
+      setClauses.push(`error_message = $${paramIdx++}`)
+      params.push(updates.errorMessage)
     }
     if (updates.suspendReason !== undefined) {
       setClauses.push(`suspend_reason = $${paramIdx++}`)
@@ -486,7 +492,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
   async getRun(runId: string): Promise<AgentRunState | null> {
     const result = await this.sql.unsafe(
       `SELECT run_id, agent_name, thread_id, resource_id, status,
-              suspend_reason, missing_rpcs,
+              error_message, suspend_reason, missing_rpcs,
               usage_input_tokens, usage_output_tokens,
               usage_model, created_at, updated_at
        FROM ${this.schemaName}.ai_run WHERE run_id = $1`,
@@ -507,7 +513,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
   async getRunsByThread(threadId: string): Promise<AgentRunState[]> {
     const result = await this.sql.unsafe(
       `SELECT run_id, agent_name, thread_id, resource_id, status,
-              suspend_reason, missing_rpcs,
+              error_message, suspend_reason, missing_rpcs,
               usage_input_tokens, usage_output_tokens,
               usage_model, created_at, updated_at
        FROM ${this.schemaName}.ai_run WHERE thread_id = $1
@@ -588,6 +594,7 @@ export class PgAIStorageService implements AIStorageService, AIRunStateService {
       threadId: row.thread_id as string,
       resourceId: row.resource_id as string,
       status: row.status as AgentRunState['status'],
+      errorMessage: (row.error_message as string) ?? undefined,
       suspendReason: row.suspend_reason as AgentRunState['suspendReason'],
       missingRpcs: row.missing_rpcs as string[] | undefined,
       pendingApprovals,
