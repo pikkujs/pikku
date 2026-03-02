@@ -27,7 +27,7 @@ import { approveAIAgent } from '../ai-agent/ai-agent-registry.js'
  * Resolve a namespaced function reference to package and function names
  * Uses pikkuState to look up the namespace -> package mapping
  */
-const resolveNamespace = (
+export const resolveNamespace = (
   namespacedFunction: string
 ): ResolvedFunction | null => {
   const colonIndex = namespacedFunction.indexOf(':')
@@ -38,16 +38,16 @@ const resolveNamespace = (
   const namespace = namespacedFunction.substring(0, colonIndex)
   const functionName = namespacedFunction.substring(colonIndex + 1)
 
-  const addons = pikkuState(null, 'rpc', 'addons')
+  const addons = pikkuState(null, 'addons', 'packages')
   const pkgConfig = addons.get(namespace)
   if (!pkgConfig) {
     return null
   }
 
   return {
-    namespace,
     package: pkgConfig.package,
     function: functionName,
+    addonConfig: pkgConfig,
   }
 }
 
@@ -165,11 +165,11 @@ export class ContextAwareRPCService {
     }
     const funcName = funcMeta.pikkuFuncId || resolved.function
 
-    const addonConfig = pikkuState(null, 'rpc', 'addons').get(
-      resolved.namespace
-    )
-    const auth = addonConfig?.auth ?? this.options.requiresAuth
-    const tags = [...(addonConfig?.tags ?? []), ...(funcMeta.tags ?? [])]
+    const auth = resolved.addonConfig?.auth ?? this.options.requiresAuth
+    const tags = [
+      ...(resolved.addonConfig?.tags ?? []),
+      ...(funcMeta.tags ?? []),
+    ]
 
     // Execute the function using runPikkuFunc with the addon package's state
     // We use the parent services (this.services) since addon packages share services
@@ -313,7 +313,7 @@ export class ContextAwareRPCService {
     const colonIndex = funcName.indexOf(':')
     if (colonIndex !== -1) {
       const namespace = funcName.substring(0, colonIndex)
-      const addons = pikkuState(null, 'rpc', 'addons')
+      const addons = pikkuState(null, 'addons', 'packages')
       const pkgConfig = addons.get(namespace)
       endpoint = pkgConfig?.rpcEndpoint
     }

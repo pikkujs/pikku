@@ -95,7 +95,7 @@ export const getAllFunctionNames = (): string[] => {
   const mainFunctionsMeta = pikkuState(null, 'function', 'meta')
   functions.push(...Object.keys(mainFunctionsMeta))
 
-  const addons = pikkuState(null, 'rpc', 'addons')
+  const addons = pikkuState(null, 'addons', 'packages')
   for (const [namespace, config] of addons) {
     const packageFunctionsMeta = pikkuState(config.package, 'function', 'meta')
     for (const funcName of Object.keys(packageFunctionsMeta)) {

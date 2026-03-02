@@ -72,7 +72,9 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   rpc: {
     meta: {},
     files: new Map(),
-    addons: new Map(),
+  },
+  addons: {
+    packages: new Map(),
   },
   http: {
     middleware: new Map(),
