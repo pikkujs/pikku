@@ -18,6 +18,7 @@ import {
 } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 
 /**
@@ -564,8 +565,12 @@ export const addChannel: AddWiring = (
       )
       return
     }
+    const msgPackageName = ts.isIdentifier(onMsgProp)
+      ? resolveAddonName(onMsgProp, checker, state.rpc.wireAddonDeclarations)
+      : null
     message = {
       pikkuFuncId: msgFuncId,
+      ...(msgPackageName && { packageName: msgPackageName }),
     }
   }
 
@@ -579,15 +584,20 @@ export const addChannel: AddWiring = (
   // --- track used functions/middleware for service aggregation ---
   // Track connect/disconnect/message handlers
   let connectFuncId: string | undefined
+  let connectPackageName: string | null = null
   if (connect) {
     const extracted = extractFunctionName(connect, checker, state.rootDir)
     connectFuncId = extracted.pikkuFuncId.startsWith('__temp_')
       ? makeContextBasedId('channel', name, 'connect')
       : extracted.pikkuFuncId
+    connectPackageName = ts.isIdentifier(connect)
+      ? resolveAddonName(connect, checker, state.rpc.wireAddonDeclarations)
+      : null
     state.serviceAggregation.usedFunctions.add(connectFuncId)
   }
 
   let disconnectFuncId: string | undefined
+  let disconnectPackageName: string | null = null
   if (disconnect) {
     const extracted = extractFunctionName(
       disconnect as any,
@@ -597,6 +607,9 @@ export const addChannel: AddWiring = (
     disconnectFuncId = extracted.pikkuFuncId.startsWith('__temp_')
       ? makeContextBasedId('channel', name, 'disconnect')
       : extracted.pikkuFuncId
+    disconnectPackageName = ts.isIdentifier(disconnect)
+      ? resolveAddonName(disconnect, checker, state.rpc.wireAddonDeclarations)
+      : null
     state.serviceAggregation.usedFunctions.add(disconnectFuncId)
   }
 
@@ -634,8 +647,8 @@ export const addChannel: AddWiring = (
     input: null,
     params: params.length ? params : undefined,
     query: query?.length ? query : undefined,
-    connect: connectFuncId ? { pikkuFuncId: connectFuncId } : null,
-    disconnect: disconnectFuncId ? { pikkuFuncId: disconnectFuncId } : null,
+    connect: connectFuncId ? { pikkuFuncId: connectFuncId, ...(connectPackageName && { packageName: connectPackageName }) } : null,
+    disconnect: disconnectFuncId ? { pikkuFuncId: disconnectFuncId, ...(disconnectPackageName && { packageName: disconnectPackageName }) } : null,
     message,
     messageWirings,
     binary: binary === undefined ? undefined : binary,

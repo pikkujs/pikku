@@ -11,6 +11,7 @@ import {
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { ErrorCode } from '../error-codes.js'
 
 export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
@@ -65,6 +66,10 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
       pikkuFuncId = makeContextBasedId('queue', name)
     }
 
+    const packageName = ts.isIdentifier(funcInitializer)
+      ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+      : null
+
     if (!name) {
       logger.critical(
         ErrorCode.MISSING_QUEUE_NAME,
@@ -85,6 +90,7 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
     state.queueWorkers.files.add(node.getSourceFile().fileName)
     state.queueWorkers.meta[name] = {
       pikkuFuncId,
+      ...(packageName && { packageName }),
       name,
       summary,
       description,

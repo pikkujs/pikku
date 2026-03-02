@@ -638,7 +638,7 @@ export async function streamAIAgent(
         }
       }
     }
-    await aiRunState.updateRun(runId, { status: 'failed' })
+    await aiRunState.updateRun(runId, { status: 'failed', errorMessage: err instanceof Error ? err.message : String(err) })
     channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),
@@ -1049,7 +1049,7 @@ async function continueAfterToolResult(
         }
       }
     }
-    await aiRunState.updateRun(run.runId, { status: 'failed' })
+    await aiRunState.updateRun(run.runId, { status: 'failed', errorMessage: err instanceof Error ? err.message : String(err) })
     channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),

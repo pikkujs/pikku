@@ -20,16 +20,12 @@ export const agentCaller = pikkuSessionlessFunc<
 })
 
 export const agentStreamCaller = pikkuSessionlessFunc<
-  { agentName: string; message: string; threadId: string; resourceId: string },
+  { agentName: string; threadId: string; messages?: any[]; [key: string]: any },
   void
 >({
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.stream(data.agentName as any, {
-      message: data.message,
-      threadId: data.threadId,
-      resourceId: data.resourceId,
-    })
+    await rpc.agent.stream(data.agentName as any, data)
   },
 })
 

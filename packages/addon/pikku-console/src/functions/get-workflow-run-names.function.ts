@@ -7,7 +7,7 @@ export const getWorkflowRunNames = pikkuSessionlessFunc<null, string[]>({
   expose: true,
   auth: false,
   func: async ({ workflowRunService }) => {
-    if (!workflowRunService) return []
+    if (!workflowRunService) throw new Error('workflowRunService is not available')
     return await workflowRunService.getDistinctWorkflowNames()
   },
 })

@@ -298,6 +298,7 @@ export interface AgentRunState {
   threadId: string
   resourceId: string
   status: 'running' | 'suspended' | 'completed' | 'failed'
+  errorMessage?: string
   suspendReason?: 'approval' | 'rpc-missing'
   missingRpcs?: string[]
   pendingApprovals?: PendingApproval[]
@@ -312,6 +313,7 @@ export interface AgentRunRow {
   threadId: string
   resourceId: string
   status: string
+  errorMessage?: string
   suspendReason?: string
   missingRpcs?: string[]
   usageInputTokens: number

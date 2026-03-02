@@ -21,6 +21,7 @@ import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
 import { ErrorCode } from '../error-codes.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 
 import type { InspectorLogger } from '../types.js'
 
@@ -203,6 +204,10 @@ export function registerHTTPRoute({
     funcName = makeContextBasedId('http', method, fullRoute)
   }
 
+  const packageName = ts.isIdentifier(funcInitializer)
+    ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+    : null
+
   ensureFunctionMetadata(
     state,
     funcName,
@@ -320,6 +325,7 @@ export function registerHTTPRoute({
   state.http.files.add(sourceFile.fileName)
   state.http.meta[method][fullRoute] = {
     pikkuFuncId: funcName,
+    ...(packageName && { packageName }),
     route: fullRoute,
     method: method as HTTPMethod,
     params: params.length > 0 ? params : undefined,

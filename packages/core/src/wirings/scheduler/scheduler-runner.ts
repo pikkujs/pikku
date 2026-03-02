@@ -117,6 +117,7 @@ export async function runScheduledTask({
       tags: task.tags,
       wire,
       sessionService: userSession,
+      packageName: meta.packageName,
     })
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)

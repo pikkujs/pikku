@@ -151,6 +151,21 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
               result: part.output,
             })
             break
+          case 'tool-error': {
+            const errorText = `Error: ${(part as any).error instanceof Error ? (part as any).error.message : String((part as any).error)}`
+            stepResult.toolResults.push({
+              toolCallId: (part as any).toolCallId,
+              toolName: (part as any).toolName,
+              result: errorText,
+            })
+            channel.send({
+              type: 'tool-result',
+              toolCallId: (part as any).toolCallId,
+              toolName: (part as any).toolName,
+              result: errorText,
+            })
+            break
+          }
           case 'finish-step':
             stepResult.usage = {
               inputTokens: part.usage.inputTokens ?? 0,
@@ -178,7 +193,10 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             break
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[VercelAIAgentRunner] Stream error:', err instanceof Error ? err.message : String(err))
+      throw err
+    }
 
     return stepResult
   }

@@ -10,7 +10,7 @@ export const getWorkflowVersion = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ workflowRunService }, input) => {
-    if (!workflowRunService) return null
+    if (!workflowRunService) throw new Error('workflowRunService is not available')
     return await workflowRunService.getWorkflowVersion(
       input.name,
       input.graphHash

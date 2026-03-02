@@ -5,39 +5,29 @@
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
-import type {
-  SetSecretInput,
-  SetSecretOutput,
-  GetVariableInput,
-  GetVariableOutput,
-  SetVariableInput,
-  SetVariableOutput,
-  GetSecretInput,
-  GetSecretOutput,
-  StartWorkflowRunInput,
-  StartWorkflowRunOutput,
-} from '../../backend/src/functions/pikku.console.gen.js'
 
-export type HttpOptionsApiWorkflowRunRunIdStreamInput = { runId: string }
+import type { SetSecretInput, SetSecretOutput, GetVariableInput, GetVariableOutput, SetVariableInput, SetVariableOutput, GetSecretInput, GetSecretOutput, StartWorkflowRunInput, StartWorkflowRunOutput } from '../../backend/src/functions/pikku.console.gen.js'
+
+
+export type HttpOptionsApiWorkflowRunRunIdStreamInput = { runId: string; }
 
 interface RPCHandler<I, O> {
-  input: I
-  output: O
+    input: I;
+    output: O;
 }
 
 export type RPCMap = {
-  readonly setSecret: RPCHandler<SetSecretInput, SetSecretOutput>
-  readonly getVariable: RPCHandler<GetVariableInput, GetVariableOutput>
-  readonly setVariable: RPCHandler<SetVariableInput, SetVariableOutput>
-  readonly getSecret: RPCHandler<GetSecretInput, GetSecretOutput>
-  readonly startWorkflowRun: RPCHandler<
-    StartWorkflowRunInput,
-    StartWorkflowRunOutput
-  >
-}
+  readonly 'setSecret': RPCHandler<SetSecretInput, SetSecretOutput>,
+  readonly 'getVariable': RPCHandler<GetVariableInput, GetVariableOutput>,
+  readonly 'setVariable': RPCHandler<SetVariableInput, SetVariableOutput>,
+  readonly 'getSecret': RPCHandler<GetSecretInput, GetSecretOutput>,
+  readonly 'startWorkflowRun': RPCHandler<StartWorkflowRunInput, StartWorkflowRunOutput>,
+};
+
 
 // Addon package RPC maps
 import type { RPCMap as ConsoleRPCMap } from '@pikku/addon-console/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
+
 
 // Utility type to prefix keys with namespace
 type PrefixKeys<T, Prefix extends string> = {
@@ -45,7 +35,9 @@ type PrefixKeys<T, Prefix extends string> = {
 }
 
 // Merge all RPC maps with namespace prefixes
-export type FlattenedRPCMap = RPCMap & PrefixKeys<ConsoleRPCMap, 'console'>
+export type FlattenedRPCMap =
+  RPCMap & PrefixKeys<ConsoleRPCMap, 'console'>
+
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
   name: Name,
@@ -64,7 +56,10 @@ import type { AgentMap } from '../../backend/.pikku/agent/pikku-agent-map.gen.d.
 // Addon package Agent maps
 import type { AgentMap as ConsoleAgentMap } from '@pikku/addon-console/.pikku/agent/pikku-agent-map.gen.d.js'
 
-type FlattenedAgentMap = AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
+
+type FlattenedAgentMap =
+  AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
+
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 
@@ -85,28 +80,15 @@ type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
       input: AIAgentInput
-    ) => Promise<{
-      runId: string
-      result: FlattenedAgentMap[Name]['output']
-      usage: { inputTokens: number; outputTokens: number }
-    }>
+    ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
 
 type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
-  ? (
-      name: string,
-      input: AIAgentInput,
-      options?: { requiresToolApproval?: 'all' | 'explicit' | false }
-    ) => Promise<void>
+  ? (name: string, input: AIAgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
       input: AIAgentInput,
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
 
-export type TypedPikkuRPC = PikkuRPC<
-  RPCInvoke,
-  RPCRemote,
-  TypedStartWorkflow,
-  TypedAgentRun,
-  TypedAgentStream
->
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
+  

@@ -13,6 +13,7 @@ import {
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { ErrorCode } from '../error-codes.js'
 
 export const addMCPResource: AddWiring = (
@@ -81,6 +82,10 @@ export const addMCPResource: AddWiring = (
       pikkuFuncId = makeContextBasedId('mcp', 'resource', uriValue)
     }
 
+    const packageName = ts.isIdentifier(funcInitializer)
+      ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+      : null
+
     ensureFunctionMetadata(
       state,
       pikkuFuncId,
@@ -145,6 +150,7 @@ export const addMCPResource: AddWiring = (
 
     state.mcpEndpoints.resourcesMeta[uriValue] = {
       pikkuFuncId,
+      ...(packageName && { packageName }),
       uri: uriValue,
       title: titleValue,
       description,

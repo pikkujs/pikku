@@ -10,7 +10,7 @@ export const deleteWorkflowRun = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ workflowRunService }, input) => {
-    if (!workflowRunService) return { deleted: false }
+    if (!workflowRunService) throw new Error('workflowRunService is not available')
     const deleted = await workflowRunService.deleteRun(input.runId)
     return { deleted }
   },

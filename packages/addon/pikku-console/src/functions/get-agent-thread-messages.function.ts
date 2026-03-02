@@ -10,7 +10,7 @@ export const getAgentThreadMessages = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) return []
+    if (!agentRunService) throw new Error('agentRunService is not available')
     return await agentRunService.getThreadMessages(input.threadId)
   },
 })

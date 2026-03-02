@@ -245,6 +245,7 @@ export async function runAIAgent(
     }
     await aiRunState.updateRun(runId, {
       status: 'failed',
+      errorMessage: error instanceof Error ? error.message : String(error),
     })
     throw error
   }

@@ -396,6 +396,7 @@ const executeRoute = async (
       tags: route.tags,
       wire,
       sessionService: userSession,
+      packageName: meta.packageName,
     }
   )
   if (!matchedRoute.route.sse) {
@@ -545,15 +546,25 @@ export const fetchData = async <In, Out>(
 
     return result
   } catch (e: any) {
-    handleHTTPError(
-      e,
-      http,
-      requestId,
-      singletonServices.logger,
-      logWarningsForStatusCodes,
-      respondWith404,
-      bubbleErrors
-    )
+    if (matchedRoute?.route.sse) {
+      // For SSE routes, send error through the stream since the response is already in stream mode
+      singletonServices.logger.error(e instanceof Error ? e.message : e)
+      try {
+        response.arrayBuffer(JSON.stringify({ type: 'error', errorText: e instanceof Error ? e.message : String(e) }))
+        response.arrayBuffer('[DONE]')
+      } catch {}
+      response.close?.()
+    } else {
+      handleHTTPError(
+        e,
+        http,
+        requestId,
+        singletonServices.logger,
+        logWarningsForStatusCodes,
+        respondWith404,
+        bubbleErrors
+      )
+    }
   } finally {
     // Clean up any session-specific services created during processing
     if (wireServices) {

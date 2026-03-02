@@ -20,6 +20,7 @@ import { runPikkuFunc } from '../../function/function-runner.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from 'crypto'
+import { streamAIAgent } from './ai-agent-stream.js'
 
 import {
   resolveMemoryServices,
@@ -285,7 +286,6 @@ export function buildToolDefs(
           }
 
           if (streamContext) {
-            const { streamAIAgent } = await import('./ai-agent-stream.js')
             const { channel } = streamContext
             channel.send({
               type: 'agent-call',

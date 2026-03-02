@@ -10,7 +10,7 @@ export const getWorkflowRunHistory = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ workflowRunService }, input) => {
-    if (!workflowRunService) return []
+    if (!workflowRunService) throw new Error('workflowRunService is not available')
     return await workflowRunService.getRunHistory(input.runId)
   },
 })

@@ -11,6 +11,7 @@ import {
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
+import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import type { GatewayTransportType } from '@pikku/core/gateway'
 
 import { ErrorCode } from '../error-codes.js'
@@ -68,6 +69,10 @@ export const addGateway: AddWiring = (
     pikkuFuncId = makeContextBasedId('gateway', nameValue)
   }
 
+  const packageName = ts.isIdentifier(funcInitializer)
+    ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+    : null
+
   if (!nameValue || !typeValue) {
     return
   }
@@ -82,6 +87,7 @@ export const addGateway: AddWiring = (
   state.gateways.files.add(node.getSourceFile().fileName)
   state.gateways.meta[nameValue] = {
     pikkuFuncId,
+    ...(packageName && { packageName }),
     name: nameValue,
     type: typeValue,
     route: routeValue,

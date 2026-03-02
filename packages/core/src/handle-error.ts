@@ -60,6 +60,4 @@ export const handleHTTPError = (
   if (bubbleError) {
     throw e
   }
-
-  http?.response?.close?.()
 }
