@@ -5182,7 +5182,7 @@ __metadata:
     "@types/node": "npm:^20.11.30"
     autocannon: "npm:^8.0.0"
     husky: "npm:^9.1.7"
-    lint-staged: "npm:^16.0.0"
+    lint-staged: "npm:^16.3.1"
     oxlint: "npm:^1.50.0"
     prettier: "npm:3.3.3"
     tsx: "npm:^4.19.2"
@@ -11393,6 +11393,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"commander@npm:^14.0.3":
+  version: 14.0.3
+  resolution: "commander@npm:14.0.3"
+  checksum: 10/dfa9ebe2a433d277de5cb0252d23b10a543d245d892db858d23b516336a835c50fd4f52bee4cd13c705cc8acb6f03dc632c73dd806f7d06d3353eb09953dd17a
+  languageName: node
+  linkType: hard
+
 "compress-commons@npm:^4.1.2":
   version: 4.1.2
   resolution: "compress-commons@npm:4.1.2"
@@ -15179,20 +15186,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lint-staged@npm:^16.0.0":
-  version: 16.2.7
-  resolution: "lint-staged@npm:16.2.7"
+"lint-staged@npm:^16.3.1":
+  version: 16.3.1
+  resolution: "lint-staged@npm:16.3.1"
   dependencies:
-    commander: "npm:^14.0.2"
+    commander: "npm:^14.0.3"
     listr2: "npm:^9.0.5"
     micromatch: "npm:^4.0.8"
-    nano-spawn: "npm:^2.0.0"
-    pidtree: "npm:^0.6.0"
     string-argv: "npm:^0.3.2"
-    yaml: "npm:^2.8.1"
+    tinyexec: "npm:^1.0.2"
+    yaml: "npm:^2.8.2"
   bin:
     lint-staged: bin/lint-staged.js
-  checksum: 10/c1fd7685300800ea6d3f073cb450f9e3d2a83966e7c6785ea9608a08e77e1e8e5f1958f77b98ccd7d423daa53bb36016d6fd96a98d22234d0f7f56d7b3f360f2
+  checksum: 10/4eaebcfcf7cc37c163e3b365da4b35c3403b6e6184039ff0256e2d1765e01aea28a5ffd8726ee4964b10ea6aecd4cbb1790e08964597bafe608bd8126ed4700d
   languageName: node
   linkType: hard
 
@@ -16558,13 +16564,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nano-spawn@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "nano-spawn@npm:2.0.0"
-  checksum: 10/117d35d7bd85b146908de5d3d1177d2b2ee3174e5d884d6bc9555583bf6e50a265f4038b5c134b7cdd768a10d53598ccde5c00d6f55e25e7eed31b86b8d29646
-  languageName: node
-  linkType: hard
-
 "nanoassert@npm:^1.1.0":
   version: 1.1.0
   resolution: "nanoassert@npm:1.1.0"
@@ -17563,15 +17562,6 @@ __metadata:
   version: 2.5.0
   resolution: "picoquery@npm:2.5.0"
   checksum: 10/58e123cd497a5a1a5fd368f58c2825cd97814be5ddf85f59b7a11e87a836f95c9bacdd43b3be9d3e7aa4f16c43a5e7c0f5af4227d1a5616c69b3ab966fe0b3a6
-  languageName: node
-  linkType: hard
-
-"pidtree@npm:^0.6.0":
-  version: 0.6.0
-  resolution: "pidtree@npm:0.6.0"
-  bin:
-    pidtree: bin/pidtree.js
-  checksum: 10/ea67fb3159e170fd069020e0108ba7712df9f0fd13c8db9b2286762856ddce414fb33932e08df4bfe36e91fe860b51852aee49a6f56eb4714b69634343add5df
   languageName: node
   linkType: hard
 
@@ -20242,6 +20232,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tinyexec@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "tinyexec@npm:1.0.2"
+  checksum: 10/cb709ed4240e873d3816e67f851d445f5676e0ae3a52931a60ff571d93d388da09108c8057b62351766133ee05ff3159dd56c3a0fbd39a5933c6639ce8771405
+  languageName: node
+  linkType: hard
+
 "tinyglobby@npm:^0.2.12, tinyglobby@npm:^0.2.13, tinyglobby@npm:^0.2.14":
   version: 0.2.15
   resolution: "tinyglobby@npm:0.2.15"
@@ -21436,7 +21433,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yaml@npm:^2.6.1, yaml@npm:^2.8.1, yaml@npm:^2.8.2":
+"yaml@npm:^2.6.1, yaml@npm:^2.8.2":
   version: 2.8.2
   resolution: "yaml@npm:2.8.2"
   bin:
