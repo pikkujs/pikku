@@ -243,7 +243,7 @@ export function buildToolDefs(
         (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
 
       tools.push({
-        name: toolName,
+        name: toolName.replaceAll(':', '__'),
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema,
         needsApproval: needsApproval || undefined,
