@@ -79,8 +79,10 @@ export interface PikkuPackageState {
         path: string
       }
     >
-    /** Maps namespace aliases to package config (e.g., 'ext' -> { package: '@pikku/...', rpcEndpoint: '...' }) */
-    addons: Map<
+  }
+  /** Maps namespace aliases to package config (e.g., 'console' -> { package: '@pikku/console', ... }) */
+  addons: {
+    packages: Map<
       string,
       { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[] }
     >

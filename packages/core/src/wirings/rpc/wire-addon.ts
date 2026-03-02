@@ -11,7 +11,7 @@ export type WireAddonConfig = {
 }
 
 export const wireAddon = (config: WireAddonConfig): void => {
-  pikkuState(null, 'rpc', 'addons').set(config.name, {
+  pikkuState(null, 'addons', 'packages').set(config.name, {
     package: config.package,
     rpcEndpoint: config.rpcEndpoint,
     auth: config.auth,

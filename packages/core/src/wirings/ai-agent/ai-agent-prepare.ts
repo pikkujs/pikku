@@ -11,16 +11,15 @@ import type {
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
-import {
-  pikkuState,
-  getSingletonServices,
-  getCreateWireServices,
-} from '../../pikku-state.js'
-import { runPikkuFunc } from '../../function/function-runner.js'
+import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from 'crypto'
 import { streamAIAgent } from './ai-agent-stream.js'
+import {
+  resolveNamespace,
+  ContextAwareRPCService,
+} from '../../wirings/rpc/rpc-runner.js'
 
 import {
   resolveMemoryServices,
@@ -83,7 +82,7 @@ export const resolveAgent = (
   if (colonIndex !== -1) {
     const namespace = agentName.substring(0, colonIndex)
     const localName = agentName.substring(colonIndex + 1)
-    const addons = pikkuState(null, 'rpc', 'addons')
+    const addons = pikkuState(null, 'addons', 'packages')
     const pkgConfig = addons.get(namespace)
     if (pkgConfig) {
       const extAgent = pikkuState(pkgConfig.package, 'agent', 'agents').get(
@@ -197,18 +196,35 @@ export function buildToolDefs(
   const metaAgents = meta.agents
 
   if (metaTools?.length) {
-    const functionMeta = pikkuState(null, 'function', 'meta')
-    const schemas = pikkuState(null, 'misc', 'schemas')
-
     for (const toolName of metaTools) {
-      const rpcMeta = pikkuState(null, 'rpc', 'meta')
-      const pikkuFuncId = rpcMeta[toolName]
-      if (!pikkuFuncId) {
+      let fnMeta: any
+      let resolvedPkg: string | null = null
+      let schemas: Map<string, any>
+
+      const resolved = toolName.includes(':')
+        ? resolveNamespace(toolName)
+        : null
+
+      if (resolved) {
+        resolvedPkg = resolved.package
+        fnMeta = pikkuState(resolvedPkg, 'function', 'meta')[resolved.function]
+        schemas = pikkuState(resolvedPkg, 'misc', 'schemas')
+      } else {
+        const rpcMeta = pikkuState(null, 'rpc', 'meta')
+        const pikkuFuncId = rpcMeta[toolName]
+        if (!pikkuFuncId) {
+          missingRpcs.push(toolName)
+          continue
+        }
+        fnMeta = pikkuState(null, 'function', 'meta')[pikkuFuncId]
+        schemas = pikkuState(null, 'misc', 'schemas')
+      }
+
+      if (!fnMeta) {
         missingRpcs.push(toolName)
         continue
       }
 
-      const fnMeta = functionMeta[pikkuFuncId]
       const inputSchemaName = fnMeta?.inputSchemaName
       let inputSchema = inputSchemaName
         ? schemas.get(inputSchemaName)
@@ -227,7 +243,7 @@ export function buildToolDefs(
         (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
 
       tools.push({
-        name: pikkuFuncId,
+        name: toolName,
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema,
         needsApproval: needsApproval || undefined,
@@ -235,13 +251,12 @@ export function buildToolDefs(
           const wire: PikkuWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
-          return runPikkuFunc('agent', `tool:${pikkuFuncId}`, pikkuFuncId, {
+          const rpcService = new ContextAwareRPCService(
             singletonServices,
-            createWireServices: getCreateWireServices(),
-            data: () => toolInput,
             wire,
-            sessionService: params.sessionService,
-          })
+            { sessionService: params.sessionService }
+          )
+          return rpcService.rpc(toolName, toolInput)
         },
       })
     }

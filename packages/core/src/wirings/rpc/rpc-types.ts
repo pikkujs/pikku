@@ -45,7 +45,12 @@ export interface RPCHandler<Input, Output> {
  * Resolved function reference from namespace
  */
 export interface ResolvedFunction {
-  namespace: string
   package: string
   function: string
+  addonConfig: {
+    package: string
+    auth?: boolean
+    tags?: string[]
+    rpcEndpoint?: string
+  }
 }
