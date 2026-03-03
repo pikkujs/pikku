@@ -339,7 +339,8 @@ export const addFunctions: AddWiring = (
   let remote: boolean | undefined
   let mcp: boolean | undefined
   let readonly_: boolean | undefined
-  let requiresApproval: boolean | undefined
+  let approvalRequired: boolean | undefined
+  let approvalDescription: string | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
@@ -421,9 +422,32 @@ export const addFunctions: AddWiring = (
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
     readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
-    requiresApproval = getPropertyValue(firstArg, 'requiresApproval') as
+    approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
       | boolean
       | undefined
+
+    // Extract approvalDescription identifier reference
+    for (const prop of firstArg.properties) {
+      if (
+        ts.isPropertyAssignment(prop) &&
+        ts.isIdentifier(prop.name) &&
+        prop.name.text === 'approvalDescription' &&
+        ts.isIdentifier(prop.initializer)
+      ) {
+        const { pikkuFuncId: descId } = extractFunctionName(
+          prop.initializer,
+          checker,
+          state.rootDir
+        )
+        if (descId && !descId.startsWith('__temp_')) {
+          approvalDescription = descId
+        } else {
+          // Try resolving the identifier directly
+          approvalDescription = prop.initializer.text
+        }
+        break
+      }
+    }
 
     const versionRaw = getPropertyValue(firstArg, 'version')
     if (versionRaw !== null && versionRaw !== undefined) {
@@ -759,7 +783,8 @@ export const addFunctions: AddWiring = (
     remote: remote || undefined,
     mcp: mcpEnabled || undefined,
     readonly: readonly_ || undefined,
-    requiresApproval: requiresApproval || undefined,
+    approvalRequired: approvalRequired || undefined,
+    approvalDescription: approvalDescription || undefined,
     version,
     title,
     tags: tags || undefined,

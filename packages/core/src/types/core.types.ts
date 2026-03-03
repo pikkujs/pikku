@@ -109,7 +109,8 @@ export type FunctionRuntimeMeta = {
   readonly?: boolean
   sessionless?: boolean
   version?: number
-  requiresApproval?: boolean
+  approvalRequired?: boolean
+  approvalDescription?: string
   contractHash?: string
   inputHash?: string
   outputHash?: string

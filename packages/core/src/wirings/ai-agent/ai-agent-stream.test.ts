@@ -203,7 +203,7 @@ describe('streamAIAgent', () => {
     pikkuState(null, 'rpc', 'meta')['tool-x'] = 'tool-x'
     pikkuState(null, 'function', 'meta')['tool-x'] = {
       description: 'test tool',
-      requiresApproval: true,
+      approvalRequired: true,
     }
     pikkuState(null, 'misc', 'schemas').set('ToolXInput', {
       type: 'object',

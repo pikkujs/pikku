@@ -86,6 +86,7 @@ export interface AIAgentToolDef {
   inputSchema: Record<string, unknown>
   execute: (input: unknown) => Promise<unknown>
   needsApproval?: boolean
+  approvalDescriptionFn?: (input: unknown) => Promise<string>
 }
 
 export interface PikkuAIMiddlewareHooks<

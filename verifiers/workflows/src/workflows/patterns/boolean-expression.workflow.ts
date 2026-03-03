@@ -8,7 +8,7 @@ export const booleanExpressionWorkflow = pikkuWorkflowFunc<
   {
     isUrgent: boolean
     isHighValue: boolean
-    requiresApproval: boolean
+    approvalRequired: boolean
     customerTier: number
   },
   { processType: string; notificationsSent: number }
@@ -44,7 +44,7 @@ export const booleanExpressionWorkflow = pikkuWorkflowFunc<
         body: 'A priority request has been received.',
       })
       notificationsSent = 1
-    } else if (data.requiresApproval && data.customerTier < 2) {
+    } else if (data.approvalRequired && data.customerTier < 2) {
       processType = 'approval-required'
 
       await workflow.do('Request approval', 'notifyEmail', {

@@ -19,7 +19,7 @@ export const workflowTestData: Record<string, any> = {
   dealStageWithApprovalWorkflow: {
     dealId: 'deal-1',
     targetStage: 'proposal',
-    requiresApproval: true,
+    approvalRequired: true,
   },
 
   // Document workflows
@@ -206,7 +206,7 @@ export const workflowTestData: Record<string, any> = {
   booleanExpressionWorkflow: {
     isUrgent: true,
     isHighValue: true,
-    requiresApproval: false,
+    approvalRequired: false,
     customerTier: 2,
   },
   complexConditionalBranchingWorkflow: {

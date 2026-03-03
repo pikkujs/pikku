@@ -194,6 +194,40 @@ export const pikkuPermissionFactory = <In = any>(
   return factory
 }
 
+/**
+ * A function that generates a human-readable description of a pending approval action.
+ * Used by AI agents to show meaningful approval prompts instead of raw tool arguments.
+ *
+ * @template In - The input type (same as the function it describes).
+ * @template Services - The services type, defaults to `CoreSingletonServices`.
+ */
+export type CorePikkuApprovalDescription<
+  In = any,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+> = (services: Services, data: In) => Promise<string>
+
+/**
+ * Factory function for creating approval description functions with tree-shaking support.
+ *
+ * @example
+ * ```typescript
+ * export const deleteTodoApproval = pikkuApprovalDescription(
+ *   async ({ todoStore }, { id }) => {
+ *     const todo = await todoStore.get(id)
+ *     return `Delete todo: "${todo.title}"`
+ *   }
+ * )
+ * ```
+ */
+export const pikkuApprovalDescription = <
+  In = any,
+  Services extends CoreSingletonServices = CoreSingletonServices,
+>(
+  fn: CorePikkuApprovalDescription<In, Services>
+): CorePikkuApprovalDescription<In, Services> => {
+  return fn
+}
+
 export type CorePikkuAuth<
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
@@ -256,7 +290,8 @@ export type CorePikkuFunctionConfig<
   remote?: boolean
   mcp?: boolean
   readonly?: boolean
-  requiresApproval?: boolean
+  approvalRequired?: boolean
+  approvalDescription?: any
   func: PikkuFunction
   auth?: boolean
   permissions?: CorePermissionGroup<PikkuPermission>

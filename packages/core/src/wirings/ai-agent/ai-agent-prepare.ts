@@ -40,7 +40,7 @@ export class ToolApprovalRequired extends PikkuError {
   public readonly toolCallId: string
   public readonly toolName: string
   public readonly args: unknown
-  public readonly reason?: string
+  public reason?: string
   public readonly displayToolName?: string
   public readonly displayArgs?: unknown
   public readonly agentRunId?: string
@@ -205,13 +205,16 @@ export function buildToolDefs(
         ? resolveNamespace(toolName)
         : null
 
+      let pikkuFuncId: string | undefined
+
       if (resolved) {
         resolvedPkg = resolved.package
-        fnMeta = pikkuState(resolvedPkg, 'function', 'meta')[resolved.function]
+        pikkuFuncId = resolved.function
+        fnMeta = pikkuState(resolvedPkg, 'function', 'meta')[pikkuFuncId]
         schemas = pikkuState(resolvedPkg, 'misc', 'schemas')
       } else {
         const rpcMeta = pikkuState(null, 'rpc', 'meta')
-        const pikkuFuncId = rpcMeta[toolName]
+        pikkuFuncId = rpcMeta[toolName]
         if (!pikkuFuncId) {
           missingRpcs.push(toolName)
           continue
@@ -240,13 +243,42 @@ export function buildToolDefs(
 
       const needsApproval =
         approvalPolicy === 'all' ||
-        (approvalPolicy === 'explicit' && fnMeta?.requiresApproval)
+        (approvalPolicy === 'explicit' && fnMeta?.approvalRequired)
+
+      // Build approvalDescriptionFn if the function has an approvalDescription configured
+      let approvalDescriptionFn:
+        | ((input: unknown) => Promise<string>)
+        | undefined
+      if (needsApproval && pikkuFuncId) {
+        const funcConfig = pikkuState(resolvedPkg, 'function', 'functions').get(
+          pikkuFuncId
+        )
+        if (funcConfig?.approvalDescription) {
+          const descFn = funcConfig.approvalDescription
+          const capturedPkg = resolvedPkg
+          approvalDescriptionFn = async (input: unknown) => {
+            let services = singletonServices
+            if (capturedPkg) {
+              const pkgServices = pikkuState(
+                capturedPkg,
+                'package',
+                'singletonServices'
+              )
+              if (pkgServices) {
+                services = pkgServices
+              }
+            }
+            return descFn(services, input)
+          }
+        }
+      }
 
       tools.push({
         name: toolName.replaceAll(':', '__'),
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema,
         needsApproval: needsApproval || undefined,
+        approvalDescriptionFn,
         execute: async (toolInput: unknown) => {
           const wire: PikkuWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }

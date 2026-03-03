@@ -47,6 +47,7 @@ export type {
   CorePikkuPermission,
   CorePikkuPermissionConfig,
   CorePikkuPermissionFactory,
+  CorePikkuApprovalDescription,
   CorePermissionGroup,
   ZodLike,
 } from './function/functions.types.js'
@@ -54,6 +55,7 @@ export {
   pikkuAuth,
   pikkuPermission,
   pikkuPermissionFactory,
+  pikkuApprovalDescription,
 } from './function/functions.types.js'
 export { addFunction, getAllFunctionNames } from './function/index.js'
 export { PikkuRequest } from './pikku-request.js'

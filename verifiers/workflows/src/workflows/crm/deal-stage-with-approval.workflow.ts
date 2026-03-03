@@ -5,7 +5,7 @@
 import { pikkuWorkflowFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 export const dealStageWithApprovalWorkflow = pikkuWorkflowFunc<
-  { dealId: string; targetStage: string; requiresApproval: boolean },
+  { dealId: string; targetStage: string; approvalRequired: boolean },
   { moved: boolean; approved: boolean }
 >({
   title: 'Deal Stage With Approval',
@@ -19,7 +19,7 @@ export const dealStageWithApprovalWorkflow = pikkuWorkflowFunc<
     let approved = true
 
     // Step 2: Check if approval required
-    if (data.requiresApproval) {
+    if (data.approvalRequired) {
       // Request approval
       await workflow.do('Request approval', 'notifyEmail', {
         userId: 'sales-manager',
