@@ -1,4 +1,4 @@
-import { useState, type FunctionComponent } from 'react'
+import { createContext, useContext, useState, type FunctionComponent } from 'react'
 import {
   AssistantRuntimeProvider,
   ThreadPrimitive,
@@ -12,6 +12,22 @@ import {
 
 export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
   emptyMessage?: string
+  /** Hide tool calls from the chat display.
+   *  - `true`: hide all non-approval tool calls
+   *  - `string[]`: hide tool calls matching these names
+   */
+  hideToolCalls?: boolean | string[]
+}
+
+const HideToolCallsContext = createContext<boolean | string[] | undefined>(undefined)
+
+function shouldHideToolCall(
+  hideToolCalls: boolean | string[] | undefined,
+  toolName: string
+): boolean {
+  if (!hideToolCalls) return false
+  if (hideToolCalls === true) return true
+  return hideToolCalls.includes(toolName)
 }
 
 const ToolCallDisplay: FunctionComponent<{
@@ -21,6 +37,7 @@ const ToolCallDisplay: FunctionComponent<{
   status: { type: string }
   addResult?: (result: unknown) => void
 }> = ({ toolName, args, result, status, addResult }) => {
+  const hideToolCalls = useContext(HideToolCallsContext)
   const [expanded, setExpanded] = useState(false)
   const isApproval = status.type === 'requires-action'
   const approvalReason = (args as any)?.__approvalReason
@@ -29,6 +46,16 @@ const ToolCallDisplay: FunctionComponent<{
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(
     null
   )
+
+  // Hide responded approval tool calls
+  if (isApproval && responded && shouldHideToolCall(hideToolCalls, toolName)) {
+    return null
+  }
+
+  // Hide non-approval tool calls
+  if (!isApproval && shouldHideToolCall(hideToolCalls, toolName)) {
+    return null
+  }
 
   if (isApproval && !responded) {
     return (
@@ -382,10 +409,11 @@ const PikkuComposer: FunctionComponent = () => (
 )
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
-  const { emptyMessage, ...runtimeOptions } = props
+  const { emptyMessage, hideToolCalls, ...runtimeOptions } = props
   const { runtime } = usePikkuAgentRuntime(runtimeOptions)
 
   return (
+    <HideToolCallsContext.Provider value={hideToolCalls}>
     <AssistantRuntimeProvider runtime={runtime}>
       <div
         style={{
@@ -451,5 +479,6 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
         </ThreadPrimitive.Root>
       </div>
     </AssistantRuntimeProvider>
+    </HideToolCallsContext.Provider>
   )
 }
