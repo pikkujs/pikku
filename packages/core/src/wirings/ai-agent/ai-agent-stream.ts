@@ -800,10 +800,12 @@ export async function resumeAIAgent(
       typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
 
     let toolResult: unknown
+    let isError = false
     try {
       toolResult = await matchingTool.execute(toolArgs)
     } catch (execErr) {
       toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+      isError = true
     }
 
     const resultStr =
@@ -830,6 +832,7 @@ export async function resumeAIAgent(
       toolCallId: input.toolCallId,
       toolName: pending.toolName,
       result: toolResult,
+      ...(isError ? { isError: true } : {}),
     })
   }
 

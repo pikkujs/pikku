@@ -198,7 +198,20 @@ const ToolCallDisplay: FunctionComponent<{
         {status.type === 'running' && (
           <span style={{ fontSize: 11, color: '#888' }}>running...</span>
         )}
-        {status.type === 'complete' && (
+        {status.type === 'complete' && typeof result === 'string' && result.startsWith('Error:') && (
+          <span
+            style={{
+              fontSize: 11,
+              padding: '1px 5px',
+              borderRadius: 3,
+              background: '#ffebee',
+              color: '#c62828',
+            }}
+          >
+            error
+          </span>
+        )}
+        {status.type === 'complete' && !(typeof result === 'string' && result.startsWith('Error:')) && (
           <span
             style={{
               fontSize: 11,

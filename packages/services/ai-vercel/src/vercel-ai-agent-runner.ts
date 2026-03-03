@@ -163,6 +163,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
               toolCallId: (part as any).toolCallId,
               toolName: (part as any).toolName,
               result: errorText,
+              isError: true,
             })
             break
           }
@@ -194,7 +195,10 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
         }
       }
     } catch (err) {
-      console.warn('[VercelAIAgentRunner] Stream error:', err instanceof Error ? err.message : String(err))
+      console.warn(
+        '[VercelAIAgentRunner] Stream error:',
+        err instanceof Error ? err.message : String(err)
+      )
       throw err
     }
 

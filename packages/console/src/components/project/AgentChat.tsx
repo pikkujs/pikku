@@ -139,7 +139,12 @@ const ToolCallDisplay: React.FunctionComponent<{
             {toolName}
           </Text>
           {status.type === 'running' && <Loader size={10} />}
-          {status.type === 'complete' && (
+          {status.type === 'complete' && typeof result === 'string' && result.startsWith('Error:') && (
+            <PikkuBadge type="label" color="red">
+              error
+            </PikkuBadge>
+          )}
+          {status.type === 'complete' && !(typeof result === 'string' && result.startsWith('Error:')) && (
             <PikkuBadge type="label" color="green">
               done
             </PikkuBadge>

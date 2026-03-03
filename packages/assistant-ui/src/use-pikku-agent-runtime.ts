@@ -78,6 +78,7 @@ type ToolCall = {
   toolName: string
   args: Record<string, unknown>
   result?: string
+  isError?: boolean
 }
 
 /**
@@ -121,6 +122,9 @@ async function processStream(
             typeof event.result === 'string'
               ? event.result
               : JSON.stringify(event.result)
+          if (event.isError) {
+            tc.isError = true
+          }
         }
         break
       }
