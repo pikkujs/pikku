@@ -94,7 +94,12 @@ describe('streamAIAgent', () => {
       {}
     )
 
-    assert.deepEqual(updates, [{ runId: 'run-1', patch: { status: 'failed' } }])
+    assert.deepEqual(updates, [
+      {
+        runId: 'run-1',
+        patch: { status: 'failed', errorMessage: 'stream failed' },
+      },
+    ])
     assert.deepEqual(
       events.map((event) => event.type),
       ['step-start', 'error', 'done']

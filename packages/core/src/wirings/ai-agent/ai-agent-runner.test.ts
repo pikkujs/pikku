@@ -84,7 +84,9 @@ describe('runAIAgent', () => {
       expectedError
     )
 
-    assert.deepEqual(updates, [{ status: 'failed' }])
+    assert.deepEqual(updates, [
+      { status: 'failed', errorMessage: 'runner failed' },
+    ])
   })
 
   test('loops through multiple steps and accumulates usage', async () => {
