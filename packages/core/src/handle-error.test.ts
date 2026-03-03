@@ -267,7 +267,7 @@ describe('handleHTTPError', () => {
     // Should not throw
   })
 
-  test('should call response.close when available', () => {
+  test('should not call response.close automatically', () => {
     const logger = createMockLogger()
     const http = createMockHTTP()
     const error = new BadRequestError('bad')
@@ -282,7 +282,7 @@ describe('handleHTTPError', () => {
       false
     )
 
-    assert.strictEqual(http._state.closed, true)
+    assert.strictEqual(http._state.closed, false)
   })
 
   test('should handle undefined http gracefully', () => {
