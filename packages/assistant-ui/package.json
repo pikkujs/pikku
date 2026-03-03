@@ -19,8 +19,7 @@
     "build": "yarn build:esm && yarn build:cjs"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.12.12",
-    "@assistant-ui/react-data-stream": "^0.12.5"
+    "@assistant-ui/react": "^0.12.12"
   },
   "peerDependencies": {
     "react": "^18 || ^19",

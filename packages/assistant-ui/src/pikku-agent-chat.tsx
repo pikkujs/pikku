@@ -383,7 +383,7 @@ const PikkuComposer: FunctionComponent = () => (
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
   const { emptyMessage, ...runtimeOptions } = props
-  const runtime = usePikkuAgentRuntime(runtimeOptions)
+  const { runtime } = usePikkuAgentRuntime(runtimeOptions)
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>

@@ -20,12 +20,16 @@ export const agentCaller = pikkuSessionlessFunc<
 })
 
 export const agentStreamCaller = pikkuSessionlessFunc<
-  { agentName: string; threadId: string; messages?: any[]; [key: string]: any },
+  { agentName: string; message: string; threadId: string; resourceId: string },
   void
 >({
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
-    await rpc.agent.stream(data.agentName as any, data)
+    await rpc.agent.stream(data.agentName as any, {
+      message: data.message,
+      threadId: data.threadId,
+      resourceId: data.resourceId,
+    })
   },
 })
 
@@ -36,6 +40,19 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   auth: ${authFlag},
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
     return await rpc.agent.approve(runId, approvals, agentName)
+  },
+})
+
+export const agentResumeCaller = pikkuSessionlessFunc<
+  { agentName: string; runId: string; toolCallId: string; approved: boolean },
+  void
+>({
+  auth: ${authFlag},
+  func: async (_services, data, { rpc }) => {
+    await rpc.agent.resume(data.runId, {
+      toolCallId: data.toolCallId,
+      approved: data.approved,
+    })
   },
 })
 
@@ -58,6 +75,12 @@ export const agentRoutes = defineHTTPRoutes({
       route: '/rpc/agent/:agentName/approve',
       method: 'post',
       func: agentApproveCaller,
+    },
+    agentResume: {
+      route: '/rpc/agent/:agentName/resume',
+      method: 'post',
+      sse: true,
+      func: agentResumeCaller,
     },
   },
 })

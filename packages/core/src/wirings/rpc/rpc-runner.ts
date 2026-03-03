@@ -254,9 +254,7 @@ export class ContextAwareRPCService {
       },
       stream: async (
         agentName: string,
-        input:
-          | { message: string; threadId: string; resourceId: string }
-          | Record<string, unknown>,
+        input: { message: string; threadId: string; resourceId: string },
         options?: StreamAIAgentOptions
       ) => {
         const channel = this.wire.channel as unknown as AIStreamChannel

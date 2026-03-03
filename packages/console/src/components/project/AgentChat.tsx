@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import {
   Stack,
   Box,
@@ -285,25 +285,22 @@ export const AgentChat: React.FunctionComponent = () => {
   const { agentId, threadId, setThreadId, refetchThreads, dbMessages } =
     useAgentPlayground()
 
-  const onThreadCreated = useCallback(
-    (id: string) => {
-      setThreadId(id)
-    },
-    [setThreadId]
-  )
-
   const onStreamDone = useCallback(() => {
     refetchThreads()
   }, [refetchThreads])
 
   const serverUrl = getServerUrl()
-  const api = `${serverUrl}/rpc/agent/${encodeURIComponent(agentId)}/stream`
+  const api = `${serverUrl}/rpc/agent`
 
-  const runtime = usePikkuAgentRuntime({
+  const fallbackThreadId = useMemo(() => crypto.randomUUID(), [])
+  const effectiveThreadId = threadId ?? fallbackThreadId
+
+  const { runtime } = usePikkuAgentRuntime({
     api,
-    threadId,
+    agentName: agentId,
+    threadId: effectiveThreadId,
+    resourceId: 'default',
     initialMessages: dbMessages,
-    onThreadCreated,
     onFinish: onStreamDone,
   })
 

@@ -76,7 +76,7 @@ const AgentPlaygroundInner: React.FunctionComponent<{
       runsPanelVisible
       emptyPanelMessage="Agent configuration"
     >
-      <AgentChat />
+      <AgentChat key={threadId} />
     </ThreePaneLayout>
   )
 }
