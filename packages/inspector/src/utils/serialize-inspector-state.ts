@@ -81,6 +81,7 @@ export interface SerializableInspectorState {
     }
     meta: InspectorState['functions']['meta']
     files: Array<[string, { path: string; exportedName: string }]>
+    approvalDescriptions: InspectorState['functions']['approvalDescriptions']
   }
   http: {
     metaInputTypes: Array<
@@ -307,6 +308,7 @@ export function serializeInspectorState(
       typesMap: serializeTypesMap(state.functions.typesMap),
       meta: state.functions.meta,
       files: Array.from(state.functions.files.entries()),
+      approvalDescriptions: state.functions.approvalDescriptions,
     },
     http: {
       metaInputTypes: Array.from(state.http.metaInputTypes.entries()),
@@ -475,6 +477,7 @@ export function deserializeInspectorState(
       typesMap: deserializeTypesMap(data.functions.typesMap),
       meta: data.functions.meta,
       files: new Map(data.functions.files),
+      approvalDescriptions: (data.functions as any).approvalDescriptions || {},
     },
     http: {
       metaInputTypes: new Map(data.http.metaInputTypes),

@@ -293,6 +293,19 @@ async function runStreamStepLoop(
       runId
     )
     if (approvalNeeded) {
+      // If the tool has an approvalDescriptionFn, call it to generate a human-readable reason
+      const toolDef = runnerParams.tools.find(
+        (t) => t.name === approvalNeeded.toolName
+      )
+      if (toolDef?.approvalDescriptionFn && !approvalNeeded.reason) {
+        try {
+          approvalNeeded.reason = await toolDef.approvalDescriptionFn(
+            approvalNeeded.args
+          )
+        } catch {
+          // If description generation fails, continue without it
+        }
+      }
       return { outcome: 'approval', approval: approvalNeeded }
     }
 

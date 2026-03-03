@@ -26,6 +26,7 @@ import { addSecret, addOAuth2Credential } from './add/add-secret.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addAIAgent } from './add/add-ai-agent.js'
+import { addApprovalDescription } from './add/add-approval-description.js'
 
 export const visitSetup = (
   logger: InspectorLogger,
@@ -87,6 +88,7 @@ export const visitSetup = (
   addWireAddon(node, state, logger)
   addMiddleware(logger, node, checker, state, options)
   addPermission(logger, node, checker, state, options)
+  addApprovalDescription(logger, node, checker, state, options)
   addWorkflow(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>

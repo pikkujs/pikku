@@ -98,6 +98,7 @@ export interface InspectorFunctionState {
   typesMap: TypesMap
   meta: FunctionsMeta
   files: Map<string, { path: string; exportedName: string }>
+  approvalDescriptions: Record<string, InspectorApprovalDescriptionDefinition>
 }
 
 export interface InspectorChannelState {
@@ -138,6 +139,14 @@ export interface InspectorChannelMiddlewareState {
 
 export interface InspectorAIMiddlewareState {
   definitions: Record<string, InspectorMiddlewareDefinition>
+}
+
+export interface InspectorApprovalDescriptionDefinition {
+  services: FunctionServicesMeta
+  wires?: FunctionWiresMeta
+  sourceFile: string
+  position: number
+  exportedName: string | null
 }
 
 export interface InspectorPermissionDefinition {

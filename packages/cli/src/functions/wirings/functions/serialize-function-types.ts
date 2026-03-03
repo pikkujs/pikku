@@ -245,6 +245,37 @@ export const pikkuPermissionFactory = <In = any>(
 }
 
 /**
+ * A function that generates a human-readable description of a pending approval action.
+ * Used by AI agents to show meaningful approval prompts instead of raw tool arguments.
+ *
+ * @template In - The input type (same as the function it describes)
+ * @template RequiredServices - The services required for this description function
+ */
+export type PikkuApprovalDescription<In = unknown, RequiredServices extends Services = Services> = (
+  services: RequiredServices,
+  data: In
+) => Promise<string>
+
+/**
+ * Factory function for creating approval description functions with tree-shaking support.
+ *
+ * @example
+ * \`\`\`typescript
+ * export const deleteTodoApproval = pikkuApprovalDescription(
+ *   async ({ todoStore }, { id }) => {
+ *     const todo = await todoStore.get(id)
+ *     return \\\`Delete todo: "\${todo.title}"\\\`
+ *   }
+ * )
+ * \`\`\`
+ */
+export const pikkuApprovalDescription = <In = unknown, RequiredServices extends Services = Services>(
+  fn: PikkuApprovalDescription<In, RequiredServices>
+): PikkuApprovalDescription<In, RequiredServices> => {
+  return fn
+}
+
+/**
  * A sessionless API function that doesn't require user authentication.
  * Use this for public endpoints, health checks, or operations that don't need user context.
  *
@@ -323,7 +354,8 @@ export type PikkuFunctionConfigWithSchema<
   expose?: boolean
   mcp?: boolean
   internal?: boolean
-  requiresApproval?: boolean
+  approvalRequired?: boolean
+  approvalDescription?: PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
   func: PikkuFunction<
     InferSchemaOutput<InputSchema>,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
@@ -409,7 +441,8 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   mcp?: boolean
   internal?: boolean
   remote?: boolean
-  requiresApproval?: boolean
+  approvalRequired?: boolean
+  approvalDescription?: PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
   func: PikkuFunctionSessionless<
     InferSchemaOutput<InputSchema>,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,

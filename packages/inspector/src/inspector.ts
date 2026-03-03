@@ -63,6 +63,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       typesMap: new TypesMap(),
       meta: {},
       files: new Map(),
+      approvalDescriptions: {},
     },
     http: {
       metaInputTypes: new Map(),
