@@ -24,4 +24,15 @@ describe('serializePublicAgent', () => {
       /rpc\.agent\.approve\(runId, approvals, agentName\)/
     )
   })
+
+  test('resume caller delegates to rpc.agent.resume with SSE', () => {
+    const serialized = serializePublicAgent('#pikku')
+
+    assert.match(serialized, /rpc\.agent\.resume\(data\.runId/)
+    assert.match(
+      serialized,
+      /agentResume:[\s\S]*?route: '\/rpc\/agent\/:agentName\/resume'/
+    )
+    assert.match(serialized, /agentResume:[\s\S]*?sse: true/)
+  })
 })

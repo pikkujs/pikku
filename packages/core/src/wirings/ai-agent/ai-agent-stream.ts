@@ -39,10 +39,6 @@ import {
   type StreamAIAgentOptions,
   type StreamContext,
 } from './ai-agent-prepare.js'
-import {
-  createAssistantUIChannel,
-  parseAssistantUIInput,
-} from './ai-agent-assistant-ui.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 import type { AIAgentRunnerService } from '../../services/ai-agent-runner-service.js'
@@ -432,9 +428,7 @@ function handleApproval(
 
 export async function streamAIAgent(
   agentName: string,
-  input:
-    | { message: string; threadId: string; resourceId: string }
-    | Record<string, unknown>,
+  input: { message: string; threadId: string; resourceId: string },
   channel: AIStreamChannel,
   params: RunAIAgentParams,
   agentSessionMap?: Map<string, string>,
@@ -442,22 +436,7 @@ export async function streamAIAgent(
 ): Promise<void> {
   const sessionMap = agentSessionMap ?? new Map<string, string>()
 
-  const { agent: resolvedAgentForProtocol } = resolveAgent(agentName)
-  const inputRecord = input as Record<string, unknown>
-  const useUIMessageStream =
-    resolvedAgentForProtocol.protocol === 'ui-message-stream' ||
-    Array.isArray(inputRecord.messages)
-  let normalizedInput: { message: string; threadId: string; resourceId: string }
-  if (useUIMessageStream) {
-    normalizedInput = parseAssistantUIInput(inputRecord)
-    channel = createAssistantUIChannel(channel)
-  } else {
-    normalizedInput = input as {
-      message: string
-      threadId: string
-      resourceId: string
-    }
-  }
+  const normalizedInput = input
 
   const streamContext: StreamContext = { channel, options }
 
@@ -638,7 +617,10 @@ export async function streamAIAgent(
         }
       }
     }
-    await aiRunState.updateRun(runId, { status: 'failed', errorMessage: err instanceof Error ? err.message : String(err) })
+    await aiRunState.updateRun(runId, {
+      status: 'failed',
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
     channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),
@@ -1049,7 +1031,10 @@ async function continueAfterToolResult(
         }
       }
     }
-    await aiRunState.updateRun(run.runId, { status: 'failed', errorMessage: err instanceof Error ? err.message : String(err) })
+    await aiRunState.updateRun(run.runId, {
+      status: 'failed',
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
     channel.send({
       type: 'error',
       message: err instanceof Error ? err.message : String(err),

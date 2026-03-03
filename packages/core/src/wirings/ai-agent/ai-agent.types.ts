@@ -195,7 +195,6 @@ export type CoreAIAgent<
   input?: unknown
   output?: unknown
   tags?: string[]
-  protocol?: 'ui-message-stream'
   prepareStep?: (ctx: {
     stepNumber: number
     messages: AIMessage[]

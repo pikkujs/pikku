@@ -323,6 +323,7 @@ export type PikkuFunctionConfigWithSchema<
   expose?: boolean
   mcp?: boolean
   internal?: boolean
+  requiresApproval?: boolean
   func: PikkuFunction<
     InferSchemaOutput<InputSchema>,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
@@ -408,6 +409,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   mcp?: boolean
   internal?: boolean
   remote?: boolean
+  requiresApproval?: boolean
   func: PikkuFunctionSessionless<
     InferSchemaOutput<InputSchema>,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
