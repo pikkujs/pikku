@@ -7,7 +7,7 @@ import { toWebRequest } from '@pikku/core/http'
 
 export type AuthConfigOrFactory =
   | AuthConfig
-  | ((services: CoreSingletonServices) => AuthConfig)
+  | ((services: CoreSingletonServices) => AuthConfig | Promise<AuthConfig>)
 
 /**
  * Creates a Pikku sessionless function that delegates to Auth.js.
@@ -26,7 +26,7 @@ export const createAuthHandler = (
     }
 
     const resolvedConfig =
-      typeof config === 'function' ? config(services) : config
+      typeof config === 'function' ? await config(services) : config
     const webRequest = toWebRequest(request)
     return await Auth(webRequest, resolvedConfig)
   },
