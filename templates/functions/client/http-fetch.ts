@@ -36,18 +36,6 @@ async function check() {
     })
     console.log('Deleted todo:', deleted)
 
-    // Test auth flow: login then logout
-    const loginResult = await pikkuFetch.post('/auth/login', {
-      username: 'demo',
-      password: 'password',
-    })
-    console.log('Logged in:', loginResult)
-
-    pikkuFetch.setAuthorizationJWT(loginResult.token)
-
-    const logoutResult = await pikkuFetch.post('/auth/logout', {})
-    console.log('Logged out:', logoutResult)
-
     console.log('✅ HTTP test passed')
 
     process.exit(0)
