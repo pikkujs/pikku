@@ -43,6 +43,10 @@ export class PikkuFetchHTTPRequest<In = unknown>
     return this.request.arrayBuffer()
   }
 
+  public headers(): Record<string, string> {
+    return Object.fromEntries(this.request.headers.entries())
+  }
+
   /**
    * Retrieves the value of a specific header.
    * @param headerName - The name of the header to retrieve.

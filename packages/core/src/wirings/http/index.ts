@@ -11,12 +11,15 @@ export {
 } from './http-runner.js'
 
 export { wireHTTPRoutes, defineHTTPRoutes } from './http-routes.js'
+export { toWebRequest, applyWebResponse } from './web-request.js'
 
 export type {
   AssertHTTPWiringParams,
   CoreHTTPFunctionWiring,
   HTTPMethod,
   HTTPRouteBaseConfig,
+  HTTPRouteContract,
+  HTTPRouteMap,
   HTTPWiringsMeta,
   PikkuHTTPRequest,
   PikkuHTTPResponse,

@@ -85,6 +85,13 @@ export class PikkuActionNextRequest<In> implements PikkuHTTPRequest<In> {
     return this.cookieStore.get(cookieName)?.value || null
   }
 
+  public headers(): Record<string, string> {
+    if (!this.dynamic || !this.#headers) {
+      return {}
+    }
+    return Object.fromEntries(this.#headers.entries())
+  }
+
   /**
    * Retrieves the value of a specific header from the request.
    * Returns null in static context (when dynamic is false) to allow

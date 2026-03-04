@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/auth-js",
+  "version": "0.12.1",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "release": "npm run build && npm test"
+  },
+  "peerDependencies": {
+    "@auth/core": "^0.37.0",
+    "@pikku/core": "^0.12.1"
+  },
+  "devDependencies": {
+    "@auth/core": "^0.37.0",
+    "typescript": "^5.9"
+  }
+}
