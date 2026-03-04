@@ -14,6 +14,9 @@ import { TodoStore } from './services/store.service.js'
 export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
+    secrets: {
+      AUTH_SECRET: 'AUTH_SECRET',
+    },
   }
 })
 
