@@ -64,7 +64,7 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
 
     const nodesMeta = await readJsonFile<{
       package?: { icon?: string; displayName?: string; description?: string }
-    }>(join(metaDir, 'console', 'pikku-nodes-meta.gen.json'))
+    }>(join(metaDir, 'console', 'pikku-addon-meta.gen.json'))
 
     let readme: string | undefined
     try {

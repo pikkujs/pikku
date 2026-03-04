@@ -250,7 +250,7 @@ export class IngestionService {
     try {
       const nodesMeta = await this.readJsonFile<{
         package?: { icon?: string }
-      }>(join(packageDir, '.pikku', 'console', 'pikku-nodes-meta.gen.json'))
+      }>(join(packageDir, '.pikku', 'console', 'pikku-addon-meta.gen.json'))
       return nodesMeta?.package?.icon ?? undefined
     } catch {
       return undefined

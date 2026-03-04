@@ -152,7 +152,14 @@ export type PikkuCLIInput = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  addon?: boolean
+  addon?:
+    | boolean
+    | {
+        categories?: string[]
+        icon?: string
+        displayName?: string
+        description?: string
+      }
   addonName?: string
 
   models?: Record<
@@ -246,14 +253,7 @@ export type PikkuCLIInput = {
     wiresNotDestructured?: 'off' | 'warn' | 'error'
   }
 
-  node?: {
-    categories?: string[]
-    icon?: string
-    displayName?: string
-    description?: string
-  }
-
-  nodesMetaJsonFile?: string
+  addonMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
@@ -267,7 +267,14 @@ export type PikkuCLIConfig = {
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
-  addon?: boolean
+  addon?:
+    | boolean
+    | {
+        categories?: string[]
+        icon?: string
+        displayName?: string
+        description?: string
+      }
   addonName?: string
 
   models?: Record<
@@ -369,14 +376,7 @@ export type PikkuCLIConfig = {
     wiresNotDestructured?: 'off' | 'warn' | 'error'
   }
 
-  node?: {
-    categories?: string[]
-    icon?: string
-    displayName?: string
-    description?: string
-  }
-
-  nodesMetaJsonFile?: string
+  addonMetaJsonFile?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

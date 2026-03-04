@@ -492,8 +492,8 @@ const _getPikkuCLIConfig = async (
     }
 
     const consoleDir = join(result.outDir, 'console')
-    if (!result.nodesMetaJsonFile) {
-      result.nodesMetaJsonFile = join(consoleDir, 'pikku-nodes-meta.gen.json')
+    if (!result.addonMetaJsonFile) {
+      result.addonMetaJsonFile = join(consoleDir, 'pikku-addon-meta.gen.json')
     }
     if (!result.nodeTypesFile) {
       result.nodeTypesFile = join(consoleDir, 'pikku-node-types.gen.ts')
