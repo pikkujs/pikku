@@ -124,7 +124,7 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
       cli,
       mcp,
       schemas,
-    } as AddonPackageInfo
+    } as unknown as AddonPackageInfo
   },
 })
 
