@@ -12,7 +12,11 @@ import {
 import { TodoStore } from './services/store.service.js'
 
 export const createConfig = pikkuConfig(async () => {
-  return {}
+  return {
+    secrets: {
+      AUTH_SECRET: 'AUTH_SECRET',
+    },
+  }
 })
 
 export const createSingletonServices = pikkuServices(
