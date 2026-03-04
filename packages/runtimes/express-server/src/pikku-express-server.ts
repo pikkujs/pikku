@@ -11,6 +11,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
+import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import type { LocalContentConfig } from '@pikku/core/services/local-content'
 
@@ -90,7 +91,7 @@ export class PikkuExpressServer {
     })
   }
 
-  public async init() {
+  public async init(httpOptions: RunHTTPWiringOptions = {}) {
     this.app.use(
       express.json({
         limit: this.config.limits?.json || '1mb',
@@ -114,6 +115,7 @@ export class PikkuExpressServer {
         logger: this.logger,
         logRoutes: true,
         loadSchemas: true,
+        ...httpOptions,
       })
     )
   }

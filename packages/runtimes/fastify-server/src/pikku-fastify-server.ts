@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
+import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import pikkuFastifyPlugin from '@pikku/fastify-plugin'
 
 export type FastifyCoreConfig = CoreConfig & {
@@ -47,7 +48,7 @@ export class PikkuFastifyServer {
   /**
    * Initializes the server by setting up health check and registering the Pikku Fastify plugin.
    */
-  public async init() {
+  public async init(httpOptions: RunHTTPWiringOptions = {}) {
     this.app.get(this.config.healthCheckPath || '/health-check', async () => {
       return { status: 'ok' }
     })
@@ -57,6 +58,7 @@ export class PikkuFastifyServer {
         logger: this.logger,
         logRoutes: true,
         loadSchemas: true,
+        ...httpOptions,
       },
     })
   }

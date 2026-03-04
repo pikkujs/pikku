@@ -36,6 +36,7 @@ export type RunHTTPWiringOptions = Partial<{
   logWarningsForStatusCodes: number[]
   coerceDataFromSchema: boolean
   bubbleErrors: boolean
+  exposeErrors: boolean
   generateRequestId: () => string
 }>
 

@@ -21,7 +21,8 @@ export const handleHTTPError = (
   logger: Logger,
   logWarningsForStatusCodes: number[],
   respondWith404: boolean,
-  bubbleError: boolean
+  bubbleError: boolean,
+  exposeErrors: boolean = false
 ) => {
   // Skip 404 handling if configured to do so
   if (e instanceof NotFoundError && !respondWith404) {
@@ -53,7 +54,12 @@ export const handleHTTPError = (
 
     if (trackerId) {
       logger.warn(`Error id: ${trackerId}`)
-      http?.response?.json({ errorId: trackerId })
+      const errorBody: Record<string, unknown> = { errorId: trackerId }
+      if (exposeErrors && e instanceof Error) {
+        errorBody.message = e.message
+        errorBody.stack = e.stack
+      }
+      http?.response?.json(errorBody)
     }
   }
 

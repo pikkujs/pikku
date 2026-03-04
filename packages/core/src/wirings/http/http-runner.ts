@@ -485,6 +485,7 @@ export const fetchData = async <In, Out>(
     logWarningsForStatusCodes = [],
     coerceDataFromSchema = true,
     bubbleErrors = false,
+    exposeErrors = false,
     generateRequestId,
   }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
@@ -550,7 +551,12 @@ export const fetchData = async <In, Out>(
       // For SSE routes, send error through the stream since the response is already in stream mode
       singletonServices.logger.error(e instanceof Error ? e.message : e)
       try {
-        response.arrayBuffer(JSON.stringify({ type: 'error', errorText: e instanceof Error ? e.message : String(e) }))
+        response.arrayBuffer(
+          JSON.stringify({
+            type: 'error',
+            errorText: e instanceof Error ? e.message : String(e),
+          })
+        )
         response.arrayBuffer('[DONE]')
       } catch {}
       response.close?.()
@@ -562,7 +568,8 @@ export const fetchData = async <In, Out>(
         singletonServices.logger,
         logWarningsForStatusCodes,
         respondWith404,
-        bubbleErrors
+        bubbleErrors,
+        exposeErrors
       )
     }
   } finally {
