@@ -5,10 +5,12 @@ export type {
   FunctionUsedBy,
 } from './services/wiring.service.js'
 export { getAllMeta } from './functions/get-all-meta.function.js'
+export { getInstalledAddons } from './functions/get-installed-addons.function.js'
 export { getChannelSnippets } from './functions/get-channel-snippets.function.js'
 export { getAddonIcon } from './functions/get-addon-icon.function.js'
 export { getAddonMeta } from './functions/get-addon-meta.function.js'
-export { getAddonPackage } from './functions/get-addon-package.function.js'
+export { getAddonCommunityPackage } from './functions/get-addon-package.function.js'
+export { getAddonInstalledPackage } from './functions/get-installed-package.function.js'
 export { getFunctionsMeta } from './functions/get-functions-meta.function.js'
 export { getSchema } from './functions/get-schema.function.js'
 export { getWorkflowMetaById } from './functions/get-workflow-meta-by-id.function.js'

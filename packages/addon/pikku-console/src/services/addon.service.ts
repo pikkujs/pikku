@@ -14,7 +14,7 @@ export interface McpMeta {
   promptsMeta: MCPPromptMeta
 }
 
-export interface PackageRegistryEntry {
+export interface AddonPackageInfo {
   id: string
   name: string
   displayName: string
@@ -40,8 +40,8 @@ export interface PackageRegistryEntry {
   schemas: Record<string, unknown>
 }
 
-export type AddonMeta = PackageRegistryEntry
-export type AddonDetail = PackageRegistryEntry
+export type AddonMeta = AddonPackageInfo
+export type AddonDetail = AddonPackageInfo
 
 export class AddonService {
   constructor(private registryUrl: string) {}
@@ -56,7 +56,10 @@ export class AddonService {
     const response = await fetch(
       `${this.registryUrl}/api/packages/${encodeURIComponent(id)}`
     )
-    return response.json()
+    if (!response.ok) return null
+    const text = await response.text()
+    if (!text) return null
+    return JSON.parse(text)
   }
 
   async init(): Promise<void> {}

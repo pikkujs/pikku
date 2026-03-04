@@ -296,6 +296,31 @@ export function computeResolvedIOTypes(state: InspectorState): void {
     }
 
     state.resolvedIOTypes[pikkuFuncId] = { inputType, outputType }
+
+    if (meta.inputSchemaName && inputType !== 'null') {
+      meta.inputSchemaName = inputType
+    }
+    if (meta.outputSchemaName && outputType !== 'null') {
+      meta.outputSchemaName = outputType
+    }
+    if (meta.inputs) {
+      meta.inputs = meta.inputs.map((name) => {
+        try {
+          return functions.typesMap.getTypeMeta(name).uniqueName
+        } catch {
+          return name
+        }
+      })
+    }
+    if (meta.outputs) {
+      meta.outputs = meta.outputs.map((name) => {
+        try {
+          return functions.typesMap.getTypeMeta(name).uniqueName
+        } catch {
+          return name
+        }
+      })
+    }
   }
 }
 

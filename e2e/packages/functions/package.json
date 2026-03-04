@@ -1,0 +1,22 @@
+{
+  "name": "@pikku/e2e-functions",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*": "../../.pikku/*"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "*"
+  },
+  "peerDependencies": {
+    "@pikku/core": "*"
+  },
+  "devDependencies": {
+    "@pikku/core": "*",
+    "typescript": "~5.8.0"
+  }
+}

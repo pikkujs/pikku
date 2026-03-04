@@ -22,7 +22,7 @@ export const createSingletonServices = pikkuAddonServices(
   ) => {
     const pikkuMetaPath = pikkuState(null, 'package', 'metaDir') ?? ''
     const registryUrl =
-      (await variables.get('REGISTRY_URL')) ?? 'http://localhost:4003'
+      (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
 
     const wiringService = new WiringService(pikkuMetaPath)
     const schemaService = new SchemaService(pikkuMetaPath)
