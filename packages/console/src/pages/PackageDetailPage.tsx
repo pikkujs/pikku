@@ -282,6 +282,7 @@ export const PackageDetailPage: React.FunctionComponent<{
 }> = ({ id, onBack }) => {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', id],
@@ -362,16 +363,18 @@ export const PackageDetailPage: React.FunctionComponent<{
                   ? 'secrets'
                   : 'variables'
 
-  const hasTabs =
-    !!pkg.readme ||
-    functionList.length > 0 ||
-    agentList.length > 0 ||
-    httpRouteCount > 0 ||
-    channelList.length > 0 ||
-    cliCommandCount > 0 ||
-    mcpCount > 0 ||
-    secretList.length > 0 ||
-    variableList.length > 0
+  const currentTab = activeTab ?? defaultTab
+
+  const hasTabs = true
+
+  const panelTabs = ['functions', 'secrets', 'variables']
+  const showPanel = panelTabs.includes(currentTab)
+  const emptyPanelMessage =
+    currentTab === 'secrets'
+      ? 'Select a secret to view its details'
+      : currentTab === 'variables'
+        ? 'Select a variable to view its details'
+        : 'Select a function to view its details'
 
   return (
     <ResizablePanelLayout
@@ -399,8 +402,8 @@ export const PackageDetailPage: React.FunctionComponent<{
           }
         />
       }
-      hidePanel={functionList.length === 0}
-      emptyPanelMessage="Select a function to view its details"
+      hidePanel={!showPanel}
+      emptyPanelMessage={emptyPanelMessage}
     >
       <Stack gap={0}>
         <Box
@@ -467,7 +470,7 @@ export const PackageDetailPage: React.FunctionComponent<{
         </Box>
 
         {hasTabs && (
-          <Tabs defaultValue={defaultTab}>
+          <Tabs value={currentTab} onChange={setActiveTab}>
             <Box
               style={{
                 borderBottom: '1px solid var(--mantine-color-default-border)',
@@ -517,14 +520,13 @@ export const PackageDetailPage: React.FunctionComponent<{
                     Secrets ({secretList.length})
                   </Tabs.Tab>
                 )}
-                {variableList.length > 0 && (
-                  <Tabs.Tab
-                    value="variables"
-                    leftSection={<Settings2 size={14} />}
-                  >
-                    Variables ({variableList.length})
-                  </Tabs.Tab>
-                )}
+                <Tabs.Tab
+                  value="variables"
+                  leftSection={<Settings2 size={14} />}
+                  disabled={variableList.length === 0}
+                >
+                  Variables ({variableList.length})
+                </Tabs.Tab>
               </Tabs.List>
             </Box>
 
@@ -603,14 +605,12 @@ export const PackageDetailPage: React.FunctionComponent<{
               </Tabs.Panel>
             )}
 
-            {variableList.length > 0 && (
-              <Tabs.Panel value="variables">
-                <ProjectVariables
-                  variables={variableList.map(([, v]) => v)}
-                  installed={false}
-                />
-              </Tabs.Panel>
-            )}
+            <Tabs.Panel value="variables">
+              <ProjectVariables
+                variables={variableList.map(([, v]) => v)}
+                installed={false}
+              />
+            </Tabs.Panel>
           </Tabs>
         )}
       </Stack>
