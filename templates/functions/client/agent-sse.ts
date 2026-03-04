@@ -18,22 +18,19 @@ async function testStreamAgent() {
 
   console.log('\n--- Stream: Ask daily-planner for advice ---')
 
-  const params = new URLSearchParams({
-    message: 'Plan my afternoon — I have 3 hours free',
-    threadId: `stream-test-${runId}`,
-    resourceId: 'test-user',
+  const response = await fetch(`${url}/rpc/agent/dailyPlanner/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      Authorization: `Bearer ${loginResult.token}`,
+    },
+    body: JSON.stringify({
+      message: 'Plan my afternoon — I have 3 hours free',
+      threadId: `stream-test-${runId}`,
+      resourceId: 'test-user',
+    }),
   })
-
-  const response = await fetch(
-    `${url}/rpc/agent/dailyPlanner/stream?${params}`,
-    {
-      method: 'GET',
-      headers: {
-        Accept: 'text/event-stream',
-        Authorization: `Bearer ${loginResult.token}`,
-      },
-    }
-  )
 
   if (!response.ok || !response.body) {
     throw new Error(
