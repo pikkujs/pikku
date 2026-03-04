@@ -8,6 +8,7 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   #body: string | Buffer | ArrayBuffer | undefined
   #ended = false
   #streaming = false
+  #headersFlushed = false
 
   constructor(private res: ExpressResponse) {}
 
@@ -47,6 +48,7 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
 
   public arrayBuffer(data: any): this {
     if (this.#streaming) {
+      this.#flushHeadersOnce()
       this.res.write(`data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
       return this
     }
@@ -85,14 +87,20 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
     return this.#streaming
   }
 
+  #flushHeadersOnce(): void {
+    if (this.#headersFlushed) return
+    this.#headersFlushed = true
+    this.res.status(this.#statusCode)
+    for (const [name, value] of this.#headers) {
+      this.res.append(name, value)
+    }
+    this.res.flushHeaders()
+  }
+
   public flush(): void {
     if (this.#ended) return
     if (this.#streaming) {
-      this.res.status(this.#statusCode)
-      for (const [name, value] of this.#headers) {
-        this.res.append(name, value)
-      }
-      this.res.flushHeaders()
+      this.#flushHeadersOnce()
       return
     }
     this.#ended = true
