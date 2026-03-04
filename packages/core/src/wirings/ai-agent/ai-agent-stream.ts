@@ -346,18 +346,40 @@ function checkForApprovals(
         displayToolName?: string
         displayArgs?: unknown
         agentRunId?: string
+        subApprovals?: Array<{
+          toolCallId: string
+          toolName: string
+          args: unknown
+          runId: string
+        }>
       }
-      approvals.push(
-        new ToolApprovalRequired(
-          tc.toolCallId,
-          r.toolName,
-          r.args,
-          r.reason,
-          r.displayToolName,
-          r.displayArgs,
-          r.agentRunId
+      if (r.subApprovals?.length) {
+        for (const sub of r.subApprovals) {
+          approvals.push(
+            new ToolApprovalRequired(
+              sub.toolCallId,
+              r.toolName,
+              r.args,
+              undefined,
+              sub.toolName,
+              sub.args,
+              r.agentRunId
+            )
+          )
+        }
+      } else {
+        approvals.push(
+          new ToolApprovalRequired(
+            tc.toolCallId,
+            r.toolName,
+            r.args,
+            r.reason,
+            r.displayToolName,
+            r.displayArgs,
+            r.agentRunId
+          )
         )
-      )
+      }
     }
   }
   return approvals
@@ -758,7 +780,9 @@ export async function resumeAIAgent(
     if (!subRun) {
       throw new Error(`Sub-agent run not found: ${pending.agentRunId}`)
     }
-    const subPending = subRun.pendingApprovals?.[0]
+    const subPending =
+      subRun.pendingApprovals?.find((p) => p.toolCallId === input.toolCallId) ??
+      subRun.pendingApprovals?.[0]
     if (!subPending) {
       throw new Error(
         `No pending approval on sub-agent run ${pending.agentRunId}`

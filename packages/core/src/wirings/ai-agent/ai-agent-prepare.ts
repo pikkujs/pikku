@@ -115,17 +115,18 @@ export function buildInstructions(
     ? baseInstructions +
         '\n\nWhen calling a sub-agent, provide a short session name that describes the task. ' +
         'Use the same session name to continue a previous conversation with that agent. ' +
-        'Use a new session name for a new independent task.'
+        'Use a new session name for a new independent task. ' +
+        'When a request involves multiple actions for the same domain, combine them into a single sub-agent call rather than making separate calls.'
     : baseInstructions
 }
 
 export type ScopedChannel = AIStreamChannel & {
-  approval: {
+  approvals: Array<{
     toolCallId: string
     toolName: string
     args: unknown
     runId: string
-  } | null
+  }>
 }
 
 export function createScopedChannel(
@@ -133,7 +134,7 @@ export function createScopedChannel(
   agentName: string,
   session: string
 ): ScopedChannel {
-  let capturedApproval: ScopedChannel['approval'] = null
+  const capturedApprovals: ScopedChannel['approvals'] = []
 
   return {
     channelId: `${parent.channelId}:${agentName}:${session}`,
@@ -141,20 +142,20 @@ export function createScopedChannel(
     get state() {
       return parent.state
     },
-    get approval() {
-      return capturedApproval
+    get approvals() {
+      return capturedApprovals
     },
     close: () => {},
     sendBinary: (data) => parent.sendBinary(data),
     send: (event: AIStreamEvent) => {
       if (event.type === 'done') return
       if (event.type === 'approval-request') {
-        capturedApproval = {
+        capturedApprovals.push({
           toolCallId: event.toolCallId,
           toolName: event.toolName,
           args: event.args,
           runId: (event as any).runId,
-        }
+        })
         return
       }
       if (
@@ -353,14 +354,13 @@ export function buildToolDefs(
               agentSessionMap,
               streamContext.options
             )
-            if (subChannel.approval) {
+            if (subChannel.approvals.length > 0) {
               return {
                 __approvalRequired: true,
                 toolName: subAgentName,
                 args: toolInput,
-                displayToolName: subChannel.approval.toolName,
-                displayArgs: subChannel.approval.args,
-                agentRunId: subChannel.approval.runId,
+                agentRunId: subChannel.approvals[0].runId,
+                subApprovals: subChannel.approvals,
               }
             }
             channel.send({
