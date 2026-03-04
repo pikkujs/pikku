@@ -159,6 +159,33 @@ describe('getFileImportRelativePath', () => {
     assert.strictEqual(result, '@myorg/utils/dist/utils')
   })
 
+  test('should handle dot key in packageMappings without corrupting path', () => {
+    const from = '/project/e2e/packages/functions/src/pikku/agent.wiring.gen.ts'
+    const to = '/project/e2e/.pikku/pikku-types.gen.ts'
+    const packageMappings = {
+      '.': '@pikku/e2e',
+      'packages/functions': '@pikku/e2e-functions',
+    }
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    // '.' key should be skipped — use relative path instead of package mapping
+    assert.strictEqual(result, '../../../../.pikku/pikku-types.gen.js')
+  })
+
+  test('should handle dot key when both files are in same specific package', () => {
+    const from = '/project/e2e/packages/functions/src/pikku/agent.wiring.gen.ts'
+    const to = '/project/e2e/packages/functions/src/pikku/pikku-types.gen.ts'
+    const packageMappings = {
+      '.': '@pikku/e2e',
+      'packages/functions': '@pikku/e2e-functions',
+    }
+
+    const result = getFileImportRelativePath(from, to, packageMappings)
+
+    assert.strictEqual(result, './pikku-types.gen.js')
+  })
+
   test('should handle deeply nested node_modules paths', () => {
     const from =
       '/Users/user/project/workspace-starter/packages/functions/.pikku/http/pikku-http-routes-map.gen.d.ts'
