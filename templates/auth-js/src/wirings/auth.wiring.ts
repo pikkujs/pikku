@@ -4,10 +4,11 @@ import type { AuthConfigOrFactory } from '@pikku/auth-js'
 import { wireHTTPRoutes } from '../../.pikku/pikku-types.gen.js'
 import type { SingletonServices } from '../../.pikku/pikku-types.gen.js'
 
-const AUTH_SECRET = 'pikku-auth-js-dev-secret'
+export const AUTH_SECRET_ID = 'AUTH_SECRET'
 
-const configFactory: AuthConfigOrFactory = (services) => {
+const configFactory: AuthConfigOrFactory = async (services) => {
   const { todoStore } = services as SingletonServices
+  const secret = await services.secrets.getSecret(AUTH_SECRET_ID)
   return {
     providers: [
       Credentials({
@@ -21,12 +22,10 @@ const configFactory: AuthConfigOrFactory = (services) => {
         },
       }),
     ],
-    secret: AUTH_SECRET,
+    secret,
     trustHost: true,
     basePath: '/auth',
   }
 }
 
 wireHTTPRoutes({ routes: { auth: createAuthRoutes(configFactory) as any } })
-
-export { AUTH_SECRET }

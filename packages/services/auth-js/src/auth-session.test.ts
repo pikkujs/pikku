@@ -246,6 +246,41 @@ describe('authJsSession middleware', () => {
     assert.equal(wire._getInternalSession(), undefined)
   })
 
+  test('should resolve secret from secretId via services.secrets', async () => {
+    const token = await createToken({ sub: 'secret-id-user' })
+    const wire = createSessionWireProps()
+
+    const middleware = authJsSession({ secretId: 'MY_AUTH_SECRET' })
+    let nextCalled = false
+
+    await middleware(
+      {
+        logger: createMockLogger(),
+        secrets: {
+          getSecret: async (key: string) => {
+            assert.equal(key, 'MY_AUTH_SECRET')
+            return TEST_SECRET
+          },
+        },
+      } as any,
+      {
+        ...wire,
+        http: {
+          request: createMockHTTPRequest({
+            'authjs.session-token': token,
+          }),
+        },
+      } as any,
+      async () => {
+        nextCalled = true
+      }
+    )
+
+    assert.equal(nextCalled, true)
+    const session = wire._getInternalSession()
+    assert.equal(session?.userId, 'secret-id-user')
+  })
+
   test('should throw if session is modified during request', async () => {
     const token = await createToken({ sub: 'user789' })
     const wire = createSessionWireProps()
