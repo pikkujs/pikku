@@ -53,6 +53,11 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
+  public send(data: any): this {
+    this.#body = data
+    return this
+  }
+
   public arrayBuffer(data: any): this {
     if (this.#streaming) {
       this.#sendStreamChunk(data)
@@ -79,6 +84,7 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public close(): void {
+    this.flush()
     if (!this.#ended && !this.isAborted()) {
       this.#ended = true
       this.res.cork(() => {

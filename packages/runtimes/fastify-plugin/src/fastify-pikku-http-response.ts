@@ -45,9 +45,16 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
+  public send(data: any): this {
+    this.#body = data
+    return this
+  }
+
   public arrayBuffer(data: any): this {
     if (this.#streaming) {
-      this.reply.raw.write(`data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
+      this.reply.raw.write(
+        `data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`
+      )
       return this
     }
     this.#body = data
@@ -71,6 +78,7 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public close(): void {
+    this.flush()
     if (!this.#ended) {
       this.#ended = true
       this.reply.raw.end()
@@ -88,15 +96,23 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
   public flush(): void {
     if (this.#ended) return
     if (this.#streaming) {
-      this.reply.raw.writeHead(this.#statusCode, this.#headers.reduce((acc, [name, value]) => {
-        const existing = acc[name]
-        if (existing) {
-          acc[name] = Array.isArray(existing) ? [...existing, value] : [existing, value]
-        } else {
-          acc[name] = value
-        }
-        return acc
-      }, {} as Record<string, string | string[]>))
+      this.reply.raw.writeHead(
+        this.#statusCode,
+        this.#headers.reduce(
+          (acc, [name, value]) => {
+            const existing = acc[name]
+            if (existing) {
+              acc[name] = Array.isArray(existing)
+                ? [...existing, value]
+                : [existing, value]
+            } else {
+              acc[name] = value
+            }
+            return acc
+          },
+          {} as Record<string, string | string[]>
+        )
+      )
       return
     }
     this.#ended = true

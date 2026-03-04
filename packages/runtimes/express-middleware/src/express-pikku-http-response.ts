@@ -45,9 +45,16 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
+  public send(data: any): this {
+    this.#body = data
+    return this
+  }
+
   public arrayBuffer(data: any): this {
     if (this.#streaming) {
-      this.res.write(`data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
+      this.res.write(
+        `data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`
+      )
       return this
     }
     this.#body = data
@@ -71,6 +78,7 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public close(): void {
+    this.flush()
     if (!this.#ended) {
       this.#ended = true
       this.res.end()

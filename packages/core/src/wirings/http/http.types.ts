@@ -271,6 +271,7 @@ export interface PikkuHTTPRequest<In = unknown> {
   data(): Promise<In>
   json(): Promise<unknown>
   arrayBuffer(): Promise<ArrayBuffer>
+  headers(): Record<string, string>
   header(headerName: string): string | null
   cookie(name?: string): string | null
   params(): Partial<Record<string, string | string[]>>
@@ -293,6 +294,7 @@ export interface PikkuHTTPResponse<Out = unknown> {
       | ReadableStream
   ): this
   json(data: Out): this
+  send?(data: string | ArrayBuffer | Buffer): this
   redirect(location: string, status?: number): this
   close?: () => void
   setMode?: (mode: 'stream') => void

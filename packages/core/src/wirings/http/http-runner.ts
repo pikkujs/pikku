@@ -38,6 +38,7 @@ import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
 import type { PikkuChannel } from '../channel/channel.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { applyWebResponse } from './web-request.js'
 import { httpRouter } from './routers/http-router.js'
 import { validateSchema } from '../../schema.js'
 import { runMiddleware } from '../../middleware-runner.js'
@@ -399,7 +400,9 @@ const executeRoute = async (
     }
   )
   if (!matchedRoute.route.sse) {
-    if (result === undefined || result === null) {
+    if (result instanceof Response) {
+      await applyWebResponse(http!.response!, result)
+    } else if (result === undefined || result === null) {
       http?.response?.status(204)
     } else if (route.returnsJSON === false) {
       http?.response?.arrayBuffer(result)

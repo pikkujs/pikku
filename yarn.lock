@@ -229,6 +229,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@auth/core@npm:^0.37.0":
+  version: 0.37.4
+  resolution: "@auth/core@npm:0.37.4"
+  dependencies:
+    "@panva/hkdf": "npm:^1.2.1"
+    jose: "npm:^5.9.6"
+    oauth4webapi: "npm:^3.1.1"
+    preact: "npm:10.24.3"
+    preact-render-to-string: "npm:6.5.11"
+  peerDependencies:
+    "@simplewebauthn/browser": ^9.0.1
+    "@simplewebauthn/server": ^9.0.2
+    nodemailer: ^6.8.0
+  peerDependenciesMeta:
+    "@simplewebauthn/browser":
+      optional: true
+    "@simplewebauthn/server":
+      optional: true
+    nodemailer:
+      optional: true
+  checksum: 10/859e416c3b5d4ffcaaf9cba175204066c3474e4ee9653e2533f187006673b7fce9d40ad6be0c06bd3113cac5c10895df42470bae866b3dd5de9ab1fdf3c2c23a
+  languageName: node
+  linkType: hard
+
 "@aws-crypto/crc32@npm:5.2.0":
   version: 5.2.0
   resolution: "@aws-crypto/crc32@npm:5.2.0"
@@ -4666,6 +4690,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@panva/hkdf@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "@panva/hkdf@npm:1.2.1"
+  checksum: 10/a4a9d1812f88f02bc163b365524bbaa5239cc4711e5e7be1bda68dabae1c896cf1cd12520949b0925a6910733d1afcb25ab51fd3cf06f0f69aee988fffebf56e
+  languageName: node
+  linkType: hard
+
 "@parcel/watcher-android-arm64@npm:2.5.6":
   version: 2.5.6
   resolution: "@parcel/watcher-android-arm64@npm:2.5.6"
@@ -4876,6 +4907,18 @@ __metadata:
   peerDependencies:
     react: ^18 || ^19
     react-dom: ^18 || ^19
+  languageName: unknown
+  linkType: soft
+
+"@pikku/auth-js@npm:^0.12.1, @pikku/auth-js@workspace:packages/services/auth-js":
+  version: 0.0.0-use.local
+  resolution: "@pikku/auth-js@workspace:packages/services/auth-js"
+  dependencies:
+    "@auth/core": "npm:^0.37.0"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@auth/core": ^0.37.0
+    "@pikku/core": ^0.12.1
   languageName: unknown
   linkType: soft
 
@@ -5333,6 +5376,22 @@ __metadata:
     postgres: "npm:^3.4.8"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-auth-js@workspace:templates/auth-js":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-auth-js@workspace:templates/auth-js"
+  dependencies:
+    "@auth/core": "npm:^0.37.0"
+    "@pikku/auth-js": "npm:^0.12.1"
+    "@pikku/cli": "npm:^0.12.2"
+    "@pikku/core": "npm:^0.12.2"
+    "@pikku/express": "npm:^0.12.1"
+    "@pikku/schema-cfworker": "npm:^0.12.1"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 
@@ -14816,7 +14875,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jose@npm:^5.10.0, jose@npm:^5.7.0":
+"jose@npm:^5.10.0, jose@npm:^5.7.0, jose@npm:^5.9.6":
   version: 5.10.0
   resolution: "jose@npm:5.10.0"
   checksum: 10/03881d1dfb390dcf50926402edcfe233bf557b5a77321fcb1bdb53453bc1cdd26d2d0a9ab28c7445cbb826881f84fdf5074179700f10c2711ccb9880f51065d7
@@ -16922,6 +16981,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"oauth4webapi@npm:^3.1.1":
+  version: 3.8.5
+  resolution: "oauth4webapi@npm:3.8.5"
+  checksum: 10/5c39d4dbd95b795438e79444a1d710631b3f8311e8b8913150b385b5815857b32f617a49d4869a4476b2318f614adfbc9d19510360df198719973f6f69a2e75b
+  languageName: node
+  linkType: hard
+
 "object-assign@npm:^4, object-assign@npm:^4.1.1":
   version: 4.1.1
   resolution: "object-assign@npm:4.1.1"
@@ -17820,6 +17886,22 @@ __metadata:
   version: 3.4.8
   resolution: "postgres@npm:3.4.8"
   checksum: 10/65bf20b4ada953926c05a83f3fb454f10f5db0f05bd1fd2d41ddba4ce16d2038b46a973fd04e0331fb43cb5b6028fda272db438e497bc7c947756790f8fadc52
+  languageName: node
+  linkType: hard
+
+"preact-render-to-string@npm:6.5.11":
+  version: 6.5.11
+  resolution: "preact-render-to-string@npm:6.5.11"
+  peerDependencies:
+    preact: ">=10"
+  checksum: 10/a77f7715f3b7e94d6157dab3708e204663a605f86bb20d70a2916c734b873640335dd4180aa79f4eeb4555c07dc4e92b9a4fadc809beeb56b206eaf41e5762dd
+  languageName: node
+  linkType: hard
+
+"preact@npm:10.24.3":
+  version: 10.24.3
+  resolution: "preact@npm:10.24.3"
+  checksum: 10/e9c4c901a4ddd475a1072355b5c6c944b05797445e0d68f317ad0dbc976b831523573693ea75d2e12e7902042e3729af435377816d25558bf693ecf6b516c707
   languageName: node
   linkType: hard
 

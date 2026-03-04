@@ -83,10 +83,10 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
-  // public body(body: BodyInit): this {
-  //   this.#body = body
-  //   return this
-  // }
+  public send(data: any): this {
+    this.#body = data
+    return this
+  }
 
   public redirect(location: string, status: number = 302): this {
     if (
