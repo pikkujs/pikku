@@ -5,12 +5,11 @@ import {
   pikkuChannelMiddleware,
 } from '../.pikku/pikku-types.gen.js'
 import { pikkuAIMiddleware } from '../.pikku/agent/pikku-agent-types.gen.js'
-import { AUTH_SECRET_ID } from './wirings/auth.wiring.js'
 
 export const httpAuthMiddleware = () =>
   addHTTPMiddleware('*', [
     authJsSession({
-      secretId: AUTH_SECRET_ID,
+      secretId: 'AUTH_SECRET',
       mapSession: (claims) => ({ userId: claims.sub as string }),
     }),
   ])
