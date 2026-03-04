@@ -50,12 +50,6 @@ export const ListTodosInputSchema = z.object({
 })
 export type ListTodosInput = z.infer<typeof ListTodosInputSchema>
 
-export const LoginInputSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
-})
-export type LoginInput = z.infer<typeof LoginInputSchema>
-
 export const TodoResponseSchema = z.object({
   todo: TodoSchema,
 })
@@ -63,15 +57,6 @@ export const TodoResponseSchema = z.object({
 export const TodoListResponseSchema = z.object({
   todos: z.array(TodoSchema),
   total: z.number(),
-})
-
-export const LoginResponseSchema = z.object({
-  token: z.string(),
-  user: UserSchema,
-})
-
-export const UserResponseSchema = z.object({
-  user: UserSchema,
 })
 
 export const DeleteResponseSchema = z.object({
@@ -115,10 +100,6 @@ export const CreateTodoOutputSchema = z.object({
 })
 
 export const EmptyInputSchema = z.object({})
-
-export const SuccessOutputSchema = z.object({
-  success: z.boolean(),
-})
 
 export const EventTopicSchema = z.enum([
   'todo-created',

@@ -14,6 +14,7 @@
     "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
     "mcpJsonFile": ".pikku/mcp/mcp.gen.json"
   },
+  "forceRequiredServices": ["todoStore"],
   "scaffold": {
     "agent": "auth"
   },
