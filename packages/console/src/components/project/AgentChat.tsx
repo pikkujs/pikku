@@ -23,7 +23,13 @@ import {
   MessagePrimitive,
   ComposerPrimitive,
 } from '@assistant-ui/react'
-import { usePikkuAgentRuntime } from '@pikku/assistant-ui'
+import {
+  usePikkuAgentRuntime,
+  PikkuApprovalContext,
+  usePikkuApproval,
+  resolvePikkuToolStatus,
+  type PikkuToolStatus,
+} from '@pikku/assistant-ui'
 import {
   Send,
   ChevronDown,
@@ -40,14 +46,16 @@ import { useAgentPlayground } from '@/context/AgentPlaygroundContext'
 import { getServerUrl } from '@/context/PikkuRpcProvider'
 
 const ToolCallDisplay: React.FunctionComponent<{
+  toolCallId: string
   toolName: string
   args: Record<string, unknown>
   result?: unknown
-  status: { type: string }
+  status: PikkuToolStatus
   argsText?: string
   addResult?: (result: unknown) => void
-}> = ({ toolName, args, result, status, addResult }) => {
+}> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const [opened, setOpened] = useState(false)
+  const { handleApproval } = usePikkuApproval()
   const isApproval = status.type === 'requires-action'
   const approvalReason = (args as any)?.__approvalReason
   const displayArgs = { ...args }
@@ -56,11 +64,13 @@ const ToolCallDisplay: React.FunctionComponent<{
 
   const handleApprove = () => {
     setResponded('approved')
+    handleApproval(toolCallId, true)
     addResult?.({ approved: true })
   }
 
   const handleDeny = () => {
     setResponded('denied')
+    handleApproval(toolCallId, false)
     addResult?.({ approved: false })
   }
 
@@ -139,12 +149,17 @@ const ToolCallDisplay: React.FunctionComponent<{
             {toolName}
           </Text>
           {status.type === 'running' && <Loader size={10} />}
-          {status.type === 'complete' && typeof result === 'string' && result.startsWith('Error:') && (
+          {status.type === 'error' && (
             <PikkuBadge type="label" color="red">
               error
             </PikkuBadge>
           )}
-          {status.type === 'complete' && !(typeof result === 'string' && result.startsWith('Error:')) && (
+          {status.type === 'denied' && (
+            <PikkuBadge type="label" color="red">
+              denied
+            </PikkuBadge>
+          )}
+          {status.type === 'completed' && (
             <PikkuBadge type="label" color="green">
               done
             </PikkuBadge>
@@ -231,10 +246,11 @@ const AssistantMessage: React.FunctionComponent = () => (
             tools: {
               Fallback: (props) => (
                 <ToolCallDisplay
+                  toolCallId={props.toolCallId}
                   toolName={props.toolName}
                   args={props.args as Record<string, unknown>}
                   result={props.result}
-                  status={props.status}
+                  status={resolvePikkuToolStatus(props.status, props.result)}
                   argsText={props.argsText}
                   addResult={props.addResult}
                 />
@@ -257,25 +273,47 @@ const AssistantMessage: React.FunctionComponent = () => (
   </Box>
 )
 
-const AgentComposer: React.FunctionComponent = () => (
+const AgentComposer: React.FunctionComponent<{ disabled?: boolean }> = ({
+  disabled,
+}) => (
   <Box py="sm" pb="md">
     <Container size="md">
       <ComposerPrimitive.Root>
-        <Paper radius="md" withBorder style={{ overflow: 'hidden' }}>
+        <Paper
+          radius="md"
+          withBorder
+          style={{
+            overflow: 'hidden',
+            ...(disabled
+              ? { opacity: 0.5, pointerEvents: 'none' as const }
+              : {}),
+          }}
+        >
           <Group gap={0} align="flex-end" wrap="nowrap" px="lg" py={6}>
             <ComposerPrimitive.Input asChild>
               <Textarea
-                placeholder="Message..."
+                placeholder={
+                  disabled
+                    ? 'Respond to approval request above...'
+                    : 'Message...'
+                }
                 autosize
                 minRows={2}
                 maxRows={6}
                 variant="unstyled"
+                disabled={disabled}
                 style={{ flex: 1 }}
                 styles={{ input: { padding: '4px 0' } }}
               />
             </ComposerPrimitive.Input>
             <ComposerPrimitive.Send asChild>
-              <ActionIcon variant="filled" size={28} radius="xl" mb={2}>
+              <ActionIcon
+                variant="filled"
+                size={28}
+                radius="xl"
+                mb={2}
+                disabled={disabled}
+              >
                 <Send size={14} />
               </ActionIcon>
             </ComposerPrimitive.Send>
@@ -300,7 +338,8 @@ export const AgentChat: React.FunctionComponent = () => {
   const fallbackThreadId = useMemo(() => crypto.randomUUID(), [])
   const effectiveThreadId = threadId ?? fallbackThreadId
 
-  const { runtime } = usePikkuAgentRuntime({
+  const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
+    usePikkuAgentRuntime({
     api,
     agentName: agentId,
     threadId: effectiveThreadId,
@@ -310,6 +349,7 @@ export const AgentChat: React.FunctionComponent = () => {
   })
 
   return (
+    <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
     <AssistantRuntimeProvider runtime={runtime}>
       <Stack
         gap={0}
@@ -345,9 +385,10 @@ export const AgentChat: React.FunctionComponent = () => {
               </Container>
             </ScrollArea>
           </ThreadPrimitive.Viewport>
-          <AgentComposer />
+          <AgentComposer disabled={isAwaitingApproval} />
         </ThreadPrimitive.Root>
       </Stack>
     </AssistantRuntimeProvider>
+    </PikkuApprovalContext.Provider>
   )
 }

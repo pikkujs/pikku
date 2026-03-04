@@ -7,6 +7,10 @@ import {
 } from '@assistant-ui/react'
 import {
   usePikkuAgentRuntime,
+  PikkuApprovalContext,
+  usePikkuApproval,
+  resolvePikkuToolStatus,
+  type PikkuToolStatus,
   type PikkuAgentRuntimeOptions,
 } from './use-pikku-agent-runtime.js'
 
@@ -31,13 +35,15 @@ function shouldHideToolCall(
 }
 
 const ToolCallDisplay: FunctionComponent<{
+  toolCallId: string
   toolName: string
   args: Record<string, unknown>
   result?: unknown
-  status: { type: string }
+  status: PikkuToolStatus
   addResult?: (result: unknown) => void
-}> = ({ toolName, args, result, status, addResult }) => {
+}> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const hideToolCalls = useContext(HideToolCallsContext)
+  const { handleApproval } = usePikkuApproval()
   const [expanded, setExpanded] = useState(false)
   const isApproval = status.type === 'requires-action'
   const approvalReason = (args as any)?.__approvalReason
@@ -102,6 +108,7 @@ const ToolCallDisplay: FunctionComponent<{
           <button
             onClick={() => {
               setResponded('approved')
+              handleApproval(toolCallId, true)
               addResult?.({ approved: true })
             }}
             style={{
@@ -119,6 +126,7 @@ const ToolCallDisplay: FunctionComponent<{
           <button
             onClick={() => {
               setResponded('denied')
+              handleApproval(toolCallId, false)
               addResult?.({ approved: false })
             }}
             style={{
@@ -198,7 +206,7 @@ const ToolCallDisplay: FunctionComponent<{
         {status.type === 'running' && (
           <span style={{ fontSize: 11, color: '#888' }}>running...</span>
         )}
-        {status.type === 'complete' && typeof result === 'string' && result.startsWith('Error:') && (
+        {status.type === 'error' && (
           <span
             style={{
               fontSize: 11,
@@ -211,7 +219,20 @@ const ToolCallDisplay: FunctionComponent<{
             error
           </span>
         )}
-        {status.type === 'complete' && !(typeof result === 'string' && result.startsWith('Error:')) && (
+        {status.type === 'denied' && (
+          <span
+            style={{
+              fontSize: 11,
+              padding: '1px 5px',
+              borderRadius: 3,
+              background: '#ffebee',
+              color: '#c62828',
+            }}
+          >
+            denied
+          </span>
+        )}
+        {status.type === 'completed' && (
           <span
             style={{
               fontSize: 11,
@@ -338,10 +359,11 @@ const AssistantMessage: FunctionComponent = () => (
             tools: {
               Fallback: (props) => (
                 <ToolCallDisplay
+                  toolCallId={props.toolCallId}
                   toolName={props.toolName}
                   args={props.args as Record<string, unknown>}
                   result={props.result}
-                  status={props.status}
+                  status={resolvePikkuToolStatus(props.status, props.result)}
                   addResult={props.addResult}
                 />
               ),
@@ -369,7 +391,9 @@ const AssistantMessage: FunctionComponent = () => (
   </div>
 )
 
-const PikkuComposer: FunctionComponent = () => (
+const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
+  disabled,
+}) => (
   <div style={{ padding: '8px 0 16px' }}>
     <ComposerPrimitive.Root>
       <div
@@ -381,11 +405,13 @@ const PikkuComposer: FunctionComponent = () => (
           alignItems: 'flex-end',
           padding: '6px 12px',
           gap: 8,
+          ...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : {}),
         }}
       >
         <ComposerPrimitive.Input
-          placeholder="Message..."
+          placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
           rows={2}
+          disabled={disabled}
           style={{
             flex: 1,
             border: 'none',
@@ -398,14 +424,15 @@ const PikkuComposer: FunctionComponent = () => (
           }}
         />
         <ComposerPrimitive.Send
+          disabled={disabled}
           style={{
             width: 28,
             height: 28,
             borderRadius: '50%',
             border: 'none',
-            background: '#1976d2',
+            background: disabled ? '#999' : '#1976d2',
             color: '#fff',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -423,9 +450,11 @@ const PikkuComposer: FunctionComponent = () => (
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
   const { emptyMessage, hideToolCalls, ...runtimeOptions } = props
-  const { runtime } = usePikkuAgentRuntime(runtimeOptions)
+  const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
+    usePikkuAgentRuntime(runtimeOptions)
 
   return (
+    <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
     <HideToolCallsContext.Provider value={hideToolCalls}>
     <AssistantRuntimeProvider runtime={runtime}>
       <div
@@ -487,11 +516,12 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
             </div>
           </ThreadPrimitive.Viewport>
           <div style={{ maxWidth: 768, margin: '0 auto', width: '100%', padding: '0 16px' }}>
-            <PikkuComposer />
+            <PikkuComposer disabled={isAwaitingApproval} />
           </div>
         </ThreadPrimitive.Root>
       </div>
     </AssistantRuntimeProvider>
     </HideToolCallsContext.Provider>
+    </PikkuApprovalContext.Provider>
   )
 }
