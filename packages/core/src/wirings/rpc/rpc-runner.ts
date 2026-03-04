@@ -250,11 +250,21 @@ export class ContextAwareRPCService {
           runId: result.runId,
           result: result.object ?? result.text,
           usage: result.usage,
+          ...(result.status === 'suspended' && {
+            status: 'suspended' as const,
+            pendingApprovals: result.pendingApprovals,
+          }),
         }
       },
       stream: async (
         agentName: string,
-        input: { message: string; threadId: string; resourceId: string },
+        input: {
+          message: string
+          threadId: string
+          resourceId: string
+          model?: string
+          temperature?: number
+        },
         options?: StreamAIAgentOptions
       ) => {
         const channel = this.wire.channel as unknown as AIStreamChannel

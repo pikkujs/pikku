@@ -538,6 +538,18 @@ export async function prepareAgentRun(
   const instructions = buildInstructions(resolvedName, packageName)
 
   const resolved = resolveModelConfig(resolvedName, agent)
+
+  // Per-request overrides
+  if (input.model) {
+    resolved.model = resolveModelConfig(resolvedName, {
+      ...agent,
+      model: input.model,
+    }).model
+  }
+  if (input.temperature !== undefined) {
+    resolved.temperature = input.temperature
+  }
+
   const maxSteps = resolved.maxSteps ?? 10
 
   const runnerParams: AIAgentRunnerParams = {

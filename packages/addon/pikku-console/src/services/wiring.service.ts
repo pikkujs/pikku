@@ -1,5 +1,6 @@
 import { readFile, readdir } from 'fs/promises'
 import { join } from 'path'
+import { pikkuState } from '@pikku/core/internal'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ChannelsMeta } from '@pikku/core/channel'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
@@ -270,6 +271,7 @@ export interface PikkuMetaState {
   agentsMeta: AgentsMeta
   secretsMeta: SecretDefinitionsMeta
   variablesMeta: VariableDefinitionsMeta
+  modelAliases: string[]
 }
 
 export interface AllMeta extends PikkuMetaState {
@@ -936,6 +938,12 @@ export class WiringService {
       countCli(program.commands)
     }
 
+    let modelAliases: string[] = []
+    try {
+      const modelsConfig = pikkuState(null, 'models', 'config') ?? {}
+      modelAliases = Object.keys(modelsConfig.models ?? {})
+    } catch {}
+
     const counts = {
       functions: Object.values(functions).length,
       workflows: Object.keys(workflows).length,
@@ -972,6 +980,7 @@ export class WiringService {
       agentsMeta,
       secretsMeta,
       variablesMeta,
+      modelAliases,
       functionUsedBy,
       counts,
     }

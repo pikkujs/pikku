@@ -58,6 +58,7 @@ const EMPTY_META: PikkuMetaState = {
   agentsMeta: {},
   secretsMeta: {},
   variablesMeta: {},
+  modelAliases: [],
 }
 
 const EMPTY_COUNTS: MetaCounts = {
@@ -112,6 +113,7 @@ export const PikkuMetaProvider: React.FunctionComponent<{
         agentsMeta: allMeta.agentsMeta,
         secretsMeta: allMeta.secretsMeta,
         variablesMeta: allMeta.variablesMeta,
+        modelAliases: allMeta.modelAliases ?? [],
       })
       setCounts(allMeta.counts)
       setServerFunctionUsedBy(allMeta.functionUsedBy)
