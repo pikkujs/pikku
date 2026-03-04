@@ -12,11 +12,13 @@
   "scripts": {
     "start": "tsx bin/start.ts",
     "dev": "tsx --watch bin/start.ts",
-    "test": "cucumber-js --config tests/cucumber.mjs",
+    "test": "cucumber-js --config tests/cucumber.mjs --tags 'not @router and not @todo'",
+    "test:all": "cucumber-js --config tests/cucumber.mjs",
     "test:todo": "cucumber-js --config tests/cucumber.mjs --tags @todo",
     "test:router": "cucumber-js --config tests/cucumber.mjs --tags @router",
     "test:workflow": "cucumber-js --config tests/cucumber.mjs --tags @workflow",
     "test:addons": "cucumber-js --config tests/cucumber.mjs --tags @addons",
+    "test:workflow-ui": "cucumber-js --config tests/cucumber.mjs --tags @workflow-ui",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
