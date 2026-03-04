@@ -41,8 +41,10 @@ export const getFileImportRelativePath = (
 
   // Check if both files are in the same package directory
   // If so, skip packageMappings to use relative paths
+  // Skip '.' key — it matches any dot character in paths and is too generic for substring matching
   let inSamePackage = false
   for (const [path] of Object.entries(packageMappings)) {
+    if (path === '.') continue
     if (absolutePath.includes(path) && fromAbsolutePath.includes(path)) {
       inSamePackage = true
       break
@@ -51,10 +53,9 @@ export const getFileImportRelativePath = (
 
   // Only apply packageMappings if files are not in the same package
   if (!inSamePackage) {
-    // let usesPackageName = false
     for (const [path, packageName] of Object.entries(packageMappings)) {
+      if (path === '.') continue
       if (absolutePath.includes(path)) {
-        // usesPackageName = true
         // Use string slicing instead of regex to avoid ReDoS and ensure correct behavior
         const pathIndex = absolutePath.indexOf(path)
         filePath = packageName + absolutePath.slice(pathIndex + path.length)
