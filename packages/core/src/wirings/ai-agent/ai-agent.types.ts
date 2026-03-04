@@ -69,6 +69,8 @@ export interface AIAgentInput {
   threadId: string
   resourceId: string
   attachments?: AIAgentInputAttachment[]
+  model?: string
+  temperature?: number
 }
 
 export interface AIAgentOutput {
@@ -78,6 +80,14 @@ export interface AIAgentOutput {
   threadId: string
   steps: AIAgentStep[]
   usage: { inputTokens: number; outputTokens: number }
+  status?: 'completed' | 'suspended'
+  pendingApprovals?: Array<{
+    toolCallId: string
+    toolName: string
+    args: unknown
+    reason?: string
+    runId: string
+  }>
 }
 
 export interface AIAgentToolDef {

@@ -21,6 +21,8 @@ export interface PikkuAgentRuntimeOptions {
   onFinish?: () => void
   credentials?: RequestCredentials
   headers?: Record<string, string>
+  model?: string
+  temperature?: number
 }
 
 export interface PendingApproval {
@@ -185,7 +187,7 @@ function buildContent(text: { value: string }, toolCalls: ToolCall[]): any[] {
   return content
 }
 
-function createPikkuAdapter(
+function createPikkuStreamingAdapter(
   optionsRef: React.RefObject<PikkuAgentRuntimeOptions>,
   pendingApprovalsRef: React.RefObject<PendingApproval[]>,
   approvalDecisionsRef: React.RefObject<
@@ -343,6 +345,8 @@ function createPikkuAdapter(
           message: messageText,
           threadId: opts.threadId,
           resourceId: opts.resourceId,
+          model: opts.model,
+          temperature: opts.temperature,
         }),
         signal: abortSignal,
         credentials: opts.credentials,
@@ -566,7 +570,7 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
 
   const adapter = useMemo(
     () =>
-      createPikkuAdapter(
+      createPikkuStreamingAdapter(
         optionsRef,
         pendingApprovalsRef,
         approvalDecisionsRef,
@@ -589,6 +593,268 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
   // handleApproval is called from the Approve/Deny button click handler.
   // It accumulates the decision in the ref. assistant-ui will call run()
   // when ALL tool calls have results (via addResult).
+  const handleApproval = useCallback(
+    (toolCallId: string, approved: boolean) => {
+      approvalDecisionsRef.current.push({ toolCallId, approved })
+    },
+    []
+  )
+
+  const isAwaitingApproval = pendingApprovals.length > 0
+
+  return {
+    runtime,
+    pendingApprovals,
+    isAwaitingApproval,
+    handleApproval,
+  }
+}
+
+function createPikkuNonStreamingAdapter(
+  optionsRef: React.RefObject<PikkuAgentRuntimeOptions>,
+  pendingApprovalsRef: React.RefObject<PendingApproval[]>,
+  approvalDecisionsRef: React.RefObject<
+    { toolCallId: string; approved: boolean }[]
+  >,
+  setPendingApprovalsRef: React.RefObject<
+    (approvals: PendingApproval[]) => void
+  >,
+  onFinishRef: React.RefObject<(() => void) | undefined>
+): ChatModelAdapter {
+  return {
+    async *run({ messages, abortSignal }) {
+      const opts = optionsRef.current!
+
+      // Continuation after approval decisions
+      const pendingApprovals = pendingApprovalsRef.current
+      if (pendingApprovals.length > 0) {
+        const decisions = approvalDecisionsRef.current
+        approvalDecisionsRef.current = []
+
+        if (decisions.length === 0) return
+
+        pendingApprovalsRef.current = []
+        setPendingApprovalsRef.current([])
+
+        // Resume uses SSE (same as streaming mode)
+        let lastText = { value: '' }
+        let lastToolCalls: ToolCall[] = []
+        let nextApprovals: PendingApproval[] = []
+
+        for (let i = 0; i < decisions.length; i++) {
+          const decision = decisions[i]
+          const matchingApproval = pendingApprovals.find(
+            (p) => p.toolCallId === decision.toolCallId
+          )
+          const runId = matchingApproval?.runId ?? pendingApprovals[0]?.runId
+
+          const resumeResponse = await fetch(
+            `${opts.api}/${opts.agentName}/resume`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...opts.headers,
+              },
+              body: JSON.stringify({
+                runId,
+                toolCallId: decision.toolCallId,
+                approved: decision.approved,
+              }),
+              signal: abortSignal,
+              credentials: opts.credentials,
+            }
+          )
+
+          if (!resumeResponse.ok || !resumeResponse.body) continue
+
+          const text = { value: '' }
+          const toolCalls: ToolCall[] = []
+          const reader = resumeResponse.body.getReader()
+          const streamApprovals = await processStream(
+            reader,
+            text,
+            toolCalls,
+            () => {},
+            i === decisions.length - 1
+              ? (onFinishRef.current ?? undefined)
+              : undefined
+          )
+
+          lastText = text
+          lastToolCalls = toolCalls
+          if (streamApprovals.length > 0) {
+            nextApprovals = streamApprovals
+          }
+        }
+
+        const content = buildContent(lastText, lastToolCalls)
+
+        if (nextApprovals.length > 0) {
+          pendingApprovalsRef.current = nextApprovals
+          setPendingApprovalsRef.current(nextApprovals)
+
+          for (const approval of nextApprovals) {
+            const approvalToolCall: ToolCall = {
+              type: 'tool-call',
+              toolCallId: approval.toolCallId,
+              toolName: approval.toolName,
+              args: {
+                ...(typeof approval.args === 'object' && approval.args !== null
+                  ? (approval.args as Record<string, unknown>)
+                  : {}),
+                ...(approval.reason
+                  ? { __approvalReason: approval.reason }
+                  : {}),
+              },
+            }
+            const idx = lastToolCalls.findIndex(
+              (tc) => tc.toolCallId === approval.toolCallId && !tc.result
+            )
+            if (idx !== -1) {
+              lastToolCalls[idx] = approvalToolCall
+            } else {
+              lastToolCalls.push(approvalToolCall)
+            }
+          }
+
+          const updatedContent = buildContent(lastText, lastToolCalls)
+          yield {
+            content: updatedContent,
+            status: {
+              type: 'requires-action' as const,
+              reason: 'tool-calls' as const,
+            },
+          }
+        } else if (content.length > 0) {
+          yield { content }
+        }
+        return
+      }
+
+      // Normal flow: new user message → non-streaming POST
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+      if (!lastUserMsg) return
+
+      let messageText = ''
+      if (lastUserMsg.content) {
+        for (const part of lastUserMsg.content) {
+          if ('text' in part && part.type === 'text') {
+            messageText += (part as { text: string }).text
+          }
+        }
+      }
+
+      const response = await fetch(`${opts.api}/${opts.agentName}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...opts.headers },
+        body: JSON.stringify({
+          agentName: opts.agentName,
+          message: messageText,
+          threadId: opts.threadId,
+          resourceId: opts.resourceId,
+          model: opts.model,
+          temperature: opts.temperature,
+        }),
+        signal: abortSignal,
+        credentials: opts.credentials,
+      })
+
+      if (!response.ok) {
+        throw new Error(`Agent run failed: ${response.status}`)
+      }
+
+      const json = await response.json()
+
+      if (json.status === 'suspended' && json.pendingApprovals?.length > 0) {
+        const approvals: PendingApproval[] = json.pendingApprovals
+        pendingApprovalsRef.current = approvals
+        setPendingApprovalsRef.current(approvals)
+
+        const toolCalls: ToolCall[] = approvals.map((approval) => ({
+          type: 'tool-call' as const,
+          toolCallId: approval.toolCallId,
+          toolName: approval.toolName,
+          args: {
+            ...(typeof approval.args === 'object' && approval.args !== null
+              ? (approval.args as Record<string, unknown>)
+              : {}),
+            ...(approval.reason ? { __approvalReason: approval.reason } : {}),
+          },
+        }))
+
+        const content: any[] = []
+        if (json.result) {
+          content.push({ type: 'text' as const, text: json.result })
+        }
+        content.push(...toolCalls)
+
+        yield {
+          content,
+          status: {
+            type: 'requires-action' as const,
+            reason: 'tool-calls' as const,
+          },
+        }
+        return
+      }
+
+      // No approvals — yield complete content
+      onFinishRef.current?.()
+      const content: any[] = []
+      if (json.result) {
+        content.push({ type: 'text' as const, text: String(json.result) })
+      }
+      if (content.length > 0) {
+        yield { content }
+      }
+    },
+  }
+}
+
+export function usePikkuAgentNonStreamingRuntime(
+  options: PikkuAgentRuntimeOptions
+) {
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
+    []
+  )
+
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
+  const onFinishRef = useRef(options.onFinish)
+  onFinishRef.current = options.onFinish
+
+  const pendingApprovalsRef = useRef<PendingApproval[]>([])
+  const approvalDecisionsRef = useRef<
+    { toolCallId: string; approved: boolean }[]
+  >([])
+
+  const setPendingApprovalsRef = useRef(setPendingApprovals)
+  setPendingApprovalsRef.current = setPendingApprovals
+
+  const adapter = useMemo(
+    () =>
+      createPikkuNonStreamingAdapter(
+        optionsRef,
+        pendingApprovalsRef,
+        approvalDecisionsRef,
+        setPendingApprovalsRef,
+        onFinishRef
+      ),
+    []
+  )
+
+  const initialMessages = useMemo(
+    () =>
+      options.initialMessages
+        ? convertDbMessages(options.initialMessages)
+        : undefined,
+    [options.initialMessages]
+  )
+
+  const runtime = useLocalRuntime(adapter, { initialMessages })
+
   const handleApproval = useCallback(
     (toolCallId: string, approved: boolean) => {
       approvalDecisionsRef.current.push({ toolCallId, approved })

@@ -315,7 +315,7 @@ async function runStreamStepLoop(
   return { outcome: 'done' }
 }
 
-function checkForApprovals(
+export function checkForApprovals(
   stepResult: AIAgentStepResult,
   tools: AIAgentRunnerParams['tools'],
   runId: string
@@ -385,7 +385,7 @@ function checkForApprovals(
   return approvals
 }
 
-function appendStepMessages(
+export function appendStepMessages(
   runnerParams: AIAgentRunnerParams,
   stepResult: AIAgentStepResult
 ): void {
@@ -473,7 +473,13 @@ function handleApprovals(
 
 export async function streamAIAgent(
   agentName: string,
-  input: { message: string; threadId: string; resourceId: string },
+  input: {
+    message: string
+    threadId: string
+    resourceId: string
+    model?: string
+    temperature?: number
+  },
   channel: AIStreamChannel,
   params: RunAIAgentParams,
   agentSessionMap?: Map<string, string>,

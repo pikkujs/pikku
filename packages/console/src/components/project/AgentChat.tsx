@@ -25,6 +25,7 @@ import {
 } from '@assistant-ui/react'
 import {
   usePikkuAgentRuntime,
+  usePikkuAgentNonStreamingRuntime,
   PikkuApprovalContext,
   usePikkuApproval,
   resolvePikkuToolStatus,
@@ -324,7 +325,11 @@ const AgentComposer: React.FunctionComponent<{ disabled?: boolean }> = ({
   </Box>
 )
 
-export const AgentChat: React.FunctionComponent = () => {
+export const AgentChat: React.FunctionComponent<{
+  streaming?: boolean
+  model?: string
+  temperature?: number
+}> = ({ streaming = false, model, temperature }) => {
   const { agentId, threadId, setThreadId, refetchThreads, dbMessages } =
     useAgentPlayground()
 
@@ -338,15 +343,22 @@ export const AgentChat: React.FunctionComponent = () => {
   const fallbackThreadId = useMemo(() => crypto.randomUUID(), [])
   const effectiveThreadId = threadId ?? fallbackThreadId
 
-  const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
-    usePikkuAgentRuntime({
+  const runtimeOptions = {
     api,
     agentName: agentId,
     threadId: effectiveThreadId,
     resourceId: 'default',
     initialMessages: dbMessages,
     onFinish: onStreamDone,
-  })
+    model,
+    temperature,
+  }
+
+  const streamingHook = usePikkuAgentRuntime(runtimeOptions)
+  const nonStreamingHook = usePikkuAgentNonStreamingRuntime(runtimeOptions)
+
+  const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
+    streaming ? streamingHook : nonStreamingHook
 
   return (
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
