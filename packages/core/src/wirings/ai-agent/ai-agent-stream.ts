@@ -234,7 +234,7 @@ type StepLoopParams = {
 
 type StepLoopResult =
   | { outcome: 'done' }
-  | { outcome: 'approval'; approval: ToolApprovalRequired }
+  | { outcome: 'approval'; approvals: ToolApprovalRequired[] }
 
 async function runStreamStepLoop(
   params: StepLoopParams
@@ -287,26 +287,26 @@ async function runStreamStepLoop(
 
     if (stepResult.toolCalls.length === 0) break
 
-    const approvalNeeded = checkForApproval(
+    const approvalsNeeded = checkForApprovals(
       stepResult,
       runnerParams.tools,
       runId
     )
-    if (approvalNeeded) {
-      // If the tool has an approvalDescriptionFn, call it to generate a human-readable reason
-      const toolDef = runnerParams.tools.find(
-        (t) => t.name === approvalNeeded.toolName
-      )
-      if (toolDef?.approvalDescriptionFn && !approvalNeeded.reason) {
-        try {
-          approvalNeeded.reason = await toolDef.approvalDescriptionFn(
-            approvalNeeded.args
-          )
-        } catch {
-          // If description generation fails, continue without it
+    if (approvalsNeeded.length > 0) {
+      // For each approval, call approvalDescriptionFn if available
+      for (const approval of approvalsNeeded) {
+        const toolDef = runnerParams.tools.find(
+          (t) => t.name === approval.toolName
+        )
+        if (toolDef?.approvalDescriptionFn && !approval.reason) {
+          try {
+            approval.reason = await toolDef.approvalDescriptionFn(approval.args)
+          } catch {
+            // If description generation fails, continue without it
+          }
         }
       }
-      return { outcome: 'approval', approval: approvalNeeded }
+      return { outcome: 'approval', approvals: approvalsNeeded }
     }
 
     appendStepMessages(runnerParams, stepResult)
@@ -315,16 +315,20 @@ async function runStreamStepLoop(
   return { outcome: 'done' }
 }
 
-function checkForApproval(
+function checkForApprovals(
   stepResult: AIAgentStepResult,
   tools: AIAgentRunnerParams['tools'],
   runId: string
-): ToolApprovalRequired | null {
+): ToolApprovalRequired[] {
+  const approvals: ToolApprovalRequired[] = []
   for (const tc of stepResult.toolCalls) {
     const toolDef = tools.find((t) => t.name === tc.toolName)
 
     if (toolDef?.needsApproval) {
-      return new ToolApprovalRequired(tc.toolCallId, tc.toolName, tc.args)
+      approvals.push(
+        new ToolApprovalRequired(tc.toolCallId, tc.toolName, tc.args)
+      )
+      continue
     }
 
     const tr = stepResult.toolResults.find(
@@ -343,18 +347,20 @@ function checkForApproval(
         displayArgs?: unknown
         agentRunId?: string
       }
-      return new ToolApprovalRequired(
-        tc.toolCallId,
-        r.toolName,
-        r.args,
-        r.reason,
-        r.displayToolName,
-        r.displayArgs,
-        r.agentRunId
+      approvals.push(
+        new ToolApprovalRequired(
+          tc.toolCallId,
+          r.toolName,
+          r.args,
+          r.reason,
+          r.displayToolName,
+          r.displayArgs,
+          r.agentRunId
+        )
       )
     }
   }
-  return null
+  return approvals
 }
 
 function appendStepMessages(
@@ -393,8 +399,8 @@ function appendStepMessages(
   }
 }
 
-function handleApproval(
-  err: ToolApprovalRequired,
+function handleApprovals(
+  approvals: ToolApprovalRequired[],
   runId: string,
   channel: AIStreamChannel,
   aiRunState: AIRunStateService,
@@ -403,37 +409,41 @@ function handleApproval(
   return (async () => {
     await persistingChannel.flush()
 
-    const pendingApproval = err.agentRunId
-      ? {
-          type: 'agent-call' as const,
-          toolCallId: err.toolCallId,
-          agentName: err.toolName,
-          agentRunId: err.agentRunId,
-          displayToolName: err.displayToolName ?? err.toolName,
-          displayArgs: err.displayArgs ?? err.args,
-        }
-      : {
-          type: 'tool-call' as const,
-          toolCallId: err.toolCallId,
-          toolName: err.toolName,
-          args: err.args,
-        }
+    const pendingApprovals = approvals.map((err) =>
+      err.agentRunId
+        ? {
+            type: 'agent-call' as const,
+            toolCallId: err.toolCallId,
+            agentName: err.toolName,
+            agentRunId: err.agentRunId,
+            displayToolName: err.displayToolName ?? err.toolName,
+            displayArgs: err.displayArgs ?? err.args,
+          }
+        : {
+            type: 'tool-call' as const,
+            toolCallId: err.toolCallId,
+            toolName: err.toolName,
+            args: err.args,
+          }
+    )
 
     await aiRunState.updateRun(runId, {
       status: 'suspended',
       suspendReason: 'approval',
-      pendingApprovals: [pendingApproval],
+      pendingApprovals,
     })
 
-    const approvalEvent = {
-      type: 'approval-request' as const,
-      toolCallId: err.toolCallId,
-      toolName: err.displayToolName ?? err.toolName,
-      args: err.displayArgs ?? err.args,
-      reason: err.reason,
-      runId,
+    for (const err of approvals) {
+      const approvalEvent = {
+        type: 'approval-request' as const,
+        toolCallId: err.toolCallId,
+        toolName: err.displayToolName ?? err.toolName,
+        args: err.displayArgs ?? err.args,
+        reason: err.reason,
+        runId,
+      }
+      channel.send(approvalEvent as any)
     }
-    channel.send(approvalEvent as any)
     channel.send({ type: 'done' })
     channel.close()
   })()
@@ -591,8 +601,8 @@ export async function streamAIAgent(
     })
 
     if (loopResult.outcome === 'approval') {
-      await handleApproval(
-        loopResult.approval,
+      await handleApprovals(
+        loopResult.approvals,
         runId,
         channel,
         aiRunState,
@@ -691,7 +701,8 @@ export async function resumeAIAgent(
       await aiRunState.updateRun(pending.agentRunId, { status: 'failed' })
     }
 
-    const denialResult = 'Tool call was not approved by the user'
+    const denialResult =
+      'The user explicitly declined this action. Inform them that it was declined and do not retry.'
 
     if (storage) {
       await storage.saveMessages(run.threadId, [
@@ -711,6 +722,17 @@ export async function resumeAIAgent(
           createdAt: new Date(),
         },
       ])
+    }
+
+    // Check remaining pending approvals
+    const updatedRun = await aiRunState.getRun(run.runId)
+    const remaining = updatedRun?.pendingApprovals ?? []
+
+    if (remaining.length > 0) {
+      // Still waiting for more approvals - don't continue step loop
+      channel.send({ type: 'done' })
+      channel.close()
+      return
     }
 
     await aiRunState.updateRun(run.runId, { status: 'running' })
@@ -847,6 +869,17 @@ export async function resumeAIAgent(
       result: toolResult,
       ...(isError ? { isError: true } : {}),
     })
+  }
+
+  // Check remaining pending approvals after processing this one
+  const updatedRun = await aiRunState.getRun(run.runId)
+  const remaining = updatedRun?.pendingApprovals ?? []
+
+  if (remaining.length > 0) {
+    // Still waiting for more approvals - don't continue step loop
+    channel.send({ type: 'done' })
+    channel.close()
+    return
   }
 
   await aiRunState.updateRun(run.runId, { status: 'running' })
@@ -1008,8 +1041,8 @@ async function continueAfterToolResult(
     })
 
     if (loopResult.outcome === 'approval') {
-      await handleApproval(
-        loopResult.approval,
+      await handleApprovals(
+        loopResult.approvals,
         run.runId,
         channel,
         aiRunState,
