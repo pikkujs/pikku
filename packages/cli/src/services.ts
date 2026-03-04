@@ -309,7 +309,7 @@ export const createSingletonServices: CreateSingletonServices<
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
-        isAddon: config.addon,
+        isAddon: !!config.addon,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,

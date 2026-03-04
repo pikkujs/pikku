@@ -10,7 +10,7 @@ export const pikkuNodeTypes = pikkuSessionlessFunc<void, void>({
       nodeTypesFile,
       rpcInternalMapDeclarationFile,
       packageMappings,
-      node,
+      addon,
     } = config
 
     let rpcMapImportPath = getFileImportRelativePath(
@@ -20,7 +20,7 @@ export const pikkuNodeTypes = pikkuSessionlessFunc<void, void>({
     )
     rpcMapImportPath = rpcMapImportPath.replace('.d.js', '.js')
 
-    const categories = node?.categories
+    const categories = typeof addon === 'object' ? addon?.categories : undefined
     const content = serializeNodeTypes(rpcMapImportPath, categories)
     await writeFileInDir(logger, nodeTypesFile, content)
   },

@@ -39,7 +39,8 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
     const { nodes, secrets } = state
-    const { nodesMetaJsonFile, node, rootDir } = config
+    const { addonMetaJsonFile, addon, rootDir } = config
+    const addonMeta = typeof addon === 'object' ? addon : undefined
 
     const secretsMeta = validateAndBuildSecretDefinitionsMeta(
       secrets.definitions,
@@ -48,12 +49,13 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const hasNodes = Object.keys(nodes.meta).length > 0
     const hasSecrets = secrets.definitions.length > 0
+    const hasPackageMeta = !!addonMeta?.icon || !!addonMeta?.displayName
 
-    if (!hasNodes && !hasSecrets) {
+    if (!hasNodes && !hasSecrets && !hasPackageMeta) {
       return undefined
     }
 
-    const allowedCategories = node?.categories
+    const allowedCategories = addonMeta?.categories
     if (allowedCategories && allowedCategories.length > 0) {
       for (const [name, meta] of Object.entries(nodes.meta) as [
         string,
@@ -75,30 +77,30 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
       outputMeta[name] = nodeMetaWithoutIcon
     }
 
-    const packageIcon = await loadIcon(node?.icon, rootDir, logger)
+    const packageIcon = await loadIcon(addonMeta?.icon, rootDir, logger)
 
     const metaData = {
       nodes: outputMeta,
       secrets: secretsMeta,
       package: {
-        displayName: node?.displayName,
-        description: node?.description,
+        displayName: addonMeta?.displayName,
+        description: addonMeta?.description,
         icon: packageIcon,
-        categories: node?.categories,
+        categories: addonMeta?.categories,
       },
     }
 
-    if (nodesMetaJsonFile && config.scaffold?.console) {
+    if (addonMetaJsonFile && (config.scaffold?.console || config.addon)) {
       const minimalMeta = stripVerboseFields(metaData)
       await writeFileInDir(
         logger,
-        nodesMetaJsonFile,
+        addonMetaJsonFile,
         JSON.stringify(minimalMeta, null, 2),
         { ignoreModifyComment: true }
       )
 
       if (hasVerboseFields(metaData)) {
-        const verbosePath = nodesMetaJsonFile.replace(
+        const verbosePath = addonMetaJsonFile.replace(
           /\.gen\.json$/,
           '-verbose.gen.json'
         )
