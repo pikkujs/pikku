@@ -1,0 +1,50 @@
+{
+  "name": "@pikku/e2e",
+  "version": "0.0.0",
+  "description": "Pikku E2E test harness",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "bin/start.ts",
+  "imports": {
+    "#pikku/*": "./.pikku/*"
+  },
+  "scripts": {
+    "start": "tsx bin/start.ts",
+    "dev": "tsx --watch bin/start.ts",
+    "test": "cucumber-js --config tests/cucumber.mjs",
+    "test:todo": "cucumber-js --config tests/cucumber.mjs --tags @todo",
+    "test:router": "cucumber-js --config tests/cucumber.mjs --tags @router",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.37",
+    "@pikku/addon-console": "workspace:*",
+    "@pikku/ai-vercel": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/pg": "workspace:*",
+    "@pikku/redis": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "@pikku/uws": "workspace:*",
+    "ai": "^6.0.105",
+    "better-sqlite3": "^11.0.0",
+    "ioredis": "^5.10.0",
+    "kysely": "^0.28.11",
+    "kysely-plugin-serialize": "^0.6.0",
+    "kysely-postgres-js": "^3.0.0",
+    "mysql2": "^3.18.2",
+    "postgres": "^3.4.8",
+    "tslib": "^2.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.0.0",
+    "@pikku/cli": "workspace:*",
+    "@playwright/test": "^1.50.0",
+    "@types/better-sqlite3": "^7.0.0",
+    "@types/node": "^22"
+  }
+}

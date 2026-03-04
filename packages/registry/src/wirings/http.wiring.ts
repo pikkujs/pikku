@@ -13,7 +13,6 @@ wireHTTPRoutes({
     ingest: {
       route: '/api/ingest',
       method: 'post',
-      auth: true,
       func: pikkuSessionlessFunc<
         { packageName: string; version?: string },
         unknown

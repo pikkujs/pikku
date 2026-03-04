@@ -1,13 +1,13 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import type { AddonDetail } from '../services/addon.service.js'
+import type { AddonPackageInfo } from '../services/addon.service.js'
 
-export const getAddonPackage = pikkuSessionlessFunc<
+export const getAddonCommunityPackage = pikkuSessionlessFunc<
   { id: string },
-  AddonDetail | null
+  AddonPackageInfo | null
 >({
-  title: 'Get Addon Package',
+  title: 'Get Community Addon Package',
   description:
-    'Returns the full details of a single addon by ID, including readme and repository information',
+    'Returns the full details of a community addon by ID from the registry',
   expose: true,
   auth: false,
   func: async ({ addonService }, { id }) => {

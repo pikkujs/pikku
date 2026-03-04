@@ -71,6 +71,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             ? aiTool({
                 description: t.description,
                 inputSchema: jsonSchema(cleaned),
+                needsApproval: true,
               })
             : aiTool({
                 description: t.description,
@@ -164,7 +165,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
               toolName: (part as any).toolName,
               result: errorText,
               isError: true,
-            })
+            } as any)
             break
           }
           case 'finish-step':

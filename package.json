@@ -15,6 +15,7 @@
       "templates/*",
       "verifiers/*",
       "e2e",
+      "e2e/packages/*",
       "packages/registry"
     ]
   },

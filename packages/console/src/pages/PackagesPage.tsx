@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PackageDetailPage } from './PackageDetailPage'
-import { Group, Text, ThemeIcon, Badge } from '@mantine/core'
-import { Package } from 'lucide-react'
+import { Group, Text, ThemeIcon, Badge, SegmentedControl, Box } from '@mantine/core'
+import { Package, HardDrive, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
@@ -22,6 +22,15 @@ export interface PackageMeta {
   categories: string[]
   functions: Record<string, unknown>
   agents: Record<string, unknown>
+}
+
+interface InstalledAddon {
+  namespace: string
+  packageName: string
+  functionCount: number
+  agentCount: number
+  icon?: string
+  tags?: string[]
 }
 
 const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
@@ -49,7 +58,7 @@ const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
   )
 }
 
-const COLUMNS = () => [
+const COMMUNITY_COLUMNS = () => [
   {
     key: 'package',
     header: 'PACKAGE',
@@ -90,8 +99,91 @@ const COLUMNS = () => [
   },
 ]
 
-const PackagesList: React.FunctionComponent<{
-  onSelect: (id: string) => void
+const INSTALLED_COLUMNS = () => [
+  {
+    key: 'addon',
+    header: 'ADDON',
+    render: (item: InstalledAddon) => (
+      <Group gap="sm" wrap="nowrap">
+        <PackageIcon icon={item.icon} name={item.namespace} />
+        <div>
+          <Group gap="xs" wrap="nowrap">
+            <Text fw={500} size="sm">
+              {item.namespace}
+            </Text>
+            <Badge size="xs" variant="light" color="gray">
+              {item.packageName}
+            </Badge>
+          </Group>
+          {(item.tags ?? []).length > 0 && (
+            <Group gap={4} mt={2}>
+              {item.tags!.map((tag) => (
+                <Badge key={tag} size="xs" variant="dot">
+                  {tag}
+                </Badge>
+              ))}
+            </Group>
+          )}
+        </div>
+      </Group>
+    ),
+  },
+  {
+    key: 'functions',
+    header: 'FUNCTIONS',
+    render: (item: InstalledAddon) => (
+      <Text size="sm">{item.functionCount}</Text>
+    ),
+  },
+  {
+    key: 'agents',
+    header: 'AGENTS',
+    render: (item: InstalledAddon) => (
+      <Text size="sm">{item.agentCount}</Text>
+    ),
+  },
+]
+
+const InstalledList: React.FunctionComponent<{
+  onSelect: (id: string, source: 'installed' | 'community') => void
+}> = ({ onSelect }) => {
+  const rpc = usePikkuRPC()
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['installed-addons'],
+    queryFn: async () => {
+      const result = await rpc.invoke('console:getInstalledAddons', null)
+      return (result ?? []) as InstalledAddon[]
+    },
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+
+  const columns = useMemo(() => INSTALLED_COLUMNS(), [])
+
+  return (
+    <TableListPage
+      title="Installed Addons"
+      icon={Package}
+      docsHref="https://pikku.dev/docs/external-packages"
+      data={data ?? []}
+      columns={columns}
+      getKey={(item) => item.namespace}
+      onRowClick={(item) => onSelect(item.packageName, 'installed')}
+      searchPlaceholder="Search installed addons..."
+      searchFilter={(item, q) =>
+        item.namespace.toLowerCase().includes(q) ||
+        item.packageName.toLowerCase().includes(q) ||
+        false
+      }
+      emptyMessage="No installed addons found."
+      loading={isLoading}
+    />
+  )
+}
+
+const CommunityList: React.FunctionComponent<{
+  onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
 
@@ -105,7 +197,35 @@ const PackagesList: React.FunctionComponent<{
     retry: false,
   })
 
-  const columns = useMemo(() => COLUMNS(), [])
+  const columns = useMemo(() => COMMUNITY_COLUMNS(), [])
+
+  return (
+    <TableListPage
+      title="Community Addons"
+      icon={Package}
+      docsHref="https://pikku.dev/docs/external-packages"
+      data={data ?? []}
+      columns={columns}
+      getKey={(item) => item.id}
+      onRowClick={(item) => onSelect(item.id, 'community')}
+      searchPlaceholder="Search community addons..."
+      searchFilter={(item, q) =>
+        item.displayName?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q) ||
+        false
+      }
+      emptyTitle="Registry Unavailable"
+      emptyDescription="Could not fetch addons from the registry. Check your network connection."
+      loading={isLoading}
+    />
+  )
+}
+
+const PackagesList: React.FunctionComponent<{
+  onSelect: (id: string, source: 'installed' | 'community') => void
+}> = ({ onSelect }) => {
+  const [tab, setTab] = useState<string>('installed')
 
   return (
     <ResizablePanelLayout
@@ -118,26 +238,42 @@ const PackagesList: React.FunctionComponent<{
       }
       hidePanel
     >
-      <TableListPage
-        title="Addons"
-        icon={Package}
-        docsHref="https://pikku.dev/docs/external-packages"
-        data={data ?? []}
-        columns={columns}
-        getKey={(item) => item.id}
-        onRowClick={(item) => onSelect(item.id)}
-        searchPlaceholder="Search addons..."
-        searchFilter={(item, q) =>
-          item.displayName?.toLowerCase().includes(q) ||
-          item.name?.toLowerCase().includes(q) ||
-          item.description?.toLowerCase().includes(q) ||
-          false
-        }
-        emptyTitle={isError ? 'Addon Service Not Running' : undefined}
-        emptyDescription={isError ? '' : undefined}
-        emptyMessage="No addons found."
-        loading={isLoading}
-      />
+      <Box
+        style={{
+          borderBottom: '1px solid var(--mantine-color-default-border)',
+        }}
+      >
+        <SegmentedControl
+          fullWidth
+          value={tab}
+          onChange={(value) => setTab(value)}
+          data={[
+            {
+              label: (
+                <Group gap={4} justify="center">
+                  <HardDrive size={14} />
+                  <span>Installed</span>
+                </Group>
+              ),
+              value: 'installed',
+            },
+            {
+              label: (
+                <Group gap={4} justify="center">
+                  <Globe size={14} />
+                  <span>Community</span>
+                </Group>
+              ),
+              value: 'community',
+            },
+          ]}
+        />
+      </Box>
+      {tab === 'installed' ? (
+        <InstalledList onSelect={onSelect} />
+      ) : (
+        <CommunityList onSelect={onSelect} />
+      )}
     </ResizablePanelLayout>
   )
 }
@@ -145,14 +281,25 @@ const PackagesList: React.FunctionComponent<{
 const PackagesPageContent: React.FunctionComponent = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
+  const source = (searchParams.get('source') ?? 'community') as
+    | 'installed'
+    | 'community'
 
   if (selectedId) {
     return (
-      <PackageDetailPage id={selectedId} onBack={() => setSearchParams({})} />
+      <PackageDetailPage
+        id={selectedId}
+        source={source}
+        onBack={() => setSearchParams({})}
+      />
     )
   }
 
-  return <PackagesList onSelect={(id) => setSearchParams({ id })} />
+  return (
+    <PackagesList
+      onSelect={(id, src) => setSearchParams({ id, source: src })}
+    />
+  )
 }
 
 export const PackagesPage: React.FunctionComponent = () => {

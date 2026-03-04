@@ -265,6 +265,208 @@ describe('streamAIAgent', () => {
     )
   })
 
+  test('suspends run when multiple tool calls need approval (explicit policy)', async () => {
+    addTestAgent('multi-approval-agent')
+
+    const updates: Array<{ runId: string; patch: unknown }> = []
+    const events: AIStreamEvent[] = []
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (): Promise<AIAgentStepResult> => {
+          // Simulate LLM returning 3 addTodo calls in one step
+          return makeStepResult({
+            toolCalls: [
+              {
+                toolCallId: 'tc-1',
+                toolName: 'todos__addTodo',
+                args: { title: 'todo 1' },
+              },
+              {
+                toolCallId: 'tc-2',
+                toolName: 'todos__addTodo',
+                args: { title: 'todo 2' },
+              },
+              {
+                toolCallId: 'tc-3',
+                toolName: 'todos__addTodo',
+                args: { title: 'todo 3' },
+              },
+            ],
+            // No toolResults since tools have no execute (needsApproval)
+          })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-multi-approval',
+        updateRun: async (runId: string, patch: unknown) => {
+          updates.push({ runId, patch })
+        },
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    const agentName = 'multi-approval-agent'
+    pikkuState(null, 'agent', 'agentsMeta')[agentName].tools = [
+      'todos__addTodo',
+    ]
+    pikkuState(null, 'rpc', 'meta')['todos__addTodo'] = 'addTodo'
+    pikkuState(null, 'function', 'meta')['addTodo'] = {
+      description: 'Add a todo',
+      approvalRequired: true,
+      inputSchemaName: 'AddTodoInput',
+    }
+    pikkuState(null, 'misc', 'schemas').set('AddTodoInput', {
+      type: 'object',
+      properties: { title: { type: 'string' } },
+    })
+
+    await streamAIAgent(
+      agentName,
+      {
+        message: 'create 3 todos',
+        threadId: 'thread-multi-approval',
+        resourceId: 'resource-multi-approval',
+      },
+      {
+        channelId: 'channel-multi-approval',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => {
+          events.push(event)
+        },
+        close: () => {},
+      },
+      {}
+      // No options → defaults to requiresToolApproval: 'explicit'
+    )
+
+    // Should suspend on first tool call
+    const approvalEvent = events.find(
+      (e) => e.type === 'approval-request'
+    ) as any
+    assert.ok(approvalEvent, 'Should have an approval-request event')
+    assert.equal(approvalEvent.toolCallId, 'tc-1')
+    assert.equal(approvalEvent.toolName, 'todos__addTodo')
+
+    // Run should be suspended
+    assert.ok(
+      updates.some((u) => (u.patch as any).status === 'suspended'),
+      'Run should be suspended for approval'
+    )
+
+    assert.ok(events.some((e) => e.type === 'done'))
+  })
+
+  test('suspends run for addon tools using namespaced resolution (explicit policy)', async () => {
+    addTestAgent('addon-approval-agent')
+
+    const updates: Array<{ runId: string; patch: unknown }> = []
+    const events: AIStreamEvent[] = []
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (params: any): Promise<AIAgentStepResult> => {
+          // Verify the tool was built with needsApproval
+          const addTodoTool = params.tools.find(
+            (t: any) => t.name === 'todos__addTodo'
+          )
+          assert.ok(addTodoTool, 'Tool todos__addTodo should exist')
+          assert.equal(
+            addTodoTool.needsApproval,
+            true,
+            'Tool should have needsApproval=true'
+          )
+
+          // Simulate LLM calling the tool
+          return makeStepResult({
+            toolCalls: [
+              {
+                toolCallId: 'tc-1',
+                toolName: 'todos__addTodo',
+                args: { title: 'new todo' },
+              },
+            ],
+          })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-addon-approval',
+        updateRun: async (runId: string, patch: unknown) => {
+          updates.push({ runId, patch })
+        },
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    // Register addon package
+    pikkuState(null, 'addons', 'packages').set('todos', {
+      package: '@test/addon-todos',
+    })
+
+    // Set up addon package's function metadata
+    pikkuState('@test/addon-todos', 'function', 'meta')['addTodo'] = {
+      description: 'Add a todo',
+      approvalRequired: true,
+      inputSchemaName: 'AddTodoInput',
+    }
+    pikkuState('@test/addon-todos', 'misc', 'schemas').set('AddTodoInput', {
+      type: 'object',
+      properties: { title: { type: 'string' } },
+    })
+
+    // Set up agent with namespaced tool
+    const agentName = 'addon-approval-agent'
+    pikkuState(null, 'agent', 'agentsMeta')[agentName].tools = ['todos:addTodo']
+
+    await streamAIAgent(
+      agentName,
+      {
+        message: 'add a todo',
+        threadId: 'thread-addon-approval',
+        resourceId: 'resource-addon-approval',
+      },
+      {
+        channelId: 'channel-addon-approval',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => {
+          events.push(event)
+        },
+        close: () => {},
+      },
+      {}
+    )
+
+    // Should suspend on the tool call
+    const approvalEvent = events.find(
+      (e) => e.type === 'approval-request'
+    ) as any
+    assert.ok(approvalEvent, 'Should have an approval-request event')
+    assert.equal(approvalEvent.toolCallId, 'tc-1')
+    assert.equal(approvalEvent.toolName, 'todos__addTodo')
+
+    // Run should be suspended
+    assert.ok(
+      updates.some((u) => (u.patch as any).status === 'suspended'),
+      'Run should be suspended for approval'
+    )
+  })
+
   test('suspends with agent-call type when sub-agent returns approval sentinel', async () => {
     addTestAgent('parent-agent')
 

@@ -19,6 +19,9 @@ import type {
 } from '../../backend/src/functions/pikku.console.gen.js'
 
 export type HttpOptionsApiWorkflowRunRunIdStreamInput = { runId: string }
+export type RpcCallerInput = { rpcName: string; data?: unknown }
+export type WorkflowCallerInput = { workflowName: string; input?: unknown }
+export type WorkflowCallerOutput = { runId: string }
 
 interface RPCHandler<I, O> {
   input: I

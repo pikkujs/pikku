@@ -278,18 +278,23 @@ const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
 
 export const PackageDetailPage: React.FunctionComponent<{
   id: string
+  source: 'installed' | 'community'
   onBack: () => void
-}> = ({ id, onBack }) => {
+}> = ({ id, source, onBack }) => {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
-    queryKey: ['addon', id],
+    queryKey: ['addon', source, id],
     queryFn: async () => {
-      const result = await (rpc.invoke('console:getAddonPackage', {
-        id,
-      }) as Promise<PackageRegistryEntry | null>)
+      const result = await (source === 'installed'
+        ? (rpc.invoke('console:getAddonInstalledPackage', {
+            packageName: id,
+          }) as Promise<PackageRegistryEntry | null>)
+        : (rpc.invoke('console:getAddonCommunityPackage', {
+            id,
+          }) as Promise<PackageRegistryEntry | null>))
       if (result?.schemas) {
         for (const [schemaName, schema] of Object.entries(result.schemas)) {
           queryClient.setQueryData(['schema', schemaName], schema)
@@ -512,14 +517,13 @@ export const PackageDetailPage: React.FunctionComponent<{
                     MCP ({mcpCount})
                   </Tabs.Tab>
                 )}
-                {secretList.length > 0 && (
-                  <Tabs.Tab
-                    value="secrets"
-                    leftSection={<KeyRound size={14} />}
-                  >
-                    Secrets ({secretList.length})
-                  </Tabs.Tab>
-                )}
+                <Tabs.Tab
+                  value="secrets"
+                  leftSection={<KeyRound size={14} />}
+                  disabled={secretList.length === 0}
+                >
+                  Secrets ({secretList.length})
+                </Tabs.Tab>
                 <Tabs.Tab
                   value="variables"
                   leftSection={<Settings2 size={14} />}
@@ -596,14 +600,12 @@ export const PackageDetailPage: React.FunctionComponent<{
               </Tabs.Panel>
             )}
 
-            {secretList.length > 0 && (
-              <Tabs.Panel value="secrets">
-                <ProjectSecrets
-                  secrets={secretList.map(([, s]) => s)}
-                  installed={false}
-                />
-              </Tabs.Panel>
-            )}
+            <Tabs.Panel value="secrets">
+              <ProjectSecrets
+                secrets={secretList.map(([, s]) => s)}
+                installed={false}
+              />
+            </Tabs.Panel>
 
             <Tabs.Panel value="variables">
               <ProjectVariables

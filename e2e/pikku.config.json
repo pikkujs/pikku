@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "rootDir": ".",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": [
+    "src",
+    "packages/functions/src"
+  ],
+  "outDir": ".pikku",
+  "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
+  "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
+  "packageMappings": {
+    ".": "@pikku/e2e",
+    "packages/functions": "@pikku/e2e-functions"
+  },
+  "console": {
+    "functionsPath": "packages/functions/src/wirings/console.functions.gen.ts"
+  },
+  "schema": {
+    "supportsImportAttributes": true
+  },
+  "verboseMeta": true,
+  "scaffold": {
+    "pikkuDir": "packages/functions/src/pikku",
+    "console": "no-auth",
+    "agent": "no-auth",
+    "workflow": "no-auth"
+  }
+}
