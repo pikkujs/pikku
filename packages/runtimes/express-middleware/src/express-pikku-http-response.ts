@@ -46,6 +46,11 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
     return this
   }
 
+  public send(data: any): this {
+    this.#body = data
+    return this
+  }
+
   public arrayBuffer(data: any): this {
     if (this.#streaming) {
       this.#flushHeadersOnce()
@@ -73,6 +78,7 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public close(): void {
+    this.flush()
     if (!this.#ended) {
       this.#ended = true
       this.res.end()

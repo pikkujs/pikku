@@ -33,6 +33,10 @@ export class UWSPikkuHTTPRequest<In = unknown> implements PikkuHTTPRequest<In> {
     return new Uint8Array(this._body).buffer as ArrayBuffer
   }
 
+  public headers(): Record<string, string> {
+    return { ...this._headers }
+  }
+
   public header(name: string): string | null {
     return this._headers[name.toLowerCase()] ?? null
   }

@@ -30,6 +30,16 @@ export class ExpressPikkuHTTPRequest<In = unknown>
     return new ArrayBuffer(0)
   }
 
+  public headers(): Record<string, string> {
+    const result: Record<string, string> = {}
+    for (const [key, value] of Object.entries(this.req.headers)) {
+      if (value != null) {
+        result[key] = Array.isArray(value) ? value.join(', ') : value
+      }
+    }
+    return result
+  }
+
   public header(name: string): string | null {
     const val = this.req.headers[name.toLowerCase()]
     if (!val) return null
