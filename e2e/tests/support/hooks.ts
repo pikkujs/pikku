@@ -59,15 +59,13 @@ BeforeAll(async function () {
   const backendPort = new URL(config.apiUrl).port
   const consolePort = Number(new URL(config.consoleUrl).port)
 
-  // Start the console UI static server
+  // Start the console UI static server (only needed for @console scenarios, but
+  // BeforeAll cannot inspect tags so we start it if the dist exists)
   const consoleDist = resolve(projectDir, '../packages/console/dist')
-  if (!existsSync(consoleDist)) {
-    throw new Error(
-      `Console dist not found at ${consoleDist}. Run 'yarn build' in packages/console first.`
-    )
+  if (existsSync(consoleDist)) {
+    consoleServer = await startConsoleServer(consoleDist, consolePort)
+    console.log(`[console] serving ${consoleDist} on port ${consolePort}`)
   }
-  consoleServer = await startConsoleServer(consoleDist, consolePort)
-  console.log(`[console] serving ${consoleDist} on port ${consolePort}`)
 
   // Start the backend API server
   backendProcess = spawn('npx', ['tsx', 'bin/start.ts'], {
@@ -107,7 +105,7 @@ AfterAll(async function () {
   }
 })
 
-Before(async function (this: AgentWorld) {
+Before('@console', async function (this: AgentWorld) {
   this.threadId = randomUUID()
   // Reset the in-memory stores to seed data before each scenario
   await Promise.all([
@@ -125,16 +123,19 @@ Before(async function (this: AgentWorld) {
   await this.openBrowser()
 })
 
-After(async function (this: AgentWorld, { result }: ITestCaseHookParameter) {
-  if (result?.status === 'FAILED') {
-    // Take a screenshot on failure for debugging
-    try {
-      const screenshotPath = `tests/reports/failure-${Date.now()}.png`
-      await this.page.screenshot({ path: screenshotPath, fullPage: true })
-      console.log(`Screenshot saved to ${screenshotPath}`)
-    } catch {
-      // Ignore screenshot failures
+After(
+  '@console',
+  async function (this: AgentWorld, { result }: ITestCaseHookParameter) {
+    if (result?.status === 'FAILED') {
+      // Take a screenshot on failure for debugging
+      try {
+        const screenshotPath = `tests/reports/failure-${Date.now()}.png`
+        await this.page.screenshot({ path: screenshotPath, fullPage: true })
+        console.log(`Screenshot saved to ${screenshotPath}`)
+      } catch {
+        // Ignore screenshot failures
+      }
     }
+    await this.closeBrowser()
   }
-  await this.closeBrowser()
-})
+)
