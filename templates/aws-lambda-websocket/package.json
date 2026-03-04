@@ -15,6 +15,8 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@pikku/auth-js": "^0.12.1",
     "@pikku/aws-services": "^0.12.2",
     "@pikku/core": "^0.12.2",
     "@pikku/kysely-postgres": "^0.12.2",

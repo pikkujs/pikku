@@ -12,6 +12,8 @@
     "start": "wrangler dev"
   },
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@pikku/auth-js": "^0.12.1",
     "@pikku/cloudflare": "^0.12.2",
     "@pikku/core": "^0.12.2"
   },
