@@ -1,11 +1,9 @@
-import type { JWTService } from '@pikku/core/services'
 import {
   ConsoleLogger,
   LocalSecretService,
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { requiredSingletonServices } from '../.pikku/pikku-services.gen.js'
 import {
   pikkuConfig,
   pikkuServices,
@@ -21,35 +19,19 @@ export const createConfig = pikkuConfig(async () => {
 
 /**
  * Creates singleton services for the todo app.
- * Includes JWT for authentication and optional EventHub for real-time updates.
  */
 export const createSingletonServices = pikkuServices(
   async (config, existingServices) => {
     const variables = existingServices?.variables || new LocalVariablesService()
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
-    const secrets = new LocalSecretService()
-
-    let jwt: JWTService | undefined
-    if (requiredSingletonServices.jwt) {
-      const { JoseJWTService } = await import('@pikku/jose')
-      jwt = new JoseJWTService(
-        async () => [
-          {
-            id: 'todo-app-key',
-            value: 'super-secret-jwt-key-change-in-production',
-          },
-        ],
-        logger
-      )
-    }
+    const secrets = new LocalSecretService(variables)
 
     return {
       config,
       logger,
       variables,
       schema,
-      jwt,
       secrets,
       todoStore: existingServices?.todoStore || new TodoStore(),
       aiStorage: existingServices?.aiStorage,

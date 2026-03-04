@@ -1,12 +1,19 @@
-import { authBearer } from '@pikku/core/middleware'
+import { authJsSession } from '@pikku/auth-js'
 import type { AIStreamEvent } from '@pikku/core/ai-agent'
 import {
   addHTTPMiddleware,
   pikkuChannelMiddleware,
 } from '../.pikku/pikku-types.gen.js'
 import { pikkuAIMiddleware } from '../.pikku/agent/pikku-agent-types.gen.js'
+import { AUTH_SECRET_ID } from './wirings/auth.wiring.js'
 
-export const httpAuthMiddleware = () => addHTTPMiddleware('*', [authBearer({})])
+export const httpAuthMiddleware = () =>
+  addHTTPMiddleware('*', [
+    authJsSession({
+      secretId: AUTH_SECRET_ID,
+      mapSession: (claims) => ({ userId: claims.sub as string }),
+    }),
+  ])
 
 export const appendModified = pikkuChannelMiddleware<any, AIStreamEvent>(
   async (_services, event, next) => {

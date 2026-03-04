@@ -1,24 +1,31 @@
-import { wireHTTP } from '../../.pikku/pikku-types.gen.js'
-import { login, logout, getMe } from '../functions/auth.functions.js'
+import Credentials from '@auth/core/providers/credentials'
+import { createAuthRoutes } from '@pikku/auth-js'
+import type { AuthConfigOrFactory } from '@pikku/auth-js'
+import { wireHTTPRoutes } from '../../.pikku/pikku-types.gen.js'
+import type { SingletonServices } from '../../.pikku/pikku-types.gen.js'
 
-wireHTTP({
-  auth: false,
-  method: 'post',
-  route: '/auth/login',
-  func: login,
-  tags: ['auth'],
-})
+export const AUTH_SECRET_ID = 'AUTH_SECRET'
 
-wireHTTP({
-  method: 'post',
-  route: '/auth/logout',
-  func: logout,
-  tags: ['auth'],
-})
+const configFactory: AuthConfigOrFactory = async (services) => {
+  const { todoStore } = services as SingletonServices
+  const secret = await services.secrets.getSecret(AUTH_SECRET_ID)
+  return {
+    providers: [
+      Credentials({
+        credentials: { username: {}, password: {} },
+        authorize: async (credentials) => {
+          const user = todoStore.getUserByUsername(
+            credentials.username as string
+          )
+          if (!user || !(credentials.password as string)) return null
+          return { id: user.id, name: user.username, email: user.email }
+        },
+      }),
+    ],
+    secret,
+    trustHost: true,
+    basePath: '/auth',
+  }
+}
 
-wireHTTP({
-  method: 'get',
-  route: '/auth/me',
-  func: getMe,
-  tags: ['auth'],
-})
+wireHTTPRoutes({ routes: { auth: createAuthRoutes(configFactory) as any } })
