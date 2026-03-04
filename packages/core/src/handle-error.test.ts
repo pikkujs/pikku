@@ -335,6 +335,69 @@ describe('handleHTTPError', () => {
     assert.ok(errors.some((e) => e.args[0] === 'just a string error'))
   })
 
+  test('should include message and stack when exposeErrors is true', () => {
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+    const error = new Error('something unexpected')
+
+    handleHTTPError(
+      error,
+      http as any,
+      'tracker-expose',
+      logger as any,
+      [],
+      true,
+      false,
+      true
+    )
+
+    assert.strictEqual(http._state.statusCode, 500)
+    assert.strictEqual(http._state.jsonBody.errorId, 'tracker-expose')
+    assert.strictEqual(http._state.jsonBody.message, 'something unexpected')
+    assert.ok(typeof http._state.jsonBody.stack === 'string')
+  })
+
+  test('should not include message and stack when exposeErrors is false', () => {
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+    const error = new Error('something unexpected')
+
+    handleHTTPError(
+      error,
+      http as any,
+      'tracker-no-expose',
+      logger as any,
+      [],
+      true,
+      false,
+      false
+    )
+
+    assert.strictEqual(http._state.statusCode, 500)
+    assert.deepStrictEqual(http._state.jsonBody, {
+      errorId: 'tracker-no-expose',
+    })
+  })
+
+  test('should not expose details for non-Error objects even when exposeErrors is true', () => {
+    const logger = createMockLogger()
+    const http = createMockHTTP()
+
+    handleHTTPError(
+      'string error',
+      http as any,
+      'tracker-str',
+      logger as any,
+      [],
+      true,
+      false,
+      true
+    )
+
+    assert.strictEqual(http._state.statusCode, 500)
+    assert.deepStrictEqual(http._state.jsonBody, { errorId: 'tracker-str' })
+  })
+
   test('should handle warning log without trackerId', () => {
     const logger = createMockLogger()
     const http = createMockHTTP()

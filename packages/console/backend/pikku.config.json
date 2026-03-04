@@ -9,6 +9,10 @@
     "fetchFile": "../src/pikku/pikku-fetch.gen.ts",
     "rpcWiringsFile": "../src/pikku/pikku-rpc.gen.ts"
   },
+  "scaffold": {
+    "pikkuDir": "src",
+    "rpc": "no-auth"
+  },
   "addons": {
     "console": { "package": "@pikku/addon-console", "forceInclude": true }
   },
