@@ -20,8 +20,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: |
+            node_modules
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
       - run: yarn install
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
       - name: Check formatting
         run: yarn prettier
       - name: Lint
@@ -85,13 +92,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: packages
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: |
+            node_modules
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
       - run: yarn install
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
       - run: cd templates/function-addon && yarn pikku && yarn build
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
@@ -154,14 +168,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.version }}
-          cache: yarn
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: packages
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: |
+            node_modules
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
       - name: Install dependencies for create
         run: yarn install # TODO: This should only need to install create
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
       - name: Test template
         timeout-minutes: 2
         run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
@@ -186,13 +207,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: yarn
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: packages
+      - uses: actions/cache@v4
+        id: yarn-cache
+        with:
+          path: |
+            node_modules
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
       - run: yarn install
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
       - name: Generate pikku files for e2e addons
         run: |
           cd packages/addon/pikku-console && npx pikku all
