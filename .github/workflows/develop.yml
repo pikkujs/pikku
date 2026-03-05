@@ -37,6 +37,8 @@ jobs:
         run: yarn build:packages
       - name: Generate pikku files
         run: yarn pikku
+      - name: Build addons
+        run: yarn build:addons
       - name: Build templates
         run: yarn build:templates
       - name: Regenerate schemas after bootstrap
