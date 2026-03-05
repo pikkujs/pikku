@@ -58,7 +58,7 @@ const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
   )
 }
 
-const COMMUNITY_COLUMNS = () => [
+const COMMUNITY_COLUMNS = (installedNames: Set<string>) => [
   {
     key: 'package',
     header: 'PACKAGE',
@@ -73,6 +73,11 @@ const COMMUNITY_COLUMNS = () => [
             <Badge size="xs" variant="light" color="gray">
               v{item.version}
             </Badge>
+            {installedNames.has(item.name) && (
+              <Badge size="xs" variant="light" color="green">
+                Installed
+              </Badge>
+            )}
           </Group>
           {item.description && (
             <Text size="xs" c="dimmed" truncate style={{ maxWidth: 400 }}>
@@ -197,7 +202,21 @@ const CommunityList: React.FunctionComponent<{
     retry: false,
   })
 
-  const columns = useMemo(() => COMMUNITY_COLUMNS(), [])
+  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+    queryKey: ['installed-addons'],
+    queryFn: async () => {
+      const result = await rpc.invoke('console:getInstalledAddons', null)
+      return (result ?? []) as Array<{ packageName: string }>
+    },
+    staleTime: 60 * 1000,
+  })
+
+  const installedNames = useMemo(
+    () => new Set((installedAddons ?? []).map((a) => a.packageName)),
+    [installedAddons]
+  )
+
+  const columns = useMemo(() => COMMUNITY_COLUMNS(installedNames), [installedNames])
 
   return (
     <TableListPage

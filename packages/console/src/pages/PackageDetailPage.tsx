@@ -21,6 +21,7 @@ import {
   Bot,
   KeyRound,
   Settings2,
+  Check,
   Download,
   Globe,
   Radio,
@@ -285,6 +286,19 @@ export const PackageDetailPage: React.FunctionComponent<{
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
+  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+    queryKey: ['installed-addons'],
+    queryFn: async () => {
+      const result = await rpc.invoke('console:getInstalledAddons', null)
+      return (result ?? []) as Array<{ packageName: string }>
+    },
+    staleTime: 60 * 1000,
+  })
+
+  const isInstalled =
+    source === 'installed' ||
+    (installedAddons ?? []).some((a) => a.packageName === id)
+
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', source, id],
     queryFn: async () => {
@@ -448,13 +462,25 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Anchor>
                   )}
                 </Group>
-                <Button
-                  size="xs"
-                  leftSection={<Download size={13} />}
-                  onClick={() => alert('Not yet implemented')}
-                >
-                  Install
-                </Button>
+                {isInstalled ? (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="green"
+                    leftSection={<Check size={13} />}
+                    disabled
+                  >
+                    Installed
+                  </Button>
+                ) : (
+                  <Button
+                    size="xs"
+                    leftSection={<Download size={13} />}
+                    onClick={() => alert('Not yet implemented')}
+                  >
+                    Install
+                  </Button>
+                )}
               </Group>
               {pkg.description && (
                 <Text size="sm" c="dimmed">

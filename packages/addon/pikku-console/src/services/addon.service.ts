@@ -47,7 +47,6 @@ export class AddonService {
   constructor(private registryUrl: string) {}
 
   async readAddonsMeta(): Promise<AddonMeta[]> {
-    console.log('[AddonService] fetching from:', this.registryUrl)
     const response = await fetch(`${this.registryUrl}/api/packages?limit=500`)
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)

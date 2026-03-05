@@ -1,5 +1,6 @@
 export {
   usePikkuAgentRuntime,
+  usePikkuAgentNonStreamingRuntime,
   PikkuApprovalContext,
   usePikkuApproval,
   convertDbMessages,
