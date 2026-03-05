@@ -100,8 +100,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
         run: yarn test:e2e
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
     name: Verifiers

@@ -21,11 +21,21 @@ function parseInput(table: any, docString?: string): Record<string, any> {
   if (docString) {
     return JSON.parse(docString)
   }
+  if (!table) {
+    return {}
+  }
   const rows = table.rawTable || table.raw()
+  if (!Array.isArray(rows) || rows.length < 2) {
+    return {}
+  }
   const headers = rows[0]
   const values = rows[1]
+  if (!Array.isArray(headers) || !Array.isArray(values)) {
+    return {}
+  }
   const result: Record<string, any> = {}
-  for (let i = 0; i < headers.length; i++) {
+  const len = Math.min(headers.length, values.length)
+  for (let i = 0; i < len; i++) {
     const key = headers[i]
     const val = values[i]
     if (val === 'true') result[key] = true

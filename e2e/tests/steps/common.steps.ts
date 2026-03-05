@@ -170,7 +170,7 @@ Then(
   'the last assistant message should not contain {string}',
   async function (this: AgentWorld, unexpected: string) {
     // Get the last assistant message block
-    const assistantBlocks = this.page.locator('[style*="flex-start"]')
+    const assistantBlocks = this.page.locator('[data-testid="assistant-block"]')
     const count = await assistantBlocks.count()
     expect(count).toBeGreaterThan(0)
     const lastBlock = assistantBlocks.nth(count - 1)

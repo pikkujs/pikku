@@ -90,12 +90,12 @@ export const pikkuAddonServices = <T extends Record<string, any>, ExistingServic
  * @returns The wire services factory function
  *
  * @example
- * \\\`\\\`\\\`typescript
+ * \`\`\`typescript
  * export const createWireServices = pikkuAddonWireServices(async (services, wire) => {
  *   const authHeader = wire.http?.request?.header('authorization')
  *   return { myService: new MyService(authHeader) }
  * })
- * \\\`\\\`\\\`
+ * \`\`\`
  */
 export const pikkuAddonWireServices = (
   func: (services: SingletonServices, wire: any) => Promise<Record<string, any>>
