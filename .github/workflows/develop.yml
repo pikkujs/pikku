@@ -39,14 +39,10 @@ jobs:
         run: yarn pikku
       - name: Build addons
         run: yarn build:addons
-      - name: Build templates
-        run: yarn build:templates
       - name: Regenerate schemas after bootstrap
         run: yarn pikku
       - name: Run tests
         run: yarn test:coverage
-      - name: Generate and type-check templates/functions
-        run: cd templates/functions && yarn pikku && cd ../..
       - name: Generate and type-check console
         run: cd packages/console && yarn generate && yarn tsc --noEmit
       - name: Build console
@@ -70,7 +66,7 @@ jobs:
     name: Verifiers
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build
+    needs: [build, e2e]
     strategy:
       fail-fast: false
       matrix:
@@ -115,7 +111,7 @@ jobs:
     name: Templates
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build
+    needs: [build, e2e]
     services:
       redis:
         image: redis
