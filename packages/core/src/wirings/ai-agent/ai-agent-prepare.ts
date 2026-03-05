@@ -336,9 +336,9 @@ export function buildToolDefs(
             agentSessionMap.set(sessionKey, threadId)
           }
 
-          if (streamContext && agentMode !== 'supervise') {
-            // Delegate mode (default): sub-agent streams directly to client
-            if (streamContext.delegateState) {
+          if (streamContext) {
+            const isDelegate = agentMode !== 'supervise'
+            if (isDelegate && streamContext.delegateState) {
               streamContext.delegateState.delegated = true
             }
             const { channel } = streamContext
@@ -353,10 +353,25 @@ export function buildToolDefs(
               subAgentName,
               session
             )
+            // In supervise mode, suppress sub-agent text from reaching the client.
+            // Approvals still flow through normally.
+            const effectiveChannel = isDelegate
+              ? subChannel
+              : {
+                  ...subChannel,
+                  send: (event: AIStreamEvent) => {
+                    if (
+                      event.type === 'text-delta' ||
+                      event.type === 'reasoning-delta'
+                    )
+                      return
+                    subChannel.send(event)
+                  },
+                }
             const resultText = await streamAIAgent(
               subAgentName,
               { message, threadId, resourceId },
-              subChannel,
+              effectiveChannel,
               params,
               agentSessionMap,
               streamContext.options
@@ -379,8 +394,7 @@ export function buildToolDefs(
             return resultText
           }
 
-          // Supervise mode (or no stream context): sub-agent runs non-streaming,
-          // returns full result to parent for the parent to process
+          // No stream context: sub-agent runs non-streaming
           const result = await runAIAgent(
             subAgentName,
             { message, threadId, resourceId },
