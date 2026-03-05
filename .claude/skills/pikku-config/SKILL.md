@@ -56,7 +56,7 @@ const apiKey = services.variables.get('API_KEY')
 ### Local Development Services
 
 ```typescript
-import { LocalSecretService, LocalVariablesService } from '@pikku/core'
+import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 
 const createSingletonServices = pikkuServices(async (config) => ({
   secrets: new LocalSecretService(), // Reads from .env or local files

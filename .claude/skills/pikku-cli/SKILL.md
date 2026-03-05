@@ -45,7 +45,7 @@ wireCLI({
 ### `pikkuCLICommand(config)`
 
 ```typescript
-import { pikkuCLICommand } from '@pikku/core/cli'
+import { pikkuCLICommand } from '#pikku'
 
 pikkuCLICommand({
   parameters?: string,          // Positional args (e.g. '<text>', '<username> <email>')

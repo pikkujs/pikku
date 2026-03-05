@@ -175,7 +175,7 @@ const createSingletonServices = pikkuServices(async (config) => {
 ```typescript
 // services.ts
 import { pikkuServices, pikkuWireServices } from '#pikku'
-import { ConsoleLogger } from '@pikku/core'
+import { ConsoleLogger } from '@pikku/core/services'
 import { JoseJWTService } from '@pikku/jose'
 
 // Custom service
