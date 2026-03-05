@@ -8,18 +8,22 @@ Feature: Router Agent via Console
     When I send "List my todos"
     Then I should see "Review pull requests" in the chat
 
-  Scenario: Route to todo-agent with approval
+  Scenario: Route to todo-agent with approval — shows approval description
     Given I open the "routerAgent" playground
     When I send "Add a todo called 'Routed todo'"
     Then I should see an approval request
+    And the approval reason should contain "Add a todo called"
+    And the approval reason should contain "Routed todo"
     When I click "Approve"
     Then I should see "Routed todo" in the chat
 
   # Email routing
-  Scenario: Route to email-agent for sending (approved)
+  Scenario: Route to email-agent for sending (approved) — shows approval description
     Given I open the "routerAgent" playground
     When I send "Send an email to alice@test.com with subject 'Hello' and body 'Hi Alice'"
     Then I should see an approval request
+    And the approval reason should contain "Send an email to"
+    And the approval reason should contain "alice@test.com"
     When I click "Approve"
     Then I should see "alice@test.com" in the chat
 
@@ -27,6 +31,8 @@ Feature: Router Agent via Console
     Given I open the "routerAgent" playground
     When I send "Send an email to bob@test.com with subject 'Meeting' and body 'See you at 3pm'"
     Then I should see an approval request
+    And the approval reason should contain "Send an email to"
+    And the approval reason should contain "bob@test.com"
     When I click "Deny"
     Then I should see "Denied" on the approval badge
 

@@ -15,6 +15,9 @@ export const AddTodoOutput = z.object({
 export const addTodo = pikkuSessionlessFunc({
   description: 'Adds a new todo',
   approvalRequired: true,
+  approvalDescription: async (_services, { title }) => {
+    return `Add a todo called "${title}"`
+  },
   input: AddTodoInput,
   output: AddTodoOutput,
   func: async ({ todoStore }, { title }) => {
