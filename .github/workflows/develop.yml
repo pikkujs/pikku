@@ -22,15 +22,26 @@ jobs:
           node-version: 24
           cache: yarn
       - run: yarn install
-      - run: yarn build
-      # Run pikku again to regenerate schemas after initial bootstrap
-      - run: yarn pikku
-      - run: yarn test:coverage
-      - run: yarn prettier
-      - run: yarn lint
-      - run: cd templates/functions && yarn pikku && cd ../..
-      - run: cd packages/console && yarn generate && yarn tsc --noEmit
-      - run: yarn build:console
+      - name: Check formatting
+        run: yarn prettier
+      - name: Lint
+        run: yarn lint
+      - name: Build packages
+        run: yarn build:packages
+      - name: Generate pikku files
+        run: yarn pikku
+      - name: Build templates
+        run: yarn build:templates
+      - name: Regenerate schemas after bootstrap
+        run: yarn pikku
+      - name: Run tests
+        run: yarn test:coverage
+      - name: Generate and type-check templates/functions
+        run: cd templates/functions && yarn pikku && cd ../..
+      - name: Generate and type-check console
+        run: cd packages/console && yarn generate && yarn tsc --noEmit
+      - name: Build console
+        run: yarn build:console
 
       - name: Save build output (for later jobs)
         uses: actions/upload-artifact@v4
