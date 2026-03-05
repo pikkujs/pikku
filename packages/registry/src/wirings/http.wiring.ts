@@ -5,11 +5,6 @@ import { getPackage } from '../functions/get-package.function.js'
 wireHTTPRoutes({
   auth: false,
   routes: {
-    ingestOptions: {
-      route: '/api/ingest',
-      method: 'options',
-      func: pikkuSessionlessFunc(async () => void 0),
-    },
     ingest: {
       route: '/api/ingest',
       method: 'post',
@@ -23,11 +18,6 @@ wireHTTPRoutes({
         )
       }),
     },
-    ingestLocalOptions: {
-      route: '/api/ingest-local',
-      method: 'options',
-      func: pikkuSessionlessFunc(async () => void 0),
-    },
     ingestLocal: {
       route: '/api/ingest-local',
       method: 'post',
@@ -38,11 +28,6 @@ wireHTTPRoutes({
         }
       ),
     },
-    iconOptions: {
-      route: '/api/icon/:id',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ id: string }>(async () => void 0),
-    },
     icon: {
       route: '/api/icon/:id',
       method: 'get',
@@ -52,20 +37,10 @@ wireHTTPRoutes({
         }
       ),
     },
-    listPackagesOptions: {
-      route: '/api/packages',
-      method: 'options',
-      func: pikkuSessionlessFunc(async () => void 0),
-    },
     listPackages: {
       route: '/api/packages',
       method: 'get',
       func: listPackages,
-    },
-    getPackageOptions: {
-      route: '/api/packages/:id',
-      method: 'options',
-      func: pikkuSessionlessFunc<{ id: string }>(async () => void 0),
     },
     getPackage: {
       route: '/api/packages/:id',
