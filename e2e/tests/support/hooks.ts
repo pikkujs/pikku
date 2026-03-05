@@ -72,6 +72,7 @@ BeforeAll(async function () {
     cwd: projectDir,
     env: { ...process.env, PORT: backendPort },
     stdio: 'pipe',
+    detached: true,
   })
 
   backendProcess.stderr?.on('data', (d: Buffer) =>
@@ -96,7 +97,9 @@ BeforeAll(async function () {
 
 AfterAll(async function () {
   if (backendProcess) {
-    backendProcess.kill('SIGTERM')
+    if (backendProcess.pid) {
+      process.kill(-backendProcess.pid, 'SIGTERM')
+    }
     backendProcess = undefined
   }
   if (consoleServer) {
