@@ -101,17 +101,23 @@ async function processStream(
       case 'text-delta':
         text.value += event.text
         break
-      case 'tool-call':
+      case 'tool-call': {
+        let parsedArgs = event.args
+        if (typeof event.args === 'string') {
+          try {
+            parsedArgs = JSON.parse(event.args)
+          } catch {
+            parsedArgs = {}
+          }
+        }
         toolCalls.push({
           type: 'tool-call',
           toolCallId: event.toolCallId,
           toolName: event.toolName,
-          args:
-            typeof event.args === 'string'
-              ? JSON.parse(event.args)
-              : event.args,
+          args: parsedArgs,
         })
         break
+      }
       case 'tool-result': {
         // Skip tool-results that contain __approvalRequired
         const resultObj = typeof event.result === 'object' ? event.result : null
@@ -253,7 +259,12 @@ function createPikkuStreamingAdapter(
           )
 
           if (!resumeResponse.ok || !resumeResponse.body) {
-            continue
+            const errorText = resumeResponse.body
+              ? await resumeResponse.text().catch(() => '')
+              : ''
+            throw new Error(
+              `Resume failed: ${resumeResponse.status}${errorText ? ` - ${errorText}` : ''}`
+            )
           }
 
           const text = { value: '' }
@@ -666,7 +677,14 @@ function createPikkuNonStreamingAdapter(
             }
           )
 
-          if (!resumeResponse.ok || !resumeResponse.body) continue
+          if (!resumeResponse.ok || !resumeResponse.body) {
+            const errorText = resumeResponse.body
+              ? await resumeResponse.text().catch(() => '')
+              : ''
+            throw new Error(
+              `Resume failed: ${resumeResponse.status}${errorText ? ` - ${errorText}` : ''}`
+            )
+          }
 
           const text = { value: '' }
           const toolCalls: ToolCall[] = []

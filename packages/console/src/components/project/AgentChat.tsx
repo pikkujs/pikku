@@ -222,7 +222,7 @@ const UserMessage: React.FunctionComponent = () => (
 )
 
 const AssistantMessage: React.FunctionComponent = () => (
-  <Box style={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
+  <Box data-testid="assistant-block" style={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
         <Bot size={14} color="var(--mantine-color-violet-6)" />

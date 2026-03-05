@@ -164,13 +164,13 @@ const createSingletonServices = pikkuServices(async (config) => {
 
 ### Built-in Services
 
-| Service                 | Package       | Purpose                     |
-| ----------------------- | ------------- | --------------------------- |
-| `ConsoleLogger`         | `@pikku/core` | Console-based logging       |
-| `JoseJWTService`        | `@pikku/jose` | JWT sign/verify via jose    |
-| `LocalSecretService`    | `@pikku/core` | Local development secrets   |
-| `LocalVariablesService` | `@pikku/core` | Local environment variables |
-| `PinoLogger`            | `@pikku/pino` | Structured logging via Pino |
+| Service                 | Package              | Purpose                     |
+| ----------------------- | -------------------- | --------------------------- |
+| `ConsoleLogger`         | `@pikku/core/services` | Console-based logging       |
+| `JoseJWTService`        | `@pikku/jose`          | JWT sign/verify via jose    |
+| `LocalSecretService`    | `@pikku/core/services` | Local development secrets   |
+| `LocalVariablesService` | `@pikku/core/services` | Local environment variables |
+| `PinoLogger`            | `@pikku/pino`          | Structured logging via Pino |
 
 ## Complete Example
 

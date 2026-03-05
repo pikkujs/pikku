@@ -3,7 +3,6 @@ import { expect } from '@playwright/test'
 import type { AgentWorld } from '../support/world.js'
 import { config } from '../support/types.js'
 
-// Shared state from workflow.steps.ts - import the same reference
 let lastRunId: string | undefined
 
 When(

@@ -433,7 +433,7 @@ const TransformView: React.FunctionComponent<{
           </Text>
         </Box>
       )}
-      {!isLoading && (
+      {!isLoading && !isError && (
         <Box p="md">
           <Text size="sm" c="dimmed">
             No transforms available
@@ -571,7 +571,7 @@ const AddonsView: React.FunctionComponent<{
           </Text>
         </Box>
       )}
-      {filteredAddons.length === 0 && !isLoading && (
+      {filteredAddons.length === 0 && !isLoading && !isError && (
         <Box p="md">
           <Text size="sm" c="dimmed">
             No addons available

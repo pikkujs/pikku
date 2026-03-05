@@ -114,6 +114,10 @@ test('should run function with middleware', async () => {
 
 ```typescript
 test('middleware runs in order: wiring tags -> wiring -> func tags -> func', async () => {
+  const mockSingletonServices = {
+    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+  } as any
+
   const order: string[] = []
 
   const createMiddleware = (name: string) =>
@@ -162,6 +166,10 @@ test('middleware runs in order: wiring tags -> wiring -> func tags -> func', asy
 
 ```typescript
 test('should reject when permission fails', async () => {
+  const mockSingletonServices = {
+    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+  } as any
+
   addPermission('admin', [
     async () => false,  // Always deny
   ])
@@ -194,7 +202,15 @@ Test the full HTTP stack using the `fetch` export:
 
 ```typescript
 import { fetch, wireHTTP } from '@pikku/core/http'
-import { resetPikkuState, pikkuState } from '@pikku/core'
+import { resetPikkuState, pikkuState, addFunction } from '@pikku/core'
+
+const mockSingletonServices = {
+  logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+} as any
+
+const listTodos = {
+  func: async () => ({ todos: [{ id: '1', title: 'Test todo' }] }),
+}
 
 beforeEach(() => {
   resetPikkuState()
@@ -205,7 +221,14 @@ beforeEach(() => {
 })
 
 test('GET /todos returns todo list', async () => {
-  // Register route and function...
+  // Register route metadata and function
+  pikkuState(null, 'http', 'meta')['get'] = pikkuState(null, 'http', 'meta')['get'] || {}
+  pikkuState(null, 'http', 'meta')['get']['/todos'] = {
+    pikkuFuncId: 'listTodos',
+    method: 'get',
+    route: '/todos',
+  }
+  addFunction('listTodos', listTodos)
   wireHTTP({ method: 'get', route: '/todos', func: listTodos })
 
   const request = new Request('http://localhost/todos')

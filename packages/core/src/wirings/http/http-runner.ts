@@ -558,7 +558,11 @@ export const fetchData = async <In, Out>(
           })
         )
         response.arrayBuffer('[DONE]')
-      } catch {}
+      } catch (streamErr: any) {
+        singletonServices.logger.error(
+          `SSE error while sending error payload: ${streamErr instanceof Error ? streamErr.message : String(streamErr)}`
+        )
+      }
       response.close?.()
     } else {
       handleHTTPError(

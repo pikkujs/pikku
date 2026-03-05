@@ -100,16 +100,21 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
       )
 
       if (hasVerboseFields(metaData)) {
-        const verbosePath = addonMetaJsonFile.replace(
-          /\.gen\.json$/,
-          '-verbose.gen.json'
-        )
-        await writeFileInDir(
-          logger,
-          verbosePath,
-          JSON.stringify(metaData, null, 2),
-          { ignoreModifyComment: true }
-        )
+        const verbosePath = addonMetaJsonFile.endsWith('.gen.json')
+          ? addonMetaJsonFile.replace(/\.gen\.json$/, '-verbose.gen.json')
+          : addonMetaJsonFile.replace(/(\.\w+)$/, '-verbose$1')
+        if (verbosePath === addonMetaJsonFile) {
+          logger.warn(
+            `Cannot derive verbose path from ${addonMetaJsonFile}, skipping verbose metadata`
+          )
+        } else {
+          await writeFileInDir(
+            logger,
+            verbosePath,
+            JSON.stringify(metaData, null, 2),
+            { ignoreModifyComment: true }
+          )
+        }
       }
     }
 
