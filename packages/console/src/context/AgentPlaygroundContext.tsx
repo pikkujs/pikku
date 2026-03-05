@@ -23,9 +23,13 @@ interface AgentPlaygroundContextType {
   createNewThread: () => void
   refetchThreads: () => void
   dbMessages: any[] | undefined
+  model: string | undefined
+  setModel: (model: string | undefined) => void
+  temperature: number | undefined
+  setTemperature: (temperature: number | undefined) => void
 }
 
-const AgentPlaygroundContext = createContext<
+export const AgentPlaygroundContext = createContext<
   AgentPlaygroundContextType | undefined
 >(undefined)
 
@@ -57,6 +61,8 @@ export const AgentPlaygroundProvider: React.FunctionComponent<
   const [searchParams, setSearchParams] = useSearchParams()
   const initialThreadId = searchParams.get('threadId')
   const [threadId, setThreadIdState] = useState<string | null>(initialThreadId)
+  const [model, setModel] = useState<string | undefined>()
+  const [temperature, setTemperature] = useState<number | undefined>()
 
   const { data: dbThreads, refetch: refetchThreads } = useAgentThreads(agentId)
   const { data: dbMessages } = useAgentThreadMessages(threadId)
@@ -108,6 +114,10 @@ export const AgentPlaygroundProvider: React.FunctionComponent<
           refetchThreads()
         },
         dbMessages: dbMessages as any[] | undefined,
+        model,
+        setModel,
+        temperature,
+        setTemperature,
       }}
     >
       {children}

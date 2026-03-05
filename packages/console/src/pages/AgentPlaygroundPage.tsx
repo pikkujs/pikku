@@ -1,14 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import {
-  Center,
-  Loader,
-  Text,
-  SegmentedControl,
-  Select,
-  NumberInput,
-  Group,
-} from '@mantine/core'
+import { Center, Loader, Text, SegmentedControl } from '@mantine/core'
 import { Bot } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '@/context/PanelContext'
@@ -33,16 +25,6 @@ const AgentPlaygroundInner: React.FunctionComponent<{
     useAgentPlayground()
   const deleteThread = useDeleteAgentThread()
   const [streaming, setStreaming] = useState(false)
-  const [model, setModel] = useState<string | undefined>()
-  const [temperature, setTemperature] = useState<number | undefined>()
-  const { meta } = usePikkuMeta()
-  const modelAliases = meta.modelAliases ?? []
-
-  const modelOptions = useMemo(() => {
-    const aliases = new Set(modelAliases)
-    if (agentData?.model) aliases.add(agentData.model)
-    return Array.from(aliases)
-  }, [modelAliases, agentData?.model])
 
   useEffect(() => {
     if (agentData) {
@@ -86,39 +68,15 @@ const AgentPlaygroundInner: React.FunctionComponent<{
       items={agentItems}
       onItemSelect={onAgentSelect}
       rightSection={
-        <Group gap="xs">
-          {modelOptions.length > 0 && (
-            <Select
-              size="xs"
-              placeholder={agentData?.model ?? 'default'}
-              data={modelOptions}
-              value={model ?? null}
-              onChange={(v) => setModel(v ?? undefined)}
-              clearable
-              w={160}
-            />
-          )}
-          <NumberInput
-            size="xs"
-            placeholder={agentData?.temperature != null ? String(agentData.temperature) : 'default'}
-            value={temperature ?? ''}
-            onChange={(v) => setTemperature(typeof v === 'number' ? v : undefined)}
-            min={0}
-            max={2}
-            step={0.1}
-            decimalScale={1}
-            w={100}
-          />
-          <SegmentedControl
-            size="xs"
-            value={streaming ? 'stream' : 'normal'}
-            onChange={(v) => setStreaming(v === 'stream')}
-            data={[
-              { label: 'Normal', value: 'normal' },
-              { label: 'Stream', value: 'stream' },
-            ]}
-          />
-        </Group>
+        <SegmentedControl
+          size="xs"
+          value={streaming ? 'stream' : 'normal'}
+          onChange={(v) => setStreaming(v === 'stream')}
+          data={[
+            { label: 'Normal', value: 'normal' },
+            { label: 'Stream', value: 'stream' },
+          ]}
+        />
       }
     />
   )
@@ -130,7 +88,7 @@ const AgentPlaygroundInner: React.FunctionComponent<{
       runsPanelVisible
       emptyPanelMessage="Agent configuration"
     >
-      <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} model={model} temperature={temperature} />
+      <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} />
     </ThreePaneLayout>
   )
 }

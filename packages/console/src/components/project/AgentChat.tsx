@@ -327,10 +327,8 @@ const AgentComposer: React.FunctionComponent<{ disabled?: boolean }> = ({
 
 export const AgentChat: React.FunctionComponent<{
   streaming?: boolean
-  model?: string
-  temperature?: number
-}> = ({ streaming = false, model, temperature }) => {
-  const { agentId, threadId, setThreadId, refetchThreads, dbMessages } =
+}> = ({ streaming = false }) => {
+  const { agentId, threadId, setThreadId, refetchThreads, dbMessages, model, temperature } =
     useAgentPlayground()
 
   const onStreamDone = useCallback(() => {

@@ -1,5 +1,5 @@
-import React from 'react'
-import { Stack, Text, Box, Group } from '@mantine/core'
+import React, { useContext, useMemo } from 'react'
+import { Stack, Text, Box, Group, Select, NumberInput } from '@mantine/core'
 import { Bot } from 'lucide-react'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
@@ -7,6 +7,8 @@ import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 import { LinkedBadge } from '@/components/project/panels/LinkedBadge'
 import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
 import { usePanelContext } from '@/context/PanelContext'
+import { AgentPlaygroundContext } from '@/context/AgentPlaygroundContext'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
 interface AgentPanelProps {
   wireId: string
@@ -18,6 +20,16 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
   metadata = {},
 }) => {
   const { navigateInPanel } = usePanelContext()
+  const playgroundCtx = useContext(AgentPlaygroundContext)
+  const { meta } = usePikkuMeta()
+  const modelAliases = meta.modelAliases ?? []
+
+  const modelOptions = useMemo(() => {
+    const aliases = new Set(modelAliases)
+    if (metadata?.model) aliases.add(metadata.model)
+    return Array.from(aliases)
+  }, [modelAliases, metadata?.model])
+
   const middleware = metadata?.middleware || []
   const channelMiddleware = metadata?.channelMiddleware || []
   const aiMiddleware = metadata?.aiMiddleware || []
@@ -69,6 +81,36 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
           <PikkuBadge type="flag" flag="permissioned" />
         )}
       </Group>
+
+      {playgroundCtx && (
+        <Box>
+          <SectionLabel>Playground Overrides</SectionLabel>
+          <Stack gap="xs">
+            {modelOptions.length > 0 && (
+              <Select
+                size="xs"
+                label={`Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`}
+                placeholder={metadata?.model ?? 'default'}
+                data={modelOptions}
+                value={playgroundCtx.model ?? null}
+                onChange={(v) => playgroundCtx.setModel(v ?? undefined)}
+                clearable
+              />
+            )}
+            <NumberInput
+              size="xs"
+              label={`Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`}
+              placeholder={metadata?.temperature != null ? String(metadata.temperature) : 'default'}
+              value={playgroundCtx.temperature ?? ''}
+              onChange={(v) => playgroundCtx.setTemperature(typeof v === 'number' ? v : undefined)}
+              min={0}
+              max={2}
+              step={0.1}
+              decimalScale={1}
+            />
+          </Stack>
+        </Box>
+      )}
 
       <CommonDetails
         description={metadata?.description}

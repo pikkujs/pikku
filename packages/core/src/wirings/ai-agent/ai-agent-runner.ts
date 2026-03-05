@@ -2,15 +2,14 @@ import type {
   AIAgentInput,
   AIAgentOutput,
   AIAgentStep,
-  AIMessage,
   PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
 import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
 
 import { saveMessages } from './ai-agent-memory.js'
 import { prepareAgentRun, type RunAIAgentParams } from './ai-agent-prepare.js'
+import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
 import { getSingletonServices } from '../../pikku-state.js'
-import { randomUUID } from 'crypto'
 
 export async function runAIAgent(
   agentName: string,
@@ -147,35 +146,88 @@ export async function runAIAgent(
 
       if (stepResult.toolCalls.length === 0) break
 
-      const assistantMsg: AIMessage = {
-        id: randomUUID(),
-        role: 'assistant',
-        content: stepResult.text || undefined,
-        toolCalls: stepResult.toolCalls.map((tc) => ({
-          id: tc.toolCallId,
-          name: tc.toolName,
-          args: tc.args as Record<string, unknown>,
-        })),
-        createdAt: new Date(),
-      }
-      runnerParams.messages.push(assistantMsg)
-
-      if (stepResult.toolResults.length > 0) {
-        const toolMsg: AIMessage = {
-          id: randomUUID(),
-          role: 'tool',
-          toolResults: stepResult.toolResults.map((tr) => ({
-            id: tr.toolCallId,
-            name: tr.toolName,
-            result:
-              typeof tr.result === 'string'
-                ? tr.result
-                : JSON.stringify(tr.result),
-          })),
-          createdAt: new Date(),
+      const approvalsNeeded = checkForApprovals(
+        stepResult,
+        runnerParams.tools,
+        runId
+      )
+      if (approvalsNeeded.length > 0) {
+        for (const approval of approvalsNeeded) {
+          const toolDef = runnerParams.tools.find(
+            (t) => t.name === approval.toolName
+          )
+          if (toolDef?.approvalDescriptionFn && !approval.reason) {
+            try {
+              approval.reason = await toolDef.approvalDescriptionFn(
+                approval.args
+              )
+            } catch {
+              // If description generation fails, continue without it
+            }
+          }
         }
-        runnerParams.messages.push(toolMsg)
+
+        const pendingApprovals = approvalsNeeded.map((a) =>
+          a.agentRunId
+            ? {
+                type: 'agent-call' as const,
+                toolCallId: a.toolCallId,
+                agentName: a.toolName,
+                agentRunId: a.agentRunId,
+                displayToolName: a.displayToolName ?? a.toolName,
+                displayArgs: a.displayArgs ?? a.args,
+              }
+            : {
+                type: 'tool-call' as const,
+                toolCallId: a.toolCallId,
+                toolName: a.toolName,
+                args: a.args,
+              }
+        )
+
+        appendStepMessages(runnerParams, stepResult)
+
+        const finalText = lastStepResult?.text ?? ''
+        await saveMessages(
+          storage,
+          threadId,
+          input.resourceId,
+          memoryConfig,
+          userMessage,
+          { text: finalText, steps: accumulatedSteps },
+          {
+            workingMemoryJsonSchema,
+            workingMemorySchemaName,
+            logger: singletonServices.logger,
+            schemaService: singletonServices.schema,
+          }
+        )
+
+        await aiRunState.updateRun(runId, {
+          status: 'suspended',
+          suspendReason: 'approval',
+          pendingApprovals,
+          usage: { ...totalUsage, model: agent.model },
+        })
+
+        return {
+          runId,
+          text: finalText,
+          threadId,
+          steps: accumulatedSteps,
+          usage: totalUsage,
+          status: 'suspended',
+          pendingApprovals: approvalsNeeded.map((a) => ({
+            toolCallId: a.toolCallId,
+            toolName: a.displayToolName ?? a.toolName,
+            args: a.displayArgs ?? a.args,
+            reason: a.reason,
+            runId,
+          })),
+        }
       }
+
+      appendStepMessages(runnerParams, stepResult)
     }
 
     const finalText = lastStepResult?.text ?? ''
