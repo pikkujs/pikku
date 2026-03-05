@@ -88,6 +88,6 @@ export const consoleRoutes = defineHTTPRoutes({
 })
 
 wireAddon({ name: 'console', package: '@pikku/addon-console' })
-wireHTTPRoutes({ baseRoute: '/api', routes: { console: consoleRoutes } })
+wireHTTPRoutes({ basePath: '/api', routes: { console: consoleRoutes } })
 `
 }

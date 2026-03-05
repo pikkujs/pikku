@@ -1,6 +1,23 @@
 import { existsSync } from 'fs'
 import { pikkuVoidFunc } from '#pikku'
 
+const scaffoldFiles = (config: any): { file: string; generator: string }[] => {
+  const files: { file: string; generator: string }[] = []
+  if (config.scaffold?.rpc && config.publicRpcFile)
+    files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
+  if (config.scaffold?.console && config.consoleFunctionsFile)
+    files.push({
+      file: config.consoleFunctionsFile,
+      generator: 'pikkuConsoleFunctions',
+    })
+  if (config.scaffold?.agent && config.publicAgentFile)
+    files.push({
+      file: config.publicAgentFile,
+      generator: 'pikkuPublicAgent',
+    })
+  return files
+}
+
 export const all = pikkuVoidFunc({
   remote: true,
   func: async ({ logger, config, getInspectorState }, _data, { rpc }) => {
@@ -11,10 +28,21 @@ export const all = pikkuVoidFunc({
       typesDeclarationFileExists = false
     }
 
+    const missingScaffolds = scaffoldFiles(config).filter(
+      (s) => !existsSync(s.file)
+    )
+    if (missingScaffolds.length > 0) {
+      for (const { generator } of missingScaffolds) {
+        await rpc.invoke(generator as any, null)
+      }
+    }
+
     await rpc.invoke('pikkuFunctionTypes', null)
 
-    if (!typesDeclarationFileExists) {
-      logger.debug(`• Type file first created, inspecting again...`)
+    if (!typesDeclarationFileExists || missingScaffolds.length > 0) {
+      logger.debug(
+        `• Type file or scaffolds first created, inspecting again...`
+      )
       await getInspectorState(true)
     }
 
@@ -87,6 +115,18 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuRPCInternalMap', null)
     await rpc.invoke('pikkuRPCExposedMap', null)
 
+    const workflows = await rpc.invoke('pikkuWorkflow', null)
+
+    let remoteRPC = false
+    if (!config.addon) {
+      remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
+    }
+
+    if (workflows || remoteRPC) {
+      await getInspectorState(true)
+      await rpc.invoke('pikkuSchemas', null)
+    }
+
     if (!config.addon) {
       const http = await rpc.invoke('pikkuHTTP', null)
       if (http) {
@@ -111,18 +151,6 @@ export const all = pikkuVoidFunc({
           config.triggersWiringFile
         )
       }
-    }
-
-    const workflows = await rpc.invoke('pikkuWorkflow', null)
-
-    let remoteRPC = false
-    if (!config.addon) {
-      remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
-    }
-
-    if (workflows || remoteRPC) {
-      await getInspectorState(true)
-      await rpc.invoke('pikkuSchemas', null)
     }
 
     const hasFunctionRegistrations = await rpc.invoke('pikkuFunctions', null)
