@@ -1,6 +1,8 @@
 ---
 name: pikku-addon
-description: 'Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon, addon(), pikkuAddonServices, addon package structure, and cross-project function sharing.'
+description: 'Use when creating or consuming reusable function packages (addons) in Pikku. Covers wireAddon, addon(), pikkuAddonServices, pikkuAddonWireServices, addon package structure, and cross-project function sharing.
+TRIGGER when: code uses wireAddon/addon()/pikkuAddonServices, user asks about addons, reusable function packages, cross-project sharing, or addon package structure.
+DO NOT TRIGGER when: user asks about internal function composition (use pikku-rpc) or general function definitions (use pikku-concepts).'
 ---
 
 # Pikku Addons

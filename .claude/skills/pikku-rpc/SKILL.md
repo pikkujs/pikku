@@ -1,6 +1,8 @@
 ---
 name: pikku-rpc
-description: 'Use when making internal function-to-function calls within a Pikku app, composing functions, or exposing RPC endpoints. Covers rpc.invoke, rpc.remote, rpc.exposed, and generated RPC client.'
+description: 'Use when making internal function-to-function calls within a Pikku app, composing functions, or exposing RPC endpoints. Covers rpc.invoke, rpc.remote, rpc.exposed, and generated RPC client.
+TRIGGER when: code uses wire.rpc or expose: true, user asks about calling one Pikku function from another, function composition, or RPC endpoints.
+DO NOT TRIGGER when: user asks about HTTP routes (use pikku-http) or addon cross-package calls (use pikku-addon).'
 ---
 
 # Pikku RPC Wiring

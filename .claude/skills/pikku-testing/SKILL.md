@@ -1,6 +1,8 @@
 ---
 name: pikku-testing
-description: 'Use when writing tests for Pikku functions, middleware, permissions, or services. Covers unit testing with direct invocation, runPikkuFunc, service mocking, and integration testing with the HTTP runner.'
+description: 'Use when writing tests for Pikku functions, middleware, permissions, or services. Covers unit testing with direct invocation, runPikkuFunc, service mocking, and integration testing with the HTTP runner.
+TRIGGER when: user asks about testing, writing tests, test setup, mocking services, or integration testing Pikku functions.
+DO NOT TRIGGER when: user asks about running the existing test suite (use Bash) or CI configuration (not a Pikku skill).'
 ---
 
 # Pikku Testing

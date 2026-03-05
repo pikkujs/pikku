@@ -1,6 +1,8 @@
 ---
 name: pikku-info
-description: Discover what exists in a Pikku project — functions, tags, middleware, permissions, HTTP routes, channels, schedulers, queues, and more. Use when you need to understand the project structure, find existing functions, or check what middleware and permissions are defined.
+description: 'Discover what exists in a Pikku project — functions, tags, middleware, permissions, HTTP routes, channels, schedulers, queues, and more. Use when you need to understand the project structure, find existing functions, or check what middleware and permissions are defined.
+TRIGGER when: user asks "what functions exist?", "show me the project structure", "list routes/middleware/permissions", or needs to understand an existing Pikku codebase.
+DO NOT TRIGGER when: user is writing new code (use the specific wiring skill) or asking about Pikku concepts (use pikku-concepts).'
 allowed-tools: Bash(yarn pikku info *)
 argument-hint: '[functions|tags|middleware|permissions] [--verbose] [--limit N]'
 ---

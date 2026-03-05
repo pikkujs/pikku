@@ -1,6 +1,8 @@
 ---
 name: pikku-cron
-description: 'Use when adding scheduled tasks, recurring jobs, or cron-based automation to a Pikku app. Covers wireScheduler, cron expressions, scheduled task wire object, and scheduler middleware.'
+description: 'Use when adding scheduled tasks, recurring jobs, or cron-based automation to a Pikku app. Covers wireScheduler, cron expressions, scheduled task wire object, and scheduler middleware.
+TRIGGER when: code uses wireScheduler, user asks about cron, scheduled tasks, recurring jobs, or "run every X minutes/hours".
+DO NOT TRIGGER when: user asks about background jobs with retries (use pikku-queue) or event-driven triggers (use pikku-trigger).'
 ---
 
 # Pikku Cron/Scheduler Wiring

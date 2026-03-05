@@ -1,6 +1,8 @@
 ---
 name: pikku-concepts
-description: 'Foundational guide to Pikku framework concepts. Use this skill when working with any Pikku codebase, starting a new Pikku project, or migrating a backend to Pikku. Covers the core mental model, function types, project structure, code generation, testing, and how Pikku maps to traditional backend patterns.'
+description: 'Foundational guide to Pikku framework concepts. Use this skill when working with any Pikku codebase, starting a new Pikku project, or migrating a backend to Pikku. Covers the core mental model, function types, project structure, code generation, testing, and how Pikku maps to traditional backend patterns.
+TRIGGER when: user asks "what is Pikku?", starts a new Pikku project, migrates from Express/NestJS/Hono, or needs to understand how Pikku works.
+DO NOT TRIGGER when: user is doing a specific wiring task (use the specific skill instead, e.g. pikku-http, pikku-websocket).'
 ---
 
 # Pikku Framework Concepts

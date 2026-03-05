@@ -1,6 +1,8 @@
 ---
 name: pikku-mcp
-description: 'Use when exposing Pikku functions as MCP tools, resources, or prompts for AI assistants. Covers mcp: true flag, pikkuMCPResourceFunc, pikkuMCPPromptFunc, and MCP wire object.'
+description: 'Use when exposing Pikku functions as MCP tools, resources, or prompts for AI assistants. Covers mcp: true flag, pikkuMCPResourceFunc, pikkuMCPPromptFunc, and MCP wire object.
+TRIGGER when: code uses mcp: true or pikkuMCPResourceFunc/pikkuMCPPromptFunc, user asks about MCP, Model Context Protocol, AI tool integration, or exposing functions to Claude/ChatGPT.
+DO NOT TRIGGER when: user asks about AI agents (use pikku-ai-agent) or general function definitions (use pikku-concepts).'
 ---
 
 # Pikku MCP Wiring

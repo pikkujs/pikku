@@ -1,6 +1,8 @@
 ---
 name: pikku-config
-description: 'Use when managing secrets, environment variables, config, OAuth2 credentials, or API versioning in a Pikku app. Covers wireSecret, wireVariable, wireOAuth2Credential, typed config access, and contract versioning.'
+description: 'Use when managing secrets, environment variables, config, OAuth2 credentials, or API versioning in a Pikku app. Covers wireSecret, wireVariable, wireOAuth2Credential, typed config access, and contract versioning.
+TRIGGER when: code uses wireSecret/wireVariable/wireOAuth2Credential, user asks about env vars, secrets, config, OAuth2, API versioning, or "how do I access environment variables".
+DO NOT TRIGGER when: user asks about service factories (use pikku-services) or auth middleware (use pikku-security).'
 ---
 
 # Pikku Config, Secrets & Versioning
