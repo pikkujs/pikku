@@ -37,7 +37,10 @@ wireHTTP({
   permissions?: Record<string, PikkuPermission | PikkuPermission[]>,
   middleware?: PikkuMiddleware[],
   sse?: boolean,          // Enable Server-Sent Events
-  version?: number,       // API versioning
+  contentType?: 'xml' | 'json',  // Response content type
+  timeout?: number,       // Request timeout in ms
+  headers?: HTTPHeadersSchema,   // Expected headers schema
+  docs?: HTTPRouteDocsConfig,    // OpenAPI docs config
 })
 ```
 

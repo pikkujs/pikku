@@ -26,15 +26,26 @@ import { pikkuAIAgent } from '#pikku'
 pikkuAIAgent({
   name: string,                  // Unique agent identifier
   description: string,           // What the agent does
-  instructions: string,          // System prompt / behavior instructions
+  instructions: string | string[],  // System prompt / behavior instructions
   model: string,                 // LLM model (e.g. 'openai/gpt-4o-mini')
-  tools: PikkuFunc[],            // Pikku functions the agent can call
+  tools?: PikkuFunc[],           // Pikku functions the agent can call
+  agents?: AIAgentConfig[],      // Sub-agents this agent can delegate to
   memory?: {
-    storage: string,             // Service name for persistence (e.g. 'aiStorage')
-    lastMessages: number,        // How many messages to retain in context
+    storage?: string,            // Service name for persistence (e.g. 'aiStorage')
+    vector?: string,             // Vector store service name
+    embedder?: string,           // Embedding service name
+    lastMessages?: number,       // How many messages to retain in context
+    workingMemory?: ZodSchema,   // Schema for structured working memory
   },
   maxSteps?: number,             // Max tool-call rounds per invocation
   temperature?: number,          // LLM temperature (0-1)
+  toolChoice?: 'auto' | 'required' | 'none',
+  input?: ZodSchema,             // Input validation schema
+  output?: ZodSchema,            // Output validation schema
+  tags?: string[],               // For grouping and middleware targeting
+  aiMiddleware?: PikkuAIMiddlewareHooks[],  // AI-specific middleware
+  middleware?: PikkuMiddleware[],
+  permissions?: PermissionGroup,
 })
 ```
 
@@ -53,7 +64,7 @@ const result = await runAIAgent(
 
 result.text // Agent's text response
 result.steps // Array of tool calls made
-result.usage // Token usage { input, output }
+result.usage // Token usage { inputTokens, outputTokens }
 ```
 
 ### `streamAIAgent(name, input, channel, options)` — Streaming
@@ -71,10 +82,16 @@ await streamAIAgent(
 )
 
 // Channel receives events:
+// { type: 'step-start', stepNumber: 1 }
 // { type: 'text-delta', text: '...' }
-// { type: 'tool-call', toolName: 'createTodo', args: {...} }
-// { type: 'tool-result', result: {...} }
-// { type: 'usage', tokens: { input: 150, output: 42 } }
+// { type: 'reasoning-delta', text: '...' }
+// { type: 'tool-call', toolCallId, toolName, args }
+// { type: 'tool-result', toolCallId, toolName, result }
+// { type: 'agent-call', agentName, session, input }
+// { type: 'agent-result', agentName, session, result }
+// { type: 'approval-request', toolCallId, toolName, args, reason? }
+// { type: 'usage', tokens: { input, output }, model }
+// { type: 'error', message }
 // { type: 'done' }
 ```
 
@@ -114,7 +131,7 @@ const result = await runAIAgent(
 
 console.log(result.text) // "I've created a task 'buy groceries' for tomorrow."
 console.log(result.steps) // [{ tool: 'createTodo', args: {...}, result: {...} }]
-console.log(result.usage) // { input: 150, output: 42 }
+console.log(result.usage) // { inputTokens: 150, outputTokens: 42 }
 ```
 
 ### Stream Responses
