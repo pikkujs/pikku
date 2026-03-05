@@ -41,7 +41,7 @@
     "test": "yarn workspaces foreach -A --exclude '@pikku/templates-*' --exclude '@pikku/verifiers-*' --exclude '@pikku/addon-console' --exclude '@pikku/console' run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
     "lint": "npx --yes oxlint@latest",
-    "prettier": "npx --yes prettier . --write",
+    "prettier": "npx --yes prettier . --check --log-level warn",
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
     "changeset": "npx changeset",
     "pikku:functions": "cd templates/functions && yarn pikku",

@@ -91,11 +91,75 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+  build-templates:
+    name: Build Templates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build, e2e]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: yarn install
+      - name: Build templates
+        run: yarn build:templates
+      - name: Save built templates
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-templates
+          path: templates/**/dist
+          include-hidden-files: true
+          retention-days: 1
+
+  build-verifiers:
+    name: Build Verifiers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build, e2e]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: yarn install
+      - name: Build verifiers
+        run: yarn build:verifiers
+      - name: Build function-addon template
+        run: cd templates/function-addon && yarn pikku && yarn build
+      - name: Save built verifiers and function-addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-verifiers
+          path: |
+            verifiers/**/dist
+            templates/function-addon/dist
+          include-hidden-files: true
+          retention-days: 1
+
   verifiers:
     name: Verifiers
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build, e2e]
+    needs: build-verifiers
     strategy:
       fail-fast: false
       matrix:
@@ -125,15 +189,18 @@ jobs:
         with:
           name: built-packages
           path: packages
+      - name: Download built verifiers
+        uses: actions/download-artifact@v4
+        with:
+          name: built-verifiers
       - run: yarn install
-      - run: cd templates/function-addon && yarn pikku && yarn build
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
     name: Templates
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build, e2e]
+    needs: build-templates
     services:
       redis:
         image: redis
@@ -194,6 +261,11 @@ jobs:
         with:
           name: built-packages
           path: packages
+      - name: Download built templates
+        uses: actions/download-artifact@v4
+        with:
+          name: built-templates
+          path: templates
       - run: yarn install
       - name: Test template
         timeout-minutes: 2
