@@ -50,6 +50,13 @@ jobs:
             packages/**/bin
           include-hidden-files: true
           retention-days: 1
+      - name: Save generated pikku files
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-pikku
+          path: templates/**/.pikku
+          include-hidden-files: true
+          retention-days: 1
 
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.3.4
@@ -95,7 +102,7 @@ jobs:
     name: Build Templates
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build, e2e]
+    needs: build
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -110,6 +117,10 @@ jobs:
         with:
           name: built-packages
           path: packages
+      - name: Download generated pikku files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-pikku
       - run: yarn install
       - name: Build templates
         run: yarn build:templates
@@ -125,7 +136,7 @@ jobs:
     name: Build Verifiers
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build, e2e]
+    needs: build
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -140,7 +151,13 @@ jobs:
         with:
           name: built-packages
           path: packages
+      - name: Download generated pikku files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-pikku
       - run: yarn install
+      - name: Generate pikku files for verifiers
+        run: yarn workspaces foreach -p -A --include 'verifiers/**' exec bash -c 'npx pikku all || true'
       - name: Build verifiers
         run: yarn build:verifiers
       - name: Build function-addon template
@@ -261,6 +278,10 @@ jobs:
         with:
           name: built-packages
           path: packages
+      - name: Download generated pikku files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-pikku
       - name: Download built templates
         uses: actions/download-artifact@v4
         with:
