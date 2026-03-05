@@ -15,7 +15,7 @@
     "@pikku/core": "^0.12.2",
     "@pikku/fastify-plugin": "^0.12.1",
     "@pikku/schedule": "^0.12.2",
-    "fastify": "^5.7.4",
+    "fastify": "^5.8.1",
     "fastify-plugin": "^5.1.0",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
@@ -23,6 +23,6 @@
   },
   "devDependencies": {
     "@types/node": "^24",
-    "fastify": "^5.7.4"
+    "fastify": "^5.8.1"
   }
 }
