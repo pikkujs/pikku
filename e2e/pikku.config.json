@@ -22,6 +22,7 @@
   "verboseMeta": true,
   "scaffold": {
     "pikkuDir": "packages/functions/src/pikku",
+    "rpc": "no-auth",
     "console": "no-auth",
     "agent": "no-auth",
     "workflow": "no-auth"
