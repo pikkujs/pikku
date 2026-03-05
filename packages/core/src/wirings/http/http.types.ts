@@ -1,6 +1,5 @@
 import type { SerializeOptions } from 'cookie'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
-import type { PikkuError } from '../../errors/error-handler.js'
 import type {
   CorePikkuMiddleware,
   CommonWireMeta,
@@ -61,16 +60,6 @@ export type HTTPHeadersSchema = StandardSchemaV1<
 >
 
 /**
- * Documentation config for OpenAPI generation
- */
-export type HTTPRouteDocsConfig = {
-  description?: string
-  response?: string
-  errors?: Array<typeof PikkuError>
-  tags?: string[]
-}
-
-/**
  * Common HTTP route configuration shared between wireHTTP and wireHTTPRoutes
  */
 export type HTTPRouteBaseConfig = {
@@ -78,7 +67,6 @@ export type HTTPRouteBaseConfig = {
   timeout?: number
   tags?: string[]
   headers?: HTTPHeadersSchema
-  docs?: HTTPRouteDocsConfig
 }
 
 /**

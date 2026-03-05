@@ -1,4 +1,3 @@
-import type { PikkuError } from '../../errors/error-handler.js'
 import type {
   HTTPFunctionMetaInputTypes,
   PikkuHTTPRequest,
@@ -142,12 +141,6 @@ export type CoreChannel<
     data: BinaryData,
     channel: PikkuChannel<ChannelData, any>
   ) => Promise<BinaryData | void> | BinaryData | void
-  docs?: Partial<{
-    description: string
-    response: string
-    errors: Array<typeof PikkuError>
-    tags: string[]
-  }>
   tags?: string[]
 }
 

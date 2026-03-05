@@ -281,6 +281,11 @@ wireCLI({
               description:
                 'Path to OpenAPI YAML/JSON spec to generate functions from',
             },
+            mcp: {
+              description:
+                'Add mcp: true to generated functions (expose as MCP tools)',
+              default: false,
+            },
           },
         }),
       },

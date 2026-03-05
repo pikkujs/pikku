@@ -6,12 +6,32 @@ import { parse as parseYAML } from 'yaml'
 
 import type { OpenAPISchema } from './zod-codegen.js'
 
+export interface ErrorResponse {
+  statusCode: number
+  description: string
+}
+
+export interface SecuritySchemeInfo {
+  type: 'oauth2' | 'http' | 'apiKey'
+  scheme?: string
+  bearerFormat?: string
+  name?: string
+  in?: string
+  flows?: {
+    authorizationUrl?: string
+    tokenUrl?: string
+    scopes?: Record<string, string>
+  }
+}
+
 export interface ParsedSpec {
   info: { title: string; version: string; description?: string }
   baseUrl: string
   authType: 'bearer' | 'oauth2' | 'apiKey' | 'none'
   operations: ParsedOperation[]
   componentSchemas: Record<string, OpenAPISchema>
+  securitySchemes: Record<string, SecuritySchemeInfo>
+  tagDescriptions: Record<string, string>
 }
 
 export interface ParsedOperation {
@@ -23,9 +43,14 @@ export interface ParsedOperation {
   tags: string[]
   pathParams: ParsedParam[]
   queryParams: ParsedParam[]
+  headerParams: ParsedParam[]
   requestBody?: OpenAPISchema
+  requestBodyDescription?: string
+  requestBodyRequired?: boolean
   responseSchema?: OpenAPISchema
   responseDescription?: string
+  errorResponses: ErrorResponse[]
+  deprecated: boolean
 }
 
 export interface ParsedParam {
@@ -33,6 +58,7 @@ export interface ParsedParam {
   required: boolean
   schema: OpenAPISchema
   description?: string
+  example?: unknown
 }
 
 /**
@@ -60,6 +86,8 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
 
   const baseUrl = extractBaseUrl(doc)
   const authType = detectAuthType(doc)
+  const securitySchemes = extractSecuritySchemes(doc)
+  const tagDescriptions = extractTagDescriptions(doc)
 
   // Extract component schemas
   const componentSchemas: Record<string, OpenAPISchema> = {}
@@ -69,10 +97,12 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
     }
   }
 
-  // Extract operations
+  // Extract operations (skip deprecated)
   const operations: ParsedOperation[] = []
   if (doc.paths) {
-    for (const [path, pathItem] of Object.entries(doc.paths as Record<string, any>)) {
+    for (const [path, pathItem] of Object.entries(
+      doc.paths as Record<string, any>
+    )) {
       // Shared parameters at the path level
       const sharedParams: any[] = pathItem.parameters ?? []
 
@@ -80,7 +110,12 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
         const op = pathItem[method]
         if (!op) continue
 
+        // Skip deprecated operations
+        if (op.deprecated === true) continue
+
         const allParams: any[] = [...sharedParams, ...(op.parameters ?? [])]
+
+        const body = op.requestBody
 
         operations.push({
           operationId: op.operationId,
@@ -91,15 +126,28 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
           tags: op.tags ?? [],
           pathParams: extractParams(allParams, 'path'),
           queryParams: extractParams(allParams, 'query'),
+          headerParams: extractParams(allParams, 'header'),
           requestBody: extractRequestBody(op),
+          requestBodyDescription: body?.description,
+          requestBodyRequired: body?.required,
           responseSchema: extractResponseSchema(op),
           responseDescription: extractResponseDescription(op),
+          errorResponses: extractErrorResponses(op),
+          deprecated: false,
         })
       }
     }
   }
 
-  return { info, baseUrl, authType, operations, componentSchemas }
+  return {
+    info,
+    baseUrl,
+    authType,
+    operations,
+    componentSchemas,
+    securitySchemes,
+    tagDescriptions,
+  }
 }
 
 /** Recursively resolve $ref pointers in-place */
@@ -171,7 +219,10 @@ function detectAuthType(doc: any): 'bearer' | 'oauth2' | 'apiKey' | 'none' {
   return 'none'
 }
 
-function extractParams(params: any[], location: 'path' | 'query'): ParsedParam[] {
+function extractParams(
+  params: any[],
+  location: 'path' | 'query' | 'header'
+): ParsedParam[] {
   return params
     .filter((p) => p.in === location)
     .map((p) => ({
@@ -179,6 +230,7 @@ function extractParams(params: any[], location: 'path' | 'query'): ParsedParam[]
       required: p.required ?? location === 'path',
       schema: (p.schema ?? { type: 'string' }) as OpenAPISchema,
       description: p.description,
+      example: p.example,
     }))
 }
 
@@ -242,4 +294,77 @@ function extractResponseSchema(op: any): OpenAPISchema | undefined {
   }
 
   return undefined
+}
+
+function extractErrorResponses(op: any): ErrorResponse[] {
+  const responses = op.responses
+  if (!responses) return []
+
+  const errors: ErrorResponse[] = []
+  for (const [code, resp] of Object.entries(responses) as [string, any][]) {
+    const statusCode = parseInt(code, 10)
+    if (isNaN(statusCode)) continue
+    if (statusCode >= 400) {
+      errors.push({
+        statusCode,
+        description: resp.description ?? `Error ${statusCode}`,
+      })
+    }
+  }
+  return errors
+}
+
+function extractSecuritySchemes(doc: any): Record<string, SecuritySchemeInfo> {
+  const raw = doc.components?.securitySchemes ?? doc.securityDefinitions ?? {}
+  const result: Record<string, SecuritySchemeInfo> = {}
+
+  for (const [name, scheme] of Object.entries(raw) as [string, any][]) {
+    const info: SecuritySchemeInfo = {
+      type: scheme.type === 'http' ? 'http' : scheme.type,
+    }
+
+    if (scheme.type === 'http') {
+      info.scheme = scheme.scheme
+      info.bearerFormat = scheme.bearerFormat
+    }
+
+    if (scheme.type === 'apiKey') {
+      info.name = scheme.name
+      info.in = scheme.in
+    }
+
+    if (scheme.type === 'oauth2') {
+      // Extract flows — prefer authorizationCode, then implicit, then clientCredentials
+      const flows = scheme.flows ?? {}
+      const flow =
+        flows.authorizationCode ??
+        flows.implicit ??
+        flows.clientCredentials ??
+        flows.password
+
+      if (flow) {
+        info.flows = {
+          authorizationUrl: flow.authorizationUrl,
+          tokenUrl: flow.tokenUrl,
+          scopes: flow.scopes,
+        }
+      }
+    }
+
+    result[name] = info
+  }
+
+  return result
+}
+
+function extractTagDescriptions(doc: any): Record<string, string> {
+  const result: Record<string, string> = {}
+  if (Array.isArray(doc.tags)) {
+    for (const tag of doc.tags) {
+      if (tag.name && tag.description) {
+        result[tag.name] = tag.description
+      }
+    }
+  }
+  return result
 }

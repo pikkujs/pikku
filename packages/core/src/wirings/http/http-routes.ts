@@ -166,7 +166,6 @@ function registerRoute(
     contentType: route.contentType,
     timeout: route.timeout,
     headers: route.headers,
-    docs: route.docs,
     sse: route.sse,
   } as any)
 }

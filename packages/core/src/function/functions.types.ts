@@ -7,6 +7,7 @@ import type {
   PickRequired,
 } from '../types/core.types.js'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 
 /**
@@ -299,4 +300,5 @@ export type CorePikkuFunctionConfig<
   input?: InputSchema
   output?: OutputSchema
   node?: CoreNodeConfig
+  errors?: Array<typeof PikkuError>
 }
