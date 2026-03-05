@@ -200,6 +200,7 @@ export type CoreAIAgent<
   temperature?: number
   tools?: unknown[]
   agents?: unknown[]
+  agentMode?: 'delegate' | 'supervise'
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
