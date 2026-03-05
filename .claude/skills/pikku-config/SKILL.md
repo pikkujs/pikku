@@ -1,13 +1,13 @@
 ---
 name: pikku-config
-description: 'Use when managing secrets, environment variables, config, OAuth2 credentials, or API versioning in a Pikku app. Covers wireSecret, wireVariable, wireOAuth2Credential, typed config access, and contract versioning.
-TRIGGER when: code uses wireSecret/wireVariable/wireOAuth2Credential, user asks about env vars, secrets, config, OAuth2, API versioning, or "how do I access environment variables".
-DO NOT TRIGGER when: user asks about service factories (use pikku-services) or auth middleware (use pikku-security).'
+description: 'Use when managing secrets, environment variables, config, or OAuth2 credentials in a Pikku app. Covers wireSecret, wireVariable, wireOAuth2Credential, and typed config access.
+TRIGGER when: code uses wireSecret/wireVariable/wireOAuth2Credential, user asks about env vars, secrets, config, OAuth2, or "how do I access environment variables".
+DO NOT TRIGGER when: user asks about API versioning/breaking changes (use pikku-versioning), service factories (use pikku-services), or auth middleware (use pikku-security).'
 ---
 
-# Pikku Config, Secrets & Versioning
+# Pikku Config, Secrets & OAuth2
 
-Manage secrets, variables, OAuth2 credentials, and API contract versioning. Never use `process.env` in Pikku functions — use typed services instead.
+Manage secrets, variables, and OAuth2 credentials. Never use `process.env` in Pikku functions — use typed services instead.
 
 ## Before You Start
 
@@ -136,91 +136,6 @@ const response = await slackOAuth.request(
   }
 )
 const data = await response.json()
-```
-
-## API Versioning
-
-### Function Versioning
-
-Add `version` to function config to maintain backward compatibility:
-
-```typescript
-// v1 — kept for running workflows and agents
-const getBookV1 = pikkuFunc({
-  title: 'Get Book',
-  version: 1,
-  input: z.object({ bookId: z.string() }),
-  output: z.object({ title: z.string() }),
-  func: async ({ db }, { bookId }) => {
-    return await db.getBook(bookId)
-  },
-})
-
-// v2 — the latest version, called by default
-const getBook = pikkuFunc({
-  title: 'Get Book',
-  input: z.object({
-    bookId: z.string(),
-    format: z.enum(['full', 'summary']),
-  }),
-  output: z.object({
-    title: z.string(),
-    author: z.string(),
-    isbn: z.string(),
-  }),
-  func: async ({ db }, { bookId, format }) => {
-    return await db.getBook(bookId, format)
-  },
-})
-```
-
-### Version Manifest (`versions.json`)
-
-Pikku tracks contract hashes to detect breaking changes:
-
-```json
-{
-  "manifestVersion": 1,
-  "contracts": {
-    "createTodo": {
-      "latest": 1,
-      "versions": {
-        "1": "a1b2c3d4e5f6g7h8"
-      }
-    },
-    "getTodos": {
-      "latest": 2,
-      "versions": {
-        "1": "i9j0k1l2m3n4o5p6",
-        "2": "q7r8s9t0u1v2w3x4"
-      }
-    }
-  }
-}
-```
-
-### CLI Commands
-
-```bash
-npx pikku versions init     # Initialize versioning manifest
-npx pikku versions check    # Detect contract changes (use in CI)
-npx pikku versions update   # Update contract hashes after version bump
-```
-
-### CI Integration
-
-```yaml
-# .github/workflows/ci.yml
-name: CI
-on: [push, pull_request]
-
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm ci
-      - run: npx pikku versions check
 ```
 
 ## Key Rule
