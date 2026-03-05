@@ -1,6 +1,8 @@
 ---
 name: pikku-services
-description: 'Use when setting up dependency injection, creating custom services, or configuring the service layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service typing, built-in services, and tree-shaking.'
+description: 'Use when setting up dependency injection, creating custom services, or configuring the service layer in a Pikku app. Covers pikkuServices (singleton), pikkuWireServices (per-request), service typing, built-in services, and tree-shaking.
+TRIGGER when: code uses pikkuServices/pikkuWireServices, user asks about services.ts, dependency injection, service factories, or built-in services (ConsoleLogger, JoseJWTService).
+DO NOT TRIGGER when: user asks about auth middleware (use pikku-security) or secrets/variables (use pikku-config).'
 ---
 
 # Pikku Services (Dependency Injection)

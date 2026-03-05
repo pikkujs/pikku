@@ -1,6 +1,8 @@
 ---
 name: pikku-http
-description: 'Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers wireHTTP, defineHTTPRoutes, route groups, auth, middleware, permissions, SSE, and generated fetch client.'
+description: 'Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers wireHTTP, defineHTTPRoutes, route groups, auth, middleware, permissions, SSE, and generated fetch client.
+TRIGGER when: code uses wireHTTP/defineHTTPRoutes/wireHTTPRoutes, user asks about REST endpoints, API routes, SSE, or the generated fetch client.
+DO NOT TRIGGER when: user asks about WebSocket (use pikku-websocket), queue workers (use pikku-queue), or deployment (use pikku-deploy-*).'
 ---
 
 # Pikku HTTP Wiring

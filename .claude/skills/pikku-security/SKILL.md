@@ -1,6 +1,8 @@
 ---
 name: pikku-security
-description: 'Use when adding authentication, authorization, permissions, middleware, or security to a Pikku app. Covers pikkuAuth, pikkuPermission, pikkuMiddleware, built-in auth strategies (bearer, cookie, API key), and permission scoping.'
+description: 'Use when adding authentication, authorization, permissions, middleware, or security to a Pikku app. Covers pikkuAuth, pikkuPermission, pikkuMiddleware, built-in auth strategies (bearer, cookie, API key), and permission scoping.
+TRIGGER when: code uses pikkuAuth/pikkuPermission/pikkuMiddleware, user asks about auth, login, session, permissions, RBAC, middleware, or API keys.
+DO NOT TRIGGER when: user asks about JWT service setup (use pikku-services) or secrets/env vars (use pikku-config).'
 ---
 
 # Pikku Security (Auth, Permissions, Middleware)

@@ -1,6 +1,8 @@
 ---
 name: pikku-queue
-description: 'Use when adding background job processing, async task queues, or distributed workers to a Pikku app. Covers wireQueueWorker, job enqueuing, progress tracking, retries, BullMQ and PgBoss adapters.'
+description: 'Use when adding background job processing, async task queues, or distributed workers to a Pikku app. Covers wireQueueWorker, job enqueuing, progress tracking, retries, BullMQ and PgBoss adapters.
+TRIGGER when: code uses wireQueueWorker, user asks about background jobs, task queues, async processing, BullMQ, PgBoss, or job retries.
+DO NOT TRIGGER when: user asks about scheduled cron tasks (use pikku-cron) or event-driven triggers (use pikku-trigger).'
 ---
 
 # Pikku Queue Wiring

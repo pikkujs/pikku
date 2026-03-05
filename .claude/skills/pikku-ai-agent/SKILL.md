@@ -1,6 +1,8 @@
 ---
 name: pikku-ai-agent
-description: 'Use when building AI agents, chatbots, or LLM-powered assistants with Pikku. Covers pikkuAIAgent, tool registration, memory, streaming, and agent invocation.'
+description: 'Use when building AI agents, chatbots, or LLM-powered assistants with Pikku. Covers pikkuAIAgent, tool registration, memory, streaming, and agent invocation.
+TRIGGER when: code uses pikkuAIAgent/runAIAgent/streamAIAgent, user asks about AI agents, chatbots, LLM assistants, tool-calling agents, or agent memory/streaming.
+DO NOT TRIGGER when: user asks about MCP tool exposure (use pikku-mcp) or general function definitions (use pikku-concepts).'
 ---
 
 # Pikku AI Agent Wiring
