@@ -30,6 +30,7 @@ export const serializeFunctionTypes = (
 import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired } from '@pikku/core'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core'
+import { PikkuError } from '@pikku/core/errors'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
@@ -371,6 +372,7 @@ export type PikkuFunctionConfigWithSchema<
   input: InputSchema
   output?: OutputSchema
   node?: NodeConfig
+  errors?: Array<typeof PikkuError>
 }
 
 /**
@@ -454,6 +456,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   input: InputSchema
   output?: OutputSchema
   node?: NodeConfig
+  errors?: Array<typeof PikkuError>
 }
 
 /**

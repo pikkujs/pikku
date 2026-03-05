@@ -665,6 +665,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     oauth?: boolean
     test?: boolean
     openapi?: string
+    mcp?: boolean
   },
   void
 >({
@@ -681,6 +682,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       oauth = false,
       test = true,
       openapi,
+      mcp = false,
     }
   ) => {
     if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
@@ -727,6 +729,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
         oauth,
         secret: secret || oauth,
+        mcp,
       })
       Object.assign(addonFiles, openapiFiles)
     }

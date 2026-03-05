@@ -2,7 +2,11 @@
  * Generates addon files from a parsed OpenAPI spec.
  * Returns Record<string, string> compatible with getAddonFiles output.
  */
-import type { ParsedSpec, ParsedOperation } from './parse-openapi.js'
+import type {
+  ParsedSpec,
+  ParsedOperation,
+  ErrorResponse,
+} from './parse-openapi.js'
 import {
   schemaToZod,
   schemaVarName,
@@ -27,32 +31,83 @@ interface AddonVars {
 interface CodegenFlags {
   oauth: boolean
   secret: boolean
+  mcp?: boolean
 }
 
 const GENERIC_SUMMARIES = new Set([
-  'index', 'show', 'create', 'update', 'destroy', 'delete', 'list',
+  'index',
+  'show',
+  'create',
+  'update',
+  'destroy',
+  'delete',
+  'list',
 ])
+
+/** Map from HTTP status code to pikku error class name */
+const STATUS_TO_ERROR: Record<number, string> = {
+  400: 'BadRequestError',
+  401: 'UnauthorizedError',
+  403: 'ForbiddenError',
+  404: 'NotFoundError',
+  405: 'MethodNotAllowedError',
+  409: 'ConflictError',
+  422: 'UnprocessableContentError',
+  429: 'TooManyRequestsError',
+  500: 'InternalServerError',
+}
 
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function humanDescription(named: NamedOperation, parsed: ParsedOperation): string {
+function humanDescription(
+  named: NamedOperation,
+  parsed: ParsedOperation
+): string {
+  const summary = parsed.summary?.trim()
+  const description = parsed.description?.trim()
+
+  // Summary is preferred — it's the operation's intent
+  if (summary && !GENERIC_SUMMARIES.has(summary.toLowerCase())) {
+    // If description adds info beyond summary, combine them
+    if (
+      description &&
+      !GENERIC_SUMMARIES.has(description.toLowerCase()) &&
+      description.toLowerCase() !== summary.toLowerCase()
+    ) {
+      const sep = summary.endsWith('.') ? ' ' : '. '
+      return `${capitalize(summary)}${sep}${capitalize(description)}`
+    }
+    return capitalize(summary)
+  }
+
+  if (description && !GENERIC_SUMMARIES.has(description.toLowerCase())) {
+    return capitalize(description)
+  }
+
   if (parsed.responseDescription) {
     return capitalize(parsed.responseDescription)
   }
-  const summary = parsed.summary?.trim()
-  if (summary && !GENERIC_SUMMARIES.has(summary.toLowerCase())) {
-    return capitalize(summary)
-  }
-  if (parsed.description && !GENERIC_SUMMARIES.has(parsed.description.trim().toLowerCase())) {
-    return capitalize(parsed.description.trim())
-  }
+
   const words = named.functionName
     .replace(/([A-Z])/g, ' $1')
     .trim()
     .toLowerCase()
   return capitalize(words)
+}
+
+function getErrorClassesForResponses(
+  errorResponses: ErrorResponse[]
+): string[] {
+  const classes: string[] = []
+  for (const err of errorResponses) {
+    const cls = STATUS_TO_ERROR[err.statusCode]
+    if (cls && !classes.includes(cls)) {
+      classes.push(cls)
+    }
+  }
+  return classes
 }
 
 export function generateAddonFromOpenAPI(
@@ -83,9 +138,8 @@ export function generateAddonFromOpenAPI(
   )
 
   // Pair named operations with their parsed data
-  const opPairs: Array<{ named: NamedOperation; parsed: ParsedOperation }> = namedOps.map(
-    (named, i) => ({ named, parsed: spec.operations[i] })
-  )
+  const opPairs: Array<{ named: NamedOperation; parsed: ParsedOperation }> =
+    namedOps.map((named, i) => ({ named, parsed: spec.operations[i] }))
 
   // Generate types file with shared schemas (only if there are any)
   if (Object.keys(spec.componentSchemas).length > 0) {
@@ -96,7 +150,14 @@ export function generateAddonFromOpenAPI(
   const functionExports: string[] = []
   for (const { named, parsed } of opPairs) {
     const funcCtx = createContext(schemaRefs)
-    const funcCode = generateFunctionFile(named, parsed, vars, funcCtx)
+    const funcCode = generateFunctionFile(
+      named,
+      parsed,
+      vars,
+      funcCtx,
+      spec,
+      flags
+    )
     files[`src/functions/${named.functionName}.function.ts`] = funcCode
     functionExports.push(named.functionName)
   }
@@ -115,10 +176,7 @@ export function generateAddonFromOpenAPI(
   return files
 }
 
-function generateTypesFile(
-  spec: ParsedSpec,
-  ctx: ZodCodegenContext
-): string {
+function generateTypesFile(spec: ParsedSpec, ctx: ZodCodegenContext): string {
   const lines: string[] = []
   lines.push("import { z } from 'zod'")
   lines.push('')
@@ -141,20 +199,45 @@ function generateFunctionFile(
   parsed: ParsedOperation,
   vars: AddonVars,
   ctx: ZodCodegenContext,
+  spec: ParsedSpec,
+  flags: CodegenFlags
 ): string {
   const lines: string[] = []
   const { camelName } = vars
+
+  // Tag description as file header
+  if (parsed.tags.length > 0) {
+    const tag = parsed.tags[0]
+    const tagDesc = spec.tagDescriptions[tag]
+    if (tagDesc) {
+      lines.push(`// ${tag} — ${tagDesc}`)
+      lines.push('')
+    }
+  }
+
   const hasInput =
     parsed.pathParams.length > 0 ||
     parsed.queryParams.length > 0 ||
+    parsed.headerParams.length > 0 ||
     parsed.requestBody
 
-  const pascalName = named.functionName.charAt(0).toUpperCase() + named.functionName.slice(1)
+  const pascalName =
+    named.functionName.charAt(0).toUpperCase() + named.functionName.slice(1)
   const inputName = `${pascalName}Input`
   const outputName = `${pascalName}Output`
 
+  // Determine error imports needed
+  const errorClasses = getErrorClassesForResponses(parsed.errorResponses)
+
   lines.push("import { z } from 'zod'")
   lines.push("import { pikkuSessionlessFunc } from '#pikku'")
+
+  if (errorClasses.length > 0) {
+    lines.push(
+      `import { ${errorClasses.join(', ')} } from '@pikku/core/errors'`
+    )
+  }
+
   lines.push('')
 
   // Build Input schema (exported for pikku schema discovery)
@@ -166,7 +249,7 @@ function generateFunctionFile(
 
   // Build Output schema (exported for pikku schema discovery)
   if (parsed.responseSchema) {
-    const outputCode = schemaToZod(parsed.responseSchema, ctx)
+    const outputCode = buildOutputSchema(parsed.responseSchema, ctx)
     lines.push(`export const ${outputName} = ${outputCode}`)
     lines.push('')
   }
@@ -177,11 +260,21 @@ function generateFunctionFile(
   const funcConfig: string[] = []
   funcConfig.push(`  description: ${JSON.stringify(description)},`)
   if (hasInput) funcConfig.push(`  input: ${inputName},`)
-  if (parsed.responseSchema) funcConfig.push(`  output: ${outputName},`)
+  if (parsed.responseSchema) {
+    funcConfig.push(`  output: ${outputName},`)
+  } else {
+    funcConfig.push('  output: z.void(),')
+  }
 
-  const funcParams = hasInput
-    ? `{ ${camelName} }, data`
-    : `{ ${camelName} }`
+  if (errorClasses.length > 0) {
+    funcConfig.push(`  errors: [${errorClasses.join(', ')}],`)
+  }
+
+  if (flags.mcp) {
+    funcConfig.push('  mcp: true,')
+  }
+
+  const funcParams = hasInput ? `{ ${camelName} }, data` : `{ ${camelName} }`
 
   const returnCast = parsed.responseSchema ? ' as any' : ''
   funcConfig.push(
@@ -205,28 +298,31 @@ function buildInputSchema(
   const props: string[] = []
 
   for (const param of parsed.pathParams) {
-    const zodCode = schemaToZod(param.schema, ctx, { optional: !param.required })
-    const desc = param.description
-      ? `${zodCode}.describe(${JSON.stringify(param.description)})`
-      : zodCode
-    props.push(`  ${param.name}: ${desc},`)
+    props.push(formatParamProp(param, ctx))
   }
 
   for (const param of parsed.queryParams) {
-    const zodCode = schemaToZod(param.schema, ctx, { optional: !param.required })
-    const desc = param.description
-      ? `${zodCode}.describe(${JSON.stringify(param.description)})`
-      : zodCode
-    props.push(`  ${param.name}: ${desc},`)
+    props.push(formatParamProp(param, ctx))
+  }
+
+  for (const param of parsed.headerParams) {
+    props.push(formatParamProp(param, ctx))
   }
 
   if (parsed.requestBody) {
     if (parsed.requestBody.properties) {
       const requiredSet = new Set(parsed.requestBody.required ?? [])
-      for (const [key, propSchema] of Object.entries(parsed.requestBody.properties)) {
+      for (const [key, propSchema] of Object.entries(
+        parsed.requestBody.properties
+      )) {
+        // Skip readOnly properties from input
+        if (propSchema.readOnly) continue
         const isOptional = !requiredSet.has(key)
         const zodCode = schemaToZod(propSchema, ctx, { optional: isOptional })
-        props.push(`  ${key}: ${zodCode},`)
+        const withDesc = propSchema.description
+          ? `${zodCode}.describe(${JSON.stringify(propSchema.description)})`
+          : zodCode
+        props.push(`  ${key}: ${withDesc},`)
       }
     } else {
       const bodyZod = schemaToZod(parsed.requestBody, ctx)
@@ -235,6 +331,49 @@ function buildInputSchema(
   }
 
   return `z.object({\n${props.join('\n')}\n})`
+}
+
+function formatParamProp(
+  param: {
+    name: string
+    required: boolean
+    schema: any
+    description?: string
+    example?: unknown
+  },
+  ctx: ZodCodegenContext
+): string {
+  const zodCode = schemaToZod(param.schema, ctx, { optional: !param.required })
+
+  let descParts: string[] = []
+  if (param.description) descParts.push(param.description)
+  if (param.example !== undefined)
+    descParts.push(`Example: ${JSON.stringify(param.example)}`)
+
+  const desc =
+    descParts.length > 0
+      ? `${zodCode}.describe(${JSON.stringify(descParts.join('. '))})`
+      : zodCode
+
+  return `  ${param.name}: ${desc},`
+}
+
+function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {
+  // For output schemas, filter out writeOnly properties
+  if (schema.properties) {
+    const filteredProps: Record<string, any> = {}
+    for (const [key, propSchema] of Object.entries(schema.properties) as [
+      string,
+      any,
+    ][]) {
+      if (!propSchema.writeOnly) {
+        filteredProps[key] = propSchema
+      }
+    }
+    const filteredSchema = { ...schema, properties: filteredProps }
+    return schemaToZod(filteredSchema, ctx)
+  }
+  return schemaToZod(schema, ctx)
 }
 
 function generateIndexFile(functionExports: string[]): string {
@@ -249,6 +388,8 @@ function generateIndexFile(functionExports: string[]): string {
 interface RouteInfo {
   path: string[]
   query: string[]
+  headers: string[]
+  errors?: Record<number, string>
 }
 
 function generateServiceFile(
@@ -262,11 +403,24 @@ function generateServiceFile(
 
   const baseUrl = spec.baseUrl || 'https://api.example.com'
 
+  // Always import all error classes used in the switch statement
+  const allErrorClasses = new Set<string>(Object.values(STATUS_TO_ERROR))
+
   if (flags.oauth) {
     lines.push("import { OAuth2Client } from '@pikku/core/oauth2'")
-    lines.push("import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'")
+    lines.push(
+      "import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'"
+    )
   } else if (flags.secret) {
-    lines.push(`import type { ${pascalName}Secrets } from './${name}.secret.js'`)
+    lines.push(
+      `import type { ${pascalName}Secrets } from './${name}.secret.js'`
+    )
+  }
+
+  if (allErrorClasses.size > 0) {
+    lines.push(
+      `import { ${[...allErrorClasses].sort().join(', ')} } from '@pikku/core/errors'`
+    )
   }
 
   lines.push('')
@@ -274,11 +428,24 @@ function generateServiceFile(
   lines.push('')
 
   if (flags.oauth) {
+    // Use OAuth2 details from spec if available
+    const oauthScheme = Object.values(spec.securitySchemes).find(
+      (s) => s.type === 'oauth2'
+    )
+    const authUrl =
+      oauthScheme?.flows?.authorizationUrl ??
+      'https://example.com/oauth2/authorize'
+    const tokenUrl =
+      oauthScheme?.flows?.tokenUrl ?? 'https://example.com/oauth2/token'
+    const scopes = oauthScheme?.flows?.scopes
+      ? Object.keys(oauthScheme.flows.scopes)
+      : ['read', 'write']
+
     lines.push(`export const ${screamingName}_OAUTH2_CONFIG = {`)
     lines.push(`  tokenSecretId: '${screamingName}_TOKENS',`)
-    lines.push(`  authorizationUrl: 'https://example.com/oauth2/authorize',`)
-    lines.push(`  tokenUrl: 'https://example.com/oauth2/token',`)
-    lines.push("  scopes: ['read', 'write'],")
+    lines.push(`  authorizationUrl: ${JSON.stringify(authUrl)},`)
+    lines.push(`  tokenUrl: ${JSON.stringify(tokenUrl)},`)
+    lines.push(`  scopes: ${JSON.stringify(scopes)},`)
     lines.push('}')
     lines.push('')
   }
@@ -287,13 +454,23 @@ function generateServiceFile(
   const routes: Record<string, RouteInfo> = {}
   for (const { parsed } of opPairs) {
     const key = `${parsed.method.toUpperCase()} ${parsed.path}`
-    routes[key] = {
+    const route: RouteInfo = {
       path: parsed.pathParams.map((p) => p.name),
       query: parsed.queryParams.map((p) => p.name),
+      headers: parsed.headerParams.map((p) => p.name),
     }
+    if (parsed.errorResponses.length > 0) {
+      route.errors = {}
+      for (const err of parsed.errorResponses) {
+        route.errors[err.statusCode] = err.description
+      }
+    }
+    routes[key] = route
   }
 
-  lines.push(`const ROUTES: Record<string, { path: string[], query: string[] }> = ${JSON.stringify(routes, null, 2)}`)
+  lines.push(
+    `const ROUTES: Record<string, { path: string[], query: string[], headers: string[], errors?: Record<number, string> }> = ${JSON.stringify(routes, null, 2)}`
+  )
   lines.push('')
 
   // Class declaration
@@ -315,7 +492,7 @@ function generateServiceFile(
 
   lines.push('')
 
-  // call() method — splits data into path/query/body using route map
+  // call() method — splits data into path/query/headers/body using route map
   lines.push('  async call<T>(')
   lines.push("    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',")
   lines.push('    path: string,')
@@ -325,12 +502,17 @@ function generateServiceFile(
   lines.push('    let endpoint = path')
   lines.push('    let body: Record<string, unknown> | undefined')
   lines.push('    const query: Record<string, string> = {}')
+  lines.push('    const headers: Record<string, string> = {')
+  lines.push("      'Content-Type': 'application/json',")
+  lines.push('    }')
   lines.push('')
   lines.push('    if (data && route) {')
   lines.push('      // Interpolate path params')
   lines.push('      for (const param of route.path) {')
   lines.push('        if (data[param] !== undefined) {')
-  lines.push('          endpoint = endpoint.replace(`{${param}}`, String(data[param]))')
+  lines.push(
+    '          endpoint = endpoint.replace(`{${param}}`, String(data[param]))'
+  )
   lines.push('        }')
   lines.push('      }')
   lines.push('      // Extract query params')
@@ -339,10 +521,20 @@ function generateServiceFile(
   lines.push('          query[param] = String(data[param])')
   lines.push('        }')
   lines.push('      }')
+  lines.push('      // Extract header params')
+  lines.push('      for (const param of route.headers) {')
+  lines.push('        if (data[param] !== undefined) {')
+  lines.push('          headers[param] = String(data[param])')
+  lines.push('        }')
+  lines.push('      }')
   lines.push('      // Everything else goes into body')
-  lines.push('      const pathAndQuery = new Set([...route.path, ...route.query])')
+  lines.push(
+    '      const pathQueryHeaders = new Set([...route.path, ...route.query, ...route.headers])'
+  )
   lines.push('      const remaining = Object.fromEntries(')
-  lines.push('        Object.entries(data).filter(([k]) => !pathAndQuery.has(k))')
+  lines.push(
+    '        Object.entries(data).filter(([k]) => !pathQueryHeaders.has(k))'
+  )
   lines.push('      )')
   lines.push('      if (Object.keys(remaining).length > 0) {')
   lines.push('        body = remaining')
@@ -356,24 +548,35 @@ function generateServiceFile(
   lines.push('')
 
   if (flags.oauth) {
-    lines.push('    const response = await this.oauth.request(url.toString(), {')
+    lines.push(
+      '    const response = await this.oauth.request(url.toString(), {'
+    )
     lines.push('      method,')
-    lines.push("      headers: { 'Content-Type': 'application/json' },")
+    lines.push('      headers,')
     lines.push('      body: body ? JSON.stringify(body) : undefined,')
     lines.push('    })')
   } else if (flags.secret) {
+    // Use apiKey details from spec if available
+    const apiKeyScheme = Object.values(spec.securitySchemes).find(
+      (s) => s.type === 'apiKey'
+    )
+    if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
+      lines.push(
+        `    headers[${JSON.stringify(apiKeyScheme.name)}] = this.creds.apiKey`
+      )
+    } else {
+      lines.push('    headers.Authorization = `Bearer ${this.creds.apiKey}`')
+    }
+    lines.push('')
     lines.push('    const response = await fetch(url.toString(), {')
     lines.push('      method,')
-    lines.push('      headers: {')
-    lines.push("        'Content-Type': 'application/json',")
-    lines.push('        Authorization: `Bearer ${this.creds.apiKey}`,')
-    lines.push('      },')
+    lines.push('      headers,')
     lines.push('      body: body ? JSON.stringify(body) : undefined,')
     lines.push('    })')
   } else {
     lines.push('    const response = await fetch(url.toString(), {')
     lines.push('      method,')
-    lines.push("      headers: { 'Content-Type': 'application/json' },")
+    lines.push('      headers,')
     lines.push('      body: body ? JSON.stringify(body) : undefined,')
     lines.push('    })')
   }
@@ -381,11 +584,29 @@ function generateServiceFile(
   lines.push('')
   lines.push('    if (!response.ok) {')
   lines.push('      const errorText = await response.text()')
-  lines.push(`      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)`)
+  lines.push(
+    '      const errorMessage = route?.errors?.[response.status] ?? errorText'
+  )
+  lines.push('      switch (response.status) {')
+  lines.push('        case 400: throw new BadRequestError(errorMessage)')
+  lines.push('        case 401: throw new UnauthorizedError(errorMessage)')
+  lines.push('        case 403: throw new ForbiddenError(errorMessage)')
+  lines.push('        case 404: throw new NotFoundError(errorMessage)')
+  lines.push('        case 405: throw new MethodNotAllowedError(errorMessage)')
+  lines.push('        case 409: throw new ConflictError(errorMessage)')
+  lines.push(
+    '        case 422: throw new UnprocessableContentError(errorMessage)'
+  )
+  lines.push('        case 429: throw new TooManyRequestsError(errorMessage)')
+  lines.push('        case 500: throw new InternalServerError(errorMessage)')
+  lines.push(
+    `        default: throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)`
+  )
+  lines.push('      }')
   lines.push('    }')
   lines.push('')
   lines.push('    const text = await response.text()')
-  lines.push("    if (!text) return {} as T")
+  lines.push('    if (!text) return {} as T')
   lines.push('    return JSON.parse(text) as T')
   lines.push('  }')
 
