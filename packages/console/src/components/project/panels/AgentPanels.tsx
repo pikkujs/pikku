@@ -27,7 +27,7 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
   const modelOptions = useMemo(() => {
     const aliases = new Set(modelAliases)
     if (metadata?.model) aliases.add(metadata.model)
-    return Array.from(aliases)
+    return Array.from(aliases) as string[]
   }, [modelAliases, metadata?.model])
 
   const middleware = metadata?.middleware || []
