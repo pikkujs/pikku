@@ -19,7 +19,7 @@ export const sendEmail = pikkuSessionlessFunc({
   description: 'Sends an email',
   approvalRequired: true,
   approvalDescription: async (_services, { to, subject }) => {
-    return `Send email to "${to}": "${subject}"`
+    return `Send an email to "${to}" with subject "${subject}"`
   },
   input: SendEmailInput,
   output: SendEmailOutput,

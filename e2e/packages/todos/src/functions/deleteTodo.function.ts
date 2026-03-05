@@ -14,7 +14,7 @@ export const deleteTodo = pikkuSessionlessFunc({
   approvalRequired: true,
   approvalDescription: async ({ todoStore }, { id }) => {
     const todo = todoStore.get(id)
-    return `Delete todo: "${todo?.title ?? id}"`
+    return `Delete the todo called "${todo?.title ?? id}"`
   },
   input: DeleteTodoInput,
   output: DeleteTodoOutput,

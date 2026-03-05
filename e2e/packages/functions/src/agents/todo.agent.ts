@@ -1,5 +1,6 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
 import { addon } from '#pikku/pikku-types.gen.js'
+import { uppercaseMiddleware } from '../ai-middleware/uppercase.ai-middleware.js'
 
 export const todoAgent = pikkuAIAgent({
   name: 'todo-agent',
@@ -13,6 +14,7 @@ export const todoAgent = pikkuAIAgent({
     addon('todos:addTodo'),
     addon('todos:deleteTodo'),
   ],
+  aiMiddleware: [uppercaseMiddleware],
   maxSteps: 5,
   toolChoice: 'auto',
 })

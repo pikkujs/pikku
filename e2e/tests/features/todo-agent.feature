@@ -3,22 +3,25 @@ Feature: Todo Agent via Console
   The todo-agent manages a todo list. Tests interact with it through
   the Pikku Console agent playground UI.
 
-  Scenario: List all todos
+  Scenario: List all todos — response is uppercased by AI middleware
     Given I open the "todoAgent" playground
     When I send "What todos do I have?"
-    Then I should see "Review pull requests" in the chat
+    Then I should see exactly "REVIEW PULL REQUESTS" in the chat
 
-  Scenario: Add a todo (approved)
+  Scenario: Add a todo (approved) — shows approval description and uppercase response
     Given I open the "todoAgent" playground
     When I send "Add a todo called 'Write e2e tests'"
     Then I should see an approval request
+    And the approval reason should contain "Add a todo called"
+    And the approval reason should contain "Write e2e tests"
     When I click "Approve"
-    Then I should see "Write e2e tests" in the chat
+    Then I should see exactly "WRITE E2E TESTS" in the chat
 
   Scenario: Add a todo (denied)
     Given I open the "todoAgent" playground
     When I send "Add a todo called 'Should not exist'"
     Then I should see an approval request
+    And the approval reason should contain "Add a todo called"
     When I click "Deny"
     Then I should see "Denied" on the approval badge
 
@@ -47,19 +50,20 @@ Feature: Todo Agent via Console
     Then I should see an approval request
     And the approval reason should contain "Buy groceries"
     When I click "Approve"
-    Then I should see "deleted" in the chat
+    Then I should see exactly "DELETED" in the chat
 
   Scenario: Full conversation — list, add, deny, batch add, delete, verify
     Given I open the "todoAgent" playground
 
-    # 1. List existing todos — just verify the tool works
+    # 1. List existing todos — response uppercased by AI middleware
     When I send "How many todos do I have? List them."
     And I wait for the response
-    Then I should see "Buy groceries" in the chat
+    Then I should see exactly "BUY GROCERIES" in the chat
 
-    # 2. Add a todo and approve it
+    # 2. Add a todo and approve it — approval description shown
     When I send "Add a todo called 'Organize sock drawer'"
     Then I should see an approval request
+    And the approval reason should contain "Organize sock drawer"
     When I click "Approve"
     And I wait for the response
     Then I should see "Organize sock drawer" in the chat

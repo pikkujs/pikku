@@ -148,6 +148,15 @@ When('I wait for the response', async function (this: AgentWorld) {
 })
 
 Then(
+  'I should see exactly {string} in the chat',
+  async function (this: AgentWorld, expected: string) {
+    await expect(this.page.locator('body')).toContainText(expected, {
+      timeout: config.responseTimeout,
+    })
+  }
+)
+
+Then(
   'I should not see {string} in the chat',
   async function (this: AgentWorld, unexpected: string) {
     // Brief wait for content to settle, then assert absence

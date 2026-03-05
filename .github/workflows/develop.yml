@@ -41,20 +41,26 @@ jobs:
       - name: Build console
         run: yarn build:console
 
+      - name: Generate pikku files for verifiers
+        run: yarn workspaces foreach -p -A --include 'verifiers/**' exec bash -c 'npx pikku all || true'
+      - name: Build verifiers
+        run: yarn build:verifiers
+      - name: Build function-addon template
+        run: cd templates/function-addon && yarn pikku && yarn build
+      - name: Build templates
+        run: yarn build:templates
+
       - name: Save build output (for later jobs)
         uses: actions/upload-artifact@v4
         with:
-          name: built-packages
+          name: build-output
           path: |
             packages/**/dist
             packages/**/bin
-          include-hidden-files: true
-          retention-days: 1
-      - name: Save generated pikku files
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-pikku
-          path: templates/**/.pikku
+            templates/**/.pikku
+            templates/**/dist
+            verifiers/**/.pikku
+            verifiers/**/dist
           include-hidden-files: true
           retention-days: 1
 
@@ -76,11 +82,10 @@ jobs:
         with:
           node-version: 24
           cache: yarn
-      - name: Download built packages
+      - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: built-packages
-          path: packages
+          name: build-output
       - run: yarn install
       - name: Generate pikku files for e2e addons
         run: |
@@ -98,85 +103,11 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-  build-templates:
-    name: Build Templates
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: yarn
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-          path: packages
-      - name: Download generated pikku files
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-pikku
-      - run: yarn install
-      - name: Build templates
-        run: yarn build:templates
-      - name: Save built templates
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-templates
-          path: templates/**/dist
-          include-hidden-files: true
-          retention-days: 1
-
-  build-verifiers:
-    name: Build Verifiers
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: yarn
-      - name: Download built packages
-        uses: actions/download-artifact@v4
-        with:
-          name: built-packages
-          path: packages
-      - name: Download generated pikku files
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-pikku
-      - run: yarn install
-      - name: Generate pikku files for verifiers
-        run: yarn workspaces foreach -p -A --include 'verifiers/**' exec bash -c 'npx pikku all || true'
-      - name: Build verifiers
-        run: yarn build:verifiers
-      - name: Build function-addon template
-        run: cd templates/function-addon && yarn pikku && yarn build
-      - name: Save built verifiers and function-addon
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-verifiers
-          path: |
-            verifiers/**/dist
-            templates/function-addon/dist
-          include-hidden-files: true
-          retention-days: 1
-
   verifiers:
     name: Verifiers
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-verifiers
+    needs: build
     strategy:
       fail-fast: false
       matrix:
@@ -201,15 +132,10 @@ jobs:
         with:
           node-version: 24
           cache: yarn
-      - name: Download built packages
+      - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: built-packages
-          path: packages
-      - name: Download built verifiers
-        uses: actions/download-artifact@v4
-        with:
-          name: built-verifiers
+          name: build-output
       - run: yarn install
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
@@ -217,7 +143,7 @@ jobs:
     name: Templates
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build-templates
+    needs: build
     services:
       redis:
         image: redis
@@ -273,20 +199,10 @@ jobs:
         with:
           node-version: ${{ matrix.version }}
           cache: yarn
-      - name: Download built packages
+      - name: Download build output
         uses: actions/download-artifact@v4
         with:
-          name: built-packages
-          path: packages
-      - name: Download generated pikku files
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-pikku
-      - name: Download built templates
-        uses: actions/download-artifact@v4
-        with:
-          name: built-templates
-          path: templates
+          name: build-output
       - run: yarn install
       - name: Test template
         timeout-minutes: 2
