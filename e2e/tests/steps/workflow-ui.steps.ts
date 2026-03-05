@@ -72,7 +72,9 @@ Then(
       return ''
     })
 
-    const match = bgColor.match(/^rgb\((\d+), (\d+), (\d+)\)$/)
+    const match = bgColor.match(
+      /^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+\s*)?\)$/
+    )
     if (!match) {
       throw new Error(
         `Canvas node "${nodeLabel}" has no rgb background: "${bgColor}"`
