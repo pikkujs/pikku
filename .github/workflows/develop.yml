@@ -42,7 +42,7 @@ jobs:
         run: yarn build:console
 
       - name: Generate pikku files for verifiers
-        run: yarn workspaces foreach -p -A --include 'verifiers/**' exec bash -c 'npx pikku all || true'
+        run: yarn workspaces foreach -p -A --include 'verifiers/**' run pikku
       - name: Build verifiers
         run: yarn build:verifiers
       - name: Build function-addon template
