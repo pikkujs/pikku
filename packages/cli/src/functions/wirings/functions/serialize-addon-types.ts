@@ -81,5 +81,26 @@ export const pikkuAddonServices = <T extends Record<string, any>, ExistingServic
     } as unknown as RequiredSingletonServices
   }
 }
+
+/**
+ * Creates a Pikku wire services factory for addon packages.
+ * Wire services are created per-request and have access to the HTTP request context.
+ *
+ * @param func - Wire services factory function that receives singleton services and the wire context
+ * @returns The wire services factory function
+ *
+ * @example
+ * \\\`\\\`\\\`typescript
+ * export const createWireServices = pikkuAddonWireServices(async (services, wire) => {
+ *   const authHeader = wire.http?.request?.header('authorization')
+ *   return { myService: new MyService(authHeader) }
+ * })
+ * \\\`\\\`\\\`
+ */
+export const pikkuAddonWireServices = (
+  func: (services: SingletonServices, wire: any) => Promise<Record<string, any>>
+) => {
+  return func as any
+}
 `
 }

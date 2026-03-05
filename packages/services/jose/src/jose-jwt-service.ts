@@ -96,7 +96,13 @@ export class JoseJWTService implements JWTService {
     const protectedHeader = jose.decodeProtectedHeader(token)
     const keyId = protectedHeader.kid
     if (!keyId) {
-      throw new Error('Missing secret keyid on token')
+      if (!this.currentSecret) {
+        await this.init()
+      }
+      if (!this.currentSecret) {
+        throw new Error('No secrets configured')
+      }
+      return this.currentSecret.key
     }
     if (!this.secrets[keyId]) {
       await this.init()

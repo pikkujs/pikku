@@ -484,12 +484,13 @@ export async function streamAIAgent(
   params: RunAIAgentParams,
   agentSessionMap?: Map<string, string>,
   options?: StreamAIAgentOptions
-): Promise<void> {
+): Promise<string> {
   const sessionMap = agentSessionMap ?? new Map<string, string>()
 
   const normalizedInput = input
 
   const streamContext: StreamContext = { channel, options }
+  // delegateState is attached after prepareAgentRun resolves the agent config
 
   const {
     agent,
@@ -532,7 +533,7 @@ export async function streamAIAgent(
     })
     channel.send({ type: 'suspended', reason: 'rpc-missing', missingRpcs })
     channel.send({ type: 'done' })
-    return
+    return ''
   }
 
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
@@ -610,8 +611,32 @@ export async function streamAIAgent(
         ).channel as AIStreamChannel)
       : channel
 
+  // In delegate mode (default), suppress parent's text from reaching the client
+  // AFTER a sub-agent has been called. If the parent responds directly (no delegation),
+  // its text goes through normally. Sub-agent text bypasses this path entirely
+  // (goes through subChannel → channel directly).
+  const isDelegateMode = agent.agentMode !== 'supervise' && meta.agents?.length
+  const delegateState = { delegated: false }
+  if (isDelegateMode) {
+    streamContext.delegateState = delegateState
+  }
+  const outputChannel = isDelegateMode
+    ? {
+        ...wrappedChannel,
+        send: (event: AIStreamEvent) => {
+          if (
+            delegateState.delegated &&
+            (event.type === 'text-delta' || event.type === 'reasoning-delta')
+          )
+            return
+          wrappedChannel.send(event)
+        },
+        delegateState,
+      }
+    : wrappedChannel
+
   const persistingChannel = createPersistingChannel(
-    wrappedChannel,
+    outputChannel,
     storage,
     threadId
   )
@@ -636,7 +661,7 @@ export async function streamAIAgent(
         aiRunState,
         persistingChannel
       )
-      return
+      return persistingChannel.fullText
     }
 
     await postStreamCleanup(
@@ -654,6 +679,7 @@ export async function streamAIAgent(
 
     channel.send({ type: 'done' })
     channel.close()
+    return persistingChannel.fullText
   } catch (err) {
     for (const mw of aiMiddlewares) {
       if (mw.onError) {
@@ -678,6 +704,7 @@ export async function streamAIAgent(
     })
     channel.send({ type: 'done' })
     channel.close()
+    return persistingChannel.fullText
   }
 }
 

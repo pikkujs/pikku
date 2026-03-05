@@ -16,6 +16,7 @@ import { createMiddlewareSessionWireProps } from '../../services/user-session-se
 import type { SessionService } from '../../services/user-session-service.js'
 import { randomUUID } from 'crypto'
 import { streamAIAgent } from './ai-agent-stream.js'
+import { runAIAgent } from './ai-agent-runner.js'
 import {
   resolveNamespace,
   ContextAwareRPCService,
@@ -68,6 +69,7 @@ export class ToolApprovalRequired extends PikkuError {
 export type StreamContext = {
   channel: AIStreamChannel
   options?: StreamAIAgentOptions
+  delegateState?: { delegated: boolean }
 }
 
 export const resolveAgent = (
@@ -182,7 +184,8 @@ export function buildToolDefs(
   agentName: string,
   packageName: string | null,
   streamContext?: StreamContext,
-  aiMiddlewares?: PikkuAIMiddlewareHooks[]
+  aiMiddlewares?: PikkuAIMiddlewareHooks[],
+  agentMode?: 'delegate' | 'supervise'
 ): { tools: AIAgentToolDef[]; missingRpcs: string[] } {
   const singletonServices = getSingletonServices()
   const tools: AIAgentToolDef[] = []
@@ -333,7 +336,11 @@ export function buildToolDefs(
             agentSessionMap.set(sessionKey, threadId)
           }
 
-          if (streamContext) {
+          if (streamContext && agentMode !== 'supervise') {
+            // Delegate mode (default): sub-agent streams directly to client
+            if (streamContext.delegateState) {
+              streamContext.delegateState.delegated = true
+            }
             const { channel } = streamContext
             channel.send({
               type: 'agent-call',
@@ -346,7 +353,7 @@ export function buildToolDefs(
               subAgentName,
               session
             )
-            await streamAIAgent(
+            const resultText = await streamAIAgent(
               subAgentName,
               { message, threadId, resourceId },
               subChannel,
@@ -367,12 +374,13 @@ export function buildToolDefs(
               type: 'agent-result',
               agentName: subAgentName,
               session,
-              result: null,
+              result: resultText,
             })
-            return null
+            return resultText
           }
 
-          const { runAIAgent } = await import('./ai-agent-runner.js')
+          // Supervise mode (or no stream context): sub-agent runs non-streaming,
+          // returns full result to parent for the parent to process
           const result = await runAIAgent(
             subAgentName,
             { message, threadId, resourceId },
@@ -532,7 +540,8 @@ export async function prepareAgentRun(
     resolvedName,
     packageName,
     streamContext,
-    aiMiddlewares
+    aiMiddlewares,
+    agent.agentMode
   )
 
   const instructions = buildInstructions(resolvedName, packageName)
