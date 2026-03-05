@@ -28,3 +28,28 @@ Then(
     await expect(badge).toBeVisible()
   }
 )
+
+When(
+  'I click the {string} tab',
+  async function (this: AgentWorld, tabName: string) {
+    const tab = this.page.locator('label', { hasText: tabName })
+    await tab.click()
+    await this.page.waitForSelector('table', { timeout: 15_000 })
+  }
+)
+
+Then(
+  'I should see the community addons list',
+  async function (this: AgentWorld) {
+    const header = this.page.locator('th', { hasText: 'PACKAGE' })
+    await expect(header).toBeVisible({ timeout: 15_000 })
+  }
+)
+
+Then(
+  'I should see community package {string}',
+  async function (this: AgentWorld, packageName: string) {
+    const row = this.page.locator('table tbody tr', { hasText: packageName })
+    await expect(row.first()).toBeVisible({ timeout: 15_000 })
+  }
+)

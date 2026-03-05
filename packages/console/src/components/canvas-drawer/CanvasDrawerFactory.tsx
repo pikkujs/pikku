@@ -30,44 +30,25 @@ import { useAddonMeta, useFunctionsMeta } from '@/hooks/useWirings'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { Code2 } from 'lucide-react'
 
-interface ExternalNode {
-  name: string
-  displayName: string
-  category: string
-  type: string
-  rpc: string
-  description: string
-  errorOutput: boolean
-  inputSchemaName: string
-  outputSchemaName: string
-}
-
-interface ExternalCredential {
-  name: string
-  displayName: string
-  description: string
-  secretId: string
-  schema: string
-}
-
 interface AddonMeta {
-  package: string
-  alias: string
+  id: string
+  name: string
   displayName: string
   description: string
   categories: string[]
-  nodes: Record<string, ExternalNode[]>
-  credentials: Record<string, ExternalCredential>
+  functions: Record<string, unknown>
+  secrets: Record<string, unknown>
+  icon?: string
 }
 
-const IntegrationIcon: React.FunctionComponent<{
-  alias: string
+const AddonIcon: React.FunctionComponent<{
+  id: string
   size?: number
-}> = ({ alias, size = 20 }) => {
+}> = ({ id, size = 20 }) => {
   const rpc = usePikkuRPC()
   const { data: svgContent } = useQuery({
-    queryKey: ['addon', 'icon', alias],
-    queryFn: () => rpc.invoke('console:getAddonIcon', { alias }),
+    queryKey: ['addon', 'icon', id],
+    queryFn: () => rpc.invoke('console:getAddonIcon', { alias: id }),
   })
 
   if (!svgContent) {
@@ -94,8 +75,8 @@ type AddStepView =
   | 'triggers'
   | 'wire'
   | 'transform'
-  | 'integrations'
-  | { type: 'integrationDetail'; integration: AddonMeta }
+  | 'addons'
+  | { type: 'addonDetail'; addon: AddonMeta }
 
 const flowNodes = [
   {
@@ -303,9 +284,9 @@ const MenuButton: React.FunctionComponent<{
 
 const BackButton: React.FunctionComponent<{
   title: string
-  iconAlias?: string
+  iconId?: string
   onClick: () => void
-}> = ({ title, iconAlias, onClick }) => (
+}> = ({ title, iconId, onClick }) => (
   <UnstyledButton
     onClick={onClick}
     p="md"
@@ -316,7 +297,7 @@ const BackButton: React.FunctionComponent<{
   >
     <Group gap="xs">
       <ArrowLeft size={16} />
-      {iconAlias && <IntegrationIcon alias={iconAlias} size={16} />}
+      {iconId && <AddonIcon id={iconId} size={16} />}
       <Text size="sm" fw={600}>
         {title}
       </Text>
@@ -435,16 +416,7 @@ const WireView: React.FunctionComponent<{ onBack: () => void }> = ({
 const TransformView: React.FunctionComponent<{
   onBack: () => void
 }> = ({ onBack }) => {
-  const { data: addonMeta, isLoading, isError } = useAddonMeta()
-
-  const pikkuPackage = React.useMemo(() => {
-    if (!addonMeta) return null
-    return addonMeta.find((pkg: any) => pkg.alias === 'pikku')
-  }, [addonMeta])
-
-  const categories = pikkuPackage
-    ? (Object.entries(pikkuPackage.nodes) as [string, ExternalNode[]][])
-    : []
+  const { isLoading, isError } = useAddonMeta()
 
   return (
     <Box>
@@ -461,32 +433,12 @@ const TransformView: React.FunctionComponent<{
           </Text>
         </Box>
       )}
-      {!isLoading && categories.length === 0 && (
+      {!isLoading && (
         <Box p="md">
           <Text size="sm" c="dimmed">
             No transforms available
           </Text>
         </Box>
-      )}
-      {categories.length > 0 && (
-        <Stack gap={0}>
-          {categories.map(([category, nodes]) => (
-            <Box key={category}>
-              <Box px="md" py="xs" bg="gray.1">
-                <Text size="xs" fw={600} c="dimmed" tt="uppercase">
-                  {category}
-                </Text>
-              </Box>
-              {nodes.map((node: ExternalNode) => (
-                <NodeItem
-                  key={node.name}
-                  name={node.displayName}
-                  description={node.description}
-                />
-              ))}
-            </Box>
-          ))}
-        </Stack>
       )}
     </Box>
   )
@@ -501,19 +453,17 @@ const FunctionsView: React.FunctionComponent<{
   const internalFunctions = React.useMemo(() => {
     if (!functions) return []
 
-    const addonRpcNames = new Set<string>()
+    const addonFuncNames = new Set<string>()
     if (addonMeta) {
       for (const pkg of addonMeta as AddonMeta[]) {
-        for (const nodes of Object.values(pkg.nodes)) {
-          for (const node of nodes) {
-            addonRpcNames.add(node.rpc)
-          }
+        for (const name of Object.keys(pkg.functions ?? {})) {
+          addonFuncNames.add(name)
         }
       }
     }
 
     return (Object.values(functions) as any[]).filter(
-      (fn: any) => !addonRpcNames.has(fn.name)
+      (fn: any) => !addonFuncNames.has(fn.name)
     )
   }, [functions, addonMeta])
 
@@ -555,12 +505,12 @@ const FunctionsView: React.FunctionComponent<{
   )
 }
 
-const IntegrationItem: React.FunctionComponent<{
-  integration: AddonMeta
+const AddonItem: React.FunctionComponent<{
+  addon: AddonMeta
   onSelect: () => void
-}> = ({ integration, onSelect }) => {
+}> = ({ addon, onSelect }) => {
   const [hovered, setHovered] = useState(false)
-  const nodeCount = Object.values(integration.nodes).flat().length
+  const functionCount = Object.keys(addon.functions ?? {}).length
   return (
     <UnstyledButton
       onClick={onSelect}
@@ -576,16 +526,16 @@ const IntegrationItem: React.FunctionComponent<{
     >
       <Group gap="md" wrap="nowrap" justify="space-between">
         <Group gap="md" wrap="nowrap" style={{ flex: 1 }}>
-          <IntegrationIcon alias={integration.alias} size={20} />
+          <AddonIcon id={addon.id} size={20} />
           <Box style={{ flex: 1 }}>
             <Group gap="xs">
               <Text size="sm" fw={500}>
-                {integration.displayName}
+                {addon.displayName}
               </Text>
-              <PikkuBadge type="dynamic" badge="nodes" value={nodeCount} />
+              <PikkuBadge type="dynamic" badge="functions" value={functionCount} />
             </Group>
             <Text size="xs" c="dimmed">
-              {integration.description}
+              {addon.description}
             </Text>
           </Box>
         </Group>
@@ -595,20 +545,20 @@ const IntegrationItem: React.FunctionComponent<{
   )
 }
 
-const IntegrationsView: React.FunctionComponent<{
+const AddonsView: React.FunctionComponent<{
   onBack: () => void
-  onSelectIntegration: (integration: AddonMeta) => void
-}> = ({ onBack, onSelectIntegration }) => {
-  const { data: integrations, isLoading, isError } = useAddonMeta()
+  onSelectAddon: (addon: AddonMeta) => void
+}> = ({ onBack, onSelectAddon }) => {
+  const { data: addons, isLoading, isError } = useAddonMeta()
 
-  const filteredIntegrations = React.useMemo(() => {
-    if (!integrations) return []
-    return integrations.filter((pkg: AddonMeta) => pkg.alias !== 'pikku')
-  }, [integrations])
+  const filteredAddons = React.useMemo(() => {
+    if (!addons) return []
+    return addons.filter((pkg: AddonMeta) => pkg.id !== 'pikku')
+  }, [addons])
 
   return (
     <Box>
-      <BackButton title="Integrations" onClick={onBack} />
+      <BackButton title="Addons" onClick={onBack} />
       {isLoading && (
         <Box p="xl" style={{ display: 'flex', justifyContent: 'center' }}>
           <Loader size="sm" />
@@ -617,24 +567,24 @@ const IntegrationsView: React.FunctionComponent<{
       {isError && (
         <Box p="md">
           <Text size="sm" c="red">
-            Failed to load integrations
+            Failed to load addons
           </Text>
         </Box>
       )}
-      {filteredIntegrations.length === 0 && !isLoading && (
+      {filteredAddons.length === 0 && !isLoading && (
         <Box p="md">
           <Text size="sm" c="dimmed">
-            No integrations available
+            No addons available
           </Text>
         </Box>
       )}
-      {filteredIntegrations.length > 0 && (
+      {filteredAddons.length > 0 && (
         <Stack gap={0}>
-          {filteredIntegrations.map((integration: AddonMeta) => (
-            <IntegrationItem
-              key={integration.alias}
-              integration={integration}
-              onSelect={() => onSelectIntegration(integration)}
+          {filteredAddons.map((addon: AddonMeta) => (
+            <AddonItem
+              key={addon.id}
+              addon={addon}
+              onSelect={() => onSelectAddon(addon)}
             />
           ))}
         </Stack>
@@ -643,17 +593,18 @@ const IntegrationsView: React.FunctionComponent<{
   )
 }
 
-const IntegrationDetailView: React.FunctionComponent<{
-  integration: AddonMeta
+const AddonDetailView: React.FunctionComponent<{
+  addon: AddonMeta
   onBack: () => void
-}> = ({ integration, onBack }) => {
-  const categories = Object.entries(integration.nodes)
+}> = ({ addon, onBack }) => {
+  const functions = Object.entries(addon.functions ?? {})
+  const secrets = Object.keys(addon.secrets ?? {})
 
   return (
     <Box>
       <BackButton
-        title={integration.displayName}
-        iconAlias={integration.alias}
+        title={addon.displayName}
+        iconId={addon.id}
         onClick={onBack}
       />
       <Box
@@ -663,18 +614,18 @@ const IntegrationDetailView: React.FunctionComponent<{
         }}
       >
         <Text size="xs" c="dimmed">
-          {integration.description}
+          {addon.description}
         </Text>
-        {Object.keys(integration.credentials).length > 0 && (
+        {secrets.length > 0 && (
           <Box mt="sm">
             <Text size="xs" fw={600} c="dimmed" mb="xs">
-              Credentials
+              Secrets
             </Text>
             <Stack gap="xs">
-              {Object.values(integration.credentials).map((cred) => (
-                <Group key={cred.name} gap="xs" wrap="nowrap">
+              {secrets.map((name) => (
+                <Group key={name} gap="xs" wrap="nowrap">
                   <Key size={14} color="var(--mantine-color-default-border)" />
-                  <Text size="xs">{cred.displayName}</Text>
+                  <Text size="xs">{name}</Text>
                 </Group>
               ))}
             </Stack>
@@ -682,21 +633,12 @@ const IntegrationDetailView: React.FunctionComponent<{
         )}
       </Box>
       <Stack gap={0}>
-        {categories.map(([category, nodes]) => (
-          <Box key={category}>
-            <Box px="md" py="xs" bg="gray.1">
-              <Text size="xs" fw={600} c="dimmed" tt="uppercase">
-                {category}
-              </Text>
-            </Box>
-            {nodes.map((node: ExternalNode) => (
-              <NodeItem
-                key={node.name}
-                name={node.displayName}
-                description={node.description}
-              />
-            ))}
-          </Box>
+        {functions.map(([name, meta]: [string, any]) => (
+          <NodeItem
+            key={name}
+            name={meta?.displayName ?? name}
+            description={meta?.description ?? ''}
+          />
         ))}
       </Stack>
     </Box>
@@ -726,22 +668,22 @@ const AddStepContent: React.FunctionComponent = () => {
     return <TransformView onBack={() => setView('main')} />
   }
 
-  if (view === 'integrations') {
+  if (view === 'addons') {
     return (
-      <IntegrationsView
+      <AddonsView
         onBack={() => setView('main')}
-        onSelectIntegration={(integration) =>
-          setView({ type: 'integrationDetail', integration })
+        onSelectAddon={(addon) =>
+          setView({ type: 'addonDetail', addon })
         }
       />
     )
   }
 
-  if (typeof view === 'object' && view.type === 'integrationDetail') {
+  if (typeof view === 'object' && view.type === 'addonDetail') {
     return (
-      <IntegrationDetailView
-        integration={view.integration}
-        onBack={() => setView('integrations')}
+      <AddonDetailView
+        addon={view.addon}
+        onBack={() => setView('addons')}
       />
     )
   }
@@ -779,9 +721,9 @@ const AddStepContent: React.FunctionComponent = () => {
         />
         <MenuButton
           icon={Plug}
-          title="Integrations"
+          title="Addons"
           description="Third-party services and APIs"
-          onClick={() => setView('integrations')}
+          onClick={() => setView('addons')}
         />
         <MenuButton
           icon={Radio}
