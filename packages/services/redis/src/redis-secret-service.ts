@@ -25,8 +25,12 @@ export class RedisSecretService implements SecretService {
     connectionOrConfig: Redis | RedisOptions | string,
     config: RedisSecretServiceConfig
   ) {
-    if (connectionOrConfig instanceof Redis) {
-      this.redis = connectionOrConfig
+    if (
+      typeof connectionOrConfig === 'object' &&
+      'hgetall' in connectionOrConfig &&
+      'hset' in connectionOrConfig
+    ) {
+      this.redis = connectionOrConfig as Redis
       this.ownsConnection = false
     } else if (typeof connectionOrConfig === 'string') {
       this.redis = new Redis(connectionOrConfig)
