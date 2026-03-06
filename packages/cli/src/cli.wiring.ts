@@ -110,6 +110,11 @@ wireCLI({
           default: '51442',
           short: 'p',
         },
+        open: {
+          description: 'Open the console in the browser',
+          default: 'false',
+          short: 'o',
+        },
       },
     }),
     schemas: pikkuCLICommand({
