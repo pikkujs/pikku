@@ -43,7 +43,8 @@
     "./services/gopass-secrets": "./dist/services/gopass-secrets.js",
     "./crypto-utils": "./dist/crypto-utils.js",
     "./internal": "./dist/internal.js",
-    "./schema": "./dist/schema.js"
+    "./schema": "./dist/schema.js",
+    "./testing": "./dist/testing/index.js"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
