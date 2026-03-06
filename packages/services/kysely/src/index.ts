@@ -7,6 +7,8 @@ export { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 export { KyselyDeploymentService } from './kysely-deployment-service.js'
 export { KyselyAIStorageService } from './kysely-ai-storage-service.js'
 export { KyselyAgentRunService } from './kysely-agent-run-service.js'
+export { KyselySecretService } from './kysely-secret-service.js'
+export type { KyselySecretServiceConfig } from './kysely-secret-service.js'
 
 export type { KyselyPikkuDB } from './kysely-tables.js'
 export type { WorkflowRunService } from '@pikku/core/workflow'

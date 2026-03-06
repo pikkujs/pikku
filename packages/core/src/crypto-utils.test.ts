@@ -1,6 +1,15 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { encryptJSON, decryptJSON } from './crypto-utils.js'
+import {
+  encryptJSON,
+  decryptJSON,
+  generateDEK,
+  wrapDEK,
+  unwrapDEK,
+  envelopeEncrypt,
+  envelopeDecrypt,
+  envelopeRewrap,
+} from './crypto-utils.js'
 
 describe('encryptJSON / decryptJSON', () => {
   const secret = 'test-secret-key-for-encryption'
@@ -112,5 +121,94 @@ describe('encryptJSON / decryptJSON', () => {
     const encrypted = await encryptJSON(secret, original)
     const decrypted = await decryptJSON(secret, encrypted)
     assert.deepStrictEqual(decrypted, original)
+  })
+})
+
+describe('envelope encryption', () => {
+  const kek = 'my-key-encryption-key'
+
+  test('generateDEK produces unique keys', async () => {
+    const dek1 = await generateDEK()
+    const dek2 = await generateDEK()
+    assert.notStrictEqual(dek1, dek2)
+    assert.ok(dek1.length > 0)
+  })
+
+  test('wrapDEK / unwrapDEK round-trip', async () => {
+    const dek = await generateDEK()
+    const wrapped = await wrapDEK(kek, dek)
+    const unwrapped = await unwrapDEK(kek, wrapped)
+    assert.strictEqual(unwrapped, dek)
+  })
+
+  test('unwrapDEK fails with wrong KEK', async () => {
+    const dek = await generateDEK()
+    const wrapped = await wrapDEK(kek, dek)
+    await assert.rejects(
+      () => unwrapDEK('wrong-kek', wrapped),
+      (err: any) => err instanceof Error
+    )
+  })
+
+  test('envelopeEncrypt / envelopeDecrypt round-trip', async () => {
+    const original = {
+      apiKey: 'sk-secret-123',
+      endpoint: 'https://api.example.com',
+    }
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(kek, original)
+    const decrypted = await envelopeDecrypt(kek, ciphertext, wrappedDEK)
+    assert.deepStrictEqual(decrypted, original)
+  })
+
+  test('envelopeEncrypt produces unique ciphertexts and DEKs per call', async () => {
+    const value = { same: 'data' }
+    const r1 = await envelopeEncrypt(kek, value)
+    const r2 = await envelopeEncrypt(kek, value)
+    assert.notStrictEqual(r1.ciphertext, r2.ciphertext)
+    assert.notStrictEqual(r1.wrappedDEK, r2.wrappedDEK)
+  })
+
+  test('envelopeDecrypt fails with wrong KEK', async () => {
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(kek, 'secret')
+    await assert.rejects(
+      () => envelopeDecrypt('wrong-kek', ciphertext, wrappedDEK),
+      (err: any) => err instanceof Error
+    )
+  })
+
+  test('envelopeRewrap allows decryption with new KEK', async () => {
+    const newKEK = 'my-new-kek'
+    const original = { token: 'abc-123' }
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(kek, original)
+
+    const rewrapped = await envelopeRewrap(kek, newKEK, wrappedDEK)
+
+    await assert.rejects(
+      () => envelopeDecrypt(kek, ciphertext, rewrapped),
+      (err: any) => err instanceof Error
+    )
+
+    const decrypted = await envelopeDecrypt(newKEK, ciphertext, rewrapped)
+    assert.deepStrictEqual(decrypted, original)
+  })
+
+  test('envelopeRewrap does not change the ciphertext', async () => {
+    const original = { data: 'important' }
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(kek, original)
+    const rewrapped = await envelopeRewrap(kek, 'new-kek', wrappedDEK)
+
+    assert.notStrictEqual(rewrapped, wrappedDEK)
+
+    const decrypted = await envelopeDecrypt('new-kek', ciphertext, rewrapped)
+    assert.deepStrictEqual(decrypted, original)
+  })
+
+  test('envelope handles string secrets', async () => {
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(
+      kek,
+      'plain-string-secret'
+    )
+    const decrypted = await envelopeDecrypt<string>(kek, ciphertext, wrappedDEK)
+    assert.strictEqual(decrypted, 'plain-string-secret')
   })
 })

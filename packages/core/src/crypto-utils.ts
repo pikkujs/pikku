@@ -97,3 +97,117 @@ export const decryptJSON = async <T>(
   )
   return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
 }
+
+/**
+ * Envelope encryption utilities.
+ *
+ * Each secret gets its own random DEK (data encryption key).
+ * The DEK is wrapped (encrypted) by a KEK (key encryption key) — typically an env var.
+ * The actual secret is encrypted with the DEK.
+ *
+ * KEK rotation only re-wraps the DEK, never touches the ciphertext.
+ */
+
+const importRawKey = async (rawBytes: Uint8Array): Promise<CryptoKey> => {
+  const subtle = getSubtle()
+  return subtle.importKey(
+    'raw',
+    rawBytes.buffer as ArrayBuffer,
+    { name: 'AES-GCM' },
+    true,
+    ['encrypt', 'decrypt']
+  )
+}
+
+export const generateDEK = async (): Promise<string> => {
+  const raw = globalThis.crypto.getRandomValues(new Uint8Array(32))
+  return toBase64Url(raw)
+}
+
+export const wrapDEK = async (
+  kek: string,
+  plaintextDEK: string
+): Promise<string> => {
+  return encryptJSON(kek, plaintextDEK)
+}
+
+export const unwrapDEK = async (
+  kek: string,
+  wrappedDEK: string
+): Promise<string> => {
+  return decryptJSON<string>(kek, wrappedDEK)
+}
+
+const encryptWithDEK = async (
+  dekBase64: string,
+  value: unknown
+): Promise<string> => {
+  const crypto = globalThis.crypto
+  const subtle = getSubtle()
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await importRawKey(fromBase64Url(dekBase64))
+  const plaintext = encoder.encode(JSON.stringify(value))
+  const encrypted = await subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    plaintext
+  )
+  const cipherBytes = new Uint8Array(encrypted)
+  const out = new Uint8Array(iv.length + cipherBytes.length)
+  out.set(iv, 0)
+  out.set(cipherBytes, iv.length)
+  return toBase64Url(out)
+}
+
+const decryptWithDEK = async <T>(
+  dekBase64: string,
+  token: string
+): Promise<T> => {
+  const subtle = getSubtle()
+  const data = fromBase64Url(token)
+  if (data.length < 13) {
+    throw new Error('Invalid encrypted payload')
+  }
+  const iv = data.slice(0, 12)
+  const ciphertext = data.slice(12)
+  const key = await importRawKey(fromBase64Url(dekBase64))
+  const decrypted = await subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  )
+  return JSON.parse(decoder.decode(new Uint8Array(decrypted))) as T
+}
+
+export interface EnvelopeEncryptResult {
+  ciphertext: string
+  wrappedDEK: string
+}
+
+export const envelopeEncrypt = async (
+  kek: string,
+  value: unknown
+): Promise<EnvelopeEncryptResult> => {
+  const dek = await generateDEK()
+  const ciphertext = await encryptWithDEK(dek, value)
+  const wrappedDEK = await wrapDEK(kek, dek)
+  return { ciphertext, wrappedDEK }
+}
+
+export const envelopeDecrypt = async <T>(
+  kek: string,
+  ciphertext: string,
+  wrappedDEK: string
+): Promise<T> => {
+  const dek = await unwrapDEK(kek, wrappedDEK)
+  return decryptWithDEK<T>(dek, ciphertext)
+}
+
+export const envelopeRewrap = async (
+  oldKEK: string,
+  newKEK: string,
+  wrappedDEK: string
+): Promise<string> => {
+  const dek = await unwrapDEK(oldKEK, wrappedDEK)
+  return wrapDEK(newKEK, dek)
+}
