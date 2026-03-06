@@ -22,9 +22,12 @@ const MIME_TYPES: Record<string, string> = {
   '.map': 'application/json',
 }
 
-export const consoleCommand = pikkuSessionlessFunc<{ port?: string }, void>({
+export const consoleCommand = pikkuSessionlessFunc<
+  { port?: string; open?: string },
+  void
+>({
   remote: true,
-  func: async ({ logger, config }, { port }, { rpc }) => {
+  func: async ({ logger, config }, { port, open: openBrowser }, { rpc }) => {
     const consoleDir = join(
       fileURLToPath(import.meta.url),
       '..',
@@ -73,7 +76,9 @@ export const consoleCommand = pikkuSessionlessFunc<{ port?: string }, void>({
 
     server.listen(resolvedPort, () => {
       logger.info(`Pikku Console running at http://localhost:${resolvedPort}`)
-      open(`http://localhost:${resolvedPort}`)
+      if (openBrowser === 'true') {
+        open(`http://localhost:${resolvedPort}`)
+      }
     })
 
     const configWatcher = chokidar.watch(config.srcDirectories, {
