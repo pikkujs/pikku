@@ -19,7 +19,7 @@ do
 done
 
 # Build the command
-CMD="node --import tsx --test src/**/*.test.ts"
+CMD="node --import tsx --test --test-force-exit src/**/*.test.ts"
 
 if [ "$WATCH_MODE" = true ]; then
     CMD="$CMD --watch"

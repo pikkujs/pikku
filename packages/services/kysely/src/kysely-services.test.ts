@@ -12,6 +12,7 @@ import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { KyselyDeploymentService } from './kysely-deployment-service.js'
 import { KyselyAIStorageService } from './kysely-ai-storage-service.js'
 import { KyselyAgentRunService } from './kysely-agent-run-service.js'
+import { KyselySecretService } from './kysely-secret-service.js'
 
 function createSqliteDb(): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
@@ -48,6 +49,8 @@ async function dropAllTables(db: Kysely<KyselyPikkuDB>): Promise<void> {
     'workflow_step',
     'workflow_runs',
     'workflow_versions',
+    'secrets_audit',
+    'secrets',
   ]
   for (const table of tables) {
     await db.schema.dropTable(table).ifExists().execute()
@@ -729,6 +732,152 @@ function defineTestSuite(
     test('findFunction returns empty for unknown function', async () => {
       const infos = await service.findFunction('unknown-func')
       assert.deepEqual(infos, [])
+    })
+  })
+
+  describe(`KyselySecretService [${dialectName}]`, () => {
+    const kek = 'test-key-encryption-key-32chars!'
+
+    test('setSecretJSON and getSecretJSON', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      await service.setSecretJSON('api-key', {
+        token: 'sk-123',
+        endpoint: 'https://api.example.com',
+      })
+      const result = await service.getSecretJSON<{
+        token: string
+        endpoint: string
+      }>('api-key')
+      assert.deepEqual(result, {
+        token: 'sk-123',
+        endpoint: 'https://api.example.com',
+      })
+    })
+
+    test('getSecret returns raw string', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      await service.setSecretJSON('string-secret', 'plain-value')
+      const result = await service.getSecret('string-secret')
+      assert.strictEqual(result, '"plain-value"')
+    })
+
+    test('hasSecret returns true/false', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      assert.strictEqual(await service.hasSecret('api-key'), true)
+      assert.strictEqual(await service.hasSecret('nonexistent'), false)
+    })
+
+    test('getSecret throws for missing key', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      await assert.rejects(() => service.getSecret('nonexistent'), {
+        message: 'Secret not found: nonexistent',
+      })
+    })
+
+    test('setSecretJSON upserts existing key', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      await service.setSecretJSON('upsert-key', { v: 1 })
+      await service.setSecretJSON('upsert-key', { v: 2 })
+      const result = await service.getSecretJSON<{ v: number }>('upsert-key')
+      assert.deepEqual(result, { v: 2 })
+    })
+
+    test('deleteSecret removes the key', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      await service.setSecretJSON('to-delete', 'bye')
+      assert.strictEqual(await service.hasSecret('to-delete'), true)
+      await service.deleteSecret('to-delete')
+      assert.strictEqual(await service.hasSecret('to-delete'), false)
+    })
+
+    test('rotateKEK re-wraps all secrets', async () => {
+      const newKEK = 'new-key-encryption-key-rotated!'
+      const oldService = new KyselySecretService(getDb(), { key: kek })
+      await oldService.init()
+      await oldService.setSecretJSON('rotate-test', { important: 'data' })
+
+      const rotatedService = new KyselySecretService(getDb(), {
+        key: newKEK,
+        keyVersion: 2,
+        previousKey: kek,
+      })
+      await rotatedService.init()
+
+      const before = await rotatedService.getSecretJSON<{ important: string }>(
+        'rotate-test'
+      )
+      assert.deepEqual(before, { important: 'data' })
+
+      const count = await rotatedService.rotateKEK()
+      assert.ok(count > 0)
+
+      const newOnlyService = new KyselySecretService(getDb(), {
+        key: newKEK,
+        keyVersion: 2,
+      })
+      await newOnlyService.init()
+      const after = await newOnlyService.getSecretJSON<{ important: string }>(
+        'rotate-test'
+      )
+      assert.deepEqual(after, { important: 'data' })
+    })
+
+    test('rotateKEK throws without previousKey', async () => {
+      const service = new KyselySecretService(getDb(), { key: kek })
+      await service.init()
+      await assert.rejects(() => service.rotateKEK(), {
+        message: 'No previousKey configured — nothing to rotate from',
+      })
+    })
+
+    test('audit logs writes, reads, and deletes', async () => {
+      const service = new KyselySecretService(getDb(), {
+        key: kek,
+        audit: true,
+        auditReads: true,
+      })
+      await service.init()
+      await service.setSecretJSON('audit-test', 'value')
+      await service.getSecret('audit-test')
+      await service.deleteSecret('audit-test')
+
+      const logs = await getDb()
+        .selectFrom('secrets_audit')
+        .select(['secret_key', 'action'])
+        .where('secret_key', '=', 'audit-test')
+        .orderBy('performed_at', 'asc')
+        .execute()
+
+      assert.equal(logs.length, 3)
+      assert.equal(logs[0]!.action, 'write')
+      assert.equal(logs[1]!.action, 'read')
+      assert.equal(logs[2]!.action, 'delete')
+    })
+
+    test('audit skips reads when auditReads is false', async () => {
+      const service = new KyselySecretService(getDb(), {
+        key: kek,
+        audit: true,
+        auditReads: false,
+      })
+      await service.init()
+      await service.setSecretJSON('no-read-audit', 'value')
+      await service.getSecret('no-read-audit')
+
+      const logs = await getDb()
+        .selectFrom('secrets_audit')
+        .select(['action'])
+        .where('secret_key', '=', 'no-read-audit')
+        .execute()
+
+      assert.equal(logs.length, 1)
+      assert.equal(logs[0]!.action, 'write')
     })
   })
 

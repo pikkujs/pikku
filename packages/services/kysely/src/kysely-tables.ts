@@ -134,6 +134,22 @@ export interface PikkuDeploymentFunctionsTable {
   function_name: string
 }
 
+export interface SecretsTable {
+  key: string
+  ciphertext: string
+  wrapped_dek: string
+  key_version: number
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface SecretsAuditTable {
+  id: string
+  secret_key: string
+  action: string
+  performed_at: Generated<Date>
+}
+
 export interface KyselyPikkuDB {
   channels: ChannelsTable
   channel_subscriptions: ChannelSubscriptionsTable
@@ -148,4 +164,6 @@ export interface KyselyPikkuDB {
   ai_run: AIRunTable
   pikku_deployments: PikkuDeploymentsTable
   pikku_deployment_functions: PikkuDeploymentFunctionsTable
+  secrets: SecretsTable
+  secrets_audit: SecretsAuditTable
 }

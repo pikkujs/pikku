@@ -4232,6 +4232,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ioredis/as-callback@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@ioredis/as-callback@npm:3.0.0"
+  checksum: 10/2835e39631497fe4f8b07d95576abea165c9f7efef81e9e55c733588051ff4edcb31eeb59f36127923dae0cb1a8e21b4e27ee3ab79a065a0baeecf861c3bc0b1
+  languageName: node
+  linkType: hard
+
 "@ioredis/commands@npm:1.5.0":
   version: 1.5.0
   resolution: "@ioredis/commands@npm:1.5.0"
@@ -4239,7 +4246,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ioredis/commands@npm:1.5.1":
+"@ioredis/commands@npm:1.5.1, @ioredis/commands@npm:^1.4.0":
   version: 1.5.1
   resolution: "@ioredis/commands@npm:1.5.1"
   checksum: 10/7efb0339302094aed30903ccbf8ca24d6048cff0d556114f43004c2e02d0808e6619a814ca72d6ea00586972fab7aae6c18892f9feabea56e632fb2db34b09db
@@ -5499,7 +5506,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/redis@workspace:packages/services/redis"
   dependencies:
+    "@types/ioredis-mock": "npm:^8"
     ioredis: "npm:^5.10.0"
+    ioredis-mock: "npm:^8.13.1"
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.12.2
@@ -9792,6 +9801,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/ioredis-mock@npm:^8":
+  version: 8.2.6
+  resolution: "@types/ioredis-mock@npm:8.2.6"
+  peerDependencies:
+    ioredis: ">=5"
+  checksum: 10/c63a14478150aca8c23c6c599259b943cae4e7dfdbda91c4ab9285d8bbc1f5340ccfe2e452e4a9c49b3a9ba851a834629d125bf15070173649482a75c96d14ec
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:^7.0.15":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
@@ -13876,6 +13894,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fengari-interop@npm:^0.1.3":
+  version: 0.1.4
+  resolution: "fengari-interop@npm:0.1.4"
+  peerDependencies:
+    fengari: ^0.1.0
+  checksum: 10/b04836b2c7e569f969138a654e5b8c1eb6ac593251ba38e9aa694c37d38d3636862c42ec7c2526fa4ea543698905305697012d1d6f99b69ed7f729958ada6ae5
+  languageName: node
+  linkType: hard
+
+"fengari@npm:^0.1.4":
+  version: 0.1.5
+  resolution: "fengari@npm:0.1.5"
+  dependencies:
+    readline-sync: "npm:^1.4.10"
+    sprintf-js: "npm:^1.1.3"
+    tmp: "npm:^0.2.5"
+  checksum: 10/4357facc3f03dd6476b14859d76f41a037cca26c168fd893d962a75091bd75b920b727f762aff892cb288fd096c707b8e7accd4e8f77f6d6cd84a6e4145b0198
+  languageName: node
+  linkType: hard
+
 "fetch-blob@npm:^3.1.2, fetch-blob@npm:^3.1.4":
   version: 3.2.0
   resolution: "fetch-blob@npm:3.2.0"
@@ -14896,6 +14934,22 @@ __metadata:
   version: 1.0.1
   resolution: "internmap@npm:1.0.1"
   checksum: 10/429cb9e28f393f10c73a826d71ba9e359711b7e42345bd684aba708f43b8139ce90f09b15abbf977a981474ac61615294854e5b9520d3f65187d0f6a2ff27665
+  languageName: node
+  linkType: hard
+
+"ioredis-mock@npm:^8.13.1":
+  version: 8.13.1
+  resolution: "ioredis-mock@npm:8.13.1"
+  dependencies:
+    "@ioredis/as-callback": "npm:^3.0.0"
+    "@ioredis/commands": "npm:^1.4.0"
+    fengari: "npm:^0.1.4"
+    fengari-interop: "npm:^0.1.3"
+    semver: "npm:^7.7.2"
+  peerDependencies:
+    "@types/ioredis-mock": ^8
+    ioredis: ^5
+  checksum: 10/a75505e6ab652515a6e46cb976effccb82ae3adcc317f262c41ff6419ec9aab35514e6e9b2ecc68fcbd3698a816cd3dd99bd902761c135f32f880fa10a7913d6
   languageName: node
   linkType: hard
 
@@ -19310,6 +19364,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"readline-sync@npm:^1.4.10":
+  version: 1.4.10
+  resolution: "readline-sync@npm:1.4.10"
+  checksum: 10/5eb6465f5c5391e32cb525022a307a910a565828cd53da87ac05fca291607df54099dd65bc9c7a513ac53a5eb4e11454d48f0dcf4ad54126d36dec5fcec4a8f0
+  languageName: node
+  linkType: hard
+
 "real-require@npm:^0.2.0":
   version: 0.2.0
   resolution: "real-require@npm:0.2.0"
@@ -19875,7 +19936,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"semver@npm:7.7.4, semver@npm:^7.3.2":
+"semver@npm:7.7.4, semver@npm:^7.3.2, semver@npm:^7.7.2":
   version: 7.7.4
   resolution: "semver@npm:7.7.4"
   bin:
@@ -20502,6 +20563,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sprintf-js@npm:^1.1.3":
+  version: 1.1.3
+  resolution: "sprintf-js@npm:1.1.3"
+  checksum: 10/e7587128c423f7e43cc625fe2f87e6affdf5ca51c1cc468e910d8aaca46bb44a7fbcfa552f787b1d3987f7043aeb4527d1b99559e6621e01b42b3f45e5a24cbb
+  languageName: node
+  linkType: hard
+
 "sprintf-js@npm:~1.0.2":
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
@@ -21116,6 +21184,13 @@ __metadata:
   version: 3.0.2
   resolution: "tinyspy@npm:3.0.2"
   checksum: 10/5db671b2ff5cd309de650c8c4761ca945459d7204afb1776db9a04fb4efa28a75f08517a8620c01ee32a577748802231ad92f7d5b194dc003ee7f987a2a06337
+  languageName: node
+  linkType: hard
+
+"tmp@npm:^0.2.5":
+  version: 0.2.5
+  resolution: "tmp@npm:0.2.5"
+  checksum: 10/dd4b78b32385eab4899d3ae296007b34482b035b6d73e1201c4a9aede40860e90997a1452c65a2d21aee73d53e93cd167d741c3db4015d90e63b6d568a93d7ec
   languageName: node
   linkType: hard
 
