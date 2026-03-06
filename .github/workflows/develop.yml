@@ -22,6 +22,8 @@ jobs:
           node-version: 24
           cache: yarn
       - run: yarn install
+      - name: Check changesets
+        run: bash scripts/check-changesets.sh origin/main
       - name: Check formatting
         run: yarn prettier
       - name: Lint
