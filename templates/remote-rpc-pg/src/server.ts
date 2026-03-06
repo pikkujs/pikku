@@ -1,5 +1,8 @@
 import { PikkuExpressServer } from '@pikku/express'
-import { PgDeploymentService } from '@pikku/pg'
+import { KyselyDeploymentService } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
+import { Kysely } from 'kysely'
+import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -18,9 +21,12 @@ async function main(): Promise<void> {
       process.env.DATABASE_URL ||
         'postgres://postgres:password@localhost:5432/pikku_remote_rpc'
     )
-    const deploymentService = new PgDeploymentService(
+    const db = new Kysely<KyselyPikkuDB>({
+      dialect: new PostgresJSDialect({ postgres: sql }),
+    })
+    const deploymentService = new KyselyDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
-      sql
+      db
     )
 
     await deploymentService.init()

@@ -3,9 +3,12 @@
  * Executes all workflows using PG-Boss queue service and PostgreSQL workflow storage
  */
 
-import { PgWorkflowService } from '@pikku/pg'
+import { KyselyWorkflowService } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { pikkuState } from '@pikku/core/internal'
+import { Kysely } from 'kysely'
+import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 
 import { createConfig, createSingletonServices } from '../services.js'
@@ -28,7 +31,11 @@ async function main(): Promise<void> {
   const pgBossFactory = new PgBossServiceFactory(connectionString)
   await pgBossFactory.init()
 
-  const workflowService = new PgWorkflowService(postgres(connectionString))
+  const sql = postgres(connectionString)
+  const db = new Kysely<KyselyPikkuDB>({
+    dialect: new PostgresJSDialect({ postgres: sql }),
+  })
+  const workflowService = new KyselyWorkflowService(db)
   await workflowService.init()
 
   await createSingletonServices(config, {
