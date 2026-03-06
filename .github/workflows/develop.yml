@@ -4,6 +4,9 @@ on:
   push:
     branches-ignore:
       - main
+  pull_request:
+    branches:
+      - main
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -23,6 +26,7 @@ jobs:
           cache: yarn
       - run: yarn install
       - name: Check changesets
+        if: github.event_name == 'pull_request'
         run: bash scripts/check-changesets.sh origin/main
       - name: Check formatting
         run: yarn prettier
