@@ -16,8 +16,11 @@
   "dependencies": {
     "@pikku/core": "^0.12.2",
     "@pikku/express": "^0.12.1",
-    "@pikku/pg": "^0.12.1",
+    "@pikku/kysely": "^0.12.2",
     "@pikku/queue-pg-boss": "^0.12.2",
+    "kysely": "^0.28.11",
+    "kysely-postgres-js": "^3.0.0",
+    "postgres": "^3.4.8",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9"

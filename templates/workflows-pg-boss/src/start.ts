@@ -1,7 +1,10 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { PgWorkflowService } from '@pikku/pg'
+import { KyselyWorkflowService } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 import { InMemoryTriggerService } from '@pikku/core/services'
+import { Kysely } from 'kysely'
+import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 import {
   createConfig,
@@ -18,13 +21,16 @@ async function main(): Promise<void> {
     const config = await createConfig()
 
     const sql = postgres(connectionString)
+    const db = new Kysely<KyselyPikkuDB>({
+      dialect: new PostgresJSDialect({ postgres: sql }),
+    })
 
     const pgBossFactory = new PgBossServiceFactory(connectionString)
     await pgBossFactory.init()
 
     const schedulerService = pgBossFactory.getSchedulerService()
 
-    const workflowService = new PgWorkflowService(sql)
+    const workflowService = new KyselyWorkflowService(db)
     await workflowService.init()
 
     const singletonServices = await createSingletonServices(config, {

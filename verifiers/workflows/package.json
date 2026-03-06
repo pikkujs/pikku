@@ -8,11 +8,13 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/pg": "workspace:*",
+    "@pikku/kysely": "workspace:*",
     "@pikku/queue-bullmq": "workspace:*",
     "@pikku/queue-pg-boss": "workspace:*",
     "@pikku/redis": "workspace:*",
-    "postgres": "^3.4.7"
+    "kysely": "^0.28.11",
+    "kysely-postgres-js": "^3.0.0",
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
