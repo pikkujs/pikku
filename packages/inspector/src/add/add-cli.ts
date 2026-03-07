@@ -345,20 +345,48 @@ function processCommand(
     const propName = prop.name.text
 
     if (propName === 'func') {
-      pikkuFuncId = extractFunctionName(
-        prop.initializer,
-        typeChecker,
-        inspectorState.rootDir
-      ).pikkuFuncId
-      if (pikkuFuncId.startsWith('__temp_')) {
-        pikkuFuncId = makeContextBasedId('cli', programName, ...fullPath)
-      }
-      meta.pikkuFuncId = pikkuFuncId
-      const cliPackageName = ts.isIdentifier(prop.initializer)
-        ? resolveAddonName(prop.initializer, typeChecker, inspectorState.rpc.wireAddonDeclarations)
-        : null
-      if (cliPackageName) {
-        meta.packageName = cliPackageName
+      // Check for addon('namespace:funcName') calls
+      if (
+        ts.isCallExpression(prop.initializer) &&
+        ts.isIdentifier(prop.initializer.expression) &&
+        prop.initializer.expression.text === 'addon'
+      ) {
+        const [firstArg] = prop.initializer.arguments
+        if (firstArg && ts.isStringLiteral(firstArg)) {
+          pikkuFuncId = firstArg.text
+          meta.pikkuFuncId = pikkuFuncId
+          // Resolve the addon package name from the namespace
+          const addonNamespace = pikkuFuncId.split(':')[0]
+          if (
+            addonNamespace &&
+            inspectorState.rpc.wireAddonDeclarations.has(addonNamespace)
+          ) {
+            meta.packageName =
+              inspectorState.rpc.wireAddonDeclarations.get(
+                addonNamespace
+              )!.package
+          }
+        }
+      } else {
+        pikkuFuncId = extractFunctionName(
+          prop.initializer,
+          typeChecker,
+          inspectorState.rootDir
+        ).pikkuFuncId
+        if (pikkuFuncId.startsWith('__temp_')) {
+          pikkuFuncId = makeContextBasedId('cli', programName, ...fullPath)
+        }
+        meta.pikkuFuncId = pikkuFuncId
+        const cliPackageName = ts.isIdentifier(prop.initializer)
+          ? resolveAddonName(
+              prop.initializer,
+              typeChecker,
+              inspectorState.rpc.wireAddonDeclarations
+            )
+          : null
+        if (cliPackageName) {
+          meta.packageName = cliPackageName
+        }
       }
     } else if (
       propName === 'options' &&

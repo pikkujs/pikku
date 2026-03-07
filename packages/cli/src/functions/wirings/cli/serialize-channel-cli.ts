@@ -19,10 +19,8 @@ export function serializeChannelCLI(
   const finalChannelName = channelName || `${programName}-cli`
   const finalChannelRoute = channelRoute || `/cli/${programName}`
   // Flatten all commands into a single routing map
-  const commandMap: Record<
-    string,
-    { pikkuFuncId: string; importPath?: string }
-  > = {}
+  const commandMap: Record<string, { pikkuFuncId: string; isAddon?: boolean }> =
+    {}
 
   const collectCommands = (
     commands: Record<string, any>,
@@ -35,6 +33,7 @@ export function serializeChannelCLI(
       if (cmd.pikkuFuncId) {
         commandMap[commandKey] = {
           pikkuFuncId: cmd.pikkuFuncId,
+          isAddon: !!cmd.packageName,
         }
       }
 
@@ -47,25 +46,33 @@ export function serializeChannelCLI(
 
   collectCommands(programMeta.commands)
 
-  // Generate imports from function file locations
-  const funcNames = [
+  // Separate addon vs local functions
+  const allFuncs = [
     ...new Set(Object.values(commandMap).map((v) => v.pikkuFuncId)),
   ]
-  const imports = funcNames
-    .map((pikkuFuncId) => {
-      const fileInfo = functionFiles.get(pikkuFuncId)
-      if (!fileInfo) {
-        throw new Error(`Function not found in files map: ${pikkuFuncId}`)
-      }
+  const localFuncs = allFuncs.filter(
+    (id) =>
+      !Object.values(commandMap).find((v) => v.pikkuFuncId === id && v.isAddon)
+  )
+  const hasAddonFuncs = allFuncs.length > localFuncs.length
 
-      const importPath = getFileImportRelativePath(
-        channelFile,
-        fileInfo.path,
-        packageMappings
-      )
-      return `import { ${fileInfo.exportedName} } from '${importPath}'`
-    })
-    .join('\n')
+  // Generate imports for local functions from file locations
+  const importLines: string[] = []
+
+  for (const pikkuFuncId of localFuncs) {
+    const fileInfo = functionFiles.get(pikkuFuncId)
+    if (!fileInfo) {
+      throw new Error(`Function not found in files map: ${pikkuFuncId}`)
+    }
+    const importPath = getFileImportRelativePath(
+      channelFile,
+      fileInfo.path,
+      packageMappings
+    )
+    importLines.push(`import { ${fileInfo.exportedName} } from '${importPath}'`)
+  }
+
+  const imports = importLines.join('\n')
 
   // Get relative path to channel types file
   const channelTypesPath = getFileImportRelativePath(
@@ -85,7 +92,7 @@ export function serializeChannelCLI(
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuMiddleware } from '${functionTypesPath}'
+import { pikkuMiddleware${hasAddonFuncs ? ', addon' : ''} } from '${functionTypesPath}'
 ${imports}
 
 // Middleware to close the channel after CLI command completes
@@ -118,13 +125,15 @@ wireChannel({
   onMessageWiring: {
     command: {
 ${Object.entries(commandMap)
-  .map(
-    ([commandKey, { pikkuFuncId }]) =>
-      `      '${commandKey}': {
-        func: ${pikkuFuncId},
+  .map(([commandKey, { pikkuFuncId, isAddon }]) => {
+    const funcRef = isAddon
+      ? `addon('${pikkuFuncId}')`
+      : (functionFiles.get(pikkuFuncId)?.exportedName ?? pikkuFuncId)
+    return `      '${commandKey}': {
+        func: ${funcRef},
         middleware: [cliCloseOnComplete],
       }`
-  )
+  })
   .join(',\n')}
     }
   },
