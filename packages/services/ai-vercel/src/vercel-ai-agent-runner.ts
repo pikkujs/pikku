@@ -234,24 +234,38 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
     const step = result.steps[0]
 
+    const toolCalls =
+      step?.toolCalls?.map((tc: any) => ({
+        toolCallId: tc.toolCallId,
+        toolName: tc.toolName,
+        args: tc.input,
+      })) ?? []
+
+    const toolResults =
+      step?.toolResults?.map((tr: any) => ({
+        toolCallId: tr.toolCallId,
+        toolName: tr.toolName,
+        result: tr.output,
+      })) ?? []
+
+    for (const tc of toolCalls) {
+      if (!toolResults.find((tr) => tr.toolCallId === tc.toolCallId)) {
+        toolResults.push({
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          result: `Error: Tool execution failed`,
+        })
+      }
+    }
+
     return {
       text: result.text,
       object:
         params.outputSchema && params.tools.length === 0
           ? (result as any).output
           : undefined,
-      toolCalls:
-        step?.toolCalls?.map((tc: any) => ({
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          args: tc.input,
-        })) ?? [],
-      toolResults:
-        step?.toolResults?.map((tr: any) => ({
-          toolCallId: tr.toolCallId,
-          toolName: tr.toolName,
-          result: tr.output,
-        })) ?? [],
+      toolCalls,
+      toolResults,
       usage: {
         inputTokens: step?.usage?.inputTokens ?? 0,
         outputTokens: step?.usage?.outputTokens ?? 0,
