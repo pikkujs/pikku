@@ -57,57 +57,47 @@ export const createSingletonServices = pikkuServices(
       agentRunService = new KyselyAgentRunService(db)
       workflowService = new KyselyWorkflowService(db)
       await workflowService.init()
-      // SQLite doesn't support FOR UPDATE - use no-op locks (safe for single-process in-memory)
-      workflowService.withRunLock = async (
-        _id: string,
-        fn: () => Promise<any>
-      ) => fn()
-      workflowService.withStepLock = async (
-        _runId: string,
-        _stepName: string,
-        fn: () => Promise<any>
-      ) => fn()
       workflowRunService = new KyselyWorkflowRunService(db)
     } else if (backend === 'postgres') {
       const { default: pg } = await import('postgres')
       const { PostgresJSDialect } = await import('kysely-postgres-js')
       const { Kysely } = await import('kysely')
       const {
-        KyselyAIStorageService,
-        KyselyAgentRunService,
-        KyselyWorkflowService,
-        KyselyWorkflowRunService,
-      } = await import('@pikku/kysely')
+        PgKyselyAIStorageService,
+        PgKyselyAgentRunService,
+        PgKyselyWorkflowService,
+        PgKyselyWorkflowRunService,
+      } = await import('@pikku/kysely-postgres')
       const sql = pg(process.env.DATABASE_URL!)
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new PostgresJSDialect({ postgres: sql }),
       })
-      aiStorage = new KyselyAIStorageService(db)
+      aiStorage = new PgKyselyAIStorageService(db)
       await aiStorage.init()
-      agentRunService = new KyselyAgentRunService(db)
-      workflowService = new KyselyWorkflowService(db)
+      agentRunService = new PgKyselyAgentRunService(db)
+      workflowService = new PgKyselyWorkflowService(db)
       await workflowService.init()
-      workflowRunService = new KyselyWorkflowRunService(db)
+      workflowRunService = new PgKyselyWorkflowRunService(db)
     } else if (backend === 'mysql') {
       const { Kysely, MysqlDialect } = await import('kysely')
       const { createPool } = await import('mysql2')
       const {
-        KyselyAIStorageService,
-        KyselyAgentRunService,
-        KyselyWorkflowService,
-        KyselyWorkflowRunService,
-      } = await import('@pikku/kysely')
+        MySQLKyselyAIStorageService,
+        MySQLKyselyAgentRunService,
+        MySQLKyselyWorkflowService,
+        MySQLKyselyWorkflowRunService,
+      } = await import('@pikku/kysely-mysql')
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new MysqlDialect({
           pool: createPool(process.env.DATABASE_URL!) as any,
         }),
       })
-      aiStorage = new KyselyAIStorageService(db)
+      aiStorage = new MySQLKyselyAIStorageService(db)
       await aiStorage.init()
-      agentRunService = new KyselyAgentRunService(db)
-      workflowService = new KyselyWorkflowService(db)
+      agentRunService = new MySQLKyselyAgentRunService(db)
+      workflowService = new MySQLKyselyWorkflowService(db)
       await workflowService.init()
-      workflowRunService = new KyselyWorkflowRunService(db)
+      workflowRunService = new MySQLKyselyWorkflowRunService(db)
     } else if (backend === 'redis') {
       const { default: Redis } = await import('ioredis')
       const { RedisAgentRunService } = await import('@pikku/redis')
@@ -129,15 +119,6 @@ export const createSingletonServices = pikkuServices(
       agentRunService = new RedisAgentRunService(redis)
       workflowService = new KyselyWorkflowService(db)
       await workflowService.init()
-      workflowService.withRunLock = async (
-        _id: string,
-        fn: () => Promise<any>
-      ) => fn()
-      workflowService.withStepLock = async (
-        _runId: string,
-        _stepName: string,
-        fn: () => Promise<any>
-      ) => fn()
       workflowRunService = new KyselyWorkflowRunService(db)
     } else {
       throw new Error(`Unknown DB_BACKEND: ${backend}`)

@@ -1,6 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
-import { KyselyDeploymentService } from '@pikku/kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import { PgKyselyDeploymentService } from '@pikku/kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     const db = new Kysely<KyselyPikkuDB>({
       dialect: new PostgresJSDialect({ postgres: sql }),
     })
-    const deploymentService = new KyselyDeploymentService(
+    const deploymentService = new PgKyselyDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
       db
     )

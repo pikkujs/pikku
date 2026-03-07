@@ -5260,6 +5260,8 @@ __metadata:
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
     "@pikku/kysely": "workspace:*"
+    "@pikku/kysely-mysql": "workspace:*"
+    "@pikku/kysely-postgres": "workspace:*"
     "@pikku/redis": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
     "@pikku/uws": "workspace:*"
@@ -5384,7 +5386,33 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.2, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely-mysql@workspace:*, @pikku/kysely-mysql@workspace:packages/services/kysely-mysql":
+  version: 0.0.0-use.local
+  resolution: "@pikku/kysely-mysql@workspace:packages/services/kysely-mysql"
+  dependencies:
+    kysely: "npm:^0.28.11"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@pikku/core": ^0.12.2
+    "@pikku/kysely": ^0.12.2
+  languageName: unknown
+  linkType: soft
+
+"@pikku/kysely-postgres@npm:^0.12.2, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
+  version: 0.0.0-use.local
+  resolution: "@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"
+  dependencies:
+    kysely: "npm:^0.28.11"
+    kysely-postgres-js: "npm:^3.0.0"
+    postgres: "npm:^3.4.8"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@pikku/core": ^0.12.2
+    "@pikku/kysely": ^0.12.2
+  languageName: unknown
+  linkType: soft
+
+"@pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -5586,7 +5614,7 @@ __metadata:
     "@pikku/ai-vercel": "npm:^0.12.1"
     "@pikku/core": "npm:^0.12.2"
     "@pikku/express": "npm:^0.12.1"
-    "@pikku/kysely": "npm:^0.12.2"
+    "@pikku/kysely-postgres": "npm:^0.12.2"
     "@pikku/schema-cfworker": "npm:^0.12.1"
     "@types/node": "npm:^24"
     kysely: "npm:^0.28.11"
@@ -5609,7 +5637,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
     "@pikku/aws-services": "npm:^0.12.2"
     "@pikku/core": "npm:^0.12.2"
-    "@pikku/kysely": "npm:^0.12.2"
+    "@pikku/kysely-postgres": "npm:^0.12.2"
     "@pikku/lambda": "npm:^0.12.2"
     "@types/aws-lambda": "npm:^8.10.161"
     "@types/node": "npm:^24"
@@ -5864,7 +5892,7 @@ __metadata:
     "@pikku/core": "npm:^0.12.2"
     "@pikku/express": "npm:^0.12.1"
     "@pikku/jose": "npm:^0.12.1"
-    "@pikku/kysely": "npm:^0.12.2"
+    "@pikku/kysely-postgres": "npm:^0.12.2"
     "@pikku/schema-cfworker": "npm:^0.12.1"
     "@types/node": "npm:^24"
     kysely: "npm:^0.28.11"
@@ -5935,7 +5963,7 @@ __metadata:
     "@pikku/cli": "npm:^0.12.2"
     "@pikku/core": "npm:^0.12.2"
     "@pikku/express": "npm:^0.12.1"
-    "@pikku/kysely": "npm:^0.12.2"
+    "@pikku/kysely-postgres": "npm:^0.12.2"
     "@pikku/queue-pg-boss": "npm:^0.12.2"
     "@types/node": "npm:^24"
     kysely: "npm:^0.28.11"

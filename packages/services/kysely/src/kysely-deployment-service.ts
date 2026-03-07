@@ -58,19 +58,21 @@ export class KyselyDeploymentService implements DeploymentService {
       ])
       .execute()
 
-    await this.db.schema
-      .createIndex('idx_pikku_deployments_heartbeat')
-      .ifNotExists()
-      .on('pikku_deployments')
-      .column('last_heartbeat')
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_pikku_deployments_heartbeat')
+        .ifNotExists()
+        .on('pikku_deployments')
+        .column('last_heartbeat')
+    )
 
-    await this.db.schema
-      .createIndex('idx_pikku_deployment_functions_name')
-      .ifNotExists()
-      .on('pikku_deployment_functions')
-      .column('function_name')
-      .execute()
+    await this.createIndexSafe(
+      this.db.schema
+        .createIndex('idx_pikku_deployment_functions_name')
+        .ifNotExists()
+        .on('pikku_deployment_functions')
+        .column('function_name')
+    )
 
     this.initialized = true
   }
@@ -154,6 +156,18 @@ export class KyselyDeploymentService implements DeploymentService {
       deploymentId: row.deployment_id,
       endpoint: row.endpoint,
     }))
+  }
+
+  private async createIndexSafe(builder: {
+    execute(): Promise<void>
+  }): Promise<void> {
+    try {
+      await builder.execute()
+    } catch (e: any) {
+      if (e?.code === 'ER_DUP_KEYNAME' || e?.errno === 1061) return
+      if (e?.code === '42P07') return
+      throw e
+    }
   }
 
   private async sendHeartbeat(): Promise<void> {

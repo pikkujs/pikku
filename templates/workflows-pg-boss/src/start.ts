@@ -1,7 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
-import { KyselyWorkflowService } from '@pikku/kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import { PgKyselyWorkflowService } from '@pikku/kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { InMemoryTriggerService } from '@pikku/core/services'
 import { Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
 
     const schedulerService = pgBossFactory.getSchedulerService()
 
-    const workflowService = new KyselyWorkflowService(db)
+    const workflowService = new PgKyselyWorkflowService(db)
     await workflowService.init()
 
     const singletonServices = await createSingletonServices(config, {

@@ -1,7 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { LocalSecretService } from '@pikku/core/services'
-import { KyselyAIStorageService } from '@pikku/kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import { PgKyselyAIStorageService } from '@pikku/kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     const db = new Kysely<KyselyPikkuDB>({
       dialect: new PostgresJSDialect({ postgres: sql }),
     })
-    const pgAiStorage = new KyselyAIStorageService(db)
+    const pgAiStorage = new PgKyselyAIStorageService(db)
     await pgAiStorage.init()
 
     const secrets = new LocalSecretService()
