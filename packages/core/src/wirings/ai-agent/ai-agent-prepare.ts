@@ -332,7 +332,7 @@ export function buildToolDefs(
           const sessionKey = `${subAgentName}::${session}`
           let threadId = agentSessionMap.get(sessionKey)
           if (!threadId) {
-            threadId = `${subAgentName}-${session}-${Date.now()}`
+            threadId = randomUUID()
             agentSessionMap.set(sessionKey, threadId)
           }
 
