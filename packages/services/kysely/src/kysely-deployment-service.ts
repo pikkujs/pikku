@@ -18,7 +18,7 @@ export class KyselyDeploymentService implements DeploymentService {
 
   constructor(
     config: DeploymentServiceConfig,
-    private db: Kysely<KyselyPikkuDB>
+    protected db: Kysely<KyselyPikkuDB>
   ) {
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
@@ -166,6 +166,7 @@ export class KyselyDeploymentService implements DeploymentService {
     } catch (e: any) {
       if (e?.code === 'ER_DUP_KEYNAME' || e?.errno === 1061) return
       if (e?.code === '42P07') return
+      if (e?.message?.includes('already exists')) return
       throw e
     }
   }
