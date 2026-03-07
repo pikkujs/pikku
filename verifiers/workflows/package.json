@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
+    "@pikku/kysely": "0.6.0",
     "@pikku/queue-bullmq": "workspace:*",
     "@pikku/queue-pg-boss": "workspace:*",
     "@pikku/redis": "workspace:*",
