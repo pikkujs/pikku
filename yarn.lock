@@ -5333,7 +5333,7 @@ __metadata:
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.12.1
-    fastify: ^5.6.1
+    fastify: ^5.8.2
     fastify-plugin: ^5.1.0
   languageName: unknown
   linkType: soft
@@ -5348,7 +5348,7 @@ __metadata:
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.12.1
-    fastify: ^5.6.1
+    fastify: ^5.8.2
   languageName: unknown
   linkType: soft
 
