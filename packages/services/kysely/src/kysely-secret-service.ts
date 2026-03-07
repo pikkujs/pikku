@@ -82,7 +82,7 @@ export class KyselySecretService implements SecretService {
         id: crypto.randomUUID(),
         secret_key: secretKey,
         action,
-        performed_at: new Date(),
+        performed_at: new Date().toISOString() as any,
       })
       .execute()
   }
@@ -132,7 +132,7 @@ export class KyselySecretService implements SecretService {
       this.key,
       plaintext
     )
-    const now = new Date()
+    const now = new Date().toISOString()
 
     await this.db
       .insertInto('secrets')
@@ -141,15 +141,15 @@ export class KyselySecretService implements SecretService {
         ciphertext,
         wrapped_dek: wrappedDEK,
         key_version: this.keyVersion,
-        created_at: now,
-        updated_at: now,
+        created_at: now as any,
+        updated_at: now as any,
       })
       .onConflict((oc) =>
         oc.column('key').doUpdateSet({
           ciphertext,
           wrapped_dek: wrappedDEK,
           key_version: this.keyVersion,
-          updated_at: now,
+          updated_at: now as any,
         })
       )
       .execute()
@@ -184,7 +184,7 @@ export class KyselySecretService implements SecretService {
         .set({
           wrapped_dek: newWrappedDEK,
           key_version: this.keyVersion,
-          updated_at: new Date(),
+          updated_at: new Date().toISOString() as any,
         })
         .where('key', '=', row.key)
         .execute()

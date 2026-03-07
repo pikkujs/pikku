@@ -4,7 +4,7 @@ import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ForbiddenError } from '../../errors/errors.js'
-import { PikkuError } from '../../errors/error-handler.js'
+import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
 import { encryptJSON } from '../../crypto-utils.js'
@@ -16,6 +16,11 @@ export class RPCNotFoundError extends PikkuError {
     this.rpcName = rpcName
   }
 }
+addError(RPCNotFoundError, {
+  status: 404,
+  mcpCode: -32601,
+  message: 'RPC function not found.',
+})
 import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
 import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
 import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
@@ -90,7 +95,7 @@ export class ContextAwareRPCService {
       functionMeta = pikkuState(null, 'function', 'meta')[funcName]
     }
     if (!functionMeta) {
-      throw new Error(`Function not found: ${funcName}`)
+      throw new RPCNotFoundError(funcName)
     }
     if (!functionMeta.expose) {
       throw new ForbiddenError()

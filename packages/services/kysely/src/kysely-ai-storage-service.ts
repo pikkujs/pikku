@@ -22,8 +22,11 @@ export class KyselyAIStorageService
     try {
       await builder.execute()
     } catch (e: any) {
-      // Ignore "index already exists" errors (MySQL doesn't support IF NOT EXISTS for indexes)
+      // Ignore "index already exists" errors across databases
+      // MySQL: ER_DUP_KEYNAME, Postgres: 42P07, SQLite: "already exists"
       if (e?.code === 'ER_DUP_KEYNAME' || e?.errno === 1061) return
+      if (e?.code === '42P07') return
+      if (e?.message?.includes('already exists')) return
       throw e
     }
   }
