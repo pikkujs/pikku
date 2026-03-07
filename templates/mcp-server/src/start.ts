@@ -36,7 +36,6 @@ async function main() {
     if (useHTTP) {
       const port = parseInt(process.env.MCP_PORT || '3000', 10)
       const { close } = await server.connectHTTP({ port })
-      singletonServices.logger = server.createMCPLogger()
       process.on('SIGINT', async () => {
         await close()
         process.exit(0)

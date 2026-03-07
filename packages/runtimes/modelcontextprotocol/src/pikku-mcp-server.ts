@@ -24,6 +24,7 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
   McpError,
+  isInitializeRequest,
 } from '@modelcontextprotocol/sdk/types.js'
 
 import type { CoreConfig } from '@pikku/core'
@@ -61,24 +62,18 @@ export interface MCPHttpOptions {
 }
 
 export class PikkuMCPServer {
-  private server: Server
+  private server!: Server
   private mcpEndpointRegistry: MCPEndpointRegistry
+  private sessions = new Map<
+    string,
+    { server: Server; transport: StreamableHTTPServerTransport }
+  >()
   private connected = false
 
   constructor(
     private config: MCPServerConfig,
     private logger: Logger
   ) {
-    this.server = new Server(
-      {
-        name: config.name,
-        version: config.version,
-      },
-      {
-        capabilities: config.capabilities,
-      }
-    )
-
     this.mcpEndpointRegistry = new MCPEndpointRegistry()
   }
 
@@ -89,19 +84,16 @@ export class PikkuMCPServer {
       if (this.config.capabilities.resources) {
         const resourcesMeta = getMCPResourcesMeta()
         this.mcpEndpointRegistry.setResourcesMeta(resourcesMeta)
-        this.setupResources()
       }
 
       if (this.config.capabilities.tools) {
         const toolsMeta = getMCPToolsMeta()
         this.mcpEndpointRegistry.setToolsMeta(toolsMeta)
-        this.setupTools()
       }
 
       if (this.config.capabilities.prompts) {
         const promptsMeta = getMCPPromptsMeta()
         this.mcpEndpointRegistry.setPromptsMeta(promptsMeta)
-        this.setupPrompts()
       }
     } catch (error) {
       this.logger.error('Failed to initialize MCP server:', error)
@@ -111,13 +103,45 @@ export class PikkuMCPServer {
 
   public async stop(): Promise<void> {
     await stopSingletonServices()
-    await this.server.close()
+    for (const { server, transport } of this.sessions.values()) {
+      await transport.close()
+      await server.close()
+    }
+    this.sessions.clear()
+    if (this.server) {
+      await this.server.close()
+    }
+  }
+
+  private createConfiguredServer(): Server {
+    const server = new Server(
+      {
+        name: this.config.name,
+        version: this.config.version,
+      },
+      {
+        capabilities: this.config.capabilities,
+      }
+    )
+
+    if (this.config.capabilities.resources) {
+      this.setupResources(server)
+    }
+    if (this.config.capabilities.tools) {
+      this.setupTools(server)
+    }
+    if (this.config.capabilities.prompts) {
+      this.setupPrompts(server)
+    }
+
+    return server
   }
 
   public async connect(transport: Transport): Promise<void> {
     if (this.connected) {
       throw new Error('MCP server is already connected')
     }
+    this.server = this.createConfiguredServer()
     await this.server.connect(transport)
     this.connected = true
   }
@@ -128,33 +152,124 @@ export class PikkuMCPServer {
   }
 
   public createHTTPRequestHandler(options?: { path?: string }): {
-    transport: StreamableHTTPServerTransport
     handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>
   } {
     const mcpPath = options?.path ?? '/mcp'
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    })
-
-    this.connect(transport)
 
     const handler = async (req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
-      if (url.pathname === mcpPath) {
-        await transport.handleRequest(req, res)
-      } else {
+      if (url.pathname !== mcpPath) {
         res.writeHead(404).end()
+        return
+      }
+
+      if (req.method === 'POST') {
+        await this.handleHTTPPost(req, res)
+      } else if (req.method === 'GET') {
+        const sessionId = req.headers['mcp-session-id'] as string | undefined
+        if (sessionId && this.sessions.has(sessionId)) {
+          const session = this.sessions.get(sessionId)!
+          await session.transport.handleRequest(req, res)
+        } else {
+          res.writeHead(400).end(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              error: { code: -32000, message: 'Invalid or missing session ID' },
+              id: null,
+            })
+          )
+        }
+      } else if (req.method === 'DELETE') {
+        const sessionId = req.headers['mcp-session-id'] as string | undefined
+        if (sessionId && this.sessions.has(sessionId)) {
+          const session = this.sessions.get(sessionId)!
+          await session.transport.close()
+          await session.server.close()
+          this.sessions.delete(sessionId)
+          res.writeHead(200).end()
+        } else {
+          res.writeHead(405).end()
+        }
+      } else {
+        res.writeHead(405).end()
       }
     }
 
-    return { transport, handler }
+    return { handler }
+  }
+
+  private async handleHTTPPost(
+    req: IncomingMessage,
+    res: ServerResponse
+  ): Promise<void> {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined
+
+    if (sessionId && this.sessions.has(sessionId)) {
+      const session = this.sessions.get(sessionId)!
+      await session.transport.handleRequest(req, res)
+      return
+    }
+
+    const body = await new Promise<string>((resolve) => {
+      let data = ''
+      req.on('data', (chunk: Buffer) => (data += chunk.toString()))
+      req.on('end', () => resolve(data))
+    })
+
+    let parsedBody: unknown
+    try {
+      parsedBody = JSON.parse(body)
+    } catch {
+      res.writeHead(400).end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32700, message: 'Parse error' },
+          id: null,
+        })
+      )
+      return
+    }
+
+    if (!isInitializeRequest(parsedBody)) {
+      res.writeHead(400).end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: No valid session ID provided',
+          },
+          id: null,
+        })
+      )
+      return
+    }
+
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => crypto.randomUUID(),
+      onsessioninitialized: (newSessionId) => {
+        this.sessions.set(newSessionId, { server, transport })
+      },
+    })
+
+    transport.onclose = () => {
+      const sid = transport.sessionId
+      if (sid) {
+        this.sessions.delete(sid)
+      }
+    }
+
+    const server = this.createConfiguredServer()
+    await server.connect(transport)
+    await transport.handleRequest(req, res, parsedBody)
   }
 
   public async connectHTTP(options?: MCPHttpOptions): Promise<{
     httpServer: HttpServer
     close: () => Promise<void>
   }> {
-    const { handler } = this.createHTTPRequestHandler({ path: options?.path })
+    const { handler } = this.createHTTPRequestHandler({
+      path: options?.path,
+    })
     const port = options?.port ?? 3000
     const host = options?.host ?? '127.0.0.1'
 
@@ -238,9 +353,8 @@ export class PikkuMCPServer {
     return logger
   }
 
-  private createMCPService(): PikkuMCP {
+  private createMCPService(server: Server): PikkuMCP {
     const mcpEndpointRegistry = this.mcpEndpointRegistry
-    const server = this.server
 
     return {
       sendResourceUpdated: async function (uri: string) {
@@ -270,8 +384,8 @@ export class PikkuMCPServer {
     }
   }
 
-  private setupTools(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+  private setupTools(server: Server): void {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = Object.values(this.mcpEndpointRegistry.getTools())
       return {
         tools: tools.map((tool) => ({
@@ -283,10 +397,10 @@ export class PikkuMCPServer {
       } as ListToolsResult
     })
 
-    const mcp = this.createMCPService()
+    const mcp = this.createMCPService(server)
 
     // Handler for calling tools
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params
       try {
         const result = await runMCPTool(
@@ -321,26 +435,23 @@ export class PikkuMCPServer {
     })
   }
 
-  private setupResources(): void {
-    this.server.setRequestHandler(
-      ListResourceTemplatesRequestSchema,
-      async () => {
-        const resourceTemplates = Object.values(
-          this.mcpEndpointRegistry.getResources()
-        ).filter((resource) => resource.inputSchema)
-        return {
-          resourceTemplates: resourceTemplates.map((resource) => ({
-            name: resource.uri,
-            uriTemplate: resource.uri,
-            title: resource.title,
-            description: resource.description,
-            mimeType: resource.mimeType,
-          })),
-        } as ListResourceTemplatesResult
-      }
-    )
+  private setupResources(server: Server): void {
+    server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      const resourceTemplates = Object.values(
+        this.mcpEndpointRegistry.getResources()
+      ).filter((resource) => resource.inputSchema)
+      return {
+        resourceTemplates: resourceTemplates.map((resource) => ({
+          name: resource.uri,
+          uriTemplate: resource.uri,
+          title: resource.title,
+          description: resource.description,
+          mimeType: resource.mimeType,
+        })),
+      } as ListResourceTemplatesResult
+    })
 
-    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
       const resources = Object.values(getMCPResourcesMeta()).filter(
         (resource) => !resource.inputSchema
       )
@@ -355,47 +466,44 @@ export class PikkuMCPServer {
       } as ListResourcesResult
     })
 
-    const mcp = this.createMCPService()
+    const mcp = this.createMCPService(server)
 
-    this.server.setRequestHandler(
-      ReadResourceRequestSchema,
-      async (request) => {
-        const { uri } = request.params
-        try {
-          const { result: contents } = await runMCPResource(
-            {
-              jsonrpc: '2.0' as const,
-              id: Date.now().toString(),
-              params: {},
-            },
-            { mcp },
-            uri
-          )
-          return {
-            contents,
-          }
-        } catch (error: unknown) {
-          if (error instanceof MCPError) {
-            const { code, message, data } = error.error
-            this.server.sendLoggingMessage({
-              level: 'error',
-              data: `Error reading resource ${uri}: code ${code}: ${message}`,
-            })
-            throw new McpError(code, message, data)
-          }
-
-          this.server.sendLoggingMessage({
-            level: 'error',
-            data: `Error reading resource ${uri}: ${error instanceof Error ? error.message : String(error)}`,
-          })
-          throw error
+    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const { uri } = request.params
+      try {
+        const { result: contents } = await runMCPResource(
+          {
+            jsonrpc: '2.0' as const,
+            id: Date.now().toString(),
+            params: {},
+          },
+          { mcp },
+          uri
+        )
+        return {
+          contents,
         }
+      } catch (error: unknown) {
+        if (error instanceof MCPError) {
+          const { code, message, data } = error.error
+          server.sendLoggingMessage({
+            level: 'error',
+            data: `Error reading resource ${uri}: code ${code}: ${message}`,
+          })
+          throw new McpError(code, message, data)
+        }
+
+        server.sendLoggingMessage({
+          level: 'error',
+          data: `Error reading resource ${uri}: ${error instanceof Error ? error.message : String(error)}`,
+        })
+        throw error
       }
-    )
+    })
   }
 
-  private setupPrompts(): void {
-    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  private setupPrompts(server: Server): void {
+    server.setRequestHandler(ListPromptsRequestSchema, async () => {
       const promptsMeta = Object.values(getMCPPromptsMeta())
       return {
         prompts: promptsMeta.map((prompt) => ({
@@ -406,9 +514,9 @@ export class PikkuMCPServer {
       } as ListPromptsResult
     })
 
-    const mcp = this.createMCPService()
+    const mcp = this.createMCPService(server)
 
-    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       const { name, arguments: args } = request.params
       const promptMeta = getMCPPromptsMeta()[name]
 
