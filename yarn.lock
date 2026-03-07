@@ -5262,6 +5262,7 @@ __metadata:
     "@pikku/kysely": "workspace:*"
     "@pikku/kysely-mysql": "workspace:*"
     "@pikku/kysely-postgres": "workspace:*"
+    "@pikku/kysely-sqlite": "workspace:*"
     "@pikku/redis": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
     "@pikku/uws": "workspace:*"
@@ -5406,6 +5407,17 @@ __metadata:
     kysely: "npm:^0.28.11"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
+  version: 0.0.0-use.local
+  resolution: "@pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite"
+  dependencies:
+    "@pikku/core": "workspace:*"
+    "@pikku/kysely": "workspace:*"
+    kysely: "npm:^0.28.11"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
