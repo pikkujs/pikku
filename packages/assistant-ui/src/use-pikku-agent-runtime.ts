@@ -145,6 +145,9 @@ async function processStream(
           runId: event.runId,
         })
         break
+      case 'error':
+        text.value += `\n\nError: ${event.message || event.errorText || 'Unknown error'}`
+        break
       case 'done':
         onFinish?.()
         continue

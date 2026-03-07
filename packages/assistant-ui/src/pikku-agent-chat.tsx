@@ -21,8 +21,67 @@ export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
    *  - `string[]`: hide tool calls matching these names
    */
   hideToolCalls?: boolean | string[]
+  dark?: boolean
 }
 
+interface ChatColors {
+  bg: string
+  userBubble: string
+  assistantBubble: string
+  text: string
+  textMuted: string
+  border: string
+  codeBg: string
+  inputBg: string
+  sendBg: string
+  sendColor: string
+  approvalBg: string
+  approvalBorder: string
+  successBg: string
+  successColor: string
+  errorBg: string
+  errorColor: string
+}
+
+const lightColors: ChatColors = {
+  bg: '#ffffff',
+  userBubble: '#e3f2fd',
+  assistantBubble: '#f5f5f5',
+  text: '#1a1a1a',
+  textMuted: '#888',
+  border: '#ddd',
+  codeBg: '#f5f5f5',
+  inputBg: 'transparent',
+  sendBg: '#1976d2',
+  sendColor: '#fff',
+  approvalBg: '#fef9e7',
+  approvalBorder: '#e9a211',
+  successBg: '#e8f5e9',
+  successColor: '#2e7d32',
+  errorBg: '#ffebee',
+  errorColor: '#c62828',
+}
+
+const darkColors: ChatColors = {
+  bg: 'transparent',
+  userBubble: 'rgba(0, 230, 138, 0.1)',
+  assistantBubble: '#1e1e2e',
+  text: '#e0e0e8',
+  textMuted: '#8888a0',
+  border: '#2a2a3e',
+  codeBg: '#0e0e16',
+  inputBg: 'transparent',
+  sendBg: '#00cc7a',
+  sendColor: '#0a0a0f',
+  approvalBg: 'rgba(233, 162, 17, 0.1)',
+  approvalBorder: '#e9a211',
+  successBg: 'rgba(0, 230, 138, 0.1)',
+  successColor: '#00e68a',
+  errorBg: 'rgba(220, 38, 38, 0.1)',
+  errorColor: '#f87171',
+}
+
+const ColorsContext = createContext<ChatColors>(lightColors)
 const HideToolCallsContext = createContext<boolean | string[] | undefined>(undefined)
 
 function shouldHideToolCall(
@@ -42,6 +101,7 @@ const ToolCallDisplay: FunctionComponent<{
   status: PikkuToolStatus
   addResult?: (result: unknown) => void
 }> = ({ toolCallId, toolName, args, result, status, addResult }) => {
+  const colors = useContext(ColorsContext)
   const hideToolCalls = useContext(HideToolCallsContext)
   const { handleApproval } = usePikkuApproval()
   const [expanded, setExpanded] = useState(false)
@@ -67,11 +127,11 @@ const ToolCallDisplay: FunctionComponent<{
     return (
       <div
         style={{
-          border: '1px solid #e9a211',
+          border: `1px solid ${colors.approvalBorder}`,
           borderRadius: 6,
           padding: 12,
           margin: '4px 0',
-          backgroundColor: '#fef9e7',
+          backgroundColor: colors.approvalBg,
         }}
       >
         <div
@@ -82,24 +142,26 @@ const ToolCallDisplay: FunctionComponent<{
             marginBottom: 8,
             fontWeight: 600,
             fontSize: 13,
+            color: colors.text,
           }}
         >
           Approval required
         </div>
         {approvalReason && (
-          <div style={{ fontSize: 13, marginBottom: 4 }}>{approvalReason}</div>
+          <div style={{ fontSize: 13, marginBottom: 4, color: colors.text }}>{approvalReason}</div>
         )}
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+        <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>
           The agent wants to call <code>{toolName}</code>
         </div>
         <pre
           style={{
             fontSize: 11,
-            background: '#f5f5f5',
+            background: colors.codeBg,
             padding: 8,
             borderRadius: 4,
             overflow: 'auto',
             marginBottom: 8,
+            color: colors.text,
           }}
         >
           {JSON.stringify(displayArgs, null, 2)}
@@ -114,10 +176,10 @@ const ToolCallDisplay: FunctionComponent<{
             style={{
               padding: '4px 12px',
               fontSize: 12,
-              border: '1px solid #2e7d32',
+              border: `1px solid ${colors.successColor}`,
               borderRadius: 4,
-              background: '#e8f5e9',
-              color: '#2e7d32',
+              background: colors.successBg,
+              color: colors.successColor,
               cursor: 'pointer',
             }}
           >
@@ -132,10 +194,10 @@ const ToolCallDisplay: FunctionComponent<{
             style={{
               padding: '4px 12px',
               fontSize: 12,
-              border: '1px solid #c62828',
+              border: `1px solid ${colors.errorColor}`,
               borderRadius: 4,
-              background: '#ffebee',
-              color: '#c62828',
+              background: colors.errorBg,
+              color: colors.errorColor,
               cursor: 'pointer',
             }}
           >
@@ -150,7 +212,7 @@ const ToolCallDisplay: FunctionComponent<{
     return (
       <div
         style={{
-          border: '1px solid #ddd',
+          border: `1px solid ${colors.border}`,
           borderRadius: 6,
           padding: 8,
           margin: '4px 0',
@@ -158,6 +220,7 @@ const ToolCallDisplay: FunctionComponent<{
           alignItems: 'center',
           gap: 8,
           fontSize: 13,
+          color: colors.text,
         }}
       >
         <span style={{ fontWeight: 500 }}>{toolName}</span>
@@ -166,8 +229,8 @@ const ToolCallDisplay: FunctionComponent<{
             fontSize: 11,
             padding: '2px 6px',
             borderRadius: 3,
-            background: responded === 'approved' ? '#e8f5e9' : '#ffebee',
-            color: responded === 'approved' ? '#2e7d32' : '#c62828',
+            background: responded === 'approved' ? colors.successBg : colors.errorBg,
+            color: responded === 'approved' ? colors.successColor : colors.errorColor,
           }}
         >
           {responded}
@@ -179,7 +242,7 @@ const ToolCallDisplay: FunctionComponent<{
   return (
     <div
       style={{
-        border: '1px solid #ddd',
+        border: `1px solid ${colors.border}`,
         borderRadius: 6,
         padding: 8,
         margin: '4px 0',
@@ -197,6 +260,7 @@ const ToolCallDisplay: FunctionComponent<{
           width: '100%',
           padding: 0,
           fontSize: 13,
+          color: colors.text,
         }}
       >
         <span>{expanded ? '\u25BC' : '\u25B6'}</span>
@@ -204,7 +268,7 @@ const ToolCallDisplay: FunctionComponent<{
           {toolName}
         </span>
         {status.type === 'running' && (
-          <span style={{ fontSize: 11, color: '#888' }}>running...</span>
+          <span style={{ fontSize: 11, color: colors.textMuted }}>running...</span>
         )}
         {status.type === 'error' && (
           <span
@@ -212,8 +276,8 @@ const ToolCallDisplay: FunctionComponent<{
               fontSize: 11,
               padding: '1px 5px',
               borderRadius: 3,
-              background: '#ffebee',
-              color: '#c62828',
+              background: colors.errorBg,
+              color: colors.errorColor,
             }}
           >
             error
@@ -225,8 +289,8 @@ const ToolCallDisplay: FunctionComponent<{
               fontSize: 11,
               padding: '1px 5px',
               borderRadius: 3,
-              background: '#ffebee',
-              color: '#c62828',
+              background: colors.errorBg,
+              color: colors.errorColor,
             }}
           >
             denied
@@ -238,8 +302,8 @@ const ToolCallDisplay: FunctionComponent<{
               fontSize: 11,
               padding: '1px 5px',
               borderRadius: 3,
-              background: '#e8f5e9',
-              color: '#2e7d32',
+              background: colors.successBg,
+              color: colors.successColor,
             }}
           >
             done
@@ -248,16 +312,17 @@ const ToolCallDisplay: FunctionComponent<{
       </button>
       {expanded && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 2 }}>
             Arguments:
           </div>
           <pre
             style={{
               fontSize: 11,
-              background: '#f5f5f5',
+              background: colors.codeBg,
               padding: 8,
               borderRadius: 4,
               overflow: 'auto',
+              color: colors.text,
             }}
           >
             {JSON.stringify(displayArgs, null, 2)}
@@ -265,17 +330,18 @@ const ToolCallDisplay: FunctionComponent<{
           {result !== undefined && (
             <>
               <div
-                style={{ fontSize: 12, color: '#888', marginTop: 8, marginBottom: 2 }}
+                style={{ fontSize: 12, color: colors.textMuted, marginTop: 8, marginBottom: 2 }}
               >
                 Result:
               </div>
               <pre
                 style={{
                   fontSize: 11,
-                  background: '#f5f5f5',
+                  background: colors.codeBg,
                   padding: 8,
                   borderRadius: 4,
                   overflow: 'auto',
+                  color: colors.text,
                 }}
               >
                 {typeof result === 'string'
@@ -290,170 +356,183 @@ const ToolCallDisplay: FunctionComponent<{
   )
 }
 
-const UserMessage: FunctionComponent = () => (
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'flex-end',
-      width: '100%',
-    }}
-  >
-    <div style={{ maxWidth: '80%' }}>
-      <div
-        style={{
-          fontSize: 12,
-          color: '#888',
-          marginBottom: 4,
-          textAlign: 'right',
-        }}
-      >
-        You
-      </div>
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          backgroundColor: '#e3f2fd',
-        }}
-      >
-        <MessagePrimitive.Content
-          components={{
-            Text: ({ text }) => (
-              <span style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
-                {text}
-              </span>
-            ),
+const UserMessage: FunctionComponent = () => {
+  const colors = useContext(ColorsContext)
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        width: '100%',
+      }}
+    >
+      <div style={{ maxWidth: '80%' }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: colors.textMuted,
+            marginBottom: 4,
+            textAlign: 'right',
           }}
-        />
-      </div>
-    </div>
-  </div>
-)
-
-const AssistantMessage: FunctionComponent = () => (
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'flex-start',
-      width: '100%',
-    }}
-  >
-    <div style={{ maxWidth: '80%' }}>
-      <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
-        Assistant
-      </div>
-      <div
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          backgroundColor: '#f5f5f5',
-        }}
-      >
-        <MessagePrimitive.Content
-          components={{
-            Text: ({ text }) => (
-              <span style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
-                {text}
-              </span>
-            ),
-            tools: {
-              Fallback: (props) => (
-                <ToolCallDisplay
-                  toolCallId={props.toolCallId}
-                  toolName={props.toolName}
-                  args={props.args as Record<string, unknown>}
-                  result={props.result}
-                  status={resolvePikkuToolStatus(props.status, props.result)}
-                  addResult={props.addResult}
-                />
+        >
+          You
+        </div>
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.userBubble,
+          }}
+        >
+          <MessagePrimitive.Content
+            components={{
+              Text: ({ text }) => (
+                <span style={{ fontSize: 14, whiteSpace: 'pre-wrap', color: colors.text }}>
+                  {text}
+                </span>
               ),
-            },
-          }}
-        />
-        <MessagePrimitive.If last>
-          <ThreadPrimitive.If running>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                marginTop: 8,
-                fontSize: 13,
-                color: '#888',
-              }}
-            >
-              Thinking...
-            </div>
-          </ThreadPrimitive.If>
-        </MessagePrimitive.If>
+            }}
+          />
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
+
+const AssistantMessage: FunctionComponent = () => {
+  const colors = useContext(ColorsContext)
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'flex-start',
+        width: '100%',
+      }}
+    >
+      <div style={{ maxWidth: '80%' }}>
+        <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>
+          Assistant
+        </div>
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.assistantBubble,
+          }}
+        >
+          <MessagePrimitive.Content
+            components={{
+              Text: ({ text }) => (
+                <span style={{ fontSize: 14, whiteSpace: 'pre-wrap', color: colors.text }}>
+                  {text}
+                </span>
+              ),
+              tools: {
+                Fallback: (props) => (
+                  <ToolCallDisplay
+                    toolCallId={props.toolCallId}
+                    toolName={props.toolName}
+                    args={props.args as Record<string, unknown>}
+                    result={props.result}
+                    status={resolvePikkuToolStatus(props.status, props.result)}
+                    addResult={props.addResult}
+                  />
+                ),
+              },
+            }}
+          />
+          <MessagePrimitive.If last>
+            <ThreadPrimitive.If running>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginTop: 8,
+                  fontSize: 13,
+                  color: colors.textMuted,
+                }}
+              >
+                Thinking...
+              </div>
+            </ThreadPrimitive.If>
+          </MessagePrimitive.If>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
   disabled,
-}) => (
-  <div style={{ padding: '8px 0 16px' }}>
-    <ComposerPrimitive.Root>
-      <div
-        style={{
-          border: '1px solid #ddd',
-          borderRadius: 12,
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'flex-end',
-          padding: '6px 12px',
-          gap: 8,
-          ...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : {}),
-        }}
-      >
-        <ComposerPrimitive.Input
-          placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
-          rows={2}
-          disabled={disabled}
+}) => {
+  const colors = useContext(ColorsContext)
+  return (
+    <div style={{ padding: '8px 0 16px' }}>
+      <ComposerPrimitive.Root>
+        <div
           style={{
-            flex: 1,
-            border: 'none',
-            outline: 'none',
-            resize: 'none',
-            fontSize: 14,
-            fontFamily: 'inherit',
-            padding: '4px 0',
-            background: 'transparent',
-          }}
-        />
-        <ComposerPrimitive.Send
-          disabled={disabled}
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: '50%',
-            border: 'none',
-            background: disabled ? '#999' : '#1976d2',
-            color: '#fff',
-            cursor: disabled ? 'not-allowed' : 'pointer',
+            border: `1px solid ${colors.border}`,
+            borderRadius: 12,
+            overflow: 'hidden',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            marginBottom: 2,
-            fontSize: 14,
+            alignItems: 'flex-end',
+            padding: '6px 12px',
+            gap: 8,
+            ...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : {}),
           }}
         >
-          &#9654;
-        </ComposerPrimitive.Send>
-      </div>
-    </ComposerPrimitive.Root>
-  </div>
-)
+          <ComposerPrimitive.Input
+            placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
+            rows={2}
+            disabled={disabled}
+            style={{
+              flex: 1,
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              fontSize: 14,
+              fontFamily: 'inherit',
+              padding: '4px 0',
+              background: colors.inputBg,
+              color: colors.text,
+            }}
+          />
+          <ComposerPrimitive.Send
+            disabled={disabled}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              border: 'none',
+              background: disabled ? colors.textMuted : colors.sendBg,
+              color: colors.sendColor,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              marginBottom: 2,
+              fontSize: 14,
+            }}
+          >
+            &#9654;
+          </ComposerPrimitive.Send>
+        </div>
+      </ComposerPrimitive.Root>
+    </div>
+  )
+}
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
-  const { emptyMessage, hideToolCalls, ...runtimeOptions } = props
+  const { emptyMessage, hideToolCalls, dark, ...runtimeOptions } = props
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
     usePikkuAgentRuntime(runtimeOptions)
 
+  const colors = dark ? darkColors : lightColors
+
   return (
+    <ColorsContext.Provider value={colors}>
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
     <HideToolCallsContext.Provider value={hideToolCalls}>
     <AssistantRuntimeProvider runtime={runtime}>
@@ -462,6 +541,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
+          background: colors.bg,
         }}
       >
         <ThreadPrimitive.Root
@@ -496,7 +576,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     minHeight: 300,
-                    color: '#888',
+                    color: colors.textMuted,
                     textAlign: 'center',
                     fontSize: 14,
                   }}
@@ -523,5 +603,6 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
     </AssistantRuntimeProvider>
     </HideToolCallsContext.Provider>
     </PikkuApprovalContext.Provider>
+    </ColorsContext.Provider>
   )
 }
