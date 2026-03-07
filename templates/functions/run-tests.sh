@@ -30,6 +30,7 @@ RUN_RPC_TESTS=false
 RUN_HTTP_SSE_TESTS=false
 RUN_QUEUE_TESTS=false
 RUN_MCP_TESTS=false
+RUN_MCP_HTTP_TESTS=false
 RUN_CLI_TESTS=false
 RUN_WORKFLOW_TESTS=false
 RUN_AGENT_TESTS=false
@@ -81,6 +82,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --mcp)
             RUN_MCP_TESTS=true
+            shift
+            ;;
+        --mcp-http)
+            RUN_MCP_HTTP_TESTS=true
             shift
             ;;
         --cli)
@@ -185,6 +190,12 @@ fi
 if $RUN_MCP_TESTS; then
     echo "Running MCP tests..."
     $PKG_MANAGER run test:mcp
+fi
+
+# -------- RUN MCP HTTP TESTS IF REQUESTED --------
+if $RUN_MCP_HTTP_TESTS; then
+    echo "Running MCP HTTP tests..."
+    $PKG_MANAGER run test:mcp:http
 fi
 
 # -------- RUN CLI TESTS IF REQUESTED --------

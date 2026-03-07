@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/start.ts",
+    "start:http": "tsx src/start.ts --http",
     "dev": "tsx --watch src/start.ts",
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
-    "test": "bash ../functions/run-tests.sh --mcp --ignore-server-ready-check",
-    "test:mcp": "npx tsx client/mcp.ts"
+    "test": "bash ../functions/run-tests.sh --mcp --ignore-server-ready-check && bash ../functions/run-tests.sh --server 'yarn start:http' --url http://localhost:3000 --mcp-http",
+    "test:mcp": "npx tsx client/mcp.ts",
+    "test:mcp:http": "npx tsx client/mcp-http.ts"
   },
   "devDependencies": {
     "@pikku/cli": "^0.12.1",

@@ -1,4 +1,13 @@
+import {
+  createServer,
+  type IncomingMessage,
+  type Server as HttpServer,
+  type ServerResponse,
+} from 'node:http'
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import type {
   ListResourceTemplatesResult,
@@ -45,9 +54,16 @@ export interface MCPServerConfig extends CoreConfig {
   }>
 }
 
+export interface MCPHttpOptions {
+  port?: number
+  host?: string
+  path?: string
+}
+
 export class PikkuMCPServer {
   private server: Server
   private mcpEndpointRegistry: MCPEndpointRegistry
+  private connected = false
 
   constructor(
     private config: MCPServerConfig,
@@ -99,7 +115,69 @@ export class PikkuMCPServer {
   }
 
   public async connect(transport: Transport): Promise<void> {
+    if (this.connected) {
+      throw new Error('MCP server is already connected')
+    }
     await this.server.connect(transport)
+    this.connected = true
+  }
+
+  public async connectStdio(): Promise<void> {
+    const transport = new StdioServerTransport()
+    await this.connect(transport)
+  }
+
+  public createHTTPRequestHandler(options?: { path?: string }): {
+    transport: StreamableHTTPServerTransport
+    handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>
+  } {
+    const mcpPath = options?.path ?? '/mcp'
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    })
+
+    this.connect(transport)
+
+    const handler = async (req: IncomingMessage, res: ServerResponse) => {
+      const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
+      if (url.pathname === mcpPath) {
+        await transport.handleRequest(req, res)
+      } else {
+        res.writeHead(404).end()
+      }
+    }
+
+    return { transport, handler }
+  }
+
+  public async connectHTTP(options?: MCPHttpOptions): Promise<{
+    httpServer: HttpServer
+    close: () => Promise<void>
+  }> {
+    const { handler } = this.createHTTPRequestHandler({ path: options?.path })
+    const port = options?.port ?? 3000
+    const host = options?.host ?? '127.0.0.1'
+
+    const httpServer = createServer(handler)
+
+    await new Promise<void>((resolve) => {
+      httpServer.listen(port, host, () => {
+        this.logger.info(
+          `MCP HTTP server listening on http://${host}:${port}${options?.path ?? '/mcp'}`
+        )
+        resolve()
+      })
+    })
+
+    return {
+      httpServer,
+      close: async () => {
+        await new Promise<void>((resolve, reject) => {
+          httpServer.close((err) => (err ? reject(err) : resolve()))
+        })
+        await this.stop()
+      },
+    }
   }
 
   public createMCPLogger(): Logger {

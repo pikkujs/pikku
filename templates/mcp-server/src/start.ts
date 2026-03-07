@@ -8,7 +8,6 @@ import {
 
 import mcpJSON from '../../functions/.pikku/mcp/mcp.gen.json' with { type: 'json' }
 import '../../functions/.pikku/pikku-bootstrap.gen.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 async function main() {
   try {
@@ -32,13 +31,24 @@ async function main() {
 
     await server.init()
 
-    const transport = new StdioServerTransport()
-    await server.connect(transport)
-    singletonServices.logger = server.createMCPLogger()
-    process.on('SIGINT', async () => {
-      await server.stop()
-      process.exit(0)
-    })
+    const useHTTP = process.argv.includes('--http')
+
+    if (useHTTP) {
+      const port = parseInt(process.env.MCP_PORT || '3000', 10)
+      const { close } = await server.connectHTTP({ port })
+      singletonServices.logger = server.createMCPLogger()
+      process.on('SIGINT', async () => {
+        await close()
+        process.exit(0)
+      })
+    } else {
+      await server.connectStdio()
+      singletonServices.logger = server.createMCPLogger()
+      process.on('SIGINT', async () => {
+        await server.stop()
+        process.exit(0)
+      })
+    }
   } catch (error) {
     console.error('Failed to start MCP server:', error)
     process.exit(1)

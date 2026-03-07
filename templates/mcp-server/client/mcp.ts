@@ -1,5 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import {
   CallToolResultSchema,
   GetPromptResultSchema,
@@ -10,10 +11,11 @@ import {
   PingRequestSchema,
   ReadResourceResultSchema,
 } from '@modelcontextprotocol/sdk/types.js'
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 
 export class PikkuMCPTestClient {
   private client: Client
-  private transport: StdioClientTransport | undefined
+  private transport: Transport | undefined
 
   constructor(
     private serverCommand: string,
@@ -41,6 +43,11 @@ export class PikkuMCPTestClient {
     this.transport.onerror = (error: Error) => {
       console.error('Server process error:', error)
     }
+  }
+
+  async connectHTTP(url: string): Promise<void> {
+    this.transport = new StreamableHTTPClientTransport(new URL(url))
+    await this.client.connect(this.transport)
   }
 
   async disconnect(): Promise<void> {
@@ -210,6 +217,20 @@ export async function runMCPClientTest(
     await client.runFullTest()
   } catch (error) {
     console.error('❌ Test failed:', error)
+    throw error
+  } finally {
+    await client.disconnect()
+  }
+}
+
+export async function runMCPHTTPClientTest(url: string): Promise<void> {
+  const client = new PikkuMCPTestClient('', [])
+
+  try {
+    await client.connectHTTP(url)
+    await client.runFullTest()
+  } catch (error) {
+    console.error('❌ HTTP Test failed:', error)
     throw error
   } finally {
     await client.disconnect()
