@@ -1,3 +1,4 @@
+export { createSQLiteKysely } from './create-sqlite-kysely.js'
 export { SQLiteKyselyWorkflowService } from './sqlite-kysely-workflow-service.js'
 export { SQLiteKyselyDeploymentService } from './sqlite-kysely-deployment-service.js'
 export { SQLiteKyselyAIStorageService } from './sqlite-kysely-ai-storage-service.js'
