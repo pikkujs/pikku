@@ -1,5 +1,16 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- 387b2ee: Accept RunHTTPWiringOptions in server init() and update fastify to 5.8.1
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [96ce74e]
+  - @pikku/core@0.12.3
+  - @pikku/fastify-plugin@0.12.2
+
 ## 0.12.1
 
 ### Patch Changes

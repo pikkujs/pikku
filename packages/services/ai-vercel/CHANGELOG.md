@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- 387b2ee: Add tool error handling, set needsApproval flag on approval tools, and propagate stream errors instead of silently swallowing them
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+  - @pikku/core@0.12.3
+
 ## 0.12.1
 
 ### Patch Changes

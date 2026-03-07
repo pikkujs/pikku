@@ -1,5 +1,19 @@
 ## 0.12.0
 
+## 0.13.0
+
+### Minor Changes
+
+- b2b0af9: Migrate all consumers from @pikku/pg to @pikku/kysely and remove the @pikku/pg package
+
+### Patch Changes
+
+- 32ed003: Add envelope encryption utilities and database-backed secret services with KEK rotation support
+- 387b2ee: Add error_message column to agent run storage and queries
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

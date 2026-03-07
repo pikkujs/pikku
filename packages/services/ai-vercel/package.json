@@ -1,6 +1,6 @@
 {
   "name": "@pikku/ai-vercel",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",
@@ -16,7 +16,7 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.2",
+    "@pikku/core": "^0.12.3",
     "ai": "^6.0.0"
   },
   "devDependencies": {

@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- 387b2ee: Add agent thread/run management functions, workflow run streaming, and refactor services to receive DB services from host app
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+  - @pikku/core@0.12.3
+
 ## 0.12.1
 
 ### Patch Changes
