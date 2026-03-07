@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 387b2ee: Add approval description inspection, track packageName on wire metadata, and resolve addon package names in channel/RPC wirings
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- 96ce74e: Fix SSE streaming headers not being sent before first chunk write, resolving ERR_INCOMPLETE_CHUNKED_ENCODING errors in approval flows
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+  - @pikku/core@0.12.3
+
 ## 0.12.1
 
 ### Patch Changes

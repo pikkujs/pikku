@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 32ed003: Add envelope encryption utilities and database-backed secret services with KEK rotation support
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

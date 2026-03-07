@@ -1,0 +1,22 @@
+# @pikku/e2e
+
+## 0.0.1
+
+### Patch Changes
+
+- Updated dependencies [387b2ee]
+- Updated dependencies [387b2ee]
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [387b2ee]
+- Updated dependencies [b2b0af9]
+- Updated dependencies [387b2ee]
+  - @pikku/addon-console@0.12.2
+  - @pikku/ai-vercel@0.12.2
+  - @pikku/core@0.12.3
+  - @pikku/kysely@0.13.0
+  - @pikku/redis@0.12.3
+  - @pikku/uws@0.12.3
+  - @pikku/kysely-mysql@0.12.3
+  - @pikku/kysely-postgres@0.12.3
+  - @pikku/kysely-sqlite@0.12.3
