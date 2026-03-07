@@ -1,0 +1,22 @@
+{
+  "name": "@pikku/kysely-sqlite",
+  "version": "0.12.2",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/src/index.js",
+  "main": "dist/src/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "kysely": "^0.28.11"
+  },
+  "devDependencies": {
+    "typescript": "^5.9"
+  }
+}
