@@ -1,5 +1,3 @@
-export { PikkuKysely } from './pikku-kysely.js'
-
 export { KyselyChannelStore } from './kysely-channel-store.js'
 export { KyselyEventHubStore } from './kysely-eventhub-store.js'
 export { KyselyWorkflowService } from './kysely-workflow-service.js'

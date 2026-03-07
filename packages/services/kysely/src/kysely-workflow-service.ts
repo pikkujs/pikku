@@ -16,7 +16,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   private initialized = false
   private runService: KyselyWorkflowRunService
 
-  constructor(private db: Kysely<KyselyPikkuDB>) {
+  constructor(protected db: Kysely<KyselyPikkuDB>) {
     super()
     this.runService = new KyselyWorkflowRunService(db)
   }
@@ -463,33 +463,16 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async withRunLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
-    return this.db.transaction().execute(async (trx) => {
-      await trx
-        .selectFrom('workflow_runs')
-        .select('workflow_run_id')
-        .where('workflow_run_id', '=', id)
-        .forUpdate()
-        .executeTakeFirst()
-      return fn()
-    })
+  async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
+    return fn()
   }
 
   async withStepLock<T>(
-    runId: string,
-    stepName: string,
+    _runId: string,
+    _stepName: string,
     fn: () => Promise<T>
   ): Promise<T> {
-    return this.db.transaction().execute(async (trx) => {
-      await trx
-        .selectFrom('workflow_step')
-        .select('workflow_step_id')
-        .where('workflow_run_id', '=', runId)
-        .where('step_name', '=', stepName)
-        .forUpdate()
-        .executeTakeFirst()
-      return fn()
-    })
+    return fn()
   }
 
   async getCompletedGraphState(runId: string): Promise<{

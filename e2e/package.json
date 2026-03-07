@@ -27,6 +27,8 @@
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
+    "@pikku/kysely-mysql": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/uws": "workspace:*",

@@ -18,8 +18,11 @@ import {
   createConfig,
   createSingletonServices,
 } from '../../functions/src/services.js'
-import { KyselyChannelStore, KyselyEventHubStore } from '@pikku/kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import {
+  PgKyselyChannelStore,
+  PgKyselyEventHubStore,
+} from '@pikku/kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
@@ -47,8 +50,8 @@ const getParams = async (event: APIGatewayEvent) => {
     const db = new Kysely<KyselyPikkuDB>({
       dialect: new PostgresJSDialect({ postgres: sql }),
     })
-    const channelStore = new KyselyChannelStore(db)
-    const eventHubStore = new KyselyEventHubStore(db)
+    const channelStore = new PgKyselyChannelStore(db)
+    const eventHubStore = new PgKyselyEventHubStore(db)
 
     await channelStore.init()
     await eventHubStore.init()
