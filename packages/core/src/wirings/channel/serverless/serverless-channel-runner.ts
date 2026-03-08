@@ -276,7 +276,10 @@ export const runChannelMessage = async (
     singletonServices.logger.error(
       `Error processing message: ${e.message || e}`
     )
-    return { error: e.message || 'Unknown error' }
+    return {
+      error: e.message || 'Unknown error',
+      errorName: e.constructor?.name,
+    }
   } finally {
     if (wireServices) {
       await closeWireServices(singletonServices.logger, wireServices)
