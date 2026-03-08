@@ -27,6 +27,7 @@ export interface SecuritySchemeInfo {
 export interface ParsedSpec {
   info: { title: string; version: string; description?: string }
   baseUrl: string
+  serverUrls: string[]
   authType: 'bearer' | 'oauth2' | 'apiKey' | 'none'
   operations: ParsedOperation[]
   componentSchemas: Record<string, OpenAPISchema>
@@ -75,6 +76,20 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
     doc = parseYAML(content)
   }
 
+  // Validate spec version
+  const specVersion = doc.openapi ?? doc.swagger
+  if (!specVersion) {
+    throw new Error(
+      'Not a valid OpenAPI/Swagger spec: missing "openapi" or "swagger" version field.'
+    )
+  }
+  const major = String(specVersion).split('.')[0]
+  if (major !== '2' && major !== '3') {
+    throw new Error(
+      `Unsupported spec version "${specVersion}". Only OpenAPI 3.x and Swagger 2.x are supported.`
+    )
+  }
+
   // Resolve all $ref pointers in-place
   resolveRefs(doc, doc)
 
@@ -84,7 +99,8 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
     description: doc.info?.description,
   }
 
-  const baseUrl = extractBaseUrl(doc)
+  const serverUrls = extractServerUrls(doc)
+  const baseUrl = serverUrls[0] ?? ''
   const authType = detectAuthType(doc)
   const securitySchemes = extractSecuritySchemes(doc)
   const tagDescriptions = extractTagDescriptions(doc)
@@ -142,6 +158,7 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
   return {
     info,
     baseUrl,
+    serverUrls,
     authType,
     operations,
     componentSchemas,
@@ -192,18 +209,18 @@ function resolveRefPath(ref: string, root: any): any {
   return current
 }
 
-function extractBaseUrl(doc: any): string {
+function extractServerUrls(doc: any): string[] {
   // OpenAPI 3.x
   if (doc.servers && doc.servers.length > 0) {
-    return doc.servers[0].url ?? ''
+    return doc.servers.map((s: any) => s.url).filter((url: string) => !!url)
   }
   // Swagger 2.x
   if (doc.host) {
-    const scheme = doc.schemes?.[0] ?? 'https'
+    const schemes = doc.schemes?.length ? doc.schemes : ['https']
     const basePath = doc.basePath ?? ''
-    return `${scheme}://${doc.host}${basePath}`
+    return schemes.map((scheme: string) => `${scheme}://${doc.host}${basePath}`)
   }
-  return ''
+  return []
 }
 
 function detectAuthType(doc: any): 'bearer' | 'oauth2' | 'apiKey' | 'none' {
