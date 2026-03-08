@@ -127,6 +127,7 @@ jobs:
             workflows-pg-boss,
             remote-rpc-pg,
             remote-rpc-redis,
+            ai-postgres,
           ]
         package-manager: [yarn]
     steps:
