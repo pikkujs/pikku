@@ -8,6 +8,7 @@ interface DynamicWorkflowState {
   consoleResponse: any
   rpcResponse: any
   threadId: string
+  lastAgentName: string
 }
 
 const state: DynamicWorkflowState = {
@@ -15,6 +16,7 @@ const state: DynamicWorkflowState = {
   consoleResponse: undefined,
   rpcResponse: undefined,
   threadId: randomUUID(),
+  lastAgentName: '',
 }
 
 Before('@dynamic-workflows', async function () {
@@ -22,6 +24,7 @@ Before('@dynamic-workflows', async function () {
   state.agentResponse = undefined
   state.consoleResponse = undefined
   state.rpcResponse = undefined
+  state.lastAgentName = ''
   await fetch(`${config.apiUrl}/rpc/todos:resetTodos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -33,6 +36,7 @@ When(
   'I send the agent {string} the message {string}',
   { timeout: 60_000 },
   async function (agentName: string, message: string) {
+    state.lastAgentName = agentName
     const res = await fetch(`${config.apiUrl}/rpc/agent/${agentName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -44,6 +48,36 @@ When(
       }),
     })
     state.agentResponse = await res.json()
+  }
+)
+
+When(
+  'I approve all pending approvals',
+  { timeout: 120_000 },
+  async function () {
+    let response = state.agentResponse
+    let safety = 10
+    while (safety-- > 0 && response?.pendingApprovals?.length > 0) {
+      const runId = response.runId ?? response.pendingApprovals[0]?.runId
+      const approvals = response.pendingApprovals.map((a: any) => ({
+        toolCallId: a.toolCallId,
+        approved: true,
+      }))
+      const res = await fetch(
+        `${config.apiUrl}/rpc/agent/${state.lastAgentName}/approve`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agentName: state.lastAgentName,
+            runId,
+            approvals,
+          }),
+        }
+      )
+      response = await res.json()
+      state.agentResponse = response
+    }
   }
 )
 
@@ -137,6 +171,16 @@ Then('the todo {string} should be completed', function (title: string) {
   )
   expect(found).toBeTruthy()
   expect(found.completed).toBe(true)
+})
+
+Then('a new completed todo should exist', function () {
+  const todos = state.rpcResponse?.todos ?? state.rpcResponse
+  expect(Array.isArray(todos)).toBeTruthy()
+  const seedIds = new Set(['1', '2', '3'])
+  const newCompleted = todos.find(
+    (t: any) => !seedIds.has(t.id) && t.completed === true
+  )
+  expect(newCompleted).toBeTruthy()
 })
 
 Then('the todo {string} should not be in the list', function (title: string) {
