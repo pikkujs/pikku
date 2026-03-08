@@ -173,6 +173,9 @@ export function generateAddonFromOpenAPI(
     flags
   )
 
+  // Generate variable file for BASE_URL
+  files[`src/${name}.variable.ts`] = generateVariableFile(spec, vars)
+
   return files
 }
 
@@ -401,8 +404,6 @@ function generateServiceFile(
   const { name, pascalName, screamingName, displayName } = vars
   const lines: string[] = []
 
-  const baseUrl = spec.baseUrl || 'https://api.example.com'
-
   // Always import all error classes used in the switch statement
   const allErrorClasses = new Set<string>(Object.values(STATUS_TO_ERROR))
 
@@ -423,8 +424,9 @@ function generateServiceFile(
     )
   }
 
-  lines.push('')
-  lines.push(`const BASE_URL = ${JSON.stringify(baseUrl)}`)
+  lines.push(
+    `import type { TypedVariablesService } from '#pikku/variables/pikku-variables.gen.js'`
+  )
   lines.push('')
 
   if (flags.oauth) {
@@ -475,11 +477,17 @@ function generateServiceFile(
 
   // Class declaration
   lines.push(`export class ${pascalName}Service {`)
+  lines.push('  private baseUrl: string')
 
   if (flags.oauth) {
     lines.push('  private oauth: OAuth2Client')
     lines.push('')
-    lines.push(`  constructor(secrets: TypedSecretService) {`)
+    lines.push(
+      `  constructor(secrets: TypedSecretService, variables: TypedVariablesService) {`
+    )
+    lines.push(
+      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
+    )
     lines.push('    this.oauth = new OAuth2Client(')
     lines.push(`      ${screamingName}_OAUTH2_CONFIG,`)
     lines.push(`      '${screamingName}_APP_CREDENTIALS',`)
@@ -487,7 +495,21 @@ function generateServiceFile(
     lines.push('    )')
     lines.push('  }')
   } else if (flags.secret) {
-    lines.push(`  constructor(private creds: ${pascalName}Secrets) {}`)
+    lines.push('')
+    lines.push(
+      `  constructor(private creds: ${pascalName}Secrets, variables: TypedVariablesService) {`
+    )
+    lines.push(
+      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
+    )
+    lines.push('  }')
+  } else {
+    lines.push('')
+    lines.push(`  constructor(variables: TypedVariablesService) {`)
+    lines.push(
+      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
+    )
+    lines.push('  }')
   }
 
   lines.push('')
@@ -541,7 +563,7 @@ function generateServiceFile(
   lines.push('      }')
   lines.push('    }')
   lines.push('')
-  lines.push('    const url = new URL(`${BASE_URL}${endpoint}`)')
+  lines.push('    const url = new URL(`${this.baseUrl}${endpoint}`)')
   lines.push('    for (const [key, value] of Object.entries(query)) {')
   lines.push('      url.searchParams.set(key, value)')
   lines.push('    }')
@@ -611,6 +633,36 @@ function generateServiceFile(
   lines.push('  }')
 
   lines.push('}')
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
+  const { camelName, screamingName, displayName } = vars
+  const serverUrls = spec.serverUrls.length > 0 ? spec.serverUrls : []
+  const defaultUrl = serverUrls[0]
+
+  const lines: string[] = []
+  lines.push("import { z } from 'zod'")
+  lines.push("import { wireVariable } from '@pikku/core/variable'")
+  lines.push('')
+
+  const schemaVarName = `${camelName}BaseUrlSchema`
+
+  const urlsLiteral = serverUrls.map((u) => JSON.stringify(u)).join(', ')
+  lines.push(
+    `export const ${schemaVarName} = z.enum([${urlsLiteral}]).default(${JSON.stringify(defaultUrl)})`
+  )
+
+  lines.push('')
+  lines.push(`wireVariable({`)
+  lines.push(`  name: '${screamingName}_BASE_URL',`)
+  lines.push(`  displayName: '${displayName} Base URL',`)
+  lines.push(`  description: 'The base URL for the ${displayName} API.',`)
+  lines.push(`  variableId: '${screamingName}_BASE_URL',`)
+  lines.push(`  schema: ${schemaVarName},`)
+  lines.push(`})`)
   lines.push('')
 
   return lines.join('\n')
