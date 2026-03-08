@@ -32,6 +32,7 @@ export {
   deserializeAllDslWorkflows,
 } from './utils/workflow/dsl/index.js'
 export { getFilesAndMethods } from './utils/get-files-and-methods.js'
+export { resolveFunctionMeta } from './utils/resolve-function-meta.js'
 export type {
   SerializedWorkflowGraph,
   SerializedWorkflowGraphs,

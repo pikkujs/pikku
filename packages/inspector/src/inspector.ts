@@ -30,6 +30,7 @@ import {
   finalizeWorkflowWires,
 } from './utils/workflow/graph/finalize-workflow-wires.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
+import { loadAddonFunctionsMeta } from './utils/load-addon-functions-meta.js'
 import {
   computeContractHashes,
   extractContractsFromMeta,
@@ -198,6 +199,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     requiredSchemas: new Set(),
     openAPISpec: null,
     diagnostics: [],
+    addonFunctions: {},
   }
 }
 
@@ -252,6 +254,9 @@ export const inspect = async (
   logger.debug(
     `Visit setup phase completed in ${(performance.now() - startSetup).toFixed(2)}ms`
   )
+
+  // Load addon function metadata so wirings can reference addon functions
+  await loadAddonFunctionsMeta(logger, state)
 
   if (!options.setupOnly) {
     // Second sweep: add all transports

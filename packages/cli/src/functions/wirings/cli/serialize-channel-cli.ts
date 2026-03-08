@@ -92,7 +92,9 @@ export function serializeChannelCLI(
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuMiddleware${hasAddonFuncs ? ', addon' : ''} } from '${functionTypesPath}'
+import { pikkuMiddleware${hasAddonFuncs ? ', addon' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
+import { generateCommandHelp } from '@pikku/core/cli'
+import { pikkuState } from '@pikku/core/internal'
 ${imports}
 
 // Middleware to close the channel after CLI command completes
@@ -107,7 +109,7 @@ const cliCloseOnComplete = pikkuMiddleware(async (_services, { channel }, next) 
       }
     }, 200)
   }
-  
+
   try {
     const result = await next()
     closeChannel()
@@ -118,12 +120,26 @@ const cliCloseOnComplete = pikkuMiddleware(async (_services, { channel }, next) 
   }
 })
 
+export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string }>({
+  auth: false,
+  func: async (_services, data: { args?: string[] }) => {
+    const cliMeta = pikkuState(null, 'cli', 'meta')
+    const commandPath = data?.args?.length ? data.args : []
+    const helpText = generateCommandHelp('${programName}', cliMeta as any, commandPath)
+    return { help: helpText }
+  },
+})
+
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
   auth: false,
   onMessageWiring: {
     command: {
+      '__help': {
+        func: cliHelp,
+        middleware: [cliCloseOnComplete],
+      },
 ${Object.entries(commandMap)
   .map(([commandKey, { pikkuFuncId, isAddon }]) => {
     const funcRef = isAddon

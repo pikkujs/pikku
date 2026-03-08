@@ -14,6 +14,7 @@ export const pikkuChannelsMap = pikkuSessionlessFunc<void, void>({
       packageMappings,
       state.functions.typesMap,
       state.functions.meta,
+      state.addonFunctions,
       state.channels.meta
     )
     await writeFileInDir(logger, channelsMapDeclarationFile, content)

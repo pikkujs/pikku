@@ -1,7 +1,7 @@
 import type { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
 import type { TypesMap } from '@pikku/inspector'
-import { generateCustomTypes } from '@pikku/inspector'
+import { generateCustomTypes, resolveFunctionMeta } from '@pikku/inspector'
 import type { FunctionsMeta } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
@@ -11,10 +11,12 @@ export const serializeTypedChannelsMap = (
   packageMappings: Record<string, string>,
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
+  addonFunctions: Record<string, FunctionsMeta>,
   channelsMeta: ChannelsMeta
 ): string => {
   const { channels, requiredTypes } = generateChannels(
     functionsMeta,
+    addonFunctions,
     channelsMeta
   )
   typesMap.customTypes.forEach(({ references }) => {
@@ -66,8 +68,10 @@ export type ChannelWiringHandlerOf<
 
 function generateChannels(
   functionsMeta: FunctionsMeta,
+  addonFunctions: Record<string, FunctionsMeta>,
   channelsMeta: ChannelsMeta
 ) {
+  const state = { functions: { meta: functionsMeta }, addonFunctions }
   const requiredTypes = new Set<string>()
   const channelsObject: Record<
     string,
@@ -94,7 +98,7 @@ function generateChannels(
     }
 
     if (message) {
-      const func = functionsMeta[message.pikkuFuncId]
+      const func = resolveFunctionMeta(state, message.pikkuFuncId)
       if (!func) {
         throw new Error(
           `Function ${message.pikkuFuncId} not found in functionsMeta for channel ${name}`
@@ -115,7 +119,7 @@ function generateChannels(
         channelsObject[name].routes[key] = {}
       }
       for (const [method, { pikkuFuncId }] of Object.entries(route)) {
-        const func = functionsMeta[pikkuFuncId]
+        const func = resolveFunctionMeta(state, pikkuFuncId)
         if (!func) {
           throw new Error(
             `Function ${pikkuFuncId} not found in functionsMeta for channel ${name}, route ${key}, method ${method}`
