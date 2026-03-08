@@ -188,7 +188,8 @@ export function buildWorkflowTools(
 
   tools.push({
     name: 'saveAgentWorkflow',
-    description: 'Save a previously validated workflow so it can be executed.',
+    description:
+      'Save a previously validated workflow so it can be executed. Requires user approval. Always include the nodes JSON from createAgentWorkflow.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -197,23 +198,107 @@ export function buildWorkflowTools(
           description:
             'Full workflow name returned by createAgentWorkflow (e.g. ai:agentName:myWorkflow)',
         },
+        nodes: {
+          type: 'string',
+          description:
+            'JSON string of the workflow nodes (same as passed to createAgentWorkflow). Required for persistence.',
+        },
+        description: {
+          type: 'string',
+          description: 'What this workflow does',
+        },
       },
-      required: ['name'],
+      required: ['name', 'nodes'],
     },
-    execute: async (input: unknown) => {
-      const { name } = input as { name: string }
-      const fullName = name.startsWith(`ai:${agentName}:`)
-        ? name
-        : `ai:${agentName}:${name}`
-
+    needsApproval: true,
+    approvalDescriptionFn: async (input: unknown) => {
+      const raw = input as {
+        name: string
+        nodes?: string
+        description?: string
+      }
+      const fullName = raw.name.startsWith(`ai:${agentName}:`)
+        ? raw.name
+        : `ai:${agentName}:${raw.name}`
       const pending = pendingWorkflows.get(fullName)
-      if (!pending) {
-        return {
-          error: `No pending workflow '${fullName}'. Call createAgentWorkflow first.`,
+      if (pending) {
+        const nodeCount = Object.keys(pending.meta.nodes!).length
+        const desc = pending.meta.description
+          ? `\n${pending.meta.description}`
+          : ''
+        return `Save workflow '${fullName}' (${nodeCount} nodes)${desc}\n\n${pending.mermaid}`
+      }
+      if (raw.nodes) {
+        try {
+          const nodes =
+            typeof raw.nodes === 'string' ? JSON.parse(raw.nodes) : raw.nodes
+          const nodeCount = Object.keys(nodes).length
+          const entryNodeIds = computeEntryNodeIds(nodes)
+          const mermaid = generateMermaidDiagram(fullName, nodes, entryNodeIds)
+          const desc = raw.description ? `\n${raw.description}` : ''
+          return `Save workflow '${fullName}' (${nodeCount} nodes)${desc}\n\n${mermaid}`
+        } catch {
+          return `Save workflow '${fullName}'`
         }
       }
+      return `Save workflow '${fullName}'`
+    },
+    execute: async (input: unknown) => {
+      const raw = input as {
+        name: string
+        nodes?: string | Record<string, any>
+        description?: string
+      }
+      const fullName = raw.name.startsWith(`ai:${agentName}:`)
+        ? raw.name
+        : `ai:${agentName}:${raw.name}`
 
-      const { meta } = pending
+      let meta: WorkflowRuntimeMeta
+      const pending = pendingWorkflows.get(fullName)
+
+      if (pending) {
+        meta = pending.meta
+        pendingWorkflows.delete(fullName)
+      } else if (raw.nodes) {
+        let nodes: Record<string, any>
+        if (typeof raw.nodes === 'string') {
+          try {
+            nodes = JSON.parse(raw.nodes)
+          } catch {
+            return { error: 'Invalid JSON in nodes field' }
+          }
+        } else {
+          nodes = raw.nodes
+        }
+
+        const validationErrors = validateWorkflowWiring(nodes, toolNames)
+        if (validationErrors.length > 0) {
+          return {
+            error: 'Workflow validation failed',
+            errors: validationErrors,
+          }
+        }
+
+        const entryNodeIds = computeEntryNodeIds(nodes)
+        if (entryNodeIds.length === 0) {
+          return { error: 'No entry nodes found.' }
+        }
+
+        const graphHash = hashString(canonicalJSON({ nodes, entryNodeIds }))
+        meta = {
+          name: fullName,
+          pikkuFuncId: fullName,
+          source: 'ai-agent',
+          description: raw.description,
+          nodes,
+          entryNodeIds,
+          graphHash,
+        }
+      } else {
+        return {
+          error: `No pending workflow '${fullName}' and no nodes provided. Include the nodes JSON from createAgentWorkflow.`,
+        }
+      }
 
       const allMeta = pikkuState(null, 'workflows', 'meta')
       allMeta[fullName] = meta
@@ -236,8 +321,6 @@ export function buildWorkflowTools(
           entryNodeIds: meta.entryNodeIds!,
         })
       }
-
-      pendingWorkflows.delete(fullName)
 
       return {
         success: true,
@@ -309,6 +392,20 @@ export function buildWorkflowTools(
         },
       },
       required: ['name'],
+    },
+    needsApproval: true,
+    approvalDescriptionFn: async (input: unknown) => {
+      const { name, input: workflowInput } = input as {
+        name: string
+        input?: Record<string, any>
+      }
+      const fullName = name.startsWith(`ai:${agentName}:`)
+        ? name
+        : `ai:${agentName}:${name}`
+      const inputStr = workflowInput
+        ? `\nInput: ${JSON.stringify(workflowInput)}`
+        : ''
+      return `Execute workflow '${fullName}'${inputStr}`
     },
     execute: async (toolInput: unknown) => {
       const { name, input: workflowInput } = toolInput as {

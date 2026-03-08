@@ -10,6 +10,7 @@ Feature: Dynamic Workflows via Todo Agent (API)
 
   Scenario: Explicit workflow creation with tool names
     When I send the agent "todoAgent" the message "Use createAgentWorkflow to create a workflow called 'add-and-list' with two nodes: first node calls todos:addTodo with input title 'Workflow task', second node calls todos:listTodos. The first node should flow to the second. Then save it using saveAgentWorkflow."
+    And I approve all pending approvals
     Then the agent response should contain "add-and-list"
     And the agent response should contain "saved"
 
@@ -17,6 +18,7 @@ Feature: Dynamic Workflows via Todo Agent (API)
     Then the agent response should contain "add-and-list"
 
     When I send the agent "todoAgent" the message "Use executeAgentWorkflow to run the 'add-and-list' workflow"
+    And I approve all pending approvals
     Then the agent response should not contain "error"
 
     When I query the console RPC "console:getWorkflowRuns"
@@ -24,10 +26,12 @@ Feature: Dynamic Workflows via Todo Agent (API)
 
   Scenario Outline: Natural language workflow - <style>
     When I send the agent "todoAgent" the message "<create_prompt> Save it when ready."
+    And I approve all pending approvals
     Then the agent response should contain "workflow"
     And the agent response should not contain "error"
 
     When I send the agent "todoAgent" the message "Run that workflow with the title 'Sleep test item'."
+    And I approve all pending approvals
     Then the agent response should not contain "error"
 
     When I query the console RPC "console:getWorkflowRuns"

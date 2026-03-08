@@ -4,7 +4,7 @@ export {
   agentResume,
   agentApprove,
 } from './ai-agent-helpers.js'
-export { runAIAgent } from './ai-agent-runner.js'
+export { runAIAgent, resumeAIAgentSync } from './ai-agent-runner.js'
 export { streamAIAgent, resumeAIAgent } from './ai-agent-stream.js'
 export {
   type RunAIAgentParams,
