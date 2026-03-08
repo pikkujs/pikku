@@ -119,9 +119,12 @@ export const runLocalChannel = async ({
             if (result !== undefined) {
               await channel.send(result)
             }
-          } catch (e) {
+          } catch (e: any) {
             singletonServices.logger.error(`Error handling onConnect: ${e}`)
-            channel.send({ error: e.message || 'Unknown error' })
+            channel.send({
+              error: e.message || 'Unknown error',
+              errorName: e.constructor?.name,
+            })
           }
         }
       })
@@ -138,9 +141,12 @@ export const runLocalChannel = async ({
               channel,
               channelMiddlewareMeta: meta.channelMiddleware,
             })
-          } catch (e) {
+          } catch (e: any) {
             singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
-            channel.send({ error: e.message || 'Unknown error' })
+            channel.send({
+              error: e.message || 'Unknown error',
+              errorName: e.constructor?.name,
+            })
           }
         }
 
@@ -157,9 +163,12 @@ export const runLocalChannel = async ({
         try {
           const result = await onMessage(data)
           await channel.send(result)
-        } catch (e) {
+        } catch (e: any) {
           singletonServices.logger.error(e)
-          channel.send({ error: e.message || 'Unknown error' })
+          channel.send({
+            error: e.message || 'Unknown error',
+            errorName: e.constructor?.name,
+          })
           setTimeout(() => channel.close(), 200)
         }
       })
