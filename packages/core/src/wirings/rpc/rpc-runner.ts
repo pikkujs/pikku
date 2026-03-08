@@ -206,6 +206,11 @@ export class ContextAwareRPCService {
           }
         : undefined,
     }
+
+    if (rpcName.includes(':')) {
+      return this.invokeAddonFunction<In, Out>(rpcName, data, mergedWire)
+    }
+
     return runPikkuFunc<In, Out>(
       'rpc',
       rpcName,

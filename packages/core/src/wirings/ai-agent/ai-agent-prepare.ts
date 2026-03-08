@@ -103,23 +103,32 @@ export const resolveAgent = (
   throw new Error(`AI agent not found: ${agentName}`)
 }
 
-export function buildInstructions(
+export async function buildInstructions(
   agentName: string,
   packageName: string | null
-): string {
+): Promise<string> {
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
-  const instructions = meta?.instructions ?? ''
-  const baseInstructions = Array.isArray(instructions)
-    ? instructions.join('\n')
-    : instructions
+  const rawInstructions = meta?.instructions ?? ''
+  let instructions = Array.isArray(rawInstructions)
+    ? rawInstructions.join('\n')
+    : rawInstructions
 
-  return meta?.agents?.length
-    ? baseInstructions +
-        '\n\nWhen calling a sub-agent, provide a short session name that describes the task. ' +
-        'Use the same session name to continue a previous conversation with that agent. ' +
-        'Use a new session name for a new independent task. ' +
-        'When a request involves multiple actions for the same domain, combine them into a single sub-agent call rather than making separate calls.'
-    : baseInstructions
+  if (meta?.agents?.length) {
+    instructions +=
+      '\n\nWhen calling a sub-agent, provide a short session name that describes the task. ' +
+      'Use the same session name to continue a previous conversation with that agent. ' +
+      'Use a new session name for a new independent task. ' +
+      'When a request involves multiple actions for the same domain, combine them into a single sub-agent call rather than making separate calls.'
+  }
+
+  if (meta?.dynamicWorkflows && meta.tools?.length) {
+    const { buildDynamicWorkflowInstructions } = await import(
+      './agent-dynamic-workflow.js'
+    )
+    instructions += buildDynamicWorkflowInstructions(meta.tools, packageName)
+  }
+
+  return instructions
 }
 
 export type ScopedChannel = AIStreamChannel & {
@@ -167,7 +176,8 @@ export function createScopedChannel(
         event.type === 'tool-call' ||
         event.type === 'tool-result' ||
         event.type === 'usage' ||
-        event.type === 'error'
+        event.type === 'error' ||
+        event.type === 'workflow-created'
       ) {
         parent.send({ ...event, agent: agentName, session } as AIStreamEvent)
       } else {
@@ -177,7 +187,7 @@ export function createScopedChannel(
   }
 }
 
-export function buildToolDefs(
+export async function buildToolDefs(
   params: RunAIAgentParams,
   agentSessionMap: Map<string, string>,
   resourceId: string,
@@ -186,7 +196,7 @@ export function buildToolDefs(
   streamContext?: StreamContext,
   aiMiddlewares?: PikkuAIMiddlewareHooks[],
   agentMode?: 'delegate' | 'supervise'
-): { tools: AIAgentToolDef[]; missingRpcs: string[] } {
+): Promise<{ tools: AIAgentToolDef[]; missingRpcs: string[] }> {
   const singletonServices = getSingletonServices()
   const tools: AIAgentToolDef[] = []
   const missingRpcs: string[] = []
@@ -407,6 +417,18 @@ export function buildToolDefs(
     }
   }
 
+  if (meta.dynamicWorkflows) {
+    const { buildWorkflowTools } = await import('./agent-dynamic-workflow.js')
+    const workflowTools = buildWorkflowTools(
+      agentName,
+      packageName,
+      meta.tools ?? [],
+      streamContext,
+      params.sessionService
+    )
+    tools.push(...workflowTools)
+  }
+
   const hasToolHooks = aiMiddlewares?.some(
     (mw) => mw.beforeToolCall || mw.afterToolCall
   )
@@ -481,6 +503,19 @@ export async function prepareAgentRun(
     throw new Error('AIAgentRunnerService not available in singletonServices')
   }
 
+  if (agent.dynamicWorkflows && singletonServices.workflowService) {
+    const persisted =
+      await singletonServices.workflowService.getAIGeneratedWorkflows(
+        resolvedName
+      )
+    const allMeta = pikkuState(null, 'workflows', 'meta')
+    for (const wf of persisted) {
+      if (!allMeta[wf.workflowName]) {
+        allMeta[wf.workflowName] = wf.graph
+      }
+    }
+  }
+
   const { storage } = resolveMemoryServices(agent, singletonServices)
   const memoryConfig = agent.memory
   const threadId = input.threadId
@@ -547,7 +582,7 @@ export async function prepareAgentRun(
 
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
 
-  const { tools, missingRpcs } = buildToolDefs(
+  const { tools, missingRpcs } = await buildToolDefs(
     params,
     agentSessionMap,
     input.resourceId,
@@ -558,7 +593,7 @@ export async function prepareAgentRun(
     agent.agentMode
   )
 
-  const instructions = buildInstructions(resolvedName, packageName)
+  const instructions = await buildInstructions(resolvedName, packageName)
 
   const resolved = resolveModelConfig(resolvedName, agent)
 

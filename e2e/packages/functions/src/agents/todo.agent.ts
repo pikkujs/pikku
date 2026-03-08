@@ -12,9 +12,12 @@ export const todoAgent = pikkuAIAgent({
     addon('todos:listTodos'),
     addon('todos:getTodo'),
     addon('todos:addTodo'),
+    addon('todos:completeTodo'),
     addon('todos:deleteTodo'),
+    addon('graph:sleep'),
   ],
   aiMiddleware: [uppercaseMiddleware],
-  maxSteps: 5,
+  maxSteps: 10,
   toolChoice: 'auto',
+  dynamicWorkflows: true,
 })

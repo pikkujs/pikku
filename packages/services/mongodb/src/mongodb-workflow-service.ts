@@ -548,5 +548,20 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getWorkflowVersion(name, graphHash)
   }
 
+  async getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
+    const filter: Record<string, any> = { source: 'ai-agent' }
+    if (agentName) {
+      filter.workflowName = { $regex: `^ai:${agentName}:` }
+    }
+    const docs = await this.versions.find(filter).toArray()
+    return docs.map((doc) => ({
+      workflowName: doc.workflowName,
+      graphHash: doc.graphHash,
+      graph: doc.graph,
+    }))
+  }
+
   async close(): Promise<void> {}
 }

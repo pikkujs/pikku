@@ -622,5 +622,23 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return this.runService.getWorkflowVersion(name, graphHash)
   }
 
+  async getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
+    let query = this.db
+      .selectFrom('workflow_versions')
+      .select(['workflow_name', 'graph_hash', 'graph'])
+      .where('source', '=', 'ai-agent')
+    if (agentName) {
+      query = query.where('workflow_name', 'like', `ai:${agentName}:%`)
+    }
+    const rows = await query.execute()
+    return rows.map((row) => ({
+      workflowName: row.workflow_name,
+      graphHash: row.graph_hash,
+      graph: typeof row.graph === 'string' ? JSON.parse(row.graph) : row.graph,
+    }))
+  }
+
   async close(): Promise<void> {}
 }
