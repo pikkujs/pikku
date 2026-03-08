@@ -68,13 +68,14 @@ export const pikkuAddonServices = <T extends Record<string, any>, ExistingServic
   func: (config: Config, services: ExistingServices) => Promise<T>
 ) => {
   return async (config: Config, existingServices?: Partial<SingletonServices>): Promise<RequiredSingletonServices> => {
-    const { logger, variables, secrets } = (existingServices ?? {}) as unknown as SingletonServices
+    const { logger, variables, secrets, schema } = (existingServices ?? {}) as unknown as SingletonServices
     const typedVariables = new TypedVariablesService(variables)
     const typedSecrets = new TypedSecretService(secrets)
     const result = await func(config, { ...existingServices, logger, variables: typedVariables, secrets: typedSecrets } as ExistingServices)
     return {
       config,
       logger,
+      schema,
       variables: typedVariables,
       secrets: typedSecrets,
       ...result,
