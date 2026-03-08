@@ -158,8 +158,9 @@ export const runLocalChannel = async ({
           const result = await onMessage(data)
           await channel.send(result)
         } catch (e) {
-          singletonServices.logger.error(`Error handling message: ${e.message}`)
+          singletonServices.logger.error(e)
           channel.send({ error: e.message || 'Unknown error' })
+          setTimeout(() => channel.close(), 200)
         }
       })
       if (onBinaryMessage) {

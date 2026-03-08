@@ -250,6 +250,7 @@ export interface SerializableInspectorState {
   requiredSchemas: string[]
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
+  addonFunctions: InspectorState['addonFunctions']
 }
 
 /**
@@ -418,6 +419,7 @@ export function serializeInspectorState(
     requiredSchemas: Array.from(state.requiredSchemas),
     openAPISpec: state.openAPISpec,
     diagnostics: state.diagnostics,
+    addonFunctions: state.addonFunctions,
   }
 }
 
@@ -593,5 +595,6 @@ export function deserializeInspectorState(
     requiredSchemas: new Set(data.requiredSchemas || []),
     openAPISpec: data.openAPISpec || null,
     diagnostics: data.diagnostics || [],
+    addonFunctions: data.addonFunctions || {},
   }
 }

@@ -418,4 +418,5 @@ export interface InspectorState {
   requiredSchemas: Set<string>
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
+  addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
 }

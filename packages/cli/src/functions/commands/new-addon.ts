@@ -161,9 +161,9 @@ import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
-  { secrets }
+  { secrets, variables }
 ) => {
-  const ${camelName} = new ${pascalName}Service(secrets)
+  const ${camelName} = new ${pascalName}Service(secrets, variables)
 
   return { ${camelName} }
 })
@@ -176,10 +176,10 @@ import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
-  { secrets }
+  { secrets, variables }
 ) => {
   const creds = await secrets.getSecretJSON<${pascalName}Secrets>('${screamingName}_CREDENTIALS')
-  const ${camelName} = new ${pascalName}Service(creds)
+  const ${camelName} = new ${pascalName}Service(creds, variables)
 
   return { ${camelName} }
 })
@@ -191,8 +191,9 @@ import { pikkuAddonServices } from '#pikku'
 
 export const createSingletonServices = pikkuAddonServices(async (
   config,
+  { variables }
 ) => {
-  const ${camelName} = new ${pascalName}Service()
+  const ${camelName} = new ${pascalName}Service(variables)
 
   return { ${camelName} }
 })

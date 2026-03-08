@@ -98,12 +98,24 @@ export const processMessageHandlers = (
       return
     }
 
+    const routeMeta = getRouteMeta(
+      channelConfig.name,
+      routingProperty,
+      routerValue
+    )
     const {
-      pikkuFuncId,
       packageName,
       middleware: routeInheritedMiddleware,
       permissions: inheritedPermissions,
-    } = getRouteMeta(channelConfig.name, routingProperty, routerValue)
+    } = routeMeta
+
+    // Strip namespace prefix for addon functions (e.g. 'swaggerPetstore:addPet' → 'addPet')
+    const pikkuFuncId =
+      packageName && routeMeta.pikkuFuncId.includes(':')
+        ? routeMeta.pikkuFuncId.substring(
+            routeMeta.pikkuFuncId.indexOf(':') + 1
+          )
+        : routeMeta.pikkuFuncId
 
     // Get wire middleware: channel-level middleware + message-specific middleware
     const channelWireMiddleware = channelConfig.middleware || []

@@ -69,7 +69,18 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
           const channelName = entrypointConfig.name
           const channelRoute = entrypointConfig.route
 
-          const channelWireFile = join(config.rootDir, channelWirePath)
+          // Validate wirePath is not inside the output directory
+          const resolvedWirePath = join(config.rootDir, channelWirePath)
+          const resolvedOutDir = join(config.rootDir, config.outDir)
+          if (resolvedWirePath.startsWith(resolvedOutDir)) {
+            throw new Error(
+              `CLI channel wirePath "${channelWirePath}" must not be inside the output directory "${config.outDir}". ` +
+                `The wire file uses wireChannel() which must be in a source directory so the inspector can discover it. ` +
+                `Move it to a source directory like "src/wirings/cli-channel.gen.ts".`
+            )
+          }
+
+          const channelWireFile = resolvedWirePath
 
           const channelCode = serializeChannelCLI(
             programName,
