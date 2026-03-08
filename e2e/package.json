@@ -19,11 +19,13 @@
     "test:workflow": "cucumber-js --config tests/cucumber.mjs --tags @workflow",
     "test:addons": "cucumber-js --config tests/cucumber.mjs --tags @addons",
     "test:workflow-ui": "cucumber-js --config tests/cucumber.mjs --tags @workflow-ui",
+    "test:dynamic-workflows": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
     "@pikku/addon-console": "workspace:*",
+    "@pikku/addon-graph": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",

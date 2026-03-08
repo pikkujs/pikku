@@ -900,6 +900,45 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
+  async getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
+    const pattern = agentName
+      ? `${this.keyPrefix}:version:ai\\:${agentName}\\:*`
+      : `${this.keyPrefix}:version:ai\\:*`
+    const results: Array<{
+      workflowName: string
+      graphHash: string
+      graph: any
+    }> = []
+    const versionPrefix = `${this.keyPrefix}:version:`
+    let cursor = '0'
+    do {
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = nextCursor
+      for (const key of keys) {
+        const data = await this.redis.hgetall(key)
+        if (!data.graph || data.source !== 'ai-agent') continue
+        const suffix = key.substring(versionPrefix.length)
+        const hashLen = 16
+        const workflowName = suffix.substring(0, suffix.length - hashLen - 1)
+        const graphHash = suffix.substring(suffix.length - hashLen)
+        results.push({
+          workflowName,
+          graphHash,
+          graph: JSON.parse(data.graph),
+        })
+      }
+    } while (cursor !== '0')
+    return results
+  }
+
   async close(): Promise<void> {
     if (this.ownsConnection) {
       await this.redis.quit()

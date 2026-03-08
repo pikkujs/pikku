@@ -54,6 +54,14 @@ export class TodoStore {
     return todo
   }
 
+  complete(id: string): Todo | undefined {
+    const todo = this.todos.get(id)
+    if (todo) {
+      todo.completed = true
+    }
+    return todo
+  }
+
   delete(id: string): boolean {
     return this.todos.delete(id)
   }

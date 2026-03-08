@@ -871,7 +871,7 @@ export async function resumeAIAgent(
     }
     const aiMiddlewaresForResume: PikkuAIMiddlewareHooks[] =
       agent.aiMiddleware ?? []
-    const { tools } = buildToolDefs(
+    const { tools } = await buildToolDefs(
       params,
       new Map<string, string>(),
       run.resourceId,
@@ -994,7 +994,7 @@ async function continueAfterToolResult(
   const allMessages = [...contextMessages, ...messages]
   const trimmedMessages = trimMessages(allMessages)
 
-  const instructions = buildInstructions(resolvedName, packageName)
+  const instructions = await buildInstructions(resolvedName, packageName)
 
   const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
   let modifiedMessages = trimmedMessages
@@ -1059,14 +1059,16 @@ async function continueAfterToolResult(
   )
 
   const streamContext: StreamContext = { channel, options }
-  const resumeTools = buildToolDefs(
-    params,
-    new Map<string, string>(),
-    run.resourceId,
-    resolvedName,
-    packageName,
-    streamContext,
-    aiMiddlewares
+  const resumeTools = (
+    await buildToolDefs(
+      params,
+      new Map<string, string>(),
+      run.resourceId,
+      resolvedName,
+      packageName,
+      streamContext,
+      aiMiddlewares
+    )
   ).tools
 
   const resolved = resolveModelConfig(resolvedName, agent)

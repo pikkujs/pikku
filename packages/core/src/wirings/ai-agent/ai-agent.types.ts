@@ -204,6 +204,7 @@ export type CoreAIAgent<
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
+  dynamicWorkflows?: boolean
   input?: unknown
   output?: unknown
   tags?: string[]
@@ -278,6 +279,14 @@ export type AIStreamEvent =
       session?: string
     }
   | { type: 'audio-done'; agent?: string; session?: string }
+  | {
+      type: 'workflow-created'
+      workflowName: string
+      nodes: Record<string, any>
+      entryNodeIds: string[]
+      agent?: string
+      session?: string
+    }
   | {
       type: 'suspended'
       reason: 'rpc-missing'
@@ -369,5 +378,6 @@ export type AIAgentMeta = Record<
     channelMiddleware?: MiddlewareMetadata[]
     aiMiddleware?: MiddlewareMetadata[]
     permissions?: PermissionMetadata[]
+    dynamicWorkflows?: boolean
   }
 >

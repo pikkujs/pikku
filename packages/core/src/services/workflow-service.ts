@@ -81,4 +81,8 @@ export interface WorkflowService {
     name: string,
     graphHash: string
   ): Promise<{ graph: any; source: string } | null>
+
+  getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
 }

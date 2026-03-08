@@ -347,6 +347,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     graphHash: string
   ): Promise<{ graph: any; source: string } | null>
 
+  abstract getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
+
   // ============================================================================
   // Workflow Lifecycle Methods
   // ============================================================================

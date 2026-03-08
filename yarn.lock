@@ -5026,7 +5026,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/addon-graph@workspace:packages/addon/pikku-graph":
+"@pikku/addon-graph@workspace:*, @pikku/addon-graph@workspace:packages/addon/pikku-graph":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-graph@workspace:packages/addon/pikku-graph"
   dependencies:
@@ -5258,6 +5258,7 @@ __metadata:
     "@ai-sdk/openai": "npm:^3.0.37"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
+    "@pikku/addon-graph": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"

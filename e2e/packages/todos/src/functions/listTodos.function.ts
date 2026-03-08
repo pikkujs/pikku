@@ -16,6 +16,7 @@ export const ListTodosOutput = z.object({
 
 export const listTodos = pikkuSessionlessFunc({
   description: 'Lists all todos',
+  expose: true,
   input: ListTodosInput,
   output: ListTodosOutput,
   func: async ({ todoStore }) => {
