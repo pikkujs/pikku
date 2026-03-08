@@ -149,7 +149,7 @@ const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
     const properties: Record<string, any> = {}
     for (const f of fields) properties[f] = { type: 'string' }
     return {
-      type: 'object',
+      type: 'object' as const,
       properties,
       required: [...fields],
     }
