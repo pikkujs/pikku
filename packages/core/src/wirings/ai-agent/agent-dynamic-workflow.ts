@@ -142,6 +142,13 @@ export function buildWorkflowTools(
         nodes = raw.nodes
       }
 
+      if (Object.keys(nodes).length < 2) {
+        return {
+          error:
+            'A workflow must have at least 2 nodes. A single node is just a tool call — use the tool directly instead.',
+        }
+      }
+
       const validationErrors = validateWorkflowWiring(nodes, toolNames)
       if (validationErrors.length > 0) {
         return {
@@ -269,6 +276,13 @@ export function buildWorkflowTools(
           }
         } else {
           nodes = raw.nodes
+        }
+
+        if (Object.keys(nodes).length < 2) {
+          return {
+            error:
+              'A workflow must have at least 2 nodes. A single node is just a tool call — use the tool directly instead.',
+          }
         }
 
         const validationErrors = validateWorkflowWiring(nodes, toolNames)

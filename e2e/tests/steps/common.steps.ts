@@ -147,6 +147,21 @@ When('I wait for the response', async function (this: AgentWorld) {
   await this.waitForResponse()
 })
 
+When('I open the workflows page', async function (this: AgentWorld) {
+  await this.page.goto(`${config.consoleUrl}/workflow`)
+  await this.page.waitForSelector('table', { timeout: 15_000 })
+})
+
+Then(
+  'I should see {string} on the page',
+  async function (this: AgentWorld, expected: string) {
+    await expect(this.page.locator('body')).toContainText(expected, {
+      timeout: 15_000,
+      ignoreCase: true,
+    })
+  }
+)
+
 Then(
   'I should see exactly {string} in the chat',
   async function (this: AgentWorld, expected: string) {

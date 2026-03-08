@@ -116,7 +116,10 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
       .aggregate<{
         _id: string
         count: number
-      }>([{ $match: { workflowStepId: { $in: stepIds } } }, { $group: { _id: '$workflowStepId', count: { $sum: 1 } } }])
+      }>([
+        { $match: { workflowStepId: { $in: stepIds } } },
+        { $group: { _id: '$workflowStepId', count: { $sum: 1 } } },
+      ])
       .toArray()
 
     const countMap = new Map(historyCounts.map((h) => [h._id, h.count]))
@@ -194,6 +197,21 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
       graph: row.graph,
       source: row.source,
     }
+  }
+
+  async getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
+    const filter: Record<string, any> = { source: 'ai-agent' }
+    if (agentName) {
+      filter.workflowName = { $regex: `^ai:${agentName}:` }
+    }
+    const rows = await this.versions.find(filter).toArray()
+    return rows.map((row) => ({
+      workflowName: row.workflowName,
+      graphHash: row.graphHash,
+      graph: row.graph,
+    }))
   }
 
   async deleteRun(id: string): Promise<boolean> {

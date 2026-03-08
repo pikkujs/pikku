@@ -150,6 +150,9 @@ export interface WorkflowRunService {
     name: string,
     graphHash: string
   ): Promise<{ graph: any; source: string } | null>
+  getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>>
   deleteRun(id: string): Promise<boolean>
 }
 

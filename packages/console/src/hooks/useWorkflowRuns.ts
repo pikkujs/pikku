@@ -101,7 +101,7 @@ export function useStartWorkflowRun() {
     }: {
       workflowName: string
       input?: any
-    }) => (rpc.startWorkflow as any)(workflowName, input),
+    }) => rpc.invoke('startWorkflowRun', { workflowName, input: input || {} }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflow-runs'] })
     },
@@ -115,6 +115,17 @@ export function useWorkflowRunNames() {
     queryKey: ['workflow-run-names'],
     queryFn: async () => {
       return await rpc.invoke('console:getWorkflowRunNames', null)
+    },
+  })
+}
+
+export function useAIWorkflows() {
+  const rpc = usePikkuRPC()
+
+  return useQuery({
+    queryKey: ['ai-workflows'],
+    queryFn: async () => {
+      return await rpc.invoke('console:getAIWorkflows', {})
     },
   })
 }
