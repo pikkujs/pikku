@@ -236,6 +236,19 @@ function detectAuthType(doc: any): 'bearer' | 'oauth2' | 'apiKey' | 'none' {
   return 'none'
 }
 
+/**
+ * Build an OpenAPI schema object from v2-style parameter-level properties
+ * (type, enum, items, format, default) that aren't nested under `schema`.
+ */
+function paramToSchema(p: any): OpenAPISchema {
+  const schema: any = { type: p.type ?? 'string' }
+  if (p.enum) schema.enum = p.enum
+  if (p.items) schema.items = p.items
+  if (p.format) schema.format = p.format
+  if (p.default !== undefined) schema.default = p.default
+  return schema
+}
+
 function extractParams(
   params: any[],
   location: 'path' | 'query' | 'header'
@@ -245,7 +258,7 @@ function extractParams(
     .map((p) => ({
       name: p.name,
       required: p.required ?? location === 'path',
-      schema: (p.schema ?? { type: 'string' }) as OpenAPISchema,
+      schema: (p.schema ?? paramToSchema(p)) as OpenAPISchema,
       description: p.description,
       example: p.example,
     }))

@@ -16,6 +16,9 @@
     },
     {
       "path": "../inspector/tsconfig.json"
+    },
+    {
+      "path": "../openapi-to-zod-schema/tsconfig.json"
     }
   ]
 }

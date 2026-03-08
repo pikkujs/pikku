@@ -12,6 +12,7 @@ import {
   makeContextBasedId,
 } from '../utils/extract-function-name.js'
 import { resolveMiddleware } from '../utils/middleware.js'
+import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
@@ -613,22 +614,31 @@ function processOptions(
       }
 
       // Extract enum values from the function input type if available
-      // Get the input type if we have a pikkuFuncId
-      let inputTypes: ts.Type[] | undefined
-      if (pikkuFuncId) {
-        inputTypes = inspectorState.typesLookup.get(pikkuFuncId)
-      }
-
       let derivedChoices: string[] | null = null
 
-      if (inputTypes && inputTypes.length > 0) {
-        derivedChoices = extractEnumFromPropertyType(
-          inputTypes[0]!,
-          optionName,
-          typeChecker
-        )
-      } else {
-        // Fallback: try to extract from Config type
+      if (pikkuFuncId) {
+        // 1. Try TypeScript types first (most precise — handles unions, TS enums)
+        const inputTypes = inspectorState.typesLookup.get(pikkuFuncId)
+        if (inputTypes && inputTypes.length > 0) {
+          derivedChoices = extractEnumFromPropertyType(
+            inputTypes[0]!,
+            optionName,
+            typeChecker
+          )
+        }
+
+        // 2. Fallback: try JSON schema (works for addon functions)
+        if (!derivedChoices) {
+          derivedChoices = extractEnumFromJsonSchema(
+            inspectorState,
+            pikkuFuncId,
+            optionName
+          )
+        }
+      }
+
+      // 3. Last resort: try Config type
+      if (!derivedChoices) {
         derivedChoices = extractEnumFromConfigType(
           logger,
           optionName,
@@ -788,6 +798,44 @@ function extractEnumFromConfigType(
 
   // Extract enum from the property
   return extractEnumFromPropertyType(configType, propertyName, typeChecker)
+}
+
+/**
+ * Extracts enum values from the function's JSON schema.
+ * Works for addon functions whose schemas are generated from OpenAPI/Zod.
+ */
+function extractEnumFromJsonSchema(
+  inspectorState: InspectorState,
+  pikkuFuncId: string,
+  propertyName: string
+): string[] | null {
+  const fnMeta = resolveFunctionMeta(inspectorState, pikkuFuncId)
+  if (!fnMeta?.inputSchemaName) return null
+
+  const schema = inspectorState.schemas[fnMeta.inputSchemaName] as any
+  if (!schema?.properties?.[propertyName]) return null
+
+  const prop = schema.properties[propertyName]
+
+  // Direct enum on property
+  if (prop.enum && Array.isArray(prop.enum)) {
+    const strings = prop.enum.filter((v: unknown) => typeof v === 'string')
+    if (strings.length > 0) return strings
+  }
+
+  // Array with enum items (e.g. z.array(z.enum([...])))
+  if (
+    prop.type === 'array' &&
+    prop.items?.enum &&
+    Array.isArray(prop.items.enum)
+  ) {
+    const strings = prop.items.enum.filter(
+      (v: unknown) => typeof v === 'string'
+    )
+    if (strings.length > 0) return strings
+  }
+
+  return null
 }
 
 /**
