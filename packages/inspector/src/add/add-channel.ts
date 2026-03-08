@@ -18,6 +18,7 @@ import {
 } from '../utils/middleware.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
+import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 
@@ -93,6 +94,13 @@ function getHandlerNameFromExpression(
 
   // Handle call expressions
   if (ts.isCallExpression(expr)) {
+    // Handle addon('namespace:funcName') calls
+    if (ts.isIdentifier(expr.expression) && expr.expression.text === 'addon') {
+      const [firstArg] = expr.arguments
+      if (firstArg && ts.isStringLiteral(firstArg)) {
+        return firstArg.text
+      }
+    }
     const { pikkuFuncId } = extractFunctionName(expr, checker, rootDir)
     return pikkuFuncId
   }
@@ -461,11 +469,11 @@ export function addMessagesRoutes(
         continue
       }
 
-      const fnMeta = state.functions.meta[handlerName]
+      const fnMeta = resolveFunctionMeta(state, handlerName)
       if (!fnMeta) {
         logger.critical(
           ErrorCode.FUNCTION_METADATA_NOT_FOUND,
-          `No function metadata found for handler '${handlerName}'`
+          `No function metadata found for channel handler '${handlerName}' on route '${routeKey}'. If this is an inline function, it must be exported for the inspector to discover it.`
         )
         continue
       }
@@ -479,8 +487,17 @@ export function addMessagesRoutes(
         ? resolveMiddleware(state, init, routeTags, checker)
         : undefined
 
+      // Resolve package name for addon functions (e.g. 'swaggerPetstore:addPet')
+      const colonIdx = handlerName.indexOf(':')
+      const addonNs =
+        colonIdx !== -1 ? handlerName.substring(0, colonIdx) : null
+      const packageName = addonNs
+        ? state.rpc.wireAddonDeclarations.get(addonNs)?.package
+        : undefined
+
       result[channelKey]![routeKey] = {
         pikkuFuncId: handlerName,
+        packageName,
         middleware: routeMiddleware,
       }
     }
@@ -647,8 +664,18 @@ export const addChannel: AddWiring = (
     input: null,
     params: params.length ? params : undefined,
     query: query?.length ? query : undefined,
-    connect: connectFuncId ? { pikkuFuncId: connectFuncId, ...(connectPackageName && { packageName: connectPackageName }) } : null,
-    disconnect: disconnectFuncId ? { pikkuFuncId: disconnectFuncId, ...(disconnectPackageName && { packageName: disconnectPackageName }) } : null,
+    connect: connectFuncId
+      ? {
+          pikkuFuncId: connectFuncId,
+          ...(connectPackageName && { packageName: connectPackageName }),
+        }
+      : null,
+    disconnect: disconnectFuncId
+      ? {
+          pikkuFuncId: disconnectFuncId,
+          ...(disconnectPackageName && { packageName: disconnectPackageName }),
+        }
+      : null,
     message,
     messageWirings,
     binary: binary === undefined ? undefined : binary,
