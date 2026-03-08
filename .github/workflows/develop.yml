@@ -94,6 +94,8 @@ jobs:
         run: |
           cd packages/addon/pikku-console && npx pikku all
           cd ../../..
+          cd packages/addon/pikku-graph && npx pikku all
+          cd ../../..
           cd e2e/packages/todos && npx pikku all
           cd ../../..
           cd e2e/packages/emails && npx pikku all
