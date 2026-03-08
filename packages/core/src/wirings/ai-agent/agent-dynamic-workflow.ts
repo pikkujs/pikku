@@ -70,16 +70,19 @@ export function buildDynamicWorkflowInstructions(
 
   return (
     '\n\n## Workflow Creation\n\n' +
-    'You can create workflows that chain your tools together using create_workflow, then execute them with execute_workflow.\n\n' +
+    'You can create workflows that chain your tools together. Use createAgentWorkflow to validate and preview a workflow, then saveAgentWorkflow to save it, then executeAgentWorkflow to run it.\n\n' +
     '### Tool Schemas:\n' +
     toolSchemaLines.join('\n') +
     '\n\n### Workflow Format:\n' +
     '- Each node has: rpcName (tool name), input (with $ref to wire outputs), next (flow control), onError\n' +
     '- Use {"$ref": "nodeId", "path": "fieldName"} to wire a previous node\'s output field to this node\'s input\n' +
-    '- Use {"$ref": "trigger", "path": "fieldName"} to extract a field from the workflow\'s trigger input. Always include "path" to extract specific fields.\n' +
+    '- Use {"$ref": "trigger", "path": "fieldName"} to extract a field from the workflow\'s trigger input. IMPORTANT: Always include "path" — never pass {"$ref": "trigger"} without "path", or the entire trigger object will be used as the value.\n' +
+    '- Use {"$ref": "nodeId", "path": "fieldName"} to extract a field from a previous node\'s output. Always include "path" to select the specific field.\n' +
     '- next can be a string (single next node), array (parallel), or object {branchKey: nextNode} for branching\n' +
-    '\n### Example:\n' +
-    '{"add":{"rpcName":"todos:addTodo","input":{"title":{"$ref":"trigger","path":"title"}},"next":"list"},"list":{"rpcName":"todos:listTodos","input":{}}}'
+    '\n### Example (add todo from trigger title, then list):\n' +
+    '{"add":{"rpcName":"todos:addTodo","input":{"title":{"$ref":"trigger","path":"title"}},"next":"list"},"list":{"rpcName":"todos:listTodos","input":{}}}\n' +
+    '\n### Example (add todo, sleep, complete using addTodo result id):\n' +
+    '{"add":{"rpcName":"todos:addTodo","input":{"title":{"$ref":"trigger","path":"title"}},"next":"wait"},"wait":{"rpcName":"sleep","input":{"seconds":5},"next":"complete"},"complete":{"rpcName":"todos:completeTodo","input":{"id":{"$ref":"add","path":"id"}}}}'
   )
 }
 
@@ -91,11 +94,15 @@ export function buildWorkflowTools(
   sessionService?: SessionService<CoreUserSession>
 ): AIAgentToolDef[] {
   const tools: AIAgentToolDef[] = []
+  const pendingWorkflows = new Map<
+    string,
+    { meta: WorkflowRuntimeMeta; mermaid: string }
+  >()
 
   tools.push({
-    name: 'create_workflow',
+    name: 'createAgentWorkflow',
     description:
-      'Create a workflow graph that chains tools together. The workflow will be registered and can be executed later.',
+      'Validate and preview a workflow graph that chains tools together. Returns a preview with a mermaid diagram. Call saveAgentWorkflow to save it after the user approves.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -164,6 +171,50 @@ export function buildWorkflowTools(
         graphHash,
       }
 
+      const mermaid = generateMermaidDiagram(fullName, nodes, entryNodeIds)
+
+      pendingWorkflows.set(fullName, { meta, mermaid })
+
+      return {
+        valid: true,
+        workflowName: fullName,
+        entryNodes: entryNodeIds,
+        nodeCount: Object.keys(nodes).length,
+        mermaid,
+        message: `Workflow '${fullName}' validated with ${Object.keys(nodes).length} nodes. Present this to the user and call saveAgentWorkflow to save it.`,
+      }
+    },
+  })
+
+  tools.push({
+    name: 'saveAgentWorkflow',
+    description: 'Save a previously validated workflow so it can be executed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description:
+            'Full workflow name returned by createAgentWorkflow (e.g. ai:agentName:myWorkflow)',
+        },
+      },
+      required: ['name'],
+    },
+    execute: async (input: unknown) => {
+      const { name } = input as { name: string }
+      const fullName = name.startsWith(`ai:${agentName}:`)
+        ? name
+        : `ai:${agentName}:${name}`
+
+      const pending = pendingWorkflows.get(fullName)
+      if (!pending) {
+        return {
+          error: `No pending workflow '${fullName}'. Call createAgentWorkflow first.`,
+        }
+      }
+
+      const { meta } = pending
+
       const allMeta = pikkuState(null, 'workflows', 'meta')
       allMeta[fullName] = meta
 
@@ -171,7 +222,7 @@ export function buildWorkflowTools(
       if (singletonServices?.workflowService) {
         await singletonServices.workflowService.upsertWorkflowVersion(
           fullName,
-          graphHash,
+          meta.graphHash!,
           meta,
           'ai-agent'
         )
@@ -181,28 +232,25 @@ export function buildWorkflowTools(
         streamContext.channel.send({
           type: 'workflow-created',
           workflowName: fullName,
-          nodes,
-          entryNodeIds,
+          nodes: meta.nodes!,
+          entryNodeIds: meta.entryNodeIds!,
         })
       }
 
-      const mermaid = generateMermaidDiagram(fullName, nodes, entryNodeIds)
+      pendingWorkflows.delete(fullName)
 
       return {
         success: true,
         workflowName: fullName,
-        entryNodes: entryNodeIds,
-        nodeCount: Object.keys(nodes).length,
-        mermaid,
-        message: `Workflow '${fullName}' created with ${Object.keys(nodes).length} nodes. Entry nodes: ${entryNodeIds.join(', ')}`,
+        message: `Workflow '${fullName}' saved and ready to execute.`,
       }
     },
   })
 
   tools.push({
-    name: 'list_workflows',
+    name: 'listAgentWorkflows',
     description:
-      'List previously created workflows for this agent that can be executed.',
+      'List previously saved workflows for this agent that can be executed.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -245,8 +293,8 @@ export function buildWorkflowTools(
   })
 
   tools.push({
-    name: 'execute_workflow',
-    description: 'Execute a previously created workflow with the given input.',
+    name: 'executeAgentWorkflow',
+    description: 'Execute a previously saved workflow with the given input.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -280,7 +328,7 @@ export function buildWorkflowTools(
       const allMeta = pikkuState(null, 'workflows', 'meta')
       if (!allMeta[fullName]) {
         return {
-          error: `Workflow '${fullName}' not found. Use list_workflows to see available workflows, or create_workflow to make a new one.`,
+          error: `Workflow '${fullName}' not found. Use listAgentWorkflows to see available workflows, or createAgentWorkflow to make a new one.`,
         }
       }
 
@@ -304,7 +352,7 @@ export function buildWorkflowTools(
       )
 
       const pollInterval = 200
-      const maxWait = 30000
+      const maxWait = 45000
       let elapsed = 0
       while (elapsed < maxWait) {
         const run = await workflowService.getRun(runId)
