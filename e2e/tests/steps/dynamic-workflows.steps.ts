@@ -120,21 +120,65 @@ Then(
 
 Then(
   'the console response should have a run for {string} with status {string}',
-  function (workflowName: string, expectedStatus: string) {
-    expect(Array.isArray(state.consoleResponse)).toBeTruthy()
+  { timeout: 60_000 },
+  async function (workflowName: string, expectedStatus: string) {
+    const maxWait = 50_000
+    const interval = 2_000
+    let elapsed = 0
+    while (elapsed < maxWait) {
+      const res = await fetch(`${config.apiUrl}/rpc/console:getWorkflowRuns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      state.consoleResponse = await res.json()
+      if (Array.isArray(state.consoleResponse)) {
+        const run = state.consoleResponse.find(
+          (r: any) =>
+            (r.workflowName || r.workflow) === workflowName &&
+            r.status === expectedStatus
+        )
+        if (run) return
+      }
+      await new Promise((r) => setTimeout(r, interval))
+      elapsed += interval
+    }
     const run = state.consoleResponse.find(
-      (r: any) => (r.workflowName || r.workflow) === workflowName
+      (r: any) =>
+        (r.workflowName || r.workflow) === workflowName &&
+        r.status === expectedStatus
     )
     expect(run).toBeTruthy()
-    expect(run.status).toBe(expectedStatus)
   }
 )
 
-Then('the console response should have a completed run', function () {
-  expect(Array.isArray(state.consoleResponse)).toBeTruthy()
-  const run = state.consoleResponse.find((r: any) => r.status === 'completed')
-  expect(run).toBeTruthy()
-})
+Then(
+  'the console response should have a completed run',
+  { timeout: 60_000 },
+  async function () {
+    const maxWait = 50_000
+    const interval = 2_000
+    let elapsed = 0
+    while (elapsed < maxWait) {
+      const res = await fetch(`${config.apiUrl}/rpc/console:getWorkflowRuns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      state.consoleResponse = await res.json()
+      if (Array.isArray(state.consoleResponse)) {
+        const run = state.consoleResponse.find(
+          (r: any) => r.status === 'completed'
+        )
+        if (run) return
+      }
+      await new Promise((r) => setTimeout(r, interval))
+      elapsed += interval
+    }
+    const run = state.consoleResponse.find((r: any) => r.status === 'completed')
+    expect(run).toBeTruthy()
+  }
+)
 
 When(
   'I call the RPC {string}',

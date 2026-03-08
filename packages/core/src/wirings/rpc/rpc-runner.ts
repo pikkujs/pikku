@@ -24,9 +24,8 @@ addError(RPCNotFoundError, {
 import type { AIAgentInput } from '../ai-agent/ai-agent.types.js'
 import type { AIStreamChannel } from '../ai-agent/ai-agent.types.js'
 import type { StreamAIAgentOptions } from '../ai-agent/ai-agent-prepare.js'
-import { runAIAgent } from '../ai-agent/ai-agent-runner.js'
+import { runAIAgent, resumeAIAgentSync } from '../ai-agent/ai-agent-runner.js'
 import { streamAIAgent, resumeAIAgent } from '../ai-agent/ai-agent-stream.js'
-import { approveAIAgent } from '../ai-agent/ai-agent-registry.js'
 
 /**
  * Resolve a namespaced function reference to package and function names
@@ -305,16 +304,20 @@ export class ContextAwareRPCService {
       approve: async (
         runId: string,
         approvals: { toolCallId: string; approved: boolean }[],
-        expectedAgentName?: string
+        _expectedAgentName?: string
       ) => {
-        if (!this.services.aiRunState)
-          throw new Error('AIRunStateService not available')
-        return approveAIAgent(
-          this.services.aiRunState,
-          runId,
-          approvals,
-          expectedAgentName
-        )
+        const result = await resumeAIAgentSync(runId, approvals, {
+          sessionService: this.options.sessionService,
+        })
+        return {
+          runId: result.runId,
+          result: result.object ?? result.text,
+          usage: result.usage,
+          ...(result.status === 'suspended' && {
+            status: 'suspended' as const,
+            pendingApprovals: result.pendingApprovals,
+          }),
+        }
       },
     }
   }

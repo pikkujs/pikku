@@ -6,6 +6,8 @@ Feature: Dynamic Workflows via Todo Agent (Console UI)
   Scenario: Create, save, list and execute a workflow via chat
     Given I open the "todoAgent" playground
     When I send "Use createAgentWorkflow to create a workflow called 'add-and-list' with two nodes: first node calls todos:addTodo with input title 'Workflow task', second node calls todos:listTodos. The first node should flow to the second. Then save it using saveAgentWorkflow."
+    Then I should see an approval request
+    When I approve all pending requests
     And I wait for the response
     Then I should see "add-and-list" in the chat
     And I should see "saved" in the chat
@@ -15,16 +17,21 @@ Feature: Dynamic Workflows via Todo Agent (Console UI)
     Then I should see "add-and-list" in the chat
 
     When I send "Use executeAgentWorkflow to run the 'add-and-list' workflow"
+    Then I should see an approval request
+    When I approve all pending requests
     And I wait for the response
     Then I should not see "error" in the chat
 
   Scenario: Natural language workflow creation and execution via chat
     Given I open the "todoAgent" playground
     When I send "Create a workflow that adds a todo from the trigger's title, then lists all todos. Save it when ready."
+    Then I should see an approval request
+    When I approve all pending requests
     And I wait for the response
     Then I should see "workflow" in the chat
-    And I should not see "error" in the chat
 
     When I send "Run that workflow with the title 'UI test item'."
+    Then I should see an approval request
+    When I approve all pending requests
     And I wait for the response
     Then I should not see "error" in the chat

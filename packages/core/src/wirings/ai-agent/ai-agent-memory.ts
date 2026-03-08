@@ -112,7 +112,7 @@ export async function saveMessages(
   threadId: string,
   resourceId: string,
   memoryConfig: AIAgentMemoryConfig | undefined,
-  userMessage: AIMessage,
+  userMessage: AIMessage | null | undefined,
   result: {
     text: string
     steps: {
@@ -133,15 +133,16 @@ export async function saveMessages(
   let responseText = result.text
 
   if (storage) {
-    const newMessages: AIMessage[] = [userMessage]
+    const newMessages: AIMessage[] = userMessage ? [userMessage] : []
 
     for (const step of result.steps) {
       if (step.toolCalls?.length) {
+        const toolCallIds = step.toolCalls.map(() => randomUUID())
         newMessages.push({
           id: randomUUID(),
           role: 'assistant',
-          toolCalls: step.toolCalls.map((tc) => ({
-            id: randomUUID(),
+          toolCalls: step.toolCalls.map((tc, i) => ({
+            id: toolCallIds[i],
             name: tc.name,
             args: tc.args,
           })),
@@ -150,8 +151,8 @@ export async function saveMessages(
         newMessages.push({
           id: randomUUID(),
           role: 'tool',
-          toolResults: step.toolCalls.map((tc) => ({
-            id: randomUUID(),
+          toolResults: step.toolCalls.map((tc, i) => ({
+            id: toolCallIds[i],
             name: tc.name,
             result: tc.result,
           })),
