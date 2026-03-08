@@ -215,6 +215,24 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     }
   }
 
+  async getAIGeneratedWorkflows(
+    agentName?: string
+  ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
+    let query = this.db
+      .selectFrom('workflow_versions')
+      .select(['workflow_name', 'graph_hash', 'graph'])
+      .where('source', '=', 'ai-agent')
+    if (agentName) {
+      query = query.where('workflow_name', 'like', `ai:${agentName}:%`)
+    }
+    const rows = await query.execute()
+    return rows.map((row) => ({
+      workflowName: row.workflow_name,
+      graphHash: row.graph_hash,
+      graph: parseJson(row.graph),
+    }))
+  }
+
   async deleteRun(id: string): Promise<boolean> {
     const result = await this.db
       .deleteFrom('workflow_runs')

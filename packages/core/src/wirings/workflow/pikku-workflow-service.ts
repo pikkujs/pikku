@@ -430,8 +430,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowNotFoundError(name)
     }
 
-    // Check if this is a graph workflow (source === 'graph')
-    if (workflowMeta.source === 'graph') {
+    if (workflowMeta.source === 'graph' || workflowMeta.source === 'ai-agent') {
       const shouldInline =
         options?.inline || !getSingletonServices()?.queueService
       return runWorkflowGraph(

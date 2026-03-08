@@ -134,20 +134,43 @@ const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
   const startMutation = useStartWorkflowRun()
   const { workflow } = useWorkflowContext()
 
+  const triggerSchema = useMemo(() => {
+    if (workflow?.source !== 'ai-agent' || !workflow?.nodes) return null
+    const fields = new Set<string>()
+    for (const node of Object.values(workflow.nodes as Record<string, any>)) {
+      if (!node.input) continue
+      for (const val of Object.values(node.input as Record<string, any>)) {
+        if (val && typeof val === 'object' && val.$ref === 'trigger' && val.path) {
+          fields.add(val.path)
+        }
+      }
+    }
+    if (fields.size === 0) return null
+    const properties: Record<string, any> = {}
+    for (const f of fields) properties[f] = { type: 'string' }
+    return {
+      type: 'object',
+      properties,
+      required: [...fields],
+    }
+  }, [workflow])
+
   const inputFuncId = useMemo(() => {
-    if (workflow?.source === 'graph') {
+    if (triggerSchema) return null
+    if (workflow?.source === 'graph' || workflow?.source === 'ai-agent') {
       const entryNodeId = workflow.entryNodeIds?.[0]
       const entryNode = entryNodeId ? workflow.nodes?.[entryNodeId] : null
       return entryNode?.rpcName ?? null
     }
     return workflow?.pikkuFuncId ?? null
-  }, [workflow])
+  }, [workflow, triggerSchema])
 
   const { data: funcMeta, isLoading: funcLoading } = useFunctionMeta(
     inputFuncId ?? ''
   )
   const inputSchemaName = funcMeta?.inputSchemaName
   const { data: schema, isLoading: schemaLoading } = useSchema(inputSchemaName)
+  const effectiveSchema = triggerSchema ?? schema
 
   const handleSubmit = useCallback(
     (formData: any) => {
@@ -173,9 +196,9 @@ const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
     <Stack gap="md">
       {isLoading ? (
         <Loader size="sm" />
-      ) : schema ? (
+      ) : effectiveSchema ? (
         <SchemaForm
-          schema={schema}
+          schema={effectiveSchema}
           onSubmit={handleSubmit}
           submitting={startMutation.isPending}
         />
