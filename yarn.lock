@@ -5131,6 +5131,7 @@ __metadata:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.12.2"
     "@pikku/inspector": "npm:^0.12.2"
+    "@pikku/openapi-to-zod-schema": "npm:^0.12.2"
     "@types/cookie": "npm:^1.0.0"
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
@@ -5513,6 +5514,14 @@ __metadata:
     "@pikku/core": ^0.12.1
     next: ^15
     react-dom: "*"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/openapi-to-zod-schema@npm:^0.12.2, @pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema":
+  version: 0.0.0-use.local
+  resolution: "@pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema"
+  dependencies:
+    typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
 

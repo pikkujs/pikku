@@ -1,0 +1,19 @@
+{
+  "name": "@pikku/openapi-to-zod-schema",
+  "version": "0.12.2",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "^5.9"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

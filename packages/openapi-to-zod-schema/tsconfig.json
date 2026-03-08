@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "module": "Node18",
+    "outDir": "dist",
+    "target": "esnext",
+    "composite": true,
+    "declaration": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules"]
+}
