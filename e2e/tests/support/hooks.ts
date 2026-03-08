@@ -139,6 +139,11 @@ After(
         // Ignore screenshot failures
       }
     }
+    const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
+    if (headed) {
+      console.log('[headed] Pausing for 30 seconds before closing browser...')
+      await new Promise((r) => setTimeout(r, 30_000))
+    }
     await this.closeBrowser()
   }
 )

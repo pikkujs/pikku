@@ -17,7 +17,11 @@ export class AgentWorld extends World {
   threadId: string = randomUUID()
 
   async openBrowser() {
-    this.browser = await chromium.launch({ headless: true })
+    const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
+    this.browser = await chromium.launch({
+      headless: !headed,
+      slowMo: headed ? 200 : 0,
+    })
     this.context = await this.browser.newContext()
     this.page = await this.context.newPage()
     this.page.setDefaultTimeout(config.responseTimeout)
