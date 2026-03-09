@@ -195,7 +195,6 @@ When(
 
 Then('the todo {string} should be in the list', function (title: string) {
   const todos = state.rpcResponse?.todos ?? state.rpcResponse
-  console.log('Todos:', JSON.stringify(todos))
   expect(Array.isArray(todos)).toBeTruthy()
   const found = todos.find(
     (t: any) =>

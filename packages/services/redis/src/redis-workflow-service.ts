@@ -877,6 +877,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     if (!exists) {
       await this.redis.hmset(
         key,
+        'workflowName',
+        name,
+        'graphHash',
+        graphHash,
         'graph',
         JSON.stringify(graph),
         'source',
@@ -911,7 +915,6 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       graphHash: string
       graph: any
     }> = []
-    const versionPrefix = `${this.keyPrefix}:version:`
     let cursor = '0'
     do {
       const [nextCursor, keys] = await this.redis.scan(
@@ -925,10 +928,9 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       for (const key of keys) {
         const data = await this.redis.hgetall(key)
         if (!data.graph || data.source !== 'ai-agent') continue
-        const suffix = key.substring(versionPrefix.length)
-        const hashLen = 16
-        const workflowName = suffix.substring(0, suffix.length - hashLen - 1)
-        const graphHash = suffix.substring(suffix.length - hashLen)
+        const workflowName = data.workflowName
+        const graphHash = data.graphHash
+        if (!workflowName || !graphHash) continue
         results.push({
           workflowName,
           graphHash,

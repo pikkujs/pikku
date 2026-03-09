@@ -634,7 +634,7 @@ async function continueAfterToolResultSync(
             run.threadId,
             run.resourceId,
             memoryConfig,
-            null as any,
+            null,
             { text: '', steps: completedSteps },
             {
               workingMemoryJsonSchema,

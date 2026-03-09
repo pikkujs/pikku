@@ -553,7 +553,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
     const filter: Record<string, any> = { source: 'ai-agent' }
     if (agentName) {
-      filter.workflowName = { $regex: `^ai:${agentName}:` }
+      const escaped = agentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      filter.workflowName = { $regex: `^ai:${escaped}:` }
     }
     const docs = await this.versions.find(filter).toArray()
     return docs.map((doc) => ({

@@ -129,7 +129,7 @@ export function buildWorkflowTools(
         description?: string
         nodes: string | Record<string, any>
       }
-      const name = raw.name
+      const name = raw.name.replace(/[^a-zA-Z0-9_-]/g, '-')
       const description = raw.description
       let nodes: Record<string, any>
       if (typeof raw.nodes === 'string') {
@@ -462,10 +462,10 @@ export function buildWorkflowTools(
         { type: 'ai-agent' }
       )
 
-      const pollInterval = 200
       const maxWait = 45000
-      let elapsed = 0
-      while (elapsed < maxWait) {
+      const startTime = Date.now()
+      let pollInterval = 100
+      while (Date.now() - startTime < maxWait) {
         const run = await workflowService.getRun(runId)
         if (!run) {
           return { error: `Workflow run '${runId}' not found` }
@@ -485,7 +485,7 @@ export function buildWorkflowTools(
           return { result: run.output, runId, status: run.status }
         }
         await new Promise((resolve) => setTimeout(resolve, pollInterval))
-        elapsed += pollInterval
+        pollInterval = Math.min(pollInterval * 1.5, 2000)
       }
 
       return {
