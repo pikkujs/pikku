@@ -44,7 +44,7 @@ export class MCPEndpointRegistry {
           name: tool.name,
           title: tool.title,
           description: tool.description,
-          inputSchema: tool.parameters,
+          inputSchema: tool.parameters ?? { type: 'object' },
           outputSchema: tool.returns,
           enabled: tool.enabled !== undefined ? tool.enabled : true,
         })
