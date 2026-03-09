@@ -280,6 +280,10 @@ export const runPikkuFunc = async <In = any, Out = any>(
     // Validate and coerce data if schema is defined
     const inputSchemaName = funcMeta.inputSchemaName
     if (inputSchemaName) {
+      // Coerce (top level) data types before validation (e.g. string→array, string→date)
+      if (coerceDataFromSchema) {
+        coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
+      }
       // Validate request data against the defined schema, if any
       await validateSchema(
         resolvedSingletonServices.logger,
@@ -288,10 +292,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
         actualData,
         packageName
       )
-      // Coerce (top level) query string parameters or date objects if specified by the schema
-      if (coerceDataFromSchema) {
-        coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
-      }
     }
 
     if (

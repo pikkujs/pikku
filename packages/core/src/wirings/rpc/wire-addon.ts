@@ -5,6 +5,7 @@ export type WireAddonConfig = {
   package: string
   rpcEndpoint?: string
   auth?: boolean
+  mcp?: boolean
   tags?: string[]
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>

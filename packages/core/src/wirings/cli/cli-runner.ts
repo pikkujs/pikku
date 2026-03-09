@@ -218,7 +218,9 @@ function pluckCLIData(
   const funcMeta = pikkuState(null, 'function', 'meta')[funcName]
   const schemaName = funcMeta?.inputSchemaName
   const schema = schemaName
-    ? pikkuState(funcMeta?.packageName ?? null, 'misc', 'schemas').get(schemaName)
+    ? pikkuState(funcMeta?.packageName ?? null, 'misc', 'schemas').get(
+        schemaName
+      )
     : null
 
   if (schema && schema.properties) {
@@ -226,7 +228,13 @@ function pluckCLIData(
     const result: Record<string, any> = {}
     for (const key of Object.keys(schema.properties)) {
       if (key in mergedData) {
-        result[key] = mergedData[key]
+        let value = mergedData[key]
+        // CLI passes all values as strings — coerce to array when schema expects one
+        const propSchema = schema.properties[key]
+        if (propSchema?.type === 'array' && !Array.isArray(value)) {
+          value = typeof value === 'string' ? value.split(',') : [value]
+        }
+        result[key] = value
       } else if (availableOptions[key]?.default !== undefined) {
         // Apply default if not provided
         result[key] = availableOptions[key].default
@@ -354,6 +362,7 @@ export async function runCLICommand({
       wireMiddleware: allWireMiddleware,
       inheritedPermissions: currentCommand.permissions,
       wirePermissions: undefined,
+      coerceDataFromSchema: true,
       tags: programData?.tags,
       wire,
       sessionService: userSession,

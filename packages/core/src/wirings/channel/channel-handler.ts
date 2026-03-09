@@ -109,13 +109,7 @@ export const processMessageHandlers = (
       permissions: inheritedPermissions,
     } = routeMeta
 
-    // Strip namespace prefix for addon functions (e.g. 'swaggerPetstore:addPet' → 'addPet')
-    const pikkuFuncId =
-      packageName && routeMeta.pikkuFuncId.includes(':')
-        ? routeMeta.pikkuFuncId.substring(
-            routeMeta.pikkuFuncId.indexOf(':') + 1
-          )
-        : routeMeta.pikkuFuncId
+    const pikkuFuncId = routeMeta.pikkuFuncId
 
     // Get wire middleware: channel-level middleware + message-specific middleware
     const channelWireMiddleware = channelConfig.middleware || []
@@ -159,6 +153,7 @@ export const processMessageHandlers = (
       wireChannelMiddleware: wireChannelMiddleware as any,
       inheritedPermissions,
       wirePermissions,
+      coerceDataFromSchema: true,
       tags: channelConfig.tags,
       sessionService: userSession,
       wire: {
