@@ -41,7 +41,7 @@ export const InlineNode: React.FunctionComponent<NodeProps<InlineNodeData>> = ({
           <SimpleGrid
             cols={2}
             px="1rem"
-            c="gray.7"
+            c="dimmed"
             mt="xs"
             style={{ alignItems: 'center' }}
           >

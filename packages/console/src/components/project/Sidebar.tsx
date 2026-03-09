@@ -200,7 +200,7 @@ export const Sidebar: React.FunctionComponent = () => {
       w={sidebarWidth}
       h="100vh"
       style={{
-        borderRight: `1px solid var(--mantine-color-default-border)`,
+        borderRight: `1px solid var(--app-glass-border)`,
         backgroundColor: `var(--mantine-color-body)`,
         display: 'flex',
         flexDirection: 'column',

@@ -3,15 +3,15 @@
 }
 
 .row:hover {
-  background-color: var(--mantine-color-gray-0);
+  background-color: var(--mantine-color-default-hover);
 }
 
 .active {
-  background-color: var(--mantine-color-blue-0);
+  background-color: var(--mantine-color-gray-light);
 }
 
 .active:hover {
-  background-color: var(--mantine-color-blue-0);
+  background-color: var(--mantine-color-gray-light);
 }
 
 .row .workflowIcon {

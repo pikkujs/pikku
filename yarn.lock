@@ -5084,6 +5084,7 @@ __metadata:
     "@assistant-ui/react": "npm:^0.12.12"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
+    react-markdown: "npm:^10.1.0"
     typescript: "npm:^5.9"
   peerDependencies:
     react: ^18 || ^19

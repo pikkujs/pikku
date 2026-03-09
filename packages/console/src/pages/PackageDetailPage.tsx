@@ -111,7 +111,7 @@ const PackageIcon: React.FunctionComponent<{
     )
   }
   return (
-    <ThemeIcon size={size} radius="md" variant="light" color="blue">
+    <ThemeIcon size={size} radius="md" variant="light" color="gray">
       <Package size={size * 0.5} />
     </ThemeIcon>
   )

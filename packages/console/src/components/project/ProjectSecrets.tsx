@@ -39,7 +39,7 @@ export const ProjectSecrets: React.FunctionComponent<ProjectSecretsProps> = ({
                 {s.displayName}
               </Text>
               {s.isOAuth2 && (
-                <PikkuBadge type="label" color="violet">
+                <PikkuBadge type="label" color="gray">
                   OAuth2
                 </PikkuBadge>
               )}

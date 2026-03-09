@@ -21,8 +21,8 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
   }
 
   return (
-    <Center h="100vh" bg="dark.9">
-      <Paper p="xl" radius="md" maw={420} w="100%" bg="dark.7">
+    <Center h="100vh">
+      <Paper p="xl" radius="lg" maw={420} w="100%" withBorder>
         <Stack gap="lg" align="center">
           <Box>
             <Center>
@@ -33,12 +33,12 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
                 height={48}
               />
             </Center>
-            <Text size="xl" fw={500} ta="center" mt="xs" c="white">
+            <Text size="xl" fw={500} ta="center" mt="xs">
               Pikku Console
             </Text>
           </Box>
 
-          <Text c="red.4" size="sm" ta="center">
+          <Text c="dimmed" size="sm" ta="center">
             {error}
           </Text>
 
@@ -47,12 +47,9 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
             value={url}
             onChange={(e) => setUrl(e.currentTarget.value)}
             w="100%"
-            styles={{
-              label: { color: 'var(--mantine-color-gray-4)' },
-            }}
           />
 
-          <Button fullWidth onClick={handleReconnect}>
+          <Button fullWidth variant="default" onClick={handleReconnect}>
             Reconnect
           </Button>
         </Stack>

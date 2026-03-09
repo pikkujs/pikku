@@ -52,7 +52,7 @@ const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
     )
   }
   return (
-    <ThemeIcon size={28} radius="sm" variant="light" color="blue">
+    <ThemeIcon size={28} radius="sm" variant="light" color="gray">
       <Package size={16} />
     </ThemeIcon>
   )

@@ -200,12 +200,12 @@ const UserMessage: React.FunctionComponent = () => (
         <Text size="xs" c="dimmed">
           You
         </Text>
-        <User size={14} color="var(--mantine-color-blue-6)" />
+        <User size={14} color="var(--mantine-color-dimmed)" />
       </Group>
       <Paper
         p="sm"
         radius="md"
-        style={{ backgroundColor: 'var(--mantine-color-blue-light)' }}
+        style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}
       >
         <MessagePrimitive.Content
           components={{
@@ -225,7 +225,7 @@ const AssistantMessage: React.FunctionComponent = () => (
   <Box data-testid="assistant-block" style={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
-        <Bot size={14} color="var(--mantine-color-violet-6)" />
+        <Bot size={14} color="var(--mantine-color-dimmed)" />
         <Text size="xs" c="dimmed">
           Assistant
         </Text>
