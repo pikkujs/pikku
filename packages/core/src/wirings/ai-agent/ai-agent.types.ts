@@ -204,7 +204,7 @@ export type CoreAIAgent<
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
-  dynamicWorkflows?: boolean
+  dynamicWorkflows?: 'read' | 'always' | 'ask'
   input?: unknown
   output?: unknown
   tags?: string[]
@@ -377,6 +377,6 @@ export type AIAgentMeta = Record<
     channelMiddleware?: MiddlewareMetadata[]
     aiMiddleware?: MiddlewareMetadata[]
     permissions?: PermissionMetadata[]
-    dynamicWorkflows?: boolean
+    dynamicWorkflows?: 'read' | 'always' | 'ask'
   }
 >

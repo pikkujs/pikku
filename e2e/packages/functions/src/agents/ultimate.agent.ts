@@ -44,5 +44,5 @@ export const ultimateAgent = pikkuAIAgent({
   ],
   maxSteps: 20,
   toolChoice: 'auto',
-  dynamicWorkflows: true,
+  dynamicWorkflows: 'always',
 })

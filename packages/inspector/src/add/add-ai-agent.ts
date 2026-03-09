@@ -269,7 +269,7 @@ export const addAIAgent: AddWiring = (
       | null
     const toolChoiceValue = getPropertyValue(obj, 'toolChoice') as string | null
     const dynamicWorkflowsValue = getPropertyValue(obj, 'dynamicWorkflows') as
-      | boolean
+      | string
       | null
     const toolsValue = resolveToolReferences(
       obj,
@@ -459,7 +459,7 @@ export const addAIAgent: AddWiring = (
       ...(toolsValue !== null && { tools: toolsValue }),
       ...(agentsValue !== null && { agents: agentsValue }),
       ...(dynamicWorkflowsValue !== null && {
-        dynamicWorkflows: dynamicWorkflowsValue,
+        dynamicWorkflows: dynamicWorkflowsValue as 'read' | 'always' | 'ask',
       }),
       tags,
       inputSchema,

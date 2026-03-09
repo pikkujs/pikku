@@ -19,5 +19,5 @@ export const todoAgent = pikkuAIAgent({
   aiMiddleware: [uppercaseMiddleware],
   maxSteps: 10,
   toolChoice: 'auto',
-  dynamicWorkflows: true,
+  dynamicWorkflows: 'always',
 })
