@@ -19,7 +19,7 @@ const state: DynamicWorkflowState = {
   lastAgentName: '',
 }
 
-Before('@dynamic-workflows', async function () {
+Before({ tags: '@dynamic-workflows or @dynamic-workflow-modes' }, async function () {
   state.threadId = randomUUID()
   state.agentResponse = undefined
   state.consoleResponse = undefined
