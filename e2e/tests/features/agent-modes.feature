@@ -1,4 +1,4 @@
-@agent-modes @console
+@agent-modes @console @ai
 Feature: Agent Delegation Modes
   Tests delegate vs supervise agent modes.
   Delegate mode: sub-agent streams directly to user, parent text suppressed after delegation.

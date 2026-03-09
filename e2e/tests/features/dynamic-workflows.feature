@@ -1,4 +1,4 @@
-@dynamic-workflows
+@dynamic-workflows @ai
 Feature: Dynamic Workflows via Todo Agent (API)
   The todo-agent has dynamicWorkflows enabled, allowing it to create,
   save, and execute workflows using its existing tools.

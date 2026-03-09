@@ -1,4 +1,4 @@
-@todo @console
+@todo @console @ai
 Feature: Todo Agent via Console
   The todo-agent manages a todo list. Tests interact with it through
   the Pikku Console agent playground UI.
