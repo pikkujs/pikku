@@ -15,7 +15,6 @@ async function testStreamAgent() {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
-      Authorization: `Bearer ${loginResult.token}`,
     },
     body: JSON.stringify({
       message: 'Plan my afternoon — I have 3 hours free',
