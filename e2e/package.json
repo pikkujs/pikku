@@ -12,7 +12,7 @@
   "scripts": {
     "start": "tsx bin/start.ts",
     "dev": "tsx --watch bin/start.ts",
-    "test": "cucumber-js --config tests/cucumber.mjs --tags 'not @router and not @todo'",
+    "test": "cucumber-js --config tests/cucumber.mjs --tags 'not @router and not @todo and not @skip'",
     "test:all": "cucumber-js --config tests/cucumber.mjs",
     "test:todo": "cucumber-js --config tests/cucumber.mjs --tags @todo",
     "test:router": "cucumber-js --config tests/cucumber.mjs --tags @router",
