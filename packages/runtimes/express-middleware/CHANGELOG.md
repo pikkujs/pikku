@@ -1,5 +1,26 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- 96ce74e: Fix SSE streaming headers not being sent before first chunk write, resolving ERR_INCOMPLETE_CHUNKED_ENCODING errors in approval flows
+- ffe83af: Add Web Response passthrough support and fix close() flushing
+
+  - HTTP runner detects when a function returns a Web `Response` object and applies it directly via `applyWebResponse()`, enabling seamless integration with libraries like Auth.js
+  - Add `send()` method to `PikkuHTTPResponse` for setting body without Content-Type headers
+  - Add `headers()` method to `PikkuHTTPRequest` for retrieving all headers as a record
+  - Add `toWebRequest()` and `applyWebResponse()` utilities for Web Request/Response conversion
+  - Fix `close()` in Express, Fastify, and UWS responses to flush buffered status/headers/body before ending the connection
+
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+
 ## 0.12.1
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 387b2ee: Add console app assets, agent serialization, addon type generation, and enhance OpenAPI codegen with error handling, header params, and MCP support
+- 6e8777b: Rename `node` config key to `addon` (now accepts boolean or object with metadata) and rename generated file `pikku-nodes-meta.gen.json` to `pikku-addon-meta.gen.json`
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [387b2ee]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+  - @pikku/inspector@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

@@ -1,5 +1,24 @@
 ## 0.12.0
 
+## 0.13.0
+
+### Minor Changes
+
+- b2b0af9: Migrate all consumers from @pikku/pg to @pikku/kysely and remove the @pikku/pg package
+
+### Patch Changes
+
+- 32ed003: Add envelope encryption utilities and database-backed secret services with KEK rotation support
+- 387b2ee: Add error_message column to agent run storage and queries
+- c7ff141: Add WorkflowVersionStatus type with draft→active lifecycle for AI-generated workflows, type all DB status fields with proper unions instead of plain strings
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

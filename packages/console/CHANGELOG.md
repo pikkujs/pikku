@@ -1,5 +1,20 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 387b2ee: Add agent playground with model/temperature overrides, installed/community addon tabs, and workflow canvas improvements
+- Updated dependencies [387b2ee]
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/assistant-ui@0.12.1
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes
