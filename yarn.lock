@@ -2258,30 +2258,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cucumber/pretty-formatter@npm:^3.2.0":
-  version: 3.2.0
-  resolution: "@cucumber/pretty-formatter@npm:3.2.0"
-  dependencies:
-    "@cucumber/query": "npm:15.0.1"
-    luxon: "npm:^3.7.2"
-  peerDependencies:
-    "@cucumber/messages": "*"
-  checksum: 10/c09388be4945444066bbf3b4ee89a3cbc82b103fa23d1ec02a0198493cd8e2072543b63ea478d151ea48d0d8010650aa06c4dc7b0110d2de47aafe1cf87ade40
-  languageName: node
-  linkType: hard
-
-"@cucumber/query@npm:15.0.1":
-  version: 15.0.1
-  resolution: "@cucumber/query@npm:15.0.1"
-  dependencies:
-    "@teppeis/multimaps": "npm:3.0.0"
-    lodash.sortby: "npm:^4.7.0"
-  peerDependencies:
-    "@cucumber/messages": "*"
-  checksum: 10/713c2f46fb5ad4c1d76126a6034567e19b6023a9fe52829fc3476d6e83c6ccafc48fb019c4deb6d6e0d590dc4e7ea7883494a8070ef68eb795bd30f6988ca574
-  languageName: node
-  linkType: hard
-
 "@cucumber/query@npm:^13.0.2":
   version: 13.6.0
   resolution: "@cucumber/query@npm:13.6.0"
@@ -5338,7 +5314,6 @@ __metadata:
   dependencies:
     "@ai-sdk/openai": "npm:^3.0.37"
     "@cucumber/cucumber": "npm:^11.0.0"
-    "@cucumber/pretty-formatter": "npm:^3.2.0"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
@@ -16371,7 +16346,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"luxon@npm:^3.2.1, luxon@npm:^3.5.0, luxon@npm:^3.7.1, luxon@npm:^3.7.2, luxon@npm:~3.7.0":
+"luxon@npm:^3.2.1, luxon@npm:^3.5.0, luxon@npm:^3.7.1, luxon@npm:~3.7.0":
   version: 3.7.2
   resolution: "luxon@npm:3.7.2"
   checksum: 10/b24cd205ed306ce7415991687897dcc4027921ae413c9116590bc33a95f93b86ce52cf74ba72b4f5c5ab1c10090517f54ac8edfb127c049e0bf55b90dc2260be
