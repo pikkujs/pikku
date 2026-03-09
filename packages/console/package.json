@@ -37,7 +37,7 @@
     "dayjs": "^1.11.19",
     "elkjs": "^0.11.0",
     "lodash": "^4.17.21",
-    "lucide-react": "^0.554.0",
+    "lucide-react": "^0.577.0",
     "mantine-datatable": "^8.3.8",
     "react": "^19",
     "react-arborist": "^3.4.3",

@@ -5204,7 +5204,7 @@ __metadata:
     dayjs: "npm:^1.11.19"
     elkjs: "npm:^0.11.0"
     lodash: "npm:^4.17.21"
-    lucide-react: "npm:^0.554.0"
+    lucide-react: "npm:^0.577.0"
     mantine-datatable: "npm:^8.3.8"
     postcss: "npm:^8"
     postcss-preset-mantine: "npm:^1.18.0"
@@ -16214,12 +16214,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:^0.554.0":
-  version: 0.554.0
-  resolution: "lucide-react@npm:0.554.0"
+"lucide-react@npm:^0.577.0":
+  version: 0.577.0
+  resolution: "lucide-react@npm:0.577.0"
   peerDependencies:
     react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10/3f21ca482ca0b73ae30da06675c2f064c27f0ba165e55a064318443a6d92c6affc8b6ffefc94a8d082d27aaaf34f45df281ca21087d58c2361f7cfae16daba08
+  checksum: 10/dcc834b83ff2b3fca4898672ead3ac3f6316c4c391a4ccfc94e5fdd4a08e834ab2d80de7503e3bc9f6fce8333d446c7263cfb5f6f4fc54b5f7569c4e53340e47
   languageName: node
   linkType: hard
 
