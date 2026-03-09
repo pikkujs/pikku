@@ -1,4 +1,4 @@
-@dynamic-workflow-modes
+@dynamic-workflow-modes @ai
 Feature: Dynamic Workflow Modes (read / always / ask)
   Tests that the three dynamicWorkflows modes provide the correct
   tools and behavioral constraints to agents.

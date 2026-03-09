@@ -38,6 +38,7 @@
     "test:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run test",
     "test:templates": "yarn workspaces foreach -A --include 'templates/**' run test",
     "test:e2e": "yarn workspace @pikku/e2e test",
+    "test:e2e:ai": "yarn workspace @pikku/e2e test:ai",
     "test": "yarn workspaces foreach -A --exclude '@pikku/templates-*' --exclude '@pikku/verifiers-*' --exclude '@pikku/addon-console' --exclude '@pikku/console' run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
     "lint": "npx --yes oxlint@latest",

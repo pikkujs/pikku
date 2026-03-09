@@ -1,4 +1,4 @@
-@router @console
+@router @console @ai
 Feature: Router Agent via Console
   The router-agent delegates requests to domain agents.
 

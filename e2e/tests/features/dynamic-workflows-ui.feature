@@ -1,4 +1,4 @@
-@dynamic-workflows-ui @console
+@dynamic-workflows-ui @console @ai
 Feature: Dynamic Workflows via Todo Agent (Console UI)
   The todo-agent has dynamicWorkflows enabled, allowing it to create,
   save, and execute workflows through the Console agent playground.
