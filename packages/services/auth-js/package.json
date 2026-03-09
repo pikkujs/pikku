@@ -1,6 +1,6 @@
 {
   "name": "@pikku/auth-js",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",
@@ -16,7 +16,7 @@
   },
   "peerDependencies": {
     "@auth/core": "^0.37.0",
-    "@pikku/core": "^0.12.1"
+    "@pikku/core": "^0.12.3"
   },
   "devDependencies": {
     "@auth/core": "^0.37.0",
