@@ -30,6 +30,23 @@ export async function loadAddonFunctionsMeta(
         `Loaded ${Object.keys(meta).length} addon functions for '${namespace}' from ${decl.package}`
       )
 
+      // If wireAddon has mcp: true, expose addon functions with mcp: true as MCP tools
+      if (decl.mcp) {
+        for (const [funcName, funcMeta] of Object.entries<any>(meta)) {
+          if (funcMeta.mcp) {
+            const toolName = `${namespace}:${funcName}`
+            state.mcpEndpoints.toolsMeta[toolName] = {
+              pikkuFuncId: `${namespace}:${funcName}`,
+              name: toolName,
+              description: funcMeta.description || funcMeta.title || funcName,
+              inputSchema: funcMeta.inputSchemaName ?? null,
+              outputSchema: funcMeta.outputSchemaName ?? null,
+              tags: funcMeta.tags,
+            }
+          }
+        }
+      }
+
       // Load addon schemas into state.schemas
       const schemasDir = join(dirname(metaPath), '..', 'schemas', 'schemas')
       try {

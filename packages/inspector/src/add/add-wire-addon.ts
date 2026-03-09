@@ -40,6 +40,7 @@ export function addWireAddon(
   let name: string | undefined
   let pkg: string | undefined
   let rpcEndpoint: string | undefined
+  let mcp: boolean | undefined
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
 
@@ -53,6 +54,12 @@ export function addWireAddon(
       pkg = prop.initializer.text
     } else if (key === 'rpcEndpoint' && ts.isStringLiteral(prop.initializer)) {
       rpcEndpoint = prop.initializer.text
+    } else if (
+      key === 'mcp' &&
+      (prop.initializer.kind === ts.SyntaxKind.TrueKeyword ||
+        prop.initializer.kind === ts.SyntaxKind.FalseKeyword)
+    ) {
+      mcp = prop.initializer.kind === ts.SyntaxKind.TrueKeyword
     } else if (
       key === 'secretOverrides' &&
       ts.isObjectLiteralExpression(prop.initializer)
@@ -72,6 +79,7 @@ export function addWireAddon(
   state.rpc.wireAddonDeclarations.set(name, {
     package: pkg,
     rpcEndpoint,
+    mcp,
     secretOverrides,
     variableOverrides,
   })

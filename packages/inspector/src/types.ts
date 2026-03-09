@@ -349,6 +349,7 @@ export interface InspectorState {
       {
         package: string
         rpcEndpoint?: string
+        mcp?: boolean
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
       }

@@ -94,6 +94,37 @@ function hasVerboseShallow(
 }
 
 /**
+ * Recursively strip addon namespace prefixes from pikkuFuncId values.
+ * When an entry has both pikkuFuncId (e.g. "swaggerPetstore:addPet") and packageName,
+ * the namespace prefix is redundant — strip it so runtime gets bare function names.
+ */
+function stripAddonNamespacePrefixes<T>(obj: T): T {
+  if (obj === null || obj === undefined || typeof obj !== 'object') return obj
+  if (Array.isArray(obj)) return obj.map(stripAddonNamespacePrefixes) as T
+
+  const record = obj as Record<string, unknown>
+  const result: Record<string, unknown> = {}
+
+  for (const [key, value] of Object.entries(record)) {
+    if (
+      key === 'pikkuFuncId' &&
+      typeof value === 'string' &&
+      value.includes(':') &&
+      'packageName' in record &&
+      record.packageName
+    ) {
+      result[key] = value.substring(value.indexOf(':') + 1)
+    } else if (typeof value === 'object' && value !== null) {
+      result[key] = stripAddonNamespacePrefixes(value)
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result as T
+}
+
+/**
  * Strip verbose fields from a meta object.
  *
  * Handles different meta structure patterns:
@@ -102,8 +133,14 @@ function hasVerboseShallow(
  * 2. Record of meta entries: { "entryName": { pikkuFuncId, description, tags, ... } }
  *    -> Strips description, tags from each entry (one level deep only)
  * 3. CLI meta and others with complex nesting: preserved as-is except for pikkuFuncId entries
+ *
+ * Also strips addon namespace prefixes from pikkuFuncId values where packageName is present.
  */
 export function stripVerboseFields<T>(obj: T): T {
+  return stripAddonNamespacePrefixes(_stripVerboseFieldsInner(obj))
+}
+
+function _stripVerboseFieldsInner<T>(obj: T): T {
   if (obj === null || obj === undefined || typeof obj !== 'object') {
     return obj
   }
