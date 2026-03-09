@@ -34,6 +34,7 @@ export type {
   WorkflowServiceConfig,
   WorkflowRunWire,
   WorkflowStatus,
+  WorkflowVersionStatus,
   StepStatus,
   WorkflowRun,
   StepState,

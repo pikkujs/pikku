@@ -6,6 +6,7 @@ import type {
   WorkflowRunWire,
   StepState,
   WorkflowStatus,
+  WorkflowVersionStatus,
   WorkflowStepOptions,
 } from '../wirings/workflow/workflow.types.js'
 
@@ -40,7 +41,10 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
   >() // keyed by runId
   private runState = new Map<string, Record<string, unknown>>() // keyed by runId
   private branchKeys = new Map<string, string>() // keyed by stepId
-  private workflowVersions = new Map<string, { graph: any; source: string }>() // keyed by `${name}:${graphHash}`
+  private workflowVersions = new Map<
+    string,
+    { graph: any; source: string; status: WorkflowVersionStatus }
+  >() // keyed by `${name}:${graphHash}`
 
   async createRun(
     workflowName: string,
@@ -376,12 +380,26 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     name: string,
     graphHash: string,
     graph: any,
-    source: string
+    source: string,
+    status?: WorkflowVersionStatus
   ): Promise<void> {
     this.workflowVersions.set(`${name}:${graphHash}`, {
       graph,
       source,
+      status: status ?? 'active',
     })
+  }
+
+  async updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
+  ): Promise<void> {
+    const key = `${name}:${graphHash}`
+    const version = this.workflowVersions.get(key)
+    if (version) {
+      version.status = status
+    }
   }
 
   async getWorkflowVersion(
@@ -403,7 +421,7 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     }> = []
     const prefix = agentName ? `ai:${agentName}:` : 'ai:'
     for (const [key, value] of this.workflowVersions) {
-      if (value.source !== 'ai-agent') continue
+      if (value.source !== 'ai-agent' || value.status !== 'active') continue
       const separatorIdx = key.lastIndexOf(':')
       const wfName = key.substring(0, separatorIdx)
       const hash = key.substring(separatorIdx + 1)

@@ -12,7 +12,7 @@ Feature: Dynamic Workflows via Todo Agent (API)
     When I send the agent "todoAgent" the message "Use createAgentWorkflow to create a workflow called 'add-and-list' with two nodes: first node calls todos:addTodo with input title 'Workflow task', second node calls todos:listTodos. The first node should flow to the second. Then save it using saveAgentWorkflow."
     And I approve all pending approvals
     Then the agent response should contain "add-and-list"
-    And the agent response should contain "saved"
+    And the agent response should contain "activated"
 
     When I send the agent "todoAgent" the message "Use listAgentWorkflows to show my workflows"
     Then the agent response should contain "add-and-list"

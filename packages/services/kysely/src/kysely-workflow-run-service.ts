@@ -40,7 +40,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     }
 
     if (status) {
-      query = query.where('status', '=', status)
+      query = query.where('status', '=', status as WorkflowStatus)
     }
 
     const result = await query
@@ -222,6 +222,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       .selectFrom('workflow_versions')
       .select(['workflow_name', 'graph_hash', 'graph'])
       .where('source', '=', 'ai-agent')
+      .where('status', '=', 'active')
     if (agentName) {
       query = query.where('workflow_name', 'like', `ai:${agentName}:%`)
     }

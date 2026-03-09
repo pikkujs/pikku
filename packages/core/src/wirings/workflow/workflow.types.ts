@@ -61,6 +61,11 @@ export type WorkflowStatus =
   | 'cancelled'
 
 /**
+ * Workflow version status (for AI-generated workflows)
+ */
+export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
+
+/**
  * Workflow step status
  */
 export type StepStatus =
