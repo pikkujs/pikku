@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PackageDetailPage } from './PackageDetailPage'
-import { Group, Text, ThemeIcon, Badge, SegmentedControl, Box } from '@mantine/core'
-import { Package, HardDrive, Globe } from 'lucide-react'
+import { Group, Text, ThemeIcon, Badge, Box } from '@mantine/core'
+import { Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
 import { TableListPage } from '@/components/layout/TableListPage'
 import { PanelProvider } from '@/context/PanelContext'
 
@@ -241,6 +241,11 @@ const CommunityList: React.FunctionComponent<{
   )
 }
 
+const ADDON_TABS = [
+  { value: 'installed', label: 'Installed' },
+  { value: 'community', label: 'Community' },
+]
+
 const PackagesList: React.FunctionComponent<{
   onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ onSelect }) => {
@@ -249,45 +254,17 @@ const PackagesList: React.FunctionComponent<{
   return (
     <ResizablePanelLayout
       header={
-        <DetailPageHeader
+        <TabbedPageHeader
           icon={Package}
           category="Addons"
           docsHref="https://pikku.dev/docs/external-packages"
+          tabs={ADDON_TABS}
+          activeTab={tab}
+          onTabChange={setTab}
         />
       }
       hidePanel
     >
-      <Box
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-        }}
-      >
-        <SegmentedControl
-          fullWidth
-          value={tab}
-          onChange={(value) => setTab(value)}
-          data={[
-            {
-              label: (
-                <Group gap={4} justify="center">
-                  <HardDrive size={14} />
-                  <span>Installed</span>
-                </Group>
-              ),
-              value: 'installed',
-            },
-            {
-              label: (
-                <Group gap={4} justify="center">
-                  <Globe size={14} />
-                  <span>Community</span>
-                </Group>
-              ),
-              value: 'community',
-            },
-          ]}
-        />
-      </Box>
       {tab === 'installed' ? (
         <InstalledList onSelect={onSelect} />
       ) : (

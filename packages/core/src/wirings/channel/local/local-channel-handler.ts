@@ -8,7 +8,7 @@ export class PikkuLocalChannelHandler<
   private onMessageCallback?: (message: unknown) => void
   private onBinaryMessageCallback?: (data: BinaryData) => void
   private openCallBack?: () => void
-  private closeCallback?: () => void
+  private closeCallbacks: (() => void)[] = []
   private sendCallback?: (message: Out, isBinary?: boolean) => void
   private sendBinaryCallback?: (data: BinaryData) => void
 
@@ -44,7 +44,7 @@ export class PikkuLocalChannelHandler<
   }
 
   public registerOnClose(callback: () => void): void {
-    this.closeCallback = callback
+    this.closeCallbacks.push(callback)
   }
 
   public close() {
@@ -52,7 +52,9 @@ export class PikkuLocalChannelHandler<
       return
     }
     super.close()
-    this.closeCallback?.()
+    for (const cb of this.closeCallbacks) {
+      cb()
+    }
   }
 
   public registerOnSend(send: (message: Out) => void) {

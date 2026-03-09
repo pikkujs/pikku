@@ -54,7 +54,7 @@ const ChannelPageInner: React.FunctionComponent<{
   const handleChannelSwitch = useCallback(
     (name: string) => {
       setSelected(null)
-      navigate(`/apis/channels?id=${encodeURIComponent(name)}`)
+      navigate(`/apis?tab=channels&id=${encodeURIComponent(name)}`)
     },
     [navigate]
   )
@@ -65,7 +65,7 @@ const ChannelPageInner: React.FunctionComponent<{
         <DetailPageHeader
           icon={Radio}
           category="Channels"
-          categoryPath="/apis/channels"
+          categoryPath="/apis?tab=channels"
           currentItem={channelName}
           items={channelItems}
           onItemSelect={handleChannelSwitch}

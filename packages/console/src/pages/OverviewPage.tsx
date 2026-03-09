@@ -29,7 +29,6 @@ interface StatCardProps {
   count: number
   icon: React.ComponentType<{ size?: number }>
   href: string
-  color: string
 }
 
 const StatCard: React.FunctionComponent<StatCardProps> = ({
@@ -37,7 +36,6 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
   count,
   icon: Icon,
   href,
-  color,
 }) => (
   <Paper
     component={Link}
@@ -66,11 +64,11 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
           width: 40,
           height: 40,
           borderRadius: 8,
-          backgroundColor: `var(--mantine-color-${color}-0)`,
+          backgroundColor: 'rgba(255,255,255,0.04)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: `var(--mantine-color-${color}-6)`,
+          color: 'var(--mantine-color-dimmed)',
         }}
       >
         <Icon size={20} />
@@ -104,63 +102,54 @@ export const OverviewPage: React.FunctionComponent = () => {
       count: counts.functions,
       icon: FunctionSquare,
       href: '/functions',
-      color: 'blue',
     },
     {
       label: 'Workflows',
       count: counts.workflows,
       icon: GitBranch,
       href: '/workflow',
-      color: 'violet',
     },
     {
       label: 'Agents',
       count: counts.agents,
       icon: Bot,
       href: '/agents',
-      color: 'grape',
     },
     {
       label: 'HTTP Routes',
       count: counts.httpRoutes,
       icon: Globe,
-      href: '/apis/http',
-      color: 'green',
+      href: '/apis?tab=http',
     },
     {
       label: 'Channels',
       count: counts.channels,
       icon: Radio,
-      href: '/apis/channels',
-      color: 'cyan',
+      href: '/apis?tab=channels',
     },
     {
       label: 'MCP Tools',
       count: counts.mcpTools,
       icon: Cpu,
-      href: '/apis/mcp',
-      color: 'orange',
+      href: '/apis?tab=mcp',
     },
     {
       label: 'CLI Commands',
       count: counts.cliCommands,
       icon: Terminal,
-      href: '/apis/cli',
-      color: 'teal',
+      href: '/apis?tab=cli',
     },
     {
       label: 'Schedulers',
       count: counts.schedulers,
       icon: Clock,
-      href: '/jobs/schedulers',
-      color: 'yellow',
+      href: '/jobs?tab=schedulers',
     },
     {
       label: 'Queues',
       count: counts.queues,
       icon: ListOrdered,
-      href: '/jobs/queues',
-      color: 'pink',
+      href: '/jobs?tab=queues',
     },
   ]
 

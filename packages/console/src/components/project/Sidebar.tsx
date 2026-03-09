@@ -15,24 +15,17 @@ import {
   GitBranch,
   Bot,
   Globe,
-  Radio,
-  Cpu,
-  Terminal,
   Clock,
-  ListOrdered,
-  Zap,
   Server,
-  Layers,
-  Shield,
   KeyRound,
-  Settings2,
-  Settings,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Package,
+  RefreshCw,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
+import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
 interface NavItem {
   label: string
@@ -70,99 +63,34 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Config',
     items: [
       {
-        label: 'Secrets',
-        href: '/config/secrets',
-        icon: KeyRound,
-        matchPrefix: '/config/secrets',
-      },
-      {
-        label: 'Variables',
-        href: '/config/variables',
-        icon: Settings2,
-        matchPrefix: '/config/variables',
-      },
-    ],
-  },
-  {
-    title: 'APIs',
-    items: [
-      {
-        label: 'HTTP',
-        href: '/apis/http',
+        label: 'APIs',
+        href: '/apis',
         icon: Globe,
-        matchPrefix: '/apis/http',
+        matchPrefix: '/apis',
       },
       {
-        label: 'Channels',
-        href: '/apis/channels',
-        icon: Radio,
-        matchPrefix: '/apis/channels',
-      },
-      {
-        label: 'MCP',
-        href: '/apis/mcp',
-        icon: Cpu,
-        matchPrefix: '/apis/mcp',
-      },
-      {
-        label: 'CLI',
-        href: '/apis/cli',
-        icon: Terminal,
-        matchPrefix: '/apis/cli',
-      },
-    ],
-  },
-  {
-    title: 'Jobs',
-    items: [
-      {
-        label: 'Schedulers',
-        href: '/jobs/schedulers',
+        label: 'Jobs',
+        href: '/jobs',
         icon: Clock,
-        matchPrefix: '/jobs/schedulers',
+        matchPrefix: '/jobs',
       },
       {
-        label: 'Queues',
-        href: '/jobs/queues',
-        icon: ListOrdered,
-        matchPrefix: '/jobs/queues',
-      },
-      {
-        label: 'Triggers',
-        href: '/jobs/triggers',
-        icon: Zap,
-        matchPrefix: '/jobs/triggers',
-      },
-    ],
-  },
-  {
-    title: 'Runtime',
-    items: [
-      {
-        label: 'Services',
-        href: '/runtime/services',
+        label: 'Runtime',
+        href: '/runtime',
         icon: Server,
-        matchPrefix: '/runtime/services',
+        matchPrefix: '/runtime',
       },
       {
-        label: 'Middleware',
-        href: '/runtime/middleware',
-        icon: Layers,
-        matchPrefix: '/runtime/middleware',
-      },
-      {
-        label: 'Permissions',
-        href: '/runtime/permissions',
-        icon: Shield,
-        matchPrefix: '/runtime/permissions',
+        label: 'Config',
+        href: '/config',
+        icon: KeyRound,
+        matchPrefix: '/config',
       },
     ],
   },
   {
-    title: 'Addons',
     items: [
       {
         label: 'Addons',
@@ -183,6 +111,7 @@ export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 export const Sidebar: React.FunctionComponent = () => {
   const theme = useMantineTheme()
   const { pathname } = useLocation()
+  const { refresh, loading: metaLoading } = usePikkuMeta()
   const [collapsed, setCollapsed] = useLocalStorage({
     key: 'sidebar-collapsed',
     defaultValue: false,
@@ -320,23 +249,16 @@ export const Sidebar: React.FunctionComponent = () => {
         <Box px={6} py={4}>
           {collapsed ? (
             <Stack gap={2} align="center">
-              <Tooltip label="Settings" position="right">
-                <NavLink
-                  component={Link}
-                  to="/settings"
-                  active={pathname.includes('/settings')}
-                  leftSection={<Settings size={18} />}
-                  variant="light"
-                  style={{
-                    borderRadius: theme.radius.sm,
-                    justifyContent: 'center',
-                    padding: '8px 0',
-                  }}
-                  styles={{
-                    section: { marginRight: 0 },
-                    body: { display: 'none' },
-                  }}
-                />
+              <Tooltip label="Refresh metadata" position="right">
+                <ActionIcon
+                  variant="subtle"
+                  size="md"
+                  color="gray"
+                  loading={metaLoading}
+                  onClick={() => refresh()}
+                >
+                  <RefreshCw size={16} />
+                </ActionIcon>
               </Tooltip>
               <Tooltip label="Expand sidebar" position="right">
                 <ActionIcon
@@ -357,20 +279,17 @@ export const Sidebar: React.FunctionComponent = () => {
                 justifyContent: 'space-between',
               }}
             >
-              <Box style={{ flex: 1 }}>
-                <NavLink
-                  component={Link}
-                  to="/settings"
-                  label="Settings"
-                  leftSection={<Settings size={16} />}
-                  active={pathname.includes('/settings')}
-                  variant="light"
-                  style={{
-                    borderRadius: theme.radius.sm,
-                    fontSize: 13,
-                  }}
-                />
-              </Box>
+              <Tooltip label="Refresh metadata">
+                <ActionIcon
+                  variant="subtle"
+                  size="sm"
+                  color="gray"
+                  loading={metaLoading}
+                  onClick={() => refresh()}
+                >
+                  <RefreshCw size={16} />
+                </ActionIcon>
+              </Tooltip>
               <Tooltip label="Collapse sidebar">
                 <ActionIcon
                   variant="subtle"
