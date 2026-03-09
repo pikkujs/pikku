@@ -202,7 +202,7 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
   async getAIGeneratedWorkflows(
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    const filter: Record<string, any> = { source: 'ai-agent' }
+    const filter: Record<string, any> = { source: 'ai-agent', status: 'active' }
     if (agentName) {
       const escaped = agentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       filter.workflowName = { $regex: `^ai:${escaped}:` }

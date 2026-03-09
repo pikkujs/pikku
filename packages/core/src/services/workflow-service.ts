@@ -4,6 +4,7 @@ import type {
   WorkflowRunWire,
   StepState,
   WorkflowStatus,
+  WorkflowVersionStatus,
 } from '../wirings/workflow/workflow.types.js'
 
 /**
@@ -75,7 +76,13 @@ export interface WorkflowService {
     name: string,
     graphHash: string,
     graph: any,
-    source: string
+    source: string,
+    status?: WorkflowVersionStatus
+  ): Promise<void>
+  updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
   ): Promise<void>
   getWorkflowVersion(
     name: string,

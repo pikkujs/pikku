@@ -5,6 +5,7 @@ import {
   type WorkflowRunWire,
   type StepState,
   type WorkflowStatus,
+  type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
 import { Redis, type RedisOptions } from 'ioredis'
 import { randomUUID } from 'crypto'
@@ -870,7 +871,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     name: string,
     graphHash: string,
     graph: any,
-    source: string
+    source: string,
+    status?: WorkflowVersionStatus
   ): Promise<void> {
     const key = this.versionKey(name, graphHash)
     const exists = await this.redis.exists(key)
@@ -885,10 +887,21 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         JSON.stringify(graph),
         'source',
         source,
+        'status',
+        status ?? 'active',
         'createdAt',
         Date.now().toString()
       )
     }
+  }
+
+  async updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
+  ): Promise<void> {
+    const key = this.versionKey(name, graphHash)
+    await this.redis.hset(key, 'status', status)
   }
 
   async getWorkflowVersion(
@@ -927,7 +940,12 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       cursor = nextCursor
       for (const key of keys) {
         const data = await this.redis.hgetall(key)
-        if (!data.graph || data.source !== 'ai-agent') continue
+        if (
+          !data.graph ||
+          data.source !== 'ai-agent' ||
+          data.status !== 'active'
+        )
+          continue
         const workflowName = data.workflowName
         const graphHash = data.graphHash
         if (!workflowName || !graphHash) continue

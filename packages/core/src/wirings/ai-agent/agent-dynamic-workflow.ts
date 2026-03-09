@@ -11,13 +11,9 @@ import type { SessionService } from '../../services/user-session-service.js'
 import {
   validateWorkflowWiring,
   computeEntryNodeIds,
-  generateMermaidDiagram,
 } from '../workflow/graph/graph-validation.js'
 
-export function buildDynamicWorkflowInstructions(
-  tools: string[],
-  packageName: string | null
-): string {
+export function buildDynamicWorkflowInstructions(tools: string[]): string {
   const toolSchemaLines: string[] = []
 
   for (const toolName of tools) {
@@ -94,15 +90,11 @@ export function buildWorkflowTools(
   sessionService?: SessionService<CoreUserSession>
 ): AIAgentToolDef[] {
   const tools: AIAgentToolDef[] = []
-  const pendingWorkflows = new Map<
-    string,
-    { meta: WorkflowRuntimeMeta; mermaid: string }
-  >()
 
   tools.push({
     name: 'createAgentWorkflow',
     description:
-      'Validate and preview a workflow graph that chains tools together. Returns a preview with a mermaid diagram. Call saveAgentWorkflow to save it after the user approves.',
+      'Validate and create a draft workflow graph that chains tools together. Call saveAgentWorkflow to activate it after the user approves.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -130,7 +122,6 @@ export function buildWorkflowTools(
         nodes: string | Record<string, any>
       }
       const name = raw.name.replace(/[^a-zA-Z0-9_-]/g, '-')
-      const description = raw.description
       let nodes: Record<string, any>
       if (typeof raw.nodes === 'string') {
         try {
@@ -166,29 +157,38 @@ export function buildWorkflowTools(
       }
 
       const fullName = `ai:${agentName}:${name}`
-      const graphHash = hashString(canonicalJSON({ nodes, entryNodeIds }))
 
-      const meta: WorkflowRuntimeMeta = {
+      const graphHash = hashString(canonicalJSON({ nodes, entryNodeIds }))
+      const graph: WorkflowRuntimeMeta = {
         name: fullName,
         pikkuFuncId: fullName,
         source: 'ai-agent',
-        description,
+        description: raw.description,
         nodes,
         entryNodeIds,
         graphHash,
       }
 
-      const mermaid = generateMermaidDiagram(fullName, nodes, entryNodeIds)
+      const singletonServices = getSingletonServices()
+      if (!singletonServices?.workflowService) {
+        return { error: 'Workflow service not available' }
+      }
 
-      pendingWorkflows.set(fullName, { meta, mermaid })
+      await singletonServices.workflowService.upsertWorkflowVersion(
+        fullName,
+        graphHash,
+        graph,
+        'ai-agent',
+        'draft'
+      )
 
       return {
         valid: true,
         workflowName: fullName,
+        graphHash,
         entryNodes: entryNodeIds,
         nodeCount: Object.keys(nodes).length,
-        mermaid,
-        message: `Workflow '${fullName}' validated with ${Object.keys(nodes).length} nodes. Present this to the user and call saveAgentWorkflow to save it.`,
+        message: `Workflow '${fullName}' validated and saved as draft. Present this to the user and call saveAgentWorkflow to activate it.`,
       }
     },
   })
@@ -196,7 +196,7 @@ export function buildWorkflowTools(
   tools.push({
     name: 'saveAgentWorkflow',
     description:
-      'Save a previously validated workflow so it can be executed. Requires user approval. Always include the nodes JSON from createAgentWorkflow.',
+      'Activate a previously created draft workflow so it can be executed. Requires user approval.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -205,141 +205,83 @@ export function buildWorkflowTools(
           description:
             'Full workflow name returned by createAgentWorkflow (e.g. ai:agentName:myWorkflow)',
         },
-        nodes: {
+        graphHash: {
           type: 'string',
-          description:
-            'JSON string of the workflow nodes (same as passed to createAgentWorkflow). Required for persistence.',
-        },
-        description: {
-          type: 'string',
-          description: 'What this workflow does',
+          description: 'Graph hash returned by createAgentWorkflow',
         },
       },
-      required: ['name', 'nodes'],
+      required: ['name', 'graphHash'],
     },
     needsApproval: true,
     approvalDescriptionFn: async (input: unknown) => {
-      const raw = input as {
-        name: string
-        nodes?: string
-        description?: string
-      }
+      const raw = input as { name: string; graphHash: string }
       const fullName = raw.name.startsWith(`ai:${agentName}:`)
         ? raw.name
         : `ai:${agentName}:${raw.name}`
-      const pending = pendingWorkflows.get(fullName)
-      if (pending) {
-        const nodeCount = Object.keys(pending.meta.nodes!).length
-        const desc = pending.meta.description
-          ? `\n${pending.meta.description}`
-          : ''
-        return `Save workflow '${fullName}' (${nodeCount} nodes)${desc}\n\n${pending.mermaid}`
-      }
-      if (raw.nodes) {
-        try {
-          const nodes =
-            typeof raw.nodes === 'string' ? JSON.parse(raw.nodes) : raw.nodes
-          const nodeCount = Object.keys(nodes).length
-          const entryNodeIds = computeEntryNodeIds(nodes)
-          const mermaid = generateMermaidDiagram(fullName, nodes, entryNodeIds)
-          const desc = raw.description ? `\n${raw.description}` : ''
-          return `Save workflow '${fullName}' (${nodeCount} nodes)${desc}\n\n${mermaid}`
-        } catch {
-          return `Save workflow '${fullName}'`
-        }
-      }
-      return `Save workflow '${fullName}'`
-    },
-    execute: async (input: unknown) => {
-      const raw = input as {
-        name: string
-        nodes?: string | Record<string, any>
-        description?: string
-      }
-      const fullName = raw.name.startsWith(`ai:${agentName}:`)
-        ? raw.name
-        : `ai:${agentName}:${raw.name}`
-
-      let meta: WorkflowRuntimeMeta
-      const pending = pendingWorkflows.get(fullName)
-
-      if (pending) {
-        meta = pending.meta
-        pendingWorkflows.delete(fullName)
-      } else if (raw.nodes) {
-        let nodes: Record<string, any>
-        if (typeof raw.nodes === 'string') {
-          try {
-            nodes = JSON.parse(raw.nodes)
-          } catch {
-            return { error: 'Invalid JSON in nodes field' }
-          }
-        } else {
-          nodes = raw.nodes
-        }
-
-        if (Object.keys(nodes).length < 2) {
-          return {
-            error:
-              'A workflow must have at least 2 nodes. A single node is just a tool call — use the tool directly instead.',
-          }
-        }
-
-        const validationErrors = validateWorkflowWiring(nodes, toolNames)
-        if (validationErrors.length > 0) {
-          return {
-            error: 'Workflow validation failed',
-            errors: validationErrors,
-          }
-        }
-
-        const entryNodeIds = computeEntryNodeIds(nodes)
-        if (entryNodeIds.length === 0) {
-          return { error: 'No entry nodes found.' }
-        }
-
-        const graphHash = hashString(canonicalJSON({ nodes, entryNodeIds }))
-        meta = {
-          name: fullName,
-          pikkuFuncId: fullName,
-          source: 'ai-agent',
-          description: raw.description,
-          nodes,
-          entryNodeIds,
-          graphHash,
-        }
-      } else {
-        return {
-          error: `No pending workflow '${fullName}' and no nodes provided. Include the nodes JSON from createAgentWorkflow.`,
-        }
-      }
-
-      const allMeta = pikkuState(null, 'workflows', 'meta')
-      allMeta[fullName] = meta
 
       const singletonServices = getSingletonServices()
-      if (singletonServices?.workflowService) {
-        await singletonServices.workflowService.upsertWorkflowVersion(
-          fullName,
-          meta.graphHash!,
-          meta,
-          'ai-agent'
-        )
+      if (!singletonServices?.workflowService) {
+        return `Activate workflow '${fullName}'`
       }
+
+      const version =
+        await singletonServices.workflowService.getWorkflowVersion(
+          fullName,
+          raw.graphHash
+        )
+      if (version) {
+        const graph = version.graph as WorkflowRuntimeMeta
+        if (graph.nodes) {
+          const desc = graph.description ? `\n${graph.description}` : ''
+          return `Activate workflow '${fullName}' (${Object.keys(graph.nodes).length} nodes)${desc}`
+        }
+      }
+      return `Activate workflow '${fullName}'`
+    },
+    execute: async (input: unknown) => {
+      const raw = input as { name: string; graphHash: string }
+      const fullName = raw.name.startsWith(`ai:${agentName}:`)
+        ? raw.name
+        : `ai:${agentName}:${raw.name}`
+
+      const singletonServices = getSingletonServices()
+      if (!singletonServices?.workflowService) {
+        return { error: 'Workflow service not available' }
+      }
+
+      const version =
+        await singletonServices.workflowService.getWorkflowVersion(
+          fullName,
+          raw.graphHash
+        )
+      if (!version) {
+        return {
+          error: `Workflow '${fullName}' with hash '${raw.graphHash}' not found. Use createAgentWorkflow first.`,
+        }
+      }
+
+      await singletonServices.workflowService.updateWorkflowVersionStatus(
+        fullName,
+        raw.graphHash,
+        'active'
+      )
+
+      const graph = version.graph as WorkflowRuntimeMeta
+      const allMeta = pikkuState(null, 'workflows', 'meta')
+      allMeta[fullName] = graph
 
       if (streamContext) {
         streamContext.channel.send({
           type: 'workflow-created',
           workflowName: fullName,
-          nodes: meta.nodes!,
-          entryNodeIds: meta.entryNodeIds!,
+          graph,
         })
       }
 
       return {
         success: true,
         workflowName: fullName,
-        message: `Workflow '${fullName}' saved and ready to execute.`,
+        message: `Workflow '${fullName}' activated and ready to execute.`,
       }
     },
   })
@@ -354,6 +296,10 @@ export function buildWorkflowTools(
     },
     execute: async () => {
       const singletonServices = getSingletonServices()
+      if (!singletonServices?.workflowService) {
+        return { error: 'Workflow service not available' }
+      }
+
       const results: Array<{
         name: string
         description?: string
@@ -372,7 +318,7 @@ export function buildWorkflowTools(
         }
       }
 
-      if (results.length === 0 && singletonServices?.workflowService) {
+      if (results.length === 0) {
         const persisted =
           await singletonServices.workflowService.getAIGeneratedWorkflows(
             agentName

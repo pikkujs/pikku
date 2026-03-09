@@ -1,4 +1,9 @@
 import type { Generated } from 'kysely'
+import type {
+  WorkflowStatus,
+  StepStatus,
+  WorkflowVersionStatus,
+} from '@pikku/core/workflow'
 
 export interface ChannelsTable {
   channel_id: string
@@ -17,7 +22,7 @@ export interface ChannelSubscriptionsTable {
 export interface WorkflowRunsTable {
   workflow_run_id: Generated<string>
   workflow: string
-  status: string
+  status: WorkflowStatus
   input: string
   output: string | null
   error: string | null
@@ -35,7 +40,7 @@ export interface WorkflowStepTable {
   step_name: string
   rpc_name: string | null
   data: string | null
-  status: Generated<string>
+  status: Generated<StepStatus>
   result: string | null
   error: string | null
   branch_taken: string | null
@@ -48,7 +53,7 @@ export interface WorkflowStepTable {
 export interface WorkflowStepHistoryTable {
   history_id: Generated<string>
   workflow_step_id: string
-  status: string
+  status: StepStatus
   result: string | null
   error: string | null
   created_at: Generated<Date>
@@ -63,6 +68,7 @@ export interface WorkflowVersionsTable {
   graph_hash: string
   graph: string
   source: string
+  status: Generated<WorkflowVersionStatus>
   created_at: Generated<Date>
 }
 
@@ -78,7 +84,7 @@ export interface AIThreadsTable {
 export interface AIMessageTable {
   id: string
   thread_id: string
-  role: string
+  role: 'system' | 'user' | 'assistant' | 'tool'
   content: string | null
   created_at: Generated<Date>
 }
@@ -91,8 +97,8 @@ export interface AIToolCallTable {
   tool_name: string
   args: string
   result: string | null
-  approval_status: string | null
-  approval_type: string | null
+  approval_status: 'approved' | 'denied' | 'pending' | null
+  approval_type: 'agent-call' | 'tool-call' | null
   agent_run_id: string | null
   display_tool_name: string | null
   display_args: string | null
@@ -111,9 +117,9 @@ export interface AIRunTable {
   agent_name: string
   thread_id: string
   resource_id: string
-  status: Generated<string>
+  status: Generated<'running' | 'suspended' | 'completed' | 'failed'>
   error_message: string | null
-  suspend_reason: string | null
+  suspend_reason: 'approval' | 'rpc-missing' | null
   missing_rpcs: string | null
   usage_input_tokens: Generated<number>
   usage_output_tokens: Generated<number>

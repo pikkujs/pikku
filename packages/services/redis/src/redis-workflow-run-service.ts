@@ -190,7 +190,11 @@ export class RedisWorkflowRunService implements WorkflowRunService {
       cursor = nextCursor
       for (const key of keys) {
         const data = await this.redis.hgetall(key)
-        if (data.source === 'ai-agent' && data.graph) {
+        if (
+          data.source === 'ai-agent' &&
+          data.graph &&
+          data.status === 'active'
+        ) {
           const workflowName = data.workflowName
           const graphHash = data.graphHash
           if (!workflowName || !graphHash) continue

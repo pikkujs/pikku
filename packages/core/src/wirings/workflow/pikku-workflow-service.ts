@@ -13,6 +13,7 @@ import type {
   WorkflowRun,
   WorkflowRunWire,
   WorkflowStatus,
+  WorkflowVersionStatus,
   WorkflowServiceConfig,
   WorkflowStepOptions,
 } from './workflow.types.js'
@@ -339,7 +340,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     name: string,
     graphHash: string,
     graph: any,
-    source: string
+    source: string,
+    status?: WorkflowVersionStatus
+  ): Promise<void>
+
+  abstract updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
   ): Promise<void>
 
   abstract getWorkflowVersion(

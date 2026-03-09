@@ -282,8 +282,7 @@ export type AIStreamEvent =
   | {
       type: 'workflow-created'
       workflowName: string
-      nodes: Record<string, any>
-      entryNodeIds: string[]
+      graph: any
       agent?: string
       session?: string
     }

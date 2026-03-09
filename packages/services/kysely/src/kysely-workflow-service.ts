@@ -5,6 +5,7 @@ import {
   type WorkflowRunWire,
   type StepState,
   type WorkflowStatus,
+  type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
@@ -119,6 +120,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .addColumn('graph_hash', 'text', (col) => col.notNull())
       .addColumn('graph', 'text', (col) => col.notNull())
       .addColumn('source', 'text', (col) => col.notNull())
+      .addColumn('status', 'text', (col) => col.notNull().defaultTo('active'))
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -599,7 +601,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     name: string,
     graphHash: string,
     graph: any,
-    source: string
+    source: string,
+    status?: WorkflowVersionStatus
   ): Promise<void> {
     await this.db
       .insertInto('workflow_versions')
@@ -608,10 +611,24 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         graph_hash: graphHash,
         graph: JSON.stringify(graph),
         source,
+        status: status ?? 'active',
       })
       .onConflict((oc) =>
         oc.columns(['workflow_name', 'graph_hash']).doNothing()
       )
+      .execute()
+  }
+
+  async updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
+  ): Promise<void> {
+    await this.db
+      .updateTable('workflow_versions')
+      .set({ status })
+      .where('workflow_name', '=', name)
+      .where('graph_hash', '=', graphHash)
       .execute()
   }
 

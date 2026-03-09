@@ -21,7 +21,7 @@ import {
   resolveNamespace,
   ContextAwareRPCService,
 } from '../../wirings/rpc/rpc-runner.js'
-
+import { buildDynamicWorkflowInstructions } from './agent-dynamic-workflow.js'
 import {
   resolveMemoryServices,
   loadContextMessages,
@@ -122,10 +122,7 @@ export async function buildInstructions(
   }
 
   if (meta?.dynamicWorkflows && meta.tools?.length) {
-    const { buildDynamicWorkflowInstructions } = await import(
-      './agent-dynamic-workflow.js'
-    )
-    instructions += buildDynamicWorkflowInstructions(meta.tools, packageName)
+    instructions += buildDynamicWorkflowInstructions(meta.tools)
   }
 
   return instructions

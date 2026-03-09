@@ -5,6 +5,7 @@ import {
   type WorkflowRunWire,
   type StepState,
   type WorkflowStatus,
+  type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
 import type { Db, Collection } from 'mongodb'
 import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
@@ -58,6 +59,7 @@ interface WorkflowVersionDoc {
   graphHash: string
   graph: any
   source: string
+  status: string
   createdAt: Date
 }
 
@@ -524,7 +526,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     name: string,
     graphHash: string,
     graph: any,
-    source: string
+    source: string,
+    status?: WorkflowVersionStatus
   ): Promise<void> {
     await this.versions.updateOne(
       { workflowName: name, graphHash },
@@ -534,10 +537,22 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
           graphHash,
           graph,
           source,
+          status: status ?? 'active',
           createdAt: new Date(),
         },
       },
       { upsert: true }
+    )
+  }
+
+  async updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
+  ): Promise<void> {
+    await this.versions.updateOne(
+      { workflowName: name, graphHash },
+      { $set: { status } }
     )
   }
 
@@ -551,7 +566,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   async getAIGeneratedWorkflows(
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    const filter: Record<string, any> = { source: 'ai-agent' }
+    const filter: Record<string, any> = { source: 'ai-agent', status: 'active' }
     if (agentName) {
       const escaped = agentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       filter.workflowName = { $regex: `^ai:${escaped}:` }
