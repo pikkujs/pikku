@@ -10,7 +10,7 @@ Feature: Dynamic Workflows via Todo Agent (Console UI)
     When I approve all pending requests
     And I wait for the response
     Then I should see "add-and-list" in the chat
-    And I should see "saved" in the chat
+    And I should see "saveAgentWorkflow" in the chat
 
     When I send "Use listAgentWorkflows to show my workflows"
     And I wait for the response
@@ -28,7 +28,7 @@ Feature: Dynamic Workflows via Todo Agent (Console UI)
     Then I should see an approval request
     When I approve all pending requests
     And I wait for the response
-    Then I should see "saved" in the chat
+    Then I should see "saveAgentWorkflow" in the chat
     When I open the workflows page
     Then I should see "add-sleep-list" on the page
     And I should see "AI Agent" on the page
@@ -39,7 +39,7 @@ Feature: Dynamic Workflows via Todo Agent (Console UI)
     Then I should see an approval request
     When I approve all pending requests
     And I wait for the response
-    Then I should see "saved" in the chat
+    Then I should see "saveAgentWorkflow" in the chat
     When I open the workflows page
     Then I should see "kitchen-sink" on the page
     And I should see "AI Agent" on the page
