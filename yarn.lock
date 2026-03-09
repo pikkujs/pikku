@@ -4391,18 +4391,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mantine/dates@npm:^8.3.8":
-  version: 8.3.15
-  resolution: "@mantine/dates@npm:8.3.15"
+"@mantine/dates@npm:^8.3.16":
+  version: 8.3.16
+  resolution: "@mantine/dates@npm:8.3.16"
   dependencies:
     clsx: "npm:^2.1.1"
   peerDependencies:
-    "@mantine/core": 8.3.15
-    "@mantine/hooks": 8.3.15
+    "@mantine/core": 8.3.16
+    "@mantine/hooks": 8.3.16
     dayjs: ">=1.0.0"
     react: ^18.x || ^19.x
     react-dom: ^18.x || ^19.x
-  checksum: 10/4a07b7bfd53e15d0f282ca00d6f72f43a3a14f7f02a1f8f3856339c0435eee280a4519d323bedb35803dce898caf5292498a037fa221155f09983e380633adde
+  checksum: 10/12dc41b0c08fc7faca1c3c4e4a84596d3aac6852c9924d6bff5eb8b1811ffbe3e16b2c3c35c78af41622f3fa65a7c326487cd06b3311a79475491069a67dde4e
   languageName: node
   linkType: hard
 
@@ -5173,7 +5173,7 @@ __metadata:
     "@emotion/react": "npm:^11.14.0"
     "@mantine/colors-generator": "npm:^8.3.8"
     "@mantine/core": "npm:^8.3.8"
-    "@mantine/dates": "npm:^8.3.8"
+    "@mantine/dates": "npm:^8.3.16"
     "@mantine/dropzone": "npm:^8.3.8"
     "@mantine/hooks": "npm:^8.3.8"
     "@mantine/notifications": "npm:^8.3.8"
