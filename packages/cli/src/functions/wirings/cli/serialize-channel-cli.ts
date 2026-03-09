@@ -46,7 +46,6 @@ export function serializeChannelCLI(
 
   collectCommands(programMeta.commands)
 
-  // Separate addon vs local functions
   const allFuncs = [
     ...new Set(Object.values(commandMap).map((v) => v.pikkuFuncId)),
   ]
@@ -56,7 +55,6 @@ export function serializeChannelCLI(
   )
   const hasAddonFuncs = allFuncs.length > localFuncs.length
 
-  // Generate imports for local functions from file locations
   const importLines: string[] = []
 
   for (const pikkuFuncId of localFuncs) {
