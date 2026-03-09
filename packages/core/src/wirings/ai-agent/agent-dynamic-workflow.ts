@@ -13,7 +13,25 @@ import {
   computeEntryNodeIds,
 } from '../workflow/graph/graph-validation.js'
 
-export function buildDynamicWorkflowInstructions(tools: string[]): string {
+export function buildDynamicWorkflowInstructions(tools: string[], mode: 'read' | 'always' | 'ask'): string {
+  if (mode === 'read') {
+    return (
+      '\n\n## Existing Workflows\n\n' +
+      'You can list and execute previously saved workflows using listAgentWorkflows and executeAgentWorkflow.\n' +
+      'Use listAgentWorkflows to discover what\'s available, then executeAgentWorkflow to run them.'
+    )
+  }
+
+  const modeGuidance = mode === 'always'
+    ? 'When a user requests a complex multi-step task, prefer creating a workflow over making sequential tool calls.\n' +
+      'Check if a suitable workflow already exists with listAgentWorkflows first.\n' +
+      'If none exists, create one with createAgentWorkflow, save with saveAgentWorkflow, then execute.\n\n'
+    : 'When you receive a request that would benefit from a reusable multi-step workflow,\n' +
+      'suggest creating one to the user. Explain the benefits (reusability, reliability,\n' +
+      'can run in background) and wait for confirmation before creating.\n' +
+      'Do NOT create workflows automatically — always propose and get user approval first.\n' +
+      'For one-off tasks, just use the tools directly.\n\n'
+
   const toolSchemaLines: string[] = []
 
   for (const toolName of tools) {
@@ -66,6 +84,7 @@ export function buildDynamicWorkflowInstructions(tools: string[]): string {
 
   return (
     '\n\n## Workflow Creation\n\n' +
+    modeGuidance +
     'You can create workflows that chain your tools together. Use createAgentWorkflow to validate and preview a workflow, then saveAgentWorkflow to save it, then executeAgentWorkflow to run it.\n\n' +
     '### Tool Schemas:\n' +
     toolSchemaLines.join('\n') +
@@ -86,11 +105,13 @@ export function buildWorkflowTools(
   agentName: string,
   packageName: string | null,
   toolNames: string[],
+  mode: 'read' | 'always' | 'ask',
   streamContext?: StreamContext,
   sessionService?: SessionService<CoreUserSession>
 ): AIAgentToolDef[] {
   const tools: AIAgentToolDef[] = []
 
+  if (mode !== 'read') {
   tools.push({
     name: 'createAgentWorkflow',
     description:
@@ -285,6 +306,7 @@ export function buildWorkflowTools(
       }
     },
   })
+  } // end if (mode !== 'read')
 
   tools.push({
     name: 'listAgentWorkflows',
