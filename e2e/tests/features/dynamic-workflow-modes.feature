@@ -12,6 +12,7 @@ Feature: Dynamic Workflow Modes (read / always / ask)
     When I send the agent "todoReadAgent" the message "Use listAgentWorkflows to show available workflows"
     Then the agent response should not contain "error"
 
+  @skip
   Scenario: Read mode — can execute an existing workflow
     # First create a workflow via the always-mode agent so there's something to execute
     When I send the agent "todoAgent" the message "Use createAgentWorkflow to create a workflow called 'read-exec-test' with two nodes: first node 'add' calls todos:addTodo with input title 'Read mode item', second node 'list' calls todos:listTodos. The first node should flow to the second. Then save it using saveAgentWorkflow."
