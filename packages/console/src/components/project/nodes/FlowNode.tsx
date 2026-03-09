@@ -229,7 +229,7 @@ export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({
         <Box
           style={{
             position: 'absolute',
-            top: size + 4,
+            top: size + 12,
             left: '50%',
             transform: 'translateX(-50%)',
             textAlign: 'center',

@@ -13,11 +13,13 @@ import { AgentsPage } from '@/pages/AgentsPage'
 import { AgentPlaygroundPage } from '@/pages/AgentPlaygroundPage'
 import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
 import { PackagesPage } from '@/pages/PackagesPage'
+import { RenderWorkflowPage } from '@/pages/RenderWorkflowPage'
 
 export const App: React.FunctionComponent = () => {
   return (
     <Routes>
       <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+      <Route path="/render/workflow" element={<RenderWorkflowPage />} />
       <Route
         element={
           <AppLayout>

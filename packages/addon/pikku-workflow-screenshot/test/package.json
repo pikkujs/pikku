@@ -1,0 +1,23 @@
+{
+  "name": "@pikku/test-workflow-screenshot",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "scripts": {
+    "pretest": "pikku all",
+    "test": "node --preserve-symlinks --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@pikku/addon-workflow-screenshot": "file:..",
+    "@pikku/core": "*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "*",
+    "@types/node": "^24",
+    "tsx": "^4",
+    "typescript": "^5.9"
+  }
+}
