@@ -2,13 +2,18 @@ import type {
   AIAgentInput,
   AIAgentOutput,
   AIAgentStep,
+  AIAgentMemoryConfig,
+  CoreAIAgent,
   PikkuAIMiddlewareHooks,
   AgentRunState,
 } from './ai-agent.types.js'
 import type {
   AIAgentStepResult,
   AIAgentRunnerParams,
+  AIAgentRunnerService,
 } from '../../services/ai-agent-runner-service.js'
+import type { AIStorageService } from '../../services/ai-storage-service.js'
+import type { AIRunStateService } from '../../services/ai-run-state-service.js'
 
 import {
   saveMessages,
@@ -468,14 +473,14 @@ export async function resumeAIAgentSync(
 
 async function continueAfterToolResultSync(
   run: AgentRunState,
-  agent: any,
+  agent: CoreAIAgent,
   packageName: string | null,
   resolvedName: string,
-  storage: any,
-  memoryConfig: any,
-  agentRunner: any,
+  storage: AIStorageService | undefined,
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  agentRunner: AIAgentRunnerService,
   params: RunAIAgentParams,
-  aiRunState: any
+  aiRunState: AIRunStateService
 ): Promise<AIAgentOutput> {
   const singletonServices = getSingletonServices()
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
