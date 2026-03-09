@@ -91,7 +91,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         size={size}
         tt="none"
         variant={(variant || 'light') as BadgeProps['variant']}
-        color="gray"
+        color={color || 'gray'}
         {...badgeProps}
       >
         {children}
@@ -112,7 +112,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         size={size}
         tt="none"
         variant="light"
-        color="gray"
+        color={def.color || 'gray'}
         style={{ flexShrink: 0 }}
         leftSection={
           Icon ? (
@@ -147,7 +147,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         size={size}
         tt="none"
         variant="light"
-        color="gray"
+        color={def.color || 'gray'}
         style={{ flexShrink: 0 }}
         leftSection={
           Icon ? (
@@ -178,7 +178,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
       size={size}
       tt="none"
       variant="light"
-      color="gray"
+      color={def?.color || 'gray'}
       style={{ flexShrink: 0 }}
       {...badgeProps}
     >

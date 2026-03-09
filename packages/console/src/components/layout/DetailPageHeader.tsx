@@ -9,6 +9,8 @@ import {
   UnstyledButton,
   ScrollArea,
   Box,
+  Tooltip,
+  ActionIcon,
 } from '@mantine/core'
 import { Search, ChevronDown, Check, ExternalLink } from 'lucide-react'
 
@@ -190,23 +192,19 @@ export const DetailPageHeader: React.FunctionComponent<
 
       <Group ml="auto" gap="sm">
         {rightSection}
-        <a
-          href={docsHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            textDecoration: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            color: 'var(--mantine-color-dimmed)',
-          }}
-        >
-          <ExternalLink size={14} />
-          <Text size="sm" c="dimmed">
-            {category} documentation
-          </Text>
-        </a>
+        <Tooltip label={`${category} docs`}>
+          <ActionIcon
+            component="a"
+            href={docsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="subtle"
+            color="gray"
+            size="sm"
+          >
+            <ExternalLink size={14} />
+          </ActionIcon>
+        </Tooltip>
       </Group>
     </Group>
   )

@@ -21,12 +21,12 @@ const TYPE_CONFIG: Record<
 > = {
   function: { icon: FunctionSquare, color: 'blue', href: '/functions' },
   workflow: { icon: GitBranch, color: 'violet', href: '/workflow' },
-  http: { icon: Globe, color: 'green', href: '/apis/http' },
-  channel: { icon: Radio, color: 'cyan', href: '/apis/channels' },
-  mcp: { icon: Cpu, color: 'orange', href: '/apis/mcp' },
-  cli: { icon: Terminal, color: 'teal', href: '/apis/cli' },
-  scheduler: { icon: Clock, color: 'yellow', href: '/jobs/schedulers' },
-  queue: { icon: ListOrdered, color: 'pink', href: '/jobs/queues' },
+  http: { icon: Globe, color: 'green', href: '/apis?tab=http' },
+  channel: { icon: Radio, color: 'cyan', href: '/apis?tab=channels' },
+  mcp: { icon: Cpu, color: 'orange', href: '/apis?tab=mcp' },
+  cli: { icon: Terminal, color: 'teal', href: '/apis?tab=cli' },
+  scheduler: { icon: Clock, color: 'yellow', href: '/jobs?tab=schedulers' },
+  queue: { icon: ListOrdered, color: 'pink', href: '/jobs?tab=queues' },
   agent: { icon: Bot, color: 'grape', href: '/agents' },
 }
 
@@ -66,7 +66,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
         label,
         description: `HTTP → ${route.pikkuFuncId || ''}`,
         leftSection: <Globe size={16} />,
-        onClick: () => navigate('/apis/http'),
+        onClick: () => navigate('/apis?tab=http'),
       })
     })
 
@@ -77,7 +77,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
           label: channelName,
           description: 'Channel',
           leftSection: <Radio size={16} />,
-          onClick: () => navigate('/apis/channels'),
+          onClick: () => navigate('/apis?tab=channels'),
         })
       }
     }
@@ -88,7 +88,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
         label: item.name || item.wireId,
         description: `MCP ${item.method || ''}`,
         leftSection: <Cpu size={16} />,
-        onClick: () => navigate('/apis/mcp'),
+        onClick: () => navigate('/apis?tab=mcp'),
       })
     })
 
@@ -103,7 +103,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
               label: `${program.wireId} ${fullPath}`,
               description: `CLI → ${cmdData.pikkuFuncId}`,
               leftSection: <Terminal size={16} />,
-              onClick: () => navigate('/apis/cli'),
+              onClick: () => navigate('/apis?tab=cli'),
             })
           }
           if (cmdData.subcommands) walkCommands(cmdData.subcommands, fullPath)
@@ -121,7 +121,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
           label: taskName,
           description: `Scheduler${taskData.schedule ? ` (${taskData.schedule})` : ''}`,
           leftSection: <Clock size={16} />,
-          onClick: () => navigate('/jobs/schedulers'),
+          onClick: () => navigate('/jobs?tab=schedulers'),
         })
       }
     }
@@ -133,7 +133,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
           label: workerName,
           description: 'Queue Worker',
           leftSection: <ListOrdered size={16} />,
-          onClick: () => navigate('/jobs/queues'),
+          onClick: () => navigate('/jobs?tab=queues'),
         })
       }
     }

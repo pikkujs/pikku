@@ -6,15 +6,15 @@ import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { wiringTypeColor } from '@/components/ui/badge-defs'
 
 const TYPE_HREF: Record<string, string> = {
-  http: '/apis/http',
-  channel: '/apis/channels',
-  mcp: '/apis/mcp',
-  cli: '/apis/cli',
-  rpc: '/apis/http',
-  scheduler: '/jobs/schedulers',
-  queue: '/jobs/queues',
-  trigger: '/jobs/triggers',
-  triggerSource: '/jobs/triggers',
+  http: '/apis?tab=http',
+  channel: '/apis?tab=channels',
+  mcp: '/apis?tab=mcp',
+  cli: '/apis?tab=cli',
+  rpc: '/apis?tab=http',
+  scheduler: '/jobs?tab=schedulers',
+  queue: '/jobs?tab=queues',
+  trigger: '/jobs?tab=triggers',
+  triggerSource: '/jobs?tab=triggers',
 }
 
 export const FunctionCrossLinks: React.FunctionComponent<{
@@ -94,7 +94,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
               <Anchor
                 key={svc}
                 component={Link}
-                to="/runtime/services"
+                to="/runtime?tab=services"
                 underline="never"
               >
                 <PikkuBadge
@@ -151,7 +151,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
               <Anchor
                 key={svc}
                 component={Link}
-                to="/runtime/services"
+                to="/runtime?tab=services"
                 underline="never"
               >
                 <PikkuBadge

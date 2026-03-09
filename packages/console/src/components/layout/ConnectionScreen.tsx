@@ -7,13 +7,48 @@ import {
   Text,
   Paper,
   Box,
+  Alert,
 } from '@mantine/core'
+import { AlertTriangle } from 'lucide-react'
 import { getServerUrl, setServerUrl } from '@/context/PikkuRpcProvider'
+
+function getErrorGuidance(error: string, url: string): { title: string; hint: string } {
+  const lower = error.toLowerCase()
+  if (lower.includes('fetch') || lower.includes('network') || lower.includes('econnrefused') || lower.includes('failed to fetch')) {
+    return {
+      title: 'Connection refused',
+      hint: `Make sure your Pikku server is running at ${url}`,
+    }
+  }
+  if (lower.includes('404') || lower.includes('not found') || lower.includes('rpc function')) {
+    return {
+      title: 'Console addon not found',
+      hint: 'The @pikku/addon-console package may not be installed. Add it to your project and run pikku to generate the bootstrap.',
+    }
+  }
+  if (lower.includes('cors') || lower.includes('cross-origin')) {
+    return {
+      title: 'CORS error',
+      hint: 'Your Pikku server may need CORS configured to allow requests from the console origin.',
+    }
+  }
+  if (lower.includes('timeout')) {
+    return {
+      title: 'Request timed out',
+      hint: 'The server took too long to respond. Check if it is under heavy load or unreachable.',
+    }
+  }
+  return {
+    title: 'Connection failed',
+    hint: error,
+  }
+}
 
 export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
   error,
 }) => {
   const [url, setUrl] = useState(getServerUrl)
+  const guidance = getErrorGuidance(error, url)
 
   const handleReconnect = () => {
     setServerUrl(url.trim())
@@ -38,9 +73,15 @@ export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
             </Text>
           </Box>
 
-          <Text c="dimmed" size="sm" ta="center">
-            {error}
-          </Text>
+          <Alert
+            icon={<AlertTriangle size={16} />}
+            color="red"
+            variant="light"
+            title={guidance.title}
+            w="100%"
+          >
+            <Text size="sm">{guidance.hint}</Text>
+          </Alert>
 
           <TextInput
             label="Pikku instance URL"

@@ -54,7 +54,7 @@ export const CliPageClient: React.FunctionComponent = () => {
   const handleProgramSwitch = useCallback(
     (name: string) => {
       setCommandPath([])
-      navigate(`/apis/cli?id=${encodeURIComponent(name)}`)
+      navigate(`/apis?tab=cli&id=${encodeURIComponent(name)}`)
     },
     [navigate]
   )
@@ -74,7 +74,7 @@ export const CliPageClient: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Terminal}
             category="CLI"
-            categoryPath="/apis/cli"
+            categoryPath="/apis?tab=cli"
             currentItem={programId}
             items={allPrograms}
             onItemSelect={handleProgramSwitch}
