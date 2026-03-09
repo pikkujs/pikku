@@ -5692,22 +5692,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/templates-auth-js@workspace:templates/auth-js":
-  version: 0.0.0-use.local
-  resolution: "@pikku/templates-auth-js@workspace:templates/auth-js"
-  dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.1"
-    "@pikku/cli": "npm:^0.12.2"
-    "@pikku/core": "npm:^0.12.2"
-    "@pikku/express": "npm:^0.12.1"
-    "@pikku/schema-cfworker": "npm:^0.12.1"
-    tsx: "npm:^4.21.0"
-    typescript: "npm:^5.9"
-    zod: "npm:^4"
-  languageName: unknown
-  linkType: soft
-
 "@pikku/templates-aws-lambda-websocket@workspace:templates/aws-lambda-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/templates-aws-lambda-websocket@workspace:templates/aws-lambda-websocket"
