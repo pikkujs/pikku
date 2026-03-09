@@ -146,6 +146,6 @@ export const validateSchema = async (
       )
     }
     await schemaService.compileSchema(key, schema)
-    await schemaService.validateSchema(key, data)
+    await schemaService.validateSchema(key, data ?? {})
   }
 }
