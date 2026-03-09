@@ -1,5 +1,18 @@
 ## 0.12.0
 
+## 0.12.2
+
+### Patch Changes
+
+- 387b2ee: Fall back to current secret when JWT token has no kid header instead of throwing
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+
 ## 0.12.1
 
 ### Patch Changes

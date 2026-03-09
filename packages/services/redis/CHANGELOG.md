@@ -1,5 +1,19 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 32ed003: Add envelope encryption utilities and database-backed secret services with KEK rotation support
+- c7ff141: Add WorkflowVersionStatus type with draft→active lifecycle for AI-generated workflows, type all DB status fields with proper unions instead of plain strings
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

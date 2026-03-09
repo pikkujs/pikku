@@ -1,5 +1,19 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 508a796: Fix MCP server not exposing addon tools: resolve namespaced function IDs in MCP runner, load addon schemas after schema generation, and use resolveFunctionMeta for MCP JSON serialization
+- 387b2ee: Add approval description inspection, track packageName on wire metadata, and resolve addon package names in channel/RPC wirings
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

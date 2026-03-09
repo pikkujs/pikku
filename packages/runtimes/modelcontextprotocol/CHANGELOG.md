@@ -1,5 +1,18 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 4ef2db4: Add Streamable HTTP transport support to PikkuMCPServer with connectStdio(), createHTTPRequestHandler(), and connectHTTP() convenience methods
+- Updated dependencies [387b2ee]
+- Updated dependencies [32ed003]
+- Updated dependencies [7d369f3]
+- Updated dependencies [508a796]
+- Updated dependencies [ffe83af]
+- Updated dependencies [c7ff141]
+  - @pikku/core@0.12.3
+
 ## 0.12.2
 
 ### Patch Changes

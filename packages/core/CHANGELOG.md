@@ -1,5 +1,23 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 387b2ee: Add approval descriptions, rename requiresApproval to approvalRequired, export all service interfaces, add exposeErrors option to HTTP runner, promote addons to top-level state, add packageName to CommonWireMeta, add errors to function config, and improve agent runner streaming
+- 32ed003: Add envelope encryption utilities and database-backed secret services with KEK rotation support
+- 7d369f3: Fix agent sub-agent tool execution failures: use UUID for sub-agent thread IDs (was exceeding varchar(36) DB column), and synthesize error results for failed tool calls in non-streaming run() to prevent "Tool result is missing" cascading errors.
+- 508a796: Fix MCP server not exposing addon tools: resolve namespaced function IDs in MCP runner, load addon schemas after schema generation, and use resolveFunctionMeta for MCP JSON serialization
+- ffe83af: Add Web Response passthrough support and fix close() flushing
+
+  - HTTP runner detects when a function returns a Web `Response` object and applies it directly via `applyWebResponse()`, enabling seamless integration with libraries like Auth.js
+  - Add `send()` method to `PikkuHTTPResponse` for setting body without Content-Type headers
+  - Add `headers()` method to `PikkuHTTPRequest` for retrieving all headers as a record
+  - Add `toWebRequest()` and `applyWebResponse()` utilities for Web Request/Response conversion
+  - Fix `close()` in Express, Fastify, and UWS responses to flush buffered status/headers/body before ending the connection
+
+- c7ff141: Add WorkflowVersionStatus type with draft→active lifecycle for AI-generated workflows, type all DB status fields with proper unions instead of plain strings
+
 ## 0.12.2
 
 ### Patch Changes
