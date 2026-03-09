@@ -346,7 +346,6 @@ function processCommand(
     const propName = prop.name.text
 
     if (propName === 'func') {
-      // Check for addon('namespace:funcName') calls
       if (
         ts.isCallExpression(prop.initializer) &&
         ts.isIdentifier(prop.initializer.expression) &&

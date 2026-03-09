@@ -156,42 +156,57 @@ export class PikkuMCPServer {
   } {
     const mcpPath = options?.path ?? '/mcp'
 
-    const handler = async (req: IncomingMessage, res: ServerResponse) => {
-      const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
-      if (url.pathname !== mcpPath) {
-        res.writeHead(404).end()
-        return
-      }
+    const processLogger = this.logger
 
-      if (req.method === 'POST') {
-        await this.handleHTTPPost(req, res)
-      } else if (req.method === 'GET') {
-        const sessionId = req.headers['mcp-session-id'] as string | undefined
-        if (sessionId && this.sessions.has(sessionId)) {
-          const session = this.sessions.get(sessionId)!
-          await session.transport.handleRequest(req, res)
+    const handler = async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
+        if (url.pathname !== mcpPath) {
+          res.writeHead(404).end()
+          return
+        }
+
+        if (req.method === 'POST') {
+          await this.handleHTTPPost(req, res)
+        } else if (req.method === 'GET') {
+          const sessionId = req.headers['mcp-session-id'] as string | undefined
+          if (sessionId && this.sessions.has(sessionId)) {
+            const session = this.sessions.get(sessionId)!
+            await session.transport.handleRequest(req, res)
+          } else {
+            res.writeHead(400).end(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                error: { code: -32000, message: 'Invalid or missing session ID' },
+                id: null,
+              })
+            )
+          }
+        } else if (req.method === 'DELETE') {
+          const sessionId = req.headers['mcp-session-id'] as string | undefined
+          if (sessionId && this.sessions.has(sessionId)) {
+            const session = this.sessions.get(sessionId)!
+            await session.transport.close()
+            await session.server.close()
+            this.sessions.delete(sessionId)
+            res.writeHead(200).end()
+          } else {
+            res.writeHead(405).end()
+          }
         } else {
-          res.writeHead(400).end(
+          res.writeHead(405).end()
+        }
+      } catch (err) {
+        processLogger?.error('mcp handler error', err)
+        if (!res.headersSent) {
+          res.writeHead(500).end(
             JSON.stringify({
               jsonrpc: '2.0',
-              error: { code: -32000, message: 'Invalid or missing session ID' },
+              error: { code: -32000, message: 'Internal server error' },
               id: null,
             })
           )
         }
-      } else if (req.method === 'DELETE') {
-        const sessionId = req.headers['mcp-session-id'] as string | undefined
-        if (sessionId && this.sessions.has(sessionId)) {
-          const session = this.sessions.get(sessionId)!
-          await session.transport.close()
-          await session.server.close()
-          this.sessions.delete(sessionId)
-          res.writeHead(200).end()
-        } else {
-          res.writeHead(405).end()
-        }
-      } else {
-        res.writeHead(405).end()
       }
     }
 
@@ -275,8 +290,14 @@ export class PikkuMCPServer {
 
     const httpServer = createServer(handler)
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
+      const onError = (err: Error) => {
+        httpServer.removeListener('error', onError)
+        reject(err)
+      }
+      httpServer.on('error', onError)
       httpServer.listen(port, host, () => {
+        httpServer.removeListener('error', onError)
         this.logger.info(
           `MCP HTTP server listening on http://${host}:${port}${options?.path ?? '/mcp'}`
         )
