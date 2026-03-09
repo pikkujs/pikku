@@ -21,6 +21,7 @@
     "test:workflow-ui": "cucumber-js --config tests/cucumber.mjs --tags @workflow-ui",
     "test:dynamic-workflows": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows",
     "test:dynamic-workflows-ui": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows-ui",
+    "test:dynamic-workflow-modes": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflow-modes",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
