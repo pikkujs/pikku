@@ -304,11 +304,11 @@ export class ContextAwareRPCService {
       approve: async (
         runId: string,
         approvals: { toolCallId: string; approved: boolean }[],
-        _expectedAgentName?: string
+        expectedAgentName?: string
       ) => {
         const result = await resumeAIAgentSync(runId, approvals, {
           sessionService: this.options.sessionService,
-        })
+        }, expectedAgentName)
         return {
           runId: result.runId,
           result: result.object ?? result.text,

@@ -12,6 +12,7 @@ export const sleep = pikkuSessionlessFunc({
   input: SleepInput,
   output: z.void(),
   func: async (_services, data, { workflow }) => {
-    await workflow?.sleep(data.name, `${data.ms}ms`)
+    if (!workflow) throw new Error('sleep can only be called from within a workflow')
+    await workflow.sleep(data.name, `${data.ms}ms`)
   },
 })

@@ -342,7 +342,8 @@ export async function runAIAgent(
 export async function resumeAIAgentSync(
   runId: string,
   approvals: { toolCallId: string; approved: boolean }[],
-  params: RunAIAgentParams
+  params: RunAIAgentParams,
+  expectedAgentName?: string
 ): Promise<AIAgentOutput> {
   const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
@@ -352,6 +353,11 @@ export async function resumeAIAgentSync(
 
   const run = await aiRunState.getRun(runId)
   if (!run) throw new Error(`No run found for runId ${runId}`)
+  if (expectedAgentName && run.agentName !== expectedAgentName) {
+    throw new Error(
+      `Run ${runId} belongs to agent '${run.agentName}', not '${expectedAgentName}'`
+    )
+  }
   if (run.status !== 'suspended') {
     throw new Error(`Run ${runId} is not suspended (status: ${run.status})`)
   }
