@@ -19,6 +19,7 @@ import {
   getCreateWireServices,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { resolveNamespace } from '../rpc/rpc-runner.js'
 import {
   BadRequestError,
   NotFoundError,
@@ -231,19 +232,35 @@ async function runMCPPikkuFunc(
       meta = pikkuState(null, 'mcp', 'promptsMeta')[name]
     }
 
-    let result = await runPikkuFunc('mcp', `${type}:${name}`, pikkuFuncId, {
-      singletonServices,
-      createWireServices,
-      data: () => request.params,
-      inheritedMiddleware: meta?.middleware,
-      wireMiddleware: mcp?.middleware,
-      inheritedPermissions: meta?.permissions,
-      wirePermissions: mcp?.permissions,
-      tags: mcp?.tags,
-      wire,
-      sessionService: mcpSessionService,
-      packageName: meta?.packageName,
-    })
+    // Resolve namespaced function IDs (e.g., 'swaggerPetstore:findPetsByStatus')
+    let resolvedFuncName = pikkuFuncId
+    let resolvedPackageName: string | null = meta?.packageName ?? null
+    if (pikkuFuncId.includes(':')) {
+      const resolved = resolveNamespace(pikkuFuncId)
+      if (resolved) {
+        resolvedFuncName = resolved.function
+        resolvedPackageName = resolved.package
+      }
+    }
+
+    let result = await runPikkuFunc(
+      'mcp',
+      `${type}:${name}`,
+      resolvedFuncName,
+      {
+        singletonServices,
+        createWireServices,
+        data: () => request.params,
+        inheritedMiddleware: meta?.middleware,
+        wireMiddleware: mcp?.middleware,
+        inheritedPermissions: meta?.permissions,
+        wirePermissions: mcp?.permissions,
+        tags: mcp?.tags,
+        wire,
+        sessionService: mcpSessionService,
+        packageName: resolvedPackageName,
+      }
+    )
 
     if (type === 'tool' && meta?.outputSchema !== 'MCPToolResponse') {
       result = [{ type: 'text', text: JSON.stringify(result) }]
