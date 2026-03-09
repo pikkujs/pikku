@@ -1,5 +1,6 @@
 import type { InspectorLogger, InspectorState } from '../types.js'
 import type { JSONValue } from '@pikku/core'
+import { resolveFunctionMeta } from './resolve-function-meta.js'
 
 interface MCPEndpoint {
   uri?: string
@@ -15,7 +16,7 @@ export const serializeMCPJson = (
   state: InspectorState
 ): string => {
   const { mcpEndpoints, functions, schemas } = state
-  const { meta: functionsMeta, typesMap } = functions
+  const { typesMap } = functions
   const { resourcesMeta, toolsMeta, promptsMeta } = mcpEndpoints
 
   const tools: MCPEndpoint[] = []
@@ -39,9 +40,13 @@ export const serializeMCPJson = (
       return undefined
     }
 
-    const uniqueName = typesMap.getUniqueName(typeName)
-    if (!uniqueName) {
-      return undefined
+    // Try local typesMap first, fall back to direct schema lookup (for addon types)
+    let uniqueName: string | undefined
+    try {
+      uniqueName = typesMap.getUniqueName(typeName)
+    } catch {
+      // Type not in local typesMap — try direct schema lookup (addon schemas)
+      uniqueName = typeName
     }
 
     const schema = schemas[uniqueName]
@@ -56,7 +61,7 @@ export const serializeMCPJson = (
   }
 
   for (const [name, endpointMeta] of Object.entries(resourcesMeta)) {
-    const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
+    const functionMeta = resolveFunctionMeta(state, endpointMeta.pikkuFuncId)
     if (!functionMeta) {
       logger.warn(
         `Function ${endpointMeta.pikkuFuncId} not found in functionsMeta. Skipping resource ${name}.`
@@ -81,7 +86,7 @@ export const serializeMCPJson = (
   }
 
   for (const [name, endpointMeta] of Object.entries(toolsMeta)) {
-    const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
+    const functionMeta = resolveFunctionMeta(state, endpointMeta.pikkuFuncId)
     if (!functionMeta) {
       logger.warn(
         `Function ${endpointMeta.pikkuFuncId} not found in functionsMeta. Skipping tool ${name}.`
@@ -105,7 +110,7 @@ export const serializeMCPJson = (
   }
 
   for (const [name, endpointMeta] of Object.entries(promptsMeta)) {
-    const functionMeta = functionsMeta[endpointMeta.pikkuFuncId]
+    const functionMeta = resolveFunctionMeta(state, endpointMeta.pikkuFuncId)
     if (!functionMeta) {
       logger.warn(
         `Function ${endpointMeta.pikkuFuncId} not found in functionsMeta. Skipping prompt ${name}.`

@@ -7,7 +7,6 @@ import type { InspectorState, InspectorLogger } from '../types.js'
  * After the setup sweep discovers wireAddon() declarations, load each addon
  * package's function metadata so that wiring handlers (channels, HTTP routes,
  * schedules, etc.) can look up addon function types during the routes sweep.
- * Also loads addon schemas into state.schemas so CLI options can derive choices.
  */
 export async function loadAddonFunctionsMeta(
   logger: InspectorLogger,
@@ -46,8 +45,32 @@ export async function loadAddonFunctionsMeta(
           }
         }
       }
+    } catch (error: any) {
+      logger.warn(
+        `Failed to load addon function metadata for '${namespace}' (${decl.package}): ${error.message}`
+      )
+    }
+  }
+}
 
-      // Load addon schemas into state.schemas
+/**
+ * Load addon schemas into state.schemas. Called after generateAllSchemas
+ * to ensure addon schemas aren't overwritten.
+ */
+export async function loadAddonSchemas(
+  logger: InspectorLogger,
+  state: InspectorState
+): Promise<void> {
+  const { wireAddonDeclarations } = state.rpc
+  if (wireAddonDeclarations.size === 0) return
+
+  const require = createRequire(join(state.rootDir, 'package.json'))
+
+  for (const [namespace, decl] of wireAddonDeclarations) {
+    try {
+      const metaPath = require.resolve(
+        `${decl.package}/.pikku/function/pikku-functions-meta.gen.json`
+      )
       const schemasDir = join(dirname(metaPath), '..', 'schemas', 'schemas')
       try {
         const schemaFiles = await readdir(schemasDir)
@@ -64,7 +87,7 @@ export async function loadAddonFunctionsMeta(
       }
     } catch (error: any) {
       logger.warn(
-        `Failed to load addon function metadata for '${namespace}' (${decl.package}): ${error.message}`
+        `Failed to load addon schemas for '${namespace}' (${decl.package}): ${error.message}`
       )
     }
   }

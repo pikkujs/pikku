@@ -30,7 +30,10 @@ import {
   finalizeWorkflowWires,
 } from './utils/workflow/graph/finalize-workflow-wires.js'
 import { generateAllSchemas } from './utils/schema-generator.js'
-import { loadAddonFunctionsMeta } from './utils/load-addon-functions-meta.js'
+import {
+  loadAddonFunctionsMeta,
+  loadAddonSchemas,
+} from './utils/load-addon-functions-meta.js'
 import {
   computeContractHashes,
   extractContractsFromMeta,
@@ -285,6 +288,9 @@ export const inspect = async (
       )
       computeRequiredSchemas(state, options)
     }
+
+    // Re-load addon schemas (generateAllSchemas replaces state.schemas)
+    await loadAddonSchemas(logger, state)
 
     state.manifest.initial = options.manifest ?? null
     const contracts = extractContractsFromMeta(state.functions.meta)
