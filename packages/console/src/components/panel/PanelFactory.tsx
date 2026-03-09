@@ -102,7 +102,7 @@ const WorkflowStepTabbedPanel: React.FunctionComponent<{
         <Text size="lg" ff="monospace">
           {node?.stepName || node?.nodeId || stepId}
         </Text>
-        <PikkuBadge type="label" color="blue">
+        <PikkuBadge type="label" color="gray">
           {stepType}
         </PikkuBadge>
       </Group>

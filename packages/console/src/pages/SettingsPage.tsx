@@ -7,15 +7,12 @@ import {
   Paper,
   Group,
   Button,
-  SegmentedControl,
 } from '@mantine/core'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { useMantineColorScheme } from '@mantine/core'
-import { Sun, Moon, Monitor, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
 export const SettingsPage: React.FunctionComponent = () => {
-  const { colorScheme, setColorScheme } = useMantineColorScheme()
   const { counts, loading, error, refresh } = usePikkuMeta()
 
   return (
@@ -29,50 +26,6 @@ export const SettingsPage: React.FunctionComponent = () => {
             Application preferences and metadata status
           </Text>
         </Box>
-
-        <Paper p="lg" radius="md" withBorder>
-          <Stack gap="md">
-            <Text fw={600}>Appearance</Text>
-            <Group justify="space-between" align="center">
-              <Text size="sm">Color scheme</Text>
-              <SegmentedControl
-                value={colorScheme}
-                onChange={(value) =>
-                  setColorScheme(value as 'light' | 'dark' | 'auto')
-                }
-                data={[
-                  {
-                    label: (
-                      <Group gap={4}>
-                        <Sun size={14} />
-                        <span>Light</span>
-                      </Group>
-                    ),
-                    value: 'light',
-                  },
-                  {
-                    label: (
-                      <Group gap={4}>
-                        <Moon size={14} />
-                        <span>Dark</span>
-                      </Group>
-                    ),
-                    value: 'dark',
-                  },
-                  {
-                    label: (
-                      <Group gap={4}>
-                        <Monitor size={14} />
-                        <span>Auto</span>
-                      </Group>
-                    ),
-                    value: 'auto',
-                  },
-                ]}
-              />
-            </Group>
-          </Stack>
-        </Paper>
 
         <Paper p="lg" radius="md" withBorder>
           <Stack gap="md">

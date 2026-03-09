@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type FunctionComponent } from 'react'
+import { createContext, useContext, useState, useMemo, type FunctionComponent } from 'react'
+import Markdown from 'react-markdown'
 import {
   AssistantRuntimeProvider,
   ThreadPrimitive,
@@ -356,6 +357,53 @@ const ToolCallDisplay: FunctionComponent<{
   )
 }
 
+const MarkdownText: FunctionComponent<{ text: string; colors: ChatColors }> = ({ text, colors }) => {
+  const components = useMemo(() => ({
+    p: ({ children }: any) => (
+      <p style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.6, color: colors.text }}>{children}</p>
+    ),
+    strong: ({ children }: any) => (
+      <strong style={{ fontWeight: 600, color: colors.text }}>{children}</strong>
+    ),
+    em: ({ children }: any) => (
+      <em style={{ color: colors.text }}>{children}</em>
+    ),
+    ul: ({ children }: any) => (
+      <ul style={{ margin: '4px 0 8px', paddingLeft: 20, fontSize: 14, color: colors.text }}>{children}</ul>
+    ),
+    ol: ({ children }: any) => (
+      <ol style={{ margin: '4px 0 8px', paddingLeft: 20, fontSize: 14, color: colors.text }}>{children}</ol>
+    ),
+    li: ({ children }: any) => (
+      <li style={{ marginBottom: 2, lineHeight: 1.6 }}>{children}</li>
+    ),
+    code: ({ children, className }: any) => {
+      const isBlock = className?.startsWith('language-')
+      if (isBlock) {
+        return (
+          <pre style={{ background: colors.codeBg, padding: 10, borderRadius: 4, overflow: 'auto', margin: '4px 0 8px', fontSize: 12 }}>
+            <code style={{ color: colors.text }}>{children}</code>
+          </pre>
+        )
+      }
+      return (
+        <code style={{ background: colors.codeBg, padding: '1px 4px', borderRadius: 3, fontSize: 13, color: colors.text }}>
+          {children}
+        </code>
+      )
+    },
+    pre: ({ children }: any) => <>{children}</>,
+    h1: ({ children }: any) => <h3 style={{ margin: '8px 0 4px', fontSize: 16, fontWeight: 600, color: colors.text }}>{children}</h3>,
+    h2: ({ children }: any) => <h4 style={{ margin: '8px 0 4px', fontSize: 15, fontWeight: 600, color: colors.text }}>{children}</h4>,
+    h3: ({ children }: any) => <h5 style={{ margin: '8px 0 4px', fontSize: 14, fontWeight: 600, color: colors.text }}>{children}</h5>,
+    a: ({ href, children }: any) => (
+      <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: colors.textMuted, textDecoration: 'underline' }}>{children}</a>
+    ),
+  }), [colors])
+
+  return <Markdown components={components}>{text}</Markdown>
+}
+
 const UserMessage: FunctionComponent = () => {
   const colors = useContext(ColorsContext)
   return (
@@ -423,9 +471,7 @@ const AssistantMessage: FunctionComponent = () => {
           <MessagePrimitive.Content
             components={{
               Text: ({ text }) => (
-                <span style={{ fontSize: 14, whiteSpace: 'pre-wrap', color: colors.text }}>
-                  {text}
-                </span>
+                <MarkdownText text={text} colors={colors} />
               ),
               tools: {
                 Fallback: (props) => (

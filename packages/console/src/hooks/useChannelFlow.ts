@@ -22,8 +22,12 @@ function createEdge(
 
   if (label) {
     edge.label = label
-    edge.labelStyle = { fontSize: 10, fill: '#666', fontFamily: 'monospace' }
-    edge.labelBgStyle = { fill: '#fff', fillOpacity: 0.8 }
+    edge.labelStyle = {
+      fontSize: 10,
+      fill: 'rgba(255,255,255,0.4)',
+      fontFamily: 'monospace',
+    }
+    edge.labelBgStyle = { fill: 'rgba(255,255,255,0.05)', fillOpacity: 1 }
   }
 
   return edge

@@ -4,11 +4,10 @@ import {
   MantineProvider,
   Stepper,
   Container,
-  localStorageColorSchemeManager,
+  type CSSVariablesResolver,
+  type MantineColorsTuple,
 } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
-
-const manager = localStorageColorSchemeManager({ key: 'mantine-color-scheme' })
 
 import { Button, Anchor, createTheme, rem } from '@mantine/core'
 import { generateColors } from '@mantine/colors-generator'
@@ -22,8 +21,58 @@ const DAYJS_LOCALE_MAP: Record<string, string> = {
   de: 'de',
 }
 
+const emerald: MantineColorsTuple = [
+  '#e6fff5',
+  '#b3ffe0',
+  '#80ffcc',
+  '#4dffb8',
+  '#1affa3',
+  '#00e68a',
+  '#00cc7a',
+  '#00b36b',
+  '#00995c',
+  '#00804d',
+]
+
+const dark: MantineColorsTuple = [
+  '#C1C2C5',
+  '#A6A7AB',
+  '#909296',
+  '#5c5f66',
+  '#373A40',
+  '#2C2E33',
+  '#1a1c24',
+  '#13151c',
+  '#0e1016',
+  '#0b0d12',
+]
+
+const cssVariablesResolver: CSSVariablesResolver = () => ({
+  variables: {
+    '--app-glass-bg': 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+    '--app-glass-border': 'rgba(255,255,255,0.06)',
+    '--app-glass-backdrop': 'blur(8px)',
+    '--app-input-bg': 'rgba(255,255,255,0.02)',
+    '--app-surface': dark[8],
+    '--app-code-bg': dark[8],
+  },
+  dark: {
+    '--mantine-color-body': dark[9],
+    '--mantine-color-default-border': 'rgba(255,255,255,0.06)',
+    '--mantine-color-default-hover': 'rgba(255,255,255,0.04)',
+    '--mantine-color-gray-light': 'rgba(255,255,255,0.06)',
+    '--mantine-color-gray-light-color': 'rgba(255,255,255,0.72)',
+    '--mantine-color-gray-light-hover': 'rgba(255,255,255,0.09)',
+    '--mantine-color-gray-1': 'rgba(255,255,255,0.04)',
+    '--mantine-color-blue-6': 'rgba(255,255,255,0.5)',
+    '--mantine-color-blue-light': 'rgba(255,255,255,0.04)',
+    '--mantine-color-blue-3': 'rgba(255,255,255,0.15)',
+  },
+  light: {},
+})
+
 const theme = createTheme({
-  primaryColor: 'primary',
+  primaryColor: 'gray',
   breakpoints: {
     xs: '36em',
     sm: '48em',
@@ -32,8 +81,8 @@ const theme = createTheme({
     xl: '88em',
   },
   colors: {
-    primary: generateColors('#A83CE0'), // Magenta-ish Violet - creative, energetic
-    secondary: generateColors('#F5A623'), // Warm Amber-Gold
+    emerald,
+    dark,
     success: generateColors('#10B981'),
     error: generateColors('#EF4444'),
     function: [
@@ -48,34 +97,20 @@ const theme = createTheme({
       '#000000',
       '#000000',
     ],
-    workflow: generateColors('#8B5CF6'), // Workflow purple/violet
-    http: generateColors('#16a34a'), // HTTP green
-    channel: generateColors('#9333ea'), // Channel purple
-    websocket: generateColors('#9333ea'), // WebSocket purple (deprecated, use channel)
-    sse: generateColors('#ea580c'), // SSE orange
-    queue: generateColors('#dc2626'), // Queue red
-    scheduler: generateColors('#ca8a04'), // Cron yellow
-    mcp: generateColors('#ec4899'), // MCP pink
-    cli: generateColors('#0891b2'), // CLI cyan
-    focusedNode: generateColors('#A83CE0'), // Primary purple - panel is open for this node
-    referencedNode: generateColors('#f59e0b'), // Amber - $ref pointing to this node
-    dark: [
-      '#d5d7da',
-      '#C1C2C5',
-      '#A6A7AB',
-      '#909296',
-      '#5C5F66',
-      '#373A40',
-      '#2C2E33',
-      '#1A1B1E',
-      '#141517',
-      '#101113',
-    ],
+    workflow: generateColors('#8B5CF6'),
+    http: generateColors('#16a34a'),
+    channel: generateColors('#9333ea'),
+    websocket: generateColors('#9333ea'),
+    sse: generateColors('#ea580c'),
+    queue: generateColors('#dc2626'),
+    scheduler: generateColors('#ca8a04'),
+    mcp: generateColors('#ec4899'),
+    cli: generateColors('#0891b2'),
+    focusedNode: generateColors('#A83CE0'),
+    referencedNode: generateColors('#f59e0b'),
   },
-  fontFamily:
-    'ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"',
-  fontFamilyMonospace:
-    'ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace',
+  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+  fontFamilyMonospace: 'JetBrains Mono, monospace',
   fontSizes: {
     xs: rem(10),
     sm: rem(12),
@@ -90,8 +125,7 @@ const theme = createTheme({
     hero: rem(64),
   },
   headings: {
-    fontFamily:
-      'ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"',
+    fontFamily: 'JetBrains Mono, monospace',
     sizes: {
       h1: {
         fontSize: rem(40),
@@ -125,6 +159,7 @@ const theme = createTheme({
       },
     },
   },
+  defaultRadius: 'md',
   components: {
     Container: Container.extend({
       defaultProps: {
@@ -134,49 +169,144 @@ const theme = createTheme({
         if (props.size === 'xl') {
           return {
             root: {
-              '--container-size': '80rem', // 1280px
+              '--container-size': '80rem',
             },
           }
         }
         return { root: {} }
       },
     }),
-    Button: Button.extend({
+    Paper: {
       defaultProps: {
-        size: 'md',
         radius: 'lg',
       },
-      styles: (theme, props) => ({
+      styles: {
         root: {
-          color:
-            props.variant === 'filled' || !props.variant
-              ? 'var(--mantine-color-white)'
-              : undefined,
+          background: 'var(--app-glass-bg)',
+          borderColor: 'var(--app-glass-border)',
+          backdropFilter: 'var(--app-glass-backdrop)',
         },
-      }),
+      },
+    },
+    Button: Button.extend({
+      styles: {
+        root: {
+          fontWeight: 600,
+        },
+      },
     }),
     InputWrapper: InputWrapper.extend({
       styles: {
         label: {
-          fontSize: rem(14),
-          fontWeight: 500,
-          marginBottom: rem(10),
+          color: 'var(--mantine-color-dimmed)',
+          fontSize: rem(12),
+          fontWeight: 600,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.5px',
+          marginBottom: rem(6),
         },
       },
     }),
+    TextInput: {
+      styles: {
+        input: {
+          backgroundColor: 'var(--app-input-bg)',
+          borderColor: 'var(--app-glass-border)',
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 13,
+        },
+      },
+    },
+    Select: {
+      styles: {
+        input: {
+          backgroundColor: 'var(--app-input-bg)',
+          borderColor: 'var(--app-glass-border)',
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 13,
+        },
+        dropdown: {
+          backgroundColor: dark[7],
+          borderColor: 'var(--app-glass-border)',
+        },
+        option: {
+          fontSize: 13,
+        },
+      },
+    },
+    Textarea: {
+      styles: {
+        input: {
+          backgroundColor: 'var(--app-input-bg)',
+          borderColor: 'var(--app-glass-border)',
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 12,
+        },
+      },
+    },
+    SegmentedControl: {
+      styles: {
+        root: {
+          backgroundColor: 'var(--app-input-bg)',
+          border: '1px solid var(--app-glass-border)',
+        },
+        label: {
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 12,
+          fontWeight: 500,
+        },
+      },
+    },
+    Accordion: {
+      styles: {
+        item: {
+          background: 'var(--app-glass-bg)',
+          borderColor: 'var(--app-glass-border)',
+          backdropFilter: 'var(--app-glass-backdrop)',
+          borderRadius: 'var(--mantine-radius-lg)',
+        },
+        control: {
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 12,
+          fontWeight: 600,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.8px',
+          color: 'var(--mantine-color-dimmed)',
+        },
+        content: {
+          padding: 0,
+        },
+      },
+    },
+    Tabs: {
+      styles: {
+        tab: {
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 12,
+          fontWeight: 600,
+        },
+      },
+    },
     Stepper: Stepper.extend({
       styles: {
         stepIcon: {
-          backgroundColor: 'initial',
-          color: 'var(--mantine-color-dimmed)',
+          backgroundColor: 'var(--app-input-bg)',
+          borderColor: 'var(--app-glass-border)',
           width: rem(30),
           height: rem(30),
           minWidth: rem(30),
           minHeight: rem(30),
         },
         stepLabel: {
-          fontSize: rem(14),
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: rem(11),
+          fontWeight: 600,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.5px',
           color: 'var(--mantine-color-dimmed)',
+        },
+        separator: {
+          backgroundColor: 'var(--app-glass-border)',
         },
       },
     }),
@@ -189,13 +319,10 @@ const theme = createTheme({
       },
     }),
     List: List.extend({
-      styles: (theme) => {
+      styles: () => {
         return {
           root: {
             paddingLeft: rem(10),
-          },
-          item: {
-            color: theme.colors.gray[8],
           },
         }
       },
@@ -205,26 +332,15 @@ const theme = createTheme({
 
 export const ThemeProvider: React.FunctionComponent<{
   children: React.ReactNode
-  initial: 'light' | 'dark' | 'auto'
   locale?: string
-}> = ({ children, initial, locale = 'en' }) => {
+}> = ({ children, locale = 'en' }) => {
   const dateLocale = DAYJS_LOCALE_MAP[locale] || 'en'
 
   return (
     <MantineProvider
       theme={theme}
-      defaultColorScheme={initial}
-      colorSchemeManager={manager}
-      cssVariablesResolver={() => ({
-        variables: {},
-        light: {},
-        dark: {
-          '--mantine-color-body': '#0a0a0f',
-          '--mantine-color-gray-light': 'rgba(255,255,255,0.11)',
-          '--mantine-color-gray-light-color': 'rgba(255,255,255,0.72)',
-          '--mantine-color-gray-light-hover': 'rgba(255,255,255,0.16)',
-        },
-      })}
+      forceColorScheme="dark"
+      cssVariablesResolver={cssVariablesResolver}
     >
       <DatesProvider settings={{ locale: dateLocale }}>
         {children}

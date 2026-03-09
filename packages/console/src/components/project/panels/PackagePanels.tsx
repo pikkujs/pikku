@@ -51,7 +51,7 @@ export const PackageConfiguration: React.FunctionComponent<
       </Box>
 
       <Group gap="xs">
-        <PikkuBadge type="label" color="blue">
+        <PikkuBadge type="label" color="gray">
           v{metadata?.version || '?'}
         </PikkuBadge>
         {metadata?.license && (

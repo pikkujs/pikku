@@ -395,7 +395,7 @@ const WireView: React.FunctionComponent<{ onBack: () => void }> = ({
     <Stack gap={0}>
       {wireCategories.map(({ key, title }) => (
         <Box key={key}>
-          <Box px="md" py="xs" bg="gray.1">
+          <Box px="md" py="xs" bg="var(--mantine-color-default-hover)">
             <Text size="xs" fw={600} c="dimmed" tt="uppercase">
               {title}
             </Text>

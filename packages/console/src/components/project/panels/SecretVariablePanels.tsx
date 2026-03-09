@@ -60,11 +60,11 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
 
       <Group gap="xs">
         {isOAuth2 ? (
-          <PikkuBadge type="label" color="violet">
+          <PikkuBadge type="label" color="gray">
             OAuth2
           </PikkuBadge>
         ) : (
-          <PikkuBadge type="label" color="blue">
+          <PikkuBadge type="label" color="gray">
             Secret
           </PikkuBadge>
         )}
@@ -265,8 +265,7 @@ const OAuthConnectionSection: React.FunctionComponent<{
           ) : (
             <>
               <Button
-                variant="light"
-                color="blue"
+                variant="default"
                 size="xs"
                 leftSection={<ShieldCheck size={14} />}
                 loading={testTokenMutation.isPending}
