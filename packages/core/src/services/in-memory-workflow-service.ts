@@ -3,6 +3,7 @@ import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service
 import type { SerializedError } from '../types/core.types.js'
 import type {
   WorkflowRun,
+  WorkflowRunService,
   WorkflowRunWire,
   StepState,
   WorkflowStatus,
@@ -31,7 +32,10 @@ interface InternalStepData {
  * await workflowService.startWorkflow('myWorkflow', input, { type: 'cli' }, rpc, { inline: true })
  * ```
  */
-export class InMemoryWorkflowService extends PikkuWorkflowService {
+export class InMemoryWorkflowService
+  extends PikkuWorkflowService
+  implements WorkflowRunService
+{
   private runs = new Map<string, WorkflowRun>()
   private steps = new Map<string, StepState>() // keyed by `${runId}:${stepName}`
   private stepData = new Map<string, InternalStepData>() // keyed by stepId
@@ -256,6 +260,68 @@ export class InMemoryWorkflowService extends PikkuWorkflowService {
     this.stepHistory.set(runId, history)
 
     return newStep
+  }
+
+  async listRuns(options?: {
+    workflowName?: string
+    status?: string
+    limit?: number
+    offset?: number
+  }): Promise<WorkflowRun[]> {
+    let runs = Array.from(this.runs.values())
+    if (options?.workflowName) {
+      runs = runs.filter((r) => r.workflow === options.workflowName)
+    }
+    if (options?.status) {
+      runs = runs.filter((r) => r.status === options.status)
+    }
+    runs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    const offset = options?.offset ?? 0
+    const limit = options?.limit ?? runs.length
+    return runs.slice(offset, offset + limit)
+  }
+
+  async getRunSteps(
+    runId: string
+  ): Promise<
+    Array<StepState & { stepName: string; rpcName?: string; data?: any }>
+  > {
+    const history = this.stepHistory.get(runId) || []
+    return history.map((step) => {
+      const stepDataEntry = this.stepData.get(step.stepId)
+      return {
+        ...step,
+        rpcName: stepDataEntry?.rpcName ?? undefined,
+        data: stepDataEntry?.data,
+      }
+    })
+  }
+
+  async getDistinctWorkflowNames(): Promise<string[]> {
+    const names = new Set<string>()
+    for (const run of this.runs.values()) {
+      names.add(run.workflow)
+    }
+    return Array.from(names)
+  }
+
+  async deleteRun(id: string): Promise<boolean> {
+    const existed = this.runs.has(id)
+    this.runs.delete(id)
+    this.stepHistory.delete(id)
+    this.runState.delete(id)
+    const prefix = `${id}:`
+    for (const key of this.steps.keys()) {
+      if (key.startsWith(prefix)) {
+        const step = this.steps.get(key)
+        if (step) {
+          this.stepData.delete(step.stepId)
+          this.branchKeys.delete(step.stepId)
+        }
+        this.steps.delete(key)
+      }
+    }
+    return existed
   }
 
   async withRunLock<T>(_id: string, fn: () => Promise<T>): Promise<T> {
