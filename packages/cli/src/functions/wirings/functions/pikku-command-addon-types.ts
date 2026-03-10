@@ -17,6 +17,7 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<void, void>({
       packageMappings,
       servicesFile,
       secretsFile,
+      credentialsFile,
       variablesFile,
     } = config
 
@@ -41,7 +42,10 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<void, void>({
       configTypeImport,
       `import type { RequiredSingletonServices } from '${getFileImportRelativePath(addonTypesFile, servicesFile, packageMappings)}'`,
       `import { TypedSecretService } from '${getFileImportRelativePath(addonTypesFile, secretsFile, packageMappings)}'`,
-      `import { TypedVariablesService } from '${getFileImportRelativePath(addonTypesFile, variablesFile, packageMappings)}'`
+      `import { TypedVariablesService } from '${getFileImportRelativePath(addonTypesFile, variablesFile, packageMappings)}'`,
+      visitState.credentials.definitions.length > 0
+        ? `import { TypedCredentialService } from '${getFileImportRelativePath(addonTypesFile, credentialsFile, packageMappings)}'`
+        : null
     )
 
     await writeFileInDir(logger, addonTypesFile, content)

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { wireSecret } from '@pikku/core/secret'
-import { wireOAuth2Credential } from '@pikku/core/oauth2'
+import { wireCredential } from '@pikku/core/credential'
 
 /**
  * Example API credentials using wireSecret with Zod schema.
@@ -24,13 +24,20 @@ wireSecret({
  * Mock OAuth2 credential for testing OAuth flows.
  * Uses oauth2-mock-server running on localhost:8080
  */
-wireOAuth2Credential({
+wireCredential({
   name: 'mock',
   displayName: 'Mock OAuth Provider',
   description: 'Mock OAuth2 provider for testing',
-  secretId: 'MOCK_OAUTH_APP',
-  tokenSecretId: 'MOCK_OAUTH_TOKENS',
-  authorizationUrl: 'http://localhost:8080/authorize',
-  tokenUrl: 'http://localhost:8080/token',
-  scopes: ['openid', 'profile', 'email'],
+  type: 'singleton',
+  schema: z.object({
+    accessToken: z.string(),
+    refreshToken: z.string().optional(),
+  }),
+  oauth2: {
+    appCredentialSecretId: 'MOCK_OAUTH_APP',
+    tokenSecretId: 'MOCK_OAUTH_TOKENS',
+    authorizationUrl: 'http://localhost:8080/authorize',
+    tokenUrl: 'http://localhost:8080/token',
+    scopes: ['openid', 'profile', 'email'],
+  },
 })

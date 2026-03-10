@@ -16,6 +16,7 @@ import { KyselyDeploymentService } from './kysely-deployment-service.js'
 import { KyselyAIStorageService } from './kysely-ai-storage-service.js'
 import { KyselyAgentRunService } from './kysely-agent-run-service.js'
 import { KyselySecretService } from './kysely-secret-service.js'
+import { KyselyCredentialService } from './kysely-credential-service.js'
 
 function createSqliteDb(): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
@@ -52,6 +53,8 @@ async function dropAllTables(db: Kysely<KyselyPikkuDB>): Promise<void> {
     'workflow_versions',
     'secrets_audit',
     'secrets',
+    'credentials_audit',
+    'credentials',
   ]
   for (const table of tables) {
     await db.schema.dropTable(table).ifExists().execute()
@@ -97,6 +100,11 @@ function registerTests(
       agentRunService: async () => new KyselyAgentRunService(getDb()),
       secretService: async (config) => {
         const s = new KyselySecretService(getDb(), config)
+        await s.init()
+        return s
+      },
+      credentialService: async (config) => {
+        const s = new KyselyCredentialService(getDb(), config)
         await s.init()
         return s
       },
@@ -148,6 +156,56 @@ function registerTests(
 
       assert.equal(logs.length, 1)
       assert.equal(logs[0]!.action, 'write')
+    })
+  })
+
+  describe(`KyselyCredentialService audit [${dialectName}]`, () => {
+    const kek = 'test-key-encryption-key-32chars!'
+
+    test('audit logs writes, reads, and deletes', async () => {
+      const service = new KyselyCredentialService(getDb(), {
+        key: kek,
+        audit: true,
+        auditReads: true,
+      })
+      await service.init()
+      await service.set('audit-cred', { token: 'abc' }, 'user-1')
+      await service.get('audit-cred', 'user-1')
+      await service.delete('audit-cred', 'user-1')
+
+      const logs = await getDb()
+        .selectFrom('credentials_audit')
+        .select(['credential_name', 'user_id', 'action'])
+        .where('credential_name', '=', 'audit-cred')
+        .orderBy('performed_at', 'asc')
+        .execute()
+
+      assert.equal(logs.length, 3)
+      assert.equal(logs[0]!.action, 'write')
+      assert.equal(logs[0]!.user_id, 'user-1')
+      assert.equal(logs[1]!.action, 'read')
+      assert.equal(logs[2]!.action, 'delete')
+    })
+
+    test('audit logs global credential with null user_id', async () => {
+      const service = new KyselyCredentialService(getDb(), {
+        key: kek,
+        audit: true,
+        auditReads: true,
+      })
+      await service.init()
+      await service.set('global-cred', { key: 'val' })
+      await service.get('global-cred')
+
+      const logs = await getDb()
+        .selectFrom('credentials_audit')
+        .select(['credential_name', 'user_id', 'action'])
+        .where('credential_name', '=', 'global-cred')
+        .execute()
+
+      assert.equal(logs.length, 2)
+      assert.equal(logs[0]!.user_id, null)
+      assert.equal(logs[1]!.user_id, null)
     })
   })
 }

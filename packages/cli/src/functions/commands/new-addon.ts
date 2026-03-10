@@ -403,18 +403,35 @@ export interface Services extends CoreServices<SingletonServices> {}
 
   // Conditional: secret file
   if (flags.oauth) {
-    files[`src/${name}.secret.ts`] =
-      `import { wireOAuth2Credential } from '@pikku/core/oauth2'
+    files[`src/${name}.credential.ts`] = `import { z } from 'zod'
+import { wireCredential } from '@pikku/core/credential'
+import { wireSecret } from '@pikku/core/secret'
 
-wireOAuth2Credential({
-  name: '${camelName}OAuth',
-  displayName: '${displayName} OAuth2',
-  description: '${displayName} OAuth2 credentials',
-  secretId: '${screamingName}_APP_CREDENTIALS',
-  tokenSecretId: '${screamingName}_TOKENS',
-  authorizationUrl: 'https://example.com/oauth2/authorize',
-  tokenUrl: 'https://example.com/oauth2/token',
-  scopes: ['read', 'write'],
+export const ${camelName}TokenSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string().optional(),
+})
+
+wireCredential({
+  name: '${camelName}',
+  displayName: '${displayName}',
+  description: '${description}',
+  type: 'wire',
+  schema: ${camelName}TokenSchema,
+  oauth2: {
+    appCredentialSecretId: '${screamingName}_OAUTH_APP',
+    tokenSecretId: '${screamingName}_OAUTH_TOKENS',
+    authorizationUrl: 'https://example.com/oauth2/authorize',
+    tokenUrl: 'https://example.com/oauth2/token',
+    scopes: ['read', 'write'],
+  },
+})
+
+wireSecret({
+  name: '${camelName}OAuthApp',
+  displayName: '${displayName} OAuth App',
+  description: 'OAuth2 app credentials for ${displayName}',
+  secretId: '${screamingName}_OAUTH_APP',
 })
 `
   } else if (flags.secret) {

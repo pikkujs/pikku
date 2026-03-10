@@ -133,6 +133,12 @@ export interface PikkuCLICoreOutputFiles {
   // Secrets metadata JSON
   secretsMetaJsonFile: string
 
+  // Credentials (typed wrapper for CredentialService)
+  credentialsFile: string
+
+  // Credentials metadata JSON
+  credentialsMetaJsonFile: string
+
   // Variables
   variableTypesFile: string
 
