@@ -4,7 +4,8 @@ export const serializeAddonTypes = (
   configTypeImport: string,
   requiredServicesTypeImport: string,
   typedSecretServiceImport: string,
-  typedVariablesServiceImport: string
+  typedVariablesServiceImport: string,
+  typedCredentialServiceImport: string | null = null
 ) => {
   return `/**
  * Addon package types for pikkuAddonConfig and pikkuAddonServices
@@ -16,6 +17,7 @@ ${configTypeImport}
 ${requiredServicesTypeImport}
 ${typedSecretServiceImport}
 ${typedVariablesServiceImport}
+${typedCredentialServiceImport ? typedCredentialServiceImport : ''}
 
 ${singletonServicesTypeName !== 'SingletonServices' ? `type SingletonServices = ${singletonServicesTypeName}` : ''}
 ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
@@ -27,7 +29,7 @@ ${configTypeImport.includes('Config type not found') ? 'type Config = any' : ''}
 export type AddonBaseServices = {
   logger: SingletonServices['logger']
   variables: TypedVariablesService
-  secrets: TypedSecretService
+  secrets: TypedSecretService${typedCredentialServiceImport ? `\n  credentials: TypedCredentialService` : ''}
 }
 
 /**

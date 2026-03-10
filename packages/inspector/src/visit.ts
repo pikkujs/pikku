@@ -22,7 +22,8 @@ import { addWireAddon } from './add/add-wire-addon.js'
 import { addMiddleware } from './add/add-middleware.js'
 import { addPermission } from './add/add-permission.js'
 import { addCLI, addCLIRenderers } from './add/add-cli.js'
-import { addSecret, addOAuth2Credential } from './add/add-secret.js'
+import { addSecret } from './add/add-secret.js'
+import { addCredential } from './add/add-credential.js'
 import { addVariable } from './add/add-variable.js'
 import { addWorkflowGraph } from './add/add-workflow-graph.js'
 import { addAIAgent } from './add/add-ai-agent.js'
@@ -105,7 +106,7 @@ export const visitRoutes = (
 ) => {
   addFunctions(logger, node, checker, state, options)
   addSecret(logger, node, checker, state, options)
-  addOAuth2Credential(logger, node, checker, state, options)
+  addCredential(logger, node, checker, state, options)
   addVariable(logger, node, checker, state, options)
 
   addHTTPRoute(logger, node, checker, state, options)

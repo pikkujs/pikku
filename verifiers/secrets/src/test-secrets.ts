@@ -4,7 +4,6 @@
  *
  * This validates the same pattern used in templates/function-addon:
  * - wireSecret with Zod schema for type-safe secrets
- * - wireOAuth2Credential for OAuth2 flows
  * - TypedSecretService provides compile-time validated access
  */
 
@@ -28,16 +27,6 @@ void ({
   apiKey: 'key',
   apiSecret: 'secret',
 } satisfies ApiCredentialsType)
-
-// Verify OAuth2AppCredential type is correct
-type OAuthAppType = CredentialsMap['MOCK_OAUTH_APP']
-// @ts-expect-error - clientId should be required
-void ({ clientSecret: 'x' } satisfies OAuthAppType)
-
-// Verify OAuth2Token type is correct
-type OAuthTokenType = CredentialsMap['MOCK_OAUTH_TOKENS']
-// @ts-expect-error - accessToken should be required
-void ({ tokenType: 'Bearer' } satisfies OAuthTokenType)
 
 // Inline VariablesService that reads from process.env
 class EnvVariablesService implements VariablesService {
@@ -76,17 +65,6 @@ async function testTypedSecretService() {
     apiSecret: 'test-secret',
     baseUrl: 'https://api.example.com',
   })
-  process.env.MOCK_OAUTH_APP = JSON.stringify({
-    clientId: 'mock-client-id',
-    clientSecret: 'mock-client-secret',
-  })
-  process.env.MOCK_OAUTH_TOKENS = JSON.stringify({
-    accessToken: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
-    expiresAt: Date.now() + 3600000,
-    tokenType: 'Bearer',
-    scope: 'openid profile email',
-  })
 
   const variablesService = new EnvVariablesService()
   const secretService = new LocalSecretService(variablesService)
@@ -100,23 +78,12 @@ async function testTypedSecretService() {
   console.log(`  EXAMPLE_API_CREDENTIALS.apiSecret: ${apiCreds.apiSecret}`)
   console.log(`  EXAMPLE_API_CREDENTIALS.baseUrl: ${apiCreds.baseUrl}`)
 
-  const appCreds = await secrets.getSecretJSON('MOCK_OAUTH_APP')
-  console.log(`  MOCK_OAUTH_APP.clientId: ${appCreds.clientId}`)
-  console.log(`  MOCK_OAUTH_APP.clientSecret: ${appCreds.clientSecret}`)
-
-  const tokens = await secrets.getSecretJSON('MOCK_OAUTH_TOKENS')
-  console.log(`  MOCK_OAUTH_TOKENS.accessToken: ${tokens.accessToken}`)
-  console.log(`  MOCK_OAUTH_TOKENS.refreshToken: ${tokens.refreshToken}`)
-  console.log(`  MOCK_OAUTH_TOKENS.expiresAt: ${tokens.expiresAt}`)
-
   // Test 2: hasSecret() method
   console.log('\nTest 2: hasSecret() method')
   const hasApi = await secrets.hasSecret('EXAMPLE_API_CREDENTIALS')
-  const hasOAuth = await secrets.hasSecret('MOCK_OAUTH_APP')
   console.log(`  hasSecret(EXAMPLE_API_CREDENTIALS): ${hasApi}`)
-  console.log(`  hasSecret(MOCK_OAUTH_APP): ${hasOAuth}`)
 
-  if (!hasApi || !hasOAuth) {
+  if (!hasApi) {
     throw new Error('hasSecret() should return true for configured secrets')
   }
 
@@ -129,24 +96,22 @@ async function testTypedSecretService() {
     )
   }
 
-  if (allStatus.length !== 3) {
-    throw new Error(`Expected 3 credentials, got ${allStatus.length}`)
+  if (allStatus.length !== 1) {
+    throw new Error(`Expected 1 secret, got ${allStatus.length}`)
   }
 
   // Test 4: getMissing() - should be empty since all are configured
   console.log('\nTest 4: getMissing()')
   const missing = await secrets.getMissing()
-  console.log(`  Missing credentials: ${missing.length}`)
+  console.log(`  Missing secrets: ${missing.length}`)
 
   if (missing.length !== 0) {
-    throw new Error(`Expected 0 missing credentials, got ${missing.length}`)
+    throw new Error(`Expected 0 missing secrets, got ${missing.length}`)
   }
 
   // Test 5: Test with missing secrets
   console.log('\nTest 5: Test with missing secrets')
   delete process.env.EXAMPLE_API_CREDENTIALS
-  delete process.env.MOCK_OAUTH_APP
-  delete process.env.MOCK_OAUTH_TOKENS
 
   const emptySecrets = new TypedSecretService(
     new LocalSecretService(new EnvVariablesService())
@@ -154,10 +119,8 @@ async function testTypedSecretService() {
   const missingCreds = await emptySecrets.getMissing()
   console.log(`  Missing when empty: ${missingCreds.length}`)
 
-  if (missingCreds.length !== 3) {
-    throw new Error(
-      `Expected 3 missing credentials, got ${missingCreds.length}`
-    )
+  if (missingCreds.length !== 1) {
+    throw new Error(`Expected 1 missing secret, got ${missingCreds.length}`)
   }
 
   // Test 6: setSecretJSON() type enforcement

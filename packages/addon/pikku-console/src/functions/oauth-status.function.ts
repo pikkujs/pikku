@@ -11,9 +11,12 @@ export const oauthStatus = pikkuSessionlessFunc<
 >({
   title: 'OAuth Status',
   description:
-    'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then attempts to read the stored token from secrets. Returns connection status data including whether a refresh token exists and expiration status.',
+    'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then attempts to read the stored token from credential service (or secrets as fallback). Returns connection status data including whether a refresh token exists and expiration status.',
   expose: true,
-  func: async ({ logger, wiringService, secrets }, { credentialName }) => {
+  func: async (
+    { logger, wiringService, secrets, credentialService },
+    { credentialName }
+  ) => {
     const secretsMeta = await wiringService.readSecretsMeta()
 
     const credential = secretsMeta[credentialName]
@@ -33,11 +36,23 @@ export const oauthStatus = pikkuSessionlessFunc<
     }
 
     try {
-      const token = await secrets.getSecretJSON<{
+      let token: {
         accessToken: string
         refreshToken?: string
         expiresAt?: number
-      }>(credential.oauth2.tokenSecretId)
+      } | null = null
+
+      if (credentialService) {
+        token = await credentialService.get(credentialName)
+      }
+
+      if (!token) {
+        token = await secrets.getSecretJSON<{
+          accessToken: string
+          refreshToken?: string
+          expiresAt?: number
+        }>(credential.oauth2.tokenSecretId)
+      }
 
       const expiresAt = token.expiresAt
       const isExpired = expiresAt ? new Date(expiresAt) < new Date() : undefined

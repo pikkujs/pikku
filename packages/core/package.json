@@ -35,6 +35,7 @@
     "./cli": "./dist/wirings/cli/index.js",
     "./cli/channel": "./dist/wirings/cli/channel/index.js",
     "./node": "./dist/wirings/node/index.js",
+    "./credential": "./dist/wirings/credential/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
     "./oauth2": "./dist/wirings/oauth2/index.js",

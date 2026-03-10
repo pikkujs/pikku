@@ -33,6 +33,10 @@ import {
 } from '../../pikku-state.js'
 import { PikkuSessionService } from '../../services/user-session-service.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
+import {
+  PikkuCredentialWireService,
+  createMiddlewareCredentialWireProps,
+} from '../../services/credential-wire-service.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -299,6 +303,7 @@ const executeRoute = async (
   }
 ) => {
   const userSession = new PikkuSessionService<CoreUserSession>()
+  const credentialWire = new PikkuCredentialWireService()
   const { params, route, meta } = matchedRoute
   const { singletonServices, createWireServices, skipUserSession, requestId } =
     services
@@ -377,6 +382,7 @@ const executeRoute = async (
     setSession: (s: any) => userSession.setInitial(s),
     getSession: () => userSession.get(),
     hasSessionChanged: () => userSession.sessionChanged,
+    ...createMiddlewareCredentialWireProps(credentialWire),
   }
 
   result = await runPikkuFunc(
@@ -396,6 +402,7 @@ const executeRoute = async (
       tags: route.tags,
       wire,
       sessionService: userSession,
+      credentialWireService: credentialWire,
       packageName: meta.packageName,
     }
   )

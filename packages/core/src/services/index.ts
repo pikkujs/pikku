@@ -10,8 +10,14 @@ export {
   createFunctionSessionWireProps,
 } from './user-session-service.js'
 export { TypedSecretService } from './typed-secret-service.js'
+export {
+  PikkuCredentialWireService,
+  createMiddlewareCredentialWireProps,
+  createWireServicesCredentialWireProps,
+} from './credential-wire-service.js'
 export { TypedVariablesService } from './typed-variables-service.js'
 export { LocalSecretService } from './local-secrets.js'
+export { LocalCredentialService } from './local-credential-service.js'
 export { LocalVariablesService } from './local-variables.js'
 export { ConsoleLogger } from './logger-console.js'
 export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
@@ -53,4 +59,10 @@ export type {
   CredentialStatus,
   CredentialMeta,
 } from './typed-secret-service.js'
+export type { CredentialService } from './credential-service.js'
+export { TypedCredentialService } from './typed-credential-service.js'
+export type {
+  CredentialStatusInfo,
+  CredentialMetaInfo,
+} from './typed-credential-service.js'
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'

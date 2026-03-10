@@ -5,9 +5,12 @@ export const oauthDisconnect = pikkuSessionlessFunc<{
 }>({
   title: 'OAuth Disconnect',
   description:
-    'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then deletes the stored tokens from secrets service using the tokenSecretId.',
+    'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then deletes the stored tokens from credential service (or secrets as fallback).',
   expose: true,
-  func: async ({ logger, wiringService, secrets }, { credentialName }) => {
+  func: async (
+    { logger, wiringService, secrets, credentialService },
+    { credentialName }
+  ) => {
     const secretsMeta = await wiringService.readSecretsMeta()
 
     const credential = secretsMeta[credentialName]
@@ -21,7 +24,12 @@ export const oauthDisconnect = pikkuSessionlessFunc<{
       )
     }
 
-    await secrets.deleteSecret(credential.oauth2.tokenSecretId)
+    if (credentialService) {
+      await credentialService.delete(credentialName)
+    } else {
+      await secrets.deleteSecret(credential.oauth2.tokenSecretId)
+    }
+
     logger.info(`Tokens removed for '${credentialName}'`)
   },
 })

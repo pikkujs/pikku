@@ -7,9 +7,12 @@ export const oauthExchangeTokens = pikkuSessionlessFunc<
 >({
   title: 'OAuth Exchange Tokens',
   description:
-    'Given an authorization code and state string, retrieves the pending OAuth flow from oauthService using the state, creates an OAuth2Client, exchanges the code for tokens, stores the tokens in secrets service under the tokenSecretId, and returns the credentialName. Throws if the state is invalid or expired.',
+    'Given an authorization code and state string, retrieves the pending OAuth flow from oauthService using the state, creates an OAuth2Client, exchanges the code for tokens, stores the tokens in credential service, and returns the credentialName. Throws if the state is invalid or expired.',
   expose: true,
-  func: async ({ logger, secrets, oauthService }, { code, state }) => {
+  func: async (
+    { logger, secrets, oauthService, credentialService },
+    { code, state }
+  ) => {
     const flow = oauthService.getPendingFlow(state)
     if (!flow) {
       throw new Error('Invalid or expired OAuth state')
@@ -21,10 +24,13 @@ export const oauthExchangeTokens = pikkuSessionlessFunc<
 
     const tokens = await oauth2Client.exchangeCode(code, flow.callbackUrl)
 
-    await secrets.setSecretJSON(flow.oauth2.tokenSecretId, tokens)
-    logger.info(
-      `Tokens stored for '${flow.credentialName}' in secret '${flow.oauth2.tokenSecretId}'`
-    )
+    if (credentialService) {
+      await credentialService.set(flow.credentialName, tokens)
+    } else {
+      await secrets.setSecretJSON(flow.oauth2.tokenSecretId, tokens)
+    }
+
+    logger.info(`Tokens stored for '${flow.credentialName}'`)
 
     return { credentialName: flow.credentialName }
   },

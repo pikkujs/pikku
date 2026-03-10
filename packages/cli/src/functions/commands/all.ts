@@ -110,6 +110,7 @@ export const all = pikkuVoidFunc({
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
     await rpc.invoke('pikkuSecrets', null)
+    await rpc.invoke('pikkuCredentials', null)
     await rpc.invoke('pikkuVariableDefinitionTypes', null)
     await rpc.invoke('pikkuVariables', null)
 

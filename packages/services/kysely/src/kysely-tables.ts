@@ -157,6 +157,24 @@ export interface SecretsAuditTable {
   performed_at: Generated<Date>
 }
 
+export interface CredentialsTable {
+  name: string
+  user_id: string | null
+  ciphertext: string
+  wrapped_dek: string
+  key_version: number
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface CredentialsAuditTable {
+  id: string
+  credential_name: string
+  user_id: string | null
+  action: string
+  performed_at: Generated<Date>
+}
+
 export interface KyselyPikkuDB {
   channels: ChannelsTable
   channel_subscriptions: ChannelSubscriptionsTable
@@ -173,4 +191,6 @@ export interface KyselyPikkuDB {
   pikku_deployment_functions: PikkuDeploymentFunctionsTable
   secrets: SecretsTable
   secrets_audit: SecretsAuditTable
+  credentials: CredentialsTable
+  credentials_audit: CredentialsAuditTable
 }

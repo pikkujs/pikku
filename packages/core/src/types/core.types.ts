@@ -33,6 +33,7 @@ import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
+import type { CredentialService } from '../services/credential-service.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -227,6 +228,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   agentRunService?: AgentRunService
   /** Workflow run service (listing workflow runs) */
   workflowRunService?: WorkflowRunService
+  /** Credential service for dynamic/managed credentials (OAuth tokens, per-user API keys) */
+  credentialService?: CredentialService
 }
 
 /**
@@ -270,6 +273,10 @@ export type PikkuWire<
   getSession: () => Promise<UserSession> | UserSession | undefined
   /** Whether the session was modified during this run */
   hasSessionChanged: () => boolean
+  /** Set a credential value (available in middleware) */
+  setCredential: (name: string, value: unknown) => void
+  /** Get all resolved credentials (only available in pikkuWireServices) */
+  getCredentials: () => Record<string, unknown>
 }>
 
 /**

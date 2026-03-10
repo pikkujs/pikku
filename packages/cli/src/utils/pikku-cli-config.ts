@@ -521,6 +521,18 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Credentials (typed wrapper for CredentialService)
+    const credentialsDir = join(result.outDir, 'credentials')
+    if (!result.credentialsFile) {
+      result.credentialsFile = join(credentialsDir, 'pikku-credentials.gen.ts')
+    }
+    if (!result.credentialsMetaJsonFile) {
+      result.credentialsMetaJsonFile = join(
+        credentialsDir,
+        'pikku-credentials-meta.gen.json'
+      )
+    }
+
     // Variables (typed wrapper for VariablesService)
     const variablesDir = join(result.outDir, 'variables')
     if (!result.variableTypesFile) {
