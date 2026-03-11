@@ -66,7 +66,6 @@
     }
   },
   "devDependencies": {
-    "react-router-dom": "^7",
     "@mantine/colors-generator": "^8.3.8",
     "@pikku/addon-console": "workspace:*",
     "@pikku/cli": "workspace:*",
@@ -79,6 +78,7 @@
     "postcss": "^8",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7",
+    "react-router-dom": "^7",
     "typescript": "^5",
     "vite": "^6"
   }
