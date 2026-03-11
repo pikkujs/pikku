@@ -28,6 +28,13 @@ export const consoleCommand = pikkuSessionlessFunc<
 >({
   remote: true,
   func: async ({ logger, config }, { port, open: openBrowser }, { rpc }) => {
+    if (!config.scaffold?.console) {
+      logger.error(
+        'Console is not enabled. Add { "scaffold": { "console": "no-auth" } } to your pikku.config.json'
+      )
+      return
+    }
+
     const consoleDir = join(
       fileURLToPath(import.meta.url),
       '..',
