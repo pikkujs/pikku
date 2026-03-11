@@ -1,5 +1,11 @@
 # @pikku/kysely-postgres
 
+## 0.12.4
+
+### Patch Changes
+
+- Fix workspace protocol references in published dependencies
+
 ## 0.12.3
 
 ### Patch Changes
