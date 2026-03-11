@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { useLink } from '@/router'
 import {
   Box,
   Container,
@@ -36,7 +36,9 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
   count,
   icon: Icon,
   href,
-}) => (
+}) => {
+  const Link = useLink()
+  return (
   <Paper
     component={Link}
     to={href}
@@ -83,7 +85,8 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
       </Stack>
     </Group>
   </Paper>
-)
+  )
+}
 
 export const OverviewPage: React.FunctionComponent = () => {
   const { counts, loading } = usePikkuMeta()

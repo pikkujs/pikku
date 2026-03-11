@@ -1,6 +1,6 @@
 import React from 'react'
 import { Stack, Text, Box, Group, Anchor } from '@mantine/core'
-import { Link } from 'react-router-dom'
+import { useLink } from '@/router'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { wiringTypeColor } from '@/components/ui/badge-defs'
@@ -20,6 +20,7 @@ const TYPE_HREF: Record<string, string> = {
 export const FunctionCrossLinks: React.FunctionComponent<{
   pikkuFuncId: string
 }> = ({ pikkuFuncId }) => {
+  const Link = useLink()
   const { functionUsedBy, meta } = usePikkuMeta()
   const usedBy = functionUsedBy.get(pikkuFuncId)
 
@@ -118,6 +119,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
 export const WiringCrossLinks: React.FunctionComponent<{
   pikkuFuncId?: string
 }> = ({ pikkuFuncId }) => {
+  const Link = useLink()
   const { functionUsedBy, meta } = usePikkuMeta()
 
   if (!pikkuFuncId) return null

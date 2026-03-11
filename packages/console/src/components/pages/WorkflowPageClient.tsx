@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from '@/router'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider } from '@/context/PanelContext'
 import { WorkflowRunProvider } from '@/context/WorkflowRunContext'

@@ -5,13 +5,20 @@ import {
   SIDEBAR_COLLAPSED_WIDTH,
   SIDEBAR_EXPANDED_WIDTH,
 } from '@/components/project/Sidebar'
+import type { SidebarProps } from '@/components/project/Sidebar'
 import { PikkuMetaProvider, usePikkuMeta } from '@/context/PikkuMetaContext'
 import { SpotlightSearch } from '@/components/search/SpotlightSearch'
 import { ConnectionScreen } from '@/components/layout/ConnectionScreen'
 
-const AppLayoutInner: React.FunctionComponent<{
+export interface AppLayoutProps {
   children: React.ReactNode
-}> = ({ children }) => {
+  sidebar?: SidebarProps
+}
+
+const AppLayoutInner: React.FunctionComponent<AppLayoutProps> = ({
+  children,
+  sidebar,
+}) => {
   const { loading, error } = usePikkuMeta()
   const [collapsed] = useLocalStorage({
     key: 'sidebar-collapsed',
@@ -37,7 +44,7 @@ const AppLayoutInner: React.FunctionComponent<{
   return (
     <>
       <SpotlightSearch />
-      <Sidebar />
+      <Sidebar {...sidebar} />
       <Box
         ml={sidebarWidth}
         h="100vh"
@@ -49,12 +56,13 @@ const AppLayoutInner: React.FunctionComponent<{
   )
 }
 
-export const AppLayout: React.FunctionComponent<{
-  children: React.ReactNode
-}> = ({ children }) => {
+export const AppLayout: React.FunctionComponent<AppLayoutProps> = ({
+  children,
+  sidebar,
+}) => {
   return (
     <PikkuMetaProvider>
-      <AppLayoutInner>{children}</AppLayoutInner>
+      <AppLayoutInner sidebar={sidebar}>{children}</AppLayoutInner>
     </PikkuMetaProvider>
   )
 }

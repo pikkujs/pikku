@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Text, Badge } from '@mantine/core'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@/router'
 import { GitBranch } from 'lucide-react'
 import { TableListPage } from '@/components/layout/TableListPage'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'

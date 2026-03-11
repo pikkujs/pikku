@@ -1,7 +1,7 @@
 import React, { Suspense, useMemo } from 'react'
 import { Text, Center, Loader } from '@mantine/core'
 import { Radio } from 'lucide-react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from '@/router'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { ChannelPageClient } from '@/components/pages/ChannelPageClient'
 import { TableListPage } from '@/components/layout/TableListPage'

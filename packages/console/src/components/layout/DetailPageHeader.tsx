@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useLink } from '@/router'
 import {
   Group,
   Text,
@@ -46,6 +46,7 @@ export const DetailPageHeader: React.FunctionComponent<
   tabs,
   rightSection,
 }) => {
+  const Link = useLink()
   const [opened, setOpened] = useState(false)
   const [search, setSearch] = useState('')
 

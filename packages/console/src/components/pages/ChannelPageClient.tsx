@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from '@/router'
 import { Box, Center, Text } from '@mantine/core'
 import { Radio } from 'lucide-react'
 import { PanelProvider } from '@/context/PanelContext'

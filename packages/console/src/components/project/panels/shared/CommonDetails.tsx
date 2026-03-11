@@ -1,6 +1,6 @@
 import React from 'react'
 import { Text, Box, Group, Divider, Table, Anchor } from '@mantine/core'
-import { Link } from 'react-router-dom'
+import { useLink } from '@/router'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { LinkedBadge } from '@/components/project/panels/LinkedBadge'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
@@ -48,6 +48,7 @@ const TYPE_HREF: Record<string, string> = {
 const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
   functionName,
 }) => {
+  const Link = useLink()
   const { functionUsedBy } = usePikkuMeta()
   const usedBy = functionUsedBy.get(functionName)
   const allWirings = usedBy ? [...usedBy.transports, ...usedBy.jobs] : []

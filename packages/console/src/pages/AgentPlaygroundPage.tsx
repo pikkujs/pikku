@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from '@/router'
 import { Center, Loader, Text, SegmentedControl } from '@mantine/core'
 import { Bot } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'

@@ -1,4 +1,4 @@
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, useLink } from '@/router'
 import {
   Stack,
   Box,
@@ -27,19 +27,19 @@ import {
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
-interface NavItem {
+export interface NavItem {
   label: string
   href: string
   icon: React.ComponentType<{ size?: number }>
   matchPrefix: string
 }
 
-interface NavSection {
+export interface NavSection {
   title?: string
   items: NavItem[]
 }
 
-const NAV_SECTIONS: NavSection[] = [
+export const DEFAULT_NAV_SECTIONS: NavSection[] = [
   {
     items: [
       {
@@ -102,13 +102,45 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ]
 
+export interface SidebarBranding {
+  logo: React.ReactNode
+  title: string
+  tooltipLabel: string
+  homeHref: string
+}
+
+const DEFAULT_BRANDING: SidebarBranding = {
+  logo: (
+    <img
+      src="/pikku-console-logo.png"
+      alt="Pikku Console"
+      width={28}
+      height={28}
+    />
+  ),
+  title: 'Pikku Console',
+  tooltipLabel: 'Pikku Console Alpha',
+  homeHref: '/',
+}
+
+export interface SidebarProps {
+  sections?: NavSection[]
+  branding?: SidebarBranding
+  footer?: React.ReactNode
+}
+
 const COLLAPSED_WIDTH = 60
 const EXPANDED_WIDTH = 210
 
 export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 
-export const Sidebar: React.FunctionComponent = () => {
+export const Sidebar: React.FunctionComponent<SidebarProps> = ({
+  sections = DEFAULT_NAV_SECTIONS,
+  branding = DEFAULT_BRANDING,
+  footer,
+}) => {
+  const Link = useLink()
   const theme = useMantineTheme()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()
@@ -150,12 +182,12 @@ export const Sidebar: React.FunctionComponent = () => {
         }}
       >
         <Tooltip
-          label="Pikku Console Alpha"
+          label={branding.tooltipLabel}
           position="right"
           disabled={!collapsed}
         >
           <Link
-            to="/"
+            to={branding.homeHref}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -164,15 +196,10 @@ export const Sidebar: React.FunctionComponent = () => {
               color: 'inherit',
             }}
           >
-            <img
-              src="/pikku-console-logo.png"
-              alt="Pikku Console"
-              width={28}
-              height={28}
-            />
+            {branding.logo}
             {!collapsed && (
               <Text size="lg" fw={500}>
-                Pikku Console
+                {branding.title}
               </Text>
             )}
           </Link>
@@ -192,7 +219,7 @@ export const Sidebar: React.FunctionComponent = () => {
       </Box>
 
       <Box style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} py={4}>
-        {NAV_SECTIONS.map((section, sectionIndex) => (
+        {sections.map((section, sectionIndex) => (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
             {section.items.map((item) => {
@@ -243,6 +270,13 @@ export const Sidebar: React.FunctionComponent = () => {
           </Box>
         ))}
       </Box>
+
+      {footer && (
+        <Box style={{ flexShrink: 0 }} px={6} py={4}>
+          <Divider mx="sm" mb={4} />
+          {footer}
+        </Box>
+      )}
 
       <Box style={{ flexShrink: 0 }}>
         <Divider mx="sm" />

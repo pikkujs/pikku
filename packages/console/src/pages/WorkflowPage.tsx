@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from '@/router'
 import { GitBranch } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { WorkflowsList } from '@/components/project/WorkflowsList'
