@@ -1,5 +1,13 @@
 # @pikku/e2e
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [688b5e8]
+  - @pikku/core@0.12.4
+  - @pikku/kysely-mysql@0.12.4
+
 ## 0.0.1
 
 ### Patch Changes
