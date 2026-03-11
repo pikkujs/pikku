@@ -1,5 +1,24 @@
 ## 0.12.0
 
+## 0.12.5
+
+### Patch Changes
+
+- Fix publish: ensure dist/.pikku/ generated files are included in the published package
+
+## 0.12.4
+
+### Patch Changes
+
+- Fix `#pikku` import alias: use conditional exports so published package resolves to compiled `dist/.pikku/pikku-types.gen.js` at runtime while keeping `.ts` for types during development
+
+## 0.12.3
+
+### Patch Changes
+
+- Fix publish: exports now point to compiled dist/.pikku/ instead of root .pikku/ (TS-only), ensuring consumers can import .pikku/pikku-bootstrap.gen.js
+- Remove redundant cp in build script that was overwriting compiled JS with source TS
+
 ## 0.12.2
 
 ### Patch Changes
