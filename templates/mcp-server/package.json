@@ -1,5 +1,6 @@
 {
   "name": "@pikku/templates-mcp-server",
+  "private": true,
   "version": "0.1.4",
   "description": "Pikku Model Context Protocol (MCP) Server Template",
   "type": "module",
