@@ -142,12 +142,12 @@ describe('InMemoryWorkflowService', () => {
       assert.ok(updated.failedAt)
     })
 
-    test('should return default step state for non-existent step', async () => {
+    test('should throw for non-existent step', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
-      const step = await service.getStepState(runId, 'non-existent')
-      assert.strictEqual(step.stepId, '')
-      assert.strictEqual(step.status, 'pending')
-      assert.strictEqual(step.attemptCount, 0)
+      await assert.rejects(
+        () => service.getStepState(runId, 'non-existent'),
+        /Step not found/
+      )
     })
   })
 

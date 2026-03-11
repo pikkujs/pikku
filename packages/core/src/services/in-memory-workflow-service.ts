@@ -118,7 +118,7 @@ export class InMemoryWorkflowService
     const stepId = randomUUID()
     const now = new Date()
 
-    const step: StepState = {
+    const step: StepState & { stepName: string } = {
       stepId,
       status: 'pending',
       attemptCount: 1,
@@ -126,15 +126,16 @@ export class InMemoryWorkflowService
       retryDelay: stepOptions?.retryDelay,
       createdAt: now,
       updatedAt: now,
+      stepName,
     }
 
     const key = `${runId}:${stepName}`
     this.steps.set(key, step)
     this.stepData.set(stepId, { rpcName, data, stepName })
 
-    // Add to history
+    // Add to history (same reference so mutations are reflected)
     const history = this.stepHistory.get(runId) || []
-    history.push({ ...step, stepName })
+    history.push(step)
     this.stepHistory.set(runId, history)
 
     return step
@@ -144,13 +145,9 @@ export class InMemoryWorkflowService
     const key = `${runId}:${stepName}`
     const step = this.steps.get(key)
     if (!step) {
-      return {
-        stepId: '',
-        status: 'pending',
-        attemptCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
+      throw new Error(
+        `Step not found: runId=${runId}, stepName=${stepName}. Use insertStepState to create it.`
+      )
     }
     return step
   }
@@ -232,7 +229,7 @@ export class InMemoryWorkflowService
     const newStepId = randomUUID()
     const now = new Date()
 
-    const newStep: StepState = {
+    const newStep: StepState & { stepName: string } = {
       stepId: newStepId,
       status,
       attemptCount: failedStep.attemptCount + 1,
@@ -240,6 +237,7 @@ export class InMemoryWorkflowService
       retryDelay: failedStep.retryDelay,
       createdAt: now,
       updatedAt: now,
+      stepName: stepName!,
     }
 
     if (status === 'running') {
@@ -254,9 +252,9 @@ export class InMemoryWorkflowService
       this.stepData.set(newStepId, { ...failedStepData })
     }
 
-    // Add to history
+    // Add to history (same reference so mutations are reflected)
     const history = this.stepHistory.get(runId) || []
-    history.push({ ...newStep, stepName })
+    history.push(newStep)
     this.stepHistory.set(runId, history)
 
     return newStep

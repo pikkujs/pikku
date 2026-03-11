@@ -464,25 +464,31 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new Error(`Missing workflow graphHash for '${name}'`)
     }
 
+    const shouldInline =
+      options?.inline || !getSingletonServices()?.queueService
+
     const runId = await this.createRun(
       name,
       input,
-      options?.inline ?? false,
+      shouldInline,
       workflowMeta.graphHash,
       wire
     )
 
-    if (options?.inline) {
+    if (shouldInline) {
       this.inlineRuns.add(runId)
     }
 
-    if (options?.inline || !getSingletonServices()?.queueService) {
+    if (shouldInline) {
       this.runWorkflowJob(runId, rpcService)
-        .catch(() => {})
+        .catch((err) => {
+          getSingletonServices()!.logger.error(
+            `Workflow ${name} (run ${runId}) failed:`,
+            err
+          )
+        })
         .finally(() => {
-          if (options?.inline) {
-            this.inlineRuns.delete(runId)
-          }
+          this.inlineRuns.delete(runId)
         })
     } else {
       await this.resumeWorkflow(runId)
