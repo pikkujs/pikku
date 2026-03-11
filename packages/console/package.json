@@ -27,7 +27,7 @@
     "@mantine/notifications": "^8.3.8",
     "@mantine/spotlight": "^8.3.8",
     "@pikku/assistant-ui": "workspace:*",
-    "@pikku/core": "workspace:*",
+    "@pikku/core": "0.6.9",
     "@pikku/fetch": "workspace:*",
     "@pikku/websocket": "workspace:*",
     "@rjsf/core": "^6.3.1",
