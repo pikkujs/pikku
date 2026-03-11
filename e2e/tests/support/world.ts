@@ -58,18 +58,13 @@ export class AgentWorld extends World {
   async sendMessage(message: string) {
     const input = this.page.getByPlaceholder('Message...')
     // Wait for textarea to be enabled (runtime back to idle)
-    await this.page.waitForFunction(
-      () => {
-        const ta = document.querySelector('textarea')
-        return ta && !ta.disabled
-      },
-      { timeout: config.responseTimeout }
-    )
-    // Brief pause for assistant-ui runtime to fully settle after approval-resume cycles
-    await this.page.waitForTimeout(2000)
+    await this.waitForTextareaEnabled()
 
     // Try submitting, with retries if the runtime doesn't process the message
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      // Brief settle for assistant-ui runtime after approval-resume cycles
+      await this.page.waitForTimeout(1_000)
+
       await input.click()
       await input.fill(message)
       await this.page.evaluate(() => {
@@ -77,14 +72,35 @@ export class AgentWorld extends World {
         if (form) form.requestSubmit()
       })
 
-      // Wait briefly then check if textarea was cleared (runtime consumed the message)
-      await this.page.waitForTimeout(500)
-      const value = await input.inputValue()
-      if (value === '') return // Message accepted
-
-      // Textarea still has text — runtime didn't consume it. Wait and retry.
-      await this.page.waitForTimeout(2000)
+      // Wait for textarea to be cleared (runtime consumed the message)
+      try {
+        await this.page.waitForFunction(
+          () => {
+            const ta = document.querySelector('textarea')
+            return ta && ta.value === ''
+          },
+          { timeout: 5_000 }
+        )
+        return // Message accepted
+      } catch {
+        // Textarea still has text — runtime didn't consume it. Retry.
+        await this.waitForTextareaEnabled()
+      }
     }
+    throw new Error(`Message was not consumed after 5 attempts: "${message}"`)
+  }
+
+  /**
+   * Wait for the textarea to become enabled (runtime idle).
+   */
+  async waitForTextareaEnabled() {
+    await this.page.waitForFunction(
+      () => {
+        const ta = document.querySelector('textarea')
+        return ta && !ta.disabled
+      },
+      { timeout: config.responseTimeout }
+    )
   }
 
   /**
@@ -97,14 +113,8 @@ export class AgentWorld extends World {
       timeout: config.responseTimeout,
     })
 
-    // Wait for any loading indicators to disappear
-    await this.page.waitForFunction(
-      () => {
-        const textarea = document.querySelector('textarea')
-        return textarea && !textarea.disabled
-      },
-      { timeout: config.responseTimeout }
-    )
+    // Wait for textarea to be enabled (response complete)
+    await this.waitForTextareaEnabled()
   }
 
   /**

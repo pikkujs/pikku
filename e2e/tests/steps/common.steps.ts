@@ -16,6 +16,10 @@ When('I send {string}', async function (this: AgentWorld, message: string) {
 
 When('I click {string}', async function (this: AgentWorld, buttonText: string) {
   await this.page.getByRole('button', { name: buttonText }).last().click()
+  // After Approve/Deny, wait for the AI to finish responding
+  if (buttonText === 'Approve' || buttonText === 'Deny') {
+    await this.waitForTextareaEnabled()
+  }
 })
 
 Then(
@@ -74,16 +78,9 @@ When(
       }
 
       // Wait for the response to complete (textarea becomes enabled)
-      await this.page.waitForFunction(
-        () => {
-          const ta = document.querySelector('textarea')
-          return ta && !ta.disabled
-        },
-        { timeout: config.responseTimeout }
-      )
+      await this.waitForTextareaEnabled()
 
       // Check if more approval requests appeared (sequential tool calls)
-      await this.page.waitForTimeout(2000)
       const moreButtons = await this.page
         .getByRole('button', { name: 'Approve' })
         .count()
@@ -134,13 +131,7 @@ async function denyNthAndApproveRest(this: AgentWorld, nth: number) {
   }
 
   // Wait for the response to complete
-  await this.page.waitForFunction(
-    () => {
-      const ta = document.querySelector('textarea')
-      return ta && !ta.disabled
-    },
-    { timeout: config.responseTimeout }
-  )
+  await this.waitForTextareaEnabled()
 }
 
 When('I wait for the response', async function (this: AgentWorld) {
@@ -174,8 +165,8 @@ Then(
 Then(
   'I should not see {string} in the chat',
   async function (this: AgentWorld, unexpected: string) {
-    // Brief wait for content to settle, then assert absence
-    await this.page.waitForTimeout(2000)
+    // Wait for response to complete, then assert absence
+    await this.waitForTextareaEnabled()
     const body = await this.page.innerText('body')
     expect(body.toLowerCase()).not.toContain(unexpected.toLowerCase())
   }
