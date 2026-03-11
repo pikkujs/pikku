@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar from 'chokidar'
 import open from 'open'
+import { pikkuDevReloader } from '@pikku/core/dev'
 
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -23,11 +24,15 @@ const MIME_TYPES: Record<string, string> = {
 }
 
 export const consoleCommand = pikkuSessionlessFunc<
-  { port?: string; open?: string },
+  { port?: string; open?: string; hmr?: boolean },
   void
 >({
   remote: true,
-  func: async ({ logger, config }, { port, open: openBrowser }, { rpc }) => {
+  func: async (
+    { logger, config },
+    { port, open: openBrowser, hmr },
+    { rpc }
+  ) => {
     if (!config.scaffold?.console) {
       logger.error(
         'Console is not enabled. Add { "scaffold": { "console": "no-auth" } } to your pikku.config.json'
@@ -87,6 +92,13 @@ export const consoleCommand = pikkuSessionlessFunc<
         open(`http://localhost:${resolvedPort}`)
       }
     })
+
+    if (hmr) {
+      await pikkuDevReloader({
+        srcDirectories: config.srcDirectories,
+        logger,
+      })
+    }
 
     const configWatcher = chokidar.watch(config.srcDirectories, {
       ignoreInitial: true,

@@ -100,6 +100,12 @@ wireCLI({
     watch: pikkuCLICommand({
       func: watch,
       description: 'Watch for file changes and regenerate automatically',
+      options: {
+        hmr: {
+          description: 'Enable hot module reload for registered functions',
+          default: false,
+        },
+      },
     }),
     console: pikkuCLICommand({
       func: consoleCommand,
@@ -114,6 +120,10 @@ wireCLI({
           description: 'Open the console in the browser',
           default: 'false',
           short: 'o',
+        },
+        hmr: {
+          description: 'Enable hot module reload for registered functions',
+          default: false,
         },
       },
     }),

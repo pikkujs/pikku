@@ -1,9 +1,17 @@
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku'
 import chokidar from 'chokidar'
+import { pikkuDevReloader } from '@pikku/core/dev'
 
-export const watch = pikkuVoidFunc({
+export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
   remote: true,
-  func: async ({ logger, config }, _data, { rpc }) => {
+  func: async ({ logger, config }, { hmr }, { rpc }) => {
+    if (hmr) {
+      await pikkuDevReloader({
+        srcDirectories: config.srcDirectories,
+        logger,
+      })
+    }
+
     const configWatcher = chokidar.watch(config.srcDirectories, {
       ignoreInitial: true,
       ignored: /.*\.gen\.tsx?/,

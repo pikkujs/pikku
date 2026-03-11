@@ -30,6 +30,12 @@ const channelMiddlewareCache: Record<
   readonly CorePikkuChannelMiddleware[]
 > = {}
 
+export const clearChannelMiddlewareCache = () => {
+  for (const key of Object.keys(channelMiddlewareCache)) {
+    delete channelMiddlewareCache[key]
+  }
+}
+
 export const combineChannelMiddleware = (
   wireType: string,
   uid: string,

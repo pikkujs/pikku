@@ -124,6 +124,12 @@ const middlewareCache: Record<
   gateway: {},
 }
 
+export const clearMiddlewareCache = () => {
+  for (const key of Object.keys(middlewareCache) as PikkuWiringTypes[]) {
+    middlewareCache[key] = {}
+  }
+}
+
 /**
  * Combines wiring-specific middleware with function-level middleware.
  *

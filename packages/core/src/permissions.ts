@@ -133,6 +133,14 @@ const combinedPermissionsCache: Record<
   gateway: {},
 }
 
+export const clearPermissionsCache = () => {
+  for (const key of Object.keys(
+    combinedPermissionsCache
+  ) as PikkuWiringTypes[]) {
+    combinedPermissionsCache[key] = {}
+  }
+}
+
 /**
  * Combines wiring-specific permissions with function-level permissions.
  *
