@@ -1,8 +1,15 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "private": true,
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles": "./src/styles.ts",
+    "./adapters/react-router": "./src/adapters/react-router.tsx"
+  },
   "scripts": {
     "ncu": "ncu",
     "dev": "vite --port 7070",
@@ -45,11 +52,21 @@
     "react-hook-form": "^7.66.1",
     "react-markdown": "^10.1.0",
     "react-medium-image-zoom": "^5.4.0",
-    "react-router-dom": "^7",
     "reactflow": "^11.11.4",
     "remark-gfm": "^4.0.1"
   },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19",
+    "react-router-dom": "^7"
+  },
+  "peerDependenciesMeta": {
+    "react-router-dom": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "react-router-dom": "^7",
     "@mantine/colors-generator": "^8.3.8",
     "@pikku/addon-console": "workspace:*",
     "@pikku/cli": "workspace:*",

@@ -1,7 +1,7 @@
 import React, { Suspense, useMemo } from 'react'
 import { Text, Center, Loader, Group } from '@mantine/core'
 import { Terminal } from 'lucide-react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from '@/router'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { CliPageClient } from '@/components/pages/CliPageClient'
 import { TableListPage } from '@/components/layout/TableListPage'

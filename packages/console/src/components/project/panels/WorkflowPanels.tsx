@@ -10,7 +10,7 @@ import {
   Anchor,
 } from '@mantine/core'
 import { GitBranch } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useLink } from '@/router'
 import { useWorkflowContext } from '@/context/WorkflowContext'
 import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
 import { usePanelContext } from '@/context/PanelContext'
@@ -70,6 +70,7 @@ interface WiredTo {
 const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
   wiredTo,
 }) => {
+  const Link = useLink()
   if (wiredTo.transports.length === 0 && wiredTo.jobs.length === 0) {
     return null
   }

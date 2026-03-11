@@ -33,13 +33,15 @@ const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
 
 export const PikkuHTTPProvider: React.FunctionComponent<{
   children: React.ReactNode
-}> = ({ children }) => {
+  serverUrl?: string
+}> = ({ children, serverUrl }) => {
+  const resolvedUrl = serverUrl ?? getServerUrl()
   const pikkuInstance = useMemo(() => {
     return pikku({
-      serverUrl: getServerUrl(),
+      serverUrl: resolvedUrl,
       credentials: 'include',
     })
-  }, [])
+  }, [resolvedUrl])
   return (
     <PikkuInstanceContext.Provider value={pikkuInstance}>
       <PikkuHTTPContext.Provider value={pikkuInstance.fetch}>

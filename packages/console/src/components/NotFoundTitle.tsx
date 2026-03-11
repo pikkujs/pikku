@@ -1,5 +1,5 @@
 import { Button, Container, Group, Text, Title } from '@mantine/core'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@/router'
 import classes from './NotFoundTitle.module.css'
 
 export const NotFoundTitle: React.FunctionComponent = () => {

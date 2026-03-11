@@ -1,6 +1,6 @@
 import React from 'react'
 import { Clock } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from '@/router'
 import { PanelProvider } from '@/context/PanelContext'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
 import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'

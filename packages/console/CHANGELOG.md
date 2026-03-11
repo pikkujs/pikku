@@ -1,5 +1,19 @@
 ## 0.12.0
 
+## 0.12.4
+
+### Patch Changes
+
+- Make console components reusable across different frameworks (Next.js, Vite, etc.)
+- Add router abstraction layer (`ConsoleRouter` context) replacing direct `react-router-dom` imports across all 26 component files
+- Export all components, providers, hooks, and pages from package entry point
+- Add `reactRouterAdapter` for Vite/React Router consumers
+- Make `Sidebar` configurable with `sections`, `branding`, and `footer` props (defaults to existing nav)
+- Make `AppLayout` accept `sidebar` prop for customization
+- Add `PikkuHTTPProvider` `serverUrl` prop to allow host apps to provide the backend URL
+- Move `react-router-dom` to optional peer dependency
+- Add `./styles` and `./adapters/react-router` package exports
+
 ## 0.12.3
 
 ### Patch Changes

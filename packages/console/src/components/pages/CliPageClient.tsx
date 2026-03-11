@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate } from '@/router'
 import { Box, Center, Text } from '@mantine/core'
 import { Terminal } from 'lucide-react'
 import type { CLIMeta } from '@pikku/core/cli'
