@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-sqlite",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",
@@ -12,8 +12,8 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
+    "@pikku/core": "^0.12.0",
+    "@pikku/kysely": "^0.12.0",
     "kysely": "^0.28.11",
     "kysely-plugin-serialize": "^0.8.2"
   },
