@@ -237,7 +237,7 @@ export class InMemoryWorkflowService
       retryDelay: failedStep.retryDelay,
       createdAt: now,
       updatedAt: now,
-      stepName: stepName!,
+      stepName: stepName,
     }
 
     if (status === 'running') {

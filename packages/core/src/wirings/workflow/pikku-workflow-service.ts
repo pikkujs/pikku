@@ -477,9 +477,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     if (shouldInline) {
       this.inlineRuns.add(runId)
-    }
-
-    if (shouldInline) {
       this.runWorkflowJob(runId, rpcService)
         .catch((err) => {
           getSingletonServices()!.logger.error(

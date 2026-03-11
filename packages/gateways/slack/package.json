@@ -10,6 +10,7 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
+    "test": "echo \"no tests yet\"",
     "release": "npm run build && npm test"
   },
   "peerDependencies": {
