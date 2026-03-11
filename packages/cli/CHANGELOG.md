@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.4
+
+### Patch Changes
+
+- e387a68: Add scaffold.console check to console command: error with setup instructions if console is not enabled in pikku.config.json. Update bundled console app.
+- Updated dependencies [688b5e8]
+  - @pikku/core@0.12.4
+
 ## 0.12.3
 
 ### Patch Changes

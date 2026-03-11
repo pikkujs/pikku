@@ -1,5 +1,12 @@
 ## 0.12.0
 
+## 0.12.5
+
+### Patch Changes
+
+- Updated dependencies [688b5e8]
+  - @pikku/core@0.12.4
+
 ## 0.12.4
 
 ### Patch Changes
