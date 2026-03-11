@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.4
+
+### Patch Changes
+
+- InMemoryWorkflowService now implements WorkflowRunService interface (listRuns, getRunSteps, getDistinctWorkflowNames, deleteRun)
+
 ## 0.12.3
 
 ### Patch Changes

@@ -21,7 +21,10 @@ import {
   resolveNamespace,
   ContextAwareRPCService,
 } from '../../wirings/rpc/rpc-runner.js'
-import { buildDynamicWorkflowInstructions, buildWorkflowTools } from './agent-dynamic-workflow.js'
+import {
+  buildDynamicWorkflowInstructions,
+  buildWorkflowTools,
+} from './agent-dynamic-workflow.js'
 import {
   resolveMemoryServices,
   loadContextMessages,
@@ -122,7 +125,10 @@ export async function buildInstructions(
   }
 
   if (meta?.dynamicWorkflows && meta.tools?.length) {
-    instructions += buildDynamicWorkflowInstructions(meta.tools, meta.dynamicWorkflows)
+    instructions += buildDynamicWorkflowInstructions(
+      meta.tools,
+      meta.dynamicWorkflows
+    )
   }
 
   return instructions
@@ -408,6 +414,32 @@ export async function buildToolDefs(
             params,
             agentSessionMap
           )
+          console.log(
+            `[DEBUG sub-agent] ${subAgentName} result:`,
+            JSON.stringify({
+              status: result.status,
+              pendingApprovals: result.pendingApprovals?.length,
+              text: result.text?.substring(0, 100),
+              steps: result.steps?.length,
+            })
+          )
+          if (
+            result.status === 'suspended' &&
+            result.pendingApprovals?.length
+          ) {
+            return {
+              __approvalRequired: true,
+              toolName: subAgentName,
+              args: toolInput,
+              agentRunId: result.runId,
+              subApprovals: result.pendingApprovals.map((a) => ({
+                toolCallId: a.toolCallId,
+                toolName: a.toolName,
+                args: a.args,
+                runId: a.runId,
+              })),
+            }
+          }
           return result.object ?? result.text
         },
       })
