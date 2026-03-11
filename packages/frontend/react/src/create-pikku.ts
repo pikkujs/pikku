@@ -1,5 +1,5 @@
 import type { CorePikkuFetch, CorePikkuFetchOptions } from '@pikku/fetch'
-import type { PikkuInstance } from './pikku-provider'
+import type { PikkuInstance } from './pikku-provider.js'
 
 export type CreatePikkuOptions = CorePikkuFetchOptions & {
   serverUrl: string
@@ -11,7 +11,7 @@ export const createPikku = <
 >(
   PikkuFetchClass: new (options?: CorePikkuFetchOptions) => Fetch,
   PikkuRPCClass: new () => RPC,
-  options: CreatePikkuOptions,
+  options: CreatePikkuOptions
 ): PikkuInstance<Fetch, RPC> => {
   const { serverUrl, ...fetchOptions } = options
   const fetch = new PikkuFetchClass(fetchOptions)
