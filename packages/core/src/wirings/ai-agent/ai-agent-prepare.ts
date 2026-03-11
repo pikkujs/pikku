@@ -414,15 +414,6 @@ export async function buildToolDefs(
             params,
             agentSessionMap
           )
-          console.log(
-            `[DEBUG sub-agent] ${subAgentName} result:`,
-            JSON.stringify({
-              status: result.status,
-              pendingApprovals: result.pendingApprovals?.length,
-              text: result.text?.substring(0, 100),
-              steps: result.steps?.length,
-            })
-          )
           if (
             result.status === 'suspended' &&
             result.pendingApprovals?.length

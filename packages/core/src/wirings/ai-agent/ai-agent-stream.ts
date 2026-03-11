@@ -321,21 +321,6 @@ export function checkForApprovals(
   runId: string
 ): ToolApprovalRequired[] {
   const approvals: ToolApprovalRequired[] = []
-  console.log(
-    `[DEBUG checkForApprovals] toolCalls:`,
-    stepResult.toolCalls.map((tc) => tc.toolName),
-    'tools:',
-    tools.map((t) => `${t.name}(approval:${t.needsApproval})`),
-    'toolResults:',
-    stepResult.toolResults.map((tr) => ({
-      name: tr.toolName,
-      type: typeof tr.result,
-      hasApproval:
-        tr.result &&
-        typeof tr.result === 'object' &&
-        '__approvalRequired' in (tr.result as any),
-    }))
-  )
   for (const tc of stepResult.toolCalls) {
     const toolDef = tools.find((t) => t.name === tc.toolName)
 
