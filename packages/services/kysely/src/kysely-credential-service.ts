@@ -124,7 +124,12 @@ export class KyselyCredentialService implements CredentialService {
       row.wrapped_dek
     )
     await this.logAudit(name, userId, 'read')
-    return JSON.parse(plaintext) as T
+
+    try {
+      return JSON.parse(plaintext) as T
+    } catch {
+      throw new Error(`Credential '${name}' contains invalid data`)
+    }
   }
 
   async set(name: string, value: unknown, userId?: string): Promise<void> {
@@ -200,7 +205,11 @@ export class KyselyCredentialService implements CredentialService {
         row.ciphertext,
         row.wrapped_dek
       )
-      result[row.name] = JSON.parse(plaintext)
+      try {
+        result[row.name] = JSON.parse(plaintext)
+      } catch {
+        throw new Error(`Credential '${row.name}' contains invalid data`)
+      }
       await this.logAudit(row.name, userId, 'read')
     }
 

@@ -1,0 +1,226 @@
+import { Given, When, Then } from '@cucumber/cucumber'
+import { expect } from '@playwright/test'
+import { config } from '../support/types.js'
+
+async function rpc(name: string, data: Record<string, unknown> = {}) {
+  const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  })
+  return res.json()
+}
+
+async function httpPost(
+  path: string,
+  body: Record<string, unknown>,
+  headers: Record<string, string> = {}
+) {
+  const res = await fetch(`${config.apiUrl}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  })
+  return { status: res.status, body: await res.json() }
+}
+
+interface CredentialState {
+  lastSignature: string | undefined
+  lastVerification: boolean | undefined
+  lastError: string | undefined
+  savedSignatures: Record<string, string>
+}
+
+const state: CredentialState = {
+  lastSignature: undefined,
+  lastVerification: undefined,
+  lastError: undefined,
+  savedSignatures: {},
+}
+
+// --- Basic CRUD steps ---
+
+Given('credentials are reset', async function () {
+  await rpc('resetCredentials', {})
+  state.lastSignature = undefined
+  state.lastVerification = undefined
+  state.lastError = undefined
+})
+
+When(
+  'I set credential {string} with value:',
+  async function (name: string, docString: string) {
+    await rpc('setCredential', { name, valueJson: docString })
+  }
+)
+
+When(
+  'I set credential {string} for user {string} with value:',
+  async function (name: string, userId: string, docString: string) {
+    await rpc('setCredential', { name, valueJson: docString, userId })
+  }
+)
+
+When('I delete credential {string}', async function (name: string) {
+  await rpc('deleteCredential', { name })
+})
+
+When(
+  'I delete credential {string} for user {string}',
+  async function (name: string, userId: string) {
+    await rpc('deleteCredential', { name, userId })
+  }
+)
+
+Then('credential {string} should exist', async function (name: string) {
+  const result = await rpc('hasCredential', { name })
+  expect(result.exists).toBe(true)
+})
+
+Then('credential {string} should not exist', async function (name: string) {
+  const result = await rpc('hasCredential', { name })
+  expect(result.exists).toBe(false)
+})
+
+Then(
+  'credential {string} for user {string} should exist',
+  async function (name: string, userId: string) {
+    const result = await rpc('hasCredential', { name, userId })
+    expect(result.exists).toBe(true)
+  }
+)
+
+Then(
+  'credential {string} for user {string} should not exist',
+  async function (name: string, userId: string) {
+    const result = await rpc('hasCredential', { name, userId })
+    expect(result.exists).toBe(false)
+  }
+)
+
+Then(
+  'credential {string} should have value:',
+  async function (name: string, docString: string) {
+    const expected = JSON.parse(docString)
+    const result = await rpc('getCredential', { name })
+    expect(JSON.parse(result.valueJson)).toEqual(expected)
+  }
+)
+
+Then(
+  'credential {string} for user {string} should have value:',
+  async function (name: string, userId: string, docString: string) {
+    const expected = JSON.parse(docString)
+    const result = await rpc('getCredential', { name, userId })
+    expect(JSON.parse(result.valueJson)).toEqual(expected)
+  }
+)
+
+Then('credential {string} value should be null', async function (name: string) {
+  const result = await rpc('getCredential', { name })
+  expect(result.valueJson).toBeNull()
+})
+
+Then(
+  'user {string} should have {int} credentials',
+  async function (userId: string, count: number) {
+    const result = await rpc('getAllCredentials', { userId })
+    const credentials = JSON.parse(result.credentialsJson)
+    expect(Object.keys(credentials).length).toBe(count)
+  }
+)
+
+Then(
+  'user {string} credential {string} should be:',
+  async function (userId: string, name: string, docString: string) {
+    const expected = JSON.parse(docString)
+    const result = await rpc('getAllCredentials', { userId })
+    const credentials = JSON.parse(result.credentialsJson)
+    expect(credentials[name]).toEqual(expected)
+  }
+)
+
+// --- HMAC signing addon steps (full wire credential flow) ---
+
+When(
+  'I sign {string} with credential {string}',
+  async function (message: string, credentialName: string) {
+    const res = await httpPost(
+      '/api/hmac/sign',
+      { message },
+      { 'x-credentials': credentialName }
+    )
+    state.lastSignature = res.body.signature
+    state.lastError = undefined
+  }
+)
+
+When('I sign {string} without credentials', async function (message: string) {
+  const res = await httpPost('/api/hmac/sign', { message })
+  if (res.status >= 400) {
+    state.lastError = res.body.message
+    state.lastSignature = undefined
+  } else {
+    state.lastSignature = res.body.signature
+    state.lastError = undefined
+  }
+})
+
+When(
+  'I verify {string} with the signature and credential {string}',
+  async function (message: string, credentialName: string) {
+    const res = await httpPost(
+      '/api/hmac/verify',
+      { message, signature: state.lastSignature! },
+      { 'x-credentials': credentialName }
+    )
+    state.lastVerification = res.body.valid
+  }
+)
+
+When(
+  'I verify {string} with signature {string} and credential {string}',
+  async function (message: string, signature: string, credentialName: string) {
+    const res = await httpPost(
+      '/api/hmac/verify',
+      { message, signature },
+      { 'x-credentials': credentialName }
+    )
+    state.lastVerification = res.body.valid
+  }
+)
+
+When('I save the signature as {string}', async function (name: string) {
+  state.savedSignatures[name] = state.lastSignature!
+})
+
+Then('the signature should not be empty', async function () {
+  expect(state.lastSignature).toBeTruthy()
+  expect(typeof state.lastSignature).toBe('string')
+  expect(state.lastSignature!.length).toBeGreaterThan(0)
+})
+
+Then('the verification should be valid', async function () {
+  expect(state.lastVerification).toBe(true)
+})
+
+Then('the verification should be invalid', async function () {
+  expect(state.lastVerification).toBe(false)
+})
+
+Then(
+  'the sign request should fail with {string}',
+  async function (expectedError: string) {
+    expect(state.lastError).toContain(expectedError)
+  }
+)
+
+Then(
+  'the signature should differ from {string}',
+  async function (savedName: string) {
+    const savedSig = state.savedSignatures[savedName]
+    expect(savedSig).toBeTruthy()
+    expect(state.lastSignature).toBeTruthy()
+    expect(state.lastSignature).not.toBe(savedSig)
+  }
+)

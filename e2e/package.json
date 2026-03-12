@@ -22,6 +22,8 @@
     "test:workflow-ui": "cucumber-js --config tests/cucumber.mjs --tags @workflow-ui",
     "test:dynamic-workflows": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows",
     "test:dynamic-workflows-ui": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows-ui",
+    "test:credential": "cucumber-js --config tests/cucumber.mjs --tags @credential",
+    "test:credential-oauth": "cucumber-js --config tests/cucumber.mjs --tags @credential",
     "test:dynamic-workflow-modes": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflow-modes",
     "tsc": "tsc --noEmit"
   },
@@ -29,7 +31,9 @@
     "@ai-sdk/openai": "^3.0.37",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
+    "@pikku/addon-hmac-signer": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
+    "@pikku/jose": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/kysely-mysql": "workspace:*",
