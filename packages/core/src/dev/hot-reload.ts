@@ -140,8 +140,17 @@ export async function pikkuDevReloader(
       if (schemasChanged) {
         try {
           compileAllSchemas(logger)
-        } catch {
-          logger.warn('Schema recompilation skipped (no SchemaService)')
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          if (
+            msg.includes('SchemaService') ||
+            (msg.includes('schema') && msg.includes('not'))
+          ) {
+            logger.warn('Schema recompilation skipped (no SchemaService)')
+          } else {
+            logger.error(`Schema recompilation failed: ${msg}`)
+            return
+          }
         }
       }
 

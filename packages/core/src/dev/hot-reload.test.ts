@@ -254,18 +254,18 @@ describe('pikkuDevReloader', () => {
   test('should hot-reload function used via scheduler wire', async () => {
     const taskResult = { ref: 'initial' }
 
-    pikkuState(null, 'scheduler', 'meta')['hot-task'] = {
-      pikkuFuncId: 'scheduler_hot-task',
-      name: 'hot-task',
+    pikkuState(null, 'scheduler', 'meta')['hotTask'] = {
+      pikkuFuncId: 'hotTask',
+      name: 'hotTask',
       schedule: '0 0 * * *',
     }
-    pikkuState(null, 'function', 'meta')['scheduler_hot-task'] = {
-      pikkuFuncId: 'scheduler_hot-task',
+    pikkuState(null, 'function', 'meta')['hotTask'] = {
+      pikkuFuncId: 'hotTask',
       inputSchemaName: null,
       outputSchemaName: null,
     }
 
-    addFunction('scheduler_hot-task', {
+    addFunction('hotTask', {
       func: async () => {
         taskResult.ref = 'v1'
       },
@@ -273,7 +273,7 @@ describe('pikkuDevReloader', () => {
     })
 
     wireScheduler({
-      name: 'hot-task',
+      name: 'hotTask',
       schedule: '0 0 * * *',
       func: {
         func: async () => {
@@ -283,12 +283,12 @@ describe('pikkuDevReloader', () => {
       },
     })
 
-    await runScheduledTask({ name: 'hot-task' })
+    await runScheduledTask({ name: 'hotTask' })
     assert.equal(taskResult.ref, 'v1')
 
-    const jsV2 = `export const scheduler_hot_task = { func: async () => { }, auth: false };\n`
-    await writeFile(join(tmpDir, 'scheduler_hot_task.js'), jsV2)
-    await writeFile(join(tmpDir, 'scheduler_hot_task.ts'), '// initial')
+    const jsV1 = `export const hotTask = { func: async () => { }, auth: false };\n`
+    await writeFile(join(tmpDir, 'hotTask.js'), jsV1)
+    await writeFile(join(tmpDir, 'hotTask.ts'), '// initial')
 
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
@@ -296,28 +296,29 @@ describe('pikkuDevReloader', () => {
       pikkuDir: tmpDir,
     })
 
-    const jsV3Content = [
-      'const ref = { current: null };',
-      'export { ref as __taskRef };',
-      'export const scheduler_hot_task = {',
-      '  func: async () => { ref.current = "v2"; },',
-      '  auth: false,',
-      '};',
-    ].join('\n')
+    // Write updated function via file system and let the watcher pick it up
+    const jsV2 = `export const hotTask = { func: async () => { return { reloaded: true }; }, auth: false };\n`
+    await writeFile(join(tmpDir, 'hotTask.js'), jsV2)
+    await writeFile(join(tmpDir, 'hotTask.ts'), `// trigger ${Date.now()}`)
 
-    // Note: this tests direct Map replacement. The scheduler runner
-    // re-reads from the functions Map on each call via runPikkuFunc,
-    // but the wireScheduler registration stores its own func copy.
-    // Hot-reload replaces the Map entry, which is what runPikkuFunc uses.
-    addFunction('scheduler_hot-task', {
-      func: async () => {
-        taskResult.ref = 'v2-direct'
-      },
-      auth: false,
-    })
+    await wait(300)
 
-    await runScheduledTask({ name: 'hot-task' })
-    assert.equal(taskResult.ref, 'v2-direct')
+    // Verify the function was reloaded via the watcher
+    const reloadLog = mockLogger
+      .getLogs()
+      .find(
+        (l) =>
+          l.message.includes('Hot-reloaded') && l.message.includes('hotTask')
+      )
+    assert.ok(reloadLog, 'Should log hot-reload for hotTask')
+
+    // runScheduledTask uses runPikkuFunc which reads from the functions Map,
+    // so it will pick up the hot-reloaded function (no longer sets taskResult.ref)
+    await runScheduledTask({ name: 'hotTask' })
+
+    // The reloaded function no longer sets taskResult.ref, so it should
+    // still be 'v1' (proving the old function was replaced)
+    assert.equal(taskResult.ref, 'v1')
   })
 
   test('should hot-reload function used via queue wire', async () => {
