@@ -2,10 +2,12 @@ import {
   ConsoleLogger,
   LocalSecretService,
   LocalVariablesService,
+  LocalCredentialService,
 } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 
@@ -124,10 +126,24 @@ export const createSingletonServices = pikkuServices(
       throw new Error(`Unknown DB_BACKEND: ${backend}`)
     }
 
+    const credentialService = new LocalCredentialService()
+
+    const jwt = new JoseJWTService(async () => [
+      { id: 'e2e-key', value: 'e2e-test-jwt-secret-key-at-least-32-chars' },
+    ])
+    await jwt.init()
+
+    await secrets.setSecretJSON('MOCK_OAUTH_APP', {
+      clientId: 'mock-client-id',
+      clientSecret: 'mock-client-secret',
+    })
+
     return {
       config,
       variables,
       secrets,
+      credentialService,
+      jwt,
       schema,
       logger,
       aiStorage,

@@ -5,6 +5,7 @@ import { createSingletonServices } from '../src/services.js'
 
 import '../src/middleware.js'
 import '../.pikku/pikku-bootstrap.gen.js'
+import '../packages/functions/src/wirings/oauth2-routes.wirings.js'
 
 async function main(): Promise<void> {
   try {

@@ -30,7 +30,8 @@ import type { SecretService } from '../../services/secret-service.js'
  * })
  * ```
  */
-const DEFAULT_TIMEOUT_MS = 30000
+const DEFAULT_TIMEOUT_MS = 30_000
+const TOKEN_EXPIRY_BUFFER_MS = 60_000
 
 /**
  * Helper to fetch with a timeout using AbortController.
@@ -145,18 +146,15 @@ export class OAuth2Client {
    * Uses a promise lock to prevent concurrent refresh attempts.
    */
   private async refreshAndGetToken(): Promise<string> {
-    // If already refreshing, wait for that to complete
     if (this.refreshPromise) {
       const token = await this.refreshPromise
       return token.accessToken
     }
 
-    // Start refresh
     this.refreshPromise = this.doRefreshToken()
 
     try {
       const token = await this.refreshPromise
-      this.cachedToken = token
       return token.accessToken
     } finally {
       this.refreshPromise = null
@@ -192,7 +190,10 @@ export class OAuth2Client {
     })
 
     if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`)
+      const body = await response.text().catch(() => '')
+      throw new Error(
+        `Token refresh failed: ${response.status}${body ? ` — ${body}` : ''}`
+      )
     }
 
     const data = await response.json()
@@ -211,9 +212,8 @@ export class OAuth2Client {
       scope: data.scope,
     }
 
-    // Cache and persist the refreshed token
-    this.cachedToken = token
     await this.secrets.setSecretJSON(this.oauth2Config.tokenSecretId, token)
+    this.cachedToken = token
 
     return token
   }
@@ -225,8 +225,7 @@ export class OAuth2Client {
     if (!token.expiresAt) {
       return true // No expiry info, assume valid
     }
-    // Add 60 second buffer to account for clock skew
-    return token.expiresAt > Date.now() + 60000
+    return token.expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS
   }
 
   /**
@@ -308,7 +307,10 @@ export class OAuth2Client {
     })
 
     if (!response.ok) {
-      throw new Error(`Token exchange failed: ${response.status}`)
+      const body = await response.text().catch(() => '')
+      throw new Error(
+        `Token exchange failed: ${response.status}${body ? ` — ${body}` : ''}`
+      )
     }
 
     const data = await response.json()

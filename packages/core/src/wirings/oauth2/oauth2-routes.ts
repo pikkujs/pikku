@@ -8,6 +8,8 @@ import type { JWTService } from '../../services/jwt-service.js'
 import type { CredentialDefinitionsMeta } from '../credential/credential.types.js'
 import type { OAuth2Token } from './oauth2.types.js'
 
+const TOKEN_EXPIRY_BUFFER_MS = 60_000
+
 export type CreateOAuth2RoutesOptions = {
   credentialsMeta: CredentialDefinitionsMeta
   basePath?: string
@@ -18,17 +20,23 @@ type OAuth2RouteContext = {
 }
 
 const OAUTH2_ROUTES = [
-  { method: 'get' as const, route: '/:name/connect' },
-  { method: 'get' as const, route: '/:name/callback' },
-  { method: 'delete' as const, route: '/:name' },
-  { method: 'get' as const, route: '/:name/status' },
+  { method: 'get' as const, route: '/:name/connect', sessionless: false },
+  { method: 'get' as const, route: '/:name/callback', sessionless: true },
+  { method: 'delete' as const, route: '/:name', sessionless: false },
+  { method: 'get' as const, route: '/:name/status', sessionless: false },
 ]
 
 function registerOAuth2Meta(basePath: string): void {
   const httpMeta = pikkuState(null, 'http', 'meta')
   const funcMeta = pikkuState(null, 'function', 'meta')
 
-  for (const { method, route } of OAUTH2_ROUTES) {
+  const httpMiddlewareGroups = pikkuState(null, 'middleware', 'httpGroup')
+  const middleware: Array<{ type: 'http'; route: string }> = []
+  for (const pattern of Object.keys(httpMiddlewareGroups)) {
+    middleware.push({ type: 'http', route: pattern })
+  }
+
+  for (const { method, route, sessionless } of OAUTH2_ROUTES) {
     const fullRoute = basePath + route
     const pikkuFuncId = `oauth2_${method}_${fullRoute.replace(/[^a-z0-9]/gi, '_')}`
 
@@ -39,13 +47,14 @@ function registerOAuth2Meta(basePath: string): void {
       pikkuFuncId,
       route: fullRoute,
       method,
+      middleware,
     }
 
     funcMeta[pikkuFuncId] = {
       pikkuFuncId,
       inputSchemaName: null,
       outputSchemaName: null,
-      sessionless: false,
+      sessionless,
       services: { optimized: false, services: [] },
     }
   }
@@ -123,14 +132,21 @@ export const createOAuth2Routes = (
       }
     )
 
-    const origin =
-      wire.http.request.header('origin') ||
-      wire.http.request.header('host') ||
-      ''
+    let origin = wire.http.request.header('origin')
+    if (!origin) {
+      const host = wire.http.request.header('host')
+      if (!host) {
+        throw new Error(
+          'Unable to determine request origin for OAuth2 callback'
+        )
+      }
+      const protocol = wire.http.request.header('x-forwarded-proto') || 'http'
+      origin = `${protocol}://${host}`
+    }
     const callbackUrl = `${origin}${basePath}/${name}/callback`
     const authUrl = await oauth2Client.getAuthorizationUrl(state, callbackUrl)
 
-    wire.http.response.redirect(authUrl)
+    return Response.redirect(authUrl, 302)
   }
 
   const callbackHandler = async (
@@ -174,10 +190,17 @@ export const createOAuth2Routes = (
       services.secrets
     )
 
-    const origin =
-      wire.http.request.header('origin') ||
-      wire.http.request.header('host') ||
-      ''
+    let origin = wire.http.request.header('origin')
+    if (!origin) {
+      const host = wire.http.request.header('host')
+      if (!host) {
+        throw new Error(
+          'Unable to determine request origin for OAuth2 callback'
+        )
+      }
+      const protocol = wire.http.request.header('x-forwarded-proto') || 'http'
+      origin = `${protocol}://${host}`
+    }
     const callbackUrl = `${origin}${basePath}/${name}/callback`
     const tokens = await oauth2Client.exchangeCode(code, callbackUrl)
 
@@ -188,7 +211,7 @@ export const createOAuth2Routes = (
     )
 
     if (statePayload.redirectUrl) {
-      wire.http.response.redirect(statePayload.redirectUrl)
+      return Response.redirect(statePayload.redirectUrl, 302)
     } else {
       return { success: true, credentialName: name }
     }
@@ -236,7 +259,7 @@ export const createOAuth2Routes = (
       hasRefreshToken: !!credential.refreshToken,
       expiresAt: credential.expiresAt,
       isExpired: credential.expiresAt
-        ? credential.expiresAt < Date.now()
+        ? credential.expiresAt < Date.now() + TOKEN_EXPIRY_BUFFER_MS
         : false,
     }
   }
@@ -248,23 +271,23 @@ export const createOAuth2Routes = (
       connect: {
         method: 'get',
         route: '/:name/connect',
-        func: connectHandler as any,
+        func: { func: connectHandler } as any,
       },
       callback: {
         method: 'get',
         route: '/:name/callback',
-        func: callbackHandler as any,
+        func: { func: callbackHandler } as any,
         auth: false,
       },
       disconnect: {
         method: 'delete',
         route: '/:name',
-        func: disconnectHandler as any,
+        func: { func: disconnectHandler } as any,
       },
       status: {
         method: 'get',
         route: '/:name/status',
-        func: statusHandler as any,
+        func: { func: statusHandler } as any,
       },
     },
   })
