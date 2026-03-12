@@ -6215,6 +6215,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-hmr@workspace:verifiers/hmr":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-hmr@workspace:verifiers/hmr"
+  dependencies:
+    "@pikku/cli": "npm:^0.12.3"
+    "@pikku/core": "npm:^0.12.3"
+    "@pikku/schema-cfworker": "npm:^0.12.1"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
