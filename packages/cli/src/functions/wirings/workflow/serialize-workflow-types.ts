@@ -47,24 +47,67 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
   ): Promise<T>
 }
 
+import type { StandardSchemaV1 } from '@standard-schema/spec'
+import type { InferSchemaOutput, PikkuPermission, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
+import { PikkuError } from '@pikku/core/errors'
+import type { CorePermissionGroup } from '@pikku/core'
+
 export type PikkuFunctionWorkflow<
   In = unknown,
   Out = never
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
-export const pikkuWorkflowFunc = <In, Out = unknown>(
+export type PikkuWorkflowConfigWithSchema<
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = {
+  name?: string
+  description?: string
+  tags?: string[]
+  expose?: boolean
+  internal?: boolean
+  approvalRequired?: boolean
+  approvalDescription?: PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
+  func: PikkuFunctionWorkflow<
+    InferSchemaOutput<InputSchema>,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
+  >
+  auth?: boolean
+  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
+  middleware?: PikkuMiddleware[]
+  input: InputSchema
+  output?: OutputSchema
+  node?: NodeConfig
+  errors?: Array<typeof PikkuError>
+}
+
+export function pikkuWorkflowFunc<
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow'>
+export function pikkuWorkflowFunc<In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
-) => {
+): PikkuFunctionConfig<In, Out, 'workflow'>
+export function pikkuWorkflowFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
-export const pikkuWorkflowComplexFunc = <In, Out = unknown>(
+export function pikkuWorkflowComplexFunc<
+  InputSchema extends StandardSchemaV1,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow'>
+export function pikkuWorkflowComplexFunc<In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
     | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
-) => {
+): PikkuFunctionConfig<In, Out, 'workflow'>
+export function pikkuWorkflowComplexFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
