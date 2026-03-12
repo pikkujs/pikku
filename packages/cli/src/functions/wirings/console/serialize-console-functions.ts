@@ -58,6 +58,19 @@ export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
   },
 })
 
+export const pikkuConsoleHasSecret = pikkuSessionlessFunc<
+  { secretId: string },
+  { exists: boolean }
+>({
+  description: 'Check if a secret exists without reading its value',
+  expose: true,
+  auth: false,
+  func: async ({ secrets }, { secretId }) => {
+    const exists = await secrets.hasSecret(secretId)
+    return { exists }
+  },
+})
+
 export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
   { secretId: string },
   { exists: boolean; value: unknown | null }

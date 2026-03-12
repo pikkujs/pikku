@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.5
+
+### Patch Changes
+
+- Add `pikkuConsoleHasSecret` RPC to generated console functions: check if a secret exists without reading its value
+
 ## 0.12.4
 
 ### Patch Changes
