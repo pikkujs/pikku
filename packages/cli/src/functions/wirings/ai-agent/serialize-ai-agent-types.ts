@@ -17,16 +17,24 @@ import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { AIAgentMemoryConfig, AIAgentInput } from '@pikku/core/ai-agent'
 import type { AgentMap } from '${agentMapImportPath}'
 
-type AIAgentConfig = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware>, 'tools' | 'agents' | 'memory'> & {
-  input?: StandardSchemaV1
-  output?: StandardSchemaV1
+import type { InferSchemaOutput } from '${functionTypesImportPath}'
+
+type AIAgentConfig<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = Omit<CoreAIAgent<PikkuPermission, PikkuMiddleware>, 'tools' | 'agents' | 'memory' | 'input' | 'output'> & {
+  input?: InputSchema
+  output?: OutputSchema
   memory?: Omit<AIAgentMemoryConfig, 'workingMemory'> & { workingMemory?: StandardSchemaV1 }
   tools?: object[]
-  agents?: AIAgentConfig[]
+  agents?: AIAgentConfig<any, any>[]
 }
 
-export const pikkuAIAgent = (
-  agent: AIAgentConfig
+export const pikkuAIAgent = <
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  agent: AIAgentConfig<InputSchema, OutputSchema>
 ) => {
   return agent
 }
