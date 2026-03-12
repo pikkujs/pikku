@@ -1,5 +1,11 @@
 ## 0.12.4
 
+## 0.12.5
+
+### Patch Changes
+
+- 198e68f: Add hot-reload for dev mode: reload functions, middleware, and permissions without server restart.
+
 ## 0.12.4
 
 ### Patch Changes
