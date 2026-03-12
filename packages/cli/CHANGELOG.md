@@ -1,5 +1,16 @@
 ## 0.12.0
 
+## 0.12.6
+
+### Patch Changes
+
+- a0c496f: Fix OpenAPI codegen bugs: use operation description instead of response description, sanitize dots in type names, quote hyphenated property keys, make function input optional in types, and use pikkuServices() in test template.
+- 198e68f: Add hot-reload for dev mode: reload functions, middleware, and permissions without server restart.
+- Updated dependencies [a0c496f]
+- Updated dependencies [198e68f]
+  - @pikku/openapi-to-zod-schema@0.12.3
+  - @pikku/core@0.12.5
+
 ## 0.12.5
 
 ### Patch Changes
