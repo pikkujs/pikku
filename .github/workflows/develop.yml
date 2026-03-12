@@ -162,6 +162,7 @@ jobs:
             workflows,
             variables,
             functions,
+            hmr,
           ]
     steps:
       - name: Check out repository code
