@@ -190,10 +190,7 @@ export class OAuth2Client {
     })
 
     if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new Error(
-        `Token refresh failed: ${response.status}${body ? ` — ${body}` : ''}`
-      )
+      throw new Error(`Token refresh failed: ${response.status}`)
     }
 
     const data = await response.json()
@@ -307,10 +304,7 @@ export class OAuth2Client {
     })
 
     if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new Error(
-        `Token exchange failed: ${response.status}${body ? ` — ${body}` : ''}`
-      )
+      throw new Error(`Token exchange failed: ${response.status}`)
     }
 
     const data = await response.json()
