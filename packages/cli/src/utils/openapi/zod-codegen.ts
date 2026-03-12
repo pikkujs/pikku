@@ -4,4 +4,5 @@ export {
   createContext,
   schemaToZod,
   schemaVarName,
+  sanitizeTypeName,
 } from '@pikku/openapi-to-zod-schema'

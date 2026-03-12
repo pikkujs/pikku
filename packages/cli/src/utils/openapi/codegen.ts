@@ -10,6 +10,7 @@ import type {
 import {
   schemaToZod,
   schemaVarName,
+  sanitizeTypeName,
   createContext,
   type ZodCodegenContext,
 } from './zod-codegen.js'
@@ -32,6 +33,10 @@ interface CodegenFlags {
   oauth: boolean
   secret: boolean
   mcp?: boolean
+}
+
+function safeKey(key: string): string {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : JSON.stringify(key)
 }
 
 const GENERIC_SUMMARIES = new Set([
@@ -61,40 +66,12 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function humanDescription(
-  named: NamedOperation,
-  parsed: ParsedOperation
-): string {
-  const summary = parsed.summary?.trim()
+function humanDescription(parsed: ParsedOperation): string | undefined {
   const description = parsed.description?.trim()
-
-  // Summary is preferred — it's the operation's intent
-  if (summary && !GENERIC_SUMMARIES.has(summary.toLowerCase())) {
-    // If description adds info beyond summary, combine them
-    if (
-      description &&
-      !GENERIC_SUMMARIES.has(description.toLowerCase()) &&
-      description.toLowerCase() !== summary.toLowerCase()
-    ) {
-      const sep = summary.endsWith('.') ? ' ' : '. '
-      return `${capitalize(summary)}${sep}${capitalize(description)}`
-    }
-    return capitalize(summary)
-  }
-
   if (description && !GENERIC_SUMMARIES.has(description.toLowerCase())) {
     return capitalize(description)
   }
-
-  if (parsed.responseDescription) {
-    return capitalize(parsed.responseDescription)
-  }
-
-  const words = named.functionName
-    .replace(/([A-Z])/g, ' $1')
-    .trim()
-    .toLowerCase()
-  return capitalize(words)
+  return undefined
 }
 
 function getErrorClassesForResponses(
@@ -190,7 +167,9 @@ function generateTypesFile(spec: ParsedSpec, ctx: ZodCodegenContext): string {
     const varName = schemaVarName(name)
     const zodCode = schemaToZod(schema, ctx)
     lines.push(`export const ${varName} = ${zodCode}`)
-    lines.push(`export type ${name} = z.infer<typeof ${varName}>`)
+    lines.push(
+      `export type ${sanitizeTypeName(name)} = z.infer<typeof ${varName}>`
+    )
     lines.push('')
   }
 
@@ -257,11 +236,13 @@ function generateFunctionFile(
     lines.push('')
   }
 
-  const description = humanDescription(named, parsed)
+  const description = humanDescription(parsed)
   const method = parsed.method.toUpperCase()
 
   const funcConfig: string[] = []
-  funcConfig.push(`  description: ${JSON.stringify(description)},`)
+  if (description) {
+    funcConfig.push(`  description: ${JSON.stringify(description)},`)
+  }
   if (hasInput) funcConfig.push(`  input: ${inputName},`)
   if (parsed.responseSchema) {
     funcConfig.push(`  output: ${outputName},`)
@@ -325,7 +306,7 @@ function buildInputSchema(
         const withDesc = propSchema.description
           ? `${zodCode}.describe(${JSON.stringify(propSchema.description)})`
           : zodCode
-        props.push(`  ${key}: ${withDesc},`)
+        props.push(`  ${safeKey(key)}: ${withDesc},`)
       }
     } else {
       const bodyZod = schemaToZod(parsed.requestBody, ctx)
@@ -358,7 +339,7 @@ function formatParamProp(
       ? `${zodCode}.describe(${JSON.stringify(descParts.join('. '))})`
       : zodCode
 
-  return `  ${param.name}: ${desc},`
+  return `  ${safeKey(param.name)}: ${desc},`
 }
 
 function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {

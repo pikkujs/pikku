@@ -346,7 +346,7 @@ export type PikkuFunctionConfig<
  * Types are automatically inferred from the schemas.
  */
 export type PikkuFunctionConfigWithSchema<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never
 > = {
@@ -356,20 +356,20 @@ export type PikkuFunctionConfigWithSchema<
   mcp?: boolean
   internal?: boolean
   approvalRequired?: boolean
-  approvalDescription?: PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
+  approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunction<
-    InferSchemaOutput<InputSchema>,
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     RequiredWires
   > | PikkuFunctionSessionless<
-    InferSchemaOutput<InputSchema>,
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     RequiredWires
   >
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
+  permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
   middleware?: PikkuMiddleware[]
-  input: InputSchema
+  input?: InputSchema
   output?: OutputSchema
   node?: NodeConfig
   errors?: Array<typeof PikkuError>
@@ -414,11 +414,11 @@ export type PikkuFunctionConfigWithSchema<
  * \`\`\`
  */
 export function pikkuFunc<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
-): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuFunc<In, Out = unknown>(
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
@@ -432,7 +432,7 @@ export function pikkuFunc(func: any) {
  * Configuration object for sessionless Pikku functions with Zod schema validation.
  */
 export type PikkuFunctionSessionlessConfigWithSchema<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never
 > = {
@@ -444,16 +444,16 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   internal?: boolean
   remote?: boolean
   approvalRequired?: boolean
-  approvalDescription?: PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
+  approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunctionSessionless<
-    InferSchemaOutput<InputSchema>,
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
     RequiredWires
   >
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
+  permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
   middleware?: PikkuMiddleware[]
-  input: InputSchema
+  input?: InputSchema
   output?: OutputSchema
   node?: NodeConfig
   errors?: Array<typeof PikkuError>
@@ -495,11 +495,11 @@ export type PikkuFunctionSessionlessConfigWithSchema<
  * \`\`\`
  */
 export function pikkuSessionlessFunc<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>
-): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
 export function pikkuSessionlessFunc<In, Out = unknown>(
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc'>

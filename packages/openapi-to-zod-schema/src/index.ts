@@ -338,6 +338,11 @@ function safeKey(key: string): string {
  * Generate the Zod variable name for a component schema.
  * e.g. "PaginatedResponse" → "PaginatedResponseSchema"
  */
+export function sanitizeTypeName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_$]/g, '')
+}
+
 export function schemaVarName(name: string): string {
-  return name.endsWith('Schema') ? name : `${name}Schema`
+  const sanitized = sanitizeTypeName(name)
+  return sanitized.endsWith('Schema') ? sanitized : `${sanitized}Schema`
 }
