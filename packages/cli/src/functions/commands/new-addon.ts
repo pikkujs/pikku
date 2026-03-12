@@ -527,24 +527,16 @@ wireAddon({ name: '${name}', package: '@pikku/addon-${name}' })
 `
 
   // test/src/services.ts
-  files['src/services.ts'] = `import type {
-  SingletonServices,
-} from '../types/application-types.js'
-import {
-  CreateSingletonServices,
-} from '@pikku/core'
-import {
+  files['src/services.ts'] = `import {
   ConsoleLogger,
   LocalVariablesService,
   LocalSecretService,
 } from '@pikku/core/services'
+import { pikkuServices } from '#pikku'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 
-export const createSingletonServices: CreateSingletonServices<
-  {},
-  SingletonServices
-> = async (_config, existingServices) => {
+export const createSingletonServices = pikkuServices(async (_config, existingServices) => {
   const variables = existingServices?.variables ?? new LocalVariablesService(process.env)
   const secrets = existingServices?.secrets ?? new LocalSecretService(variables)
 
@@ -553,7 +545,7 @@ export const createSingletonServices: CreateSingletonServices<
     variables,
     secrets,
   }
-}
+})
 `
 
   // test/src/{name}-tests.function.ts
