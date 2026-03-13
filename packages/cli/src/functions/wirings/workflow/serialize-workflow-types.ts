@@ -58,7 +58,7 @@ export type PikkuFunctionWorkflow<
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
 
 export type PikkuWorkflowConfigWithSchema<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 > = {
   name?: string
@@ -67,26 +67,26 @@ export type PikkuWorkflowConfigWithSchema<
   expose?: boolean
   internal?: boolean
   approvalRequired?: boolean
-  approvalDescription?: PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
+  approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunctionWorkflow<
-    InferSchemaOutput<InputSchema>,
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
     OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
   >
   auth?: boolean
-  permissions?: CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
+  permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
   middleware?: PikkuMiddleware[]
-  input: InputSchema
+  input?: InputSchema
   output?: OutputSchema
   node?: NodeConfig
   errors?: Array<typeof PikkuError>
 }
 
 export function pikkuWorkflowFunc<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow'>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow'>
 export function pikkuWorkflowFunc<In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>
@@ -97,11 +97,11 @@ export function pikkuWorkflowFunc(func: any) {
 }
 
 export function pikkuWorkflowComplexFunc<
-  InputSchema extends StandardSchemaV1,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InferSchemaOutput<InputSchema>, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow'>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow'>
 export function pikkuWorkflowComplexFunc<In, Out = unknown>(
   func:
     | PikkuFunctionWorkflow<In, Out>

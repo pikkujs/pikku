@@ -12,12 +12,10 @@ import {
   agentResume as coreAgentResume,
   agentApprove as coreAgentApprove,
 } from '@pikku/core/ai-agent'
-import type { PikkuPermission, PikkuMiddleware, Services, PikkuFunctionConfig } from '${functionTypesImportPath}'
+import type { PikkuPermission, PikkuMiddleware, Services, PikkuFunctionConfig, InferSchemaOutput } from '${functionTypesImportPath}'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { AIAgentMemoryConfig, AIAgentInput } from '@pikku/core/ai-agent'
 import type { AgentMap } from '${agentMapImportPath}'
-
-import type { InferSchemaOutput } from '${functionTypesImportPath}'
 
 type AIAgentConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
