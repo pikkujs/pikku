@@ -560,7 +560,7 @@ export const fetchData = async <In, Out>(
             errorText: e instanceof Error ? e.message : String(e),
           })
         )
-        response.arrayBuffer('[DONE]')
+        response.arrayBuffer(JSON.stringify({ type: 'done' }))
       } catch (streamErr: any) {
         singletonServices.logger.error(
           `SSE error while sending error payload: ${streamErr instanceof Error ? streamErr.message : String(streamErr)}`
