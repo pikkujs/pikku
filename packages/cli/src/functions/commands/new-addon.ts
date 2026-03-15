@@ -58,14 +58,16 @@ function getAddonFiles(
           types: './dist/src/index.d.ts',
           import: './dist/src/index.js',
         },
-        './.pikku/*': './.pikku/*',
-        './.pikku/pikku-metadata.gen.json': './.pikku/pikku-metadata.gen.json',
+        './.pikku/*': './dist/.pikku/*',
+        './.pikku/pikku-metadata.gen.json':
+          './dist/.pikku/pikku-metadata.gen.json',
         './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js': {
-          types: './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
+          types: './dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
         },
       },
-      files: ['dist', '.pikku'],
+      files: ['dist'],
       scripts: {
+        prepublishOnly: 'yarn build',
         prebuild: 'pikku all',
         build: 'tsc && cp -r .pikku dist/',
         pikku: 'pikku all',
