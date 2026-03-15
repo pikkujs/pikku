@@ -11,14 +11,18 @@ export class PikkuKysely<DB> {
 
   constructor(
     private logger: Logger,
-    connectionOrConfig: postgres.Sql<{}> | postgres.Options<{}>,
+    connectionOrConfig: postgres.Sql<{}> | postgres.Options<{}> | string,
     defaultSchemaName?: string
   ) {
-    // Check if it's a postgres.Sql instance or config options
+    // Check if it's a postgres.Sql instance, a connection string, or config options
     if (typeof connectionOrConfig === 'function') {
       // It's a postgres.Sql instance
       this.postgres = connectionOrConfig as postgres.Sql<{}>
       this.ownsConnection = false
+    } else if (typeof connectionOrConfig === 'string') {
+      // It's a connection string URL
+      this.postgres = postgres(connectionOrConfig)
+      this.ownsConnection = true
     } else {
       // It's a config object
       this.poolConfig = connectionOrConfig
@@ -44,7 +48,7 @@ export class PikkuKysely<DB> {
         `Connecting to database: ${this.poolConfig.host}:${this.poolConfig.port} with name ${this.poolConfig.database}`
       )
     } else {
-      this.logger.info('Using existing postgres connection')
+      this.logger.info('Connecting to database...')
     }
 
     try {
