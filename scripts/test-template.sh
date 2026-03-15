@@ -109,9 +109,9 @@ fi
 # copy, causing TypeScript to see two incompatible versions (TS2345).
 log_info "Deduplicating portal-conflicting packages..."
 for pkg in kysely; do
-    if [ -d "node_modules/$pkg" ] && [ -d "../pikku/node_modules/$pkg" ]; then
+    if [ -d "node_modules/$pkg" ] && [ -d "$PROJECT_ROOT/node_modules/$pkg" ]; then
         rm -rf "node_modules/$pkg"
-        ln -s "$(cd ../pikku/node_modules/$pkg && pwd)" "node_modules/$pkg"
+        ln -s "$(cd "$PROJECT_ROOT/node_modules/$pkg" && pwd)" "node_modules/$pkg"
     fi
 done
 
