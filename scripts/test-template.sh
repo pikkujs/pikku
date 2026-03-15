@@ -103,6 +103,18 @@ if ! yarn install; then
     exit 1
 fi
 
+# Replace duplicate copies of packages that use #private class fields with
+# symlinks to the monorepo's copy. With yarn portals, the portal's dependencies
+# resolve from the monorepo's node_modules while the test-app installs its own
+# copy, causing TypeScript to see two incompatible versions (TS2345).
+log_info "Deduplicating portal-conflicting packages..."
+for pkg in kysely; do
+    if [ -d "node_modules/$pkg" ] && [ -d "../pikku/node_modules/$pkg" ]; then
+        rm -rf "node_modules/$pkg"
+        ln -s "$(cd ../pikku/node_modules/$pkg && pwd)" "node_modules/$pkg"
+    fi
+done
+
 # Build
 log_info "Building the app..."
 if ! yarn run tsc; then
