@@ -159,6 +159,10 @@ export type PikkuCLIInput = {
         icon?: string
         displayName?: string
         description?: string
+        openapi?: {
+          version: string
+          hash: string
+        }
       }
   addonName?: string
 
@@ -274,6 +278,10 @@ export type PikkuCLIConfig = {
         icon?: string
         displayName?: string
         description?: string
+        openapi?: {
+          version: string
+          hash: string
+        }
       }
   addonName?: string
 
