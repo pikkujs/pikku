@@ -1,6 +1,10 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
+import {
+  createEmptyManifest,
+  saveManifest,
+} from '../../utils/contract-versions.js'
 import { pikkuSessionlessFunc } from '#pikku'
 import {
   parseOpenAPISpec,
@@ -751,6 +755,10 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       const testWritten = await writeFiles(join(addonDir, 'test'), testFiles)
       written.push(...testWritten)
     }
+
+    // Initialize version manifest
+    const manifestPath = join(addonDir, 'versions.pikku.json')
+    await saveManifest(manifestPath, createEmptyManifest())
 
     logger.info(`Created addon at ${addonDir}`)
     for (const f of written) {
