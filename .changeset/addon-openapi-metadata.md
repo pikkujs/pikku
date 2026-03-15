@@ -1,5 +1,5 @@
 ---
-"@pikku/cli": minor
+"@pikku/cli": patch
 ---
 
 Add OpenAPI metadata to pikku.config.json for generated addons

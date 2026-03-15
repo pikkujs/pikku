@@ -1,5 +1,6 @@
 ---
 '@pikku/cli': patch
+'@pikku/core': patch
 '@pikku/kysely': patch
 '@pikku/mongodb': patch
 '@pikku/redis': patch
