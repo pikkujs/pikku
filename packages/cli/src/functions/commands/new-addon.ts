@@ -2,7 +2,10 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import { pikkuSessionlessFunc } from '#pikku'
-import { parseOpenAPISpec } from '../../utils/openapi/parse-openapi.js'
+import {
+  parseOpenAPISpec,
+  computeContractHash,
+} from '../../utils/openapi/parse-openapi.js'
 import { generateAddonFromOpenAPI } from '../../utils/openapi/codegen.js'
 
 function toCamelCase(str: string): string {
@@ -727,6 +730,17 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         mcp,
       })
       Object.assign(addonFiles, openapiFiles)
+
+      // Inject openapi metadata into pikku.config.json
+      const config = JSON.parse(addonFiles['pikku.config.json'])
+      if (typeof config.addon === 'boolean' || !config.addon) {
+        config.addon = {}
+      }
+      config.addon.openapi = {
+        version: spec.info.version,
+        hash: computeContractHash(spec),
+      }
+      addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
     }
 
     const written = await writeFiles(addonDir, addonFiles)

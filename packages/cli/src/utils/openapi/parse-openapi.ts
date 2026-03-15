@@ -1,6 +1,7 @@
 /**
  * Parses OpenAPI YAML/JSON specs, resolves $ref pointers, and produces a normalized IR.
  */
+import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 import { parse as parseYAML } from 'yaml'
 
@@ -385,6 +386,47 @@ function extractSecuritySchemes(doc: any): Record<string, SecuritySchemeInfo> {
   }
 
   return result
+}
+
+/**
+ * Compute a SHA-256 hash of the contract-relevant parts of a parsed spec.
+ * Excludes presentation fields (summary, description, tags, operationId)
+ * so that only structural API changes produce a different hash.
+ */
+export function computeContractHash(spec: ParsedSpec): string {
+  const contract = {
+    operations: spec.operations.map((op) => ({
+      method: op.method,
+      path: op.path,
+      pathParams: op.pathParams.map((p) => ({
+        name: p.name,
+        required: p.required,
+        schema: p.schema,
+      })),
+      queryParams: op.queryParams.map((p) => ({
+        name: p.name,
+        required: p.required,
+        schema: p.schema,
+      })),
+      headerParams: op.headerParams.map((p) => ({
+        name: p.name,
+        required: p.required,
+        schema: p.schema,
+      })),
+      requestBody: op.requestBody,
+      requestBodyRequired: op.requestBodyRequired,
+      responseSchema: op.responseSchema,
+      errorResponses: op.errorResponses,
+    })),
+    componentSchemas: spec.componentSchemas,
+    securitySchemes: spec.securitySchemes,
+    serverUrls: spec.serverUrls,
+  }
+
+  return createHash('sha256')
+    .update(JSON.stringify(contract))
+    .digest('hex')
+    .slice(0, 16)
 }
 
 function extractTagDescriptions(doc: any): Record<string, string> {
