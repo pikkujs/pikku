@@ -1,63 +1,20 @@
-import { defineHTTPRoutes } from '../http/http-routes.js'
-import type { HTTPRouteContract, HTTPRouteMap } from '../http/http.types.js'
-import { pikkuState } from '../../pikku-state.js'
-import { OAuth2Client } from './oauth2-client.js'
 import type { CredentialService } from '../../services/credential-service.js'
 import type { SecretService } from '../../services/secret-service.js'
 import type { JWTService } from '../../services/jwt-service.js'
 import type { CredentialDefinitionsMeta } from '../credential/credential.types.js'
 import type { OAuth2Token } from './oauth2.types.js'
+import { OAuth2Client } from './oauth2-client.js'
 
 const TOKEN_EXPIRY_BUFFER_MS = 60_000
 
-export type CreateOAuth2RoutesOptions = {
+export type CreateOAuth2HandlerOptions = {
   credentialsMeta: CredentialDefinitionsMeta
   basePath?: string
 }
 
 type OAuth2RouteContext = {
   credentialsMeta: CredentialDefinitionsMeta
-}
-
-const OAUTH2_ROUTES = [
-  { method: 'get' as const, route: '/:name/connect', sessionless: false },
-  { method: 'get' as const, route: '/:name/callback', sessionless: true },
-  { method: 'delete' as const, route: '/:name', sessionless: false },
-  { method: 'get' as const, route: '/:name/status', sessionless: false },
-]
-
-function registerOAuth2Meta(basePath: string): void {
-  const httpMeta = pikkuState(null, 'http', 'meta')
-  const funcMeta = pikkuState(null, 'function', 'meta')
-
-  const httpMiddlewareGroups = pikkuState(null, 'middleware', 'httpGroup')
-  const middleware: Array<{ type: 'http'; route: string }> = []
-  for (const pattern of Object.keys(httpMiddlewareGroups)) {
-    middleware.push({ type: 'http', route: pattern })
-  }
-
-  for (const { method, route, sessionless } of OAUTH2_ROUTES) {
-    const fullRoute = basePath + route
-    const pikkuFuncId = `oauth2_${method}_${fullRoute.replace(/[^a-z0-9]/gi, '_')}`
-
-    if (!httpMeta[method]) {
-      httpMeta[method] = {}
-    }
-    httpMeta[method][fullRoute] = {
-      pikkuFuncId,
-      route: fullRoute,
-      method,
-      middleware,
-    }
-
-    funcMeta[pikkuFuncId] = {
-      pikkuFuncId,
-      inputSchemaName: null,
-      outputSchemaName: null,
-      sessionless,
-      services: { optimized: false, services: [] },
-    }
-  }
+  basePath: string
 }
 
 function getCredentialMeta(ctx: OAuth2RouteContext, name: string) {
@@ -72,31 +29,35 @@ function getCredentialMeta(ctx: OAuth2RouteContext, name: string) {
 }
 
 /**
- * Creates OAuth2 routes for user credential management.
+ * Creates OAuth2 route handlers for user credential management.
  *
- * Provides connect/callback/disconnect/status endpoints that handle
- * the OAuth2 authorization code flow and store tokens in CredentialService.
+ * Returns individual handler functions for connect/callback/disconnect/status
+ * that handle the OAuth2 authorization code flow and store tokens in CredentialService.
  *
  * @example
  * ```typescript
- * wireHTTPRoutes({
+ * const oauth2 = createOAuth2Handler({ credentialsMeta })
+ *
+ * const oauth2Routes = defineHTTPRoutes({
+ *   auth: true,
+ *   basePath: '/credentials',
  *   routes: {
- *     credentials: createOAuth2Routes({
- *       credentialsMeta,
- *     }),
+ *     connect: { method: 'get', route: '/:name/connect', func: oauth2.connect },
+ *     callback: { method: 'get', route: '/:name/callback', func: oauth2.callback, auth: false },
+ *     disconnect: { method: 'delete', route: '/:name', func: oauth2.disconnect },
+ *     status: { method: 'get', route: '/:name/status', func: oauth2.status },
  *   },
  * })
+ *
+ * wireHTTPRoutes({ routes: { credentials: oauth2Routes } })
  * ```
  */
-export const createOAuth2Routes = (
-  options: CreateOAuth2RoutesOptions
-): HTTPRouteContract<HTTPRouteMap> => {
+export const createOAuth2Handler = (options: CreateOAuth2HandlerOptions) => {
   const basePath = options.basePath ?? '/credentials'
   const ctx: OAuth2RouteContext = {
     credentialsMeta: options.credentialsMeta,
+    basePath,
   }
-
-  registerOAuth2Meta(basePath)
 
   const connectHandler = async (
     services: {
@@ -264,31 +225,10 @@ export const createOAuth2Routes = (
     }
   }
 
-  return defineHTTPRoutes({
-    auth: true,
-    basePath,
-    routes: {
-      connect: {
-        method: 'get',
-        route: '/:name/connect',
-        func: { func: connectHandler } as any,
-      },
-      callback: {
-        method: 'get',
-        route: '/:name/callback',
-        func: { func: callbackHandler } as any,
-        auth: false,
-      },
-      disconnect: {
-        method: 'delete',
-        route: '/:name',
-        func: { func: disconnectHandler } as any,
-      },
-      status: {
-        method: 'get',
-        route: '/:name/status',
-        func: { func: statusHandler } as any,
-      },
-    },
-  })
+  return {
+    connect: { func: connectHandler } as any,
+    callback: { func: callbackHandler } as any,
+    disconnect: { func: disconnectHandler } as any,
+    status: { func: statusHandler } as any,
+  }
 }
