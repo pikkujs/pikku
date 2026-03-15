@@ -303,7 +303,7 @@ export const createSingletonServices: CreateSingletonServices<
       }
 
       const manifest = !setupOnly
-        ? ((await loadManifest(join(config.outDir, 'versions.json'))) ??
+        ? ((await loadManifest(join(config.rootDir, 'versions.pikku.json'))) ??
           undefined)
         : undefined
       unfilteredState = await inspect(logger, wiringFiles, {

@@ -238,7 +238,7 @@ export const all = pikkuVoidFunc({
     try {
       await rpc.invoke('pikkuVersionsUpdate', null)
     } catch {
-      logger.warn(`Run 'pikku init' to enable contract versioning.`)
+      logger.warn(`Run 'pikku versions init' to enable contract versioning.`)
     }
 
     await rpc.invoke('pikkuBootstrap', { allImports })

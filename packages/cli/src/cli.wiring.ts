@@ -310,7 +310,7 @@ wireCLI({
       subcommands: {
         init: pikkuCLICommand({
           func: pikkuVersionsInit,
-          description: 'Initialize the version manifest (versions.json)',
+          description: 'Initialize the version manifest (versions.pikku.json)',
           options: {
             force: {
               description: 'Overwrite existing manifest',

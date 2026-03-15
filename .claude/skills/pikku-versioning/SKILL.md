@@ -1,6 +1,6 @@
 ---
 name: pikku-versioning
-description: 'Use when versioning Pikku function contracts, detecting breaking changes, or managing API backward compatibility. Covers the version property, versions.json manifest, contract hashing, and CI integration.
+description: 'Use when versioning Pikku function contracts, detecting breaking changes, or managing API backward compatibility. Covers the version property, versions.pikku.json manifest, contract hashing, and CI integration.
 TRIGGER when: code uses version: on a pikkuFunc, user asks about API versioning, breaking changes, contract hashes, backward compatibility, or "pikku versions" CLI commands.
 DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config) or general function definitions (use pikku-concepts).'
 ---
@@ -53,7 +53,7 @@ const getBook = pikkuFunc({
 
 When you add a breaking change (new required fields, removed fields, type changes), bump the version number on the old function and create the new version without a `version` field (it becomes the latest).
 
-## Version Manifest (`versions.json`)
+## Version Manifest (`versions.pikku.json`)
 
 Pikku tracks contract hashes to detect breaking changes:
 
@@ -90,7 +90,7 @@ npx pikku versions update   # Update contract hashes after version bump
 
 **Workflow:**
 
-1. `pikku versions init` — run once to create `versions.json`
+1. `pikku versions init` — run once to create `versions.pikku.json`
 2. Develop normally — add/modify functions
 3. `pikku versions check` — CI catches unversioned breaking changes
 4. If intentional: bump `version` on old function, then `pikku versions update`

@@ -16,7 +16,7 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
     const visitState = await getInspectorState()
 
     if (!visitState.manifest.initial) {
-      const manifestPath = join(config.outDir, 'versions.json')
+      const manifestPath = join(config.rootDir, 'versions.pikku.json')
       throw new Error(
         `[${ErrorCode.MANIFEST_MISSING}] Version manifest not found at ${manifestPath}. Run 'pikku versions init' to create one.`
       )
@@ -83,10 +83,12 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
             logger.info(`  Latest recorded version: ${error.latestVersion}`)
           }
           logger.info(
-            `  Version ${error.version} exists in code but not in versions.json`
+            `  Version ${error.version} exists in code but not in versions.pikku.json`
           )
           logger.info(``)
-          logger.info(`  This usually means a merge conflict in versions.json.`)
+          logger.info(
+            `  This usually means a merge conflict in versions.pikku.json.`
+          )
           logger.info(`  Resolve the conflict, then run:`)
           logger.info(`  npx pikku versions-update`)
         } else if (
@@ -116,7 +118,9 @@ export const pikkuVersionsCheck = pikkuSessionlessFunc<void, void>({
           error.code === ErrorCode.MANIFEST_INTEGRITY_ERROR &&
           error.functionKey
         ) {
-          logger.info(`✗ ${error.functionKey} — versions.json integrity error`)
+          logger.info(
+            `✗ ${error.functionKey} — versions.pikku.json integrity error`
+          )
           if (error.latestVersion !== undefined) {
             logger.info(`  "latest" field: ${error.latestVersion}`)
           }

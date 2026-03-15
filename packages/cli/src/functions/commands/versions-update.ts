@@ -5,7 +5,7 @@ import { saveManifest } from '../../utils/contract-versions.js'
 
 export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const manifestPath = join(config.outDir, 'versions.json')
+    const manifestPath = join(config.rootDir, 'versions.pikku.json')
     const visitState = await getInspectorState()
 
     if (!visitState.manifest.initial) {

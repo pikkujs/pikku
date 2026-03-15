@@ -11,7 +11,7 @@ export const pikkuVersionsInit = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config }, { force }) => {
-    const manifestPath = join(config.outDir, 'versions.json')
+    const manifestPath = join(config.rootDir, 'versions.pikku.json')
 
     if (existsSync(manifestPath) && !force) {
       logger.error(
