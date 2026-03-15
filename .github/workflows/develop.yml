@@ -44,12 +44,12 @@ jobs:
       - name: Build console
         run: yarn build:console
 
+      - name: Build function-addon template
+        run: cd templates/function-addon && yarn pikku && yarn build
       - name: Generate pikku files for verifiers
         run: yarn workspaces foreach -p -A --include 'verifiers/**' run pikku
       - name: Build verifiers
         run: yarn build:verifiers
-      - name: Build function-addon template
-        run: cd templates/function-addon && yarn pikku && yarn build
       - name: Build templates
         run: yarn build:templates
 
