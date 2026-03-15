@@ -20,18 +20,25 @@ import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflo
 
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
-import type { RPCMap, FlattenedRPCMap } from '${rpcMapImportPath}'
+import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { WorkflowMap, GraphsMap } from '${workflowMapImportPath}'
 
 export { template }
 
 export interface TypedWorkflow extends PikkuWorkflowWire {
-  do<K extends keyof RPCMap>(
+  do<K extends keyof FlattenedRPCMap>(
     stepName: string,
     rpcName: K,
-    data: RPCMap[K]['input'],
+    data: FlattenedRPCMap[K]['input'],
     options?: WorkflowStepOptions
-  ): Promise<RPCMap[K]['output']>
+  ): Promise<FlattenedRPCMap[K]['output']>
+
+  do<K extends keyof WorkflowMap>(
+    stepName: string,
+    workflowName: K,
+    data: WorkflowMap[K]['input'],
+    options?: WorkflowStepOptions
+  ): Promise<WorkflowMap[K]['output']>
 
   do<T>(
     stepName: string,

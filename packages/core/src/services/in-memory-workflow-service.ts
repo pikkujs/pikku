@@ -202,6 +202,16 @@ export class InMemoryWorkflowService
     }
   }
 
+  async setStepChildRunId(stepId: string, childRunId: string): Promise<void> {
+    for (const step of this.steps.values()) {
+      if (step.stepId === stepId) {
+        step.childRunId = childRunId
+        step.updatedAt = new Date()
+        break
+      }
+    }
+  }
+
   async createRetryAttempt(
     failedStepId: string,
     status: 'pending' | 'running'

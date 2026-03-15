@@ -126,6 +126,8 @@ export interface StepState {
   createdAt: Date
   /** Last update timestamp */
   updatedAt: Date
+  /** Child workflow run ID (if this step spawned a sub-workflow) */
+  childRunId?: string
   /** Timestamp when step started running */
   runningAt?: Date
   /** Timestamp when step was scheduled */

@@ -227,6 +227,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   abstract setStepResult(stepId: string, result: any): Promise<void>
 
   /**
+   * Set the child workflow run ID on a step
+   * @param stepId - Step ID
+   * @param childRunId - Child workflow run ID
+   */
+  abstract setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+
+  /**
    * Store step error and mark as failed
    * Updates both workflow_step and workflow_step_history
    * @param stepId - Step ID
@@ -870,13 +877,52 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       while (true) {
         try {
           await this.setStepRunning(currentStepState.stepId)
-          const result = await rpcService.rpcWithWire(rpcName, data, {
-            workflowStep: {
-              runId,
-              stepId: currentStepState.stepId,
-              attemptCount: currentStepState.attemptCount,
-            },
-          })
+          // Check if the name refers to a workflow
+          const workflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+          let result: any
+          if (workflowMeta) {
+            const childWire = {
+              type: 'workflow',
+              id: rpcName,
+              parentRunId: runId,
+            }
+            const { runId: childRunId } = await this.startWorkflow(
+              rpcName,
+              data,
+              childWire,
+              rpcService,
+              { inline: true }
+            )
+            await this.setStepChildRunId(currentStepState.stepId, childRunId)
+            // Poll until child workflow completes
+            while (true) {
+              const childRun = await this.getRun(childRunId)
+              if (!childRun) {
+                throw new WorkflowRunNotFoundError(childRunId)
+              }
+              if (WORKFLOW_END_STATES.has(childRun.status)) {
+                if (childRun.status === 'failed') {
+                  throw new Error(
+                    childRun.error?.message || 'Sub-workflow failed'
+                  )
+                }
+                if (childRun.status === 'cancelled') {
+                  throw new Error('Sub-workflow was cancelled')
+                }
+                result = childRun.output
+                break
+              }
+              await new Promise((resolve) => setTimeout(resolve, 500))
+            }
+          } else {
+            result = await rpcService.rpcWithWire(rpcName, data, {
+              workflowStep: {
+                runId,
+                stepId: currentStepState.stepId,
+                attemptCount: currentStepState.attemptCount,
+              },
+            })
+          }
           await this.setStepResult(currentStepState.stepId, result)
           return result
         } catch (error: any) {

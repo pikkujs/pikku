@@ -56,6 +56,7 @@ export interface WorkflowService {
   setStepRunning(stepId: string): Promise<void>
   setStepScheduled(stepId: string): Promise<void>
   setStepResult(stepId: string, result: any): Promise<void>
+  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
   setStepError(stepId: string, error: Error): Promise<void>
   createRetryAttempt(
     stepId: string,
