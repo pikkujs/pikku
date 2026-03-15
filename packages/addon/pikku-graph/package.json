@@ -25,7 +25,8 @@
     "pikku": "pikku all",
     "ncu": "npx npm-check-updates",
     "pretest": "pikku all",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
     "@pikku/core": "*",

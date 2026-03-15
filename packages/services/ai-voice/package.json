@@ -14,7 +14,8 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
-    "release": "npm run build"
+    "release": "npm run build",
+    "prepublishOnly": "yarn build"
   },
   "exports": {
     ".": "./dist/index.js"

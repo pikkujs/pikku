@@ -24,7 +24,8 @@
     "build": "pikku all && tsc && cp -r .pikku dist/",
     "pikku": "pikku all",
     "pretest": "pikku all",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.3"

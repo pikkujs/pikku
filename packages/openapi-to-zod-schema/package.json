@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "prepublishOnly": "yarn build"
   },
   "devDependencies": {
     "typescript": "^5.9"

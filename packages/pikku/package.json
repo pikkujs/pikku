@@ -11,7 +11,8 @@
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "build": "tsc -b",
     "release": "yarn build && npm test",
-    "test": "bash run-tests.sh"
+    "test": "bash run-tests.sh",
+    "prepublishOnly": "yarn build"
   },
   "dependencies": {
     "@pikku/core": "^0.12.2",

@@ -26,7 +26,8 @@
     "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ && cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null; true",
     "pikku": "pikku all",
     "pretest": "pikku all",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.3"

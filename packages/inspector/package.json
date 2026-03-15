@@ -30,7 +30,8 @@
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
-    "test:coverage": "bash run-tests.sh --coverage"
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "yarn build"
   },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",

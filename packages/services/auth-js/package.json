@@ -12,7 +12,8 @@
     "build": "tsc -b",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
-    "release": "npm run build && npm test"
+    "release": "npm run build && npm test",
+    "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
     "@auth/core": "^0.37.0",

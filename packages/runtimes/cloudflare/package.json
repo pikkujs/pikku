@@ -13,7 +13,8 @@
     "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
-    "test:coverage": "bash run-tests.sh --coverage"
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "yarn build"
   },
   "exports": {
     ".": "./dist/index.js"
