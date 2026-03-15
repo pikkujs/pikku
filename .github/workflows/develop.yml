@@ -104,7 +104,7 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
-        run: yarn test:e2e
+        run: yarn test:e2e --force-exit
 
   # e2e-ai:
   #   name: E2E AI
