@@ -303,6 +303,18 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
+  async setStepChildRunId(stepId: string, childRunId: string): Promise<void> {
+    await this.steps.updateOne(
+      { _id: stepId },
+      {
+        $set: {
+          childRunId,
+          updatedAt: new Date(),
+        },
+      }
+    )
+  }
+
   async setStepResult(stepId: string, result: any): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },

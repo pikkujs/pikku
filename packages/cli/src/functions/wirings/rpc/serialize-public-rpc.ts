@@ -28,7 +28,7 @@ export const workflowCaller = pikkuSessionlessFunc<
 >({
   auth: ${authFlag},
   func: async (_services, { workflowName, input }, { rpc }) => {
-    return await rpc.startWorkflow(workflowName, input || {})
+    return await (rpc.startWorkflow as Function)(workflowName, input || {})
   },
 })
 
