@@ -25,7 +25,7 @@ type AIAgentConfig<
   output?: OutputSchema
   memory?: Omit<AIAgentMemoryConfig, 'workingMemory'> & { workingMemory?: StandardSchemaV1 }
   tools?: object[]
-  agents?: AIAgentConfig<any, any>[]
+  agents?: AIAgentConfig<StandardSchemaV1 | undefined, StandardSchemaV1 | undefined>[]
 }
 
 export const pikkuAIAgent = <
