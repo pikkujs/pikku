@@ -97,8 +97,14 @@ BeforeAll(async function () {
 
 AfterAll(async function () {
   if (backendProcess) {
+    backendProcess.stderr?.destroy()
+    backendProcess.stdout?.destroy()
     if (backendProcess.pid) {
-      process.kill(-backendProcess.pid, 'SIGTERM')
+      try {
+        process.kill(-backendProcess.pid, 'SIGTERM')
+      } catch {
+        // Process group may already be gone
+      }
     }
     backendProcess = undefined
   }
@@ -106,6 +112,8 @@ AfterAll(async function () {
     consoleServer.close()
     consoleServer = undefined
   }
+  const { stopMockOAuthServer } = await import('./mock-oauth-server.js')
+  stopMockOAuthServer()
 })
 
 Before('@console', async function (this: AgentWorld) {
