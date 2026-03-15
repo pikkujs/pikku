@@ -189,7 +189,8 @@ jobs:
           cd ../../..
           cd e2e/packages/emails && npx pikku all
           cd ../../..
-          cd e2e/packages/hmac-signer && npx pikku all
+          echo "--- Running pikku for hmac-signer ---"
+          cd e2e/packages/hmac-signer && npx pikku all && echo "--- hmac-signer pikku done ---"
       - name: Generate pikku files for e2e project
         run: cd e2e && npx pikku all
       - name: Install Playwright
