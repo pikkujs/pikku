@@ -10,8 +10,11 @@ export function getLastAuthRequest() {
 }
 
 export function startMockOAuthServer(): Promise<Server> {
+  if (server) {
+    return Promise.resolve(server)
+  }
   return new Promise((resolve, reject) => {
-    server = createServer((req, res) => {
+    const s = createServer((req, res) => {
       const url = new URL(req.url!, `http://localhost:${MOCK_PORT}`)
 
       if (url.pathname === '/authorize' && req.method === 'GET') {
@@ -75,8 +78,17 @@ export function startMockOAuthServer(): Promise<Server> {
       res.end('Not found')
     })
 
-    server.listen(MOCK_PORT, () => resolve(server!))
-    server.on('error', reject)
+    s.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(s)
+      } else {
+        reject(err)
+      }
+    })
+    s.listen(MOCK_PORT, () => {
+      server = s
+      resolve(s)
+    })
   })
 }
 
