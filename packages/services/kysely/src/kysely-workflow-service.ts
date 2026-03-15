@@ -347,6 +347,17 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     }
   }
 
+  async setStepChildRunId(stepId: string, childRunId: string): Promise<void> {
+    await this.db
+      .updateTable('workflow_step')
+      .set({
+        child_run_id: childRunId,
+        updated_at: new Date(),
+      })
+      .where('workflow_step_id', '=', stepId)
+      .execute()
+  }
+
   async setStepResult(stepId: string, result: any): Promise<void> {
     const resultJson = JSON.stringify(result)
 

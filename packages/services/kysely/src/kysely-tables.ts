@@ -43,6 +43,7 @@ export interface WorkflowStepTable {
   status: Generated<StepStatus>
   result: string | null
   error: string | null
+  child_run_id: string | null
   branch_taken: string | null
   retries: number | null
   retry_delay: string | null

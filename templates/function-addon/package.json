@@ -11,15 +11,14 @@
       "types": "./dist/src/types.d.ts",
       "import": "./dist/src/types.js"
     },
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [
-    "dist",
-    ".pikku"
+    "dist"
   ],
   "scripts": {
     "prebuild": "pikku all",

@@ -506,6 +506,14 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
+  async setStepChildRunId(stepId: string, childRunId: string): Promise<void> {
+    const parts = stepId.split(':')
+    const runId = parts[0]!
+    const stepName = parts.slice(1, -1).join(':')
+    const key = this.stepKey(runId, stepName)
+    await this.redis.hmset(key, 'childRunId', childRunId)
+  }
+
   async setStepResult(stepId: string, result: any): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')

@@ -24,6 +24,22 @@ export const all = pikkuVoidFunc({
     const allImports: string[] = []
     let typesDeclarationFileExists = true
 
+    if (!existsSync(config.outDir)) {
+      logger.debug(`• .pikku directory not found, running bootstrap first...`)
+      await getInspectorState(false, false, true)
+      await rpc.invoke('pikkuFunctionTypes', null)
+      await rpc.invoke('pikkuFunctionTypesSplit', null)
+      await rpc.invoke('pikkuHTTPTypes', null)
+      await rpc.invoke('pikkuChannelTypes', null)
+      await rpc.invoke('pikkuSchedulerTypes', null)
+      await rpc.invoke('pikkuQueueTypes', null)
+      await rpc.invoke('pikkuWorkflow', null)
+      await rpc.invoke('pikkuMCPTypes', null)
+      await rpc.invoke('pikkuAIAgentTypes', null)
+      await rpc.invoke('pikkuCLITypes', null)
+      await getInspectorState(true)
+    }
+
     if (!existsSync(config.typesDeclarationFile)) {
       typesDeclarationFileExists = false
     }
