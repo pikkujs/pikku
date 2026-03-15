@@ -561,7 +561,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         runId,
         rpcService
       )
-      const wire: PikkuWire = { workflow: workflowWire }
+      const wire: PikkuWire = {
+        workflow: workflowWire,
+        session: rpcService.wire?.session,
+        rpc: rpcService.wire?.rpc,
+      }
       try {
         const result = await runPikkuFunc(
           'workflow',
