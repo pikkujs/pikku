@@ -72,6 +72,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .addColumn('status', 'text', (col) => col.notNull().defaultTo('pending'))
       .addColumn('result', 'text')
       .addColumn('error', 'text')
+      .addColumn('child_run_id', 'text')
       .addColumn('branch_taken', 'text')
       .addColumn('retries', 'integer')
       .addColumn('retry_delay', 'text')

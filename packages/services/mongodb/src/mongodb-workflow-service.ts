@@ -34,6 +34,7 @@ interface WorkflowStepDoc {
   status: string
   result: any | null
   error: any | null
+  childRunId?: string
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null

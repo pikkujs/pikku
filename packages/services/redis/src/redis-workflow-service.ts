@@ -511,7 +511,13 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const runId = parts[0]!
     const stepName = parts.slice(1, -1).join(':')
     const key = this.stepKey(runId, stepName)
-    await this.redis.hmset(key, 'childRunId', childRunId)
+    await this.redis.hmset(
+      key,
+      'childRunId',
+      childRunId,
+      'updatedAt',
+      Date.now().toString()
+    )
   }
 
   async setStepResult(stepId: string, result: any): Promise<void> {
