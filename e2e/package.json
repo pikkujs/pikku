@@ -41,7 +41,7 @@
     "ai": "^6.0.105",
     "better-sqlite3": "^11.0.0",
     "ioredis": "^5.10.0",
-    "kysely": "^0.28.11",
+    "kysely": "^0.28.12",
     "kysely-plugin-serialize": "^0.6.0",
     "kysely-postgres-js": "^3.0.0",
     "mysql2": "^3.18.2",

@@ -15,7 +15,7 @@
   "dependencies": {
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
-    "kysely": "^0.28.11"
+    "kysely": "^0.28.12"
   },
   "devDependencies": {
     "typescript": "^5.9"
