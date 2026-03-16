@@ -1,30 +1,31 @@
-import { describe, it, expect } from 'vitest'
+import { strict as assert } from 'assert'
+import { describe, test } from 'node:test'
 import { serializePublicRPC } from './serialize-public-rpc.js'
 
 describe('serializePublicRPC', () => {
-  it('should generate routes without prefix by default', () => {
+  test('should generate routes without prefix by default', () => {
     const result = serializePublicRPC('#pikku', true)
-    expect(result).toContain("route: '/rpc/:rpcName'")
-    expect(result).toContain("route: '/rpc/workflow/:workflowName'")
+    assert.ok(result.includes("route: '/rpc/:rpcName'"))
+    assert.ok(result.includes("route: '/rpc/workflow/:workflowName'"))
   })
 
-  it('should generate routes with empty string prefix', () => {
+  test('should generate routes with empty string prefix', () => {
     const result = serializePublicRPC('#pikku', true, '')
-    expect(result).toContain("route: '/rpc/:rpcName'")
-    expect(result).toContain("route: '/rpc/workflow/:workflowName'")
+    assert.ok(result.includes("route: '/rpc/:rpcName'"))
+    assert.ok(result.includes("route: '/rpc/workflow/:workflowName'"))
   })
 
-  it('should generate routes with globalHTTPPrefix', () => {
+  test('should generate routes with globalHTTPPrefix', () => {
     const result = serializePublicRPC('#pikku', true, '/api')
-    expect(result).toContain("route: '/api/rpc/:rpcName'")
-    expect(result).toContain("route: '/api/rpc/workflow/:workflowName'")
+    assert.ok(result.includes("route: '/api/rpc/:rpcName'"))
+    assert.ok(result.includes("route: '/api/rpc/workflow/:workflowName'"))
   })
 
-  it('should set auth flag correctly', () => {
+  test('should set auth flag correctly', () => {
     const authResult = serializePublicRPC('#pikku', true, '')
-    expect(authResult).toContain('auth: true')
+    assert.ok(authResult.includes('auth: true'))
 
     const noAuthResult = serializePublicRPC('#pikku', false, '')
-    expect(noAuthResult).toContain('auth: false')
+    assert.ok(noAuthResult.includes('auth: false'))
   })
 })
