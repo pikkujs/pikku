@@ -14,7 +14,7 @@
     "@inquirer/prompts": "^7.3.2",
     "chalk": "^5.4.1",
     "commander": "^14.0.2",
-    "giget": "^1.2.4",
+    "giget": "^3.1.2",
     "nanospinner": "^1.2.2"
   },
   "devDependencies": {
