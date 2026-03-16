@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.8",
+  "version": "0.12.9",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

@@ -1,5 +1,11 @@
 ## 0.12.4
 
+## 0.12.8
+
+### Patch Changes
+
+- 09491c6: Fix toWebRequest to respect x-forwarded-proto and x-forwarded-host headers behind reverse proxies. Previously always used http:// which broke OAuth callback URLs behind TLS-terminating proxies like Fly.io.
+
 ## 0.12.7
 
 ### Patch Changes
