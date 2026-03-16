@@ -15,7 +15,7 @@
     "prebuild": "npm run generate:readme"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.7",
+    "@pikku/core": "^0.12.8",
     "@pikku/templates-function-addon": "workspace:*"
   },
   "devDependencies": {

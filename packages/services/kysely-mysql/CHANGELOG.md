@@ -1,5 +1,12 @@
 # @pikku/kysely-mysql
 
+## 0.12.8
+
+### Patch Changes
+
+- Updated dependencies [09491c6]
+  - @pikku/core@0.12.8
+
 ## 0.12.7
 
 ### Patch Changes

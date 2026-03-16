@@ -6,7 +6,7 @@
   "dependencies": {
     "@auth/core": "^0.37.0",
     "@pikku/auth-js": "^0.12.2",
-    "@pikku/core": "^0.12.7",
+    "@pikku/core": "^0.12.8",
     "@pikku/express-middleware": "^0.12.2",
     "@pikku/jose": "^0.12.2",
     "@pikku/schedule": "^0.12.2",
