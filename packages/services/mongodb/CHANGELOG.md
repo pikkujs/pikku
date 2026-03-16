@@ -1,5 +1,17 @@
 # @pikku/mongodb
 
+## 0.12.2
+
+### Patch Changes
+
+- 3e79248: Add setStepChildRunId to workflow service implementations and auto-bootstrap in pikku all
+- Updated dependencies [bb27710]
+- Updated dependencies [a31bc63]
+- Updated dependencies [3e79248]
+- Updated dependencies [b0a81cc]
+- Updated dependencies [6413df7]
+  - @pikku/core@0.12.6
+
 ## 0.12.1
 
 ### Patch Changes
