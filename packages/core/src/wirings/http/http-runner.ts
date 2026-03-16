@@ -352,8 +352,6 @@ const executeRoute = async (
     response.setMode('stream')
     response.header('Content-Type', 'text/event-stream')
     response.header('Cache-Control', 'no-cache')
-    response.header('Connection', 'keep-alive')
-    response.header('Transfer-Encoding', 'chunked')
     channel = {
       channelId: requestId,
       openingData: await data(),
