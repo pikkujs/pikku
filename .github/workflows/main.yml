@@ -360,6 +360,11 @@ jobs:
         with:
           node-version: 24
           cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
       - run: yarn install
 
       - name: Create Release Pull Request
