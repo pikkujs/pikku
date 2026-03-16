@@ -1,8 +1,7 @@
 {
-  "name": "@pikku/openapi-to-zod-schema",
+  "name": "@pikku/openapi-parser",
   "version": "0.12.3",
-  "description": "DEPRECATED: Use @pikku/openapi-parser instead",
-  "deprecated": "This package has been merged into @pikku/openapi-parser. Please use @pikku/openapi-parser instead.",
+  "description": "OpenAPI spec parser and code generator for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",
@@ -10,13 +9,18 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
     "build": "tsc -b",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "yaml": "^2.7.1"
   },
   "devDependencies": {
     "typescript": "^5.9"
-  },
-  "engines": {
-    "node": ">=18"
   }
 }

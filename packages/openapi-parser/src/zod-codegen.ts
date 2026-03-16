@@ -5,4 +5,4 @@ export {
   schemaToZod,
   schemaVarName,
   sanitizeTypeName,
-} from '@pikku/openapi-to-zod-schema'
+} from './openapi-to-zod-schema.js'

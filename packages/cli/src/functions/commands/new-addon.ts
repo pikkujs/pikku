@@ -9,8 +9,8 @@ import { pikkuSessionlessFunc } from '#pikku'
 import {
   parseOpenAPISpec,
   computeContractHash,
-} from '../../utils/openapi/parse-openapi.js'
-import { generateAddonFromOpenAPI } from '../../utils/openapi/codegen.js'
+  generateAddonFromOpenAPI,
+} from '@pikku/openapi-parser'
 
 function toCamelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
