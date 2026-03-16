@@ -5636,7 +5636,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/queue-bullmq@workspace:packages/services/queue-bullmq"
   dependencies:
-    bullmq: "npm:^5.70.1"
+    bullmq: "npm:^5.71.0"
     ioredis: "npm:^5.10.0"
     typescript: "npm:^5.9"
   peerDependencies:
@@ -11586,9 +11586,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bullmq@npm:^5.70.1":
-  version: 5.70.1
-  resolution: "bullmq@npm:5.70.1"
+"bullmq@npm:^5.71.0":
+  version: 5.71.0
+  resolution: "bullmq@npm:5.71.0"
   dependencies:
     cron-parser: "npm:4.9.0"
     ioredis: "npm:5.9.3"
@@ -11597,7 +11597,7 @@ __metadata:
     semver: "npm:7.7.4"
     tslib: "npm:2.8.1"
     uuid: "npm:11.1.0"
-  checksum: 10/53d34676b3ffacc7219af000dbe7e261737e840cdaddd4103e47e29547376667d49c78d6b4641e4b4c265eda7faf0f33dd4e20ff0bd3eee96c4dc025b5b321f1
+  checksum: 10/abf9fefe4cd4997b475d8c9bed6637931bbebf8547be72dacff1ebde1f85491d0850c0acaf833d508453d48661a70333c68bc440218d19e8aa687591d9048de1
   languageName: node
   linkType: hard
 
