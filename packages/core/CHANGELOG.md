@@ -1,5 +1,11 @@
 ## 0.12.4
 
+## 0.12.7
+
+### Patch Changes
+
+- 66519c9: Remove explicit Transfer-Encoding and Connection headers from SSE responses. The transport layer handles chunked encoding automatically, and setting it explicitly causes double-encoding behind reverse proxies like Caddy.
+
 ## 0.12.6
 
 ### Patch Changes
