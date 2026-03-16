@@ -6,9 +6,11 @@ import type { PikkuHTTPResponse } from './http.types.js'
  * Useful for bridging Pikku routes to libraries that expect standard Web Request objects.
  */
 export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
+  const proto = req.header('x-forwarded-proto') ?? 'http'
+  const host = req.header('x-forwarded-host') ?? req.header('host') ?? 'localhost'
   const url = new URL(
     req.path(),
-    baseUrl ?? `http://${req.header('host') ?? 'localhost'}`
+    baseUrl ?? `${proto}://${host}`
   )
 
   const query = req.query()
