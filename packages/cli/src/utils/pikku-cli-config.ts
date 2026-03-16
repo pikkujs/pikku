@@ -539,6 +539,8 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    result.globalHTTPPrefix = result.globalHTTPPrefix ? result.globalHTTPPrefix.replace(/\/+$/, '') : ''
+
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)
     }

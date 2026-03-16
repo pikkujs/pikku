@@ -259,6 +259,8 @@ export type PikkuCLIInput = {
 
   addonMetaJsonFile?: string
 
+  globalHTTPPrefix?: string
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -385,6 +387,8 @@ export type PikkuCLIConfig = {
   }
 
   addonMetaJsonFile?: string
+
+  globalHTTPPrefix?: string
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

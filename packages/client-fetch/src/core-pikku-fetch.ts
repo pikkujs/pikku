@@ -115,6 +115,48 @@ export class CorePikkuFetch {
   }
 
   /**
+   * Uploads a file to a URL obtained from `getUploadURL`.
+   * Handles both presigned URLs (e.g. S3) and header-based auth (e.g. B2).
+   *
+   * @param {Object} uploadInfo - The result from the backend's `getUploadURL` call.
+   * @param {string} uploadInfo.uploadUrl - The URL to upload to.
+   * @param {string} uploadInfo.assetKey - The finalized asset key.
+   * @param {Record<string, string>} [uploadInfo.uploadHeaders] - Optional headers required by the storage backend.
+   * @param {Blob | File | Buffer | ReadableStream} body - The file content to upload.
+   * @param {string} [contentType] - The MIME type (used as fallback if not in uploadHeaders).
+   * @returns {Promise<{ assetKey: string; response: Response }>} - The asset key and raw response.
+   */
+  public async uploadFile(
+    uploadInfo: {
+      uploadUrl: string
+      assetKey: string
+      uploadHeaders?: Record<string, string>
+      uploadMethod?: 'PUT' | 'POST'
+    },
+    body: Blob | File | BufferSource | ReadableStream,
+    contentType?: string
+  ): Promise<{ assetKey: string; response: Response }> {
+    const headers: Record<string, string> = {
+      ...uploadInfo.uploadHeaders,
+    }
+    if (!headers['Content-Type'] && contentType) {
+      headers['Content-Type'] = contentType
+    }
+
+    const response = await fetch(uploadInfo.uploadUrl, {
+      method: uploadInfo.uploadMethod ?? 'PUT',
+      headers,
+      body: body as any,
+    })
+
+    if (response.status >= 400) {
+      throw response
+    }
+
+    return { assetKey: uploadInfo.assetKey, response }
+  }
+
+  /**
    * Makes an API request with the specified URI, method, and data, and optionally transforms dates in the response.
    *
    * @param {string} uri - The endpoint URI for the request.

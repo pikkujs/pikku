@@ -32,7 +32,12 @@ export interface ContentService {
   getUploadURL(
     fileKey: string,
     contentType: string
-  ): Promise<{ uploadUrl: string; assetKey: string }>
+  ): Promise<{
+    uploadUrl: string
+    assetKey: string
+    uploadHeaders?: Record<string, string>
+    uploadMethod?: 'PUT' | 'POST'
+  }>
 
   /**
    * Deletes a file from the storage backend.

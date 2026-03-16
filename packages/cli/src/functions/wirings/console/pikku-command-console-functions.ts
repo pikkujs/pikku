@@ -20,7 +20,7 @@ export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         config.consoleFunctionsFile,
-        serializeConsoleFunctions(pathToPikkuTypes, pathToAgentTypes)
+        serializeConsoleFunctions(pathToPikkuTypes, pathToAgentTypes, config.globalHTTPPrefix || '')
       )
       return true
     }

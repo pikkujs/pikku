@@ -1,4 +1,4 @@
-export const serializeRPCWrapper = (rpcMapPath: string) => {
+export const serializeRPCWrapper = (rpcMapPath: string, globalHTTPPrefix: string = '') => {
   return `
 import { PikkuFetch } from "./pikku-fetch.gen.js"
 import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow } from '${rpcMapPath}'
@@ -59,7 +59,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the function's return value
      */
     invoke: RPCInvoke = async (rpcName, data) => {
-       return await this.pikkuFetch.post(\`/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
+       return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
     }
 
     /**
@@ -71,7 +71,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the new run ID
      */
     startWorkflow: TypedStartWorkflow = async (workflowName, input) => {
-        return await this.pikkuFetch.post(\`/rpc/workflow/\${String(workflowName)}\` as never, { workflowName: String(workflowName), input }) as any
+        return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/workflow/\${String(workflowName)}\` as never, { workflowName: String(workflowName), input }) as any
     }
 
     /**
@@ -87,7 +87,7 @@ export class PikkuRPC {
          * @returns A promise with runId, result, and token usage
          */
         run: (async (agentName, input) => {
-            return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}\` as never, input) as any
+            return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}\` as never, input) as any
         }) as TypedAgentRun,
         /**
          * Streams agent responses via SSE. Used for real-time chat interfaces.
@@ -96,7 +96,7 @@ export class PikkuRPC {
          * @param input - The agent input (message, threadId, resourceId)
          */
         stream: async (agentName: string, input: Record<string, unknown>) => {
-            return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}/stream\` as never, input) as any
+            return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/stream\` as never, input) as any
         },
         /**
          * Approves or denies pending tool calls for an agent run.
@@ -105,7 +105,7 @@ export class PikkuRPC {
          * @param input - The approval payload (runId, approvals array)
          */
         approve: async (agentName: string, input: Record<string, unknown>) => {
-            return await this.pikkuFetch.post(\`/rpc/agent/\${String(agentName)}/approve\` as never, input) as any
+            return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/approve\` as never, input) as any
         },
     }
 }

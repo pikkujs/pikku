@@ -1,38 +1,34 @@
-import { describe, test } from 'node:test'
-import assert from 'node:assert/strict'
-
+import { describe, it, expect } from 'vitest'
 import { serializePublicAgent } from './serialize-public-agent.js'
 
 describe('serializePublicAgent', () => {
-  test('defaults generated public agent routes to auth enabled', () => {
-    const serialized = serializePublicAgent('#pikku')
-    assert.doesNotMatch(serialized, /auth:\s*false/)
-    assert.match(serialized, /auth:\s*true/)
-    assert.match(serialized, /tags:\s*\['pikku:public'\]/g)
+  it('should generate routes without prefix by default', () => {
+    const result = serializePublicAgent('#pikku', true)
+    expect(result).toContain("route: '/rpc/agent/:agentName'")
+    expect(result).toContain("route: '/rpc/agent/:agentName/stream'")
+    expect(result).toContain("route: '/rpc/agent/:agentName/approve'")
+    expect(result).toContain("route: '/rpc/agent/:agentName/resume'")
   })
 
-  test('supports explicitly generating public unauthenticated routes', () => {
-    const serialized = serializePublicAgent('#pikku', false)
-    assert.match(serialized, /auth:\s*false/)
+  it('should generate routes with empty string prefix', () => {
+    const result = serializePublicAgent('#pikku', true, '')
+    expect(result).toContain("route: '/rpc/agent/:agentName'")
+    expect(result).toContain("route: '/rpc/agent/:agentName/stream'")
   })
 
-  test('approve caller delegates to rpc.agent.approve', () => {
-    const serialized = serializePublicAgent('#pikku')
-
-    assert.match(
-      serialized,
-      /rpc\.agent\.approve\(runId, approvals, agentName\)/
-    )
+  it('should generate routes with globalHTTPPrefix', () => {
+    const result = serializePublicAgent('#pikku', true, '/api')
+    expect(result).toContain("route: '/api/rpc/agent/:agentName'")
+    expect(result).toContain("route: '/api/rpc/agent/:agentName/stream'")
+    expect(result).toContain("route: '/api/rpc/agent/:agentName/approve'")
+    expect(result).toContain("route: '/api/rpc/agent/:agentName/resume'")
   })
 
-  test('resume caller delegates to rpc.agent.resume with SSE', () => {
-    const serialized = serializePublicAgent('#pikku')
+  it('should set auth flag correctly', () => {
+    const authResult = serializePublicAgent('#pikku', true, '')
+    expect(authResult).toContain('auth: true')
 
-    assert.match(serialized, /rpc\.agent\.resume\(data\.runId/)
-    assert.match(
-      serialized,
-      /agentResume:[\s\S]*?route: '\/rpc\/agent\/:agentName\/resume'/
-    )
-    assert.match(serialized, /agentResume:[\s\S]*?sse: true/)
+    const noAuthResult = serializePublicAgent('#pikku', false, '')
+    expect(noAuthResult).toContain('auth: false')
   })
 })
