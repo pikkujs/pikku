@@ -24,7 +24,7 @@ export const pikkuRPCClient = pikkuSessionlessFunc<void, void>({
       rpcMapDeclarationFile,
       packageMappings
     )
-    const content = [serializeRPCWrapper(rpcMapDeclarationPath)]
+    const content = [serializeRPCWrapper(rpcMapDeclarationPath, config.globalHTTPPrefix || '')]
     await writeFileInDir(logger, rpcWiringsFile, content.join('\n'))
   },
   middleware: [

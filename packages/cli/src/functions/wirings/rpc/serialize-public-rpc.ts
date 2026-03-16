@@ -3,7 +3,8 @@
  */
 export const serializePublicRPC = (
   pathToPikkuTypes: string,
-  requireAuth: boolean = true
+  requireAuth: boolean = true,
+  globalHTTPPrefix: string = ''
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
   return `/**
@@ -37,12 +38,12 @@ export const rpcRoutes = defineHTTPRoutes({
   tags: ['pikku:public'],
   routes: {
     rpc: {
-      route: '/rpc/:rpcName',
+      route: '${globalHTTPPrefix}/rpc/:rpcName',
       method: 'post',
       func: rpcCaller,
     },
     workflow: {
-      route: '/rpc/workflow/:workflowName',
+      route: '${globalHTTPPrefix}/rpc/workflow/:workflowName',
       method: 'post',
       func: workflowCaller,
     },

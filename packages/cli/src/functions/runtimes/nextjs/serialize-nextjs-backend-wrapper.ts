@@ -4,7 +4,8 @@ export const serializeNextJsBackendWrapper = (
   rpcMapPath: string,
   configImport: string,
   singleServicesFactoryImport: string,
-  wireServicesImport: string | undefined
+  wireServicesImport: string | undefined,
+  globalHTTPPrefix: string = ''
 ) => {
   return `'server-only'
 
@@ -201,7 +202,7 @@ export const pikku = (_options?: any) => {
     rpcName: Name,
     data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
-    return dynamicActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: data ?? null }) as unknown as FlattenedRPCMap[Name]['output']
+    return dynamicActionRequest('${globalHTTPPrefix}/rpc/:rpcName' as '${globalHTTPPrefix}/rpc/:rpcName', 'POST', { rpcName, data: data ?? null }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   /**

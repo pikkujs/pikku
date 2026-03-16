@@ -14,10 +14,11 @@ export function serializeChannelCLI(
   channelTypesFile: string,
   functionTypesFile: string,
   channelName?: string,
-  channelRoute?: string
+  channelRoute?: string,
+  globalHTTPPrefix: string = ''
 ): string {
   const finalChannelName = channelName || `${programName}-cli`
-  const finalChannelRoute = channelRoute || `/cli/${programName}`
+  const finalChannelRoute = channelRoute || `${globalHTTPPrefix}/cli/${programName}`
   // Flatten all commands into a single routing map
   const commandMap: Record<string, { pikkuFuncId: string; isAddon?: boolean }> =
     {}

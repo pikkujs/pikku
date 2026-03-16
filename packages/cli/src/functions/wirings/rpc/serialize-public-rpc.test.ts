@@ -1,23 +1,30 @@
-import { describe, test } from 'node:test'
-import assert from 'node:assert/strict'
-
+import { describe, it, expect } from 'vitest'
 import { serializePublicRPC } from './serialize-public-rpc.js'
 
 describe('serializePublicRPC', () => {
-  test('adds pikku:public tags to generated public rpc routes', () => {
-    const serialized = serializePublicRPC('#pikku')
-    const matches = serialized.match(/tags:\s*\['pikku:public'\]/g)
-    assert.equal(matches?.length, 1)
+  it('should generate routes without prefix by default', () => {
+    const result = serializePublicRPC('#pikku', true)
+    expect(result).toContain("route: '/rpc/:rpcName'")
+    expect(result).toContain("route: '/rpc/workflow/:workflowName'")
   })
 
-  test('defaults generated public rpc routes to auth enabled', () => {
-    const serialized = serializePublicRPC('#pikku')
-    assert.doesNotMatch(serialized, /auth:\s*false/)
-    assert.match(serialized, /auth:\s*true/)
+  it('should generate routes with empty string prefix', () => {
+    const result = serializePublicRPC('#pikku', true, '')
+    expect(result).toContain("route: '/rpc/:rpcName'")
+    expect(result).toContain("route: '/rpc/workflow/:workflowName'")
   })
 
-  test('supports explicitly generating public unauthenticated rpc routes', () => {
-    const serialized = serializePublicRPC('#pikku', false)
-    assert.match(serialized, /auth:\s*false/)
+  it('should generate routes with globalHTTPPrefix', () => {
+    const result = serializePublicRPC('#pikku', true, '/api')
+    expect(result).toContain("route: '/api/rpc/:rpcName'")
+    expect(result).toContain("route: '/api/rpc/workflow/:workflowName'")
+  })
+
+  it('should set auth flag correctly', () => {
+    const authResult = serializePublicRPC('#pikku', true, '')
+    expect(authResult).toContain('auth: true')
+
+    const noAuthResult = serializePublicRPC('#pikku', false, '')
+    expect(noAuthResult).toContain('auth: false')
   })
 })

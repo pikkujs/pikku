@@ -1,6 +1,7 @@
 export const serializePublicAgent = (
   pathToPikkuTypes: string,
-  requireAuth: boolean = true
+  requireAuth: boolean = true,
+  globalHTTPPrefix: string = ''
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
   return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
@@ -61,23 +62,23 @@ export const agentRoutes = defineHTTPRoutes({
   tags: ['pikku:public'],
   routes: {
     agentRun: {
-      route: '/rpc/agent/:agentName',
+      route: '${globalHTTPPrefix}/rpc/agent/:agentName',
       method: 'post',
       func: agentCaller,
     },
     agentStream: {
-      route: '/rpc/agent/:agentName/stream',
+      route: '${globalHTTPPrefix}/rpc/agent/:agentName/stream',
       method: 'post',
       sse: true,
       func: agentStreamCaller,
     },
     agentApprove: {
-      route: '/rpc/agent/:agentName/approve',
+      route: '${globalHTTPPrefix}/rpc/agent/:agentName/approve',
       method: 'post',
       func: agentApproveCaller,
     },
     agentResume: {
-      route: '/rpc/agent/:agentName/resume',
+      route: '${globalHTTPPrefix}/rpc/agent/:agentName/resume',
       method: 'post',
       sse: true,
       func: agentResumeCaller,

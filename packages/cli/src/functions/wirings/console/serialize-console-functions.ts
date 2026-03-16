@@ -1,6 +1,7 @@
 export const serializeConsoleFunctions = (
   pathToPikkuTypes: string,
-  _pathToAgentTypes: string
+  _pathToAgentTypes: string,
+  globalHTTPPrefix: string = ''
 ) => {
   return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, addon, wireAddon } from '${pathToPikkuTypes}'
 
@@ -101,6 +102,6 @@ export const consoleRoutes = defineHTTPRoutes({
 })
 
 wireAddon({ name: 'console', package: '@pikku/addon-console' })
-wireHTTPRoutes({ basePath: '/api', routes: { console: consoleRoutes } })
+wireHTTPRoutes({ basePath: '${globalHTTPPrefix}', routes: { console: consoleRoutes } })
 `
 }

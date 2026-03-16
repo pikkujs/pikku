@@ -1,7 +1,8 @@
 export const serializeNextJsHTTPWrapper = (
   routesMapPath: string,
   rpcMapPath: string,
-  pikkuFetchImport: string
+  pikkuFetchImport: string,
+  globalHTTPPrefix: string = ''
 ) => {
   return `'server-only'
   
@@ -177,7 +178,7 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     rpcName: Name,
     data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
-    return dynamicActionRequest('/rpc/:rpcName' as '/rpc/:rpcName', 'POST', { rpcName, data: data ?? null }) as unknown as FlattenedRPCMap[Name]['output']
+    return dynamicActionRequest('${globalHTTPPrefix}/rpc/:rpcName' as '${globalHTTPPrefix}/rpc/:rpcName', 'POST', { rpcName, data: data ?? null }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   /**

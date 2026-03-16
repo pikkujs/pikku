@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/backblaze",
+  "version": "0.12.3",
+  "description": "Backblaze B2 content service for Pikku",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b",
+    "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "peerDependencies": {
+    "@pikku/core": "^0.12.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9"
+  }
+}
