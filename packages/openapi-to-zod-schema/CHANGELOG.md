@@ -1,5 +1,11 @@
 # @pikku/openapi-to-zod-schema
 
+## 0.12.4
+
+### Patch Changes
+
+- 1419fba: Deprecated: This package has been merged into `@pikku/openapi-parser`. Please use `@pikku/openapi-parser` instead.
+
 ## 0.12.3
 
 ### Patch Changes

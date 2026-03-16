@@ -1,5 +1,21 @@
 # @pikku/e2e
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [bb27710]
+- Updated dependencies [a31bc63]
+- Updated dependencies [d3536d8]
+- Updated dependencies [3e79248]
+- Updated dependencies [b0a81cc]
+- Updated dependencies [6413df7]
+  - @pikku/core@0.12.6
+  - @pikku/kysely-postgres@0.12.5
+  - @pikku/kysely@0.12.4
+  - @pikku/redis@0.12.4
+  - @pikku/kysely-mysql@0.12.6
+
 ## 0.0.3
 
 ### Patch Changes

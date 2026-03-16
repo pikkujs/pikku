@@ -1,5 +1,15 @@
 ## 0.12.4
 
+## 0.12.6
+
+### Patch Changes
+
+- bb27710: Add optional `uploadHeaders` to `ContentService.getUploadURL` return type, allowing storage backends (e.g. Backblaze B2) to provide required headers for direct uploads.
+- a31bc63: Fix SSE error handler to send `[DONE]` as JSON (`{"type":"done"}`) for consistency with all other SSE messages.
+- 3e79248: Add setStepChildRunId to workflow service implementations and auto-bootstrap in pikku all
+- b0a81cc: Support sub-workflows in `workflow.do()`: when a string name is passed, it now checks if the name refers to a registered workflow and runs it as a sub-workflow, falling back to RPC invocation if not found. The `TypedWorkflow.do` type now also accepts workflow names with typed input/output. Steps that spawn sub-workflows expose `childRunId` on the step state so clients can stream sub-workflow progress.
+- 6413df7: Propagate session and RPC service from the originating request to workflow runs, fixing "Authentication required" errors for workflows with `auth: true`.
+
 ## 0.12.5
 
 ### Patch Changes

@@ -1,5 +1,26 @@
 ## 0.12.0
 
+## 0.12.7
+
+### Patch Changes
+
+- e1374fc: Add OpenAPI metadata to pikku.config.json for generated addons
+
+  When an addon is scaffolded with `--openapi`, the config now includes an `openapi` object with `version` (from the spec's `info.version`) and `hash` (a contract hash of paths, methods, params, and schemas). This lets users and tooling know whether an addon was auto-generated and if the upstream API contract has changed.
+
+- c283e87: Add prepublishOnly script to addon scaffold template so changesets only builds packages it publishes
+- c077608: Add `globalHTTPPrefix` config option to prefix all generated HTTP route paths (e.g. `/api`), freeing `/` for a frontend or landing page.
+- d5f35c5: Rename version manifest from versions.json to versions.pikku.json and place it next to pikku.config.json instead of in .pikku/. Update warning message to say 'pikku versions init'.
+- 049d4c3: Add input/output schema support to pikkuWorkflowFunc, pikkuWorkflowComplexFunc, and pikkuAIAgent
+- 3e79248: Add setStepChildRunId to workflow service implementations and auto-bootstrap in pikku all
+- b0a81cc: Support sub-workflows in `workflow.do()`: when a string name is passed, it now checks if the name refers to a registered workflow and runs it as a sub-workflow, falling back to RPC invocation if not found. The `TypedWorkflow.do` type now also accepts workflow names with typed input/output. Steps that spawn sub-workflows expose `childRunId` on the step state so clients can stream sub-workflow progress.
+- Updated dependencies [bb27710]
+- Updated dependencies [a31bc63]
+- Updated dependencies [3e79248]
+- Updated dependencies [b0a81cc]
+- Updated dependencies [6413df7]
+  - @pikku/core@0.12.6
+
 ## 0.12.6
 
 ### Patch Changes
