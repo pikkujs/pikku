@@ -224,6 +224,7 @@ export type WorkflowsMeta = Record<
     steps: WorkflowStepMeta[]
     context?: WorkflowContext
     dsl?: boolean
+    inline?: boolean
   }
 >
 
@@ -243,6 +244,8 @@ export interface WorkflowRuntimeMeta {
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** If true, workflow always executes inline without queues */
+  inline?: boolean
   /** Serialized nodes */
   nodes?: Record<string, any>
   /** Entry node IDs for graph workflows (computed at build time) */
