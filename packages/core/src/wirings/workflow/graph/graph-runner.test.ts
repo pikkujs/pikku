@@ -484,4 +484,46 @@ describe('graph-runner bugs', () => {
 
     delete metaState['testInlineRpcMissing']
   })
+
+  test('graph workflow with inline: true in meta should run inline', async () => {
+    const ws = new InMemoryWorkflowService()
+    let executed = false
+
+    const mockRpcService = {
+      rpcWithWire: async () => {
+        executed = true
+        return { done: true }
+      },
+    }
+
+    // Set up queue service to verify nothing is queued
+    let queued = false
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {
+          queued = true
+        },
+      },
+    } as any)
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testInlineMetaGraph'] = {
+      name: 'testInlineMetaGraph',
+      pikkuFuncId: 'testInlineMetaGraph',
+      source: 'graph',
+      inline: true,
+      entryNodeIds: ['a'],
+      graphHash: 'inline-meta-graph-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'doA' },
+      },
+    }
+
+    await runWorkflowGraph(ws, 'testInlineMetaGraph', {}, mockRpcService, true)
+
+    assert.equal(executed, true, 'RPC should have been executed inline')
+    assert.equal(queued, false, 'nothing should have been queued')
+
+    delete metaState['testInlineMetaGraph']
+  })
 })

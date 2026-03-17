@@ -84,6 +84,7 @@ export type PikkuWorkflowConfigWithSchema<
   output?: OutputSchema
   node?: NodeConfig
   errors?: Array<typeof PikkuError>
+  inline?: boolean
 }
 
 export function pikkuWorkflowFunc<

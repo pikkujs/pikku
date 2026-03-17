@@ -447,7 +447,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     if (workflowMeta.source === 'graph' || workflowMeta.source === 'ai-agent') {
       const shouldInline =
-        options?.inline || !getSingletonServices()?.queueService
+        options?.inline ||
+        workflowMeta.inline ||
+        !getSingletonServices()?.queueService
       return runWorkflowGraph(
         this,
         name,
@@ -472,7 +474,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     const shouldInline =
-      options?.inline || !getSingletonServices()?.queueService
+      options?.inline ||
+      workflowMeta.inline ||
+      !getSingletonServices()?.queueService
 
     const runId = await this.createRun(
       name,

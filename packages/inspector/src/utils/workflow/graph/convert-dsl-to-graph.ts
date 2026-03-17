@@ -400,6 +400,7 @@ export function convertDslToGraph(
     source,
     description: meta.description,
     tags: meta.tags,
+    inline: meta.inline,
     context: meta.context,
     nodes: nodesRecord,
     entryNodeIds,

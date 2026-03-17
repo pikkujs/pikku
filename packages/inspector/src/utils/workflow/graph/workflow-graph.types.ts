@@ -192,6 +192,8 @@ export interface SerializedWorkflowGraph {
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** If true, workflow always executes inline without queues */
+  inline?: boolean
   /** Workflow context/state variables (from Zod schema) */
   context?: WorkflowContext
   /** Serialized nodes */

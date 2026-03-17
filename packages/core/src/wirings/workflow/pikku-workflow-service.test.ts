@@ -9,6 +9,115 @@ import {
   type PikkuWorkflowWire,
 } from './pikku-workflow-service.js'
 
+describe('pikku-workflow-service inline meta flag', () => {
+  test('workflow with inline: true in meta should create inline run and not queue', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testInlineMetaFlag'
+    const graphHash = 'inline-meta-hash'
+
+    // Set up a queue service that tracks if anything was queued
+    let queued = false
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        error: () => {},
+        info: () => {},
+        warn: () => {},
+        debug: () => {},
+      },
+      queueService: {
+        add: async () => {
+          queued = true
+        },
+      },
+    } as any)
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState[workflowName] = {
+      name: workflowName,
+      pikkuFuncId: workflowName,
+      source: 'dsl',
+      graphHash,
+      inline: true,
+    }
+
+    const functionMetaState = pikkuState(null, 'function', 'meta')
+    functionMetaState[workflowName] = {
+      name: workflowName,
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    addWorkflow(workflowName, {
+      func: async () => {
+        return { ok: true }
+      },
+    })
+
+    const { runId } = await ws.startWorkflow(workflowName, {}, {})
+
+    // The run should be created as inline
+    const run = await ws.getRun(runId)
+    assert.equal(run?.inline, true, 'run should be marked as inline')
+    assert.equal(
+      queued,
+      false,
+      'nothing should have been queued to the queue service'
+    )
+
+    delete metaState[workflowName]
+    delete functionMetaState[workflowName]
+    pikkuState(null, 'workflows', 'registrations').delete(workflowName)
+  })
+
+  test('workflow without inline flag should use queue when queueService exists', async () => {
+    const ws = new InMemoryWorkflowService()
+    const workflowName = 'testNonInlineMetaFlag'
+    const graphHash = 'non-inline-meta-hash'
+
+    let queued = false
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {
+          queued = true
+        },
+      },
+    } as any)
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState[workflowName] = {
+      name: workflowName,
+      pikkuFuncId: workflowName,
+      source: 'dsl',
+      graphHash,
+      // no inline flag
+    }
+
+    const functionMetaState = pikkuState(null, 'function', 'meta')
+    functionMetaState[workflowName] = {
+      name: workflowName,
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    addWorkflow(workflowName, {
+      func: async () => {
+        return { ok: true }
+      },
+    })
+
+    await ws.startWorkflow(workflowName, {}, {})
+
+    // Wait a tick
+    await new Promise((r) => setTimeout(r, 50))
+
+    assert.equal(queued, true, 'workflow should have been queued')
+
+    delete metaState[workflowName]
+    delete functionMetaState[workflowName]
+    pikkuState(null, 'workflows', 'registrations').delete(workflowName)
+  })
+})
+
 describe('pikku-workflow-service version mismatch fallback', () => {
   test('should fall back to stored graph for dsl workflow version mismatch', async () => {
     const ws = new InMemoryWorkflowService()

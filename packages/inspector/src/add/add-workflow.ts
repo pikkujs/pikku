@@ -11,7 +11,10 @@ import {
   extractDescription,
   extractDuration,
 } from '../utils/extract-node-value.js'
-import { getCommonWireMetaData } from '../utils/get-property-value.js'
+import {
+  getCommonWireMetaData,
+  getPropertyValue,
+} from '../utils/get-property-value.js'
 import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
 
 /**
@@ -206,6 +209,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   let summary: string | undefined
   let description: string | undefined
   let errors: string[] | undefined
+  let inline: boolean | undefined
 
   if (ts.isObjectLiteralExpression(firstArg)) {
     const metadata = getCommonWireMetaData(
@@ -219,6 +223,11 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     summary = metadata.summary
     description = metadata.description
     errors = metadata.errors
+
+    const inlineProp = getPropertyValue(firstArg, 'inline')
+    if (inlineProp === true) {
+      inline = true
+    }
   }
 
   // Validate that we got a valid function
@@ -324,5 +333,6 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     description,
     errors,
     tags,
+    inline,
   }
 }
