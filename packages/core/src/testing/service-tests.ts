@@ -780,7 +780,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
       test('getSecret throws for missing key', async () => {
         const service = await factory({ key: kek })
         await assert.rejects(() => service.getSecret('nonexistent'), {
-          message: 'Secret not found: nonexistent',
+          message: 'Requested secret not found',
         })
       })
 
