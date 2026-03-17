@@ -20,6 +20,7 @@ import {
   computePermissionsGroupsMeta,
   computeRequiredSchemas,
   computeDiagnostics,
+  validateSchemaWiringSeparation,
 } from './utils/post-process.js'
 import { generateOpenAPISpec } from './utils/serialize-openapi-json.js'
 import { pikkuState } from '@pikku/core/internal'
@@ -323,6 +324,7 @@ export const inspect = async (
     computeMiddlewareGroupsMeta(state)
     computePermissionsGroupsMeta(state)
     computeDiagnostics(state)
+    validateSchemaWiringSeparation(logger, state)
 
     if (options.openAPI) {
       state.openAPISpec = await generateOpenAPISpec(

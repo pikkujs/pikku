@@ -492,6 +492,65 @@ export function validateAgentOverrides(
   }
 }
 
+/**
+ * Validates that Zod schemas and wiring side-effects (wireHTTPRoutes,
+ * addPermission, addHTTPMiddleware, etc.) do not coexist in the same file.
+ *
+ * The CLI uses tsImport to extract Zod schemas at runtime, which executes
+ * all top-level code in the file. Wiring calls crash during this process
+ * because the pikku state metadata doesn't exist in the CLI context.
+ */
+export function validateSchemaWiringSeparation(
+  logger: InspectorLogger,
+  state: InspectorState
+): void {
+  // Collect files that contain schemas
+  const schemaFiles = new Set<string>()
+  for (const ref of state.schemaLookup.values()) {
+    schemaFiles.add(ref.sourceFile)
+  }
+
+  // Collect files that contain wiring side-effects
+  const wiringFiles = new Set<string>()
+
+  // HTTP route wirings
+  for (const file of state.http.files) {
+    wiringFiles.add(file)
+  }
+
+  // Permission wirings (addPermission calls)
+  for (const meta of state.permissions.tagPermissions.values()) {
+    wiringFiles.add(meta.sourceFile)
+  }
+  for (const meta of state.http.routePermissions.values()) {
+    wiringFiles.add(meta.sourceFile)
+  }
+
+  // Middleware wirings (addHTTPMiddleware calls)
+  for (const meta of state.http.routeMiddleware.values()) {
+    wiringFiles.add(meta.sourceFile)
+  }
+  for (const meta of state.middleware.tagMiddleware.values()) {
+    wiringFiles.add(meta.sourceFile)
+  }
+
+  // Check for overlap
+  for (const file of schemaFiles) {
+    if (wiringFiles.has(file)) {
+      const schemas = Array.from(state.schemaLookup.entries())
+        .filter(([, ref]) => ref.sourceFile === file)
+        .map(([name]) => name)
+
+      logger.critical(
+        ErrorCode.SCHEMA_AND_WIRING_COLOCATED,
+        `File '${file}' contains both Zod schemas (${schemas.join(', ')}) and wiring calls (wireHTTPRoutes, addPermission, etc.). ` +
+          `These must be in separate files because the CLI imports schema files at runtime, which triggers wiring side-effects that crash without server context. ` +
+          `Move the route/wiring definitions to a dedicated wiring file.`
+      )
+    }
+  }
+}
+
 export function computeDiagnostics(state: InspectorState): void {
   const diagnostics: InspectorDiagnostic[] = []
 
