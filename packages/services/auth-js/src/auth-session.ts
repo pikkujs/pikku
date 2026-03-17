@@ -69,8 +69,8 @@ export const authJsSession = (
                 : { userId: decoded.sub as string }
             )
           }
-        } catch {
-          // Invalid or expired token — proceed without session
+        } catch (e: any) {
+          services.logger?.warn(`Auth.js session decode failed: ${e?.message}`)
         }
       }
 

@@ -55,7 +55,7 @@ export interface SlackGatewayAdapterOptions {
    */
   tokenResolver: TokenResolver
   /** Slack signing secret for verifying request signatures */
-  signingSecret?: string
+  signingSecret: string
 }
 
 /**

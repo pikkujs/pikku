@@ -60,7 +60,7 @@ export const runSQSQueueWorker = async (
   logger: Logger,
   event: SQSEvent
 ): Promise<SQSBatchResponse> => {
-  console.log(JSON.stringify(event, null, 2))
+  logger.info(`Processing ${event.Records.length} SQS messages`)
   const jobs = event.Records.map(mapSQSRecordToQueueJob)
 
   // Process all jobs in parallel
