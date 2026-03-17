@@ -449,9 +449,7 @@ export class PikkuMCPServer {
             ],
           }
         }
-        throw new McpError(-32603, 'Internal error', {
-          message: e instanceof Error ? e.message : String(e),
-        })
+        throw new McpError(-32603, 'Internal error')
       }
     })
   }

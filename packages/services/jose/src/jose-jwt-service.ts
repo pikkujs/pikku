@@ -40,7 +40,7 @@ export class JoseJWTService implements JWTService {
       {} as Record<string, Uint8Array>
     )
     this.logger?.info(
-      `Retrieved JWT secrets: ${Object.keys(this.secrets).join(',')}`
+      `Retrieved ${Object.keys(this.secrets).length} JWT secrets`
     )
   }
 
@@ -73,7 +73,7 @@ export class JoseJWTService implements JWTService {
    */
   public async decode<T>(token: string): Promise<T> {
     const secret = await this.getSecret(token)
-    return (await jose.jwtVerify(token, secret, {})).payload as unknown as T
+    return (await jose.jwtVerify(token, secret, { algorithms: ['HS256'] })).payload as unknown as T
   }
 
   /**
@@ -83,7 +83,7 @@ export class JoseJWTService implements JWTService {
    */
   public async verify(token: string): Promise<void> {
     const secret = await this.getSecret(token)
-    await jose.jwtVerify(token, secret)
+    await jose.jwtVerify(token, secret, { algorithms: ['HS256'] })
   }
 
   /**
